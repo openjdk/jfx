@@ -25,9 +25,6 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.scene.Node;
@@ -37,7 +34,8 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
-
+import java.util.ArrayList;
+import java.util.List;
 import com.sun.javafx.scene.control.skin.TabPaneSkin;
 import com.sun.javafx.scene.traversal.Direction;
 
@@ -53,25 +51,21 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
     private static final String CTRL_TAB = "Ctrl_Tab";
     private static final String CTRL_SHIFT_TAB = "Ctrl_Shift_Tab";
 
-    protected static final List<KeyBinding> TABPANE_BINDINGS = new ArrayList<KeyBinding>();
+    protected static final List<KeyBinding> TAB_PANE_BINDINGS = new ArrayList<>();
     static {
-        TABPANE_BINDINGS.add(new KeyBinding(KeyCode.UP, "TraverseUp"));
-        TABPANE_BINDINGS.add(new KeyBinding(KeyCode.DOWN, "TraverseDown"));
-        TABPANE_BINDINGS.add(new KeyBinding(KeyCode.LEFT, "TraverseLeft"));
-        TABPANE_BINDINGS.add(new KeyBinding(KeyCode.RIGHT, "TraverseRight"));
-        TABPANE_BINDINGS.add(new KeyBinding(KeyCode.TAB, "TraverseNext"));
-        TABPANE_BINDINGS.add(new KeyBinding(KeyCode.TAB, "TraversePrevious").shift());
+        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.UP, "TraverseUp"));
+        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.DOWN, "TraverseDown"));
+        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.LEFT, "TraverseLeft"));
+        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.RIGHT, "TraverseRight"));
+        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.TAB, "TraverseNext"));
+        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.TAB, "TraversePrevious").shift());
 
-        TABPANE_BINDINGS.add(new KeyBinding(KeyCode.HOME, HOME));
-        TABPANE_BINDINGS.add(new KeyBinding(KeyCode.END, END));
-        TABPANE_BINDINGS.add(new KeyBinding(KeyCode.PAGE_UP, CTRL_PAGE_UP).ctrl());
-        TABPANE_BINDINGS.add(new KeyBinding(KeyCode.PAGE_DOWN, CTRL_PAGE_DOWN).ctrl());
-        TABPANE_BINDINGS.add(new KeyBinding(KeyCode.TAB, CTRL_TAB).ctrl());
-        TABPANE_BINDINGS.add(new KeyBinding(KeyCode.TAB, CTRL_SHIFT_TAB).shift().ctrl());
-    }
-
-    @Override protected List<KeyBinding> createKeyBindings() {
-        return TABPANE_BINDINGS;
+        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.HOME, HOME));
+        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.END, END));
+        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.PAGE_UP, CTRL_PAGE_UP).ctrl());
+        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.PAGE_DOWN, CTRL_PAGE_DOWN).ctrl());
+        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.TAB, CTRL_TAB).ctrl());
+        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.TAB, CTRL_SHIFT_TAB).shift().ctrl());
     }
 
     @Override protected void callAction(String name) {
@@ -288,7 +282,7 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
      *************************************************************************/
 
     public TabPaneBehavior(TabPane tabPane) {
-        super(tabPane);
+        super(tabPane, TAB_PANE_BINDINGS);
     }
 
     public void selectTab(Tab tab) {

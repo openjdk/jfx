@@ -52,8 +52,8 @@ public abstract class MenuButtonBehaviorBase<C extends MenuButton> extends Butto
      *                                                                         *
      **************************************************************************/
 
-    public MenuButtonBehaviorBase(final C menuButton) {
-        super(menuButton);
+    public MenuButtonBehaviorBase(final C menuButton, List<KeyBinding> bindings) {
+        super(menuButton, bindings);
     }
 
     /***************************************************************************

@@ -44,7 +44,7 @@ public class AccordionBehavior extends BehaviorBase<Accordion> {
     private AccordionFocusModel focusModel;
     
     public AccordionBehavior(Accordion accordion) {
-        super(accordion);
+        super(accordion, ACCORDION_BINDINGS);
         focusModel = new AccordionFocusModel(accordion);
     }
 
@@ -82,10 +82,6 @@ public class AccordionBehavior extends BehaviorBase<Accordion> {
         ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.PAGE_DOWN, CTRL_PAGE_DOWN).ctrl());
         ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.TAB, CTRL_TAB).ctrl());
         ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.TAB, CTRL_SHIFT_TAB).shift().ctrl());
-    }
-
-    @Override protected List<KeyBinding> createKeyBindings() {
-        return ACCORDION_BINDINGS;
     }
 
     @Override protected void callAction(String name) {   

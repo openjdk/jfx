@@ -25,8 +25,6 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import java.util.List;
-
 import javafx.application.ConditionalFeature;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.ListCell;
@@ -35,6 +33,8 @@ import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import java.util.Collections;
+import java.util.List;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.control.Logging;
 import sun.util.logging.PlatformLogger;
@@ -108,7 +108,7 @@ public class ListCellBehavior<T> extends CellBehaviorBase<ListCell<T>> {
      **************************************************************************/
 
     public ListCellBehavior(ListCell<T> control) {
-        super(control);
+        super(control, Collections.EMPTY_LIST);
     }
 
 

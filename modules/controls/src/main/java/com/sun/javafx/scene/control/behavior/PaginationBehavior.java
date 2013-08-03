@@ -25,13 +25,13 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import java.util.ArrayList;
-import java.util.List;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.control.Pagination;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
+import java.util.ArrayList;
+import java.util.List;
 import com.sun.javafx.scene.control.skin.PaginationSkin;
 
 public class PaginationBehavior extends BehaviorBase<Pagination> {
@@ -48,11 +48,7 @@ public class PaginationBehavior extends BehaviorBase<Pagination> {
         PAGINATION_BINDINGS.add(new KeyBinding(KeyCode.RIGHT, RIGHT));
     }
 
-    @Override protected List<KeyBinding> createKeyBindings() {
-        return PAGINATION_BINDINGS;
-    }
-    
-    protected /*final*/ String matchActionForEvent(KeyEvent e) {
+    protected String matchActionForEvent(KeyEvent e) {
         String action = super.matchActionForEvent(e);
         if (action != null) {
             if (e.getCode() == KeyCode.LEFT) {
@@ -97,6 +93,6 @@ public class PaginationBehavior extends BehaviorBase<Pagination> {
      *************************************************************************/
 
     public PaginationBehavior(Pagination pagination) {
-        super(pagination);
+        super(pagination, PAGINATION_BINDINGS);
     }
 }

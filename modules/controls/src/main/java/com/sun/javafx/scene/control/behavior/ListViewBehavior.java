@@ -213,10 +213,6 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         else super.callAction(name);
     }
 
-    @Override protected List<KeyBinding> createKeyBindings() {
-        return LIST_VIEW_BINDINGS;
-    }
-    
     @Override protected void callActionForEvent(KeyEvent e) {
         // RT-12751: we want to keep an eye on the user holding down the shift key, 
         // so that we know when they enter/leave multiple selection mode. This
@@ -326,10 +322,10 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     private final WeakChangeListener<MultipleSelectionModel<T>> weakSelectionModelListener = 
             new WeakChangeListener<MultipleSelectionModel<T>>(selectionModelListener);
     
-	private TwoLevelFocusListBehavior tlFocus;
+    private TwoLevelFocusListBehavior tlFocus;
 
     public ListViewBehavior(ListView<T> control) {
-        super(control);
+        super(control, LIST_VIEW_BINDINGS);
         
         control.itemsProperty().addListener(weakItemsListener);
         if (control.getItems() != null) {

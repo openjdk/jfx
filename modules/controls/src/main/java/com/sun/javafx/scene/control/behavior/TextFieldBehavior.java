@@ -58,7 +58,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     private TwoLevelFocusBehavior tlFocus;
 
     public TextFieldBehavior(final TextField textField) {
-        super(textField);
+        super(textField, TEXT_INPUT_BINDINGS);
 
         contextMenu = new ContextMenu();
         if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {

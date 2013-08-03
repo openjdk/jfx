@@ -25,9 +25,6 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import com.sun.javafx.application.PlatformImpl;
-
-import java.util.List;
 import javafx.application.ConditionalFeature;
 import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;
@@ -38,6 +35,9 @@ import javafx.scene.control.TablePositionBase;
 import javafx.scene.control.TableSelectionModel;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import java.util.Collections;
+import java.util.List;
+import com.sun.javafx.application.PlatformImpl;
 
 /**
  */
@@ -103,7 +103,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
      **************************************************************************/    
 
     public TableCellBehaviorBase(C control) {
-        super(control);
+        super(control, Collections.EMPTY_LIST);
     }
     
     

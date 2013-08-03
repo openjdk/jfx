@@ -83,7 +83,7 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
     }
 
     public ChoiceBoxBehavior(ChoiceBox<T> control) {
-        super(control);
+        super(control, CHOICE_BUTTON_BINDINGS);
         // Only add this if we're on an embedded platform that supports 5-button navigation
         if (Utils.isTwoLevelFocus()) {
             tlFocus = new TwoLevelFocusComboBehavior(control); // needs to be last.
@@ -93,10 +93,6 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
     @Override public void dispose() {
         if (tlFocus != null) tlFocus.dispose();
         super.dispose();
-    }
-
-    @Override protected List<KeyBinding> createKeyBindings() {
-        return CHOICE_BUTTON_BINDINGS;
     }
 
     public void select(int index) {

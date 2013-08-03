@@ -91,8 +91,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
      * Create a new TextInputControlBehavior.
      * @param textInputControl cannot be null
      */
-    public TextInputControlBehavior(T textInputControl) {
-        super(textInputControl);
+    public TextInputControlBehavior(T textInputControl, List<KeyBinding> bindings) {
+        super(textInputControl, bindings);
 
         this.textInputControl = textInputControl;
 
@@ -124,10 +124,6 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     /**************************************************************************
      * Key handling implementation                                            *
      *************************************************************************/
-
-    @Override protected List<KeyBinding> createKeyBindings() {
-        return TEXT_INPUT_BINDINGS;
-    }
 
     /**
      * Records the last KeyEvent we saw.

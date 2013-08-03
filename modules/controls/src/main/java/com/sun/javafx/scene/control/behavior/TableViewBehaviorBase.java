@@ -195,10 +195,6 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         else super.callAction(name);
     }
 
-    @Override protected List<KeyBinding> createKeyBindings() {
-        return TABLE_VIEW_BINDINGS;
-    }
-    
     @Override protected void callActionForEvent(KeyEvent e) {
         // RT-12751: we want to keep an eye on the user holding down the shift key, 
         // so that we know when they enter/leave multiple selection mode. This
@@ -259,7 +255,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
             new WeakListChangeListener<TablePositionBase>(selectedCellsListener);
     
     
-    
+
     /**************************************************************************
      *                                                                        *
      * Constructors                                                           *
@@ -267,7 +263,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
      *************************************************************************/
     
     public TableViewBehaviorBase(C control) {
-        super(control);
+        super(control, TABLE_VIEW_BINDINGS);
     }
 
     

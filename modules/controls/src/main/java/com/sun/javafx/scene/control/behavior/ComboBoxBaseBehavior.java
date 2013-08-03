@@ -53,8 +53,8 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
     /**
      * 
      */
-    public ComboBoxBaseBehavior(final ComboBoxBase<T> comboBox) {
-        super(comboBox);
+    public ComboBoxBaseBehavior(final ComboBoxBase<T> comboBox, final List<KeyBinding> bindings) {
+        super(comboBox, bindings);
 
         // Only add this if we're on an embedded platform that supports 5-button navigation
         if (com.sun.javafx.scene.control.skin.Utils.isTwoLevelFocus()) {
@@ -123,10 +123,6 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(ENTER, KEY_PRESSED, PRESS_ACTION));
         COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(ENTER, KEY_RELEASED, RELEASE_ACTION));
         
-    }
-
-    @Override protected List<KeyBinding> createKeyBindings() {
-        return COMBO_BOX_BASE_BINDINGS;
     }
 
     @Override protected void callAction(String name) {

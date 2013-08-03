@@ -25,22 +25,6 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import static javafx.scene.input.KeyCode.DOWN;
-import static javafx.scene.input.KeyCode.END;
-import static javafx.scene.input.KeyCode.F4;
-import static javafx.scene.input.KeyCode.HOME;
-import static javafx.scene.input.KeyCode.KP_DOWN;
-import static javafx.scene.input.KeyCode.KP_LEFT;
-import static javafx.scene.input.KeyCode.KP_RIGHT;
-import static javafx.scene.input.KeyCode.KP_UP;
-import static javafx.scene.input.KeyCode.LEFT;
-import static javafx.scene.input.KeyCode.RIGHT;
-import static javafx.scene.input.KeyCode.UP;
-import static javafx.scene.input.KeyEvent.KEY_RELEASED;
-
-import java.util.ArrayList;
-import java.util.List;
-
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.event.ActionEvent;
@@ -55,8 +39,21 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.util.Duration;
-
+import java.util.ArrayList;
+import java.util.List;
 import com.sun.javafx.Utils;
+import static javafx.scene.input.KeyCode.DOWN;
+import static javafx.scene.input.KeyCode.END;
+import static javafx.scene.input.KeyCode.F4;
+import static javafx.scene.input.KeyCode.HOME;
+import static javafx.scene.input.KeyCode.KP_DOWN;
+import static javafx.scene.input.KeyCode.KP_LEFT;
+import static javafx.scene.input.KeyCode.KP_RIGHT;
+import static javafx.scene.input.KeyCode.KP_UP;
+import static javafx.scene.input.KeyCode.LEFT;
+import static javafx.scene.input.KeyCode.RIGHT;
+import static javafx.scene.input.KeyCode.UP;
+import static javafx.scene.input.KeyEvent.KEY_RELEASED;
 
 /**
  * A Behavior implementation for ScrollBars.
@@ -71,8 +68,8 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
      *                                                                         *
      **************************************************************************/
 
-    public ScrollBarBehavior(ScrollBar scrollbar) {
-        super(scrollbar);
+    public ScrollBarBehavior(ScrollBar scrollBar) {
+        super(scrollBar, SCROLL_BAR_BINDINGS);
     }
 
     /***************************************************************************
@@ -106,27 +103,23 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
     /* We manually specify the focus traversal keys because Slider has
      * different usage for up/down arrow keys.
      */
-    protected static final List<KeyBinding> SCROLLBAR_BINDINGS = new ArrayList<KeyBinding>();
+    protected static final List<KeyBinding> SCROLL_BAR_BINDINGS = new ArrayList<>();
     static {
-        SCROLLBAR_BINDINGS.add(new KeyBinding(F4, "TraverseDebug").alt().ctrl().shift());
+        SCROLL_BAR_BINDINGS.add(new KeyBinding(F4, "TraverseDebug").alt().ctrl().shift());
 
-        SCROLLBAR_BINDINGS.add(new ScrollBarKeyBinding(LEFT, "DecrementValue"));
-        SCROLLBAR_BINDINGS.add(new ScrollBarKeyBinding(KP_LEFT, "DecrementValue"));
-        SCROLLBAR_BINDINGS.add(new ScrollBarKeyBinding(UP, "DecrementValue").vertical());
-        SCROLLBAR_BINDINGS.add(new ScrollBarKeyBinding(KP_UP, "DecrementValue").vertical());
-        SCROLLBAR_BINDINGS.add(new ScrollBarKeyBinding(RIGHT, "IncrementValue"));
-        SCROLLBAR_BINDINGS.add(new ScrollBarKeyBinding(KP_RIGHT, "IncrementValue"));
-        SCROLLBAR_BINDINGS.add(new ScrollBarKeyBinding(DOWN, "IncrementValue").vertical());
-        SCROLLBAR_BINDINGS.add(new ScrollBarKeyBinding(KP_DOWN, "IncrementValue").vertical());
+        SCROLL_BAR_BINDINGS.add(new ScrollBarKeyBinding(LEFT, "DecrementValue"));
+        SCROLL_BAR_BINDINGS.add(new ScrollBarKeyBinding(KP_LEFT, "DecrementValue"));
+        SCROLL_BAR_BINDINGS.add(new ScrollBarKeyBinding(UP, "DecrementValue").vertical());
+        SCROLL_BAR_BINDINGS.add(new ScrollBarKeyBinding(KP_UP, "DecrementValue").vertical());
+        SCROLL_BAR_BINDINGS.add(new ScrollBarKeyBinding(RIGHT, "IncrementValue"));
+        SCROLL_BAR_BINDINGS.add(new ScrollBarKeyBinding(KP_RIGHT, "IncrementValue"));
+        SCROLL_BAR_BINDINGS.add(new ScrollBarKeyBinding(DOWN, "IncrementValue").vertical());
+        SCROLL_BAR_BINDINGS.add(new ScrollBarKeyBinding(KP_DOWN, "IncrementValue").vertical());
 
-        SCROLLBAR_BINDINGS.add(new KeyBinding(HOME, KEY_RELEASED, "Home"));
-        SCROLLBAR_BINDINGS.add(new KeyBinding(END, KEY_RELEASED, "End"));
+        SCROLL_BAR_BINDINGS.add(new KeyBinding(HOME, KEY_RELEASED, "Home"));
+        SCROLL_BAR_BINDINGS.add(new KeyBinding(END, KEY_RELEASED, "End"));
     }
 
-    @Override protected List<KeyBinding> createKeyBindings() {
-        return SCROLLBAR_BINDINGS;
-    }
-    
     protected /*final*/ String matchActionForEvent(KeyEvent e) {
         String action = super.matchActionForEvent(e);
         if (action != null) {

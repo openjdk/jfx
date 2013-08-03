@@ -31,9 +31,10 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Skin;
 import javafx.scene.input.KeyCode;
 import java.util.Arrays;
-import java.util.List;
+import java.util.Collections;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.skin.BehaviorSkinBase;
+import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -42,6 +43,21 @@ import static org.junit.Assert.assertTrue;
  * Unit tests for BehaviorBase
  */
 public class BehaviorBaseTest {
+    private Button button;
+
+    @Before public void setup() {
+        button = new Button();
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void creatingBehaviorWithNullControlThrowsNPE() {
+        new BehaviorBase<Button>(null, Collections.EMPTY_LIST);
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void creatingBehaviorWithNullKeyBindingsThrowsNPE() {
+        new BehaviorBase<>(button, null);
+    }
 
     // Test that changes to key bindings after the createKeyBindings method is called
     // has no effect.
@@ -57,13 +73,7 @@ public class BehaviorBaseTest {
         // Shove the result of the behavior responding to a key event here
         final BooleanProperty actionCalled = new SimpleBooleanProperty(false);
         // Setup the test
-        Button button = new Button();
-        BehaviorBase behavior = new BehaviorBase(button) {
-            @Override
-            protected List<KeyBinding> createKeyBindings() {
-                return Arrays.asList(new KeyBinding(KeyCode.ENTER, "action!"));
-            }
-
+        BehaviorBase behavior = new BehaviorBase(button, Arrays.asList(new KeyBinding(KeyCode.ENTER, "action!"))) {
             @Override protected void callAction(String name) {
                 actionCalled.set(true);
             }

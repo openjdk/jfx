@@ -109,7 +109,7 @@ public class BehaviorBase<C extends Control> {
     /**
      * The key bindings for this Behavior.
      */
-    private final List<KeyBinding> keyBindings = Collections.unmodifiableList(createKeyBindings());
+    private final List<KeyBinding> keyBindings;
 
     /**
      * Listens to any key events on the Control and responds to them
@@ -134,11 +134,15 @@ public class BehaviorBase<C extends Control> {
     /**
      * Create a new BehaviorBase for the given control. The Control must not
      * be null.
-     * @param control
+     *
+     * @param control The control. Must not be null.
+     * @param keyBindings The key bindings that should be used with this behavior. Must not be null.
      */
-    public BehaviorBase(C control) {
+    public BehaviorBase(C control, List<KeyBinding> keyBindings) {
+        // Don't need to explicitly check for null because Collections.unmodifiableList
+        // will die on null, as will the adding of listeners
         this.control = control;
-
+        this.keyBindings = Collections.unmodifiableList(keyBindings);
         control.addEventHandler(KeyEvent.ANY, keyEventListener);
         control.focusedProperty().addListener(focusListener);
     }
@@ -151,18 +155,6 @@ public class BehaviorBase<C extends Control> {
     public void dispose() {
         control.removeEventHandler(KeyEvent.ANY, keyEventListener);
         control.focusedProperty().removeListener(focusListener);
-    }
-
-    /**
-     * Called during initialization to compute the set of key bindings which
-     * should be applied for this behavior. This method should NOT mutate the
-     * List after having returned it. Any modifications to the list after it
-     * has been returned will be ignored.
-     *
-     * @return a non-null list of key bindings.
-     */
-    protected List<KeyBinding> createKeyBindings() {
-        return Collections.emptyList();
     }
 
     /**
@@ -207,7 +199,7 @@ public class BehaviorBase<C extends Control> {
         return action;
     }
     
-    protected /*final*/ void callActionForEvent(KeyEvent e) {
+    protected void callActionForEvent(KeyEvent e) {
         String action = matchActionForEvent(e);
         if (action != null) {
             callAction(action);

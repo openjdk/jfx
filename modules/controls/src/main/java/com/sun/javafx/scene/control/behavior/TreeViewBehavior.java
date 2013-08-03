@@ -164,10 +164,6 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         else super.callAction(name);
     }
 
-    @Override protected List<KeyBinding> createKeyBindings() {
-        return TREE_VIEW_BINDINGS;
-    }
-    
     @Override protected void callActionForEvent(KeyEvent e) {
         // RT-12751: we want to keep an eye on the user holding down the shift key, 
         // so that we know when they enter/leave multiple selection mode. This
@@ -259,7 +255,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
             new WeakChangeListener<MultipleSelectionModel<TreeItem<T>>>(selectionModelListener);
 
     public TreeViewBehavior(TreeView<T> control) {
-        super(control);
+        super(control, TREE_VIEW_BINDINGS);
         
         // Fix for RT-16565
         getControl().selectionModelProperty().addListener(weakSelectionModelListener);

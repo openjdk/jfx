@@ -25,16 +25,14 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import javafx.scene.control.*;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
 import javafx.scene.control.Control;
 import javafx.scene.control.ControlStub;
-
+import java.util.Collections;
+import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import org.junit.Before;
 import org.junit.Test;
-
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 
 public class BehaviorSkinBaseTest {
     private ControlStub c;
@@ -43,8 +41,8 @@ public class BehaviorSkinBaseTest {
 
     @Before public void setup() {
         c = new ControlStub();
-        b = new BehaviorBaseStub<ControlStub>(c);
-        s = new BehaviorSkinBaseStub<ControlStub, BehaviorBaseStub<ControlStub>>(c, b);
+        b = new BehaviorBaseStub<>(c);
+        s = new BehaviorSkinBaseStub<>(c, b);
     }
     
     @Test public void skinNotAssignedToControlShouldStillHaveReferenceToControl() {
@@ -76,7 +74,7 @@ public class BehaviorSkinBaseTest {
     
     public static final class BehaviorBaseStub<C extends Control> extends BehaviorBase<C> {
         public BehaviorBaseStub(C control) {
-            super(control);
+            super(control, Collections.EMPTY_LIST);
         }        
     }
 }

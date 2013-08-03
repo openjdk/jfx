@@ -148,7 +148,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
      *************************************************************************/
 
     public TextAreaBehavior(final TextArea textArea) {
-        super(textArea);
+        super(textArea, TEXT_AREA_BINDINGS);
 
         contextMenu = new ContextMenu();
         if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
@@ -216,10 +216,6 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     /**************************************************************************
      * Key handling implementation                                            *
      *************************************************************************/
-
-    @Override protected List<KeyBinding> createKeyBindings() {
-        return TEXT_AREA_BINDINGS;
-    }
 
     @Override public void callAction(String name) {
         final TextArea textInputControl = getControl();

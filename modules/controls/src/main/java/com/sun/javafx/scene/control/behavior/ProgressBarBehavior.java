@@ -26,6 +26,7 @@
 package com.sun.javafx.scene.control.behavior;
 
 import javafx.scene.control.ProgressBar;
+import java.util.Collections;
 
 
 public class ProgressBarBehavior<C extends ProgressBar> extends BehaviorBase<C> {
@@ -37,6 +38,6 @@ public class ProgressBarBehavior<C extends ProgressBar> extends BehaviorBase<C> 
      **************************************************************************/
 
     public ProgressBarBehavior(final C progress) {
-        super(progress);
+        super(progress, Collections.EMPTY_LIST);
     }
 }

@@ -102,15 +102,11 @@ public class SliderBehavior extends BehaviorBase<Slider> {
     private TwoLevelFocusBehavior tlFocus;
 
     public SliderBehavior(Slider slider) {
-        super(slider);
+        super(slider, SLIDER_BINDINGS);
         // Only add this if we're on an embedded platform that supports 5-button navigation
         if (com.sun.javafx.scene.control.skin.Utils.isTwoLevelFocus()) {
             tlFocus = new TwoLevelFocusBehavior(slider); // needs to be last.
         }
-    }
-
-    @Override protected List<KeyBinding> createKeyBindings() {
-        return SLIDER_BINDINGS;
     }
 
     @Override public void dispose() {
