@@ -33,10 +33,34 @@ import com.sun.glass.ui.GestureSupport;
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.View;
 
-import java.util.LinkedList;
-import java.util.Hashtable;
+import java.lang.Integer;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+
 
 final class LensTouchInputSupport {
+
+    private static final int touchTapRadius;
+    private static final int touchReleasePendingTimeout;
+
+    static {
+        touchTapRadius = AccessController.doPrivileged(
+        new PrivilegedAction<Integer>() {
+            @Override
+            public Integer run() {
+                return Integer.getInteger("lens.touchTapRadius", 20);
+            }
+        });
+
+        touchReleasePendingTimeout = AccessController.doPrivileged(
+        new PrivilegedAction<Integer>() {
+            @Override
+            public Integer run() {
+                return Integer.getInteger("lens.touchReleasePendingTimeout", 50);
+            }
+        });
+    }
+
 
     private final static GestureSupport gestures = new GestureSupport(false);
     private final static TouchInputSupport touches =
