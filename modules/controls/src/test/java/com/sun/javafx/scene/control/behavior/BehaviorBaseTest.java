@@ -25,17 +25,20 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.control.Button;
 import javafx.scene.control.Skin;
 import javafx.scene.input.KeyCode;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import com.sun.javafx.scene.control.skin.BehaviorSkinBase;
 import org.junit.Before;
 import org.junit.Test;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -44,57 +47,173 @@ import static org.junit.Assert.assertTrue;
  */
 public class BehaviorBaseTest {
     private Button button;
+    private Skin<Button> skin;
+    private BehaviorBaseMock behavior;
+    private ArrayList<KeyBinding> bindings;
+    private KeyEventFirer keyboard;
 
-    @Before public void setup() {
+    @Before
+    public void setup() {
         button = new Button();
+        bindings = new ArrayList<>();
+        bindings.addAll(BehaviorBase.TRAVERSAL_BINDINGS);
+        behavior = new BehaviorBaseMock(button, bindings);
+        skin = new BehaviorSkinBase(button, behavior) {};
+        button.setSkin(skin);
+        keyboard = new KeyEventFirer(button);
     }
 
+    /**
+     * We don't accept null for the control of a behavior
+     */
     @Test(expected = NullPointerException.class)
     public void creatingBehaviorWithNullControlThrowsNPE() {
         new BehaviorBase<Button>(null, Collections.EMPTY_LIST);
     }
 
-    @Test(expected = NullPointerException.class)
-    public void creatingBehaviorWithNullKeyBindingsThrowsNPE() {
-        new BehaviorBase<>(button, null);
+    /**
+     * We do accept null for the key bindings of a behavior, treating it as empty
+     */
+    @Test
+    public void creatingBehaviorWithNullKeyBindingsResultsInEmptyKeyBindings() {
+        BehaviorBaseMock b = new BehaviorBaseMock(button, null);
+        skin = new BehaviorSkinBase(button, b) {};
+        button.setSkin(skin);
+        keyboard.doKeyPress(KeyCode.TAB);
+        assertFalse(b.someActionCalled());
     }
 
-    // Test that changes to key bindings after the createKeyBindings method is called
-    // has no effect.
+    /**
+     * This is a hard-and-fast rule, you must always have the control set to the
+     * expected value after the constructor was called
+     */
+    @Test
+    public void controlMustBeSet() {
+        assertEquals(button, behavior.getControl());
+    }
 
-    // Test that the different traversal bindings call the right stuff on the traversal engine
+    /**
+     * This is a little fishy. Right now we store the control in a final field, so we
+     * know that we want this to continue returning "button" after dispose, but really
+     * it seems better to clear the control after dispose, although this mean we can
+     * no longer store the control in a final field.
+     */
+    @Test
+    public void controlMustNotBeClearedOnDispose() {
+        button.setSkin(null);
+        assertEquals(button, behavior.getControl());
+    }
 
-    // Test that the control is set
+    /**
+     * Modifying the list passed to BehaviorBase should have no effect on what
+     * key bindings are used.
+     */
+    @Test
+    public void changingKeyBindingsDynamicallyMustHaveNoEffect() {
+        bindings.set(0, new KeyBinding(KeyCode.TAB, "action2"));
+        keyboard.doKeyPress(KeyCode.TAB);
+        assertTrue(behavior.actionCalled(BehaviorBase.TRAVERSE_NEXT));
+        assertFalse(behavior.actionCalled("action2"));
+    }
 
-    // Test that key events on a control are handled by the behavior
+    /**
+     * Test that if the default traversal bindings are installed, that the "tab" event is
+     * handled correctly
+     */
+    @Test
+    public void tabCalls_TraverseNext() {
+        keyboard.doKeyPress(KeyCode.TAB);
+        assertTrue(behavior.actionCalled(BehaviorBase.TRAVERSE_NEXT));
+    }
 
-    // Test that key events on a control where the behavior was removed are no longer handled by the behavior
-    @Test public void keyListenerShouldBeRemovedAfterBehaviorIsDisposed() {
-        // Shove the result of the behavior responding to a key event here
-        final BooleanProperty actionCalled = new SimpleBooleanProperty(false);
-        // Setup the test
-        BehaviorBase behavior = new BehaviorBase(button, Arrays.asList(new KeyBinding(KeyCode.ENTER, "action!"))) {
-            @Override protected void callAction(String name) {
-                actionCalled.set(true);
-            }
-        };
-        Skin skin = new BehaviorSkinBase(button, behavior) {};
-        button.setSkin(skin);
+    /**
+     * Test that if the default traversal bindings are installed, that the "shift+tab" event is
+     * handled correctly
+     */
+    @Test
+    public void shiftTabCalls_TraversePrevious() {
+        keyboard.doKeyPress(KeyCode.TAB, KeyModifier.SHIFT);
+        assertTrue(behavior.actionCalled(BehaviorBase.TRAVERSE_PREVIOUS));
+    }
 
-        KeyEventFirer keyboard = new KeyEventFirer(button);
+    /**
+     * Test that if the default traversal bindings are installed, that the "up" event is
+     * handled correctly
+     */
+    @Test
+    public void upCalls_TraverseUp() {
+        keyboard.doKeyPress(KeyCode.UP);
+        assertTrue(behavior.actionCalled(BehaviorBase.TRAVERSE_UP));
+    }
 
+    /**
+     * Test that if the default traversal bindings are installed, that the "down" event is
+     * handled correctly
+     */
+    @Test
+    public void downCalls_TraverseDown() {
+        keyboard.doKeyPress(KeyCode.DOWN);
+        assertTrue(behavior.actionCalled(BehaviorBase.TRAVERSE_DOWN));
+    }
+
+    /**
+     * Test that if the default traversal bindings are installed, that the "left" event is
+     * handled correctly
+     */
+    @Test
+    public void leftCalls_TraverseLeft() {
+        keyboard.doKeyPress(KeyCode.LEFT);
+        assertTrue(behavior.actionCalled(BehaviorBase.TRAVERSE_LEFT));
+    }
+
+    /**
+     * Test that if the default traversal bindings are installed, that the "right" event is
+     * handled correctly
+     */
+    @Test
+    public void rightCalls_TraverseRight() {
+        keyboard.doKeyPress(KeyCode.RIGHT);
+        assertTrue(behavior.actionCalled(BehaviorBase.TRAVERSE_RIGHT));
+    }
+
+    @Test
+    public void keyListenerShouldBeRemovedAfterBehaviorIsDisposed() {
         // Send a key event
-        keyboard.doKeyPress(KeyCode.ENTER);
-        assertTrue(actionCalled.get());
-        actionCalled.set(false);
+        keyboard.doKeyPress(KeyCode.TAB);
+        assertTrue(behavior.someActionCalled());
+        behavior.reset();
 
         // Remove the skin, which should result in dispose being called, and then send another event
         button.setSkin(null);
-        keyboard.doKeyPress(KeyCode.ENTER);
-        assertFalse(actionCalled.get());
+        keyboard.doKeyPress(KeyCode.TAB);
+        assertFalse(behavior.someActionCalled());
     }
 
     // Test the matchActionForEvent
     //      Make sure paired events are consumed / allowed together
     //
+
+    private static final class BehaviorBaseMock extends BehaviorBase<Button> {
+        private Set<String> actionsCalled = new HashSet<>();
+
+        public BehaviorBaseMock(Button control, List<KeyBinding> keyBindings) {
+            super(control, keyBindings);
+        }
+
+        @Override protected void callAction(String name) {
+            actionsCalled.add(name);
+        }
+
+        public boolean someActionCalled() {
+            return !actionsCalled.isEmpty();
+        }
+
+        public boolean actionCalled(String name) {
+            return actionsCalled.contains(name);
+        }
+
+        public void reset() {
+            actionsCalled.clear();
+        }
+    }
 }

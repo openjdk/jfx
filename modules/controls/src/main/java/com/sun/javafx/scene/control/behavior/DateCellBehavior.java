@@ -89,7 +89,7 @@ public class DateCellBehavior extends CellBehaviorBase<DateCell> {
         super.callAction(name);
     }
 
-    @Override public void traverse(Node node, Direction dir) {
+    @Override public void traverse(final Node node, final Direction dir) {
         switch (dir) {
           case UP:
           case DOWN:
