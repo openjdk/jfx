@@ -980,6 +980,7 @@ public class Scene implements EventTarget {
     // Used by the camera
     void markCameraDirty() {
         markDirty(DirtyBits.CAMERA_DIRTY);
+        setNeedsRepaint();
     }
 
     /**
