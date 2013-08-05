@@ -26,6 +26,7 @@
 package com.sun.prism.impl;
 
 import com.sun.javafx.font.CharToGlyphMapper;
+import com.sun.javafx.font.CompositeGlyphMapper;
 import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.Glyph;
@@ -38,12 +39,14 @@ import com.sun.prism.impl.packrect.RectanglePacker;
 import com.sun.prism.Texture;
 import com.sun.prism.impl.shape.MaskData;
 import com.sun.prism.paint.Color;
+
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.WeakHashMap;
 
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
+
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture.WrapMode;
 
@@ -133,7 +136,7 @@ public class GlyphCache {
         boolean subPixel = strike.isSubPixelGlyph();
         float subPixelX = 0;
         for (int gi = 0; gi < len; gi++) {
-            int gc = gl.getGlyphCode(gi);
+            int gc = gl.getGlyphCode(gi) & CompositeGlyphMapper.GLYPHMASK;
 
             // If we have a supplementary character, then a special
             // glyph is inserted in the list, which is one we skip
