@@ -28,6 +28,7 @@ package com.sun.javafx.scene.control.behavior;
 import javafx.scene.control.Button;
 import javafx.scene.control.Skin;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.MouseEvent;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -35,6 +36,7 @@ import java.util.List;
 import java.util.Set;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.KeyModifier;
+import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import com.sun.javafx.scene.control.skin.BehaviorSkinBase;
 import org.junit.Before;
 import org.junit.Test;
@@ -46,21 +48,23 @@ import static org.junit.Assert.assertTrue;
  * Unit tests for BehaviorBase
  */
 public class BehaviorBaseTest {
-    private Button button;
+    private ControlMock button;
     private Skin<Button> skin;
     private BehaviorBaseMock behavior;
     private ArrayList<KeyBinding> bindings;
     private KeyEventFirer keyboard;
+    private MouseEventFirer mouse;
 
     @Before
     public void setup() {
-        button = new Button();
+        button = new ControlMock();
         bindings = new ArrayList<>();
         bindings.addAll(BehaviorBase.TRAVERSAL_BINDINGS);
         behavior = new BehaviorBaseMock(button, bindings);
         skin = new BehaviorSkinBase(button, behavior) {};
         button.setSkin(skin);
         keyboard = new KeyEventFirer(button);
+        mouse = new MouseEventFirer(button);
     }
 
     /**
@@ -176,6 +180,11 @@ public class BehaviorBaseTest {
         assertTrue(behavior.actionCalled(BehaviorBase.TRAVERSE_RIGHT));
     }
 
+    /**
+     * Make sure that key listeners are removed after the behavior is disposed, which should
+     * always happen when the skin is disposed, which should always happen when the skin is
+     * removed from a Control.
+     */
     @Test
     public void keyListenerShouldBeRemovedAfterBehaviorIsDisposed() {
         // Send a key event
@@ -189,12 +198,77 @@ public class BehaviorBaseTest {
         assertFalse(behavior.someActionCalled());
     }
 
+    /**
+     * Test to make sure that the focusChanged() method is called when focus is gained.
+     */
+    @Test
+    public void focusListenerShouldBeCalledWhenFocusGained() {
+        assertFalse(behavior.focusCalled);
+        button.focus();
+        assertTrue(behavior.focusCalled);
+    }
+
+    /**
+     * Test to make sure that the focusChanged() method is called when focus is lost
+     */
+    @Test
+    public void focusListenerShouldBeCalledWhenFocusLost() {
+        assertFalse(behavior.focusCalled);
+        button.focus();
+        behavior.reset();
+        button.blur();
+        assertTrue(behavior.focusCalled);
+    }
+
+    /**
+     * Make sure that the behavior is no longer called on focus changes after disposal
+     */
+    @Test
+    public void focusListenerShouldBeRemovedAfterBehaviorIsDisposed() {
+        button.setSkin(null);
+        button.focus();
+        assertFalse(behavior.focusCalled);
+    }
+
+    /**
+     * mousePressed method should be called when the behavior is wired up properly
+     */
+    @Test
+    public void mousePressedCalledWhenMousePressedOverControl() {
+        assertFalse(behavior.mousePressCalled);
+        mouse.fireMousePressed();
+        assertTrue(behavior.mousePressCalled);
+    }
+
+    /**
+     * The mouse handlers should never be called when the skin / behavior has been
+     * disposed of.
+     */
+    @Test
+    public void mouseListenerShouldBeRemovedAfterBehaviorIsDisposed() {
+        button.setSkin(null);
+        mouse.fireMousePressed();
+        assertFalse(behavior.mousePressCalled);
+    }
+
+
     // Test the matchActionForEvent
     //      Make sure paired events are consumed / allowed together
     //
 
+    private static final class ControlMock extends Button {
+        public void focus() {
+            setFocused(true);
+        }
+        public void blur() {
+            setFocused(false);
+        }
+    }
+
     private static final class BehaviorBaseMock extends BehaviorBase<Button> {
         private Set<String> actionsCalled = new HashSet<>();
+        private boolean focusCalled;
+        private boolean mousePressCalled;
 
         public BehaviorBaseMock(Button control, List<KeyBinding> keyBindings) {
             super(control, keyBindings);
@@ -212,8 +286,19 @@ public class BehaviorBaseTest {
             return actionsCalled.contains(name);
         }
 
+        @Override protected void focusChanged() {
+            focusCalled = true;
+        }
+
+        @Override
+        public void mousePressed(MouseEvent e) {
+            mousePressCalled = true;
+        }
+
         public void reset() {
             actionsCalled.clear();
+            focusCalled = false;
+            mousePressCalled = false;
         }
     }
 }
