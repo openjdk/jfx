@@ -686,6 +686,20 @@ public class TableViewTest {
         assertTrue(table.getSortOrder().isEmpty());
         assertNull(oldComparator);
     }
+
+    @Test public void testComparatorIsNullWhenSortOrderListIsEmpty() {
+        TableColumn<String, String> col = initSortTestStructure();
+
+        assertNull(table.getComparator());
+
+        table.getSortOrder().add(col);
+        assertFalse(table.getSortOrder().isEmpty());
+        assertNotNull(table.getComparator());
+
+        table.getSortOrder().clear();
+        assertTrue(table.getSortOrder().isEmpty());
+        assertNull(table.getComparator());
+    }
     
     
     
