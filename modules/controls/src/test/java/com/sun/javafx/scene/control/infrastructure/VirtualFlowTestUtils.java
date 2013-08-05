@@ -25,6 +25,7 @@
 package com.sun.javafx.scene.control.infrastructure;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
@@ -33,12 +34,7 @@ import javafx.geometry.Orientation;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.Control;
-import javafx.scene.control.IndexedCell;
-import javafx.scene.control.ListView;
-import javafx.scene.control.TableRow;
-import javafx.scene.control.TreeTableRow;
+import javafx.scene.control.*;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 
@@ -228,6 +224,10 @@ public class VirtualFlowTestUtils {
 
     public static IndexedCell getCell(final Control control, final int row, final int column) {
         IndexedCell rowCell = getVirtualFlow(control).getCell(row);
+        if (column == -1) {
+            return rowCell;
+        }
+
         int count = 0;
         for (Node n : rowCell.getChildrenUnmodifiable()) {
             if (! (n instanceof IndexedCell)) {
@@ -241,23 +241,47 @@ public class VirtualFlowTestUtils {
     }
 
     public static void assertCallback(final Control control, final int startRow, final int endRow, final Callback<IndexedCell<?>, Void> callback) {
-        VirtualFlow<?> flow = getVirtualFlow(control);
-
-        //        Region clippedContainer = (Region) flow.getChildrenUnmodifiable().get(0);
-        //        Group sheet = (Group) clippedContainer.getChildrenUnmodifiable().get(0);
-
-        //        final int sheetSize = sheet.getChildren().size();
+        final VirtualFlow<?> flow = getVirtualFlow(control);
         final int sheetSize = flow.getCellCount();
-        final int end = endRow == -1 ? sheetSize : Math.min(endRow, sheetSize);
+
+        // NOTE: we used to only go to the end of the sheet, but now we go past that if
+        // endRow desires. This is to allow for us to test cells that are visually
+        // shown, but empty.
+        final int end = endRow == -1 ? sheetSize : endRow; //Math.min(endRow, sheetSize);
+
         for (int row = startRow; row < end; row++) {
             // old approach:
             // callback.call((IndexedCell<?>)sheet.getChildren().get(row));
 
             // new approach:
-            IndexedCell cell = flow.getCell(row);
-            //            System.out.println("cell index: " + cell.getIndex());
-            callback.call(cell);
+            callback.call(flow.getCell(row));
         }
+    }
+
+    public static void assertGraphicIsVisible(final Control control, int row) {
+        assertGraphicIsVisible(control, row, -1);
+    }
+
+    public static void assertGraphicIsVisible(final Control control, int row, int column) {
+        Cell cell = getCell(control, row, column);
+        Node graphic = cell.getGraphic();
+        assertNotNull(graphic);
+        assertTrue(graphic.isVisible() && graphic.getOpacity() == 1.0);
+    }
+
+    public static void assertGraphicIsNotVisible(final Control control, int row) {
+        assertGraphicIsNotVisible(control, row, -1);
+    }
+
+    public static void assertGraphicIsNotVisible(final Control control, int row, int column) {
+        Cell cell = getCell(control, row, column);
+        Node graphic = cell.getGraphic();
+        if (graphic == null) {
+            return;
+        }
+
+        assertNotNull(graphic);
+        assertTrue(!graphic.isVisible() || graphic.getOpacity() == 0.0);
     }
 
     public static void assertCellCount(final Control control, final int expected) {
@@ -274,8 +298,6 @@ public class VirtualFlowTestUtils {
         group.getChildren().setAll(control);
         stage.show();
 
-        //        Toolkit.getToolkit().firePulse();
-
         VirtualFlow<?> flow;
         if (control instanceof ComboBox) {
             final ComboBox cb = (ComboBox) control;
@@ -284,9 +306,7 @@ public class VirtualFlowTestUtils {
         }
 
         flow = (VirtualFlow<?>)control.lookup("#virtual-flow");
-
         stage.close();
-        stage = null;
 
         return flow;
     }

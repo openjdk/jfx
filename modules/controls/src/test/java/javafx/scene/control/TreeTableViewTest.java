@@ -64,6 +64,7 @@ import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 import javafx.scene.image.ImageView;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
+import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 
@@ -2262,14 +2263,14 @@ public class TreeTableViewTest {
 
         StageLoader sl = new StageLoader(treeTableView);
 
-        assertEquals(0, rt_31200_count);
+        assertEquals(12, rt_31200_count);
 
         // resize the stage
         sl.getStage().setHeight(250);
         Toolkit.getToolkit().firePulse();
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
-        assertEquals(0, rt_31200_count);
+        assertEquals(12, rt_31200_count);
     }
 
     @Test public void test_rt_31200_tableRow() {
@@ -2315,14 +2316,14 @@ public class TreeTableViewTest {
 
         StageLoader sl = new StageLoader(treeTableView);
 
-        assertEquals(0, rt_31200_count);
+        assertEquals(17, rt_31200_count);
 
         // resize the stage
         sl.getStage().setHeight(250);
         Toolkit.getToolkit().firePulse();
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
-        assertEquals(0, rt_31200_count);
+        assertEquals(17, rt_31200_count);
     }
 
     @Test public void test_rt_31727() {
@@ -2426,5 +2427,92 @@ public class TreeTableViewTest {
         assertFalse(rootRow.isSelected());
         child3Row = (TreeTableRow) VirtualFlowTestUtils.getCell(treeTableView, 1);
         assertTrue(child3Row.isSelected());
+    }
+
+    @Test public void test_rt_30484_treeTableCell() {
+        installChildren();
+
+        TreeTableColumn<String, String> col = new TreeTableColumn<String, String>("column");
+        col.setSortType(ASCENDING);
+        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
+            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
+                return new ReadOnlyObjectWrapper<String>(param.getValue().getValue());
+            }
+        });
+        treeTableView.getColumns().add(col);
+
+        col.setCellFactory(new Callback<TreeTableColumn<String, String>, TreeTableCell<String, String>>() {
+            @Override
+            public TreeTableCell<String, String> call(TreeTableColumn<String, String> param) {
+                return new TreeTableCell<String, String>() {
+                    Rectangle graphic = new Rectangle(10, 10, Color.RED);
+                    { setGraphic(graphic); };
+
+                    @Override protected void updateItem(String item, boolean empty) {
+                        super.updateItem(item, empty);
+                        if (item == null || empty) {
+                            graphic.setVisible(false);
+                            setText(null);
+                        } else {
+                            graphic.setVisible(true);
+                            setText(item);
+                        }
+                    }
+                };
+            }
+        });
+
+        // First four rows have content, so the graphic should show.
+        // All other rows have no content, so graphic should not show.
+
+        VirtualFlowTestUtils.assertGraphicIsVisible(treeTableView,    0, 0);
+        VirtualFlowTestUtils.assertGraphicIsVisible(treeTableView,    1, 0);
+        VirtualFlowTestUtils.assertGraphicIsVisible(treeTableView,    2, 0);
+        VirtualFlowTestUtils.assertGraphicIsVisible(treeTableView,    3, 0);
+        VirtualFlowTestUtils.assertGraphicIsNotVisible(treeTableView, 4, 0);
+        VirtualFlowTestUtils.assertGraphicIsNotVisible(treeTableView, 5, 0);
+    }
+
+    @Test public void test_rt_30484_treeTableRow() {
+        installChildren();
+
+        TreeTableColumn<String, String> col = new TreeTableColumn<String, String>("column");
+        col.setSortType(ASCENDING);
+        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
+            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
+                return new ReadOnlyObjectWrapper<String>(param.getValue().getValue());
+            }
+        });
+        treeTableView.getColumns().add(col);
+
+        treeTableView.setRowFactory(new Callback<TreeTableView<String>, TreeTableRow<String>>() {
+            @Override public TreeTableRow<String> call(TreeTableView<String> param) {
+                return new TreeTableRow<String>() {
+                    Rectangle graphic = new Rectangle(10, 10, Color.RED);
+                    { setGraphic(graphic); };
+
+                    @Override protected void updateItem(String item, boolean empty) {
+                        super.updateItem(item, empty);
+                        if (item == null || empty) {
+                            graphic.setVisible(false);
+                            setText(null);
+                        } else {
+                            graphic.setVisible(true);
+                            setText(item.toString());
+                        }
+                    }
+                };
+            }
+        });
+
+        // First two rows have content, so the graphic should show.
+        // All other rows have no content, so graphic should not show.
+
+        VirtualFlowTestUtils.assertGraphicIsVisible(treeTableView,    0);
+        VirtualFlowTestUtils.assertGraphicIsVisible(treeTableView,    1);
+        VirtualFlowTestUtils.assertGraphicIsVisible(treeTableView,    2);
+        VirtualFlowTestUtils.assertGraphicIsVisible(treeTableView,    3);
+        VirtualFlowTestUtils.assertGraphicIsNotVisible(treeTableView, 4);
+        VirtualFlowTestUtils.assertGraphicIsNotVisible(treeTableView, 5);
     }
 }
