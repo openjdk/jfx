@@ -99,11 +99,19 @@ public class PlatformImpl {
 
     /**
      * Sets the name of the this application based on the Application class.
+     * This method is called by the launcher or by the deploy code, and is not
+     * called from the FX Application Thread, so we need to do it in a runLater.
+     * We do not need to wait for the result since it will complete before the
+     * Application start() method is called regardless.
      *
      * @param appClass the Application class.
      */
-    public static void setApplicationName(Class appClass) {
-        com.sun.glass.ui.Application.GetApplication().setName(appClass.getName());
+    public static void setApplicationName(final Class appClass) {
+        runLater(new Runnable() {
+            @Override public void run() {
+                com.sun.glass.ui.Application.GetApplication().setName(appClass.getName());
+            }
+        });
     }
 
     /**
