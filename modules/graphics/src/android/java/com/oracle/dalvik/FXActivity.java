@@ -102,6 +102,14 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
         System.loadLibrary(ANDROID_WEBVIEW);
     }
 
+    @Override
+    protected void onDestroy() {
+        android.os.Process.killProcess(android.os.Process.myPid());
+        super.onDestroy();
+    }
+    
+    
+
     public static FXActivity getInstance() {
         return instance;
     }
@@ -156,6 +164,11 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
     private void hideIME() {
         mView.requestFocus();
         imm.hideSoftInputFromWindow(mView.getWindowToken(), 0);
+    }
+    
+    private void shutdown() {
+        Log.e(TAG, "VM SHUTDOWN");
+        finish();
     }
 
     private void installJVMIfNeeded() {

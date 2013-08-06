@@ -95,7 +95,8 @@ public class VMLauncher extends Thread {
     }
 
     private VMLauncher(String[] args) {
-        super("JVM");
+        super("VMLauncher");
+        setDaemon(true);
         this.args = args;
     }
 

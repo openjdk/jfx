@@ -42,8 +42,10 @@ extern "C" {
 #define THROW_RUNTIME_EXCEPTION(ENV, MESSAGE, ...)                          \
     char error_msg[256];                                                    \
     sprintf(error_msg, MESSAGE, __VA_ARGS__);                               \
-    (*ENV)->ThrowNew(ENV,                                                   \
-        (*ENV)->FindClass(ENV, "java/lang/RuntimeException"), error_msg);
+    if (env) {                                                              \
+      (*ENV)->ThrowNew(ENV,                                                 \
+          (*ENV)->FindClass(ENV, "java/lang/RuntimeException"), error_msg); \
+    }                                                                       
 
 #ifdef DEBUG
     // This method is good for early debug, but is unneeded for general use
@@ -65,6 +67,7 @@ extern "C" {
 
 ANativeWindow *getAndroidNativeWindow();
 
+void android_shutdown();
     
 #ifdef	__cplusplus
 }
