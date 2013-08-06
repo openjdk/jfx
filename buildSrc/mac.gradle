@@ -146,7 +146,14 @@ MAC.prismSW.lib = "prism_sw"
 
 MAC.launcher = [:]
 MAC.launcher.compiler = compiler
-MAC.launcher.ccFlags = [ccFlags].flatten();
+MAC.launcher.ccFlags = [
+        "-std=c99",
+        "-I$JDK_HOME/include",
+        "-I$JDK_HOME/include/darwin",
+        "-mmacosx-version-min=$MACOSX_MIN_VERSION",
+        "-arch", "x86_64",
+        "-framework", "Cocoa",
+        IS_DEBUG ? ["-DDEBUG", "-O0"] : ["-O3", "-DNDEBUG"]].flatten()
 MAC.launcher.linker = linker
 MAC.launcher.linkFlags = ["-ldl"]
 
