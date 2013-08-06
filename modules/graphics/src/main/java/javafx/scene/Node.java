@@ -7614,7 +7614,7 @@ public abstract class Node implements EventTarget, Styleable {
         boolean isTreeVisible = isVisible();
         if (isTreeVisible) {
             final Parent p = getParent();
-            isTreeVisible = p != null ? getParent().impl_isTreeVisible() :
+            isTreeVisible = p != null ? p.impl_isTreeVisible() :
                     clipParent != null ? clipParent.impl_isTreeVisible() :
                     getSubScene() == null || getSubScene().impl_isTreeVisible();
         }
