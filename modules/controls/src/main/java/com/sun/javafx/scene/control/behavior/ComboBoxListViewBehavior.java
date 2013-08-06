@@ -26,13 +26,12 @@
 package com.sun.javafx.scene.control.behavior;
 
 import javafx.scene.control.ComboBox;
-import static javafx.scene.input.KeyCode.*;
-import static javafx.scene.input.KeyEvent.*;
-
+import javafx.scene.control.SelectionModel;
 import java.util.ArrayList;
 import java.util.List;
-
-import javafx.scene.control.SelectionModel;
+import static javafx.scene.input.KeyCode.DOWN;
+import static javafx.scene.input.KeyCode.UP;
+import static javafx.scene.input.KeyEvent.KEY_PRESSED;
 
 public class ComboBoxListViewBehavior<T> extends ComboBoxBaseBehavior<T> {
 
@@ -46,7 +45,7 @@ public class ComboBoxListViewBehavior<T> extends ComboBoxBaseBehavior<T> {
      * 
      */
     public ComboBoxListViewBehavior(final ComboBox<T> comboBox) {
-        super(comboBox);
+        super(comboBox, COMBO_BOX_BINDINGS);
     }
 
     /***************************************************************************
@@ -60,10 +59,6 @@ public class ComboBoxListViewBehavior<T> extends ComboBoxBaseBehavior<T> {
         COMBO_BOX_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "selectPrevious"));
         COMBO_BOX_BINDINGS.add(new KeyBinding(DOWN, "selectNext"));
         COMBO_BOX_BINDINGS.addAll(COMBO_BOX_BASE_BINDINGS);
-    }
-
-    @Override protected List<KeyBinding> createKeyBindings() {
-        return COMBO_BOX_BINDINGS;
     }
 
     @Override protected void callAction(String name) {

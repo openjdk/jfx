@@ -417,7 +417,8 @@ public class ListCell<T> extends IndexedCell<T> {
      * Private implementation                                                  *
      *                                                                         *
      **************************************************************************/
-   
+
+    private boolean firstRun = true;
     private void updateItem() {
         ListView<T> lv = getListView();
         List<T> items = lv == null ? null : lv.getItems();
@@ -440,8 +441,15 @@ public class ListCell<T> extends IndexedCell<T> {
                 updateItem(newValue, false);
             }
         } else {
-            if (!isEmpty && oldValue != null) {
+            // RT-30484 We need to allow a first run to be special-cased to allow
+            // for the updateItem method to be called at least once to allow for
+            // the correct visual state to be set up. In particular, in RT-30484
+            // refer to Ensemble8PopUpTree.png - in this case the arrows are being
+            // shown as the new cells are instantiated with the arrows in the
+            // children list, and are only hidden in updateItem.
+            if ((!isEmpty && oldValue != null) || firstRun) {
                 updateItem(null, true);
+                firstRun = false;
             }
         }
     }

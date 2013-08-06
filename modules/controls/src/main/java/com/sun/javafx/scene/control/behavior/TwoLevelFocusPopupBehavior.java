@@ -76,6 +76,16 @@ public class TwoLevelFocusPopupBehavior extends TwoLevelFocusBehavior {
         tlNode.setEventDispatcher(tlfEventDispatcher);
     }
 
+    /**
+     * Invoked by the behavior when it is disposed, so that any listeners installed by
+     * the TwoLevelFocusBehavior can also be uninstalled
+     */
+    public void dispose() {
+        tlNode.removeEventHandler(KeyEvent.ANY, keyEventListener);
+        tlNode.removeEventHandler(MouseEvent.MOUSE_PRESSED, mouseEventListener);
+        tlNode.focusedProperty().removeListener(focusListener);
+        tlNode.setEventDispatcher(origEventDispatcher);
+    }
 
     /*
     ** don't allow the Node to handle a key event if it is in externalFocus mode.

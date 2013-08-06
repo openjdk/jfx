@@ -25,10 +25,10 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import java.util.ArrayList;
-import java.util.List;
 import javafx.scene.control.ToolBar;
 import javafx.scene.input.KeyCode;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * A Behavior implementation for ToolBars.
@@ -37,7 +37,7 @@ import javafx.scene.input.KeyCode;
 public class ToolBarBehavior extends BehaviorBase<ToolBar> {
 
     public ToolBarBehavior(ToolBar toolbar) {        
-        super(toolbar);
+        super(toolbar, TOOLBAR_BINDINGS);
     }
     
     /***************************************************************************
@@ -53,11 +53,7 @@ public class ToolBarBehavior extends BehaviorBase<ToolBar> {
         TOOLBAR_BINDINGS.add(new KeyBinding(KeyCode.F5, CTRL_F5).ctrl());    
     }
     
-    @Override protected List<KeyBinding> createKeyBindings() {
-        return TOOLBAR_BINDINGS;
-    }    
-    
-    @Override protected void callAction(String name) {            
+    @Override protected void callAction(String name) {
         if (CTRL_F5.equals(name)) {
             ToolBar toolbar = getControl();
             if (!toolbar.getItems().isEmpty()) {

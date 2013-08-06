@@ -26,6 +26,7 @@
 package com.sun.javafx.scene.control.behavior;
 
 import javafx.scene.control.Cell;
+import java.util.List;
 
 /**
  * Behaviors for standard cells types. Simply defines methods that subclasses
@@ -34,7 +35,7 @@ import javafx.scene.control.Cell;
  */
 public class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
 
-    public CellBehaviorBase(T control) {
-        super(control);
+    public CellBehaviorBase(T control, List<KeyBinding> bindings) {
+        super(control, bindings);
     }
 }

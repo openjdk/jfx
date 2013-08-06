@@ -25,12 +25,6 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import javafx.animation.Animation;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
@@ -58,12 +52,17 @@ import javafx.scene.layout.Region;
 import javafx.scene.text.Text;
 import javafx.stage.Popup;
 import javafx.util.Duration;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
-
-import static javafx.scene.input.MouseEvent.*;
-import static javafx.scene.input.TouchEvent.*;
-import static javafx.scene.layout.Region.*;
+import static javafx.scene.input.MouseEvent.MOUSE_PRESSED;
+import static javafx.scene.input.TouchEvent.TOUCH_PRESSED;
+import static javafx.scene.layout.Region.USE_PREF_SIZE;
 
 
 public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
@@ -236,7 +235,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
     }
 
     public FXVKSkin(final FXVK fxvk) {
-        super(fxvk, new BehaviorBase<FXVK>(fxvk));
+        super(fxvk, new BehaviorBase<>(fxvk, Collections.EMPTY_LIST));
         this.fxvk = fxvk;
 
         StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/fxvk.css");

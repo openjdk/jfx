@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,18 +25,17 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import javafx.scene.control.ProgressIndicator;
-import java.util.Collections;
+import org.junit.Test;
 
-public class ProgressIndicatorBehavior<C extends ProgressIndicator> extends BehaviorBase<C> {
+/**
+ */
+public class AccordionBehaviorTest {
+    // Focus Gained, the expanded pane gets focus
+    // Focus Gained and there is no expanded tab, give expanded tab focus
+    // Panes added / removed, focus should move along with it
+    // Pane gets focused, the focus model should reflect it
 
-    /***************************************************************************
-     *                                                                         *
-     * Constructors                                                            *
-     *                                                                         *
-     **************************************************************************/
+    @Test public void focusGainedIsCaughtByBehavior() {
 
-    public ProgressIndicatorBehavior(final C progress) {
-        super(progress, Collections.EMPTY_LIST);
     }
 }

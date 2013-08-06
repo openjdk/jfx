@@ -25,98 +25,82 @@
 
 package com.sun.javafx.scene.control.infrastructure;
 
-import java.util.Arrays;
-import java.util.List;
-
 import javafx.event.Event;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
-import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.canvas.Canvas;
-import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.image.WritableImage;
-import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.PickResult;
-import javafx.scene.layout.Pane;
-import javafx.scene.layout.Region;
-import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import java.util.Arrays;
+import java.util.List;
 
 
 public final class MouseEventFirer {
-    
-    private MouseEventFirer() {
-        // no-op
+    private final EventTarget target;
+
+    public MouseEventFirer(EventTarget target) {
+        this.target = target;
+    }
+
+    public void fireMousePressAndRelease(KeyModifier... modifiers) {
+        fireMouseEvent(MouseEvent.MOUSE_PRESSED, modifiers);
+        fireMouseEvent(MouseEvent.MOUSE_RELEASED, modifiers);
     }
     
-    public static void fireMousePressAndRelease(Node target, KeyModifier... modifiers) {
-        fireMouseEvent(target, MouseEvent.MOUSE_PRESSED, modifiers);
-        fireMouseEvent(target, MouseEvent.MOUSE_RELEASED, modifiers);
+    public void fireMouseClicked() {
+        fireMouseEvent(MouseEvent.MOUSE_CLICKED);
     }
     
-    public static void fireMouseClicked(Node target) {
-        fireMouseEvent(target, MouseEvent.MOUSE_CLICKED);
+    public void fireMouseClicked(MouseButton button) {
+        fireMouseEvent(MouseEvent.MOUSE_CLICKED, button, 0, 0);
     }
     
-    public static void fireMouseClicked(Node target, MouseButton button) {
-        fireMouseEvent(target, MouseEvent.MOUSE_CLICKED, button, 0, 0);
+    public void fireMouseClicked(double deltaX, double deltaY) {
+        fireMouseEvent(MouseEvent.MOUSE_CLICKED, deltaX, deltaY);
     }
     
-    public static void fireMouseClicked(Node target, double deltaX, double deltaY) {
-        fireMouseEvent(target, MouseEvent.MOUSE_CLICKED, deltaX, deltaY);
+    public void fireMousePressed() {
+        fireMouseEvent(MouseEvent.MOUSE_PRESSED);
     }
     
-    public static void fireMousePressed(Node target) {
-        fireMouseEvent(target, MouseEvent.MOUSE_PRESSED);
+    public void fireMousePressed(MouseButton button) {
+        fireMouseEvent(MouseEvent.MOUSE_PRESSED, button, 0, 0);
     }
     
-    public static void fireMousePressed(Node target, MouseButton button) {
-        fireMouseEvent(target, MouseEvent.MOUSE_PRESSED, button, 0, 0);
+    public void fireMousePressed(double deltaX, double deltaY) {
+        fireMouseEvent(MouseEvent.MOUSE_PRESSED, deltaX, deltaY);
     }
     
-    public static void fireMousePressed(Node target, double deltaX, double deltaY) {
-        fireMouseEvent(target, MouseEvent.MOUSE_PRESSED, deltaX, deltaY);
+    public void fireMouseReleased() {
+        fireMouseEvent(MouseEvent.MOUSE_RELEASED);
     }
     
-    public static void fireMouseReleased(Node target) {
-        fireMouseEvent(target, MouseEvent.MOUSE_RELEASED);
+    public void fireMouseReleased(MouseButton button) {
+        fireMouseEvent(MouseEvent.MOUSE_RELEASED, button, 0, 0);
     }
     
-    public static void fireMouseReleased(Node target, MouseButton button) {
-        fireMouseEvent(target, MouseEvent.MOUSE_RELEASED, button, 0, 0);
+    public void fireMouseReleased(double deltaX, double deltaY) {
+        fireMouseEvent(MouseEvent.MOUSE_RELEASED, deltaX, deltaY);
     }
     
-    public static void fireMouseReleased(Node target, double deltaX, double deltaY) {
-        fireMouseEvent(target, MouseEvent.MOUSE_RELEASED, deltaX, deltaY);
+    public void fireMouseEvent(EventType<MouseEvent> evtType, KeyModifier... modifiers) {
+        fireMouseEvent(evtType, 0, 0 , modifiers);
     }
     
-    public static void fireMouseEvent(Node target, EventType<MouseEvent> evtType, KeyModifier... modifiers) {
-        fireMouseEvent(target, evtType, 0, 0 , modifiers);
+    public void fireMouseEvent(EventType<MouseEvent> evtType, double deltaX, double deltaY, KeyModifier... modifiers) {
+        fireMouseEvent(evtType, MouseButton.PRIMARY, deltaX, deltaY, modifiers);
     }
     
-    public static void fireMouseEvent(Node target, EventType<MouseEvent> evtType, double deltaX, double deltaY, KeyModifier... modifiers) {
-        fireMouseEvent(target, evtType, MouseButton.PRIMARY, deltaX, deltaY, modifiers);
+    public void fireMouseEvent(EventType<MouseEvent> evtType, MouseButton button, double deltaX, double deltaY, KeyModifier... modifiers) {
+        fireMouseEvent(evtType, button, 1, deltaX, deltaY, modifiers);
     }
     
-    public static void fireMouseEvent(Node target, EventType<MouseEvent> evtType, MouseButton button, double deltaX, double deltaY, KeyModifier... modifiers) {
-        fireMouseEvent(target, evtType, button, 1, deltaX, deltaY, modifiers);
-    }
-    
-    public static void fireMouseEvent(Node target, EventType<MouseEvent> evtType, MouseButton button, int clickCount, double deltaX, double deltaY, KeyModifier... modifiers) {
-        fireMouseEvent((EventTarget)target, evtType, button, clickCount, deltaX, deltaY, modifiers);
-    }
-    
-    public static void fireMouseEvent(Scene target, EventType<MouseEvent> evtType, MouseButton button, int clickCount, double deltaX, double deltaY, KeyModifier... modifiers) {
-        fireMouseEvent((EventTarget)target, evtType, button, clickCount, deltaX, deltaY, modifiers);
-    }
-    
-    private static void fireMouseEvent(EventTarget target, EventType<MouseEvent> evtType, MouseButton button, int clickCount, double deltaX, double deltaY, KeyModifier... modifiers) {
+    private void fireMouseEvent(EventType<MouseEvent> evtType, MouseButton button, int clickCount, double deltaX, double deltaY, KeyModifier... modifiers) {
         Scene scene = null;
         Bounds targetBounds = null;
         
@@ -193,7 +177,7 @@ public final class MouseEventFirer {
         Event.fireEvent(target, evt);
     }
     
-//    public static void fireMouseEvent(Scene target, EventType<MouseEvent> evtType, MouseButton button, int clickCount, double deltaX, double deltaY, KeyModifier... modifiers) {
+//    public void fireMouseEvent(Scene target, EventType<MouseEvent> evtType, MouseButton button, int clickCount, double deltaX, double deltaY, KeyModifier... modifiers) {
 //        List<KeyModifier> ml = Arrays.asList(modifiers);
 //        
 //        double screenX = target.getWindow().getX() + target.getX() + deltaX;

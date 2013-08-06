@@ -25,27 +25,24 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.control.TitledPane;
+import javafx.scene.input.MouseEvent;
+import java.util.ArrayList;
+import java.util.List;
+import com.sun.javafx.scene.control.skin.TitledPaneSkin;
+import com.sun.javafx.scene.traversal.Direction;
 import static javafx.scene.input.KeyCode.ENTER;
 import static javafx.scene.input.KeyCode.SPACE;
 import static javafx.scene.input.KeyCode.TAB;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import javafx.scene.Parent;
-import javafx.scene.Node;
-import javafx.scene.control.TitledPane;
-import javafx.scene.input.MouseEvent;
-
-import com.sun.javafx.scene.control.skin.TitledPaneSkin;
-import com.sun.javafx.scene.traversal.Direction;
 
 public class TitledPaneBehavior extends BehaviorBase<TitledPane> {
 
     private TitledPane titledPane;
 
     public TitledPaneBehavior(TitledPane pane) {
-        super(pane);
+        super(pane, TITLEDPANE_BINDINGS);
         this.titledPane = pane;
     }
 
@@ -63,10 +60,6 @@ public class TitledPaneBehavior extends BehaviorBase<TitledPane> {
         TITLEDPANE_BINDINGS.add(new KeyBinding(TAB, "TraversePrevious").shift());
         TITLEDPANE_BINDINGS.add(new KeyBinding(ENTER, PRESS_ACTION));
         TITLEDPANE_BINDINGS.add(new KeyBinding(SPACE, PRESS_ACTION));
-    }
-
-    @Override protected List<KeyBinding> createKeyBindings() {
-            return TITLEDPANE_BINDINGS;
     }
 
     @Override protected void callAction(String name) {

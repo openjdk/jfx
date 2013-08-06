@@ -40,9 +40,12 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Bounds;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.SkinBase;
 import javafx.scene.layout.Pane;
@@ -55,6 +58,7 @@ import javafx.scene.shape.ArcType;
 import javafx.scene.shape.Circle;
 import javafx.scene.text.Text;
 import javafx.scene.transform.Scale;
+import javafx.stage.Window;
 import javafx.util.Duration;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableObjectProperty;
@@ -458,12 +462,102 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
             rebuildTimeline();
         }
 
+    private boolean isVisibleInClip() {
+        Parent p1 = control;
+
+        Bounds ourBounds1 = p1.localToScene(control.getLayoutBounds());
+        while (p1 != null) {
+            Node clip = p1.getClip();
+            if (clip != null) {
+                Bounds clipBounds1 = p1.localToScene(clip.getLayoutBounds());
+                if (!ourBounds1.intersects(clipBounds1)) {
+                    return false;
+                }
+            }
+            p1 = p1.getParent();
+        }
+        return true;
+    }
+
+    /*
+    ** see if we're clipped...
+    */
+    private void pauseIfNotVisibleInClip() {
+        if (!isVisibleInClip()) {
+            indeterminateTimeline.pause();
+            
+            Thread t = new Thread(new Runnable() {
+                 @Override
+                     public void run() {
+                        while (!isVisibleInClip()) {
+                            try {
+                                Thread.sleep(500);
+                            }
+                            catch (Exception e) {};
+                        }
+                        indeterminateTimeline.play();
+                    }
+                });
+            t.start();
+        }
+    }
+
+    private boolean isInvisibleOrDisconnected() {
+        Scene s = control.getScene();
+        if (s == null) {
+            return true;
+        }
+        Window w = s.getWindow();
+        if (w == null) {
+            return true;
+        }
+        if (w.impl_getPeer() == null) {
+            return true;
+        }
+        if (!control.impl_isTreeVisible()) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private boolean stopIfInvisibleOrDisconnected() {
+        if (isInvisibleOrDisconnected()) {
+            indeterminateTimeline.stop();
+            indeterminateTimeline = null;
+            return true;
+        }
+        return false;
+    }
+
+
+        private void stopIfNotNeeded() {
+            if (!stopIfInvisibleOrDisconnected()) {
+                pauseIfNotVisibleInClip();
+            }
+        }
+
         private void rebuildTimeline() {
             final ObservableList<KeyFrame> keyFrames = FXCollections.<KeyFrame>observableArrayList();
             if(spinEnabled) {
                 keyFrames.add(new KeyFrame(Duration.millis(0), new KeyValue(pathsG.rotateProperty(), 360)));
                 keyFrames.add(new KeyFrame(Duration.millis(3900), new KeyValue(pathsG.rotateProperty(), 0)));
             }
+            keyFrames.add(
+              new KeyFrame(
+                Duration.millis(50), new EventHandler<ActionEvent>() {
+                  @Override public void handle(ActionEvent event) {
+                      /*
+                      ** Stop the animation if the ProgressBar is removed
+                      ** from a Scene, or is invisible.
+                      ** Pause the animation if it's outside of a clipped
+                      ** region (e.g. not visible in a ScrollPane)
+                      */
+                      stopIfNotNeeded();
+                  }
+                }));
+
+
             for (int i = 100; i <= 3900; i += 100) {
                 keyFrames.add(
                         new KeyFrame(

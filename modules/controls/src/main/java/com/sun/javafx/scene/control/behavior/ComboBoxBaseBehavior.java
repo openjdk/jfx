@@ -25,21 +25,20 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import javafx.scene.Node;
 import javafx.scene.control.ComboBoxBase;
-import javafx.beans.Observable;
-import static javafx.scene.input.KeyCode.*;
-import static javafx.scene.input.KeyEvent.*;
-
-import com.sun.javafx.Utils;
-
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
-
 import java.util.ArrayList;
 import java.util.List;
-
-import javafx.beans.InvalidationListener;
-import javafx.scene.Node;
-import javafx.scene.input.MouseButton;
+import com.sun.javafx.Utils;
+import static javafx.scene.input.KeyCode.DOWN;
+import static javafx.scene.input.KeyCode.ENTER;
+import static javafx.scene.input.KeyCode.F4;
+import static javafx.scene.input.KeyCode.SPACE;
+import static javafx.scene.input.KeyCode.UP;
+import static javafx.scene.input.KeyEvent.KEY_PRESSED;
+import static javafx.scene.input.KeyEvent.KEY_RELEASED;
 
 public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
 
@@ -54,26 +53,33 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
     /**
      * 
      */
-    public ComboBoxBaseBehavior(final ComboBoxBase<T> comboBox) {
-        super(comboBox);
-        InvalidationListener focusListener = new InvalidationListener() {
-            @Override public void invalidated(Observable o) {
-                // If we did have the key down, but are now not focused, then we must
-                // disarm the button.
-                if (keyDown && !getControl().isFocused()) {
-                    keyDown = false;
-                    getControl().disarm();
-                }
-            }
-        };
-        getControl().focusedProperty().addListener(focusListener);
+    public ComboBoxBaseBehavior(final ComboBoxBase<T> comboBox, final List<KeyBinding> bindings) {
+        super(comboBox, bindings);
 
-        /*
-        ** only add this if we're on an embedded
-        ** platform that supports 5-button navigation 
-        */
+        // Only add this if we're on an embedded platform that supports 5-button navigation
         if (com.sun.javafx.scene.control.skin.Utils.isTwoLevelFocus()) {
             tlFocus = new TwoLevelFocusComboBehavior(comboBox); // needs to be last.
+        }
+    }
+
+    @Override public void dispose() {
+        if (tlFocus != null) tlFocus.dispose();
+        super.dispose();
+    }
+
+    /***************************************************************************
+     *                                                                         *
+     * Focus change handling                                                   *
+     *                                                                         *
+     **************************************************************************/
+
+    @Override protected void focusChanged() {
+        // If we did have the key down, but are now not focused, then we must
+        // disarm the box.
+        final ComboBoxBase box = getControl();
+        if (keyDown && !box.isFocused()) {
+            keyDown = false;
+            box.disarm();
         }
     }
 
@@ -117,10 +123,6 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(ENTER, KEY_PRESSED, PRESS_ACTION));
         COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(ENTER, KEY_RELEASED, RELEASE_ACTION));
         
-    }
-
-    @Override protected List<KeyBinding> createKeyBindings() {
-        return COMBO_BOX_BASE_BINDINGS;
     }
 
     @Override protected void callAction(String name) {

@@ -49,7 +49,7 @@ public class ColorPickerBehavior extends ComboBoxBaseBehavior<Color> {
      * 
      */
     public ColorPickerBehavior(final ColorPicker colorPicker) {
-        super(colorPicker);
+        super(colorPicker, COLOR_PICKER_BINDINGS);
     }
 
     /***************************************************************************
@@ -78,10 +78,6 @@ public class ColorPickerBehavior extends ComboBoxBaseBehavior<Color> {
         
     }
 
-    @Override protected List<KeyBinding> createKeyBindings() {
-        return COLOR_PICKER_BINDINGS;
-    }
-
     @Override protected void callAction(String name) {
         if (OPEN_ACTION.equals(name)) {
             show();
@@ -96,17 +92,7 @@ public class ColorPickerBehavior extends ComboBoxBaseBehavior<Color> {
      * Mouse Events                                                           *
      *                                                                        *
      *************************************************************************/
-     /**
-     * When a mouse button is pressed, we either want to behave like a button or
-     * show the popup.  This will be called by the skin.
-     *
-     * @param e the mouse press event
-     * @param showHidePopup if true, this should show or hide Popup.
-     */
-//    public void mousePressed(MouseEvent e) {
-//        super.mousePressed(e);
-//    }
-    
+
     @Override public void onAutoHide() {
         // when we click on some non  interactive part of the 
         // Color Palette - we do not want to hide.

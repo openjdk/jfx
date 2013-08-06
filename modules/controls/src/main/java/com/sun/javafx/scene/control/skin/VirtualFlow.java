@@ -25,12 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import java.util.AbstractList;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
+import com.sun.javafx.application.PlatformImpl;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.ConditionalFeature;
@@ -41,11 +36,7 @@ import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
-import javafx.event.Event;
-import javafx.event.EventDispatchChain;
-import javafx.event.EventDispatcher;
-import javafx.event.EventHandler;
+import javafx.event.*;
 import javafx.geometry.Orientation;
 import javafx.scene.Group;
 import javafx.scene.Node;
@@ -62,7 +53,9 @@ import javafx.scene.shape.Rectangle;
 import javafx.util.Callback;
 import javafx.util.Duration;
 
-import com.sun.javafx.application.PlatformImpl;
+import java.util.AbstractList;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Implementation of a virtualized container using a cell based mechanism.
@@ -297,10 +290,10 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * jitter. The access on this variable is package ONLY FOR TESTING.
      */
     private double maxPrefBreadth;
-    protected void setMaxPrefBreadth(double value) {
+    protected final void setMaxPrefBreadth(double value) {
         this.maxPrefBreadth = value;
     }
-    double getMaxPrefBreadth() {
+    protected final double getMaxPrefBreadth() {
         return maxPrefBreadth;
     }
 
@@ -311,10 +304,10 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * The access on this variable is package ONLY FOR TESTING.
      */
     private double viewportBreadth;
-    void setViewportBreadth(double value) {
+    protected final void setViewportBreadth(double value) {
         this.viewportBreadth = value;
     }
-    protected double getViewportBreadth() {
+    protected final double getViewportBreadth() {
         return viewportBreadth;
     }
 
@@ -388,9 +381,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * This is package private ONLY FOR TESTING
      */
     final ArrayLinkedList<T> cells = new ArrayLinkedList<T>();
-    @ReturnsUnmodifiableCollection
     protected List<T> getCells() {
-        return Collections.unmodifiableList(cells);
+        return cells;
     }
 
     /**
@@ -1789,7 +1781,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         return cell;
     }
 
-    private void addAllToPile() {
+    // protected to allow subclasses to clean up
+    protected void addAllToPile() {
         for (int i = 0, max = cells.size(); i < max; i++) {
             addToPile(cells.removeFirst());
         }
@@ -2055,10 +2048,10 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // if we find that the maxPrefBreadth exceeds the viewportBreadth,
         // then we will be sure to show the breadthBar and update it
         // accordingly.
-        int cellsSize = cells.size();
-        if (cellsSize > 0) {
-            for (int i = 0; i < cellsSize; i++) {
+        if (cells.size() > 0) {
+            for (int i = 0; i < cells.size(); i++) {
                 T cell = cells.get(i);
+                assert cell != null;
                 positionCell(cell, getCellPosition(cell) - delta);
             }
 
@@ -2399,7 +2392,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * <p>
      * This class is package private solely for the sake of testing.
      */
-    static class ArrayLinkedList<T> extends AbstractList {
+    public static class ArrayLinkedList<T> extends AbstractList {
         /**
          * The array list backing this class. We default the size of the array
          * list to be fairly large so as not to require resizing during normal
@@ -2538,13 +2531,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     Timeline sbTouchTimeline;
     KeyFrame sbTouchKF1;
     KeyFrame sbTouchKF2;
-    Timeline contentsToViewTimeline;
-    KeyFrame contentsToViewKF1;
-    KeyFrame contentsToViewKF2;
-    KeyFrame contentsToViewKF3;
 
     private boolean tempVisibility = false;
-
 
     protected void startSBReleasedAnimation() {
         if (sbTouchTimeline == null) {

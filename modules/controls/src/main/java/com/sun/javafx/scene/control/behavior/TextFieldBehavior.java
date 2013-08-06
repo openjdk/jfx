@@ -58,7 +58,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     private TwoLevelFocusBehavior tlFocus;
 
     public TextFieldBehavior(final TextField textField) {
-        super(textField);
+        super(textField, TEXT_INPUT_BINDINGS);
 
         contextMenu = new ContextMenu();
         if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
@@ -75,13 +75,15 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
             }
         });
 
-        /*
-        ** only add this if we're on an embedded
-        ** platform that supports 5-button navigation 
-        */
+        // Only add this if we're on an embedded platform that supports 5-button navigation
         if (com.sun.javafx.scene.control.skin.Utils.isTwoLevelFocus()) {
             tlFocus = new TwoLevelFocusBehavior(textField); // needs to be last.
         }
+    }
+
+    @Override public void dispose() {
+        if (tlFocus != null) tlFocus.dispose();
+        super.dispose();
     }
 
     private void handleFocusChange() {

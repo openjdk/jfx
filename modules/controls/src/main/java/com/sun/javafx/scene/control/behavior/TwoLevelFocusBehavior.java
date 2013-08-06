@@ -63,7 +63,6 @@ public class TwoLevelFocusBehavior {
     }
 
     public TwoLevelFocusBehavior(Node node) {
-
         tlNode = node;
         tlPopup = null;
 
@@ -76,11 +75,21 @@ public class TwoLevelFocusBehavior {
         tlNode.setEventDispatcher(tlfEventDispatcher);
     }
 
+    /**
+     * Invoked by the behavior when it is disposed, so that any listeners installed by
+     * the TwoLevelFocusBehavior can also be uninstalled
+     */
+    public void dispose() {
+        tlNode.removeEventHandler(KeyEvent.ANY, keyEventListener);
+        tlNode.removeEventHandler(MouseEvent.MOUSE_PRESSED, mouseEventListener);
+        tlNode.focusedProperty().removeListener(focusListener);
+        tlNode.setEventDispatcher(origEventDispatcher);
+    }
 
-    /*
-    ** don't allow the Node to handle a key event if it is in externalFocus mode.
-    ** the only keyboard actions allowed are the navigation keys......
-    */ 
+    /**
+     * Don't allow the Node to handle a key event if it is in externalFocus mode.
+     * the only keyboard actions allowed are the navigation keys......
+     */
     final EventDispatcher preemptiveEventDispatcher = new EventDispatcher() {
         @Override public Event dispatchEvent(Event event, EventDispatchChain tail) {
 
@@ -191,9 +200,9 @@ public class TwoLevelFocusBehavior {
     };
 
 
-    /*
-    **  When a node gets focus, put it in external-focus mode.
-    */
+    /**
+     *  When a node gets focus, put it in external-focus mode.
+     */
     final ChangeListener<Boolean> focusListener = new ChangeListener<Boolean>() {
         @Override public void changed(ObservableValue<? extends Boolean> observable, Boolean oldVal, Boolean newVal) {
             if (newVal && tlPopup != null) {
@@ -226,17 +235,12 @@ public class TwoLevelFocusBehavior {
         externalFocus = value;
 
         if (tlNode != null && tlNode instanceof Control) {
-            ((Control)tlNode).pseudoClassStateChanged(INTERNAL_PSEUDOCLASS_STATE, !value);
-            ((Control)tlNode).pseudoClassStateChanged(EXTERNAL_PSEUDOCLASS_STATE,  value);
+            tlNode.pseudoClassStateChanged(INTERNAL_PSEUDOCLASS_STATE, !value);
+            tlNode.pseudoClassStateChanged(EXTERNAL_PSEUDOCLASS_STATE, value);
         }
         else if (tlPopup != null) {
             tlPopup.pseudoClassStateChanged(INTERNAL_PSEUDOCLASS_STATE, !value);
-            tlPopup.pseudoClassStateChanged(EXTERNAL_PSEUDOCLASS_STATE,  value);
+            tlPopup.pseudoClassStateChanged(EXTERNAL_PSEUDOCLASS_STATE, value);
         }
     }
-
-    Node getTwoLevelFocusNode() {
-        return tlNode;
-    }
-
 }

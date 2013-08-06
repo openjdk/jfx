@@ -25,7 +25,6 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import java.util.List;
 import javafx.application.ConditionalFeature;
 import javafx.scene.Node;
 import javafx.scene.control.FocusModel;
@@ -36,6 +35,8 @@ import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import java.util.Collections;
+import java.util.List;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.control.Logging;
 import sun.util.logging.PlatformLogger;
@@ -109,7 +110,7 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
      **************************************************************************/
 
     public TreeCellBehavior(final TreeCell<T> control) {
-        super(control);
+        super(control, Collections.EMPTY_LIST);
     }
 
 

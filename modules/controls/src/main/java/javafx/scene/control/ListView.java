@@ -315,8 +315,14 @@ public class ListView<T> extends Control {
         if (items == null) {
             items = new SimpleObjectProperty<ObservableList<T>>(this, "items") {
                 WeakReference<ObservableList<T>> oldItemsRef;
-                
-                @Override protected void invalidated() {
+
+                // need to override set() rather than invalidated() as we need to
+                // be notified of all changes (even when the item is the same, such
+                // as in the case of a new empty items list replacing an old (but
+                // equal) empty items list
+                @Override public void set(ObservableList<T> newValue) {
+                    super.set(newValue);
+
                     ObservableList<T> oldItems = oldItemsRef == null ? null : oldItemsRef.get();
                     
                     // FIXME temporary fix for RT-15793. This will need to be

@@ -25,10 +25,6 @@
 
 package com.sun.javafx.scene.traversal;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-
 import javafx.application.ConditionalFeature;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
@@ -36,7 +32,9 @@ import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
 import com.sun.javafx.Logging;
 import com.sun.javafx.application.PlatformImpl;
 import sun.util.logging.PlatformLogger;
@@ -73,7 +71,7 @@ public class TraversalEngine {
          *    algorithm = new WeightedClosestCorner();
          * for Container sequence TAB behaviour and 2d arrow behaviour use :
          *    algorithm = new ContainerTabOrder();
-         * for 2D arrow behaviour with a target biasm and a stack use :
+         * for 2D arrow behaviour with a target bias and a stack use :
          *    algorithm = new Biased2DWithStack();
          */
         if (PlatformImpl.isSupported(ConditionalFeature.TWO_LEVEL_FOCUS)) {

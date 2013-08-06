@@ -86,17 +86,17 @@ public class TableViewBehavior<T> extends TableViewBehaviorBase<TableView<T>, T,
             sm.getSelectedCells().addListener(selectedCellsListener);
         }
         
-        /*
-        ** only add this if we're on an embedded
-        ** platform that supports 5-button navigation 
-        */
+        // Only add this if we're on an embedded platform that supports 5-button navigation
         if (Utils.isTwoLevelFocus()) {
             tlFocus = new TwoLevelFocusBehavior(control); // needs to be last.
         }
     }
 
-    
-    
+    @Override public void dispose() {
+        if (tlFocus != null) tlFocus.dispose();
+        super.dispose();
+    }
+
     /**************************************************************************
      *                                                                        *
      * Implement TableViewBehaviorBase abstract methods                       *

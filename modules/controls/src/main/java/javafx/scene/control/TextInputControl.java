@@ -25,10 +25,6 @@
 
 package javafx.scene.control;
 
-import java.text.BreakIterator;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -52,14 +48,18 @@ import javafx.css.CssMetaData;
 import javafx.css.FontCssMetaData;
 import javafx.css.PseudoClass;
 import javafx.css.StyleOrigin;
+import javafx.css.Styleable;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.text.Font;
+import java.text.BreakIterator;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import com.sun.javafx.Utils;
 import com.sun.javafx.binding.ExpressionHelper;
-import javafx.css.Styleable;
 
 /**
  * Abstract base class for text input controls.
@@ -603,7 +603,7 @@ public abstract class TextInputControl extends Control {
 
         // Skip the non-word region, then move/select to the beginning of the word.
         while (pos != BreakIterator.DONE &&
-               !Character.isLetter(text.charAt(Utils.clamp(0, pos, textLength-1)))) {
+               !Character.isLetterOrDigit(text.charAt(Utils.clamp(0, pos, textLength-1)))) {
             pos = breakIterator.preceding(Utils.clamp(0, pos, textLength-1));
         }
 
@@ -629,7 +629,7 @@ public abstract class TextInputControl extends Control {
         // skip the non-word region, then move/select to the beginning of the word.
         while (current != BreakIterator.DONE) {
             for (int p=last; p<=current; p++) {
-                if (Character.isLetter(text.charAt(Utils.clamp(0, p, textLength-1)))) {
+                if (Character.isLetterOrDigit(text.charAt(Utils.clamp(0, p, textLength-1)))) {
                     if (select) {
                         selectRange(getAnchor(), p);
                     } else {
@@ -668,7 +668,7 @@ public abstract class TextInputControl extends Control {
         // skip the non-word region, then move/select to the end of the word.
         while (current != BreakIterator.DONE) {
             for (int p=last; p<=current; p++) {
-                if (!Character.isLetter(text.charAt(Utils.clamp(0, p, textLength-1)))) {
+                if (!Character.isLetterOrDigit(text.charAt(Utils.clamp(0, p, textLength-1)))) {
                     if (select) {
                         selectRange(getAnchor(), p);
                     } else {

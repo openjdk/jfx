@@ -63,6 +63,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
+import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 
@@ -1104,13 +1105,46 @@ public class TreeViewTest {
 
         StageLoader sl = new StageLoader(treeView);
 
-        assertEquals(0, rt_31200_count);
+        assertEquals(24, rt_31200_count);
 
         // resize the stage
         sl.getStage().setHeight(250);
         Toolkit.getToolkit().firePulse();
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
-        assertEquals(0, rt_31200_count);
+        assertEquals(24, rt_31200_count);
+    }
+
+    @Test public void test_rt_30484() {
+        installChildren();
+        treeView.setCellFactory(new Callback<TreeView<String>, TreeCell<String>>() {
+            @Override public TreeCell<String> call(TreeView<String> param) {
+                return new TreeCell<String>() {
+                    Rectangle graphic = new Rectangle(10, 10, Color.RED);
+                    { setGraphic(graphic); };
+
+                    @Override protected void updateItem(String item, boolean empty) {
+                        super.updateItem(item, empty);
+                        if (item == null || empty) {
+                            graphic.setVisible(false);
+                            setText(null);
+                        } else {
+                            graphic.setVisible(true);
+                            setText(item);
+                        }
+                    }
+                };
+            }
+        });
+
+        // First two four have content, so the graphic should show.
+        // All other rows have no content, so graphic should not show.
+
+        VirtualFlowTestUtils.assertGraphicIsVisible(treeView, 0);
+        VirtualFlowTestUtils.assertGraphicIsVisible(treeView, 1);
+        VirtualFlowTestUtils.assertGraphicIsVisible(treeView, 2);
+        VirtualFlowTestUtils.assertGraphicIsVisible(treeView, 3);
+        VirtualFlowTestUtils.assertGraphicIsNotVisible(treeView, 4);
+        VirtualFlowTestUtils.assertGraphicIsNotVisible(treeView, 5);
     }
 }

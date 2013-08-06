@@ -25,20 +25,18 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.WeakHashMap;
-
-import static com.sun.javafx.scene.traversal.Direction.DOWN;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.ReadOnlyProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.event.WeakEventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
@@ -49,23 +47,24 @@ import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
-import javafx.beans.value.WeakChangeListener;
-
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.WeakHashMap;
 import com.sun.javafx.menu.MenuBase;
 import com.sun.javafx.scene.control.GlobalMenuAdapter;
-import javafx.event.WeakEventHandler;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.scene.traversal.TraverseListener;
 import com.sun.javafx.stage.StageHelper;
 import com.sun.javafx.tk.Toolkit;
-import javafx.event.ActionEvent;
-import javafx.scene.input.*;
+import static com.sun.javafx.scene.traversal.Direction.DOWN;
 
 
 /**
@@ -180,7 +179,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
      **************************************************************************/
 
     public MenuBarSkin(final MenuBar control) {
-        super(control, new BehaviorBase<MenuBar>(control));
+        super(control, new BehaviorBase<>(control, Collections.EMPTY_LIST));
         
         container = new HBox();
         container.getStyleClass().add("container");

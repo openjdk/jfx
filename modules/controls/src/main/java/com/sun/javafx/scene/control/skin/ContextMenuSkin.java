@@ -55,6 +55,7 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
     private ContextMenu popupMenu;
     
     private final Region root;
+    private TwoLevelFocusPopupBehavior tlFocus;
     
     // Fix for RT-18247
     private final EventHandler<KeyEvent> keyListener = new EventHandler<KeyEvent>() {
@@ -106,12 +107,9 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
         root.styleProperty().bind(popupMenu.styleProperty());
         root.getStyleClass().addAll(popupMenu.getStyleClass()); // TODO needs to handle updates
 
-        /*
-        ** only add this if we're on an embedded
-        ** platform that supports 5-button navigation 
-        */
+        // Only add this if we're on an embedded platform that supports 5-button navigation
         if (Utils.isTwoLevelFocus()) {
-            new TwoLevelFocusPopupBehavior(popupMenu); // needs to be last.
+            tlFocus = new TwoLevelFocusPopupBehavior(popupMenu); // needs to be last.
         }
     }
 
@@ -126,5 +124,6 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
     @Override public void dispose() {
         root.idProperty().unbind();
         root.styleProperty().unbind();
+        if (tlFocus != null) tlFocus.dispose();
     }
 }

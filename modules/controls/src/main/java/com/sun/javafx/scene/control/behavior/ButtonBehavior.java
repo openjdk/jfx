@@ -25,18 +25,14 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import static javafx.scene.input.KeyCode.SPACE;
-import static javafx.scene.input.KeyEvent.KEY_PRESSED;
-import static javafx.scene.input.KeyEvent.KEY_RELEASED;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.scene.control.ButtonBase;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import java.util.ArrayList;
+import java.util.List;
+import static javafx.scene.input.KeyCode.SPACE;
+import static javafx.scene.input.KeyEvent.KEY_PRESSED;
+import static javafx.scene.input.KeyEvent.KEY_RELEASED;
 
 
 /**
@@ -56,18 +52,27 @@ public class ButtonBehavior<C extends ButtonBase> extends BehaviorBase<C> {
      **************************************************************************/
 
     public ButtonBehavior(final C button) {
-        super(button);
-        InvalidationListener focusListener = new InvalidationListener() {
-            @Override public void invalidated(Observable property) {
-                // If we did have the key down, but are now not focused, then we must
-                // disarm the button.
-                if (keyDown && !button.isFocused()) {
-                    keyDown = false;
-                    button.disarm();
-                }
-            }
-        };
-        button.focusedProperty().addListener(focusListener);
+        super(button, BUTTON_BINDINGS);
+    }
+
+    public ButtonBehavior(final C button, final List<KeyBinding> bindings) {
+        super(button, bindings);
+    }
+
+    /***************************************************************************
+     *                                                                         *
+     * Focus change handling                                                   *
+     *                                                                         *
+     **************************************************************************/
+
+    @Override protected void focusChanged() {
+        // If we did have the key down, but are now not focused, then we must
+        // disarm the button.
+        final ButtonBase button = getControl();
+        if (keyDown && !button.isFocused()) {
+            keyDown = false;
+            button.disarm();
+        }
     }
 
     /***************************************************************************
@@ -91,10 +96,6 @@ public class ButtonBehavior<C extends ButtonBase> extends BehaviorBase<C> {
     static {
             BUTTON_BINDINGS.add(new KeyBinding(SPACE, KEY_PRESSED, PRESS_ACTION));
             BUTTON_BINDINGS.add(new KeyBinding(SPACE, KEY_RELEASED, RELEASE_ACTION));
-    }
-
-    @Override protected List<KeyBinding> createKeyBindings() {
-        return BUTTON_BINDINGS;
     }
 
     @Override protected void callAction(String name) {

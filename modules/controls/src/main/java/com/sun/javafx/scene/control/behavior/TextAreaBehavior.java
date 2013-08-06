@@ -25,8 +25,6 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import java.util.ArrayList;
-import java.util.List;
 import javafx.application.ConditionalFeature;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -41,15 +39,30 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.stage.Screen;
 import javafx.stage.Window;
+import java.util.ArrayList;
+import java.util.List;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.scene.control.skin.TextAreaSkin;
 import com.sun.javafx.scene.text.HitInfo;
-
-import static javafx.scene.input.KeyCode.*;
-import static javafx.scene.input.KeyEvent.*;
-import static com.sun.javafx.PlatformUtil.*;
+import static com.sun.javafx.PlatformUtil.isMac;
+import static com.sun.javafx.PlatformUtil.isWindows;
+import static javafx.scene.input.KeyCode.DOWN;
+import static javafx.scene.input.KeyCode.END;
+import static javafx.scene.input.KeyCode.ENTER;
+import static javafx.scene.input.KeyCode.HOME;
+import static javafx.scene.input.KeyCode.KP_DOWN;
+import static javafx.scene.input.KeyCode.KP_LEFT;
+import static javafx.scene.input.KeyCode.KP_RIGHT;
+import static javafx.scene.input.KeyCode.KP_UP;
+import static javafx.scene.input.KeyCode.LEFT;
+import static javafx.scene.input.KeyCode.PAGE_DOWN;
+import static javafx.scene.input.KeyCode.PAGE_UP;
+import static javafx.scene.input.KeyCode.RIGHT;
+import static javafx.scene.input.KeyCode.TAB;
+import static javafx.scene.input.KeyCode.UP;
+import static javafx.scene.input.KeyEvent.KEY_PRESSED;
 
 
 /**
@@ -135,7 +148,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
      *************************************************************************/
 
     public TextAreaBehavior(final TextArea textArea) {
-        super(textArea);
+        super(textArea, TEXT_AREA_BINDINGS);
 
         contextMenu = new ContextMenu();
         if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
@@ -184,13 +197,15 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
             }
         });
 
-        /*
-        ** only add this if we're on an embedded
-        ** platform that supports 5-button navigation 
-        */
+        // Only add this if we're on an embedded platform that supports 5-button navigation
         if (com.sun.javafx.scene.control.skin.Utils.isTwoLevelFocus()) {
             tlFocus = new TwoLevelFocusBehavior(textArea); // needs to be last.
         }
+    }
+
+    @Override public void dispose() {
+        if (tlFocus != null) tlFocus.dispose();
+        super.dispose();
     }
 
     // An unholy back-reference!
@@ -201,10 +216,6 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     /**************************************************************************
      * Key handling implementation                                            *
      *************************************************************************/
-
-    @Override protected List<KeyBinding> createKeyBindings() {
-        return TEXT_AREA_BINDINGS;
-    }
 
     @Override public void callAction(String name) {
         final TextArea textInputControl = getControl();

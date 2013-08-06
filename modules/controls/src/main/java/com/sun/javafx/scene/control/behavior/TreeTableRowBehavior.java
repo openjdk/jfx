@@ -25,8 +25,6 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import java.util.List;
-
 import javafx.scene.Node;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableColumn;
@@ -35,11 +33,13 @@ import javafx.scene.control.TreeTableView;
 import javafx.scene.control.TreeTableView.TreeTableViewSelectionModel;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import java.util.Collections;
+import java.util.List;
 
 public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
 
     public TreeTableRowBehavior(TreeTableRow<T> control) {
-        super(control);
+        super(control, Collections.EMPTY_LIST);
     }
 
     @Override public void mouseReleased(MouseEvent e) {

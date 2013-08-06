@@ -25,9 +25,7 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import java.util.ArrayList;
-import java.util.List;
-
+import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
@@ -37,6 +35,8 @@ import javafx.scene.control.FocusModel;
 import javafx.scene.control.TitledPane;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class AccordionBehavior extends BehaviorBase<Accordion> {
@@ -44,8 +44,13 @@ public class AccordionBehavior extends BehaviorBase<Accordion> {
     private AccordionFocusModel focusModel;
     
     public AccordionBehavior(Accordion accordion) {
-        super(accordion);
+        super(accordion, ACCORDION_BINDINGS);
         focusModel = new AccordionFocusModel(accordion);
+    }
+
+    @Override public void dispose() {
+        focusModel.dispose();
+        super.dispose();
     }
 
     /***************************************************************************
@@ -77,10 +82,6 @@ public class AccordionBehavior extends BehaviorBase<Accordion> {
         ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.PAGE_DOWN, CTRL_PAGE_DOWN).ctrl());
         ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.TAB, CTRL_TAB).ctrl());
         ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.TAB, CTRL_SHIFT_TAB).shift().ctrl());
-    }
-
-    @Override protected List<KeyBinding> createKeyBindings() {
-        return ACCORDION_BINDINGS;
     }
 
     @Override protected void callAction(String name) {   
@@ -135,12 +136,12 @@ public class AccordionBehavior extends BehaviorBase<Accordion> {
     }
 
 
-    /*
-    ** mouse press over the background of the accordian
-    ** i.e. it missed all of the titledpanes
-    ** select the last titledpane, or the accoridan if
-    ** none present
-    */
+    /**
+     * Mouse press over the background of the accordion
+     * i.e. it missed all of the titled panes
+     * select the last titled pane, or the accordion if
+     * none present
+     */
     public void mousePressed(MouseEvent e) {
         Accordion accordion = getControl();
         if (accordion.getPanes().size() > 0) {
@@ -156,56 +157,63 @@ public class AccordionBehavior extends BehaviorBase<Accordion> {
     static class AccordionFocusModel extends FocusModel<TitledPane> {
 
         private final Accordion accordion;
+        private final ChangeListener<Boolean> focusListener = new ChangeListener<Boolean>() {
+            @Override
+            public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+                if (newValue) {
+                    if (accordion.getExpandedPane() != null) {
+                        accordion.getExpandedPane().requestFocus();
+                    } else {
+                        // TODO need to detect the focus direction
+                        // to selected the first panel when TAB is pressed
+                        // or select the last panel when SHIFT TAB is pressed.
+                        accordion.getPanes().get(0).requestFocus();
+                    }
+                }
+            }
+        };
+        private final ChangeListener<Boolean> paneFocusListener = new ChangeListener<Boolean>() {
+            @Override public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+                if (newValue) {
+                    final ReadOnlyBooleanProperty focusedProperty = (ReadOnlyBooleanProperty) observable;
+                    final TitledPane tp = (TitledPane) focusedProperty.getBean();
+                    focus(accordion.getPanes().indexOf(tp));
+                }
+            }
+        };
+        private final ListChangeListener<TitledPane> panesListener = new ListChangeListener<TitledPane>() {
+            @Override public void onChanged(Change<? extends TitledPane> c) {
+                while (c.next()) {
+                    if (c.wasAdded()) {
+                        for (final TitledPane tp: c.getAddedSubList()) {
+                            tp.focusedProperty().addListener(paneFocusListener);
+                        }
+                    } else if (c.wasRemoved()) {
+                        for (final TitledPane tp: c.getAddedSubList()) {
+                            tp.focusedProperty().removeListener(paneFocusListener);
+                        }
+                    }
+                }
+            }
+        };
         
         public AccordionFocusModel(final Accordion accordion) {
             if (accordion == null) {
                 throw new IllegalArgumentException("Accordion can not be null");
             }
             this.accordion = accordion;
-            this.accordion.focusedProperty().addListener(new ChangeListener<Boolean>() {
-                @Override
-                public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                    if (newValue) {
-                        if (accordion.getExpandedPane() != null) {
-                            accordion.getExpandedPane().requestFocus();
-                        } else {
-                            // TODO need to detect the focus direction
-                            // to selected the first panel when TAB is pressed
-                            // or select the last panel when SHIFT TAB is pressed.
-                            accordion.getPanes().get(0).requestFocus();
-                        }
-                    }
-                }
-            });
-            this.accordion.getPanes().addListener(new ListChangeListener<TitledPane>() {
-                @Override public void onChanged(Change<? extends TitledPane> c) {
-                    // TODO need to remove the listeners.
-                    while (c.next()) {
-                        if (c.wasAdded()) {
-                            for (final TitledPane tp: c.getAddedSubList()) {
-                                tp.focusedProperty().addListener(new ChangeListener<Boolean>() {
-                                    @Override
-                                    public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                                        if (newValue) {
-                                            focus(accordion.getPanes().indexOf(tp));
-                                        }
-                                    }
-                                });
-                            }
-                        }
-                    }
-                }
-            });
-
+            this.accordion.focusedProperty().addListener(focusListener);
+            this.accordion.getPanes().addListener(panesListener);
             for (final TitledPane tp: this.accordion.getPanes()) {
-                tp.focusedProperty().addListener(new ChangeListener<Boolean>() {
-                    @Override
-                    public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                        if (newValue) {
-                            focus(accordion.getPanes().indexOf(tp));
-                        }
-                    }
-                });
+                tp.focusedProperty().addListener(paneFocusListener);
+            }
+        }
+
+        void dispose() {
+            accordion.focusedProperty().removeListener(focusListener);
+            accordion.getPanes().removeListener(panesListener);
+            for (final TitledPane tp: this.accordion.getPanes()) {
+                tp.focusedProperty().removeListener(paneFocusListener);
             }
         }
 

@@ -25,8 +25,6 @@
 
 package javafx.scene.control;
 
-import java.util.Arrays;
-import java.util.Collection;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
@@ -41,13 +39,17 @@ import javafx.scene.Scene;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.text.Font;
+import java.util.Arrays;
+import java.util.Collection;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  */
@@ -846,6 +848,24 @@ public class TextInputControlTest {
         assertEquals(new IndexRange(4, 4), textInput.getSelection());
     }
 
+    @Test public void previousWord_withANumber() {
+        textInput.setText("There are 5 cards in the hand");
+        textInput.positionCaret(12);
+        textInput.previousWord();
+        assertEquals(10, textInput.getCaretPosition());
+        assertEquals(10, textInput.getAnchor());
+        assertEquals(new IndexRange(10, 10), textInput.getSelection());
+    }
+
+    @Test public void previousWord_withALongNumber() {
+        textInput.setText("There are 52 cards in the deck");
+        textInput.positionCaret(13);
+        textInput.previousWord();
+        assertEquals(10, textInput.getCaretPosition());
+        assertEquals(10, textInput.getAnchor());
+        assertEquals(new IndexRange(10, 10), textInput.getSelection());
+    }
+
     @Test public void nextWordWithNoText() {
         textInput.nextWord();
         assertEquals(0, textInput.getCaretPosition());
@@ -943,6 +963,24 @@ public class TextInputControlTest {
         assertEquals(new IndexRange(19, 19), textInput.getSelection());
     }
 
+    @Test public void nextWord_withANumber() {
+        textInput.setText("There are 5 cards in the hand");
+        textInput.positionCaret(6);
+        textInput.nextWord();
+        assertEquals(10, textInput.getCaretPosition());
+        assertEquals(10, textInput.getAnchor());
+        assertEquals(new IndexRange(10, 10), textInput.getSelection());
+    }
+
+    @Test public void nextWord_withALongNumber() {
+        textInput.setText("There are 52 cards in the deck");
+        textInput.positionCaret(10);
+        textInput.nextWord();
+        assertEquals(13, textInput.getCaretPosition());
+        assertEquals(13, textInput.getAnchor());
+        assertEquals(new IndexRange(13, 13), textInput.getSelection());
+    }
+
     @Test public void endOfNextWordWithNoText() {
         textInput.endOfNextWord();
         assertEquals(0, textInput.getCaretPosition());
@@ -1029,6 +1067,33 @@ public class TextInputControlTest {
         assertEquals(16, textInput.getCaretPosition());
         assertEquals(16, textInput.getAnchor());
         assertEquals(new IndexRange(16, 16), textInput.getSelection());
+    }
+
+    @Test public void endOfNextWord_withANumber() {
+        textInput.setText("There are 5 cards in the hand");
+        textInput.positionCaret(6);
+        textInput.endOfNextWord();
+        assertEquals(9, textInput.getCaretPosition());
+        assertEquals(9, textInput.getAnchor());
+        assertEquals(new IndexRange(9, 9), textInput.getSelection());
+    }
+
+    @Test public void endOfNextWord_withANumber_CaretOnANumber() {
+        textInput.setText("There are 5 cards in the hand");
+        textInput.positionCaret(10);
+        textInput.endOfNextWord();
+        assertEquals(11, textInput.getCaretPosition());
+        assertEquals(11, textInput.getAnchor());
+        assertEquals(new IndexRange(11, 11), textInput.getSelection());
+    }
+
+    @Test public void endOfNextWord_withALongNumber_CaretOnANumber() {
+        textInput.setText("There are 52 cards in the deck");
+        textInput.positionCaret(10);
+        textInput.endOfNextWord();
+        assertEquals(12, textInput.getCaretPosition());
+        assertEquals(12, textInput.getAnchor());
+        assertEquals(new IndexRange(12, 12), textInput.getSelection());
     }
 
     @Test public void selectPreviousWordWithNoText() {

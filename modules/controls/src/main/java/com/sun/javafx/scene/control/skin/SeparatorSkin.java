@@ -29,6 +29,7 @@ import javafx.geometry.Orientation;
 import javafx.scene.control.Separator;
 import javafx.scene.layout.Region;
 
+import java.util.Collections;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 
 /**
@@ -59,7 +60,7 @@ public class SeparatorSkin extends BehaviorSkinBase<Separator, BehaviorBase<Sepa
         // There is no behavior for the separator, so we just create a
         // dummy behavior base instead, since SkinBase will complain
         // about it being null.
-        super(separator, new BehaviorBase<Separator>(separator));
+        super(separator, new BehaviorBase<>(separator, Collections.EMPTY_LIST));
 
         line = new Region();
         line.getStyleClass().setAll("line");

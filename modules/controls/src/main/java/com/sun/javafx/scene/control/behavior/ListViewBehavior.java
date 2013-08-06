@@ -25,6 +25,27 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WeakChangeListener;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
+import javafx.collections.WeakListChangeListener;
+import javafx.event.EventType;
+import javafx.geometry.NodeOrientation;
+import javafx.geometry.Orientation;
+import javafx.scene.control.Control;
+import javafx.scene.control.FocusModel;
+import javafx.scene.control.ListView;
+import javafx.scene.control.MultipleSelectionModel;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
+import javafx.util.Callback;
+import java.util.ArrayList;
+import java.util.List;
+import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.scene.control.skin.Utils;
 import static javafx.scene.input.KeyCode.A;
 import static javafx.scene.input.KeyCode.BACK_SLASH;
 import static javafx.scene.input.KeyCode.DOWN;
@@ -43,32 +64,6 @@ import static javafx.scene.input.KeyCode.PAGE_UP;
 import static javafx.scene.input.KeyCode.RIGHT;
 import static javafx.scene.input.KeyCode.SPACE;
 import static javafx.scene.input.KeyCode.UP;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import javafx.event.EventType;
-import javafx.geometry.NodeOrientation;
-import javafx.geometry.Orientation;
-import javafx.scene.control.Control;
-import javafx.scene.control.FocusModel;
-import javafx.scene.control.ListView;
-import javafx.scene.control.MultipleSelectionModel;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseEvent;
-
-import com.sun.javafx.PlatformUtil;
-
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.beans.value.WeakChangeListener;
-import javafx.collections.ListChangeListener;
-import javafx.collections.ObservableList;
-import javafx.collections.WeakListChangeListener;
-import javafx.util.Callback;
-
-import com.sun.javafx.scene.control.skin.Utils;
 
 /**
  *
@@ -109,7 +104,6 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         } else {
             LIST_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").ctrl());
         }
-
 
         // if listView is vertical...
         LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(UP, "SelectPreviousRow").vertical());
@@ -219,10 +213,6 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         else super.callAction(name);
     }
 
-    @Override protected List<KeyBinding> createKeyBindings() {
-        return LIST_VIEW_BINDINGS;
-    }
-    
     @Override protected void callActionForEvent(KeyEvent e) {
         // RT-12751: we want to keep an eye on the user holding down the shift key, 
         // so that we know when they enter/leave multiple selection mode. This
@@ -297,18 +287,16 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     };
     
     private final ChangeListener<ObservableList<T>> itemsListener = new ChangeListener<ObservableList<T>>() {
-
-		@Override
-		public void changed(
-				ObservableValue<? extends ObservableList<T>> observable,
-				ObservableList<T> oldValue, ObservableList<T> newValue) {
-			if (oldValue != null) {
-	             oldValue.removeListener(weakItemsListListener);
-	         } if (newValue != null) {
-	             newValue.addListener(weakItemsListListener);
-	         }
-		}
-       
+        @Override
+        public void changed(
+                ObservableValue<? extends ObservableList<T>> observable,
+                ObservableList<T> oldValue, ObservableList<T> newValue) {
+            if (oldValue != null) {
+                 oldValue.removeListener(weakItemsListListener);
+             } if (newValue != null) {
+                 newValue.addListener(weakItemsListListener);
+             }
+        }
     };
     
     private final ChangeListener<MultipleSelectionModel<T>> selectionModelListener = new ChangeListener<MultipleSelectionModel<T>>() {
@@ -334,10 +322,10 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     private final WeakChangeListener<MultipleSelectionModel<T>> weakSelectionModelListener = 
             new WeakChangeListener<MultipleSelectionModel<T>>(selectionModelListener);
     
-	private TwoLevelFocusListBehavior tlFocus;
+    private TwoLevelFocusListBehavior tlFocus;
 
     public ListViewBehavior(ListView<T> control) {
-        super(control);
+        super(control, LIST_VIEW_BINDINGS);
         
         control.itemsProperty().addListener(weakItemsListener);
         if (control.getItems() != null) {
@@ -350,17 +338,16 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             control.getSelectionModel().getSelectedIndices().addListener(weakSelectedIndicesListener);
         }
 
-        /*
-        ** only add this if we're on an embedded
-        ** platform that supports 5-button navigation 
-        */
+        // Only add this if we're on an embedded platform that supports 5-button navigation
         if (Utils.isTwoLevelFocus()) {
             tlFocus = new TwoLevelFocusListBehavior(control); // needs to be last.
         }
     }
     
-    public void dispose() {
+    @Override public void dispose() {
         ListCellBehavior.removeAnchor(getControl());
+        if (tlFocus != null) tlFocus.dispose();
+        super.dispose();
     }
 
     private void setAnchor(int anchor) {
