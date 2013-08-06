@@ -43,23 +43,19 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.geometry.Orientation;
-import javafx.scene.Node;
-import javafx.scene.Scene;
 import javafx.scene.control.cell.CheckBoxListCell;
 import javafx.scene.control.cell.ComboBoxListCell;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 import javafx.util.Callback;
 
-import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import org.junit.Before;
 import org.junit.Test;
 
 import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
-import com.sun.javafx.scene.control.skin.VirtualFlow;
 import com.sun.javafx.scene.control.skin.VirtualScrollBar;
 import com.sun.javafx.scene.control.test.Person;
 import com.sun.javafx.scene.control.test.RT_22463_Person;
@@ -694,13 +690,48 @@ public class ListViewTest {
 
         StageLoader sl = new StageLoader(listView);
 
-        assertEquals(0, rt_31200_count);
+        assertEquals(24, rt_31200_count);
 
         // resize the stage
         sl.getStage().setHeight(250);
         Toolkit.getToolkit().firePulse();
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
-        assertEquals(0, rt_31200_count);
+        assertEquals(24, rt_31200_count);
     }
+
+    @Test public void test_rt_30484() {
+        final ListView listView = new ListView();
+        listView.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
+            @Override public ListCell<String> call(ListView<String> param) {
+                return new ListCell<String>() {
+                    Rectangle graphic = new Rectangle(10, 10, Color.RED);
+                    { setGraphic(graphic); };
+
+                    @Override protected void updateItem(String item, boolean empty) {
+                        super.updateItem(item, empty);
+                        if (item == null || empty) {
+                            graphic.setVisible(false);
+                            setText(null);
+                        } else {
+                            graphic.setVisible(true);
+                            setText(item);
+                        }
+                    }
+                };
+            }
+        });
+
+        // First two rows have content, so the graphic should show.
+        // All other rows have no content, so graphic should not show.
+        listView.getItems().setAll("one", "two");
+
+        VirtualFlowTestUtils.assertGraphicIsVisible(listView, 0);
+        VirtualFlowTestUtils.assertGraphicIsVisible(listView, 1);
+        VirtualFlowTestUtils.assertGraphicIsNotVisible(listView, 2);
+        VirtualFlowTestUtils.assertGraphicIsNotVisible(listView, 3);
+        VirtualFlowTestUtils.assertGraphicIsNotVisible(listView, 4);
+        VirtualFlowTestUtils.assertGraphicIsNotVisible(listView, 5);
+    }
+
 }

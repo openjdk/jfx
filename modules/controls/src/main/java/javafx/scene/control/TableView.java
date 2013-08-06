@@ -34,10 +34,12 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.sun.javafx.scene.control.Logging;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
+import javafx.beans.binding.BooleanBinding;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -55,6 +57,7 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
+import javafx.collections.transformation.SortedList;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import javafx.css.Styleable;
@@ -333,7 +336,35 @@ public class TableView<S> extends Control {
     public static final Callback<TableView, Boolean> DEFAULT_SORT_POLICY = new Callback<TableView, Boolean>() {
         @Override public Boolean call(TableView table) {
             try {
-                FXCollections.sort(table.getItems(), table.getComparator());
+                ObservableList<?> itemsList = table.getItems();
+                if (itemsList instanceof SortedList) {
+                    // it is the responsibility of the SortedList to bind to the
+                    // comparator provided by the TableView. However, we don't
+                    // want to fail the sort (which would put the UI in an
+                    // inconsistent state), so we return true here, but only if
+                    // the SortedList has its comparator bound to the TableView
+                    // comparator property.
+                    SortedList sortedList = (SortedList) itemsList;
+                    boolean comparatorsBound = sortedList.comparatorProperty().
+                            isEqualTo(table.comparatorProperty()).get();
+
+                    if (! comparatorsBound) {
+                        // this isn't a good situation to be in, so lets log it
+                        // out in case the developer is unaware
+                        if (Logging.getControlsLogger().isEnabled()) {
+                            String s = "TableView items list is a SortedList, but the SortedList " +
+                                    "comparator should be bound to the TableView comparator for " +
+                                    "sorting to be enabled (e.g. " +
+                                    "sortedList.comparatorProperty().bind(tableView.comparatorProperty());).";
+                            Logging.getControlsLogger().info(s);
+                        }
+                    }
+                    return comparatorsBound;
+                }
+
+                // otherwise we attempt to do a manual sort, and if successful
+                // we return true
+                FXCollections.sort(itemsList, table.getComparator());
                 return true;
             } catch (UnsupportedOperationException e) {
                 // TODO might need to support other exception types including:
@@ -1275,18 +1306,12 @@ public class TableView<S> extends Control {
         
         // update the Comparator property
         final Comparator<S> oldComparator = getComparator();
-        Comparator<S> newComparator = new TableColumnComparator(sortOrder);
-        setComparator(newComparator);
-        
-//        if (sortOrder.isEmpty()) {
-//            // TODO this should eventually handle returning a SortedList back
-//            // to its unsorted state
-//            setComparator(null);
-//        }
-        
+
+        setComparator(sortOrder.isEmpty() ? null : new TableColumnComparator(sortOrder));
+
         // fire the onSort event and check if it is consumed, if
         // so, don't run the sort
-        SortEvent<TableView<S>> sortEvent = new SortEvent<TableView<S>>(TableView.this, TableView.this);
+        SortEvent<TableView<S>> sortEvent = new SortEvent<>(TableView.this, TableView.this);
         fireEvent(sortEvent);
         if (sortEvent.isConsumed()) {
             // if the sort is consumed we could back out the last action (the code

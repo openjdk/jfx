@@ -511,6 +511,8 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
      */
     private ObservableValue<T> currentObservableValue = null;
 
+    private boolean isFirstRun = true;
+
     /*
      * This is called when we think that the data within this TreeTableCell may have
      * changed. You'll note that this is a private function - it is only called
@@ -538,8 +540,15 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
                 !tableColumn.isVisible() ||
                 tableView.getRoot() == null) {
 
-            if (!isEmpty && oldValue != null) {
+            // RT-30484 We need to allow a first run to be special-cased to allow
+            // for the updateItem method to be called at least once to allow for
+            // the correct visual state to be set up. In particular, in RT-30484
+            // refer to Ensemble8PopUpTree.png - in this case the arrows are being
+            // shown as the new cells are instantiated with the arrows in the
+            // children list, and are only hidden in updateItem.
+            if ((!isEmpty && oldValue != null) || isFirstRun) {
                 updateItem(null, true);
+                isFirstRun = false;
             }
             return;
         } else {

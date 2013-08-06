@@ -53,6 +53,8 @@ import javafx.scene.control.cell.ChoiceBoxTableCell;
 import javafx.scene.control.cell.ComboBoxListCell;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.image.ImageView;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 import javafx.util.Callback;
 
 import com.sun.javafx.tk.Toolkit;
@@ -685,6 +687,20 @@ public class TableViewTest {
         
         assertTrue(table.getSortOrder().isEmpty());
         assertNull(oldComparator);
+    }
+
+    @Test public void testComparatorIsNullWhenSortOrderListIsEmpty() {
+        TableColumn<String, String> col = initSortTestStructure();
+
+        assertNull(table.getComparator());
+
+        table.getSortOrder().add(col);
+        assertFalse(table.getSortOrder().isEmpty());
+        assertNotNull(table.getComparator());
+
+        table.getSortOrder().clear();
+        assertTrue(table.getSortOrder().isEmpty());
+        assertNull(table.getComparator());
     }
     
     
@@ -1431,14 +1447,14 @@ public class TableViewTest {
 
         StageLoader sl = new StageLoader(tableView);
 
-        assertEquals(0, rt_31200_count);
+        assertEquals(14, rt_31200_count);
 
         // resize the stage
         sl.getStage().setHeight(250);
         Toolkit.getToolkit().firePulse();
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
-        assertEquals(0, rt_31200_count);
+        assertEquals(14, rt_31200_count);
     }
 
     @Test public void test_rt_31200_tableRow() {
@@ -1479,14 +1495,14 @@ public class TableViewTest {
 
         StageLoader sl = new StageLoader(tableView);
 
-        assertEquals(0, rt_31200_count);
+        assertEquals(14, rt_31200_count);
 
         // resize the stage
         sl.getStage().setHeight(250);
         Toolkit.getToolkit().firePulse();
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
-        assertEquals(0, rt_31200_count);
+        assertEquals(14, rt_31200_count);
     }
 
     @Test public void test_rt_31727() {
@@ -1592,5 +1608,90 @@ public class TableViewTest {
         assertFalse(aaaRow.isSelected());
         cccRow = (TableRow) VirtualFlowTestUtils.getCell(table, 0);
         assertTrue(cccRow.isSelected());
+    }
+
+    @Test public void test_rt_30484_tableCell() {
+        TableView<Person> table = new TableView<>();
+        TableColumn<Person,String> first = new TableColumn<>("first");
+        first.setCellValueFactory(new PropertyValueFactory("firstName"));
+        table.getColumns().addAll(first);
+
+        table.setItems(FXCollections.observableArrayList(
+                new Person("AAA", "Smith", "jacob.smith@example.com"),
+                new Person("BBB", "Bob", "jim.bob@example.com")
+        ));
+
+        first.setCellFactory(new Callback<TableColumn<Person, String>, TableCell<Person, String>>() {
+            @Override
+            public TableCell<Person, String> call(TableColumn<Person, String> param) {
+                return new TableCell<Person, String>() {
+                    Rectangle graphic = new Rectangle(10, 10, Color.RED);
+                    { setGraphic(graphic); };
+
+                    @Override protected void updateItem(String item, boolean empty) {
+                        super.updateItem(item, empty);
+                        if (item == null || empty) {
+                            graphic.setVisible(false);
+                            setText(null);
+                        } else {
+                            graphic.setVisible(true);
+                            setText(item);
+                        }
+                    }
+                };
+            }
+        });
+
+        // First two rows have content, so the graphic should show.
+        // All other rows have no content, so graphic should not show.
+
+        VirtualFlowTestUtils.assertGraphicIsVisible(table,    0, 0);
+        VirtualFlowTestUtils.assertGraphicIsVisible(table,    1, 0);
+        VirtualFlowTestUtils.assertGraphicIsNotVisible(table, 2, 0);
+        VirtualFlowTestUtils.assertGraphicIsNotVisible(table, 3, 0);
+        VirtualFlowTestUtils.assertGraphicIsNotVisible(table, 4, 0);
+        VirtualFlowTestUtils.assertGraphicIsNotVisible(table, 5, 0);
+    }
+
+    @Test public void test_rt_30484_tableRow() {
+        TableView<Person> table = new TableView<>();
+        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        first.setCellValueFactory(new PropertyValueFactory("firstName"));
+        table.getColumns().addAll(first);
+
+        table.setItems(FXCollections.observableArrayList(
+                new Person("AAA", "Smith", "jacob.smith@example.com"),
+                new Person("BBB", "Bob", "jim.bob@example.com")
+        ));
+
+        table.setRowFactory(new Callback<TableView<Person>, TableRow<Person>>() {
+            @Override public TableRow<Person> call(TableView<Person> param) {
+                return new TableRow<Person>() {
+                    Rectangle graphic = new Rectangle(10, 10, Color.RED);
+                    { setGraphic(graphic); };
+
+                    @Override protected void updateItem(Person item, boolean empty) {
+                        super.updateItem(item, empty);
+                        if (item == null || empty) {
+                            graphic.setVisible(false);
+                            setText(null);
+                        } else {
+                            graphic.setVisible(true);
+                            setText(item.toString());
+                        }
+                    }
+                };
+            }
+        });
+
+        // First two rows have content, so the graphic should show.
+        // All other rows have no content, so graphic should not show.
+
+        VirtualFlowTestUtils.assertGraphicIsVisible(table,    0);
+        VirtualFlowTestUtils.assertGraphicIsVisible(table,    1);
+        VirtualFlowTestUtils.assertGraphicIsNotVisible(table, 2);
+        VirtualFlowTestUtils.assertGraphicIsNotVisible(table, 3);
+        VirtualFlowTestUtils.assertGraphicIsNotVisible(table, 4);
+        VirtualFlowTestUtils.assertGraphicIsNotVisible(table, 5);
     }
 }

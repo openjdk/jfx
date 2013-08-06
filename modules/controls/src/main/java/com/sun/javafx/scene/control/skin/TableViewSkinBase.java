@@ -63,7 +63,16 @@ import javafx.scene.control.TableFocusModel;
 import javafx.scene.control.TablePositionBase;
 import javafx.scene.control.TableSelectionModel;
 
-public abstract class TableViewSkinBase<S, C extends Control, B extends BehaviorBase<C>, I extends IndexedCell> extends VirtualContainerBase<C, B, I> {
+/**
+ *
+ * @param <M> The type of the item stored in the cell
+ * @param <S> The type of the item represented by the virtualised control (e.g. TableView<S>)
+ * @param <C> The type of the virtualised control (e.g TableView, TreeTableView)
+ * @param <B> The Behavior of the virtualised control
+ * @param <I> The type of cell used by this virtualised control (e.g. TableRow, TreeTableRow)
+ * @param <TC> The type of TableColumnBase used by this virtualised control (e.g. TableColumn, TreeTableColumn)
+ */
+public abstract class TableViewSkinBase<M, S, C extends Control, B extends BehaviorBase<C>, I extends IndexedCell<M>, TC extends TableColumnBase<S,?>> extends VirtualContainerBase<C, B, I> {
 
     /***************************************************************************
      *                                                                         *
@@ -184,7 +193,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         getChildren().addAll(tableHeaderRow, flow, columnReorderOverlay, columnReorderLine);
 
         updateVisibleColumnCount();
-        updateVisibleLeafColumnWidthListeners(getVisibleLeafColumns(), FXCollections.<TableColumnBase<S,?>>emptyObservableList());
+        updateVisibleLeafColumnWidthListeners(getVisibleLeafColumns(), FXCollections.<TC>emptyObservableList());
 
         tableHeaderRow.reorderingProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable valueModel) {
@@ -199,8 +208,8 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
 
         control.getProperties().addListener(propertiesMapListener);
         
-        control.addEventHandler(ScrollToEvent.<TableColumnBase>scrollToColumn(), new EventHandler<ScrollToEvent<TableColumnBase>>() {
-            @Override public void handle(ScrollToEvent<TableColumnBase> event) {
+        control.addEventHandler(ScrollToEvent.<TC>scrollToColumn(), new EventHandler<ScrollToEvent<TC>>() {
+            @Override public void handle(ScrollToEvent<TC> event) {
                 scrollHorizontally(event.getScrollTarget());
             }
         });   
@@ -243,8 +252,8 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         }
     };
     
-    private ListChangeListener rowCountListener = new ListChangeListener() {
-        @Override public void onChanged(Change c) {
+    private ListChangeListener<S> rowCountListener = new ListChangeListener<S>() {
+        @Override public void onChanged(Change<? extends S> c) {
             while (c.next()) {
                 if (c.wasReplaced()) {
                     // RT-28397: Support for when an item is replaced with itself (but
@@ -268,9 +277,9 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         }
     };
     
-    private ListChangeListener<TableColumnBase> visibleLeafColumnsListener = 
-        new ListChangeListener<TableColumnBase>() {
-            @Override public void onChanged(Change<? extends TableColumnBase> c) {
+    private ListChangeListener<TC> visibleLeafColumnsListener = 
+        new ListChangeListener<TC>() {
+            @Override public void onChanged(Change<? extends TC> c) {
                 updateVisibleColumnCount();
                 while (c.next()) {
                     updateVisibleLeafColumnWidthListeners(c.getAddedSubList(), c.getRemoved());
@@ -300,8 +309,8 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
     
     private WeakListChangeListener<S> weakRowCountListener =
             new WeakListChangeListener<S>(rowCountListener);
-    private WeakListChangeListener<TableColumnBase> weakVisibleLeafColumnsListener =
-            new WeakListChangeListener<TableColumnBase>(visibleLeafColumnsListener);
+    private WeakListChangeListener<TC> weakVisibleLeafColumnsListener =
+            new WeakListChangeListener<TC>(visibleLeafColumnsListener);
     private WeakInvalidationListener weakWidthListener = 
             new WeakInvalidationListener(widthListener);
     private WeakChangeListener<ObservableList<S>> weakItemsChangeListener = 
@@ -316,28 +325,28 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
      **************************************************************************/
 
     // returns the selection model of the control
-    protected abstract TableSelectionModel getSelectionModel();
+    protected abstract TableSelectionModel<S> getSelectionModel();
 
     // returns the focus model of the control
-    protected abstract TableFocusModel getFocusModel();
+    protected abstract TableFocusModel<S,TC> getFocusModel();
 
     // returns the currently focused cell in the focus model
-    protected abstract TablePositionBase getFocusedCell();
+    protected abstract TablePositionBase<? extends TC> getFocusedCell();
 
     // returns an ObservableList of the visible leaf columns of the control
-    protected abstract ObservableList<? extends TableColumnBase/*<S,?>*/> getVisibleLeafColumns();
+    protected abstract ObservableList<? extends TC> getVisibleLeafColumns();
 
     // returns the index of a column in the visible leaf columns
-    protected abstract int getVisibleLeafIndex(TableColumnBase tc);
+    protected abstract int getVisibleLeafIndex(TC tc);
 
     // returns the leaf column at the given index
-    protected abstract TableColumnBase getVisibleLeafColumn(int col);
+    protected abstract TC getVisibleLeafColumn(int col);
 
     // returns a list of the root columns
-    protected abstract ObservableList<? extends TableColumnBase/*<S,?>*/> getColumns();
+    protected abstract ObservableList<TC> getColumns();
 
     // returns the sort order of the control
-    protected abstract ObservableList<? extends TableColumnBase/*<S,?>*/> getSortOrder();
+    protected abstract ObservableList<TC> getSortOrder();
 
     // returns a property representing the list of items in the control
     protected abstract ObjectProperty<ObservableList<S>> itemsProperty();
@@ -357,11 +366,11 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
 
     // Method to resize the given column by the given delta, returning a boolean
     // to indicate success or failure
-    protected abstract boolean resizeColumn(TableColumnBase tc, double delta);
+    protected abstract boolean resizeColumn(TC tc, double delta);
 
     // Method to resize the column based on the content in that column, based on
     // the maxRows number of rows
-    protected abstract void resizeColumnToFitContent(TableColumnBase tc, int maxRows);
+    protected abstract void resizeColumnToFitContent(TC tc, int maxRows);
     
     
     
@@ -468,14 +477,14 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         return newSelectionIndex;
     }
     
-     boolean isColumnPartiallyOrFullyVisible(TableColumnBase col) {
+     boolean isColumnPartiallyOrFullyVisible(TC col) {
         if (col == null || !col.isVisible()) return false;
         
         double scrollX = flow.getHbar().getValue(); 
 
         // work out where this column header is, and it's width (start -> end)
         double start = 0;
-        final ObservableList<? extends TableColumnBase> visibleLeafColumns = getVisibleLeafColumns();
+        final ObservableList<? extends TC> visibleLeafColumns = getVisibleLeafColumns();
         for (int i = 0, max = visibleLeafColumns.size(); i < max; i++) {
             TableColumnBase<S,?> c = visibleLeafColumns.get(i);
             if (c.equals(col)) break;
@@ -522,28 +531,28 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
     }
 
     protected void onFocusPreviousCell() {
-        TableFocusModel fm = getFocusModel();
+        TableFocusModel<S,TC> fm = getFocusModel();
         if (fm == null) return;
 
         flow.show(fm.getFocusedIndex());
     }
 
     protected void onFocusNextCell() {
-        TableFocusModel fm = getFocusModel();
+        TableFocusModel<S,TC> fm = getFocusModel();
         if (fm == null) return;
 
         flow.show(fm.getFocusedIndex());
     }
 
     protected void onSelectPreviousCell() {
-        SelectionModel sm = getSelectionModel();
+        SelectionModel<S> sm = getSelectionModel();
         if (sm == null) return;
 
         flow.show(sm.getSelectedIndex());
     }
 
     protected void onSelectNextCell() {
-        SelectionModel sm = getSelectionModel();
+        SelectionModel<S> sm = getSelectionModel();
         if (sm == null) return;
 
         flow.show(sm.getSelectedIndex());
@@ -598,14 +607,14 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         double prefHeight = computePrefHeight(-1, topInset, rightInset, bottomInset, leftInset);
         
-        List<? extends TableColumnBase> cols = getVisibleLeafColumns();
+        List<? extends TC> cols = getVisibleLeafColumns();
         if (cols == null || cols.isEmpty()) {
             return prefHeight * GOLDEN_RATIO_MULTIPLIER;
         } 
 
         double pw = leftInset + rightInset;
         for (int i = 0, max = cols.size(); i < max; i++) {
-            TableColumnBase tc = cols.get(i);
+            TC tc = cols.get(i);
             pw += Math.max(tc.getPrefWidth(), tc.getMinWidth());
         }
 //        return pw;
@@ -730,14 +739,14 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
     }
     
     private void updateVisibleLeafColumnWidthListeners(
-            List<? extends TableColumnBase> added, List<? extends TableColumnBase> removed) {
+            List<? extends TC> added, List<? extends TC> removed) {
         
         for (int i = 0, max = removed.size(); i < max; i++) {
-            TableColumnBase tc = removed.get(i);
+            TC tc = removed.get(i);
             tc.widthProperty().removeListener(weakWidthListener);
         }
         for (int i = 0, max = added.size(); i < max; i++) {
-            TableColumnBase tc = added.get(i);
+            TC tc = added.get(i);
             tc.widthProperty().addListener(weakWidthListener);
         }
         needCellsRebuilt = true;
@@ -810,21 +819,21 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
     // and the newly selected cell belongs to a column which is not totally
     // visible.
     protected void scrollHorizontally() {
-        TableFocusModel fm = getFocusModel();
+        TableFocusModel<S,TC> fm = getFocusModel();
         if (fm == null) return;
 
-        TableColumnBase col = getFocusedCell().getTableColumn();
+        TC col = getFocusedCell().getTableColumn();
         scrollHorizontally(col);
     }
 
-    protected void scrollHorizontally(TableColumnBase col) {
+    protected void scrollHorizontally(TC col) {
         if (col == null || !col.isVisible()) return;
         
         final Control control = getSkinnable();
 
         // work out where this column header is, and it's width (start -> end)
         double start = 0;//scrollX;
-        for (TableColumnBase c : getVisibleLeafColumns()) {
+        for (TC c : getVisibleLeafColumns()) {
             if (c.equals(col)) break;
             start += c.getWidth();
         }
@@ -856,7 +865,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
     }
 
     private boolean isCellSelected(int row) {
-        TableSelectionModel sm = getSelectionModel();
+        TableSelectionModel<S> sm = getSelectionModel();
         if (sm == null) return false;
         if (! sm.isCellSelectionEnabled()) return false;
 
@@ -871,7 +880,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
     }
     
     private boolean isCellFocused(int row) {
-        TableFocusModel fm = getFocusModel();
+        TableFocusModel<S,TC> fm = getFocusModel();
         if (fm == null) return false;
 
         int columnCount = getVisibleLeafColumns().size();
