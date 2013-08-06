@@ -1064,9 +1064,6 @@ public abstract class Node implements EventTarget, Styleable {
                         impl_markDirty(DirtyBits.NODE_VISIBLE);
                         impl_geomChanged();
                         updateTreeVisible();
-                        if (getClip() != null) {
-                            getClip().updateTreeVisible();
-                        }
                         if (getParent() != null) {
                             // notify the parent of the potential change in visibility
                             // of this node, since visibility affects bounds of the
@@ -7632,6 +7629,9 @@ public abstract class Node implements EventTarget, Styleable {
             treeVisible = value;
             updateCanReceiveFocus();
             focusSetDirty(getScene());
+            if (getClip() != null) {
+                getClip().updateTreeVisible();
+            }
             if (treeVisible && !impl_isDirtyEmpty()) {
                 // The node hasn't been synchronized while invisible, so
                 // synchronize now
