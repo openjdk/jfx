@@ -482,26 +482,26 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         double tabsStartX = tabPosition.equals(Side.RIGHT)? x + w - headerHeight : x;
         double tabsStartY = tabPosition.equals(Side.BOTTOM)? y + h - headerHeight : y;
 
-        if (tabPosition.equals(tabPosition.TOP)) {
+        if (tabPosition == Side.TOP) {
             tabHeaderArea.resize(w, headerHeight);
             tabHeaderArea.relocate(tabsStartX, tabsStartY);
             tabHeaderArea.getTransforms().clear();
-            tabHeaderArea.getTransforms().add(new Rotate(getRotation(tabPosition.TOP)));
-        } else if (tabPosition.equals(tabPosition.BOTTOM)) {
+            tabHeaderArea.getTransforms().add(new Rotate(getRotation(Side.TOP)));
+        } else if (tabPosition == Side.BOTTOM) {
             tabHeaderArea.resize(w, headerHeight);
             tabHeaderArea.relocate(w, tabsStartY - headerHeight);
             tabHeaderArea.getTransforms().clear();
-            tabHeaderArea.getTransforms().add(new Rotate(getRotation(tabPosition.BOTTOM), 0, headerHeight));
-        } else if (tabPosition.equals(tabPosition.LEFT)) {
+            tabHeaderArea.getTransforms().add(new Rotate(getRotation(Side.BOTTOM), 0, headerHeight));
+        } else if (tabPosition == Side.LEFT) {
             tabHeaderArea.resize(h, headerHeight);
             tabHeaderArea.relocate(tabsStartX + headerHeight, h - headerHeight);
             tabHeaderArea.getTransforms().clear();
-            tabHeaderArea.getTransforms().add(new Rotate(getRotation(tabPosition.LEFT), 0, headerHeight));
-        } else if (tabPosition.equals(tabPosition.RIGHT)) {
+            tabHeaderArea.getTransforms().add(new Rotate(getRotation(Side.LEFT), 0, headerHeight));
+        } else if (tabPosition == Side.RIGHT) {
             tabHeaderArea.resize(h, headerHeight);
             tabHeaderArea.relocate(tabsStartX, y - headerHeight);
             tabHeaderArea.getTransforms().clear();
-            tabHeaderArea.getTransforms().add(new Rotate(getRotation(tabPosition.RIGHT), 0, headerHeight));
+            tabHeaderArea.getTransforms().add(new Rotate(getRotation(Side.RIGHT), 0, headerHeight));
         }
 
         tabHeaderAreaClipRect.setX(0);
@@ -520,28 +520,28 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         double contentStartX = 0;
         double contentStartY = 0;
 
-        if (tabPosition.equals(tabPosition.TOP)) {
+        if (tabPosition == Side.TOP) {
             contentStartX = x;
             contentStartY = y + headerHeight;
             if (isFloatingStyleClass()) {
                 // This is to hide the top border content
                 contentStartY -= 1;
             }
-        } else if (tabPosition.equals(tabPosition.BOTTOM)) {
+        } else if (tabPosition == Side.BOTTOM) {
             contentStartX = x;
             contentStartY = y;
             if (isFloatingStyleClass()) {
                 // This is to hide the bottom border content
                 contentStartY = 1;
             }
-        } else if (tabPosition.equals(tabPosition.LEFT)) {
+        } else if (tabPosition == Side.LEFT) {
             contentStartX = x + headerHeight;
             contentStartY = y;
             if (isFloatingStyleClass()) {
                 // This is to hide the left border content
                 contentStartX -= 1;
             }
-        } else if (tabPosition.equals(tabPosition.RIGHT)) {
+        } else if (tabPosition == Side.RIGHT) {
             contentStartX = x;
             contentStartY = y;
             if (isFloatingStyleClass()) {
@@ -844,7 +844,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             headersRegion.getChildren().add(addToIndex, tabHeaderSkin);
         }
 
-        private List<TabHeaderSkin> removeTab = new ArrayList();
+        private List<TabHeaderSkin> removeTab = new ArrayList<>();
         private void removeTab(Tab tab) {
             TabHeaderSkin tabHeaderSkin = getTabHeaderSkin(tab);
             if (tabHeaderSkin != null) {

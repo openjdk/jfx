@@ -75,8 +75,9 @@ public class ScrollBar extends Control {
      **************************************************************************/
 
     /**
-     * Creates a new horizontal (i.e. <code>getOrientation() == Orientation.HORIZONTAL</code>)
-     * ScrollBar.
+     * Creates a new horizontal ScrollBar (ie getOrientation() == Orientation.HORIZONTAL).
+     *  
+     * 
      */
     public ScrollBar() {
         // TODO : we need to ensure we have a width and height

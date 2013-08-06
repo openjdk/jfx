@@ -25,46 +25,37 @@
 
 package com.sun.javafx.scene.web.behavior;
 
-import static javafx.scene.input.KeyCode.B;
-import static javafx.scene.input.KeyCode.I;
-import static javafx.scene.input.KeyCode.U;
-import static javafx.scene.input.KeyCode.F12;
-import static javafx.scene.input.KeyCode.TAB;
-
+import javafx.scene.web.HTMLEditor;
 import java.util.ArrayList;
 import java.util.List;
-
-import javafx.scene.web.HTMLEditor;
-
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.behavior.KeyBinding;
 import com.sun.javafx.scene.web.skin.HTMLEditorSkin;
-import com.sun.javafx.PlatformUtil;
+import static javafx.scene.input.KeyCode.B;
+import static javafx.scene.input.KeyCode.F12;
+import static javafx.scene.input.KeyCode.I;
+import static javafx.scene.input.KeyCode.TAB;
+import static javafx.scene.input.KeyCode.U;
 
 
 /**
  * HTML editor behavior.
  */
 public class HTMLEditorBehavior extends BehaviorBase<HTMLEditor> {
-    protected static final List<KeyBinding> HTMLEDITOR_BINDINGS = new ArrayList<KeyBinding>();
+    protected static final List<KeyBinding> HTML_EDITOR_BINDINGS = new ArrayList<KeyBinding>();
 
     static {
-        HTMLEDITOR_BINDINGS.add(new KeyBinding(B, "bold").shortcut());
-        HTMLEDITOR_BINDINGS.add(new KeyBinding(I, "italic").shortcut());
-        HTMLEDITOR_BINDINGS.add(new KeyBinding(U, "underline").shortcut());
+        HTML_EDITOR_BINDINGS.add(new KeyBinding(B, "bold").shortcut());
+        HTML_EDITOR_BINDINGS.add(new KeyBinding(I, "italic").shortcut());
+        HTML_EDITOR_BINDINGS.add(new KeyBinding(U, "underline").shortcut());
         
-        HTMLEDITOR_BINDINGS.add(new KeyBinding(F12, "F12"));
-        HTMLEDITOR_BINDINGS.add(new KeyBinding(TAB, "TraverseNext").ctrl());
-        HTMLEDITOR_BINDINGS.add(new KeyBinding(TAB, "TraversePrevious").ctrl().shift());
+        HTML_EDITOR_BINDINGS.add(new KeyBinding(F12, "F12"));
+        HTML_EDITOR_BINDINGS.add(new KeyBinding(TAB, "TraverseNext").ctrl());
+        HTML_EDITOR_BINDINGS.add(new KeyBinding(TAB, "TraversePrevious").ctrl().shift());
     }
 
     public HTMLEditorBehavior(HTMLEditor htmlEditor) {
-        super(htmlEditor);
-    }
-
-    @Override
-    protected List<KeyBinding> createKeyBindings() {
-        return HTMLEDITOR_BINDINGS;
+        super(htmlEditor, HTML_EDITOR_BINDINGS);
     }
 
     @Override

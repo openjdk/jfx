@@ -109,9 +109,9 @@ public class ProgressBarTreeTableCellTest {
         assertTrue(cell.getStyleClass().contains("progress-bar-tree-table-cell"));
     }
     
-    @Test public void testConstructor_noArgs_defaultGraphicIsAProgressBar() {
+    @Test public void testConstructor_noArgs_defaultGraphicIsNull() {
         ProgressBarTreeTableCell<Object> cell = new ProgressBarTreeTableCell<>();
-        assertTrue(cell.getGraphic() instanceof ProgressBar);
+        assertNull(cell.getGraphic());
     }
 
 

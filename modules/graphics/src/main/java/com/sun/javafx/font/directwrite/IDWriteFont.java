@@ -45,6 +45,15 @@ class IDWriteFont extends IUnknown {
         return result != 0 ? new IDWriteFontFamily(result) : null;
     }
 
+    IDWriteLocalizedStrings GetInformationalStrings(int informationalStringID) {
+        long result = OS.GetInformationalStrings(ptr, informationalStringID);
+        return result != 0 ? new IDWriteLocalizedStrings(result) : null;
+    }
+
+    int GetSimulations() {
+        return OS.GetSimulations(ptr);
+    }
+
     int GetStretch() {
         return OS.GetStretch(ptr);
     }

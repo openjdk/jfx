@@ -124,7 +124,7 @@ public abstract class NGShape3D extends NGNode {
             float ambientGreen = 0.0f;
 
             for (int i = 0; i < g.getLights().length; i++) {
-                NGLightBase lightBase = (NGLightBase)g.getLights()[i];
+                NGLightBase lightBase = g.getLights()[i];
                 if (lightBase == null) {
                     // The array of lights can have nulls
                     break;

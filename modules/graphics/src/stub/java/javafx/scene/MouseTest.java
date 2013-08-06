@@ -39,6 +39,7 @@ import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
+import javafx.scene.input.MouseDragEvent;
 import javafx.scene.input.PickResult;
 import javafx.scene.paint.Color;
 import javafx.scene.transform.Rotate;
@@ -1444,6 +1445,25 @@ public class MouseTest {
         s.assertCalled();
     }
 
+    @Test
+    public void mouseExitedShouldBeGeneratedBeforeNodeRemoval() {
+        final SimpleTestScene s = new SimpleTestScene();
+        s.smallSquareTracker.node.addEventHandler(MouseEvent.MOUSE_EXITED,
+                new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent event) {
+                assertNotNull(s.smallSquareTracker.node.getScene());
+            }
+        });
+
+        s.processEvent(MouseEventGenerator.generateMouseEvent(
+                MouseEvent.MOUSE_MOVED, 250, 250));
+        assertTrue(s.smallSquareTracker.enteredMe);
+        assertFalse(s.smallSquareTracker.exitedMe);
+
+        s.scene.getRoot().getChildren().clear();
+
+        assertTrue(s.smallSquareTracker.exitedMe);
+    }
 
     private static class SimpleTestScene {
 

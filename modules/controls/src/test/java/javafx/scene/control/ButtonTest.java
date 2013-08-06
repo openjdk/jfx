@@ -25,6 +25,31 @@
 
 package javafx.scene.control;
 
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
+import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.MouseButton;
+import javafx.scene.layout.BackgroundFill;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
+import javafx.scene.paint.LinearGradient;
+import javafx.scene.paint.Stop;
+import javafx.scene.shape.Rectangle;
+import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
+import java.util.List;
+import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.scene.control.infrastructure.ContextMenuEventFirer;
+import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
+import com.sun.javafx.tk.Toolkit;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassDoesNotExist;
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassExists;
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
@@ -35,36 +60,7 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.util.List;
-
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
-import javafx.scene.Scene;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.BackgroundFill;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Region;
-import javafx.scene.layout.StackPane;
-import javafx.scene.paint.LinearGradient;
-import javafx.scene.paint.Stop;
-import javafx.scene.shape.Rectangle;
-import javafx.stage.Stage;
-import javafx.stage.WindowEvent;
-
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-
-import com.sun.javafx.pgstub.StubToolkit;
-import com.sun.javafx.scene.control.infrastructure.ContextMenuEventFirer;
-import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
-import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 //import com.sun.javafx.test.MouseEventGenerator;
-import com.sun.javafx.tk.Toolkit;
 
 /**
  * action (which can be bound, and can be null),
@@ -75,7 +71,8 @@ public class ButtonTest {
     private Toolkit tk;
     private Scene scene;
     private Stage stage;
-    private StackPane root;      
+    private StackPane root;
+    private MouseEventFirer mouse;
     
     @Before public void setup() {
         btn = new Button();
@@ -83,7 +80,8 @@ public class ButtonTest {
         root = new StackPane();
         scene = new Scene(root);
         stage = new Stage();
-        stage.setScene(scene);         
+        stage.setScene(scene);
+        mouse = new MouseEventFirer(btn);
     }
     
     /*********************************************************************
@@ -354,23 +352,21 @@ public class ButtonTest {
         root.getChildren().add(btn);
         show();
 
-        /*
-        ** none of these should cause the context menu to appear,
-        ** so fire them all, and see if anything happens.
-        */
-        KeyEventFirer keyboard = new KeyEventFirer(btn);        
+        // None of these should cause the context menu to appear,
+        // so fire them all, and see if anything happens.
+        KeyEventFirer keyboard = new KeyEventFirer(btn);
         keyboard.doKeyPress(KeyCode.ENTER);
 
         btn.fireEvent(new ActionEvent());
         btn.fire();
-        
-        MouseEventFirer.fireMousePressed(btn);
-        MouseEventFirer.fireMouseReleased(btn);
-        MouseEventFirer.fireMouseClicked(btn);
+
+        mouse.fireMousePressed();
+        mouse.fireMouseReleased();
+        mouse.fireMouseClicked();
     }
     
     private int count = 0;
-    @Test public void conextMenuShouldShowOnInSomeCircumstances() {
+    @Test public void contextMenuShouldShowOnInSomeCircumstances() {
         ContextMenu popupMenu = new ContextMenu();
         MenuItem item1 = new MenuItem("_About");
         popupMenu.getItems().add(item1);
@@ -396,13 +392,13 @@ public class ButtonTest {
         assertEquals(0, count);
         
         /* Note that right-mouse press events don't force the popup open */
-        MouseEventFirer.fireMousePressed(btn, MouseButton.SECONDARY);
+        mouse.fireMousePressed(MouseButton.SECONDARY);
         assertEquals(0, count);
         
-        MouseEventFirer.fireMouseClicked(btn, MouseButton.SECONDARY);
+        mouse.fireMouseClicked(MouseButton.SECONDARY);
         assertEquals(0, count);
         
-        MouseEventFirer.fireMouseReleased(btn, MouseButton.SECONDARY);
+        mouse.fireMouseReleased(MouseButton.SECONDARY);
         assertEquals(0, count);
         
         /* Only context menu events force it to appear */

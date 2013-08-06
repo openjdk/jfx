@@ -35,7 +35,7 @@ import javafx.scene.control.TableView.TableViewFocusModel;
 
 /**
  */
-public class TableCellBehavior<S,T> extends TableCellBehaviorBase<S, TableCell<S, T>> {
+public class TableCellBehavior<S,T> extends TableCellBehaviorBase<S, T, TableColumn<S,?>, TableCell<S, T>> {
     
     /***************************************************************************
      *                                                                         *
@@ -43,7 +43,7 @@ public class TableCellBehavior<S,T> extends TableCellBehaviorBase<S, TableCell<S
      *                                                                         *
      **************************************************************************/    
 
-    public TableCellBehavior(TableCell control) {
+    public TableCellBehavior(TableCell<S,T> control) {
         super(control);
     }
     
@@ -56,12 +56,12 @@ public class TableCellBehavior<S,T> extends TableCellBehaviorBase<S, TableCell<S
      **************************************************************************/          
 
     /** @{@inheritDoc} */
-    @Override TableView getTableControl() {
+    @Override TableView<S> getTableControl() {
         return getControl().getTableView();
     }
 
     /** @{@inheritDoc} */
-    @Override TableColumn getTableColumn() {
+    @Override TableColumn<S,T> getTableColumn() {
         return getControl().getTableColumn();
     }
 
@@ -71,12 +71,12 @@ public class TableCellBehavior<S,T> extends TableCellBehaviorBase<S, TableCell<S
     }
 
     /** @{@inheritDoc} */
-    @Override TableView.TableViewSelectionModel getSelectionModel() {
+    @Override TableView.TableViewSelectionModel<S> getSelectionModel() {
         return getTableControl().getSelectionModel();
     }
 
     /** @{@inheritDoc} */
-    @Override TableViewFocusModel getFocusModel() {
+    @Override TableViewFocusModel<S> getFocusModel() {
         return getTableControl().getFocusModel();
     }
 

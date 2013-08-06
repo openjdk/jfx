@@ -25,16 +25,15 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import javafx.beans.value.ObservableValue;
-
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.control.Control;
 import javafx.scene.control.SkinBase;
 import javafx.scene.input.MouseEvent;
 import javafx.util.Callback;
+import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
+import com.sun.javafx.scene.control.behavior.BehaviorBase;
 
 /**
  *
@@ -148,14 +147,19 @@ public abstract class BehaviorSkinBase<C extends Control, BB extends BehaviorBas
         }
         
         C control = getSkinnable();
-        control.removeEventHandler(MouseEvent.MOUSE_ENTERED, mouseHandler);
-        control.removeEventHandler(MouseEvent.MOUSE_EXITED, mouseHandler);
-        control.removeEventHandler(MouseEvent.MOUSE_PRESSED, mouseHandler);
-        control.removeEventHandler(MouseEvent.MOUSE_RELEASED, mouseHandler);
-        control.removeEventHandler(MouseEvent.MOUSE_DRAGGED, mouseHandler);
+        if (control != null) {
+            control.removeEventHandler(MouseEvent.MOUSE_ENTERED, mouseHandler);
+            control.removeEventHandler(MouseEvent.MOUSE_EXITED, mouseHandler);
+            control.removeEventHandler(MouseEvent.MOUSE_PRESSED, mouseHandler);
+            control.removeEventHandler(MouseEvent.MOUSE_RELEASED, mouseHandler);
+            control.removeEventHandler(MouseEvent.MOUSE_DRAGGED, mouseHandler);
+        }
 
-        this.behavior = null;
-        
+        if (behavior != null) {
+            behavior.dispose();
+            behavior = null;
+        }
+
         super.dispose();
     }
     
@@ -172,7 +176,7 @@ public abstract class BehaviorSkinBase<C extends Control, BB extends BehaviorBas
      * @param property
      * @param reference
      */
-    protected final void registerChangeListener(ObservableValue property, String reference) {
+    protected final void registerChangeListener(ObservableValue<?> property, String reference) {
         if (changeListenerHandler == null) {
             changeListenerHandler = new MultiplePropertyChangeListenerHandler(new Callback<String, Void>() {
                 @Override public Void call(String p) {

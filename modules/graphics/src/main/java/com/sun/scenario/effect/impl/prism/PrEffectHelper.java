@@ -26,25 +26,25 @@
 package com.sun.scenario.effect.impl.prism;
 
 import com.sun.glass.ui.Screen;
-import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.Point2D;
+import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Vec3d;
-import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.geom.transform.NoninvertibleTransformException;
+import com.sun.javafx.sg.prism.NGCamera;
+import com.sun.javafx.sg.prism.NGPerspectiveCamera;
 import com.sun.prism.Graphics;
 import com.sun.prism.RenderTarget;
+import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture;
-import com.sun.prism.camera.PrismCameraImpl;
-import com.sun.prism.camera.PrismPerspectiveCameraImpl;
 import com.sun.scenario.effect.Effect;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.ImageData;
 import com.sun.scenario.effect.impl.EffectPeer;
 import com.sun.scenario.effect.impl.ImagePool;
-import com.sun.prism.ResourceFactory;
 
 public class PrEffectHelper {
 
@@ -107,7 +107,7 @@ public class PrEffectHelper {
                 scale = 1.0 / scale;
                 ((Affine3D) rendertx).scale(scale, scale);
             }
-            PrismCameraImpl cam = g.getCameraNoClone();
+            NGCamera cam = g.getCameraNoClone();
             BaseTransform inv;
             try {
                 inv = rendertx.createInverse();
@@ -179,11 +179,11 @@ public class PrEffectHelper {
     }
 
     static Point2D project(float x, float y,
-                           PrismCameraImpl cam, BaseTransform inv,
+                           NGCamera cam, BaseTransform inv,
                            PickRay tmpray, Vec3d tmpvec, Point2D ret)
     {
         tmpray = cam.computePickRay(x, y, tmpray);
-        return tmpray.projectToZeroPlane(inv, cam instanceof PrismPerspectiveCameraImpl,
+        return tmpray.projectToZeroPlane(inv, cam instanceof NGPerspectiveCamera,
                                          tmpvec, ret);
     }
 

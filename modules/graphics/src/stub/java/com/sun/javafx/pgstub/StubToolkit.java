@@ -29,6 +29,7 @@
 
 package com.sun.javafx.pgstub;
 
+import com.sun.glass.ui.CommonDialogs.FileChooserResult;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.embed.HostInterface;
 import com.sun.javafx.geom.Path2D;
@@ -737,12 +738,13 @@ public class StubToolkit extends Toolkit {
     }
 
     public interface CommonDialogsSupport {
-        List<File> showFileChooser(TKStage ownerWindow,
+        FileChooserResult showFileChooser(TKStage ownerWindow,
                                    String title,
                                    File initialDirectory,
                                    String initialFileName,
                                    FileChooserType fileChooserType,
-                                   List<ExtensionFilter> extensionFilters);
+                                   List<ExtensionFilter> extensionFilters,
+                                   ExtensionFilter selectedFilter);
 
         File showDirectoryChooser(TKStage ownerWindow,
                                   String title,
@@ -756,19 +758,21 @@ public class StubToolkit extends Toolkit {
     }
 
     @Override
-    public List<File> showFileChooser(TKStage ownerWindow,
+    public FileChooserResult showFileChooser(TKStage ownerWindow,
                                       String title,
                                       File initialDirectory,
                                       String initialFileName,
                                       FileChooserType fileChooserType,
-                                      List<ExtensionFilter> extensionFilters) {
+                                      List<ExtensionFilter> extensionFilters,
+                                      ExtensionFilter selectedFilter) {
         return commonDialogsSupport.showFileChooser(
                                         ownerWindow,
                                         title,
                                         initialDirectory,
                                         initialFileName,
                                         fileChooserType,
-                                        extensionFilters);
+                                        extensionFilters,
+                                        selectedFilter);
     }
 
 

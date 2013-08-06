@@ -79,6 +79,11 @@ public class BrickBreakerApp extends Application {
         primaryStage.show();
     }
 
+    @Override public void stop() {
+        MainFrame currentMainFrame = getMainFrame();
+        currentMainFrame.endGame();
+    }
+
     public static void main(String[] args) {
         Application.launch(args);
     }
@@ -119,6 +124,10 @@ public class BrickBreakerApp extends Application {
             return lifeCount;
         }
 
+        public void setLifeCount(int count) {
+            lifeCount = count;
+        }
+
         public void increaseLives() {
             lifeCount = Math.min(lifeCount + 1, Config.MAX_LIVES);
         }
@@ -132,6 +141,15 @@ public class BrickBreakerApp extends Application {
             lifeCount = 3;
             score = 0;
             changeState(1);
+        }
+
+        public void endGame() {
+            if (splash != null) {
+                splash.stop();
+            }
+            if (level != null) {
+                level.stop();
+            }
         }
 
         // Current state of the game. The next values are available

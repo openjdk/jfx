@@ -53,7 +53,7 @@ import javafx.util.Duration;
  * Simple 7 segment LED style digit. It supports the numbers 0 through 9.
  */
 /**
- * A ui control which displays a browsable display shelf of images
+ * A ui control which displays a browse-able display shelf of images
  */
 public class DisplayShelf extends Region {
 
@@ -77,11 +77,9 @@ public class DisplayShelf extends Region {
     public DisplayShelf(Image[] images) {
         // set clip
         setClip(clip);
-        // set background gradient using css
-        setStyle("-fx-background-color: linear-gradient(to bottom,"
-                + " black 60, #141414 60.1%, black 100%);");
-        // style scroll bar color
-        scrollBar.setStyle("-fx-base: #202020; -fx-background: #202020;");
+        // set ids for styling via CSS
+        setId("displayshelf");  
+        scrollBar.setId("display-scrollbar");
         // create items
         items = new PerspectiveImage[images.length];
         for (int i = 0; i < images.length; i++) {

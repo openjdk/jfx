@@ -91,7 +91,6 @@ public class ProgressBarTreeTableCell<S> extends TreeTableCell<S, Double> {
         this.getStyleClass().add("progress-bar-tree-table-cell");
         
         this.progressBar = new ProgressBar();
-        setGraphic(progressBar);
     }
     
     
@@ -114,7 +113,7 @@ public class ProgressBarTreeTableCell<S> extends TreeTableCell<S, Double> {
             observable = getTableColumn().getCellObservableValue(getIndex());
             if (observable != null) {
                 progressBar.progressProperty().bind(observable);
-            } else {
+            } else if (item != null) {
                 progressBar.setProgress(item);
             }
             

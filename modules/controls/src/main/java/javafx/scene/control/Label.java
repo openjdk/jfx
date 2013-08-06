@@ -25,7 +25,6 @@
 
 package javafx.scene.control;
 
-import javafx.css.CssMetaData;
 import com.sun.javafx.scene.control.skin.LabelSkin;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;

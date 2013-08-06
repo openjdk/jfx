@@ -93,7 +93,7 @@ public class VirtualKeyboardSkin extends SkinBase<VirtualKeyboard, BehaviorBase<
      * @param behavior
      */
     public VirtualKeyboardSkin(VirtualKeyboard keyboard) {
-        super(keyboard, new BehaviorBase<VirtualKeyboard>(keyboard));
+        super(keyboard, new BehaviorBase<VirtualKeyboard>(keyboard, Collections.EMPTY_LIST));
 
         registerChangeListener(keyboard.typeProperty(), "type");
         rebuild();

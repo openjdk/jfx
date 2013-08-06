@@ -87,30 +87,6 @@ class FTFontFile extends PrismFontFile {
         }
     }
 
-    /* This is called only for fonts where a temp file was created */
-    @Override
-    protected synchronized void disposeOnShutdown() {
-        if (face != 0) {
-            OS.FT_Done_Face(face);
-            if (PrismFontFactory.debugFonts) {
-                System.err.println("Done Face=" + face);
-            }
-            face = 0;
-        }
-        if (library != 0) {
-            OS.FT_Done_FreeType(library);
-            if (PrismFontFactory.debugFonts) {
-                System.err.println("Done Library=" + library);
-            }
-            library = 0;
-        }
-        if (disposer != null) {
-            disposer.library = 0;
-            disposer.face = 0;
-            disposer = null;
-        }
-    }
-
     @Override
     protected PrismFontStrike<?> createStrike(float size, BaseTransform transform,
                                               int aaMode, FontStrikeDesc desc) {
@@ -140,7 +116,13 @@ class FTFontFile extends PrismFontFile {
     }
 
     synchronized void initGlyph(FTGlyph glyph, FTFontStrike strike) {
-        int size26dot6 = (int)(strike.getSize() * 64);
+        float size = strike.getSize();
+        if (size == 0) {
+            glyph.buffer = new byte[0];
+            glyph.bitmap = new FT_Bitmap();
+            return;
+        }
+        int size26dot6 = (int)(size * 64);
         OS.FT_Set_Char_Size(face, 0, size26dot6, 72, 72);
 
         boolean lcd = strike.getAAMode() == FontResource.AA_LCD &&

@@ -29,26 +29,15 @@ package javafx.scene.control;
  * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
  */
 
-import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
-
-import org.junit.Before;
-import org.junit.Test;
-
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
@@ -57,6 +46,14 @@ import com.sun.javafx.scene.control.skin.ColorPalette;
 import com.sun.javafx.scene.control.skin.ColorPickerPaletteRetriever;
 import com.sun.javafx.scene.control.skin.ColorPickerSkin;
 import com.sun.javafx.tk.Toolkit;
+import org.junit.Before;
+import org.junit.Test;
+import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class ColorPickerTest {
     private ColorPicker colorPicker;
@@ -200,8 +197,9 @@ public class ColorPickerTest {
         
         //Click on CustomColor hyperlink to show the custom color dialog.
         Hyperlink hyperlink = ColorPickerPaletteRetriever.getCustomColorLink(colorPalette);
-        MouseEventFirer.fireMousePressAndRelease(hyperlink);
-        
+        MouseEventFirer mouse = new MouseEventFirer(hyperlink);
+        mouse.fireMousePressAndRelease();
+
         Stage dialog = ColorPickerPaletteRetriever.getCustomColorDialog(colorPalette);
         assertNotNull(dialog);
         assertTrue(dialog.isShowing());

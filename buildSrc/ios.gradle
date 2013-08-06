@@ -337,6 +337,13 @@ project(":web") {
                 destinationDir = file("modules/web/build/classes/ios")
                 dependencyCacheDir = file("modules/web/build/dependency-cache")
                 source file("$closedDir/javafx-ios-webnode/src")
+                doLast {
+                    copy {
+                        from source
+                        into "modules/web/build/classes/ios"
+                        exclude "**/*.java"
+                    }
+                }
             }
 
             def jarWebJavaIos = task("jarWebJavaIos",

@@ -33,7 +33,6 @@ import javafx.scene.Node;
 import javafx.scene.image.Image;
 
 import com.sun.javafx.effect.EffectDirtyBits;
-import com.sun.javafx.effect.EffectUtils;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -245,14 +244,13 @@ public class ImageInput extends Effect {
             BaseBounds r = new RectBounds(
                     localX, localY,
                     localX + localWidth, localY + localHeight);
-            return EffectUtils.transformBounds(tx, r);
+            return transformBounds(tx, r);
         } else {
             return new RectBounds();
         }
     }
 
     /**
-     * 
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */

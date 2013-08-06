@@ -27,16 +27,15 @@ package com.sun.prism.impl.ps;
 
 import com.sun.glass.ui.Screen;
 import com.sun.javafx.geom.Rectangle;
-import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.Affine3D;
+import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.prism.CompositeMode;
-import com.sun.prism.Graphics;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.RTTexture;
 import com.sun.prism.RenderTarget;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture;
-import com.sun.prism.camera.PrismCameraImpl;
 import com.sun.prism.impl.BaseContext;
 import com.sun.prism.impl.BaseGraphics;
 import com.sun.prism.impl.VertexBuffer;
@@ -152,7 +151,7 @@ public abstract class BaseShaderContext extends BaseContext {
     public static class State {
         private Shader lastShader;
         private RenderTarget lastRenderTarget;
-        private PrismCameraImpl lastCamera;
+        private NGCamera lastCamera;
         private boolean lastDepthTest;
         private BaseTransform lastTransform = new Affine3D();
         private Rectangle lastClip;
@@ -168,7 +167,7 @@ public abstract class BaseShaderContext extends BaseContext {
         private boolean lastState3D = false;
     }
 
-    protected abstract State updateRenderTarget(RenderTarget target, PrismCameraImpl camera,
+    protected abstract State updateRenderTarget(RenderTarget target, NGCamera camera,
                                                 boolean depthTest);
 
     protected abstract void updateTexture(int texUnit, Texture tex);
@@ -720,7 +719,7 @@ public abstract class BaseShaderContext extends BaseContext {
                           int dstX0, int dstY0, int dstX1, int dstY1);
 
     @Override
-    protected void setRenderTarget(RenderTarget target, PrismCameraImpl camera,
+    protected void setRenderTarget(RenderTarget target, NGCamera camera,
             boolean depthTest, boolean state3D)
     {
         if (target instanceof Texture) {

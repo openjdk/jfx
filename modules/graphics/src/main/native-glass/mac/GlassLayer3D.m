@@ -38,6 +38,8 @@
 
 @implementation GlassLayer3D
 
+static NSArray *allModes = nil;
+
 - (void)_connectToRemoteServer:(NSString*)serverName
 {
     // SAK: Note that RemoteLayerGetServerPort can return 0/MACH_PORT_NULL. This is
@@ -62,41 +64,10 @@
         NSLog(@"RemoteLayer ERROR: nil remoteLayer for serverName:%@", serverName);
     }
 }
-- (CGLPixelFormatObj)_createPixelFormat
-{
-    CGLPixelFormatObj pix = NULL;
-    {
-        const CGLPixelFormatAttribute attributes[] =
-        {
-            kCGLPFAAccelerated,
-            kCGLPFAColorSize, 32,
-            (CGLPixelFormatAttribute)0
-        };
-        GLint npix = 0;
-        CGLError err = CGLChoosePixelFormat(attributes, &pix, &npix);
-        if (err != kCGLNoError)
-        {
-            NSLog(@"CGLChoosePixelFormat error: %d", err);
-        }
-    }
-    return pix;
-}
 
-- (CGLContextObj)_createContextWithShared:(CGLContextObj)share withFormat:(CGLPixelFormatObj)format
-{
-    CGLContextObj ctx = NULL;
-    {
-        //NSLog(@"ALLOC");
-        CGLError err = CGLCreateContext(format, share, &ctx);
-        if (err != kCGLNoError)
-        {
-            NSLog(@"CGLCreateContext error: %d", err);
-        }
-    }
-    return ctx;
-}
-
-- (id)initWithSharedContext:(CGLContextObj)ctx withHiDPIAware:(BOOL)HiDPIAware
+- (id)initWithSharedContext:(CGLContextObj)ctx
+           andClientContext:(CGLContextObj)clCtx
+             withHiDPIAware:(BOOL)HiDPIAware
 {
     LOG("GlassLayer3D initWithSharedContext]");
     self = [super init];
@@ -106,14 +77,14 @@
         self->_remoteLayer = nil;
         self->_remoteLayerID = 0;
 
-        self->_format = [self _createPixelFormat];
-        self->_ctx = [self _createContextWithShared:ctx withFormat:self->_format];
-        self->_offscreen = nil;
-        LOG("   GlassLayer3D context: %p", self->_ctx);
+        self->_painterOffscreen = [[GlassOffscreen alloc] initWithContext:clCtx];
+        self->_glassOffscreen = [[GlassOffscreen alloc] initWithContext:ctx];
+        [self->_glassOffscreen setLayer:self];
+        LOG("   GlassLayer3D context: %p", ctx);
 
         self->isHiDPIAware = HiDPIAware;
 
-        [self setAsynchronous:YES]; // allow the layer to check for dirty flag and repaint if needed
+        [self setAsynchronous:NO];
         [self setAutoresizingMask:(kCALayerWidthSizable|kCALayerHeightSizable)];
         [self setContentsGravity:kCAGravityTopLeft];
 
@@ -125,18 +96,23 @@
         [self setMasksToBounds:YES];
         [self setNeedsDisplayOnBoundsChange:YES];
         [self setAnchorPoint:CGPointMake(0.0f, 0.0f)];
+
+        if (allModes == nil) {
+            allModes = [[NSArray arrayWithObjects:NSDefaultRunLoopMode,
+                        NSModalPanelRunLoopMode,
+                        NSModalPanelRunLoopMode, nil] retain];
+        }
     }
     return self;
 }
 
 - (void)dealloc
 {
-    //NSLog(@"FREE");
-    CGLDestroyContext( self->_ctx );
-    self->_ctx = NULL;
+    [self->_glassOffscreen release];
+    self->_glassOffscreen = nil;
 
-    [self->_offscreen dealloc];
-    self->_offscreen = nil;
+    [self->_painterOffscreen release];
+    self->_painterOffscreen = nil;
 
     [self->_remoteLayer dealloc];
     self->_remoteLayer = nil;
@@ -161,54 +137,60 @@
 
 - (BOOL)canDrawInCGLContext:(CGLContextObj)glContext pixelFormat:(CGLPixelFormatObj)pixelFormat forLayerTime:(CFTimeInterval)timeInterval displayTime:(const CVTimeStamp *)timeStamp
 {
-    //return YES;
-    return (([self needsDisplay] == YES) || ([self->_offscreen isDirty] == YES));
+    return [self->_glassOffscreen isDirty];
 }
 
 - (CGLContextObj)copyCGLContextForPixelFormat:(CGLPixelFormatObj)pixelFormat
 {
-    return CGLRetainContext(self->_ctx);
+    return CGLRetainContext([self->_glassOffscreen getContext]);
 }
 
 - (CGLPixelFormatObj)copyCGLPixelFormatForDisplayMask:(uint32_t)mask
 {
-    return CGLRetainPixelFormat(self->_format);
+    return CGLRetainPixelFormat(CGLGetPixelFormat([self->_glassOffscreen getContext]));
 }
 
 - (void)drawInCGLContext:(CGLContextObj)glContext pixelFormat:(CGLPixelFormatObj)pixelFormat forLayerTime:(CFTimeInterval)timeInterval displayTime:(const CVTimeStamp *)timeStamp
 {
-    [self->_offscreen lock];
-    {
-        LOG("GlassLayer3D drawInCGLContext]");
-        LOG("   current context: %p", CGLGetCurrentContext());
+    // glContext is already set as current by now and locked by Quartz internaly
+    LOG("GlassLayer3D drawInCGLContext]");
+    LOG("   current context: %p", CGLGetCurrentContext());
 #ifdef VERBOSE
-        {
-            GLint fbo = 0; // default to screen
-            glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, (GLint*)&fbo);
-            LOG("   fbo: %d", fbo);
-        }
-#endif
-        // the viewport is already set for us here, so just blit
-        
-#if 0
-        // this will stretch the offscreen to cover all the surface
-        // ie., live resizing "appears" better, but the blit area is not at 1:1 scale
-        [self->_offscreen blit];
-#else
-        // we blit only in the area we rendered in
-        GLint params[] = { 0, 0, 0, 0 };
-        glGetIntegerv(GL_VIEWPORT, params);
-        if ((params[2] > 0) && ((params[3] > 0)))
-        {
-            [self->_offscreen blitForWidth:(GLuint)params[2] andHeight:(GLuint)params[3]];
-        }
-#endif
-        
-        // the default implementation of the method flushes the context.
-        [super drawInCGLContext:glContext pixelFormat:pixelFormat forLayerTime:timeInterval displayTime:timeStamp];
-        LOG("\n");
+    {
+        GLint fbo = 0; // default to screen
+        glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, (GLint*)&fbo);
+        LOG("   fbo: %d", fbo);
     }
-    [self->_offscreen unlock];
+#endif
+    // the viewport is already set for us here, so just blit
+  
+#if 0
+    // this will stretch the offscreen to cover all the surface
+    // ie., live resizing "appears" better, but the blit area is not at 1:1 scale
+    [self->_glassOffscreen blit];
+#else
+    // we blit only in the area we rendered in
+    GLint params[] = { 0, 0, 0, 0 };
+    glGetIntegerv(GL_VIEWPORT, params);
+    if ((params[2] > 0) && ((params[3] > 0)))
+    {
+        [self->_glassOffscreen blitForWidth:(GLuint)params[2] andHeight:(GLuint)params[3]];
+    }
+#endif
+
+    // the default implementation of the method flushes the context.
+    [super drawInCGLContext:glContext pixelFormat:pixelFormat forLayerTime:timeInterval displayTime:timeStamp];
+    LOG("\n");
+}
+
+- (void)flush
+{
+    [(GlassOffscreen*)_glassOffscreen blitFromOffscreen:(GlassOffscreen*)_painterOffscreen];
+    [[NSRunLoop mainRunLoop] performSelector:@selector(setNeedsDisplay)
+                                      target:[self->_glassOffscreen getLayer]
+                                    argument:nil
+                                       order:0
+                                       modes:allModes];
 }
 
 - (uint32_t)getRemoteLayerIdForServer:(NSString*)serverName
@@ -241,16 +223,21 @@
     }
 }
 
-- (GlassOffscreen*)getOffscreen
+- (GlassOffscreen*)getPainterOffscreen
 {
-    return self->_offscreen;
+    return self->_painterOffscreen;
+}
+
+- (GlassOffscreen*)getGlassOffscreen
+{
+    return self->_glassOffscreen;
 }
 
 - (void)hostOffscreen:(GlassOffscreen*)offscreen
 {
-    [self->_offscreen release];
-    self->_offscreen = nil;
-    self->_offscreen = [offscreen retain];
+    [self->_glassOffscreen release];
+    self->_glassOffscreen = [offscreen retain];
+    [self->_glassOffscreen setLayer:self];
 }
 
 @end

@@ -29,8 +29,6 @@ import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import java.util.Collections;
 import java.util.List;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.collections.ObservableList;
 import javafx.css.Styleable;
 import javafx.event.EventHandler;
@@ -42,6 +40,10 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 
 /**
+ * Base implementation class for defining the visual representation of user
+ * interface controls by defining a scene graph of nodes to represent the
+ * {@link Skin skin}.
+ * A user interface control is abstracted behind the {@link Skinnable} interface.
  *
  * @since JavaFX 8.0
  */
@@ -427,22 +429,121 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     protected double snapPosition(double value) {
         return control.isSnapToPixel() ? Math.round(value) : value;
     }
-    
+
+    /**
+     * Utility method which positions the child within an area of this
+     * skin defined by {@code areaX}, {@code areaY}, {@code areaWidth} x {@code areaHeight},
+     * with a baseline offset relative to that area.
+     * <p>
+     * This function does <i>not</i> resize the node and uses the node's layout bounds
+     * width and height to determine how it should be positioned within the area.
+     * <p>
+     * If the vertical alignment is {@code VPos.BASELINE} then it
+     * will position the node so that its own baseline aligns with the passed in
+     * {@code baselineOffset}, otherwise the baseline parameter is ignored.
+     * <p>
+     * If {@code snapToPixel} is {@code true} for this skin, then the x/y position
+     * values will be rounded to their nearest pixel boundaries.
+     *
+     * @param child the child being positioned within this skin
+     * @param areaX the horizontal offset of the layout area relative to this skin
+     * @param areaY the vertical offset of the layout area relative to this skin
+     * @param areaWidth  the width of the layout area
+     * @param areaHeight the height of the layout area
+     * @param areaBaselineOffset the baseline offset to be used if VPos is BASELINE
+     * @param halignment the horizontal alignment for the child within the area
+     * @param valignment the vertical alignment for the child within the area
+     *
+     */
     protected void positionInArea(Node child, double areaX, double areaY, 
             double areaWidth, double areaHeight, double areaBaselineOffset, 
             HPos halignment, VPos valignment) {
         positionInArea(child, areaX, areaY, areaWidth, areaHeight, 
                 areaBaselineOffset, Insets.EMPTY, halignment, valignment);
     }
-    
-    protected void positionInArea(Node child, double areaX, double areaY, 
+
+    /**
+     * Utility method which positions the child within an area of this
+     * skin defined by {@code areaX}, {@code areaY}, {@code areaWidth} x {@code areaHeight},
+     * with a baseline offset relative to that area.
+     * <p>
+     * This function does <i>not</i> resize the node and uses the node's layout bounds
+     * width and height to determine how it should be positioned within the area.
+     * <p>
+     * If the vertical alignment is {@code VPos.BASELINE} then it
+     * will position the node so that its own baseline aligns with the passed in
+     * {@code baselineOffset},  otherwise the baseline parameter is ignored.
+     * <p>
+     * If {@code snapToPixel} is {@code true} for this skin, then the x/y position
+     * values will be rounded to their nearest pixel boundaries.
+     * <p>
+     * If {@code margin} is non-null, then that space will be allocated around the
+     * child within the layout area.  margin may be null.
+     *
+     * @param child the child being positioned within this skin
+     * @param areaX the horizontal offset of the layout area relative to this skin
+     * @param areaY the vertical offset of the layout area relative to this skin
+     * @param areaWidth  the width of the layout area
+     * @param areaHeight the height of the layout area
+     * @param areaBaselineOffset the baseline offset to be used if VPos is BASELINE
+     * @param margin the margin of space to be allocated around the child
+     * @param halignment the horizontal alignment for the child within the area
+     * @param valignment the vertical alignment for the child within the area
+     *
+     * @since JavaFX 8.0
+     */
+    protected void positionInArea(Node child, double areaX, double areaY,
             double areaWidth, double areaHeight, double areaBaselineOffset, 
             Insets margin, HPos halignment, VPos valignment) {
         Region.positionInArea(child, areaX, areaY, areaWidth, areaHeight, 
                 areaBaselineOffset, margin, halignment, valignment, 
                 control.isSnapToPixel());
     }
-    
+
+    /**
+     * Utility method which lays out the child within an area of this
+     * skin defined by {@code areaX}, {@code areaY}, {@code areaWidth} x {@code areaHeight},
+     * with a baseline offset relative to that area.
+     * <p>
+     * If the child is resizable, this method will resize it to fill the specified
+     * area unless the node's maximum size prevents it.  If the node's maximum
+     * size preference is less than the area size, the maximum size will be used.
+     * If node's maximum is greater than the area size, then the node will be
+     * resized to fit within the area, unless its minimum size prevents it.
+     * <p>
+     * If the child has a non-null contentBias, then this method will use it when
+     * resizing the child.  If the contentBias is horizontal, it will set its width
+     * first to the area's width (up to the child's max width limit) and then pass
+     * that value to compute the child's height.  If child's contentBias is vertical,
+     * then it will set its height to the area height (up to child's max height limit)
+     * and pass that height to compute the child's width.  If the child's contentBias
+     * is null, then it's width and height have no dependencies on each other.
+     * <p>
+     * If the child is not resizable (Shape, Group, etc) then it will only be
+     * positioned and not resized.
+     * <p>
+     * If the child's resulting size differs from the area's size (either
+     * because it was not resizable or it's sizing preferences prevented it), then
+     * this function will align the node relative to the area using horizontal and
+     * vertical alignment values.
+     * If valignment is {@code VPos.BASELINE} then the node's baseline will be aligned
+     * with the area baseline offset parameter, otherwise the baseline parameter
+     * is ignored.
+     * <p>
+     * If {@code snapToPixel} is {@code true} for this skin, then the resulting x,y
+     * values will be rounded to their nearest pixel boundaries and the
+     * width/height values will be ceiled to the next pixel boundary.
+     *
+     * @param child the child being positioned within this skin
+     * @param areaX the horizontal offset of the layout area relative to this skin
+     * @param areaY the vertical offset of the layout area relative to this skin
+     * @param areaWidth  the width of the layout area
+     * @param areaHeight the height of the layout area
+     * @param areaBaselineOffset the baseline offset to be used if VPos is BASELINE
+     * @param halignment the horizontal alignment for the child within the area
+     * @param valignment the vertical alignment for the child within the area
+     *
+     */
     protected void layoutInArea(Node child, double areaX, double areaY,
                                double areaWidth, double areaHeight,
                                double areaBaselineOffset,
@@ -450,7 +551,54 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
         layoutInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, 
                 Insets.EMPTY, true, true, halignment, valignment);
     }
-    
+
+    /**
+     * Utility method which lays out the child within an area of this
+     * skin defined by {@code areaX}, {@code areaY}, {@code areaWidth} x {@code areaHeight},
+     * with a baseline offset relative to that area.
+     * <p>
+     * If the child is resizable, this method will resize it to fill the specified
+     * area unless the node's maximum size prevents it.  If the node's maximum
+     * size preference is less than the area size, the maximum size will be used.
+     * If node's maximum is greater than the area size, then the node will be
+     * resized to fit within the area, unless its minimum size prevents it.
+     * <p>
+     * If the child has a non-null contentBias, then this method will use it when
+     * resizing the child.  If the contentBias is horizontal, it will set its width
+     * first to the area's width (up to the child's max width limit) and then pass
+     * that value to compute the child's height.  If child's contentBias is vertical,
+     * then it will set its height to the area height (up to child's max height limit)
+     * and pass that height to compute the child's width.  If the child's contentBias
+     * is null, then it's width and height have no dependencies on each other.
+     * <p>
+     * If the child is not resizable (Shape, Group, etc) then it will only be
+     * positioned and not resized.
+     * <p>
+     * If the child's resulting size differs from the area's size (either
+     * because it was not resizable or it's sizing preferences prevented it), then
+     * this function will align the node relative to the area using horizontal and
+     * vertical alignment values.
+     * If valignment is {@code VPos.BASELINE} then the node's baseline will be aligned
+     * with the area baseline offset parameter, otherwise the baseline parameter
+     * is ignored.
+     * <p>
+     * If {@code margin} is non-null, then that space will be allocated around the
+     * child within the layout area.  margin may be null.
+     * <p>
+     * If {@code snapToPixel} is {@code true} for this skin, then the resulting x,y
+     * values will be rounded to their nearest pixel boundaries and the
+     * width/height values will be ceiled to the next pixel boundary.
+     *
+     * @param child the child being positioned within this skin
+     * @param areaX the horizontal offset of the layout area relative to this skin
+     * @param areaY the vertical offset of the layout area relative to this skin
+     * @param areaWidth  the width of the layout area
+     * @param areaHeight the height of the layout area
+     * @param areaBaselineOffset the baseline offset to be used if VPos is BASELINE
+     * @param margin the margin of space to be allocated around the child
+     * @param halignment the horizontal alignment for the child within the area
+     * @param valignment the vertical alignment for the child within the area
+     */
     protected void layoutInArea(Node child, double areaX, double areaY,
                                double areaWidth, double areaHeight,
                                double areaBaselineOffset,
@@ -459,7 +607,57 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
         layoutInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset,
                 margin, true, true, halignment, valignment);
     }
-    
+
+    /**
+     * Utility method which lays out the child within an area of this
+     * skin defined by {@code areaX}, {@code areaY}, {@code areaWidth} x {@code areaHeight},
+     * with a baseline offset relative to that area.
+     * <p>
+     * If the child is resizable, this method will use {@code fillWidth} and {@code fillHeight}
+     * to determine whether to resize it to fill the area or keep the child at its
+     * preferred dimension.  If fillWidth/fillHeight are true, then this method
+     * will only resize the child up to its max size limits.  If the node's maximum
+     * size preference is less than the area size, the maximum size will be used.
+     * If node's maximum is greater than the area size, then the node will be
+     * resized to fit within the area, unless its minimum size prevents it.
+     * <p>
+     * If the child has a non-null contentBias, then this method will use it when
+     * resizing the child.  If the contentBias is horizontal, it will set its width
+     * first and then pass that value to compute the child's height.  If child's
+     * contentBias is vertical, then it will set its height first
+     * and pass that value to compute the child's width.  If the child's contentBias
+     * is null, then it's width and height have no dependencies on each other.
+     * <p>
+     * If the child is not resizable (Shape, Group, etc) then it will only be
+     * positioned and not resized.
+     * <p>
+     * If the child's resulting size differs from the area's size (either
+     * because it was not resizable or it's sizing preferences prevented it), then
+     * this function will align the node relative to the area using horizontal and
+     * vertical alignment values.
+     * If valignment is {@code VPos.BASELINE} then the node's baseline will be aligned
+     * with the area baseline offset parameter, otherwise the baseline parameter
+     * is ignored.
+     * <p>
+     * If {@code margin} is non-null, then that space will be allocated around the
+     * child within the layout area.  margin may be null.
+     * <p>
+     * If {@code snapToPixel} is {@code true} for this skin, then the resulting x,y
+     * values will be rounded to their nearest pixel boundaries and the
+     * width/height values will be ceiled to the next pixel boundary.
+     *
+     * @param child the child being positioned within this skin
+     * @param areaX the horizontal offset of the layout area relative to this skin
+     * @param areaY the vertical offset of the layout area relative to this skin
+     * @param areaWidth  the width of the layout area
+     * @param areaHeight the height of the layout area
+     * @param areaBaselineOffset the baseline offset to be used if VPos is BASELINE
+     * @param margin the margin of space to be allocated around the child
+     * @param fillWidth whether or not the child should be resized to fill the area width or kept to its preferred width
+     * @param fillHeight whether or not the child should e resized to fill the area height or kept to its preferred height
+     * @param halignment the horizontal alignment for the child within the area
+     * @param valignment the vertical alignment for the child within the area
+     */
     protected void layoutInArea(Node child, double areaX, double areaY,
                                double areaWidth, double areaHeight,
                                double areaBaselineOffset,

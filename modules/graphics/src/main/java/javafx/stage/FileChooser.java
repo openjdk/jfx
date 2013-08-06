@@ -37,6 +37,9 @@ import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
+import com.sun.glass.ui.CommonDialogs;
+import com.sun.glass.ui.CommonDialogs.FileChooserResult;
+
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import com.sun.javafx.tk.FileChooserType;
 import com.sun.javafx.tk.Toolkit;
@@ -294,6 +297,44 @@ public final class FileChooser {
     }
 
     /**
+     * This property is used to pre-select the extension filter for the next
+     * displayed dialog and to read the user-selected extension filter from the
+     * dismissed dialog.
+     * <p>
+     * When the file dialog is shown, the selectedExtensionFilter will be checked.
+     * If the value of selectedExtensionFilter is null or is not contained in
+     * the list of extension filters, then the first extension filter in the list
+     * of extension filters will be selected instead. Otherwise, the specified
+     * selectedExtensionFilter will be activated.
+     * <p>
+     * After the dialog is dismissed the value of this property is updated to
+     * match the user-selected extension filter from the dialog.
+     *
+     * @since JavaFX 8.0
+     */
+
+    private ObjectProperty<ExtensionFilter> selectedExtensionFilter;
+
+    public final ObjectProperty<ExtensionFilter> selectedExtensionFilterProperty() {
+        if (selectedExtensionFilter == null) {
+            selectedExtensionFilter =
+                    new SimpleObjectProperty<ExtensionFilter>(this,
+                    "selectedExtensionFilter");
+        }
+        return selectedExtensionFilter;
+    }
+
+    public final void setSelectedExtensionFilter(ExtensionFilter filter) {
+        selectedExtensionFilterProperty().setValue(filter);
+    }
+
+    public final ExtensionFilter getSelectedExtensionFilter() {
+        return (selectedExtensionFilter != null)
+                ? selectedExtensionFilter.get()
+                : null;
+    }
+
+    /**
      * Shows a new file open dialog. The method doesn't return until the
      * displayed open dialog is dismissed. The return value specifies
      * the file chosen by the user or {@code null} if no selection has been
@@ -354,15 +395,42 @@ public final class FileChooser {
                 ? selectedFiles.get(0) : null;
     }
 
+    private ExtensionFilter findSelectedFilter(CommonDialogs.ExtensionFilter filter) {
+        if (filter != null) {
+            String description = filter.getDescription();
+            List<String> extensions = filter.getExtensions();
+
+            for (ExtensionFilter ef : extensionFilters) {
+                if (description.equals(ef.getDescription())
+                        && extensions.equals(ef.getExtensions())) {
+                    return ef;
+                }
+            }
+        }
+
+        return null;
+    }
+
     private List<File> showDialog(final Window ownerWindow,
                                   final FileChooserType fileChooserType) {
-        return Toolkit.getToolkit().showFileChooser(
+        FileChooserResult result = Toolkit.getToolkit().showFileChooser(
                 (ownerWindow != null) ? ownerWindow.impl_getPeer() : null,
                 getTitle(),
                 getInitialDirectory(),
                 getInitialFileName(),
                 fileChooserType,
-                extensionFilters);
-        
+                extensionFilters,
+                getSelectedExtensionFilter());
+
+        if (result == null) {
+            return null;
+        }
+
+        List<File> files = result.getFiles();
+        if (files != null && files.size() > 0) {
+            selectedExtensionFilterProperty().set(
+                    findSelectedFilter(result.getExtensionFilter()));
+        }
+        return files;
     }
 }

@@ -33,7 +33,6 @@ import javafx.scene.Node;
 
 import com.sun.javafx.Utils;
 import com.sun.javafx.effect.EffectDirtyBits;
-import com.sun.javafx.effect.EffectUtils;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -79,7 +78,7 @@ import com.sun.scenario.effect.Blend.Mode;
  * g.getChildren().addAll(rect, text);
  * </pre></code>
  *
- * <p> The code above produces the following: </p> 
+ * <p> The code above produces the following: </p>
  * <p> <img src="doc-files/blend.png"/> </p>
  * @since JavaFX 2.0
  */
@@ -358,18 +357,17 @@ public class Blend extends Effect {
                                      BoundsAccessor boundsAccessor) {
         BaseBounds topBounds = new RectBounds();
         BaseBounds bottomBounds = new RectBounds();
-        bottomBounds = EffectUtils.getInputBounds(bottomBounds, tx,
-                                                  node, boundsAccessor,
-                                                  getBottomInput());
-        topBounds = EffectUtils.getInputBounds(topBounds, tx,
-                                               node, boundsAccessor,
-                                               getTopInput());
+        bottomBounds = getInputBounds(bottomBounds, tx,
+                                      node, boundsAccessor,
+                                      getBottomInput());
+        topBounds = getInputBounds(topBounds, tx,
+                                   node, boundsAccessor,
+                                   getTopInput());
         BaseBounds ret = topBounds.deriveWithUnion(bottomBounds);
         return ret;
     }
-    
+
     /**
-     * 
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */

@@ -32,7 +32,6 @@ import javafx.scene.Node;
 
 import com.sun.javafx.Utils;
 import com.sun.javafx.effect.EffectDirtyBits;
-import com.sun.javafx.effect.EffectUtils;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.BoundsAccessor;
@@ -249,20 +248,19 @@ public class MotionBlur extends Effect {
                                      BaseTransform tx,
                                      Node node,
                                      BoundsAccessor boundsAccessor) {
-        bounds = EffectUtils.getInputBounds(bounds,
-                                            BaseTransform.IDENTITY_TRANSFORM,
-                                            node, boundsAccessor,
-                                            getInput());
+        bounds = getInputBounds(bounds,
+                                BaseTransform.IDENTITY_TRANSFORM,
+                                node, boundsAccessor,
+                                getInput());
 
         int hpad = getHPad();
         int vpad = getVPad();
         bounds = bounds.deriveWithPadding(hpad, vpad, 0);
 
-        return EffectUtils.transformBounds(tx, bounds);
+        return transformBounds(tx, bounds);
     }
 
     /**
-     * 
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
@@ -272,6 +270,6 @@ public class MotionBlur extends Effect {
         MotionBlur mb = new MotionBlur(this.getAngle(), this.getRadius());
         mb.setInput(mb.getInput());
         return mb;
-        
+
     }
 }

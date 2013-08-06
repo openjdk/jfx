@@ -32,7 +32,6 @@ import javafx.scene.Node;
 
 import com.sun.javafx.Utils;
 import com.sun.javafx.effect.EffectDirtyBits;
-import com.sun.javafx.effect.EffectUtils;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.BoundsAccessor;
@@ -41,7 +40,7 @@ import com.sun.javafx.scene.BoundsAccessor;
 /**
  * An effect that allows for per-pixel adjustments of hue, saturation,
  * brightness, and contrast.
- *  
+ *
  * <p>
  * Example:
  * <pre><code>
@@ -50,13 +49,13 @@ import com.sun.javafx.scene.BoundsAccessor;
  * colorAdjust.setHue(-0.05);
  * colorAdjust.setBrightness(0.1);
  * colorAdjust.setSaturation(0.2);
- * 
+ *
  * Image image = new Image("boat.jpg");
  * ImageView imageView = new ImageView(image);
  * imageView.setFitWidth(200);
  * imageView.setPreserveRatio(true);
  * imageView.setEffect(colorAdjust);
- * </pre></code> 
+ * </pre></code>
  * <p> The code above applied on this image: </p>
  * <p>
  * <img src="doc-files/photo.png"/>
@@ -337,20 +336,17 @@ public class ColorAdjust extends Effect {
                                      BaseTransform tx,
                                      Node node,
                                      BoundsAccessor boundsAccessor) {
-        return EffectUtils.getInputBounds(bounds, tx,
-                                          node, boundsAccessor,
-                                          getInput());
+        return getInputBounds(bounds, tx, node, boundsAccessor, getInput());
     }
 
     /**
-     * 
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
     @Override
     public Effect impl_copy() {
-        ColorAdjust ca = new ColorAdjust(this.getHue(), this.getSaturation(), 
+        ColorAdjust ca = new ColorAdjust(this.getHue(), this.getSaturation(),
                 this.getBrightness(), this.getContrast());
         ca.setInput(ca.getInput());
         return ca;

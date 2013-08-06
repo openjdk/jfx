@@ -28,13 +28,13 @@ package com.sun.prism.impl;
 import com.sun.glass.ui.Screen;
 import com.sun.javafx.geom.Ellipse2D;
 import com.sun.javafx.geom.Line2D;
-import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.RectBounds;
+import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.RoundRectangle2D;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.geom.transform.GeneralTransform3D;
+import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.PixelFormat;
@@ -42,15 +42,11 @@ import com.sun.prism.RectShadowGraphics;
 import com.sun.prism.RenderTarget;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture;
-import com.sun.prism.camera.PrismCameraImpl;
-import com.sun.prism.camera.PrismDefaultCamera;
-import com.sun.prism.camera.PrismParallelCameraImpl;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Paint;
 
 public abstract class BaseGraphics implements RectShadowGraphics {
 
-    private static final PrismCameraImpl DEFAULT_CAMERA = PrismDefaultCamera.getInstance();
     private static final BasicStroke DEFAULT_STROKE =
         new BasicStroke(1.0f, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER, 10.0f);
     private static final Paint DEFAULT_PAINT = Color.WHITE;
@@ -62,7 +58,7 @@ public abstract class BaseGraphics implements RectShadowGraphics {
 
     // TODO: initialize transform lazily to avoid creating garbage... (RT-27422)
     private final Affine3D transform3D = new Affine3D();
-    private PrismCameraImpl camera = DEFAULT_CAMERA;
+    private NGCamera camera = NGCamera.INSTANCE;
     private RectBounds devClipRect;
     private RectBounds finalClipRect;
     protected RectBounds nodeBounds = null;
@@ -84,7 +80,6 @@ public abstract class BaseGraphics implements RectShadowGraphics {
     private final BaseContext context;
     private final RenderTarget renderTarget;
     private boolean state3D = false;
-    private GeneralTransform3D pvTx;
 
     protected BaseGraphics(BaseContext context, RenderTarget target) {
         this.context = context;
@@ -109,7 +104,7 @@ public abstract class BaseGraphics implements RectShadowGraphics {
         }
     }
 
-    protected PrismCameraImpl getCamera() {
+    protected NGCamera getCamera() {
         return camera;
     }
 
@@ -199,14 +194,6 @@ public abstract class BaseGraphics implements RectShadowGraphics {
         }
     }
 
-    public void setWindowProjViewTx(GeneralTransform3D pvTx) {
-        this.pvTx = pvTx;
-    }
-
-    public GeneralTransform3D getWindowProjViewTxNoClone() {
-        return pvTx;
-    }
-
     public void setClipRectIndex(int index) {
         this.clipRectIndex = index;
     }
@@ -250,12 +237,8 @@ public abstract class BaseGraphics implements RectShadowGraphics {
         }
     }
 
-    public PrismCameraImpl getCameraNoClone() {
+    public NGCamera getCameraNoClone() {
         return camera;
-    }
-
-    public boolean hasOrthoCamera() {
-        return camera instanceof PrismParallelCameraImpl;
     }
 
     public void setDepthTest(boolean depthTest) {
@@ -274,7 +257,7 @@ public abstract class BaseGraphics implements RectShadowGraphics {
         return depthBuffer;
     }
 
-    public void setCamera(PrismCameraImpl camera) {
+    public void setCamera(NGCamera camera) {
         this.camera = camera;
     }
 

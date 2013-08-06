@@ -627,6 +627,19 @@ JNIEXPORT jobject JNICALL OS_NATIVE(CTRunGetStringRange)
     return newCFRange(env, &result);
 }
 
+JNIEXPORT jstring JNICALL OS_NATIVE(CTFontCopyAttributeDisplayName)
+    (JNIEnv *env, jclass that, jlong arg0)
+{
+    CFStringRef stringRef = CTFontCopyAttribute((CTFontRef)arg0, kCTFontDisplayNameAttribute);
+
+    /* Copied from MacFontFinder#createJavaString */
+    CFIndex length = CFStringGetLength(stringRef);
+    UniChar buffer[length];
+    CFStringGetCharacters(stringRef, CFRangeMake(0, length), buffer);
+    CFRelease(stringRef);
+    return (*env)->NewString(env, (jchar *)buffer, length);
+}
+
 JNIEXPORT jstring JNICALL OS_NATIVE(CTFontCopyDisplayName)
     (JNIEnv *env, jclass that, jlong arg0)
 {

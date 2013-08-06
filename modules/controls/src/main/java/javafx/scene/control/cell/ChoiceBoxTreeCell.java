@@ -53,7 +53,7 @@ import javafx.util.StringConverter;
  * @param <T> The type of the TreeItems contained within the TreeView.
  * @since JavaFX 2.2
  */
-public class ChoiceBoxTreeCell<T> extends TreeCell<T> {
+public class ChoiceBoxTreeCell<T> extends DefaultTreeCell<T> {
     
     /***************************************************************************
      *                                                                         *

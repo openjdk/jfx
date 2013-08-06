@@ -25,6 +25,16 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import javafx.event.EventType;
+import javafx.geometry.NodeOrientation;
+import javafx.scene.control.Control;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
+import java.util.ArrayList;
+import java.util.List;
+import com.sun.javafx.scene.control.skin.ScrollPaneSkin;
 import static javafx.scene.input.KeyCode.DOWN;
 import static javafx.scene.input.KeyCode.F4;
 import static javafx.scene.input.KeyCode.LEFT;
@@ -33,19 +43,6 @@ import static javafx.scene.input.KeyCode.PAGE_UP;
 import static javafx.scene.input.KeyCode.RIGHT;
 import static javafx.scene.input.KeyCode.SPACE;
 import static javafx.scene.input.KeyCode.UP;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import javafx.event.EventType;
-import javafx.geometry.NodeOrientation;
-import javafx.scene.control.Control;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseEvent;
-
-import com.sun.javafx.scene.control.skin.ScrollPaneSkin;
 
 
 /**
@@ -64,8 +61,8 @@ public class ScrollPaneBehavior extends BehaviorBase<ScrollPane> {
      *                                                                         *
      **************************************************************************/
 
-    public ScrollPaneBehavior(ScrollPane scrollview) {
-        super(scrollview);
+    public ScrollPaneBehavior(ScrollPane scrollPane) {
+        super(scrollPane, SCROLL_PANE_BINDINGS);
     }
 
     /***************************************************************************
@@ -121,26 +118,22 @@ public class ScrollPaneBehavior extends BehaviorBase<ScrollPane> {
      * We manually handle focus traversal keys due to the ScrollPane binding
      * the left/right/up/down keys specially.
      */
-    protected static final List<KeyBinding> SCROLLVIEW_BINDINGS = new ArrayList<KeyBinding>();
+    protected static final List<KeyBinding> SCROLL_PANE_BINDINGS = new ArrayList<>();
     static {
         // TODO XXX DEBUGGING ONLY
-        SCROLLVIEW_BINDINGS.add(new KeyBinding(F4, "TraverseDebug").alt().ctrl().shift());
+        SCROLL_PANE_BINDINGS.add(new KeyBinding(F4, "TraverseDebug").alt().ctrl().shift());
 
-        SCROLLVIEW_BINDINGS.add(new ScrollViewKeyBinding(LEFT, "HorizontalUnitDecrement"));
-        SCROLLVIEW_BINDINGS.add(new ScrollViewKeyBinding(RIGHT, "HorizontalUnitIncrement"));
+        SCROLL_PANE_BINDINGS.add(new ScrollViewKeyBinding(LEFT, "HorizontalUnitDecrement"));
+        SCROLL_PANE_BINDINGS.add(new ScrollViewKeyBinding(RIGHT, "HorizontalUnitIncrement"));
 
-        SCROLLVIEW_BINDINGS.add(new ScrollViewKeyBinding(UP, "VerticalUnitDecrement"));
-        SCROLLVIEW_BINDINGS.add(new ScrollViewKeyBinding(DOWN, "VerticalUnitIncrement"));
+        SCROLL_PANE_BINDINGS.add(new ScrollViewKeyBinding(UP, "VerticalUnitDecrement"));
+        SCROLL_PANE_BINDINGS.add(new ScrollViewKeyBinding(DOWN, "VerticalUnitIncrement"));
 
-        SCROLLVIEW_BINDINGS.add(new ScrollViewKeyBinding(PAGE_UP, "VerticalPageDecrement"));
-        SCROLLVIEW_BINDINGS.add(new ScrollViewKeyBinding(PAGE_DOWN, "VerticalPageIncrement"));
-        SCROLLVIEW_BINDINGS.add(new KeyBinding(SPACE, "VerticalPageIncrement"));
+        SCROLL_PANE_BINDINGS.add(new ScrollViewKeyBinding(PAGE_UP, "VerticalPageDecrement"));
+        SCROLL_PANE_BINDINGS.add(new ScrollViewKeyBinding(PAGE_DOWN, "VerticalPageIncrement"));
+        SCROLL_PANE_BINDINGS.add(new KeyBinding(SPACE, "VerticalPageIncrement"));
     }
 
-    @Override protected List<KeyBinding> createKeyBindings() {
-        return SCROLLVIEW_BINDINGS;
-    }
-    
     protected /*final*/ String matchActionForEvent(KeyEvent e) {
         //TODO - untested code doesn't seem to get triggered (key eaten?)
         String action = super.matchActionForEvent(e);

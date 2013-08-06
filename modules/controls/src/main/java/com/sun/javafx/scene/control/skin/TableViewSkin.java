@@ -25,34 +25,33 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.behavior.TableViewBehavior;
+import java.util.List;
+
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ObjectProperty;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
-import javafx.scene.control.SelectionModel;
+import javafx.scene.control.ResizeFeaturesBase;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TablePosition;
 import javafx.scene.control.TableRow;
+import javafx.scene.control.TableSelectionModel;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TableView.TableViewFocusModel;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.Region;
 import javafx.util.Callback;
 
-import java.util.List;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.ObjectProperty;
-import javafx.scene.control.ResizeFeaturesBase;
-import javafx.scene.control.TableCell;
-import javafx.scene.control.TableColumnBase;
-import javafx.scene.control.TablePositionBase;
-import javafx.scene.control.TableSelectionModel;
-import javafx.scene.layout.Region;
+import com.sun.javafx.scene.control.behavior.TableViewBehavior;
 
-public class TableViewSkin<T> extends TableViewSkinBase<T, TableView<T>, TableViewBehavior<T>, TableRow<T>> {
+public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, TableViewBehavior<T>, TableRow<T>, TableColumn<T, ?>> {
     
     private final TableView<T> tableView;
 
-    public TableViewSkin(final TableView tableView) {
-        super(tableView, new TableViewBehavior(tableView));
+    public TableViewSkin(final TableView<T> tableView) {
+        super(tableView, new TableViewBehavior<T>(tableView));
         
         this.tableView = tableView;
         flow.setFixedCellSize(tableView.getFixedCellSize());
@@ -80,7 +79,7 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, TableView<T>, TableVi
         flow.getHbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
 
         // init the behavior 'closures'
-        TableViewBehavior behavior = getBehavior();
+        TableViewBehavior<T> behavior = getBehavior();
         behavior.setOnFocusPreviousRow(new Runnable() {
             @Override public void run() { onFocusPreviousCell(); }
         });
@@ -150,26 +149,26 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, TableView<T>, TableVi
         return tableView.getVisibleLeafColumns();
     }
 
-    @Override protected int getVisibleLeafIndex(TableColumnBase tc) {
-        return tableView.getVisibleLeafIndex((TableColumn)tc);
+    @Override protected int getVisibleLeafIndex(TableColumn<T, ?> tc) {
+        return tableView.getVisibleLeafIndex(tc);
     }
     
-    @Override protected TableColumnBase getVisibleLeafColumn(int col) {
+    @Override protected TableColumn<T, ?> getVisibleLeafColumn(int col) {
         return tableView.getVisibleLeafColumn(col);
     }
     
     /** {@inheritDoc} */
-    @Override protected TableViewFocusModel getFocusModel() {
+    @Override protected TableViewFocusModel<T> getFocusModel() {
         return tableView.getFocusModel();
     }
 
     /** {@inheritDoc} */
-    @Override protected TablePositionBase getFocusedCell() {
+    @Override protected TablePosition<T, ?> getFocusedCell() {
         return tableView.getFocusModel().getFocusedCell();
     }
     
     /** {@inheritDoc} */
-    @Override protected TableSelectionModel getSelectionModel() {
+    @Override protected TableSelectionModel<T> getSelectionModel() {
         return tableView.getSelectionModel();
     }
 
@@ -209,8 +208,8 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, TableView<T>, TableVi
         return tableView.getSortOrder();
     }
 
-    @Override protected boolean resizeColumn(TableColumnBase tc, double delta) {
-        return tableView.resizeColumn((TableColumn)tc, delta);
+    @Override protected boolean resizeColumn(TableColumn<T, ?> tc, double delta) {
+        return tableView.resizeColumn(tc, delta);
     }
 
     /*
@@ -219,15 +218,15 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, TableView<T>, TableVi
      * in this column. This can be potentially very expensive if the number of
      * rows is large.
      */
-    @Override protected void resizeColumnToFitContent(TableColumnBase tc, int maxRows) {
-        final TableColumn col = (TableColumn) tc;
+    @Override protected void resizeColumnToFitContent(TableColumn<T, ?> tc, int maxRows) {
+        final TableColumn<T, ?> col = tc;
         List<?> items = itemsProperty().get();
         if (items == null || items.isEmpty()) return;
     
-        Callback cellFactory = col.getCellFactory();
+        Callback/*<TableColumn<T, ?>, TableCell<T,?>>*/ cellFactory = col.getCellFactory();
         if (cellFactory == null) return;
     
-        TableCell cell = (TableCell) cellFactory.call(col);
+        TableCell<T,?> cell = (TableCell<T, ?>) cellFactory.call(col);
         if (cell == null) return;
         
         // set this property to tell the TableCell we want to know its actual
@@ -272,13 +271,13 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, TableView<T>, TableVi
     }
     
     /** {@inheritDoc} */
-    @Override public TableRow createCell() {
-        TableRow cell;
+    @Override public TableRow<T> createCell() {
+        TableRow<T> cell;
 
         if (tableView.getRowFactory() != null) {
             cell = tableView.getRowFactory().call(tableView);
         } else {
-            cell = new TableRow();
+            cell = new TableRow<T>();
         }
 
         cell.updateTableView(tableView);

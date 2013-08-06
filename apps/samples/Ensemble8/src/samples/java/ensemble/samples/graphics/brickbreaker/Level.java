@@ -133,6 +133,8 @@ public class Level extends Parent {
     }
 
     private void initTimeline() {
+        mainFrame.setLifeCount(3);
+        mainFrame.setScore(0);
         timeline = new Timeline();
         timeline.setCycleCount(Timeline.INDEFINITE);
         KeyFrame kf = new KeyFrame(Config.ANIMATION_TIME, new EventHandler<ActionEvent>() {

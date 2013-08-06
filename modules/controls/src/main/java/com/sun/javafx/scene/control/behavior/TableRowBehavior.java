@@ -25,19 +25,19 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import java.util.List;
-
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableSelectionModel;
 import javafx.scene.control.TableView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import java.util.Collections;
+import java.util.List;
 
 public class TableRowBehavior<T> extends CellBehaviorBase<TableRow<T>> {
 
     public TableRowBehavior(TableRow<T> control) {
-        super(control);
+        super(control, Collections.EMPTY_LIST);
     }
 
     @Override public void mouseReleased(MouseEvent e) {
@@ -48,7 +48,7 @@ public class TableRowBehavior<T> extends CellBehaviorBase<TableRow<T>> {
         final TableRow<T> tableRow = getControl();
         final TableView<T> table = tableRow.getTableView();
         if (table == null) return;
-        final TableSelectionModel sm = table.getSelectionModel();
+        final TableSelectionModel<T> sm = table.getSelectionModel();
         if (sm == null || sm.isCellSelectionEnabled()) return;
         
         final int index = getControl().getIndex();

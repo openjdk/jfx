@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,20 +23,19 @@
  * questions.
  */
 
-package com.sun.prism.camera;
+package com.sun.javafx.scene.control.behavior;
 
-import com.sun.javafx.geom.PickRay;
+import org.junit.Test;
 
-public class PrismParallelCameraImpl extends PrismCameraImpl {
+/**
+ */
+public class AccordionBehaviorTest {
+    // Focus Gained, the expanded pane gets focus
+    // Focus Gained and there is no expanded tab, give expanded tab focus
+    // Panes added / removed, focus should move along with it
+    // Pane gets focused, the focus model should reflect it
 
-    /**
-     * Constructs a orthographic camera object with default parameters.
-     */
-    public PrismParallelCameraImpl() {}
+    @Test public void focusGainedIsCaughtByBehavior() {
 
-    @Override
-    public PickRay computePickRay(float x, float y, PickRay pickRay) {
-        return PickRay.computeParallelPickRay(x, y, worldTransform, zNear, zFar,
-                pickRay);
     }
 }

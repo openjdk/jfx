@@ -40,7 +40,6 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
-import javafx.scene.Node;
 import javafx.scene.control.SkinBase;
 
 
@@ -137,14 +136,14 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
                  SizeConverter.getInstance(), DEFAULT_CELL_SIZE) {
 
             @Override
-            public boolean isSettable(Cell n) {
-                final CellSkinBase skin = (CellSkinBase) n.getSkin();
+            public boolean isSettable(Cell<?> n) {
+                final CellSkinBase<?,?> skin = (CellSkinBase<?,?>) n.getSkin();
                 return skin.cellSize == null || !skin.cellSize.isBound();
             }
 
             @Override
-            public StyleableProperty<Number> getStyleableProperty(Cell n) {
-                final CellSkinBase skin = (CellSkinBase) n.getSkin();
+            public StyleableProperty<Number> getStyleableProperty(Cell<?> n) {
+                final CellSkinBase<?,?> skin = (CellSkinBase<?,?>) n.getSkin();
                 return (StyleableProperty<Number>)skin.cellSizePropertyImpl();
             }
         };

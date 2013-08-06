@@ -34,7 +34,6 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.css.CssMetaData;
-import javafx.css.StyleOrigin;
 import javafx.css.StyleableIntegerProperty;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;

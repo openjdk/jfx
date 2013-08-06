@@ -24,6 +24,8 @@
  */
 package com.sun.glass.ui;
 
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -33,6 +35,18 @@ public final class Screen {
     // the list of attached screens provided by native.
     // screens[0] is the default/main Screen
     private static volatile List<Screen> screens = null ;
+
+    // If dpiOverride is non-zero, use its value as screen DPI
+    private static final int dpiOverride;
+
+    static {
+        dpiOverride = AccessController.doPrivileged(new PrivilegedAction<Integer>() {
+            @Override
+            public Integer run() {
+                return Integer.getInteger("com.sun.javafx.screenDPI", 0);
+            }
+        }).intValue();
+    }
 
     public static class EventHandler {
         public void handleSettingsChanged() {
@@ -131,8 +145,12 @@ public final class Screen {
         this.visibleWidth = visibleWidth;
         this.visibleHeight = visibleHeight;
 
-        this.resolutionX = resolutionX;
-        this.resolutionY = resolutionY;
+        if (dpiOverride > 0) {
+            this.resolutionX = this.resolutionY = dpiOverride;
+        } else {
+            this.resolutionX = resolutionX;
+            this.resolutionY = resolutionY;
+        }
 
         this.scale = scale;
     }

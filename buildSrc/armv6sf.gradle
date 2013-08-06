@@ -169,6 +169,8 @@ def webLFlags = [extraLFlags].flatten()
 //defineProperty("PRISM_CC", "cc");
 //defineProperty("PRISM_SW_CC", "cc");
 
+def gtkCFlags = [extraCFlags].flatten()
+def gtkLFlags = [extraLFlags].flatten()
 setupTools("armv6sf_tools",
     { propFile ->
         ByteArrayOutputStream results = new ByteArrayOutputStream();
@@ -186,9 +188,8 @@ setupTools("armv6sf_tools",
         propFile << "libs=" << results.toString().trim();
     },
     { properties ->
-        // TODO ONLY TO BE USED WITH GTK COMPILATION
-//        extraCFlags.addAll(properties.getProperty("cflags").split(" "))
-//        extraLFlags.addAll(properties.getProperty("libs").split(" "))
+        gtkCFlags.addAll(properties.getProperty("cflags").split(" "))
+        gtkLFlags.addAll(properties.getProperty("libs").split(" "))
     }
 )
 
@@ -266,7 +267,9 @@ ARMV6SF.glass.variants = ["eglfb", "directfb", "fb", "eglx11", "gtk"]
 ARMV6SF.glass.javahInclude = [
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*",
-    "com/sun/glass/ui/lens/*"]
+    "com/sun/glass/ui/lens/*",
+    "com/sun/glass/ui/gtk/*",
+    "com/sun/glass/ui/accessible/gtk/*"]
 ARMV6SF.glass.lib = "glass"
 
 ARMV6SF.glass.eglfb = [:]
@@ -330,13 +333,11 @@ ARMV6SF.glass.eglx11.linkFlags = [lensLFlags].flatten()
 ARMV6SF.glass.eglx11.lib = "glass_lens_eglx11"
  
 ARMV6SF.glass.gtk = [:]
-ARMV6SF.glass.gtk.nativeSource = [
-    file("modules/graphics/src/main/native-glass/lens"),
-    file("modules/graphics/src/main/native-glass/lens/wm")]
+ARMV6SF.glass.gtk.nativeSource = file("modules/graphics/src/main/native-glass/gtk")
 ARMV6SF.glass.gtk.compiler = compiler
-ARMV6SF.glass.gtk.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX"].flatten()
+ARMV6SF.glass.gtk.ccFlags = ["-ffast-math", gtkCFlags, "-DLINUX"].flatten()
 ARMV6SF.glass.gtk.linker = linker
-ARMV6SF.glass.gtk.linkFlags = [lensLFlags, "-lstdc++"].flatten()
+ARMV6SF.glass.gtk.linkFlags = [gtkLFlags, "-lstdc++"].flatten()
 ARMV6SF.glass.gtk.lib = "glass"
 
 ARMV6SF.decora = [:]
@@ -437,3 +438,13 @@ ARMV6SF.fontPango.ccFlags = ["-DJFXFONT_PLUS", ccFlags, pangoCCFlags].flatten()
 ARMV6SF.fontPango.linker = linker
 ARMV6SF.fontPango.linkFlags = [linkFlags, pangoLinkFlags].flatten()
 ARMV6SF.fontPango.lib = "javafx-font-pango"
+
+ARMV6SF.webkit = [:]
+ARMV6SF.webkit.binDir   = "$compilerHome/bin"
+ARMV6SF.webkit.compiler = compiler
+ARMV6SF.webkit.linker   = linker
+ARMV6SF.webkit.ar       = file("$compilerHome/bin/arm-none-linux-gnueabi-ar").getAbsolutePath()
+ARMV6SF.webkit.objcopy  = file("$compilerHome/bin/arm-none-linux-gnueabi-objcopy").getAbsolutePath()
+ARMV6SF.webkit.strip    = file("$compilerHome/bin/arm-none-linux-gnueabi-strip").getAbsolutePath()
+ARMV6SF.webkit.ccFlags  = extraCFlags.join(' ')
+ARMV6SF.webkit.linkFlags = extraLFlags.join(' ')

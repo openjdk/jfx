@@ -62,10 +62,9 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldTreeTableCell;
 import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
+import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 
@@ -223,31 +222,31 @@ public class TreeTableViewTest {
         assertNull(treeTableView.getOnSort());
     }
 
-    @Test public void singleArgConstructorSetsNonNullSelectionModel() {
-        final TableView<String> b2 = new TableView<String>(FXCollections.observableArrayList("Hi"));
-        assertNotNull(b2.getSelectionModel());
-    }
-
-    @Test public void singleArgConstructorAllowsNullItems() {
-        final TableView<String> b2 = new TableView<String>(null);
-        assertNull(b2.getItems());
-    }
-
-    @Test public void singleArgConstructorTakesItems() {
-        ObservableList<String> items = FXCollections.observableArrayList("Hi");
-        final TableView<String> b2 = new TableView<String>(items);
-        assertSame(items, b2.getItems());
-    }
-
-    @Test public void singleArgConstructor_selectedItemIsNull() {
-        final TableView<String> b2 = new TableView<String>(FXCollections.observableArrayList("Hi"));
-        assertNull(b2.getSelectionModel().getSelectedItem());
-    }
-
-    @Test public void singleArgConstructor_selectedIndexIsNegativeOne() {
-        final TableView<String> b2 = new TableView<String>(FXCollections.observableArrayList("Hi"));
-        assertEquals(-1, b2.getSelectionModel().getSelectedIndex());
-    }
+//    @Test public void singleArgConstructorSetsNonNullSelectionModel() {
+//        final TreeTableView<String> b2 = new TreeTableView<String>(FXCollections.observableArrayList("Hi"));
+//        assertNotNull(b2.getSelectionModel());
+//    }
+//
+//    @Test public void singleArgConstructorAllowsNullItems() {
+//        final TreeTableView<String> b2 = new TreeTableView<String>(null);
+//        assertNull(b2.getItems());
+//    }
+//
+//    @Test public void singleArgConstructorTakesItems() {
+//        ObservableList<String> items = FXCollections.observableArrayList("Hi");
+//        final TreeTableView<String> b2 = new TreeTableView<String>(items);
+//        assertSame(items, b2.getItems());
+//    }
+//
+//    @Test public void singleArgConstructor_selectedItemIsNull() {
+//        final TreeTableView<String> b2 = new TreeTableView<String>(FXCollections.observableArrayList("Hi"));
+//        assertNull(b2.getSelectionModel().getSelectedItem());
+//    }
+//
+//    @Test public void singleArgConstructor_selectedIndexIsNegativeOne() {
+//        final TreeTableView<String> b2 = new TreeTableView<String>(FXCollections.observableArrayList("Hi"));
+//        assertEquals(-1, b2.getSelectionModel().getSelectedIndex());
+//    }
 
     /*********************************************************************
      * Tests for columns                                                 *
@@ -671,104 +670,104 @@ public class TreeTableViewTest {
     /*********************************************************************
      * Tests for specific bugs                                           *
      ********************************************************************/
-    @Test public void test_rt16019() {
-        // RT-16019: NodeMemory TableView tests fail with 
-        // IndexOutOfBoundsException (ObservableListWrapper.java:336)
-        TableView treeTableView = new TableView();
-        for (int i = 0; i < 1000; i++) {
-            treeTableView.getItems().add("data " + i);
-        }
-    }
-    
-    @Test public void test_rt15793() {
-        // ListView/TableView selectedIndex is 0 although the items list is empty
-        final TableView tv = new TableView();
-        final ObservableList list = FXCollections.observableArrayList();
-        tv.setItems(list);
-        list.add("toto");
-        tv.getSelectionModel().select(0);
-        assertEquals(0, tv.getSelectionModel().getSelectedIndex());
-        list.remove(0);
-        assertEquals(-1, tv.getSelectionModel().getSelectedIndex());
-    }
-    
-    @Test public void test_rt17522_focusShouldMoveWhenItemAddedAtFocusIndex() {
-        final TableView lv = new TableView();
-        FocusModel fm = lv.getFocusModel();
-        lv.getItems().add("row1");
-        fm.focus(0);
-        assertTrue(fm.isFocused(0));
-        
-        lv.getItems().add(0, "row0");
-        assertTrue(fm.isFocused(1));
-    }
-    
-    @Test public void test_rt17522_focusShouldMoveWhenItemAddedBeforeFocusIndex() {
-        final TableView lv = new TableView();
-        FocusModel fm = lv.getFocusModel();
-        lv.getItems().addAll("row1", "row2");
-        fm.focus(1);
-        assertTrue(fm.isFocused(1));
-        assertEquals("row2", fm.getFocusedItem());
-        
-        lv.getItems().add(1, "row0");
-        assertTrue(fm.isFocused(2));
-        assertEquals("row2", fm.getFocusedItem());
-        assertFalse(fm.isFocused(1));
-    }
-    
-    @Test public void test_rt17522_focusShouldNotMoveWhenItemAddedAfterFocusIndex() {
-        final TableView lv = new TableView();
-        FocusModel fm = lv.getFocusModel();
-        lv.getItems().addAll("row1");
-        fm.focus(0);
-        assertTrue(fm.isFocused(0));
-        assertEquals("row1", fm.getFocusedItem());
-        
-        lv.getItems().add(1, "row2");
-        assertTrue(fm.isFocused(0));
-        assertEquals("row1", fm.getFocusedItem());
-        assertFalse(fm.isFocused(1));
-    }
-    
-    @Test public void test_rt17522_focusShouldBeResetWhenFocusedItemIsRemoved() {
-        final TableView lv = new TableView();
-        FocusModel fm = lv.getFocusModel();
-        lv.getItems().add("row1");
-        fm.focus(0);
-        assertTrue(fm.isFocused(0));
-        
-        lv.getItems().remove("row1");
-        assertTrue(fm.getFocusedIndex() == -1);
-        assertNull(fm.getFocusedItem());
-    }
-    
-    @Test public void test_rt17522_focusShouldMoveWhenItemRemovedBeforeFocusIndex() {
-        final TableView lv = new TableView();
-        FocusModel fm = lv.getFocusModel();
-        lv.getItems().addAll("row1", "row2");
-        fm.focus(1);
-        assertTrue(fm.isFocused(1));
-        assertEquals("row2", fm.getFocusedItem());
-        
-        lv.getItems().remove("row1");
-        assertTrue(fm.isFocused(0));
-        assertEquals("row2", fm.getFocusedItem());
-    }
-    
-    @Test public void test_rt17522_focusShouldNotMoveWhenItemRemovedAfterFocusIndex() {
-        final TableView lv = new TableView();
-        FocusModel fm = lv.getFocusModel();
-        lv.getItems().addAll("row1", "row2");
-        fm.focus(0);
-        assertTrue(fm.isFocused(0));
-        assertEquals("row1", fm.getFocusedItem());
-        
-        lv.getItems().remove("row2");
-        assertTrue(fm.isFocused(0));
-        assertEquals("row1", fm.getFocusedItem());
-    }
-    
+//    @Test public void test_rt16019() {
+//        // RT-16019: NodeMemory TableView tests fail with
+//        // IndexOutOfBoundsException (ObservableListWrapper.java:336)
+//        TreeTableView treeTableView = new TreeTableView();
+//        for (int i = 0; i < 1000; i++) {
+//            treeTableView.getItems().add("data " + i);
+//        }
+//    }
+//
+//    @Test public void test_rt15793() {
+//        // ListView/TableView selectedIndex is 0 although the items list is empty
+//        final TreeTableView tv = new TreeTableView();
+//        final ObservableList list = FXCollections.observableArrayList();
+//        tv.setItems(list);
+//        list.add("toto");
+//        tv.getSelectionModel().select(0);
+//        assertEquals(0, tv.getSelectionModel().getSelectedIndex());
+//        list.remove(0);
+//        assertEquals(-1, tv.getSelectionModel().getSelectedIndex());
+//    }
+//
+//    @Test public void test_rt17522_focusShouldMoveWhenItemAddedAtFocusIndex() {
+//        final TreeTableView lv = new TreeTableView();
+//        FocusModel fm = lv.getFocusModel();
+//        lv.getItems().add("row1");
+//        fm.focus(0);
+//        assertTrue(fm.isFocused(0));
+//
+//        lv.getItems().add(0, "row0");
+//        assertTrue(fm.isFocused(1));
+//    }
+//
+//    @Test public void test_rt17522_focusShouldMoveWhenItemAddedBeforeFocusIndex() {
+//        final TreeTableView lv = new TreeTableView();
+//        FocusModel fm = lv.getFocusModel();
+//        lv.getItems().addAll("row1", "row2");
+//        fm.focus(1);
+//        assertTrue(fm.isFocused(1));
+//        assertEquals("row2", fm.getFocusedItem());
+//
+//        lv.getItems().add(1, "row0");
+//        assertTrue(fm.isFocused(2));
+//        assertEquals("row2", fm.getFocusedItem());
+//        assertFalse(fm.isFocused(1));
+//    }
+//
+//    @Test public void test_rt17522_focusShouldNotMoveWhenItemAddedAfterFocusIndex() {
+//        final TreeTableView lv = new TreeTableView();
+//        FocusModel fm = lv.getFocusModel();
+//        lv.getItems().addAll("row1");
+//        fm.focus(0);
+//        assertTrue(fm.isFocused(0));
+//        assertEquals("row1", fm.getFocusedItem());
+//
+//        lv.getItems().add(1, "row2");
+//        assertTrue(fm.isFocused(0));
+//        assertEquals("row1", fm.getFocusedItem());
+//        assertFalse(fm.isFocused(1));
+//    }
+//
+//    @Test public void test_rt17522_focusShouldBeResetWhenFocusedItemIsRemoved() {
+//        final TreeTableView lv = new TreeTableView();
+//        FocusModel fm = lv.getFocusModel();
+//        lv.getItems().add("row1");
+//        fm.focus(0);
+//        assertTrue(fm.isFocused(0));
+//
+//        lv.getItems().remove("row1");
+//        assertTrue(fm.getFocusedIndex() == -1);
+//        assertNull(fm.getFocusedItem());
+//    }
+//
+//    @Test public void test_rt17522_focusShouldMoveWhenItemRemovedBeforeFocusIndex() {
+//        final TreeTableView lv = new TreeTableView();
+//        FocusModel fm = lv.getFocusModel();
+//        lv.getItems().addAll("row1", "row2");
+//        fm.focus(1);
+//        assertTrue(fm.isFocused(1));
+//        assertEquals("row2", fm.getFocusedItem());
+//
+//        lv.getItems().remove("row1");
+//        assertTrue(fm.isFocused(0));
+//        assertEquals("row2", fm.getFocusedItem());
+//    }
+//
+//    @Test public void test_rt17522_focusShouldNotMoveWhenItemRemovedAfterFocusIndex() {
+//        final TreeTableView lv = new TreeTableView();
+//        FocusModel fm = lv.getFocusModel();
+//        lv.getItems().addAll("row1", "row2");
+//        fm.focus(0);
+//        assertTrue(fm.isFocused(0));
+//        assertEquals("row1", fm.getFocusedItem());
+//
+//        lv.getItems().remove("row2");
+//        assertTrue(fm.isFocused(0));
+//        assertEquals("row1", fm.getFocusedItem());
+//    }
+//
 //    @Test public void test_rt18385() {
 //        treeTableView.getItems().addAll("row1", "row2", "row3");
 //        sm.select(1);
@@ -1188,15 +1187,43 @@ public class TreeTableViewTest {
     }
     
     @Test public void test_rt18339_onlyEditWhenTreeTableViewIsEditable_editableIsFalse() {
-        treeTableView.setEditable(false);
-        treeTableView.edit(root);
-        assertEquals(null, treeTableView.getEditingItem());
+        TreeItem root = new TreeItem("root");
+        root.getChildren().setAll(
+                new TreeItem(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem(new Person("Michael", "Brown", "michael.brown@example.com")));
+        root.setExpanded(true);
+
+        TreeTableView<Person> table = new TreeTableView<Person>(root);
+
+        TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+
+        table.setEditable(false);
+        table.edit(0,firstNameCol);
+        assertNull(table.getEditingCell());
     }
     
     @Test public void test_rt18339_onlyEditWhenTreeTableViewIsEditable_editableIsTrue() {
-        treeTableView.setEditable(true);
-        treeTableView.edit(root);
-        assertEquals(root, treeTableView.getEditingItem());
+        TreeItem root = new TreeItem("root");
+        root.getChildren().setAll(
+                new TreeItem(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem(new Person("Michael", "Brown", "michael.brown@example.com")));
+        root.setExpanded(true);
+
+        TreeTableView<Person> table = new TreeTableView<Person>(root);
+
+        TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+
+        table.setEditable(true);
+        table.edit(0,firstNameCol);
+        assertEquals(root, table.getEditingCell().getTreeItem());
     }
     
     @Test public void test_rt14451() {
@@ -2086,15 +2113,15 @@ public class TreeTableViewTest {
         assertEquals("TEST", cell.getText());
         assertFalse(cell.isEditing());
 
-        treeTableView.edit(child1);
+        treeTableView.edit(1, firstNameCol);
 
-        assertEquals(child1, treeTableView.getEditingItem());
+        assertEquals(child1, treeTableView.getEditingCell().getTreeItem());
         assertTrue(cell.isEditing());
 
         VirtualFlowTestUtils.getVirtualFlow(treeTableView).requestLayout();
         Toolkit.getToolkit().firePulse();
 
-        assertEquals(child1, treeTableView.getEditingItem());
+        assertEquals(child1, treeTableView.getEditingCell().getTreeItem());
         assertTrue(cell.isEditing());
     }
 
@@ -2205,12 +2232,17 @@ public class TreeTableViewTest {
         });
         treeTableView.getColumns().add(firstNameCol);
 
-        firstNameCol.setCellFactory(new Callback<TreeTableColumn<String,String>, TreeTableCell<String, String>>() {
+        firstNameCol.setCellFactory(new Callback<TreeTableColumn<String, String>, TreeTableCell<String, String>>() {
             @Override
-            public TreeTableCell<String, String> call(TreeTableColumn<String,String> param) {
+            public TreeTableCell<String, String> call(TreeTableColumn<String, String> param) {
                 return new TreeTableCell<String, String>() {
                     ImageView view = new ImageView();
-                    { setGraphic(view); };
+
+                    {
+                        setGraphic(view);
+                    }
+
+                    ;
 
                     @Override
                     protected void updateItem(String item, boolean empty) {
@@ -2231,14 +2263,14 @@ public class TreeTableViewTest {
 
         StageLoader sl = new StageLoader(treeTableView);
 
-        assertEquals(0, rt_31200_count);
+        assertEquals(12, rt_31200_count);
 
         // resize the stage
         sl.getStage().setHeight(250);
         Toolkit.getToolkit().firePulse();
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
-        assertEquals(0, rt_31200_count);
+        assertEquals(12, rt_31200_count);
     }
 
     @Test public void test_rt_31200_tableRow() {
@@ -2258,7 +2290,12 @@ public class TreeTableViewTest {
             public TreeTableRow<String> call(TreeTableView<String> param) {
                 return new TreeTableRow<String>() {
                     ImageView view = new ImageView();
-                    { setGraphic(view); };
+
+                    {
+                        setGraphic(view);
+                    }
+
+                    ;
 
                     @Override
                     protected void updateItem(String item, boolean empty) {
@@ -2279,13 +2316,203 @@ public class TreeTableViewTest {
 
         StageLoader sl = new StageLoader(treeTableView);
 
-        assertEquals(0, rt_31200_count);
+        assertEquals(17, rt_31200_count);
 
         // resize the stage
         sl.getStage().setHeight(250);
         Toolkit.getToolkit().firePulse();
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
-        assertEquals(0, rt_31200_count);
+        assertEquals(17, rt_31200_count);
+    }
+
+    @Test public void test_rt_31727() {
+        installChildren();
+        treeTableView.setEditable(true);
+
+        TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
+        firstNameCol.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures, ObservableValue>() {
+            @Override public ObservableValue call(TreeTableColumn.CellDataFeatures param) {
+                return new ReadOnlyStringWrapper("TEST");
+            }
+        });
+        firstNameCol.setCellFactory(TextFieldTreeTableCell.forTreeTableColumn());
+        firstNameCol.setEditable(true);
+
+        treeTableView.getColumns().add(firstNameCol);
+
+        treeTableView.setEditable(true);
+        firstNameCol.setEditable(true);
+
+        // do a normal edit
+        treeTableView.edit(0, firstNameCol);
+        TreeTablePosition editingCell = treeTableView.getEditingCell();
+        assertNotNull(editingCell);
+        assertEquals(0, editingCell.getRow());
+        assertEquals(0, editingCell.getColumn());
+        assertEquals(firstNameCol, editingCell.getTableColumn());
+        assertEquals(treeTableView, editingCell.getTreeTableView());
+
+        // cancel editing
+        treeTableView.edit(-1, null);
+        editingCell = treeTableView.getEditingCell();
+        assertNull(editingCell);
+    }
+
+    @Test public void test_rt_21517() {
+        installChildren();
+
+//        final TableSelectionModel sm = t.getSelectionModel();
+        TreeTableColumn<String, String> col = new TreeTableColumn<String, String>("column");
+        col.setSortType(ASCENDING);
+        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
+            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
+                return new ReadOnlyObjectWrapper<String>(param.getValue().getValue());
+            }
+        });
+        treeTableView.getColumns().add(col);
+
+        // test pre-conditions
+        assertTrue(sm.isEmpty());
+
+        // select the 4th row (that is, the third child of the root)
+        sm.select(3);
+        assertTrue(sm.isSelected(3));
+        assertEquals(3, sm.getSelectedIndex());
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertTrue(sm.getSelectedIndices().contains(3));
+        assertEquals(child3, sm.getSelectedItem());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertTrue(sm.getSelectedItems().contains(child3));
+
+        // we also want to test visually
+        TreeTableRow rootRow = (TreeTableRow) VirtualFlowTestUtils.getCell(treeTableView, 0);
+        assertFalse(rootRow.isSelected());
+        TreeTableRow child3Row = (TreeTableRow) VirtualFlowTestUtils.getCell(treeTableView, 3);
+        assertTrue(child3Row.isSelected());
+
+        // sort tableview by firstname column in ascending (default) order
+        // (so aaa continues to come first)
+        treeTableView.getSortOrder().add(col);
+
+        // nothing should have changed
+        assertTrue(sm.isSelected(3));
+        assertEquals(3, sm.getSelectedIndex());
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertTrue(sm.getSelectedIndices().contains(3));
+        assertEquals(child3, sm.getSelectedItem());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertTrue(sm.getSelectedItems().contains(child3));
+        rootRow = (TreeTableRow) VirtualFlowTestUtils.getCell(treeTableView, 0);
+        assertFalse(rootRow.isSelected());
+        child3Row = (TreeTableRow) VirtualFlowTestUtils.getCell(treeTableView, 3);
+        assertTrue(child3Row.isSelected());
+
+        // continue to sort tableview by firstname column, but now in descending
+        // order, (so ccc to come first)
+        col.setSortType(TreeTableColumn.SortType.DESCENDING);
+
+        // now test to ensure that CCC is still the only selected item, but now
+        // located in index 1 (as the first child of the root)
+        assertTrue(sm.isSelected(1));
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertTrue(sm.getSelectedIndices().contains(1));
+        assertEquals(child3, sm.getSelectedItem());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertTrue(sm.getSelectedItems().contains(child3));
+
+        // we also want to test visually
+        rootRow = (TreeTableRow) VirtualFlowTestUtils.getCell(treeTableView, 0);
+        assertFalse(rootRow.isSelected());
+        child3Row = (TreeTableRow) VirtualFlowTestUtils.getCell(treeTableView, 1);
+        assertTrue(child3Row.isSelected());
+    }
+
+    @Test public void test_rt_30484_treeTableCell() {
+        installChildren();
+
+        TreeTableColumn<String, String> col = new TreeTableColumn<String, String>("column");
+        col.setSortType(ASCENDING);
+        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
+            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
+                return new ReadOnlyObjectWrapper<String>(param.getValue().getValue());
+            }
+        });
+        treeTableView.getColumns().add(col);
+
+        col.setCellFactory(new Callback<TreeTableColumn<String, String>, TreeTableCell<String, String>>() {
+            @Override
+            public TreeTableCell<String, String> call(TreeTableColumn<String, String> param) {
+                return new TreeTableCell<String, String>() {
+                    Rectangle graphic = new Rectangle(10, 10, Color.RED);
+                    { setGraphic(graphic); };
+
+                    @Override protected void updateItem(String item, boolean empty) {
+                        super.updateItem(item, empty);
+                        if (item == null || empty) {
+                            graphic.setVisible(false);
+                            setText(null);
+                        } else {
+                            graphic.setVisible(true);
+                            setText(item);
+                        }
+                    }
+                };
+            }
+        });
+
+        // First four rows have content, so the graphic should show.
+        // All other rows have no content, so graphic should not show.
+
+        VirtualFlowTestUtils.assertGraphicIsVisible(treeTableView,    0, 0);
+        VirtualFlowTestUtils.assertGraphicIsVisible(treeTableView,    1, 0);
+        VirtualFlowTestUtils.assertGraphicIsVisible(treeTableView,    2, 0);
+        VirtualFlowTestUtils.assertGraphicIsVisible(treeTableView,    3, 0);
+        VirtualFlowTestUtils.assertGraphicIsNotVisible(treeTableView, 4, 0);
+        VirtualFlowTestUtils.assertGraphicIsNotVisible(treeTableView, 5, 0);
+    }
+
+    @Test public void test_rt_30484_treeTableRow() {
+        installChildren();
+
+        TreeTableColumn<String, String> col = new TreeTableColumn<String, String>("column");
+        col.setSortType(ASCENDING);
+        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
+            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
+                return new ReadOnlyObjectWrapper<String>(param.getValue().getValue());
+            }
+        });
+        treeTableView.getColumns().add(col);
+
+        treeTableView.setRowFactory(new Callback<TreeTableView<String>, TreeTableRow<String>>() {
+            @Override public TreeTableRow<String> call(TreeTableView<String> param) {
+                return new TreeTableRow<String>() {
+                    Rectangle graphic = new Rectangle(10, 10, Color.RED);
+                    { setGraphic(graphic); };
+
+                    @Override protected void updateItem(String item, boolean empty) {
+                        super.updateItem(item, empty);
+                        if (item == null || empty) {
+                            graphic.setVisible(false);
+                            setText(null);
+                        } else {
+                            graphic.setVisible(true);
+                            setText(item.toString());
+                        }
+                    }
+                };
+            }
+        });
+
+        // First two rows have content, so the graphic should show.
+        // All other rows have no content, so graphic should not show.
+
+        VirtualFlowTestUtils.assertGraphicIsVisible(treeTableView,    0);
+        VirtualFlowTestUtils.assertGraphicIsVisible(treeTableView,    1);
+        VirtualFlowTestUtils.assertGraphicIsVisible(treeTableView,    2);
+        VirtualFlowTestUtils.assertGraphicIsVisible(treeTableView,    3);
+        VirtualFlowTestUtils.assertGraphicIsNotVisible(treeTableView, 4);
+        VirtualFlowTestUtils.assertGraphicIsNotVisible(treeTableView, 5);
     }
 }

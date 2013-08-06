@@ -40,6 +40,7 @@
     GLuint _fboToRestore;
 }
 
+- (void)blitFromFBO:(GlassFrameBufferObject*)other_fbo;
 - (GLuint)texture;
 - (GLuint)fbo;
 

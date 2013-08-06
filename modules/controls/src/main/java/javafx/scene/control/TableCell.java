@@ -34,7 +34,6 @@ import javafx.collections.ListChangeListener;
 import javafx.event.Event;
 import javafx.scene.control.TableView.TableViewFocusModel;
 
-import com.sun.javafx.property.PropertyReference;
 import com.sun.javafx.scene.control.skin.TableCellSkin;
 import javafx.collections.WeakListChangeListener;
 import java.lang.ref.WeakReference;
@@ -58,6 +57,8 @@ import javafx.scene.control.TableColumn.CellEditEvent;
  * @see Cell
  * @see IndexedCell
  * @see TableRow
+ * @param <S> The type of the TableView generic type (i.e. S == TableView&lt;S&gt;).
+ *           This should also match with the first generic type in TableColumn.
  * @param <T> The type of the item contained within the Cell.
  * @since JavaFX 2.0
  */
@@ -131,8 +132,8 @@ public class TableCell<S,T> extends IndexedCell<T> {
         }
     };
     
-    private ListChangeListener<TableColumn<S,T>> visibleLeafColumnsListener = new ListChangeListener<TableColumn<S,T>>() {
-        @Override public void onChanged(Change<? extends TableColumn<S,T>> c) {
+    private ListChangeListener<TableColumn<S,?>> visibleLeafColumnsListener = new ListChangeListener<TableColumn<S,?>>() {
+        @Override public void onChanged(Change<? extends TableColumn<S,?>> c) {
             updateColumnIndex();
         }
     };
@@ -151,16 +152,16 @@ public class TableCell<S,T> extends IndexedCell<T> {
         }
     };
     
-    private final WeakListChangeListener weakSelectedListener = 
-            new WeakListChangeListener(selectedListener);
+    private final WeakListChangeListener<TablePosition> weakSelectedListener =
+            new WeakListChangeListener<>(selectedListener);
     private final WeakInvalidationListener weakFocusedListener = 
             new WeakInvalidationListener(focusedListener);
     private final WeakInvalidationListener weaktableRowUpdateObserver = 
             new WeakInvalidationListener(tableRowUpdateObserver);
     private final WeakInvalidationListener weakEditingListener = 
             new WeakInvalidationListener(editingListener);
-    private final WeakListChangeListener weakVisibleLeafColumnsListener =
-            new WeakListChangeListener(visibleLeafColumnsListener);
+    private final WeakListChangeListener<TableColumn<S,?>> weakVisibleLeafColumnsListener =
+            new WeakListChangeListener<>(visibleLeafColumnsListener);
     private final WeakListChangeListener<String> weakColumnStyleClassListener =
             new WeakListChangeListener<String>(columnStyleClassListener);
 
@@ -214,8 +215,8 @@ public class TableCell<S,T> extends IndexedCell<T> {
             tableView = new ReadOnlyObjectWrapper<TableView<S>>() {
                 private WeakReference<TableView<S>> weakTableViewRef;
                 @Override protected void invalidated() {
-                    TableView.TableViewSelectionModel sm;
-                    TableViewFocusModel fm;
+                    TableView.TableViewSelectionModel<S> sm;
+                    TableViewFocusModel<S> fm;
                     
                     if (weakTableViewRef != null) {
                         cleanUpTableViewListeners(weakTableViewRef.get());
@@ -518,6 +519,8 @@ public class TableCell<S,T> extends IndexedCell<T> {
      */
     private ObservableValue<T> currentObservableValue = null;
 
+    private boolean isFirstRun = true;
+
     /*
      * This is called when we think that the data within this TableCell may have
      * changed. You'll note that this is a private function - it is only called
@@ -545,8 +548,15 @@ public class TableCell<S,T> extends IndexedCell<T> {
                 tableColumn == null || 
                 !tableColumn.isVisible()) {
 
-            if (!isEmpty && oldValue != null) {
+            // RT-30484 We need to allow a first run to be special-cased to allow
+            // for the updateItem method to be called at least once to allow for
+            // the correct visual state to be set up. In particular, in RT-30484
+            // refer to Ensemble8PopUpTree.png - in this case the arrows are being
+            // shown as the new cells are instantiated with the arrows in the
+            // children list, and are only hidden in updateItem.
+            if ((!isEmpty && oldValue != null) || isFirstRun) {
                 updateItem(null, true);
+                isFirstRun = false;
             }
             return;
         } else {

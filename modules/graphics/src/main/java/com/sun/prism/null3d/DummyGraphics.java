@@ -32,11 +32,8 @@ import com.sun.prism.paint.Color;
 
 class DummyGraphics extends BaseShaderGraphics  {
 
-    private DummyContext context;
-
     private DummyGraphics(DummyContext context, RenderTarget target) {
         super(context, target);
-        this.context = context;
     }
 
     static Graphics create(RenderTarget target, DummyContext ctx) {

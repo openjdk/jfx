@@ -42,7 +42,6 @@ import javafx.util.StringConverter;
 
 import com.sun.javafx.Utils;
 import javafx.css.CssMetaData;
-import javafx.css.StyleOrigin;
 import javafx.css.PseudoClass;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
@@ -57,7 +56,6 @@ import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.scene.control.skin.SliderSkin;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
-import javafx.scene.Node;
 
 /**
  * The Slider Control is used to display a continuous or discrete range of

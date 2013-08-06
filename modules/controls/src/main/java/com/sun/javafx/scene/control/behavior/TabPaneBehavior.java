@@ -25,9 +25,6 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.scene.Node;
@@ -37,9 +34,12 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
-
+import javafx.scene.layout.StackPane;
+import java.util.ArrayList;
+import java.util.List;
 import com.sun.javafx.scene.control.skin.TabPaneSkin;
 import com.sun.javafx.scene.traversal.Direction;
+import com.sun.javafx.scene.traversal.TraversalEngine;
 
 public class TabPaneBehavior extends BehaviorBase<TabPane> {
 
@@ -53,25 +53,21 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
     private static final String CTRL_TAB = "Ctrl_Tab";
     private static final String CTRL_SHIFT_TAB = "Ctrl_Shift_Tab";
 
-    protected static final List<KeyBinding> TABPANE_BINDINGS = new ArrayList<KeyBinding>();
+    protected static final List<KeyBinding> TAB_PANE_BINDINGS = new ArrayList<>();
     static {
-        TABPANE_BINDINGS.add(new KeyBinding(KeyCode.UP, "TraverseUp"));
-        TABPANE_BINDINGS.add(new KeyBinding(KeyCode.DOWN, "TraverseDown"));
-        TABPANE_BINDINGS.add(new KeyBinding(KeyCode.LEFT, "TraverseLeft"));
-        TABPANE_BINDINGS.add(new KeyBinding(KeyCode.RIGHT, "TraverseRight"));
-        TABPANE_BINDINGS.add(new KeyBinding(KeyCode.TAB, "TraverseNext"));
-        TABPANE_BINDINGS.add(new KeyBinding(KeyCode.TAB, "TraversePrevious").shift());
+        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.UP, "TraverseUp"));
+        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.DOWN, "TraverseDown"));
+        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.LEFT, "TraverseLeft"));
+        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.RIGHT, "TraverseRight"));
+        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.TAB, "TraverseNext"));
+        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.TAB, "TraversePrevious").shift());
 
-        TABPANE_BINDINGS.add(new KeyBinding(KeyCode.HOME, HOME));
-        TABPANE_BINDINGS.add(new KeyBinding(KeyCode.END, END));
-        TABPANE_BINDINGS.add(new KeyBinding(KeyCode.PAGE_UP, CTRL_PAGE_UP).ctrl());
-        TABPANE_BINDINGS.add(new KeyBinding(KeyCode.PAGE_DOWN, CTRL_PAGE_DOWN).ctrl());
-        TABPANE_BINDINGS.add(new KeyBinding(KeyCode.TAB, CTRL_TAB).ctrl());
-        TABPANE_BINDINGS.add(new KeyBinding(KeyCode.TAB, CTRL_SHIFT_TAB).shift().ctrl());
-    }
-
-    @Override protected List<KeyBinding> createKeyBindings() {
-        return TABPANE_BINDINGS;
+        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.HOME, HOME));
+        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.END, END));
+        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.PAGE_UP, CTRL_PAGE_UP).ctrl());
+        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.PAGE_DOWN, CTRL_PAGE_DOWN).ctrl());
+        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.TAB, CTRL_TAB).ctrl());
+        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.TAB, CTRL_SHIFT_TAB).shift().ctrl());
     }
 
     @Override protected void callAction(String name) {
@@ -86,14 +82,13 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
                 selectNextTab();
             }
         } else if ("TraverseNext".equals(name)) {
-            TabPane tp = getControl();
-            TabPaneSkin tps = (TabPaneSkin)tp.getSkin();
-            if (tps.getSelectedTabContentRegion() != null) {
-                if (tps.getSelectedTabContentRegion().getImpl_traversalEngine().registeredNodes.isEmpty()) {
-
-                    tps.getSelectedTabContentRegion().getImpl_traversalEngine().getTopLeftFocusableNode();
-                    Parent traversableParent = null;
-                    traversableParent = getFirstPopulatedInnerTraversalEngine(tps.getSelectedTabContentRegion().getChildren());
+            final TabPaneSkin tps = (TabPaneSkin)getControl().getSkin();
+            final StackPane contentRegion = tps.getSelectedTabContentRegion();
+            if (contentRegion != null) {
+                final TraversalEngine traversalEngine = contentRegion.getImpl_traversalEngine();
+                if (traversalEngine.registeredNodes.isEmpty()) {
+                    traversalEngine.getTopLeftFocusableNode();
+                    final Parent traversableParent = getFirstPopulatedInnerTraversalEngine(contentRegion.getChildren());
                     if (traversableParent != null) {
                         boolean nodeFound = false;
                         for (Node n : traversableParent.getImpl_traversalEngine().registeredNodes) {
@@ -106,24 +101,17 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
                         if (nodeFound == false) {
                             super.callAction(name);
                         }
-                    }
-                    else {
+                    } else {
                         super.callAction(name);
                     }
-
-                }
-                else {
-                    /*
-                    ** if we have the focus owner then traverse from it, otherwise
-                    ** request focus in the top-left
-                    */
-                    List<Node> children = tps.getSelectedTabContentRegion().getChildrenUnmodifiable();
-                    Node focusNode = tps.getSelectedTabContentRegion().getScene().getFocusOwner();
-                    
+                } else {
+                    // If we have the focus owner then traverse from it, otherwise
+                    // request focus in the top-left
+                    final List<Node> children = contentRegion.getChildrenUnmodifiable();
+                    final Node focusNode = contentRegion.getScene().getFocusOwner();
                     if (focusNode != null && (isChildFocused(focusNode, children) == true)) {
                         focusNode.impl_traverse(Direction.NEXT);
-                    }
-                    else {
+                    } else {
                         focusFirstChild(children);
                     }
                 }
@@ -131,14 +119,13 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
                 super.callAction(name);
             }
         } else if ("TraversePrevious".equals(name)) {
-            TabPane tp = getControl();
-            TabPaneSkin tps = (TabPaneSkin)tp.getSkin();
-            if (tps.getSelectedTabContentRegion() != null) {
-                if (tps.getSelectedTabContentRegion().getImpl_traversalEngine().registeredNodes.isEmpty()) {
-
-                    tps.getSelectedTabContentRegion().getImpl_traversalEngine().getTopLeftFocusableNode();
-                    Parent traversableParent = null;
-                    traversableParent = getFirstPopulatedInnerTraversalEngine(tps.getSelectedTabContentRegion().getChildren());
+            final TabPaneSkin tps = (TabPaneSkin)getControl().getSkin();
+            final StackPane contentRegion = tps.getSelectedTabContentRegion();
+            if (contentRegion != null) {
+                final TraversalEngine traversalEngine = contentRegion.getImpl_traversalEngine();
+                if (traversalEngine.registeredNodes.isEmpty()) {
+                    traversalEngine.getTopLeftFocusableNode();
+                    final Parent traversableParent = getFirstPopulatedInnerTraversalEngine(contentRegion.getChildren());
                     if (traversableParent != null) {
                         boolean nodeFound = false;
                         for (Node n : traversableParent.getImpl_traversalEngine().registeredNodes) {
@@ -151,23 +138,17 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
                         if (nodeFound == false) {
                             super.callAction(name);
                         }
-                    }
-                    else {
+                    } else {
                         super.callAction(name);
                     }
-                }
-                else {
-                    /*
-                    ** if we have the focus owner then traverse from it, otherwise
-                    ** request focus in the top-left
-                    */
-                    List<Node> children = tps.getSelectedTabContentRegion().getChildrenUnmodifiable();
-                    Node focusNode = tps.getSelectedTabContentRegion().getScene().getFocusOwner();
-
+                } else {
+                    // If we have the focus owner then traverse from it, otherwise
+                    // request focus in the top-left
+                    final List<Node> children = contentRegion.getChildrenUnmodifiable();
+                    final Node focusNode = contentRegion.getScene().getFocusOwner();
                     if (focusNode != null && (isChildFocused(focusNode, children) == true)) {
                         focusNode.impl_traverse(Direction.PREVIOUS);
-                    }
-                    else {
+                    } else {
                         focusLastChild(children);
                     }
                 }
@@ -288,7 +269,7 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
      *************************************************************************/
 
     public TabPaneBehavior(TabPane tabPane) {
-        super(tabPane);
+        super(tabPane, TAB_PANE_BINDINGS);
     }
 
     public void selectTab(Tab tab) {

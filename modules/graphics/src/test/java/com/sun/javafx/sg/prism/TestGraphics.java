@@ -48,7 +48,6 @@ import com.sun.prism.ResourceFactory;
 import com.sun.prism.ResourceFactoryListener;
 import com.sun.prism.Texture;
 import com.sun.prism.Texture.WrapMode;
-import com.sun.prism.camera.PrismCameraImpl;
 import com.sun.prism.impl.BaseContext;
 import com.sun.prism.impl.BaseGraphics;
 import com.sun.prism.impl.TextureResourcePool;
@@ -147,7 +146,7 @@ public class TestGraphics extends BaseGraphics {
         }
 
         @Override
-        protected void setRenderTarget(RenderTarget target, PrismCameraImpl camera, boolean depthTest, boolean state3D) {
+        protected void setRenderTarget(RenderTarget target, NGCamera camera, boolean depthTest, boolean state3D) {
         }
 
         @Override
@@ -289,11 +288,11 @@ public class TestGraphics extends BaseGraphics {
     }
 
     @Override
-    public void setLights(Object[] lights) {
+    public void setLights(NGLightBase[] lights) {
     }
 
     @Override
-    public Object[] getLights() {
+    public NGLightBase[] getLights() {
         return null;
     }
 }

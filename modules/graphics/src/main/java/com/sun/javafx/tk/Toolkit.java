@@ -67,6 +67,7 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
+import com.sun.glass.ui.CommonDialogs.FileChooserResult;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.embed.HostInterface;
@@ -730,13 +731,14 @@ public abstract class Toolkit {
         return PlatformUtil.isMac() ? KeyCode.META : KeyCode.CONTROL;
     }
 
-    public abstract List<File> showFileChooser(
+    public abstract FileChooserResult showFileChooser(
             TKStage ownerWindow,
             String title,
             File initialDirectory,
             String initialFileName,
             FileChooserType fileChooserType,
-            List<ExtensionFilter> extensionFilters);
+            List<ExtensionFilter> extensionFilters,
+            ExtensionFilter selectedFilter);
 
     public abstract File showDirectoryChooser(
             TKStage ownerWindow,

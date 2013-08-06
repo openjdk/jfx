@@ -31,7 +31,6 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 
 import com.sun.javafx.collections.TrackableObservableList;
-import javafx.css.CssMetaData;
 import com.sun.javafx.scene.control.skin.AccordionSkin;
 import javafx.css.StyleableProperty;
 

@@ -164,8 +164,8 @@ public class NGRegion extends NGGroup {
     // We create a class instance of a no op. Effect internally to handle 3D
     // transform if user didn't use Effect for 3D Transformed Region. This will
     // automatically forces Region rendering path to use the Effect path.
-    private static Offset nopEffect = new Offset(0, 0, null);
-    private BaseEffectFilter nopEffectFilter;
+    private static final Offset nopEffect = new Offset(0, 0, null);
+    private EffectFilter nopEffectFilter;
 
     /**************************************************************************
      *                                                                        *
@@ -406,7 +406,7 @@ public class NGRegion extends NGGroup {
             if (clip != null) { // We already know that clip is rectangular
                 // RT-25095: If this node has a clip who's opaque region cannot be determined, then
                 // we cannot determine any opaque region for this node (in fact, it might not have one).
-                final RectBounds clipOpaqueRegion = ((NGRectangle)clip).getOpaqueRegion();
+                final RectBounds clipOpaqueRegion = clip.getOpaqueRegion();
                 if (clipOpaqueRegion == null) {
                     return null;
                 } else {
@@ -473,9 +473,9 @@ public class NGRegion extends NGGroup {
             // We will need to use a no op. Effect internally since user
             // didn't use Effect for this Region
             if (nopEffectFilter == null) {
-                nopEffectFilter = createEffectFilter(nopEffect);
+                nopEffectFilter = new EffectFilter(nopEffect, this);
             }
-            ((EffectFilter)nopEffectFilter).render(g);
+            nopEffectFilter.render(g);
 
             return;
         }
@@ -1333,7 +1333,7 @@ public class NGRegion extends NGGroup {
                 // try to adjust the phase to make it look better.
                 if (lineLength > 0) {
                     // For DASHED we want the dash array to be 2*strokewidth, val where "val" is as close to
-                    // 1.4*strokewidth as possible, but we want the sapcing to be such that we get an even spacing between
+                    // 1.4*strokewidth as possible, but we want the spacing to be such that we get an even spacing between
                     // all dashes around the edge. Maybe we can start with the dash phase at half the dash length.
                     final double dashLength = strokeWidth * 2;
                     double gapLength = strokeWidth * 1.4;
@@ -1375,7 +1375,7 @@ public class NGRegion extends NGGroup {
         final BorderWidths widths = sb.getWidths();
         BorderStrokeStyle bs = sb.getTopStyle();
         double sbWidth = widths.isTopAsPercentage() ? height * widths.getTop() : widths.getTop();
-        Object sbFill = getPlatformPaint(sb.getTopStroke());
+        Paint sbFill = getPlatformPaint(sb.getTopStroke());
         if (bs == null) {
             bs = sb.getLeftStyle();
             sbWidth = widths.isLeftAsPercentage() ? width * widths.getLeft() : widths.getLeft();
@@ -1387,8 +1387,7 @@ public class NGRegion extends NGGroup {
                 if (bs == null) {
                     bs = sb.getRightStyle();
                     sbWidth = widths.isRightAsPercentage() ? width * widths.getRight() : widths.getRight();
-                    sbWidth = widths.isRightAsPercentage() ? width * widths.getRight() : widths.getRight();
-                    sbFill = sb.getRightStroke();
+                    sbFill = getPlatformPaint(sb.getRightStroke());
                 }
             }
         }
@@ -1396,7 +1395,7 @@ public class NGRegion extends NGGroup {
             return;
         }
         g.setStroke(createStroke(bs, sbWidth, length));
-        g.setPaint((Paint) sbFill);
+        g.setPaint(sbFill);
     }
 
     // If we generate the coordinates for the "start point, corner, end point"
@@ -1500,7 +1499,7 @@ public class NGRegion extends NGGroup {
     }
 
     /**
-     * Creates a rounded rectangle path with our width and heigh, different corner radii, offset with given offsets.
+     * Creates a rounded rectangle path with our width and height, different corner radii, offset with given offsets.
      * Each side as a separate path.  The sides are returned in the CSS standard
      * order of top, right, bottom, left.
      */

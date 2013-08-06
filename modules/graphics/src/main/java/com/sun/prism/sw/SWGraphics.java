@@ -31,7 +31,6 @@ import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.Glyph;
 import com.sun.javafx.font.Metrics;
 import com.sun.javafx.font.PrismFontFactory;
-import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.geom.Ellipse2D;
 import com.sun.javafx.geom.Line2D;
 import com.sun.javafx.geom.Point2D;
@@ -41,8 +40,10 @@ import com.sun.javafx.geom.RoundRectangle2D;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
+import com.sun.javafx.scene.text.GlyphList;
+import com.sun.javafx.sg.prism.NGCamera;
+import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.pisces.GradientColorMap;
 import com.sun.pisces.PiscesRenderer;
 import com.sun.pisces.RendererBase;
@@ -51,11 +52,10 @@ import com.sun.prism.BasicStroke;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.Image;
 import com.sun.prism.PixelFormat;
+import com.sun.prism.RTTexture;
 import com.sun.prism.ReadbackGraphics;
 import com.sun.prism.RenderTarget;
-import com.sun.prism.RTTexture;
 import com.sun.prism.Texture;
-import com.sun.prism.camera.PrismCameraImpl;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Gradient;
@@ -209,22 +209,10 @@ final class SWGraphics implements ReadbackGraphics {
         throw new UnsupportedOperationException("scale3D: unimp");
     }
 
-    public void setWindowProjViewTx(GeneralTransform3D pvTx) {
-        throw new UnsupportedOperationException("setWindowProjViewTx: unimp");
+    public void setCamera(NGCamera camera) {
     }
 
-    public GeneralTransform3D getWindowProjViewTxNoClone() {
-        throw new UnsupportedOperationException("getWindowProjViewTxNoClone: unimp");
-    }
-
-    public boolean hasOrthoCamera() {
-        throw new UnsupportedOperationException("hasOrthoCamera: unimp");
-    }
-
-    public void setCamera(PrismCameraImpl camera) {
-    }
-
-    public PrismCameraImpl getCameraNoClone() {
+    public NGCamera getCameraNoClone() {
         throw new UnsupportedOperationException("getCameraNoClone: unimp");
     }
 
@@ -778,24 +766,19 @@ final class SWGraphics implements ReadbackGraphics {
 
         final Glyph g = strike.getGlyph(gl.getGlyphCode(idx));
         if (drawAsMasks) {
-            final byte pixelData[] = g.getPixelData();
+            final float posX = (float)(x + tx.getMxt() + gl.getPosX(idx));
+            final float posY = (float)(y + tx.getMyt() + gl.getPosY(idx));
+            final float subPosX = getSubPos(posX);
+            final byte pixelData[] = g.getPixelData(subPosX, 0);
             if (pixelData != null) {
+                final int intPosX = g.getOriginX() + (int)posX;
+                final int intPosY = g.getOriginY() + (int)posY;
                 if (g.isLCDGlyph()) {
-                    final double posX = x + tx.getMxt() + g.getOriginX() + gl.getPosX(idx) + 0.5f;
-                    int subPosX = ((int)(3*posX)) % 3;
-                    if (subPosX < 0) {
-                        subPosX += 3;
-                    }
-                    this.pr.fillLCDAlphaMask(pixelData,
-                            (int)posX,
-                            (int)(y + tx.getMyt() + g.getOriginY() + gl.getPosY(idx) + 0.5f),
-                            subPosX,
+                    this.pr.fillLCDAlphaMask(pixelData, intPosX, intPosY,
                             g.getWidth(), g.getHeight(),
                             0, g.getWidth());
                 } else {
-                    this.pr.fillAlphaMask(pixelData,
-                            (int)(x + tx.getMxt() + g.getOriginX() + gl.getPosX(idx) + 0.5f),
-                            (int)(y + tx.getMyt() + g.getOriginY() + gl.getPosY(idx) + 0.5f),
+                    this.pr.fillAlphaMask(pixelData, intPosX, intPosY,
                             g.getWidth(), g.getHeight(),
                             0, g.getWidth());
                 }
@@ -805,6 +788,22 @@ final class SWGraphics implements ReadbackGraphics {
             glyphTx.deriveWithTranslation(x + gl.getPosX(idx), y + gl.getPosY(idx));
             this.paintShapePaintAlreadySet(g.getShape(), null, glyphTx);
         }
+    }
+
+    private float getSubPos(float value) {
+        float v = value - ((int)value);
+        if (v != 0f) {
+            if (v < 0.25f) {
+                v = 0;
+            } else if (v < 0.50f) {
+                v = 0.25f;
+            } else if (v < 0.75f) {
+                v = 0.50f;
+            } else {
+                v = 0.75f;
+            }
+        }
+        return v;
     }
 
     public void drawTexture(Texture tex, float x, float y, float w, float h) {
@@ -1025,12 +1024,12 @@ final class SWGraphics implements ReadbackGraphics {
     }
 
     @Override
-    public void setLights(Object[] lights) {
+    public void setLights(NGLightBase[] lights) {
         // Light are not supported by SW pipeline
     }
 
     @Override
-    public Object[] getLights() {
+    public NGLightBase[] getLights() {
         // Light are not supported by SW pipeline
         return null;
     }

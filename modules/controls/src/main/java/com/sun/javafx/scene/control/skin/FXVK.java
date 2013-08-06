@@ -25,32 +25,13 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-
-import javafx.application.Platform;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.WritableValue;
-import javafx.geometry.HPos;
 import javafx.geometry.NodeOrientation;
-import javafx.geometry.Point2D;
-import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 
-import com.sun.javafx.css.StyleManager;
-import javafx.css.StyleableBooleanProperty;
-import javafx.css.CssMetaData;
-import com.sun.javafx.css.converters.BooleanConverter;
-
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleObjectProperty;
 import javafx.event.EventHandler;
 import javafx.scene.control.Control;
 import javafx.scene.input.KeyEvent;

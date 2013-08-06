@@ -44,8 +44,6 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Text;
 
-import com.sun.javafx.scene.control.skin.resources.ControlResources;
-
 /**
  * Extends DatePickerContent to add a secondary calendar, allowing the
  * ISO and Islamic calendars to be displayed simultaneously.  The
@@ -73,7 +71,7 @@ class DatePickerHijrahContent extends DatePickerContent {
         hijrahMonthYearLabel = new Label();
         hijrahMonthYearLabel.getStyleClass().add("secondary-label");
         monthYearPane.setBottom(hijrahMonthYearLabel);
-        monthYearPane.setAlignment(hijrahMonthYearLabel, Pos.CENTER);
+        BorderPane.setAlignment(hijrahMonthYearLabel, Pos.CENTER);
 
         return monthYearPane;
     }

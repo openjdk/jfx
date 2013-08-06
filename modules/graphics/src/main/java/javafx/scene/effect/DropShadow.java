@@ -34,7 +34,6 @@ import javafx.scene.paint.Color;
 
 import com.sun.javafx.Utils;
 import com.sun.javafx.effect.EffectDirtyBits;
-import com.sun.javafx.effect.EffectUtils;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.BoundsAccessor;
@@ -54,7 +53,7 @@ import com.sun.javafx.tk.Toolkit;
  * dropShadow.setOffsetX(3.0);
  * dropShadow.setOffsetY(3.0);
  * dropShadow.setColor(Color.color(0.4, 0.5, 0.5));  *
- * 
+ *
  * Text text = new Text();
  * text.setEffect(dropShadow);
  * text.setCache(true);
@@ -119,7 +118,7 @@ public class DropShadow extends Effect {
         setOffsetY(offsetY);
         setColor(color);
     }
-    
+
     /**
      * Creates a new instance of DropShadow with the specified blurType, color,
      * radius, spread, offsetX and offsetY.
@@ -132,7 +131,7 @@ public class DropShadow extends Effect {
      * @param offsetY the shadow offset in the y direction
      * @since JavaFX 2.1
      */
-    public DropShadow(BlurType blurType, Color color, double radius, double spread, 
+    public DropShadow(BlurType blurType, Color color, double radius, double spread,
             double offsetX, double offsetY) {
         setBlurType(blurType);
         setColor(color);
@@ -692,10 +691,10 @@ public class DropShadow extends Effect {
                                      BaseTransform tx,
                                      Node node,
                                      BoundsAccessor boundsAccessor) {
-        bounds = EffectUtils.getInputBounds(bounds,
-                                            BaseTransform.IDENTITY_TRANSFORM,
-                                            node, boundsAccessor,
-                                            getInput());
+        bounds = getInputBounds(bounds,
+                                BaseTransform.IDENTITY_TRANSFORM,
+                                node, boundsAccessor,
+                                getInput());
 
         int shadowX = (int) getOffsetX();
         int shadowY = (int) getOffsetY();
@@ -707,26 +706,25 @@ public class DropShadow extends Effect {
                                                          bounds.getMaxY() + shadowY,
                                                          bounds.getMaxZ());
 
-        shadowBounds = EffectUtils.getShadowBounds(shadowBounds, tx,
-                                                   getClampedWidth(),
-                                                   getClampedHeight(),
-                                                   getBlurTypeInternal());
-        BaseBounds contentBounds = EffectUtils.transformBounds(tx, bounds);
+        shadowBounds = getShadowBounds(shadowBounds, tx,
+                                       getClampedWidth(),
+                                       getClampedHeight(),
+                                       getBlurTypeInternal());
+        BaseBounds contentBounds = transformBounds(tx, bounds);
         BaseBounds ret = contentBounds.deriveWithUnion(shadowBounds);
 
         return ret;
     }
 
     /**
-     * 
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
     @Override
     public Effect impl_copy() {
-        DropShadow d = new DropShadow(this.getBlurType(), this.getColor(), 
-                this.getRadius(), this.getSpread(), this.getOffsetX(), 
+        DropShadow d = new DropShadow(this.getBlurType(), this.getColor(),
+                this.getRadius(), this.getSpread(), this.getOffsetX(),
                 this.getOffsetY());
         d.setInput(this.getInput());
         d.setWidth(this.getWidth());

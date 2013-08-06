@@ -37,7 +37,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 class CTFontStrike extends PrismFontStrike<CTFontFile> {
 
     private long fontRef;
-    CGAffineTransform matrix, imatrix;
+    CGAffineTransform matrix;
     boolean subPixel = false;
     private static final boolean SUBPIXEL;
     static {
@@ -58,8 +58,6 @@ class CTFontStrike extends PrismFontStrike<CTFontFile> {
             matrix.b = -tx2d.getMyx(); /*Inverted coordinates system */
             matrix.c = -tx2d.getMxy(); /*Inverted coordinates system */
             matrix.d = tx2d.getMyy();
-
-            imatrix = OS.CGAffineTransformInvert(matrix);
 
             if (Math.abs(matrix.a * size) > maxDim ||
                 Math.abs(matrix.b * size) > maxDim ||

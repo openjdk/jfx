@@ -25,26 +25,41 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import static javafx.scene.input.KeyCode.*;
-
-import java.util.ArrayList;
-import java.util.List;
-
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WeakChangeListener;
+import javafx.collections.ListChangeListener;
+import javafx.collections.WeakListChangeListener;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
-
-import com.sun.javafx.PlatformUtil;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.beans.value.WeakChangeListener;
-import javafx.collections.ListChangeListener;
-import javafx.collections.WeakListChangeListener;
-import javafx.scene.input.KeyCode;
 import javafx.util.Callback;
+import java.util.ArrayList;
+import java.util.List;
+import com.sun.javafx.PlatformUtil;
+import static javafx.scene.input.KeyCode.A;
+import static javafx.scene.input.KeyCode.ADD;
+import static javafx.scene.input.KeyCode.DOWN;
+import static javafx.scene.input.KeyCode.END;
+import static javafx.scene.input.KeyCode.ENTER;
+import static javafx.scene.input.KeyCode.ESCAPE;
+import static javafx.scene.input.KeyCode.F2;
+import static javafx.scene.input.KeyCode.HOME;
+import static javafx.scene.input.KeyCode.KP_DOWN;
+import static javafx.scene.input.KeyCode.KP_LEFT;
+import static javafx.scene.input.KeyCode.KP_RIGHT;
+import static javafx.scene.input.KeyCode.KP_UP;
+import static javafx.scene.input.KeyCode.LEFT;
+import static javafx.scene.input.KeyCode.MULTIPLY;
+import static javafx.scene.input.KeyCode.PAGE_DOWN;
+import static javafx.scene.input.KeyCode.PAGE_UP;
+import static javafx.scene.input.KeyCode.RIGHT;
+import static javafx.scene.input.KeyCode.SPACE;
+import static javafx.scene.input.KeyCode.SUBTRACT;
+import static javafx.scene.input.KeyCode.UP;
 
 public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
 
@@ -69,8 +84,13 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "ScrollUp"));
         TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "ScrollDown"));
         
+        if (PlatformUtil.isMac()) {
+            TREE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").ctrl().shortcut());
+        } else {
+            TREE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").ctrl());
+        }
+
         TREE_VIEW_BINDINGS.add(new KeyBinding(A, "SelectAll").shortcut());
-        TREE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").shortcut());
         TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "FocusPageUp").shortcut());
         TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "FocusPageDown").shortcut());
         TREE_VIEW_BINDINGS.add(new KeyBinding(UP, "FocusPreviousRow").shortcut());
@@ -144,10 +164,6 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         else super.callAction(name);
     }
 
-    @Override protected List<KeyBinding> createKeyBindings() {
-        return TREE_VIEW_BINDINGS;
-    }
-    
     @Override protected void callActionForEvent(KeyEvent e) {
         // RT-12751: we want to keep an eye on the user holding down the shift key, 
         // so that we know when they enter/leave multiple selection mode. This
@@ -196,7 +212,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     private boolean selectionChanging = false;
     
     private final ListChangeListener<Integer> selectedIndicesListener = new ListChangeListener<Integer>() {
-        @Override public void onChanged(ListChangeListener.Change c) {
+        @Override public void onChanged(ListChangeListener.Change<? extends Integer> c) {
             while (c.next()) {
                 MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
                 
@@ -238,8 +254,8 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     private final WeakChangeListener<MultipleSelectionModel<TreeItem<T>>> weakSelectionModelListener =
             new WeakChangeListener<MultipleSelectionModel<TreeItem<T>>>(selectionModelListener);
 
-    public TreeViewBehavior(TreeView control) {
-        super(control);
+    public TreeViewBehavior(TreeView<T> control) {
+        super(control, TREE_VIEW_BINDINGS);
         
         // Fix for RT-16565
         getControl().selectionModelProperty().addListener(weakSelectionModelListener);
@@ -248,8 +264,9 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         }
     }
     
-    public void dispose() {
+    @Override public void dispose() {
         TreeCellBehavior.removeAnchor(getControl());
+        super.dispose();
     }
     
     private void setAnchor(int anchor) {
@@ -289,7 +306,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         }
         if (newSelectedIndex == -1) return;
         
-        MultipleSelectionModel sm = getControl().getSelectionModel();
+        MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
         if (sm == null) return;
         sm.clearAndSelect(newSelectedIndex);
     }
@@ -301,13 +318,13 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         }
         if (newSelectedIndex == -1) return;
         
-        MultipleSelectionModel sm = getControl().getSelectionModel();
+        MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
         if (sm == null) return;
         sm.clearAndSelect(newSelectedIndex);
     }
     
     private void focusFirstRow() {
-        FocusModel fm = getControl().getFocusModel();
+        FocusModel<TreeItem<T>> fm = getControl().getFocusModel();
         if (fm == null) return;
         fm.focus(0);
         
@@ -315,7 +332,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
     
     private void focusLastRow() {
-        FocusModel fm = getControl().getFocusModel();
+        FocusModel<TreeItem<T>> fm = getControl().getFocusModel();
         if (fm == null) return;
         fm.focus(getControl().getExpandedItemCount() - 1);
         
@@ -323,10 +340,10 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
     
     private void focusPreviousRow() {
-        FocusModel fm = getControl().getFocusModel();
+        FocusModel<TreeItem<T>> fm = getControl().getFocusModel();
         if (fm == null) return;
         
-        MultipleSelectionModel sm = getControl().getSelectionModel();
+        MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
         if (sm == null) return;
         
         fm.focusPrevious();
@@ -339,10 +356,10 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
 
     private void focusNextRow() {
-        FocusModel fm = getControl().getFocusModel();
+        FocusModel<TreeItem<T>> fm = getControl().getFocusModel();
         if (fm == null) return;
         
-        MultipleSelectionModel sm = getControl().getSelectionModel();
+        MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
         if (sm == null) return;
         
         fm.focusNext();
@@ -357,7 +374,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     private void focusPageUp() {
         int newFocusIndex = onScrollPageUp.call(getAnchor());
         
-        FocusModel fm = getControl().getFocusModel();
+        FocusModel<TreeItem<T>> fm = getControl().getFocusModel();
         if (fm == null) return;
         fm.focus(newFocusIndex);
     }
@@ -365,16 +382,16 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     private void focusPageDown() {
         int newFocusIndex = onScrollPageDown.call(getAnchor());
         
-        FocusModel fm = getControl().getFocusModel();
+        FocusModel<TreeItem<T>> fm = getControl().getFocusModel();
         if (fm == null) return;
         fm.focus(newFocusIndex);
     }
 
     private void alsoSelectPreviousRow() {
-        FocusModel fm = getControl().getFocusModel();
+        FocusModel<TreeItem<T>> fm = getControl().getFocusModel();
         if (fm == null) return;
         
-        MultipleSelectionModel sm = getControl().getSelectionModel();
+        MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
         if (sm == null) return;
         
 //        final int focusIndex = fm.getFocusedIndex();
@@ -402,10 +419,10 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
 
     private void alsoSelectNextRow() {
-        FocusModel fm = getControl().getFocusModel();
+        FocusModel<TreeItem<T>> fm = getControl().getFocusModel();
         if (fm == null) return;
         
-        MultipleSelectionModel sm = getControl().getSelectionModel();
+        MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
         if (sm == null) return;
         
         if (isShiftDown && getAnchor() != -1) {
@@ -431,7 +448,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
     
     private void clearSelectionOutsideRange(int start, int end) {
-        MultipleSelectionModel sm = getControl().getSelectionModel();
+        MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
         if (sm == null) return;
         
         int min = Math.min(start, end);
@@ -450,7 +467,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
 
     private void selectPreviousRow() {
-        FocusModel fm = getControl().getFocusModel();
+        FocusModel<TreeItem<T>> fm = getControl().getFocusModel();
         if (fm == null) return;
 
         int focusIndex = fm.getFocusedIndex();
@@ -464,7 +481,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
 
     private void selectNextRow() {
-        FocusModel fm = getControl().getFocusModel();
+        FocusModel<TreeItem<T>> fm = getControl().getFocusModel();
         if (fm == null) return;
 
         int focusIndex = fm.getFocusedIndex();
@@ -490,7 +507,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
 
     private void selectAllToFirstRow() {
-        MultipleSelectionModel sm = getControl().getSelectionModel();
+        MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
         if (sm == null) return;
         
         int leadIndex = sm.getSelectedIndex();
@@ -510,7 +527,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
 
     private void selectAllToLastRow() {
-        MultipleSelectionModel sm = getControl().getSelectionModel();
+        MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
         if (sm == null) return;
 
         int leadIndex = sm.getSelectedIndex();
@@ -534,7 +551,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
     
     private void selectAllPageUp() {
-        FocusModel fm = getControl().getFocusModel();
+        FocusModel<TreeItem<T>> fm = getControl().getFocusModel();
         if (fm == null) return;
 
         int leadIndex = fm.getFocusedIndex();
@@ -545,7 +562,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         
         int leadSelectedIndex = onScrollPageUp.call(getAnchor());
         
-        MultipleSelectionModel sm = getControl().getSelectionModel();
+        MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
         if (sm == null) return;
         
         selectionChanging = true;
@@ -555,7 +572,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
     
     private void selectAllPageDown() {
-        FocusModel fm = getControl().getFocusModel();
+        FocusModel<TreeItem<T>> fm = getControl().getFocusModel();
         if (fm == null) return;
         
         int leadIndex = fm.getFocusedIndex();
@@ -566,7 +583,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         
         int leadSelectedIndex = onScrollPageDown.call(getAnchor());
         
-        MultipleSelectionModel sm = getControl().getSelectionModel();
+        MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
         if (sm == null) return;
         
         selectionChanging = true;
@@ -576,10 +593,10 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
     
     private void selectAllToFocus() {
-        MultipleSelectionModel sm = getControl().getSelectionModel();
+        MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
         if (sm == null) return;
 
-        FocusModel fm = getControl().getFocusModel();
+        FocusModel<TreeItem<T>> fm = getControl().getFocusModel();
         if (fm == null) return;
 
         int focusIndex = fm.getFocusedIndex();
@@ -606,7 +623,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
     
     private void collapseRow() {
-        TreeView control = getControl();
+        TreeView<T> control = getControl();
         TreeViewBehavior.collapseRow(control.getSelectionModel(), control.getRoot(), control.isShowRoot());
     }
 
@@ -627,20 +644,20 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         }
     }
     
-    static void expandAll(final TreeItem root) {
+    static <T> void expandAll(final TreeItem<T> root) {
         if (root == null) return;
         
         root.setExpanded(true);
         expandChildren(root);
     }
     
-    private static void expandChildren(TreeItem node) {
+    private static <T> void expandChildren(TreeItem<T> node) {
         if (node == null) return;
-        List<TreeItem> children = node.getChildren();
+        List<TreeItem<T>> children = node.getChildren();
         if (children == null) return;
         
         for (int i = 0; i < children.size(); i++) {
-            TreeItem child = children.get(i);
+            TreeItem<T> child = children.get(i);
             if (child == null || child.isLeaf()) continue;
             
             child.setExpanded(true);
@@ -648,10 +665,10 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         }
     }
 
-    static <T> void collapseRow(final MultipleSelectionModel<TreeItem<T>> sm, final TreeItem root, final boolean isShowRoot) {
+    static <T> void collapseRow(final MultipleSelectionModel<TreeItem<T>> sm, final TreeItem<T> root, final boolean isShowRoot) {
         if (sm == null) return;
         
-        TreeItem selectedItem = sm.getSelectedItem();
+        TreeItem<T> selectedItem = sm.getSelectedItem();
         if (selectedItem == null) return;
         if (root == null) return;
         
@@ -682,17 +699,17 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
 
     private void edit() {
-        TreeItem treeItem = getControl().getSelectionModel().getSelectedItem();
+        TreeItem<T> treeItem = getControl().getSelectionModel().getSelectedItem();
         if (treeItem == null) return;
 
         getControl().edit(treeItem);
     }
     
     private void toggleFocusOwnerSelection() {
-        MultipleSelectionModel sm = getControl().getSelectionModel();
+        MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
         if (sm == null) return;
 
-        FocusModel fm = getControl().getFocusModel();
+        FocusModel<TreeItem<T>> fm = getControl().getFocusModel();
         if (fm == null) return;
 
         int focusedIndex = fm.getFocusedIndex();
@@ -712,10 +729,10 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
      *************************************************************************/
     
     private void discontinuousSelectPreviousRow() {
-        MultipleSelectionModel sm = getControl().getSelectionModel();
+        MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
         if (sm == null) return;
         
-        FocusModel fm = getControl().getFocusModel();
+        FocusModel<TreeItem<T>> fm = getControl().getFocusModel();
         if (fm == null) return;
         
         int index = fm.getFocusedIndex() - 1;
@@ -724,10 +741,10 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
     
     private void discontinuousSelectNextRow() {
-        MultipleSelectionModel sm = getControl().getSelectionModel();
+        MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
         if (sm == null) return;
         
-        FocusModel fm = getControl().getFocusModel();
+        FocusModel<TreeItem<T>> fm = getControl().getFocusModel();
         if (fm == null) return;
 
         int index = fm.getFocusedIndex() + 1;
@@ -735,10 +752,10 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
     
     private void discontinuousSelectPageUp() {
-        MultipleSelectionModel sm = getControl().getSelectionModel();
+        MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
         if (sm == null) return;
         
-        FocusModel fm = getControl().getFocusModel();
+        FocusModel<TreeItem<T>> fm = getControl().getFocusModel();
         if (fm == null) return;
 
         int leadIndex = fm.getFocusedIndex();
@@ -747,10 +764,10 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
     
     private void discontinuousSelectPageDown() {
-        MultipleSelectionModel sm = getControl().getSelectionModel();
+        MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
         if (sm == null) return;
         
-        FocusModel fm = getControl().getFocusModel();
+        FocusModel<TreeItem<T>> fm = getControl().getFocusModel();
         if (fm == null) return;
         
         int leadIndex = fm.getFocusedIndex();
@@ -759,10 +776,10 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
     
     private void discontinuousSelectAllToFirstRow() {
-        MultipleSelectionModel sm = getControl().getSelectionModel();
+        MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
         if (sm == null) return;
         
-        FocusModel fm = getControl().getFocusModel();
+        FocusModel<TreeItem<T>> fm = getControl().getFocusModel();
         if (fm == null) return;
 
         int index = fm.getFocusedIndex();
@@ -773,10 +790,10 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
     
     private void discontinuousSelectAllToLastRow() {
-        MultipleSelectionModel sm = getControl().getSelectionModel();
+        MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
         if (sm == null) return;
         
-        FocusModel fm = getControl().getFocusModel();
+        FocusModel<TreeItem<T>> fm = getControl().getFocusModel();
         if (fm == null) return;
 
         int index = fm.getFocusedIndex() + 1;

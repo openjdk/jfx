@@ -2,8 +2,8 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="" />
-    <mapping directory="$PROJECT_DIR$/../../deploy" vcs="hg4idea" />
     <mapping directory="$PROJECT_DIR$" vcs="hg4idea" />
+    <mapping directory="$PROJECT_DIR$/../../deploy" vcs="hg4idea" />
     <mapping directory="$PROJECT_DIR$/../../rt-closed" vcs="hg4idea" />
   </component>
 </project>

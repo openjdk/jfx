@@ -25,12 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import java.util.AbstractList;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
+import com.sun.javafx.application.PlatformImpl;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.ConditionalFeature;
@@ -41,11 +36,7 @@ import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
-import javafx.event.Event;
-import javafx.event.EventDispatchChain;
-import javafx.event.EventDispatcher;
-import javafx.event.EventHandler;
+import javafx.event.*;
 import javafx.geometry.Orientation;
 import javafx.scene.Group;
 import javafx.scene.Node;
@@ -62,8 +53,9 @@ import javafx.scene.shape.Rectangle;
 import javafx.util.Callback;
 import javafx.util.Duration;
 
-import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.application.PlatformImpl;
+import java.util.AbstractList;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Implementation of a virtualized container using a cell based mechanism.
@@ -147,8 +139,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                     pile.clear();
                     sheetChildren.clear();
                     cells.clear();
-                    lastWidth = lastHeight = maxPrefBreadth = -1;
-                    viewportBreadth = viewportLength = lastPosition = 0;
+                    lastWidth = lastHeight = -1;
+                    setMaxPrefBreadth(-1);
+                    setViewportBreadth(0);
+                    setViewportLength(0);
+                    lastPosition = 0;
                     hbar.setValue(0);
                     vbar.setValue(0);
                     setPosition(0.0f);
@@ -294,7 +289,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * unless instructed to do so, so as to reduce the amount of scroll bar
      * jitter. The access on this variable is package ONLY FOR TESTING.
      */
-    double maxPrefBreadth;
+    private double maxPrefBreadth;
+    protected final void setMaxPrefBreadth(double value) {
+        this.maxPrefBreadth = value;
+    }
+    protected final double getMaxPrefBreadth() {
+        return maxPrefBreadth;
+    }
 
     /**
      * The breadth of the viewport portion of the VirtualFlow as computed during
@@ -302,7 +303,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * view width. In a horizontal flow this is the clip view height.
      * The access on this variable is package ONLY FOR TESTING.
      */
-    double viewportBreadth;
+    private double viewportBreadth;
+    protected final void setViewportBreadth(double value) {
+        this.viewportBreadth = value;
+    }
+    protected final double getViewportBreadth() {
+        return viewportBreadth;
+    }
 
     /**
      * The length of the viewport portion of the VirtualFlow as computed
@@ -310,7 +317,14 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * clip view height. In a horizontal flow this is the clip view width.
      * The access on this variable is package ONLY FOR TESTING.
      */
-    double viewportLength;
+    private double viewportLength;
+    void setViewportLength(double value) {
+        this.viewportLength = value;
+    }
+    protected double getViewportLength() {
+        return viewportLength;
+    }
+
 
     /**
      * The width of the VirtualFlow the last time it was laid out. We
@@ -367,9 +381,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * This is package private ONLY FOR TESTING
      */
     final ArrayLinkedList<T> cells = new ArrayLinkedList<T>();
-    @ReturnsUnmodifiableCollection
     protected List<T> getCells() {
-        return Collections.unmodifiableList(cells);
+        return cells;
     }
 
     /**
@@ -797,8 +810,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     }
     
     @Override protected void layoutChildren() {
-       if (needsRecreateCells) {
-            maxPrefBreadth = -1;
+        if (needsRecreateCells) {
+            setMaxPrefBreadth(-1);
             lastWidth = -1;
             lastHeight = -1;
             releaseCell(accumCell);
@@ -811,7 +824,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             cells.clear();
             pile.clear();
         } else if (needsRebuildCells) {
-            maxPrefBreadth = -1;
+            setMaxPrefBreadth(-1);
             lastWidth = -1;
             lastHeight = -1;
             releaseCell(accumCell);
@@ -820,7 +833,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             }
             addAllToPile();
         } else if (needsReconfigureCells) {
-            maxPrefBreadth = -1;
+            setMaxPrefBreadth(-1);
             lastWidth = -1;
             lastHeight = -1;
         }
@@ -975,7 +988,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         boolean rebuild = cellNeedsLayout ||
                 isVertical != lastVertical ||
                 cells.isEmpty() ||
-                maxPrefBreadth == -1 ||
+                getMaxPrefBreadth() == -1 ||
                 position != lastPosition ||
                 cellCount != lastCellCount;
 
@@ -1057,7 +1070,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * indicates the distance from the leading edge (top) of the viewport to
      * the leading edge (top) of the currentIndex.
      */
-    private void addLeadingCells(int currentIndex, double startOffset) {
+    protected void addLeadingCells(int currentIndex, double startOffset) {
         // The offset will keep track of the distance from the top of the
         // viewport to the top of the current index. We will increment it
         // as we lay out leading cells.
@@ -1095,7 +1108,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
             // Position the cell, and update the maxPrefBreadth variable as we go.
             positionCell(cell, offset);
-            maxPrefBreadth = Math.max(maxPrefBreadth, getCellBreadth(cell));
+            setMaxPrefBreadth(Math.max(getMaxPrefBreadth(), getCellBreadth(cell)));
             cell.setVisible(true);
             --index;
         }
@@ -1123,7 +1136,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * Adds all the trailing cells that come <em>after</em> the last index in
      * the cells ObservableList.
      */
-    private boolean addTrailingCells(boolean fillEmptyCells) {
+    protected boolean addTrailingCells(boolean fillEmptyCells) {
         // If cells is empty then addLeadingCells bailed for some reason and
         // we're hosed, so just punt
         if (cells.isEmpty()) return false;
@@ -1137,6 +1150,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         int index = getCellIndex(startCell) + 1;
         boolean filledWithNonEmpty = index <= cellCount;
 
+        final double viewportLength = getViewportLength();
         while (offset < viewportLength) {
             if (index >= cellCount) {
                 if (offset < viewportLength) filledWithNonEmpty = false;
@@ -1149,7 +1163,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
             // Position the cell and update the max pref
             positionCell(cell, offset);
-            maxPrefBreadth = Math.max(maxPrefBreadth, getCellBreadth(cell));
+            setMaxPrefBreadth(Math.max(getMaxPrefBreadth(), getCellBreadth(cell)));
 
             offset += getCellLength(cell);
             cell.setVisible(true);
@@ -1183,7 +1197,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 start -= cellLength;
                 prospectiveEnd += cellLength;
                 positionCell(cell, start);
-                maxPrefBreadth = Math.max(maxPrefBreadth, getCellBreadth(cell));
+                setMaxPrefBreadth(Math.max(getMaxPrefBreadth(), getCellBreadth(cell)));
                 cell.setVisible(true);
             }
 
@@ -1220,8 +1234,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         final boolean isVertical = isVertical();
         double width = getWidth();
         double height = getHeight();
-        viewportLength = snapSize(isVertical ? height : width);
-        viewportBreadth = snapSize(isVertical ? width : height);
+        setViewportLength(snapSize(isVertical ? height : width));
+        setViewportBreadth(snapSize(isVertical ? width : height));
 
         // Assign the hbar and vbar to the breadthBar and lengthBar so as
         // to make some subsequent calculations easier.
@@ -1244,9 +1258,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // compute the maxPrefBreadth and also determine if we have enough cells
         // such that it will require more than a single page.
 
+        final double maxPrefBreadth = getMaxPrefBreadth();
         if (maxPrefBreadth == -1) {
             return;
         }
+
+        final double viewportBreadth = getViewportBreadth();
+        final double viewportLength = getViewportLength();
 
         // Perform a few computations used for understanding the effect of the
         // bars on the viewport dimensions. Here we tentatively decide whether
@@ -1262,8 +1280,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // bars actually is needed, then we will perform a cleanup pass
 
         if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
-            if (needBreadthBar) viewportLength -= breadthBarLength;
-            if (needLengthBar) viewportBreadth -= lengthBarBreadth;
+            if (needBreadthBar) setViewportLength(viewportLength - breadthBarLength);
+            if (needLengthBar) setViewportBreadth(viewportBreadth - lengthBarBreadth);
 
             breadthBar.setVisible(needBreadthBar);
             lengthBar.setVisible(needLengthBar);
@@ -1325,25 +1343,25 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                     // to determine if we need the length bar
                     T lastCell = cells.getLast();
                     if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
-                        lengthBar.setVisible((getCellPosition(lastCell) + getCellLength(lastCell)) > viewportLength);
+                        lengthBar.setVisible((getCellPosition(lastCell) + getCellLength(lastCell)) > getViewportLength());
                     }
                     else {
-                        lengthBar.setVisible(((getCellPosition(lastCell) + getCellLength(lastCell)) > viewportLength) && tempVisibility);
+                        lengthBar.setVisible(((getCellPosition(lastCell) + getCellLength(lastCell)) > getViewportLength()) && tempVisibility);
                     }
                 }
                 
                 // If the bar is needed, adjust the viewportBreadth
                 if (lengthBar.isVisible() && !PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
-                    viewportBreadth -= lengthBarBreadth;
+                    setViewportBreadth(getViewportBreadth() - lengthBarBreadth);
                 }
             }
             
             if (! breadthBar.isVisible()) {
-                final boolean visible = maxPrefBreadth > viewportBreadth;
+                final boolean visible = getMaxPrefBreadth() > getViewportBreadth();
                 if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
                     breadthBar.setVisible(visible);
                     if (visible) {
-                        viewportLength -= breadthBarLength;
+                        setViewportLength(getViewportLength() - breadthBarLength);
                     }
                 }
                 else {
@@ -1358,6 +1376,9 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         double sumCellLength = 0;
         double flowLength = (isVertical ? getHeight() : getWidth()) -
             (breadthBar.isVisible() ? breadthBar.prefHeight(-1) : 0);
+
+        final double viewportBreadth = getViewportBreadth();
+        final double viewportLength = getViewportLength();
         
         // Now position and update the scroll bars
         if (breadthBar.isVisible()) {
@@ -1386,7 +1407,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             // There was a weird bug where the newMax would sometimes go < 0
             // when switching vertical and that would drive the min value to
             // something crazy negative.
-            double newMax = Math.max(1, maxPrefBreadth - viewportBreadth);
+            double newMax = Math.max(1, getMaxPrefBreadth() - viewportBreadth);
             if (newMax != breadthBar.getMax()) {
                 breadthBar.setMax(newMax);
 
@@ -1396,7 +1417,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                     breadthBar.setValue(newMax);
                 }
 
-                breadthBar.setVisibleAmount((viewportBreadth / maxPrefBreadth) * newMax);
+                breadthBar.setVisibleAmount((viewportBreadth / getMaxPrefBreadth()) * newMax);
             }
         }
 
@@ -1496,7 +1517,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * offset.
      */
     private void fitCells() {
-        double size = Math.max(maxPrefBreadth, viewportBreadth);
+        double size = Math.max(getMaxPrefBreadth(), getViewportBreadth());
         boolean isVertical = isVertical();
         for (int i = 0, max = cells.size(); i < max; i++) {
             Cell cell = cells.get(i);
@@ -1509,6 +1530,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     }
 
     private void cull() {
+        final double viewportLength = getViewportLength();
         for (int i = cells.size() - 1; i >= 0; i--) {
             T cell = cells.get(i);
             double cellSize = getCellLength(cell);
@@ -1747,7 +1769,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                     cell = pile.removeFirst();
                 }
             } else {
-                cell = createCell.call(this);
+                cell = getCreateCell().call(this);
                 cell.getProperties().put(NEW_CELL, null);
             }
         }
@@ -1759,7 +1781,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         return cell;
     }
 
-    private void addAllToPile() {
+    // protected to allow subclasses to clean up
+    protected void addAllToPile() {
         for (int i = 0, max = cells.size(); i < max; i++) {
             addToPile(cells.removeFirst());
         }
@@ -1816,7 +1839,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * are no cells, or if the viewport length is 0.
      */
     public T getLastVisibleCell() {
-        if (cells.isEmpty() || viewportLength <= 0) return null;
+        if (cells.isEmpty() || getViewportLength() <= 0) return null;
 
         T cell;
         for (int i = cells.size() - 1; i >= 0; i--) {
@@ -1835,13 +1858,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * cells or the viewport length is 0.
      */
     public T getFirstVisibleCell() {
-        if (cells.isEmpty() || viewportLength <= 0) return null;
+        if (cells.isEmpty() || getViewportLength() <= 0) return null;
         T cell = cells.getFirst();
         return cell.isEmpty() ? null : cell;
     }
 
     public T getLastVisibleCellWithinViewPort() {
-        if (cells.isEmpty() || viewportLength <= 0) return null;
+        if (cells.isEmpty() || getViewportLength() <= 0) return null;
 
         T cell;
         for (int i = cells.size() - 1; i >= 0; i--) {
@@ -1857,7 +1880,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     }
 
     public T getFirstVisibleCellWithinViewPort() {
-        if (cells.isEmpty() || viewportLength <= 0) return null;
+        if (cells.isEmpty() || getViewportLength() <= 0) return null;
 
         final boolean isVertical = isVertical();
         T cell;
@@ -1893,7 +1916,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      */
     public void showAsLast(T lastCell) {
         if (lastCell != null) {
-            adjustPixels(getCellPosition(lastCell) + getCellLength(lastCell) - viewportLength);
+            adjustPixels(getCellPosition(lastCell) + getCellLength(lastCell) - getViewportLength());
         }
     }
 
@@ -1903,9 +1926,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      */
     public void show(T cell) {
         if (cell != null) {
-            double start = getCellPosition(cell);
-            double length = getCellLength(cell);
-            double end = start + length;
+            final double start = getCellPosition(cell);
+            final double length = getCellLength(cell);
+            final double end = start + length;
+            final double viewportLength = getViewportLength();
+
             if (start < 0) {
                 adjustPixels(start);
             } else if (end > viewportLength) {
@@ -1929,7 +1954,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 resizeCellSize(cell); // resize must be after config
                 cells.addLast(cell);
                 positionCell(cell, getCellPosition(prev) + getCellLength(prev));
-                maxPrefBreadth = Math.max(maxPrefBreadth, getCellBreadth(cell));
+                setMaxPrefBreadth(Math.max(getMaxPrefBreadth(), getCellBreadth(cell)));
                 cell.setVisible(true);
                 show(cell);
 //                layingOut = false;
@@ -1944,7 +1969,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 resizeCellSize(cell); // resize must be after config
                 cells.addFirst(cell);
                 positionCell(cell, getCellPosition(next) - getCellLength(cell));
-                maxPrefBreadth = Math.max(maxPrefBreadth, getCellBreadth(cell));
+                setMaxPrefBreadth(Math.max(getMaxPrefBreadth(), getCellBreadth(cell)));
                 cell.setVisible(true);
                 show(cell);
 //                layingOut = false;
@@ -2023,18 +2048,34 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // if we find that the maxPrefBreadth exceeds the viewportBreadth,
         // then we will be sure to show the breadthBar and update it
         // accordingly.
-        int cellsSize = cells.size();
-        if (cellsSize > 0) {
-            for (int i = 0; i < cellsSize; i++) {
+        if (cells.size() > 0) {
+            for (int i = 0; i < cells.size(); i++) {
                 T cell = cells.get(i);
+                assert cell != null;
                 positionCell(cell, getCellPosition(cell) - delta);
             }
 
+            // Now throw away any cells that don't fit
+            cull();
+
             // Add any necessary leading cells
             T firstCell = cells.getFirst();
-            int firstIndex = getCellIndex(firstCell);
-            double prevIndexSize = getCellLength(firstIndex - 1);
-            addLeadingCells(firstIndex - 1, getCellPosition(firstCell) - prevIndexSize);
+            if (firstCell != null) {
+                int firstIndex = getCellIndex(firstCell);
+                double prevIndexSize = getCellLength(firstIndex - 1);
+                addLeadingCells(firstIndex - 1, getCellPosition(firstCell) - prevIndexSize);
+            } else {
+                int currentIndex = computeCurrentIndex();
+
+                // The distance from the top of the viewport to the top of the
+                // cell for the current index.
+                double offset = -computeViewportOffset(getPosition());
+
+                // Add all the leading and trailing cells (the call to add leading
+                // cells will add the current cell as well -- that is, the one that
+                // represents the current position on the mapper).
+                addLeadingCells(currentIndex, offset);
+            }
 
             // Starting at the tail of the list, loop adding cells until
             // all the space on the table is filled up. We want to make
@@ -2045,9 +2086,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 // Reached the end, but not enough cells to fill up to
                 // the end. So, remove the trailing empty space, and translate
                 // the cells down
-                T lastCell = getLastVisibleCell();
-                double lastCellSize = getCellLength(lastCell);
-                double cellEnd = getCellPosition(lastCell) + lastCellSize;
+                final T lastCell = getLastVisibleCell();
+                final double lastCellSize = getCellLength(lastCell);
+                final double cellEnd = getCellPosition(lastCell) + lastCellSize;
+                final double viewportLength = getViewportLength();
+
                 if (cellEnd < viewportLength) {
                     // Reposition the nodes
                     double emptySize = viewportLength - cellEnd;
@@ -2058,9 +2101,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                     setPosition(1.0f);
                 }
             }
-
-            // Now throw away any cells that don't fit
-            cull();
         }
 
         // Finally, update the scroll bars
@@ -2160,7 +2200,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         double fraction = fractionalPosition - cellIndex;
         double cellSize = getCellLength(cellIndex);
         double pixelOffset = cellSize * fraction;
-        double viewportOffset = viewportLength * p;
+        double viewportOffset = getViewportLength() * p;
         return pixelOffset - viewportOffset;
     }
 
@@ -2216,8 +2256,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         // Keep track of the number of pixels left to travel
         double n = forward ?
-              numPixels + pixelOffset - (viewportLength * getPosition()) - start
-            : -numPixels + end - (pixelOffset - (viewportLength * getPosition()));
+              numPixels + pixelOffset - (getViewportLength() * getPosition()) - start
+            : -numPixels + end - (pixelOffset - (getViewportLength() * getPosition()));
 
         // "p" represents the most recent value for position. This is always
         // based on the edge between two cells, except at the very end of the
@@ -2265,7 +2305,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     private double computeOffsetForCell(int itemIndex) {
         double cellCount = getCellCount();
         double p = com.sun.javafx.Utils.clamp(0, itemIndex, cellCount) / cellCount;
-        return -(viewportLength * p);
+        return -(getViewportLength() * p);
     }
     
 //    /**
@@ -2352,7 +2392,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * <p>
      * This class is package private solely for the sake of testing.
      */
-    static class ArrayLinkedList<T> extends AbstractList {
+    public static class ArrayLinkedList<T> extends AbstractList {
         /**
          * The array list backing this class. We default the size of the array
          * list to be fairly large so as not to require resizing during normal
@@ -2491,13 +2531,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     Timeline sbTouchTimeline;
     KeyFrame sbTouchKF1;
     KeyFrame sbTouchKF2;
-    Timeline contentsToViewTimeline;
-    KeyFrame contentsToViewKF1;
-    KeyFrame contentsToViewKF2;
-    KeyFrame contentsToViewKF3;
 
     private boolean tempVisibility = false;
-
 
     protected void startSBReleasedAnimation() {
         if (sbTouchTimeline == null) {

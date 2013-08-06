@@ -26,7 +26,6 @@
 package javafx.scene.control;
 
 import java.text.Collator;
-import java.util.Collections;
 import java.util.Comparator;
 
 import javafx.beans.property.BooleanProperty;

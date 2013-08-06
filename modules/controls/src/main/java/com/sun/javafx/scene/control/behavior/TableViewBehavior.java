@@ -25,9 +25,6 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import javafx.css.PseudoClass;
-import java.util.List;
-import java.util.Set;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
@@ -84,22 +81,22 @@ public class TableViewBehavior<T> extends TableViewBehaviorBase<TableView<T>, T,
         
         // Fix for RT-16565
         control.selectionModelProperty().addListener(weakSelectionModelListener);
-        TableViewSelectionModel sm = control.getSelectionModel();
+        TableViewSelectionModel<T> sm = control.getSelectionModel();
         if (sm != null) {
             sm.getSelectedCells().addListener(selectedCellsListener);
         }
         
-        /*
-        ** only add this if we're on an embedded
-        ** platform that supports 5-button navigation 
-        */
+        // Only add this if we're on an embedded platform that supports 5-button navigation
         if (Utils.isTwoLevelFocus()) {
             tlFocus = new TwoLevelFocusBehavior(control); // needs to be last.
         }
     }
 
-    
-    
+    @Override public void dispose() {
+        if (tlFocus != null) tlFocus.dispose();
+        super.dispose();
+    }
+
     /**************************************************************************
      *                                                                        *
      * Implement TableViewBehaviorBase abstract methods                       *
@@ -122,8 +119,8 @@ public class TableViewBehavior<T> extends TableViewBehaviorBase<TableView<T>, T,
     }
 
     /** {@inheritDoc}  */
-    @Override protected ObservableList<TablePosition<T,?>> getSelectedCells() {
-        return (ObservableList<TablePosition<T,?>>) (Object) getControl().getSelectionModel().getSelectedCells();
+    @Override protected ObservableList<TablePosition> getSelectedCells() {
+        return getControl().getSelectionModel().getSelectedCells();
     }
 
     /** {@inheritDoc}  */
@@ -137,7 +134,7 @@ public class TableViewBehavior<T> extends TableViewBehaviorBase<TableView<T>, T,
     }
 
     /** {@inheritDoc}  */
-    @Override protected TableColumn getVisibleLeafColumn(int index) {
+    @Override protected TableColumn<T,?> getVisibleLeafColumn(int index) {
         return getControl().getVisibleLeafColumn(index);
     }
 

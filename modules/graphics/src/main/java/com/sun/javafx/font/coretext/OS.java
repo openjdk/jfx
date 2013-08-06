@@ -79,6 +79,7 @@ class OS {
     static final native CGRect CGPathGetPathBoundingBox(long path);
     static final native long CFStringCreateWithCharacters(long alloc, char[] chars, long start, long numChars);
     static final native String CTFontCopyDisplayName(long font);
+    static final native String CTFontCopyAttributeDisplayName(long font);
     static final native void CTFontDrawGlyphs(long font, short glyphs, double x, double y, long count, long context);
     static final native double CTFontGetAdvancesForGlyphs(long font, int orientation, short glyphs, CGSize advances, long count);
     static final native CGRect CTFontGetBoundingRectsForGlyphs(long font, int orientation, short glyphs, CGRect boundingRects, long count);

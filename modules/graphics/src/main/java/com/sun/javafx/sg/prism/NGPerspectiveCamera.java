@@ -25,25 +25,43 @@
 
 package com.sun.javafx.sg.prism;
 
-import com.sun.prism.camera.PrismPerspectiveCameraImpl;
+import com.sun.javafx.geom.PickRay;
 
 /**
- * TODO: 3D - Need documentation
- * (RT-26534) Implement 3D Camera support for FX 8
+ * Specifies a Swing-coordinates camera, suitable for mixing with Swing and
+ * the 2D scene graph. The coordinate system defined by this camera has its
+ * origin in the upper left corner of the panel with the Y-axis pointing
+ * down and the Z axis pointing away from the viewer (into the screen). The
+ * units are in pixel coordinates at the projection plane (Z=0),
+ * regardless of the size of the panel.
+ * The viewing transform is defined by specifying the zero point, the viewing
+ * direction, and the up vector.
+ * This resulting transform is used as the view portion of the ModelView matrix.
+ * The projection transform a fixed perspective transform. The 3D viewport is
+ * set to the bounds of the panel.
  */
 public class NGPerspectiveCamera extends NGCamera {
+    private final boolean fixedEyeAtCameraZero;
+    private double fov;
+    private boolean verticalFieldOfView;
 
     public NGPerspectiveCamera(boolean fixedEyeAtCameraZero) {
-        setCameraImpl(new PrismPerspectiveCameraImpl(fixedEyeAtCameraZero));       
+        this.fixedEyeAtCameraZero = fixedEyeAtCameraZero;
     }
 
     public void setFieldOfView(float fieldOfView) {
-        // System.err.println("NGPerspectiveCamera.setFieldOfView() fieldOfView = " + fieldOfView);
-        ((PrismPerspectiveCameraImpl) getCameraImpl()).setFieldOfView(fieldOfView);
+        this.fov = Math.toRadians(fieldOfView);
     }
 
     public void setVerticalFieldOfView(boolean verticalFieldOfView) {
-        ((PrismPerspectiveCameraImpl) getCameraImpl()).setVerticalFieldOfView(verticalFieldOfView);
+        this.verticalFieldOfView = verticalFieldOfView;
     }
     
+    @Override
+    public PickRay computePickRay(float x, float y, PickRay pickRay) {
+        return PickRay.computePerspectivePickRay(x, y, fixedEyeAtCameraZero,
+                viewWidth, viewHeight, fov, verticalFieldOfView, worldTransform,
+                zNear, zFar,
+                pickRay);
+    }
 }

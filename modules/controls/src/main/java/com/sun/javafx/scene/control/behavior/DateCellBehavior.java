@@ -25,18 +25,25 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import javafx.scene.Node;
+import javafx.scene.control.DateCell;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-
-import javafx.scene.Node;
-import javafx.scene.control.DateCell;
-
 import com.sun.javafx.scene.control.skin.DatePickerContent;
 import com.sun.javafx.scene.traversal.Direction;
-
-import static java.time.temporal.ChronoUnit.*;
-import static javafx.scene.input.KeyCode.*;
+import static java.time.temporal.ChronoUnit.DAYS;
+import static java.time.temporal.ChronoUnit.MONTHS;
+import static java.time.temporal.ChronoUnit.WEEKS;
+import static javafx.scene.input.KeyCode.DOWN;
+import static javafx.scene.input.KeyCode.ENTER;
+import static javafx.scene.input.KeyCode.HOME;
+import static javafx.scene.input.KeyCode.LEFT;
+import static javafx.scene.input.KeyCode.PAGE_DOWN;
+import static javafx.scene.input.KeyCode.PAGE_UP;
+import static javafx.scene.input.KeyCode.RIGHT;
+import static javafx.scene.input.KeyCode.SPACE;
+import static javafx.scene.input.KeyCode.UP;
 
 /**
  * Behaviors for LocalDate based cells types. Simply defines methods
@@ -62,7 +69,7 @@ public class DateCellBehavior extends CellBehaviorBase<DateCell> {
 
 
     public DateCellBehavior(DateCell dateCell) {
-        super(dateCell);
+        super(dateCell, DATE_CELL_BINDINGS);
     }
 
     @Override public void callAction(String name) {
@@ -82,7 +89,7 @@ public class DateCellBehavior extends CellBehaviorBase<DateCell> {
         super.callAction(name);
     }
 
-    @Override public void traverse(Node node, Direction dir) {
+    @Override public void traverse(final Node node, final Direction dir) {
         switch (dir) {
           case UP:
           case DOWN:
@@ -109,10 +116,5 @@ public class DateCellBehavior extends CellBehaviorBase<DateCell> {
         Node parent = node;
         while ((parent = parent.getParent()) != null && !(parent instanceof DatePickerContent));
         return (DatePickerContent)parent;
-    }
-
-
-    @Override protected List<KeyBinding> createKeyBindings() {
-        return DATE_CELL_BINDINGS;
     }
 }

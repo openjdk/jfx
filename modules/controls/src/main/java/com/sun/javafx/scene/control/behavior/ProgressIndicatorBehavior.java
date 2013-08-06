@@ -26,6 +26,7 @@
 package com.sun.javafx.scene.control.behavior;
 
 import javafx.scene.control.ProgressIndicator;
+import java.util.Collections;
 
 public class ProgressIndicatorBehavior<C extends ProgressIndicator> extends BehaviorBase<C> {
 
@@ -36,6 +37,6 @@ public class ProgressIndicatorBehavior<C extends ProgressIndicator> extends Beha
      **************************************************************************/
 
     public ProgressIndicatorBehavior(final C progress) {
-        super(progress);
+        super(progress, Collections.EMPTY_LIST);
     }
 }

@@ -50,6 +50,7 @@ def closedDir = file("$projectDir/../rt-closed")
 
 defineProperty("ANDROID_CROSS_TOOLS_VER", "arm-linux-androideabi-4.4.3")
 defineProperty("ARM_ARCH", "armeabi")//armeabi-v7
+defineProperty("COMPILE_PANGO", "false")
 
 ANDROID = [:]
 ANDROID.compileSwing = false;
@@ -112,8 +113,8 @@ project(":graphics") {
     }
 
     afterEvaluate {
-        addNative(project, "surface")
-        addNative(project, "vmlauncher")
+        addNative(project, "surface", ["android"])
+        addNative(project, "vmlauncher", ["android"])
         tasks["javahAndroidVmlauncher"].dependsOn(compileDalvikLibs)
         tasks["native"].dependsOn("nativeSurface", "nativeVmlauncher")
 
@@ -174,8 +175,8 @@ project(":web") {
             from("build/classes/android")
         }
 
-        addNative(project, "webview")
-        addNative(project, "dvkwebview")
+        addNative(project, "webview", ["android"])
+        addNative(project, "dvkwebview", ["android"])
         javahAndroidWebview.dependsOn(compileWebJavaAndroid)
         javahAndroidDvkwebview.dependsOn(compileWebJavaAndroid)
 

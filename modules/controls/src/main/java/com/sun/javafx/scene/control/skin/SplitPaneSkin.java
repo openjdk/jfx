@@ -25,8 +25,6 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import java.util.ListIterator;
-
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
@@ -34,6 +32,7 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
 import javafx.geometry.VPos;
 import javafx.scene.Cursor;
@@ -42,12 +41,12 @@ import javafx.scene.control.SplitPane;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
-
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import javafx.geometry.NodeOrientation;
+import java.util.ListIterator;
+import com.sun.javafx.scene.control.behavior.BehaviorBase;
 
 public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<SplitPane>>  {
 
@@ -56,7 +55,7 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
     private boolean horizontal;
     
     public SplitPaneSkin(final SplitPane splitPane) {
-        super(splitPane, new BehaviorBase<SplitPane>(splitPane));
+        super(splitPane, new BehaviorBase<>(splitPane, Collections.EMPTY_LIST));
 //        splitPane.setManaged(false);
         horizontal = getSkinnable().getOrientation() == Orientation.HORIZONTAL;
         

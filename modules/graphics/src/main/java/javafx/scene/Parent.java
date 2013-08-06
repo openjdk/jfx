@@ -233,16 +233,15 @@ public abstract class Parent extends Node {
     // true. These functions will indicate whether the geom
     // bounds for the parent have changed
     private boolean geomChanged;
-    private boolean childrenModified;
+    private boolean childSetModified;
     private final ObservableList<Node> children = new VetoableListDecorator<Node>(new TrackableObservableList<Node>() {
 
 
         protected void onChanged(Change<Node> c) {
             // proceed with updating the scene graph
-            if (childrenModified) {
-                unmodifiableManagedChildren = null;
-                boolean relayout = false;
-
+            unmodifiableManagedChildren = null;
+            boolean relayout = false;
+            if (childSetModified) {
                 while (c.next()) {
                     int from = c.getFrom();
                     int to = c.getTo();
@@ -255,9 +254,6 @@ public abstract class Parent extends Node {
                                 java.lang.System.err.println("    node=" + n + " oldparent= " + n.getParent() + " newparent=" + this);
                             }
                             n.getParent().children.remove(n);
-                            if (n.isManaged()) {
-                                relayout = true;
-                            }
                             if (warnOnAutoMove) {
                                 Thread.dumpStack();
                             }
@@ -293,8 +289,8 @@ public abstract class Parent extends Node {
                 // If so, then we need to create dirtyChildren and
                 // populate it.
                 if (dirtyChildren == null && children.size() > DIRTY_CHILDREN_THRESHOLD) {
-                    dirtyChildren =
-                            new ArrayList<Node>(2 * DIRTY_CHILDREN_THRESHOLD);
+                    dirtyChildren
+                            = new ArrayList<Node>(2 * DIRTY_CHILDREN_THRESHOLD);
                     // only bother populating children if geom has
                     // changed, otherwise there is no need
                     if (dirtyChildrenCount > 0) {
@@ -307,33 +303,52 @@ public abstract class Parent extends Node {
                         }
                     }
                 }
+            } else {
+                // If childSet was not modified, we still need to check whether the permutation
+                // did change the layout
+                layout_loop:while (c.next()) {
+                    List<Node> removed = c.getRemoved();
+                    for (int i = 0, removedSize = removed.size(); i < removedSize; ++i) {
+                        if (removed.get(i).isManaged()) {
+                            relayout = true;
+                            break layout_loop;
+                        }
+                    }
 
-                if (geomChanged) {
-                    impl_geomChanged();
+                    for (int i = c.getFrom(), to = c.getTo(); i < to; ++i) {
+                        if (children.get(i).isManaged()) {
+                            relayout = true;
+                            break layout_loop;
+                        }
+                    }
                 }
+            }
 
-                //
-                // Note that the styles of a child do not affect the parent or
-                // its siblings. Thus, it is only necessary to reapply css to
-                // the Node just added and not to this parent and all of its
-                // children. So the following call to impl_reapplyCSS was moved
-                // to Node.parentProperty. The original comment and code were
-                // purposely left here as documentation should there be any
-                // question about how the code used to work and why the change
-                // was made.
-                //
-                // if children have changed then I need to reapply
-                // CSS from this node on down
+            //
+            // Note that the styles of a child do not affect the parent or
+            // its siblings. Thus, it is only necessary to reapply css to
+            // the Node just added and not to this parent and all of its
+            // children. So the following call to impl_reapplyCSS was moved
+            // to Node.parentProperty. The original comment and code were
+            // purposely left here as documentation should there be any
+            // question about how the code used to work and why the change
+            // was made.
+            //
+            // if children have changed then I need to reapply
+            // CSS from this node on down
 //                impl_reapplyCSS();
-                //
+            //
 
-                // request layout if a Group subclass has overridden doLayout OR
-                // if one of the new children needs layout, in which case need to ensure
-                // the needsLayout flag is set all the way to the root so the next layout
-                // pass will reach the child.
-                if (relayout) {
-                    requestLayout();
-                }
+            // request layout if a Group subclass has overridden doLayout OR
+            // if one of the new children needs layout, in which case need to ensure
+            // the needsLayout flag is set all the way to the root so the next layout
+            // pass will reach the child.
+            if (relayout) {
+                requestLayout();
+            }
+
+            if (geomChanged) {
+                impl_geomChanged();
             }
 
             // Note the starting index at which we need to update the
@@ -369,7 +384,7 @@ public abstract class Parent extends Node {
             // If the childrenTriggerPermutation flag is set, then we know it
             // is a simple permutation and no further checking is needed.
             if (childrenTriggerPermutation) {
-                childrenModified = false;
+                childSetModified = false;
                 return;
             }
 
@@ -379,13 +394,13 @@ public abstract class Parent extends Node {
             // ObservableList. Note that even if the childrenModified flag is false,
             // we still have to check for duplicates. If it is a simple
             // permutation, we can avoid checking for cycles or other parents.
-            childrenModified = true;
+            childSetModified = true;
             if (newLength == childSet.size()) {
-                childrenModified = false;
+                childSetModified = false;
                 for (int i = newNodes.size() - 1; i >= 0; --i ) {
                     Node n = newNodes.get(i);
                     if (!childSet.contains(n)) {
-                        childrenModified = true;
+                        childSetModified = true;
                         break;
                     }
                 }
@@ -415,7 +430,7 @@ public abstract class Parent extends Node {
             }
 
             try {
-                if (childrenModified) {
+                if (childSetModified) {
                     // check individual children before duplication test
                     // if done in this order, the exception is more specific
                     for (int i = newNodes.size() - 1; i >= 0; --i ) {
@@ -455,7 +470,7 @@ public abstract class Parent extends Node {
 
             // Done with error checking
 
-            if (!childrenModified) {
+            if (!childSetModified) {
                 return;
             }
 
@@ -472,6 +487,10 @@ public abstract class Parent extends Node {
             for (int i = 0; i < toBeRemoved.length; i += 2) {
                 for (int j = toBeRemoved[i]; j < toBeRemoved[i + 1]; j++) {
                     Node old = children.get(j);
+                    final Scene oldScene = old.getScene();
+                    if (oldScene != null) {
+                        oldScene.generateMouseExited(old);
+                    }
                     if (dirtyChildren != null) {
                         dirtyChildren.remove(old);
                     }
@@ -823,14 +842,22 @@ public abstract class Parent extends Node {
         Parent parent = getParent();
         while (parent != null && parent.layoutFlag == LayoutFlags.CLEAN) {
             parent.setLayoutFlag(LayoutFlags.DIRTY_BRANCH);
+            if (parent.sceneRoot) {
+                Toolkit.getToolkit().requestNextPulse();
+            }
             parent = parent.getParent();
         }
+
     }
 
     private void markDirtyLayout(boolean local) {
         setLayoutFlag(LayoutFlags.NEEDS_LAYOUT);
         if (local || layoutRoot) {
-            markDirtyLayoutBranch();
+            if (sceneRoot) {
+                Toolkit.getToolkit().requestNextPulse();
+            } else {
+                markDirtyLayoutBranch();
+            }
         } else {
             requestParentLayout();
         }

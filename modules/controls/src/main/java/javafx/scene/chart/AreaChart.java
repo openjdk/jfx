@@ -61,7 +61,6 @@ import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableProperty;
-import static javafx.scene.chart.LineChart.getClassCssMetaData;
 
 /**
  * AreaChart - Plots the area between the line that connects the data points and

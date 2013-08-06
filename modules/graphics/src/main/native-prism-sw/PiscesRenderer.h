@@ -304,7 +304,6 @@ typedef struct _Renderer {
 
     // Mask
     jboolean _mask_free;
-    jint _mask_subPosX;
 
     // Mask data
     jint _maskType;

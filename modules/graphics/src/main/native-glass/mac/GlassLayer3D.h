@@ -34,20 +34,23 @@
     CALayer *_remoteLayer;
     uint32_t _remoteLayerID;
     
-    CGLContextObj _ctx;
-    CGLPixelFormatObj _format;
-    GlassOffscreen *_offscreen;
+    GlassOffscreen *_glassOffscreen;
+    GlassOffscreen *_painterOffscreen;
 
     BOOL isHiDPIAware;
 }
 
-- (id)initWithSharedContext:(CGLContextObj)ctx withHiDPIAware:(BOOL)HiDPIAware;
+- (id)initWithSharedContext:(CGLContextObj)ctx
+           andClientContext:(CGLContextObj)clCtx
+             withHiDPIAware:(BOOL)HiDPIAware;
 
 - (uint32_t)getRemoteLayerIdForServer:(NSString*)serverName;
 - (void)hostRemoteLayerId:(uint32_t)layerId;
 
-- (GlassOffscreen*)getOffscreen;
+- (GlassOffscreen*)getPainterOffscreen;
+- (GlassOffscreen*)getGlassOffscreen;
 - (void)hostOffscreen:(GlassOffscreen*)offscreen;
+- (void)flush;
 
 - (void)notifyScaleFactorChanged:(CGFloat)scale;
 

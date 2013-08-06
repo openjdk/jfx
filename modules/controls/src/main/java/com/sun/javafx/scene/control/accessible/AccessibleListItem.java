@@ -25,8 +25,6 @@
 
 package com.sun.javafx.scene.control.accessible;
 
-import com.sun.javafx.accessible.AccessibleNode;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.accessible.providers.GridItemProvider;
 import com.sun.javafx.accessible.providers.SelectionItemProvider;
 import com.sun.javafx.accessible.utils.ControlTypeIds;

@@ -25,8 +25,6 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import java.util.List;
-
 import javafx.application.ConditionalFeature;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.ListCell;
@@ -35,6 +33,8 @@ import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import java.util.Collections;
+import java.util.List;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.control.Logging;
 import sun.util.logging.PlatformLogger;
@@ -42,7 +42,7 @@ import sun.util.logging.PlatformLogger.Level;
 
 /**
  */
-public class ListCellBehavior extends CellBehaviorBase<ListCell> {
+public class ListCellBehavior<T> extends CellBehaviorBase<ListCell<T>> {
 
     /***************************************************************************
      *                                                                         *
@@ -52,8 +52,8 @@ public class ListCellBehavior extends CellBehaviorBase<ListCell> {
 
     private static final String ANCHOR_PROPERTY_KEY = "list.anchor";
 
-    static int getAnchor(ListView list) {
-        FocusModel fm = list.getFocusModel();
+    static int getAnchor(ListView<?> list) {
+        FocusModel<?> fm = list.getFocusModel();
         if (fm == null) return -1;
 
         return hasAnchor(list) ?
@@ -61,7 +61,7 @@ public class ListCellBehavior extends CellBehaviorBase<ListCell> {
                 fm.getFocusedIndex();
     }
 
-    static void setAnchor(ListView list, int anchor) {
+    static void setAnchor(ListView<?> list, int anchor) {
         if (list != null && anchor < 0) {
             removeAnchor(list);
         } else {
@@ -69,11 +69,11 @@ public class ListCellBehavior extends CellBehaviorBase<ListCell> {
         }
     }
 
-    static boolean hasAnchor(ListView list) {
+    static boolean hasAnchor(ListView<?> list) {
         return list.getProperties().get(ANCHOR_PROPERTY_KEY) != null;
     }
 
-    static void removeAnchor(ListView list) {
+    static void removeAnchor(ListView<?> list) {
         list.getProperties().remove(ANCHOR_PROPERTY_KEY);
     }
 
@@ -107,8 +107,8 @@ public class ListCellBehavior extends CellBehaviorBase<ListCell> {
      *                                                                         *
      **************************************************************************/
 
-    public ListCellBehavior(ListCell control) {
-        super(control);
+    public ListCellBehavior(ListCell<T> control) {
+        super(control, Collections.EMPTY_LIST);
     }
 
 
@@ -165,8 +165,8 @@ public class ListCellBehavior extends CellBehaviorBase<ListCell> {
     private void doSelect(MouseEvent e) {
         // Note that list.select will reset selection
         // for out of bounds indexes. So, need to check
-        ListCell listCell = getControl();
-        ListView listView = getControl().getListView();
+        ListCell<T> listCell = getControl();
+        ListView<T> listView = getControl().getListView();
         if (listView == null) return;
 
         // If the mouse event is not contained within this ListCell, then
@@ -187,10 +187,10 @@ public class ListCellBehavior extends CellBehaviorBase<ListCell> {
         int index = listCell.getIndex();
         boolean selected = listCell.isSelected();
 
-        MultipleSelectionModel sm = listView.getSelectionModel();
+        MultipleSelectionModel<T> sm = listView.getSelectionModel();
         if (sm == null) return;
 
-        FocusModel fm = listView.getFocusModel();
+        FocusModel<T> fm = listView.getFocusModel();
         if (fm == null) return;
 
         // if shift is down, and we don't already have the initial focus index
@@ -250,9 +250,9 @@ public class ListCellBehavior extends CellBehaviorBase<ListCell> {
     }
 
     private void simpleSelect(MouseEvent e) {
-        ListView lv = getControl().getListView();
+        ListView<T> lv = getControl().getListView();
         int index = getControl().getIndex();
-        MultipleSelectionModel sm = lv.getSelectionModel();
+        MultipleSelectionModel<T> sm = lv.getSelectionModel();
         boolean isAlreadySelected = sm.isSelected(index);
 
         lv.getSelectionModel().clearAndSelect(index);

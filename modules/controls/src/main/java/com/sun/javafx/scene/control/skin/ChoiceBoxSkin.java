@@ -221,9 +221,7 @@ import javafx.collections.WeakListChangeListener;
                 getSkinnable().autosize();
                 // -- End of RT-9071 fix
 
-                double y = 0f;
-                // TODO without this, the choicebox won't shift vertically..
-//                if (item != null) y = -item.prefHeight(-1) - item.getLayoutY();
+                double y = 0;
 
                 if (popup.getSkin() != null) {
                     ContextMenuContent cmContent = (ContextMenuContent)popup.getSkin().getNode();
@@ -231,10 +229,7 @@ import javafx.collections.WeakListChangeListener;
                         y = -(cmContent.getMenuYOffset((int)currentSelectedIndex));
                     }
                 }
-                // TODO will need to do this, but for now, if I do this, then the
-                // choice box changes size when the popup is shown
-                // popup.setWidth(getWidth());
-                
+
                 popup.show(getSkinnable(), Side.BOTTOM, 2, y);
             } else {
                 popup.hide();

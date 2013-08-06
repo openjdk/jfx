@@ -258,8 +258,8 @@ final class QuantumRenderer extends ThreadPoolExecutor  {
     void checkRendererIdle() {
         if (PrismSettings.threadCheck) {
             PaintCollector collector = PaintCollector.getInstance();
-            final boolean busy = AbstractPainter.renderLock.isLocked() &&
-                    !AbstractPainter.renderLock.isHeldByCurrentThread();
+            final boolean busy = ViewPainter.renderLock.isLocked() &&
+                    !ViewPainter.renderLock.isHeldByCurrentThread();
 
             if (busy) {
                 System.err.println("ERROR: PrismPen / FX threads co-running:" +

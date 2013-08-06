@@ -46,7 +46,6 @@ import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.Node;
-import javafx.scene.control.TableColumn.SortType;
 import javafx.util.Callback;
 import javafx.css.Styleable;
 import com.sun.javafx.scene.control.skin.TableViewSkinBase;
@@ -113,8 +112,8 @@ import com.sun.javafx.scene.control.skin.TableViewSkinBase;
  * 
  * It is hoped that over time there will be convenience cell value factories 
  * developed and made available to developers. As of the JavaFX 2.0 release, 
- * there is one such convenience class: {@link PropertyValueFactory}. This class
- * removes the need to write the code above, instead relying on reflection to 
+ * there is one such convenience class: {@link javafx.scene.control.cell.TreeItemPropertyValueFactory}.
+ * This class removes the need to write the code above, instead relying on reflection to
  * look up a given property from a String. Refer to the 
  * <code>PropertyValueFactory</code> class documentation for more information
  * on how to use this with a TableColumn.
@@ -374,15 +373,15 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
      * 
      * A common approach is to want to populate cells in a TreeTableColumn using
      * a single value from a Java bean. To support this common scenario, there
-     * is the {@link PropertyValueFactory} class. Refer to this class for more 
-     * information on how to use it, but briefly here is how the above use case
-     * could be simplified using the PropertyValueFactory class:
+     * is the {@link javafx.scene.control.cell.TreeItemPropertyValueFactory} class.
+     * Refer to this class for more information on how to use it, but briefly
+     * here is how the above use case could be simplified using the PropertyValueFactory class:
      * 
      * <pre><code>
      * lastNameCol.setCellValueFactory(new PropertyValueFactory&lt;Person,String&gt;("lastName"));
      * </code></pre>
      * 
-     * @see PropertyValueFactory
+     * @see javafx.scene.control.cell.TreeItemPropertyValueFactory
      */
     private ObjectProperty<Callback<TreeTableColumn.CellDataFeatures<S,T>, ObservableValue<T>>> cellValueFactory;
     public final void setCellValueFactory(Callback<TreeTableColumn.CellDataFeatures<S,T>, ObservableValue<T>> value) {
@@ -681,7 +680,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
          * Instantiates a CellDataFeatures instance with the given properties
          * set as read-only values of this instance.
          * 
-         * @param tableView The TableView that this instance refers to.
+         * @param treeTableView The TableView that this instance refers to.
          * @param tableColumn The TreeTableColumn that this instance refers to.
          * @param value The value for a row in the TableView.
          */
@@ -752,9 +751,6 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
             if (table == null) {
                 throw new NullPointerException("TableView can not be null");
             }
-            if (pos == null) {
-                throw new NullPointerException("TablePosition can not be null");
-            }
             this.pos = pos;
             this.newValue = newValue;
         }
@@ -798,7 +794,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
 
         /**
          * Attempts to return the old value at the position referred to in the
-         * TablePosition returned by {@link #getTablePosition()}. This may return
+         * TablePosition returned by {@link #getTreeTablePosition()}. This may return
          * null for a number of reasons.
          *
          * @return Returns the value stored in the position being edited, or null
@@ -818,7 +814,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
          * Convenience method that returns the value for the row (that is, from
          * the TableView {@link TableView#itemsProperty() items} list), for the
          * row contained within the {@link TablePosition} returned in
-         * {@link #getTablePosition()}.
+         * {@link #getTreeTablePosition()}.
          */
         public TreeItem<S> getRowValue() {
 //            List<S> items = getTreeTableView().getItems();

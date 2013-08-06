@@ -116,7 +116,7 @@ public class TableRow<T> extends IndexedCell<T> {
         }
     };
 
-    private final WeakListChangeListener weakSelectedListener = new WeakListChangeListener(selectedListener);
+    private final WeakListChangeListener<TablePosition> weakSelectedListener = new WeakListChangeListener<>(selectedListener);
     private final WeakInvalidationListener weakFocusedListener = new WeakInvalidationListener(focusedListener);
     private final WeakInvalidationListener weakEditingListener = new WeakInvalidationListener(editingListener);
 
@@ -150,11 +150,11 @@ public class TableRow<T> extends IndexedCell<T> {
             tableView = new ReadOnlyObjectWrapper<TableView<T>>() {
                 private WeakReference<TableView<T>> weakTableViewRef;
                 @Override protected void invalidated() {
-                    TableView.TableViewSelectionModel sm;
-                    TableViewFocusModel fm;
+                    TableView.TableViewSelectionModel<T> sm;
+                    TableViewFocusModel<T> fm;
 
                     if (weakTableViewRef != null) {
-                        TableView oldTableView = weakTableViewRef.get();
+                        TableView<T> oldTableView = weakTableViewRef.get();
                         if (oldTableView != null) {
                             sm = oldTableView.getSelectionModel();
                             if (sm != null) {
@@ -172,7 +172,7 @@ public class TableRow<T> extends IndexedCell<T> {
                         weakTableViewRef = null;
                     }
 
-                    TableView tableView = getTableView();
+                    TableView<T> tableView = getTableView();
                     if (tableView != null) {
                         sm = tableView.getSelectionModel();
                         if (sm != null) {
@@ -214,7 +214,7 @@ public class TableRow<T> extends IndexedCell<T> {
 
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
-        return new TableRowSkin(this);
+        return new TableRowSkin<>(this);
     }
 
     /***************************************************************************
@@ -241,7 +241,8 @@ public class TableRow<T> extends IndexedCell<T> {
         updateSelection();
         updateFocus();
     }
-    
+
+    private boolean isFirstRun = true;
     private void updateItem(int newIndex) {
         TableView<T> tv = getTableView();
         if (tv == null || tv.getItems() == null) return;
@@ -265,8 +266,15 @@ public class TableRow<T> extends IndexedCell<T> {
                 updateItem(newValue, false);
             }
         } else {
-            if (!isEmpty && oldValue != null) {
+            // RT-30484 We need to allow a first run to be special-cased to allow
+            // for the updateItem method to be called at least once to allow for
+            // the correct visual state to be set up. In particular, in RT-30484
+            // refer to Ensemble8PopUpTree.png - in this case the arrows are being
+            // shown as the new cells are instantiated with the arrows in the
+            // children list, and are only hidden in updateItem.
+            if ((!isEmpty && oldValue != null) || isFirstRun) {
                 updateItem(null, true);
+                isFirstRun = false;
             }
         }
     }
@@ -297,8 +305,8 @@ public class TableRow<T> extends IndexedCell<T> {
         TableView<T> table = getTableView();
         if (table == null) return;
         
-        TableView.TableViewSelectionModel sm = table.getSelectionModel();
-        TableView.TableViewFocusModel fm = table.getFocusModel();
+        TableView.TableViewSelectionModel<T> sm = table.getSelectionModel();
+        TableView.TableViewFocusModel<T> fm = table.getFocusModel();
         if (sm == null || fm == null) return;
         
         boolean isFocused = ! sm.isCellSelectionEnabled() && fm.isFocused(getIndex());
@@ -311,11 +319,11 @@ public class TableRow<T> extends IndexedCell<T> {
         TableView<T> table = getTableView();
         if (table == null) return;
 
-        TableView.TableViewSelectionModel sm = table.getSelectionModel();
+        TableView.TableViewSelectionModel<T> sm = table.getSelectionModel();
         if (sm == null || sm.isCellSelectionEnabled()) return;
 
-        TablePosition editCell = table.getEditingCell();
-        boolean rowMatch = editCell.getRow() == getIndex();
+        TablePosition<T,?> editCell = table.getEditingCell();
+        boolean rowMatch = editCell == null ? false : editCell.getRow() == getIndex();
 
         if (! isEditing() && rowMatch) {
             startEdit();

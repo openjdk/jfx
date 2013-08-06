@@ -119,8 +119,10 @@ def mediaLFlags = [extraLFlags, "-lgstreamer-0.10", "-lgstapp-0.10",
 def webCFlags = [extraCFlags].flatten()
 def webLFlags = [extraLFlags].flatten()
 
-// Create $buildDir/linux_tools.properties file and load props from it
-setupTools("linux_tools",
+def gtkCFlags = [extraCFlags].flatten()
+def gtkLFlags = [extraLFlags].flatten()
+// Create $buildDir/x86egl_tools.properties file and load props from it
+setupTools("x86egl_tools",
         { propFile ->
             ByteArrayOutputStream results = new ByteArrayOutputStream();
             exec {
@@ -137,8 +139,8 @@ setupTools("linux_tools",
             propFile << "libs=" << results.toString().trim();
         },
         { properties ->
-            ccFlags.addAll(properties.getProperty("cflags").split(" "))
-            linkFlags.addAll(properties.getProperty("libs").split(" "))
+            gtkCFlags.addAll(properties.getProperty("cflags").split(" "))
+            gtkLFlags.addAll(properties.getProperty("libs").split(" "))
         }
 )
 
@@ -214,7 +216,9 @@ X86EGL.glass.variants = ["eglfb", "directfb", "fb", "eglx11", "gtk"]
 X86EGL.glass.javahInclude = [
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*",
-    "com/sun/glass/ui/lens/*"]
+    "com/sun/glass/ui/lens/*",
+    "com/sun/glass/ui/gtk/*",
+    "com/sun/glass/ui/accessible/gtk/*"]
 X86EGL.glass.lib = "glass"
 
 X86EGL.glass.eglfb = [:]
@@ -280,13 +284,11 @@ X86EGL.glass.eglx11.linkFlags = [lensLFlags].flatten()
 X86EGL.glass.eglx11.lib = "glass_lens_eglx11"
 
 X86EGL.glass.gtk = [:]
-X86EGL.glass.gtk.nativeSource = [
-    file("modules/graphics/src/main/native-glass/lens"),
-    file("modules/graphics/src/main/native-glass/lens/wm")]
+X86EGL.glass.gtk.nativeSource = file("modules/graphics/src/main/native-glass/gtk")
 X86EGL.glass.gtk.compiler = compiler
-X86EGL.glass.gtk.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX"].flatten()
+X86EGL.glass.gtk.ccFlags = ["-ffast-math", gtkCFlags, "-DLINUX"].flatten()
 X86EGL.glass.gtk.linker = linker
-X86EGL.glass.gtk.linkFlags = [lensLFlags, "-lstdc++"].flatten()
+X86EGL.glass.gtk.linkFlags = [gtkLFlags, "-lstdc++"].flatten()
 X86EGL.glass.gtk.lib = "glass"
 
 X86EGL.decora = [:]

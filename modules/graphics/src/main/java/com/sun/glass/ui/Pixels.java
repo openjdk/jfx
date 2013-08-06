@@ -31,6 +31,8 @@ import java.nio.ByteOrder;
 
 /**
  * The object wraps the given raw pixels data.
+ *
+ * Pixels class is NOT thread safe.
  */
 public abstract class Pixels {
     /**
@@ -81,7 +83,6 @@ public abstract class Pixels {
     private final float scale;
 
     protected Pixels(final int width, final int height, final ByteBuffer pixels) {
-        //Application.checkEventThread(); // Quantum
         this.width = width;
         this.height = height;
         this.bytesPerComponent = 1;
@@ -95,7 +96,6 @@ public abstract class Pixels {
     }
     
     protected Pixels(final int width, final int height, IntBuffer pixels) {
-        //Application.checkEventThread(); // Quantum
         this.width = width;
         this.height = height;
         this.bytesPerComponent = 4;
@@ -109,7 +109,6 @@ public abstract class Pixels {
     }
 
     protected Pixels(final int width, final int height, IntBuffer pixels, float scale) {
-        //Application.checkEventThread(); // Quantum
         this.width = width;
         this.height = height;
         this.bytesPerComponent = 4;
@@ -146,7 +145,6 @@ public abstract class Pixels {
      * Return the original pixels buffer.
      */
     public final Buffer getPixels() {
-        Application.checkEventThread();
         if (this.bytes != null) {
             this.bytes.rewind();
             return this.bytes;

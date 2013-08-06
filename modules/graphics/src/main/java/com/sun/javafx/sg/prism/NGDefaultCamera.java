@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,35 +25,16 @@
 
 package com.sun.javafx.sg.prism;
 
-import com.sun.javafx.geom.BaseBounds;
-import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.scenario.effect.Effect;
-
 /**
  */
-public abstract class BaseEffectFilter {
-    private Effect effect;
-    private BaseNodeEffectInput nodeInput;
+public class NGDefaultCamera extends NGParallelCamera {
+    public void validate(final int w, final int h) {
+        if ((w != viewWidth) || (h != viewHeight)) {
+            setViewWidth(w);
+            setViewHeight(h);
 
-    protected BaseEffectFilter(Effect effect, NGNode node) {
-        this.effect = effect;
-        this.nodeInput = createNodeEffectInput(node);
+            final double halfDepth = (w > h) ? w / 2.0 : h / 2.0;
+            projViewTx.ortho(0.0, w, h, 0.0, -halfDepth, halfDepth);
+        }
     }
-
-    public Effect getEffect() { return effect; }
-
-    public BaseNodeEffectInput getNodeInput() { return nodeInput; }
-
-    protected void dispose() {
-        effect = null;
-        nodeInput.setNode(null);
-        nodeInput = null;
-    }
-
-    public BaseBounds getBounds(BaseBounds bounds, BaseTransform xform) {
-        BaseBounds r = getEffect().getBounds(xform, nodeInput);
-        return bounds.deriveWithNewBounds(r);
-    }
-
-    protected abstract BaseNodeEffectInput createNodeEffectInput(NGNode node);
 }

@@ -25,15 +25,13 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import javafx.scene.control.SplitMenuButton;
+import java.util.ArrayList;
+import java.util.List;
 import static javafx.scene.input.KeyCode.ENTER;
 import static javafx.scene.input.KeyCode.SPACE;
 import static javafx.scene.input.KeyEvent.KEY_PRESSED;
 import static javafx.scene.input.KeyEvent.KEY_RELEASED;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import javafx.scene.control.SplitMenuButton;
 
 /**
  * Behavior for SplitMenuButton.
@@ -52,7 +50,7 @@ public class SplitMenuButtonBehavior extends MenuButtonBehaviorBase<SplitMenuBut
      * @param splitMenuButton the SplitMenuButton
      */
     public SplitMenuButtonBehavior(final SplitMenuButton splitMenuButton) {
-        super(splitMenuButton);
+        super(splitMenuButton, SPLIT_MENU_BUTTON_BINDINGS);
     }
 
     /***************************************************************************
@@ -79,12 +77,4 @@ public class SplitMenuButtonBehavior extends MenuButtonBehaviorBase<SplitMenuBut
         SPLIT_MENU_BUTTON_BINDINGS.add(new KeyBinding(ENTER, KEY_PRESSED,  "Press"));
         SPLIT_MENU_BUTTON_BINDINGS.add(new KeyBinding(ENTER, KEY_RELEASED, "Release"));
     }
-
-    /**
-     * Gets the list of KeyBinding objects for this behavior.
-     */
-    @Override protected List<KeyBinding> createKeyBindings() {
-        return SPLIT_MENU_BUTTON_BINDINGS;
-    }
-
 }

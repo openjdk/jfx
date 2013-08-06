@@ -34,7 +34,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import javafx.beans.property.ObjectProperty;
 import javafx.css.*;
 import javafx.scene.control.Labeled;
 import javafx.scene.paint.Color;
@@ -110,7 +109,7 @@ public class LabeledText extends Text {
     private StyleableProperty<Font> fontMirror = null;
     private StyleableProperty<Font> fontMirror() {
         if (fontMirror == null) {
-            fontMirror = new StyleablePropertyMirror<Font>(FONT, "fontMirror", Font.getDefault(), (StyleableProperty)labeled.fontProperty());
+            fontMirror = new StyleablePropertyMirror<Font>(FONT, "fontMirror", Font.getDefault(), (StyleableProperty<Font>)labeled.fontProperty());
         }
         return fontMirror;
     }
@@ -132,7 +131,7 @@ public class LabeledText extends Text {
     private StyleableProperty<Paint> fillMirror;
     private StyleableProperty<Paint> fillMirror() {
         if (fillMirror == null) {
-            fillMirror = new StyleablePropertyMirror<Paint>(FILL, "fillMirror", Color.BLACK, (StyleableProperty)labeled.textFillProperty());
+            fillMirror = new StyleablePropertyMirror<Paint>(FILL, "fillMirror", Color.BLACK, (StyleableProperty<Paint>)labeled.textFillProperty());
         }
         return fillMirror;        
     }
@@ -155,7 +154,7 @@ public class LabeledText extends Text {
     private StyleableProperty<TextAlignment> textAlignmentMirror;
     private StyleableProperty<TextAlignment> textAlignmentMirror() {
         if (textAlignmentMirror == null) {
-            textAlignmentMirror = new StyleablePropertyMirror<TextAlignment>(TEXT_ALIGNMENT, "textAlignmentMirror", TextAlignment.LEFT, (StyleableProperty)labeled.textAlignmentProperty());
+            textAlignmentMirror = new StyleablePropertyMirror<TextAlignment>(TEXT_ALIGNMENT, "textAlignmentMirror", TextAlignment.LEFT, (StyleableProperty<TextAlignment>)labeled.textAlignmentProperty());
         }
         return textAlignmentMirror;        
     }
@@ -179,7 +178,7 @@ public class LabeledText extends Text {
     private StyleableProperty<Boolean> underlineMirror;
     private StyleableProperty<Boolean> underlineMirror() {
         if (underlineMirror == null) {
-            underlineMirror = new StyleablePropertyMirror<Boolean>(UNDERLINE, "underLineMirror", Boolean.FALSE, (StyleableProperty)labeled.underlineProperty());
+            underlineMirror = new StyleablePropertyMirror<Boolean>(UNDERLINE, "underLineMirror", Boolean.FALSE, (StyleableProperty<Boolean>)labeled.underlineProperty());
         }
         return underlineMirror;        
     }
@@ -203,7 +202,7 @@ public class LabeledText extends Text {
     private StyleableProperty<Number> lineSpacingMirror;
     private StyleableProperty<Number> lineSpacingMirror() {
         if (lineSpacingMirror == null) {
-            lineSpacingMirror = new StyleablePropertyMirror<Number>(LINE_SPACING, "lineSpacingMirror", 0d, (StyleableProperty)labeled.lineSpacingProperty());
+            lineSpacingMirror = new StyleablePropertyMirror<Number>(LINE_SPACING, "lineSpacingMirror", 0d, (StyleableProperty<Number>)labeled.lineSpacingProperty());
         }
         return lineSpacingMirror;        
     }
@@ -251,7 +250,7 @@ public class LabeledText extends Text {
     
     private class StyleablePropertyMirror<T> extends SimpleStyleableObjectProperty<T> {
         
-        private StyleablePropertyMirror(CssMetaData<LabeledText, T> cssMetaData, String name, T initialValue, StyleableProperty property) {
+        private StyleablePropertyMirror(CssMetaData<LabeledText, T> cssMetaData, String name, T initialValue, StyleableProperty<T> property) {
             super(cssMetaData, LabeledText.this, name, initialValue);
             this.property = property;
         }
@@ -283,7 +282,7 @@ public class LabeledText extends Text {
             property.applyStyle(this.getStyleOrigin(), this.get());
         }
         
-        private final StyleableProperty property;
+        private final StyleableProperty<T> property;
     } 
        
 }

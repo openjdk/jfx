@@ -3,17 +3,6 @@
  */
 package com.sun.javafx.webkit.theme;
 
-import java.lang.ref.WeakReference;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.collections.FXCollections;
@@ -28,15 +17,24 @@ import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Region;
-
+import java.lang.ref.WeakReference;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
-
+import com.sun.javafx.scene.control.skin.BehaviorSkinBase;
+import com.sun.javafx.webkit.Accessor;
 import com.sun.webkit.LoadListenerClient;
 import com.sun.webkit.graphics.Ref;
 import com.sun.webkit.graphics.RenderTheme;
 import com.sun.webkit.graphics.WCGraphicsContext;
-import com.sun.javafx.webkit.Accessor;
-import com.sun.javafx.scene.control.skin.BehaviorSkinBase;
 
 public final class RenderThemeImpl extends RenderTheme {
     private final static Logger log = Logger.getLogger(RenderThemeImpl.class.getName());
@@ -536,7 +534,7 @@ public final class RenderThemeImpl extends RenderTheme {
         private final class Skin extends BehaviorSkinBase {
             Skin() {
                 super(FormMenuListButton.this,
-                      new BehaviorBase<FormMenuListButton>(FormMenuListButton.this));
+                      new BehaviorBase<>(FormMenuListButton.this, Collections.EMPTY_LIST));
                 
                 Region arrow = new Region();
                 arrow.getStyleClass().add("arrow");

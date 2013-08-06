@@ -25,8 +25,22 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
+import javafx.collections.WeakListChangeListener;
+import javafx.scene.control.Control;
+import javafx.scene.control.SelectionMode;
+import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.TableFocusModel;
+import javafx.scene.control.TablePositionBase;
+import javafx.scene.control.TableSelectionModel;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
+import javafx.util.Callback;
+import java.util.ArrayList;
+import java.util.List;
+import com.sun.javafx.PlatformUtil;
 import static javafx.scene.input.KeyCode.A;
-import static javafx.scene.input.KeyCode.BACK_SLASH;
 import static javafx.scene.input.KeyCode.DOWN;
 import static javafx.scene.input.KeyCode.END;
 import static javafx.scene.input.KeyCode.ENTER;
@@ -44,25 +58,6 @@ import static javafx.scene.input.KeyCode.RIGHT;
 import static javafx.scene.input.KeyCode.SPACE;
 import static javafx.scene.input.KeyCode.TAB;
 import static javafx.scene.input.KeyCode.UP;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import javafx.collections.ObservableList;
-import javafx.scene.control.SelectionMode;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseEvent;
-
-import com.sun.javafx.PlatformUtil;
-import javafx.collections.ListChangeListener;
-import javafx.collections.WeakListChangeListener;
-import javafx.scene.control.Control;
-import javafx.scene.control.MultipleSelectionModel;
-import javafx.scene.control.TableColumnBase;
-import javafx.scene.control.TableFocusModel;
-import javafx.scene.control.TablePositionBase;
-import javafx.scene.control.TableSelectionModel;
-import javafx.util.Callback;
 
 public abstract class TableViewBehaviorBase<C extends Control, T, TC extends TableColumnBase<T,?>> extends BehaviorBase<C> {
 
@@ -200,10 +195,6 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         else super.callAction(name);
     }
 
-    @Override protected List<KeyBinding> createKeyBindings() {
-        return TABLE_VIEW_BINDINGS;
-    }
-    
     @Override protected void callActionForEvent(KeyEvent e) {
         // RT-12751: we want to keep an eye on the user holding down the shift key, 
         // so that we know when they enter/leave multiple selection mode. This
@@ -264,7 +255,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
             new WeakListChangeListener<TablePositionBase>(selectedCellsListener);
     
     
-    
+
     /**************************************************************************
      *                                                                        *
      * Constructors                                                           *
@@ -272,7 +263,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
      *************************************************************************/
     
     public TableViewBehaviorBase(C control) {
-        super(control);
+        super(control, TABLE_VIEW_BINDINGS);
     }
 
     

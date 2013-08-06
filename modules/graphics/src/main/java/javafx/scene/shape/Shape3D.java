@@ -159,7 +159,7 @@ public abstract class Shape3D extends Node {
     }  
 
     /**
-     * Defines the drawMode this {@code Shape3D}.
+     * Defines the cullFace this {@code Shape3D}.
      *
      * @defaultValue CullFace.BACK
      */

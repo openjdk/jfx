@@ -32,6 +32,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
@@ -199,5 +201,31 @@ public class TreeViewMouseInputTest {
         // select all from 5 - 7 - 9
         VirtualFlowTestUtils.clickOnRow(treeView, 9, KeyModifier.SHIFT);
         assertTrue(debug(),isSelected(5,6,7,8,9));
+    }
+
+    private int rt30394_count = 0;
+    @Test public void test_rt30394() {
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearSelection();
+
+        final FocusModel fm = treeView.getFocusModel();
+        fm.focus(-1);
+
+        fm.focusedIndexProperty().addListener(new ChangeListener<Number>() {
+            @Override public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
+                rt30394_count++;
+                assertEquals(0, fm.getFocusedIndex());
+            }
+        });
+
+        // test pre-conditions
+        assertEquals(0,rt30394_count);
+        assertFalse(fm.isFocused(0));
+
+        // select the first row with the shift key held down. The focus event
+        // should only fire once - for focus on 0 (never -1 as this bug shows).
+        VirtualFlowTestUtils.clickOnRow(treeView, 0, KeyModifier.SHIFT);
+        assertEquals(1, rt30394_count);
+        assertTrue(fm.isFocused(0));
     }
 }

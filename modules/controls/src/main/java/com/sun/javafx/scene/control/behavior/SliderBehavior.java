@@ -25,6 +25,18 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import javafx.event.EventType;
+import javafx.geometry.NodeOrientation;
+import javafx.geometry.Orientation;
+import javafx.scene.control.Control;
+import javafx.scene.control.Skin;
+import javafx.scene.control.Slider;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
+import java.util.ArrayList;
+import java.util.List;
+import com.sun.javafx.Utils;
 import static javafx.scene.input.KeyCode.DOWN;
 import static javafx.scene.input.KeyCode.END;
 import static javafx.scene.input.KeyCode.F4;
@@ -35,26 +47,8 @@ import static javafx.scene.input.KeyCode.KP_RIGHT;
 import static javafx.scene.input.KeyCode.KP_UP;
 import static javafx.scene.input.KeyCode.LEFT;
 import static javafx.scene.input.KeyCode.RIGHT;
-import static javafx.scene.input.KeyCode.TAB;
 import static javafx.scene.input.KeyCode.UP;
 import static javafx.scene.input.KeyEvent.KEY_RELEASED;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-
-import javafx.event.EventType;
-import javafx.geometry.NodeOrientation;
-import javafx.geometry.Orientation;
-import javafx.scene.control.Control;
-import javafx.scene.control.Skin;
-import javafx.scene.control.Slider;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseEvent;
-
-import com.sun.javafx.Utils;
-import javafx.css.PseudoClass;
 
 public class SliderBehavior extends BehaviorBase<Slider> {
     /**************************************************************************
@@ -108,18 +102,16 @@ public class SliderBehavior extends BehaviorBase<Slider> {
     private TwoLevelFocusBehavior tlFocus;
 
     public SliderBehavior(Slider slider) {
-        super(slider);
-        /*
-        ** only add this if we're on an embedded
-        ** platform that supports 5-button navigation 
-        */
+        super(slider, SLIDER_BINDINGS);
+        // Only add this if we're on an embedded platform that supports 5-button navigation
         if (com.sun.javafx.scene.control.skin.Utils.isTwoLevelFocus()) {
             tlFocus = new TwoLevelFocusBehavior(slider); // needs to be last.
         }
     }
 
-    @Override protected List<KeyBinding> createKeyBindings() {
-        return SLIDER_BINDINGS;
+    @Override public void dispose() {
+        if (tlFocus != null) tlFocus.dispose();
+        super.dispose();
     }
 
     /**************************************************************************

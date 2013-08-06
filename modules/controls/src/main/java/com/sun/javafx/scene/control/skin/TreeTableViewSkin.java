@@ -27,13 +27,16 @@ package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
+
 import javafx.event.WeakEventHandler;
 import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
+
 import com.sun.javafx.scene.control.behavior.TreeTableViewBehavior;
+
 import java.lang.ref.WeakReference;
 import java.util.List;
-import java.util.WeakHashMap;
+
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -43,28 +46,25 @@ import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.Node;
 import javafx.scene.control.ResizeFeaturesBase;
-import javafx.scene.control.SelectionModel;
-import javafx.scene.control.TableColumnBase;
-import javafx.scene.control.TablePositionBase;
 import javafx.scene.control.TableSelectionModel;
-import javafx.scene.control.TableView;
 import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeTablePosition;
+import javafx.scene.control.TreeItem.TreeModificationEvent;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.util.Callback;
 
-public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>, TreeTableViewBehavior<S>, TreeTableRow<S>> {
+public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeItem<S>, TreeTableView<S>, TreeTableViewBehavior<S>, TreeTableRow<S>, TreeTableColumn<S,?>> {
     
     public TreeTableViewSkin(final TreeTableView<S> treeTableView) {
-        super(treeTableView, new TreeTableViewBehavior(treeTableView));
+        super(treeTableView, new TreeTableViewBehavior<S>(treeTableView));
         
         this.treeTableView = treeTableView;
-        this.tableBackingList = new TreeTableViewBackingList(treeTableView);
-        this.tableBackingListProperty = new SimpleObjectProperty<TreeTableViewBackingList<S>>(tableBackingList);
+        this.tableBackingList = new TreeTableViewBackingList<S>(treeTableView);
+        this.tableBackingListProperty = new SimpleObjectProperty<ObservableList<TreeItem<S>>>(tableBackingList);
         
         flow.setFixedCellSize(treeTableView.getFixedCellSize());
         
@@ -93,7 +93,7 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
         flow.getHbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
 
         // init the behavior 'closures'
-        TreeTableViewBehavior behavior = getBehavior();
+        TreeTableViewBehavior<S> behavior = getBehavior();
         behavior.setOnFocusPreviousRow(new Runnable() {
             @Override public void run() { onFocusPreviousCell(); }
         });
@@ -170,12 +170,12 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
      **************************************************************************/
 
     private TreeTableViewBackingList<S> tableBackingList;
-    private ObjectProperty/*<TreeTableViewBackingList<S>>*/ tableBackingListProperty;
+    private ObjectProperty<ObservableList<TreeItem<S>>> tableBackingListProperty;
     private TreeTableView<S> treeTableView;
-    private WeakReference<TreeItem> weakRootRef;
+    private WeakReference<TreeItem<S>> weakRootRef;
     
-    private EventHandler<TreeItem.TreeModificationEvent> rootListener = new EventHandler<TreeItem.TreeModificationEvent>() {
-        @Override public void handle(TreeItem.TreeModificationEvent e) {
+    private EventHandler<TreeItem.TreeModificationEvent<S>> rootListener = new EventHandler<TreeItem.TreeModificationEvent<S>>() {
+        @Override public void handle(TreeItem.TreeModificationEvent<S> e) {
             if (e.wasAdded() && e.wasRemoved() && e.getAddedSize() == e.getRemovedSize()) {
                 // Fix for RT-14842, where the children of a TreeItem were changing,
                 // but because the overall item count was staying the same, there was 
@@ -191,7 +191,7 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
             } else {
                 // Fix for RT-20090. We are checking to see if the event coming
                 // from the TreeItem root is an event where the count has changed.
-                EventType eventType = e.getEventType();
+                EventType<?> eventType = e.getEventType();
                 while (eventType != null) {
                     if (eventType.equals(TreeItem.<S>expandedItemCountChangeEvent())) {
                         rowCountDirty = true;
@@ -204,20 +204,20 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
         }
     };
     
-    private WeakEventHandler weakRootListener;
+    private WeakEventHandler<TreeModificationEvent<S>> weakRootListener;
             
     
 //    private WeakReference<TreeItem> weakRoot;
-    private TreeItem getRoot() {
+    private TreeItem<S> getRoot() {
         return weakRootRef == null ? null : weakRootRef.get();
     }
-    private void setRoot(TreeItem newRoot) {
+    private void setRoot(TreeItem<S> newRoot) {
         if (getRoot() != null && weakRootListener != null) {
             getRoot().removeEventHandler(TreeItem.<S>treeNotificationEvent(), weakRootListener);
         }
-        weakRootRef = new WeakReference<TreeItem>(newRoot);
+        weakRootRef = new WeakReference<>(newRoot);
         if (getRoot() != null) {
-            weakRootListener = new WeakEventHandler(rootListener);
+            weakRootListener = new WeakEventHandler<>(rootListener);
             getRoot().addEventHandler(TreeItem.<S>treeNotificationEvent(), weakRootListener);
         }
         
@@ -236,26 +236,26 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
         return treeTableView.getVisibleLeafColumns();
     }
     
-    @Override protected int getVisibleLeafIndex(TableColumnBase tc) {
-        return treeTableView.getVisibleLeafIndex((TreeTableColumn)tc);
+    @Override protected int getVisibleLeafIndex(TreeTableColumn<S,?> tc) {
+        return treeTableView.getVisibleLeafIndex(tc);
     }
 
-    @Override protected TableColumnBase getVisibleLeafColumn(int col) {
+    @Override protected TreeTableColumn<S,?> getVisibleLeafColumn(int col) {
         return treeTableView.getVisibleLeafColumn(col);
     }
 
     /** {@inheritDoc} */
-    @Override protected TreeTableView.TreeTableViewFocusModel getFocusModel() {
+    @Override protected TreeTableView.TreeTableViewFocusModel<S> getFocusModel() {
         return treeTableView.getFocusModel();
     }
     
     /** {@inheritDoc} */
-    @Override protected TablePositionBase getFocusedCell() {
+    @Override protected TreeTablePosition<S, ?> getFocusedCell() {
         return treeTableView.getFocusModel().getFocusedCell();
     }
 
     /** {@inheritDoc} */
-    @Override protected TableSelectionModel getSelectionModel() {
+	@Override protected TableSelectionModel<TreeItem<S>> getSelectionModel() {
         return treeTableView.getSelectionModel();
     }
 
@@ -270,7 +270,7 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
     }
 
     /** {@inheritDoc} */
-    @Override protected ObjectProperty<ObservableList<S>> itemsProperty() {
+    @Override protected ObjectProperty<ObservableList<TreeItem<S>>> itemsProperty() {
         return tableBackingListProperty;
     }
 
@@ -295,8 +295,8 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
         return treeTableView.getSortOrder();
     }
     
-    @Override protected boolean resizeColumn(TableColumnBase tc, double delta) {
-        return treeTableView.resizeColumn((TreeTableColumn)tc, delta);
+    @Override protected boolean resizeColumn(TreeTableColumn<S,?> tc, double delta) {
+        return treeTableView.resizeColumn(tc, delta);
     }
 
     /*
@@ -305,15 +305,15 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
      * in this column. This can be potentially very expensive if the number of
      * rows is large.
      */
-    @Override protected void resizeColumnToFitContent(TableColumnBase tc, int maxRows) {
-        final TreeTableColumn col = (TreeTableColumn) tc;
+    @Override protected void resizeColumnToFitContent(TreeTableColumn<S,?> tc, int maxRows) {
+        final TreeTableColumn col = tc;
         List<?> items = itemsProperty().get();
         if (items == null || items.isEmpty()) return;
     
         Callback cellFactory = col.getCellFactory();
         if (cellFactory == null) return;
     
-        TreeTableCell cell = (TreeTableCell) cellFactory.call(col);
+        TreeTableCell<S,?> cell = (TreeTableCell) cellFactory.call(col);
         if (cell == null) return;
         
         // set this property to tell the TableCell we want to know its actual
@@ -328,7 +328,7 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
             padding = r.snappedLeftInset() + r.snappedRightInset();
         } 
         
-        TreeTableRow treeTableRow = new TreeTableRow();
+        TreeTableRow<S> treeTableRow = new TreeTableRow<>();
         treeTableRow.updateTreeTableView(treeTableView);
         
         int rows = maxRows == -1 ? items.size() : Math.min(items.size(), maxRows);
