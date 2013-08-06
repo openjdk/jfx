@@ -324,6 +324,10 @@ public abstract class Parent extends Node {
                 }
             }
 
+            if (geomChanged) {
+                impl_geomChanged();
+            }
+
             //
             // Note that the styles of a child do not affect the parent or
             // its siblings. Thus, it is only necessary to reapply css to
@@ -345,10 +349,6 @@ public abstract class Parent extends Node {
             // pass will reach the child.
             if (relayout) {
                 requestLayout();
-            }
-
-            if (geomChanged) {
-                impl_geomChanged();
             }
 
             // Note the starting index at which we need to update the
