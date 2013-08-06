@@ -161,10 +161,6 @@ public class Text extends Shape {
 
     private void checkOrientation() {
         if (!isSpan()) {
-            /* Using impl_transformsChanged to detect for orientation change.
-             * This can be improved if EffectiveNodeOrientation becomes a
-             * property. See http://javafx-jira.kenai.com/browse/RT-26140
-             */
             NodeOrientation orientation = getEffectiveNodeOrientation();
             boolean rtl =  orientation == NodeOrientation.RIGHT_TO_LEFT;
             int dir = rtl ? TextLayout.DIRECTION_RTL : TextLayout.DIRECTION_LTR;
@@ -252,17 +248,17 @@ public class Text extends Shape {
     private boolean spanBoundsInvalid = true;
 
     void layoutSpan(GlyphList[] runs) {
-        /* Sometimes a property change in the text node will causes layout in 
-         * text flow. In this case all the dirty bits are already clear and no 
-         * extra work is necessary. Other times the layout is caused by changes  
+        /* Sometimes a property change in the text node will causes layout in
+         * text flow. In this case all the dirty bits are already clear and no
+         * extra work is necessary. Other times the layout is caused by changes
          * in the text flow object (wrapping width and text alignment for example).
-         * In the second case the dirty bits must be set here using 
-         * needsTextLayout(). Note that needsTextLayout() uses impl_geomChanged() 
+         * In the second case the dirty bits must be set here using
+         * needsTextLayout(). Note that needsTextLayout() uses impl_geomChanged()
          * which causes another (undesired) layout request in the parent.
-         * In general this is not a problem because shapes are not resizable and 
+         * In general this is not a problem because shapes are not resizable and
          * region do not propagate layout changes to the parent.
          * This is a special case where a shape is resized by the parent during
-         * layoutChildren().  See TextFlow#requestLayout() for information how 
+         * layoutChildren().  See TextFlow#requestLayout() for information how
          * text flow deals with this situation.
          */
         needsTextLayout();
@@ -332,7 +328,7 @@ public class Text extends Shape {
         int type = TextLayout.TYPE_TEXT;
         if (isStrikethrough()) type |= TextLayout.TYPE_STRIKETHROUGH;
         if (isUnderline()) type |= TextLayout.TYPE_UNDERLINE;
-        
+
         TextSpan filter = null;
         if (isSpan()) {
             /* Spans are always relative to the top */
@@ -549,7 +545,7 @@ public class Text extends Shape {
     }
 
     public final TextBoundsType getBoundsType() {
-        return boundsType == null ? 
+        return boundsType == null ?
             DEFAULT_BOUNDS_TYPE : boundsTypeProperty().get();
     }
 
@@ -678,7 +674,7 @@ public class Text extends Shape {
      * has no effect.
      *
      * @defaultValue TextAlignment.LEFT
-     */   
+     */
     public final ObjectProperty<TextAlignment> textAlignmentProperty() {
         return getTextAttribute().textAlignmentProperty();
     }
@@ -809,8 +805,8 @@ public class Text extends Shape {
     }
 
     /**
-     * Shape of selection in local coordinates. 
-     * 
+     * Shape of selection in local coordinates.
+     *
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended
      * for use and will be removed in the next version
@@ -827,7 +823,7 @@ public class Text extends Shape {
      */
     @Deprecated
     public final void setImpl_selectionStart(int value) {
-        if (value == -1 && 
+        if (value == -1 &&
                 (attributes == null || attributes.impl_selectionStart == null)) {
             return;
         }
@@ -848,7 +844,7 @@ public class Text extends Shape {
     }
 
     /**
-     * Selection start index in the content. 
+     * Selection start index in the content.
      * set to {@code -1} to unset selection.
      *
      * @treatAsPrivate implementation detail
@@ -867,7 +863,7 @@ public class Text extends Shape {
      */
     @Deprecated
     public final void setImpl_selectionEnd(int value) {
-        if (value == -1 && 
+        if (value == -1 &&
                 (attributes == null || attributes.impl_selectionEnd == null)) {
             return;
         }
@@ -888,7 +884,7 @@ public class Text extends Shape {
     }
 
     /**
-     * Selection end index in the content. 
+     * Selection end index in the content.
      * set to {@code -1} to unset selection.
      *
      * @treatAsPrivate implementation detail
@@ -922,7 +918,7 @@ public class Text extends Shape {
 
     /**
      * Shape of caret in local coordinates.
-     * 
+     *
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended
      * for use and will be removed in the next version
@@ -939,7 +935,7 @@ public class Text extends Shape {
      */
     @Deprecated
     public final void setImpl_caretPosition(int value) {
-        if (value == -1 && 
+        if (value == -1 &&
                 (attributes == null || attributes.impl_caretPosition == null)) {
             return;
         }
@@ -960,9 +956,9 @@ public class Text extends Shape {
     }
 
     /**
-     * caret index in the content. 
+     * caret index in the content.
      * set to {@code -1} to unset caret.
-     * 
+     *
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended
      * for use and will be removed in the next version
@@ -994,7 +990,7 @@ public class Text extends Shape {
     public final boolean isImpl_caretBias() {
         if (attributes == null || attributes.impl_caretBias == null) {
             return DEFAULT_CARET_BIAS;
-        } 
+        }
         return getTextAttribute().isImpl_caretBias();
     }
 
@@ -1348,8 +1344,8 @@ public class Text extends Shape {
 
             @Override
             public boolean isSettable(Text node) {
-                return node.attributes == null || 
-                       node.attributes.textOrigin == null || 
+                return node.attributes == null ||
+                       node.attributes.textOrigin == null ||
                       !node.attributes.textOrigin.isBound();
             }
 
@@ -1446,8 +1442,8 @@ public class Text extends Shape {
      *
      * @since JavaFX 8.0
      */
-    
-    
+
+
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
@@ -1515,7 +1511,7 @@ public class Text extends Shape {
             accText = new AccessibleText(this);
         return (AccessibleProvider)accText ;
     }
-    
+
     /***************************************************************************
      *                                                                         *
      *                       Seldom Used Properties                            *
@@ -1523,14 +1519,14 @@ public class Text extends Shape {
      **************************************************************************/
 
     private TextAttribute attributes;
-    
+
     private TextAttribute getTextAttribute() {
         if (attributes == null) {
             attributes = new TextAttribute();
         }
         return attributes;
     }
-    
+
     private static final VPos DEFAULT_TEXT_ORIGIN = VPos.BASELINE;
     private static final TextBoundsType DEFAULT_BOUNDS_TYPE = TextBoundsType.LOGICAL;
     private static final boolean DEFAULT_UNDERLINE = false;
@@ -1542,7 +1538,7 @@ public class Text extends Shape {
     private static final int DEFAULT_SELECTION_END = -1;
     private static final Color DEFAULT_SELECTION_FILL= Color.WHITE;
     private static final boolean DEFAULT_CARET_BIAS = true;
-    
+
     private final class TextAttribute {
 
         private ObjectProperty<VPos> textOrigin;
@@ -1566,7 +1562,7 @@ public class Text extends Shape {
             }
             return textOrigin;
         }
-        
+
         private BooleanProperty underline;
 
         public final boolean isUnderline() {
@@ -1591,7 +1587,7 @@ public class Text extends Shape {
             }
             return underline;
         }
-        
+
         private BooleanProperty strikethrough;
 
         public final boolean isStrikethrough() {
@@ -1616,7 +1612,7 @@ public class Text extends Shape {
             }
             return strikethrough;
         }
-        
+
         private ObjectProperty<TextAlignment> textAlignment;
 
         public final TextAlignment getTextAlignment() {
@@ -1648,7 +1644,7 @@ public class Text extends Shape {
             }
             return textAlignment;
         }
-        
+
         private DoubleProperty lineSpacing;
 
         public final double getLineSpacing() {
@@ -1686,7 +1682,7 @@ public class Text extends Shape {
                         {bind(fontProperty());}
                         @Override protected double computeValue() {
                             /* This method should never be used for spans.
-                             * If it is, it will still returns the ascent 
+                             * If it is, it will still returns the ascent
                              * for the first line in the layout */
                             BaseBounds bounds = getLogicalBounds();
                             return -bounds.getMinY();
@@ -1723,7 +1719,7 @@ public class Text extends Shape {
         @Deprecated
         public final ObjectProperty<Paint> impl_selectionFillProperty() {
             if (selectionFill == null) {
-                selectionFill = 
+                selectionFill =
                     new ObjectPropertyBase<Paint>(DEFAULT_SELECTION_FILL) {
                         @Override public Object getBean() { return Text.this; }
                         @Override public String getName() { return "impl_selectionFill"; }
@@ -1746,7 +1742,7 @@ public class Text extends Shape {
         @Deprecated
         public final IntegerProperty impl_selectionStartProperty() {
             if (impl_selectionStart == null) {
-                impl_selectionStart = 
+                impl_selectionStart =
                     new IntegerPropertyBase(DEFAULT_SELECTION_START) {
                         @Override public Object getBean() { return Text.this; }
                         @Override public String getName() { return "impl_selectionStart"; }
@@ -1769,7 +1765,7 @@ public class Text extends Shape {
         @Deprecated
         public final IntegerProperty impl_selectionEndProperty() {
             if (impl_selectionEnd == null) {
-                impl_selectionEnd = 
+                impl_selectionEnd =
                     new IntegerPropertyBase(DEFAULT_SELECTION_END) {
                         @Override public Object getBean() { return Text.this; }
                         @Override public String getName() { return "impl_selectionEnd"; }
@@ -1808,7 +1804,7 @@ public class Text extends Shape {
             }
             return impl_caretShape;
         }
-        
+
         @Deprecated
         private IntegerProperty impl_caretPosition;
 
@@ -1825,7 +1821,7 @@ public class Text extends Shape {
             }
             return impl_caretPosition;
         }
-        
+
         @Deprecated
         private BooleanProperty impl_caretBias;
 
