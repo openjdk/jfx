@@ -44,8 +44,10 @@ IOS.compileDesignTime = false;
 
 defineProperty("USE_LIPO", "false")
 defineProperty("GENERATE_SYMBOLS", "false")
+defineProperty("BUILD_IOS_TOOLS", "true")
 if (USE_LIPO instanceof String) IOS.useLipo = Boolean.parseBoolean(USE_LIPO)
 if (GENERATE_SYMBOLS instanceof String) IOS.generateSymbols = Boolean.parseBoolean(GENERATE_SYMBOLS)
+if (BUILD_IOS_TOOLS instanceof String) ext.BUILD_IOS_TOOLS = Boolean.parseBoolean(BUILD_IOS_TOOLS)
 
 IOS.generateSymbolsExcludes = [
     "libprism_sw.a",

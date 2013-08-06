@@ -130,9 +130,11 @@ INCLUDEPATH += \
 }
 
 win32-* {
-    LIBS += -llibxml2 -lole32 -ladvapi32 -luser32
+    QMAKE_CXXFLAGS += -DLIBXML_STATIC
+    LIBS += -llibxml2_a -lole32 -ladvapi32 -luser32
     contains(DEFINES, ENABLE_XSLT=1) {
-        LIBS += -llibxslt
+        QMAKE_CXXFLAGS += -DLIBXSLT_STATIC
+        LIBS += -llibxslt_a
     }
     !contains(DEFINES, IMAGEIO=1) {
         INCLUDEPATH += $(WEBKITOUTPUTDIR)/import/include/image

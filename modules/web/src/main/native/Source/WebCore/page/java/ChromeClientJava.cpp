@@ -771,18 +771,6 @@ bool ChromeClientJava::shouldRubberBandInDirection(ScrollDirection direction) co
     return true;
 }
 
-#if ENABLE(REQUEST_ANIMATION_FRAME) && !USE(REQUEST_ANIMATION_FRAME_TIMER)
-void ChromeClientJava::scheduleAnimation()
-{
-    notImplemented();
-}
-
-//void ChromeClientJava::serviceScriptedAnimations()
-//{
-//    notImplemented();
-//}
-#endif
-
 // End of HostWindow methods
 
 } // namespace WebCore

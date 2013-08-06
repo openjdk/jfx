@@ -84,9 +84,6 @@ namespace WebCore {
     virtual void scrollbarsModeDidChange() const OVERRIDE;
     virtual void setCursor(const Cursor&) OVERRIDE;
     virtual void setCursorHiddenUntilMouseMoves(bool) OVERRIDE;
-#if ENABLE(REQUEST_ANIMATION_FRAME) && !USE(REQUEST_ANIMATION_FRAME_TIMER)
-    virtual void scheduleAnimation() OVERRIDE;
-#endif
     // End methods used by HostWindow.
 
     virtual void contentsSizeChanged(Frame*, const IntSize&) const OVERRIDE;

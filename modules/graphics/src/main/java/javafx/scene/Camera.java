@@ -287,13 +287,12 @@ public abstract class Camera extends Node {
     }
 
     private void markOwnerDirty() {
-        // if the camera is part of the scene/subScene, we don't need to notify
-        // the owner as the camera will be added to its dirty list as usual
-
-        if (ownerScene != null && ownerScene != getScene()) {
+        // if the camera is part of the scene/subScene, we will need to notify
+        // the owner to mark the entire scene/subScene dirty.
+        if (ownerScene != null) {
             ownerScene.markCameraDirty();
         }
-        if (ownerSubScene != null && ownerSubScene != getSubScene()) {
+        if (ownerSubScene != null) {
             ownerSubScene.markContentDirty();
         }
     }

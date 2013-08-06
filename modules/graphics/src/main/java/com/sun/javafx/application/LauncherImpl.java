@@ -767,6 +767,7 @@ public class LauncherImpl {
                     app = c.newInstance();
                     // Set startup parameters
                     ParametersImpl.registerParameters(app, new ParametersImpl(args));
+                    PlatformImpl.setApplicationName(appClass);
                 } catch (Throwable t) {
                     System.err.println("Exception in Application constructor");
                     constructorError = t;

@@ -475,7 +475,7 @@ public class SubScene extends Node {
 
         // TODO deal with clip node
 
-        dirtyNodes = dirtyLayout = false;
+        dirtyNodes = false;
         if (isDirty()) {
             NGSubScene peer = impl_getPeer();
             final Camera cam = getEffectiveCamera();
@@ -591,6 +591,7 @@ public class SubScene extends Node {
         if (!dirtyLayout && p != null && p.getSubScene() == this &&
                 this.getScene() != null) {
             dirtyLayout = true;
+            markDirtyLayoutBranch();
             markDirty(SubSceneDirtyBits.CONTENT_DIRTY);
         }
     }
@@ -601,6 +602,16 @@ public class SubScene extends Node {
                 this.getScene() != null) {
             dirtyNodes = true;
             markDirty(SubSceneDirtyBits.CONTENT_DIRTY);
+        }
+    }
+
+    void layoutPass() {
+        if (dirtyLayout) {
+            Parent r = getRoot();
+            if (r != null) {
+                r.layout();
+            }
+            dirtyLayout = false;
         }
     }
 

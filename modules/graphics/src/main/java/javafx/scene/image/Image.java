@@ -122,6 +122,16 @@ public class Image {
             {
                 return image.acc_platformImageProperty();
             }
+
+            @Override
+            public int[] getPreColors(PixelFormat<ByteBuffer> pf) {
+                return ((PixelFormat.IndexedPixelFormat) pf).getPreColors();
+            }
+
+            @Override
+            public int[] getNonPreColors(PixelFormat<ByteBuffer> pf) {
+                return ((PixelFormat.IndexedPixelFormat) pf).getNonPreColors();
+            }
         });
     }
 

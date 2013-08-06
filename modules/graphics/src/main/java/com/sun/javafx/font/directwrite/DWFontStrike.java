@@ -25,6 +25,7 @@
 
 package com.sun.javafx.font.directwrite;
 
+import com.sun.javafx.font.CompositeGlyphMapper;
 import com.sun.javafx.font.DisposerRecord;
 import com.sun.javafx.font.FontStrikeDesc;
 import com.sun.javafx.font.Glyph;
@@ -105,7 +106,7 @@ class DWFontStrike extends PrismFontStrike<DWFontFile> {
         Point2D offset = (Point2D)((TextRun)gl).getGlyphData(gi);
         float advanceOffset = offset != null ? offset.x : 0;
         float ascenderOffset = offset != null ? offset.y : 0;
-        int gc = gl.getGlyphCode(gi);
+        int gc = gl.getGlyphCode(gi) & CompositeGlyphMapper.GLYPHMASK;
         if (PrismFontFactory.debugFonts) {
             if (advanceOffset != 0 || ascenderOffset != 0) {
                 System.err.println("Setting glyph[" + Integer.toHexString(gc) +

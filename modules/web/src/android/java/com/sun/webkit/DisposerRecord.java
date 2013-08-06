@@ -23,28 +23,12 @@
  * questions.
  */
 
-package com.sun.javafx.tk.quantum;
+package com.sun.webkit;
 
-final class PopupScene extends ViewScene {
-
-    public PopupScene(boolean depthBuffer, boolean antiAliasing) {
-        super(depthBuffer, antiAliasing);
-    }
-
-    private PopupStage getPopupStage() {
-        return (PopupStage)getStage();
-    }
-
-    @Override
-    public void sceneChanged() {
-        PopupStage popupStage = getPopupStage();
-        if (popupStage != null) {
-            GlassStage ownerStage = popupStage.getOwner();
-            GlassScene ownerScene = ownerStage.getScene();
-            if (ownerScene != null) {
-                ownerScene.sceneChanged();
-            }
-        }
-        super.sceneChanged();
-    }
+/**
+ * This class is used to hold the resource to be
+ * disposed.
+ */
+public interface DisposerRecord {
+    public void dispose();
 }

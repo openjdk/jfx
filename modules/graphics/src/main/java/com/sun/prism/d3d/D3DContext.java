@@ -191,6 +191,7 @@ class D3DContext extends BaseShaderContext {
         long resourceHandle = ((D3DRenderTarget)target).getResourceHandle();
         int res = nSetRenderTarget(pContext, resourceHandle);
         validate(res);
+        resetLastClip(state);
 
         this.camera = camera;
         this.depthTest = depthTest;

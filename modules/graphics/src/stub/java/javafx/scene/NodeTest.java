@@ -25,13 +25,18 @@
 
 package javafx.scene;
 
+import com.sun.javafx.geom.BoxBounds;
 import com.sun.javafx.geom.PickRay;
+import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.sg.prism.NGGroup;
 import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.sg.prism.NGRectangle;
 import com.sun.javafx.test.objects.TestScene;
 import com.sun.javafx.test.objects.TestStage;
+import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.*;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
@@ -50,6 +55,7 @@ import org.junit.rules.ExpectedException;
 import java.lang.reflect.Method;
 import java.util.Comparator;
 import javafx.scene.layout.AnchorPane;
+import javafx.stage.Stage;
 
 import static org.junit.Assert.*;
 /**
@@ -1338,5 +1344,49 @@ public class NodeTest {
         assertEquals(10, r.getLayoutX(), 1e-10);
         assertEquals(10, r.getLayoutY(), 1e-10);
 
+    }
+
+    @Test
+    public void clipShouldUpdateAfterParentVisibilityChange() {
+
+        final Group root = new Group();
+        Scene scene = new Scene(root, 300, 300);
+
+        final Group parent = new Group();
+        parent.setVisible(false);
+
+        final Circle circle = new Circle(100, 100, 100);
+        parent.getChildren().add(circle);
+
+        final Rectangle clip = new Rectangle(100, 100) {
+            @Override protected NGNode impl_createPeer() {
+                return new MockClip();
+            }
+        };
+        circle.setClip(clip);
+
+        root.getChildren().add(parent);
+        parent.setVisible(true);
+
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+
+        clip.setWidth(300);
+
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+
+        assertEquals(300, ((MockClip) clip.impl_getPeer()).w, 1e-10);
+    }
+
+    private class MockClip extends NGRectangle {
+        double w = 0;
+
+        @Override public void updateRectangle(float x, float y, float width,
+                float height, float arcWidth, float arcHeight) {
+            w = width;
+        }
     }
 }

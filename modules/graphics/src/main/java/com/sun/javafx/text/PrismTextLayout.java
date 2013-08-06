@@ -53,7 +53,9 @@ import java.util.ArrayList;
 public class PrismTextLayout implements TextLayout {
     private static final BaseTransform IDENTITY = BaseTransform.IDENTITY_TRANSFORM;
     private static final int X_MIN_INDEX = 0;
+    private static final int Y_MIN_INDEX = 1;
     private static final int X_MAX_INDEX = 2;
+    private static final int Y_MAX_INDEX = 3;
 
     private char[] text;
     private TextSpan[] spans;   /* Rich text  (null for single font text) */
@@ -62,7 +64,8 @@ public class PrismTextLayout implements TextLayout {
     private TextLine[] lines;
     private TextRun[] runs;
     private int runCount;
-    private BaseBounds bounds;
+    private BaseBounds logicalBounds;
+    private RectBounds visualBounds;
     private float layoutWidth, layoutHeight;
     private float wrapWidth, spacing;
     private LayoutCache layoutCache;
@@ -70,7 +73,7 @@ public class PrismTextLayout implements TextLayout {
     private int flags;
 
     public PrismTextLayout() {
-        bounds = new RectBounds();
+        logicalBounds = new RectBounds();
     }
 
     private void reset() {
@@ -81,9 +84,10 @@ public class PrismTextLayout implements TextLayout {
     }
 
     private void relayout() {
-        bounds.makeEmpty();
+        logicalBounds.makeEmpty();
+        visualBounds = null;
         layoutWidth = layoutHeight = 0;
-        flags &= ~FLAGS_WRAPPED;
+        flags &= ~(FLAGS_WRAPPED | FLAGS_CACHED_UNDERLINE | FLAGS_CACHED_STRIKETHROUGH);
         lines = null;
         shape = null;
     }
@@ -220,7 +224,7 @@ public class PrismTextLayout implements TextLayout {
 
     public BaseBounds getBounds() {
         ensureLayout();
-        return bounds;
+        return logicalBounds;
     }
 
     public BaseBounds getBounds(TextSpan filter, BaseBounds bounds) {
@@ -724,14 +728,14 @@ public class PrismTextLayout implements TextLayout {
         if (run.getAscent() == 0) {
             Metrics m = strike.getMetrics();
 
-            /* The implementation of the center bounds mode is to assure the
+            /* The implementation of the center layoutBounds mode is to assure the
              * layout has the same number of pixels above and bellow the cap
              * height.
              */
             if ((flags & BOUNDS_MASK) == BOUNDS_CENTER) {
                 float ascent = m.getAscent();
                 /* Segoe UI has a very large internal leading area, applying the
-                 * center bounds heuristics on it would result in several pixels
+                 * center layoutBounds heuristics on it would result in several pixels
                  * being added to the descent. The final results would be
                  * overly large and visually unappealing. The fix is to reduce
                  * the ascent before applying the algorithm. */
@@ -1177,7 +1181,7 @@ public class PrismTextLayout implements TextLayout {
             }
 
             computeSideBearings(line);
-
+            
             /* Set run location */
             float runX = lineX;
             TextRun[] lineRuns = line.getRuns();
@@ -1188,15 +1192,102 @@ public class PrismTextLayout implements TextLayout {
                 runX += run.getWidth();
             }
             if (i + 1 < lines.length) {
-                lineY = Math.max(lineY, lineY + bounds.getHeight() + spacing);
+                lineY = Math.max(lineY, lineY + bounds.getHeight() + spacing);                
             } else {
                 lineY += (bounds.getHeight() - line.getLeading());
             }
         }
         float ascent = lines[0].getBounds().getMinY();
         layoutHeight = lineY;
-        bounds = bounds.deriveWithNewBounds(0, ascent, 0, layoutWidth,
+        logicalBounds = logicalBounds.deriveWithNewBounds(0, ascent, 0, layoutWidth,
                                             layoutHeight + ascent, 0);
+    }
+
+    @Override
+    public BaseBounds getVisualBounds(int type) {
+        ensureLayout();
+
+        /* Not defined for rich text */
+        if (strike == null) {
+            return null;
+        }
+        
+        boolean underline = (type & TYPE_UNDERLINE) != 0;
+        boolean hasUnderline = (flags & FLAGS_CACHED_UNDERLINE) != 0;
+        boolean strikethrough = (type & TYPE_STRIKETHROUGH) != 0;
+        boolean hasStrikethrough = (flags & FLAGS_CACHED_STRIKETHROUGH) != 0;
+        if (visualBounds != null && underline == hasUnderline
+                && strikethrough == hasStrikethrough) {
+            /* Return last cached value */
+            return visualBounds;
+        }
+        
+        flags &= ~(FLAGS_CACHED_STRIKETHROUGH | FLAGS_CACHED_UNDERLINE);
+        if (underline) flags |= FLAGS_CACHED_UNDERLINE;
+        if (strikethrough) flags |= FLAGS_CACHED_STRIKETHROUGH;
+        visualBounds = new RectBounds();
+
+        float xMin = Float.POSITIVE_INFINITY;
+        float yMin = Float.POSITIVE_INFINITY;
+        float xMax = Float.NEGATIVE_INFINITY;
+        float yMax = Float.NEGATIVE_INFINITY;
+        float bounds[] = new float[4];
+        FontResource fr = strike.getFontResource();
+        Metrics metrics = strike.getMetrics();
+        float size = strike.getSize();
+        for (int i = 0; i < lines.length; i++) {
+            TextLine line = lines[i];
+            TextRun[] runs = line.getRuns();
+            for (int j = 0; j < runs.length; j++) {
+                TextRun run = runs[j];
+                Point2D pt = run.getLocation();
+                if (run.isLinebreak()) continue;
+                int glyphCount = run.getGlyphCount();
+                for (int gi = 0; gi < glyphCount; gi++) {
+                    int gc = run.getGlyphCode(gi);
+                    if (gc != CharToGlyphMapper.INVISIBLE_GLYPH_ID) {
+                        fr.getGlyphBoundingBox(run.getGlyphCode(gi), size, bounds);
+                        if (bounds[X_MIN_INDEX] != bounds[X_MAX_INDEX]) {
+                            float glyphX = pt.x + run.getPosX(gi);
+                            float glyphY = pt.y + run.getPosY(gi);
+                            float glyphMinX = glyphX + bounds[X_MIN_INDEX];
+                            float glyphMinY = glyphY - bounds[Y_MAX_INDEX];
+                            float glyphMaxX = glyphX + bounds[X_MAX_INDEX];
+                            float glyphMaxY = glyphY - bounds[Y_MIN_INDEX];
+                            if (glyphMinX < xMin) xMin = glyphMinX;
+                            if (glyphMinY < yMin) yMin = glyphMinY;
+                            if (glyphMaxX > xMax) xMax = glyphMaxX;
+                            if (glyphMaxY > yMax) yMax = glyphMaxY;
+                        }
+                    }
+                }
+                if (underline) {
+                    float underlineMinX = pt.x;
+                    float underlineMinY = pt.y + metrics.getUnderLineOffset();
+                    float underlineMaxX = underlineMinX + run.getWidth();
+                    float underlineMaxY = underlineMinY + metrics.getUnderLineThickness();
+                    if (underlineMinX < xMin) xMin = underlineMinX;
+                    if (underlineMinY < yMin) yMin = underlineMinY;
+                    if (underlineMaxX > xMax) xMax = underlineMaxX;
+                    if (underlineMaxY > yMax) yMax = underlineMaxY;
+                }
+                if (strikethrough) {
+                    float strikethroughMinX = pt.x;
+                    float strikethroughMinY = pt.y + metrics.getStrikethroughOffset();
+                    float strikethroughMaxX = strikethroughMinX + run.getWidth();
+                    float strikethroughMaxY = strikethroughMinY + metrics.getStrikethroughThickness();
+                    if (strikethroughMinX < xMin) xMin = strikethroughMinX;
+                    if (strikethroughMinY < yMin) yMin = strikethroughMinY;
+                    if (strikethroughMaxX > xMax) xMax = strikethroughMaxX;
+                    if (strikethroughMaxY > yMax) yMax = strikethroughMaxY;
+                }
+            }
+        }
+        
+        if (xMin < xMax && yMin < yMax) {
+            visualBounds.setBounds(xMin, yMin, xMax, yMax);
+        }
+        return visualBounds;
     }
 
     private void computeSideBearings(TextLine line) {

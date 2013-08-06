@@ -27,6 +27,7 @@ package com.sun.javafx.font;
 
 import java.util.HashMap;
 import java.util.Map;
+
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.Affine2D;
@@ -154,7 +155,8 @@ public abstract class PrismFontStrike<T extends PrismFontFile> implements FontSt
     protected abstract Glyph createGlyph(int glyphCode);
 
     protected Glyph createGlyph(GlyphList gl, int gi) {
-        return createGlyph(gl.getGlyphCode(gi));
+        int glyphCode = gl.getGlyphCode(gi) & CompositeGlyphMapper.GLYPHMASK;
+        return createGlyph(glyphCode);
     }
 
     public Glyph getGlyph(int glyphCode) {
@@ -167,7 +169,7 @@ public abstract class PrismFontStrike<T extends PrismFontFile> implements FontSt
     }
 
     public Glyph getGlyph(GlyphList gl, int gi) {
-        int glyphCode = gl.getGlyphCode(gi);
+        int glyphCode = gl.getGlyphCode(gi) & CompositeGlyphMapper.GLYPHMASK;
         Glyph glyph = glyphMap.get(glyphCode);
         if (glyph == null) {
             glyph = createGlyph(gl, gi);

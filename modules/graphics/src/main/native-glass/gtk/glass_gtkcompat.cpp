@@ -209,15 +209,20 @@ GdkDisplay * glass_gdk_window_get_display(GdkWindow * gdkWindow) {
 
 gboolean
 glass_gdk_mouse_devices_grab(GdkWindow *gdkWindow) {
-    return glass_gdk_mouse_devices_grab_with_cursor(gdkWindow, NULL);
+    return glass_gdk_mouse_devices_grab_with_cursor(gdkWindow, NULL, TRUE);
 }
 
 gboolean
 glass_gdk_mouse_devices_grab_with_cursor(GdkWindow *gdkWindow, GdkCursor *cursor) {
+    return glass_gdk_mouse_devices_grab_with_cursor(gdkWindow, cursor, TRUE);
+}
+
+gboolean
+glass_gdk_mouse_devices_grab_with_cursor(GdkWindow *gdkWindow, GdkCursor *cursor, gboolean owner_events) {
     if (disableGrab) {
         return TRUE;
     }
-    GdkGrabStatus status = gdk_pointer_grab(gdkWindow, TRUE, (GdkEventMask)
+    GdkGrabStatus status = gdk_pointer_grab(gdkWindow, owner_events, (GdkEventMask)
                                             (GDK_POINTER_MOTION_MASK
                                                 | GDK_POINTER_MOTION_HINT_MASK
                                                 | GDK_BUTTON_MOTION_MASK
