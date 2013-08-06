@@ -162,7 +162,7 @@ project(":web") {
             )
             destinationDir = file("modules/web/build/classes/android")
             dependencyCacheDir = file("modules/web/build/dependency-cache")
-            source file("${closedDir}/javafx-android/webnode/src")
+            source file("modules/web/src/android/java")
         }
 
         def jarWebJavaAndroid = task("jarWebJavaAndroid",
@@ -287,7 +287,7 @@ ANDROID.surface.nativeSource = [
 ]
 ANDROID.surface.compiler = compiler
 ANDROID.surface.linker = linker
-ANDROID.surface.lib = "glass-lens-android"
+ANDROID.surface.lib = "glass_lens_android"
 ANDROID.surface.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
     ccDebugFlags, ccDefaultIncludeFlags, "-Isrc/main/native-glass/lens"].flatten()
 ANDROID.surface.linkFlags = [linkFlags, "-ldl", "-landroid", "-llog"].flatten()
@@ -299,8 +299,7 @@ ANDROID.webview.javahInclude = [
     "com/sun/webkit/NativeWebView.class"
 ]
 ANDROID.webview.nativeSource = [
-    //file("modules/web/src/android/native/native_webview.c")
-    file("${closedDir}/javafx-android/webnode/jni/native_webview.c")
+    file("modules/web/src/android/native/native_webview.c")
 ]
 ANDROID.webview.compiler = compiler
 ANDROID.webview.linker = linker
@@ -316,12 +315,11 @@ ANDROID.dvkwebview.javahInclude = [
     "com/sun/webkit/NativeWebView.class"
 ]
 ANDROID.dvkwebview.nativeSource = [
-    //file("modules/web/src/android/native/android_webview.c")
-    file("${closedDir}/javafx-android/webnode/jni/android_webview.c")
+    file("modules/web/src/android/native/android_webview.c")
 ]
 ANDROID.dvkwebview.compiler = compiler
 ANDROID.dvkwebview.linker = linker
-ANDROID.dvkwebview.lib = "android-webview"
+ANDROID.dvkwebview.lib = "android_webview"
 ANDROID.dvkwebview.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
     ccDebugFlags, ccDefaultIncludeFlags].flatten()
 ANDROID.dvkwebview.linkFlags = [linkFlags, "-ldl", "-llog"].flatten()
@@ -342,7 +340,7 @@ ANDROID.glass.eglfb.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/wm/screen/androidScreen.c")]
 ANDROID.glass.eglfb.compiler = compiler
 ANDROID.glass.eglfb.linker = linker
-ANDROID.glass.eglfb.lib = "glass-lens-eglfb"
+ANDROID.glass.eglfb.lib = "glass_lens_eglfb"
 ANDROID.glass.eglfb.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
     ccDebugFlags, ccDefaultIncludeFlags].flatten()
 ANDROID.glass.eglfb.linkFlags = [linkFlags, "-ldl", "-landroid", "-llog"].flatten()
@@ -355,7 +353,7 @@ ANDROID.prism.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
     ccDebugFlags, ccDefaultIncludeFlags].flatten()
 ANDROID.prism.linker = linker
 ANDROID.prism.linkFlags = [linkFlags].flatten()
-ANDROID.prism.lib = "prism-common"
+ANDROID.prism.lib = "prism_common"
 
 ANDROID.prismSW = [:]
 ANDROID.prismSW.javahInclude = ["com/sun/pisces/**/*"]
@@ -365,7 +363,7 @@ ANDROID.prismSW.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
     ccDebugFlags, ccDefaultIncludeFlags].flatten()
 ANDROID.prismSW.linker = linker
 ANDROID.prismSW.linkFlags = [linkFlags].flatten()
-ANDROID.prismSW.lib = "prism-sw"
+ANDROID.prismSW.lib = "prism_sw"
 
 ANDROID.decora = [:]
 ANDROID.decora.compiler = compiler
@@ -373,7 +371,7 @@ ANDROID.decora.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
     ccDebugFlags, ccDefaultIncludeFlags].flatten()
 ANDROID.decora.linker = linker
 ANDROID.decora.linkFlags = [linkFlags].flatten()
-ANDROID.decora.lib = "decora-sse"
+ANDROID.decora.lib = "decora_sse"
 
 ANDROID.iio = [:]
 ANDROID.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
@@ -385,7 +383,7 @@ ANDROID.iio.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
     ccDebugFlags, ccDefaultIncludeFlags].flatten()
 ANDROID.iio.linker = linker
 ANDROID.iio.linkFlags = [linkFlags].flatten()
-ANDROID.iio.lib = "javafx-iio"
+ANDROID.iio.lib = "javafx_iio"
 
 ANDROID.prismES2 = [:]
 ANDROID.prismES2.variants = ["eglfb"]
@@ -401,7 +399,7 @@ ANDROID.prismES2.eglfb.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
     ccDebugFlags, ccDefaultIncludeFlags, "-DIS_EGLFB"].flatten()
 ANDROID.prismES2.eglfb.linker = linker
 ANDROID.prismES2.eglfb.linkFlags = [linkFlags, "-ldl", "-llog", "-lGLESv2", "-lEGL"].flatten()
-ANDROID.prismES2.eglfb.lib = "prism-es2-eglfb"
+ANDROID.prismES2.eglfb.lib = "prism_es2_eglfb"
 
 ANDROID.font = [:]
 ANDROID.font.javahInclude = [
@@ -413,7 +411,7 @@ ANDROID.font.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
     ccDebugFlags, ccDefaultIncludeFlags].flatten()
 ANDROID.font.linker = linker
 ANDROID.font.linkFlags = [linkFlags].flatten()
-ANDROID.font.lib = "javafx-font"
+ANDROID.font.lib = "javafx_font"
 
 ANDROID.fontT2K = [:]
 ANDROID.fontT2K.javahInclude = ["com/sun/javafx/font/t2k/**/*"]
@@ -426,4 +424,4 @@ ANDROID.fontT2K.ccFlags = [ccFlags, "-fno-exceptions", "-fno-rtti", ccWarnFlags,
     ccArchFlags, ccOptFlags, ccDebugFlags, ccDefaultIncludeFlags].flatten()
 ANDROID.fontT2K.linker = linker
 ANDROID.fontT2K.linkFlags = [linkFlags, "-lstdc++"].flatten()
-ANDROID.fontT2K.lib = "javafx-font-t2k"
+ANDROID.fontT2K.lib = "javafx_font_t2k"

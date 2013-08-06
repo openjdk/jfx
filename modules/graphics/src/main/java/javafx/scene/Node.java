@@ -1064,9 +1064,6 @@ public abstract class Node implements EventTarget, Styleable {
                         impl_markDirty(DirtyBits.NODE_VISIBLE);
                         impl_geomChanged();
                         updateTreeVisible();
-                        if (getClip() != null) {
-                            getClip().updateTreeVisible();
-                        }
                         if (getParent() != null) {
                             // notify the parent of the potential change in visibility
                             // of this node, since visibility affects bounds of the
@@ -7601,11 +7598,23 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
+    void markDirtyLayoutBranch() {
+        Parent p = getParent();
+        while (p != null && p.layoutFlag == LayoutFlags.CLEAN) {
+            p.setLayoutFlag(LayoutFlags.DIRTY_BRANCH);
+            if (p.isSceneRoot()) {
+                Toolkit.getToolkit().requestNextPulse();
+            }
+            p = p.getParent();
+        }
+
+    }
+
     private void updateTreeVisible() {
         boolean isTreeVisible = isVisible();
         if (isTreeVisible) {
             final Parent p = getParent();
-            isTreeVisible = p != null ? getParent().impl_isTreeVisible() :
+            isTreeVisible = p != null ? p.impl_isTreeVisible() :
                     clipParent != null ? clipParent.impl_isTreeVisible() :
                     getSubScene() == null || getSubScene().impl_isTreeVisible();
         }
@@ -7620,6 +7629,9 @@ public abstract class Node implements EventTarget, Styleable {
             treeVisible = value;
             updateCanReceiveFocus();
             focusSetDirty(getScene());
+            if (getClip() != null) {
+                getClip().updateTreeVisible();
+            }
             if (treeVisible && !impl_isDirtyEmpty()) {
                 // The node hasn't been synchronized while invisible, so
                 // synchronize now

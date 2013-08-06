@@ -52,7 +52,7 @@
     -fx-background-insets: 1 0 -1 0, 0, 1;
     -fx-background-radius: 2.5, 2.5, 1.5;
     -fx-padding: 0.208333em; 
-    -fx-background-image: url("/ensemble/samples/shared-resources/slider.png");
+    -fx-background-image: url("../../shared-resources/slider.png");
     -fx-background-image-width: 10;
     -fx-background-image-slice: 0 fill;
 }
@@ -62,7 +62,7 @@
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 1.0em; /* makes sure this remains circular */
     -fx-padding: 0.583333em; /* 7 */
-    -fx-border-image-source: url("/ensemble/samples/shared-resources/thumb_default.png");
+    -fx-border-image-source: url("../../shared-resources/thumb_default.png");
     -fx-border-image-width: 10;
     -fx-border-image-slice: 0 fill;
 }
@@ -71,7 +71,7 @@
     -fx-color: null;
     -fx-background-color: null;
     -fx-border-color: null;
-    -fx-border-image-source: url("/ensemble/samples/shared-resources/thumb_pressed.png");
+    -fx-border-image-source: url("../../shared-resources/thumb_pressed.png");
     -fx-border-image-width: 10;
     -fx-border-image-slice: 0 fill;
     -fx-background-insets: -1.4, 0, 1, 2;
@@ -82,68 +82,68 @@
     -fx-color: null;
     -fx-background-color: null;
     -fx-border-color: null;
-    -fx-border-image-source: url("/ensemble/samples/shared-resources/thumb_hover.png");
+    -fx-border-image-source: url("../../shared-resources/thumb_hover.png");
     -fx-border-image-width: 10;
     -fx-border-image-slice: 0 fill;
 }
 
 #back-button {
-    -fx-graphic: url("/ensemble/samples/shared-resources/button_default_back.png");
+    -fx-graphic: url("../../shared-resources/button_default_back.png");
 }
 
 #back-button:hover {
-    -fx-graphic: url("/ensemble/samples/shared-resources/button_hover_back.png");
+    -fx-graphic: url("../../shared-resources/button_hover_back.png");
 }
 
 #back-button:armed {
-    -fx-graphic: url("/ensemble/samples/shared-resources/button_pressed_back.png");
+    -fx-graphic: url("../../shared-resources/button_pressed_back.png");
 }
 
 #stop-button {
-    -fx-graphic: url("/ensemble/samples/shared-resources/button_default_stop.png");
+    -fx-graphic: url("../../shared-resources/button_default_stop.png");
 }
 
 #stop-button:hover {
-    -fx-graphic: url("/ensemble/samples/shared-resources/button_hover_stop.png");
+    -fx-graphic: url("../../shared-resources/button_hover_stop.png");
 }
 
 #stop-button:armed {
-    -fx-graphic: url("/ensemble/samples/shared-resources/button_pressed_stop.png");
+    -fx-graphic: url("../../shared-resources/button_pressed_stop.png");
 }
 
 #play-button {
-    -fx-graphic: url("/ensemble/samples/shared-resources/button_default_play.png");
+    -fx-graphic: url("../../shared-resources/button_default_play.png");
 }
 
 #play-button:hover {
-    -fx-graphic: url("/ensemble/samples/shared-resources/button_hover_play.png");
+    -fx-graphic: url("../../shared-resources/button_hover_play.png");
 }
 
 #play-button:armed {
-    -fx-graphic: url("/ensemble/samples/shared-resources/button_pressed_play.png");
+    -fx-graphic: url("../../shared-resources/button_pressed_play.png");
 }
 
 #pause-button {
-    -fx-graphic: url("/ensemble/samples/shared-resources/button_default_pause.png");
+    -fx-graphic: url("../../shared-resources/button_default_pause.png");
 }
 
 #pause-button:hover {
-    -fx-graphic: url("/ensemble/samples/shared-resources/button_hover_pause.png");
+    -fx-graphic: url("../../shared-resources/button_hover_pause.png");
 }
 
 #pause-button:armed {
-    -fx-graphic: url("/ensemble/samples/shared-resources/button_pressed_pause.png");
+    -fx-graphic: url("../../shared-resources/button_pressed_pause.png");
 }
 
 #forward-button {
-    -fx-graphic: url("/ensemble/samples/shared-resources/button_default_forward.png");
+    -fx-graphic: url("../../shared-resources/button_default_forward.png");
 }
 
 #forward-button:hover {
-    -fx-graphic: url("/ensemble/samples/shared-resources/button_hover_forward.png");
+    -fx-graphic: url("../../shared-resources/button_hover_forward.png");
 }
 
 #forward-button:armed {
-    -fx-graphic: url("/ensemble/samples/shared-resources/button_pressed_forward.png");
+    -fx-graphic: url("../../shared-resources/button_pressed_forward.png");
 }
 

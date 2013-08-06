@@ -2,15 +2,13 @@
  * Copyright (c) 2012-2013, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
-
-#include "Document.h"
-
-#include "SchemeRegistry.h"
 #include "StorageAreaJava.h"
 
+#include "Document.h"
 #include "ExceptionCode.h"
 #include "Frame.h"
 #include "Page.h"
+#include "SchemeRegistry.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
 //#include "StorageAreaSync.h"
@@ -35,6 +33,8 @@ inline StorageAreaJava::StorageAreaJava(StorageType storageType, PassRefPtr<Secu
 #ifndef NDEBUG
     , m_isShutdown(false)
 #endif
+    , m_accessCount(0)
+    , m_closeDatabaseTimer(this, &StorageAreaJava::closeDatabaseTimerFired)
 {
     ASSERT(isMainThread());
     ASSERT(m_securityOrigin);
@@ -74,6 +74,8 @@ StorageAreaJava::StorageAreaJava(StorageAreaJava* area)
 #ifndef NDEBUG
     , m_isShutdown(area->m_isShutdown)
 #endif
+    , m_accessCount(0)
+    , m_closeDatabaseTimer(this, &StorageAreaJava::closeDatabaseTimerFired)
 {
     ASSERT(isMainThread());
     ASSERT(m_securityOrigin);
@@ -81,9 +83,14 @@ StorageAreaJava::StorageAreaJava(StorageAreaJava* area)
     ASSERT(!m_isShutdown);
 }
 
-static bool privateBrowsingEnabled(Frame* sourceFrame)
+bool StorageAreaJava::canAccessStorage(Frame* frame)
 {
-    return sourceFrame->page() && sourceFrame->page()->settings()->privateBrowsingEnabled();
+    return frame && frame->page();
+}
+
+StorageType StorageAreaJava::storageType() const
+{
+    return m_storageType;
 }
 
 unsigned StorageAreaJava::length()
@@ -116,20 +123,20 @@ void StorageAreaJava::setItem(Frame* sourceFrame, const String& key, const Strin
     ASSERT(!value.isNull());
     blockUntilImportComplete();
 
-    if (privateBrowsingEnabled(sourceFrame)) {
-        quotaException = true;
-        return;
-    }
-
     String oldValue;
     RefPtr<StorageMap> newMap = m_storageMap->setItem(key, value, oldValue, quotaException);
     if (newMap)
         m_storageMap = newMap.release();
 
+    if (quotaException)
+        return;
+
+    if (oldValue == value)
+        return;
 /*
     if (m_storageAreaSync)
         m_storageAreaSync->scheduleItemForSync(key, value);
-    StorageEventDispatcher::dispatch(key, oldValue, value, m_storageType, m_securityOrigin.get(), sourceFrame);
+    dispatchStorageEvent(key, oldValue, value, sourceFrame);
 */
 }
 
@@ -138,18 +145,17 @@ void StorageAreaJava::removeItem(Frame* sourceFrame, const String& key)
     ASSERT(!m_isShutdown);
     blockUntilImportComplete();
 
-    if (privateBrowsingEnabled(sourceFrame))
-        return;
-
     String oldValue;
     RefPtr<StorageMap> newMap = m_storageMap->removeItem(key, oldValue);
     if (newMap)
         m_storageMap = newMap.release();
 
+    if (oldValue.isNull())
+        return;
 /*
     if (m_storageAreaSync)
         m_storageAreaSync->scheduleItemForSync(key, String());
-    StorageEventDispatcher::dispatch(key, oldValue, String(), m_storageType, m_securityOrigin.get(), sourceFrame);
+    dispatchStorageEvent(key, oldValue, String(), sourceFrame);
 */
 }
 
@@ -157,9 +163,6 @@ void StorageAreaJava::clear(Frame* sourceFrame)
 {
     ASSERT(!m_isShutdown);
     blockUntilImportComplete();
-
-    if (privateBrowsingEnabled(sourceFrame))
-        return;
 
     if (!m_storageMap->length())
         return;
@@ -169,7 +172,7 @@ void StorageAreaJava::clear(Frame* sourceFrame)
 /*
     if (m_storageAreaSync)
         m_storageAreaSync->scheduleClear();
-    StorageEventDispatcher::dispatch(String(), String(), String(), m_storageType, m_securityOrigin.get(), sourceFrame);
+    dispatchStorageEvent(String(), String(), String(), sourceFrame);
 */
 }
 
@@ -181,26 +184,12 @@ bool StorageAreaJava::contains(const String& key)
     return m_storageMap->contains(key);
 }
 
-bool StorageAreaJava::canAccessStorage(Frame* sourceFrame)
+void StorageAreaJava::importItems(const HashMap<String, String>& items)
 {
-    if (!sourceFrame->page() || !sourceFrame->page()->settings()->privateBrowsingEnabled())
-        return false;
-    if (m_storageType != LocalStorage)
-        return true;
-    return !SchemeRegistry::allowsLocalStorageAccessInPrivateBrowsing(sourceFrame->document()->securityOrigin()->protocol());
+    ASSERT(!m_isShutdown);
+
+    m_storageMap->importItems(items);
 }
-
-
-StorageType StorageAreaJava::storageType() const
-{
-    return m_storageType;
-}
-
-size_t StorageAreaJava::memoryBytesUsedByCache()
-{
-    return 0;
-}
-
 
 void StorageAreaJava::close()
 {
@@ -234,7 +223,7 @@ void StorageAreaJava::sync()
 {
     ASSERT(!m_isShutdown);
     blockUntilImportComplete();
-/*    
+/*
     if (m_storageAreaSync)
         m_storageAreaSync->scheduleSync();
 */
@@ -248,4 +237,58 @@ void StorageAreaJava::blockUntilImportComplete() const
 */
 }
 
+size_t StorageAreaJava::memoryBytesUsedByCache()
+{
+    return 0;
 }
+
+void StorageAreaJava::incrementAccessCount()
+{
+    m_accessCount++;
+
+    if (m_closeDatabaseTimer.isActive())
+        m_closeDatabaseTimer.stop();
+}
+
+void StorageAreaJava::decrementAccessCount()
+{
+    ASSERT(m_accessCount);
+    --m_accessCount;
+
+    if (!m_accessCount) {
+        if (m_closeDatabaseTimer.isActive())
+            m_closeDatabaseTimer.stop();
+        m_closeDatabaseTimer.startOneShot(/*StorageTracker::tracker().storageDatabaseIdleInterval()*/ 0);
+    }
+}
+
+void StorageAreaJava::closeDatabaseTimerFired(Timer<StorageAreaJava> *)
+{
+    blockUntilImportComplete();
+/*
+    if (m_storageAreaSync)
+        m_storageAreaSync->scheduleCloseDatabase();
+*/
+}
+
+void StorageAreaJava::closeDatabaseIfIdle()
+{
+    if (m_closeDatabaseTimer.isActive()) {
+        ASSERT(!m_accessCount);
+        m_closeDatabaseTimer.stop();
+
+        closeDatabaseTimerFired(&m_closeDatabaseTimer);
+}
+}
+
+void StorageAreaJava::dispatchStorageEvent(const String& key, const String& oldValue, const String& newValue, Frame* sourceFrame)
+{
+/*
+    if (m_storageType == LocalStorage)
+        StorageEventDispatcher::dispatchLocalStorageEvents(key, oldValue, newValue, m_securityOrigin.get(), sourceFrame);
+    else
+        StorageEventDispatcher::dispatchSessionStorageEvents(key, oldValue, newValue, m_securityOrigin.get(), sourceFrame);
+*/
+}
+
+} // namespace WebCore

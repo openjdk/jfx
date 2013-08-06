@@ -78,8 +78,6 @@ void init_ids(JNIEnv *);
 
 void init_functions(JNIEnv *);
 
-JNIEnv *get_glass_JNIEnv();
-
 char *describe_touch_action(int);
 
 int to_jfx_touch_action(int);

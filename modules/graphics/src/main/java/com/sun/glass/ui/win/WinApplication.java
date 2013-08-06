@@ -247,4 +247,17 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     }
 
     @Override native protected boolean _supportsUnifiedWindows();
+    
+    public String getDataDirectory() {
+        checkEventThread();
+        String baseDirectory = AccessController.doPrivileged(new PrivilegedAction<String>() {
+            @Override public String run() {
+                return System.getenv("APPDATA");
+            }
+        });
+        if (baseDirectory == null || baseDirectory.length() == 0) {
+            return super.getDataDirectory();
+        }
+        return baseDirectory + File.separator + name + File.separator;
+    }
 }

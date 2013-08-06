@@ -2,7 +2,9 @@
 #define StorageAreaJava_h
 
 #include "StorageArea.h"
+#include "Timer.h"
 
+#include <wtf/HashMap.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefPtr.h>
 
@@ -17,7 +19,6 @@ namespace WebCore {
         static PassRefPtr<StorageAreaJava> create(StorageType, PassRefPtr<SecurityOrigin>, /*PassRefPtr<StorageSyncManager>,*/ unsigned quota);
         virtual ~StorageAreaJava();
 
-        // The HTML5 DOM Storage API (and contains)
         virtual unsigned length() OVERRIDE;
         virtual String key(unsigned index) OVERRIDE;
         virtual String item(const String& key) OVERRIDE;
@@ -28,10 +29,18 @@ namespace WebCore {
 
         virtual bool canAccessStorage(Frame* sourceFrame) OVERRIDE;
         virtual StorageType storageType() const OVERRIDE;
+
         virtual size_t memoryBytesUsedByCache() OVERRIDE;
+
+        virtual void incrementAccessCount();
+        virtual void decrementAccessCount();
+        virtual void closeDatabaseIfIdle();
 
         PassRefPtr<StorageAreaJava> copy();
         void close();
+
+        // Only called from a background thread.
+        void importItems(const HashMap<String, String>& items);
 
         // Used to clear a StorageArea and close db before backing db file is deleted.
         void clearForOriginDeletion();
@@ -40,9 +49,12 @@ namespace WebCore {
 
     private:
         StorageAreaJava(StorageType, PassRefPtr<SecurityOrigin>, /*PassRefPtr<StorageSyncManager>,*/ unsigned quota);
-        StorageAreaJava(StorageAreaJava*);
+        explicit StorageAreaJava(StorageAreaJava*);
 
         void blockUntilImportComplete() const;
+        void closeDatabaseTimerFired(Timer<StorageAreaJava>*);
+
+        void dispatchStorageEvent(const String& key, const String& oldValue, const String& newValue, Frame* sourceFrame);
 
         StorageType m_storageType;
         RefPtr<SecurityOrigin> m_securityOrigin;
@@ -54,6 +66,8 @@ namespace WebCore {
 #ifndef NDEBUG
         bool m_isShutdown;
 #endif
+        unsigned m_accessCount;
+        Timer<StorageAreaJava> m_closeDatabaseTimer;
     };
 
 } // namespace WebCore

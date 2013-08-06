@@ -221,8 +221,10 @@ static int newMousePosX = 0;
 static int newMousePosY = 0;
 
 // Touch
-static const int gTapRadius = 20;//pixels
-static const int gReleasePendingTimeout = 100;//pixels
+#define LENS_MAX_TAP_RADIUS 1000
+#define LENS_MAX_TAP_RELEASE_PENDING_TIMEOUT 1000
+static int gTapRadius = 20;//pixels
+static int gTapReleasePendingTimeout = 50;//milis
 
 
 //JNI
@@ -321,6 +323,35 @@ jboolean lens_input_initialize(JNIEnv *env) {
     screenHeight = glass_screen_getMainScreen()->height;
 
     GLASS_LOG_FINE("screen size=%ix%i", screenWidth, screenHeight);
+
+    //Set tap radius/timeout
+    const char* className = "com/sun/glass/ui/lens/LensTouchInputSupport";
+    jclass lensTouchInputSupport = (*env)->FindClass(env, className);
+    if (lensTouchInputSupport != NULL) {
+        jfieldID radiusVar = (*env)->GetStaticFieldID(env,lensTouchInputSupport, "touchTapRadius", "I");
+        jfieldID timeoutVar = (*env)->GetStaticFieldID(env,lensTouchInputSupport, "touchReleasePendingTimeout", "I");
+
+        if (radiusVar != NULL && timeoutVar != NULL) {
+            int confRadius = (*env)->GetStaticIntField(env, lensTouchInputSupport, radiusVar);
+            int confTimeout = (*env)->GetStaticIntField(env, lensTouchInputSupport, timeoutVar);
+
+            if (confRadius >= 0 && confRadius <= LENS_MAX_TAP_RADIUS && 
+                confTimeout >= 0 && confTimeout <= LENS_MAX_TAP_RELEASE_PENDING_TIMEOUT) 
+            {
+                gTapRadius = confRadius;
+                gTapReleasePendingTimeout = confTimeout;
+                GLASS_LOG_FINEST("Tap radius: %d tap timeout : %d", gTapRadius, gTapReleasePendingTimeout);
+            } else {
+                GLASS_LOG_SEVERE("Out of bound value/s: tap radius: %d  tap release timeout : %d", confRadius, confTimeout);
+            }
+            
+        } else {
+            GLASS_LOG_SEVERE("Could not find static vars in %s", className);
+        }
+
+    } else {
+        GLASS_LOG_SEVERE("Could not find %s", className);
+    }
 
     lens_wm_setPointerPosition(screenWidth / 2, screenHeight / 2);
 
@@ -1392,6 +1423,9 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
     mousePosX = newMousePosX;
     mousePosY = newMousePosY;
 
+    GLASS_LOG_FINEST("device %p x %d y %d reportMove %d keyEventIndex: %d\n",
+                     device, mousePosX, mousePosY, reportMove, keyEventIndex);
+
     if (keyEventIndex >= 0) {
         //Press or release event
         if (mouseState->pendingInputEvents[keyEventIndex].value == 1) {
@@ -1429,7 +1463,14 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
             if (device->isTouch && mouseState->touchState == TOUCH_TAPPING) {
                 mouseState->touchState = TOUCH_RELEASING;
                 mouseState->releaseEvent = mouseState->pendingInputEvents[keyEventIndex];
-                lens_input_eventLoop_triggerTimeout(device, gReleasePendingTimeout, lens_input_pointerEvents_handleTimeout);
+                if (gTapReleasePendingTimeout > 0) {
+                    lens_input_eventLoop_triggerTimeout(device, gTapReleasePendingTimeout, lens_input_pointerEvents_handleTimeout);
+                } else {
+                    //Calling the timeout function since it sends the recorded 
+                    //press coordinates which is needed in case we filtered few 
+                    //moves.
+                    lens_input_pointerEvents_handleTimeout(device);
+                }
             }
         }
     }

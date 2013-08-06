@@ -170,12 +170,12 @@ public abstract class LightBase extends Node {
                         for (Node node : c.getRemoved()) {
                             // Update the removed nodes
                             if (node instanceof Parent || node instanceof Shape3D) {
-                                node.impl_markDirty(DirtyBits.NODE_CONTENTS);
+                                markChildrenDirty(node);
                             }
                         }
                         for (Node node : c.getAddedSubList()) {
                             if (node instanceof Parent || node instanceof Shape3D) {
-                                node.impl_markDirty(DirtyBits.NODE_CONTENTS);
+                                markChildrenDirty(node);
                             }
                         }
                     }
@@ -203,6 +203,45 @@ public abstract class LightBase extends Node {
         }
     }
 
+    private void markOwnerDirty() {
+        // if the light is part of the scene/subScene, we will need to notify
+        // the owner to mark the entire scene/subScene dirty.
+        SubScene subScene = getSubScene();
+        if (subScene != null) {
+            subScene.markContentDirty();
+        } else {
+            Scene scene = getScene();
+            if (scene != null) {
+                scene.setNeedsRepaint();
+            }
+        }
+    }
+
+    private void markChildrenDirty(Node node) {
+        if (node instanceof Shape3D) {
+            // Dirty using a lightweight DirtyBits.NODE_DRAWMODE bit   
+            ((Shape3D) node).impl_markDirty(DirtyBits.NODE_DRAWMODE);
+        } else if (node instanceof Parent) {
+            for (Node child : ((Parent) node).getChildren()) {
+                markChildrenDirty(child);
+            }
+        }
+    }
+
+    @Override
+    protected void impl_markDirty(DirtyBits dirtyBit) {
+        super.impl_markDirty(dirtyBit);
+        if ((scope == null) || getScope().isEmpty()) {
+            // This light affect the entire scene/subScene
+            markOwnerDirty();
+        } else {                
+            ObservableList<Node> tmpScope = getScope();            
+            for (int i = 0, max = tmpScope.size(); i < max; i++) {
+                markChildrenDirty(tmpScope.get(i));
+            }
+        }
+    }
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -218,12 +257,13 @@ public abstract class LightBase extends Node {
             peer.setLightOn(isLightOn());
 
             if (scope != null) {
-                if (getScope().isEmpty()) {
+                ObservableList<Node> tmpScope = getScope();
+                if (tmpScope.isEmpty()) {
                     peer.setScope(null);
                 } else {
-                    Object ngList[] = new Object[getScope().size()];
-                    for (int i = 0; i < scope.size(); i++) {
-                        Node n = scope.get(i);
+                    Object ngList[] = new Object[tmpScope.size()];
+                    for (int i = 0; i < tmpScope.size(); i++) {
+                        Node n = tmpScope.get(i);
                         ngList[i] = n.impl_getPeer();
                     }
                     peer.setScope(ngList);

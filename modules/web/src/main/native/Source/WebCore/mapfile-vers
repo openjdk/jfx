@@ -213,7 +213,6 @@ SUNWprivate_1.0 {
                Java_com_sun_webkit_dom_DOMWindowImpl_atobImpl;
                Java_com_sun_webkit_dom_DOMWindowImpl_blurImpl;
                Java_com_sun_webkit_dom_DOMWindowImpl_btoaImpl;
-               Java_com_sun_webkit_dom_DOMWindowImpl_cancelAnimationFrameImpl;
                Java_com_sun_webkit_dom_DOMWindowImpl_captureEventsImpl;
                Java_com_sun_webkit_dom_DOMWindowImpl_clearIntervalImpl;
                Java_com_sun_webkit_dom_DOMWindowImpl_clearTimeoutImpl;
@@ -407,8 +406,6 @@ SUNWprivate_1.0 {
                Java_com_sun_webkit_dom_DOMWindowImpl_setOnwebkittransitionendImpl;
                Java_com_sun_webkit_dom_DOMWindowImpl_setStatusImpl;
                Java_com_sun_webkit_dom_DOMWindowImpl_stopImpl;
-               Java_com_sun_webkit_dom_DOMWindowImpl_webkitCancelAnimationFrameImpl;
-               Java_com_sun_webkit_dom_DOMWindowImpl_webkitCancelRequestAnimationFrameImpl;
                Java_com_sun_webkit_dom_DocumentFragmentImpl_querySelectorAllImpl;
                Java_com_sun_webkit_dom_DocumentFragmentImpl_querySelectorImpl;
                Java_com_sun_webkit_dom_DocumentImpl_adoptNodeImpl;

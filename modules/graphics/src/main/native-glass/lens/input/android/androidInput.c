@@ -31,6 +31,7 @@
 static ANativeWindow* (*_ANDROID_getNativeWindow)();
 static void (*_ANDROID_showIME)();
 static void (*_ANDROID_hideIME)();
+static void (*_ANDROID_shutdown)();
 
 
 void init_functions(JNIEnv *env) {
@@ -41,6 +42,7 @@ void init_functions(JNIEnv *env) {
     _ANDROID_getNativeWindow = GET_SYMBOL(env, libglass, "ANDROID_getNativeWindow");
     _ANDROID_showIME = GET_SYMBOL(env, libglass, "ANDROID_showIME");
     _ANDROID_hideIME = GET_SYMBOL(env, libglass, "ANDROID_hideIME");
+    _ANDROID_shutdown = GET_SYMBOL(env, libglass, "ANDROID_shutdown");
 }
 
 ANativeWindow *getAndroidNativeWindow() {
@@ -66,6 +68,19 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_SoftwareKeyboard_hide
     }
     GLASS_LOG_FINE("Hide SoftwareKeyboard");
     (*_ANDROID_hideIME)();
+}
+
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_Activity_shutdown
+(JNIEnv *env, jclass clazz) {
+    android_shutdown();
+}
+
+void android_shutdown() {
+    if (!_ANDROID_shutdown) {
+        init_functions(NULL);
+    }
+    GLASS_LOG_FINE("Send shutdown");
+    (*_ANDROID_shutdown)();
 }
 
 #endif /* ANDROID_NDK */

@@ -324,6 +324,10 @@ public abstract class Parent extends Node {
                 }
             }
 
+            if (geomChanged) {
+                impl_geomChanged();
+            }
+
             //
             // Note that the styles of a child do not affect the parent or
             // its siblings. Thus, it is only necessary to reapply css to
@@ -345,10 +349,6 @@ public abstract class Parent extends Node {
             // pass will reach the child.
             if (relayout) {
                 requestLayout();
-            }
-
-            if (geomChanged) {
-                impl_geomChanged();
             }
 
             // Note the starting index at which we need to update the
@@ -831,23 +831,11 @@ public abstract class Parent extends Node {
     private double minWidthCache = -1;
     private double minHeightCache = -1;
 
-    private void setLayoutFlag(LayoutFlags flag) {
+    void setLayoutFlag(LayoutFlags flag) {
         if (needsLayout != null) {
             needsLayout.set(flag == LayoutFlags.NEEDS_LAYOUT);
         }
         layoutFlag = flag;
-    }
-
-    private void markDirtyLayoutBranch() {
-        Parent parent = getParent();
-        while (parent != null && parent.layoutFlag == LayoutFlags.CLEAN) {
-            parent.setLayoutFlag(LayoutFlags.DIRTY_BRANCH);
-            if (parent.sceneRoot) {
-                Toolkit.getToolkit().requestNextPulse();
-            }
-            parent = parent.getParent();
-        }
-
     }
 
     private void markDirtyLayout(boolean local) {
@@ -855,6 +843,9 @@ public abstract class Parent extends Node {
         if (local || layoutRoot) {
             if (sceneRoot) {
                 Toolkit.getToolkit().requestNextPulse();
+                if (getSubScene() != null) {
+                    getSubScene().setDirtyLayout(this);
+                }
             } else {
                 markDirtyLayoutBranch();
             }
@@ -1065,6 +1056,8 @@ public abstract class Parent extends Node {
                     final Node child = children.get(i);
                     if (child instanceof Parent) {
                         ((Parent)child).layout();
+                    } else if (child instanceof SubScene) {
+                        ((SubScene)child).layoutPass();
                     }
                 }
                 setLayoutFlag(LayoutFlags.CLEAN);
@@ -1104,6 +1097,10 @@ public abstract class Parent extends Node {
     boolean layoutRoot = false;
     @Override final void notifyManagedChanged() {
         layoutRoot = !isManaged() || sceneRoot;
+    }
+
+    final boolean isSceneRoot() {
+        return sceneRoot;
     }
 
     /***********************************************************************

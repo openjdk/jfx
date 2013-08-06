@@ -48,7 +48,8 @@ public abstract class WritablePixelFormat<T extends Buffer>
     }
 
     /**
-     * Stores a 32-bit integer representation of the color in the buffer
+     * Stores the appropriate pixel data that represents the specified
+     * 32-bit integer representation of a color in the buffer
      * at the specified coordinates.
      * The 32-bit integer will contain the 4 color components in separate
      * 8-bit fields in ARGB order from the most significant byte to the least
@@ -64,6 +65,15 @@ public abstract class WritablePixelFormat<T extends Buffer>
      * integer and indexed formats, or 3 or 4 in the case of the byte
      * formats), but some images may have further padding between rows for
      * alignment or other purposes.
+     * <p>
+     * Color components can be composed into an integer using the following
+     * sample code:
+     * <pre>
+     *     int argb = ((alpha &lt;&lt; 24) |
+     *                 (red   &lt;&lt; 16) |
+     *                 (green &lt;&lt;  8) |
+     *                 (blue       );
+     * </pre>
      * 
      * @param buf the buffer of pixel data
      * @param x the X coordinate of the pixel to be read

@@ -54,7 +54,6 @@
 #define KEY_ACTION_MULTIPLE 2
 
 JavaVM *dalvikVM;
-JNIEnv *glass_env;
 JNIEnv *dalvik_env;
 
 ANativeWindow *window;
@@ -62,41 +61,36 @@ int32_t width;
 int32_t height;
 int32_t format;
 
-static JavaVM* (*_glass_application_getVM)();
-
-static void (*_glass_application_notifyWindowEvent_resize)(
-        JNIEnv *env,
+static void (*_notifyWindowEvent_resize)(
         ANativeWindow *window,
         int eventType,
         int width,
         int height);
 
-static void (*_lens_wm_notifyTouchEvent)(
-        JNIEnv *env,
-        jint state,
+static void (*_notifyTouchEvent)(
+        int state,
         int id,
+        int sendAlsoButtonEvent,
         int xabs,
         int yabs);
 
-static void (*_lens_wm_notifyMotionEvent)(
-        JNIEnv *env,
+static void (*_notifyMotionEvent)(
         int mousePosX,
         int mousePosY,
         int isTouch,
         int touchId);
 
-static void (*_lens_wm_notifyButtonEvent)(
-        JNIEnv *env,
-        jboolean pressed,
+static void (*_notifyButtonEvent)(
+        int pressed,
         int button,
-        int xabs, int yabs);
+        int xabs,
+        int yabs);
 
-static void (*_glass_application_notifyKeyEvent)(
-        JNIEnv *env,
+static void (*_notifyKeyEvent)(
         NativeWindow window,
         int eventType,
         int jfxKeyCode,
-        jboolean isRepeatEvent);
+        int isRepeatEvent);
 
 static NativeWindow(*_glass_window_getFocusedWindow)();
 
@@ -117,6 +111,7 @@ jmethodID jFXActivity_getInstance;
 jmethodID jFXActivity_getLDPath;
 jmethodID jFXActivity_showIME;
 jmethodID jFXActivity_hideIME;
+jmethodID jFXActivity_shutdown;
 
 void init_ids(JNIEnv *env) {
     jFXActivityClass =
@@ -129,6 +124,10 @@ void init_ids(JNIEnv *env) {
 
     jFXActivity_hideIME = (*env)->GetMethodID(env, jFXActivityClass,
             "hideIME", "()V");
+    CHECK_EXCEPTION(env);
+    
+    jFXActivity_shutdown = (*env)->GetMethodID(env, jFXActivityClass,
+            "shutdown", "()V");
     CHECK_EXCEPTION(env);
 
     jFXActivity_getInstance = (*env)->GetStaticMethodID(env, jFXActivityClass,
@@ -159,12 +158,11 @@ void init_functions(JNIEnv *env) {
         THROW_RUNTIME_EXCEPTION(env, "dlopen failed with error: %s", dlerror());
         return;
     }
-    _glass_application_getVM = GET_SYMBOL(env, libglass, "glass_application_GetVM");
-    _glass_application_notifyWindowEvent_resize = GET_SYMBOL(env, libglass, "glass_application_notifyWindowEvent_resize");
-    _lens_wm_notifyTouchEvent = GET_SYMBOL(env, libglass, "lens_wm_notifyTouchEvent");
-    _lens_wm_notifyMotionEvent = GET_SYMBOL(env, libglass, "lens_wm_notifyMotionEvent");
-    _lens_wm_notifyButtonEvent = GET_SYMBOL(env, libglass, "lens_wm_notifyButtonEvent");
-    _glass_application_notifyKeyEvent = GET_SYMBOL(env, libglass, "glass_application_notifyKeyEvent");
+    _notifyWindowEvent_resize = GET_SYMBOL(env, libglass, "notifyWindowEvent_resize");
+    _notifyTouchEvent = GET_SYMBOL(env, libglass, "notifyTouchEvent");
+    _notifyMotionEvent = GET_SYMBOL(env, libglass, "notifyMotionEvent");
+    _notifyButtonEvent = GET_SYMBOL(env, libglass, "notifyButtonEvent");
+    _notifyKeyEvent = GET_SYMBOL(env, libglass, "notifyKeyEvent");
     _glass_window_getFocusedWindow = GET_SYMBOL(env, libglass, "glass_window_getFocusedWindow");
     _glass_inputEvents_getJavaKeycodeFromPlatformKeyCode = GET_SYMBOL(env, libglass,
             "glass_inputEvents_getJavaKeycodeFromPlatformKeyCode");
@@ -219,23 +217,15 @@ JNIEXPORT void JNICALL Java_com_oracle_dalvik_FXActivity_00024InternalSurfaceVie
 (JNIEnv *ignore, jobject view, jint action, jint absx, jint absy) {
     LOGV(TAG, "Touch event: [%s, x: %i, y: %i]\n", describe_touch_action(action), absx, absy);
 
-    JNIEnv *genv = get_glass_JNIEnv();
-    if (!genv) return;
-
     int fxstate = to_jfx_touch_action(action);
     if (!fxstate) {
         LOGE(TAG, "Can't handle this state yet. Ignoring. (Probably multitouch)");
         return;
     }
     if (fxstate == com_sun_glass_events_TouchEvent_TOUCH_MOVED) {
-        (*_lens_wm_notifyMotionEvent)(genv, absx, absy, 1, 0);
+        (*_notifyMotionEvent)(absx, absy, 1, 0);
     } else {
-        (*_lens_wm_notifyTouchEvent)(genv, fxstate, 0, absx, absy);
-        //send also mouse event
-        (*_lens_wm_notifyButtonEvent)(genv,
-                (fxstate == com_sun_glass_events_TouchEvent_TOUCH_PRESSED),
-                com_sun_glass_events_MouseEvent_BUTTON_LEFT,
-                absx, absy);
+        (*_notifyTouchEvent)(fxstate, 0, 1, absx, absy);
     }
 }
 
@@ -246,26 +236,13 @@ JNIEXPORT void JNICALL Java_com_oracle_dalvik_FXActivity_00024InternalSurfaceVie
  */
 JNIEXPORT void JNICALL Java_com_oracle_dalvik_FXActivity_00024InternalSurfaceView_onKeyEventNative
 (JNIEnv *ignore, jobject view, jint action, jint keyCode) {
-    JNIEnv *genv = get_glass_JNIEnv();
-    if (!genv) return;
-
+    
+    LOGV(TAG, "Key event: [action: %s, keyCode: %i]\n", describe_key_action(action), keyCode);
     int jfxaction = to_jfx_key_action(action);
     int jfxKeyCode = (*_glass_inputEvents_getJavaKeycodeFromPlatformKeyCode)(
             translate_to_linux_keycode(keyCode));
     NativeWindow window = (*_glass_window_getFocusedWindow)();
-    (*_glass_application_notifyKeyEvent)(genv, window, jfxaction, jfxKeyCode, 0);
-}
-
-JNIEnv *get_glass_JNIEnv() {
-    if (!glass_env) {
-        JavaVM *glass_vm = (*_glass_application_getVM)();
-        if (glass_vm == NULL) {
-            LOGV(TAG, "Ignoring event!");
-            return NULL;
-        }
-        (*glass_vm)->AttachCurrentThread(glass_vm, (JNIEnv **) &glass_env, NULL);
-    }
-    return glass_env;
+    (*_notifyKeyEvent)(window, jfxaction, jfxKeyCode, 0);
 }
 
 ANativeWindow *ANDROID_getNativeWindow() {
@@ -276,12 +253,21 @@ void ANDROID_showIME() {
     JNIEnv *env;
     (*dalvikVM)->AttachCurrentThread(dalvikVM, (JNIEnv **) &env, NULL);
     (*env)->CallVoidMethod(env, jFXActivity, jFXActivity_showIME);
+    (*dalvikVM)->DetachCurrentThread(dalvikVM);
 }
 
 void ANDROID_hideIME() {
     JNIEnv *env;
     (*dalvikVM)->AttachCurrentThread(dalvikVM, (JNIEnv **) &env, NULL);
     (*env)->CallVoidMethod(env, jFXActivity, jFXActivity_hideIME);
+    (*dalvikVM)->DetachCurrentThread(dalvikVM);
+}
+
+void ANDROID_shutdown() {
+    JNIEnv *env;
+    (*dalvikVM)->AttachCurrentThread(dalvikVM, (JNIEnv **) &env, NULL);
+    (*env)->CallVoidMethod(env, jFXActivity, jFXActivity_shutdown);
+    (*dalvikVM)->DetachCurrentThread(dalvikVM);
 }
 
 int32_t translate_to_linux_keycode(int32_t androidKeyCode) {
@@ -343,6 +329,17 @@ int to_jfx_key_action(int action) {
     }
 }
 
+char *describe_key_action(int action) {
+    switch(action) {
+        case KEY_ACTION_DOWN:
+            return "KEY_ACTION_DOWN";
+        case KEY_ACTION_UP:
+            return "KEY_ACTION_UP";
+        case KEY_ACTION_MULTIPLE:
+            return "KEY_ACTION_MULTIPLE";
+    }
+}
+
 char *describe_touch_action(int state) {
     switch (state) {
         case TOUCH_ACTION_DOWN:
@@ -366,5 +363,3 @@ char *describe_touch_action(int state) {
 }
 
 #endif /* ANDROID_NDK */
-
-

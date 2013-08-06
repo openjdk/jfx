@@ -42,7 +42,6 @@ import javafx.scene.layout.BorderWidths;
 import javafx.scene.layout.CornerRadii;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.LinearGradient;
-import javafx.scene.paint.RadialGradient;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.shape.StrokeType;
@@ -87,6 +86,16 @@ public class NGRegion extends NGGroup {
      * can be easily cached and reused.
      */
     private static final RegionImageCache CACHE = new RegionImageCache();
+
+    /**
+     * Indicates the cached image can be sliced vertically.
+     */
+    private static final int CACHE_SLICE_V = 0x1;
+
+    /**
+     * Indicates the cached image can be sliced horizontally.
+     */
+    private static final int CACHE_SLICE_H = 0x2;
 
     /**
      * The background to use for drawing. Since this is an immutable object, I can simply refer to
@@ -148,18 +157,18 @@ public class NGRegion extends NGGroup {
     private float width, height;
 
     /**
+     * Determined when a background is set on the region, this flag indicates whether this
+     * background can be cached. As of this time, the only backgrounds which can be cached
+     * are those where there are only solid fills or linear gradients.
+     */
+    private int cacheMode;
+
+    /**
      * Simple Helper Function for cleanup.
      */
     static Paint getPlatformPaint(javafx.scene.paint.Paint paint) {
         return (Paint)Toolkit.getPaintAccessor().getPlatformPaint(paint);
     }
-    
-    /**
-     * Determined when a background is set on the region, this flag indicates whether this
-     * background can be cached. As of this time, the only backgrounds which can be cached
-     * are those where there are only solid fills or vertical linear gradients.
-     */
-    private boolean backgroundCanBeCached;
 
     // We create a class instance of a no op. Effect internally to handle 3D
     // transform if user didn't use Effect for 3D Transformed Region. This will
@@ -240,23 +249,31 @@ public class NGRegion extends NGGroup {
         background = b == null ? Background.EMPTY : (Background) b;
 
         final List<BackgroundFill> fills = background.getFills();
-        backgroundCanBeCached = !PrismSettings.disableRegionCaching && !fills.isEmpty() && (shape == null || cacheShape);
-        if (backgroundCanBeCached) {
-            for (int i=0, max=fills.size(); i<max && backgroundCanBeCached; i++) {
+        cacheMode = 0;
+        if (!PrismSettings.disableRegionCaching && !fills.isEmpty() && (shape == null || cacheShape)) {
+            cacheMode = CACHE_SLICE_H | CACHE_SLICE_V;
+            for (int i=0, max=fills.size(); i<max && cacheMode != 0; i++) {
                 // We need to now inspect the paint to determine whether we can use a cache for this background.
                 // If a shape is being used, we don't care about gradients (we cache 'em both), but for a rectangle
                 // fill we omit these (so we can do 3-patch scaling). An ImagePattern is deadly to either
                 // (well, only deadly to a shape if it turns out to be a writable image).
                 final BackgroundFill fill = fills.get(i);
                 javafx.scene.paint.Paint paint = fill.getFill();
-                if ((shape == null && paint instanceof RadialGradient) || paint instanceof javafx.scene.paint.ImagePattern) {
-                    backgroundCanBeCached = false;
-                }
-                if (shape == null && paint instanceof LinearGradient) {
-                    LinearGradient linear = (LinearGradient) paint;
-                    if (linear.getStartX() != linear.getEndX()) {
-                        backgroundCanBeCached = false;
+                if (shape == null) {
+                    if (paint instanceof LinearGradient) {
+                        LinearGradient linear = (LinearGradient) paint;
+                        if (linear.getStartX() != linear.getEndX()) {
+                            cacheMode &= ~CACHE_SLICE_H;
+                        }
+                        if (linear.getStartY() != linear.getEndY()) {
+                            cacheMode &= ~CACHE_SLICE_V;
+                        }
+                    } else if (!(paint instanceof Color)) {
+                        //Either radial gradient or image pattern
+                        cacheMode = 0;
                     }
+                } else if (paint instanceof javafx.scene.paint.ImagePattern) {
+                    cacheMode = 0;
                 }
             }
         }
@@ -498,7 +515,7 @@ public class NGRegion extends NGGroup {
 
                 // RT-25013: We need to make sure that we do not use a cached image in the case of a
                 // scaled region, or things won't look right (they'll looked scaled instead of vector-resized).
-                final boolean cache = backgroundCanBeCached && g.getTransformNoClone().isTranslateOrIdentity();
+                final boolean cache = cacheMode != 0 && g.getTransformNoClone().isTranslateOrIdentity();
                 RTTexture cached = cache ? CACHE.getImage(g.getAssociatedScreen(), textureWidth, textureHeight, background, shape) : null;
                 if (cached != null) {
                     cached.lock();
@@ -620,7 +637,6 @@ public class NGRegion extends NGGroup {
             }
         } else if (width > 0 && height > 0) {
             if (!background.isEmpty()) {
-                final Insets outsets = background.getOutsets();
                 // cacheWidth is the width of the region used within the cached image. For example,
                 // perhaps normally the width of a region is 200px. But instead I will render the
                 // region as though it is 20px wide instead into the cached image. 20px in this
@@ -631,184 +647,159 @@ public class NGRegion extends NGGroup {
                 if (backgroundInsets == null) updateBackgroundInsets();
                 final double leftInset = backgroundInsets.getLeft() + 1;
                 final double rightInset = backgroundInsets.getRight() + 1;
-                int cacheWidth = (int) (leftInset + rightInset);
+                final double topInset = backgroundInsets.getTop() + 1;
+                final double bottomInset = backgroundInsets.getBottom() + 1;
+
                 // If the insets are too large, then we want to use the width of the region instead of the
                 // computed cacheWidth. RadioButton enters this case
-                cacheWidth = Math.min(cacheWidth, roundUp(width));
+                int cacheWidth = roundUp(width);
+                if ((cacheMode & CACHE_SLICE_H) != 0) {
+                    cacheWidth = Math.min(cacheWidth, (int) (leftInset + rightInset));
+                }
+                int cacheHeight = roundUp(height);
+                if ((cacheMode & CACHE_SLICE_V) != 0) {
+                    cacheHeight = Math.min(cacheHeight, (int) (topInset + bottomInset));
+                }
+
+                final Insets outsets = background.getOutsets();
+                final int outsetsLeft = roundUp(outsets.getLeft());
+                final int outsetsTop = roundUp(outsets.getTop());
+                final int outsetsRight = roundUp(outsets.getRight());
+                final int outsetsBottom = roundUp(outsets.getRight());
+
                 // The textureWidth / textureHeight is the width/height of the actual image. This needs to be rounded
                 // up to the next whole pixel value.
-                final int textureWidth = cacheWidth + roundUp(outsets.getLeft()) + roundUp(outsets.getRight()),
-                          textureHeight = roundUp(height) + roundUp(outsets.getTop()) + roundUp(outsets.getBottom());
+                final int textureWidth = outsetsLeft + cacheWidth + outsetsRight;
+                final int textureHeight = outsetsTop + cacheHeight + outsetsBottom;
 
                 // See if we have a cached representation for this region background already.
                 // RT-25013: We need to make sure that we do not use a cached image in the case of a
                 // scaled region, or things won't look right (they'll looked scaled instead of vector-resized).
-                // RT_25049: Need to only use the cache for pixel aligned regions or the result
+                // RT-25049: Need to only use the cache for pixel aligned regions or the result
                 // will not look the same as though drawn by vector
                 final boolean cache =
-                        height < 256 &&
                         background.getFills().size() > 1 && // Not worth the overhead otherwise
-                        (width - (int)width == 0) &&
-                        backgroundCanBeCached &&
+                        width == (int)width &&
+                        height == (int)height &&
+                        cacheMode != 0 &&
                         g.getTransformNoClone().isTranslateOrIdentity();
-                RTTexture cached = cache ? CACHE.getImage(g.getAssociatedScreen(), textureWidth, textureHeight, background) : null;
-                if (cached != null) {
-                    cached.lock();
-                    if (cached.isSurfaceLost()) {
-                        cached = null;
+                RTTexture cached = null;
+                if (cache && CACHE.isImageCachable(textureWidth, textureHeight)) {
+                    cached = CACHE.getImage(g.getAssociatedScreen(), textureWidth, textureHeight, background);
+                    if (cached != null) {
+                        cached.lock();
+                        if (cached.isSurfaceLost()) {
+                            cached = null;
+                        }
                     }
-                }
-                // If there is not a cached texture already, then we need to render everything
-                if (cached == null) {
-                    // We will here check to see if we CAN cache the region background. If not, then
-                    // we will render as normal. If we can cache it, however, then we will setup a
-                    // texture and swizzle rendering onto the RTTexture's graphics, and then at the
-                    // end do 3-patch from the texture onto the graphics object we were passed.
-                    Graphics old = null;
-                    float oldWidth = width;
-                    if (cache && CACHE.isImageCachable(textureWidth, textureHeight)) {
-                        old = g;
-                        width = cacheWidth;
-                        cached = g.getResourceFactory().createRTTexture(textureWidth, textureHeight,
-                                                                        WrapMode.CLAMP_TO_ZERO);
+                    if (cached == null) {
+                        cached = g.getResourceFactory().createRTTexture(textureWidth, textureHeight, WrapMode.CLAMP_TO_ZERO);
                         cached.contentsUseful();
-                        g = cached.createGraphics();
-                        // Have to move the origin such that when rendering to x=0, we actually end up rendering
-                        // at x=outsets.getLeft(). Otherwise anything rendered to the left of the origin would be lost
-                        // Round up to the nearest pixel
-                        g.translate(roundUp(outsets.getLeft()), roundUp(outsets.getTop()));
-                        CACHE.setImage(cached, old.getAssociatedScreen(), textureWidth, textureHeight, background);
+                        CACHE.setImage(cached, g.getAssociatedScreen(), textureWidth, textureHeight, background);
                         if (PulseLogger.PULSE_LOGGING_ENABLED) {
                             PulseLogger.PULSE_LOGGER.renderIncrementCounter("Region background image cached");
                         }
-                    }
 
-                    // Paint in order each BackgroundFill.
-                    final List<BackgroundFill> fills = background.getFills();
-                    for (int i = 0, max = fills.size(); i < max; i++) {
-                        final BackgroundFill fill = fills.get(i);
-                        final Insets insets = fill.getInsets();
-                        final float t = (float) insets.getTop(),
-                                l = (float) insets.getLeft(),
-                                b = (float) insets.getBottom(),
-                                r = (float) insets.getRight();
-                        // w and h is the width and height of the area to be filled (width and height less insets)
-                        float w = width - l - r;
-                        float h = height - t - b;
-                        // Only setup and paint for those areas which have positive width and height. This means, if
-                        // the insets are such that the right edge is left of the left edge, then we have a negative
-                        // width and will not paint it. TODO we need to document this fact (RT-26924)
-                        if (w > 0 && h > 0) {
-                            // Could optimize this such that if paint is transparent then we go no further.
-                            final Paint paint = getPlatformPaint(fill.getFill());
-                            g.setPaint(paint);
-                            final CornerRadii radii = fill.getRadii();
-                            // This is a workaround for RT-28435 so we use path rasterizer for small radius's We are
-                            // keeping old rendering. We do not apply workaround when using Caspian or Embedded
-                            if (radii.isUniform() &&
-                                    !(!PlatformImpl.isCaspian() && !PlatformUtil.isEmbedded() && radii.getTopLeftHorizontalRadius() > 0 && radii.getTopLeftHorizontalRadius() <= 4)) {
-                                // If the radii is uniform then we know every corner matches, so we can do some
-                                // faster rendering paths.
-                                float tlhr = (float) radii.getTopLeftHorizontalRadius();
-                                float tlvr = (float) radii.getTopLeftVerticalRadius();
-                                if (tlhr == 0 && tlvr == 0) {
-                                    // The edges are square, so we can do a simple fill rect
-                                    g.fillRect(l, t, w, h);
-                                } else {
-                                    // Fix the horizontal and vertical radii if they are percentage based
-                                    if (radii.isTopLeftHorizontalRadiusAsPercentage()) tlhr = tlhr * width;
-                                    if (radii.isTopLeftVerticalRadiusAsPercentage()) tlvr = tlvr * height;
-                                    // The edges are rounded, so we need to compute the arc width and arc height
-                                    // and fill a round rect
-                                    float arcWidth = tlhr + tlhr;
-                                    float arcHeight = tlvr + tlvr;
-                                    // If the arc width and arc height are so large as to exceed the width / height of
-                                    // the region, then we clamp to the width / height of the region (which will give
-                                    // the look of a circle on that corner)
-                                    if (arcWidth > w) arcWidth = w;
-                                    if (arcHeight > h) arcHeight = h;
-                                    g.fillRoundRect(l, t, w, h, arcWidth, arcHeight);
-                                }
-                            } else {
-                                // The edges are not uniform, so we have to render each edge independently
-                                // TODO document the issue number which will give us a fast path for rendering
-                                // non-uniform corners, and that we want to implement that instead of createPath2
-                                // below in such cases. (RT-26979)
-                                g.fill(createPath(t, l, b, r, normalize(radii)));
-                            }
-                        }
-                    }
+                        Graphics cacheGraphics = cached.createGraphics();
+                        // Have to move the origin such that when rendering to x=0, we actually end up rendering
+                        // at x=outsets.getLeft(). Otherwise anything rendered to the left of the origin would be lost
+                        // Round up to the nearest pixel
+                        cacheGraphics.translate(outsetsLeft, outsetsTop);
 
-                    // If old != null then that means we were rendering into the "cached" texture, and
-                    // therefore need to reset the graphics and width (because above we had changed
-                    // graphics to point to the cached texture's graphics, and we had changed the
-                    // width to be only big enough for the smallest texture we could save).
-                    if (old != null) {
-                        g = old;
-                        width = oldWidth;
+                        //rendering backgrounds to the cache
+                        renderBackgrounds(cacheGraphics, cacheWidth, cacheHeight);
                     }
+                } else {
+                    // no cache, rendering backgrounds directly to graphics
+                    renderBackgrounds(g, width, height);
                 }
 
                 // cached might not be null if either there was a cached image, or we just created one.
                 // In either case, we need to now render from the cached texture to the graphics
                 if (cached != null) {
-                    final double dstWidth = width + roundUp(outsets.getLeft()) + roundUp(outsets.getRight());
-                    if (cached.getContentWidth() == dstWidth) {
-                        // If the destination width is the same as the content width of the cached image,
-                        // then we can just draw the cached image directly, no need for 3-patch rendering
-                        final float dstX1 = -roundUp(outsets.getLeft());
-                        final float dstY1 = -roundUp(outsets.getTop());
-                        final float dstX2 = (width + roundUp(outsets.getRight()));
-                        final float dstY2 = (height + roundUp(outsets.getBottom()));
+                    final boolean sameWidth = cacheWidth == width;
+                    final boolean sameHeight = cacheHeight == height;
+                    final float dstX1 = -outsetsLeft;
+                    final float dstY1 = -outsetsTop;
+                    final float dstX2 = width + outsetsRight;
+                    final float dstY2 = height + outsetsBottom;
+                    final float srcX1 = 0f;
+                    final float srcY1 = 0f;
+                    final float srcX2 = srcX1 + textureWidth;
+                    final float srcY2 = srcY1 + textureHeight;
 
-                        final float srcX1 = 0f;
-                        final float srcY1 = 0f;
-                        final float srcX2 = srcX1 + textureWidth;
-                        final float srcY2 = srcY1 + textureHeight;
-
+                    if (sameWidth && sameHeight) {
                         g.drawTexture(cached, dstX1, dstY1, dstX2, dstY2, srcX1, srcY1, srcX2, srcY2);
-
-                        if (PulseLogger.PULSE_LOGGING_ENABLED) {
-                            PulseLogger.PULSE_LOGGER.renderIncrementCounter("Cached Region background image used");
-                        }
-                    } else {
-                        // We do 3-patch rendering, because our height is fixed (ie: the same background but at
-                        // different heights will have different cached images)
-                        final float dstX1 = -roundUp(outsets.getLeft());
-                        final float dstY1 = -roundUp(outsets.getTop());
-                        final float dstX2 = (width + roundUp(outsets.getRight()));
-                        final float dstY2 = (height + roundUp(outsets.getBottom()));
-
-                        final float srcX1 = 0f;
-                        final float srcY1 = 0f;
-                        final float srcX2 = srcX1 + textureWidth;
-                        final float srcY2 = srcY1 + textureHeight;
-
-                        final float right = (float) (rightInset + roundUp(outsets.getRight())),
-                        left = (float) (leftInset + roundUp(outsets.getLeft()));
+                    } else if (sameHeight) {
+                        // We do 3-patch rendering fixed height
+                        final float left = (float) (leftInset + outsetsLeft);
+                        final float right = (float) (rightInset + outsetsRight);
 
                         final float dstLeftX = dstX1 + left;
                         final float dstRightX = dstX2 - right;
                         final float srcLeftX = srcX1 + left;
                         final float srcRightX = srcX2 - right;
 
-//                        System.out.println("\noutsets=" + outsets + ", width=" + width + ", height=" + height + ", contentX=" + cached.getContentX() + ", contentY=" + cached.getContentY());
-//                        System.out.println("dstX1=" + dstX1 + ", dstY1=" + dstY1 + ", dstLeftX=" + dstLeftX + ", dstY2=" + dstY2 + ", srcX1=" + srcX1 + ", srcY1=" + srcY1 + ", srcLeftX=" + srcLeftX + ", srcY2=" + srcY2);
-//                        System.out.println("dstLeftX=" + dstLeftX + ", dstY1=" + dstY1 + ", dstRightX=" + dstRightX + ", dstY2=" + dstY2 + ", srcLeftX=" + srcLeftX + ", srcY1=" + srcY1 + ", srcRightX=" + srcRightX + ", srcY2=" + srcY2);
-//                        System.out.println("dstRightX=" + dstRightX + ", dstY1=" + dstY1 + ", dstX2=" + dstX2 + ", dstY2=" + dstY2 + ", srcRightX=" + srcRightX + ", srcY1=" + srcY1 + ", srcX2=" + srcX2 + ", srcY2=" + srcY2);
-
                         // These assertions must hold, or rendering artifacts are highly likely to occur
                         assert dstX1 != dstLeftX;
                         assert dstLeftX != dstRightX;
                         assert dstRightX != dstX2;
 
-                        g.drawTexture(cached, dstX1, dstY1, dstLeftX, dstY2, srcX1, srcY1, srcLeftX, srcY2);
-                        g.drawTexture(cached, dstLeftX, dstY1, dstRightX, dstY2, srcLeftX, srcY1, srcRightX, srcY2);
-                        g.drawTexture(cached, dstRightX, dstY1, dstX2, dstY2, srcRightX, srcY1, srcX2, srcY2);
+                        g.drawTexture3SliceH(cached,
+                                             dstX1, dstY1, dstX2, dstY2,
+                                             srcX1, srcY1, srcX2, srcY2,
+                                             dstLeftX, dstRightX, srcLeftX, srcRightX);
+                    } else if (sameWidth) {
+                        // We do 3-patch rendering fixed width
+                        final float top = (float) (topInset + outsetsTop);
+                        final float bottom = (float) (bottomInset + outsetsBottom);
 
-                        if (PulseLogger.PULSE_LOGGING_ENABLED) {
-                            PulseLogger.PULSE_LOGGER.renderIncrementCounter("Cached Region background image used");
-                        }
+                        final float dstTopY = dstY1 + top;
+                        final float dstBottomY = dstY2 - bottom;
+                        final float srcTopY = srcY1 + top;
+                        final float srcBottomY = srcY2 - bottom;
+
+                        // These assertions must hold, or rendering artifacts are highly likely to occur
+                        assert dstY1 != dstTopY;
+                        assert dstTopY != dstBottomY;
+                        assert dstBottomY != dstY2;
+
+                        g.drawTexture3SliceV(cached,
+                                             dstX1, dstY1, dstX2, dstY2,
+                                             srcX1, srcY1, srcX2, srcY2,
+                                             dstTopY, dstBottomY, srcTopY, srcBottomY);
+                    } else {
+                        // We do 9-patch rendering
+                        final float left = (float) (leftInset + outsetsLeft);
+                        final float top = (float) (topInset + outsetsTop);
+                        final float right = (float) (rightInset + outsetsRight);
+                        final float bottom = (float) (bottomInset + outsetsBottom);
+
+                        final float dstLeftX = dstX1 + left;
+                        final float dstRightX = dstX2 - right;
+                        final float srcLeftX = srcX1 + left;
+                        final float srcRightX = srcX2 - right;
+                        final float dstTopY = dstY1 + top;
+                        final float dstBottomY = dstY2 - bottom;
+                        final float srcTopY = srcY1 + top;
+                        final float srcBottomY = srcY2 - bottom;
+
+                        // These assertions must hold, or rendering artifacts are highly likely to occur
+                        assert dstY1 != dstTopY;
+                        assert dstTopY != dstBottomY;
+                        assert dstBottomY != dstY2;
+                        assert dstX1 != dstLeftX;
+                        assert dstLeftX != dstRightX;
+                        assert dstRightX != dstX2;
+
+                        g.drawTexture9Slice(cached,
+                                            dstX1, dstY1, dstX2, dstY2,
+                                            srcX1, srcY1, srcX2, srcY2,
+                                            dstLeftX, dstTopY, dstRightX, dstBottomY,
+                                            srcLeftX, srcTopY, srcRightX, srcBottomY);
+                    }
+                    if (PulseLogger.PULSE_LOGGING_ENABLED) {
+                        PulseLogger.PULSE_LOGGER.renderIncrementCounter("Cached Region background image used");
                     }
                     cached.unlock();
                 }
@@ -1016,7 +1007,7 @@ public class NGRegion extends NGGroup {
                             } else {
                                 // We do not have uniform radii, so we need to create a path that represents
                                 // the stroke and then draw that.
-                                g.draw(createPath(t, l, b, r, radii));
+                                g.draw(createPath(width, height, t, l, b, r, radii));
                             }
                         }
                     } else if (radii.isUniform() && radius == 0) {
@@ -1249,6 +1240,63 @@ public class NGRegion extends NGGroup {
         super.renderContent(g);
     }
 
+    private void renderBackgrounds(Graphics g, float width, float height) {
+        final List<BackgroundFill> fills = background.getFills();
+        for (int i = 0, max = fills.size(); i < max; i++) {
+            final BackgroundFill fill = fills.get(i);
+            final Insets insets = fill.getInsets();
+            final float t = (float) insets.getTop(),
+                    l = (float) insets.getLeft(),
+                    b = (float) insets.getBottom(),
+                    r = (float) insets.getRight();
+            // w and h is the width and height of the area to be filled (width and height less insets)
+            float w = width - l - r;
+            float h = height - t - b;
+            // Only setup and paint for those areas which have positive width and height. This means, if
+            // the insets are such that the right edge is left of the left edge, then we have a negative
+            // width and will not paint it. TODO we need to document this fact (RT-26924)
+            if (w > 0 && h > 0) {
+                // Could optimize this such that if paint is transparent then we go no further.
+                final Paint paint = getPlatformPaint(fill.getFill());
+                g.setPaint(paint);
+                final CornerRadii radii = fill.getRadii();
+                // This is a workaround for RT-28435 so we use path rasterizer for small radius's We are
+                // keeping old rendering. We do not apply workaround when using Caspian or Embedded
+                if (radii.isUniform() &&
+                        !(!PlatformImpl.isCaspian() && !PlatformUtil.isEmbedded() && radii.getTopLeftHorizontalRadius() > 0 && radii.getTopLeftHorizontalRadius() <= 4)) {
+                    // If the radii is uniform then we know every corner matches, so we can do some
+                    // faster rendering paths.
+                    float tlhr = (float) radii.getTopLeftHorizontalRadius();
+                    float tlvr = (float) radii.getTopLeftVerticalRadius();
+                    if (tlhr == 0 && tlvr == 0) {
+                        // The edges are square, so we can do a simple fill rect
+                        g.fillRect(l, t, w, h);
+                    } else {
+                        // Fix the horizontal and vertical radii if they are percentage based
+                        if (radii.isTopLeftHorizontalRadiusAsPercentage()) tlhr = tlhr * width;
+                        if (radii.isTopLeftVerticalRadiusAsPercentage()) tlvr = tlvr * height;
+                        // The edges are rounded, so we need to compute the arc width and arc height
+                        // and fill a round rect
+                        float arcWidth = tlhr + tlhr;
+                        float arcHeight = tlvr + tlvr;
+                        // If the arc width and arc height are so large as to exceed the width / height of
+                        // the region, then we clamp to the width / height of the region (which will give
+                        // the look of a circle on that corner)
+                        if (arcWidth > w) arcWidth = w;
+                        if (arcHeight > h) arcHeight = h;
+                        g.fillRoundRect(l, t, w, h, arcWidth, arcHeight);
+                    }
+                } else {
+                    // The edges are not uniform, so we have to render each edge independently
+                    // TODO document the issue number which will give us a fast path for rendering
+                    // non-uniform corners, and that we want to implement that instead of createPath2
+                    // below in such cases. (RT-26979)
+                    g.fill(createPath(width, height, t, l, b, r, normalize(radii)));
+                }
+            }
+        }
+    }
+
     private int roundUp(double d) {
         return (d - (int)d) == 0 ? (int) d : (int) (d + 1);
     }
@@ -1451,7 +1499,7 @@ public class NGRegion extends NGGroup {
     }
 
     /** Creates a rounded rectangle path with our width and height, different corner radii, offset with given offsets */
-    private Path2D createPath(float t, float l, float bo, float ro, CornerRadii radii) {
+    private Path2D createPath(float width, float height, float t, float l, float bo, float ro, CornerRadii radii) {
         float r = width - ro;
         float b = height - bo;
         // TODO have to teach this method how to handle vertical radii (RT-26941)

@@ -292,4 +292,14 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     public String getRemoteLayerServerName() {
         return _getRemoteLayerServerName();
     }
+    
+    private native String _getDataDirectory();
+    public String getDataDirectory() {
+        checkEventThread();
+        String baseDirectory = _getDataDirectory();
+        if (baseDirectory == null || baseDirectory.length() == 0) {
+            return super.getDataDirectory();
+        }
+        return baseDirectory + File.separator + name + File.separator;
+    }
 }

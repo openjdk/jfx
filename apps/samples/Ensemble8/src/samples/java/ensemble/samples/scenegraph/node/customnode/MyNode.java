@@ -31,10 +31,10 @@
  */
 package ensemble.samples.scenegraph.node.customnode;
 
-import javafx.scene.Parent;
+import javafx.scene.Group;
 import javafx.scene.control.Label;
 
-public class MyNode extends Parent {
+public class MyNode extends Group {
 
     private Label text;
 

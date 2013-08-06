@@ -237,61 +237,6 @@ public final class QuantumToolkit extends Toolkit {
 
     @Override public boolean init() {
         /*
-         * The below no longer applies with for jfx 8.0 on jdk 8.0. But leaving
-         * the check and comments to avoid breaking jfx running with older
-         * versions of jdk.
-         *
-         * AWT headful trips up glass, and is used in various places throughout
-         * prism, such as J2DFontFactory and BufferedImageTools, but only
-         * required AWT in a headless capacity.
-         *
-         * AWT headful interferes with glass and is used in various places throughout
-         * prism, such as J2DFontFactory and BufferedImageTools, but the only
-         * required AWT is in a headless capacity.
-         *
-         * It is assumed that we don't need AWT headful, and if it is needed
-         * then AWT is already initialized before this property is set.  In that
-         * case the code below is harmless.
-         *
-         * Further Consideration and Dependencies:
-         * - This fix introduces a order dependency in Swing/AWT and FX interop
-         * mode on Mac. Now Swing/AWT must be initialization before FX.
-         *
-         * - On Mac this causes the warning message "Process manager already
-         * initialized -- can't fully enable headless mode."
-         *
-         * - On Windows AWT headful does not cause problems.
-         *
-         * - This Mac specific fix should be removed as soon as possible.
-         * Once RT-12452 has been implemented, then we should be able to do
-         * just that.  Introducing a long term restriction on Mac only, is worse
-         * then adding universal platform restriction.
-         */
-        if (PlatformUtil.isMac()) {
-            String version = AccessController.doPrivileged(new PrivilegedAction<String>() {
-                @Override public String run() {
-                    return System.getProperty("os.version");
-                }
-            });
-            if (version.startsWith("10.4") || version.startsWith("10.5")) {
-                throw new RuntimeException("JavaFX requires Mac OSX 10.6 or higher to run");
-            }
-            String javaVersion = AccessController.doPrivileged(new PrivilegedAction<String>() {
-                @Override public String run() {
-                    return System.getProperty("java.version");
-                }
-            });
-            // We only support 1.6 and higher no need to check older versions
-            if (javaVersion.startsWith("1.6") || javaVersion.startsWith("1.7")) {
-                AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                    @Override public Void run() {
-                        System.setProperty("java.awt.headless", "true");
-                        return null;
-                    }
-                });
-            }
-        }
-        /*
          * Glass Mac, X11 need Application.setDeviceDetails to happen prior to Glass Application.Run
          */
         renderer = QuantumRenderer.getInstance();
@@ -571,8 +516,11 @@ public final class QuantumToolkit extends Toolkit {
     @Override public TKStage createTKStage(StageStyle stageStyle,
             boolean primary, Modality modality, TKStage owner, boolean rtl, AccessControlContext acc) {
         assertToolkitRunning();
-        WindowStage stage = new WindowStage(stageStyle, primary, modality, owner);
+        WindowStage stage = new WindowStage(stageStyle, modality, owner);
         stage.setSecurityContext(acc);
+        if (primary) {
+            stage.setIsPrimary();
+        }
         stage.setRTL(rtl);
         stage.init(systemMenu);
         return stage;
@@ -618,11 +566,13 @@ public final class QuantumToolkit extends Toolkit {
         eventLoop.leave(rval);
     }
 
-    @Override public TKStage createTKPopupStage(StageStyle stageStyle, TKStage owner,
+    @Override public TKStage createTKPopupStage(TKStage owner,
                                                 AccessControlContext acc) {
         assertToolkitRunning();
-        WindowStage stage = new PopupStage(owner).init(systemMenu);
+        WindowStage stage = new WindowStage(StageStyle.TRANSPARENT, null, owner);
         stage.setSecurityContext(acc);
+        stage.setIsPopup();
+        stage.init(systemMenu);
         return stage;
     }
 

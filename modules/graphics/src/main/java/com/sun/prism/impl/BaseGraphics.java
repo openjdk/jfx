@@ -402,6 +402,165 @@ public abstract class BaseGraphics implements RectShadowGraphics {
                                           tx1, ty1, tx2, ty2);
     }
 
+    @Override
+    public void drawTexture3SliceH(Texture tex,
+                                   float dx1, float dy1, float dx2, float dy2,
+                                   float sx1, float sy1, float sx2, float sy2,
+                                   float dh1, float dh2, float sh1, float sh2)
+    {
+        BaseTransform xform = isSimpleTranslate ? IDENT : getTransformNoClone();
+        PixelFormat format = tex.getPixelFormat();
+        if (format == PixelFormat.BYTE_ALPHA) {
+            // Note that we treat this as a paint operation, using the
+            // given texture as the alpha mask; perhaps it would be better
+            // to treat this as a separate operation from drawTexture(), but
+            // overloading drawTexture() seems like an equally valid option.
+            context.validatePaintOp(this, xform, tex, dx1, dy1, dx2-dx1, dy2-dy1);
+        } else {
+            context.validateTextureOp(this, xform, tex, format);
+        }
+        if (isSimpleTranslate) {
+            // The validatePaintOp bounds above needed to use the original
+            // coordinates (prior to any translation below) for relative
+            // paint processing.
+            dx1 += transX;
+            dy1 += transY;
+            dx2 += transX;
+            dy2 += transY;
+            dh1 += transX;
+         // dv1 += transY;
+            dh2 += transX;
+         // dv2 += transY;
+        }
+
+        float pw = tex.getPhysicalWidth();
+        float ph = tex.getPhysicalHeight();
+        float cx1 = tex.getContentX();
+        float cy1 = tex.getContentY();
+        float tx1 = (cx1 + sx1) / pw;
+        float ty1 = (cy1 + sy1) / ph;
+        float tx2 = (cx1 + sx2) / pw;
+        float ty2 = (cy1 + sy2) / ph;
+        float th1 = (cx1 + sh1) / pw;
+     // float tv1 = (cy1 + sv1) / ph;
+        float th2 = (cx1 + sh2) / pw;
+     // float tv2 = (cy1 + sv2) / ph;
+
+        VertexBuffer vb = context.getVertexBuffer();
+        vb.addQuad(dx1, dy1, dh1, dy2, tx1, ty1, th1, ty2);
+        vb.addQuad(dh1, dy1, dh2, dy2, th1, ty1, th2, ty2);
+        vb.addQuad(dh2, dy1, dx2, dy2, th2, ty1, tx2, ty2);
+    }
+
+    @Override
+    public void drawTexture3SliceV(Texture tex,
+                                   float dx1, float dy1, float dx2, float dy2,
+                                   float sx1, float sy1, float sx2, float sy2,
+                                   float dv1, float dv2, float sv1, float sv2)
+    {
+        BaseTransform xform = isSimpleTranslate ? IDENT : getTransformNoClone();
+        PixelFormat format = tex.getPixelFormat();
+        if (format == PixelFormat.BYTE_ALPHA) {
+            // Note that we treat this as a paint operation, using the
+            // given texture as the alpha mask; perhaps it would be better
+            // to treat this as a separate operation from drawTexture(), but
+            // overloading drawTexture() seems like an equally valid option.
+            context.validatePaintOp(this, xform, tex, dx1, dy1, dx2-dx1, dy2-dy1);
+        } else {
+            context.validateTextureOp(this, xform, tex, format);
+        }
+        if (isSimpleTranslate) {
+            // The validatePaintOp bounds above needed to use the original
+            // coordinates (prior to any translation below) for relative
+            // paint processing.
+            dx1 += transX;
+            dy1 += transY;
+            dx2 += transX;
+            dy2 += transY;
+         // dh1 += transX;
+            dv1 += transY;
+         // dh2 += transX;
+            dv2 += transY;
+        }
+
+        float pw = tex.getPhysicalWidth();
+        float ph = tex.getPhysicalHeight();
+        float cx1 = tex.getContentX();
+        float cy1 = tex.getContentY();
+        float tx1 = (cx1 + sx1) / pw;
+        float ty1 = (cy1 + sy1) / ph;
+        float tx2 = (cx1 + sx2) / pw;
+        float ty2 = (cy1 + sy2) / ph;
+     // float th1 = (cx1 + sh1) / pw;
+        float tv1 = (cy1 + sv1) / ph;
+     // float th2 = (cx1 + sh2) / pw;
+        float tv2 = (cy1 + sv2) / ph;
+
+        VertexBuffer vb = context.getVertexBuffer();
+        vb.addQuad(dx1, dy1, dx2, dv1, tx1, ty1, tx2, tv1);
+        vb.addQuad(dx1, dv1, dx2, dv2, tx1, tv1, tx2, tv2);
+        vb.addQuad(dx1, dv2, dx2, dy2, tx1, tv2, tx2, ty2);
+    }
+
+    @Override
+    public void drawTexture9Slice(Texture tex,
+                                  float dx1, float dy1, float dx2, float dy2,
+                                  float sx1, float sy1, float sx2, float sy2,
+                                  float dh1, float dv1, float dh2, float dv2,
+                                  float sh1, float sv1, float sh2, float sv2)
+    {
+        BaseTransform xform = isSimpleTranslate ? IDENT : getTransformNoClone();
+        PixelFormat format = tex.getPixelFormat();
+        if (format == PixelFormat.BYTE_ALPHA) {
+            // Note that we treat this as a paint operation, using the
+            // given texture as the alpha mask; perhaps it would be better
+            // to treat this as a separate operation from drawTexture(), but
+            // overloading drawTexture() seems like an equally valid option.
+            context.validatePaintOp(this, xform, tex, dx1, dy1, dx2-dx1, dy2-dy1);
+        } else {
+            context.validateTextureOp(this, xform, tex, format);
+        }
+        if (isSimpleTranslate) {
+            // The validatePaintOp bounds above needed to use the original
+            // coordinates (prior to any translation below) for relative
+            // paint processing.
+            dx1 += transX;
+            dy1 += transY;
+            dx2 += transX;
+            dy2 += transY;
+            dh1 += transX;
+            dv1 += transY;
+            dh2 += transX;
+            dv2 += transY;
+        }
+
+        float pw = tex.getPhysicalWidth();
+        float ph = tex.getPhysicalHeight();
+        float cx1 = tex.getContentX();
+        float cy1 = tex.getContentY();
+        float tx1 = (cx1 + sx1) / pw;
+        float ty1 = (cy1 + sy1) / ph;
+        float tx2 = (cx1 + sx2) / pw;
+        float ty2 = (cy1 + sy2) / ph;
+        float th1 = (cx1 + sh1) / pw;
+        float tv1 = (cy1 + sv1) / ph;
+        float th2 = (cx1 + sh2) / pw;
+        float tv2 = (cy1 + sv2) / ph;
+
+        VertexBuffer vb = context.getVertexBuffer();
+        vb.addQuad(dx1, dy1, dh1, dv1, tx1, ty1, th1, tv1);
+        vb.addQuad(dh1, dy1, dh2, dv1, th1, ty1, th2, tv1);
+        vb.addQuad(dh2, dy1, dx2, dv1, th2, ty1, tx2, tv1);
+
+        vb.addQuad(dx1, dv1, dh1, dv2, tx1, tv1, th1, tv2);
+        vb.addQuad(dh1, dv1, dh2, dv2, th1, tv1, th2, tv2);
+        vb.addQuad(dh2, dv1, dx2, dv2, th2, tv1, tx2, tv2);
+
+        vb.addQuad(dx1, dv2, dh1, dy2, tx1, tv2, th1, ty2);
+        vb.addQuad(dh1, dv2, dh2, dy2, th1, tv2, th2, ty2);
+        vb.addQuad(dh2, dv2, dx2, dy2, th2, tv2, tx2, ty2);
+    }
+
     public void drawTextureVO(Texture tex,
                               float topopacity, float botopacity,
                               float dx1, float dy1, float dx2, float dy2,

@@ -124,7 +124,7 @@ public class StubToolkit extends Toolkit {
     }
 
     @Override
-    public TKStage createTKPopupStage(StageStyle stageStyle, TKStage owner, AccessControlContext acc) {
+    public TKStage createTKPopupStage(TKStage owner, AccessControlContext acc) {
         return new StubPopupStage();
     }
 

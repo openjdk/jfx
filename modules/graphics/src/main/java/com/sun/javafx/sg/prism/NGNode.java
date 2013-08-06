@@ -1548,6 +1548,9 @@ public abstract class NGNode {
             }
         }
 
+        // save current depth test state
+        boolean prevDepthTest = g.isDepthTest();
+
         // Apply Depth test for this node
         // (note that this will only be used if we have a depth buffer for the
         // surface to which we are rendering)
@@ -1604,6 +1607,9 @@ public abstract class NGNode {
                          myx, myy, myz, myt,
                          mzx, mzy, mzz, mzt);
         
+        // restore previous depth test state
+        g.setDepthTest(prevDepthTest);
+
         if (PULSE_LOGGING_ENABLED) PULSE_LOGGER.renderIncrementCounter("Nodes rendered");
     }
 

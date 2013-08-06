@@ -27,6 +27,7 @@ package com.sun.javafx.image;
 
 import com.sun.javafx.image.impl.ByteBgra;
 import com.sun.javafx.image.impl.ByteBgraPre;
+import com.sun.javafx.image.impl.ByteIndexed;
 import com.sun.javafx.image.impl.ByteRgb;
 import com.sun.javafx.image.impl.General;
 import com.sun.javafx.image.impl.IntArgb;
@@ -95,6 +96,8 @@ public class PixelUtils {
                 return ByteBgraPre.getter;
             case BYTE_RGB:
                 return ByteRgb.getter;
+            case BYTE_INDEXED:
+                return ByteIndexed.createGetter(pf);
             case INT_ARGB:
             case INT_ARGB_PRE:
                 // Impossible
@@ -219,6 +222,11 @@ public class PixelUtils {
             } else if (dst ==       ByteBgraPre.setter) {
                 return    ByteRgb.ToByteBgraPreConverter;
             }
+        } else if (src instanceof ByteIndexed.Getter) {
+            if (dst == ByteBgra.setter || dst == ByteBgraPre.setter) {
+                return ByteIndexed.createToByteBgraAny((BytePixelGetter) src,
+                                                       (BytePixelSetter) dst);
+            }
         }
         return General.create((BytePixelGetter) src, (BytePixelSetter) dst);
     }
@@ -243,6 +251,11 @@ public class PixelUtils {
                 return    ByteRgb.ToIntArgbConverter;
             } else if (dst ==       IntArgbPre.setter) {
                 return    ByteRgb.ToIntArgbPreConverter;
+            }
+        } else if (src instanceof ByteIndexed.Getter) {
+            if (dst == IntArgb.setter || dst == IntArgbPre.setter) {
+                return ByteIndexed.createToIntArgbAny((BytePixelGetter) src,
+                                                      (IntPixelSetter)  dst);
             }
         }
         return General.create((BytePixelGetter) src, (IntPixelSetter) dst);

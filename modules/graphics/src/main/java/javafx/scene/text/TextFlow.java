@@ -29,18 +29,21 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.layout.Pane;
-
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.CssMetaData;
+
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.geom.BaseBounds;
@@ -51,6 +54,7 @@ import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.scene.text.TextSpan;
 import com.sun.javafx.tk.Toolkit;
+
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
@@ -62,19 +66,19 @@ import javafx.css.StyleableProperty;
  * A single {@link Text} node can span over several lines due to wrapping and
  * the visual location of {@link Text} node can differ from the logical location
  * due to bidi reordering.
- * 
+ *
  * <p>
- * Any other Node, rather than Text, will be treated as embedded object in the 
+ * Any other Node, rather than Text, will be treated as embedded object in the
  * text layout. It will be inserted in the content using its preferred width,
  * height, and baseline offset.
- * 
+ *
  * <p>
  * When a {@link Text} node is inside of a TextFlow some its properties are ignored.
  * For example, the x and y properties of the {@link Text} node are ignored since
  * the location of the node is determined by the parent. Likewise, the wrapping
  * width in the {@link Text} node is ignored since the width used for wrapping
  * is the TextFlow's width.
- * 
+ *
  * <p>
  * The wrapping width of the layout is determined by the region's current width.
  * It can be specified by the application by setting the textflow's preferred
@@ -151,16 +155,36 @@ public class TextFlow extends Pane {
      */
     public TextFlow() {
         super();
+        effectiveNodeOrientationProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable observable) {
+                checkOrientation();
+            }
+        });
     }
 
     /**
      * Creates a TextFlow layout with the given children.
-     * 
+     *
      * @param children children.
      */
     public TextFlow(Node... children) {
         this();
         getChildren().addAll(children);
+    }
+
+    private void checkOrientation() {
+        NodeOrientation orientation = getEffectiveNodeOrientation();
+        boolean rtl =  orientation == NodeOrientation.RIGHT_TO_LEFT;
+        int dir = rtl ? TextLayout.DIRECTION_RTL : TextLayout.DIRECTION_LTR;
+        TextLayout layout = getTextLayout();
+        if (layout.setDirection(dir)) {
+            requestLayout();
+        }
+    }
+
+    @Override
+    public boolean usesMirroring() {
+        return false;
     }
 
     @Override protected void setWidth(double value) {
@@ -229,7 +253,7 @@ public class TextFlow extends Pane {
         * The content does not need to set when:
         *  the width/height changes in the region
         *  the insets changes in the region
-        * 
+        *
         * Unfortunately, it is not possible to know what change invoked request
         * layout. The solution is to always reset the content in the text
         * layout and rely on it to preserve itself if the new content equals to
@@ -423,7 +447,7 @@ public class TextFlow extends Pane {
       * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
-         
+
          private static final
              CssMetaData<TextFlow, TextAlignment> TEXT_ALIGNMENT =
                  new CssMetaData<TextFlow,TextAlignment>("-fx-text-alignment",
@@ -457,7 +481,7 @@ public class TextFlow extends Pane {
          static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
                 new ArrayList<CssMetaData<? extends Styleable, ?>>(Pane.getClassCssMetaData());
-            styleables.add(TEXT_ALIGNMENT); 
+            styleables.add(TEXT_ALIGNMENT);
             styleables.add(LINE_SPACING);
             STYLEABLES = Collections.unmodifiableList(styleables);
          }
@@ -471,12 +495,6 @@ public class TextFlow extends Pane {
         return StyleableProperties.STYLEABLES;
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     */
-    
-    
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();

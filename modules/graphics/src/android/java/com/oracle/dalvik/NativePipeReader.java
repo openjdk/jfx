@@ -65,6 +65,8 @@ public class NativePipeReader extends Thread {
     private Handler handler;
 
     public NativePipeReader(Client client) {
+        super("NativePipeReader");
+        setDaemon(true);
         this.client = client;
         this.handler = new Handler();    
     }

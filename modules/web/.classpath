@@ -3,11 +3,13 @@
   <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
   <classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
   <classpathentry kind="src" exported="true" path="src/main/java"/>
+  <!--
   <classpathentry kind="src" exported="true" path="src/test/java">
   <attributes>
       <attribute name="optional" value="true"/>
     </attributes>
   </classpathentry>
+  -->
   <classpathentry kind="src" exported="true" path="src/main/resources">
   <attributes>
       <attribute name="optional" value="true"/>
@@ -23,16 +25,11 @@
       <attribute name="optional" value="true"/>
     </attributes>
   </classpathentry>
-  <classpathentry kind="src" exported="true" path="/controls"/>
-  <classpathentry kind="src" exported="true" path="/media"/>
   <classpathentry exported="true" kind="src" path="/javafx-ui-desktop">
     <attributes>
       <attribute name="optional" value="true"/>
     </attributes>
   </classpathentry>
-  <classpathentry kind="lib" exported="true" path="../../../caches/sdk/rt/lib/ext/jfxrt.jar">
-    <attributes>
-      <attribute name="optional" value="true"/>
-    </attributes>
-  </classpathentry>
+  <classpathentry kind="src" exported="true" path="/controls"/>
+  <classpathentry kind="src" exported="true" path="/media"/>
 </classpath>

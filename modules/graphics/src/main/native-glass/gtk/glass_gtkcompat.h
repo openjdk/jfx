@@ -112,6 +112,7 @@ GdkDisplay * glass_gdk_window_get_display(GdkWindow * gdkWindow);
 
 gboolean glass_gdk_mouse_devices_grab(GdkWindow * gdkWindow);
 gboolean glass_gdk_mouse_devices_grab_with_cursor(GdkWindow * gdkWindow, GdkCursor *cursor);
+gboolean glass_gdk_mouse_devices_grab_with_cursor(GdkWindow * gdkWindow, GdkCursor *cursor, gboolean owner_events);
 void glass_gdk_mouse_devices_ungrab();
 
 void glass_gdk_master_pointer_grab(GdkWindow *window, GdkCursor *cursor);

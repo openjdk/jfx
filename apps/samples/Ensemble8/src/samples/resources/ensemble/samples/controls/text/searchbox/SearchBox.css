@@ -34,7 +34,7 @@
     -fx-background-insets: 1;
     -fx-background-radius: 15;
     -fx-padding: -9 5 -11 0;
-    -fx-border-image-source: url("/ensemble/samples/shared-resources/search-box.png");
+    -fx-border-image-source: url("../../../shared-resources/search-box.png");
     -fx-border-image-slice: 12 12 12 22 fill;
     -fx-border-image-width: 12 12 12 22;
     -fx-border-image-repeat: stretch; 
@@ -48,8 +48,8 @@
 }
 .search-box .button {
     -fx-background-color: null;
-    -fx-background-image: url("/ensemble/samples/shared-resources/search-clear.png");
+    -fx-background-image: url("../../../shared-resources/search-clear.png");
 }
 .search-box .button:hover {
-    -fx-background-image: url("/ensemble/samples/shared-resources/search-clear-over.png");
+    -fx-background-image: url("../../../shared-resources/search-clear-over.png");
 }
