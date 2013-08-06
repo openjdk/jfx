@@ -213,7 +213,6 @@
                _Java_com_sun_webkit_dom_DOMWindowImpl_atobImpl
                _Java_com_sun_webkit_dom_DOMWindowImpl_blurImpl
                _Java_com_sun_webkit_dom_DOMWindowImpl_btoaImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_cancelAnimationFrameImpl
                _Java_com_sun_webkit_dom_DOMWindowImpl_captureEventsImpl
                _Java_com_sun_webkit_dom_DOMWindowImpl_clearIntervalImpl
                _Java_com_sun_webkit_dom_DOMWindowImpl_clearTimeoutImpl
@@ -407,8 +406,6 @@
                _Java_com_sun_webkit_dom_DOMWindowImpl_setOnwebkittransitionendImpl
                _Java_com_sun_webkit_dom_DOMWindowImpl_setStatusImpl
                _Java_com_sun_webkit_dom_DOMWindowImpl_stopImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_webkitCancelAnimationFrameImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_webkitCancelRequestAnimationFrameImpl
                _Java_com_sun_webkit_dom_DocumentFragmentImpl_querySelectorAllImpl
                _Java_com_sun_webkit_dom_DocumentFragmentImpl_querySelectorImpl
                _Java_com_sun_webkit_dom_DocumentImpl_adoptNodeImpl
