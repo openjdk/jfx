@@ -176,4 +176,27 @@ public class ListViewMouseInputTest {
         assertEquals(1, rt30394_count);
         assertTrue(fm.isFocused(0));
     }
+
+    @Test public void test_rt32119() {
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearSelection();
+
+        // select rows 2, 3, and 4
+        VirtualFlowTestUtils.clickOnRow(listView, 2);
+        VirtualFlowTestUtils.clickOnRow(listView, 4, KeyModifier.SHIFT);
+        assertFalse(sm.isSelected(1));
+        assertTrue(sm.isSelected(2));
+        assertTrue(sm.isSelected(3));
+        assertTrue(sm.isSelected(4));
+        assertFalse(sm.isSelected(5));
+
+        // now shift click on the 2nd row - this should make only row 2 be
+        // selected. The bug is that row 4 remains selected also.
+        VirtualFlowTestUtils.clickOnRow(listView, 2, KeyModifier.SHIFT);
+        assertFalse(sm.isSelected(1));
+        assertTrue(sm.isSelected(2));
+        assertFalse(sm.isSelected(3));
+        assertFalse(sm.isSelected(4));
+        assertFalse(sm.isSelected(5));
+    }
 }

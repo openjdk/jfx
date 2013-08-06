@@ -35,6 +35,8 @@ import javafx.scene.control.TablePositionBase;
 import javafx.scene.control.TableSelectionModel;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import com.sun.javafx.application.PlatformImpl;
@@ -261,7 +263,10 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
                             }
                         }
                     } else {
-                        List<Integer> selectedIndices = sm.getSelectedIndices();
+                        // To prevent RT-32119, we make a copy of the selected indices
+                        // list first, so that we are not iterating and modifying it
+                        // concurrently.
+                        List<Integer> selectedIndices = new ArrayList<>(sm.getSelectedIndices());
                         for (int i = 0, max = selectedIndices.size(); i < max; i++) {
                             int selectedIndex = selectedIndices.get(i);
                             if (selectedIndex < minRow || selectedIndex > maxRow) {
