@@ -110,7 +110,7 @@ import com.sun.javafx.scene.control.skin.TableViewSkinBase;
  * <p>Note that TableView is intended to be used to visualize data - it is not
  * intended to be used for laying out your user interface. If you want to lay
  * your user interface out in a grid-like fashion, consider the 
- * {@link GridPane} layout.</p>
+ * {@link javafx.scene.layout.GridPane} layout instead.</p>
  *
  * <h2>Creating a TableView</h2>
  *
@@ -249,6 +249,38 @@ import com.sun.javafx.scene.control.skin.TableViewSkinBase;
  * 
  * <p>See the {@link Cell} class documentation for a more complete
  * description of how to write custom Cells.
+ *
+ * <h3>Sorting</h3>
+ * <p>Prior to JavaFX 8.0, the TableView control would treat the
+ * {@link #getItems() items} list as the view model, meaning that any changes to
+ * the list would be immediately reflected visually. TableView would also modify
+ * the order of this list directly when a user initiated a sort. This meant that
+ * (again, prior to JavaFX 8.0) it was not possible to have the TableView return
+ * to an unsorted state (after iterating through ascending and descending
+ * orders).</p>
+ *
+ * <p>Starting with JavaFX 8.0 (and the introduction of {@link SortedList}), it
+ * is now possible to have the collection return to the unsorted state when
+ * there are no columns as part of the TableView
+ * {@link #getSortOrder() sort order}. To do this, you must create a SortedList
+ * instance, and bind its
+ * {@link javafx.collections.transformation.SortedList#comparatorProperty() comparator}
+ * property to the TableView {@link #comparatorProperty() comparator} property,
+ * list so:</p>
+ *
+ * <pre>
+ * {@code
+ * // create a SortedList based on the provided ObservableList
+ * SortedList sortedList = new SortedList(FXCollections.observableArrayList(2, 1, 3));
+ *
+ * // create a TableView with the sorted list set as the items it will show
+ * final TableView<Integer> tableView = new TableView<>(sortedList);
+ *
+ * // bind the sortedList comparator to the TableView comparator
+ * sortedList.comparatorProperty().bind(tableView.comparatorProperty());
+ *
+ * // Don't forget to define columns!
+ * }</pre>
  *
  * @see TableColumn
  * @see TablePosition
