@@ -32,6 +32,7 @@ import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
@@ -43,6 +44,7 @@ import javafx.scene.Node;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.TitledPane;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
@@ -65,7 +67,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
     public static final Duration TRANSITION_DURATION = new Duration(350.0);
 
     private final TitleRegion titleRegion;
-    private final ContentContainer contentContainer;
+    private final StackPane contentContainer;
     private final Content contentRegion;
     private Timeline timeline;
     private double transitionStartValue;
@@ -84,8 +86,18 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
         titleRegion = new TitleRegion();
 
         contentRegion = new Content(getSkinnable().getContent());
-        contentContainer = new ContentContainer();
-        contentContainer.getChildren().setAll(contentRegion);
+        contentContainer = new StackPane() {
+            {
+                getStyleClass().setAll("content");
+
+                // RT-20266: We want to align the content container so the bottom of the content
+                // is at the bottom of the title region.  If we do not do this the
+                // content will be center aligned.
+                setAlignment(Pos.BOTTOM_CENTER);
+
+                getChildren().setAll(contentRegion);
+            }
+        };
 
         if (titledPane.isExpanded()) {
             setTransition(1.0f);
@@ -179,19 +191,9 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
     private double getTransition() { return transition == null ? 0.0 : transition.get(); }
     private DoubleProperty transitionProperty() {
         if (transition == null) {
-            transition = new DoublePropertyBase() {
+            transition = new SimpleDoubleProperty(this, "transition", 0.0) {
                 @Override protected void invalidated() {
-                    getSkinnable().requestLayout();
-                }
-
-                @Override
-                public Object getBean() {
-                    return TitledPaneSkin.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "transition";
+                    contentContainer.requestLayout();
                 }
             };
         }
@@ -213,7 +215,6 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             w, headerHeight, 0, HPos.LEFT, VPos.CENTER);
 
         // content
-        double contentWidth = w;
         double contentHeight = h - headerHeight;
         if (isInsideAccordion()) {
             if (prefHeightFromAccordion != 0) {
@@ -221,11 +222,8 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             }
         }
 
-        y = y + snapSize(headerHeight) - (contentHeight * (1 - getTransition()));
-        double clipY = contentHeight * (1 - getTransition());
-        ((Rectangle)contentContainer.getClip()).setY(clipY);
-
-        contentContainer.resize(contentWidth, contentHeight);
+        y += snapSize(headerHeight);
+        contentContainer.resize(w, contentHeight);
         positionInArea(contentContainer, x, y,
             w, contentHeight, /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
     }
@@ -566,8 +564,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             return content;
         }
 
-        @Override
-        public void onTraverse(Node node, Bounds bounds) {
+        @Override public void onTraverse(Node node, Bounds bounds) {
             int index = engine.registeredNodes.indexOf(node);
 
             if (index == -1 && direction.equals(Direction.PREVIOUS)) {
@@ -580,31 +577,6 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
                     new TraversalEngine(getSkinnable(), false).trav(getSkinnable().getParent(), Direction.NEXT);
                 }
             }
-        }
-    }
-
-    static class ContentContainer extends StackPane {
-        private Rectangle clipRect;
-
-        public ContentContainer() {
-            getStyleClass().setAll("content");
-            clipRect = new Rectangle();
-            setClip(clipRect);
-
-            // RT-20266: We want to align the content container so the bottom of the content
-            // is at the bottom of the title region.  If we do not do this the
-            // content will be center aligned.
-            setAlignment(Pos.BOTTOM_CENTER);
-        }
-
-        @Override protected void setWidth(double value) {
-            super.setWidth(value);
-            clipRect.setWidth(value);
-        }
-
-        @Override protected void setHeight(double value) {
-            super.setHeight(value);
-            clipRect.setHeight(value);
         }
     }
 }
