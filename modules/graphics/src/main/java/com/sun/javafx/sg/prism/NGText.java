@@ -306,7 +306,7 @@ public class NGText extends NGShape {
             }
             y -= lineBounds.getMinY();
 
-            if ((op & TEXT) != 0) {
+            if ((op & TEXT) != 0 && run.getGlyphCount() > 0) {
                 if ((op & FILL) != 0) {
                     int start = run.getStart();
                     g.drawString(run, strike, x, y,
