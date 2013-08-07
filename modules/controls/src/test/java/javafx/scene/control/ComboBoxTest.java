@@ -55,6 +55,7 @@ import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.stage.Stage;
@@ -1056,5 +1057,30 @@ public class ComboBoxTest {
 
         // test size
         assertEquals(widthBefore, comboBox.getWidth(), 0.00);
+    }
+
+    @Test public void test_rt32139() {
+        final ObservableList<String> items =
+                FXCollections.observableArrayList("Good value", "Bad value");
+
+        final ComboBox<String> comboBox = new ComboBox<>(items);
+        comboBox.getSelectionModel().select(0);
+
+        comboBox.getSelectionModel().selectedIndexProperty().addListener(new ChangeListener<Number>() {
+            @Override public void changed(ObservableValue<? extends Number> ov, Number oldIdx, Number newIdx) {
+                if (newIdx.intValue() != 0) {
+                    comboBox.getSelectionModel().select(0);
+                }
+            }
+        });
+
+        StageLoader stageLoader = new StageLoader(comboBox);
+        stageLoader.getStage().show();
+
+        try {
+            comboBox.getSelectionModel().select(1);
+        } catch (StackOverflowError e) {
+            fail("Stack overflow should not happen here");
+        }
     }
 }

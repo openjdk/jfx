@@ -33,6 +33,8 @@ import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import com.sun.javafx.application.PlatformImpl;
@@ -230,8 +232,11 @@ public class ListCellBehavior<T> extends CellBehaviorBase<ListCell<T>> {
 
                     // and then perform the selection.
                     // We do this by deselecting the elements that are not in
-                    // range, and then selecting all elements that are in range
-                    List<Integer> selectedIndices = sm.getSelectedIndices();
+                    // range, and then selecting all elements that are in range.
+                    // To prevent RT-32119, we make a copy of the selected indices
+                    // list first, so that we are not iterating and modifying it
+                    // concurrently.
+                    List<Integer> selectedIndices = new ArrayList<>(sm.getSelectedIndices());
                     for (int i = 0, max = selectedIndices.size(); i < max; i++) {
                         int selectedIndex = selectedIndices.get(i);
                         if (selectedIndex < minRow || selectedIndex > maxRow) {
