@@ -394,9 +394,14 @@ public class TableView<S> extends Control {
                     return comparatorsBound;
                 }
 
+                Comparator comparator = table.getComparator();
+                if (comparator == null) {
+                    return true;
+                }
+
                 // otherwise we attempt to do a manual sort, and if successful
                 // we return true
-                FXCollections.sort(itemsList, table.getComparator());
+                FXCollections.sort(itemsList, comparator);
                 return true;
             } catch (UnsupportedOperationException e) {
                 // TODO might need to support other exception types including:
