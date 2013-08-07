@@ -2054,7 +2054,7 @@ project(":web") {
         dependencies {
             compile project(":base"), project(":graphics"), project(":controls")
             webkit group: "com.sun.webkit", name: "webview-deps",
-                   version: "1.0", classifier: "$platform", ext: "zip"
+                   version: "1.1", classifier: "$platform", ext: "zip"
         }
     }
 
