@@ -218,7 +218,9 @@ public abstract class SingleSelectionModel<T> extends SelectionModel<T> {
             // no-op: the current selection isn't in the underlying data model - 
             // we should keep the selected item as the new index is -1
         } else {
-            setSelectedItem(getModelItem(newIndex));
+            // we don't use newIndex here, to prevent RT-32139 (which has a unit
+            // test developed to prevent regressions in the future)
+            setSelectedItem(getModelItem(getSelectedIndex()));
         }
     }    
 }
