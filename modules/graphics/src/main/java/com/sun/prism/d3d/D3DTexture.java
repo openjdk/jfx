@@ -58,7 +58,7 @@ class D3DTexture extends BaseTexture<D3DTextureResource>
                                                         format)),
               format, wrapMode,
               physicalWidth, physicalHeight,
-              0, 0, contentWidth, contentHeight);
+              0, 0, contentWidth, contentHeight, physicalWidth, physicalHeight);
     }
 
     D3DTexture(D3DContext context, PixelFormat format, WrapMode wrapMode,
@@ -72,7 +72,8 @@ class D3DTexture extends BaseTexture<D3DTextureResource>
                                                         format)),
               format, wrapMode,
               physicalWidth, physicalHeight,
-              contentX, contentY, contentWidth, contentHeight);
+              contentX, contentY, contentWidth, contentHeight, 
+              physicalWidth, physicalHeight);
     }
 
     D3DTexture(D3DTexture sharedTex, WrapMode altMode) {

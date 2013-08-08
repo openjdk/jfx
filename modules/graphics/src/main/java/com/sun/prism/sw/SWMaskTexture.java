@@ -100,4 +100,24 @@ public class SWMaskTexture extends SWTexture {
     Texture createSharedLockedTexture(WrapMode altMode) {
         return new SWMaskTexture(this, altMode);
     }
+
+    @Override
+    public int getMaxContentWidth() {
+        return getContentWidth();
+    }
+
+    @Override
+    public int getMaxContentHeight() {
+        return getContentHeight();
+    }
+
+    @Override
+    public void setContentWidth(int contentWidth) {
+        throw new UnsupportedOperationException("Not supported.");
+    }
+
+    @Override
+    public void setContentHeight(int contentHeight) {
+        throw new UnsupportedOperationException("Not supportedt.");
+    }
 }

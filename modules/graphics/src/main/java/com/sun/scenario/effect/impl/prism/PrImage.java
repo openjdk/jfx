@@ -74,6 +74,22 @@ public class PrImage implements Filterable {
     public float getPixelScale() {
         return image.getPixelScale();
     }
+    
+    public int getMaxContentWidth() {
+        return image.getWidth();
+    }
+
+    public int getMaxContentHeight() {
+        return image.getHeight();
+    }
+
+    public void setContentWidth(int contentW) {
+        throw new UnsupportedOperationException("Not supported.");
+    }
+
+    public void setContentHeight(int contentH) {
+        throw new UnsupportedOperationException("Not supported");
+    }
 
     public void lock() {
     }

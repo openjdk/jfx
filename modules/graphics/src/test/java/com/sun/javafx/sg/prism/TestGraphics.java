@@ -235,6 +235,10 @@ public class TestGraphics extends BaseGraphics {
                 @Override public void contentsNotUseful() { }
                 @Override public void setOpaque(boolean opaque) { }
                 @Override public boolean isAntiAliasing() { return false; }
+                @Override public int getMaxContentWidth() { return getPhysicalWidth(); }
+                @Override public int getMaxContentHeight() { return getPhysicalHeight(); }
+                @Override public void setContentWidth(int contentWidth) { }
+                @Override public void setContentHeight(int contentHeight) { }
             };
         }
         @Override public Presentable createPresentable(PresentableState pstate) { return null; }
