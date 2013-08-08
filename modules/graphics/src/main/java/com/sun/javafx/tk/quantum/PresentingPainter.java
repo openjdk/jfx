@@ -65,9 +65,9 @@ final class PresentingPainter extends ViewPainter {
             
             if (factory == null) {
                 factory = GraphicsPipeline.getDefaultResourceFactory();
-                if (factory == null || !factory.isDeviceReady()) {
-                    return;
-                }
+            }
+            if (factory == null || !factory.isDeviceReady()) {
+                return;
             }
 
             boolean needsReset = (presentable == null) ||

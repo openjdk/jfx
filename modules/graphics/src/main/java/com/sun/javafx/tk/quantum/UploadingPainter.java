@@ -86,9 +86,9 @@ final class UploadingPainter extends ViewPainter implements Runnable {
             
             if (factory == null) {
                 factory = GraphicsPipeline.getDefaultResourceFactory();
-                if (factory == null || !factory.isDeviceReady()) {
-                    return;
-                }
+            }
+            if (factory == null || !factory.isDeviceReady()) {
+                return;
             }
 
             boolean needsReset = (rttexture == null) || (viewWidth != penWidth) || (viewHeight != penHeight);
