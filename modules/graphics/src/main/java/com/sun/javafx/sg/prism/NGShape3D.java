@@ -45,7 +45,6 @@ public abstract class NGShape3D extends NGNode {
     protected CullFace cullFace;
     protected boolean materialDirty = false;
     protected boolean drawModeDirty = false;
-    protected boolean cullFaceDirty = false;
     protected NGTriangleMesh mesh;
     private MeshView meshView;
 
@@ -62,7 +61,6 @@ public abstract class NGShape3D extends NGNode {
 
     public void setCullFace(Object cullFace) {
         this.cullFace = (CullFace) cullFace;
-        cullFaceDirty = true;
         visualsChanged();
     }
 
@@ -97,10 +95,14 @@ public abstract class NGShape3D extends NGNode {
             materialDirty = false;
         }
 
-        if (cullFaceDirty) {
-            meshView.setCullingMode(cullFace.ordinal());
-            cullFaceDirty = false;
+        // NOTE: Always check determinant in case of mirror transform.
+        int cullingMode = cullFace.ordinal();
+        if (cullFace.ordinal() != MeshView.CULL_NONE
+                && g.getTransformNoClone().getDeterminant() < 0) {
+            cullingMode = cullingMode == MeshView.CULL_BACK
+                    ? MeshView.CULL_FRONT : MeshView.CULL_BACK;
         }
+        meshView.setCullingMode(cullingMode);
 
         if (drawModeDirty) {
             meshView.setWireframe(drawMode == DrawMode.LINE);
