@@ -31,8 +31,10 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
+import com.sun.javafx.tk.Toolkit;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.scene.layout.StackPane;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -219,5 +221,27 @@ public class TableViewMouseInputTest {
         assertFalse(sm.isSelected(3));
         assertFalse(sm.isSelected(4));
         assertFalse(sm.isSelected(5));
+    }
+
+    @Test public void test_rt31020() {
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearSelection();
+
+        // set all the columns to be very narrow (so the mouse click happens
+        // to the right of them all, out in no-mans land
+        tableView.setMinWidth(200);
+        tableView.setPrefWidth(200);
+        tableView.getColumns().clear();
+        col0.setMaxWidth(10);
+        tableView.getColumns().add(col0);
+
+        // select rows 1, 2, 3, 4, and 5
+        VirtualFlowTestUtils.clickOnRow(tableView, 1, true);
+        VirtualFlowTestUtils.clickOnRow(tableView, 5, true, KeyModifier.SHIFT);
+        assertTrue(sm.isSelected(1));
+        assertTrue(sm.isSelected(2));
+        assertTrue(sm.isSelected(3));
+        assertTrue(sm.isSelected(4));
+        assertTrue(sm.isSelected(5));
     }
 }

@@ -63,6 +63,10 @@ public final class MouseEventFirer {
     public void fireMouseClicked(double deltaX, double deltaY) {
         fireMouseEvent(MouseEvent.MOUSE_CLICKED, deltaX, deltaY);
     }
+
+    public void fireMouseClicked(double deltaX, double deltaY, KeyModifier... modifiers) {
+        fireMouseEvent(MouseEvent.MOUSE_CLICKED, deltaX, deltaY, modifiers);
+    }
     
     public void fireMousePressed() {
         fireMouseEvent(MouseEvent.MOUSE_PRESSED);
@@ -75,6 +79,10 @@ public final class MouseEventFirer {
     public void fireMousePressed(double deltaX, double deltaY) {
         fireMouseEvent(MouseEvent.MOUSE_PRESSED, deltaX, deltaY);
     }
+
+    public void fireMousePressed(double deltaX, double deltaY, KeyModifier... modifiers) {
+        fireMouseEvent(MouseEvent.MOUSE_PRESSED, deltaX, deltaY, modifiers);
+    }
     
     public void fireMouseReleased() {
         fireMouseEvent(MouseEvent.MOUSE_RELEASED);
@@ -86,6 +94,10 @@ public final class MouseEventFirer {
     
     public void fireMouseReleased(double deltaX, double deltaY) {
         fireMouseEvent(MouseEvent.MOUSE_RELEASED, deltaX, deltaY);
+    }
+
+    public void fireMouseReleased(double deltaX, double deltaY, KeyModifier... modifiers) {
+        fireMouseEvent(MouseEvent.MOUSE_RELEASED, deltaX, deltaY, modifiers);
     }
     
     public void fireMouseEvent(EventType<MouseEvent> evtType, KeyModifier... modifiers) {
