@@ -40,8 +40,8 @@
 struct KeyMapEntry
 {
     unsigned short        keyCode;
-    jint                        jKeyCode;
-    BOOL                        sendJavaChars;
+    jint                  jKeyCode;
+    BOOL                  sendJavaChars;            
 };
 
 static const struct KeyMapEntry gKeyMap[] =
@@ -286,6 +286,87 @@ BOOL GetMacKey(jint javaKeyCode, unsigned short *outMacKeyCode)
     return NO;
 }
 
+NSString* GetStringForJavaKey(jchar jKeyCode) {
+    if (jKeyCode == '\0') return @"";
+    unichar   unicode = 0;
+    switch (jKeyCode)
+    {
+        case com_sun_glass_events_KeyEvent_VK_LEFT:
+            unicode = 0x2190; break;
+        case com_sun_glass_events_KeyEvent_VK_RIGHT:
+            unicode = 0x2192; break;
+        case com_sun_glass_events_KeyEvent_VK_UP:
+            unicode = 0x2191; break;
+        case com_sun_glass_events_KeyEvent_VK_DOWN:
+            unicode = 0x2193; break;
+        case com_sun_glass_events_KeyEvent_VK_ESCAPE:
+            unicode = 0x238B; break;
+        case com_sun_glass_events_KeyEvent_VK_LEFT_PARENTHESIS:
+            unicode = 0x0028; break;
+        case com_sun_glass_events_KeyEvent_VK_RIGHT_PARENTHESIS:
+            unicode = 0x0029; break;
+        case com_sun_glass_events_KeyEvent_VK_COLON:
+            unicode = 0x003A; break;
+        case com_sun_glass_events_KeyEvent_VK_DOLLAR:
+            unicode = 0x0024; break;
+        case com_sun_glass_events_KeyEvent_VK_EURO_SIGN:
+            unicode = 0x20AC; break;
+        case com_sun_glass_events_KeyEvent_VK_EXCLAMATION:
+            unicode = 0x0021; break;
+        case com_sun_glass_events_KeyEvent_VK_UNDERSCORE:
+            unicode = 0x005F; break;
+        case com_sun_glass_events_KeyEvent_VK_AT:
+            unicode = 0x0040; break;
+        case com_sun_glass_events_KeyEvent_VK_BRACELEFT:
+            unicode = 0x007B; break;
+        case com_sun_glass_events_KeyEvent_VK_BRACERIGHT:
+            unicode = 0x007D; break;
+        case com_sun_glass_events_KeyEvent_VK_LESS:
+            unicode = 0x003C; break;
+        case com_sun_glass_events_KeyEvent_VK_GREATER:
+            unicode = 0x003E; break;
+        case com_sun_glass_events_KeyEvent_VK_QUOTE:
+            unicode = 0x0027; break;
+        case com_sun_glass_events_KeyEvent_VK_BACK_QUOTE:
+            unicode = 0x0060; break;
+        case com_sun_glass_events_KeyEvent_VK_AMPERSAND:
+            unicode = 0x0026; break;
+        case com_sun_glass_events_KeyEvent_VK_MULTIPLY:
+        case com_sun_glass_events_KeyEvent_VK_ASTERISK:
+            unicode = 0x002A; break;
+        case com_sun_glass_events_KeyEvent_VK_DOUBLE_QUOTE:
+            unicode = 0x0022; break;
+        case com_sun_glass_events_KeyEvent_VK_NUMBER_SIGN:
+            unicode = 0x0023; break;
+        case com_sun_glass_events_KeyEvent_VK_PLUS:
+        case com_sun_glass_events_KeyEvent_VK_ADD:
+            unicode = 0x002B; break;
+        case com_sun_glass_events_KeyEvent_VK_MINUS:
+        case com_sun_glass_events_KeyEvent_VK_SUBTRACT:
+            unicode = 0x2013; break;
+        case com_sun_glass_events_KeyEvent_VK_DIVIDE:
+            unicode = 0x002F; break;
+        case com_sun_glass_events_KeyEvent_VK_CIRCUMFLEX:
+            unicode = 0x005E; break;
+        case com_sun_glass_events_KeyEvent_VK_DECIMAL:
+            unicode = 0x002E; break;
+        case com_sun_glass_events_KeyEvent_VK_DELETE:
+            unicode = 0x2326; break;
+        default:
+            break;
+    }
+    
+    if (unicode != 0)
+    {
+        return [NSString stringWithCharacters:&unicode length:1];
+    }
+    else
+    {
+        return [NSString stringWithFormat:@"%c", jKeyCode];
+    }
+
+}
+
 /*
  * Class:     com_sun_glass_events_KeyEvent
  * Method:    _getKeyCodeForChar
@@ -295,7 +376,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_events_KeyEvent__1getKeyCodeForChar
 (JNIEnv * env, jclass cls, jchar c)
 {
     LOG("Java_com_sun_glass_events_KeyEvent__1getKeyCodeForChar");
-    
+
     return [GlassApplication getKeyCodeForChar:c];
 }
 

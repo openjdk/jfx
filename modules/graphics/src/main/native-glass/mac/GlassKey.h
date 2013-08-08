@@ -33,6 +33,7 @@ jint GetJavaModifiers(NSEvent *event);
 jint GetJavaKeyCodeFor(unsigned short keyCode);
 jint GetJavaKeyCode(NSEvent *event);
 jcharArray GetJavaKeyChars(JNIEnv *env, NSEvent *event);
+NSString* GetStringForJavaKey(jchar key);
 
 // for key event injection
 BOOL GetMacKey(jint javaKeyCode, unsigned short *outMacKeyCode);
