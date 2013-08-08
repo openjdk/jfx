@@ -4,6 +4,7 @@
 \.orig\..*$
 \.chg\..*$
 \.rej$
+\.swp$
 \.conflict\~$
 ^\.ant-targets.*$
 ^.idea/tasks.xml$
