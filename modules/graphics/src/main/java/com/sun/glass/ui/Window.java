@@ -76,9 +76,19 @@ public abstract class Window {
     static private final LinkedList<Window> visibleWindows = new LinkedList<Window>();
      // Return a list of all visible windows.  Note that on platforms without a native window manager,
      // this list will be sorted in proper z-order
-    static public List<Window> getWindows() {
+    static public synchronized List<Window> getWindows() {
         Application.checkEventThread();
         return Collections.unmodifiableList(Window.visibleWindows);
+    }
+
+    // used by Lens Native
+    static private synchronized void add(Window window) {
+        Window.visibleWindows.add(window);
+    }
+
+    // used by Lens Native
+    static private synchronized void remove(Window window) {
+        Window.visibleWindows.remove(window);
     }
 
     // window style mask
@@ -544,7 +554,7 @@ public abstract class Window {
                 } else {
                     this.isVisible = visible;
                 }
-                visibleWindows.remove(this);
+                remove(this);
                 if (parent != 0) {
                     embeddedLocationTimer.stop();
                 }
@@ -555,7 +565,7 @@ public abstract class Window {
                 if (getView() != null) {
                     getView().setVisible(this.isVisible);
                 }
-                visibleWindows.add(this);
+                add(this);
                 if (parent != 0) {
                     final Runnable checkRunnable = new Runnable() {
                         @Override
