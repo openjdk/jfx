@@ -255,6 +255,9 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
                 getChildren().remove(cell);
             }
         }
+
+        // dispose of the cell to prevent it retaining listeners (see RT-31015)
+        cell.updateIndex(-1);
         
         // RT-23486
         double widthMax = maxWidth + padding;

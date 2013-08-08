@@ -1736,4 +1736,40 @@ public class TableViewTest {
         assertNull(table.getComparator());
         assertTrue(table.getSortOrder().isEmpty());
     }
+
+    private int rt_31015_count = 0;
+    @Test public void test_rt_31015() {
+        TableView<Person> table = new TableView<>();
+        table.setEditable(true);
+        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        first.setCellValueFactory(new PropertyValueFactory("firstName"));
+        table.getColumns().addAll(first);
+
+        table.setItems(FXCollections.observableArrayList(
+            new Person("John", "Smith", "jacob.smith@example.com")
+        ));
+
+        //Set cell factory for cells that allow editing
+        Callback<TableColumn<Person,String>, TableCell<Person, String>> cellFactory = new Callback<TableColumn<Person,String>, TableCell<Person, String>>() {
+            public TableCell<Person, String> call(TableColumn<Person, String> p) {
+                return new TableCell<Person, String>() {
+                    @Override public void cancelEdit() {
+                        super.cancelEdit();
+                        rt_31015_count++;
+                    }
+                };
+            }
+        };
+        first.setCellFactory(cellFactory);
+
+        new StageLoader(table);
+
+        assertEquals(0, rt_31015_count);
+
+        table.edit(0, first);
+        assertEquals(0, rt_31015_count);
+
+        table.edit(-1, null);
+        assertEquals(1, rt_31015_count);
+    }
 }

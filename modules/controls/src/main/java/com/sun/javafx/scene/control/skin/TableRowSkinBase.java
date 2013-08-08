@@ -26,10 +26,7 @@
 package com.sun.javafx.scene.control.skin;
 
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.WeakHashMap;
+import java.util.*;
 
 import com.sun.javafx.*;
 import javafx.animation.FadeTransition;
@@ -583,15 +580,19 @@ public abstract class TableRowSkinBase<T,
         // and recreate all of them.
 
         if (cellsMap != null) {
+            Collection<R> cells = cellsMap.values();
+            Iterator<R> cellsIter = cells.iterator();
+            while (cellsIter.hasNext()) {
+                R cell = cellsIter.next();
+                cell.updateIndex(-1);
+                cell.getSkin().dispose();
+            }
             cellsMap.clear();
         }
 
         ObservableList<? extends TableColumnBase/*<T,?>*/> columns = getVisibleLeafColumns();
 
         if (columns.size() != columnCount || fullRefreshCounter == 0 || cellsMap == null) {
-            if (cellsMap != null) {
-                cellsMap.clear();
-            }
             cellsMap = new WeakHashMap<TableColumnBase, R>(columns.size());
             fullRefreshCounter = DEFAULT_FULL_REFRESH_COUNTER;
             getChildren().clear();

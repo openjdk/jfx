@@ -352,6 +352,9 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeItem<S>, Tree
                 getChildren().remove(cell);
             }
         }
+
+        // dispose of the cell to prevent it retaining listeners (see RT-31015)
+        cell.updateIndex(-1);
         
         // RT-23486
         double widthMax = maxWidth + padding;
