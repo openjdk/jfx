@@ -349,7 +349,10 @@ public abstract class View {
 
     protected abstract void _enableInputMethodEvents(long ptr, boolean enable);
 
-    private long ptr; // Native handle (NSView*, or internal structure pointer)
+    /*
+        Read by the checkNotClosed method which could be called from lock/unlock on render thread
+     */
+    private volatile long ptr; // Native handle (NSView*, or internal structure pointer)
     private Window window; // parent window
     private EventHandler eventHandler;
 
@@ -394,7 +397,7 @@ public abstract class View {
     }
 
     public boolean isClosed() {
-        //Application.checkEventThread(); // Quantum
+        Application.checkEventThread();
         return this.ptr == 0L;
     }
 
@@ -405,7 +408,7 @@ public abstract class View {
      * Hence the native method.
      */
     public long getNativeView() {
-        //Application.checkEventThread(); // Quantum
+        Application.checkEventThread();
         checkNotClosed();
         return _getNativeView(this.ptr);
     }
@@ -417,7 +420,7 @@ public abstract class View {
     }
     
     public Window getWindow() {
-        //Application.checkEventThread(); // Prism (Mac)
+        Application.checkEventThread();
         return this.window;
     }
 
@@ -438,12 +441,12 @@ public abstract class View {
     }
 
     public int getWidth() {
-        //Application.checkEventThread(); // Quantum
+        Application.checkEventThread();
         return this.width;
     }
 
     public int getHeight() {
-        //Application.checkEventThread(); // Quantum
+        Application.checkEventThread();
         return this.height;
     }
 
@@ -679,9 +682,10 @@ public abstract class View {
     
     protected abstract void _begin(long ptr);
     /** prepares to painting by locking native surface
+     *
+     * Called on the render thread
      */
     public void lock() {
-        //Application.checkEventThread(); // Quantum
         checkNotClosed();
         _begin(this.ptr);
     }
@@ -689,9 +693,10 @@ public abstract class View {
     protected abstract void _end(long ptr);
     /** ends painting by unlocking native surface and flushing
      * flushes surface (if flush == true) or discard it (flush == false)
+     *
+     * Called on the render thread
      */
     public void unlock() {
-        //Application.checkEventThread(); // Quantum
         checkNotClosed();
         _end(this.ptr);
     }
@@ -704,7 +709,7 @@ public abstract class View {
      * transparent windows in order to update them.
      */
     public void uploadPixels(Pixels pixels) {
-        //Application.checkEventThread(); // Quantum
+        Application.checkEventThread();
         checkNotClosed();
         lock();
         try {

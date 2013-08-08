@@ -27,6 +27,8 @@ package com.sun.glass.ui;
 import com.sun.glass.events.MouseEvent;
 import com.sun.glass.events.WindowEvent;
 import com.sun.glass.ui.accessible.AccessibleRoot;
+
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -74,17 +76,9 @@ public abstract class Window {
     static private final LinkedList<Window> visibleWindows = new LinkedList<Window>();
      // Return a list of all visible windows.  Note that on platforms without a native window manager,
      // this list will be sorted in proper z-order
-    static public synchronized List<Window> getWindows() {
-        //Application.checkEventThread(); // Quantum
-        return Window.visibleWindows;
-    }
-
-    static private synchronized void add(Window window) {
-        Window.visibleWindows.add(window);
-    }
-
-    static private synchronized void remove(Window window) {
-        Window.visibleWindows.remove(window);
+    static public List<Window> getWindows() {
+        Application.checkEventThread();
+        return Collections.unmodifiableList(Window.visibleWindows);
     }
 
     // window style mask
@@ -309,7 +303,7 @@ public abstract class Window {
      * (HWND on Windows, NSWindow on Mac, X11 Window handle on linux-gtk etc.)
      */
     public long getNativeWindow() {
-        //Application.checkEventThread(); // Prism (Mac)
+        Application.checkEventThread();
         checkNotClosed();
         return this.delegatePtr != 0L ? this.delegatePtr : this.ptr;
     }
@@ -408,7 +402,7 @@ public abstract class Window {
     }
 
     public boolean isMinimized() {
-        //Application.checkEventThread(); // Quantum
+        Application.checkEventThread();
         return (this.state == State.MINIMIZED);
     }
 
@@ -522,7 +516,7 @@ public abstract class Window {
     }
 
     public boolean isVisible() {
-        //Application.checkEventThread(); // Quantum
+        Application.checkEventThread();
         return this.isVisible;
     }
 
@@ -550,7 +544,7 @@ public abstract class Window {
                 } else {
                     this.isVisible = visible;
                 }
-                Window.remove(this);
+                visibleWindows.remove(this);
                 if (parent != 0) {
                     embeddedLocationTimer.stop();
                 }
@@ -561,7 +555,7 @@ public abstract class Window {
                 if (getView() != null) {
                     getView().setVisible(this.isVisible);
                 }
-                Window.add(this);
+                visibleWindows.add(this);
                 if (parent != 0) {
                     final Runnable checkRunnable = new Runnable() {
                         @Override
