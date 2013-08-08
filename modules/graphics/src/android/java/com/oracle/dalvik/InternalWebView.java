@@ -64,7 +64,7 @@ public class InternalWebView {
     private WebView nativeWebView;
     private String url, content;
     private String contentType = "text/html";
-    private String encoding = "base64";
+    private String encoding = null;
     private boolean visible;
 
     public InternalWebView() {
@@ -176,7 +176,7 @@ public class InternalWebView {
         iwv.setContent(content, contentType);
         if (iwv.initialized && iwv.isLayedOut) {
             FXActivity.getInstance().runOnUiThread(new Runnable() {
-                public void run() {                    
+                public void run() {                          
                     iwv.nativeWebView.loadData(iwv.content, iwv.contentType, iwv.encoding);
                 }
             });
