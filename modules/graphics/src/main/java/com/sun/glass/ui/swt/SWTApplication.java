@@ -393,6 +393,11 @@ public final class SWTApplication extends Application {
     }
 
     @Override
+    protected boolean _supportsSystemMenu() {
+        return SWT.getPlatform().equals("cocoa");
+    }
+    
+    @Override
     protected boolean _supportsTransparentWindows() {
         return SWT.getPlatform().equals("cocoa");
     }
