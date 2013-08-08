@@ -29,6 +29,8 @@ import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.runtime.SystemProperties;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.security.AccessControlContext;
 import java.util.List;
 import java.util.Set;
@@ -77,6 +79,7 @@ public class PlatformImpl {
     private static Boolean hasTouch;
     private static Boolean hasMultiTouch;
     private static Boolean hasPointer;
+    private static boolean isThreadMerged = false;
 
     /**
      * Set a flag indicating whether this application should show up in the
@@ -174,6 +177,10 @@ public class PlatformImpl {
                 if (s != null) {
                     hasPointer = Boolean.valueOf(s);
                 }
+                s = System.getProperty("javafx.embed.singleThread");
+                if (s != null) {
+                    isThreadMerged = Boolean.valueOf(s);
+                }
                 return null;
             }
         });
@@ -208,6 +215,23 @@ public class PlatformImpl {
                 r.run();
             }
         });
+
+        //Initialize the thread merging mechanism
+        if (isThreadMerged) {
+            //Use reflection in case we are running compact profile
+            try {
+                Class swingFXUtilsClass = Class.forName("javafx.embed.swing.SwingFXUtils");
+                Method installFwEventQueue = swingFXUtilsClass.getMethod("installFwEventQueue");
+
+                waitForStart();
+                installFwEventQueue.invoke(null);
+
+            } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException e) {
+                throw new RuntimeException("Property javafx.embed.singleThread is not supported");
+            } catch (InvocationTargetException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     private static void waitForStart() {
