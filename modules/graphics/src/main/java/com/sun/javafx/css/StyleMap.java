@@ -108,6 +108,11 @@ public final class StyleMap {
                 }
             }
 
+            if (cascadingStyleList.isEmpty()) {
+                cascadingStyles = Collections.emptyMap();
+                return cascadingStyles;
+            }
+
             // apply the cascade. CascadingStyle's primary sort key is the
             // property name, so the same properties should be in sequence.
             Collections.sort(cascadingStyleList, cascadingStyleComparator);
