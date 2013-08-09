@@ -601,6 +601,10 @@ public abstract class Toolkit {
 
     public abstract TKClipboard getSystemClipboard();
 
+    public TKClipboard createLocalClipboard() {
+        return new LocalClipboard();
+    }
+
     public abstract TKSystemMenu getSystemMenu();
 
     public abstract TKClipboard getNamedClipboard(String name);
