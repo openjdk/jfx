@@ -40,12 +40,12 @@ import com.sun.prism.ResourceFactory;
  * TODO: 3D - Need documentation
  */
 public abstract class NGShape3D extends NGNode {
-    protected NGPhongMaterial material;
-    protected DrawMode drawMode;
-    protected CullFace cullFace;
-    protected boolean materialDirty = false;
-    protected boolean drawModeDirty = false;
-    protected NGTriangleMesh mesh;
+    private NGPhongMaterial material;
+    private DrawMode drawMode;
+    private CullFace cullFace;
+    private boolean materialDirty = false;
+    private boolean drawModeDirty = false;
+    NGTriangleMesh mesh;
     private MeshView meshView;
 
     public void setMaterial(NGPhongMaterial material) {
@@ -64,12 +64,12 @@ public abstract class NGShape3D extends NGNode {
         visualsChanged();
     }
 
-    protected void invalidate() {
+    void invalidate() {
         meshView = null;
         visualsChanged();
     }
 
-    protected void renderMeshView(Graphics g) {
+    private void renderMeshView(Graphics g) {
 
         //validate state
         g.setup3DRendering();
@@ -176,16 +176,13 @@ public abstract class NGShape3D extends NGNode {
         return value < 1.0f ? ((value < 0.0f) ? 0.0f : value) : 1.0f;
     }
 
-    protected void setMesh(NGTriangleMesh triangleMesh) {
+    public void setMesh(NGTriangleMesh triangleMesh) {
         this.mesh = triangleMesh;
         meshView = null;
         visualsChanged();
     }
 
-    protected NGTriangleMesh getMesh() {
-        return mesh;
-    }
-
+    @Override
     protected void renderContent(Graphics g) {
 
         if (!Platform.isSupported(ConditionalFeature.SCENE3D) || material == null) {
