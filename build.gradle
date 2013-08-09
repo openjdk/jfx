@@ -1834,7 +1834,10 @@ compileTargets { t ->
         if (COMPILE_SWING) from ("modules/swing/build/classes/main", "modules/swing/build/resources/main")
         if (COMPILE_SWT) from ("modules/swt/build/classes/main", "modules/swt/build/resources/main")
         if (t.name == 'android') {
-            from ("modules/web/build/classes/android", "modules/web/build/resources/android")
+            from ("modules/web/build/classes/android",
+                  "modules/web/build/resources/android",
+                  "modules/controls/build/classes/android",
+                  "modules/controls/build/resources/android")
         } else if (t.name == 'ios') {
             from ("modules/web/build/classes/ios", "modules/web/build/resources/ios")
         } else {

@@ -224,6 +224,32 @@ project(":graphics") {
     }
 }
 
+project(":controls") {
+    afterEvaluate {
+        task compileControlsJavaAndroid(type: JavaCompile, group: "Build", dependsOn: [":graphics:compileJava", ":controls:compileJava"]) {
+            description = "Task compiles controls for Android"
+            classpath = files("modules/base/build/classes/main",
+                "modules/graphics/build/classes/main",
+                "modules/controls/build/classes/main"
+            )
+            destinationDir = file("modules/controls/build/classes/android")
+            dependencyCacheDir = file("modules/controls/build/dependency-cache")
+            source file("modules/controls/src/android/java")
+        }
+
+       task processControlsResourcesAndroid() {
+           copy {
+               from ("modules/controls/src/android/resources")
+               into ("modules/controls/build/resources/android")
+           }
+        }
+
+        sdkAndroid {
+            dependsOn(compileControlsJavaAndroid, processControlsResourcesAndroid)        
+        }
+    }
+}        
+
 project(":web") {
     apply plugin: 'java'
 

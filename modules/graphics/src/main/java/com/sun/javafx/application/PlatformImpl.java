@@ -591,10 +591,12 @@ public class PlatformImpl {
                             StyleManager.getInstance().setDefaultUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/caspian.css");
 
                             if (isSupported(ConditionalFeature.INPUT_TOUCH)) {
-                                StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/embedded.css");
-
+                                StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/embedded.css");                              
                                 if (com.sun.javafx.Utils.isQVGAScreen()) {
                                     StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/embedded-qvga.css");
+                                }
+                                if (PlatformUtil.isAndroid()) {
+                                    StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/android.css");
                                 }
                             }
                             return null;
@@ -614,6 +616,9 @@ public class PlatformImpl {
                             if (PlatformUtil.isEmbedded()) {
                                 StyleManager.getInstance().addUserAgentStylesheet(
                                         "com/sun/javafx/scene/control/skin/modena/modena-embedded-performance.css");
+                            }
+                            if (PlatformUtil.isAndroid()) {
+                                StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/modena/android.css");
                             }
                             return null;
                         }
