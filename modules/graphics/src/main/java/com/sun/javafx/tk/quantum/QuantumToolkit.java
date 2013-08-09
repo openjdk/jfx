@@ -178,7 +178,7 @@ public final class QuantumToolkit extends Toolkit {
                 @Override public Boolean run() {
                     boolean isSWT = "swt".equals(System.getProperty("glass.platform"));
                     String result = PlatformUtil.isMac() && !isSWT ? "true" : "false";
-                    return result.equals(System.getProperty("javafx.live.resize", "true"));
+                    return "true".equals(System.getProperty("javafx.live.resize", result));
                 }
             });
 
@@ -187,7 +187,7 @@ public final class QuantumToolkit extends Toolkit {
                 @Override public Boolean run() {
                     boolean isSWT = "swt".equals(System.getProperty("glass.platform"));
                     String result = PlatformUtil.isMac() && isSWT ? "true" : "false";
-                    return result.equals(System.getProperty("javafx.draw.in.paint", "true"));}
+                    return "true".equals(System.getProperty("javafx.draw.in.paint", result));}
             });
     
     private static boolean singleThreaded =
