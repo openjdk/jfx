@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import com.sun.javafx.scene.CssFlags;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
@@ -429,7 +430,7 @@ final class CssStyleHelper {
      * is disabled until the new parser comes online with support for
      * animations and that support is detectable via the API.
      */
-    void transitionToState(Node node) {
+    void transitionToState(Node node, CssFlags cssFlag) {
 
         if (cacheContainer == null) {
             return;
@@ -517,9 +518,16 @@ final class CssStyleHelper {
                     : null;
 
             CalculatedValue calculatedValue = cacheEntry.get(property);
-            boolean addToCache = !fastpath && calculatedValue == null;
 
-            if (fastpath) {
+            // If there is no calculatedValue and we're on the fast path,
+            // take the slow path if cssFlags is REAPPLY (RT-31691)
+            final boolean forceSlowpath =
+                    fastpath && calculatedValue == null && cssFlag == CssFlags.REAPPLY;
+
+            final boolean addToCache =
+                    (!fastpath && calculatedValue == null) || forceSlowpath;
+
+            if (fastpath && !forceSlowpath) {
 
                 // calculatedValue may be null,
                 // but we should never put SKIP in cache.
