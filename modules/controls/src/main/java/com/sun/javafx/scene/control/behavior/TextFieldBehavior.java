@@ -25,7 +25,6 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import javafx.application.ConditionalFeature;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
@@ -42,12 +41,11 @@ import javafx.scene.input.MouseEvent;
 import javafx.stage.Screen;
 import javafx.stage.Window;
 import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.scene.control.skin.TextFieldSkin;
 import com.sun.javafx.scene.text.HitInfo;
-
-import static com.sun.javafx.PlatformUtil.*;
+import static com.sun.javafx.PlatformUtil.isMac;
+import static com.sun.javafx.PlatformUtil.isWindows;
 
 /**
  * Text field behavior.
@@ -61,7 +59,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         super(textField, TEXT_INPUT_BINDINGS);
 
         contextMenu = new ContextMenu();
-        if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+        if (IS_TOUCH_SUPPORTED) {
             contextMenu.getStyleClass().add("text-input-context-menu");
         }
 
@@ -213,7 +211,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
                 final int anchor = textField.getAnchor();
                 final int caretPosition = textField.getCaretPosition();
                 if (e.getClickCount() < 2 &&
-                    (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH) ||
+                    (IS_TOUCH_SUPPORTED ||
                      (anchor != caretPosition &&
                       ((i > anchor && i < caretPosition) || (i < anchor && i > caretPosition))))) {
                     // if there is a selection, then we will NOT handle the
@@ -293,7 +291,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
                 double screenY = e.getScreenY();
                 double sceneX = e.getSceneX();
 
-                if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+                if (IS_TOUCH_SUPPORTED) {
                     Point2D menuPos;
                     if (textField.getSelection().getLength() == 0) {
                         skin.positionCaret(skin.getIndex(e), false);
@@ -320,7 +318,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
 
                 skin.populateContextMenu(contextMenu);
                 double menuWidth = contextMenu.prefWidth(-1);
-                double menuX = screenX - (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH) ? (menuWidth / 2) : 0);
+                double menuX = screenX - (IS_TOUCH_SUPPORTED ? (menuWidth / 2) : 0);
                 Screen currentScreen = com.sun.javafx.Utils.getScreenForPoint(screenX, 0);
                 Rectangle2D bounds = currentScreen.getBounds();
 

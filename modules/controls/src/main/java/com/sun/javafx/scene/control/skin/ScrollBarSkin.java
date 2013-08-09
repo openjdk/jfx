@@ -25,19 +25,16 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import javafx.application.ConditionalFeature;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.scene.control.ScrollBar;
-import javafx.scene.layout.StackPane;
-import javafx.scene.input.ScrollEvent;
 import javafx.scene.input.MouseButton;
-
-import com.sun.javafx.Utils;
-import com.sun.javafx.application.PlatformImpl;
-import com.sun.javafx.scene.control.behavior.ScrollBarBehavior;
+import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
+import com.sun.javafx.Utils;
+import com.sun.javafx.scene.control.behavior.ScrollBarBehavior;
 
 public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior> {
 
@@ -98,7 +95,7 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
         thumb.getStyleClass().setAll("thumb");
 
 
-        if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+        if (!IS_TOUCH_SUPPORTED) {
             
             incButton = new EndButton("increment-button", "increment-arrow");
             incButton.setOnMousePressed(new EventHandler<javafx.scene.input.MouseEvent>() {
@@ -318,7 +315,7 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
         });
 
         getChildren().clear();
-        if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+        if (!IS_TOUCH_SUPPORTED) {
             getChildren().addAll(trackBackground, incButton, decButton, track, thumb);
         }
         else {
@@ -354,7 +351,7 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
      * We should change this when we get width/height css properties.
      */
     double getBreadth() {
-        if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+        if (!IS_TOUCH_SUPPORTED) {
             if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
                 return Math.max(decButton.prefWidth(-1), incButton.prefWidth(-1)) +snappedLeftInset()+snappedRightInset();
             } else {
@@ -388,7 +385,7 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
         if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
             return getBreadth();
         } else {
-            if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+            if (!IS_TOUCH_SUPPORTED) {
                 return decButton.minWidth(-1) + incButton.minWidth(-1) + minTrackLength()+leftInset+rightInset;
             } else {
                 return minTrackLength()+leftInset+rightInset;
@@ -398,7 +395,7 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
 
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
-            if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+            if (!IS_TOUCH_SUPPORTED) {
                 return decButton.minHeight(-1) + incButton.minHeight(-1) + minTrackLength()+topInset+bottomInset;
             } else {
                 return minTrackLength()+topInset+bottomInset;
@@ -443,7 +440,7 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
         double clampedValue = Utils.clamp(s.getMin(), s.getValue(), s.getMax());
         trackPos = (s.getMax() - s.getMin() > 0) ? ((trackLength - thumbLength) * (clampedValue - s.getMin()) / (s.getMax() - s.getMin())) : (0.0F);
 
-        if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+        if (!IS_TOUCH_SUPPORTED) {
             if (s.getOrientation() == Orientation.VERTICAL) {
                 trackPos += decButton.prefHeight(-1);
             } else {
@@ -473,7 +470,7 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
         }
 
         if (s.getOrientation() == Orientation.VERTICAL) {
-            if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+            if (!IS_TOUCH_SUPPORTED) {
                 double decHeight = snapSize(decButton.prefHeight(-1));
                 double incHeight = snapSize(incButton.prefHeight(-1));
 
@@ -499,7 +496,7 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
                 positionThumb();
             }
         } else {
-            if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+            if (!IS_TOUCH_SUPPORTED) {
                 double decWidth = snapSize(decButton.prefWidth(-1));
                 double incWidth = snapSize(incButton.prefWidth(-1));
 
@@ -534,7 +531,7 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
             trackBackground.setVisible(true);
             track.setVisible(true);
             thumb.setVisible(true);
-            if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+            if (!IS_TOUCH_SUPPORTED) {
                 incButton.setVisible(true);
                 decButton.setVisible(true);
             }
@@ -544,7 +541,7 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
             track.setVisible(false);
             thumb.setVisible(false);
 
-            if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+            if (!IS_TOUCH_SUPPORTED) {
                 /*
                 ** once the space is big enough for one button we 
                 ** can look at drawing

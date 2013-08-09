@@ -25,14 +25,10 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import java.lang.ref.WeakReference;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import javafx.application.ConditionalFeature;
-import javafx.application.Platform;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.binding.BooleanBinding;
@@ -44,6 +40,7 @@ import javafx.beans.value.ObservableBooleanValue;
 import javafx.beans.value.ObservableObjectValue;
 import javafx.collections.ObservableList;
 import javafx.css.CssMetaData;
+import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
@@ -79,22 +76,28 @@ import javafx.scene.shape.Shape;
 import javafx.scene.shape.VLineTo;
 import javafx.stage.Window;
 import javafx.util.Duration;
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.scene.control.behavior.TextInputControlBehavior;
 import com.sun.javafx.tk.FontMetrics;
 import com.sun.javafx.tk.Toolkit;
-
-import static com.sun.javafx.PlatformUtil.*;
-import static com.sun.javafx.scene.control.skin.resources.ControlResources.*;
-import javafx.css.Styleable;
+import static com.sun.javafx.PlatformUtil.isWindows;
+import static com.sun.javafx.scene.control.skin.resources.ControlResources.getString;
 
 /**
  * Abstract base class for text input skins.
  */
 public abstract class TextInputControlSkin<T extends TextInputControl, B extends TextInputControlBehavior<T>> extends BehaviorSkinBase<T, B> {
+    /**
+     * Specifies whether we ought to show handles. We should do it on touch platforms, but not
+     * iOS (and maybe not Android either?)
+     */
+    protected static boolean SHOW_HANDLES = IS_TOUCH_SUPPORTED && !PlatformUtil.isIOS();
 
     protected final ObservableObjectValue<FontMetrics> fontMetrics;
 
@@ -210,7 +213,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
     protected StackPane selectionHandle2 = null;
 
     public Point2D getMenuPosition() {
-        if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+        if (SHOW_HANDLES) {
             if (caretHandle.isVisible()) {
                 return new Point2D(caretHandle.getLayoutX() + caretHandle.getWidth() / 2,
                                    caretHandle.getLayoutY());
@@ -227,21 +230,21 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
     }
 
 
-    private final static boolean isFXVKSupported = Platform.isSupported(ConditionalFeature.VIRTUAL_KEYBOARD);
-    private static boolean useFXVK = isFXVKSupported;
+    private final static boolean IS_FXVK_SUPPORTED = Platform.isSupported(ConditionalFeature.VIRTUAL_KEYBOARD);
+    private static boolean USE_FXVK = IS_FXVK_SUPPORTED;
 
     /* For testing only */
     static int vkType = -1;
     public void toggleUseVK() {
         vkType++;
         if (vkType < 4) {
-            useFXVK = true;
+            USE_FXVK = true;
             getSkinnable().getProperties().put(FXVK.VK_TYPE_PROP_KEY, FXVK.VK_TYPE_NAMES[vkType]);
             FXVK.attach(getSkinnable());
         } else {
             FXVK.detach();
             vkType = -1;
-            useFXVK = false;
+            USE_FXVK = false;
         }
     }
 
@@ -277,7 +280,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             }
         };
 
-        if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+        if (SHOW_HANDLES) {
             caretHandle      = new StackPane();
             selectionHandle1 = new StackPane();
             selectionHandle2 = new StackPane();
@@ -329,10 +332,10 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             selectionHandle2.setId("selection-handle-2");
         }
 
-        if (isFXVKSupported) {
+        if (IS_FXVK_SUPPORTED) {
             textInput.focusedProperty().addListener(new InvalidationListener() {
                 @Override public void invalidated(Observable observable) {
-                    if (useFXVK) {
+                    if (USE_FXVK) {
                         Scene scene = getSkinnable().getScene();
                         if (textInput.isEditable() && textInput.isFocused()) {
                             FXVK.attach(textInput);
@@ -639,7 +642,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
         boolean maskText = (maskText("A") != "A");
         ObservableList<MenuItem> items = contextMenu.getItems();
 
-        if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+        if (SHOW_HANDLES) {
             items.clear();
             if (!maskText && hasSelection) {
                 if (editable) {

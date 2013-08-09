@@ -25,7 +25,6 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import javafx.application.ConditionalFeature;
 import javafx.scene.Node;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.MultipleSelectionModel;
@@ -35,11 +34,9 @@ import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.control.Logging;
 import sun.util.logging.PlatformLogger;
 import sun.util.logging.PlatformLogger.Level;
@@ -99,9 +96,7 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
     // that selection only happens on mouse release, if only minimal dragging
     // has occurred.
     private boolean latePress = false;
-    private final boolean isTouch = PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH);
     private boolean wasSelected = false;
-
 
 
 
@@ -133,7 +128,7 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
 
         doSelect(event);
 
-        if (isTouch && selectedBefore) {
+        if (IS_TOUCH_SUPPORTED && selectedBefore) {
             wasSelected = getControl().isSelected();
         }
     }
@@ -156,7 +151,7 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
         // the mouse has now been dragged on a touch device, we should
         // remove the selection if we just added it in the last mouse press
         // event
-        if (isTouch && ! wasSelected && getControl().isSelected()) {
+        if (IS_TOUCH_SUPPORTED && ! wasSelected && getControl().isSelected()) {
             treeView.getSelectionModel().clearSelection(getControl().getIndex());
         }
     }

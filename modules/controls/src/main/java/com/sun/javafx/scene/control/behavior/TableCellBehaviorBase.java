@@ -25,7 +25,6 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import javafx.application.ConditionalFeature;
 import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.SelectionMode;
@@ -35,11 +34,9 @@ import javafx.scene.control.TablePositionBase;
 import javafx.scene.control.TableSelectionModel;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import com.sun.javafx.application.PlatformImpl;
 
 /**
  */
@@ -93,10 +90,9 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
     // that selection only happens on mouse release, if only minimal dragging
     // has occurred.
     private boolean latePress = false;
-    private final boolean isTouch = PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH);
     private boolean wasSelected = false;
-    
-    
+
+
 
     /***************************************************************************
      *                                                                         *
@@ -152,7 +148,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
 
         doSelect(event);
         
-        if (isTouch && selectedBefore) {
+        if (IS_TOUCH_SUPPORTED && selectedBefore) {
             wasSelected = getControl().isSelected();
         }
     }
@@ -172,7 +168,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
         // the mouse has now been dragged on a touch device, we should
         // remove the selection if we just added it in the last mouse press
         // event
-        if (isTouch && ! wasSelected && getControl().isSelected()) {
+        if (IS_TOUCH_SUPPORTED && ! wasSelected && getControl().isSelected()) {
             getSelectionModel().clearSelection(getControl().getIndex());
         }
     }

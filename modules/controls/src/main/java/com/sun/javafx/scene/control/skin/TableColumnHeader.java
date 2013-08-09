@@ -25,17 +25,6 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import static com.sun.javafx.scene.control.TableColumnSortTypeWrapper.getSortTypeName;
-import static com.sun.javafx.scene.control.TableColumnSortTypeWrapper.getSortTypeProperty;
-import static com.sun.javafx.scene.control.TableColumnSortTypeWrapper.isAscending;
-import static com.sun.javafx.scene.control.TableColumnSortTypeWrapper.isDescending;
-import static com.sun.javafx.scene.control.TableColumnSortTypeWrapper.setSortType;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-import javafx.application.ConditionalFeature;
 import javafx.beans.property.DoubleProperty;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -62,10 +51,16 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
-
-import com.sun.javafx.application.PlatformImpl;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
+import static com.sun.javafx.scene.control.TableColumnSortTypeWrapper.getSortTypeName;
+import static com.sun.javafx.scene.control.TableColumnSortTypeWrapper.getSortTypeProperty;
+import static com.sun.javafx.scene.control.TableColumnSortTypeWrapper.isAscending;
+import static com.sun.javafx.scene.control.TableColumnSortTypeWrapper.isDescending;
+import static com.sun.javafx.scene.control.TableColumnSortTypeWrapper.setSortType;
 
 
 /**
@@ -497,7 +492,7 @@ public class TableColumnHeader extends Region {
     
     private boolean isColumnReorderingEnabled() {
         // we only allow for column reordering if there are more than one column,
-        return !PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH) && getTableViewSkin().getVisibleLeafColumns().size() > 1;
+        return !BehaviorSkinBase.IS_TOUCH_SUPPORTED && getTableViewSkin().getVisibleLeafColumns().size() > 1;
     }
     
     private void initUI() {

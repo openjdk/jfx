@@ -25,6 +25,8 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
 import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
@@ -39,7 +41,11 @@ import com.sun.javafx.scene.control.behavior.BehaviorBase;
  *
  */
 public abstract class BehaviorSkinBase<C extends Control, BB extends BehaviorBase<C>> extends SkinBase<C> {
-    
+    /**
+     * A static final reference to whether the platform we are on supports touch.
+     */
+    protected final static boolean IS_TOUCH_SUPPORTED = Platform.isSupported(ConditionalFeature.INPUT_TOUCH);
+
     /***************************************************************************
      *                                                                         *
      * Private fields                                                          *
