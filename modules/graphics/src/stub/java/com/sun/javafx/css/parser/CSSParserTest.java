@@ -160,46 +160,7 @@ public class CSSParserTest {
         assertTrue(Double.compare(size, 12) == 0);
     }
     
-    @Test public void test_RT_18126() {
-        // CSS cannot write binary -fx-background-repeat: repeat, no-repeat;
-        String data = "#rt18126 {"
-                + "-fx-background-repeat: repeat, no-repeat;"
-                + "-fx-border-image-repeat: repeat, no-repeat;"
-                + "}";
-        
-        try {
-            Stylesheet stylesheet = CSSParser.getInstance().parse(data);
 
-            StringStore stringStore = new StringStore();
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            DataOutputStream dos = new DataOutputStream(baos);
-            stylesheet.writeBinary(dos, stringStore);
-            dos.flush();
-            dos.close();
-            
-            ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
-            DataInputStream dis = new DataInputStream(bais);
-            
-            Stylesheet restored = new Stylesheet();
-            restored.readBinary(Stylesheet.BINARY_CSS_VERSION, dis, stringStore.strings.toArray(new String[stringStore.strings.size()]));
-            
-            List<Rule> cssRules = stylesheet.getRules();
-            List<Rule> bssRules = restored.getRules();
-            
-            // Rule does not have an equals method
-            assert(cssRules.size() == bssRules.size());
-            for (int n=0; n<cssRules.size(); n++) {
-                Rule expected = cssRules.get(n);
-                Rule actual = bssRules.get(n);
-                assertEquals(Integer.toString(n), expected.getUnobservedDeclarationList(), actual.getUnobservedDeclarationList());
-            }
-            
-        } catch (IOException ioe) {
-            fail(ioe.toString());
-        }
-        
-    }
-    
     @Test
     public void testRT_17830() {
 

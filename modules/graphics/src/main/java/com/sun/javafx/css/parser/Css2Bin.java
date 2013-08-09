@@ -30,7 +30,10 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URL;
+import java.net.URLConnection;
 
 import com.sun.javafx.css.StringStore;
 import com.sun.javafx.css.Stylesheet;
@@ -39,7 +42,7 @@ import com.sun.javafx.css.Stylesheet;
  * java -classpath <sdk desktop lib path>/javafx-ui-common.jar com.sun.javafx.css.parser.Css2Bin input.css output.bss
  *  If no output file is given, then the input file name is used with an extension of 'bss'x
  */
-public class Css2Bin {
+public final class Css2Bin {
     public static void main(String args[]) throws Exception {
         
         if ( args.length < 1 ) throw new IllegalArgumentException("expected file name as argument");
@@ -59,51 +62,19 @@ public class Css2Bin {
     }
 
     public static void convertToBinary(String ifname, String ofname) throws IOException {
-        final URL urlIn = new java.net.URL("file", null, ifname);
 
-        CSSParser.EXIT_ON_ERROR = true;
-        Stylesheet stylesheet = CSSParser.getInstance().parse(urlIn);
+        if (ifname == null || ofname == null) {
+            throw new IllegalArgumentException("parameters cannot be null");
+        }
 
-        // first write all the css binary data into the buffer and collect strings on way
-        StringStore stringStore = new StringStore();
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        DataOutputStream dos = new DataOutputStream(baos);
-        stylesheet.writeBinary(dos, stringStore);
-        dos.flush();
-        dos.close();
+        if (ifname.equals(ofname)) {
+            throw new IllegalArgumentException("input file and output file cannot be the same");
+        }
 
-        File outFile = new File(ofname);
-        FileOutputStream fos = new FileOutputStream(outFile);
-        DataOutputStream os = new DataOutputStream(fos);
-        // write file version
-        os.writeShort(Stylesheet.BINARY_CSS_VERSION);
-        // write strings
-        stringStore.writeBinary(os);
-        // write binary data
-        os.write(baos.toByteArray());
-        os.flush();
-        os.close();
+        final File source = new File(ifname);
+        final File destination = new File(ofname);
+        Stylesheet.convertToBinary(source, destination);
+
     }
 
-//
-//    public void writeString(DataOutputStream os, String string) throws IOException {
-//        os.writeInt(1); // version
-//        int len = (string != null) ? string.length() : 0;
-//        os.writeInt(len);
-//        if (len > 0) {
-//            os.write(string.getBytes(), 0, len);
-//        }
-//    }
-//
-//    public String readString(DataInputStream is) throws IOException {
-//        int version = is.readInt();
-//        int len = is.readInt();
-//        if (len > 0) {
-//            byte bytes[] = new byte[len];
-//            is.readFully(bytes, 0, len);
-//            return new String(bytes);
-//        } else {
-//            return null;
-//        }
-//    }
 }

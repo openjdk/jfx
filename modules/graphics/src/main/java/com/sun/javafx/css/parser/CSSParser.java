@@ -103,7 +103,6 @@ import com.sun.javafx.scene.layout.region.StrokeBorderPaintConverter;
 import java.net.MalformedURLException;
 
 final public class CSSParser {
-    static boolean EXIT_ON_ERROR = false;
 
     /* Lazy instantiation */
     private static class InstanceHolder {

@@ -26,17 +26,24 @@
 package com.sun.javafx.css;
 
 import com.sun.javafx.collections.TrackableObservableList;
+import com.sun.javafx.css.parser.CSSParser;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.css.StyleOrigin;
 
 import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.URI;
 import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,11 +54,6 @@ import java.util.List;
  * determine whether or not it is applicable, and if so it will apply certain 
  * property values to the object.
  * <p>
- * Stylesheets can be parsed from CSS documents or created programmatically.  
- * Once created, stylesheets can be freely modified, but the modifications do 
- * not affect styled objects until a subsequent {@link #applyTo} or 
- * {@link #reapply}.
- *
  */
 public class Stylesheet {
 
@@ -188,7 +190,8 @@ public class Stylesheet {
         return sbuf.toString();
     }
 
-    public final void writeBinary(final DataOutputStream os, final StringStore stringStore)
+    // protected for unit testing
+    final void writeBinary(final DataOutputStream os, final StringStore stringStore)
         throws IOException 
     {
         int index = stringStore.addString(origin.name());
@@ -198,8 +201,7 @@ public class Stylesheet {
     }
     
     // protected for unit testing 
-    /** @treatAsPrivate public to allow unit testing */
-    public final void readBinary(int bssVersion, DataInputStream is, String[] strings)
+    final void readBinary(int bssVersion, DataInputStream is, String[] strings)
         throws IOException 
     {
         this.stringStore = strings;
@@ -277,4 +279,57 @@ public class Stylesheet {
         // return stylesheet
         return stylesheet;
     }
+
+    /**
+     * Convert the .css file referenced by urlIn to binary format and write to urlOut.
+     * @param source is the JavaFX .css file to convert
+     * @param destination is the file to which the binary conversion is written
+     * @throws IOException
+     * @throws IllegalArgumentException if either parameter is null, if source and destination are the same,
+     * if source cannot be read, or if destination cannot be written.
+     */
+    public static void convertToBinary(File source, File destination) throws IOException {
+
+        if (source == null || destination == null) {
+            throw new IllegalArgumentException("parameters may not be null");
+        }
+
+        if (source.getAbsolutePath().equals(destination.getAbsolutePath())) {
+            throw new IllegalArgumentException("source and destination may not be the same");
+        }
+
+        if (source.canRead() == false) {
+            throw new IllegalArgumentException("cannot read source file");
+        }
+
+        if ((destination.exists() && destination.canWrite() == false) || destination.createNewFile() == false) {
+            throw new IllegalArgumentException("cannot write destination file");
+        }
+
+        URI sourceURI = source.toURI();
+        Stylesheet stylesheet = CSSParser.getInstance().parse(sourceURI.toURL());
+
+        // first write all the css binary data into the buffer and collect strings on way
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        DataOutputStream dos = new DataOutputStream(baos);
+        StringStore stringStore = new StringStore();
+        stylesheet.writeBinary(dos, stringStore);
+        dos.flush();
+        dos.close();
+
+        FileOutputStream fos = new FileOutputStream(destination);
+        DataOutputStream os = new DataOutputStream(fos);
+
+        // write file version
+        os.writeShort(BINARY_CSS_VERSION);
+
+        // write strings
+        stringStore.writeBinary(os);
+
+        // write binary css
+        os.write(baos.toByteArray());
+        os.flush();
+        os.close();
+    }
+
 }
