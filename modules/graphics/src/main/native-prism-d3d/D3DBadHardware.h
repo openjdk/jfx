@@ -106,6 +106,21 @@ static const ADAPTER_INFO badHardware[] = {
     { 0x8086, 0x2A43, D_VERSION(6,14,10,5303), OS_WINXP },
     { 0x8086, 0x2A43, D_VERSION(8,15,10,2302), OS_VISTA },
 
+    // Intel 9XX Chipset families that are used in GMA 3XXX series
+    // Reason: RT-31537 - unusable
+    { 0x8086, 0x2972, NO_VERSION, OS_ALL },
+    { 0x8086, 0x2973, NO_VERSION, OS_ALL },
+    { 0x8086, 0x2982, NO_VERSION, OS_ALL },
+    { 0x8086, 0x2983, NO_VERSION, OS_ALL },
+    { 0x8086, 0x2992, NO_VERSION, OS_ALL },
+    { 0x8086, 0x2993, NO_VERSION, OS_ALL },
+    { 0x8086, 0x29A2, NO_VERSION, OS_ALL },
+    { 0x8086, 0x29A3, NO_VERSION, OS_ALL },
+    { 0x8086, 0x2A02, NO_VERSION, OS_ALL },
+    { 0x8086, 0x2A03, NO_VERSION, OS_ALL },
+    { 0x8086, 0x2A12, NO_VERSION, OS_ALL },
+    { 0x8086, 0x2A13, NO_VERSION, OS_ALL },
+    
     // ATI Mobility Radeon X1600, X1400, X1450, X1300, X1350
     // Reason: workaround for 6613066, 6687166
     // X1300 (four sub ids)
