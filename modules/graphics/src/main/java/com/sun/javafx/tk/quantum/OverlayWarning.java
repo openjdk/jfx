@@ -127,7 +127,13 @@ public class OverlayWarning {
         });
    }
     
-    protected void warn() {
+    protected void warn(String msg) {
+        text.setText(msg == null
+                ? localize("OverlayWarningESC")
+                : msg);
+        // needed to force the text to update...
+        text.impl_updatePeer();
+        
         warningTransition = true;
         painter.setRenderOverlay(true);
         overlayTransition.play();
@@ -149,21 +155,19 @@ public class OverlayWarning {
         return warningTransition;
     }
     
-    private Text text;
+    private Text text = new Text();
     private Rectangle background;
     private Group root;
     
     private Group createOverlayGroup() {
         final Scene scene = new Scene(new Group());
         final Font font = new Font(Font.getDefault().getFamily(), FONTSIZE);
-        final Text text = new Text();
         final Rectangle2D screenBounds = javafx.stage.Screen.getPrimary().getBounds();
         
         scene.setFill(null);
         
         String TEXT_CSS =
             "-fx-effect: dropshadow(two-pass-box, rgba(0,0,0,0.75), 3, 0.0, 0, 2);";
-        text.setText(localize("OverlayWarningESC"));
         text.setStroke(Color.WHITE);
         text.setFill(Color.WHITE);
         text.setFont(font);
