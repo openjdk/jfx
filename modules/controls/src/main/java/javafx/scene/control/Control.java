@@ -866,6 +866,7 @@ public abstract class Control extends Region implements Skinnable {
             final Skin<?> defaultSkin = createDefaultSkin();
             if (defaultSkin != null) {
                 skinProperty().set(defaultSkin);
+                super.impl_processCSS();
             } else {
                 final String msg = "The -fx-skin property has not been defined in CSS for " + this +
                                    " and createDefaultSkin() returned null.";
