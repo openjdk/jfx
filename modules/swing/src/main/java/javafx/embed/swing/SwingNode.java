@@ -106,6 +106,13 @@ public class SwingNode extends Node {
 
     private double width;
     private double height;
+    
+    private double prefWidth;
+    private double prefHeight;
+    private double maxWidth;
+    private double maxHeight;
+    private double minWidth;
+    private double minHeight;
 
     private volatile JComponent content;
     private volatile JLightweightFrame lwFrame;
@@ -272,50 +279,95 @@ public class SwingNode extends Node {
         return true;
     }
 
+    /**
+     * Invoked by the {@code SwingNode}'s parent during layout to set the {@code SwingNode}'s
+     * width and height. <b>Applications should not invoke this method directly</b>.
+     * If an application needs to directly set the size of the {@code SwingNode}, it should
+     * set the Swing component's minimum/preferred/maximum size constraints which will
+     * be propagated correspondingly to the {@code SwingNode} and it's parent will honor those
+     * settings during layout.
+     *
+     * @param width the target layout bounds width
+     * @param height the target layout bounds height
+     */    
     @Override public void resize(final double width, final double height) {
-        this.width = width;
-        this.height = height;
         super.resize(width, height);
-        impl_geomChanged();
-        impl_markDirty(DirtyBits.NODE_GEOMETRY);
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                if (lwFrame != null) {
-                    lwFrame.setSize((int)width, (int)height);
+        if (width != this.width || height != this.height) {
+            this.width = width;
+            this.height = height;
+            impl_geomChanged();
+            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            SwingUtilities.invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    if (lwFrame != null) {
+                        lwFrame.setSize((int)width, (int)height);
+                    }
                 }
-            }
-        });
+            });
+        }
     }
 
-    @Override
-    public double maxWidth(double height) {
-        return Double.MAX_VALUE;
-    }
-
-    @Override
-    public double maxHeight(double width) {
-        return Double.MAX_VALUE;
-    }
-
+    /**
+     * Returns the {@code SwingNode}'s preferred width for use in layout calculations.
+     * This value corresponds to the preferred width of the Swing component.
+     * 
+     * @return the preferred width that the node should be resized to during layout
+     */
     @Override
     public double prefWidth(double height) {
-        return -1;
+        return prefWidth;
     }
 
+    /**
+     * Returns the {@code SwingNode}'s preferred height for use in layout calculations.
+     * This value corresponds to the preferred height of the Swing component.
+     * 
+     * @return the preferred height that the node should be resized to during layout
+     */
     @Override
     public double prefHeight(double width) {
-        return -1;
+        return prefHeight;
     }
-
-    @Override
-    public double minWidth(double height) {
-        return 0;
+    
+    /**
+     * Returns the {@code SwingNode}'s maximum width for use in layout calculations.
+     * This value corresponds to the maximum width of the Swing component.
+     * 
+     * @return the maximum width that the node should be resized to during layout
+     */
+    @Override public double maxWidth(double height) {
+        return maxWidth;
     }
-
-    @Override
-    public double minHeight(double width) {
-        return 0;
+    
+    /**
+     * Returns the {@code SwingNode}'s maximum height for use in layout calculations.
+     * This value corresponds to the maximum height of the Swing component.
+     * 
+     * @return the maximum height that the node should be resized to during layout
+     */    
+    @Override public double maxHeight(double width) {
+        return maxHeight;
+    }
+    
+    /**
+     * Returns the {@code SwingNode}'s minimum width for use in layout calculations.
+     * This value corresponds to the minimum width of the Swing component.
+     * 
+     * @return the minimum width that the node should be resized to during layout
+     */    
+    @Override public double minWidth(double height) {
+        return minWidth;
+    }
+    
+    /**
+     * Returns the {@code SwingNode}'s minimum height for use in layout calculations.
+     * This value corresponds to the minimum height of the Swing component.
+     * 
+     * @return the minimum height that the node should be resized to during layout
+     */    
+    @Override public double minHeight(double width) {
+        return minHeight;
     }
 
     @Override
@@ -545,6 +597,39 @@ public class SwingNode extends Node {
                     ungrabFocus(false);
                 }
             });
+        }
+        @Override
+        public void preferredSizeChanged(final int width, final int height) {
+            Platform.runLater(new Runnable() {
+                @Override
+                public void run() {
+                    SwingNode.this.prefWidth = width;
+                    SwingNode.this.prefHeight = height;
+                    SwingNode.this.impl_notifyLayoutBoundsChanged();
+                }
+            });            
+        }
+        @Override
+        public void maximumSizeChanged(final int width, final int height) {
+            Platform.runLater(new Runnable() {
+                @Override
+                public void run() {
+                    SwingNode.this.maxWidth = width;
+                    SwingNode.this.maxHeight = height;
+                    SwingNode.this.impl_notifyLayoutBoundsChanged();
+                }
+            });            
+        }
+        @Override
+        public void minimumSizeChanged(final int width, final int height) {
+            Platform.runLater(new Runnable() {
+                @Override
+                public void run() {
+                    SwingNode.this.minWidth = width;
+                    SwingNode.this.minHeight = height;
+                    SwingNode.this.impl_notifyLayoutBoundsChanged();
+                }
+            });            
         }
     }
 
