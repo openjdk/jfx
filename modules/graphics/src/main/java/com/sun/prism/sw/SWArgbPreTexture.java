@@ -196,14 +196,4 @@ class SWArgbPreTexture extends SWTexture {
     public int getMaxContentHeight() {
         return getContentHeight();
     }
-
-    @Override
-    public void setContentWidth(int contentWidth) {
-        throw new UnsupportedOperationException("Not supported.");
-    }
-
-    @Override
-    public void setContentHeight(int contentHeight) {
-        throw new UnsupportedOperationException("Not supported.");
-    }
 }
