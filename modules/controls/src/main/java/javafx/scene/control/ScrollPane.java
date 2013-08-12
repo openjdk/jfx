@@ -518,7 +518,7 @@ public class ScrollPane extends Control {
 
     public final ObjectProperty<Bounds> viewportBoundsProperty() {
         if (viewportBounds == null) {
-            viewportBounds = new SimpleObjectProperty<Bounds>(this, "viewportBounds");
+            viewportBounds = new SimpleObjectProperty<Bounds>(this, "viewportBounds", new BoundingBox(0,0,0,0));
         }
         return viewportBounds;
     }
