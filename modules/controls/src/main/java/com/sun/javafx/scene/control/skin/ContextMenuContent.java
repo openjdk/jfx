@@ -875,7 +875,7 @@ public class ContextMenuContent extends Region {
     }
     
     private void hideAllMenus(MenuItem item) {
-        contextMenu.hide();
+        if (contextMenu != null) contextMenu.hide();
         
         Menu parentMenu;
         while ((parentMenu = item.getParentMenu()) != null) {
