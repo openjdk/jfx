@@ -922,11 +922,6 @@ allprojects {
                     artifact "[artifact].[ext]"
                 }
             }
-            // We have this repo for getting the plugin.jar from the existing JRE
-            flatDir {
-                dir "$STUB_RUNTIME/lib/"
-                dir "$JDK_HOME/jre/lib/"
-            }
         }
     }
 
@@ -1040,7 +1035,6 @@ project(":graphics") {
 
     dependencies {
         compile project(":base"), BUILD_SRC
-        compile name: "plugin"
         compile name: SWT_FILE_NAME
         stubCompile group: "junit", name: "junit", version: "4.8.2",
         project(":base").sourceSets.test.output, sourceSets.main.output
@@ -1298,7 +1292,6 @@ project(":graphics") {
             copy {
                 into libsDir
                 from f.getParentFile()
-                include "**/plugin.jar"
                 include "**/antlr-3.1.3.jar"
                 include "**/stringtemplate-3.2.jar"
                 include "**/antlr-runtime-3.1.3.jar"
