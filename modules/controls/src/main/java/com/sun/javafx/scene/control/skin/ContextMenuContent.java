@@ -281,6 +281,26 @@ public class ContextMenuContent extends Region {
         }
     }
 
+    /**
+     * Can be called by Skins when they need to clean up the content of any 
+     * ContextMenu instances they might have created. This ensures that contents 
+     * of submenus if any, also get cleaned up.
+     */
+    public void dispose() {
+        if (submenu != null) {
+            ContextMenuContent cmContent = (ContextMenuContent)submenu.getSkin().getNode();
+            cmContent.dispose(); // recursive call to dispose submenus.
+        }
+        submenu = null;
+        openSubmenu = null;
+        selectedBackground = null;
+        if (contextMenu != null) {
+            contextMenu.getItems().clear();
+            contextMenu = null;
+        }
+        
+    }
+
     @Override protected void layoutChildren() {
         if (itemsContainer.getChildren().size() == 0) return;
         final double x = snappedLeftInset();
