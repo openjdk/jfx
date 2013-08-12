@@ -51,9 +51,15 @@ public class VirtualFlowTestUtils {
     }
 
     public static void clickOnRow(final Control control, int row, KeyModifier... modifiers) {
+        clickOnRow(control, row, false, modifiers);
+    }
+
+    // ignore children allows clicking on the row, rather than a child in that row.
+    // This is good for testing, for example, TableRowBehavior
+    public static void clickOnRow(final Control control, int row, boolean ignoreChildren, KeyModifier... modifiers) {
         IndexedCell cell = VirtualFlowTestUtils.getCell(control, row);
 
-        if ((cell instanceof TableRow) || (cell instanceof TreeTableRow)) {
+        if (! ignoreChildren && ((cell instanceof TableRow) || (cell instanceof TreeTableRow))) {
             for (Node n : cell.getChildrenUnmodifiable()) {
                 if (! (n instanceof IndexedCell)) {
                     continue;
@@ -63,7 +69,15 @@ public class VirtualFlowTestUtils {
                 break;
             }
         } else {
-            new MouseEventFirer(cell).fireMousePressAndRelease(modifiers);
+            if (ignoreChildren) {
+                // special case when we want to click on the row rather than its
+                // children (e.g. TableRow rather than its TableCell)
+                MouseEventFirer mef = new MouseEventFirer(cell);
+                mef.fireMousePressed(cell.getWidth(), cell.getHeight() / 2.0, modifiers);
+                mef.fireMouseReleased(cell.getWidth(), cell.getHeight() / 2.0, modifiers);
+            } else {
+                new MouseEventFirer(cell).fireMousePressAndRelease(modifiers);
+            }
         }
     }
 

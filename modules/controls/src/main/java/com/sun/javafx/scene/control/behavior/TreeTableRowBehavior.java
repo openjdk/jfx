@@ -26,13 +26,12 @@
 package com.sun.javafx.scene.control.behavior;
 
 import javafx.scene.Node;
-import javafx.scene.control.TreeItem;
-import javafx.scene.control.TreeTableColumn;
-import javafx.scene.control.TreeTableRow;
-import javafx.scene.control.TreeTableView;
+import javafx.scene.control.*;
 import javafx.scene.control.TreeTableView.TreeTableViewSelectionModel;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -88,6 +87,27 @@ public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
             } else {
                 if (e.isShortcutDown()) {
                     sm.select(treeTableRow.getIndex());
+                } else if (e.isShiftDown()) {
+                    // we add all rows between the current focus and
+                    // this row (inclusive) to the current selection.
+                    TablePositionBase anchor = TreeTableCellBehavior.getAnchor(table, table.getFocusModel().getFocusedCell());
+
+                    // and then determine all row and columns which must be selected
+                    int minRow = Math.min(anchor.getRow(), index);
+                    int maxRow = Math.max(anchor.getRow(), index);
+
+                    // To prevent RT-32119, we make a copy of the selected indices
+                    // list first, so that we are not iterating and modifying it
+                    // concurrently.
+                    List<Integer> selectedIndices = new ArrayList<>(sm.getSelectedIndices());
+                    for (int i = 0, max = selectedIndices.size(); i < max; i++) {
+                        int selectedIndex = selectedIndices.get(i);
+                        if (selectedIndex < minRow || selectedIndex > maxRow) {
+                            sm.clearSelection(selectedIndex);
+                        }
+                    }
+
+                    sm.selectRange(minRow, maxRow + 1);
                 } else {
                     sm.clearAndSelect(treeTableRow.getIndex());
                 }
