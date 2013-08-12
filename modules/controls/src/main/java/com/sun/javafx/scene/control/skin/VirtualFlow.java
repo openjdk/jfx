@@ -25,10 +25,8 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import com.sun.javafx.application.PlatformImpl;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
-import javafx.application.ConditionalFeature;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
@@ -36,7 +34,11 @@ import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
-import javafx.event.*;
+import javafx.event.ActionEvent;
+import javafx.event.Event;
+import javafx.event.EventDispatchChain;
+import javafx.event.EventDispatcher;
+import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
 import javafx.scene.Group;
 import javafx.scene.Node;
@@ -52,7 +54,6 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Callback;
 import javafx.util.Duration;
-
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.List;
@@ -522,7 +523,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         */
         setOnScroll(new EventHandler<javafx.scene.input.ScrollEvent>() {
             @Override public void handle(ScrollEvent event) {
-                if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+                if (BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
                     if (touchDetected == false &&  mouseDown == false ) {
                         startSBReleasedAnimation();
                     }
@@ -601,7 +602,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             @Override
             public void handle(MouseEvent e) {
                 mouseDown = true;
-                if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+                if (BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
                     scrollBarOn();
                 }
                 if (isFocusTraversable()) {
@@ -624,7 +625,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             @Override
             public void handle(MouseEvent e) {
                 mouseDown = false;
-                if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+                if (BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
                     startSBReleasedAnimation();
                 }
             }
@@ -632,7 +633,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         addEventFilter(MouseEvent.MOUSE_DRAGGED, new EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent e) {
-                if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+                if (BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
                     scrollBarOn();
                 }
                 if (! isPanning || ! isPannable()) return;
@@ -879,7 +880,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         Cell cell;
         boolean cellNeedsLayout = false;
 
-        if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+        if (BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
             if ((tempVisibility == true && (hbar.isVisible() == false || vbar.isVisible() == false)) ||
                 (tempVisibility == false && (hbar.isVisible() == true || vbar.isVisible() == true))) {
                 cellNeedsLayout = true;
@@ -1279,7 +1280,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // accordingly. If during layout we find that one or the other of the
         // bars actually is needed, then we will perform a cleanup pass
 
-        if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+        if (!BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
             if (needBreadthBar) setViewportLength(viewportLength - breadthBarLength);
             if (needLengthBar) setViewportBreadth(viewportBreadth - lengthBarBreadth);
 
@@ -1330,7 +1331,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 // If cellCount is > than cells.size(), then we know we need the
                 // length bar.
                 if (cellCount > cellsSize) {
-                    if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+                    if (!BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
                         lengthBar.setVisible(true);
                     }
                     else {
@@ -1342,7 +1343,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                     // we need to check the last cell's layout position + length
                     // to determine if we need the length bar
                     T lastCell = cells.getLast();
-                    if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+                    if (!BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
                         lengthBar.setVisible((getCellPosition(lastCell) + getCellLength(lastCell)) > getViewportLength());
                     }
                     else {
@@ -1351,14 +1352,14 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 }
                 
                 // If the bar is needed, adjust the viewportBreadth
-                if (lengthBar.isVisible() && !PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+                if (lengthBar.isVisible() && !BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
                     setViewportBreadth(getViewportBreadth() - lengthBarBreadth);
                 }
             }
             
             if (! breadthBar.isVisible()) {
                 final boolean visible = getMaxPrefBreadth() > getViewportBreadth();
-                if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+                if (!BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
                     breadthBar.setVisible(visible);
                     if (visible) {
                         setViewportLength(getViewportLength() - breadthBarLength);
@@ -1385,7 +1386,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             /*
             ** Positioning the ScrollBar
             */
-            if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+            if (!BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
                 if (isVertical) {
                     hbar.resizeRelocate(0, viewportLength,
                         viewportBreadth, hbar.prefHeight(viewportBreadth));
@@ -1463,7 +1464,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             /*
             ** Positioning the ScrollBar
             */
-            if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+            if (!BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
                 if (isVertical) {
                     vbar.resizeRelocate(viewportBreadth, 0, vbar.prefWidth(viewportLength), viewportLength);
                 } else {
@@ -1480,7 +1481,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         }
 
         if (corner.isVisible()) {
-            if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+            if (!BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
                 corner.resize(vbar.getWidth(), hbar.getHeight());
                 corner.relocate(hbar.getLayoutX() + hbar.getWidth(), vbar.getLayoutY() + vbar.getHeight());
             }

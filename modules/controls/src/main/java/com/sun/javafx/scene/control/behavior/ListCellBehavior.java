@@ -25,7 +25,6 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import javafx.application.ConditionalFeature;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -33,9 +32,9 @@ import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.control.Logging;
 import sun.util.logging.PlatformLogger;
 import sun.util.logging.PlatformLogger.Level;
@@ -96,9 +95,7 @@ public class ListCellBehavior<T> extends CellBehaviorBase<ListCell<T>> {
     // that selection only happens on mouse release, if only minimal dragging
     // has occurred.
     private boolean latePress = false;
-    private final boolean isTouch = PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH);
     private boolean wasSelected = false;
-
 
 
     /***************************************************************************
@@ -129,7 +126,7 @@ public class ListCellBehavior<T> extends CellBehaviorBase<ListCell<T>> {
 
         doSelect(event);
 
-        if (isTouch && selectedBefore) {
+        if (IS_TOUCH_SUPPORTED && selectedBefore) {
             wasSelected = getControl().isSelected();
         }
     }
@@ -149,7 +146,7 @@ public class ListCellBehavior<T> extends CellBehaviorBase<ListCell<T>> {
         // the mouse has now been dragged on a touch device, we should
         // remove the selection if we just added it in the last mouse press
         // event
-        if (isTouch && ! wasSelected && getControl().isSelected()) {
+        if (IS_TOUCH_SUPPORTED && ! wasSelected && getControl().isSelected()) {
             getControl().getListView().getSelectionModel().clearSelection(getControl().getIndex());
         }
     }
@@ -230,8 +227,11 @@ public class ListCellBehavior<T> extends CellBehaviorBase<ListCell<T>> {
 
                     // and then perform the selection.
                     // We do this by deselecting the elements that are not in
-                    // range, and then selecting all elements that are in range
-                    List<Integer> selectedIndices = sm.getSelectedIndices();
+                    // range, and then selecting all elements that are in range.
+                    // To prevent RT-32119, we make a copy of the selected indices
+                    // list first, so that we are not iterating and modifying it
+                    // concurrently.
+                    List<Integer> selectedIndices = new ArrayList<>(sm.getSelectedIndices());
                     for (int i = 0, max = selectedIndices.size(); i < max; i++) {
                         int selectedIndex = selectedIndices.get(i);
                         if (selectedIndex < minRow || selectedIndex > maxRow) {

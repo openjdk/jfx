@@ -2515,4 +2515,42 @@ public class TreeTableViewTest {
         VirtualFlowTestUtils.assertGraphicIsNotVisible(treeTableView, 4);
         VirtualFlowTestUtils.assertGraphicIsNotVisible(treeTableView, 5);
     }
+
+    private int rt_31015_count = 0;
+    @Test public void test_rt_31015() {
+        installChildren();
+        root.getChildren().clear();
+        treeTableView.setEditable(true);
+
+        TreeTableColumn<String, String> col = new TreeTableColumn<String, String>("column");
+        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
+            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
+                return new ReadOnlyObjectWrapper<String>(param.getValue().getValue());
+            }
+        });
+        treeTableView.getColumns().add(col);
+
+        //Set cell factory for cells that allow editing
+        Callback<TreeTableColumn<String,String>, TreeTableCell<String, String>> cellFactory = new Callback<TreeTableColumn<String,String>, TreeTableCell<String, String>>() {
+            public TreeTableCell<String, String> call(TreeTableColumn<String, String> p) {
+                return new TreeTableCell<String, String>() {
+                    @Override public void cancelEdit() {
+                        super.cancelEdit();
+                        rt_31015_count++;
+                    }
+                };
+            }
+        };
+        col.setCellFactory(cellFactory);
+
+        new StageLoader(treeTableView);
+
+        assertEquals(0, rt_31015_count);
+
+        treeTableView.edit(0, col);
+        assertEquals(0, rt_31015_count);
+
+        treeTableView.edit(-1, null);
+        assertEquals(1, rt_31015_count);
+    }
 }

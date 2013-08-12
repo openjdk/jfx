@@ -25,14 +25,6 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import javafx.application.ConditionalFeature;
-import javafx.css.CssMetaData;
-import javafx.css.PseudoClass;
-import javafx.css.StyleableProperty;
-import javafx.css.StyleableObjectProperty;
-import com.sun.javafx.application.PlatformImpl;
-import com.sun.javafx.css.converters.EnumConverter;
-
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -41,11 +33,17 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
+import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
+import javafx.css.Styleable;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
@@ -58,16 +56,19 @@ import javafx.scene.Node;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.SkinBase;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TabPane.TabClosingPolicy;
+import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.Tooltip;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.SwipeEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -75,24 +76,18 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Rotate;
 import javafx.util.Callback;
 import javafx.util.Duration;
-
-import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
-import com.sun.javafx.scene.control.behavior.TabPaneBehavior;
-import com.sun.javafx.scene.traversal.Direction;
-import com.sun.javafx.scene.traversal.TraversalEngine;
-import com.sun.javafx.scene.traversal.TraverseListener;
-import javafx.scene.control.RadioMenuItem;
-import javafx.scene.control.ToggleGroup;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import javafx.beans.property.ObjectProperty;
-import javafx.css.Styleable;
-import javafx.scene.input.*;
+import com.sun.javafx.css.converters.EnumConverter;
+import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
+import com.sun.javafx.scene.control.behavior.TabPaneBehavior;
+import com.sun.javafx.scene.traversal.Direction;
+import com.sun.javafx.scene.traversal.TraversalEngine;
+import com.sun.javafx.scene.traversal.TraverseListener;
 
 public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
     private static enum TabAnimation {
@@ -415,7 +410,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
     }
 
     private void initializeSwipeHandlers() {
-        if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+        if (IS_TOUCH_SUPPORTED) {
             getSkinnable().setOnSwipeLeft(new EventHandler<SwipeEvent>() {
                 @Override public void handle(SwipeEvent t) {
                     getBehavior().selectNextTab();

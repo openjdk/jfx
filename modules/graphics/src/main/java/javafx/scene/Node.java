@@ -8664,9 +8664,12 @@ public abstract class Node implements EventTarget, Styleable {
             // Note: recalculate used to do something different than reapply,
             // but the way calculated values are cached has changed.
             // TODO: re-evalutate handling of CssFlags.RECALCULATE
+            cssFlag = CssFlags.REAPPLY;
             styleHelper = CssStyleHelper.createStyleHelper(this);
 
         }
+
+        final CssFlags flag = cssFlag;
 
         // Clear the flag first in case the flag is set to something
         // other than clean by downstream processing.
@@ -8674,7 +8677,7 @@ public abstract class Node implements EventTarget, Styleable {
 
         // Transition to the new state and apply styles
         if (styleHelper != null) {
-                styleHelper.transitionToState(this);
+                styleHelper.transitionToState(this, flag);
         }
     }
 

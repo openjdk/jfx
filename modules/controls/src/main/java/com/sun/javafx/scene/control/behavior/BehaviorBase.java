@@ -25,6 +25,8 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.event.EventHandler;
@@ -72,6 +74,11 @@ import static javafx.scene.input.KeyCode.UP;
  * uppercase, matching class naming conventions.</p>
  */
 public class BehaviorBase<C extends Control> {
+    /**
+     * A static final reference to whether the platform we are on supports touch.
+     */
+    protected final static boolean IS_TOUCH_SUPPORTED = Platform.isSupported(ConditionalFeature.INPUT_TOUCH);
+
     /**
      * The default key bindings for focus traversal. For many behavior
      * implementations, you may be able to use this directly. The built in names

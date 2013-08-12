@@ -1185,40 +1185,40 @@ is being used to size a border should also be in pixels.
     -fx-background-color: -fx-accent;
 }
 .progress-indicator:indeterminate .segment0 {
-     -fx-shape:"M45.0 26.0 a3.5,3.5 0 1,1 0,1 Z";
- }
+    -fx-shape:"M41.98 14.74 a3.5,3.5 0 1,1 0,1 Z";
+}
 .progress-indicator:indeterminate .segment1 {
-    -fx-shape:"M41.98 37.25 a3.5,3.5 0 1,1 0,1 Z";
-}
-.progress-indicator:indeterminate .segment2 {
-    -fx-shape:"M33.75 45.48 a3.5,3.5 0 1,1 0,1 Z";
-}
-.progress-indicator:indeterminate .segment3 {
-    -fx-shape:"M22.5 48.5 a3.5,3.5 0 1,1 0,1 Z";
-}
-.progress-indicator:indeterminate .segment4 {
-    -fx-shape:"M11.25 45.48 a3.5,3.5 0 1,1 0,1 Z";
-}
-.progress-indicator:indeterminate .segment5 {
-    -fx-shape:"M3.01 37.25 a3.5,3.5 0 1,1 0,1 Z";
-}
-.progress-indicator:indeterminate .segment6 {
-    -fx-shape:"M0.0 26.0 a3.5,3.5 0 1,1 0,1 Z";
-}
-.progress-indicator:indeterminate .segment7 {
-    -fx-shape:"M3.01 14.74 a3.5,3.5 0 1,1 0,1 Z";
-}
-.progress-indicator:indeterminate .segment8 {
-    -fx-shape:"M11.24 6.51 a3.5,3.5 0 1,1 0,1 Z";
-}
-.progress-indicator:indeterminate .segment9 {
-    -fx-shape:"M22.49 3.5 a3.5,3.5 0 1,1 0,1 Z";
-}
-.progress-indicator:indeterminate .segment10 {
     -fx-shape:"M33.75 6.51 a3.5,3.5 0 1,1 0,1 Z";
 }
+.progress-indicator:indeterminate .segment2 {
+    -fx-shape:"M22.49 3.5 a3.5,3.5 0 1,1 0,1 Z";
+}
+.progress-indicator:indeterminate .segment3 {
+    -fx-shape:"M11.24 6.51 a3.5,3.5 0 1,1 0,1 Z";
+}
+.progress-indicator:indeterminate .segment4 {
+    -fx-shape:"M3.01 14.74 a3.5,3.5 0 1,1 0,1 Z";
+}
+.progress-indicator:indeterminate .segment5 {
+    -fx-shape:"M0.0 26.0 a3.5,3.5 0 1,1 0,1 Z";
+}
+.progress-indicator:indeterminate .segment6 {
+    -fx-shape:"M3.01 37.25 a3.5,3.5 0 1,1 0,1 Z";
+}
+.progress-indicator:indeterminate .segment7 {
+    -fx-shape:"M11.25 45.48 a3.5,3.5 0 1,1 0,1 Z";
+}
+.progress-indicator:indeterminate .segment8 {
+    -fx-shape:"M22.5 48.5 a3.5,3.5 0 1,1 0,1 Z";
+}
+.progress-indicator:indeterminate .segment9 {
+    -fx-shape:"M33.75 45.48 a3.5,3.5 0 1,1 0,1 Z";
+}
+.progress-indicator:indeterminate .segment10 {
+    -fx-shape:"M41.98 37.25 a3.5,3.5 0 1,1 0,1 Z";
+}
 .progress-indicator:indeterminate .segment11 {
-    -fx-shape:"M41.98 14.74 a3.5,3.5 0 1,1 0,1 Z";
+     -fx-shape:"M45.0 26.0 a3.5,3.5 0 1,1 0,1 Z";
 }
 
 /*******************************************************************************

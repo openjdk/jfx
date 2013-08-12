@@ -682,7 +682,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
                     region.setStyle(null);
                 }
                 pathsG.getChildren().add(region);
-                opacities.add(Math.min(1, 0.2 + (i * step)));
+                opacities.add(Math.max(0.1, (1.0 - (step*i))));
             }
         }
 

@@ -48,6 +48,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 import javafx.scene.input.KeyCode;
 
+import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import org.junit.After;
 
@@ -255,5 +256,50 @@ public class TreeTableViewMouseInputTest {
         VirtualFlowTestUtils.clickOnRow(tableView, 0, KeyModifier.SHIFT);
         assertEquals(1, rt30394_count);
         assertTrue(fm.isFocused(0));
+    }
+
+    @Test public void test_rt32119() {
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearSelection();
+
+        // select rows 2, 3, and 4
+        VirtualFlowTestUtils.clickOnRow(tableView, 2);
+        VirtualFlowTestUtils.clickOnRow(tableView, 4, KeyModifier.SHIFT);
+        assertFalse(sm.isSelected(1));
+        assertTrue(sm.isSelected(2));
+        assertTrue(sm.isSelected(3));
+        assertTrue(sm.isSelected(4));
+        assertFalse(sm.isSelected(5));
+
+        // now shift click on the 2nd row - this should make only row 2 be
+        // selected. The bug is that row 4 remains selected also.
+        VirtualFlowTestUtils.clickOnRow(tableView, 2, KeyModifier.SHIFT);
+        assertFalse(sm.isSelected(1));
+        assertTrue(sm.isSelected(2));
+        assertFalse(sm.isSelected(3));
+        assertFalse(sm.isSelected(4));
+        assertFalse(sm.isSelected(5));
+    }
+
+    @Test public void test_rt31020() {
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearSelection();
+
+        // set all the columns to be very narrow (so the mouse click happens
+        // to the right of them all, out in no-mans land
+        tableView.setMinWidth(200);
+        tableView.setPrefWidth(200);
+        tableView.getColumns().clear();
+        col0.setMaxWidth(10);
+        tableView.getColumns().add(col0);
+
+        // select rows 1, 2, 3, 4, and 5
+        VirtualFlowTestUtils.clickOnRow(tableView, 1, true);
+        VirtualFlowTestUtils.clickOnRow(tableView, 5, true, KeyModifier.SHIFT);
+        assertTrue(sm.isSelected(1));
+        assertTrue(sm.isSelected(2));
+        assertTrue(sm.isSelected(3));
+        assertTrue(sm.isSelected(4));
+        assertTrue(sm.isSelected(5));
     }
 }

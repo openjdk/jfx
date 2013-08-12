@@ -25,10 +25,8 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import java.util.List;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
-import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -62,7 +60,7 @@ import javafx.scene.shape.PathElement;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextBoundsType;
 import javafx.util.Duration;
-import com.sun.javafx.application.PlatformImpl;
+import java.util.List;
 import com.sun.javafx.scene.control.behavior.TextAreaBehavior;
 import com.sun.javafx.scene.text.HitInfo;
 
@@ -236,7 +234,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             int caretPos = textArea.getCaretPosition();
             int anchorPos = textArea.getAnchor();
 
-            if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+            if (SHOW_HANDLES) {
                 // Install and resize the handles for caret and anchor.
                 if (selection.getLength() > 0) {
                     selectionHandle1.resize(selectionHandle1.prefWidth(-1),
@@ -335,7 +333,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                 end   = Math.max(0, end   - paragraphLength);
             }
 
-            if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+            if (SHOW_HANDLES) {
                 // Position handle for the caret. This could be handle1 or handle2 when
                 // a selection is active.
                 Bounds b = caretPath.getBoundsInParent();
@@ -444,7 +442,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
         // RT-21658: We can currently only handle scroll events from touch if
         // on the embedded platform.
-        if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+        if (!SHOW_HANDLES) {
             scrollPane.addEventFilter(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
                 @Override public void handle(ScrollEvent event) {
                     if (event.isDirect()) {
@@ -471,7 +469,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         caretPath.visibleProperty().bind(caretVisible);
         contentView.getChildren().add(caretPath);
 
-        if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+        if (SHOW_HANDLES) {
             contentView.getChildren().addAll(caretHandle, selectionHandle1, selectionHandle2);
         }
 
@@ -651,7 +649,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         updatePrefViewportHeight();
         if (textArea.isFocused()) setCaretAnimating(true);
 
-        if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+        if (SHOW_HANDLES) {
             selectionHandle1.setRotate(180);
 
             EventHandler<MouseEvent> handlePressHandler = new EventHandler<MouseEvent>() {
@@ -996,7 +994,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         double w = bounds.getWidth();
         double h = bounds.getHeight();
 
-        if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
+        if (SHOW_HANDLES) {
             if (caretHandle.isVisible()) {
                 h += caretHandle.getHeight();
             } else if (selectionHandle1.isVisible() && selectionHandle2.isVisible()) {

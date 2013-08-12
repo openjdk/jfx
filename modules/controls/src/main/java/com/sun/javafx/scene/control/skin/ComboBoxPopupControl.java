@@ -113,6 +113,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
                     @Override public Node getNode() { return getPopupContent(); }
                     @Override public void dispose() { }
                 });
+                getScene().getRoot().impl_processCSS(true);
             }
         };
         popup.getStyleClass().add(COMBO_BOX_STYLE_CLASS);
@@ -146,7 +147,9 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     }
     
     void reconfigurePopup() {
-        if (! getPopup().isShowing()) return;
+        // RT-26861. Don't call getPopup() here because it may cause the popup
+        // to be created too early.
+        if (popup == null || !popup.isShowing()) return;
                 
         Point2D p = getPrefPopupPosition();
         reconfigurePopup(p.getX(), p.getY(), 

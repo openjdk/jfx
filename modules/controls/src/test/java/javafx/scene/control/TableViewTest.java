@@ -28,16 +28,9 @@ package javafx.scene.control;
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import static javafx.scene.control.TableColumn.SortType.ASCENDING;
 import static javafx.scene.control.TableColumn.SortType.DESCENDING;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.Random;
+import java.util.*;
 
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.beans.property.ObjectProperty;
@@ -1693,5 +1686,90 @@ public class TableViewTest {
         VirtualFlowTestUtils.assertGraphicIsNotVisible(table, 3);
         VirtualFlowTestUtils.assertGraphicIsNotVisible(table, 4);
         VirtualFlowTestUtils.assertGraphicIsNotVisible(table, 5);
+    }
+
+    @Test public void test_rt_32201() {
+        final int numRows = 150;
+        final int numColumns = 30;
+
+        // create data
+        final ObservableList<List<Object>> bigData = FXCollections.observableArrayList();
+        for (int row = bigData.size(); row < numRows; row++) {
+            List<Object> line = new ArrayList<>();
+            for (int col = 0; col <= numColumns; col++) {
+                double value = (col == 0) ? (double)row : Math.random() * 1000;
+                line.add(value);
+            }
+            bigData.add(line);
+        }
+
+        TableView<List<Object>> table = new TableView<>(bigData);
+
+        // create columns
+        for (int i = 0; i <= numColumns; i++) {
+            TableColumn<List<Object>,Object> col = new TableColumn<>("Col" + i);
+            final int coli = i;
+            col.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<List<Object>,Object>, ObservableValue<Object>>() {
+                public ObservableValue<Object> call(TableColumn.CellDataFeatures<List<Object>,Object> p) {
+                    return new ReadOnlyObjectWrapper(p.getValue().get(coli));
+                }
+            });
+
+            table.getColumns().add(col);
+        }
+
+        // start test
+        assertNull(table.getComparator());
+        assertTrue(table.getSortOrder().isEmpty());
+
+        table.getSortOrder().add(table.getColumns().get(0));
+        assertNotNull(table.getComparator());
+        assertTrue(table.getSortOrder().contains(table.getColumns().get(0)));
+        assertEquals(1, table.getSortOrder().size());
+
+        // remove column again
+        try {
+            table.getSortOrder().clear();
+        } catch (ClassCastException e) {
+            fail("Comparator should be null as the sort order list is empty.");
+        }
+        assertNull(table.getComparator());
+        assertTrue(table.getSortOrder().isEmpty());
+    }
+
+    private int rt_31015_count = 0;
+    @Test public void test_rt_31015() {
+        TableView<Person> table = new TableView<>();
+        table.setEditable(true);
+        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        first.setCellValueFactory(new PropertyValueFactory("firstName"));
+        table.getColumns().addAll(first);
+
+        table.setItems(FXCollections.observableArrayList(
+            new Person("John", "Smith", "jacob.smith@example.com")
+        ));
+
+        //Set cell factory for cells that allow editing
+        Callback<TableColumn<Person,String>, TableCell<Person, String>> cellFactory = new Callback<TableColumn<Person,String>, TableCell<Person, String>>() {
+            public TableCell<Person, String> call(TableColumn<Person, String> p) {
+                return new TableCell<Person, String>() {
+                    @Override public void cancelEdit() {
+                        super.cancelEdit();
+                        rt_31015_count++;
+                    }
+                };
+            }
+        };
+        first.setCellFactory(cellFactory);
+
+        new StageLoader(table);
+
+        assertEquals(0, rt_31015_count);
+
+        table.edit(0, first);
+        assertEquals(0, rt_31015_count);
+
+        table.edit(-1, null);
+        assertEquals(1, rt_31015_count);
     }
 }

@@ -488,6 +488,12 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
             menuButton.textProperty().unbind();
             menuButton.graphicProperty().unbind();
             menuButton.styleProperty().unbind();
+            // RT-29729 : old instance of context menu window/popup for this MenuButton needs 
+            // to be cleaned up. Setting the skin to null - results in a call to dispose() 
+            // on the skin which in this case MenuButtonSkinBase - does the subsequent 
+            // clean up to ContextMenu/popup window.
+            menuButton.setSkin(null);
+            menuButton = null;
         }
         container.getChildren().clear();
 

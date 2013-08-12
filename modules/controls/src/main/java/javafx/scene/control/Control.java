@@ -641,9 +641,6 @@ public abstract class Control extends Region implements Skinnable {
 
                 @Override
                 public void invalidated() {
-                    // reset the styleable properties so we get the new ones from
-                    // the new skin
-                    styleableProperties = null;
 
                     if (get() != null) {
                         if (!get().equals(currentSkinClassName)) {
@@ -852,7 +849,10 @@ public abstract class Control extends Region implements Skinnable {
      */
     @Deprecated
     @Override protected void impl_processCSS() {
+
+        // don't muck with this if block without first reading the comments in skin property's set method!
         if (skinClassNameProperty().get() == null) {
+            // TODO: using skinClassName as a flag in skin property's set method is probably a bad idea
             final String url = Control.this.getUserAgentStylesheet();
             if (url != null) {
                 StyleManager.getInstance().addUserAgentStylesheet(url);
@@ -866,7 +866,6 @@ public abstract class Control extends Region implements Skinnable {
             final Skin<?> defaultSkin = createDefaultSkin();
             if (defaultSkin != null) {
                 skinProperty().set(defaultSkin);
-                // we have to reapply css again so that the newly set skin gets css applied as well.
                 super.impl_processCSS();
             } else {
                 final String msg = "The -fx-skin property has not been defined in CSS for " + this +

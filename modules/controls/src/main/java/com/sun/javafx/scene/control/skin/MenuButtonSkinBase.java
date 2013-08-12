@@ -58,7 +58,7 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
     protected final LabeledImpl label;
     protected final StackPane arrow;
     protected final StackPane arrowButton;
-    protected final ContextMenu popup;
+    protected ContextMenu popup;
 
     /**
      * If true, the control should behave like a button for mouse button events.
@@ -130,7 +130,7 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
         control.sceneProperty().addListener(new ChangeListener<Scene>() {
                 @Override
                     public void changed(ObservableValue<? extends Scene> scene, Scene oldValue, Scene newValue) {
-                    if (getSkinnable().getScene() != null) {
+                    if (getSkinnable() != null && getSkinnable().getScene() != null) {
                         addAccelerators(getSkinnable().getItems());
                     }
                 }
@@ -156,6 +156,19 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
         registerChangeListener(popup.showingProperty(), "POPUP_VISIBLE");
     }
 
+     /** {@inheritDoc} */
+    @Override public void dispose() { 
+        super.dispose();
+        if (popup != null ) {
+            if (popup.getSkin() != null && popup.getSkin().getNode() != null) {
+                ContextMenuContent cmContent = (ContextMenuContent)popup.getSkin().getNode();
+                cmContent.dispose();
+                cmContent = null;
+            }
+            popup.setSkin(null);
+            popup = null;
+        }
+    }
     /***************************************************************************
      *                                                                         *
      * Control change handlers                                                 *
@@ -307,7 +320,7 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
         }
     }
    
-
+    
     private class MenuLabeledImpl extends LabeledImpl {
 
         MenuButton button;
