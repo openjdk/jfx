@@ -11,6 +11,7 @@
         <ant antfile="MaterialTests/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="SnapshotTests/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="SwingInterop/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="TextTests/build.xml" target="jar" inheritAll="false"/>
     </target>
 
     <target name="test" depends="jar,-smoke-test,-extra-test">
@@ -25,12 +26,14 @@
         <ant antfile="MaterialTests/build.xml" target="test" inheritAll="false"/>
         <ant antfile="SnapshotTests/build.xml" target="test" inheritAll="false"/>
         <ant antfile="SwingInterop/build.xml" target="test" inheritAll="false"/>
+        <ant antfile="TextTests/build.xml" target="test" inheritAll="false"/>
     </target>
 
     <target name="clean">
         <ant antfile="MaterialTests/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="SnapshotTests/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="SwingInterop/build.xml" target="clean" inheritAll="false"/>
+        <ant antfile="TextTests/build.xml" target="clean" inheritAll="false"/>
     </target>
 
 </project>
