@@ -31,7 +31,7 @@ fetchExternalTools('ARMV6SF', [ "armv6-vfp-03.tgz" ],
 // Define the location of the sdk and toolchain
 def sdk=file("${rootProject.CROSS_TOOLS_DIR}/armv6-vfp-03")
 
-def compilerHome=file("/opt/arm-2009q1")
+def compilerHome=file("/opt/arm-linaro-4.7")
 if (rootProject.hasProperty("ARMV6SF_COMPILER")) {
     logger.quiet "Using alternate ARMV6SF_COMPILER $rootProject.ARMV6SF_COMPILER"
     compilerHome=file(rootProject.ARMV6SF_COMPILER);
@@ -259,8 +259,8 @@ setupTools("armv6sf_pango_tools",
 )
 
 
-def compiler = file("$compilerHome/bin/arm-none-linux-gnueabi-gcc").getAbsolutePath()
-def linker = file("$compilerHome/bin/arm-none-linux-gnueabi-g++").getAbsolutePath()
+def compiler = file("$compilerHome/bin/arm-linux-gnueabi-gcc").getAbsolutePath()
+def linker = file("$compilerHome/bin/arm-linux-gnueabi-g++").getAbsolutePath()
 
 ARMV6SF.glass = [:]
 ARMV6SF.glass.variants = ["eglfb", "directfb", "fb", "eglx11", "gtk"]
