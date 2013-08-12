@@ -74,7 +74,7 @@ public class TraversalEngine {
          * for 2D arrow behaviour with a target bias and a stack use :
          *    algorithm = new Biased2DWithStack();
          */
-        if (PlatformImpl.isSupported(ConditionalFeature.TWO_LEVEL_FOCUS)) {
+        if (PlatformImpl.isContextual2DNavigation()) {
             algorithm = new Hueristic2D();
         }
         else {
