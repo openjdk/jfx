@@ -172,10 +172,12 @@ class DatePickerHijrahContent extends DatePickerContent {
                                     .format(cDate);
 
                 secondaryText.setText(hijrahStr);
+                dayCell.setDisable(false);
             } catch (DateTimeException ex) {
                 // Date is out of range.
                 // System.err.println(dayCellDate(dayCell) + " " + ex);
                 secondaryText.setText(" ");
+                dayCell.setDisable(true);
             }
 
 //             if (month == curMonth) {
