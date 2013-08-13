@@ -812,7 +812,7 @@ jboolean glass_window_list_toFront(NativeWindow window) {
 
     if (glass_window_isExist(window) == JNI_FALSE) {
         glass_window_list_unlock();
-        GLASS_LOG_SEVERE("window %p is not part of the windows list", window);
+        GLASS_LOG_WARNING("window %p is not part of the windows list", window);
         return JNI_FALSE;
     }
 
