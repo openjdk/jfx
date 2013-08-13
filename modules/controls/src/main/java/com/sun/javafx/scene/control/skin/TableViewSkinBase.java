@@ -599,12 +599,26 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
     
     private static final double GOLDEN_RATIO_MULTIPLIER = 0.618033987;
 
+    private void checkContentWidthState() {
+        // we test for item count here to resolve RT-14855, where the column
+        // widths weren't being resized properly when in constrained layout mode
+        // if there were no items.
+        if (contentWidthDirty || getItemCount() == 0) {
+            updateContentWidth();
+            contentWidthDirty = false;
+        }
+    }
+
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+        checkContentWidthState();
+
         return 400;
     }
 
     /** {@inheritDoc} */
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
+        checkContentWidthState();
+
         double prefHeight = computePrefHeight(-1, topInset, rightInset, bottomInset, leftInset);
         
         List<? extends TC> cols = getVisibleLeafColumns();
@@ -709,14 +723,6 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
         
         columnReorderLine.setVisible(tableHeaderRow.isReordering());
         columnReorderOverlay.setVisible(tableHeaderRow.isReordering());
-        
-        // we test for item count here to resolve RT-14855, where the column
-        // widths weren't being resized properly when in constrained layout mode
-        // if there were no items.
-        if (contentWidthDirty || getItemCount() == 0) {
-            updateContentWidth();
-            contentWidthDirty = false;
-        }
     }
     
     
@@ -801,6 +807,8 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
             Control c = getSkinnable();
             contentWidth = c.getWidth() - (snappedLeftInset() + snappedRightInset());
         }
+
+        contentWidth = Math.max(0.0, contentWidth);
 
         // FIXME this isn't perfect, but it prevents RT-14885, which results in
         // undesired horizontal scrollbars when in constrained resize mode
