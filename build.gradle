@@ -1248,38 +1248,17 @@ project(":graphics") {
     assemble.dependsOn nativeDecora
     processResources.dependsOn processDecoraShaders, processPrismShaders
 
-    // The graphics project needs to completely replace the "test" task because the
-    // tests have been split among the normal tests and the stub tests. I want to make sure
-    // that invoking "graphics:test" runs both of these tasks, rather than only one of them.
-    tasks.replace("test")
     test {
-        group = "Verification"
-        description = "Runs all the unit tests for Graphics"
-    }
-    task testWithoutStub(type: Test, dependsOn: ":graphics:compileJava", group: "Verification") {
-        jvmArgs "-Djava.ext.dirs="
-        classpath = sourceSets.test.runtimeClasspath
-        if (rootProject.BINARY_STUB != null) classpath += rootProject.BINARY_STUB
-    }
-    task testWithStub(type: Test, dependsOn: [":graphics:compileJava"], group: "Verification") {
         jvmArgs "-Djava.ext.dirs=", "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit", "-DCSS_META_DATA_TEST_DIR=${file('$buildDir/classes/main/javafx')}"
-        classpath = sourceSets.stub.runtimeClasspath + sourceSets.main.runtimeClasspath
-        if (rootProject.BINARY_STUB != null) classpath += rootProject.BINARY_STUB
-        testClassesDir = file("$buildDir/classes/stub")
-        testResultsDir = file("$buildDir/stub-results")
-        testReportDir = file("$buildDir/reports/stub")
-    }
-    [testWithoutStub, testWithStub].each { test ->
-        test.enableAssertions = true
-        test.testLogging.exceptionFormat = "full"
-        test.scanForTestClasses = false
-        test.include "**/*Test.*"
-        test.exclude "**/*Abstract*.*"
+        enableAssertions = true
+        testLogging.exceptionFormat = "full"
+        scanForTestClasses = false
+        include "**/*Test.*"
+        exclude "**/*Abstract*.*"
         if (BUILD_CLOSED && DO_JCOV) {
             addJCov(project, test)
         }
     }
-    test.dependsOn testWithoutStub, testWithStub
 
     // To enable the IDEs to all be happy (no red squiggles) we need to have the libraries
     // available in some known location. Maybe in the future the Gradle plugins to each
