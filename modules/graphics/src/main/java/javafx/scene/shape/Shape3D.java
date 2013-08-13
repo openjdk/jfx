@@ -100,8 +100,7 @@ public abstract class Shape3D extends Node {
     private final ChangeListener<Boolean> materialListener = new ChangeListener<Boolean>() {
         @Override public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
             if (newValue) {
-                impl_markDirty(DirtyBits.MATERIAL_PROPERTY);
-                //impl_geomChanged();
+                impl_markDirty(DirtyBits.MATERIAL);
             }
         }
     };
@@ -216,13 +215,7 @@ public abstract class Shape3D extends Node {
     @Override
     public void impl_updatePeer() {
         super.impl_updatePeer();
-
-        // TODO: 3D - Why do we have separate dirty bits for MATERIAL
-        // and MATERIAL_PROPERTY ?
         Material material = getMaterial();
-        if (impl_isDirty(DirtyBits.MATERIAL_PROPERTY) && material != null) {
-            material.impl_updatePG();
-        }
         final NGShape3D peer = impl_getPeer();
         if (impl_isDirty(DirtyBits.MATERIAL)) {
             if (material != null) {

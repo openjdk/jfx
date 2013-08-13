@@ -88,7 +88,6 @@ public enum DirtyBits {
     
     // Dirty bits for Material class (non Node type)
     MATERIAL,
-    MATERIAL_PROPERTY,
 
     // Dirty bits for Mesh class (non Node type)
     MESH,
