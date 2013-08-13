@@ -150,8 +150,12 @@ public class ImagePool {
                         chosenImage.unlock();
                     }
                     chosenEntry = entry;
-                    eimg.setContentWidth(w);
-                    eimg.setContentHeight(h);
+                    // The following calls to setContentWidth / setContentHeight
+                    // should be uncommented only after the rest of the imagepool
+                    // is fixed to handle a change in content size, and when both the
+                    // SW pipeline and J2D pipeline are able to handle the change.
+//                    eimg.setContentWidth(w);
+//                    eimg.setContentHeight(h);
                     chosenImage = eimg;
                     mindiff = diff;
                 }
