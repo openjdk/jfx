@@ -7,7 +7,7 @@
 <!-- the Compile on Save feature is turned off for the project. -->
 <!-- You can turn off the Compile on Save (or Deploy on Save) setting -->
 <!-- in the project's Project Properties dialog box.-->
-<project name="graphics" default="default" basedir=".">
+<project name="graphics" default="default" basedir="." xmlns:j2seproject3="http://www.netbeans.org/ns/j2se-project/3">
     <description>Builds, tests, and runs the project graphics.</description>
     <import file="nbproject/build-impl.xml"/>
     <!--
@@ -51,7 +51,8 @@
       -init-macrodef-junit:     defines macro for junit execution
       -init-macrodef-debug:     defines macro for class debugging
       -init-macrodef-java:      defines macro for class execution
-      -do-jar:                  JAR building
+      -do-jar-with-manifest:    JAR building (if you are using a manifest)
+      -do-jar-without-manifest: JAR building (if you are not using a manifest)
       run:                      execution of project 
       -javadoc-build:           Javadoc generation
       test-report:              JUnit report generation
@@ -70,4 +71,36 @@
     nbproject/build-impl.xml file. 
 
     -->
+
+    <!-- add prism resources -->
+    <target name="-post-jar">
+        <echo level="info">Adding prism resources to jar...</echo>
+        <jar destfile="${dist.jar}" update="true">
+            <fileset dir="../../modules/graphics/build/resources/main"/>
+        </jar>
+    </target>
+
+    <!-- run tests with stub toolkit -->
+    <target depends="-init-macrodef-test-impl,-init-macrodef-junit-impl,-init-macrodef-testng-impl" name="-init-macrodef-test">
+        <macrodef name="test" uri="http://www.netbeans.org/ns/j2se-project/3">
+            <attribute default="${includes}" name="includes"/>
+            <attribute default="${excludes}" name="excludes"/>
+            <attribute default="**" name="testincludes"/>
+            <attribute default="" name="testmethods"/>
+            <sequential>
+                <j2seproject3:test-impl excludes="@{excludes}" includes="@{includes}" testincludes="@{testincludes}" testmethods="@{testmethods}">
+                    <customize>
+                        <classpath>
+                            <path path="${run.test.classpath}"/>
+                        </classpath>
+                        <jvmarg line="${endorsed.classpath.cmd.line.arg}"/>
+                        <jvmarg line="${run.jvmargs}"/>
+                        <jvmarg line="${run.jvmargs.ide}"/>
+                        <jvmarg line="-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit"/>
+                    </customize>
+                </j2seproject3:test-impl>
+            </sequential>
+        </macrodef>
+    </target>
+
 </project>
