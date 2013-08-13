@@ -297,7 +297,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
 
         if (obj == this) return true;
 
-        if (obj != null && obj.getClass() != this.getClass()) {
+        if (obj == null || obj.getClass() != this.getClass()) {
             return false;
         }
 
