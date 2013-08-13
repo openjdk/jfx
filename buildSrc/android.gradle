@@ -33,7 +33,7 @@
  */
 String getLatestPlatform(String path) {
     def max = 0
-    file(cygpath(path + "/platforms")).eachFile() {file->
+    file(cygpath("$path/platforms")).eachFile() {file->
         def pname = file.getName() - "android-"
         def ptf = pname?.isInteger() ? pname.toInteger() : 0
         if (max < ptf) {
@@ -46,10 +46,55 @@ String getLatestPlatform(String path) {
     return "android-" + max
 }
 
+int compareVersions(String s1, String s2) {
+    def v1t = s1.tokenize(".")
+    def v2t = s2.tokenize(".")
+    for(int i = 0; i < v1t.size(); i++) {
+        if (i == v2t.size()) {
+            return 1
+        }
+        int n1 = v1t[i].isInteger() ? v1t[i].toInteger() : 0
+        int n2 = v2t[i].isInteger() ? v2t[i].toInteger() : 0
+        if (n1 == n2) {
+            continue
+        } else if (n1 > n2) {
+            return 1;
+        } else {
+            return -1
+        }        
+    }    
+    return (v2t.size() > v1t.size()) ? -1 : 0
+}
+
+String getLatestToolchain(String ndk, String tch) {
+    def max = "0.0"
+    def matchFile = null
+    file(cygpath("$ndk/toolchains")).eachFile() {file->        
+        def filename = file.getName()
+        if (filename.startsWith(tch)) {
+            def p = filename - "$tch-"
+            if (compareVersions(p, max) > 0) {
+                max = p
+                matchFile = file
+            }
+        }
+    }
+    return matchFile.getAbsolutePath()
+}
+
+boolean assertDir(File dir) {
+    return dir != null && dir.exists() && dir.isDirectory() && dir.canRead();
+}
+
+boolean assertDir(String dir) {
+    return assertDir(file(dir))
+}
+
 def closedDir = file("$projectDir/../rt-closed")
 
-defineProperty("ANDROID_CROSS_TOOLS_VER", "arm-linux-androideabi-4.4.3")
-defineProperty("ARM_ARCH", "armeabi")//armeabi-v7
+def toolchainArchs = ["arm-linux-androideabi", "mipsel-linux-android", "x86"]
+def armArchs = ["armeabi", "armeabiv-7a"]
+
 defineProperty("COMPILE_PANGO", "false")
 
 ANDROID = [:]
@@ -58,37 +103,78 @@ ANDROID.compileSWT = false;
 ANDROID.compileFXPackager = false;
 ANDROID.compileDesignTime = false;
 ANDROID.glassPlatform = "android"
-ANDROID.armArch = "${ARM_ARCH}"
+ANDROID.armArch = armArchs[0]
 ANDROID.libDest = "lib/${ANDROID.armArch}"
 ANDROID.jfxdvklib = "jfxdvk.jar"
 ANDROID.library = { name -> return "lib${name}.so" as String }
 
+def sdk = project.hasProperty("ANDROID_SDK") ? "${ANDROID_SDK}" : null;
+def ndk = project.hasProperty("ANDROID_NDK") ? "${ANDROID_NDK}" : null;
+ANDROID.canBuild = sdk != null && ndk != null
+if (!ANDROID.canBuild) {
+    logger.error("Can't build Android. Path to SDK or NDK was not set or is invalid!")
+    return;
+}
+
+ANDROID.canBuild = assertDir(sdk) && assertDir(ndk)
+if (!ANDROID.canBuild) {
+    if (!assertDir(sdk)) {
+        logger.error("Path to ANDROID_SDK is invalid! [$sdk]")
+    }
+    if (!assertDir(ndk)) {
+        logger.error("Path to ANDROID_NDK is invalid! [$ndk]")
+    }
+    return
+}
+
+def sdk_target = project.hasProperty("ANDROID_SDK_TARGET") ?  "${ANDROID_SDK_TARGET}" : getLatestPlatform(sdk);
+if (!assertDir(file("$sdk/platforms/$sdk_target"))) {            
+    sdk_target = getLatestPlatform(sdk); 
+    logger.warn("Redefine ANDROID_SDK_TARGET to: [$sdk_target]")
+}
+
+def ndk_target = project.hasProperty("ANDROID_NDK_TARGET") ? "${ANDROID_NDK_TARGET}" : getLatestPlatform(ndk);
+if (!assertDir(file("$ndk/platforms/$ndk_target"))) {            
+    ndk_target = getLatestPlatform(ndk);
+    logger.warn("Redefine ANDROID_NDK_TARGET to: [$ndk_target]")
+}
+
+ANDROID.canBuild = sdk_target != null && ndk_target != null
+if (!ANDROID.canBuild) {
+    logger.error("Can't determine sdk or ndk target platform!")
+    return
+}
+
+def toolchainHome = project.hasProperty("ANDROID_CROSS_TOOLS_VER") ? 
+    "$ndk/toolchains/${ANDROID_CROSS_TOOLS_VER}" : getLatestToolchain(ndk, toolchainArchs[0])
+if (!assertDir(toolchainHome)) {
+    toolchainHome = getLatestToolchain(ndk, toolchainArchs[0])
+    logger.warn("Redefine toolchain to [$toolchainHome]")
+}
+
 // Look for the the Android SDK & NDK to use, as well as the compiler stuff
-def sdk = project.hasProperty("ANDROID_SDK") ? getLatestPlatform("$ANDROID_SDK") : null;
-def ndk = project.hasProperty("ANDROID_NDK") ? getLatestPlatform("$ANDROID_NDK") : null;
-def toolsPlatform = IS_WINDOWS ? "windows" : IS_MAC ? "macosx" : "linux-x86"
-def compilerHome = sdk == null || ndk == null ? null : file("${ANDROID_NDK}/toolchains/${ANDROID_CROSS_TOOLS_VER}/prebuilt/$toolsPlatform")
+def compilerHome = null
+file("$toolchainHome/prebuilt").eachDir() {subdir ->
+    compilerHome = subdir.getAbsolutePath()
+    return
+}
 
-// We can build Android if the ANDROID_SDK and ANDROID_NDK are specified, and if
-// the targets exist.
-ANDROID.canBuild = sdk != null && ndk != null && compilerHome != null;
-if (!ANDROID.canBuild) return;
+ANDROID.canBuild = compilerHome != null
+if (!ANDROID.canBuild) {
+    logger.error("Failed to access toolchain [$toolchainHome/prebuilt/$toolsPlatform]!")
+    return
+}
 
-// We now know that we can build Android, so time to define some useful properties
-defineProperty("ANDROID_SDK_TARGET", sdk)
-defineProperty("ANDROID_NDK_TARGET", ndk)
-
-def compiler = file("$compilerHome/bin/arm-linux-androideabi-gcc").getAbsolutePath()
-def linker = file("$compilerHome/bin/arm-linux-androideabi-g++").getAbsolutePath()
+def compiler = file("$compilerHome/bin/${toolchainArchs[0]}-gcc").getAbsolutePath()
+def linker = file("$compilerHome/bin/${toolchainArchs[0]}-g++").getAbsolutePath()
 
 // Log the settings we're building with
-logger.quiet("ANDROID_SDK: $ANDROID_SDK")
-logger.quiet("ANDROID_SDK_TARGET: $ANDROID_SDK_TARGET")
-logger.quiet("ANDROID_NDK: $ANDROID_NDK")
-logger.quiet("ANDROID_NDK_TARGET: $ANDROID_NDK_TARGET")
+logger.quiet("ANDROID_SDK: $sdk")
+logger.quiet("ANDROID_SDK_TARGET: $sdk_target")
+logger.quiet("ANDROID_NDK: $ndk")
+logger.quiet("ANDROID_NDK_TARGET: $ndk_target")
 logger.quiet("Android Compiler: $compiler")
 logger.quiet("Android Linker: $linker")
-
 
 project(":graphics") {
 
@@ -96,7 +182,7 @@ project(":graphics") {
         description = "Task compiles dalvik vm based libraries."
         sourceCompatibility = JavaVersion.VERSION_1_6
         targetCompatibility = JavaVersion.VERSION_1_6
-        options.bootClasspath = "${ANDROID_SDK}/platforms/${ANDROID_SDK_TARGET}/android.jar"
+        options.bootClasspath = "$sdk/platforms/$sdk_target/android.jar"
         classpath = files("build/classes/android")
         destinationDir = file("build/classes/android")
         dependencyCacheDir = file("build/dependency-cache")
@@ -137,6 +223,32 @@ project(":graphics") {
         }
     }
 }
+
+project(":controls") {
+    afterEvaluate {
+        task compileControlsJavaAndroid(type: JavaCompile, group: "Build", dependsOn: [":graphics:compileJava", ":controls:compileJava"]) {
+            description = "Task compiles controls for Android"
+            classpath = files("modules/base/build/classes/main",
+                "modules/graphics/build/classes/main",
+                "modules/controls/build/classes/main"
+            )
+            destinationDir = file("modules/controls/build/classes/android")
+            dependencyCacheDir = file("modules/controls/build/dependency-cache")
+            source file("modules/controls/src/android/java")
+        }
+
+       task processControlsResourcesAndroid() {
+           copy {
+               from ("modules/controls/src/android/resources")
+               into ("modules/controls/build/resources/android")
+           }
+        }
+
+        sdkAndroid {
+            dependsOn(compileControlsJavaAndroid, processControlsResourcesAndroid)        
+        }
+    }
+}        
 
 project(":web") {
     apply plugin: 'java'
@@ -240,7 +352,7 @@ android.prism.device=true
 android.use.egl=true
 android.com.sun.javafx.isEmbedded=true
 """
-def sysroot = "${ANDROID_NDK}/platforms/${ANDROID_NDK_TARGET}/arch-arm"
+def sysroot = "$ndk/platforms/$ndk_target/arch-arm"
 
 def ccFlags = ["--sysroot=$sysroot","-std=c99", "-DANDROID", "-c", "-nostdlib", "-DANDROID_NDK"]
 def ccOptFlags = ["-fpic", "-ffunction-sections", "-funwind-tables","-fstack-protector",
@@ -249,20 +361,20 @@ def ccWarnFlags = ["-Wa,--noexecstack", "-Wno-psabi"]
 def ccArchFlags = ["-mthumb", "-msoft-float", "-D__ARM_ARCH_5__", "-D__ARM_ARCH_5T__", "-D__ARM_ARCH_5E__",
                    "-D__ARM_ARCH_5TE__", "-march=armv5te" , "-mtune=xscale"]
 def ccDebugFlags = [IS_DEBUG ? "-DDEBUG" : "-DNDEBUG"]
-def ccDefaultIncludeFlags = ["-I${ANDROID_NDK}/platforms/${ANDROID_NDK_TARGET}/arch-arm/usr/include"]
+def ccDefaultIncludeFlags = ["-I$ndk/platforms/$ndk_target/arch-arm/usr/include"]
 
 def linkFlags = ["--sysroot=$sysroot",
                  "-Wl,--no-undefined", "-Wl,-z,noexecstack", "-lc", "-lm", "-shared",
-                 "-L${ANDROID_NDK}/platforms/${ANDROID_NDK_TARGET}/arch-arm/usr/lib"]
+                 "-L$ndk/platforms/$ndk_target/arch-arm/usr/lib"]
 
 
 ANDROID.vmlauncher = [:]
-ANDROID.vmlauncher.classpath = files("${ANDROID_SDK}/platforms/${ANDROID_SDK_TARGET}/android.jar",
+ANDROID.vmlauncher.classpath = files("$sdk/platforms/$sdk_target/android.jar",
                                      "modules/graphics/build/classes/android")
 
 ANDROID.vmlauncher.javahSource = files("modules/graphics/build/classes/android")
 ANDROID.vmlauncher.javahClasspath = files("modules/graphics/build/classes/android",
-                                          "${ANDROID_SDK}/platforms/${ANDROID_SDK_TARGET}/android.jar")
+                                          "$sdk/platforms/$sdk_target/android.jar")
 ANDROID.vmlauncher.javahInclude = [
     "com/oracle/dalvik/*"
 ]

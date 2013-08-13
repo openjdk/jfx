@@ -87,12 +87,9 @@ static void (*_notifyButtonEvent)(
         int yabs);
 
 static void (*_notifyKeyEvent)(
-        NativeWindow window,
         int eventType,
         int jfxKeyCode,
         int isRepeatEvent);
-
-static NativeWindow(*_glass_window_getFocusedWindow)();
 
 static int (*_glass_inputEvents_getJavaKeycodeFromPlatformKeyCode)(
         int platformKey);
@@ -163,7 +160,6 @@ void init_functions(JNIEnv *env) {
     _notifyMotionEvent = GET_SYMBOL(env, libglass, "notifyMotionEvent");
     _notifyButtonEvent = GET_SYMBOL(env, libglass, "notifyButtonEvent");
     _notifyKeyEvent = GET_SYMBOL(env, libglass, "notifyKeyEvent");
-    _glass_window_getFocusedWindow = GET_SYMBOL(env, libglass, "glass_window_getFocusedWindow");
     _glass_inputEvents_getJavaKeycodeFromPlatformKeyCode = GET_SYMBOL(env, libglass,
             "glass_inputEvents_getJavaKeycodeFromPlatformKeyCode");
 
@@ -238,11 +234,12 @@ JNIEXPORT void JNICALL Java_com_oracle_dalvik_FXActivity_00024InternalSurfaceVie
 (JNIEnv *ignore, jobject view, jint action, jint keyCode) {
     
     LOGV(TAG, "Key event: [action: %s, keyCode: %i]\n", describe_key_action(action), keyCode);
-    int jfxaction = to_jfx_key_action(action);
-    int jfxKeyCode = (*_glass_inputEvents_getJavaKeycodeFromPlatformKeyCode)(
-            translate_to_linux_keycode(keyCode));
-    NativeWindow window = (*_glass_window_getFocusedWindow)();
-    (*_notifyKeyEvent)(window, jfxaction, jfxKeyCode, 0);
+    int event_type = to_jfx_key_action(action);
+    int linux_keycode = translate_to_linux_keycode(keyCode);
+    LOGV(TAG, "Translated to linux keycode: [%i]\n", linux_keycode);
+    if (linux_keycode > 0) {        
+        (*_notifyKeyEvent)(event_type, linux_keycode, 0);
+    }
 }
 
 ANativeWindow *ANDROID_getNativeWindow() {

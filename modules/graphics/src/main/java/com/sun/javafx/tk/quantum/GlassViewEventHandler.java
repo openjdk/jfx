@@ -37,6 +37,7 @@ import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.collections.TrackableObservableList;
+import com.sun.javafx.scene.input.KeyCodeMap;
 
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -134,11 +135,27 @@ class GlassViewEventHandler extends View.EventHandler {
                 if (stage != null) {
                     stage.setInEventHandler(true);
                 }
+
+                boolean shiftDown = (modifiers & KeyEvent.MODIFIER_SHIFT) != 0;
+                boolean controlDown = (modifiers & KeyEvent.MODIFIER_CONTROL) != 0;
+                boolean altDown = (modifiers & KeyEvent.MODIFIER_ALT) != 0;
+                boolean metaDown = (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0;
+
+                String str = new String(chars);
+                String text = str; // TODO: this must be a text like "HOME", "F1", or "A"
+
+                javafx.scene.input.KeyEvent keyEvent = new javafx.scene.input.KeyEvent(
+                        keyEventType(type),
+                        str, text, 
+                        KeyCodeMap.valueOf(key) ,
+                        shiftDown, controlDown, altDown, metaDown);
+
                 switch (type) {
                     case com.sun.glass.events.KeyEvent.PRESS:
-                        if (key == com.sun.glass.events.KeyEvent.VK_ESCAPE &&
-                                view.isInFullscreen() && stage != null) {
-                            stage.exitFullScreen();
+                        if (view.isInFullscreen() && stage != null) {
+                            if (stage.getSavedFullScreenExitKey().match(keyEvent)) {
+                                stage.exitFullScreen();
+                            }
                         }
                         /* NOBREAK */
                     case com.sun.glass.events.KeyEvent.RELEASE:
@@ -149,14 +166,7 @@ class GlassViewEventHandler extends View.EventHandler {
                             }
                         }
                         if (scene.sceneListener != null) {
-                            EventType<javafx.scene.input.KeyEvent> eventType = keyEventType(type);
-                            boolean shiftDown = (modifiers & KeyEvent.MODIFIER_SHIFT) != 0;
-                            boolean controlDown = (modifiers & KeyEvent.MODIFIER_CONTROL) != 0;
-                            boolean altDown = (modifiers & KeyEvent.MODIFIER_ALT) != 0;
-                            boolean metaDown = (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0;
-
-                            scene.sceneListener.keyEvent(eventType, key, chars,
-                                    shiftDown, controlDown, altDown, metaDown);
+                            scene.sceneListener.keyEvent(keyEvent);
                         }
                         break;
                     default:

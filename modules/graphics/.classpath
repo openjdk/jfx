@@ -18,8 +18,6 @@
       <attribute name="optional" value="true"/>
     </attributes>
   </classpathentry>
-  <classpathentry kind="src" exported="true" path="src/stub/java"/>
-  <classpathentry kind="src" exported="true" path="src/stub/resources"/>
   <classpathentry kind="src" exported="true" path="build/generated-src/jsl-decora"/>
   <classpathentry kind="src" exported="true" path="build/generated-src/jsl-prism"/>
   <classpathentry kind="src" exported="true" path="build/resources/jsl-decora"/>

@@ -80,6 +80,8 @@ void init_functions(JNIEnv *);
 
 char *describe_touch_action(int);
 
+char *describe_key_action(int action);
+
 int to_jfx_touch_action(int);
 
 int to_jfx_key_action(int);
@@ -161,6 +163,7 @@ static AndroidLinuxKC keyMap[] = {
     //{AKEYCODE_CTRL_RIGHT, KEY_RIGHTCTRL},
     {AKEYCODE_ALT_RIGHT, KEY_RIGHTALT},
     {AKEYCODE_HOME, KEY_HOME},
+    {AKEYCODE_BACK, KEY_ESC},           //special back key mapped to ESC
     {AKEYCODE_DPAD_UP, KEY_UP},
     {AKEYCODE_PAGE_UP, KEY_PAGEUP},
     {AKEYCODE_DPAD_LEFT, KEY_LEFT},

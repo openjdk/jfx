@@ -51,6 +51,7 @@ import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.shape.StrokeType;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Modality;
+import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.Window;
 import java.io.File;
@@ -272,10 +273,10 @@ public abstract class Toolkit {
 
     public abstract boolean isNestedLoopRunning();
 
-    public abstract TKStage createTKStage(StageStyle stageStyle, boolean primary,
+    public abstract TKStage createTKStage(Window peerWindow, StageStyle stageStyle, boolean primary,
             Modality modality, TKStage owner, boolean rtl, AccessControlContext acc);
 
-    public abstract TKStage createTKPopupStage(TKStage owner, AccessControlContext acc);
+    public abstract TKStage createTKPopupStage(Window peerWindow, TKStage owner, AccessControlContext acc);
     public abstract TKStage createTKEmbeddedStage(HostInterface host, AccessControlContext acc);
 
     /**

@@ -661,7 +661,7 @@ public class JFXPanel extends JComponent {
         @Override
         public void eventDispatched(AWTEvent event) {
             if (event instanceof sun.awt.UngrabEvent) {
-                Platform.runLater(new Runnable() {
+                SwingFXUtils.runOnFxThread(new Runnable() {
                     @Override
                     public void run() {
                         if (JFXPanel.this.stagePeer != null) {
@@ -694,7 +694,7 @@ public class JFXPanel extends JComponent {
 
         updateComponentSize(); // see RT-23603
 
-        Platform.runLater(new Runnable() {
+        SwingFXUtils.runOnFxThread(new Runnable() {
             @Override
             public void run() {
                 if ((stage != null) && !stage.isShowing()) {
@@ -712,7 +712,7 @@ public class JFXPanel extends JComponent {
      * chain of parent components are removed.
      */
     @Override public void removeNotify() {
-        Platform.runLater(new Runnable() {
+        SwingFXUtils.runOnFxThread(new Runnable() {
             @Override
             public void run() {
                 if ((stage != null) && stage.isShowing()) {

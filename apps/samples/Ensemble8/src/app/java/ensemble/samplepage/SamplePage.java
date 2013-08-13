@@ -69,7 +69,15 @@ public class SamplePage extends Region implements Page {
             FrontPage frontPage = new FrontPage(this);
             BackPage backPage = new BackPage(this);
 
-            if (!EnsembleApp.IS_BEAGLE) {
+            if (EnsembleApp.IS_EMBEDDED || EnsembleApp.IS_IOS) {
+                SlidingPages slidingPages = new SlidingPages();
+                slidingPages.prefWidthProperty().bind(widthProperty());
+                slidingPages.prefHeightProperty().bind(heightProperty());
+                slidingPages.setFrontPage(frontPage);
+                slidingPages.setBackPage(backPage);
+                getChildren().setAll(slidingPages);
+            } else {
+                
                 BendingPages bendingPages = new BendingPages();
                 bendingPages.prefWidthProperty().bind(widthProperty());
                 bendingPages.prefHeightProperty().bind(heightProperty());
@@ -78,13 +86,6 @@ public class SamplePage extends Region implements Page {
                 bendingPages.setColors(Color.rgb(3, 95, 188), Color.rgb(4, 164, 231), Color.rgb(0, 57, 117));
                 bendingPages.setClosedOffset(new Point2D(50, 40));
                 getChildren().setAll(bendingPages);
-            } else {
-                SlidingPages slidingPages = new SlidingPages();
-                slidingPages.prefWidthProperty().bind(widthProperty());
-                slidingPages.prefHeightProperty().bind(heightProperty());
-                slidingPages.setFrontPage(frontPage);
-                slidingPages.setBackPage(backPage);
-                getChildren().setAll(slidingPages);
             }
         }
     }

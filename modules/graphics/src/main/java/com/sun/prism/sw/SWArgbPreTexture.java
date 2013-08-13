@@ -186,4 +186,14 @@ class SWArgbPreTexture extends SWTexture {
     Texture createSharedLockedTexture(WrapMode altMode) {
         return new SWArgbPreTexture(this, altMode);
     }
+
+    @Override
+    public int getMaxContentWidth() {
+        return getContentWidth();
+    }
+
+    @Override
+    public int getMaxContentHeight() {
+        return getContentHeight();
+    }
 }

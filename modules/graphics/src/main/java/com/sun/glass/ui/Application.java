@@ -37,7 +37,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Vector;
+import java.util.LinkedList;
 
 public abstract class Application {
 
@@ -363,21 +363,15 @@ public abstract class Application {
     public void terminate() {
         checkEventThread();
         try {
-            synchronized (this) {
-                final Vector<Window> windows = new Vector<Window>(Window.getWindows());
+                final List<Window> windows = new LinkedList<>(Window.getWindows());
                 for (Window window : windows) {
-                    //System.err.println("window setVisible false : "+window.getTitle());
-
                     // first make windows invisible
                     window.setVisible(false);
                 }
                 for (Window window : windows) {
-                    //System.err.println("window close : "+window.getTitle());
-
                     // now we can close windows
                     window.close();
                 }
-            }
         } catch (Throwable t) {
             t.printStackTrace();
         } finally {

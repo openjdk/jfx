@@ -41,17 +41,19 @@ class ES2RTTexture extends ES2Texture<ES2RTTextureData>
 {
 
     private boolean opaque;
-
+  
     private ES2RTTexture(ES2Context context, ES2TextureResource<ES2RTTextureData> resource,
                          WrapMode wrapMode,
                          int physicalWidth, int physicalHeight,
                          int contentX, int contentY,
-                         int contentWidth, int contentHeight)
+                         int contentWidth, int contentHeight,
+                         int maxContentWidth, int maxContentHeight)
     {
         super(context, resource, PixelFormat.BYTE_BGRA_PRE, wrapMode,
                 physicalWidth, physicalHeight,
                 contentX, contentY,
-                contentWidth, contentHeight);
+                contentWidth, contentHeight,
+                maxContentWidth, maxContentHeight);
         this.opaque = false;
     }
 
@@ -241,15 +243,20 @@ class ES2RTTexture extends ES2Texture<ES2RTTextureData>
         // setup correctly because it will set to the content region, or
         // 128x256 in this case, assuming no padding.)
         int contentW, contentH;
+        int maxContentW, maxContentH;
 
         if (pad) {
-            contentW = texWidth - 2;
-            contentH = texHeight - 2;
+            maxContentW = texWidth - 2;
+            maxContentH = texHeight - 2;
+            contentW = w;
+            contentH = h;
         } else {
-            contentW = texWidth;
-            contentH = texHeight;
+            maxContentW = texWidth;
+            maxContentH = texHeight;
+            contentW = w;
+            contentH = h;
         }
-
+        
         // save current texture
         glContext.setActiveTextureUnit(0);
         int savedFBO = glContext.getBoundFBO();
@@ -280,7 +287,8 @@ class ES2RTTexture extends ES2Texture<ES2RTTextureData>
         ES2RTTexture es2RTT = new ES2RTTexture(context, texRes, wrapMode,
                                 texWidth, texHeight,
                                 contentX, contentY,
-                                contentW, contentH);
+                                contentW, contentH,
+                                maxContentW, maxContentH);
         if (msaa) {
             es2RTT.createAndAttachMSAABuffer(context);
         }

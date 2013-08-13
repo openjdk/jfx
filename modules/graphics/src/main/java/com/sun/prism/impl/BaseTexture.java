@@ -39,8 +39,14 @@ public abstract class BaseTexture<T extends ManagedResource> implements Texture 
     private final int physicalHeight;
     private final int contentX;
     private final int contentY;
-    private final int contentWidth;
-    private final int contentHeight;
+    protected int contentWidth;
+    protected int contentHeight;
+    
+    //maximum possible user pixels of a texture (in case of POW2 texture allocation size)
+    //currently only matters with RTT's
+    private final int maxContentWidth;
+    private final int maxContentHeight;
+    
     // We do not provide a default wrapMode because it is so dependent on
     // how the texture will be used.
     private final WrapMode wrapMode;
@@ -57,6 +63,8 @@ public abstract class BaseTexture<T extends ManagedResource> implements Texture 
         this.contentY = sharedTex.contentY;
         this.contentWidth = sharedTex.contentWidth;
         this.contentHeight = sharedTex.contentHeight;
+        this.maxContentWidth = sharedTex.maxContentWidth;
+        this.maxContentHeight = sharedTex.maxContentHeight;
     }
 
     protected BaseTexture(T resource,
@@ -81,6 +89,28 @@ public abstract class BaseTexture<T extends ManagedResource> implements Texture 
         this.contentY = contentY;
         this.contentWidth = contentWidth;
         this.contentHeight = contentHeight;
+        this.maxContentWidth = physicalWidth;
+        this.maxContentHeight = physicalHeight;
+    }
+    
+    protected BaseTexture(T resource,
+                          PixelFormat format, WrapMode wrapMode,
+                          int physicalWidth, int physicalHeight,
+                          int contentX, int contentY,
+                          int contentWidth, int contentHeight,
+                          int maxContentWidth, int maxContentHeight)
+    {
+        this.resource = resource;
+        this.format = format;
+        this.wrapMode = wrapMode;
+        this.physicalWidth = physicalWidth;
+        this.physicalHeight = physicalHeight;
+        this.contentX = contentX;
+        this.contentY = contentY;
+        this.contentWidth = contentWidth;
+        this.contentHeight = contentHeight;
+        this.maxContentWidth = maxContentWidth;
+        this.maxContentHeight = maxContentHeight;
     }
 
     @Override
@@ -117,6 +147,34 @@ public abstract class BaseTexture<T extends ManagedResource> implements Texture 
     public final int getContentHeight() {
         return contentHeight;
     }
+    
+    @Override
+    public int getMaxContentWidth() {
+        return maxContentWidth;
+    }
+    
+    @Override
+    public int getMaxContentHeight() {
+        return maxContentHeight;
+    }
+    
+    @Override
+    public void setContentWidth(int contentW) {
+        if (contentW > maxContentWidth) {
+            throw new IllegalArgumentException("ContentWidth must be less than or "
+                    + "equal to maxContentWidth");
+        }
+        contentWidth = contentW;
+    }
+    
+    @Override
+    public void setContentHeight(int contentH) {
+        if (contentH > maxContentHeight) {
+            throw new IllegalArgumentException("ContentWidth must be less than or "
+                    + "equal to maxContentHeight");
+        }
+        contentHeight = contentH; 
+   }
 
     @Override
     public final WrapMode getWrapMode() {

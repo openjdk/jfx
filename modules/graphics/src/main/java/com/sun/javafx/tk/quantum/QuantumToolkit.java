@@ -127,6 +127,7 @@ import com.sun.scenario.effect.impl.prism.PrFilterContext;
 import com.sun.scenario.effect.impl.prism.PrImage;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
+import javafx.stage.Window;
 
 public final class QuantumToolkit extends Toolkit {
 
@@ -178,7 +179,7 @@ public final class QuantumToolkit extends Toolkit {
                 @Override public Boolean run() {
                     boolean isSWT = "swt".equals(System.getProperty("glass.platform"));
                     String result = PlatformUtil.isMac() && !isSWT ? "true" : "false";
-                    return result.equals(System.getProperty("javafx.live.resize", "true"));
+                    return "true".equals(System.getProperty("javafx.live.resize", result));
                 }
             });
 
@@ -187,7 +188,7 @@ public final class QuantumToolkit extends Toolkit {
                 @Override public Boolean run() {
                     boolean isSWT = "swt".equals(System.getProperty("glass.platform"));
                     String result = PlatformUtil.isMac() && isSWT ? "true" : "false";
-                    return result.equals(System.getProperty("javafx.draw.in.paint", "true"));}
+                    return "true".equals(System.getProperty("javafx.draw.in.paint", result));}
             });
     
     private static boolean singleThreaded =
@@ -513,10 +514,10 @@ public final class QuantumToolkit extends Toolkit {
         }
     }
 
-    @Override public TKStage createTKStage(StageStyle stageStyle,
+    @Override public TKStage createTKStage(Window peerWindow, StageStyle stageStyle,
             boolean primary, Modality modality, TKStage owner, boolean rtl, AccessControlContext acc) {
         assertToolkitRunning();
-        WindowStage stage = new WindowStage(stageStyle, modality, owner);
+        WindowStage stage = new WindowStage(peerWindow, stageStyle, modality, owner);
         stage.setSecurityContext(acc);
         if (primary) {
             stage.setIsPrimary();
@@ -566,10 +567,11 @@ public final class QuantumToolkit extends Toolkit {
         eventLoop.leave(rval);
     }
 
-    @Override public TKStage createTKPopupStage(TKStage owner,
+    @Override public TKStage createTKPopupStage(Window peerWindow,
+                                                TKStage owner,
                                                 AccessControlContext acc) {
         assertToolkitRunning();
-        WindowStage stage = new WindowStage(StageStyle.TRANSPARENT, null, owner);
+        WindowStage stage = new WindowStage(peerWindow, StageStyle.TRANSPARENT, null, owner);
         stage.setSecurityContext(acc);
         stage.setIsPopup();
         stage.init(systemMenu);

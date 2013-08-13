@@ -2395,14 +2395,10 @@ public class Scene implements EventTarget {
             impl_processMouseEvent(mouseEvent);
         }
 
+
         @Override
-        public void keyEvent(EventType<KeyEvent> type, int key, char[] cs,
-                             boolean shiftDown, boolean controlDown, boolean altDown, boolean metaDown)
+        public void keyEvent(KeyEvent keyEvent)
         {
-            String chars = new String(cs);
-            String text = chars; // TODO: this must be a text like "HOME", "F1", or "A"
-            KeyEvent keyEvent = new KeyEvent(type, chars, text, KeyCodeMap.valueOf(key),
-                    shiftDown, controlDown, altDown, metaDown);
             impl_processKeyEvent(keyEvent);
         }
 

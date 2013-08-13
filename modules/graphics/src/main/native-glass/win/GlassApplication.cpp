@@ -165,6 +165,11 @@ LRESULT GlassApplication::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
                 ::SendMessage(m_hNextClipboardView, WM_DRAWCLIPBOARD, wParam, lParam);
             }            
             break;
+        case WM_SETTINGCHANGE:
+            if ((UINT)wParam != SPI_SETWORKAREA) {
+                break;
+            }
+            // Fall through
         case WM_DISPLAYCHANGE:
             GlassScreen::HandleDisplayChange();
             break;

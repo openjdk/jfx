@@ -90,6 +90,22 @@ public class PPSDrawable extends PrDrawable {
     public int getContentHeight() {
         return rtt.getContentHeight();
     }
+      
+    public int getMaxContentWidth() {
+        return rtt.getMaxContentWidth();
+    }
+
+    public int getMaxContentHeight() {
+        return rtt.getMaxContentHeight();
+    }
+    
+    public void setContentWidth(int contentW) {
+        rtt.setContentWidth(contentW);
+    }
+
+    public void setContentHeight(int contentH) {
+        rtt.setContentHeight(contentH);
+    }
 
     public int getPhysicalWidth() {
         return rtt.getPhysicalWidth();

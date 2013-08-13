@@ -36,6 +36,7 @@
 #define ATTACH_JNI_THREAD()  \
     JNIEnv *env;                                                        \
     JavaVM *vm = glass_application_GetVM();                             \
+    if (!vm) return;                                                    \
     (*vm)->AttachCurrentThreadAsDaemon(vm, (JNIEnv **) &env, NULL);     
 
 #define DETACH_JNI_THREAD()  \
@@ -106,7 +107,7 @@ void notifyMotionEvent(
    DETACH_JNI_THREAD();
 }
 
-void _notifyButtonEvent(
+void notifyButtonEvent(
         int pressed,
         int button,
         int xabs, int yabs) {
@@ -120,13 +121,18 @@ void _notifyButtonEvent(
    DETACH_JNI_THREAD();
 }
 
-void _notifyKeyEvent(
-        NativeWindow window,
+void notifyKeyEvent(
         int eventType,
-        int jfxKeyCode,
+        int platformKeycode,
         int isRepeatEvent) {
     
    ATTACH_JNI_THREAD();
+   NativeWindow window = glass_window_getFocusedWindow();
+   if (!window) {
+       GLASS_LOG_FINE("Doesn't get focused window. Terminate notifying key event.");
+       return;
+   }
+   int jfxKeyCode = glass_inputEvents_getJavaKeycodeFromPlatformKeyCode(platformKeycode);
    glass_application_notifyKeyEvent(env,
            window,
            eventType,

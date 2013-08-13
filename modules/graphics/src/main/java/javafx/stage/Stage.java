@@ -39,6 +39,7 @@ import javafx.collections.ObservableList;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
+import javafx.scene.input.KeyCombination;
 
 import com.sun.javafx.beans.annotations.Default;
 import com.sun.javafx.collections.TrackableObservableList;
@@ -51,9 +52,11 @@ import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 
 /**
@@ -575,10 +578,10 @@ public class Stage extends Window {
      * For desktop profile the user can unconditionally exit full-screen mode
      * at any time by pressing {@code ESC}.
      * <p>
-     * There are differences in behavior between signed and unsigned
-     * applications. Signed applications are allowed to enter full-screen
-     * exclusive mode unrestricted while unsigned applications will
-     * have the following restrictions:
+     * There are differences in behavior between applications if a security 
+     * manager is present. Applications with permissions are allowed to enter 
+     * full-screen exclusive mode unrestricted. Applications without the proper 
+     * permissions will have the following restrictions:
      * </p>
      * <ul>
      *  <li>Applications can only enter FSEM in response
@@ -1040,7 +1043,7 @@ public class Stage extends Window {
             Scene scene = getScene();
             boolean rtl = scene != null && scene.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
 
-            impl_peer = toolkit.createTKStage(getStyle(), isPrimary(), getModality(), tkStage, rtl, acc);
+            impl_peer = toolkit.createTKStage(this, getStyle(), isPrimary(), getModality(), tkStage, rtl, acc);
             impl_peer.setMinimumSize((int) Math.ceil(getMinWidth()),
                     (int) Math.ceil(getMinHeight()));
             impl_peer.setMaximumSize((int) Math.floor(getMaxWidth()),
@@ -1122,5 +1125,73 @@ public class Stage extends Window {
     @Override
     Window getWindowOwner() {
         return getOwner();
+    }
+
+    
+    private final ObjectProperty<KeyCombination> fullScreenExitCombination =
+            new SimpleObjectProperty<KeyCombination>(this, "fullScreenExitCombination", null);
+
+    /**
+     * Specifies what KeyCombination will allow the user to exit full screen
+     * mode. A value of KeyCombination.NO_MATCH will not match any KeyEvent and
+     * will make it so the user is not able to escape from Full Screen mode. In 
+     * addition, using NO_MATCH will disable the Full Screen Exit Hint.
+     * A value of null means that the default platform specific key combination
+     * should be used. 
+     * <p>
+     * An internal copy of this value is made when entering FullScreen mode and will be 
+     * used to trigger the exit from the mode. If an application does not have
+     * the proper permissions, this setting will be ignored.
+     * </p>
+     * The default string displayed is controlled using the {@code fullScreenExitKeyProperty}
+     * and should be changed to match the {@code KeyCombination} used.
+     * @param keyCombination the key combination to exit on
+     * @since JavaFX 8.0 
+     */
+    public final void setFullScreenExitKeyCombination(KeyCombination keyCombination) {
+        fullScreenExitCombination.set(keyCombination);
+    }
+
+    /**
+     * Get the current sequence used to exit Full Screen mode.
+     * @return the current setting (null for system default)
+     * @since JavaFX 8.0 
+     */
+    public final KeyCombination getFullScreenExitKeyCombination() {
+        return fullScreenExitCombination.get();
+    }
+
+    /**
+     * Get the property for the Full Screen exit key combination.
+     * @return the property.
+     * @since JavaFX 8.0 
+     */
+    public final ObjectProperty<KeyCombination> fullScreenExitKeyProperty() {
+        return fullScreenExitCombination;
+    }
+
+    private final ObjectProperty<String> fullScreenExitHint = 
+            new SimpleObjectProperty<String>(this, "fullScreenExitHint", null);
+                
+    /**
+     * Specifies the text to show when a user enters full screen mode, usually
+     * used to indicate the way a user should go about exiting out of full
+     * screen mode. A value of null will result in the default per-locale
+     * message being displayed. If set to the empty string, then no message will
+     * be displayed. If an application does not have the proper permissions, 
+     * this setting will be ignored.
+     * @param value the string to be displayed.
+     * @since JavaFX 8.0 
+     */
+    public final void setFullScreenExitHint(String value) {
+        fullScreenExitHint.set(value);
+    }
+
+    public final String getFullScreenExitHint() {
+        return fullScreenExitHint.get();
+    }
+
+    public final ObjectProperty<String> fullScreenExitHintProperty() {
+        return fullScreenExitHint;
     }
 }

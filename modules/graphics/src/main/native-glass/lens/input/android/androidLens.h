@@ -25,6 +25,8 @@
 #ifndef ANDROIDLENS_H
 #define	ANDROIDLENS_H
 
+#include <android/native_window.h>
+
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -32,7 +34,36 @@ extern "C" {
     jboolean lens_input_initialize(JNIEnv *env);
 
     void lens_input_shutdown();
+    
+    void notifyWindowEvent_resize(
+        ANativeWindow *window,
+        int eventType,
+        int width,
+        int height);
+    
+    void notifyTouchEvent(
+        int state,
+        int id,
+        int sendAlsoButtonEvent,
+        int xabs,
+        int yabs);
 
+    void notifyMotionEvent(
+        int mousePosX,
+        int mousePosY,
+        int isTouch,
+        int touchId);
+    
+    void notifyButtonEvent(
+        int pressed,
+        int button,
+        int xabs, int yabs);
+    
+    void notifyKeyEvent(
+        int eventType,
+        int platformKeycode,
+        int isRepeatEvent);
+    
 #ifdef	__cplusplus
 }
 #endif

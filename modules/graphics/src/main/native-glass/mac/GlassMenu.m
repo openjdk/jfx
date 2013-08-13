@@ -31,6 +31,7 @@
 #import "GlassMacros.h"
 #import "GlassMenu.h"
 #import "GlassHelper.h"
+#import "GlassKey.h"
 
 //#define VERBOSE
 #ifndef VERBOSE
@@ -199,12 +200,8 @@ static jfieldID  jDelegateMenuField = 0;
 
 - (void)_setShortcut:(jchar)jshortcut modifiers:(jint)jmodifiers
 {
-    NSString *shortcut = @"";
-    if (jshortcut != '\0')
-    {
-        shortcut = [NSString stringWithFormat:@"%c", jshortcut];
-        LOG("_setShortcut %c", jshortcut);
-    }
+    NSString *shortcut = GetStringForJavaKey(jshortcut);
+    LOG("_setShortcut %@", shortcut);
     
     NSUInteger modifier = 0;
     if ((jmodifiers & com_sun_glass_events_KeyEvent_MODIFIER_COMMAND) != 0)

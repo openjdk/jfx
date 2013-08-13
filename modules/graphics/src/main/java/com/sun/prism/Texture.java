@@ -237,6 +237,57 @@ public interface Texture extends GraphicsResource {
      * @return the content height of this texture, in pixels
      */
     public int getContentHeight();
+    
+    
+    /**
+     * Returns the max content width of this texture, in pixels.  Note that the
+     * content size of a texture may be smaller than the requested size due
+     * to hardware restrictions (e.g. lack of non-power-of-two texture support).
+     * The content width will be less than or equal to the max content width.
+     * <p>
+     * For example, if the hardware does not support non-power-of-two textures,
+     * and you call ResourceFactory.createTexture(400, 200), the returned
+     * Texture will have physical dimensions of 512x256 and the max content 
+     * dimensions will be 512x256 minus any padding needed by the implementation 
+     * to simulate edge conditions., but the content dimensions will be 400x200.
+     *
+     * @return the max content width of this texture, in pixels
+     */
+    public int getMaxContentWidth();
+    
+    /**
+     * Returns the max content height of this texture, in pixels.  Note that the
+     * content size of a texture may be smaller than the requested size due
+     * to hardware restrictions (e.g. lack of non-power-of-two texture support).
+     * The content height will be less than or equal to the max content height.
+     * <p>
+     * For example, if the hardware does not support non-power-of-two textures,
+     * and you call ResourceFactory.createTexture(400, 200), the returned
+     * Texture will have physical dimensions of 512x256 and the max content 
+     * dimensions will be 512x256 minus any padding needed by the implementation 
+     * to simulate edge conditions., but the content dimensions will be 400x200.
+     *
+     * @return the max content height of this texture, in pixels
+     */
+    public int getMaxContentHeight();
+    
+    /**
+     * Allows the content width, which is the current width of the actual content 
+     * in pixels, to be adjusted. The height must be between 0 and maxContentHeight
+     * 
+     * @param contentWidth The actual new width of user pixels.
+     */
+    public void setContentWidth(int contentWidth);
+    
+    /**
+     * Allows the content height, which is the current height of the actual content 
+     * in pixels, to be adjusted. The height must be between 0 and maxContentHeight
+.    * 
+     * @param contentHeight The actual new height of user pixels.
+     */
+    public void setContentHeight(int contentHeight);
+    
+    
 
     public int getLastImageSerial();
     public void setLastImageSerial(int serial);

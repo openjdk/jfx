@@ -38,9 +38,23 @@ static jlong lmod(jlong x, jlong y) {
     return x;
 }
 
+
+#if defined(__arm__) && (defined(__GNUC__) && __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 4))
+#define GCC_BUG_57967_WORKAROUND
+#endif
+
+#ifdef GCC_BUG_57967_WORKAROUND
+#pragma GCC push_options
+#pragma GCC optimize ("O1")
+#endif
+
 static INLINE jint interp(jint x0, jint x1, jint frac) {
     return ((x0 << 16) + (x1 - x0) * frac + 0x8000) >> 16;
 }
+
+#ifdef GCC_BUG_57967_WORKAROUND
+#pragma GCC pop_options
+#endif
 
 static INLINE jint
 pad(jint ifrac, jint cycleMethod) {
