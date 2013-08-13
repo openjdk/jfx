@@ -83,4 +83,24 @@ public class StubFilterable implements Filterable {
     public boolean isLost() {
         return false;
     }
+
+    @Override
+    public int getMaxContentWidth() {
+        return image.getImageInfo().getWidth();
+    }
+
+    @Override
+    public int getMaxContentHeight() {
+        return image.getImageInfo().getHeight();
+    }
+    
+    @Override
+    public void setContentWidth(int contentW) {
+        throw new UnsupportedOperationException("Not supported.");
+    }
+
+    @Override
+    public void setContentHeight(int contentH) {
+        throw new UnsupportedOperationException("Not supported.");
+    }
 }

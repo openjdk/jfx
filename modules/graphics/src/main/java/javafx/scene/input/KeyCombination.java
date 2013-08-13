@@ -101,6 +101,17 @@ public abstract class KeyCombination {
         META_DOWN, META_ANY,
         SHORTCUT_DOWN, SHORTCUT_ANY
     };
+
+    /**
+     * A KeyCombination that will match with no events.
+     */
+    public static final KeyCombination NO_MATCH = new KeyCombination() {
+        @Override
+        public boolean match(KeyEvent e) {
+            return false;
+        }
+    };
+
     /** The state of the {@code shift} key in this key combination. */
     private final ModifierValue shift;
 

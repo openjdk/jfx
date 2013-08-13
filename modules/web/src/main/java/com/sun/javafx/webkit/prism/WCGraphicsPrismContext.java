@@ -3,6 +3,7 @@
  */
 package com.sun.javafx.webkit.prism;
 
+import com.sun.glass.ui.Screen;
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.PGFont;
 import com.sun.javafx.geom.*;
@@ -1163,7 +1164,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             // avoid creating zero-size drawable, see also RT-21410
             int w = Math.max(bounds.width, 1);
             int h = Math.max(bounds.height, 1);
-            fctx = PrFilterContext.getInstance(g.getAssociatedScreen());
+            fctx = getFilterContext(g);
             buffer = (PrDrawable) Effect.getCompatibleImage(fctx, w, h);
         }
 
@@ -1314,7 +1315,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         }
 
         private void blend(Graphics g) {
-            FilterContext fctx = PrFilterContext.getInstance(g.getAssociatedScreen());
+            FilterContext fctx = getFilterContext(g);
             PrDrawable dstImg = null;
             PrDrawable srcImg = null;
             ReadbackGraphics readBackGraphics = null;
@@ -1447,6 +1448,13 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         public DirtyRegionContainer getDirtyRegions(Effect defaultInput, DirtyRegionPool regionPool) {
             return null;
         }
+    }
+
+    private static FilterContext getFilterContext(Graphics g) {
+        Screen screen = g.getAssociatedScreen();  // can be null when printing
+        return (screen != null
+                ? PrFilterContext.getInstance(screen)
+                : PrFilterContext.getDefaultInstance());
     }
 
     @Override public void strokeArc(final int x, final int y, final int w, final int h,

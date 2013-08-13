@@ -29,6 +29,9 @@ import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.accessible.providers.AccessibleStageProvider;
 
 import java.security.AccessControlContext;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination.ModifierValue;
 
 /**
  * TKStage - Peer interface for a Stage
@@ -258,4 +261,13 @@ public interface TKStage {
                                              int newProperty );
     public void accessibleFirePropertyChange(Object nativeAcc, int propertyId, boolean oldProperty,
                                              boolean newProperty );    
+
+
+    public static final KeyCodeCombination defaultFullScreenExitKeycombo =
+            new KeyCodeCombination(KeyCode.ESCAPE,
+            ModifierValue.UP,
+            ModifierValue.UP,
+            ModifierValue.UP,
+            ModifierValue.UP,
+            ModifierValue.UP);
 }

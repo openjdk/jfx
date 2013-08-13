@@ -26,15 +26,27 @@
 package javafx.embed.swing;
 
 import java.awt.AlphaComposite;
+import java.awt.EventQueue;
 import java.awt.Graphics2D;
+import java.awt.SecondaryLoop;
 import java.awt.image.BufferedImage;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.nio.IntBuffer;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.concurrent.atomic.AtomicBoolean;
+import javafx.application.Platform;
 import javafx.scene.image.Image;
 import javafx.scene.image.PixelFormat;
 import javafx.scene.image.PixelReader;
 import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 import javafx.scene.image.WritablePixelFormat;
+import com.sun.javafx.application.PlatformImpl;
+import com.sun.javafx.tk.Toolkit;
+import sun.awt.AWTAccessor;
+import sun.awt.FwDispatcher;
 import sun.awt.image.IntegerComponentRaster;
 
 /**
@@ -180,5 +192,73 @@ public class SwingFXUtils {
                                              PixelFormat.getIntArgbInstance());
         pr.getPixels(0, 0, iw, ih, pf, data, offset, scan);
         return bimg;
+    }
+
+    /**
+     * If called from the FX Application Thread
+     * invokes a runnable directly blocking the calling code
+     * Otherwise
+     * uses Platform.runLater without blocking
+     */
+    static void runOnFxThread(Runnable runnable) {
+        if (Platform.isFxApplicationThread()) {
+            runnable.run();
+        } else {
+            Platform.runLater(runnable);
+        }
+    }
+
+    private static class FwSecondaryLoop implements SecondaryLoop {
+
+        private final AtomicBoolean isRunning = new AtomicBoolean(false);
+
+        @Override public boolean enter() {
+            if (isRunning.compareAndSet(false, true)) {
+                PlatformImpl.runAndWait(new Runnable() {
+                    @Override public void run() {
+                        Toolkit.getToolkit().enterNestedEventLoop(FwSecondaryLoop.this);
+                    }
+                });
+                return true;
+            }
+            return false;
+        }
+
+        @Override public boolean exit() {
+            if (isRunning.compareAndSet(true, false)) {
+                PlatformImpl.runAndWait(new Runnable() {
+                    @Override public void run() {
+                        Toolkit.getToolkit().exitNestedEventLoop(FwSecondaryLoop.this, null);
+                    }
+                });
+                return true;
+            }
+            return false;
+        }
+    }
+
+    private static class FXDispatcher implements FwDispatcher {
+        @Override public boolean isDispatchThread() {
+            return Platform.isFxApplicationThread();
+        }
+
+        @Override public void scheduleDispatch(Runnable runnable) {
+            Platform.runLater(runnable);
+        }
+
+        @Override public SecondaryLoop createSecondaryLoop() {
+            return new FwSecondaryLoop();
+        }
+    }
+
+    //Called with reflection from PlatformImpl to avoid dependency
+    public static void installFwEventQueue() {
+        EventQueue eq = AccessController.doPrivileged(
+                new PrivilegedAction<EventQueue>() {
+                    @Override public EventQueue run() {
+                        return java.awt.Toolkit.getDefaultToolkit().getSystemEventQueue();
+                    }
+                });
+        AWTAccessor.getEventQueueAccessor().setFwDispatcher(eq, new FXDispatcher());
     }
 }

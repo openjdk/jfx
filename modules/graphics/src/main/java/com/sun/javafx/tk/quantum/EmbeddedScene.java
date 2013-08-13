@@ -27,6 +27,7 @@ package com.sun.javafx.tk.quantum;
 
 import javafx.application.Platform;
 import javafx.event.EventType;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import java.nio.IntBuffer;
@@ -38,6 +39,7 @@ import com.sun.javafx.embed.EmbeddedSceneDragStartListenerInterface;
 import com.sun.javafx.embed.EmbeddedSceneDropTargetInterface;
 import com.sun.javafx.embed.EmbeddedSceneInterface;
 import com.sun.javafx.embed.HostInterface;
+import com.sun.javafx.scene.input.KeyCodeMap;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.TKClipboard;
@@ -252,8 +254,15 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
                             boolean controlDown = (modifiers & AbstractEvents.MODIFIER_CONTROL) != 0;
                             boolean altDown = (modifiers & AbstractEvents.MODIFIER_ALT) != 0;
                             boolean metaDown = (modifiers & AbstractEvents.MODIFIER_META) != 0;
-                            sceneListener.keyEvent(AbstractEvents.keyIDToFXEventType(type),
-                                    key, ch, shiftDown, controlDown, altDown, metaDown);
+
+                            String str = new String(ch);
+                            String text = str; // TODO: this must be a text like "HOME", "F1", or "A"
+                            javafx.scene.input.KeyEvent keyEvent = new javafx.scene.input.KeyEvent(
+                                    AbstractEvents.keyIDToFXEventType(type),
+                                    str, text,
+                                    KeyCodeMap.valueOf(key),
+                                    shiftDown, controlDown, altDown, metaDown);
+                            sceneListener.keyEvent(keyEvent);
                         }
                         return null;
                     }

@@ -54,7 +54,24 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
               physicalWidth, physicalHeight,
               contentX, contentY, contentWidth, contentHeight);
         this.context = context;
-
+        
+        int texID = resource.getResource().getTexID();
+        PrismTrace.textureCreated(texID, physicalWidth, physicalHeight,
+                format.getBytesPerPixelUnit());
+    }
+    
+    ES2Texture(ES2Context context, ES2TextureResource<T> resource,
+               PixelFormat format, WrapMode wrapMode,
+               int physicalWidth, int physicalHeight,
+               int contentX, int contentY, int contentWidth, int contentHeight,
+               int maxContentWidth, int maxContentHeight)
+    {
+        super(resource, format, wrapMode,
+              physicalWidth, physicalHeight,
+              contentX, contentY, contentWidth, contentHeight, 
+              maxContentWidth, maxContentHeight);
+        this.context = context;
+        
         int texID = resource.getResource().getTexID();
         PrismTrace.textureCreated(texID, physicalWidth, physicalHeight,
                 format.getBytesPerPixelUnit());

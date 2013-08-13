@@ -42,7 +42,7 @@ abstract class SWTexture implements Texture {
     }
 
     boolean allocated = false;
-    int width, height;
+    int width, height, contentWidth, contentHeight;
     private SWResourceFactory factory;
     private int lastImageSerial;
     private final WrapMode wrapMode;
@@ -52,6 +52,8 @@ abstract class SWTexture implements Texture {
         this.wrapMode = wrapMode;
         width = w;
         height = h;
+        contentWidth = w;
+        contentHeight = h;
         lock();
     }
 
@@ -59,6 +61,8 @@ abstract class SWTexture implements Texture {
         this.allocated = sharedTex.allocated;
         this.width = sharedTex.width;
         this.height = sharedTex.height;
+        this.contentWidth = sharedTex.contentWidth;
+        this.contentHeight = sharedTex.contentHeight;
         this.factory = sharedTex.factory;
         // REMIND: Use indirection to share the serial number?
         this.lastImageSerial = sharedTex.lastImageSerial;
@@ -149,12 +153,28 @@ abstract class SWTexture implements Texture {
 
     @Override
     public int getContentWidth() {
-        return width;
+        return contentWidth;
+    }
+
+    @Override
+    public void setContentWidth(int contentWidth) {
+        if (contentWidth > width) {
+            throw new IllegalArgumentException("contentWidth cannot exceed physicalWidth");
+        }
+        this.contentWidth = contentWidth;
     }
 
     @Override
     public int getContentHeight() {
-        return height;
+        return contentHeight;
+    }
+
+    @Override
+    public void setContentHeight(int contentHeight) {
+        if (contentHeight > height) {
+            throw new IllegalArgumentException("contentHeight cannot exceed physicalHeight");
+        }
+        this.contentHeight = contentHeight;
     }
 
     public int getLastImageSerial() {

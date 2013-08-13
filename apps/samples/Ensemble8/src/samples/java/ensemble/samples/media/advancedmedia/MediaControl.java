@@ -283,11 +283,12 @@ public class MediaControl extends BorderPane {
                             }
                             super.layoutChildren();
                             if (mediaView != null) {
-                                mediaView.setTranslateX((((Pane) getCenter()).getWidth() - mediaView.prefWidth(-1)) / 2);
-                                mediaView.setTranslateY((((Pane) getCenter()).getHeight() - mediaView.prefHeight(-1)) / 2);
+                                if (getCenter() != null) { //if smaller pane has content
+                                    mediaView.setTranslateX((((Pane) getCenter()).getWidth() - mediaView.prefWidth(-1)) / 2);
+                                    mediaView.setTranslateY((((Pane) getCenter()).getHeight() - mediaView.prefHeight(-1)) / 2);
+                                }
                             }
                         }
-                    ;
                     };
                    
                     setCenter(null);
@@ -349,7 +350,11 @@ public class MediaControl extends BorderPane {
         if (!newStage.isFullScreen()) {
 
             fullScreen = false;
+            BorderPane smallBP = (BorderPane)newStage.getScene().getRoot();
+            smallBP.setCenter(null);
             setCenter(mvPane);
+            
+            smallBP.setBottom(null);
             setBottom(mediaBar);
             Platform.runLater(new Runnable() {
                 @Override

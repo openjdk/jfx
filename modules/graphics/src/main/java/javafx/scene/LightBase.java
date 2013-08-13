@@ -165,7 +165,7 @@ public abstract class LightBase extends Node {
 
                 @Override
                 protected void onChanged(Change<Node> c) {
-                    impl_markDirty(DirtyBits.NODE_LIGHT);
+                    impl_markDirty(DirtyBits.NODE_LIGHT_SCOPE);
                     while (c.next()) {
                         for (Node node : c.getRemoved()) {
                             // Update the removed nodes
@@ -234,7 +234,8 @@ public abstract class LightBase extends Node {
         if ((scope == null) || getScope().isEmpty()) {
             // This light affect the entire scene/subScene
             markOwnerDirty();
-        } else {                
+        } else if (dirtyBit != DirtyBits.NODE_LIGHT_SCOPE) {
+            // Skip NODE_LIGHT_SCOPE dirty since it is processed on scope change.
             ObservableList<Node> tmpScope = getScope();            
             for (int i = 0, max = tmpScope.size(); i < max; i++) {
                 markChildrenDirty(tmpScope.get(i));
@@ -255,7 +256,9 @@ public abstract class LightBase extends Node {
             peer.setColor((getColor() == null) ? null
                     : Toolkit.getPaintAccessor().getPlatformPaint(getColor()));
             peer.setLightOn(isLightOn());
+        }
 
+        if (impl_isDirty(DirtyBits.NODE_LIGHT_SCOPE)) {
             if (scope != null) {
                 ObservableList<Node> tmpScope = getScope();
                 if (tmpScope.isEmpty()) {

@@ -38,7 +38,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
+import javafx.scene.input.KeyCombination;
 import javafx.stage.Modality;
+import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
 import com.sun.glass.events.WindowEvent;
@@ -59,6 +61,8 @@ import com.sun.javafx.accessible.providers.AccessibleStageProvider;
 class WindowStage extends GlassStage {
 
     protected Window platformWindow;
+
+    protected javafx.stage.Stage fxStage;
 
     private StageStyle style;
     private GlassStage owner = null;
@@ -94,10 +98,16 @@ class WindowStage extends GlassStage {
         return appletWindow;
     }
 
-    public WindowStage(final StageStyle stageStyle, Modality modality, TKStage owner) {
+    public WindowStage(javafx.stage.Window peerWindow, final StageStyle stageStyle, Modality modality, TKStage owner) {
         this.style = stageStyle;
         this.owner = (GlassStage)owner;
         this.modality = modality;
+
+        if (peerWindow instanceof javafx.stage.Stage) {
+            fxStage = (Stage)peerWindow;
+        } else {
+            fxStage = null;
+        }
 
         transparent = stageStyle == StageStyle.TRANSPARENT;
         if (owner == null) {
@@ -507,6 +517,12 @@ class WindowStage extends GlassStage {
 
     private boolean fullScreenFromUserEvent = false;
 
+    private KeyCombination savedFullScreenExitKey = null;
+
+    public final KeyCombination getSavedFullScreenExitKey() {
+        return savedFullScreenExitKey;
+    }
+
     private void applyFullScreen() {
         if (platformWindow == null) {
             // applyFullScreen() can be called from setVisible(false), while the
@@ -520,15 +536,49 @@ class WindowStage extends GlassStage {
                 // indicating that the fullscreen request came from an input
                 // event handler.
                 // If not notify the stageListener to reset fullscreen to false.
-                if (!isTrustedFullScreen() && !fullScreenFromUserEvent) {
+                final boolean isTrusted = isTrustedFullScreen();
+                if (!isTrusted && !fullScreenFromUserEvent) {
                     exitFullScreen();
                 } else {
                     v.enterFullscreen(false, false, false);
                     if (warning != null && warning.inWarningTransition()) {
                         warning.setView(getViewScene());
-                    } else if (warning == null) {
-                        warning = new OverlayWarning(getViewScene());
-                        warning.warn();
+                    } else {                        
+                        boolean showWarning = true;
+
+                        KeyCombination key = null;
+                        String exitMessage = null;
+
+                        if (isTrusted && (fxStage != null)) {
+                            // copy the user set definitions for later use.
+                            key = fxStage.getFullScreenExitKeyCombination();
+
+                            exitMessage = fxStage.getFullScreenExitHint();
+                        }
+                        
+                        savedFullScreenExitKey =
+                                key == null
+                                ? defaultFullScreenExitKeycombo
+                                : key;
+
+                        // if the hint is "" dont show
+                        if (exitMessage != null &&
+                                (exitMessage.equals(""))) {
+                            showWarning = false;
+                        }
+
+                        // if the key is NO_MATCH dont show
+                        if (savedFullScreenExitKey.equals(KeyCombination.NO_MATCH)) {
+                            showWarning = false;
+                        }
+                        
+                        if (showWarning && warning == null) {
+                            warning = new OverlayWarning(getViewScene());
+                        }
+
+                        if (showWarning && warning != null) {
+                            warning.warn(exitMessage);
+                        }
                     }
                 }
             } else {

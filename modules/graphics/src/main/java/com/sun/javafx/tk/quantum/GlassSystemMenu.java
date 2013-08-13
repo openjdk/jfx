@@ -332,21 +332,19 @@ class GlassSystemMenu implements TKSystemMenu {
 
     private void setShortcut(MenuItem glassSubMenuItem, MenuItemBase menuItem) {
         final KeyCombination accelerator = menuItem.getAccelerator();
-
         if (accelerator == null) {
             glassSubMenuItem.setShortcut(0, 0);
         } else if (accelerator instanceof KeyCodeCombination) {
             KeyCodeCombination kcc  = (KeyCodeCombination)accelerator;
             KeyCode            code = kcc.getCode();
-
             assert PlatformUtil.isMac() || PlatformUtil.isLinux();
-
             int modifier = glassModifiers(kcc);
-            String lower = code.impl_getChar().toLowerCase();
-
             if (PlatformUtil.isMac()) {
-                glassSubMenuItem.setShortcut(lower.charAt(0), modifier);
+                int finalCode = code.isLetterKey() ? code.impl_getChar().toLowerCase().charAt(0)
+                        : code.impl_getCode();
+                glassSubMenuItem.setShortcut(finalCode, modifier);
             } else if (PlatformUtil.isLinux()) {
+                String lower = code.impl_getChar().toLowerCase();
                 if ((modifier & KeyEvent.MODIFIER_CONTROL) != 0) {
                     glassSubMenuItem.setShortcut(lower.charAt(0), modifier);
                 } else {

@@ -3,7 +3,7 @@ my %stdlibs =
 (
 #   linux => "xml2",         #have to be system
     solaris => "stlport",
-    windows => "libxml2, libxslt"
+#    windows => "libxml2, libxslt"
 );
 
 my %iculibs =
@@ -43,3 +43,4 @@ foreach $platform (@platforms) {
 
 # dump build-time flags
 print join("\n", @ARGV), "\n";
+

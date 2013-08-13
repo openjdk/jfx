@@ -131,8 +131,15 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_NativeWebView__1dispose
  * Signature: (ILjava/lang/String;Ljava/lang/String;)V
  */
 JNIEXPORT void JNICALL Java_com_sun_webkit_NativeWebView__1loadContent
-(JNIEnv *env, jobject view, jint id, jstring content, jstring contentType) {
-    (*_ANDROID_load_content)(id, content, contentType);
+(JNIEnv *env, jobject view, jint id, jstring jcontent, jstring jcontentType) {
+    if (!jcontent || !jcontentType) {
+        return;
+    }
+    char *content = (char *)(*env)->GetStringUTFChars(env, jcontent, JNI_FALSE);
+    char *content_type = (char *)(*env)->GetStringUTFChars(env, jcontentType, JNI_FALSE);
+    (*_ANDROID_load_content)(id, content, content_type);
+    (*env)->ReleaseStringUTFChars(env, jcontent, content);
+    (*env)->ReleaseStringUTFChars(env, jcontentType, content_type);
 }
 
 /*

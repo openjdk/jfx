@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,15 +23,13 @@
  * questions.
  */
 
-package com.sun.javafx.text;
+package javafx.scene.text;
 
 import javafx.geometry.Bounds;
 import javafx.geometry.VPos;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
-import javafx.scene.text.Font;
-import javafx.scene.text.Text;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -46,13 +44,12 @@ public class TextNodeTest {
         Bounds bounds = text.getLayoutBounds();
         text.setText("");
         Bounds bounds2 = text.getLayoutBounds();
-        
+
         //empty text should still have the same height
         assertEquals(bounds.getHeight(), bounds2.getHeight(), 0.00001);
-        
     }
-    
-    public void assertBoundsEquals(PathElement[] boundsShape, 
+
+    public void assertBoundsEquals(PathElement[] boundsShape,
                                    double x, double y,
                                    double w, double h) {
         assertNotNull(boundsShape);
@@ -84,8 +81,8 @@ public class TextNodeTest {
         assertEquals(l3.getX(), x, e);
         assertEquals(l3.getY(), y, e);
     }
-    
-    public void assertCaretEquals(PathElement[] caretShape, 
+
+    public void assertCaretEquals(PathElement[] caretShape,
                                   double x0, double y0,
                                   double x1, double y1) {
         assertNotNull(caretShape);
@@ -102,7 +99,7 @@ public class TextNodeTest {
         assertEquals(l.getX(), x1, e);
         assertEquals(l.getY(), y1, e);
     }
-    
+
     @SuppressWarnings("deprecation")
     @Test public void testCaretShape() {
         Font font = new Font("Monospaced Regular", 16);
@@ -116,24 +113,24 @@ public class TextNodeTest {
         PathElement[] empty = {};
 
         assertEquals(empty, text.getImpl_caretShape()); //initially empty
-        
+
         text.setImpl_caretPosition(0);
         assertCaretEquals(text.getImpl_caretShape(), 0, 0, 0, lineHeight);
-        
+
         text.setImpl_caretPosition(-1);
         assertEquals(empty, text.getImpl_caretShape()); //empty after -1
-        
+
         //set back
         text.setImpl_caretPosition(0);
         assertCaretEquals(text.getImpl_caretShape(), 0, 0, 0, lineHeight);
-        
+
         text.setImpl_caretBias(false);
         text.setText("abc");
         assertEquals(empty, text.getImpl_caretShape()); //empty after setText
         assertEquals(-1, text.getImpl_caretPosition());
         assertEquals(true, text.impl_caretBiasProperty().get());
-        
-        
+
+
         // trailing edges
         text.setImpl_caretPosition(0);
         text.setImpl_caretBias(true);
@@ -161,7 +158,7 @@ public class TextNodeTest {
         text.setImpl_caretPosition(3);
         text.setImpl_caretBias(false);
         assertCaretEquals(text.getImpl_caretShape(), avgChar*3, 0, avgChar*3, lineHeight);
-        
+
         //test out of bounds
         text.setImpl_caretPosition(4);
         text.setImpl_caretBias(true);
@@ -169,7 +166,7 @@ public class TextNodeTest {
         text.setImpl_caretPosition(4);
         text.setImpl_caretBias(false);
         assertEquals(empty, text.getImpl_caretShape());
-        
+
         //test empty text
         text.setText("");
         text.setImpl_caretPosition(0);
@@ -189,12 +186,12 @@ public class TextNodeTest {
         float lineHeight = (float)bounds.getHeight();
         float avgChar = (float)bounds.getWidth();
         PathElement[] empty = {};
-        
+
         assertEquals(empty, text.getImpl_selectionShape()); //initially null
-        
+
         text.setImpl_selectionStart(0);
         assertEquals(empty, text.getImpl_selectionShape()); //set start, but not end
-        
+
         text.setImpl_selectionStart(0);
         text.setImpl_selectionEnd(1);
         assertBoundsEquals(text.getImpl_selectionShape(), 0, 0, avgChar, lineHeight);
@@ -216,7 +213,7 @@ public class TextNodeTest {
         text.setImpl_selectionStart(1);
         text.setImpl_selectionEnd(0);
         assertEquals(empty, text.getImpl_selectionShape()); //end > start
-        
+
         text.setImpl_selectionStart(0);
         text.setImpl_selectionEnd(1);
         assertBoundsEquals(text.getImpl_selectionShape(), 0, 0, avgChar, lineHeight);
@@ -232,7 +229,7 @@ public class TextNodeTest {
         text.setImpl_selectionStart(0);
         text.setImpl_selectionEnd(3);
         assertEquals(empty, text.getImpl_selectionShape()); //end > length
-        
+
         text.setImpl_selectionStart(0);
         text.setImpl_selectionEnd(1);
         assertBoundsEquals(text.getImpl_selectionShape(), 0, 0, avgChar, lineHeight);
@@ -240,15 +237,15 @@ public class TextNodeTest {
         text.setImpl_selectionStart(3);
         text.setImpl_selectionEnd(5);
         assertEquals(empty, text.getImpl_selectionShape()); //start > length
-        
+
         text.setText("abc");
         assertEquals(empty, text.getImpl_selectionShape()); //setText resets
         assertEquals(-1, text.getImpl_selectionStart());
         assertEquals(-1, text.getImpl_selectionEnd());
-        
+
         text.setImpl_selectionStart(0);
         text.setImpl_selectionEnd(0);
-        assertEquals(empty, text.getImpl_selectionShape()); 
+        assertEquals(empty, text.getImpl_selectionShape());
         text.setImpl_selectionStart(0);
         text.setImpl_selectionEnd(1);
         assertBoundsEquals(text.getImpl_selectionShape(), 0, 0, avgChar, lineHeight);
@@ -260,7 +257,7 @@ public class TextNodeTest {
         assertBoundsEquals(text.getImpl_selectionShape(), 0, 0, 3*avgChar, lineHeight);
         text.setImpl_selectionStart(0);
         text.setImpl_selectionEnd(4);
-        assertEquals(empty, text.getImpl_selectionShape()); 
+        assertEquals(empty, text.getImpl_selectionShape());
         text.setImpl_selectionStart(1);
         text.setImpl_selectionEnd(2);
         assertBoundsEquals(text.getImpl_selectionShape(), avgChar, 0, avgChar, lineHeight);
@@ -272,7 +269,7 @@ public class TextNodeTest {
         assertBoundsEquals(text.getImpl_selectionShape(), 2*avgChar, 0, avgChar, lineHeight);
         text.setImpl_selectionStart(3);
         text.setImpl_selectionEnd(3);
-        assertEquals(empty, text.getImpl_selectionShape()); 
+        assertEquals(empty, text.getImpl_selectionShape());
     }
-    
+
 }

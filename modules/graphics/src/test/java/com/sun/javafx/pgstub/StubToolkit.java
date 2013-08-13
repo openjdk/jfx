@@ -59,6 +59,7 @@ import javafx.scene.shape.*;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Modality;
 import javafx.stage.StageStyle;
+import javafx.stage.Window;
 import javafx.util.Pair;
 
 import java.io.File;
@@ -117,14 +118,15 @@ public class StubToolkit extends Toolkit {
         return true;
     }
 
-    public TKStage createTKStage(StageStyle stageStyle, boolean primary,
+    @Override
+    public TKStage createTKStage(Window peerWindow, StageStyle stageStyle, boolean primary,
             Modality modality, TKStage owner, boolean rtl, AccessControlContext acc) {
 
         return new StubStage();
     }
 
     @Override
-    public TKStage createTKPopupStage(TKStage owner, AccessControlContext acc) {
+    public TKStage createTKPopupStage(Window peerWindow, TKStage owner, AccessControlContext acc) {
         return new StubPopupStage();
     }
 

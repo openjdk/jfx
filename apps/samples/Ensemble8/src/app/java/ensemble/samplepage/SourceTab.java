@@ -62,7 +62,7 @@ class SourceTab extends Tab {
             case ".css":
             case ".fxml":
                 String source = Utils.loadFile(getClass().getResource(url));
-                if (EnsembleApp.IS_BEAGLE) {
+                if (EnsembleApp.IS_EMBEDDED || EnsembleApp.IS_IOS) {
                     // TODO: Convert to TextFlow
                     //                    TextFlow textFlow = TextFlowBuilder.create()
                     //                            .build();

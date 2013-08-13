@@ -322,4 +322,24 @@ public final class MultiTexture implements Texture {
         textures.clear();
     }
 
+    @Override
+    public int getMaxContentWidth() {
+        return getPhysicalWidth();
+    }
+
+    @Override
+    public int getMaxContentHeight() {
+        return getPhysicalHeight();
+    }
+
+    @Override
+    public void setContentWidth(int contentWidth) {
+        throw new UnsupportedOperationException("Not supported.");
+    }
+
+    @Override
+    public void setContentHeight(int contentHeight) {
+        throw new UnsupportedOperationException("Not supported.");
+    }
+
 }

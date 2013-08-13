@@ -68,7 +68,7 @@ public class ImagePool {
         System.out.println("pixels created:    " + pixelsCreated);
         System.out.println("images accessed:   " + numAccessed);
         System.out.println("pixels accessed:   " + pixelsAccessed);
-        if (numEffects != 0) {
+        if (numEffects != 0) { 
             double avgImgs = ((double) numAccessed) / numEffects;
             double avgPxls = ((double) pixelsAccessed) / numEffects;
             System.out.println("images per effect: " + avgImgs);
@@ -136,8 +136,8 @@ public class ImagePool {
                 entries.remove();
                 continue;
             }
-            int ew = eimg.getContentWidth();
-            int eh = eimg.getContentHeight();
+            int ew = eimg.getMaxContentWidth();
+            int eh = eimg.getMaxContentHeight();
             if (ew >= w && eh >= h && ew * eh / 2 <= w * h) {
                 int diff = (ew-w) * (eh-h);
                 if (chosenEntry == null || diff < mindiff) {
@@ -150,6 +150,12 @@ public class ImagePool {
                         chosenImage.unlock();
                     }
                     chosenEntry = entry;
+                    // The following calls to setContentWidth / setContentHeight
+                    // should be uncommented only after the rest of the imagepool
+                    // is fixed to handle a change in content size, and when both the
+                    // SW pipeline and J2D pipeline are able to handle the change.
+//                    eimg.setContentWidth(w);
+//                    eimg.setContentHeight(h);
                     chosenImage = eimg;
                     mindiff = diff;
                 }

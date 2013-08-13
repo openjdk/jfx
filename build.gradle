@@ -922,11 +922,6 @@ allprojects {
                     artifact "[artifact].[ext]"
                 }
             }
-            // We have this repo for getting the plugin.jar from the existing JRE
-            flatDir {
-                dir "$STUB_RUNTIME/lib/"
-                dir "$JDK_HOME/jre/lib/"
-            }
         }
     }
 
@@ -1040,7 +1035,6 @@ project(":graphics") {
 
     dependencies {
         compile project(":base"), BUILD_SRC
-        compile name: "plugin"
         compile name: SWT_FILE_NAME
         stubCompile group: "junit", name: "junit", version: "4.8.2",
         project(":base").sourceSets.test.output, sourceSets.main.output
@@ -1254,38 +1248,17 @@ project(":graphics") {
     assemble.dependsOn nativeDecora
     processResources.dependsOn processDecoraShaders, processPrismShaders
 
-    // The graphics project needs to completely replace the "test" task because the
-    // tests have been split among the normal tests and the stub tests. I want to make sure
-    // that invoking "graphics:test" runs both of these tasks, rather than only one of them.
-    tasks.replace("test")
     test {
-        group = "Verification"
-        description = "Runs all the unit tests for Graphics"
-    }
-    task testWithoutStub(type: Test, dependsOn: ":graphics:compileJava", group: "Verification") {
-        jvmArgs "-Djava.ext.dirs="
-        classpath = sourceSets.test.runtimeClasspath
-        if (rootProject.BINARY_STUB != null) classpath += rootProject.BINARY_STUB
-    }
-    task testWithStub(type: Test, dependsOn: [":graphics:compileJava"], group: "Verification") {
         jvmArgs "-Djava.ext.dirs=", "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit", "-DCSS_META_DATA_TEST_DIR=${file('$buildDir/classes/main/javafx')}"
-        classpath = sourceSets.stub.runtimeClasspath + sourceSets.main.runtimeClasspath
-        if (rootProject.BINARY_STUB != null) classpath += rootProject.BINARY_STUB
-        testClassesDir = file("$buildDir/classes/stub")
-        testResultsDir = file("$buildDir/stub-results")
-        testReportDir = file("$buildDir/reports/stub")
-    }
-    [testWithoutStub, testWithStub].each { test ->
-        test.enableAssertions = true
-        test.testLogging.exceptionFormat = "full"
-        test.scanForTestClasses = false
-        test.include "**/*Test.*"
-        test.exclude "**/*Abstract*.*"
+        enableAssertions = true
+        testLogging.exceptionFormat = "full"
+        scanForTestClasses = false
+        include "**/*Test.*"
+        exclude "**/*Abstract*.*"
         if (BUILD_CLOSED && DO_JCOV) {
             addJCov(project, test)
         }
     }
-    test.dependsOn testWithoutStub, testWithStub
 
     // To enable the IDEs to all be happy (no red squiggles) we need to have the libraries
     // available in some known location. Maybe in the future the Gradle plugins to each
@@ -1298,7 +1271,6 @@ project(":graphics") {
             copy {
                 into libsDir
                 from f.getParentFile()
-                include "**/plugin.jar"
                 include "**/antlr-3.1.3.jar"
                 include "**/stringtemplate-3.2.jar"
                 include "**/antlr-runtime-3.1.3.jar"
@@ -1322,7 +1294,7 @@ project(":controls") {
     dependencies {
         compile BUILD_SRC, project(":base"), project(":graphics"), project(":designTime")
         // TODO not sure how to specify this? processResources project(":base"), project(":graphics")
-        testCompile project(":graphics").sourceSets.stub.output
+        testCompile project(":graphics").sourceSets.test.output
         testCompile project(":base").sourceSets.test.output
     }
 
@@ -1380,7 +1352,7 @@ project(":fxml") {
     dependencies {
         compile BUILD_SRC, project(":base"), project(":graphics"),
                 project(":controls"), project(":swt"), project(":swing")
-        testCompile project(":graphics").sourceSets.stub.output
+        testCompile project(":graphics").sourceSets.test.output
     }
     test {
         // StubToolkit is not *really* needed here, but because some code inadvertently invokes performance
@@ -1399,7 +1371,7 @@ project(":builders") {
     dependencies {
         compile BUILD_SRC, project(":base"), project(":graphics"),
                 project(":controls"), project(":swt"), project(":swing"), project(":web")
-        testCompile project(":graphics").sourceSets.stub.output
+        testCompile project(":graphics").sourceSets.test.output
     }
     test {
         // StubToolkit is not *really* needed here, but because some code inadvertently invokes performance
@@ -1645,9 +1617,6 @@ allprojects {
         if (name == "compileTestJava") {
             classpath = sourceSets.test.compileClasspath
             if (rootProject.BINARY_STUB != null) classpath += rootProject.BINARY_STUB
-        } else if (name == "compileStubJava") {
-            classpath = sourceSets.stub.compileClasspath
-            if (rootProject.BINARY_STUB != null) classpath += rootProject.BINARY_STUB
         } else if (name == "compileJava") {
             // Not everything needs the builder processor
             classpath = sourceSets.main.compileClasspath
@@ -1834,7 +1803,10 @@ compileTargets { t ->
         if (COMPILE_SWING) from ("modules/swing/build/classes/main", "modules/swing/build/resources/main")
         if (COMPILE_SWT) from ("modules/swt/build/classes/main", "modules/swt/build/resources/main")
         if (t.name == 'android') {
-            from ("modules/web/build/classes/android", "modules/web/build/resources/android")
+            from ("modules/web/build/classes/android",
+                  "modules/web/build/resources/android",
+                  "modules/controls/build/classes/android",
+                  "modules/controls/build/resources/android")
         } else if (t.name == 'ios') {
             from ("modules/web/build/classes/ios", "modules/web/build/resources/ios")
         } else {
@@ -1879,7 +1851,7 @@ compileTargets { t ->
                     from ("modules/graphics/build/libs/prismD3D/${t.name}/${library(targetProperties.prismD3D.lib)}");
                 }
                 if (COMPILE_WEBKIT) {
-                    from ("modules/web/build/libs/${library('jfxwebkit')}")
+                    from ("modules/web/build/libs/${t.name}/${library('jfxwebkit')}")
                 } else {
                     if (t.name == "android") {
                         //don't copy anything, use built in webkit.
@@ -2042,22 +2014,13 @@ if (BUILD_CLOSED) {
 // This project has to be defined after [supplementalBuildFile]
 // because it depends on media tasks
 project(":web") {
-    def platform = IS_MAC ? "mac" :
-            IS_WINDOWS ? (IS_64 ? "win-amd64" : "win-i586") :
-                COMPILE_TARGETS.contains("armv6sf") ? "armv6sf" :
-                    IS_64 ? "linux-amd64" : "linux-i586"
-                
-    if (COMPILE_WEBKIT) {
-        configurations {
-            webkit
-        }
-        dependencies {
-            compile project(":base"), project(":graphics"), project(":controls")
-            webkit group: "com.sun.webkit", name: "webview-deps",
-                   version: "1.0", classifier: "$platform", ext: "zip"
-        }
+    configurations {
+        webkit
     }
-
+    dependencies {
+        compile project(":base"), project(":graphics"), project(":controls")
+    }
+    
     compileJava.enabled = COMPILE_WEBKIT
     if (BUILD_CLOSED) {
         compileJava.dependsOn compileMediaJava
@@ -2120,23 +2083,39 @@ project(":web") {
         }
     }
 
-    def webkitOutputDir = "src/main/native/WebKitBuild/$CONF"
+    task compileGenerated()
 
-    task compileNative(dependsOn: generateHeaders) {
-        doLast {
+    compileTargets { t ->
+        def classifier = (t.name != "linux" && t.name != "win") ? t.name :
+                          IS_64 ? "${t.name}-amd64" : "${t.name}-i586"
+        dependencies {
+            webkit group: "com.sun.webkit", name: "webview-deps",
+                   version: "1.2", classifier: "$classifier", ext: "zip"
+        }
+
+        def webkitOutputDir = "$buildDir/${t.name}"
+
+        def compileNativeTask = task("compileNative${t.capital}", dependsOn: generateHeaders) << {
+            println "Building Webkit configuration /$CONF/ into $webkitOutputDir"
+            
+            def dependencyFile = configurations.webkit.filter(
+                    { File f -> f.getName().contains(classifier) }
+                ).getSingleFile()
+            ant.unzip(src:  dependencyFile,
+                      dest: webkitOutputDir)
+
             exec {
-                println "Webkit configuration to use: $CONF"
-                workingDir("src/main/native")
+                workingDir("$projectDir/src/main/native")
                 commandLine("perl", "Tools/Scripts/set-webkit-configuration", "--$CONF")
+                environment(["WEBKITOUTPUTDIR" : webkitOutputDir])
             }
             ant.unzip(src:  configurations.webkit.files.iterator().next(),
                       dest: "src/main/native/WebKitBuild")
             exec {
-                workingDir("src/main/native")
-                if (IS_WINDOWS) {
+                workingDir("$projectDir/src/main/native")
+                if (t.name == "win") {
                     String qtDir = cygpath(System.getenv().get("QTSDK_DIR"))
                     Map environmentSettings = new HashMap(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
-                    environmentSettings["JAVA_HOME"] = JAVA_HOME
                     environmentSettings["PATH"] = "$WINDOWS_VS_PATH;$qtDir/bin;$qtDir/qt/bin"
                     environmentSettings["QMAKESPEC"] = "win32-msvc2008"
                     environment(environmentSettings)
@@ -2149,81 +2128,80 @@ project(":web") {
                     3. Uncomment the line below
                      */
                     // args("--icu-unicode")
-                } else if (IS_MAC) {
+                } else if (t.name == "mac") {
                     environment([
                         "QMAKESPEC"      : "macx-g++",
                         "QMAKE_CFLAGS"   : "-m64",
                         "QMAKE_LFLAGS"   : "-m64",
-                        "JAVA_HOME"      : JDK_HOME
                     ])
-                } else if (COMPILE_TARGETS.contains("armv6sf")) {
+                } else if (t.name.startsWith("arm")) {
                     // ARM cross build
-                    def qmakeSpecDir = "$webkitOutputDir/qws/linux-cross-armv6sf-g++"
+                    def webkitProperties = project.rootProject.ext[t.upper].webkit
+                    def qmakeSpecDir = "$webkitOutputDir/qws/linux-cross-${t.name}-g++"
                     mkdir qmakeSpecDir
-                    File qmakeSpec = new File("modules/web/$qmakeSpecDir/qmake.conf")
+                    File qmakeSpec = new File("$qmakeSpecDir/qmake.conf")
                     qmakeSpec.append(
 """TARGET_PLATFORM         = unix
 include(/usr/share/qt4/mkspecs/common/linux.conf)
 include(/usr/share/qt4/mkspecs/common/g++.conf)
 include(/usr/share/qt4/mkspecs/common/qws.conf)
-QMAKE_CC                = $ARMV6SF.webkit.compiler
-QMAKE_CXX               = $ARMV6SF.webkit.linker
-QMAKE_LINK              = $ARMV6SF.webkit.linker
-QMAKE_LINK_SHLIB        = $ARMV6SF.webkit.linker
-QMAKE_AR                = $ARMV6SF.webkit.ar cqs
-QMAKE_OBJCOPY           = $ARMV6SF.webkit.objcopy
-QMAKE_STRIP             = $ARMV6SF.webkit.strip
-QMAKE_CXXFLAGS          = $ARMV6SF.webkit.ccFlags
-QMAKE_LFLAGS            = $ARMV6SF.webkit.linkFlags
+QMAKE_CC                = $webkitProperties.compiler
+QMAKE_CXX               = $webkitProperties.linker
+QMAKE_LINK              = $webkitProperties.linker
+QMAKE_LINK_SHLIB        = $webkitProperties.linker
+QMAKE_AR                = $webkitProperties.ar cqs
+QMAKE_OBJCOPY           = $webkitProperties.objcopy
+QMAKE_STRIP             = $webkitProperties.strip
+QMAKE_CXXFLAGS          = $webkitProperties.ccFlags
+QMAKE_LFLAGS            = $webkitProperties.linkFlags
 load(qt_config)""")
                     environment([
                         "QMAKESPEC" : file(qmakeSpecDir).getAbsolutePath(),
-                        "PATH"      : "$ARMV6SF.webkit.binDir:$System.env.PATH",
+                        "PATH"      : "$System.env.PATH:$webkitProperties.binDir",
                     ])
                     args("--nocache")
-                } else {
-                    environment([
-                        "JAVA_HOME"   : JDK_HOME
-                    ])
                 }
+                environment([
+                    "JAVA_HOME"       : JAVA_HOME,
+                    "WEBKITOUTPUTDIR" : webkitOutputDir,
+                ])
                 commandLine("perl", "Tools/Scripts/build-webkit", "--java", "--imageio")
             }
+
+            def library = rootProject.ext[t.upper].library
             copy {
-                from "$webkitOutputDir/lib/libjfxwebkit.so"
-                from "$webkitOutputDir/lib/libjfxwebkit.dylib"
-                from "$webkitOutputDir/lib/jfxwebkit.dll"
-                into "build/libs"
+                from "$webkitOutputDir/$CONF/lib/${library('jfxwebkit')}"
+                into "$buildDir/libs/${t.name}"
             }
             copy {
-                from "$webkitOutputDir/lib/libDumpRenderTreeJava.so"
-                from "$webkitOutputDir/lib/libDumpRenderTreeJava.dylib"
-                from "$webkitOutputDir/lib/DumpRenderTreeJava.dll"
-                into "build/test"
+                from "$webkitOutputDir/$CONF/lib/${library('DumpRenderTreeJava')}"
+                into "$buildDir/test/${t.name}"
             }
         }
+    
+        def compileGeneratedTask = task("compileGenerated${t.capital}", type: JavaCompile, dependsOn: compileNativeTask) {
+            def gensrcDir = "$webkitOutputDir/$CONF/WebCore/generated/java"
+            doFirst {
+                copy {
+                    from "$projectDir/src/main/native/Source/WebCore/bindings/java/EventListenerImpl.java"
+                    into "$gensrcDir/com/sun/webkit/dom"
+                }
+            }
+            classpath = files(project(":graphics").sourceSets.main.output) // for JSObject
+            source gensrcDir
+            destinationDir = file("$buildDir/classes/main")
+            doLast {
+                copy {
+                    from gensrcDir
+                    into "$buildDir/resources/main"
+                    exclude "**/*.java"
+                }
+            }
+        }
+
+        compileGenerated.dependsOn compileGeneratedTask
     }
     
-    task compileGenerated(type: JavaCompile, dependsOn: compileNative) {
-        def gensrcDir = "$webkitOutputDir/WebCore/generated/java"
-        doFirst {
-            copy {
-                from "src/main/native/Source/WebCore/bindings/java/EventListenerImpl.java"
-                into "$gensrcDir/com/sun/webkit/dom"
-            }
-        }
-        classpath = files("$buildDir",
-                          project(":graphics").sourceSets.main.output.classesDir)
-        source gensrcDir
-        destinationDir = file("$buildDir/classes/main")
-        doLast {
-            copy {
-                from gensrcDir
-                into "build/resources/main"
-                exclude "**/*.java"
-            }
-        }
-    }
-
     def drtClasses = "com/sun/javafx/webkit/drt/**"
     jar.exclude(drtClasses)
     task drtJar(type: Jar, dependsOn: compileJava) {
@@ -2250,13 +2228,6 @@ load(qt_config)""")
         jar.dependsOn compileGenerated, drtJar
     } else {
         jar.dependsOn copyClassesFromBinaryStub
-    }
-
-    clean << {
-        project.delete(
-            "$webkitOutputDir",
-            "src/main/native/WebKitBuild/Tools",
-            "src/main/native/WebKitBuild/import")
     }
 }
 
