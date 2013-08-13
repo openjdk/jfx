@@ -193,7 +193,7 @@ mac* {
     QMAKE_LFLAGS += -exported_symbols_list $$PWD/mapfile-macosx
 }
 
-INCLUDEPATH += ../../../../../../build/generated-src/headers
+INCLUDEPATH += ../../../generated-src/headers
 
 win32-* {
     POST_TARGETDEPS += ../lib/JavaScriptCoreJava.lib
