@@ -61,7 +61,7 @@ WIN.jfxrtJarExcludes = [
 def ccFlags = ["/nologo", "/W3", "/EHsc", "/c",
         "/D_STATIC_CPPLIB", "/D_DISABLE_DEPRECATE_STATIC_CPPLIB", "/DINLINE=__inline",
         "/DUNICODE", "/D_UNICODE", "/DWIN32", "/DIAL", "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN",
-        "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32", "/arch:SSE", "/fp:fast",
+        "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32",
         IS_DEBUG ? ["/MDd", "/Od", "/Zi", "/DDEBUG"] : ["/O2", "/MD"]].flatten();
 
 def linkFlags = ["/nologo", "/dll", "/manifest", "/opt:REF", "/incremental:no"];
@@ -154,7 +154,7 @@ WIN.glass.lib = "glass"
 
 WIN.decora = [:]
 WIN.decora.compiler = compiler
-WIN.decora.ccFlags = [ccFlags].flatten()
+WIN.decora.ccFlags = ["/arch:SSE", "/fp:fast", ccFlags].flatten()
 WIN.decora.linker = linker
 WIN.decora.linkFlags = [linkFlags].flatten()
 WIN.decora.lib = "decora_sse"
