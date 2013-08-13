@@ -1117,8 +1117,6 @@ final class CssStyleHelper {
 
             return new ParsedValueImpl(resolved, parsedValue.getConverter(), false);
 
-        }  else {
-            assert(false);
         }
 
         return parsedValue;
