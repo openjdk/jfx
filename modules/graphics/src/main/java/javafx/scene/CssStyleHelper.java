@@ -1089,27 +1089,36 @@ final class CssStyleHelper {
         }
 
         final Object val = parsedValue.getValue();
+
         if (val instanceof ParsedValueImpl[][]) {
-        // If ParsedValueImpl is a layered sequence of values, resolve the lookups for each.
+            // If ParsedValueImpl is a layered sequence of values, resolve the lookups for each.
             final ParsedValueImpl[][] layers = (ParsedValueImpl[][])val;
+            ParsedValueImpl[][] resolved = new ParsedValueImpl[layers.length][0];
             for (int l=0; l<layers.length; l++) {
+                resolved[l] = new ParsedValueImpl[layers[l].length];
                 for (int ll=0; ll<layers[l].length; ll++) {
                     if (layers[l][ll] == null) continue;
-                    layers[l][ll].setResolved(
-                        resolveLookups(styleable, layers[l][ll], states, whence, null, styleList)
-                    );
+                    resolved[l][ll] =
+                        resolveLookups(styleable, layers[l][ll], states, whence, null, styleList);
                 }
             }
+
+            return new ParsedValueImpl(resolved, parsedValue.getConverter(), false);
 
         } else if (val instanceof ParsedValueImpl[]) {
         // If ParsedValueImpl is a sequence of values, resolve the lookups for each.
             final ParsedValueImpl[] layer = (ParsedValueImpl[])val;
+            ParsedValueImpl[] resolved = new ParsedValueImpl[layer.length];
             for (int l=0; l<layer.length; l++) {
                 if (layer[l] == null) continue;
-                layer[l].setResolved(
-                    resolveLookups(styleable, layer[l], states, whence, null, styleList)
-                );
+                resolved[l] =
+                    resolveLookups(styleable, layer[l], states, whence, null, styleList);
             }
+
+            return new ParsedValueImpl(resolved, parsedValue.getConverter(), false);
+
+        }  else {
+            assert(false);
         }
 
         return parsedValue;
@@ -1338,8 +1347,6 @@ final class CssStyleHelper {
                     LOGGER.fine("node = " + node.toString());
                 }
                 return SKIP;
-            } finally {
-                if (resolved != null) resolved.setResolved(null);
             }
 
         }

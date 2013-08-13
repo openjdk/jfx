@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import javafx.css.CssMetaData;
+import javafx.css.ParsedValue;
 import javafx.css.StyleConverter;
 import javafx.css.Styleable;
 
@@ -68,6 +69,22 @@ public class StyleConverterImpl<F, T> extends StyleConverter<F, T> {
         String cname = getClass().getName();
         int index = sstore.addString(cname);
         os.writeShort(index);
+    }
+
+    private static Map<ParsedValue, Object> cache;
+
+    static void clearCache() { if (cache != null) cache.clear(); }
+
+    protected T getCachedValue(ParsedValue key) {
+        if (cache != null) {
+            return (T)cache.get(key);
+        }
+        return null;
+    }
+
+    protected void cacheValue(ParsedValue key, Object value) {
+        if (cache == null) cache = new HashMap<>();
+        cache.put(key, value);
     }
 
     // map of StyleConverter class name to StyleConverter

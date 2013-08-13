@@ -184,61 +184,8 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
         this(value, type, false);
     }
 
-    /*
-     * If this ParsedValueImpl object has lookups, then resolved is used to hold
-     * the resolved lookup value. This avoids having to allocate new
-     * ParsedValueImpl objects in StyleHelper.resolveLookups. The resolved value is 
-     * nulled out after this ParsedValueImpl object has been converted in the 
-     * StyleHelper.lookup method. 
-     */
-    private ParsedValueImpl resolved;
-
-    public ParsedValueImpl getResolved() {
-        return resolved;
-    }
-
-    public void setResolved(ParsedValueImpl resolved) {
-        if (resolved == null) nullResolved();
-        this.resolved = resolved;
-    }
-
-    /*
-     * Null out the resolved field after this ParsedValueImpl object has been converted.
-     * Called from StyleHelper.lookup.
-     */
-    private void nullResolved() {
-
-        if (resolved == this || resolved == null) return;
-
-        Object obj = resolved.getValue();
-        if(obj instanceof ParsedValueImpl[]) {
-            ParsedValueImpl[] values = (ParsedValueImpl[])obj;
-            for(int v=0; v<values.length; v++) {
-                if (values[v] == null) continue;
-                values[v].nullResolved();
-            }
-
-        } else if(obj instanceof ParsedValueImpl[][]) {
-            ParsedValueImpl[][] values = (ParsedValueImpl[][])obj;
-            for(int l=0; l<values.length; l++) {
-                if (values[l] == null) continue;
-                for(int v=0; v<values[l].length; v++)
-                {
-                    if (values[l][v] == null) continue;
-                    values[l][v].nullResolved();
-                }
-            }
-        }
-
-        resolved = null;
-        
-    }
 
     public T convert(Font font) {
-        // if this ParsedValueImpl has a resolved lookup, then convert that.
-        if (resolved != null && resolved != this) {
-            return (T)resolved.convert(font);
-        }
         return (T)((converter != null) ? converter.convert(this, font) : value);
     }
 
@@ -267,9 +214,6 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
             appendValue(sbuf, value, "value");
         } else {
             appendValue(sbuf, "null", "value");
-        }
-        if (resolved != null && resolved != this) {
-            appendValue(sbuf, resolved, "resolved");
         }
         sbuf.append(spaces())
             .append("<converter>")
@@ -353,82 +297,84 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
 
         if (obj == this) return true;
 
-        if (obj instanceof ParsedValueImpl) {
+        if (obj != null && obj.getClass() != this.getClass()) {
+            return false;
+        }
 
-            final ParsedValueImpl other = (ParsedValueImpl)obj;
-            if (this.value instanceof ParsedValueImpl[][]) {
+        final ParsedValueImpl other = (ParsedValueImpl)obj;
+        if (this.value instanceof ParsedValueImpl[][]) {
 
-                if (!(other.value instanceof ParsedValueImpl[][])) return false;
+            if (!(other.value instanceof ParsedValueImpl[][])) return false;
 
-                final ParsedValueImpl[][] thisValues = (ParsedValueImpl[][])this.value;
-                final ParsedValueImpl[][] otherValues = (ParsedValueImpl[][])other.value;
+            final ParsedValueImpl[][] thisValues = (ParsedValueImpl[][])this.value;
+            final ParsedValueImpl[][] otherValues = (ParsedValueImpl[][])other.value;
 
-                // this.value and other.value are known to be non-null
-                // due to instanceof
-                if (thisValues.length != otherValues.length) return false;
+            // this.value and other.value are known to be non-null
+            // due to instanceof
+            if (thisValues.length != otherValues.length) return false;
 
-                for (int i = 0; i < thisValues.length; i++) {
-                    
-                    // if thisValues[i] is null, then otherValues[i] must be null
-                    // if thisValues[i] is not null, then otherValues[i] must 
-                    // not be null
-                    if ((thisValues[i] == null) && (otherValues[i] == null)) continue;
-                    else if ((thisValues[i] == null) || (otherValues[i] == null)) return false;
-                    
-                    if (thisValues[i].length != otherValues[i].length) return false;
+            for (int i = 0; i < thisValues.length; i++) {
 
-                    for (int j = 0; j < thisValues[i].length; j++) {
+                // if thisValues[i] is null, then otherValues[i] must be null
+                // if thisValues[i] is not null, then otherValues[i] must
+                // not be null
+                if ((thisValues[i] == null) && (otherValues[i] == null)) continue;
+                else if ((thisValues[i] == null) || (otherValues[i] == null)) return false;
 
-                        final ParsedValueImpl thisValue = thisValues[i][j];
-                        final ParsedValueImpl otherValue = otherValues[i][j];
+                if (thisValues[i].length != otherValues[i].length) return false;
 
-                        if (thisValue != null
+                for (int j = 0; j < thisValues[i].length; j++) {
+
+                    final ParsedValueImpl thisValue = thisValues[i][j];
+                    final ParsedValueImpl otherValue = otherValues[i][j];
+
+                    if (thisValue != null
                             ? !thisValue.equals(otherValue)
                             : otherValue != null)
-                                return false;
-                    }
-                }
-                return true;
-
-            } else if (this.value instanceof ParsedValueImpl[]) {
-
-                if (!(other.value instanceof ParsedValueImpl[])) return false;
-
-                final ParsedValueImpl[] thisValues = (ParsedValueImpl[])this.value;
-                final ParsedValueImpl[] otherValues = (ParsedValueImpl[])other.value;
-
-                // this.value and other.value are known to be non-null
-                // due to instanceof
-                if (thisValues.length != otherValues.length) return false;
-
-                for (int i = 0; i < thisValues.length; i++) {
-
-                    final ParsedValueImpl thisValue = thisValues[i];
-                    final ParsedValueImpl otherValue = otherValues[i];
-
-                    if ((thisValue != null)
-                        ? !thisValue.equals(otherValue)
-                        : otherValue != null)
                         return false;
                 }
-                return true;
+            }
+            return true;
 
-            } else {
+        } else if (this.value instanceof ParsedValueImpl[]) {
 
-                if (other.value instanceof ParsedValueImpl[][] 
+            if (!(other.value instanceof ParsedValueImpl[])) return false;
+
+            final ParsedValueImpl[] thisValues = (ParsedValueImpl[])this.value;
+            final ParsedValueImpl[] otherValues = (ParsedValueImpl[])other.value;
+
+            // this.value and other.value are known to be non-null
+            // due to instanceof
+            if (thisValues.length != otherValues.length) return false;
+
+            for (int i = 0; i < thisValues.length; i++) {
+
+                final ParsedValueImpl thisValue = thisValues[i];
+                final ParsedValueImpl otherValue = otherValues[i];
+
+                if ((thisValue != null)
+                        ? !thisValue.equals(otherValue)
+                        : otherValue != null)
+                    return false;
+            }
+            return true;
+
+        } else {
+
+            if (other.value instanceof ParsedValueImpl[][]
                     || other.value instanceof ParsedValueImpl[]) return false;
 
-                // we know other is not null because of the instanceof check
-                return (this.value != null
-                        ? this.value.equals(other.value)
-                        : other.value == null);
-            }
+            // we know other is not null because of the instanceof check
+            return (this.value != null
+                    ? this.value.equals(other.value)
+                    : other.value == null);
+        }
+
 //            Converter could be null, but the values could still match.
 //            It makes sense that ParsedValueImpl<String,String>("abc", null) should equal
 //            ParsedValueImpl<String,String>("abc", StringConverter.getInstance())
 //                    (converter == null ? other.converter == null : converter.equals(other.converter));
-        }
-        return false;
+
     }
 
     private int hc = -1;

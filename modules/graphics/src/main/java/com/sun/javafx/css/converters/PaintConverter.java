@@ -116,6 +116,10 @@ public final class PaintConverter extends StyleConverterImpl<ParsedValue<?, Pain
 
         @Override 
         public Paint convert(ParsedValue<ParsedValue[], Paint> value, Font font) {
+
+            Paint paint = super.getCachedValue(value);
+            if (paint != null) return paint;
+
             ParsedValue[] values = value.getValue();
             int v = 0;
             final Size startX = (Size) values[v++].convert(font);
@@ -128,7 +132,10 @@ public final class PaintConverter extends StyleConverterImpl<ParsedValue<?, Pain
             for (int s = v; s < values.length; s++) {
                 stops[s - v] = (Stop) values[s].convert(font);
             }
-            return new LinearGradient(startX.pixels(font), startY.pixels(font), endX.pixels(font), endY.pixels(font), proportional, cycleMethod, stops);
+            paint = new LinearGradient(startX.pixels(font), startY.pixels(font), endX.pixels(font), endY.pixels(font), proportional, cycleMethod, stops);
+
+            super.cacheValue(value, paint);
+            return paint;
         }
 
         @Override
@@ -149,6 +156,10 @@ public final class PaintConverter extends StyleConverterImpl<ParsedValue<?, Pain
 
         @Override
         public Paint convert(ParsedValue<ParsedValue[], Paint> value, Font font) {
+
+            Paint paint = super.getCachedValue(value);
+            if (paint != null) return paint;
+
             ParsedValue[] values = value.getValue();
             ParsedValue<?,?> urlParsedValue = values[0];
             String url = (String) urlParsedValue.convert(font);
@@ -162,12 +173,15 @@ public final class PaintConverter extends StyleConverterImpl<ParsedValue<?, Pain
             Size h = (Size) values[4].convert(font);
             boolean p = values.length < 6 ? true : (Boolean) values[5].getValue();
 
-            return new ImagePattern(
+            paint = new ImagePattern(
                     new Image(url),
                     x.getValue(),
                     y.getValue(),
                     w.getValue(),
                     h.getValue(), p);
+
+            super.cacheValue(value, paint);
+            return paint;
         }
 
         @Override
@@ -188,13 +202,20 @@ public final class PaintConverter extends StyleConverterImpl<ParsedValue<?, Pain
 
         @Override
         public Paint convert(ParsedValue<ParsedValue[], Paint> value, Font font) {
+
+            Paint paint = super.getCachedValue(value);
+            if (paint != null) return paint;
+
             ParsedValue[] values = value.getValue();
             ParsedValue<?, ?> url = values[0];
             String u = (String) url.convert(font);
             // If u is null, then we failed to locate the image associated with the url specified in the CSS file.
             if (u == null) return null;
             final Image image = new Image(u);
-            return new ImagePattern(image, 0, 0, image.getWidth(), image.getHeight(), false);
+            paint = new ImagePattern(image, 0, 0, image.getWidth(), image.getHeight(), false);
+
+            super.cacheValue(value, paint);
+            return paint;
         }
 
         @Override
@@ -215,6 +236,10 @@ public final class PaintConverter extends StyleConverterImpl<ParsedValue<?, Pain
 
         @Override
         public Paint convert(ParsedValue<ParsedValue[], Paint> value, Font font) {
+
+            Paint paint = super.getCachedValue(value);
+            if (paint != null) return paint;
+
             final ParsedValue[] values = value.getValue();
             int v = 0;
             // First four values are for startX, startY, endX, endY
@@ -247,7 +272,10 @@ public final class PaintConverter extends StyleConverterImpl<ParsedValue<?, Pain
                     fa = (fa * 360) % 360;
                 }
             }
-            return new RadialGradient(fa, focusDistance != null ? focusDistance.pixels() : 0, centerX != null ? centerX.pixels() : 0, centerY != null ? centerY.pixels() : 0, radius != null ? radius.pixels() : 1, proportional, cycleMethod, stops);
+            paint = new RadialGradient(fa, focusDistance != null ? focusDistance.pixels() : 0, centerX != null ? centerX.pixels() : 0, centerY != null ? centerY.pixels() : 0, radius != null ? radius.pixels() : 1, proportional, cycleMethod, stops);
+
+            super.cacheValue(value, paint);
+            return paint;
         }
 
         @Override

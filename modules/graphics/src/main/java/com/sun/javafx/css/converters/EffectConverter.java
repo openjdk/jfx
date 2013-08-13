@@ -36,6 +36,9 @@ import javafx.scene.effect.InnerShadow;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class EffectConverter extends StyleConverterImpl<ParsedValue[], Effect> {
 
     // lazy, thread-safe instatiation
@@ -95,6 +98,10 @@ public class EffectConverter extends StyleConverterImpl<ParsedValue[], Effect> {
         // <number> The shadow offset in the y direction, in pixels.
         @Override
         public Effect convert(ParsedValue<ParsedValue[], Effect> value, Font font) {
+
+            Effect effect = super.getCachedValue(value);
+            if (effect != null) return effect;
+
             final ParsedValue[] values = value.getValue();
             final BlurType blurType = (BlurType) values[0].convert(font);
             final Color color = (Color) values[1].convert(font);
@@ -121,6 +128,9 @@ public class EffectConverter extends StyleConverterImpl<ParsedValue[], Effect> {
             if (offsetY != null) {
                 dropShadow.setOffsetY(offsetY);
             }
+
+            super.cacheValue(value, dropShadow);
+
             return dropShadow;
         }
 
@@ -159,6 +169,10 @@ public class EffectConverter extends StyleConverterImpl<ParsedValue[], Effect> {
         // <number> The shadow offset in the y direction, in pixels.
         @Override
         public Effect convert(ParsedValue<ParsedValue[], Effect> value, Font font) {
+
+            Effect effect = super.getCachedValue(value);
+            if (effect != null) return effect;
+
             final ParsedValue[] values = value.getValue();
             final BlurType blurType = (BlurType) values[0].convert(font);
             final Color color = (Color) values[1].convert(font);
@@ -185,6 +199,9 @@ public class EffectConverter extends StyleConverterImpl<ParsedValue[], Effect> {
             if (offsetY != null) {
                 innerShadow.setOffsetY(offsetY);
             }
+
+            super.cacheValue(value, innerShadow);
+
             return innerShadow;
         }
 
@@ -193,6 +210,10 @@ public class EffectConverter extends StyleConverterImpl<ParsedValue[], Effect> {
             return "InnerShadowConverter";
         }
     }
+
+    private static Map<ParsedValue<ParsedValue[], Effect>, Effect> cache;
+
+    public static void clearCache() { if (cache != null) cache.clear(); }
 
 }
 

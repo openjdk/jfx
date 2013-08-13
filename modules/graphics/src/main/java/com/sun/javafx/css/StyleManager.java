@@ -432,7 +432,7 @@ final public class StyleManager {
     }
 
     /**
-     * called from Parent's or Scene's stylesheets property's onChanged method
+     * called from Scene's stylesheets property's onChanged method
      */
     public void stylesheetsChanged(Scene scene, Change<String> c) {
 
@@ -558,7 +558,7 @@ final public class StyleManager {
     }
 
     /**
-     * called from Parent's or Scene's stylesheets property's onChanged method
+     * called from Parent's stylesheets property's onChanged method
      */
     public void stylesheetsChanged(Parent parent, Change<String> c) {
         processChange(c);
@@ -1193,6 +1193,8 @@ final public class StyleManager {
             container.clearCache();
         }
 
+        StyleConverterImpl.clearCache();
+
         for (Scene scene : cacheContainerMap.keySet()) {
             if (scene == null) {
                 continue;
@@ -1206,7 +1208,7 @@ final public class StyleManager {
     // recurse so that stylesheets of Parents closest to the root are
     // added to the list first. The ensures that declarations for
     // stylesheets further down the tree (closer to the leaf) have
-    // a higer ordinal in the cascade.
+    // a higher ordinal in the cascade.
     //
     private List<StylesheetContainer> gatherParentStylesheets(Parent parent) {
 
@@ -1665,7 +1667,7 @@ final public class StyleManager {
         // cache and is no longer valid.
         private int baseStyleMapId = 0;
 
-    }
+            }
 
     /**
      * Creates and caches maps of styles, reusing them as often as practical.
@@ -1916,4 +1918,4 @@ final public class StyleManager {
     }
 
 
-}
+        }
