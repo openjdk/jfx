@@ -2017,13 +2017,11 @@ if (BUILD_CLOSED) {
 // This project has to be defined after [supplementalBuildFile]
 // because it depends on media tasks
 project(":web") {
-    if (COMPILE_WEBKIT) {
-        configurations {
-            webkit
-        }
-        dependencies {
-            compile project(":base"), project(":graphics"), project(":controls")
-        }
+    configurations {
+        webkit
+    }
+    dependencies {
+        compile project(":base"), project(":graphics"), project(":controls")
     }
     
     compileJava.enabled = COMPILE_WEBKIT
