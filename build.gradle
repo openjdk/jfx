@@ -1294,7 +1294,7 @@ project(":controls") {
     dependencies {
         compile BUILD_SRC, project(":base"), project(":graphics"), project(":designTime")
         // TODO not sure how to specify this? processResources project(":base"), project(":graphics")
-        testCompile project(":graphics").sourceSets.stub.output
+        testCompile project(":graphics").sourceSets.test.output
         testCompile project(":base").sourceSets.test.output
     }
 
@@ -1352,7 +1352,7 @@ project(":fxml") {
     dependencies {
         compile BUILD_SRC, project(":base"), project(":graphics"),
                 project(":controls"), project(":swt"), project(":swing")
-        testCompile project(":graphics").sourceSets.stub.output
+        testCompile project(":graphics").sourceSets.test.output
     }
     test {
         // StubToolkit is not *really* needed here, but because some code inadvertently invokes performance
@@ -1371,7 +1371,7 @@ project(":builders") {
     dependencies {
         compile BUILD_SRC, project(":base"), project(":graphics"),
                 project(":controls"), project(":swt"), project(":swing"), project(":web")
-        testCompile project(":graphics").sourceSets.stub.output
+        testCompile project(":graphics").sourceSets.test.output
     }
     test {
         // StubToolkit is not *really* needed here, but because some code inadvertently invokes performance
@@ -1616,9 +1616,6 @@ allprojects {
         // defined. So the "test" source set automatically creates a "compileTestJava" task (among others).
         if (name == "compileTestJava") {
             classpath = sourceSets.test.compileClasspath
-            if (rootProject.BINARY_STUB != null) classpath += rootProject.BINARY_STUB
-        } else if (name == "compileStubJava") {
-            classpath = sourceSets.stub.compileClasspath
             if (rootProject.BINARY_STUB != null) classpath += rootProject.BINARY_STUB
         } else if (name == "compileJava") {
             // Not everything needs the builder processor
