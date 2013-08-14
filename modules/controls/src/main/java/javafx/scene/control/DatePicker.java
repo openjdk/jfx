@@ -25,7 +25,7 @@
 
 package javafx.scene.control;
 
-// editor and converter code in sync with ComboBox 2708:a3e606ef6ead
+// editor and converter code in sync with ComboBox 4413:89c969858c63
 
 import java.time.LocalDate;
 import java.time.DateTimeException;
