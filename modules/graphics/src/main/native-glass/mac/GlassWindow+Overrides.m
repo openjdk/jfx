@@ -74,8 +74,6 @@
         return;
     }
 
-    [GlassTouches startTracking:[self->view delegate]];
-
     (*env)->CallVoidMethod(env, self->jWindow, jWindowNotifyFocus, com_sun_glass_events_WindowEvent_FOCUS_GAINED);
     
     if (self->menubar != nil)
@@ -93,8 +91,6 @@
     }
     
     [self _ungrabFocus];
-
-    [GlassTouches stopTracking:[self->view delegate]];
 
     GET_MAIN_JENV;
     (*env)->CallVoidMethod(env, self->jWindow, jWindowNotifyFocus, com_sun_glass_events_WindowEvent_FOCUS_LOST);

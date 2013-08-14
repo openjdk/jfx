@@ -44,6 +44,7 @@
 #import "GlassHelper.h"
 #import "GlassStatics.h"
 #import "GlassPasteboard.h"
+#import "GlassTouches.h"
 
 //#define VERBOSE
 #ifndef VERBOSE
@@ -369,11 +370,13 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             
         case NSMouseEntered:
             type = com_sun_glass_events_MouseEvent_ENTER;
+            [GlassTouches startTracking:self];
             self->lastTrackingNumber = [theEvent trackingNumber];
             break;
             
         case NSMouseExited:
             type = com_sun_glass_events_MouseEvent_EXIT;
+            [GlassTouches stopTracking:self];
             self->lastTrackingNumber = [theEvent trackingNumber];
             break;
             

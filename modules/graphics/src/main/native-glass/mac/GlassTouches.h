@@ -41,7 +41,6 @@
 
 + (void)startTracking:(GlassViewDelegate *)delegate;
 + (void)stopTracking:(GlassViewDelegate *)delegate;
-+ (void)updateTracking:(GlassViewDelegate *)oldDelegate newDelegate:(GlassViewDelegate *)newDelegate;
 + (void)terminate;
 
 @end

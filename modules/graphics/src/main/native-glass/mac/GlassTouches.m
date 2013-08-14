@@ -158,18 +158,6 @@ static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type,
     LOG("TOUCHES: stopTracking: delegate=%p\n", glassTouches->curConsumer);
 }
 
-+ (void)updateTracking:(GlassViewDelegate *)oldDelegate newDelegate:(GlassViewDelegate *)newDelegate
-{
-    if (!glassTouches || glassTouches->curConsumer != oldDelegate)
-    {
-        return;
-    }
-
-    glassTouches->curConsumer = newDelegate;
-    
-    LOG("TOUCHES: updateTracking: old=%p new=%p\n", oldDelegate, glassTouches->curConsumer);
-}
-
 + (void)terminate
 {
     // Should be called right after Application's run loop terminate
