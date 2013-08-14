@@ -392,7 +392,8 @@ ANDROID.vmlauncher.linkFlags = [linkFlags, "-llog"].flatten()
 
 ANDROID.surface = [:]
 ANDROID.surface.javahInclude = [
-    "com/sun/glass/events/*"
+    "com/sun/glass/events/*",
+    "com/sun/glass/ui/android/*"
 ]
 ANDROID.surface.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/android")
@@ -441,6 +442,7 @@ ANDROID.glass.variants = ["eglfb"]
 ANDROID.glass.javahInclude = [
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*",
+    "com/sun/glass/ui/android/*",
     "com/sun/glass/ui/lens/*"]
 
 ANDROID.glass.eglfb = [:]

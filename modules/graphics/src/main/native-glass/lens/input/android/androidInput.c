@@ -27,6 +27,8 @@
 #include <dlfcn.h>
 
 #include "androidInput.h"
+#include "com_sun_glass_ui_android_SoftwareKeyboard.h"
+#include "com_sun_glass_ui_android_Activity.h"
 
 static ANativeWindow* (*_ANDROID_getNativeWindow)();
 static void (*_ANDROID_showIME)();
