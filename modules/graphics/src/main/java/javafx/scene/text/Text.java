@@ -1082,6 +1082,8 @@ public class Text extends Shape {
     }
 
     private float getYRendering() {
+        if (isSpan()) return 0;
+
         /* Always logical for rendering */
         BaseBounds bounds = getLogicalBounds();
 
