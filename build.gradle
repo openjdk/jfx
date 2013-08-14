@@ -1368,6 +1368,7 @@ project(":builders") {
     if (!COMPILE_SWING)  sourceSets.main.java.exclude ("**/swing/**")
     if (!COMPILE_SWT)    sourceSets.main.java.exclude ("**/swt/**")
     if (!COMPILE_WEBKIT) sourceSets.main.java.exclude ("**/web/**")
+    if (!BUILD_CLOSED)   sourceSets.main.java.exclude ("**/media/**")
 
     dependencies {
         compile BUILD_SRC, project(":base"), project(":graphics"),
