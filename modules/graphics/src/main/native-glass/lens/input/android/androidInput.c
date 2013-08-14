@@ -54,7 +54,7 @@ ANativeWindow *getAndroidNativeWindow() {
     return (*_ANDROID_getNativeWindow)();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_SoftwareKeyboard_show
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_SoftwareKeyboard__1show
 (JNIEnv *env, jclass clazz) {
     if (!_ANDROID_showIME) {
         init_functions(env);
@@ -63,7 +63,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_SoftwareKeyboard_show
     (*_ANDROID_showIME)();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_SoftwareKeyboard_hide
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_SoftwareKeyboard__1hide
 (JNIEnv *env, jclass clazz) {
     if (!_ANDROID_hideIME) {
         init_functions(env);
@@ -72,7 +72,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_SoftwareKeyboard_hide
     (*_ANDROID_hideIME)();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_Activity_shutdown
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_Activity__1shutdown
 (JNIEnv *env, jclass clazz) {
     android_shutdown();
 }
