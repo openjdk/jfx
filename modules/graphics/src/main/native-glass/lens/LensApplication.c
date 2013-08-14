@@ -55,6 +55,7 @@ static jmethodID jLensApplication_notifyKeyEvent;
 static jmethodID jLensApplication_notifyMouseEvent;
 static jmethodID jLensApplication_notifyScrollEvent;
 static jmethodID jLensApplication_notifyTouchEvent;
+static jmethodID jLensApplication_notifyMultiTouchEvent;
 static jmethodID jLensApplication_notifyWindowResize;
 static jmethodID jLensApplication_notifyWindowMove;
 static jmethodID jLensApplication_notifyWindowEvent;
@@ -134,6 +135,9 @@ static void initIDs(JNIEnv *env) {
     jLensApplication_notifyTouchEvent = (*env)->GetMethodID(
                                             env, jLensApplicationClass, "notifyTouchEvent",
                                             "(Lcom/sun/glass/ui/lens/LensView;IJIIII)V");
+    jLensApplication_notifyMultiTouchEvent = (*env)->GetMethodID(
+                                            env, jLensApplicationClass, "notifyMultiTouchEvent",
+                                            "(Lcom/sun/glass/ui/lens/LensView;[I[J[I[III)V");
     jLensApplication_notifyWindowResize =
         (*env)->GetMethodID(env, jLensApplicationClass, "notifyWindowResize",
                             "(Lcom/sun/glass/ui/lens/LensWindow;III)V");
@@ -494,15 +498,25 @@ void glass_application_notifyTouchEvent(JNIEnv *env,
                                         int y,
                                         int xabs,
                                         int yabs) {
+    int dx = x - xabs;
+    int dy = y - yabs;
+    glass_application_notifyMultiTouchEvent(env, window, 1, &state, &id,
+                                            &xabs, &yabs, dx, dy);
+}
 
-    int button = com_sun_glass_events_MouseEvent_BUTTON_NONE;
-    int eventType = -1;
+void glass_application_notifyMultiTouchEvent(JNIEnv *env,
+                                             NativeWindow window,
+                                             int count,
+                                             jint *states,
+                                             jlong *ids,
+                                             int *xs,
+                                             int *ys,
+                                             int dx,
+                                             int dy) {
 
     if (!pApplication) {
         return;
     }
-
-    GLASS_LOG_FINEST("JNI call notifyTouchEvent");
 
     if (window->isEnabled) {
         if (window->view == NULL || window->view->lensView == NULL) {
@@ -510,26 +524,33 @@ void glass_application_notifyTouchEvent(JNIEnv *env,
             return;
         }
         jobject jview = window->view->lensView;
-
-        button = com_sun_glass_events_MouseEvent_BUTTON_LEFT;
-
-        if (state == com_sun_glass_events_TouchEvent_TOUCH_PRESSED) {
-            eventType = com_sun_glass_events_MouseEvent_DOWN;
-        } else if (state == com_sun_glass_events_TouchEvent_TOUCH_RELEASED) {
-            eventType = com_sun_glass_events_MouseEvent_UP;
-        } else if (state == com_sun_glass_events_TouchEvent_TOUCH_MOVED) {
-            eventType = com_sun_glass_events_MouseEvent_MOVE;
+        if (count == 1) {
+            GLASS_LOG_FINEST("JNI call notifyTouchEvent");
+            (*env)->CallVoidMethod(env, pApplication,
+                                   jLensApplication_notifyTouchEvent,
+                                   jview,
+                                   states[0], ids[0], xs[0] + dx, ys[0] + dy,
+                                   xs[0], ys[0]);
         } else {
-            GLASS_LOG_SEVERE("Unexpected touch state : %d", state);
+            int i;
+            jlongArray idArray = (*env)->NewLongArray(env, count);
+            jintArray stateArray = (*env)->NewIntArray(env, count);
+            jintArray xArray = (*env)->NewIntArray(env, count);
+            jintArray yArray = (*env)->NewIntArray(env, count);
+            (*env)->SetLongArrayRegion(env, idArray, 0, count, ids);
+            (*env)->SetIntArrayRegion(env, stateArray, 0, count, states);
+            (*env)->SetIntArrayRegion(env, xArray, 0, count, xs);
+            (*env)->SetIntArrayRegion(env, yArray, 0, count, ys);
+            GLASS_LOG_FINEST("JNI call notifyMultiTouchEvent");
+            (*env)->CallVoidMethod(env, pApplication,
+                                   jLensApplication_notifyMultiTouchEvent,
+                                   jview,
+                                   stateArray, idArray, xArray, yArray, dx, dy);
+            (*env)->DeleteLocalRef(env, idArray);
+            (*env)->DeleteLocalRef(env, stateArray);
+            (*env)->DeleteLocalRef(env, xArray);
+            (*env)->DeleteLocalRef(env, yArray);
         }
-
-        glass_inputEvents_updateMouseButtonModifiers(button, eventType);
-
-
-        (*env)->CallVoidMethod(env, pApplication,
-                               jLensApplication_notifyTouchEvent,
-                               jview,
-                               state, id, x, y, xabs, yabs);
         (void)glass_application_checkReportException(env);
     } else {
         GLASS_LOG_FINE("Window %d[%p] is disabled - sending FOCUS_DISABLED event",

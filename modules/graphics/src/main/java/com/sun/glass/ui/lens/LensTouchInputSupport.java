@@ -71,7 +71,17 @@ final class LensTouchInputSupport {
         touches.notifyBeginTouchEvent(view, 0, true, 1);
         touches.notifyNextTouchEvent(view, state, id, x, y, absX, absY);
         touches.notifyEndTouchEvent(view);
+    }
 
+    static void postMultiTouchEvent(LensView view, int[] states, long[] ids,
+                                    int[] xs, int[] ys, int dx, int dy) {
+        touches.notifyBeginTouchEvent(view, 0, true, states.length);
+        for (int i = 0; i < states.length; i++) {
+            touches.notifyNextTouchEvent(view, states[i], ids[i],
+                                         xs[i] + dx, ys[i] + dy,
+                                         xs[i], ys[i]);
+        }
+        touches.notifyEndTouchEvent(view);
     }
 }
 

@@ -427,6 +427,30 @@ void glass_application_notifyTouchEvent(JNIEnv *env,
                                         int xabs,
                                         int yabs);
 
+ /**
+ * Notify LensApplication of a multitouch event
+ *
+ * @param env
+ * @param lensApplication A reference to LenApplication object
+ * @param lensWindow A reference to LensWindow object
+ * @param states the state of the finger locations (e.g.
+ * TouchEvent.TOUCH_PRESSED)
+ * @param ids The event IDs
+ * @param xs x absolute positions
+ * @param ys y absolute positions
+ * @param dx value to be added to x values to make them relative to the window
+ * @param dy value to be added to y values to make them relative to the window
+ */
+void glass_application_notifyMultiTouchEvent(JNIEnv *env,
+                                             NativeWindow window,
+                                             int count,
+                                             jint *states,
+                                             jlong *ids,
+                                             int *xs,
+                                             int *ys,
+                                             int dx,
+                                             int dy);
+
 
 
 

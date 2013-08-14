@@ -1046,74 +1046,73 @@ void lens_wm_notifyButtonEvent(JNIEnv *env,
 
 // check for window grab then forward event to application.
 // check for focus changes and handle them.
-void lens_wm_notifyTouchEvent(JNIEnv *env,
-                              jint state,
-                              int id,
-                              int xabs, int yabs) {
+void lens_wm_notifyMultiTouchEvent(JNIEnv *env,
+                                   jint count,
+                                   jint *states,
+                                   jlong *ids,
+                                   int *xabs, int *yabs) {
 
-    int relX, relY;
+    int i;
+    int dx, dy;
     NativeWindow window;
+    jboolean allReleased;
 
     //cache new coordinates
-    _mousePosX = xabs;
-    _mousePosY = yabs;
+    _mousePosX = xabs[0];
+    _mousePosY = yabs[0];
 
     fbCursorSetPosition(_mousePosX, _mousePosY);
 
-    window = glass_window_findWindowAtLocation(xabs, yabs,
+    if (_dragGrabbingWindow == NULL) {
+        int relX, relY;
+        window = glass_window_findWindowAtLocation(xabs[0], yabs[0],
                           &relX, &relY);
-
-    lens_wm_setMouseWindow(window);
-
-    if (state == com_sun_glass_events_TouchEvent_TOUCH_PRESSED) {
-        _mousePressed = JNI_TRUE;
-    } else if (state == com_sun_glass_events_TouchEvent_TOUCH_RELEASED) {
-        _mousePressed = JNI_FALSE;
+        dx = relX - xabs[0];
+        dy = relY - yabs[0];
+        lens_wm_setMouseWindow(window);
     } else {
-        GLASS_LOG_SEVERE("Unexpected state %d", state);
+        window = _dragGrabbingWindow;
+        dx = -window->currentBounds.x;
+        dy = -window->currentBounds.y;
     }
 
-    if (_mousePressed && window) {
-        // Pressed on window
-        glass_application_notifyMouseEvent(env,
-                                           window,
-                                           com_sun_glass_events_MouseEvent_ENTER,
-                                           relX, relY, xabs, yabs,
-                                           com_sun_glass_events_MouseEvent_BUTTON_NONE);
-        glass_application_notifyTouchEvent(env,
-                                           window,
-                                           com_sun_glass_events_TouchEvent_TOUCH_PRESSED,
-                                           id,
-                                           relX, relY, xabs, yabs);
-    }
-
-
-    if (!_mousePressed) {
-        if (!_onDraggingAction && window) {
-            //Press-release on a window without a move in between.
-            glass_application_notifyTouchEvent(env,
+    if (states[0] == com_sun_glass_events_TouchEvent_TOUCH_PRESSED && !_mousePressed) {
+        _mousePressed = JNI_TRUE;
+        if (window) {
+            // Pressed on window
+            glass_application_notifyMouseEvent(env,
                                                window,
-                                               com_sun_glass_events_TouchEvent_TOUCH_RELEASED,
-                                               id,
-                                               relX, relY, xabs, yabs);
-
-        } else if (_onDraggingAction && _dragGrabbingWindow != NULL) {
-            //Finished drag that started on actual window.
-            relX = xabs - _dragGrabbingWindow->currentBounds.x;
-            relY = yabs - _dragGrabbingWindow->currentBounds.y;
-            glass_application_notifyTouchEvent(env,
-                                               _dragGrabbingWindow,
-                                               com_sun_glass_events_TouchEvent_TOUCH_RELEASED,
-                                               id,
-                                               relX, relY, xabs, yabs);
+                                               com_sun_glass_events_MouseEvent_ENTER,
+                                               xabs[0] + dx, yabs[0] + dy, xabs[0], yabs[0],
+                                               com_sun_glass_events_MouseEvent_BUTTON_NONE);
         }
+    }
 
+    allReleased = JNI_TRUE;
+    for (i = 0; i < count && allReleased; i++) {
+        if (states[i] != com_sun_glass_events_TouchEvent_TOUCH_RELEASED) {
+            allReleased = JNI_FALSE;
+        }
+    }
+    if (allReleased) {
+        _mousePressed = JNI_FALSE;
         _onDraggingAction = JNI_FALSE;
         _dragGrabbingWindow = NULL;
-
+        glass_inputEvents_updateMouseButtonModifiers(
+            com_sun_glass_events_MouseEvent_BUTTON_LEFT,
+            com_sun_glass_events_MouseEvent_DOWN);
+    } else {
+        glass_inputEvents_updateMouseButtonModifiers(
+            com_sun_glass_events_MouseEvent_BUTTON_LEFT,
+            com_sun_glass_events_MouseEvent_UP);
     }
 
-    handleClickOrTouchEvent(env, xabs, yabs);
+    if (window != NULL) {
+        glass_application_notifyMultiTouchEvent(env, window, count,
+                                                states, ids, xabs, yabs,
+                                                dx, dy);
+    }
+    handleClickOrTouchEvent(env, xabs[0] + dx, yabs[0] + dy);
 
 }
 

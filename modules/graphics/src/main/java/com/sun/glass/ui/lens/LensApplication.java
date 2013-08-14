@@ -501,6 +501,41 @@ final class LensApplication extends Application {
         }
     }
 
+    private static class LensMultiTouchEvent extends Event {
+
+        private LensView view;
+        private int[] states;
+        private long[] ids;
+        private int[] xs;
+        private int[] ys;
+        private int dx;
+        private int dy;
+
+        LensMultiTouchEvent(LensView view, int[] states, long[] ids,
+                       int[] xs, int[] ys, int dx, int dy) {
+            this.view = view;
+            this.states = states;
+            this.ids = ids;
+            this.xs = xs;
+            this.ys = ys;
+            this.dx = dx;
+            this.dy = dy;
+        }
+
+        @Override
+        void dispatch() {
+            LensTouchInputSupport.postMultiTouchEvent(
+                    view, states, ids, xs, ys, dx, dy);
+
+        }
+
+        @Override
+        public String toString() {
+            return "LensMultiTouchEvent[view=" + view
+                    + ",points=" + ids.length
+                    + "]";
+        }
+    }
 
     private static class LensViewEvent extends Event {
         private LensView target;
@@ -1319,6 +1354,35 @@ final class LensApplication extends Application {
 
             postEvent(new LensTouchEvent(view, state, id,
                                          x, y, absX, absY));
+
+        } catch (Exception e) {
+            reportException(e);
+        }
+    }
+
+    /**
+    * Notify multitouch event from native layer
+    *
+    * @param window the window which the view is related to
+    * @param states list of the finger states of each touch point
+    * @param ids list of the IDs of each touch point
+    * @param xs list of of the absolute X coordinates of each touch point
+    * @param ys list of of the absolute Y coordinates of each touch point
+    * @param dx value to be added to X coordinates to convert them to relative
+    * @param dy value to be added to Y coordinates to convert them to relative
+    */
+    private void notifyMultiTouchEvent(LensView view, int[] states, long[] ids,
+                                       int[] xs, int[] ys, int dx, int dy) {
+        try {
+
+            if (LensLogger.getLogger().isLoggable(Level.FINE)) {
+                LensLogger.getLogger().fine("MultiTouch event with "
+                                            + states.length + " points "
+                                            + " on " + view);
+            }
+
+            postEvent(new LensMultiTouchEvent(view, states, ids,
+                                              xs, ys, dx, dy));
 
         } catch (Exception e) {
             reportException(e);
