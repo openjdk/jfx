@@ -151,7 +151,7 @@ final class ListChangeBuilder<E> {
 
     private int compress(List<SubChange<E>> list) {
         int removed = 0;
-        
+
         SubChange<E> prev = list.get(0);
         for (int i = 1, sz = list.size(); i < sz; ++i) {
             SubChange<E> cur = list.get(i);
@@ -170,7 +170,7 @@ final class ListChangeBuilder<E> {
             }
         }
         return removed;
-        
+
     }
 
     private static class SubChange<E> {
@@ -196,7 +196,7 @@ final class ListChangeBuilder<E> {
     public void nextRemove(int idx, E removed) {
         checkState();
         checkAddRemoveList();
-        
+
         final SubChange<E> last = addRemoveChanges.isEmpty() ? null
                 : addRemoveChanges.get(addRemoveChanges.size() - 1);
 
@@ -228,12 +228,12 @@ final class ListChangeBuilder<E> {
                 updateChanges.get(i).to--;
             }
         }
-        
+
     }
 
     public void nextRemove(int idx, List<? extends E> removed) {
         checkState();
-        
+
         for (int i = 0; i < removed.size(); ++i) {
             nextRemove(idx, removed.get(i));
         }
@@ -270,7 +270,7 @@ final class ListChangeBuilder<E> {
                 updateChanges.get(i).to += numberOfAdded;
             }
         }
-        
+
     }
 
     public void nextPermutation(int from, int to, int[] perm) {
@@ -497,7 +497,7 @@ final class ListChangeBuilder<E> {
                     int removed = compress(addRemoveChanges);
                     totalSize -= removed;
                 }
-                
+
                 SubChange<E>[] array = new SubChange[totalSize];
                 int ptr = 0;
                 if (permutationChange != null) {
