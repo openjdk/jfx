@@ -27,10 +27,14 @@ package com.sun.javafx.css.converters;
 
 import com.sun.javafx.css.StyleConverterImpl;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
+
 import javafx.css.ParsedValue;
 import javafx.css.StyleConverter;
 import javafx.scene.text.Font;
+import sun.util.logging.PlatformLogger;
 
 /**
  * Convert url("<path>") a URL string resolved relative to the location of the stylesheet.
@@ -53,39 +57,79 @@ public final class URLConverter extends StyleConverterImpl<ParsedValue[], String
 
     @Override
     public String convert(ParsedValue<ParsedValue[], String> value, Font font) {
+
         String url = null;
-        try {
-            ParsedValue[] values = value.getValue();
-            // clean URI String
-            String uriStr = StringConverter.getInstance().convert(values[0], font);
-            if (uriStr.startsWith("url(")) {
-                uriStr = com.sun.javafx.Utils.stripQuotes(uriStr.substring(4, uriStr.length() - 1));
+
+        ParsedValue[] values = value.getValue();
+
+        String resource = values.length > 0 ? StringConverter.getInstance().convert(values[0], font) : null;
+
+        if (resource != null && resource.trim().isEmpty() == false) {
+
+            if (resource.startsWith("url(")) {
+                resource = com.sun.javafx.Utils.stripQuotes(resource.substring(4, resource.length() - 1));
             } else {
-                uriStr = com.sun.javafx.Utils.stripQuotes(uriStr);
+                resource = com.sun.javafx.Utils.stripQuotes(resource);
             }
-            URL stylesheetURL = values[1] != null ? (URL)values[1].getValue() : null;
-            URL resolvedURL = null;
-            if (stylesheetURL == null) {
-                try {
-                    resolvedURL = new URL(uriStr);
-                } catch (MalformedURLException malf) {
-                    // This may be a relative URL, so try resolving
-                    // it using the application classloader
-                    if (uriStr.startsWith("/")) uriStr = uriStr.substring(1);                    
-                    final ClassLoader cl = Thread.currentThread().getContextClassLoader();
-                    resolvedURL = cl.getResource(uriStr);
-                }
-            } else {
-                if (uriStr.startsWith("/")) uriStr = uriStr.substring(1);
-                // resolve doesn't work with opaque URI's, but this does.
-                resolvedURL = new URL(stylesheetURL, uriStr);
-            }
+
+            String stylesheetURL = values.length > 1 && values[1] != null ? (String)values[1].getValue() : null;
+            URL resolvedURL = resolve(stylesheetURL, resource);
+
             if (resolvedURL != null) url = resolvedURL.toExternalForm();
-        } catch (MalformedURLException malf) {
-            System.err.println("caught " + malf + " in 'URLType.convert'");
         }
+
         return url;
     }
+
+    // package for testing
+    URL resolve(String stylesheetUrl, String resource) {
+
+        try {
+
+            // Note: the same code (pretty much) also appears in StyleManager
+
+            if (stylesheetUrl != null && stylesheetUrl.trim().isEmpty() == false) {
+                URI stylesheetUri = new URI(stylesheetUrl.trim());
+                URI resolved = stylesheetUri.resolve(resource.trim());
+                return resolved.toURL();
+            }
+
+
+            // if stylesheetUri is null, then we're dealing with an in-line style.
+            // If there is no scheme part, then the url is interpreted as being relative to the application's class-loader.
+            URI uri = new URI(resource.trim());
+
+            if (uri.isAbsolute() == false) {
+                // URL doesn't have scheme
+                final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+                URL resolved = null;
+                final String path = uri.getPath();
+
+                if (path.startsWith("/")) {
+                    resolved = contextClassLoader.getResource(path.substring(1));
+                } else {
+                    resolved = contextClassLoader.getResource(path);
+                }
+
+                return resolved;
+
+            }
+
+            // else, url does have a scheme
+            return uri.toURL();
+
+        } catch (final MalformedURLException|URISyntaxException e) {
+            PlatformLogger cssLogger = com.sun.javafx.Logging.getCSSLogger();
+            if (cssLogger.isLoggable(PlatformLogger.Level.WARNING)) {
+                cssLogger.warning(e.getLocalizedMessage());
+            }
+
+            return null;
+        }
+
+    }
+
+
 
     @Override
     public String toString() {

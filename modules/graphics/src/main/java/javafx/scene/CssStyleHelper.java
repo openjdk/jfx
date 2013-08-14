@@ -1170,11 +1170,11 @@ final class CssStyleHelper {
 
         final Rule rule = style != null ? style.getDeclaration().getRule(): null;
         final Stylesheet stylesheet = rule != null ? rule.getStylesheet() : null;
-        final java.net.URL url = stylesheet != null ? stylesheet.getUrl() : null;
+        final String url = stylesheet != null ? stylesheet.getUrl() : null;
         if (url != null) {
             sbuf.append(" from rule '")
                 .append(style.getSelector())
-                .append("' in stylesheet ").append(url.toExternalForm());
+                .append("' in stylesheet ").append(url);
         } else if (stylesheet != null && StyleOrigin.INLINE == stylesheet.getOrigin()) {
             sbuf.append(" from inline style on " )
                 .append(styleable.toString());
@@ -1195,11 +1195,11 @@ final class CssStyleHelper {
 
         final Rule rule = style != null ? style.getDeclaration().getRule(): null;
         final Stylesheet stylesheet = rule != null ? rule.getStylesheet() : null;
-        final java.net.URL url = stylesheet != null ? stylesheet.getUrl() : null;
+        final String url = stylesheet != null ? stylesheet.getUrl() : null;
         if (url != null) {
             sbuf.append(" from rule '")
                 .append(style.getSelector())
-                .append("' in stylesheet ").append(url.toExternalForm());
+                .append("' in stylesheet ").append(url);
         } else if (stylesheet != null && StyleOrigin.INLINE == stylesheet.getOrigin()) {
             sbuf.append(" from inline style on " )
                 .append(styleable.toString());

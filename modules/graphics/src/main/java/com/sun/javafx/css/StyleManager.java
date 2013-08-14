@@ -33,6 +33,7 @@ import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.AccessControlContext;
 import java.security.AccessController;
@@ -62,6 +63,8 @@ import com.sun.javafx.css.parser.CSSParser;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.regex.Pattern;
+
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import javafx.css.StyleOrigin;
@@ -732,18 +735,42 @@ final public class StyleManager {
     // Stylesheet loading
     //
     ////////////////////////////////////////////////////////////////////////////
-    private static URL getURL(String urlStr) {
+
+    private static URL getURL(final String str) {
+
+        // Note: this code is duplicated, more or less, in URLConverter
+
+        if (str == null || str.trim().isEmpty()) return null;
+
         try {
-            return new URL(urlStr);
-        } catch (MalformedURLException malf) {
-            // This may be a relative URL, so try resolving
-            // it using the application classloader
-            ClassLoader cl = Thread.currentThread().getContextClassLoader();
-            if (cl != null) {
-                String path = (urlStr != null && urlStr.startsWith("/"))
-                        ? urlStr.substring(1) : urlStr;
-                return cl.getResource(path);
+
+            URI uri =  new URI(str.trim());
+
+            // if url doesn't have a scheme
+            if (uri.isAbsolute() == false) {
+
+                final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+                final String path = uri.getPath();
+
+                URL resource = null;
+
+                if (path.startsWith("/")) {
+                    resource = contextClassLoader.getResource(path.substring(1));
+                } else {
+                    resource = contextClassLoader.getResource(path);
+                }
+
+                return resource;
             }
+
+            // else, url does have a scheme
+            return uri.toURL();
+
+        } catch (MalformedURLException malf) {
+            // Do not log exception here - caller will handle null return.
+            // For example, we might be looking for a .bss that doesn't exist
+            return null;
+        } catch (URISyntaxException urise) {
             return null;
         }
     }
@@ -1082,8 +1109,8 @@ final public class StyleManager {
 
         if (ua_stylesheet != null) {
             ua_stylesheet.setOrigin(StyleOrigin.USER_AGENT);
-            URL url = ua_stylesheet.getUrl();
-            userAgentStylesheets.add(new StylesheetContainer(url != null ? url.toExternalForm() : "", ua_stylesheet));
+            String url = ua_stylesheet.getUrl();
+            userAgentStylesheets.add(new StylesheetContainer(url != null ? url : "", ua_stylesheet));
             userAgentStylesheetsChanged();
         }
 
@@ -1157,8 +1184,8 @@ final public class StyleManager {
             throw new IllegalArgumentException("null arg ua_stylesheet");
         }
 
-        final URL url = stylesheet.getUrl();
-        final String fname = url != null ? url.toExternalForm() : "";
+        final String url = stylesheet.getUrl();
+        final String fname = url != null ? url : "";
 
         // if this stylesheet has been added already, move it to first element
         int index = getIndex(fname);

@@ -31,6 +31,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,6 +43,7 @@ import javafx.css.PseudoClass;
 import javafx.css.StyleOrigin;
 
 import javafx.scene.Node;
+import sun.util.logging.PlatformLogger;
 
 /*
  * A selector is a collection of selectors and declarations.
@@ -82,7 +84,7 @@ final public class Rule {
                     decl.rule = Rule.this;
 
                     if (stylesheet != null && stylesheet.getUrl() != null) {
-                        final URL stylesheetUrl = stylesheet.getUrl();
+                        String stylesheetUrl = stylesheet.getUrl();
                         decl.fixUrl(stylesheetUrl);
                     }
 
@@ -154,7 +156,7 @@ final public class Rule {
         this.stylesheet = stylesheet;
         
         if (stylesheet != null && stylesheet.getUrl() != null) {
-            final URL stylesheetUrl = stylesheet.getUrl();
+            final String stylesheetUrl = stylesheet.getUrl();
 
             int nDeclarations = declarations != null ? declarations.size() : 0;
             for (int d=0; d<nDeclarations; d++) {
@@ -286,7 +288,7 @@ final public class Rule {
 
                                 Stylesheet stylesheet = Observables.this.rule.stylesheet;
                                 if (stylesheet != null && stylesheet.getUrl() != null) {
-                                    final URL stylesheetUrl = stylesheet.getUrl();
+                                    final String stylesheetUrl = stylesheet.getUrl();
                                     decl.fixUrl(stylesheetUrl);
                                 }
                             }

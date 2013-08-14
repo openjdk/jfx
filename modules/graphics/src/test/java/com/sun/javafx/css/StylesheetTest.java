@@ -62,10 +62,10 @@ import static org.junit.Assert.*;
 
 public class StylesheetTest {
 
-    URL testURL = null;
+    String testURL = null;
     
     public StylesheetTest() {
-        testURL = getClass().getResource("HonorDeveloperSettingsTest_UA.css");
+        testURL = getClass().getResource("HonorDeveloperSettingsTest_UA.css").toExternalForm();
     }
 
     /**
@@ -75,7 +75,7 @@ public class StylesheetTest {
     public void testGetUrl() {
         Stylesheet instance = new Stylesheet();
         URL expResult = null;
-        URL result = instance.getUrl();
+        String result = instance.getUrl();
         assertEquals(expResult, result);
         
         instance = new Stylesheet(testURL);
@@ -184,14 +184,14 @@ public class StylesheetTest {
         assertEquals(expResult, result);
 
         instance = new Stylesheet(testURL);
-        expResult = "/* " + testURL.toExternalForm() + " */";
+        expResult = "/* " + testURL + " */";
         result = instance.toString();
         assertEquals(expResult, result);
 
         instance = new Stylesheet(testURL);
         Rule rule = new Rule(Collections.EMPTY_LIST, Collections.EMPTY_LIST);
         instance.getRules().add(rule);
-        expResult = "/* " + testURL.toExternalForm() + " */\n{\n}\n";
+        expResult = "/* " + testURL + " */\n{\n}\n";
         result = instance.toString();
         assertEquals(expResult, result);
     }

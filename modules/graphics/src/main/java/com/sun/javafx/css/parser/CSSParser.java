@@ -30,6 +30,8 @@ import java.io.CharArrayReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -124,7 +126,7 @@ final public class CSSParser {
 
     // the url of the stylesheet file, or the docbase of an applet. This will
     // be null if the source is not a file or from an applet.
-    private URL        sourceOfStylesheet;
+    private String        sourceOfStylesheet;
 
     // the Styleable from the node with an in-line style. This will be null
     // unless the source of the styles is a Node's styleProperty. In this case,
@@ -132,12 +134,12 @@ final public class CSSParser {
     private Styleable  sourceOfInlineStyle;
 
     // source is a file
-    private void setInputSource(URL url) {
-        setInputSource(url, null);
-    }
+//    private void setInputSource(String url) {
+//        setInputSource(url, null);
+//    }
 
     // source is a file
-    private void setInputSource(URL url, String str) {
+    private void setInputSource(String url, String str) {
         stylesheetAsText = str;
         sourceOfStylesheet = url;
         sourceOfInlineStyle = null;
@@ -176,7 +178,7 @@ final public class CSSParser {
             super(message);
             this.tok = tok;
             if (parser.sourceOfStylesheet != null) {
-                source = parser.sourceOfStylesheet.toExternalForm();
+                source = parser.sourceOfStylesheet;
             } else if (parser.sourceOfInlineStyle != null) {
                 source = parser.sourceOfInlineStyle.toString();
             } else if (parser.stylesheetAsText != null) {
@@ -219,10 +221,9 @@ final public class CSSParser {
      *@return the Stylesheet
      */
     public Stylesheet parse(final String docbase, final String stylesheetText) throws IOException {
-        final URL url =  new URL(docbase);
-        final Stylesheet stylesheet = new Stylesheet(url);
+        final Stylesheet stylesheet = new Stylesheet(docbase);
         if (stylesheetText != null && !stylesheetText.trim().isEmpty()) {
-            setInputSource(url, stylesheetText);
+            setInputSource(docbase, stylesheetText);
             Reader reader = new CharArrayReader(stylesheetText.toCharArray());
             parse(stylesheet, reader);
         }
@@ -233,15 +234,16 @@ final public class CSSParser {
      * Updates the given stylesheet by reading a CSS document from a URL,
      * assuming UTF-8 encoding.
      *
-     *@param the URL to parse
+     *@param  url URL of the stylesheet to parse
      *@return the stylesheet
      *@throws IOException
      */
     public Stylesheet parse(final URL url) throws IOException {
 
-        final Stylesheet stylesheet = new Stylesheet(url);
+        final String path = url != null ? url.toExternalForm() : null;
+        final Stylesheet stylesheet = new Stylesheet(path);
         if (url != null) {
-            setInputSource(url);
+            setInputSource(path);
             Reader reader = new BufferedReader(new InputStreamReader(url.openStream()));
             parse(stylesheet, reader);
         }
@@ -3784,9 +3786,12 @@ final public class CSSParser {
                                     final String urlStr = urlSb.substring(start,end);
 
                                     URL url = null;
+                                    Exception exception = null;
                                     try {
-                                        url = new URL(sourceOfStylesheet, urlStr);
-                                    } catch (MalformedURLException malf) {
+                                        URI stylesheetUri = new URI(sourceOfStylesheet);
+                                        URI fontUri = stylesheetUri.resolve(urlStr);
+                                        url = fontUri.toURL();
+                                    } catch (URISyntaxException |  MalformedURLException malf) {
 
                                         final int line = currentToken.getLine();
                                         final int pos = currentToken.getOffset();

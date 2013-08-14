@@ -97,20 +97,20 @@ public class CssError {
     /** Encapsulate errors arising from parsing of stylesheet files */
     public final static class StylesheetParsingError extends CssError { 
         
-        public StylesheetParsingError(URL url, String message) {
+        public StylesheetParsingError(String url, String message) {
             super(message);
             this.url = url;
         }
         
-        public URL getURL() {
+        public String getURL() {
             return url;
         }
         
-        private final URL url;
+        private final String url;
 
         @Override
         public String toString() {
-            final String path = url != null ? url.toExternalForm() : "?";
+            final String path = url != null ? url : "?";
             // TBD: i18n
             return "CSS Error parsing " + path + ": " + message;
         }

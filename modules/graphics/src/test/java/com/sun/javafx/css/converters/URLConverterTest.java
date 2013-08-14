@@ -56,7 +56,7 @@ public class URLConverterTest {
         
         ParsedValue[] values = new ParsedValue[] {
             new ParsedValueImpl<String,String>("com/sun/javafx/css/converters/some.txt", null),
-            new ParsedValueImpl<URL,URL>(null,null)
+            new ParsedValueImpl<String,String>(null,null)
         };
         ParsedValueImpl<ParsedValue[], String> value = 
             new ParsedValueImpl<ParsedValue[], String>(values, URLConverter.getInstance());
@@ -70,10 +70,10 @@ public class URLConverterTest {
 
     public void testConvertWithBaseURL() {
         ClassLoader cl = Thread.currentThread().getContextClassLoader();
-        URL base = cl.getResource("com/..");
+        String base = cl.getResource("com/..").toExternalForm();
         ParsedValue[] values = new ParsedValue[] {
             new ParsedValueImpl<String,String>("com/sun/javafx/css/converters/some.txt", null),
-            new ParsedValueImpl<URL,URL>(base,null)
+            new ParsedValueImpl<String,String>(base,null)
         };
         ParsedValueImpl<ParsedValue[], String> value = 
             new ParsedValueImpl<ParsedValue[], String>(values, URLConverter.getInstance());
@@ -91,7 +91,7 @@ public class URLConverterTest {
         String expResult = cl.getResource("com/sun/javafx/css/converters/some.txt").toExternalForm();
         ParsedValue[] values = new ParsedValue[] {
             new ParsedValueImpl<String,String>(expResult, null),
-            new ParsedValueImpl<URL,URL>(null,null)
+            new ParsedValueImpl<String,String>(null,null)
         };
         ParsedValueImpl<ParsedValue[], String> value = 
             new ParsedValueImpl<ParsedValue[], String>(values, URLConverter.getInstance());
@@ -105,11 +105,11 @@ public class URLConverterTest {
     public void testConvertWithAbsoluteURLWithBaseURL() {
         
         ClassLoader cl = Thread.currentThread().getContextClassLoader();
-        URL baseURL = cl.getResource("com/..");
+        String baseURL = cl.getResource("com/..").toExternalForm();
         String expResult = cl.getResource("com/sun/javafx/css/converters/some.txt").toExternalForm();
         ParsedValue[] values = new ParsedValue[] {
             new ParsedValueImpl<String,String>(expResult, null),
-            new ParsedValueImpl<URL,URL>(baseURL,null)
+            new ParsedValueImpl<String,String>(baseURL,null)
         };
         ParsedValueImpl<ParsedValue[], String> value = 
             new ParsedValueImpl<ParsedValue[], String>(values, URLConverter.getInstance());

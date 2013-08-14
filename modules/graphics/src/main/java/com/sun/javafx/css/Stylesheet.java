@@ -63,12 +63,12 @@ public class Stylesheet {
      */
     public final static int BINARY_CSS_VERSION = 4;
             
-    private final URL url;
+    private final String url;
     /** The URL from which the stylesheet was loaded.
      * @return The URL from which the stylesheet was loaded, or null if 
      *         the stylesheet was created from an inline style. 
      */
-    public URL getUrl() {
+    public String getUrl() {
         return url;
     }
 
@@ -132,8 +132,9 @@ public class Stylesheet {
     /**
      * Constructs a Stylesheet using the given URL as the base URI. The
      * parameter may not be null.
+     * @param url
      */
-    public Stylesheet(URL url) {
+    public Stylesheet(String url) {
 
         this.url = url;
         
@@ -157,11 +158,7 @@ public class Stylesheet {
             } else if (this.url == null || other.url == null) {
                 return false;
             } else {
-                // convert to Strings, as URL.equals is slow. See here:
-                // http://michaelscharf.blogspot.com/2006/11/javaneturlequals-and-hashcode-make.html
-                String thisUrlString = this.url.toExternalForm();
-                String otherUrlString = other.url.toExternalForm();
-                return thisUrlString.equals(otherUrlString);
+                return this.url.equals(other.url);
             }
         }
         return false;
@@ -194,6 +191,7 @@ public class Stylesheet {
     final void writeBinary(final DataOutputStream os, final StringStore stringStore)
         throws IOException 
     {
+        // Note: url is not written since it depends on runtime environment.
         int index = stringStore.addString(origin.name());
         os.writeShort(index);
         os.writeShort(rules.size());
@@ -244,7 +242,7 @@ public class Stylesheet {
             // read strings
             final String[] strings = StringStore.readBinary(dataInputStream);
             // read binary data
-            stylesheet = new Stylesheet(url);
+            stylesheet = new Stylesheet(url.toExternalForm());
 
             boolean retry = false;
             try {
@@ -254,7 +252,7 @@ public class Stylesheet {
 
             } catch (Exception e) {
 
-                stylesheet = new Stylesheet(url);
+                stylesheet = new Stylesheet(url.toExternalForm());
 
                 dataInputStream.reset();
 

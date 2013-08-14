@@ -144,7 +144,7 @@ final public class Declaration {
     // fix it up here. This method is called from Rule#setStylesheet
     // and from Rule#declarations onChanged method.
     // 
-    void fixUrl(URL stylesheetUrl) {
+    void fixUrl(String stylesheetUrl) {
         
         if (stylesheetUrl == null) return;
         
@@ -154,7 +154,7 @@ final public class Declaration {
         if (converter == URLConverter.getInstance()) {
             
             final ParsedValue[] values = (ParsedValue[])parsedValue.getValue();
-            values[1] = new ParsedValueImpl<URL,URL>(stylesheetUrl, null);
+            values[1] = new ParsedValueImpl<String,String>(stylesheetUrl, null);
             
         } else if (converter == URLConverter.SequenceConverter.getInstance()) {
 
@@ -163,7 +163,7 @@ final public class Declaration {
             
             for (int layer = 0; layer < layers.length; layer++) {
                 final ParsedValue[] values = (ParsedValue[])layers[layer].getValue();
-                values[1] = new ParsedValueImpl<URL,URL>(stylesheetUrl, null);
+                values[1] = new ParsedValueImpl<String,String>(stylesheetUrl, null);
             }
             
         }

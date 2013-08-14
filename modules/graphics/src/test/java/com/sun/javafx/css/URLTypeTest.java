@@ -46,16 +46,7 @@ public class URLTypeTest {
     public URLTypeTest() {
     }
 
-    URL baseURL = null;
-    @Before
-    public void setUpClass() throws Exception {
-        try {
-            // from rfc3986, section 5
-            baseURL = new URL("http://a/b/c/d;p?q");
-        } catch (MalformedURLException malf) {
-            fail(malf.toString());
-        }
-    }
+    final String baseURL = "http://a/b/c/d;p?q";
 
     // from rfc3986, section 5
     String[][] testPairs = new String[][] {
@@ -63,9 +54,9 @@ public class URLTypeTest {
         {"g"             ,  "http://a/b/c/g"},
         {"./g"           ,  "http://a/b/c/g"},
         {"g/"            ,  "http://a/b/c/g/"},
-// RT-21967 breaks this        {"/g"            ,  "http://a/g"},
-// RT-21967 breaks this        {"//g"           ,  "http://g"},
-//        {"?y"            ,  "http://a/b/c/d;p?y"},
+        {"/g"            ,  "http://a/g"},
+        {"//g"           ,  "http://g"},
+        // actual is http://a/b/c/?y - bug in java.net.URI?       {"?y"            ,  "http://a/b/c/d;p?y"},
         {"g?y"           ,  "http://a/b/c/g?y"},
         {"#s"            ,  "http://a/b/c/d;p?q#s"},
         {"g#s"           ,  "http://a/b/c/g#s"},
@@ -73,7 +64,8 @@ public class URLTypeTest {
         {";x"            ,  "http://a/b/c/;x"},
         {"g;x"           ,  "http://a/b/c/g;x"},
         {"g;x?y#s"       ,  "http://a/b/c/g;x?y#s"},
-//        {""              ,  "http://a/b/c/d;p?q"},
+        // empty string causes URISyntaxException, so converter returns null {""              ,  "http://a/b/c/d;p?q"},
+        {"", null}, // not part of the rfc test suite - converter returns null if resolving base against empty string
         {"."             ,  "http://a/b/c/"},
         {"./"            ,  "http://a/b/c/"},
         {".."            ,  "http://a/b/"},
@@ -95,7 +87,7 @@ public class URLTypeTest {
         for(int n=0; n<testPairs.length; n++) {
             ParsedValue[] values = new ParsedValue[] {
                 new ParsedValueImpl<String,String>(testPairs[n][0], StringConverter.getInstance()),
-                new ParsedValueImpl<URL, URL>(baseURL, null)
+                new ParsedValueImpl<String, String>(baseURL, null)
             };
             urls[n] = new ParsedValueImpl<ParsedValue[],String>(values, URLConverter.getInstance());
         };
@@ -107,7 +99,7 @@ public class URLTypeTest {
         String[] result = value.convert(font);
         assertEquals(testPairs.length, result.length);
         for(int n=0; n<result.length; n++) {
-            String msg = "resolve \'" + testPairs[n][0] + "\'";
+            String msg = "[" + n + "]" + "resolve \'" + testPairs[n][0] + "\'";
             assertEquals(msg, testPairs[n][1], result[n]);
         }
     }
