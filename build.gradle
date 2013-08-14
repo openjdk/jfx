@@ -1365,8 +1365,9 @@ project(":fxml") {
 project(":builders") {
     sourceCompatibility = 1.7
 
-    if (!COMPILE_SWING) sourceSets.main.java.exclude ("**/swing/**")
-    if (!COMPILE_SWT)   sourceSets.main.java.exclude ("**/swt/**")
+    if (!COMPILE_SWING)  sourceSets.main.java.exclude ("**/swing/**")
+    if (!COMPILE_SWT)    sourceSets.main.java.exclude ("**/swt/**")
+    if (!COMPILE_WEBKIT) sourceSets.main.java.exclude ("**/web/**")
 
     dependencies {
         compile BUILD_SRC, project(":base"), project(":graphics"),
