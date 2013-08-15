@@ -26,5 +26,3 @@ syntax: glob
 */Debug/*
 *~
 modules/web/src/main/native/LayoutTests
-modules/web/src/main/native/WebKitBuild
-modules/web/src/main/native/WebKitLibraries/import
