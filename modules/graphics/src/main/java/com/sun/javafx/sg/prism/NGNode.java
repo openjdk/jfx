@@ -725,7 +725,7 @@ public abstract class NGNode {
     /**
      * Mark the node as DIRTY_BY_TRANSLATION. This will call special cache invalidation
      */
-    public void markDirtyByTranslation() {
+    private void markDirtyByTranslation() {
         if (dirty == DirtyFlag.CLEAN) {
             if (parent != null && parent.dirty == DirtyFlag.CLEAN && !parent.childDirty) {
                 dirty = DirtyFlag.DIRTY_BY_TRANSLATION;
@@ -925,13 +925,13 @@ public abstract class NGNode {
 
     /**
      * Accumulates the dirty region of a node.
-     * TODO: Only made protected for the sake of testing (see javafx-sg-prism tests) (RT-23957)
+     * TODO: Only made non-final for the sake of testing (see javafx-sg-prism tests) (RT-23957)
      */
-    protected int accumulateNodeDirtyRegion(final RectBounds clip,
-                                            final RectBounds dirtyRegionTemp,
-                                            final DirtyRegionContainer dirtyRegionContainer,
-                                            final BaseTransform tx,
-                                            final GeneralTransform3D pvTx) {
+    int accumulateNodeDirtyRegion(final RectBounds clip,
+                                  final RectBounds dirtyRegionTemp,
+                                  final DirtyRegionContainer dirtyRegionContainer,
+                                  final BaseTransform tx,
+                                  final GeneralTransform3D pvTx) {
 
         // Get the dirty bounds of this specific node in scene coordinates
         BaseBounds bb = computeDirtyRegion(dirtyRegionTemp, tx, pvTx);
@@ -973,9 +973,9 @@ public abstract class NGNode {
      * using polymorphism because we wanted to centralize all of the dirty region
      * management code in one place, rather than having it spread between Prism,
      * Scenario, and any other future toolkits.
-     * TODO: Only made protected for the sake of testing (see javafx-sg-prism tests) (RT-23957)
+     * TODO: Only made non-final for the sake of testing (see javafx-sg-prism tests) (RT-23957)
      */
-    protected int accumulateGroupDirtyRegion(final RectBounds clip,
+    int accumulateGroupDirtyRegion(final RectBounds clip,
                                              final RectBounds dirtyRegionTemp,
                                              DirtyRegionPool regionPool,
                                              DirtyRegionContainer dirtyRegionContainer,
