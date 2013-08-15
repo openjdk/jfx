@@ -157,6 +157,10 @@ public class Text extends Shape {
 
     private void checkSpan() {
         isSpan = isManaged() && getParent() instanceof TextFlow;
+        if (isSpan() && !pickOnBoundsProperty().isBound()) {
+            /* Documented behavior. See class description for TextFlow */
+            setPickOnBounds(false);
+        }
     }
 
     private void checkOrientation() {
@@ -758,23 +762,6 @@ public class Text extends Shape {
     }
 
     /**
-     * Defines how the picking computation is done for this text node when
-     * triggered by a {@code MouseEvent} or a {@code contains} function call.
-     *
-     * If {@code pickOnBounds} is true, then picking is computed by
-     * intersecting with the bounds of this text node, else picking is computed
-     * by intersecting with the individual characters (geometric shape) of this
-     * text node.
-     * Picking based on bounds is more efficient and allows the spaces within
-     * and between characters to be picked.
-     *
-     * @defaultValue true
-     */
-    //@GenerateProperty private boolean pickOnBounds = true;
-
-    // private API to enable cursor and selection for text editing control
-
-    /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended
      * for use and will be removed in the next version
@@ -1232,8 +1219,24 @@ public class Text extends Shape {
     @Deprecated
     @Override
     protected final boolean impl_computeContains(double localX, double localY) {
-        //TODO Presently only support bounds based picking.
-        return true;
+        /* Used for spans, regular text uses bounds based picking */
+        double x = localX + getSpanBounds().getMinX();
+        double y = localY + getSpanBounds().getMinY();
+        GlyphList[] runs = getRuns();
+        if (runs.length != 0) {
+            for (int i = 0; i < runs.length; i++) {
+                GlyphList run = runs[i];
+                com.sun.javafx.geom.Point2D location = run.getLocation();
+                float width = run.getWidth();
+                RectBounds lineBounds = run.getLineBounds();
+                float height = lineBounds.getHeight();
+                if (location.x <= x && x < location.x + width &&
+                    location.y <= y && y < location.y + height) {
+                        return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**
