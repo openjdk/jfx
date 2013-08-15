@@ -1772,4 +1772,24 @@ public class TableViewTest {
         table.edit(-1, null);
         assertEquals(1, rt_31015_count);
     }
+
+    @Test public void test_rt_31653() {
+        TableView<Person> table = new TableView<>();
+        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        first.setCellValueFactory(new PropertyValueFactory("firstName"));
+        table.getColumns().addAll(first);
+
+        table.setItems(FXCollections.observableArrayList(
+                new Person("John", "Smith", "jacob.smith@example.com")
+        ));
+
+        TableRow<Person> rowCell = (TableRow<Person>)VirtualFlowTestUtils.getCell(table, 0);
+        final double initialWidth = rowCell.computePrefWidth(-1);
+
+        first.setPrefWidth(200);
+
+        final double newWidth = rowCell.computePrefWidth(-1);
+        assertEquals(200, newWidth, 0.0);
+        assertTrue(initialWidth != newWidth);
+    }
 }
