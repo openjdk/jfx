@@ -84,39 +84,53 @@ public final class URLConverter extends StyleConverterImpl<ParsedValue[], String
     // package for testing
     URL resolve(String stylesheetUrl, String resource) {
 
+        if (resource == null || resource.trim().isEmpty()) return null;
+
         try {
 
             // Note: the same code (pretty much) also appears in StyleManager
 
-            if (stylesheetUrl != null && stylesheetUrl.trim().isEmpty() == false) {
-                URI stylesheetUri = new URI(stylesheetUrl.trim());
-                URI resolved = stylesheetUri.resolve(resource.trim());
-                return resolved.toURL();
-            }
-
-
             // if stylesheetUri is null, then we're dealing with an in-line style.
             // If there is no scheme part, then the url is interpreted as being relative to the application's class-loader.
-            URI uri = new URI(resource.trim());
+            URI resourceUri = new URI(resource.trim());
 
-            if (uri.isAbsolute() == false) {
-                // URL doesn't have scheme
-                final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
-                URL resolved = null;
-                final String path = uri.getPath();
-
-                if (path.startsWith("/")) {
-                    resolved = contextClassLoader.getResource(path.substring(1));
-                } else {
-                    resolved = contextClassLoader.getResource(path);
-                }
-
-                return resolved;
-
+            if (resourceUri.isAbsolute()) {
+                return resourceUri.toURL();
             }
 
-            // else, url does have a scheme
-            return uri.toURL();
+            if (stylesheetUrl != null && stylesheetUrl.trim().isEmpty() == false) {
+
+                URI stylesheetUri = new URI(stylesheetUrl.trim());
+
+                if (stylesheetUri.isOpaque() == false) {
+
+                    URI resolved = stylesheetUri.resolve(resourceUri);
+                    return resolved.toURL();
+
+                } else {
+
+                    // stylesheet URI is something like jar:file:
+                    URL url = stylesheetUri.toURL();
+                    final String path = resourceUri.getPath();
+                    return new URL(url, resourceUri.getPath());
+                }
+            }
+
+
+            // URL doesn't have scheme or stylesheetUrl is null
+            final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+            final String path = resourceUri.getPath();
+
+            URL resolved = null;
+
+            if (path.startsWith("/")) {
+                resolved = contextClassLoader.getResource(path.substring(1));
+            } else {
+                resolved = contextClassLoader.getResource(path);
+            }
+
+            return resolved;
+
 
         } catch (final MalformedURLException|URISyntaxException e) {
             PlatformLogger cssLogger = com.sun.javafx.Logging.getCSSLogger();
