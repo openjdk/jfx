@@ -96,10 +96,6 @@ public class EnsembleApp extends Application {
         System.out.println("IS_IOS = " + IS_IOS);
         System.out.println("IS_EMBEDDED = " + IS_EMBEDDED);
         System.out.println("IS_DESKTOP = " + IS_DESKTOP);
-        System.setProperty("http.proxyHost", "www-proxy.us.oracle.com");
-        System.setProperty("http.proxyPort", "80");
-        System.setProperty("https.proxyHost", "www-proxy.us.oracle.com");
-        System.setProperty("https.proxyPort", "80");
     }
 
     @Override public void init() throws Exception {
