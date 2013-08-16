@@ -316,10 +316,10 @@ public class NGGroup extends NGNode {
         // to the children yo.
         if (cullingIndex != -1) {
             final int bits = cullingBits >> (cullingIndex*2);
-            if ((bits & 0x11) == 0) {
+            if ((bits & CULLING_REGION_CONTAINS_OR_INTERSECTS_CLIP) == 0) {
                 return null;
             }
-            if ((bits & 0x10) != 0) {
+            if ((bits & CULLING_REGION_CONTAINS_CLIP) != 0) {
                 cullingIndex = -1; // Do not check culling in children, 
                                    // as culling bits are not set for fully interior groups
             }

@@ -33,6 +33,8 @@ import org.junit.Test;
 import static com.sun.javafx.sg.prism.NodeTestUtils.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
 
 /**
  *
@@ -93,6 +95,23 @@ public class OcclusionCullingTest {
         g.setRenderRoot(rootPath);
         group.render(g);
 //        assertSame(group.getChildren().get(0), root);
+        rootPath.reset();
+        checkRootRendering(group, rootPath);
+    }
+
+    @Test
+    public void test2SameRectanglesOclusion() {
+        NodeTestUtils.TestNGGroup group = createGroup(
+                createGroup(createRectangle(10, 10, 100, 100), createRectangle(20, 20, 20, 20)),
+                createGroup(createRectangle(10, 10, 100, 100)));
+        NodePath<NGNode> rootPath = new NodePath<NGNode>();
+        rootPath = group.getRenderRoot(rootPath, new RectBounds(10, 10, 100, 100), -1, BaseTransform.IDENTITY_TRANSFORM, null);
+        TestGraphics g = new TestGraphics();
+        g.setRenderRoot(rootPath);
+        group.render(g);
+        rootPath.reset();
+        rootPath.next();
+        assertSame(((NGGroup)group.getChildren().get(1)).getChildren().get(0), rootPath.getCurrentNode());
         rootPath.reset();
         checkRootRendering(group, rootPath);
     }

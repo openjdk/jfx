@@ -242,6 +242,11 @@ public abstract class NGNode {
      */
     protected int cullingBits = 0x0;
 
+    static final int CULLING_REGION_INTERSECTS_CLIP = 0x1;
+    static final int CULLING_REGION_CONTAINS_CLIP = 0x2;
+    static final int CULLING_REGION_CONTAINS_OR_INTERSECTS_CLIP =
+            CULLING_REGION_INTERSECTS_CLIP | CULLING_REGION_CONTAINS_CLIP;
+
     private RectBounds opaqueRegion = null;
     private boolean opaqueRegionInvalid = true;
     private DirtyHint hint;
@@ -1225,9 +1230,9 @@ public abstract class NGNode {
         int b = 0;
         if (region != null && !region.isEmpty()) {
             if (region.intersects(bounds)) {
-                b = 1;
+                b = CULLING_REGION_INTERSECTS_CLIP;
                 if (region.contains(bounds.getMinX(), bounds.getMinY(), bounds.getWidth(), bounds.getHeight())) {
-                    b = 2;
+                    b = CULLING_REGION_CONTAINS_CLIP;
                 }
                 cullingBits = cullingBits |  (b << (2 * regionIndex));
             }
@@ -1253,7 +1258,7 @@ public abstract class NGNode {
             int cullingRegionsBitsOfParent,
             BaseTransform tx,
             GeneralTransform3D pvTx) {
-        
+
         if (tx.isIdentity()) {
             TEMP_BOUNDS.deriveWithNewBounds(transformedBounds);
         } else {
@@ -1286,13 +1291,13 @@ public abstract class NGNode {
             }
             mask = mask << 2;
         }//for
-        
+
         // If we are going to cull a node/group that's dirty,
         // make sure it's dirty flags are properly cleared.
         if (cullingBits == 0 && (dirty != DirtyFlag.CLEAN || childDirty)) {
             clearDirtyTree();
         }
-        
+
         if (debug) {
             System.out.printf("%s bits: %s bounds: %s\n",
                 this, Integer.toBinaryString(cullingBits), TEMP_BOUNDS);
@@ -1336,11 +1341,11 @@ public abstract class NGNode {
         }
         return null;
     }
-    
+
     /**
      * Searches for the last node that covers all of the specified dirty region with opaque region,
      * in this node's subtree.
-     * Such node can serve as a rendering root as all nodes preceding the node will be covered by it. 
+     * Such node can serve as a rendering root as all nodes preceding the node will be covered by it.
      * @param dirtyRegion the current dirty region
      * @param cullingIndex index of culling information
      * @param tx current transform
@@ -1365,23 +1370,23 @@ public abstract class NGNode {
         int ccw12 = ccw(x, y, rect[1], rect[2]);
         int ccw23 = ccw(x, y, rect[2], rect[3]);
         int ccw31 = ccw(x, y, rect[3], rect[0]);
-       
+
         // Possible results after this operation:
         // 0 -> 0 (0x0)
         // 1 -> 1 (0x1)
         // -1 -> Integer.MIN_VALUE (0x80000000)
-        ccw01 ^= (ccw01 >>> 1); 
-        ccw12 ^= (ccw12 >>> 1); 
-        ccw23 ^= (ccw23 >>> 1); 
-        ccw31 ^= (ccw31 >>> 1); 
-        
+        ccw01 ^= (ccw01 >>> 1);
+        ccw12 ^= (ccw12 >>> 1);
+        ccw23 ^= (ccw23 >>> 1);
+        ccw31 ^= (ccw31 >>> 1);
+
         final int union = ccw01 | ccw12 | ccw23 | ccw31;
         // This means all ccw* were either (-1 or 0) or (1 or 0), but not all of them were 0
         return union == 0x80000000 || union == 0x1;
         // Or alternatively...
 //        return (union ^ (union << 31)) < 0;
     }
-        
+
     /**
      * Check if this node can serve as rendering root for this dirty region.
      * @param dirtyRegion the current dirty region
@@ -1392,17 +1397,16 @@ public abstract class NGNode {
      */
     protected final NodePath<NGNode> computeNodeRenderRoot(NodePath<NGNode> path, RectBounds dirtyRegion, int cullingIndex, BaseTransform tx,
                                        GeneralTransform3D pvTx) {
-        
+
         // Nodes outside of the dirty region can be excluded immediately.
         // This can be used only if the culling information is provided.
         if (cullingIndex != -1) {
             final int bits = cullingBits >> (cullingIndex * 2);
-            if ((bits & 0x11) == 0x00) { // The node is neither fully interior (0x10)
-                                         // nor intersecting (0x01) the dirty region 
+            if ((bits & CULLING_REGION_CONTAINS_OR_INTERSECTS_CLIP) == 0x00) {
                 return null;
             }
         }
-        
+
         if (!isVisible()) {
             return null;
         }
@@ -1412,11 +1416,11 @@ public abstract class NGNode {
         // dirty opts 01, and then return it.
         final RectBounds opaqueRegion = getOpaqueRegion();
         if (opaqueRegion == null) return null;
-        
+
         final BaseTransform localToParentTx = getTransform();
 
         BaseTransform localToSceneTx = TEMP_TRANSFORM.deriveWithNewTransform(tx).deriveWithConcatenation(localToParentTx);
-        
+
         // Now check if the dirty region is fully contained in our opaque region.
         if (checkBoundsInQuad(opaqueRegion, dirtyRegion, localToSceneTx, pvTx)) {
                 path.add(this);
@@ -1425,10 +1429,10 @@ public abstract class NGNode {
 
         return null;
     }
-    
+
     protected static boolean checkBoundsInQuad(RectBounds untransformedQuad,
             RectBounds innerBounds, BaseTransform tx, GeneralTransform3D pvTx) {
-        
+
         if ((pvTx == null || pvTx.isIdentity()) && (tx.getType() & ~(BaseTransform.TYPE_TRANSLATION
                 | BaseTransform.TYPE_QUADRANT_ROTATION
                 | BaseTransform.TYPE_MASK_SCALE)) == 0) {
@@ -1534,11 +1538,12 @@ public abstract class NGNode {
         if (PrismSettings.dirtyOptsEnabled) {
             if (g.hasPreCullingBits()) {
                 //preculling bits available
-                if ((cullingBits & (0x3 << (g.getClipRectIndex() * 2))) == 0) {
+                final int bits = cullingBits >> (g.getClipRectIndex() * 2);
+                if ((bits & CULLING_REGION_CONTAINS_OR_INTERSECTS_CLIP) == 0) {
                     // If no culling bits are set for this region, this group
                     // does not intersect (nor is covered by) the region
                     return;
-                } else if ((cullingBits & (0x2 << (g.getClipRectIndex() * 2))) != 0) {
+                } else if ((bits & CULLING_REGION_CONTAINS_CLIP) != 0) {
                     // When this group is fully covered by the region,
                     // turn off the culling checks in the subtree, as everything
                     // gets rendered
@@ -1601,12 +1606,12 @@ public abstract class NGNode {
         if (preCullingTurnedOff) {
             g.setHasPreCullingBits(true);
         }
-        
+
         // restore previous transform state
         g.setTransform3D(mxx, mxy, mxz, mxt,
                          myx, myy, myz, myt,
                          mzx, mzy, mzz, mzt);
-        
+
         // restore previous depth test state
         g.setDepthTest(prevDepthTest);
 
@@ -1826,7 +1831,7 @@ public abstract class NGNode {
     private void renderOpacity(Graphics g) {
         if (getEffectFilter() != null ||
             getCacheFilter() != null ||
-            getClipNode() != null || 
+            getClipNode() != null ||
             !hasOverlappingContents())
         {
             // if the node has a non-null effect or cached==true, we don't
@@ -1957,7 +1962,7 @@ public abstract class NGNode {
         public boolean reducesOpaquePixels() {
             return false;
         }
-        
+
         @Override
         public DirtyRegionContainer getDirtyRegions(Effect defaultInput, DirtyRegionPool regionPool) {
             return null; //Never called
