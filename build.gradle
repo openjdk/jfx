@@ -694,9 +694,12 @@ void addNative(Project project, String name, List<String> includeTargets, boolea
     def cleanTask = project.task("cleanNative$capitalName", type: Delete, group: "Build") {
         description = "Clean native objects for $name"
     }
+    if (project.nativeAllTask) project.nativeAllTask.dependsOn nativeTask
     if (!optional) {
         project.assemble.dependsOn(nativeTask)
     }
+    if (project.cleanNativeAllTask) project.cleanNativeAllTask.dependsOn cleanTask
+    
     // Each of the different compile targets will be placed in a sub directory
     // of these root dirs, with the name of the dir being the name of the target
     def headerRootDir = project.file("$project.buildDir/generated-src/headers/$name")
@@ -751,7 +754,7 @@ void addNative(Project project, String name, List<String> includeTargets, boolea
                 linkParams.addAll(variantProperties.linkFlags)
                 lib = file("$libRootDir/${t.name}/${variant == '' ? library(properties.lib) : library(variantProperties.lib)}")
                 linker = variantProperties.linker
-                cleanTask.delete lib
+                cleanTask.delete "$libRootDir/${t.name}"
             }
             nativeTask.dependsOn(linkTask)
             if (IS_WINDOWS && t.name == "win") {
@@ -1050,6 +1053,10 @@ project(":graphics") {
         antlr3 group: "org.antlr", name: "antlr-runtime",  version: "3.1.3"
         antlr3 group: "org.antlr", name: "stringtemplate", version: "3.2"
     }
+    
+    // Create a single "native" task which will depend on all the individual native tasks for graphics
+    project.ext.nativeAllTask = task("native", group: "Build", description: "Compiles and Builds all native libraries for Graphics");
+    project.ext.cleanNativeAllTask = task("cleanNative", group: "Build", description: "Clean all native libraries and objects for Graphics");
 
     // Add tasks for native compilation
     addNative(project, "glass");
@@ -1193,7 +1200,12 @@ project(":graphics") {
         output = file("$buildDir/generated-src/headers/jsl-decora")
     }
 
-    task nativeDecora(dependsOn: compileDecoraHLSLShaders);
+    task nativeDecora(dependsOn: compileDecoraHLSLShaders, group: "Build") {
+        description = "Generates JNI headers, compiles, and builds native dynamic library for Decora"
+    }
+    task cleanNativeDecora(type: Delete, group: "Build") {
+        description = "Clean native objects for Decora"
+    }
 
     def headerDir = file("$buildDir/generated-src/headers/jsl-decora")
     def nativeRootDir = project.file("$project.buildDir/native/jsl-decora")
@@ -1215,6 +1227,7 @@ project(":graphics") {
             params.addAll(properties.decora.ccFlags)
             output(file("$nativeRootDir/$target"))
             compiler = properties.decora.compiler
+            cleanNativeDecora.delete file("$nativeRootDir/$target")
         }
 
         def linkTask = task("linkDecoraNativeShaders$capitalTarget", type: LinkTask, dependsOn: ccTask) {
@@ -1223,6 +1236,7 @@ project(":graphics") {
             linkParams.addAll(properties.decora.linkFlags)
             lib = file("$libRootDir/$t.name/${library(properties.decora.lib)}")
             linker = properties.decora.linker
+            cleanNativeDecora.delete "$libRootDir/$t.name/"
         }
 
         nativeDecora.dependsOn(linkTask)
@@ -1248,11 +1262,8 @@ project(":graphics") {
     classes.dependsOn compilePrismJavaShaders;
     nativePrism.dependsOn compilePrismHLSLShaders;
 
-    // Create a single "native" task which will depend on all the individual native tasks for graphics
-    task("native", dependsOn: [nativeGlass, nativePrism, nativePrismSW, nativeDecora]) {
-        group = "Build"
-        description = "Compiles and Builds all native libraries for Graphics"
-    }
+    project.nativeAllTask.dependsOn nativeDecora
+    project.cleanNativeAllTask.dependsOn cleanNativeDecora
     assemble.dependsOn nativeDecora
     processResources.dependsOn processDecoraShaders, processPrismShaders
 
