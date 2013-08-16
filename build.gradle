@@ -691,6 +691,9 @@ void addNative(Project project, String name, List<String> includeTargets, boolea
     def nativeTask = project.task("native$capitalName", group: "Build") {
         description = "Generates JNI headers, compiles, and builds native dynamic library for $name for all compile targets"
     }
+    def cleanTask = project.task("cleanNative$capitalName", type: Delete, group: "Build") {
+        description = "Clean native objects for $name"
+    }
     if (!optional) {
         project.assemble.dependsOn(nativeTask)
     }
@@ -731,28 +734,33 @@ void addNative(Project project, String name, List<String> includeTargets, boolea
         variants.each { variant ->
             def variantProperties = variant == "" ? properties : properties.get(variant)
             def capitalVariant = variant.capitalize()
+            def ccOutput = variant == "" ? nativeDir : file("$nativeDir/$variant")
             def ccTask = project.task("cc${t.capital}$capitalName$capitalVariant", type: CCTask, dependsOn: javahTask, group: "Build") {
                 description = "Compiles native sources for ${name} for ${t.name}${capitalVariant != '' ? ' for variant ' + capitalVariant : ''}"
                 matches = ".*\\.c|.*\\.cpp|.*\\.m|.*\\.cc"
                 headers = headerDir
-                output(variant == "" ? nativeDir : file("$nativeDir/$variant"))
+                output(ccOutput)
                 params.addAll(variantProperties.ccFlags)
                 compiler = variantProperties.compiler
                 source(variantProperties.nativeSource)
+                cleanTask.delete ccOutput
             }
             def linkTask = project.task("link${t.capital}$capitalName$capitalVariant", type: LinkTask, dependsOn: ccTask, group: "Build") {
                 description = "Creates native dynamic library for $name for ${t.name}${capitalVariant != '' ? ' for variant ' + capitalVariant : ''}"
-                objectDir = variant == "" ? nativeDir : file("$nativeDir/$variant")
+                objectDir = ccOutput
                 linkParams.addAll(variantProperties.linkFlags)
                 lib = file("$libRootDir/${t.name}/${variant == '' ? library(properties.lib) : library(variantProperties.lib)}")
                 linker = variantProperties.linker
+                cleanTask.delete lib
             }
             nativeTask.dependsOn(linkTask)
             if (IS_WINDOWS && t.name == "win") {
                 def rcTask = project.task("rc$capitalName$capitalVariant", type: CompileResourceTask, dependsOn: javahTask, group: "Build") {
                     description = "Compiles native sources for $name"
                     matches = ".*\\.rc|.*\\.cur"
-                    output(file("$nativeRootDir/win"))
+                    def rcOutput = file("$nativeRootDir/win")
+                    output(rcOutput)
+                    cleanTask.delete rcOutput
                 }
                 linkTask.dependsOn rcTask;
             }
