@@ -228,6 +228,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
         registerChangeListener(placeholderProperty(), "PLACEHOLDER");
         registerChangeListener(control.focusTraversableProperty(), "FOCUS_TRAVERSABLE");
         registerChangeListener(control.widthProperty(), "WIDTH");
+        registerChangeListener(flow.getVbar().visibleProperty(), "VBAR_VISIBLE");
     }
     
 
@@ -396,6 +397,8 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
             flow.setFocusTraversable(getSkinnable().isFocusTraversable());
 //        } else if ("WIDTH".equals(p)) {
 //            tableHeaderRow.setTablePadding(getSkinnable().getInsets());
+        } else if ("VBAR_VISIBLE".equals(p)) {
+            updateContentWidth();
         }
     }
 
@@ -610,15 +613,11 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
     }
 
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        checkContentWidthState();
-
         return 400;
     }
 
     /** {@inheritDoc} */
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
-        checkContentWidthState();
-
         double prefHeight = computePrefHeight(-1, topInset, rightInset, bottomInset, leftInset);
         
         List<? extends TC> cols = getVisibleLeafColumns();
@@ -723,6 +722,8 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
         
         columnReorderLine.setVisible(tableHeaderRow.isReordering());
         columnReorderOverlay.setVisible(tableHeaderRow.isReordering());
+
+        checkContentWidthState();
     }
     
     
