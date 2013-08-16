@@ -44,7 +44,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-//@Ignore("Disabling tests as they fail with OOM in continuous builds")
 public class ListViewKeyInputTest {
     private ListView<String> listView;
     private MultipleSelectionModel<String> sm;
@@ -1070,7 +1069,7 @@ public class ListViewKeyInputTest {
         assertEquals("Apple", listView.getFocusModel().getFocusedItem());
     }
     
-    @org.junit.Ignore("pending RT-30739") @Test public void test_rt29930() {
+    @Test public void test_rt29930() {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         
         sm.clearAndSelect(0);
