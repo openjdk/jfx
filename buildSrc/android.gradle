@@ -345,6 +345,7 @@ android.glass.lens=eglfb
 android.egl.depthSize=16
 android.prism.lcdtext=false
 android.embedded=eglfb
+android.prism.allowhidpi=false
 android.prism.maxTextureSize=2048
 android.prism.dirtyopts=true
 android.prism.vsync=false
