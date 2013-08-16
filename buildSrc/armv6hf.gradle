@@ -246,7 +246,7 @@ def compiler = file("$compilerHome/bin/arm-linux-gnueabihf-gcc").getAbsolutePath
 def linker = file("$compilerHome/bin/arm-linux-gnueabihf-g++").getAbsolutePath()
 
 ARMV6HF.glass = [:]
-ARMV6HF.glass.variants = ["eglfb", "directfb", "fb", "eglx11", "gtk"]
+ARMV6HF.glass.variants = ["eglfb", "directfb", "fb", "eglx11", "gtk", "lensport" ]
 ARMV6HF.glass.javahInclude = [
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*",
@@ -254,6 +254,16 @@ ARMV6HF.glass.javahInclude = [
     "com/sun/glass/ui/gtk/*",
     "com/sun/glass/ui/accessible/gtk/*"]
 ARMV6HF.glass.lib = "glass"
+
+ARMV6HF.glass.lensport = [:]
+ARMV6HF.glass.lensport.nativeSource = [
+    file("modules/graphics/src/main/native-glass/lens/platform-util") ]
+ARMV6HF.glass.lensport.compiler = compiler
+ARMV6HF.glass.lensport.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DISEGLFB",
+    "-DLENSPORT", "-I", file("modules/graphics/src/main/native-glass/lens/") ].flatten()
+ARMV6HF.glass.lensport.linker = linker
+ARMV6HF.glass.lensport.linkFlags = [lensLFlags].flatten()
+ARMV6HF.glass.lensport.lib = "lens_porting"
 
 ARMV6HF.glass.eglfb = [:]
 // TODO when building headless, use lens/cursor/nullcursor/
@@ -268,7 +278,8 @@ ARMV6HF.glass.eglfb.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/wm"),
     file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
     file("modules/graphics/src/main/native-glass/lens/input/udev"),
-    file("modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c")]
+    file("modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c"),
+    file("modules/graphics/src/main/native-glass/lens/platform-util") ]
     //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
 ARMV6HF.glass.eglfb.compiler = compiler
 ARMV6HF.glass.eglfb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DISEGLFB"].flatten()

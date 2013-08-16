@@ -35,6 +35,8 @@
 #include <stdio.h>
 #include <pthread.h>
 
+#include "platform-util/platformUtil.h"
+
 static pthread_mutex_t renderMutex = PTHREAD_MUTEX_INITIALIZER;
 
 static int _mousePosX;
@@ -81,6 +83,7 @@ jboolean lens_wm_initialize(JNIEnv *env) {
     jboolean result;
 
     GLASS_LOG_FINE("Init device");
+    platform_initialize();
     result = glass_application_initialize(env);
     if (result) {
         GLASS_LOG_FINE("Init screen");
@@ -90,7 +93,7 @@ jboolean lens_wm_initialize(JNIEnv *env) {
             lens_wm_clearScreen();
 
             GLASS_LOG_FINE("Cursor init");
-            fbCursorInitialize();
+            fbCursorInitialize(mainScreen->width, mainScreen->height);
 
             lens_wm_initRFB(env);
             GLASS_LOG_FINE("Init input devices");
