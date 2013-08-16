@@ -2192,13 +2192,6 @@ load(qt_config)""")
             classpath = files(project(":graphics").sourceSets.main.output) // for JSObject
             source gensrcDir
             destinationDir = file("$buildDir/classes/main")
-            doLast {
-                copy {
-                    from gensrcDir
-                    into "$buildDir/resources/main"
-                    exclude "**/*.java"
-                }
-            }
         }
 
         compileGenerated.dependsOn compileGeneratedTask

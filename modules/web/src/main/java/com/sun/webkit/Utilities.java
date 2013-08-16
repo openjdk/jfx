@@ -10,9 +10,7 @@ import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
-import java.util.ResourceBundle;
 import sun.reflect.misc.MethodUtil;
 
 public abstract class Utilities {
@@ -30,18 +28,6 @@ public abstract class Utilities {
     protected abstract Pasteboard createPasteboard();
     protected abstract PopupMenu createPopupMenu();
     protected abstract ContextMenu createContextMenu();
-
-    private final static ResourceBundle BUNDLE =
-            ResourceBundle.getBundle("com.sun.webkit.build", Locale.getDefault());
-
-    static String getProperty(String name) {
-        return getProperty(name, null);
-    }
-
-    private static String getProperty(String name, String defaultValue) {
-        return BUNDLE == null || !BUNDLE.containsKey(name)
-                ? defaultValue : BUNDLE.getString(name);
-    }
 
     private static String fwkGetMIMETypeForExtension(String ext) {
         return MimeTypeMapHolder.MIME_TYPE_MAP.get(ext);

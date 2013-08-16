@@ -1302,15 +1302,6 @@ webkitversion.clean = $${GENERATED_SOURCES_DIR}/WebKitVersion.h
 webkitversion.add_output_to_sources = false
 GENERATORS += webkitversion
 
-# GENERATOR 12: build.properties
-javalibs.script = $$PWD/platform/java/javalibs.pl
-javalibs.output = $$GENERATED_SOURCES_DIR/java/com/sun/webkit/build.properties
-javalibs.input = javalibs.script
-javalibs.commands = perl $$javalibs.script $$DEFINES > $$javalibs.output
-javalibs.add_output_to_sources = false
-javalibs.output_function = true
-GENERATORS += javalibs
-
 defineTest(prependEach) {
     unset(variable)
     unset(prefix)
