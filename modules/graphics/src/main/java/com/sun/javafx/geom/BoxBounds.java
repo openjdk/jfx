@@ -242,6 +242,16 @@ public class BoxBounds extends BaseBounds {
         return this;
     }
 
+    @Override public RectBounds flattenInto(RectBounds bounds) {
+        // Create the bounds if we need to
+        if (bounds == null) bounds = new RectBounds();
+        // Make it empty if we need to
+        if (isEmpty()) return bounds.makeEmpty();
+        // Populate it with values otherwise
+        bounds.setBounds(minX, minY, maxX, maxY);
+        return bounds;
+    }
+
     /**
      * Set the bounds to match that of the BaseBounds object specified. The
      * specified bounds object must not be null.

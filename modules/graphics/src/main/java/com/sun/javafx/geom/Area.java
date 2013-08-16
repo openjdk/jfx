@@ -25,10 +25,10 @@
 
 package com.sun.javafx.geom;
 
-import com.sun.javafx.geom.transform.BaseTransform;
-import java.util.Vector;
 import java.util.Enumeration;
 import java.util.NoSuchElementException;
+import java.util.Vector;
+import com.sun.javafx.geom.transform.BaseTransform;
 
 
 /**
@@ -542,7 +542,7 @@ public class Area extends Shape {
         if (w < 0 || h < 0) {
             return false;
         }
-        if (!getCachedBounds().contains(x, y, w, h)) {
+        if (!getCachedBounds().contains(x, y) || !getCachedBounds().contains(x+w, y+h)) {
             return false;
         }
         Crossings c = Crossings.findCrossings(curves, x, y, x+w, y+h);
