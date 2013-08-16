@@ -270,16 +270,20 @@ EGLNativeWindowType getNativeWindowType() {
             src.width = screenInfo.xres << 16;
             src.height = screenInfo.yres << 16;
 
+            VC_DISPMANX_ALPHA_T alpha;
+            alpha.flags = DISPMANX_FLAGS_ALPHA_FROM_SOURCE;
+            alpha.opacity = 0xff;
+            alpha.mask = (DISPMANX_RESOURCE_HANDLE_T) 0;
             update = (*wr_vc_dispmanx_update_start)(0);
             element = (*wr_vc_dispmanx_element_add)(
                           update,
                           display,
-                          0 /*layer*/,
+                          1 /*layer*/,
                           &dst,
                           0 /*src*/,
                           &src,
                           DISPMANX_PROTECTION_NONE,
-                          0 /*alpha*/,
+                          &alpha,
                           0 /*clamp*/,
                           0 /*transform*/);
 

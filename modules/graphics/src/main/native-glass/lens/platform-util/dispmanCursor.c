@@ -132,7 +132,7 @@ static void fbDispmanAddDispmanxElement(void) {
     cursor.element = vc_dispmanx_element_add(
                          update,
                          display,
-                         0 /*layer*/,
+                         2 /*layer*/,
                          &dst,
                          0 /*resource*/,
                          &src,
