@@ -60,7 +60,12 @@ public class VMLauncher extends Thread {
     }
 
     private static void loadNativeLibraries() {
-        System.load(sJavaHome + "/lib/" + getJvmArch() + "/minimal/libjvm.so");
+        try {
+            System.load(sJavaHome + "/lib/" + getJvmArch() + "/minimal/libjvm.so");
+        } catch(UnsatisfiedLinkError e) {
+            //try vm in debug mode
+            System.load(sJavaHome + "/lib/" + getJvmArch() + "/client/libjvm.so");
+        }
         System.load(sJavaHome + "/lib/" + getJvmArch() + "/jli/libjli.so");
     }
     
