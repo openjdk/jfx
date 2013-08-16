@@ -694,11 +694,11 @@ void addNative(Project project, String name, List<String> includeTargets, boolea
     def cleanTask = project.task("cleanNative$capitalName", type: Delete, group: "Build") {
         description = "Clean native objects for $name"
     }
-    if (project.nativeAllTask) project.nativeAllTask.dependsOn nativeTask
+    if (project.hasProperty("nativeAllTask")) project.nativeAllTask.dependsOn nativeTask
     if (!optional) {
         project.assemble.dependsOn(nativeTask)
     }
-    if (project.cleanNativeAllTask) project.cleanNativeAllTask.dependsOn cleanTask
+    if (project.hasProperty("cleanNativeAllTask")) project.cleanNativeAllTask.dependsOn cleanTask
     
     // Each of the different compile targets will be placed in a sub directory
     // of these root dirs, with the name of the dir being the name of the target
