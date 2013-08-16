@@ -61,16 +61,30 @@ public final class StyleCacheEntry {
 
         private final Set<PseudoClass>[] pseudoClassStates;
         private final double fontSize;
+        private final int hash;
     
         public Key(Set<PseudoClass>[] pseudoClassStates, Font font) {
 
-            this.pseudoClassStates = new Set[pseudoClassStates.length];
-            for (int n=0; n<pseudoClassStates.length; n++) {
+            final int length = pseudoClassStates != null ? pseudoClassStates.length : 0;
+
+            this.pseudoClassStates = new Set[length];
+            for (int n=0; n<length; n++) {
                 this.pseudoClassStates[n] = new PseudoClassState();
                 this.pseudoClassStates[n].addAll(pseudoClassStates[n]);
             }
             this.fontSize = font != null ? font.getSize() : Font.getDefault().getSize();
-            
+
+            int hash = Double.hashCode(fontSize);
+
+            for (int i=0; i<length; i++) {
+
+                final Set<PseudoClass> states = pseudoClassStates[i];
+                if (states != null) {
+                    hash = 67 * (hash + states.hashCode());
+                }
+            }
+
+            this.hash = hash;
         }
 
         @Override public String toString() {
@@ -79,17 +93,6 @@ public final class StyleCacheEntry {
 
         @Override
         public int hashCode() {
-            int hash = Double.hashCode(fontSize);
-
-            final int iMax = pseudoClassStates != null ? pseudoClassStates.length : 0;
-            
-            for (int i=0; i<iMax; i++) {
-                
-                final Set<PseudoClass> states = pseudoClassStates[i];
-                if (states != null) {                
-                    hash = 67 * (hash + states.hashCode());
-                }
-            }
             return hash;
         }
 
@@ -101,6 +104,8 @@ public final class StyleCacheEntry {
             if (obj == null || obj.getClass() != this.getClass()) return false;
 
             final Key other = (Key) obj;
+
+            if (this.hash != other.hash) return false;
 
             //
             // double == double is not reliable since a double is kind of
@@ -146,7 +151,5 @@ public final class StyleCacheEntry {
 
     }
         
-//    private final Reference<StyleCacheEntry> sharedCacheRef;
     private Map<String,CalculatedValue> calculatedValues;
-//    private CalculatedValue  font; // for use in converting font relative sizes
 }

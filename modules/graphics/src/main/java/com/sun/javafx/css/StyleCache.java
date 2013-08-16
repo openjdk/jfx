@@ -111,10 +111,21 @@ public final class StyleCache {
         public Key(int[] styleMapIds, int count) {
             this.styleMapIds = new int[count];
             System.arraycopy(styleMapIds, 0, this.styleMapIds, 0, count);
+
+            int hc = 7;
+            for (int i=0; i<styleMapIds.length; i++) {
+                final int id = styleMapIds[i];
+                hc = 17 * (hc + id);
+            }
+            this.hash = hc;
         }
 
         public Key(Key other) {
             this(other.styleMapIds, other.styleMapIds.length);
+        }
+
+        public int[] getStyleMapIds() {
+            return styleMapIds;
         }
 
         @Override public String toString() {
@@ -123,13 +134,6 @@ public final class StyleCache {
 
         @Override
         public int hashCode() {
-            int hash = 3;
-            if (styleMapIds != null) {
-                for (int i=0; i<styleMapIds.length; i++) {
-                    final int id = styleMapIds[i];
-                    hash = 17 * (hash + id);
-                }
-            }
             return hash;
         }
 
@@ -144,6 +148,8 @@ public final class StyleCache {
 
             final Key other = (Key) obj;
 
+            if (this.hash != other.hash) return false;
+
             // if one is null, so too must the other
             if ((this.styleMapIds == null) ^ (other.styleMapIds == null)) {
                 return false;
@@ -152,6 +158,10 @@ public final class StyleCache {
             // if one is null, so is the other
             if (this.styleMapIds == null) {
                 return true;
+            }
+
+            if (this.styleMapIds.length != other.styleMapIds.length) {
+                return false;
             }
 
             for (int i=0; i<styleMapIds.length; i++) {
@@ -163,10 +173,11 @@ public final class StyleCache {
             return true;
 
         }
-        
+
         final int[] styleMapIds;
+        final int hash;
     }
-    
+
     private Map<StyleCacheEntry.Key,StyleCacheEntry> entries;
 
 }

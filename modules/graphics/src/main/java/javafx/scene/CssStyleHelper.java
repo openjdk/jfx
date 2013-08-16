@@ -111,6 +111,15 @@ final class CssStyleHelper {
         final StyleMap styleMap =
                 StyleManager.getInstance().findMatchingStyles(node, triggerStates);
 
+        //
+        // reuse the existing styleHelper if possible.
+        //
+        if ( canReuseStyleHelper(node, styleMap) ) {
+
+            return node.styleHelper;
+
+        }
+
         if (styleMap == null || styleMap.isEmpty()) {
 
             boolean mightInherit = false;
@@ -181,6 +190,83 @@ final class CssStyleHelper {
         }
 
         return helper;
+    }
+
+    //
+    // return true if the Node's current styleHelper can be reused.
+    //
+    private static boolean canReuseStyleHelper(Node node, StyleMap styleMap) {
+
+        // Obviously, we cannot reuse the node's style helper if it doesn't have one.
+        if (node == null || node.styleHelper == null) {
+            return false;
+        }
+
+        // If we have a styleHelper but the new styleMap is null, then we don't need a styleHelper at all
+        if (styleMap == null) {
+            return false;
+        }
+
+        StyleMap currentMap = node.styleHelper.getStyleMap(node);
+
+        // We cannot reuse the style helper if the styleMap is not the same instance as the current one
+        // Note: check instance equality!
+        if (currentMap != styleMap) {
+            return false;
+        }
+
+        // If the style maps are the same instance, we can re-use the current styleHelper if the cacheContainer is null.
+        // Under this condition, there are no styles for this node _and_ no styles inherit.
+        if (node.styleHelper.cacheContainer == null) {
+            return true;
+        }
+
+        //
+        // The current map might be the same, but one of the node's parent's maps might have changed which
+        // might cause some calculated values to change. To see if we can re-use the style-helper, we need to
+        // check if the StyleMap id's have changed, which we can do by inspecting the cacheContainer's styleCacheKey
+        // since it is made up of the current set of StyleMap ids.
+        //
+
+        CssStyleHelper parentHelper = null;
+        Styleable parent = node.getStyleableParent();
+
+        // if the node's parent is null and the style maps are the same, then we can certainly reuse the style-helper
+        if (parent == null) {
+            return true;
+        }
+
+        while (parent != null) {
+            if (parent instanceof Node) {
+                parentHelper = ((Node) parent).styleHelper;
+                if (parentHelper != null) break;
+            }
+            parent = parent.getStyleableParent();
+        }
+
+        if (parentHelper != null && parentHelper.cacheContainer != null) {
+
+            int[] parentIds = parentHelper.cacheContainer.styleCacheKey.getStyleMapIds();
+            int[] nodeIds = node.styleHelper.cacheContainer.styleCacheKey.getStyleMapIds();
+
+            if (parentIds.length == nodeIds.length - 1) {
+
+                boolean isSame = true;
+
+                // check that all of the style map ids are the same.
+                for (int i = 0; i < parentIds.length; i++) {
+                    if (nodeIds[i + 1] != parentIds[i]) {
+                        isSame = false;
+                        break;
+                    }
+                }
+
+                return isSame;
+
+            }
+        }
+
+        return false;
     }
 
     private CacheContainer cacheContainer;
@@ -254,7 +340,7 @@ final class CssStyleHelper {
         }
 
         // This is the key we use to find the shared cache
-        private final StyleCache.Key styleCacheKey;
+        final StyleCache.Key styleCacheKey;
 
         // If the node has a fontProperty, we hang onto the CssMetaData for it
         // so we can get at it later.
@@ -437,6 +523,19 @@ final class CssStyleHelper {
         }
 
         //
+        // If styleMap is null, then StyleManager has blown it away and we need to reapply CSS.
+        //
+        final StyleMap styleMap = getStyleMap(node);
+        if (styleMap == null) {
+            cacheContainer = null;
+            node.impl_reapplyCSS();
+            return;
+        }
+
+        // if the style-map is empty, then we are only looking for inherited styles.
+        final boolean inheritOnly = styleMap.isEmpty();
+
+        //
         // Styles that need lookup can be cached provided none of the styles
         // are from Node.style.
         //
@@ -504,6 +603,10 @@ final class CssStyleHelper {
                 }
             }
 
+            // Don't bother looking up styles that don't inherit.
+            if (inheritOnly && cssMetaData.isInherits() == false) {
+                continue;
+            }
 
             // Skip the lookup if we know there isn't a chance for this property
             // to be set (usually due to a "bind").
@@ -522,7 +625,7 @@ final class CssStyleHelper {
             // If there is no calculatedValue and we're on the fast path,
             // take the slow path if cssFlags is REAPPLY (RT-31691)
             final boolean forceSlowpath =
-                    fastpath && calculatedValue == null && cssFlag == CssFlags.REAPPLY;
+                    fastpath && cssFlag == CssFlags.REAPPLY && calculatedValue == null;
 
             final boolean addToCache =
                     (!fastpath && calculatedValue == null) || forceSlowpath;
@@ -539,7 +642,7 @@ final class CssStyleHelper {
             } else if (calculatedValue == null) {
 
                 // slowpath!
-                calculatedValue = lookup(node, cssMetaData, transitionStates[0],
+                calculatedValue = lookup(node, styleMap, cssMetaData, transitionStates[0],
                         node, cachedFont, styleList);
 
                 // lookup is not supposed to return null.
@@ -683,14 +786,17 @@ final class CssStyleHelper {
      * @return
      */
     private CascadingStyle getStyle(Styleable styleable, String property, Set<PseudoClass> states){
-
-        // Get all of the Styles which may apply to this particular property
         final StyleMap smap = getStyleMap(styleable);
+        return getStyle(smap, styleable, property, states);
+    }
+
+    private CascadingStyle getStyle(StyleMap smap, Styleable styleable, String property, Set<PseudoClass> states) {
         if (smap == null || smap.isEmpty()) return null;
 
         final Map<String, List<CascadingStyle>> cascadingStyleMap = smap.getCascadingStyles();
         if (cascadingStyleMap == null || cascadingStyleMap.isEmpty()) return null;
 
+        // Get all of the Styles which may apply to this particular property
         List<CascadingStyle> styles = cascadingStyleMap.get(property);
 
         // If there are no styles for this property then we can just bail
@@ -728,6 +834,7 @@ final class CssStyleHelper {
      * @return
      */
     private CalculatedValue lookup(Node node,
+                                   StyleMap styleMap,
                                    CssMetaData styleable,
                                    Set<PseudoClass> states,
                                    Node originatingNode,
@@ -742,7 +849,7 @@ final class CssStyleHelper {
         final String property = styleable.getProperty();
 
         // Get the CascadingStyle which may apply to this particular property
-        CascadingStyle style = getStyle(node, property, states);
+        CascadingStyle style = getStyle(styleMap, node, property, states);
 
         // If no style was found and there are no sub styleables, then there
         // are no matching styles for this property. We will then either SKIP
@@ -777,7 +884,7 @@ final class CssStyleHelper {
                 for (int i=0; i<numSubProperties; i++) {
                     CssMetaData subkey = subProperties.get(i);
                     CalculatedValue constituent =
-                        lookup(node, subkey, states,
+                        lookup(node, styleMap, subkey, states,
                             originatingNode, cachedFont, styleList);
                     if (constituent != SKIP) {
                         if (subs == null) {
@@ -1399,7 +1506,8 @@ final class CssStyleHelper {
             } else {
 
                 Set<PseudoClass> pseudoClassState = parent.getPseudoClassStates();
-                cachedFont = parentHelper.lookup(parent, dummyFontProperty, pseudoClassState, parent, null, null);
+                StyleMap smap = parentHelper.getStyleMap(parent);
+                cachedFont = parentHelper.lookup(parent, smap, dummyFontProperty, pseudoClassState, parent, null, null);
             }
         }
 

@@ -46,12 +46,17 @@ import javafx.util.Pair;
 public final class StyleMap {
 
     public static final StyleMap EMPTY_MAP = 
-        new StyleMap(-1, Collections.<Selector>emptyList());
+        new StyleMap(-1, Collections.<Selector>emptyList(), false);
 
     /** Only StyleManager creates StyleMap */
-    StyleMap(int id, List<Selector> selectors) {
+    StyleMap(int id, List<Selector> selectors, boolean containsInlineStyles) {
         this.id = id;
         this.selectors = selectors;
+        this.containsInlineStyles = containsInlineStyles;
+    }
+
+    public boolean containsInlineStyles() {
+        return containsInlineStyles;
     }
 
     public int getId() {
@@ -186,6 +191,7 @@ public final class StyleMap {
             };
 
     private final int id; // unique per container
+    private final boolean containsInlineStyles;
     private List<Selector> selectors;
     private Map<String, List<CascadingStyle>> cascadingStyles;
 }
