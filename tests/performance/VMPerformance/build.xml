@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="VMPerformance" default="jar" basedir=".">
+    <description>Builds, tests, and runs the project VMPerformance.</description>
+    <import file="nbproject/build-impl.xml"/>
+
+    <pathconvert property="java.includes" pathsep=" ">
+        <path>
+            <dirset dir="${java.home}" includes="include"/>
+            <dirset dir="${java.home}/.." includes="include"/>
+            <dirset dir="${java.home}" includes="include/linux"/>
+            <dirset dir="${java.home}/.." includes="include/linux"/>
+        </path>
+        <globmapper from="*" to="-I *"/>
+    </pathconvert>
+
+    <target name="-post-compile">
+        <apply executable="gcc" dest="build" dir="build">
+            <arg value="-O2"/>
+            <arg value="-fPIC"/>
+            <arg value="-shared"/>
+            <arg value="-olibVMPerformance-${os.arch}.so"/>
+            <arg line="${java.includes}"/>
+            <fileset dir="src" includes="*.c"/>
+            <mapper type="merge" to="libVMperformance-${os.arch}.so"/>
+        </apply>
+        <apply executable="arm-linux-gnueabi-gcc" dest="build" dir="build" failonerror="false">
+            <arg value="-O2"/>
+            <arg value="-fPIC"/>
+            <arg value="-shared"/>
+            <arg value="-olibVMPerformance-arm.so"/>
+            <arg line="${java.includes}"/>
+            <fileset dir="src" includes="*.c"/>
+            <mapper type="merge" to="libVMperformance-arm.so"/>
+        </apply>
+    </target>
+
+    <target name="-post-jar">
+        <copy todir="dist">
+            <fileset dir="build" includes="*.so"/>
+        </copy>
+    </target>
+
+</project>
