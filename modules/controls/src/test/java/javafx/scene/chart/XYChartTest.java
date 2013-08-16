@@ -49,13 +49,14 @@ public class XYChartTest extends ChartTestBase {
     
     NumberAxis yaxis;
     CategoryAxis cataxis;
+    AreaChart<?, ?> areachart;
     
     protected Chart createChart() {
         ObservableList<String> cat = FXCollections.observableArrayList();
         cataxis = new CategoryAxis();
         yaxis = new NumberAxis();
         ObservableList<XYChart.Series<String, Number>> nodata = FXCollections.observableArrayList();
-        AreaChart<?, ?> areachart = new AreaChart<String, Number>(cataxis, yaxis, nodata);
+        areachart = new AreaChart<String, Number>(cataxis, yaxis, nodata);
         areachart.setId("AreaChart");
         return areachart;
     }
@@ -126,5 +127,11 @@ public class XYChartTest extends ChartTestBase {
         getTestStage().setScene(getTestScene());
         getTestStage().show();
         pulse();
+    }
+    
+    @Test public void testLegendSizeWhenThereIsNoChartData() {
+        startApp();
+        assertEquals(0, areachart.getLegend().prefHeight(-1), 0);            
+        assertEquals(0, areachart.getLegend().prefWidth(-1), 0);            
     }
 }

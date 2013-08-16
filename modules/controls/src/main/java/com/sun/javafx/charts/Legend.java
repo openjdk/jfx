@@ -133,6 +133,7 @@ public class Legend extends Region {
     }
 
     @Override protected double computePrefWidth(double height) {
+        if (getItems().isEmpty()) return 0; // RT-31157 : no data - dont show legend
         final double contentHeight = height - snappedTopInset() - snappedBottomInset();
         Dimension2D tileSize = getTileSize();
         if(height == -1) {
@@ -147,6 +148,7 @@ public class Legend extends Region {
     }
 
     @Override protected double computePrefHeight(double width) {
+        if (getItems().isEmpty()) return 0; // RT-31157 : no data - dont show legend
         final double contentWidth = width - snappedLeftInset() - snappedRightInset();
         Dimension2D tileSize = getTileSize();
         if(width == -1) {
