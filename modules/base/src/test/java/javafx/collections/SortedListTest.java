@@ -344,7 +344,8 @@ public class SortedListTest {
         String toRemove = new String("A");
         String other = new String("A");
         list = FXCollections.observableArrayList(other, toRemove);
-        SortedList<String> sorted = list.sorted(Comparator.naturalOrder());
+        Comparator<String> c = Comparator.naturalOrder();
+        SortedList<String> sorted = list.sorted(c);
 
         list.remove(1);
 
