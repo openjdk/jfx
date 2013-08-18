@@ -72,6 +72,12 @@ static jboolean try_android() { return JNI_TRUE; }
 static jboolean try_android() { return JNI_FALSE; }
 #endif
 
+#ifdef EGL_X11_FB_CONTAINER
+static jboolean try_x11_container() { return JNI_TRUE; }
+#else
+static jboolean try_x11_container() { return JNI_FALSE; }
+#endif
+
 void platform_initialize() {
     if(try_dispman()) {
        return;
@@ -82,6 +88,10 @@ void platform_initialize() {
     }
 
     if(try_android()) {
+        return;
+    }
+
+    if(try_x11_container()) {
         return;
     }
 
