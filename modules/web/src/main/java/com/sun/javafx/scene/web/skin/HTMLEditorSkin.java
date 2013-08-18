@@ -1013,10 +1013,10 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
         fontSizeComboBox.setDisable(!isCommandEnabled(FONT_SIZE_COMMAND));
         String fontSizeValue = getCommandValue(FONT_SIZE_COMMAND);
 
-        if (resetToolbarState) {
+        // added test for fontSizeValue == null to combat RT-28847
+        if (resetToolbarState && fontSizeValue == null) {
             fontSizeComboBox.setValue(sizeFontMap.get(SIZE_SMALL));
-        }
-        else {
+        } else {
             if (fontSizeValue != null) {
                 if (!fontSizeComboBox.getValue().equals(sizeFontMap.get(fontSizeValue))) {
                     fontSizeComboBox.setValue(sizeFontMap.get(fontSizeValue));
