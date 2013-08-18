@@ -1034,11 +1034,7 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
         }
 
         boldButton.setDisable(!isCommandEnabled(BOLD_COMMAND));
-        if (formatValue != null) {
-            if (!resetToolbarState && ("p".equals(formatValue) || "div".equals(formatValue))) {
-                boldButton.setSelected(getCommandState(BOLD_COMMAND));
-            }
-        }
+        boldButton.setSelected(getCommandState(BOLD_COMMAND));
         italicButton.setDisable(!isCommandEnabled(ITALIC_COMMAND));
         italicButton.setSelected(getCommandState(ITALIC_COMMAND));
         underlineButton.setDisable(!isCommandEnabled(UNDERLINE_COMMAND));
