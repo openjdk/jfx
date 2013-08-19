@@ -1013,10 +1013,10 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
         fontSizeComboBox.setDisable(!isCommandEnabled(FONT_SIZE_COMMAND));
         String fontSizeValue = getCommandValue(FONT_SIZE_COMMAND);
 
-        if (resetToolbarState) {
+        // added test for fontSizeValue == null to combat RT-28847
+        if (resetToolbarState && fontSizeValue == null) {
             fontSizeComboBox.setValue(sizeFontMap.get(SIZE_SMALL));
-        }
-        else {
+        } else {
             if (fontSizeValue != null) {
                 if (!fontSizeComboBox.getValue().equals(sizeFontMap.get(fontSizeValue))) {
                     fontSizeComboBox.setValue(sizeFontMap.get(fontSizeValue));
@@ -1034,11 +1034,7 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
         }
 
         boldButton.setDisable(!isCommandEnabled(BOLD_COMMAND));
-        if (formatValue != null) {
-            if (!resetToolbarState && ("p".equals(formatValue) || "div".equals(formatValue))) {
-                boldButton.setSelected(getCommandState(BOLD_COMMAND));
-            }
-        }
+        boldButton.setSelected(getCommandState(BOLD_COMMAND));
         italicButton.setDisable(!isCommandEnabled(ITALIC_COMMAND));
         italicButton.setSelected(getCommandState(ITALIC_COMMAND));
         underlineButton.setDisable(!isCommandEnabled(UNDERLINE_COMMAND));

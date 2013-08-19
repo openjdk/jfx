@@ -322,17 +322,24 @@ public class VirtualFlowTestUtils {
     }
 
     public static VirtualScrollBar getVirtualFlowVerticalScrollbar(final Control control) {
+        return getVirtualFlowScrollbar(control, Orientation.VERTICAL);
+    }
+
+    public static VirtualScrollBar getVirtualFlowHorizontalScrollbar(final Control control) {
+        return getVirtualFlowScrollbar(control, Orientation.HORIZONTAL);
+    }
+
+    private static VirtualScrollBar getVirtualFlowScrollbar(final Control control, Orientation orientation) {
         VirtualFlow<?> flow = getVirtualFlow(control);
         VirtualScrollBar scrollBar = null;
         for (Node child : flow.getChildrenUnmodifiable()) {
             if (child instanceof VirtualScrollBar) {
-                if (((VirtualScrollBar)child).getOrientation() == Orientation.VERTICAL) {
+                if (((VirtualScrollBar)child).getOrientation() == orientation) {
                     scrollBar = (VirtualScrollBar) child;
                 }
             }
         }
 
-        //        Toolkit.getToolkit().firePulse();
         return scrollBar;
     }
 }

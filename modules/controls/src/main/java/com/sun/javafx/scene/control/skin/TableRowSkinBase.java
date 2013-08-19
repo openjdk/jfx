@@ -93,8 +93,6 @@ public abstract class TableRowSkinBase<T,
      *                                                                         *
      **************************************************************************/
 
-    private double prefWidth = -1;
-
     /*
      * A map that maps from TableColumn to TableCell (i.e. model to view).
      * This is recreated whenever the leaf columns change, however to increase
@@ -450,16 +448,12 @@ public abstract class TableRowSkinBase<T,
         final boolean cellsEmpty = cells.isEmpty();
         cells.clear();
 
-        prefWidth = 0;
-
         final C skinnable = getSkinnable();
         final int skinnableIndex = skinnable.getIndex();
         final List<? extends TableColumnBase/*<T,?>*/> visibleLeafColumns = getVisibleLeafColumns();
 
         for (int i = 0, max = visibleLeafColumns.size(); i < max; i++) {
             TableColumnBase<T,?> col = visibleLeafColumns.get(i);
-
-            prefWidth += col.getWidth();
 
             R cell = cellsMap.get(col);
             if (cell == null) {
@@ -480,6 +474,13 @@ public abstract class TableRowSkinBase<T,
     }
 
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
+        double prefWidth = 0.0;
+
+        final List<? extends TableColumnBase/*<T,?>*/> visibleLeafColumns = getVisibleLeafColumns();
+        for (int i = 0, max = visibleLeafColumns.size(); i < max; i++) {
+            prefWidth += visibleLeafColumns.get(i).getWidth();
+        }
+
         return prefWidth;
     }
 

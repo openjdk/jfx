@@ -2553,4 +2553,22 @@ public class TreeTableViewTest {
         treeTableView.edit(-1, null);
         assertEquals(1, rt_31015_count);
     }
+
+    @Test public void test_rt_30688() {
+        installChildren();
+        root.getChildren().clear();
+        treeTableView.setColumnResizePolicy(TreeTableView.CONSTRAINED_RESIZE_POLICY);
+
+        TreeTableColumn<String, String> col = new TreeTableColumn<>("column");
+        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
+            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
+                return new ReadOnlyObjectWrapper<>(param.getValue().getValue());
+            }
+        });
+        treeTableView.getColumns().add(col);
+
+        new StageLoader(treeTableView);
+
+        assertEquals(treeTableView.contentWidth, col.getWidth(), 0.0);
+    }
 }

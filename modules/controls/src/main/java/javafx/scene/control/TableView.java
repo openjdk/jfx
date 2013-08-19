@@ -351,7 +351,7 @@ public class TableView<S> extends Control {
                                                isFirstRun, 
                                                table.contentWidth,
                                                visibleLeafColumns);
-            isFirstRun = false;
+            isFirstRun = ! isFirstRun ? false : ! result;
             return result;
         }
     };

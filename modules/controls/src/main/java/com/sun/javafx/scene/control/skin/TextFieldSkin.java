@@ -224,7 +224,15 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         caretPath.setStrokeWidth(1);
         caretPath.fillProperty().bind(textFill);
         caretPath.strokeProperty().bind(textFill);
-        caretPath.visibleProperty().bind(caretVisible);
+        
+        // modifying visibility of the caret forces a layout-pass (RT-32373), so
+        // instead we modify the opacity.
+        caretPath.opacityProperty().bind(new DoubleBinding() {
+            { bind(caretVisible); }
+            @Override protected double computeValue() {
+                return caretVisible.get() ? 1.0 : 0.0;
+            }
+        });
         caretPath.layoutXProperty().bind(textTranslateX);
         textNode.impl_caretShapeProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable observable) {

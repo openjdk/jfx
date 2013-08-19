@@ -228,6 +228,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
         registerChangeListener(placeholderProperty(), "PLACEHOLDER");
         registerChangeListener(control.focusTraversableProperty(), "FOCUS_TRAVERSABLE");
         registerChangeListener(control.widthProperty(), "WIDTH");
+        registerChangeListener(flow.getVbar().visibleProperty(), "VBAR_VISIBLE");
     }
     
 
@@ -396,6 +397,8 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
             flow.setFocusTraversable(getSkinnable().isFocusTraversable());
 //        } else if ("WIDTH".equals(p)) {
 //            tableHeaderRow.setTablePadding(getSkinnable().getInsets());
+        } else if ("VBAR_VISIBLE".equals(p)) {
+            updateContentWidth();
         }
     }
 
@@ -599,6 +602,16 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
     
     private static final double GOLDEN_RATIO_MULTIPLIER = 0.618033987;
 
+    private void checkContentWidthState() {
+        // we test for item count here to resolve RT-14855, where the column
+        // widths weren't being resized properly when in constrained layout mode
+        // if there were no items.
+        if (contentWidthDirty || getItemCount() == 0) {
+            updateContentWidth();
+            contentWidthDirty = false;
+        }
+    }
+
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         return 400;
     }
@@ -709,14 +722,8 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
         
         columnReorderLine.setVisible(tableHeaderRow.isReordering());
         columnReorderOverlay.setVisible(tableHeaderRow.isReordering());
-        
-        // we test for item count here to resolve RT-14855, where the column
-        // widths weren't being resized properly when in constrained layout mode
-        // if there were no items.
-        if (contentWidthDirty || getItemCount() == 0) {
-            updateContentWidth();
-            contentWidthDirty = false;
-        }
+
+        checkContentWidthState();
     }
     
     
@@ -801,6 +808,8 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
             Control c = getSkinnable();
             contentWidth = c.getWidth() - (snappedLeftInset() + snappedRightInset());
         }
+
+        contentWidth = Math.max(0.0, contentWidth);
 
         // FIXME this isn't perfect, but it prevents RT-14885, which results in
         // undesired horizontal scrollbars when in constrained resize mode

@@ -2308,7 +2308,7 @@ public class TreeTableViewKeyInputTest {
         assertTrue(debug(), fm.isFocused(13));
     }
     
-    @org.junit.Ignore("pending RT-30739") @Test public void test_rt29930() {
+    @Test public void test_rt29930() {
         sm.setCellSelectionEnabled(false);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         

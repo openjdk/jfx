@@ -461,7 +461,7 @@ public class TreeTableView<S> extends Control {
                                                isFirstRun, 
                                                table.contentWidth,
                                                visibleLeafColumns);
-            isFirstRun = false;
+            isFirstRun = ! isFirstRun ? false : ! result;
             return result;
         }
     };
@@ -530,7 +530,8 @@ public class TreeTableView<S> extends Control {
     private ObservableList<TreeTableColumn<S,?>> sortOrder = FXCollections.observableArrayList();
 
     // width of VirtualFlow minus the vbar width
-    private double contentWidth;
+    // package protected for testing only
+    double contentWidth;
     
     // Used to minimise the amount of work performed prior to the table being
     // completely initialised. In particular it reduces the amount of column
@@ -2590,7 +2591,7 @@ public class TreeTableView<S> extends Control {
         }
 
         @Override public void clearSelection(int row, TableColumnBase<TreeItem<S>,?> column) {
-            TreeTablePosition<S,?> tp = new TreeTablePosition<>(getTreeTableView(), row, (TreeTableColumn)column);
+            TreeTablePosition<S,?> tp = new TreeTablePosition<S,Object>(getTreeTableView(), row, (TreeTableColumn)column);
 
             boolean csMode = isCellSelectionEnabled();
             
