@@ -327,12 +327,13 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacFileNSURL__1stopAccessingSec
 /*
  * Class:     com_sun_glass_ui_mac_MacFileNSURL
  * Method:    _getBookmark
- * Signature: (J)[B
+ * Signature: (JJ)[B
  */
 JNIEXPORT jbyteArray JNICALL Java_com_sun_glass_ui_mac_MacFileNSURL__1getBookmark
-(JNIEnv *env, jobject jMacFileNSURL, jlong ptr)
+(JNIEnv *env, jobject jMacFileNSURL, jlong ptr, jlong baseDocumentPtr)
 {
     NSURL * url = (NSURL*)jlong_to_ptr(ptr);
+    NSURL * baseUrl = (NSURL*)jlong_to_ptr(baseDocumentPtr); // May be 0L
     jbyteArray data = NULL;
     
     GLASS_POOL_ENTER;
@@ -340,7 +341,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_sun_glass_ui_mac_MacFileNSURL__1getBookmar
         NSError *error = nil;
 
         NSData *nsData = [url bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope
-                       includingResourceValuesForKeys:nil relativeToURL:nil error:&error];
+                       includingResourceValuesForKeys:nil relativeToURL:baseUrl error:&error];
 
         if (error) {
             NSLog(@"ERROR in Glass calling bookmarkDataWithOptions: %@", error);
@@ -366,12 +367,13 @@ JNIEXPORT jbyteArray JNICALL Java_com_sun_glass_ui_mac_MacFileNSURL__1getBookmar
 /*
  * Class:     com_sun_glass_ui_mac_MacFileNSURL
  * Method:    _createFromBookmark
- * Signature: ([B)Lcom/sun/glass/ui/mac/MacFileNSURL;
+ * Signature: ([BJ)Lcom/sun/glass/ui/mac/MacFileNSURL;
  */
 JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacFileNSURL__1createFromBookmark
-(JNIEnv *env, jclass cls, jbyteArray data)
+(JNIEnv *env, jclass cls, jbyteArray data, jlong baseDocumentPtr)
 {
     jobject jMacFileNSURL = NULL;
+    NSURL * baseUrl = (NSURL*)jlong_to_ptr(baseDocumentPtr); // May be 0L
 
     GLASS_POOL_ENTER;
     {
@@ -391,7 +393,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacFileNSURL__1createFromBoo
 
             NSURL *url = [NSURL URLByResolvingBookmarkData:nsData
                 options:(NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithSecurityScope)
-                relativeToURL:nil bookmarkDataIsStale:&isStale error:&error];
+                relativeToURL:baseUrl bookmarkDataIsStale:&isStale error:&error];
 
             if (isStale) {
                 NSLog(@"URLByResolvingBookmarkData isStale=%d", isStale);
