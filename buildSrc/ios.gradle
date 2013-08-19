@@ -302,7 +302,7 @@ IOS.webview.javahInclude = ["javafx/scene/web/*"]
 IOS.webview.variants = ["arm", "x86"];
 
 IOS.webview.arm = [:]
-IOS.webview.arm.nativeSource = file("$closedDir/javafx-ios-webnode/native")
+IOS.webview.arm.nativeSource = file("modules/web/src/ios/native")
 IOS.webview.arm.compiler = compiler
 IOS.webview.arm.ccFlags = [ccFlags, "-arch", archArm, "-isysroot", sdkPath(iPhoneOS)].flatten()
 IOS.webview.arm.linker = linker
@@ -318,61 +318,63 @@ IOS.webview.x86.linkFlags = ["-arch_only", archX86, "-syslibroot", sdkPath(iPhon
 IOS.webview.x86.lib = "javafx_ios_webnode_${archX86}"
 
 project(":web") {
-    if (BUILD_CLOSED) {
-        apply plugin: 'java'
+    apply plugin: 'java'
 
-        compileJava {
-            enabled = false
-        }
+    compileJava {
+        enabled = false
+    }
 
-        afterEvaluate {
-            def compileWebJavaIos = task("compileWebJavaIos",
-                type: JavaCompile, group: "Build") {
+    afterEvaluate {
+        def compileWebJavaIos = task("compileWebJavaIos",
+            type: JavaCompile, group: "Build") {
 
-                dependsOn(project(":graphics").classes, project(":base").classes)
-                description = "Task compiles web component for iOS."
-                classpath = files(
-                    project(":controls").sourceSets.main.output.classesDir,
-                    project(":graphics").sourceSets.main.output.classesDir,
-                    project(":base").sourceSets.main.output.classesDir
-                )
-                destinationDir = file("modules/web/build/classes/ios")
-                dependencyCacheDir = file("modules/web/build/dependency-cache")
-                source file("$closedDir/javafx-ios-webnode/src")
-                doLast {
-                    copy {
-                        from source
-                        into "modules/web/build/classes/ios"
-                        exclude "**/*.java"
-                    }
+            dependsOn(project(":graphics").classes, project(":base").classes)
+            description = "Task compiles web component for iOS."
+            classpath = files(
+                project(":controls").sourceSets.main.output.classesDir,
+                project(":graphics").sourceSets.main.output.classesDir,
+                project(":base").sourceSets.main.output.classesDir
+            )
+            destinationDir = file("modules/web/build/classes/ios")
+            dependencyCacheDir = file("modules/web/build/dependency-cache")
+            source file("modules/web/src/ios/java")
+            doLast {
+                copy {
+                    from "modules/web/src/ios/resources"
+                    into "modules/web/build/resources/ios"
                 }
             }
+        }
 
-            def jarWebJavaIos = task("jarWebJavaIos",
-                type: Jar, group: "Build") {
-                description = "Creates web.jar for iOS."
-                dependsOn(compileWebJavaIos)
-                archiveName = "web.jar"
-                includeEmptyDirs = false
-                destinationDir = project.file("build/libs/ios")
-                from("build/classes/ios")
-            }
+        def jarWebJavaIos = task("jarWebJavaIos",
+            type: Jar, group: "Build") {
+            description = "Creates web.jar for iOS."
+            dependsOn(compileWebJavaIos)
+            archiveName = "web.jar"
+            includeEmptyDirs = false
+            destinationDir = project.file("build/libs/ios")
+            from("build/classes/ios")
+        }
 
-            addNative(project, "webview")
-            javahIosWebview.dependsOn(compileWebJavaIos)
+        addNative(project, "webview")
+        javahIosWebview.dependsOn(compileWebJavaIos)
 
-            jfxrtIos {
-                from "modules/web/build/classes/ios"
-            }
+        jfxrtIos {
+            from ("modules/web/build/classes/ios", "modules/web/build/resources/main");
+            exclude("com/sun/webkit", "com/sun/javafx/webkit");
+        }
 
-            sdkIos  {
-                dependsOn(jarWebJavaIos)
-                doLast {
-                    def props = project.ext["IOS"]
-                    copy {
+        sdkIos  {
+            dependsOn(jarWebJavaIos)
+            doLast {
+                def props = project.ext["IOS"]
+                copy {
+                    if (props.useLipo) {
                         from ("modules/web/build/libs/webview/ios/${props.library(props.webview.lib)}")
-                        into ("build/ios-sdk/rt/${props.libDest}")
+                    } else {
+                        from ("modules/web/build/libs/webview/ios")
                     }
+                    into ("build/ios-sdk/rt/${props.libDest}")
                 }
             }
         }
