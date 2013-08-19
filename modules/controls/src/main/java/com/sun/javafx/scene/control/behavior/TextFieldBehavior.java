@@ -28,6 +28,7 @@ package com.sun.javafx.scene.control.behavior;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
@@ -146,10 +147,12 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
 
     @Override protected void fire(KeyEvent event) {
         TextField textField = getControl();
+        EventHandler<ActionEvent> onAction = textField.getOnAction();
+        ActionEvent actionEvent = new ActionEvent(textField, null);
 
-        if (textField.getOnAction() != null) {
-            textField.fireEvent(new ActionEvent(textField, null));
-        } else {
+        textField.fireEvent(actionEvent);
+
+        if (onAction == null && !actionEvent.isConsumed()) {
             forwardToParent(event);
         }
     }
