@@ -31,6 +31,7 @@ import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.binding.BooleanBinding;
+import javafx.beans.binding.DoubleBinding;
 import javafx.beans.binding.IntegerBinding;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableBooleanValue;
@@ -466,7 +467,14 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         caretPath.setStrokeWidth(1);
         caretPath.fillProperty().bind(textFill);
         caretPath.strokeProperty().bind(textFill);
-        caretPath.visibleProperty().bind(caretVisible);
+        // modifying visibility of the caret forces a layout-pass (RT-32373), so
+        // instead we modify the opacity.
+        caretPath.opacityProperty().bind(new DoubleBinding() {
+            { bind(caretVisible); }
+            @Override protected double computeValue() {
+                return caretVisible.get() ? 1.0 : 0.0;
+            }
+        });
         contentView.getChildren().add(caretPath);
 
         if (SHOW_HANDLES) {
