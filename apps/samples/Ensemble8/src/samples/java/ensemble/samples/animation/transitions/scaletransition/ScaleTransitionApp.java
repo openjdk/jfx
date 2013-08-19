@@ -32,7 +32,6 @@
 package ensemble.samples.animation.transitions.scaletransition;
 
 import javafx.animation.ScaleTransition;
-import javafx.animation.ScaleTransitionBuilder;
 import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.scene.Parent;
@@ -49,10 +48,9 @@ import javafx.util.Duration;
  * @sampleName Scale Transition
  * @preview preview.png
  * @see javafx.animation.ScaleTransition
- * @see javafx.animation.ScaleTransitionBuilder
  * @see javafx.animation.Transition
  * @related /Animation/Transitions/Fade Transition
- * @related /Aimation/Transitions/Fill Transition
+ * @related /Animation/Transitions/Fill Transition
  * @related /Animation/Transitions/Parallel Transition
  * @related /Animation/Transitions/Path Transition
  * @related /Animation/Transitions/Pause Transition
@@ -67,7 +65,7 @@ public class ScaleTransitionApp extends Application {
 
     public Parent createContent() {
         Pane root = new Pane();
-        root.setPrefSize(245, 100);
+        root.setPrefSize(180, 180);
         root.setMinSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
         root.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
         
@@ -76,14 +74,12 @@ public class ScaleTransitionApp extends Application {
         rect.setArcWidth(15);
         rect.setFill(Color.ORANGE);
         root.getChildren().add(rect);
-        scaleTransition = ScaleTransitionBuilder.create()
-                .node(rect)
-                .duration(Duration.seconds(4))
-                .toX(3)
-                .toY(3)
-                .cycleCount(Timeline.INDEFINITE)
-                .autoReverse(true)
-                .build();
+        scaleTransition = new ScaleTransition(Duration.seconds(4), rect);
+        scaleTransition.setToX(3);
+        scaleTransition.setToY(3);
+        scaleTransition.setCycleCount(Timeline.INDEFINITE);
+        scaleTransition.setAutoReverse(true);
+        
         return root;
     }
 

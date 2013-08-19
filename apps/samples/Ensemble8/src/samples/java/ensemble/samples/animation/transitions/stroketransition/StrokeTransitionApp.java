@@ -32,7 +32,6 @@
 package ensemble.samples.animation.transitions.stroketransition;
 
 import javafx.animation.StrokeTransition;
-import javafx.animation.StrokeTransitionBuilder;
 import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.scene.Parent;
@@ -49,7 +48,6 @@ import javafx.util.Duration;
  * @sampleName Stroke Transition
  * @preview preview.png
  * @see javafx.animation.StrokeTransition
- * @see javafx.animation.StrokeTransitionBuilder
  * @see javafx.animation.Transition
  * @related /Animation/Transitions/Fade Transition
  * @related /Animation/Transitions/Fill Transition
@@ -67,7 +65,7 @@ public class StrokeTransitionApp extends Application {
 
     public Parent createContent() {
         Pane root = new Pane();
-        root.setPrefSize(245, 100);
+        root.setPrefSize(200, 200);
         root.setMinSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
         root.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);       
         
@@ -79,14 +77,10 @@ public class StrokeTransitionApp extends Application {
         rect.setStrokeWidth(10);
         root.getChildren().add(rect);
 
-        strokeTransition = StrokeTransitionBuilder.create()
-                .duration(Duration.seconds(3))
-                .shape(rect)
-                .fromValue(Color.RED)
-                .toValue(Color.DODGERBLUE)
-                .cycleCount(Timeline.INDEFINITE)
-                .autoReverse(true)
-                .build();
+        strokeTransition = new StrokeTransition(Duration.seconds(3), rect, Color.RED, Color.DODGERBLUE);
+        strokeTransition.setCycleCount(Timeline.INDEFINITE);
+        strokeTransition.setAutoReverse(true);
+
         return root;
     }
 
