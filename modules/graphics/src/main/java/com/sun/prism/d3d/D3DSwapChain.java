@@ -56,8 +56,21 @@ class D3DSwapChain
         if (g == null) {
             return false;
         }
-        g.setCompositeMode(CompositeMode.SRC);
-        g.drawTexture(texBackBuffer, 0, 0, this.getContentWidth(), this.getContentHeight());
+        Rectangle rectDST = new Rectangle(0, 0, this.getContentWidth(), this.getContentHeight());
+        if (clip != null) {
+            rectDST.intersectWith(clip);
+        }
+        int x0 = rectDST.x;
+        int y0 = rectDST.y;
+        int x1 = x0 + rectDST.width;
+        int y1 = y0 + rectDST.height;
+        if (isAntiAliasing()) {
+            context.flushVertexBuffer();
+            g.blit(texBackBuffer, null, x0, y0, x1, y1, x0, y0, x1, y1);
+        } else {
+            g.setCompositeMode(CompositeMode.SRC);
+            g.drawTexture(texBackBuffer, x0, y0, x1, y1);
+        }
         context.flushVertexBuffer();
         texBackBuffer.unlock();
         return true;
@@ -137,7 +150,6 @@ class D3DSwapChain
     }
 
     public boolean isAntiAliasing() {
-        //TODO: 3D - Add AA support for D3D
-        return false;
+        return texBackBuffer != null ? texBackBuffer.isAntiAliasing() : false;
     }
 }

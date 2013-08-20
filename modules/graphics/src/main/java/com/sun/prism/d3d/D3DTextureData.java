@@ -31,6 +31,7 @@ import com.sun.prism.impl.PrismTrace;
 public class D3DTextureData extends D3DResource.D3DRecord {
     private final long size;
     private final boolean isRTT;
+    private final int samples;
 
     static long estimateSize(int physicalWidth, int physicalHeight,
                              PixelFormat format)
@@ -48,13 +49,18 @@ public class D3DTextureData extends D3DResource.D3DRecord {
     D3DTextureData(D3DContext context,
                    long pResource, boolean isRTT,
                    int physicalWidth, int physicalHeight,
-                   PixelFormat format)
+                   PixelFormat format, int numberOfSamples)
     {
         super(context, pResource);
         this.size = isRTT
                ? estimateRTSize(physicalWidth, physicalHeight, false)
                : estimateSize(physicalWidth, physicalHeight, format);
         this.isRTT = isRTT;
+        this.samples = numberOfSamples;
+    }
+
+    int getSamples() {
+        return samples;
     }
 
     long getSize() {

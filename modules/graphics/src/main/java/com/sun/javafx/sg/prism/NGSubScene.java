@@ -190,13 +190,26 @@ public class NGSubScene extends NGNode {
             int x1 = x0 + rtt.getContentWidth();
             int y1 = y0 + rtt.getContentHeight();
             if ((isOpaque || g.getCompositeMode() == CompositeMode.SRC)
-                    && g.getTransformNoClone().isTranslateOrIdentity()) {
+                    && g.getTransformNoClone().isTranslateOrIdentity() &&
+                    !g.isDepthTest()) {
                 // Round translation to closest pixel
                 int tx = (int)(g.getTransformNoClone().getMxt() + 0.5);
                 int ty = (int)(g.getTransformNoClone().getMyt() + 0.5);
                 // Blit SubScene directly to scene surface
-                g.blit(rtt, null, x0, y0, x1, y1,
-                            x0 + tx, y0 + ty, x1 + tx, y1 + ty);
+
+                // Intersect src and dst boundaries.
+                // On D3D if blit is called outside boundary it will draw
+                // nothing. Using intersect prevents that from occurring.
+                int dstX0 = x0 + tx;
+                int dstY0 = y0 + ty;
+                int dstX1 = x1 + tx;
+                int dstY1 = y1 + ty;
+                int dstW = g.getRenderTarget().getContentWidth();
+                int dstH = g.getRenderTarget().getContentHeight();
+                int dX = dstX1 > dstW ? dstW - dstX1 : 0;
+                int dY = dstY1 > dstH ? dstH - dstY1 : 0;
+                g.blit(rtt, null, x0, y0, x1 + dX, y1 + dY,
+                            dstX0, dstY0, dstX1 + dX, dstY1 + dY);
             } else {
                 if (resolveRTT != null &&
                         (resolveRTT.getContentWidth() < rtt.getContentWidth() ||

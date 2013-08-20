@@ -385,6 +385,35 @@ JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetCullingMode
 
 /*
  * Class:     com_sun_prism_d3d_D3DContext
+ * Method:    nBlit
+ * Signature: (JJJIIIIIIII)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nBlit
+  (JNIEnv *env, jclass, jlong ctx, jlong nSrcRTT, jlong nDstRTT,
+            jint srcX0, jint srcY0, jint srcX1, jint srcY1,
+            jint dstX0, jint dstY0, jint dstX1, jint dstY1)
+{
+    TraceLn(NWT_TRACE_INFO, "D3DContext_nBlit");
+    D3DContext *pCtx = (D3DContext*) jlong_to_ptr(ctx);
+    D3DResource *srcRes = (D3DResource*) jlong_to_ptr(nSrcRTT);
+    D3DResource *dstRes = (D3DResource*) jlong_to_ptr(nDstRTT);
+    if (srcRes == NULL) {
+        TraceLn(NWT_TRACE_INFO, "   error srcRes NULL");
+        return;
+    }
+    IDirect3DSurface9 *pSrcSurface = srcRes->GetSurface();
+    if (pSrcSurface == NULL) {
+        TraceLn(NWT_TRACE_INFO, "   error pSrcSurface NULL");
+        return;
+    }
+    IDirect3DSurface9 *pDstSurface = (dstRes == NULL) ? NULL : dstRes->GetSurface();
+
+    pCtx->stretchRect(pSrcSurface, srcX0, srcY0, srcX1, srcY1,
+                      pDstSurface, dstX0, dstY0, dstX1, dstY1);
+}
+
+/*
+ * Class:     com_sun_prism_d3d_D3DContext
  * Method:    nSetMaterial
  * Signature: (JJJ)V
  */
@@ -696,6 +725,12 @@ D3DContext::Clear(DWORD colorArgbPre, BOOL clearDepth, BOOL ignoreScissor)
         }
     }
     if (clearDepth) {
+        // Must ensure that there is a depth buffer before attempting to clear it
+        IDirect3DSurface9 *pCurrentDepth = NULL;
+        pd3dDevice->GetDepthStencilSurface(&pCurrentDepth);
+        clearDepth = pCurrentDepth == NULL ? FALSE : clearDepth;
+    }
+    if (clearDepth) {
         flags |= D3DCLEAR_ZBUFFER;
         // also make sure depth writes are enabled for the clear operation
         pd3dDevice->GetRenderState(D3DRS_ZWRITEENABLE, &bDE);
@@ -716,40 +751,32 @@ D3DContext::Clear(DWORD colorArgbPre, BOOL clearDepth, BOOL ignoreScissor)
     return res;
 }
 
-BOOL D3DContext::IsDepthStencilBufferOk(D3DSURFACE_DESC *pTargetDesc)
+BOOL D3DContext::IsDepthStencilBufferOk(D3DSURFACE_DESC *pTargetDesc, IDirect3DSurface9 *pTargetDepth)
 {
-    IDirect3DSurface9 *pStencil;
     TraceLn(NWT_TRACE_INFO, "D3DContext::IsDepthStencilBufferOk");
+    if (pTargetDepth == NULL) { return true; } // NOP
 
-    if (SUCCEEDED(pd3dDevice->GetDepthStencilSurface(&pStencil))) {
-        D3DSURFACE_DESC descStencil;
-        pStencil->GetDesc(&descStencil);
-        pStencil->Release();
+    D3DSURFACE_DESC descStencil;
+    pTargetDepth->GetDesc(&descStencil);
 
-        D3DDISPLAYMODE dm;
-        return
-            (SUCCEEDED(pd3dDevice->GetDisplayMode(0, &dm)) &&
-             pTargetDesc->Width <= descStencil.Width &&
-             pTargetDesc->Height <= descStencil.Height &&
-             pTargetDesc->MultiSampleType == descStencil.MultiSampleType &&
-             pTargetDesc->MultiSampleQuality == descStencil.MultiSampleQuality &&
-             SUCCEEDED(pd3dObject->CheckDepthStencilMatch(
-                   adapterOrdinal,
-                   devCaps.DeviceType,
-                   dm.Format, pTargetDesc->Format,
-                   descStencil.Format)));
-    }
-    TraceLn(NWT_TRACE_VERBOSE,
-        "  current stencil buffer is not compatible with new Render Target");
-
-    return false;
+    D3DDISPLAYMODE dm;
+    return
+        (SUCCEEDED(pd3dDevice->GetDisplayMode(0, &dm)) &&
+         pTargetDesc->Width <= descStencil.Width &&
+         pTargetDesc->Height <= descStencil.Height &&
+         pTargetDesc->MultiSampleType == descStencil.MultiSampleType &&
+         pTargetDesc->MultiSampleQuality == descStencil.MultiSampleQuality &&
+         SUCCEEDED(pd3dObject->CheckDepthStencilMatch(
+               adapterOrdinal,
+               devCaps.DeviceType,
+               dm.Format, pTargetDesc->Format,
+               descStencil.Format)));
 }
 
 HRESULT
-D3DContext::InitDepthStencilBuffer(D3DSURFACE_DESC *pTargetDesc)
+D3DContext::InitDepthStencilBuffer(D3DSURFACE_DESC *pTargetDesc, IDirect3DSurface9 **ppDepthSSurface)
 {
     HRESULT res;
-    IDirect3DSurface9 *pBB;
     D3DDISPLAYMODE dm;
 
     TraceLn(NWT_TRACE_INFO, "D3DContext::InitDepthStencilBuffer");
@@ -764,12 +791,7 @@ D3DContext::InitDepthStencilBuffer(D3DSURFACE_DESC *pTargetDesc)
 
     res = pd3dDevice->CreateDepthStencilSurface(
         pTargetDesc->Width, pTargetDesc->Height, newFormat,
-        pTargetDesc->MultiSampleType, pTargetDesc->MultiSampleQuality, false, &pBB, 0);
-
-    if (SUCCEEDED(res)) {
-        res = pd3dDevice->SetDepthStencilSurface(pBB);
-        pBB->Release();
-    }
+        pTargetDesc->MultiSampleType, pTargetDesc->MultiSampleQuality, false, ppDepthSSurface, 0);
 
     return res;
 }
@@ -801,7 +823,9 @@ D3DContext::UpdateVertexShaderTX()
 }
 
 HRESULT
-D3DContext::SetRenderTarget(IDirect3DSurface9 *pSurface)
+D3DContext::SetRenderTarget(IDirect3DSurface9 *pSurface,
+        IDirect3DSurface9 **ppTargetDepthSurface,
+        BOOL depthBuffer, BOOL msaa)
 {
     HRESULT res;
     D3DSURFACE_DESC descNew;
@@ -818,7 +842,6 @@ D3DContext::SetRenderTarget(IDirect3DSurface9 *pSurface)
 
     if (SUCCEEDED(res = pd3dDevice->GetRenderTarget(0, &pCurrentTarget))) {
         if (pCurrentTarget != pSurface) {
-
 #if defined PERF_COUNTERS
             getStats().numRenderTargetSwitch++;
 #endif
@@ -830,18 +853,48 @@ D3DContext::SetRenderTarget(IDirect3DSurface9 *pSurface)
                 return res;
             }
 
-            if (!IsDepthStencilBufferOk(&descNew)) {
-                if (FAILED(res = InitDepthStencilBuffer(&descNew))) {
-                    SAFE_RELEASE(pCurrentTarget);
-                    return res;
+            currentSurface = pSurface;
+            SAFE_RELEASE(pCurrentTarget);
+        }
+
+        IDirect3DSurface9 *pCurrentDepth;
+        res = pd3dDevice->GetDepthStencilSurface(&pCurrentDepth);
+        if (res == D3DERR_NOTFOUND) {
+            pCurrentDepth = NULL;
+            res = D3D_OK;
+        } else if (FAILED(res)) {
+            return res;
+        }
+
+        if (!IsDepthStencilBufferOk(&descNew, *ppTargetDepthSurface)) {
+            *ppTargetDepthSurface = NULL;
+        }
+        bool depthIsNew = false;
+        if (depthBuffer && (*ppTargetDepthSurface) == NULL) {
+            if (FAILED(res = InitDepthStencilBuffer(&descNew, ppTargetDepthSurface))) {
+                DebugPrintD3DError(res, "D3DContext::SetRenderTarget: error creating new depth buffer");
+                return res;
+            }
+            depthIsNew = true;
+        }
+        if (pCurrentDepth != (*ppTargetDepthSurface)) {
+            res = pd3dDevice->SetDepthStencilSurface(*ppTargetDepthSurface);
+            SAFE_RELEASE(pCurrentDepth);
+            if ((*ppTargetDepthSurface) != NULL && depthIsNew) {
+                // Depth buffer must be cleared after it is created, also
+                // if depth buffer was not attached when render target was
+                // cleared, then the depth buffer will contain garbage
+                pd3dDevice->SetRenderState(D3DRS_ZWRITEENABLE, D3DZB_TRUE);
+                res = pd3dDevice->Clear(0, NULL, D3DCLEAR_ZBUFFER, NULL , 1.0f, 0x0L);
+                if (FAILED(res)) {
+                    DebugPrintD3DError(res,
+                            "D3DContext::SetRenderTarget: error clearing depth buffer");
                 }
             }
-            SAFE_RELEASE(pCurrentTarget);
-            // z-buffer will be cleared on setting of projview matrix
-        } else {
-            SAFE_RELEASE(pCurrentTarget);
-            return D3D_OK;
+        } else if (pCurrentTarget == pSurface) {
+            return res; // Render target has not changed
         }
+        pd3dDevice->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, msaa);
     }
     // NOTE PRISM: changed to only recalculate the matrix if current target is
     // different for now

@@ -123,6 +123,9 @@ do {                      \
         return (status);                   \
     } else do { } while (0)
 
+// d3d9 must be valid and tested
+int getMaxSampleSupport(IDirect3D9 *d3d9, UINT adapter);
+
 inline void logD3DSurfaceDesc(D3DSURFACE_DESC const & dsk) {
     RlsTrace5(NWT_TRACE_INFO, "w=%d, h=%d, Format = %d, Pool=%d, Usage=%d\n",
         dsk.Width, dsk.Height, dsk.Format, dsk.Pool, dsk.Usage);

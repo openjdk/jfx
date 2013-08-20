@@ -122,9 +122,9 @@ abstract class GLContext {
     private static native int nCompileShader(long nativeCtxInfo, String src,
             boolean vertex);
     private static native int nCreateDepthBuffer(long nativeCtxInfo, int width,
-            int height, int msaaSamples);
+            int height, int msaa);
     private static native int nCreateRenderBuffer(long nativeCtxInfo, int width,
-            int height, int msaaSamples);
+            int height, int msaa);
     private static native int nCreateFBO(long nativeCtxInfo, int texID);
     private static native int nCreateProgram(long nativeCtxInfo,
             int vertexShaderID, int[] fragmentShaderID,
@@ -235,7 +235,7 @@ abstract class GLContext {
     private static native void nSetPointLight(long nativeCtxInfo, long nativeMeshViewInfo,
             int index, float x, float y, float z, float r, float g, float b, float w);
     private static native void nRenderMeshView(long nativeCtxInfo, long nativeMeshViewInfo);
-    private static native int  nBlit(long nativeCtxInfo, int srcFBO, int dstFBO,
+    private static native void nBlit(long nativeCtxInfo, int srcFBO, int dstFBO,
             int srcX0, int srcY0, int srcX1, int srcY1,
             int dstX0, int dstY0, int dstX1, int dstY1);
 

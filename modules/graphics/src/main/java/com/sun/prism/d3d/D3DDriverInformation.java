@@ -39,6 +39,7 @@ class D3DDriverInformation {
     // driver version information
     public int product, version, subVersion, buildID;
     public int psVersionMajor, psVersionMinor;
+    public int maxSamples = 0;
 
     public String getDriverVersion() {
         return String.format("%d.%d.%d.%d", product, version, subVersion, buildID);

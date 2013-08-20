@@ -177,6 +177,21 @@ inline UINT align4(UINT x) {
     return (x+3) & ~3;
 }
 
+void D3DContext::stretchRect(IDirect3DSurface9* pSrcSurface,
+                               int srcX0, int srcY0, int srcX1, int srcY1,
+                               IDirect3DSurface9* pDstSurface,
+                               int dstX0, int dstY0, int dstX1, int dstY1)
+{
+    HRESULT res;
+    IDirect3DSurface9* pDst = (pDstSurface == NULL) ? currentSurface : pDstSurface;
+    RECT srcRect = {srcX0, srcY0, srcX1, srcY1};
+    RECT dstRect = {dstX0, dstY0, dstX1, dstY1};
+    res = pd3dDevice->StretchRect(pSrcSurface, &srcRect, pDst, &dstRect, D3DTEXF_NONE);
+    if (FAILED(res)) {
+        DebugPrintD3DError(res, "D3DContext::strechRect: error StretchRect");
+    }
+}
+
 HRESULT D3DContext::drawIndexedQuads(PrismSourceVertex const *pSrcFloats, BYTE const *pSrcColors, int numVerts) {
 
     // pVertexBufferRes and pVertexBuffer is never null
@@ -356,7 +371,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DContext_nSetBlendEnabled
  * Method:    nSetRenderTarget
  */
 JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DContext_nSetRenderTarget
-  (JNIEnv *, jclass, jlong ctx, jlong targetRes)
+  (JNIEnv *, jclass, jlong ctx, jlong targetRes, jboolean depthBuffer, jboolean msaa)
 {
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
     D3DResource *pRes = (D3DResource *)jlong_to_ptr(targetRes);
@@ -366,7 +381,11 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DContext_nSetRenderTarget
     IDirect3DSurface9 *pRenderTarget = pRes->GetSurface();
     RETURN_STATUS_IF_NULL(pRenderTarget, E_FAIL);
 
-    return pCtx->SetRenderTarget(pRenderTarget);
+    IDirect3DSurface9 *pDepthBuffer = pRes->GetDepthSurface();
+
+    HRESULT res = pCtx->SetRenderTarget(pRenderTarget, &pDepthBuffer, depthBuffer, msaa);
+    pRes->SetDepthSurface(pDepthBuffer);
+    return res;
 }
 
 /*

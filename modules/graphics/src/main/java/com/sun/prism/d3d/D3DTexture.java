@@ -53,23 +53,19 @@ class D3DTexture extends BaseTexture<D3DTextureResource>
                int physicalWidth, int physicalHeight,
                int contentWidth, int contentHeight, boolean isRTT)
     {
-        super(new D3DTextureResource(new D3DTextureData(context, pResource, isRTT,
-                                                        physicalWidth, physicalHeight,
-                                                        format)),
-              format, wrapMode,
-              physicalWidth, physicalHeight,
-              0, 0, contentWidth, contentHeight, physicalWidth, physicalHeight);
+        this(context, format, wrapMode, pResource, physicalWidth, physicalHeight,
+                0, 0, contentWidth, contentHeight, isRTT, 0);
     }
 
     D3DTexture(D3DContext context, PixelFormat format, WrapMode wrapMode,
                long pResource,
                int physicalWidth, int physicalHeight,
                int contentX, int contentY, int contentWidth, int contentHeight,
-               boolean isRTT)
+               boolean isRTT, int samples)
     {
         super(new D3DTextureResource(new D3DTextureData(context, pResource, isRTT,
                                                         physicalWidth, physicalHeight,
-                                                        format)),
+                                                        format, samples)),
               format, wrapMode,
               physicalWidth, physicalHeight,
               contentX, contentY, contentWidth, contentHeight, 
