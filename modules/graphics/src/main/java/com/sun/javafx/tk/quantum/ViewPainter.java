@@ -54,6 +54,7 @@ import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
 
 abstract class ViewPainter implements Runnable {
     private static final NodePath<NGNode> NODE_PATH = new NodePath<>();
+    private static final NodePath<NGNode> EMPTY_NODE_PATH = new NodePath<>();
 
     /*
      * This could be a per-scene lock but there is no guarantee that the
@@ -68,7 +69,7 @@ abstract class ViewPainter implements Runnable {
     protected int penHeight = -1;
     protected int viewWidth;
     protected int viewHeight;
-    
+
     protected final SceneState sceneState;
 
     protected Presentable presentable;
@@ -107,7 +108,7 @@ abstract class ViewPainter implements Runnable {
             dirtyRegionContainer = dirtyRegionPool.checkOut();
         }
     }
-        
+
     protected void setRoot(NGNode node) {
         root = node;
     }
@@ -188,7 +189,7 @@ abstract class ViewPainter implements Runnable {
 
                     // Disable occlusion culling if depth buffer is enabled for the scene.
                     if (sceneState.getScene().getDepthBuffer()) {
-                        doPaint(g, null);
+                        doPaint(g, EMPTY_NODE_PATH);
                     } else {
                         doPaint(g, root.getRenderRoot(NODE_PATH, dirtyRegion, i, tx, projTx));
                         NODE_PATH.clear();
@@ -198,7 +199,7 @@ abstract class ViewPainter implements Runnable {
         } else {
             g.setHasPreCullingBits(false);
             g.setClipRect(null);
-            this.doPaint(g, null);
+            this.doPaint(g, EMPTY_NODE_PATH);
         }
 
         if (PrismSettings.showDirtyRegions) {
@@ -265,8 +266,8 @@ abstract class ViewPainter implements Runnable {
 
     protected boolean validateStageGraphics() {
         if (!sceneState.isValid()) {
-            // indicates something happened between the scheduling of the 
-            // job and the running of this job. 
+            // indicates something happened between the scheduling of the
+            // job and the running of this job.
             return false;
         }
 
@@ -275,10 +276,16 @@ abstract class ViewPainter implements Runnable {
 
         return sceneState.isWindowVisible() && !sceneState.isWindowMinimized();
     }
-    
+
     private void doPaint(Graphics g, NodePath<NGNode> renderRootPath) {
         if (PrismSettings.showDirtyRegions) {
             g.setClipRect(null);
+        }
+        if (renderRootPath == null) {
+            // null render path indicates that no rendering is needed.
+            // There may be occluded dirty Nodes however, so we need to clear them
+            root.clearDirtyTree();
+            return;
         }
         long start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
         try {
@@ -307,5 +314,5 @@ abstract class ViewPainter implements Runnable {
             }
         }
     }
-    
+
 }

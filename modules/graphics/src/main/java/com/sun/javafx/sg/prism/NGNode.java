@@ -242,10 +242,10 @@ public abstract class NGNode {
      */
     protected int cullingBits = 0x0;
 
-    static final int CULLING_REGION_INTERSECTS_CLIP = 0x1;
-    static final int CULLING_REGION_CONTAINS_CLIP = 0x2;
-    static final int CULLING_REGION_CONTAINS_OR_INTERSECTS_CLIP =
-            CULLING_REGION_INTERSECTS_CLIP | CULLING_REGION_CONTAINS_CLIP;
+    static final int DIRTY_REGION_INTERSECTS_NODE_BOUNDS = 0x1;
+    static final int DIRTY_REGION_CONTAINS_NODE_BOUNDS = 0x2;
+    static final int DIRTY_REGION_CONTAINS_OR_INTERSECTS_NODE_BOUNDS =
+            DIRTY_REGION_INTERSECTS_NODE_BOUNDS | DIRTY_REGION_CONTAINS_NODE_BOUNDS;
 
     private RectBounds opaqueRegion = null;
     private boolean opaqueRegionInvalid = true;
@@ -1154,11 +1154,6 @@ public abstract class NGNode {
      * scene coordinates. The specified tx can be used to convert local bounds
      * to scene bounds (it includes everything up to but not including my own
      * transform).
-     *
-     * @param dirtyRegionTemp A temporary RectBounds that this method can use for scratch.
-     *                        In the case that no perspective transform occurs, it is best if
-     *                        the returned BaseBounds is this instance.
-     * @param tx Any transform that needs to be applied
      * @param pvTx must not be null, it's the perspective transform of the current
      *        perspective camera or identity transform if parallel camera is used.
      */
@@ -1245,9 +1240,9 @@ public abstract class NGNode {
         int b = 0;
         if (region != null && !region.isEmpty()) {
             if (region.intersects(bounds)) {
-                b = CULLING_REGION_INTERSECTS_CLIP;
+                b = DIRTY_REGION_INTERSECTS_NODE_BOUNDS;
                 if (region.contains(bounds)) {
-                    b = CULLING_REGION_CONTAINS_CLIP;
+                    b = DIRTY_REGION_CONTAINS_NODE_BOUNDS;
                 }
                 cullingBits = cullingBits |  (b << (2 * regionIndex));
             }
@@ -1337,6 +1332,27 @@ public abstract class NGNode {
      * Identifying render roots                                                *
      *                                                                         *
      **************************************************************************/
+    protected static enum RenderRootResult {
+        /**
+         * The computation to determine whether a branch of the scene graph has
+         * a render root has concluded that indeed, there is one.
+         */
+        HAS_RENDER_ROOT,
+        /**
+         * A RenderRootResult of this value means that although we discovered a
+         * render root, we also determined that there were no dirty nodes that
+         * followed the render root. Therefore, we don't actually have to render
+         * anything (the only dirty nodes are completely occluded by clean
+         * nodes).
+         */
+        EXISTS_BUT_NOT_DIRTY,
+        /**
+         * Represents the case where we did not find an opaque node that covered
+         * the dirty region, and thus we must start rendering from the actual
+         * root of the hierarchy.
+         */
+        NONE
+    }
 
     /**
      * Called <strong>after</strong> preCullingBits in order to get the node
@@ -1344,19 +1360,23 @@ public abstract class NGNode {
      * This should only be called on the root node.
      *
      * @param path node path to store the node path
-     * @return new node path (preferably == path) with first node being a child of this node. Null if renderRoot == this.
+     * @return NodePath from path parameter with the first node being a child of this node.
+     * If not render root was found, the returned NodePath will be empty.
+     * If no rendering is needed (everything dirty is occluded), null is returned.
      */
     public final NodePath<NGNode> getRenderRoot(NodePath<NGNode> path, RectBounds dirtyRegion, int cullingIndex, BaseTransform tx,
-                                      GeneralTransform3D pvTx) {
+             GeneralTransform3D pvTx) {
         // The occlusion culling support depends on dirty opts being enabled
         if (PrismSettings.occlusionCullingEnabled) {
-            NodePath<NGNode> rootPath = computeRenderRoot(path, dirtyRegion, cullingIndex, tx, pvTx);
-            if (rootPath != null) {
-                rootPath.removeRoot();
-                return rootPath.size() != 0 ? rootPath : null;
+            RenderRootResult result = computeRenderRoot(path, dirtyRegion, cullingIndex, tx, pvTx);
+            if (result == RenderRootResult.EXISTS_BUT_NOT_DIRTY) {
+                return null;
+            }
+            if (result == RenderRootResult.HAS_RENDER_ROOT) {
+                path.removeRoot();
             }
         }
-        return null;
+        return path;
     }
 
     /**
@@ -1369,7 +1389,7 @@ public abstract class NGNode {
      * @param pvTx current perspective transform
      * @return New rendering root or null if no such node exists in this subtree
      */
-    protected NodePath<NGNode> computeRenderRoot(NodePath<NGNode> path, RectBounds dirtyRegion, int cullingIndex, BaseTransform tx,
+    protected RenderRootResult computeRenderRoot(NodePath<NGNode> path, RectBounds dirtyRegion, int cullingIndex, BaseTransform tx,
                                        GeneralTransform3D pvTx) {
         return computeNodeRenderRoot(path, dirtyRegion, cullingIndex, tx, pvTx);
     }
@@ -1412,27 +1432,25 @@ public abstract class NGNode {
      * @param pvTx current perspective transform
      * @return this node if this node's opaque region covers the specified dirty region. Null otherwise.
      */
-    protected final NodePath<NGNode> computeNodeRenderRoot(NodePath<NGNode> path, RectBounds dirtyRegion, int cullingIndex, BaseTransform tx,
+    protected final RenderRootResult computeNodeRenderRoot(NodePath<NGNode> path, RectBounds dirtyRegion, int cullingIndex, BaseTransform tx,
                                        GeneralTransform3D pvTx) {
 
         // Nodes outside of the dirty region can be excluded immediately.
         // This can be used only if the culling information is provided.
         if (cullingIndex != -1) {
             final int bits = cullingBits >> (cullingIndex * 2);
-            if ((bits & CULLING_REGION_CONTAINS_OR_INTERSECTS_CLIP) == 0x00) {
-                return null;
+            if ((bits & DIRTY_REGION_CONTAINS_OR_INTERSECTS_NODE_BOUNDS) == 0x00) {
+                return RenderRootResult.NONE;
             }
         }
 
         if (!isVisible()) {
-            return null;
+            return RenderRootResult.NONE;
         }
 
-        // Walk down the tree to the very end. Then working our way back up to
-        // the top of the tree, look for the first node which which marked as
-        // dirty opts 01, and then return it.
+
         final RectBounds opaqueRegion = getOpaqueRegion();
-        if (opaqueRegion == null) return null;
+        if (opaqueRegion == null) return RenderRootResult.NONE;
 
         final BaseTransform localToParentTx = getTransform();
 
@@ -1440,11 +1458,16 @@ public abstract class NGNode {
 
         // Now check if the dirty region is fully contained in our opaque region.
         if (checkBoundsInQuad(opaqueRegion, dirtyRegion, localToSceneTx, pvTx)) {
+            // We have the potential render root, now check if it needs to be rendered
+            if (dirty != DirtyFlag.CLEAN) {
                 path.add(this);
-                return path;
+                return RenderRootResult.HAS_RENDER_ROOT;
+            } else {
+                return RenderRootResult.EXISTS_BUT_NOT_DIRTY;
+            }
         }
 
-        return null;
+        return RenderRootResult.NONE;
     }
 
     protected static boolean checkBoundsInQuad(RectBounds untransformedQuad,
@@ -1550,11 +1573,11 @@ public abstract class NGNode {
             if (g.hasPreCullingBits()) {
                 //preculling bits available
                 final int bits = cullingBits >> (g.getClipRectIndex() * 2);
-                if ((bits & CULLING_REGION_CONTAINS_OR_INTERSECTS_CLIP) == 0) {
+                if ((bits & DIRTY_REGION_CONTAINS_OR_INTERSECTS_NODE_BOUNDS) == 0) {
                     // If no culling bits are set for this region, this group
                     // does not intersect (nor is covered by) the region
                     return;
-                } else if ((bits & CULLING_REGION_CONTAINS_CLIP) != 0) {
+                } else if ((bits & DIRTY_REGION_CONTAINS_NODE_BOUNDS) != 0) {
                     // When this group is fully covered by the region,
                     // turn off the culling checks in the subtree, as everything
                     // gets rendered
