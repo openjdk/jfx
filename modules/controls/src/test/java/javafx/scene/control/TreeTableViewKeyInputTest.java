@@ -2308,7 +2308,7 @@ public class TreeTableViewKeyInputTest {
         assertTrue(debug(), fm.isFocused(13));
     }
     
-    @Test public void test_rt29930() {
+    @Ignore @Test public void test_rt29930() {
         sm.setCellSelectionEnabled(false);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         

@@ -1786,7 +1786,7 @@ public class TableViewKeyInputTest {
         assertTrue(isSelected(5,6,7,8,9));
     }
     
-    @Test public void test_rt29930() {
+    @Ignore @Test public void test_rt29930() {
         sm.setCellSelectionEnabled(false);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         

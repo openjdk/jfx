@@ -38,6 +38,7 @@ import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -1069,7 +1070,7 @@ public class ListViewKeyInputTest {
         assertEquals("Apple", listView.getFocusModel().getFocusedItem());
     }
     
-    @Test public void test_rt29930() {
+    @Ignore @Test public void test_rt29930() {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         
         sm.clearAndSelect(0);

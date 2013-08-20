@@ -1269,7 +1269,7 @@ public class TreeViewKeyInputTest {
         assertEquals(root, treeView.getFocusModel().getFocusedItem());
     }
     
-    @Test public void test_rt29930() {
+    @Ignore @Test public void test_rt29930() {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         
         sm.clearAndSelect(0);
