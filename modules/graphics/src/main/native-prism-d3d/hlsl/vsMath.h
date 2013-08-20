@@ -74,7 +74,7 @@ void calcLocalBump(float4 ipos, float4 iTn, in float4x3 mW, out LocalBumpOut r) 
 
     for (int k=0; k<LocalBump::nLights; ++k) {
         float3 L = sLights[k].pos.xyz - pos;
-        r.lBump.lights[k] = float4( getLocalVector(L, n)*sLights[k].pos.w, 1);
+        r.lBump.lights[k] = float4(getLocalVector(L, n), 1);
     }
 
     r.pos  = mul(float4(pos,1), mViewProj);

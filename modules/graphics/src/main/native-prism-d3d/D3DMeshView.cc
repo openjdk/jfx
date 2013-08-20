@@ -146,7 +146,7 @@ void D3DMeshView::render() {
     sortLights();
     // We only support up to 3 point lights at the present
     for (int i = 0; i < 3; i++) {
-            status = SUCCEEDED(device->SetVertexShaderConstantF(VSR_LIGHTS + i*2, lights[lightsOrder[i]].position, 2));
+            status = SUCCEEDED(device->SetVertexShaderConstantF(VSR_LIGHTS + i*2, lights[lightsOrder[i]].position, 1));
     }
 
     status = SUCCEEDED(device->SetVertexShaderConstantF(VSR_AMBIENTCOLOR, ambientLightColor, 1));
