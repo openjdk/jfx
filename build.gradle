@@ -2122,8 +2122,7 @@ project(":web") {
                 commandLine("perl", "Tools/Scripts/set-webkit-configuration", "--$CONF")
                 environment(["WEBKITOUTPUTDIR" : webkitOutputDir])
             }
-            ant.unzip(src:  configurations.webkit.files.iterator().next(),
-                      dest: "src/main/native/WebKitBuild")
+
             exec {
                 workingDir("$projectDir/src/main/native")
                 if (t.name == "win") {
