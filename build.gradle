@@ -2040,6 +2040,7 @@ project(":web") {
     }
     dependencies {
         compile project(":base"), project(":graphics"), project(":controls")
+        testCompile files("../../../artifacts/sdk/rt/lib/ext/jfxrt.jar")
     }
     
     compileJava.enabled = COMPILE_WEBKIT
@@ -2048,15 +2049,6 @@ project(":web") {
         compileJava.classpath += files(
                 "../media/build/classes/main",
                 "$jfxTopDir/media/jfxmedia/dist/jfxmedia.jar")
-    }
-    
-    test {
-        classpath += files("../../../artifacts/sdk/rt/lib/ext/jfxrt.jar")
-        doFirst {
-            classpath.each { p ->
-                print "Test CLASSPATH: ${p.getPath()}\n"
-            }
-        }
     }
     
     task generateHeaders(dependsOn: compileJava) {
