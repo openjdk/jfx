@@ -36,6 +36,8 @@ import javafx.stage.Stage;
 import com.sun.javafx.pgstub.StubScene;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.tk.Toolkit;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -750,5 +752,21 @@ public class SceneTest {
         } catch (IllegalArgumentException e) {
             fail("It didn't allow to 'share' camera with myslef");
         }
+    }
+
+    @Test
+    public void scenePropertyListenerShouldBeCalledForInitializedScene() {
+        final Group root = new Group();
+        final Rectangle rect = new Rectangle();
+        root.getChildren().add(rect);
+
+        root.sceneProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable o) {
+                root.getChildren().remove(rect);
+            }
+        });
+
+        Scene scene = new Scene(root, 600, 450);
+        // if there is no exception, the test passed
     }
 }
