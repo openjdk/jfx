@@ -219,13 +219,18 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_d3d_D3DContext_nBuildNativeGeometr
     UINT indexBufferSize = env->GetArrayLength(ib);
     USHORT *indexBuffer = (USHORT *) (env->GetPrimitiveArrayCritical(ib, NULL));
 
-    if (vertexBuffer == NULL || indexBuffer == NULL
-            || vbSize < 0 || vbSize > vertexBufferSize
-            || ibSize < 0 || ibSize > indexBufferSize) {
+    if (vbSize < 0 || ibSize < 0) {
         return JNI_FALSE;
     }
 
-    boolean result = mesh->buildBuffers(vertexBuffer, vbSize, indexBuffer, ibSize);
+    UINT uvbSize = (UINT) vbSize;
+    UINT uibSize = (UINT) ibSize;
+    if (vertexBuffer == NULL || indexBuffer == NULL
+            || uvbSize > vertexBufferSize || uibSize > indexBufferSize) {
+        return JNI_FALSE;
+    }
+
+    boolean result = mesh->buildBuffers(vertexBuffer, uvbSize, indexBuffer, uibSize);
     env->ReleasePrimitiveArrayCritical(ib, indexBuffer, 0);
     env->ReleasePrimitiveArrayCritical(vb, vertexBuffer, 0);
 
@@ -248,13 +253,18 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_d3d_D3DContext_nBuildNativeGeometr
     UINT indexBufferSize = env->GetArrayLength(ib);
     UINT *indexBuffer = (UINT *) (env->GetPrimitiveArrayCritical(ib, NULL));
 
-    if (vertexBuffer == NULL || indexBuffer == NULL
-            || vbSize < 0 || vbSize > vertexBufferSize
-            || ibSize < 0 || ibSize > indexBufferSize) {
+    if (vbSize < 0 || ibSize < 0) {
         return JNI_FALSE;
     }
 
-    boolean result = mesh->buildBuffers(vertexBuffer, vbSize, indexBuffer, ibSize);
+    UINT uvbSize = (UINT) vbSize;
+    UINT uibSize = (UINT) ibSize;
+    if (vertexBuffer == NULL || indexBuffer == NULL
+            || uvbSize > vertexBufferSize || uibSize > indexBufferSize) {
+        return JNI_FALSE;
+    }
+
+    boolean result = mesh->buildBuffers(vertexBuffer, uvbSize, indexBuffer, uibSize);
     env->ReleasePrimitiveArrayCritical(ib, indexBuffer, 0);
     env->ReleasePrimitiveArrayCritical(vb, vertexBuffer, 0);
 

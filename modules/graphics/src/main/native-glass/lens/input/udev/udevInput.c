@@ -103,9 +103,14 @@ typedef enum _LensInputTouchActionState {
     /* Press - crossed the tapping radius */
     TOUCH_DRAGGING,
     /* Release pending */
-    TOUCH_RELEASING
+    TOUCH_RELEASING,
+    /* Multiple current touch points */
+    TOUCH_MULTI
 } LensInputTouchActionState;
 
+// The maximum number of touch points that can be handled. If events with more
+// touch points are received, some points will be dropped.
+#define LENS_MAX_TOUCH_POINTS 20
 
 typedef struct _LensInputMouseState {
     /* device state */
@@ -114,6 +119,19 @@ typedef struct _LensInputMouseState {
     int                     rel[REL_MAX + 1];
     int                     abs[ABS_MAX + 1];
     int                     prevabs[ABS_MAX + 1];
+
+    /* multitouch points */
+    int                     nextTouchID; // ID used for the next new touch point
+    /* existing touch points that have already been sent up to Glass */
+    int                     touchPointCount;
+    int                     touchIDs[LENS_MAX_TOUCH_POINTS];
+    int                     touchXs[LENS_MAX_TOUCH_POINTS];
+    int                     touchYs[LENS_MAX_TOUCH_POINTS];
+    /* new touch points that have not yet been sent up to Glass */
+    int                     pendingTouchPointCount;
+    int                     pendingTouchIDs[LENS_MAX_TOUCH_POINTS];
+    int                     pendingTouchXs[LENS_MAX_TOUCH_POINTS];
+    int                     pendingTouchYs[LENS_MAX_TOUCH_POINTS];
 
     /* pending input events that have not yet been reported to the upper stack */
     struct input_event      *pendingInputEvents;
@@ -1256,7 +1274,15 @@ static void lens_input_pointerEvents_handleEvent(LensInputDevice *device,
 
     switch (event->type) {
         case EV_SYN:
-            lens_input_pointerEvents_handleSync(device);
+            if (event->code == SYN_REPORT) {
+                // this event is complete
+                lens_input_pointerEvents_handleSync(device);
+            } else {
+                // this EV_SYN event is a delimiter within the event, such as
+                // SYN_MT_REPORT
+                lens_input_pointerEvents_enqueuePendingEvent(
+                    (LensInputMouseState *)device->state, event);
+            }
             break;
         case EV_KEY:
         case EV_REL:
@@ -1306,6 +1332,14 @@ static void lens_input_pointerEvents_handleAbsMotion(LensInputDevice *device,
             break;
         case ABS_Y:
             newMousePosY = (int) roundf(scalar * screenHeight);
+            break;
+        case ABS_MT_POSITION_X:
+            mouseState->pendingTouchXs[mouseState->pendingTouchPointCount] =
+                    (int) roundf(scalar * screenWidth);
+            break;
+        case ABS_MT_POSITION_Y:
+            mouseState->pendingTouchYs[mouseState->pendingTouchPointCount] =
+                    (int) roundf(scalar * screenHeight);
             break;
     }
     GLASS_LOG_FINER("Pointer absolute axis 0x%02x is now %i, pointer at %i,%i",
@@ -1358,6 +1392,7 @@ static void lens_input_pointerEvents_handleKeyEvent(LensInputDevice *device,
         //tap event
         jint eventType = (isPressed) ? com_sun_glass_events_TouchEvent_TOUCH_PRESSED
                          : com_sun_glass_events_TouchEvent_TOUCH_RELEASED;
+        jlong id = TOUCH_SCREEN_ID;
 
         GLASS_LOG_FINE("Notify touch event on screen id %i - tap %s fx event code %i at %i,%i",
                        TOUCH_SCREEN_ID,
@@ -1365,8 +1400,8 @@ static void lens_input_pointerEvents_handleKeyEvent(LensInputDevice *device,
                        eventType,
                        mousePosX, mousePosY);
 
-        lens_wm_notifyTouchEvent(gJNIEnv, eventType,
-                                 TOUCH_SCREEN_ID, mousePosX, mousePosY);
+        lens_wm_notifyMultiTouchEvent(gJNIEnv, 1, &eventType, &id,
+                                      &mousePosX, &mousePosY);
     }
 
     int button = lens_input_convertButtonToFXButtonCode(pointerEvent->code);
@@ -1395,6 +1430,7 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
     LensInputMouseState *mouseState = device->state;
     int keyEventIndex = -1;
     jboolean reportMove = JNI_FALSE;
+    mouseState->pendingTouchPointCount = 0;
 
     //Pass on the events of this sync
     for (i = 0; i < mouseState->pendingInputEventCount; i++) {
@@ -1412,82 +1448,258 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
                 lens_input_pointerEvents_handleAbsMotion(device, pointerEvent);
                 reportMove = JNI_TRUE;
                 break;
+            case EV_SYN:
+                if (pointerEvent->code == SYN_MT_REPORT) {
+                    if (mouseState->pendingTouchPointCount < LENS_MAX_TOUCH_POINTS) {
+                        mouseState->pendingTouchPointCount ++;
+                    } else {
+                        // We are past how many touch points we expect to be
+                        // reported. For n touch points, where n >
+                        // LENS_MAX_TOUCH_POINTS, drop the points from
+                        // LENS_MAX_TOUCH_POINTS to (n-1). For example, if we
+                        // get 30 touch points and can only support 20, record
+                        // only points 1-19 and point 30. This is arbitrary,
+                        // just because it is easy to code.  We could do
+                        // something different here.
+                    }
+                }
+                break;
             default:
                 // The queue should not hold other event
                 assert(0);
         }
     }
 
-
-    //Update new current position
-    mousePosX = newMousePosX;
-    mousePosY = newMousePosY;
-
-    GLASS_LOG_FINEST("device %p x %d y %d reportMove %d keyEventIndex: %d\n",
-                     device, mousePosX, mousePosY, reportMove, keyEventIndex);
-
-    if (keyEventIndex >= 0) {
-        //Press or release event
-        if (mouseState->pendingInputEvents[keyEventIndex].value == 1) {
-            // press
-            jboolean sendEvent = JNI_TRUE;
-            if (device->isTouch) {
-                if (mouseState->touchState == TOUCH_DEFAULT) {
-                    //normal first stage
-                    mouseState->touchState = TOUCH_TAPPING;
-                    mouseState->pressedX = mousePosX;
-                    mouseState->pressedY = mousePosY;
-
-                } else if (mouseState->touchState == TOUCH_RELEASING) {
-                    //cancels the release
-                    lens_input_eventLoop_triggerTimeout(device, 0, NULL);
-                    mouseState->touchState = TOUCH_TAPPING;
-                    sendEvent = JNI_FALSE;
+    if (mouseState->pendingTouchPointCount > 0) {
+        // assign IDs to touch points
+        if (mouseState->touchPointCount == 0) {
+            // no pre-existing touch points, so assign any IDs
+            mouseState->nextTouchID = 1;
+            for (i = 0; i < mouseState->pendingTouchPointCount; i++) {
+                mouseState->pendingTouchIDs[i] = mouseState->nextTouchID++;
+            }
+        } else if (mouseState->pendingTouchPointCount >= mouseState->touchPointCount) {
+            // For each existing touch point, find the closest pending touch
+            // point.
+            // mapped indices contains 0 for every unmapped pending touch point
+            // index  and 1 for every pending touch point index that has
+            // already been mapped to an existing touch point.
+            int mappedIndices[LENS_MAX_TOUCH_POINTS];
+            memset(mappedIndices, 0, sizeof(mappedIndices));
+            int mappedIndexCount = 0;
+            for (i = 0; i < mouseState->touchPointCount; i++) {
+                int x = mouseState->touchXs[i];
+                int y = mouseState->touchYs[i];
+                int j;
+                int closestDistanceSquared = INT_MAX;
+                int mappedIndex = -1;
+                for (j = 0; j < mouseState->pendingTouchPointCount; j++) {
+                    if (mappedIndices[j] == 0) {
+                        int distanceX = x - mouseState->pendingTouchXs[j];
+                        int distanceY = y - mouseState->pendingTouchYs[j];
+                        int distanceSquared = distanceX * distanceX + distanceY * distanceY;
+                        if (distanceSquared < closestDistanceSquared) {
+                            mappedIndex = j;
+                            closestDistanceSquared = distanceSquared;
+                        }
+                    }
+                }
+                assert(mappedIndex >= 0);
+                mouseState->pendingTouchIDs[mappedIndex] = mouseState->touchIDs[i];
+                mappedIndexCount ++;
+                mappedIndices[mappedIndex] = 1;
+            }
+            if (mappedIndexCount < mouseState->pendingTouchPointCount) {
+                for (i = 0; i < mouseState->pendingTouchPointCount; i++) {
+                    if (mappedIndices[i] == 0) {
+                        mouseState->pendingTouchIDs[i] = mouseState->nextTouchID++;
+                    }
                 }
             }
-
-            if (sendEvent) {
-                lens_input_pointerEvents_handleKeyEvent(device,
-                                                        &mouseState->pendingInputEvents[keyEventIndex]);
-            }
-
         } else {
-            //release
-            if (!device->isTouch ||
-                    (device->isTouch && mouseState->touchState == TOUCH_DRAGGING)) {
-                mouseState->touchState = TOUCH_DEFAULT;
-                lens_input_pointerEvents_handleKeyEvent(device,
-                                                        &mouseState->pendingInputEvents[keyEventIndex]);
-            }
-
-            if (device->isTouch && mouseState->touchState == TOUCH_TAPPING) {
-                mouseState->touchState = TOUCH_RELEASING;
-                mouseState->releaseEvent = mouseState->pendingInputEvents[keyEventIndex];
-                if (gTapReleasePendingTimeout > 0) {
-                    lens_input_eventLoop_triggerTimeout(device, gTapReleasePendingTimeout, lens_input_pointerEvents_handleTimeout);
-                } else {
-                    //Calling the timeout function since it sends the recorded 
-                    //press coordinates which is needed in case we filtered few 
-                    //moves.
-                    lens_input_pointerEvents_handleTimeout(device);
+            // There are more existing touch points than pending touch points.
+            // For each pending touch point, find the closest existing touch
+            // point.
+            // mappedIndices contains 0 for every unmapped pre-existing touch
+            // index and 1 for every pre-existing touch index that has already
+            // been mapped to a pending touch point
+            int mappedIndices[LENS_MAX_TOUCH_POINTS];
+            memset(mappedIndices, 0, sizeof(mappedIndices));
+            int mappedIndexCount = 0;
+            for (i = 0; i < mouseState->pendingTouchPointCount
+                    && mappedIndexCount < mouseState->touchPointCount; i++) {
+                int x = mouseState->pendingTouchXs[i];
+                int y = mouseState->pendingTouchYs[i];
+                int j;
+                int closestDistanceSquared = INT_MAX;
+                int mappedIndex = -1;
+                for (j = 0; j < mouseState->touchPointCount; j++) {
+                    if (mappedIndices[j] == 0) {
+                        int distanceX = x - mouseState->touchXs[j];
+                        int distanceY = y - mouseState->touchYs[j];
+                        int distanceSquared = distanceX * distanceX + distanceY * distanceY;
+                        if (distanceSquared < closestDistanceSquared) {
+                            mappedIndex = j;
+                            closestDistanceSquared = distanceSquared;
+                        }
+                    }
                 }
+                assert(mappedIndex >= 0);
+                mouseState->pendingTouchIDs[i] = mouseState->touchIDs[mappedIndex];
+                mappedIndexCount ++;
+                mappedIndices[mappedIndex] = 1;
             }
+        }
+        mousePosX = mouseState->pendingTouchXs[0];
+        mousePosY = mouseState->pendingTouchYs[0];
+    } else {
+        mousePosX = newMousePosX;
+        mousePosY = newMousePosY;
+    }
+
+    // Process state changes to TOUCH_MULTI from other states. The transition
+    // out of TOUCH_MULTI is done as part of touch releases.
+    if (mouseState->pendingTouchPointCount > 1) {
+        switch (mouseState->touchState) {
+            case TOUCH_DEFAULT:
+            case TOUCH_TAPPING:
+            case TOUCH_DRAGGING:
+                mouseState->touchState = TOUCH_MULTI;
+                break;
+            case TOUCH_RELEASING:
+                // cancel timeout
+                lens_input_eventLoop_triggerTimeout(device, 0, NULL);
+                mouseState->touchState = TOUCH_MULTI;
+                break;
+            case TOUCH_MULTI:
+                // no change needed
+                break;
         }
     }
 
-    if (reportMove) {
+    if (mouseState->touchState == TOUCH_MULTI) {
+        jint count = 0;
+        jint states[LENS_MAX_TOUCH_POINTS];
+        jlong ids[LENS_MAX_TOUCH_POINTS];
+        int xs[LENS_MAX_TOUCH_POINTS];
+        int ys[LENS_MAX_TOUCH_POINTS];
+        // Process STATIONARY, MOVE and RELEASED TouchPoints
+        for (i = 0; i < mouseState->touchPointCount; i++) {
+            int j;
+            jlong id = mouseState->touchIDs[i];
+            jboolean matched = JNI_FALSE;
+            ids[count] = id;
+            for (j = 0; j < mouseState->pendingTouchPointCount && !matched; j++) {
+                if (mouseState->pendingTouchIDs[j] == id) {
+                    xs[count] = mouseState->pendingTouchXs[j];
+                    ys[count] = mouseState->pendingTouchYs[j];
+                    int x = mouseState->touchXs[i];
+                    int y = mouseState->touchYs[i];
+                    if (xs[count] == x && ys[count] == y) {
+                        states[count] = com_sun_glass_events_TouchEvent_TOUCH_STILL;
+                    } else {
+                        states[count] = com_sun_glass_events_TouchEvent_TOUCH_MOVED;
+                    }
+                    matched = JNI_TRUE;
+                }
+            }
+            if (!matched) {
+                states[count] = com_sun_glass_events_TouchEvent_TOUCH_RELEASED;
+                xs[count] = mouseState->touchXs[j];
+                ys[count] = mouseState->touchYs[j];
+            }
+            count ++;
+        }
+        // Process PRESSED TouchPoints
+        for (i = 0; i < mouseState->pendingTouchPointCount; i++) {
+            int j;
+            jlong id = mouseState->pendingTouchIDs[i];
+            jboolean matched = JNI_FALSE;
+            for (j = 0; j < mouseState->touchPointCount && !matched; j++) {
+                if (mouseState->touchIDs[j] == id) {
+                    matched = JNI_TRUE;
+                    break;
+                }
+            }
+            if (!matched) {
+                ids[count] = id;
+                xs[count] = mouseState->pendingTouchXs[i];
+                ys[count] = mouseState->pendingTouchYs[i];
+                states[count] = com_sun_glass_events_TouchEvent_TOUCH_PRESSED;
+                count ++;
+            }
+        }
+        lens_wm_notifyMultiTouchEvent(gJNIEnv, count, states, ids, xs, ys);
+        if (mouseState->pendingTouchPointCount == 0) {
+            mouseState->touchState = TOUCH_DEFAULT;
+        }
+    } else {
+        GLASS_LOG_FINEST("device %p x %d y %d reportMove %d keyEventIndex: %d\n",
+                         device, mousePosX, mousePosY, reportMove, keyEventIndex);
 
-        if (device->isTouch && mouseState->touchState == TOUCH_TAPPING) {
-            int dX = mousePosX - mouseState->pressedX;
-            int dY = mousePosY - mouseState->pressedY;
-            if (dX * dX + dY * dY >= gTapRadius * gTapRadius) {
-                mouseState->touchState = TOUCH_DRAGGING;
+        if (keyEventIndex >= 0) {
+            //Press or release event
+            if (mouseState->pendingInputEvents[keyEventIndex].value == 1) {
+                // press
+                jboolean sendEvent = JNI_TRUE;
+                if (device->isTouch) {
+                    if (mouseState->touchState == TOUCH_DEFAULT) {
+                        //normal first stage
+                        mouseState->touchState = TOUCH_TAPPING;
+                        mouseState->pressedX = mousePosX;
+                        mouseState->pressedY = mousePosY;
+
+                    } else if (mouseState->touchState == TOUCH_RELEASING) {
+                        //cancels the release
+                        lens_input_eventLoop_triggerTimeout(device, 0, NULL);
+                        mouseState->touchState = TOUCH_TAPPING;
+                        sendEvent = JNI_FALSE;
+                    }
+                }
+
+                if (sendEvent) {
+                    lens_input_pointerEvents_handleKeyEvent(device,
+                                                            &mouseState->pendingInputEvents[keyEventIndex]);
+                }
+
+            } else {
+                //release
+                if (!device->isTouch ||
+                        (device->isTouch && mouseState->touchState == TOUCH_DRAGGING)) {
+                    mouseState->touchState = TOUCH_DEFAULT;
+                    lens_input_pointerEvents_handleKeyEvent(device,
+                                                            &mouseState->pendingInputEvents[keyEventIndex]);
+                }
+
+                if (device->isTouch && mouseState->touchState == TOUCH_TAPPING) {
+                    mouseState->touchState = TOUCH_RELEASING;
+                    mouseState->releaseEvent = mouseState->pendingInputEvents[keyEventIndex];
+                    if (gTapReleasePendingTimeout > 0) {
+                        lens_input_eventLoop_triggerTimeout(device, gTapReleasePendingTimeout, lens_input_pointerEvents_handleTimeout);
+                    } else {
+                        //Calling the timeout function since it sends the recorded 
+                        //press coordinates which is needed in case we filtered few 
+                        //moves.
+                        lens_input_pointerEvents_handleTimeout(device);
+                    }
+                }
             }
         }
 
-        if (!device->isTouch ||
-                (device->isTouch && mouseState->touchState == TOUCH_DRAGGING)) {
-            lens_wm_notifyMotionEvent(gJNIEnv, mousePosX, mousePosY, device->isTouch, 1);
+        if (reportMove) {
+
+            if (device->isTouch && mouseState->touchState == TOUCH_TAPPING) {
+                int dX = mousePosX - mouseState->pressedX;
+                int dY = mousePosY - mouseState->pressedY;
+                if (dX * dX + dY * dY >= gTapRadius * gTapRadius) {
+                    mouseState->touchState = TOUCH_DRAGGING;
+                }
+            }
+
+            if (!device->isTouch ||
+                    (device->isTouch && mouseState->touchState == TOUCH_DRAGGING)) {
+                lens_wm_notifyMotionEvent(gJNIEnv, mousePosX, mousePosY, device->isTouch, 1);
+            }
         }
     }
 
@@ -1503,6 +1715,17 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
 
     mouseState->pendingInputEventCount = 0;
 
+    // recording pending touch points as existing touch points
+    mouseState->touchPointCount = mouseState->pendingTouchPointCount;
+    GLASS_LOG_FINEST("%i touch points", mouseState->touchPointCount);
+    for (i = 0; i < mouseState->pendingTouchPointCount; i++) {
+        mouseState->touchIDs[i] = mouseState->pendingTouchIDs[i];
+        mouseState->touchXs[i] = mouseState->pendingTouchXs[i];
+        mouseState->touchYs[i] = mouseState->pendingTouchYs[i];
+        GLASS_LOG_FINEST("Touch point %i at %i, %i (id=%i)", i,
+                         mouseState->touchXs[i], mouseState->touchYs[i],
+                         mouseState->touchIDs[i]);
+    }
 }
 
 

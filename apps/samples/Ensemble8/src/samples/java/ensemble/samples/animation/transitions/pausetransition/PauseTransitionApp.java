@@ -32,10 +32,10 @@
 package ensemble.samples.animation.transitions.pausetransition;
 
 import javafx.animation.Animation;
-import javafx.animation.PauseTransitionBuilder;
-import javafx.animation.SequentialTransitionBuilder;
+import javafx.animation.PauseTransition;
+import javafx.animation.SequentialTransition;
 import javafx.animation.Timeline;
-import javafx.animation.TranslateTransitionBuilder;
+import javafx.animation.TranslateTransition;
 import javafx.application.Application;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -43,7 +43,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import javafx.util.Duration;
+import static javafx.util.Duration.seconds;
 
 /**
  * A sample in which a node pauses over a given time.
@@ -51,7 +51,6 @@ import javafx.util.Duration;
  * @sampleName Pause Transition
  * @preview preview.png
  * @see javafx.animation.PauseTransition
- * @see javafx.animation.PauseTransitionBuilder
  * @see javafx.animation.Transition
  * @related /Animation/Transitions/Fade Transition
  * @related /Animation/Transitions/Fill Transition
@@ -81,25 +80,20 @@ public class PauseTransitionApp extends Application {
         rect.setTranslateY(75);
         root.getChildren().add(rect);
 
-        animation = SequentialTransitionBuilder.create()
-                .node(rect)
-                .children(
-                TranslateTransitionBuilder.create()
-                .duration(Duration.seconds(2))
-                .fromX(50)
-                .toX(150)
-                .build(),
-                PauseTransitionBuilder.create()
-                .duration(Duration.seconds(2))
-                .build(),
-                TranslateTransitionBuilder.create()
-                .duration(Duration.seconds(2))
-                .fromX(150)
-                .toX(200)
-                .build())
-                .cycleCount(Timeline.INDEFINITE)
-                .autoReverse(true)
-                .build();
+        TranslateTransition translateTrans1 = new TranslateTransition(seconds(2));
+        translateTrans1.setFromX(50);
+        translateTrans1.setToX(150);
+        
+        PauseTransition pauseTrans = new PauseTransition(seconds(2));
+           
+        TranslateTransition translateTrans2 = new TranslateTransition(seconds(2));
+        translateTrans2.setFromX(150);
+        translateTrans2.setToX(200);
+        
+        animation = new SequentialTransition(rect, translateTrans1, pauseTrans, translateTrans2);
+        animation.setCycleCount(Timeline.INDEFINITE);
+        animation.setAutoReverse(true);
+ 
         return root;
     }
 

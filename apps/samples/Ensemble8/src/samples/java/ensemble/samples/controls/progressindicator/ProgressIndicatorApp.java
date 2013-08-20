@@ -31,13 +31,19 @@
  */
 package ensemble.samples.controls.progressindicator;
 
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
 import javafx.application.Application;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 /**
  * A sample that demonstrates the Progress Indicator control in various modes.
@@ -48,7 +54,8 @@ import javafx.stage.Stage;
  * @related /Controls/Progress Bar
  */
 public class ProgressIndicatorApp extends Application {
-
+    final Timeline timeline = new Timeline();
+    
     public Parent createContent() {
         GridPane g = new GridPane();
 
@@ -66,22 +73,54 @@ public class ProgressIndicatorApp extends Application {
         ProgressIndicator p4 = new ProgressIndicator();
         p4.setPrefSize(50, 50);
         p4.setProgress(1.0F);
+        
+        // styled ProgressIndicator
+        final ProgressIndicator p5 = new ProgressIndicator();
+        p5.setPrefSize(100, 100);
+        p5.progressProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue ov, Number oldVal, Number newVal) {
+                if (p5.getProgress() < 0.25) {
+                    p5.setStyle("-fx-progress-color: red;");
+                } else if (p5.getProgress() < 0.5) {
+                    p5.setStyle("-fx-progress-color: orange;");
+                } else {
+                    p5.setStyle("-fx-progress-color: green;");
+                }
+            }
+        });
+        // animate the styled ProgressIndicator
+        timeline.setCycleCount(Timeline.INDEFINITE);
+        timeline.setAutoReverse(true);
+        final KeyValue kv = new KeyValue(p5.progressProperty(), 1);
+        final KeyFrame kf1 = new KeyFrame(Duration.millis(3000), kv);
+        timeline.getKeyFrames().add(kf1);
 
         g.add(p1, 1, 0);
         g.add(p2, 0, 1);
         g.add(p3, 1, 1);
         g.add(p4, 2, 1);
+        g.add(p5, 1, 2);
 
-        g.setHgap(40);
-        g.setVgap(40);
+        g.setHgap(20);
+        g.setVgap(20);
         g.setAlignment(Pos.CENTER);
         return g;
     }
 
+    public void play() {
+        timeline.play();
+    }
+    @Override
+    public void stop() {
+        timeline.stop();
+    }
+    
     @Override
     public void start(Stage primaryStage) throws Exception {
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();
+        play();
     }
 
     /**

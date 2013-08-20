@@ -151,7 +151,7 @@ public final class DirtyRegionContainer {
             int regionCount = emptyIndex;
 
             for(int i = 0; i < regionCount; i++) {
-                //can't have overlaping regions
+                //can't have overlapping regions
                 dr = dirtyRegions[tempIndex];
                 if (region.intersects(dr)) {
                     region.unionWith(dr);

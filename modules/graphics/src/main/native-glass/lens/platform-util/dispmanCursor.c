@@ -28,8 +28,6 @@
 #include <semaphore.h>
 #include <unistd.h>
 #include <jni.h>
-#ifdef USE_DISPMAN
-#include <bcm_host.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -37,11 +35,17 @@
 #include <sys/ioctl.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "LensCommon.h"
+#include "LensLogger.h"
+
+#ifdef USE_DISPMAN
+#include "wrapped_bcm.h"
 
 #define FB_DEVICE "/dev/fb0"
 
-#include "fbCursor.h"
+#include "utilInternal.h"
+#include "platformUtil.h"
 
 typedef struct {
     DISPMANX_ELEMENT_HANDLE_T element;
@@ -77,10 +81,8 @@ static void fbDispmanSetNativeCursor(jlong nativeCursorHandle) {
     DISPMANX_UPDATE_HANDLE_T update;
     DispmanCursorImage *cursorImage = (DispmanCursorImage *)jlong_to_ptr(nativeCursorHandle);
 
+    if (cursorImage != NULL && cursor.element != 0) {
 
-    if (cursorImage != NULL && cursor.element != 0 &&
-        cursor.currentCursor != nativeCursorHandle) 
-    {
         if (cursorImage->width != cursor.cursorWidth ||
                 cursorImage->height != cursor.cursorHeight) {
 
@@ -92,13 +94,13 @@ static void fbDispmanSetNativeCursor(jlong nativeCursorHandle) {
             fbDispmanAddDispmanxElement();
         }
 
-        cursor.currentCursor = nativeCursorHandle;
+        update = vc_dispmanx_update_start(0);
+        vc_dispmanx_element_change_source(update, cursor.element, cursorImage->resource);
+        vc_dispmanx_update_submit_sync(update);
 
-        if (cursor.isVisible) {
-            update = vc_dispmanx_update_start(0);
-            vc_dispmanx_element_change_source(update, cursor.element, cursorImage->resource);
-            vc_dispmanx_update_submit_sync(update);
-        }
+        cursor.isVisible = 1;
+
+        cursor.currentCursor = nativeCursorHandle;
     }
 }
 
@@ -130,7 +132,7 @@ static void fbDispmanAddDispmanxElement(void) {
     cursor.element = vc_dispmanx_element_add(
                          update,
                          display,
-                         0 /*layer*/,
+                         2 /*layer*/,
                          &dst,
                          0 /*resource*/,
                          &src,
@@ -255,24 +257,10 @@ static void fbDispmanReleaseNativeCursor(jlong nativeCursorHandle) {
     DispmanCursorImage *cursorImage = (DispmanCursorImage *)jlong_to_ptr(nativeCursorHandle);
 
     if (cursorImage != NULL && cursorImage->resource != 0) {
-
-        if (cursor.currentCursor == nativeCursorHandle &&
-            cursor.isVisible) 
-        {
-            DISPMANX_UPDATE_HANDLE_T update;
-            update = vc_dispmanx_update_start(0);
-            vc_dispmanx_element_change_source(update, cursor.element, 0 /* resource*/);
-            vc_dispmanx_update_submit_sync(update);
-        }
-        
         vc_dispmanx_resource_delete(cursorImage->resource);
     }
 
     free(cursorImage);
-
-    if (cursor.currentCursor == nativeCursorHandle) {
-        cursor.currentCursor = 0;
-    }
 }
 
 
@@ -280,20 +268,16 @@ static void fbDispmanSetVisible(jboolean isVisible) {
 
     if (isVisible) {
         if (!cursor.isVisible && cursor.currentCursor != 0) {
-
-            DispmanCursorImage *cursorImage = (DispmanCursorImage *)jlong_to_ptr(cursor.currentCursor);
-            DISPMANX_UPDATE_HANDLE_T update = vc_dispmanx_update_start(0);
-            vc_dispmanx_element_change_source(update, cursor.element, cursorImage->resource);
-            vc_dispmanx_update_submit_sync(update);
+            fbDispmanSetNativeCursor(cursor.currentCursor);
         }
     } else {
         DISPMANX_UPDATE_HANDLE_T update;
         update = vc_dispmanx_update_start(0);
-        vc_dispmanx_element_change_source(update, cursor.element, 0 /* resource*/);
+        vc_dispmanx_element_change_source(update, cursor.element, 0 );
         vc_dispmanx_update_submit_sync(update);
-    }
 
-    cursor.isVisible = isVisible;
+        cursor.isVisible = 0;
+    }
 }
 
 
@@ -312,11 +296,11 @@ static void *fbCursorUpdater(void *data) {
         update = vc_dispmanx_update_start(0);
         vc_dispmanx_element_change_attributes(update,
                                               cursor.element,
-                                              0x4 /* change dest rect */,
-                                              0 /* layer */, 0, /*opacity */
+                                              0x4 ,
+                                              0 , 0, 
                                               &dst,
-                                              0 /* source */,
-                                              0 /* mask */, 0 /* transform */);
+                                              0 ,
+                                              0 , 0 );
         vc_dispmanx_update_submit_sync(update);
         usleep(16666); /* sleep a sixtieth of a second before moving again */
     }
@@ -341,13 +325,13 @@ static void fbDispmanCursorSetPosition(int x, int y) {
     }
 }
 
-void fbDispmanCursorClose() {
+static void _fbDispmanCursorClose() {
 
     fbDispmanRemoveDispmanxElement();
     cursor.isVisible = 0;
 }
 
-jboolean dispman_glass_robot_screen_capture(jint x, jint y,
+static jboolean fbDispmanRobotScreenCapture(jint x, jint y,
                                             jint width, jint height,
                                             jint *pixels) {
     FILE *fb;
@@ -423,6 +407,7 @@ jboolean dispman_glass_robot_screen_capture(jint x, jint y,
     }
 
     rc = vc_dispmanx_snapshot(display, screenResource, transform);
+    rc = 0;
     if (rc) {
         fprintf(stderr, "fbRobotScreenCapture: snapshot failed\n");
         vc_dispmanx_display_close(display);
@@ -431,6 +416,7 @@ jboolean dispman_glass_robot_screen_capture(jint x, jint y,
     }
 
     rc = vc_dispmanx_resource_read_data(screenResource, &pixelRect, pixelBuffer, screenInfo.xres * 4);
+
     if (rc) {
         fprintf(stderr, "fbRobotScreenCapture: Cannot read pixels %d\n", rc);
         vc_dispmanx_display_close(display);
@@ -496,30 +482,18 @@ jboolean dispman_glass_robot_screen_capture(jint x, jint y,
     return JNI_TRUE;
 }
 
-extern int useDispman;
-extern void load_bcm_symbols();
-
-jboolean check_dispman_cursor() {
-    load_bcm_symbols();
-
-    if (useDispman) {
-        fbPlatformSetNativeCursor = fbDispmanSetNativeCursor;
-        fbPlatformCursorInitialize = fbDispmanCursorInitialize;
-        fbPlatformCursorSetPosition = fbDispmanCursorSetPosition;
-        fbPlatformCursorClose = fbDispmanCursorClose;
-        fbPlatformCreateNativeCursor = fbDispmanCreateNativeCursor;
-        fbPlatformReleaseNativeCursor = fbDispmanReleaseNativeCursor;
-        fbPlatformSetVisible = fbDispmanSetVisible;
-        fbPlatformCursorTranslucency = JNI_TRUE;
-        return JNI_TRUE;
-    }
-    return JNI_FALSE;
+void select_dispman() {
+    fbPlatformSetNativeCursor = fbDispmanSetNativeCursor;
+    fbPlatformCursorInitialize = fbDispmanCursorInitialize;
+    fbPlatformCursorSetPosition = fbDispmanCursorSetPosition;
+    fbPlatformCursorClose = _fbDispmanCursorClose;
+    fbPlatformCreateNativeCursor = fbDispmanCreateNativeCursor;
+    fbPlatformReleaseNativeCursor = fbDispmanReleaseNativeCursor;
+    fbPlatformSetVisible = fbDispmanSetVisible;
+    fbRobotScreenCapture = fbDispmanRobotScreenCapture;
+    fbPlatformCursorTranslucency = JNI_TRUE;
 }
 
-#else /* ! USE_DISPMAN */
-
-jboolean check_dispman_cursor() {
-    return JNI_FALSE;
-}
-
-#endif /* USE_DISPMAN */
+#else // !USE_DISPMAN
+void select_dispman() {}
+#endif //USE_DISPMAN

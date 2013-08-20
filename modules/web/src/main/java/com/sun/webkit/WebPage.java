@@ -103,52 +103,9 @@ public final class WebPage {
     static {
         AccessController.doPrivileged(new PrivilegedAction<Void>() {
             public Void run() {
-                String os = System.getProperty("os.name");
-                String arch = System.getProperty("os.arch");
-
-                String key = null;
-                if (os.startsWith("Windows")) {
-                    key = "windows";
-                } else if (os.startsWith("Linux")) {
-                    key = "linux";
-                } else if (os.startsWith("SunOS")) {
-                    key = "solaris";
-                }
-
-                if (key != null) {
-                    String value = Utilities.getProperty(key + ".libs");
-                    if (value != null && ! value.isEmpty()) {
-                        String[] libs = value.split("\\s*,\\s*");
-
-                        try {
-                            log.finer("loading " + os + " native libraries ...");
-                            for (String lib: libs) {
-                                NativeLibLoader.loadLibrary(lib);
-                                log.finer(lib + " loaded");
-                            }
-                        } catch (UnsatisfiedLinkError e) {
-                            log.finer("Cannot load libraries that webkit depends on. " +
-                                      "So, trying to load WebKitJava relying on " +
-                                      "system library path.");
-                        }
-                    } else {
-                        log.finer("No extra libraries to load.");
-                    }
-                } else {
-                    log.finer(os + " (" + arch + ") is not supported. "
-                            + "Trying to load WebKitJava relying on "
-                            + "system library path.");
-                }
                 NativeLibLoader.loadLibrary("jfxwebkit");
                 log.finer("jfxwebkit loaded");
 
-                return null;
-            }
-        });
-
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override
-            public Void run() {
                 if (CookieHandler.getDefault() == null) {
                     boolean setDefault = Boolean.valueOf(System.getProperty(
                             "com.sun.webkit.setDefaultCookieHandler",

@@ -358,6 +358,7 @@ public class Scene implements EventTarget {
         }
 
         Toolkit.getToolkit().checkFxUserThread();
+        init();
         setRoot(root);
         init(width, height);
         setFill(fill);
@@ -1383,10 +1384,6 @@ public class Scene implements EventTarget {
         addSnapshotRunnable(snapshotRunnable);
     }
 
-    // lets us know when initialized so our triggers can be a bit more effective
-    boolean initialized = false;
-    // This does not push changes to peer because cursor updates are pushed on mouse events
-
     /**
      * Defines the mouse cursor for this {@code Scene}.
      */
@@ -1478,7 +1475,6 @@ public class Scene implements EventTarget {
             setHeight((float)height);
         }
         sizeInitialized = (widthSetByUser >= 0 && heightSetByUser >= 0);
-        init();
     }
 
     private void init() {
@@ -1487,8 +1483,6 @@ public class Scene implements EventTarget {
         }
         mouseHandler = new MouseHandler();
         clickGenerator = new ClickGenerator();
-
-        initialized = true;
 
         if (PerformanceTracker.isLoggingEnabled()) {
             PerformanceTracker.logEvent("Scene.init for [" + this + "] - finished");

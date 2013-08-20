@@ -345,6 +345,7 @@ android.glass.lens=eglfb
 android.egl.depthSize=16
 android.prism.lcdtext=false
 android.embedded=eglfb
+android.prism.allowhidpi=false
 android.prism.maxTextureSize=2048
 android.prism.dirtyopts=true
 android.prism.vsync=false
@@ -392,7 +393,8 @@ ANDROID.vmlauncher.linkFlags = [linkFlags, "-llog"].flatten()
 
 ANDROID.surface = [:]
 ANDROID.surface.javahInclude = [
-    "com/sun/glass/events/*"
+    "com/sun/glass/events/*",
+    "com/sun/glass/ui/android/*"
 ]
 ANDROID.surface.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/android")
@@ -441,6 +443,7 @@ ANDROID.glass.variants = ["eglfb"]
 ANDROID.glass.javahInclude = [
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*",
+    "com/sun/glass/ui/android/*",
     "com/sun/glass/ui/lens/*"]
 
 ANDROID.glass.eglfb = [:]

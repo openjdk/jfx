@@ -691,9 +691,15 @@ void addNative(Project project, String name, List<String> includeTargets, boolea
     def nativeTask = project.task("native$capitalName", group: "Build") {
         description = "Generates JNI headers, compiles, and builds native dynamic library for $name for all compile targets"
     }
+    def cleanTask = project.task("cleanNative$capitalName", type: Delete, group: "Build") {
+        description = "Clean native objects for $name"
+    }
+    if (project.hasProperty("nativeAllTask")) project.nativeAllTask.dependsOn nativeTask
     if (!optional) {
         project.assemble.dependsOn(nativeTask)
     }
+    if (project.hasProperty("cleanNativeAllTask")) project.cleanNativeAllTask.dependsOn cleanTask
+    
     // Each of the different compile targets will be placed in a sub directory
     // of these root dirs, with the name of the dir being the name of the target
     def headerRootDir = project.file("$project.buildDir/generated-src/headers/$name")
@@ -731,28 +737,33 @@ void addNative(Project project, String name, List<String> includeTargets, boolea
         variants.each { variant ->
             def variantProperties = variant == "" ? properties : properties.get(variant)
             def capitalVariant = variant.capitalize()
+            def ccOutput = variant == "" ? nativeDir : file("$nativeDir/$variant")
             def ccTask = project.task("cc${t.capital}$capitalName$capitalVariant", type: CCTask, dependsOn: javahTask, group: "Build") {
                 description = "Compiles native sources for ${name} for ${t.name}${capitalVariant != '' ? ' for variant ' + capitalVariant : ''}"
                 matches = ".*\\.c|.*\\.cpp|.*\\.m|.*\\.cc"
                 headers = headerDir
-                output(variant == "" ? nativeDir : file("$nativeDir/$variant"))
+                output(ccOutput)
                 params.addAll(variantProperties.ccFlags)
                 compiler = variantProperties.compiler
                 source(variantProperties.nativeSource)
+                cleanTask.delete ccOutput
             }
             def linkTask = project.task("link${t.capital}$capitalName$capitalVariant", type: LinkTask, dependsOn: ccTask, group: "Build") {
                 description = "Creates native dynamic library for $name for ${t.name}${capitalVariant != '' ? ' for variant ' + capitalVariant : ''}"
-                objectDir = variant == "" ? nativeDir : file("$nativeDir/$variant")
+                objectDir = ccOutput
                 linkParams.addAll(variantProperties.linkFlags)
                 lib = file("$libRootDir/${t.name}/${variant == '' ? library(properties.lib) : library(variantProperties.lib)}")
                 linker = variantProperties.linker
+                cleanTask.delete "$libRootDir/${t.name}"
             }
             nativeTask.dependsOn(linkTask)
             if (IS_WINDOWS && t.name == "win") {
                 def rcTask = project.task("rc$capitalName$capitalVariant", type: CompileResourceTask, dependsOn: javahTask, group: "Build") {
                     description = "Compiles native sources for $name"
                     matches = ".*\\.rc|.*\\.cur"
-                    output(file("$nativeRootDir/win"))
+                    def rcOutput = file("$nativeRootDir/win")
+                    output(rcOutput)
+                    cleanTask.delete rcOutput
                 }
                 linkTask.dependsOn rcTask;
             }
@@ -1042,6 +1053,10 @@ project(":graphics") {
         antlr3 group: "org.antlr", name: "antlr-runtime",  version: "3.1.3"
         antlr3 group: "org.antlr", name: "stringtemplate", version: "3.2"
     }
+    
+    // Create a single "native" task which will depend on all the individual native tasks for graphics
+    project.ext.nativeAllTask = task("native", group: "Build", description: "Compiles and Builds all native libraries for Graphics");
+    project.ext.cleanNativeAllTask = task("cleanNative", group: "Build", description: "Clean all native libraries and objects for Graphics");
 
     // Add tasks for native compilation
     addNative(project, "glass");
@@ -1185,7 +1200,12 @@ project(":graphics") {
         output = file("$buildDir/generated-src/headers/jsl-decora")
     }
 
-    task nativeDecora(dependsOn: compileDecoraHLSLShaders);
+    task nativeDecora(dependsOn: compileDecoraHLSLShaders, group: "Build") {
+        description = "Generates JNI headers, compiles, and builds native dynamic library for Decora"
+    }
+    task cleanNativeDecora(type: Delete, group: "Build") {
+        description = "Clean native objects for Decora"
+    }
 
     def headerDir = file("$buildDir/generated-src/headers/jsl-decora")
     def nativeRootDir = project.file("$project.buildDir/native/jsl-decora")
@@ -1207,6 +1227,7 @@ project(":graphics") {
             params.addAll(properties.decora.ccFlags)
             output(file("$nativeRootDir/$target"))
             compiler = properties.decora.compiler
+            cleanNativeDecora.delete file("$nativeRootDir/$target")
         }
 
         def linkTask = task("linkDecoraNativeShaders$capitalTarget", type: LinkTask, dependsOn: ccTask) {
@@ -1215,6 +1236,7 @@ project(":graphics") {
             linkParams.addAll(properties.decora.linkFlags)
             lib = file("$libRootDir/$t.name/${library(properties.decora.lib)}")
             linker = properties.decora.linker
+            cleanNativeDecora.delete "$libRootDir/$t.name/"
         }
 
         nativeDecora.dependsOn(linkTask)
@@ -1240,11 +1262,8 @@ project(":graphics") {
     classes.dependsOn compilePrismJavaShaders;
     nativePrism.dependsOn compilePrismHLSLShaders;
 
-    // Create a single "native" task which will depend on all the individual native tasks for graphics
-    task("native", dependsOn: [nativeGlass, nativePrism, nativePrismSW, nativeDecora]) {
-        group = "Build"
-        description = "Compiles and Builds all native libraries for Graphics"
-    }
+    project.nativeAllTask.dependsOn nativeDecora
+    project.cleanNativeAllTask.dependsOn cleanNativeDecora
     assemble.dependsOn nativeDecora
     processResources.dependsOn processDecoraShaders, processPrismShaders
 
@@ -1365,8 +1384,10 @@ project(":fxml") {
 project(":builders") {
     sourceCompatibility = 1.7
 
-    if (!COMPILE_SWING) sourceSets.main.java.exclude ("**/swing/**")
-    if (!COMPILE_SWT)   sourceSets.main.java.exclude ("**/swt/**")
+    if (!COMPILE_SWING)  sourceSets.main.java.exclude ("**/swing/**")
+    if (!COMPILE_SWT)    sourceSets.main.java.exclude ("**/swt/**")
+    if (!COMPILE_WEBKIT) sourceSets.main.java.exclude ("**/web/**")
+    if (!BUILD_CLOSED)   sourceSets.main.java.exclude ("**/media/**")
 
     dependencies {
         compile BUILD_SRC, project(":base"), project(":graphics"),
@@ -2019,6 +2040,7 @@ project(":web") {
     }
     dependencies {
         compile project(":base"), project(":graphics"), project(":controls")
+        testCompile files("../../../artifacts/sdk/rt/lib/ext/jfxrt.jar")
     }
     
     compileJava.enabled = COMPILE_WEBKIT
@@ -2027,15 +2049,6 @@ project(":web") {
         compileJava.classpath += files(
                 "../media/build/classes/main",
                 "$jfxTopDir/media/jfxmedia/dist/jfxmedia.jar")
-    }
-    
-    test {
-        classpath += files("../../../artifacts/sdk/rt/lib/ext/jfxrt.jar")
-        doFirst {
-            classpath.each { p ->
-                print "Test CLASSPATH: ${p.getPath()}\n"
-            }
-        }
     }
     
     task generateHeaders(dependsOn: compileJava) {
@@ -2109,8 +2122,7 @@ project(":web") {
                 commandLine("perl", "Tools/Scripts/set-webkit-configuration", "--$CONF")
                 environment(["WEBKITOUTPUTDIR" : webkitOutputDir])
             }
-            ant.unzip(src:  configurations.webkit.files.iterator().next(),
-                      dest: "src/main/native/WebKitBuild")
+
             exec {
                 workingDir("$projectDir/src/main/native")
                 if (t.name == "win") {
@@ -2190,13 +2202,6 @@ load(qt_config)""")
             classpath = files(project(":graphics").sourceSets.main.output) // for JSObject
             source gensrcDir
             destinationDir = file("$buildDir/classes/main")
-            doLast {
-                copy {
-                    from gensrcDir
-                    into "$buildDir/resources/main"
-                    exclude "**/*.java"
-                }
-            }
         }
 
         compileGenerated.dependsOn compileGeneratedTask

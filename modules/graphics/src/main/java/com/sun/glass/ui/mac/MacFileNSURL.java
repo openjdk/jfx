@@ -105,7 +105,7 @@ public final class MacFileNSURL extends File {
 
     // ------------- Bookmarks --------------
 
-    native private byte[] _getBookmark(long ptr);
+    native private byte[] _getBookmark(long ptr, long baseDocumentPtr);
     /**
      * Returns a byte array representing a persistent bookmark for this URL.
      * An app can store this data, and later re-create the URL with a call
@@ -116,10 +116,10 @@ public final class MacFileNSURL extends File {
     public byte[] getBookmark() {
         Application.checkEventThread();
         checkNotDisposed();
-        return _getBookmark(ptr);
+        return _getBookmark(ptr, 0L);
     }
 
-    native private static MacFileNSURL _createFromBookmark(byte[] data);
+    native private static MacFileNSURL _createFromBookmark(byte[] data, long baseDocumentPtr);
     /**
      * Returns an instance of the MacFileNSURL class created from bookmark
      * data stored in the byte array passed as an argument.
@@ -137,7 +137,44 @@ public final class MacFileNSURL extends File {
         if (!MacCommonDialogs.isFileNSURLEnabled()) {
             throw new RuntimeException("The system property glass.macosx.enableFileNSURL is not 'true'");
         }
-        return _createFromBookmark(data);
+        return _createFromBookmark(data, 0L);
+    }
+
+    /**
+     * Returns a byte array representing a document-scoped bookmark
+     * for this URL relative to the {@code baseDocument} URL.
+     * An app can store this data, and later re-create the URL with a call
+     * to {@link createFromDocumentScopedBookmark}.
+     *
+     * @throws NullPointerException if baseDocument is {@code null}
+     * @return bookmark data in a form of byte[]
+     */
+    public byte[] getDocumentScopedBookmark(MacFileNSURL baseDocument) {
+        Application.checkEventThread();
+        checkNotDisposed();
+        return _getBookmark(ptr, baseDocument.ptr);
+    }
+
+    /**
+     * Returns an instance of the MacFileNSURL class created from a
+     * document-scoped bookmark data stored in the byte array passed as an
+     * argument, relative to the {@code baseDocument} URL.
+     *
+     * The glass.macosx.enableFileNSURL system property must be set to {@code
+     * true} before calling this method.
+     *
+     * @throws NullPointerException if baseDocument is {@code null}
+     * @return a new instance of MacFileNSURL
+     */
+    public static MacFileNSURL createFromDocumentScopedBookmark(byte[] data, MacFileNSURL baseDocument) {
+        Application.checkEventThread();
+        if (data == null) {
+            throw new NullPointerException("data must not be null");
+        }
+        if (!MacCommonDialogs.isFileNSURLEnabled()) {
+            throw new RuntimeException("The system property glass.macosx.enableFileNSURL is not 'true'");
+        }
+        return _createFromBookmark(data, baseDocument.ptr);
     }
 }
 

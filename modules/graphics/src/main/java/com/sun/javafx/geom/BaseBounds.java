@@ -26,17 +26,35 @@
 package com.sun.javafx.geom;
 
 /**
- *
+ * Base class for mutable bounds objects. There are two concrete specializations,
+ * BoxBounds (3D) and RectBounds (2D). Various "derive" methods exist which are
+ * used to mutate the bounds objects, such that they can be converted between the
+ * different types as appropriate, or modified in place if possible. This allows
+ * us to churn memory as little as possible without representing everything as
+ * if it were in 3D space (there are some computational cost savings to being
+ * able to ignore the Z values).
  */
 public abstract class BaseBounds {
 
+    /**
+     * The different types of BaseBounds that are currently supported.
+     * We might support other types of bounds in the future (such as
+     * SPHERE) which are also 2D or 3D but are defined in some way
+     * other than with a bounding box. Such bounds can sometimes more
+     * accurately represent the pixels
+     */
     public static enum BoundsType {
         RECTANGLE, // A 2D axis-aligned bounding rectangle
         BOX,  // A 3D axis-aligned bounding box
     }
 
-    /*
-     * Duplicates this instance
+    // Only allow subclasses in this package
+    BaseBounds() { }
+
+    /**
+     * Duplicates this instance. This differs from deriveWithNewBounds(other)
+     * where "other" would be this, in that derive methods may return the
+     * same instance, whereas copy will always return a new instance.
      */
     public abstract BaseBounds copy();
 
@@ -129,6 +147,18 @@ public abstract class BaseBounds {
     public abstract boolean isEmpty();
 
     public abstract void roundOut();
+
+    /**
+     * Sets the given RectBounds (or creates a new instance of bounds is null) to
+     * have the minX, minY, maxX, and maxY of this BoxBounds, dropping the Z values.
+     *
+     * @param bounds The bounds to fill with values, or null. If null, a new RectBounds
+     *               is returned. If not null, the given bounds will be populated and
+     *               then returned
+     * @return a non-null reference to a RectBounds containing the minX, minY, maxX, and
+     * maxY of this BoxBounds.
+     */
+    public abstract RectBounds flattenInto(RectBounds bounds);
 
     public abstract BaseBounds makeEmpty();
 

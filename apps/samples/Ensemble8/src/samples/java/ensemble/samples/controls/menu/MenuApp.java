@@ -119,7 +119,7 @@ public class MenuApp extends Application {
         if (os != null && os.startsWith("Mac")) {
             Menu systemMenuBarMenu = new Menu("MenuBar Options");
 
-            final CheckMenuItem useSystemMenuBarCB = new CheckMenuItem("Use System Menu Bar");
+            final CheckMenuItem useSystemMenuBarCB = new CheckMenuItem("Use System Menu Bar (works only when MenuApp is run outside of Ensemble)");
             useSystemMenuBarCB.setSelected(true);
             menuBar.useSystemMenuBarProperty().bind(useSystemMenuBarCB.selectedProperty());
             systemMenuBarMenu.getItems().add(useSystemMenuBarCB);

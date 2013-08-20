@@ -77,7 +77,11 @@ import javafx.css.StyleableProperty;
  * For example, the x and y properties of the {@link Text} node are ignored since
  * the location of the node is determined by the parent. Likewise, the wrapping
  * width in the {@link Text} node is ignored since the width used for wrapping
- * is the TextFlow's width.
+ * is the TextFlow's width. The value of the <code>pickOnBounds</code> property
+ * of a {@link Text} is set to <code>false</code> when it is laid out by the
+ * TextFlow. This happens because the content of a single {@link Text} node can
+ * divided and placed in the different locations on the TextFlow (usually due to
+ * line breaking and bidi reordering).
  *
  * <p>
  * The wrapping width of the layout is determined by the region's current width.

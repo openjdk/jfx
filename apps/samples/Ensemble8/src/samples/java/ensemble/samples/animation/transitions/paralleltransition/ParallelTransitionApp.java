@@ -31,13 +31,12 @@
  */
 package ensemble.samples.animation.transitions.paralleltransition;
 
-import javafx.animation.FadeTransitionBuilder;
+import javafx.animation.FadeTransition;
 import javafx.animation.ParallelTransition;
-import javafx.animation.ParallelTransitionBuilder;
-import javafx.animation.RotateTransitionBuilder;
-import javafx.animation.ScaleTransitionBuilder;
+import javafx.animation.RotateTransition;
+import javafx.animation.ScaleTransition;
 import javafx.animation.Timeline;
-import javafx.animation.TranslateTransitionBuilder;
+import javafx.animation.TranslateTransition;
 import javafx.application.Application;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -53,7 +52,6 @@ import javafx.util.Duration;
  * @sampleName Parallel Transition
  * @preview preview.png
  * @see javafx.animation.ParallelTransition
- * @see javafx.animation.ParallelTransitionBuilder
  * @see javafx.animation.Transition
  * @related /Animation/Transitions/Fade Transition
  * @related /Animation/Transitions/Fill Transition
@@ -71,7 +69,7 @@ public class ParallelTransitionApp extends Application {
 
     public Parent createContent() {
         Pane root = new Pane();
-        root.setPrefSize(245, 100);
+        root.setPrefSize(400, 200);
         root.setMinSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
         root.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
 
@@ -82,41 +80,34 @@ public class ParallelTransitionApp extends Application {
         rect.setTranslateX(50);
         rect.setTranslateY(75);
         root.getChildren().add(rect); 
-        // create parallel transition to do all 4 transitions at the same time        
-        parallelTransition = ParallelTransitionBuilder.create()
-            .node(rect)
-            .children(
-                FadeTransitionBuilder.create()
-                    .duration(Duration.seconds(3))
-                    .node(rect)
-                    .fromValue(1)
-                    .toValue(0.3)
-                    .autoReverse(true)
-                    .build(),
-                TranslateTransitionBuilder.create()
-                    .duration(Duration.seconds(2))
-                    .fromX(50)
-                    .toX(350)
-                    .cycleCount(2)
-                    .autoReverse(true)
-                    .build(),
-                RotateTransitionBuilder.create()
-                    .duration(Duration.seconds(3))
-                    .byAngle(180)
-                    .cycleCount(4)
-                    .autoReverse(true)
-                    .build(),
-                ScaleTransitionBuilder.create()
-                    .duration(Duration.seconds(2))
-                    .toX(2)
-                    .toY(2)
-                    .cycleCount(2)
-                    .autoReverse(true)
-                    .build()
-            )
-            .cycleCount(Timeline.INDEFINITE)
-            .autoReverse(true)
-            .build();
+        // create parallel transition to do all 4 transitions at the same time
+        FadeTransition fadeTrans = new FadeTransition(Duration.seconds(3), rect);
+        fadeTrans.setFromValue(1);
+        fadeTrans.setToValue(0.3);
+        fadeTrans.setAutoReverse(true);
+        
+        TranslateTransition translateTran = new TranslateTransition(Duration.seconds(2));
+        translateTran.setFromX(50);
+        translateTran.setToX(320);
+        translateTran.setCycleCount(2);
+        translateTran.setAutoReverse(true);
+        
+        RotateTransition rotateTran = new RotateTransition(Duration.seconds(3));
+        rotateTran.setByAngle(180);
+        rotateTran.setCycleCount(4);
+        rotateTran.setAutoReverse(true);
+        
+        ScaleTransition scaleTran = new ScaleTransition(Duration.seconds(2));
+        scaleTran.setToX(2);
+        scaleTran.setToY(2);
+        scaleTran.setCycleCount(2);
+        scaleTran.setAutoReverse(true);
+
+        parallelTransition = new ParallelTransition(rect, fadeTrans,
+                translateTran, rotateTran, scaleTran);
+        parallelTransition.setCycleCount(Timeline.INDEFINITE);
+        parallelTransition.setAutoReverse(true);
+        
         return root;
     }
 

@@ -56,13 +56,13 @@ public class NGGroup extends NGNode {
     private List<NGNode> children = new ArrayList<>(1);
     private List<NGNode> unmod = Collections.unmodifiableList(children);
     private List<NGNode> removed;
-    
+
     /**
      * This mask has all bits that mark that a region intersects this group.
      * Which means it looks like this: 00010101010101010101010101010101 (first bit for sign)
      */
     private static final int REGION_INTERSECTS_MASK = 0x15555555;
-    
+
     /***************************************************************************
      *                                                                         *
      * Implementation of the PGGroup interface                                 *
@@ -86,18 +86,13 @@ public class NGGroup extends NGNode {
             throw new IndexOutOfBoundsException("invalid index");
         }
 
-        // We're going to do a little verification to make sure something
-        // awful hasn't happened. Really, this is pretty superfluous and
-        // a waste of processing because the FX side should be doing this
-        // work. TODO We should only do this when assertions are enabled
-        // (RT-26980)
-        NGNode child = node;
         // NOTE: We used to do checks here to make sure that a node
         // being added didn't already have another parent listed as
         // its parent. Now we just silently accept them. The FX side
         // is already doing this check, and implementing this check
         // properly would require that the "clear" implementation visit
         // all nodes and clear this flag, which is really just wasted work.
+        NGNode child = node;
 
         // When a new node is added, we need to make sure the new node has this
         // group registered as its parent. We also need to make sure I invalidate
@@ -136,10 +131,10 @@ public class NGGroup extends NGNode {
         if (dirtyChildrenAccumulated > DIRTY_CHILDREN_ACCUMULATED_THRESHOLD) {
             return;
         }
-        
+
         removed.add(n);
         dirtyChildrenAccumulated++;
-        
+
         if (dirtyChildrenAccumulated > DIRTY_CHILDREN_ACCUMULATED_THRESHOLD) {
             removed.clear(); //no need to store anything in this case
         }
@@ -198,14 +193,14 @@ public class NGGroup extends NGNode {
     protected void renderContent(Graphics g) {
         renderChildren(g, (NodePath<NGNode>)g.getRenderRoot());
     }
-    
+
     private void renderChildren(Graphics g, NodePath<NGNode> renderRoot) {
         if (children == null) {
             return;
         }
-        
+
         int startPos = 0;
-        if (renderRoot != null) {
+        if (renderRoot != null && !renderRoot.isEmpty()) {
             startPos = children.indexOf(renderRoot.getCurrentNode());
 
             for (int i = 0; i < startPos; ++i) {
@@ -276,7 +271,7 @@ public class NGGroup extends NGNode {
             bot.unref();
         }
     }
-    
+
     @Override
     protected boolean hasOverlappingContents() {
         if (blendMode != Mode.SRC_OVER) {
@@ -293,7 +288,7 @@ public class NGGroup extends NGNode {
     public boolean isEmpty() {
         return children == null || children.isEmpty();
     }
-    
+
     @Override
     protected boolean hasVisuals() {
         return false;
@@ -314,39 +309,39 @@ public class NGGroup extends NGNode {
      *                                                                         *
      **************************************************************************/
     @Override
-    protected NodePath<NGNode> computeRenderRoot(NodePath<NGNode> path, RectBounds dirtyRegion, int cullingIndex, BaseTransform tx,
+    protected RenderRootResult computeRenderRoot(NodePath<NGNode> path, RectBounds dirtyRegion, int cullingIndex, BaseTransform tx,
                                        GeneralTransform3D pvTx) {
 
         // If the NGGroup is completely outside the culling area, then we don't have to traverse down
         // to the children yo.
         if (cullingIndex != -1) {
             final int bits = cullingBits >> (cullingIndex*2);
-            if ((bits & 0x11) == 0) {
-                return null;
+            if ((bits & DIRTY_REGION_CONTAINS_OR_INTERSECTS_NODE_BOUNDS) == 0) {
+                return RenderRootResult.NONE;
             }
-            if ((bits & 0x10) != 0) {
-                cullingIndex = -1; // Do not check culling in children, 
+            if ((bits & DIRTY_REGION_CONTAINS_NODE_BOUNDS) != 0) {
+                cullingIndex = -1; // Do not check culling in children,
                                    // as culling bits are not set for fully interior groups
             }
         }
-        
+
         if (!isVisible()) {
-            return null;
+            return RenderRootResult.NONE;
         }
 
         if (getOpacity() != 1.0 || (getEffect() != null && getEffect().reducesOpaquePixels()) || needsBlending()) {
-            return null;
+            return RenderRootResult.NONE;
         }
 
         if (getClipNode() != null) {
             final NGNode clip = (NGNode)getClipNode();
             RectBounds clipBounds = clip.computeOpaqueRegion(TEMP_RECT_BOUNDS);
             if (clipBounds == null) {
-                return null;
+                return RenderRootResult.NONE;
             }
             TEMP_TRANSFORM.deriveWithNewTransform(tx).deriveWithConcatenation(getTransform()).deriveWithConcatenation(clip.getTransform());
             if (!checkBoundsInQuad(clipBounds, dirtyRegion, TEMP_TRANSFORM, pvTx)) {
-                return null;
+                return RenderRootResult.NONE;
             }
         }
 
@@ -368,18 +363,22 @@ public class NGGroup extends NGNode {
         double mzz = tx.getMzz();
         double mzt = tx.getMzt();
         final BaseTransform chTx = tx.deriveWithConcatenation(getTransform());
-        NodePath childPath = null;
-        for (int i=children.size()-1; i>=0; i--) {
-            final NGNode child = (NGNode) children.get(i);
-            childPath = child.computeRenderRoot(path, dirtyRegion, cullingIndex, chTx, pvTx);
-            if (childPath != null) break;
+        RenderRootResult result = RenderRootResult.NONE;
+        int resultIdx;
+        for (resultIdx=children.size()-1; resultIdx>=0; resultIdx--) {
+            final NGNode child = children.get(resultIdx);
+            result = child.computeRenderRoot(path, dirtyRegion, cullingIndex, chTx, pvTx);
+            if (result != RenderRootResult.NONE) break;
         }
         // restore previous transform state
         tx.restoreTransform(mxx, mxy, mxz, mxt, myx, myy, myz, myt, mzx, mzy, mzz, mzt);
-        if (childPath != null) {
-            childPath.add(this);
+        if (result != RenderRootResult.NONE) {
+            if (result == RenderRootResult.HAS_RENDER_ROOT || dirty != DirtyFlag.CLEAN || childDirty) {
+                path.add(this);
+                result = RenderRootResult.HAS_RENDER_ROOT;
+            }
         }
-        return childPath;
+        return result;
     }
 
     @Override
@@ -391,7 +390,7 @@ public class NGGroup extends NGNode {
 
         //set culling bits for this group first.
         super.markCullRegions(drc, cullingRegionsBitsOfParent, tx, pvTx);
-        
+
         //cullingRegionsBits == 0 group is outside all dirty regions
         // we can cull all children otherwise check children.
         // If none of the regions intersect this group, skip pre-culling

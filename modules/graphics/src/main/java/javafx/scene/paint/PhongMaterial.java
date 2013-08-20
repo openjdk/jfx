@@ -25,8 +25,10 @@
 
 package javafx.scene.paint;
 
+import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.sg.prism.NGPhongMaterial;
 import com.sun.javafx.tk.Toolkit;
+import javafx.beans.Observable;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -159,6 +161,26 @@ public class PhongMaterial extends Material {
         return specularPower;
     }
 
+    private final AbstractNotifyListener platformImageChangeListener = new AbstractNotifyListener() {
+        @Override
+        public void invalidated(Observable valueModel) {
+            if (oldDiffuseMap != null
+                    && valueModel == Toolkit.getImageAccessor().getImageProperty(oldDiffuseMap)) {
+                diffuseMapDirty = true;
+            } else if (oldSpecularMap != null
+                    && valueModel == Toolkit.getImageAccessor().getImageProperty(oldSpecularMap)) {
+                specularMapDirty = true;
+            } else if (oldBumpMap != null
+                    && valueModel == Toolkit.getImageAccessor().getImageProperty(oldBumpMap)) {
+                bumpMapDirty = true;
+            } else if (oldSelfIlluminationMap != null
+                    && valueModel == Toolkit.getImageAccessor().getImageProperty(oldSelfIlluminationMap)) {
+                selfIlluminationMapDirty = true;
+            }
+            setDirty(true);
+        }
+    };
+
     /**
      * The diffuse map of this {@code PhongMaterial).
      *
@@ -175,12 +197,31 @@ public class PhongMaterial extends Material {
         return diffuseMap == null ? null : diffuseMap.get();
     }
 
+    private Image oldDiffuseMap;
     public final ObjectProperty<Image> diffuseMapProperty() {
         if (diffuseMap == null) {
             diffuseMap = new SimpleObjectProperty<Image>(PhongMaterial.this,
                     "diffuseMap") {
+
+                private boolean needsListeners = false;
+
                 @Override
                 public void invalidated() {
+                    Image _image = get();
+
+                    if (needsListeners) {
+                        Toolkit.getImageAccessor().getImageProperty(oldDiffuseMap).
+                                removeListener(platformImageChangeListener.getWeakListener());
+                    }
+
+                    needsListeners = _image != null && (Toolkit.getImageAccessor().isAnimation(_image)
+                            || _image.getProgress() < 1);
+                    
+                    if (needsListeners) {
+                        Toolkit.getImageAccessor().getImageProperty(_image).
+                                addListener(platformImageChangeListener.getWeakListener());
+                    }
+                    oldDiffuseMap = _image;
                     diffuseMapDirty = true;
                     setDirty(true);
                 }
@@ -205,12 +246,32 @@ public class PhongMaterial extends Material {
         return specularMap == null ? null : specularMap.get();
     }
 
+    private Image oldSpecularMap;
     public final ObjectProperty<Image> specularMapProperty() {
         if (specularMap == null) {
             specularMap = new SimpleObjectProperty<Image>(PhongMaterial.this,
                     "specularMap") {
+
+                private boolean needsListeners = false;
+
                 @Override
                 public void invalidated() {
+                    Image _image = get();
+
+                    if (needsListeners) {
+                        Toolkit.getImageAccessor().getImageProperty(oldSpecularMap).
+                                removeListener(platformImageChangeListener.getWeakListener());
+                    }
+
+                    needsListeners = _image != null && (Toolkit.getImageAccessor().isAnimation(_image)
+                            || _image.getProgress() < 1);
+                    
+                    if (needsListeners) {
+                        Toolkit.getImageAccessor().getImageProperty(_image).
+                                addListener(platformImageChangeListener.getWeakListener());
+                    }
+
+                    oldSpecularMap = _image;
                     specularMapDirty = true;
                     setDirty(true);
                 }
@@ -235,12 +296,32 @@ public class PhongMaterial extends Material {
         return bumpMap == null ? null : bumpMap.get();
     }
 
+    private Image oldBumpMap;
     public final ObjectProperty<Image> bumpMapProperty() {
         if (bumpMap == null) {
             bumpMap = new SimpleObjectProperty<Image>(PhongMaterial.this,
                     "bumpMap") {
+                        
+                private boolean needsListeners = false;
+
                 @Override
                 public void invalidated() {
+                    Image _image = get();
+
+                    if (needsListeners) {
+                        Toolkit.getImageAccessor().getImageProperty(oldBumpMap).
+                                removeListener(platformImageChangeListener.getWeakListener());
+                    }
+
+                    needsListeners = _image != null && (Toolkit.getImageAccessor().isAnimation(_image)
+                            || _image.getProgress() < 1);
+
+                    if (needsListeners) {
+                        Toolkit.getImageAccessor().getImageProperty(_image).
+                                addListener(platformImageChangeListener.getWeakListener());
+                    }
+
+                    oldBumpMap = _image;
                     bumpMapDirty = true;
                     setDirty(true);
                 }
@@ -264,13 +345,33 @@ public class PhongMaterial extends Material {
     public final Image getSelfIlluminationMap() {
         return selfIlluminationMap == null ? null : selfIlluminationMap.get();
     }
-    
+
+    private Image oldSelfIlluminationMap;
     public final ObjectProperty<Image> selfIlluminationMapProperty() {
         if (selfIlluminationMap == null) {
             selfIlluminationMap = new SimpleObjectProperty<Image>(PhongMaterial.this,
                     "selfIlluminationMap") {
+
+                private boolean needsListeners = false;
+                
                 @Override
                 public void invalidated() {
+                    Image _image = get();
+
+                    if (needsListeners) {
+                        Toolkit.getImageAccessor().getImageProperty(oldSelfIlluminationMap).
+                                removeListener(platformImageChangeListener.getWeakListener());
+                    }
+                    
+                    needsListeners = _image != null && (Toolkit.getImageAccessor().isAnimation(_image)
+                            || _image.getProgress() < 1);
+
+                    if (needsListeners) {
+                        Toolkit.getImageAccessor().getImageProperty(_image).
+                                addListener(platformImageChangeListener.getWeakListener());
+                    }
+
+                    oldSelfIlluminationMap = _image;
                     selfIlluminationMapDirty = true;
                     setDirty(true);
                 }

@@ -310,12 +310,12 @@ public final class SortedList<E> extends TransformationList<E, E>{
             return pos;
         }
         int tmp = pos;
-        while (sorted[--tmp].index != idx && compare(sorted[tmp].e, e) == 0);
+        while (tmp != 0 && sorted[--tmp].index != idx && compare(sorted[tmp].e, e) == 0);
         if (sorted[tmp].index == idx) {
             return tmp;
         }
         tmp = pos;
-        while (sorted[++tmp].index != idx && compare(sorted[tmp].e, e) == 0);
+        while (tmp != (size - 1) && sorted[++tmp].index != idx && compare(sorted[tmp].e, e) == 0);
         if (sorted[tmp].index == idx) {
             return tmp;
         }

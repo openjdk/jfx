@@ -24,10 +24,8 @@
  */
 package com.sun.glass.ui.mac;
 
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.nio.file.FileSystems;
@@ -388,8 +386,8 @@ class MacSystemClipboard extends SystemClipboard {
                 utm.put(uti, decodedMIME);
                 return decodedMIME;
             }
-            //Do not know who encoded it, pass-throw
-            return uti;
+            // FX would not handle an unknown mime.
+            return null;
         }
 
         private static native String _convertMIMEtoUTI(String mime);

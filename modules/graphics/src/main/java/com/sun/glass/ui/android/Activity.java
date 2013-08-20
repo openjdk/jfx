@@ -22,18 +22,13 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package com.sun.glass.ui.android;
 
-#ifndef FB_CURSOR_DECLARE
-#define FB_CURSOR_DECLARE extern
-#endif
+public class Activity {
 
-FB_CURSOR_DECLARE void (*fbPlatformSetNativeCursor)(jlong nativeCursorPointer);
-FB_CURSOR_DECLARE void (*fbPlatformCursorInitialize)(int screenWidth, int screenHeight);
-FB_CURSOR_DECLARE void (*fbPlatformCursorSetPosition)(int x, int y);
-FB_CURSOR_DECLARE void (*fbPlatformCursorClose)();
-FB_CURSOR_DECLARE jlong (*fbPlatformCreateNativeCursor)(JNIEnv *env, jint x, jint y,  jbyte *srcArray, jint width, jint height);
-FB_CURSOR_DECLARE void (*fbPlatformReleaseNativeCursor)(jlong nativeCursorPointer);
-FB_CURSOR_DECLARE void (*fbPlatformSetVisible)(jboolean isVisible);
-FB_CURSOR_DECLARE jboolean fbPlatformCursorTranslucency;
-
-extern jboolean check_dispman_cursor();
+    public static void shutdown() {
+        _shutdown();
+    };
+    
+    private static native void _shutdown();
+}

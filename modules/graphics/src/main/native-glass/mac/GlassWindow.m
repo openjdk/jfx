@@ -855,11 +855,6 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setView
         //NSLog(@"        view: %@", window->view);
         //NSLog(@"                frame: %.2f,%.2f %.2fx%.2f", [window->view frame].origin.x, [window->view frame].origin.y, [window->view frame].size.width, [window->view frame].size.height);
 
-        // RT-24864: notify multi touch handling code that 
-        // view delegate has changed
-        [GlassTouches updateTracking:(oldView ? [oldView delegate] : nil) 
-                         newDelegate:(window->view ? [window->view delegate] : nil)];
-
         if (oldView && oldView != window->view) {
             [[oldView delegate] resetMouseTracking];
         }

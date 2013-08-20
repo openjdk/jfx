@@ -32,7 +32,6 @@
 package ensemble.samples.animation.transitions.pathtransition;
 
 import javafx.animation.PathTransition;
-import javafx.animation.PathTransitionBuilder;
 import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.scene.Parent;
@@ -42,10 +41,9 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.CubicCurveTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
-import javafx.scene.shape.PathBuilder;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import javafx.util.Duration;
+import static javafx.util.Duration.seconds;
 
 /**
  * A sample in which a node moves along a path from end to end over a given time.
@@ -53,7 +51,6 @@ import javafx.util.Duration;
  * @sampleName Path Transition
  * @preview preview.png
  * @see javafx.animation.PathTransition
- * @see javafx.animation.PathTransitionBuilder
  * @see javafx.animation.Transition
  * @related /Animation/Transitions/Fade Transition
  * @related /Animation/Transitions/Fill Transition
@@ -71,7 +68,7 @@ public class PathTransitionApp extends Application {
 
     public Parent createContent() {
         Pane root = new Pane();
-        root.setPrefSize(245, 100);
+        root.setPrefSize(280, 190);
         root.setMinSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
         root.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);        
 
@@ -80,24 +77,18 @@ public class PathTransitionApp extends Application {
         rect.setArcWidth(10);
         rect.setFill(Color.ORANGE);
         root.getChildren().add(rect);
-        Path path = PathBuilder.create()
-                .elements(
-                new MoveTo(20, 20),
-                new CubicCurveTo(380, 0, 220, 120, 120, 80),
-                new CubicCurveTo(0, 40, 0, 240, 220, 120))
-                .build();
+        Path path = new Path(new MoveTo(20, 20), 
+                new CubicCurveTo(380, 0, 220, 120, 120, 80), 
+                new CubicCurveTo(0, 40, 0, 240, 220, 120));
         path.setStroke(Color.DODGERBLUE);
         path.getStrokeDashArray().setAll(5d, 5d);
         root.getChildren().add(path);
 
-        pathTransition = PathTransitionBuilder.create()
-                .duration(Duration.seconds(4))
-                .path(path)
-                .node(rect)
-                .orientation(PathTransition.OrientationType.ORTHOGONAL_TO_TANGENT)
-                .cycleCount(Timeline.INDEFINITE)
-                .autoReverse(true)
-                .build();
+        pathTransition = new PathTransition(seconds(4), path, rect);
+        pathTransition.setOrientation(PathTransition.OrientationType.ORTHOGONAL_TO_TANGENT);
+        pathTransition.setCycleCount(Timeline.INDEFINITE);
+        pathTransition.setAutoReverse(true);
+        
         return root;
     }
 

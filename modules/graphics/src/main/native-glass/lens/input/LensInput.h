@@ -39,7 +39,7 @@ void lens_wm_getPointerPosition(int *pX, int *pY);
 void lens_wm_setPointerPosition(int x, int y);
 
 /** Sets up the framebuffer cursor */
-void fbCursorInitialize();
+void fbCursorInitialize(int screenWidth, int screenHeight);
 
 /** Changes the position of the framebuffer cursor */
 void fbCursorSetPosition(int x, int y);

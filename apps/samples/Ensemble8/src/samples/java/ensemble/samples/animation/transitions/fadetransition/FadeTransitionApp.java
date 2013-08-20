@@ -32,7 +32,6 @@
 package ensemble.samples.animation.transitions.fadetransition;
 
 import javafx.animation.FadeTransition;
-import javafx.animation.FadeTransitionBuilder;
 import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.scene.Parent;
@@ -49,7 +48,6 @@ import javafx.util.Duration;
  * @sampleName Fade Transition
  * @preview preview.png
  * @see javafx.animation.FadeTransition
- * @see javafx.animation.FadeTransitionBuilder
  * @see javafx.animation.Transition
  * @related /Animation/Transitions/Fill Transition
  * @related /Animation/Transitions/Parallel Transition
@@ -77,15 +75,12 @@ public class FadeTransitionApp extends Application {
         rect.setFill(Color.DODGERBLUE);
         root.getChildren().add(rect);
 
-        fadeTransition = FadeTransitionBuilder.create()
-                .duration(Duration.seconds(4))
-                .node(rect)
-                .fromValue(1)
-                .toValue(0.2)
-                .cycleCount(Timeline.INDEFINITE)
-                .autoReverse(true)
-                .build();
-
+        fadeTransition = new FadeTransition(Duration.seconds(4), rect);
+        fadeTransition.setFromValue(1);
+        fadeTransition.setToValue(0.2);
+        fadeTransition.setCycleCount(Timeline.INDEFINITE);
+        fadeTransition.setAutoReverse(true);
+        
         return root;
     }
 

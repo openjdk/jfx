@@ -209,6 +209,7 @@ public abstract class GlyphLayout {
                 boolean spanChanged = i >= spanEnd;
                 boolean levelChanged = i >= bidiEnd;
                 boolean scriptChanged = false;
+                boolean oldComplex = complex;
                 if (checkComplex) {
                     if (Character.isHighSurrogate(ch)) {
                         /* Only merge surrogate when the pair is in the same span. */
@@ -232,7 +233,7 @@ public abstract class GlyphLayout {
                     if (start != i) {
                         /* Create text run */
                         run = addTextRun(layout, chars, start, i - start,
-                                         font, span, bidiLevel, complex);
+                                         font, span, bidiLevel, oldComplex);
                        if (complex) {
                            flags |= FLAGS_HAS_COMPLEX;
                            complex = false;

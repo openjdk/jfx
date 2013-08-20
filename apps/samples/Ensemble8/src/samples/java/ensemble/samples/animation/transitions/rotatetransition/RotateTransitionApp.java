@@ -32,7 +32,6 @@
 package ensemble.samples.animation.transitions.rotatetransition;
 
 import javafx.animation.RotateTransition;
-import javafx.animation.RotateTransitionBuilder;
 import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.scene.Parent;
@@ -49,7 +48,6 @@ import javafx.util.Duration;
  * @sampleName Rotate Transition
  * @preview preview.png
  * @see javafx.animation.RotateTransition
- * @see javafx.animation.RotateTransitionBuilder
  * @see javafx.animation.Transition
  * @related /Animation/Transitions/Fade Transition
  * @related /Animation/Transitions/Fill Transition
@@ -67,7 +65,7 @@ public class RotateTransitionApp extends Application {
 
     public Parent createContent() {
         Pane root = new Pane();
-        root.setPrefSize(245, 100);
+        root.setPrefSize(140, 140);
         root.setMinSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
         root.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
         // create rectangle
@@ -77,14 +75,12 @@ public class RotateTransitionApp extends Application {
         rect.setFill(Color.ORANGE);
         root.getChildren().add(rect);
 
-        rotateTransition = RotateTransitionBuilder.create()
-                .node(rect)
-                .duration(Duration.seconds(4))
-                .fromAngle(0)
-                .toAngle(720)
-                .cycleCount(Timeline.INDEFINITE)
-                .autoReverse(true)
-                .build();
+        rotateTransition = new RotateTransition(Duration.seconds(4), rect);
+        rotateTransition.setFromAngle(0);
+        rotateTransition.setToAngle(720);
+        rotateTransition.setCycleCount(Timeline.INDEFINITE);
+        rotateTransition.setAutoReverse(true);
+        
         return root;
     }
 

@@ -114,16 +114,18 @@ void lens_wm_notifyScrollEvent(JNIEnv *env, int xabs,
 
 
 /**
- * Check a touch event before passing it to
- * glass_application_notifyTouchEvent
- * so that grabbed window checks can be made.
+ * Process a touch or multitouch event and pass it on to
+ * glass_application_notifyTouchEvent or
+ * glass_application_notifyMultiTouchEvent, taking into account the grabbed
+ * window.
  * Note: a NULL window is appropriate as that 
  * will cause the grab window to be release.
  */
-void lens_wm_notifyTouchEvent(JNIEnv *env,
-                                         jint state, 
-                                         int id,
-                                         int xabs, int yabs) ;
+void lens_wm_notifyMultiTouchEvent(JNIEnv *env,
+                                   int count,
+                                   jint *state,
+                                   jlong *ids,
+                                   int *xabs, int *yabs);
 
 
 /**

@@ -336,6 +336,20 @@ public class SortedListTest {
         FXCollections.sort(list);
 
         assertEquals(sorted, list);
-        
+
+    }
+
+    @Test
+    public void testRemoveFromDuplicates() {
+        String toRemove = new String("A");
+        String other = new String("A");
+        list = FXCollections.observableArrayList(other, toRemove);
+        Comparator<String> c = Comparator.naturalOrder();
+        SortedList<String> sorted = list.sorted(c);
+
+        list.remove(1);
+
+        assertEquals(1, sorted.size());
+        assertTrue(sorted.get(0) == other);
     }
 }

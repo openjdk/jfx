@@ -38,17 +38,7 @@
 #include <linux/fb.h>
 #include <sys/ioctl.h>
 
-#define FB_DEVICE "/dev/fb0"
-
-extern int useDispman;
-extern void load_bcm_symbols();
-static int loadedBcm = 0;
-#ifdef USE_DISPMAN
-extern jboolean dispman_glass_robot_screen_capture(jint x, jint y,
-                                                   jint width, jint height,
-                                                   jint *pixels);
-#endif
-
+#include "platform-util/platformUtil.h"
 
 static struct _NativeScreen fbScreen;
 
@@ -333,124 +323,10 @@ jboolean glass_screen_capture(jint x, jint y,
                                     jint width, jint height,
                                     jint *pixels) {
 
-    if (!loadedBcm) {
-        load_bcm_symbols();
-        loadedBcm = 1;
+    if (fbRobotScreenCapture) {
+       return (*fbRobotScreenCapture)(x, y, width, height, pixels);
     }
-
-    if (useDispman) {
-#ifdef USE_DISPMAN
-        return dispman_glass_robot_screen_capture(x, y, width, height, pixels);
-#else
-        return JNI_FALSE; // cannot reach here
-#endif
-    } else {
-        FILE *fb;
-        unsigned char *pixelBuffer = NULL;
-        unsigned char *dst = (unsigned char *) pixels;
-        unsigned int dstByteStride = width * 4;
-        int i = 0;
-        int fbFileHandle;
-        struct fb_var_screeninfo screenInfo;
-        int depth; // pixel size in bytes
-
-        GLASS_LOG_FINE("Capture %i,%i+%ix%i", x, y, width, height);
-        jboolean result = JNI_FALSE;
-
-        if (width < 1 || height < 1) {
-            GLASS_LOG_SEVERE("Failed. width/height values must be at least = 1");
-            return JNI_FALSE;
-        }
-
-        GLASS_LOG_FINE("open(%s, O_RDONLY)", FB_DEVICE);
-        fbFileHandle = open(FB_DEVICE, O_RDONLY);
-        if (fbFileHandle < 0) {
-            GLASS_LOG_SEVERE("Cannot open framebuffer");
-            return JNI_FALSE;
-        }
-        GLASS_LOG_FINE("ioctl(%s, FBIOGET_VSCREENINFO)", FB_DEVICE);
-        if (ioctl(fbFileHandle, FBIOGET_VSCREENINFO, &screenInfo)) {
-            GLASS_LOG_SEVERE("Cannot get screen info");
-            return JNI_FALSE;
-        }
-        GLASS_LOG_FINE("Read screen info: res=%ix%i, offset=%ix%i",
-                       screenInfo.xres, screenInfo.yres,
-                       screenInfo.xoffset, screenInfo.yoffset);
-        GLASS_LOG_FINE("close(%s)", FB_DEVICE);
-        close(fbFileHandle);
-        depth = screenInfo.bits_per_pixel / 8;
-        int pixelBufferLength = screenInfo.xres * screenInfo.yres * depth;
-        pixelBuffer = (unsigned char *) malloc(pixelBufferLength);
-        if (pixelBuffer == NULL) {
-            GLASS_LOG_SEVERE("Failed to allocate temporary pixel buffer");
-            return JNI_FALSE;
-        }
-
-        GLASS_LOG_FINE("fopen(%s, \"r\") to read %ix%i pixels at bit depth %i",
-                       FB_DEVICE, width, height, screenInfo.bits_per_pixel);
-        fb = fopen(FB_DEVICE, "r");
-        if (fb == NULL) {
-            GLASS_LOG_SEVERE("FB: Cannot open framebuffer for reading");
-            free(pixelBuffer);
-            return JNI_FALSE;
-        }
-
-        fseek(fb, screenInfo.yoffset * screenInfo.xres * depth, SEEK_SET);
-        int numRead = fread(pixelBuffer, 1,
-                            pixelBufferLength,
-                            fb);
-
-        if (x < 0) {
-            dst += -x * 4;
-            width += x;
-            x = 0;
-        }
-        if (y < 0) {
-            dst += -y * dstByteStride;
-            height += y;
-            y = 0;
-        }
-
-        int widthLimit = width;
-        int heightLimit = height;
-
-        // Required height is larger than screen's height
-        if ((int) screenInfo.yres < height) {
-            heightLimit = (int) screenInfo.yres;
-        }
-        // Required width is larger than screen's width
-        if ((int) screenInfo.xres < width) {
-            widthLimit = (int) screenInfo.xres;
-        }
-        // Required height is out of range
-        if (((int) screenInfo.yres - y) < height) {
-            heightLimit = (int) screenInfo.yres - y;
-        }
-        // Required width is out of range
-        if (((int) screenInfo.xres - x) < width) {
-            widthLimit = (int) screenInfo.xres - x;
-        }
-
-        if (widthLimit > 0 && heightLimit > 0) {
-            // copy the relevant portion of the screen to the supplied pixel array
-            int offset = y * screenInfo.xres * depth + x * depth;
-            for (i = 0; i < heightLimit; i++) {
-                memcpy(dst + i * dstByteStride, pixelBuffer + offset, widthLimit * depth);
-                offset += screenInfo.xres * depth;
-            }
-        } else {
-            free(pixelBuffer);
-            fclose(fb);
-            GLASS_LOG_FINE("fclose(%s)", FB_DEVICE);
-            GLASS_LOG_SEVERE("Failed to take a snapshot, some of parameters are illegal");
-            return JNI_FALSE;
-        }
-
-        free(pixelBuffer);
-        GLASS_LOG_FINE("fclose(%s)", FB_DEVICE);
-        fclose(fb);
-        return JNI_TRUE;
-    }
+    return 0;
 }
 
 LensResult lens_platform_windowMinimize(JNIEnv *env,

@@ -33,7 +33,6 @@ package ensemble.samples.animation.transitions.translatetransition;
 
 import javafx.animation.Timeline;
 import javafx.animation.TranslateTransition;
-import javafx.animation.TranslateTransitionBuilder;
 import javafx.application.Application;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -50,7 +49,6 @@ import javafx.util.Duration;
  * @sampleName Translate Transition
  * @preview preview.png
  * @see javafx.animation.TranslateTransition
- * @see javafx.animation.TranslateTransitionBuilder
  * @see javafx.animation.Transition
  * @related /Animation/Transitions/Fade Transition
  * @related /Animation/Transitions/Fill Transition
@@ -76,14 +74,12 @@ public class TranslateTransitionApp extends Application {
         circle.setTranslateX(20);
         circle.setTranslateY(20);
         root.getChildren().add(circle);
-        translateTransition = TranslateTransitionBuilder.create()
-                .duration(Duration.seconds(4))
-                .node(circle)
-                .fromX(20)
-                .toX(220)
-                .cycleCount(Timeline.INDEFINITE)
-                .autoReverse(true)
-                .build();
+        translateTransition = new TranslateTransition(Duration.seconds(4), circle);
+        translateTransition.setFromX(20);
+        translateTransition.setToX(220);
+        translateTransition.setCycleCount(Timeline.INDEFINITE);
+        translateTransition.setAutoReverse(true);
+ 
         return root;
     }
 

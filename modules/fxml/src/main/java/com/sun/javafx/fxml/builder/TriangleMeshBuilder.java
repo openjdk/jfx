@@ -44,9 +44,15 @@ public class TriangleMeshBuilder extends TreeMap<String, Object> implements Buil
     @Override
     public TriangleMesh build() {
         TriangleMesh mesh = new TriangleMesh();
-        mesh.getPoints().setAll(points);
-        mesh.getTexCoords().setAll(texCoords);
-        mesh.getFaces().setAll(faces);
+        if (points != null) {
+            mesh.getPoints().setAll(points);
+        }
+        if (texCoords != null) {
+            mesh.getTexCoords().setAll(texCoords);
+        }
+        if (faces != null) {
+            mesh.getFaces().setAll(faces);
+        }
         if (faceSmoothingGroups != null) {
             mesh.getFaceSmoothingGroups().setAll(faceSmoothingGroups);
         }

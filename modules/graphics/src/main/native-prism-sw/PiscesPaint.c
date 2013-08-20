@@ -368,7 +368,7 @@ static INLINE void getPointsToInterpolate(jint *pts, jint *data, jint sidx, jint
     jboolean isXin = ((tx < txMax) && (tx >= txMin));
     pts[0] = (isXin) ? data[sidx + 1] : p00;
     pts[1] = data[sidx2];
-    pts[2] = (isXin) ? data[sidx2 + 1] : pts[0];
+    pts[2] = (isXin) ? data[sidx2 + 1] : data[sidx2];
 }
 
 static INLINE void getPointsToInterpolateRepeat(jint *pts, jint *data, jint sidx, jint stride, jint p00,
