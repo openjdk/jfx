@@ -436,17 +436,17 @@ public class NGRegion extends NGGroup {
         return null;
     }
 
-    @Override protected RenderRootResult computeRenderRoot(NodePath<NGNode> path, RectBounds dirtyRegion,
+    @Override protected NodePath<NGNode> computeRenderRoot(NodePath<NGNode> path, RectBounds dirtyRegion,
                                                            int cullingIndex, BaseTransform tx,
                                                            GeneralTransform3D pvTx) {
 
-        RenderRootResult result = super.computeRenderRoot(path, dirtyRegion, cullingIndex, tx, pvTx);
-        if (result == RenderRootResult.HAS_RENDER_ROOT) {
-            path.add(this);
+        NodePath<NGNode> childPath = super.computeRenderRoot(path, dirtyRegion, cullingIndex, tx, pvTx);
+        if (childPath != null) {
+            childPath.add(this);
         } else {
-            result = computeNodeRenderRoot(path, dirtyRegion, cullingIndex, tx, pvTx);
+            childPath = computeNodeRenderRoot(path, dirtyRegion, cullingIndex, tx, pvTx);
         }
-        return result;
+        return childPath;
     }
 
     @Override protected boolean hasVisuals() {
