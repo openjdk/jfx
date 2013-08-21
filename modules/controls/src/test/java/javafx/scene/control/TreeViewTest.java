@@ -27,6 +27,7 @@ package javafx.scene.control;
 
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.runtime.VersionInfo;
+import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import com.sun.javafx.scene.control.skin.VirtualScrollBar;
@@ -52,6 +53,8 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.Event;
+import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -60,6 +63,7 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldTreeCell;
 import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
@@ -1146,5 +1150,44 @@ public class TreeViewTest {
         VirtualFlowTestUtils.assertGraphicIsVisible(treeView, 3);
         VirtualFlowTestUtils.assertGraphicIsNotVisible(treeView, 4);
         VirtualFlowTestUtils.assertGraphicIsNotVisible(treeView, 5);
+    }
+
+    private int rt_29650_start_count = 0;
+    private int rt_29650_commit_count = 0;
+    private int rt_29650_cancel_count = 0;
+    @Test public void test_rt_29650() {
+        installChildren();
+        treeView.setOnEditStart(new EventHandler() {
+            @Override public void handle(Event t) {
+                rt_29650_start_count++;
+            }
+        });
+        treeView.setOnEditCommit(new EventHandler() {
+            @Override public void handle(Event t) {
+                rt_29650_commit_count++;
+            }
+        });
+        treeView.setOnEditCancel(new EventHandler() {
+            @Override public void handle(Event t) {
+                rt_29650_cancel_count++;
+            }
+        });
+
+        treeView.setEditable(true);
+        treeView.setCellFactory(TextFieldTreeCell.forTreeView());
+
+        new StageLoader(treeView);
+
+        treeView.edit(root);
+        TreeCell rootCell = (TreeCell) VirtualFlowTestUtils.getCell(treeView, 0);
+        TextField textField = (TextField) rootCell.getGraphic();
+        textField.setText("Testing!");
+        KeyEventFirer keyboard = new KeyEventFirer(textField);
+        keyboard.doKeyPress(KeyCode.ENTER);
+
+        assertEquals("Testing!", root.getValue());
+        assertEquals(1, rt_29650_start_count);
+        assertEquals(1, rt_29650_commit_count);
+        assertEquals(0, rt_29650_cancel_count);
     }
 }

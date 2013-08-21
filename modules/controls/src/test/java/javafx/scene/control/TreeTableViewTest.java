@@ -39,6 +39,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 
+import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.test.Data;
 
 import javafx.beans.InvalidationListener;
@@ -52,16 +53,15 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.TreeTableView.TreeTableViewFocusModel;
-import javafx.scene.control.cell.CheckBoxTreeTableCell;
-import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.control.cell.TextFieldTreeTableCell;
-import javafx.scene.control.cell.TreeItemPropertyValueFactory;
+import javafx.scene.control.cell.*;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCode;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
@@ -2570,5 +2570,56 @@ public class TreeTableViewTest {
         new StageLoader(treeTableView);
 
         assertEquals(treeTableView.contentWidth, col.getWidth(), 0.0);
+    }
+
+    private int rt_29650_start_count = 0;
+    private int rt_29650_commit_count = 0;
+    private int rt_29650_cancel_count = 0;
+    @Test public void test_rt_29650() {
+        installChildren();
+        treeTableView.setEditable(true);
+
+        TreeTableColumn<String, String> col = new TreeTableColumn<>("column");
+        col.setCellFactory(TextFieldTreeTableCell.forTreeTableColumn());
+        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
+            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
+                return new ReadOnlyObjectWrapper<>(param.getValue().getValue());
+            }
+        });
+        treeTableView.getColumns().add(col);
+
+        col.setOnEditStart(new EventHandler() {
+            @Override public void handle(Event t) {
+                rt_29650_start_count++;
+            }
+        });
+        col.setOnEditCommit(new EventHandler() {
+            @Override public void handle(Event t) {
+                rt_29650_commit_count++;
+            }
+        });
+        col.setOnEditCancel(new EventHandler() {
+            @Override public void handle(Event t) {
+                rt_29650_cancel_count++;
+            }
+        });
+
+        new StageLoader(treeTableView);
+
+        treeTableView.edit(0, col);
+
+        Toolkit.getToolkit().firePulse();
+
+        TreeTableCell rootCell = (TreeTableCell) VirtualFlowTestUtils.getCell(treeTableView, 0, 0);
+        TextField textField = (TextField) rootCell.getGraphic();
+        textField.setText("Testing!");
+        KeyEventFirer keyboard = new KeyEventFirer(textField);
+        keyboard.doKeyPress(KeyCode.ENTER);
+
+        // TODO should the following assert be enabled?
+//        assertEquals("Testing!", listView.getItems().get(0));
+        assertEquals(1, rt_29650_start_count);
+        assertEquals(1, rt_29650_commit_count);
+        assertEquals(0, rt_29650_cancel_count);
     }
 }

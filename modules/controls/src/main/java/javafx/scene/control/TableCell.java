@@ -324,13 +324,16 @@ public class TableCell<S,T> extends IndexedCell<T> {
             Event.fireEvent(getTableColumn(), editEvent);
         }
 
+        // inform parent classes of the commit, so that they can switch us
+        // out of the editing state.
+        // This MUST come before the updateItem call below, otherwise it will
+        // call cancelEdit(), resulting in both commit and cancel events being
+        // fired (as identified in RT-29650)
+        super.commitEdit(newValue);
+
         // update the item within this cell, so that it represents the new value
         updateItem(newValue, false);
 
-        // inform parent classes of the commit, so that they can switch us
-        // out of the editing state
-        super.commitEdit(newValue);
-        
         if (table != null) {
             // reset the editing cell on the TableView
             table.edit(-1, null);
