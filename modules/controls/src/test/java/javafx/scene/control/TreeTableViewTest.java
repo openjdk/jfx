@@ -2622,4 +2622,37 @@ public class TreeTableViewTest {
         assertEquals(1, rt_29650_commit_count);
         assertEquals(0, rt_29650_cancel_count);
     }
+
+    private int rt_29849_start_count = 0;
+    @Test public void test_rt_29849() {
+        installChildren();
+        treeTableView.setEditable(true);
+
+        TreeTableColumn<String, String> col = new TreeTableColumn<>("column");
+        col.setEditable(true);
+        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
+            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
+                return new ReadOnlyObjectWrapper<>(param.getValue().getValue());
+            }
+        });
+        treeTableView.getColumns().add(col);
+
+        col.setOnEditStart(new EventHandler() {
+            @Override public void handle(Event t) {
+                rt_29849_start_count++;
+            }
+        });
+
+        // load the table so the default cells are created
+        new StageLoader(treeTableView);
+
+        // now replace the cell factory
+        col.setCellFactory(TextFieldTreeTableCell.forTreeTableColumn());
+
+        Toolkit.getToolkit().firePulse();
+
+        // now start an edit and count the start edit events - it should be just 1
+        treeTableView.edit(0, col);
+        assertEquals(1, rt_29849_start_count);
+    }
 }

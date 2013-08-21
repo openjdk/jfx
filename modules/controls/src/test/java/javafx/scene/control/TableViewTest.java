@@ -1841,4 +1841,35 @@ public class TableViewTest {
         assertEquals(1, rt_29650_commit_count);
         assertEquals(0, rt_29650_cancel_count);
     }
+
+    private int rt_29849_start_count = 0;
+    @Test public void test_rt_29849() {
+        TableView<Person> table = new TableView<>();
+        table.setEditable(true);
+        table.setItems(FXCollections.observableArrayList(
+            new Person("John", "Smith", "jacob.smith@example.com")
+        ));
+
+        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        first.setCellValueFactory(new PropertyValueFactory("firstName"));
+        first.setCellFactory(TextFieldTableCell.forTableColumn());
+        table.getColumns().addAll(first);
+        first.setOnEditStart(new EventHandler() {
+            @Override public void handle(Event t) {
+                rt_29849_start_count++;
+            }
+        });
+
+        // load the table so the default cells are created
+        new StageLoader(table);
+
+        // now replace the cell factory
+        first.setCellFactory(TextFieldTableCell.<Person>forTableColumn());
+
+        Toolkit.getToolkit().firePulse();
+
+        // now start an edit and count the start edit events - it should be just 1
+        table.edit(0, first);
+        assertEquals(1, rt_29849_start_count);
+    }
 }

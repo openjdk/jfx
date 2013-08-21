@@ -152,6 +152,7 @@ public abstract class TableRowSkinBase<T,
         // --- end init bindings
 
         registerChangeListener(control.itemProperty(), "ITEM");
+        registerChangeListener(control.indexProperty(), "INDEX");
 
         if (fixedCellSizeProperty() != null) {
             registerChangeListener(fixedCellSizeProperty(), "FIXED_CELL_SIZE");
@@ -224,6 +225,12 @@ public abstract class TableRowSkinBase<T,
         if ("ITEM".equals(p)) {
             updateCells = true;
             getSkinnable().requestLayout();
+        } else if ("INDEX".equals(p)){
+            // update the index of all children cells (RT-29849)
+            final int newIndex = getSkinnable().getIndex();
+            for (int i = 0, max = cells.size(); i < max; i++) {
+                cells.get(i).updateIndex(newIndex);
+            }
         } else if ("FIXED_CELL_SIZE".equals(p)) {
             fixedCellSize = fixedCellSizeProperty().get();
             fixedCellSizeEnabled = fixedCellSize > 0;
