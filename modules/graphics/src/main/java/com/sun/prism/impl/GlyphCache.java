@@ -273,7 +273,7 @@ public class GlyphCache {
 
         // Render the glyph and insert it in the cache
         GlyphData data = null;
-        Glyph glyph = strike.getGlyph(gl, gi);
+        Glyph glyph = strike.getGlyph(glyphCode);
         if (glyph != null) {
             if (glyph.getWidth() == 0 || glyph.getHeight() == 0) {
                 data = new GlyphData(0, 0, 0,

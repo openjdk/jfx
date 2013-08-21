@@ -166,12 +166,6 @@ public class CompositeStrike implements FontStrike {
         return getStrikeSlot(slot).getGlyph(slotglyphCode);
     }
 
-    public Glyph getGlyph(GlyphList gl, int gi) {
-        int glyphCode = gl.getGlyphCode(gi);
-        int slot = (glyphCode >>> 24);
-        return getStrikeSlot(slot).getGlyph(gl, gi);
-    }
-
      /**
      * Access to individual character advances are frequently needed for layout
      * understand that advance may vary for single glyph if ligatures or kerning
