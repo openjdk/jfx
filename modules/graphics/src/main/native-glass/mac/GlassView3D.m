@@ -235,6 +235,9 @@
     [self removeTrackingArea: self->_trackingArea];
     [self->_trackingArea release];
     self->_trackingArea = nil;
+
+    [self->nsAttrBuffer release];
+    self->nsAttrBuffer = nil;
     
     [super dealloc];
 }
