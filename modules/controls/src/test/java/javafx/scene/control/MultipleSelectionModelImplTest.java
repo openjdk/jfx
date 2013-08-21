@@ -842,4 +842,58 @@ public class MultipleSelectionModelImplTest {
         assertTrue(msModel().isSelected(3));
         assertTrue(cell_3.isSelected());
     }
+
+    private int rt_32411_add_count = 0;
+    private int rt_32411_remove_count = 0;
+    @Test public void test_rt_32411_selectedItems() {
+        model.getSelectedItems().addListener(new ListChangeListener<String>() {
+            @Override public void onChanged(final Change<? extends String> change) {
+                while (change.next()) {
+                    rt_32411_remove_count += change.getRemovedSize();
+                    rt_32411_add_count += change.getAddedSize();
+                }
+            }
+        });
+
+        // reset fields
+        rt_32411_add_count = 0;
+        rt_32411_remove_count = 0;
+
+        // select a row - no problems here
+        model.select(2);
+        assertEquals(1, rt_32411_add_count);
+        assertEquals(0, rt_32411_remove_count);
+
+        // clear and select a new row. We should receive a remove event followed
+        // by an added event - but this bug shows we don't get the remove event.
+        model.clearAndSelect(4);
+        assertEquals(2, rt_32411_add_count);
+        assertEquals(1, rt_32411_remove_count);
+    }
+
+    @Test public void test_rt_32411_selectedIndices() {
+        model.getSelectedIndices().addListener(new ListChangeListener<Number>() {
+            @Override public void onChanged(final Change<? extends Number> change) {
+                while (change.next()) {
+                    rt_32411_remove_count += change.getRemovedSize();
+                    rt_32411_add_count += change.getAddedSize();
+                }
+            }
+        });
+
+        // reset fields
+        rt_32411_add_count = 0;
+        rt_32411_remove_count = 0;
+
+        // select a row - no problems here
+        model.select(2);
+        assertEquals(1, rt_32411_add_count);
+        assertEquals(0, rt_32411_remove_count);
+
+        // clear and select a new row. We should receive a remove event followed
+        // by an added event - but this bug shows we don't get the remove event.
+        model.clearAndSelect(4);
+        assertEquals(2, rt_32411_add_count);
+        assertEquals(1, rt_32411_remove_count);
+    }
 }

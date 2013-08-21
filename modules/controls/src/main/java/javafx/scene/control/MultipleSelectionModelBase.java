@@ -307,8 +307,11 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
     }
 
     @Override public void clearAndSelect(int row) {
-        // clear out all other selection quietly - so that we don't fire events
-        quietClearSelection();
+        // RT-32411 We used to call quietClearSelection() here, but this
+        // resulted in the selectedItems and selectedIndices lists never
+        // reporting that they were empty.
+        // quietClearSelection();
+        clearSelection();
 
         // and select
         select(row);

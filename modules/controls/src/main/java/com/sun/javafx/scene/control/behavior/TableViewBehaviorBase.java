@@ -835,7 +835,9 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         sm.select(cell.getRow(), cell.getTableColumn());
 
         // edit this row also
-        editCell(cell.getRow(), cell.getTableColumn());
+        if (cell.getRow() >= 0) {
+            editCell(cell.getRow(), cell.getTableColumn());
+        }
     }
     
     protected void selectAllToFocus() {

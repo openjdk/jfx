@@ -218,7 +218,6 @@ public class TextFieldTreeCell<T> extends DefaultTreeCell<T> {
         super.updateItem(item, empty);
         
         TreeItem<T> treeItem = getTreeItem();
-        Node graphic = treeItem == null ? null : treeItem.getGraphic();
         CellUtils.updateItem(this, getConverter(), hbox, getTreeItemGraphic(), textField);
     }
     
