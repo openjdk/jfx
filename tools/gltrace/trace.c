@@ -31,8 +31,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
+#include "os.h"
 #include "opengl.h"
 #include "iolib.h"
 
@@ -44,15 +44,6 @@ static void *libGLESv2 = NULL;
 static void *libEGL = NULL;
 static FILE *out = NULL;
 static int tLevel;
-static uint64_t start_time = 0;
-
-static uint64_t
-gethrtime()
-{
-    struct timespec tsp;
-    clock_gettime(CLOCK_MONOTONIC, &tsp);
-    return (tsp.tv_sec*1000000000ULL + tsp.tv_nsec - start_time);
-}
 
 /*
  *    dlfcn
@@ -201,7 +192,6 @@ static void init() __attribute__ ((constructor));
 static void 
 init()
 {
-    start_time = gethrtime();
     out = stderr;
     tLevel = trcLevel;
 
@@ -238,8 +228,6 @@ static void fini()
 /*
  *   OpenGL
  */
-
-static int glReentrance = 0;
  
 #define NOT_IMPLEMENTED() \
     { \
@@ -256,10 +244,9 @@ static int glReentrance = 0;
         if (tLevel >= dbgLevel) {\
             fprintf(out, "INTERPOSITION dlsym("#func") = %p\n", orig);\
         }\
-    }\
-    ++glReentrance
+    }
 
-#define EPILOG() --glReentrance
+#define EPILOG() 
 
 #define GLPROLOG(func)  PROLOG(libGLESv2, func)
 #define GLEPILOG()      EPILOG()
@@ -267,14 +254,6 @@ static int glReentrance = 0;
 #define EGLPROLOG(func) PROLOG(libEGL, func)
 #define EGLEPILOG()     EPILOG()
 
-#define putCmd(x) if (glReentrance == 1) putCmd(x)
-#define putInt(x) if (glReentrance == 1) putInt(x)
-#define putFloat(x) if (glReentrance == 1) putFloat(x)
-#define putLongLong(x) if (glReentrance == 1) putLongLong(x)
-#define putPtr(x) if (glReentrance == 1) putPtr(x)
-#define putString(x) if (glReentrance == 1) putString(x)
-#define putBytes(x, y) if (glReentrance == 1) putBytes(x, y)
-#define putTime(x, y) if (glReentrance == 1) putTime(x, y)
 
 static int
 glSizeof(GLenum type)

@@ -23,11 +23,24 @@
  * questions.
  */
  
-#ifndef GLTRACE_MAP_H
-#define GLTRACE_MAP_H
+#include <time.h>
 
-void    *createMap();
-void    putMap(void *map, void *key, void *val);
-void    *getMap(void *map, void *key);
+#include "os.h"
 
-#endif /* GLTRACE_MAP_H */
+static uint64_t start_time = 0;
+
+static void init() __attribute__ ((constructor));
+static void
+init()
+{
+    start_time = gethrtime();
+}
+
+uint64_t
+gltrace_gethrtime()
+{
+    struct timespec tsp;
+    clock_gettime(CLOCK_MONOTONIC, &tsp);
+    return (tsp.tv_sec*1000000000ULL + tsp.tv_nsec - start_time);
+}
+

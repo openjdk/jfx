@@ -1,11 +1,10 @@
 CC      = gcc -O2 
 JDK     = /opt/java
 
-HDRS    = iolib.h map.h
-SRCS    = trace.c agent.c iolib.c
-SRCS2   = retrace.c iolib.c enums.c map.c
+HDRS    = iolib.h map.h os.h
+SRCS    = trace.c agent.c iolib.c os-linux.c
+SRCS2   = retrace.c iolib.c enums.c map.c os-linux.c
 
-default: all
 
 PLATFORM := $(shell if [ -x /opt/vc ]; then echo RASPBERRY; else echo BEAGLE; fi)
 
@@ -18,24 +17,39 @@ ifeq ($(PLATFORM),BEAGLE)
 DEST = armv6-vfp
 endif
 
-TARGETS = $(DEST)/ogltrace.so $(DEST)/ogltrace
+TARGETS = $(DEST)/gltrace.so $(DEST)/gltrace
+
+default: all
 
 all: $(DEST) $(TARGETS)
 
 $(DEST):
-        if [ ! -x $(DEST) ]; then mkdir -m 755 -p $(DEST); fi
-
-$(DEST)/ogltrace.so: $(HDRS) $(SRCS)
-        $(CC) $(CFLAGS) -shared -fPIC \
-        -I$(JDK)/include -I$(JDK)/include/linux \
-        -ldl -lEGL -lGLESv2 \
-        -o $@ $(SRCS) 
-
-$(DEST)/ogltrace: $(HDRS) $(SRCS2)
-        $(CC) $(CFLAGS) -o $@ $(SRCS2) -lEGL -lGLESv2 -lrt -lpng
+	if [ ! -x $(DEST) ]; then mkdir -m 755 -p $(DEST); fi
 
 #
-#    Examples
+#    gltrace.so
+#
+
+HDRS    = iolib.h map.h os.h
+DYNLIB_SRCS = trace.c agent.c iolib.c os-linux.c
+
+$(DEST)/gltrace.so: $(HDRS) $(DYNLIB_SRCS)
+	$(CC) $(CFLAGS) -shared -fPIC \
+	-I$(JDK)/include -I$(JDK)/include/linux \
+	-ldl -lEGL -lGLESv2 \
+	-o $@ $(DYNLIB_SRCS) 
+
+#
+#    gltrace
+#
+
+GLTRACE_SRCS = retrace.c iolib.c enums.c map.c os-linux.c
+
+$(DEST)/gltrace: $(HDRS) $(GLTRACE_SRCS)
+	$(CC) $(CFLAGS) -o $@ $(GLTRACE_SRCS) -lEGL -lGLESv2 -lrt -lpng
+
+#
+#    examples
 #
 
 JAVA    = $(JDK)/bin/java
@@ -49,17 +63,17 @@ TEST    =
 ARGS    =
 
 trace:
-        export LD_PRELOAD=$(DEST)/ogltrace.so; \
-        $(RUNJFX) -cp "$(JAVAFX):$(JAR)" $(TEST) $(ARGS)
+	export LD_PRELOAD=$(DEST)/gltrace.so; \
+	$(RUNJFX) -cp "$(JAVAFX):$(JAR)" $(TEST) $(ARGS)
 
 replay:
-        $(DEST)/ogltrace -replay
+	$(DEST)/gltrace -replay
 
 dump:
-        $(DEST)/ogltrace -print
+	$(DEST)/gltrace -print
 
 interactive:
-        $(DEST)/ogltrace
+	$(DEST)/gltrace
 
 clean:
-        rm -rf $(TARGETS)
+	rm -rf $(TARGETS)

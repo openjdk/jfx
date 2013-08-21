@@ -22,12 +22,15 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
- 
-#ifndef GLTRACE_MAP_H
-#define GLTRACE_MAP_H
 
-void    *createMap();
-void    putMap(void *map, void *key, void *val);
-void    *getMap(void *map, void *key);
+package com.sun.javafx.logging;
 
-#endif /* GLTRACE_MAP_H */
+public class GLTrace {
+
+    /* This private variable is set to true by the JVMTI agent when present */
+    private static boolean init = false;
+
+    public static void putMark(String arg) { if ( init ) _putMark(arg); }
+
+    private static native void _putMark(String arg);
+}

@@ -23,11 +23,12 @@
  * questions.
  */
  
-#ifndef GLTRACE_MAP_H
-#define GLTRACE_MAP_H
+#ifndef GLTRACE_OS_H
+#define GLTRACE_OS_H
 
-void    *createMap();
-void    putMap(void *map, void *key, void *val);
-void    *getMap(void *map, void *key);
+#include <stdint.h>
 
-#endif /* GLTRACE_MAP_H */
+#define gethrtime gltrace_gethrtime
+uint64_t    gltrace_gethrtime();
+
+#endif /* GLTRACE_OS_H */

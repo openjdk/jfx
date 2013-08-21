@@ -25,17 +25,22 @@
  
 #define _GNU_SOURCE
 #include <fcntl.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
 
+#include "os.h"
 #include "iolib.h"
 
-#define TRACEFNAME "ogl.trace"
+#define TRACEFNAME "gl.trace"
 #define CHUNKSZ 0x100000
+#define MARKER 0xdeadbead
 
 static int ioMode;
+static int wsize = 0;
 static char *fileName = NULL;
 static char *filePtr = MAP_FAILED;
 static char *endPtr;
@@ -60,6 +65,12 @@ iolib_init(int mode, const char *fname)
         curPtr = endPtr = NULL;
         fileOffset = (off_t)0;
         fileSize = (size_t)0;
+        
+        putInt(OPC_VERSION);
+        putInt(VERSION_MAJOR);
+        putInt(VERSION_MINOR);
+        putInt(VERSION_REV);
+        putInt(sizeof(void*));
     }
     else if (ioMode == IO_READ) {
         struct stat sb;
@@ -78,6 +89,21 @@ iolib_init(int mode, const char *fname)
         }             
         curPtr = filePtr;
         endPtr = filePtr + fileSize;
+
+        int version = getInt();
+        if (version != OPC_VERSION) {
+            fprintf(stderr, "ERROR: not a trace: %s\n", fileName);
+            exit(1);
+        }
+        int major = getInt();
+        int minor = getInt();
+        int rev   = getInt();
+        if (major != VERSION_MAJOR || minor > VERSION_MINOR) {
+            fprintf(stderr, "ERROR: version mismatch: current %d.%d.%d, trace %d.%d.%d (%s)\n",
+                    VERSION_MAJOR, VERSION_MINOR, VERSION_REV,
+                    major, minor, rev, fileName);
+        }
+        wsize = getInt();
     }
 }
 
@@ -90,7 +116,12 @@ iolib_fini()
     if (ioMode == IO_WRITE && curPtr < endPtr) {
         truncate(fileName, fileOffset - (endPtr - curPtr));
     }
+    free(fileName);
 }
+
+/*
+ *    Write
+ */
 
 static void
 enlarge()
@@ -122,33 +153,86 @@ enlarge()
     endPtr = filePtr + CHUNKSZ;
 }
 
+static pthread_mutex_t memlock = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+static pthread_t curThread = (pthread_t)0;
+static int reentrance = 0;
+
 void
 putCmd(int cmd)
 {
-    if (curPtr >= endPtr) enlarge();
-    *(int*)curPtr = cmd;
-    curPtr += sizeof(int);
+    pthread_mutex_lock(&memlock);
+    if (++reentrance > 1) return;
+    
+    pthread_t thr = pthread_self();
+    if (thr != curThread) {
+        putInt(OPC_THREAD);
+        putPtr((void*)thr);
+        curThread = thr;
+    }
+    
+    putInt(cmd);
 }
 
 void
 putInt(int arg)
 {
+    if (reentrance > 1) return;
     if (curPtr >= endPtr) enlarge();
     *(int*)curPtr = arg;
     curPtr += sizeof(int);
 }
 
 void
+putIntPtr(const int *arg)
+{
+    if (reentrance > 1) return;
+    if (curPtr >= endPtr) enlarge();
+    int val = 0;
+    if (arg == NULL || *arg == MARKER) {
+        *(int*)curPtr = MARKER;
+        curPtr += sizeof(int);
+        if (curPtr >= endPtr) enlarge();
+        if (arg) val = MARKER;
+    }
+    else {
+        val = *arg;
+    }
+    *(int*)curPtr = val;
+    curPtr += sizeof(int);
+}
+
+void
 putFloat(float arg)
 {
+    if (reentrance > 1) return;
     if (curPtr >= endPtr) enlarge();
     *(float*)curPtr = arg;
     curPtr += sizeof(float);
 }
 
 void
+putFloatPtr(const float *arg)
+{
+    if (reentrance > 1) return;
+    if (curPtr >= endPtr) enlarge();
+    float val = 0.;
+    if (arg == NULL || *arg == (float)MARKER) {
+        *(float*)curPtr = (float)MARKER;
+        curPtr += sizeof(float);
+        if (curPtr >= endPtr) enlarge();
+        if (arg) val = (float)MARKER;
+    }
+    else {
+        val = *arg;
+    }
+    *(float*)curPtr = val;
+    curPtr += sizeof(float);
+}
+
+void
 putLongLong(long long arg)
 {
+    if (reentrance > 1) return;
     int left = sizeof(arg);
     char *s = (char*)&arg;
     while (left > 0) {
@@ -167,6 +251,7 @@ putLongLong(long long arg)
 void
 putPtr(const void *arg)
 {
+    if (reentrance > 1) return;
     int left = sizeof(arg);
     char *s = (char*)&arg;
     while (left > 0) {
@@ -185,6 +270,7 @@ putPtr(const void *arg)
 void
 putString(const char *str)
 {
+    if (reentrance > 1) return;
     if (str == NULL) {
         putInt(0);
         return;
@@ -208,6 +294,7 @@ putString(const char *str)
 void
 putBytes(const void *data, int size)
 {
+    if (reentrance > 1) return;
     int left = size;
     if (data == NULL) left = 0;
     char *src = (char*)data;
@@ -231,7 +318,19 @@ putTime(uint64_t bgn, uint64_t end)
 {
     putLongLong(bgn);
     putLongLong(end);
+    endCmd();
 }
+
+void
+endCmd()
+{
+    --reentrance;
+    pthread_mutex_unlock(&memlock);
+}
+
+/*
+ *    Read
+ */
 
 int
 getCmd()
@@ -251,6 +350,21 @@ getInt()
     return val;
 }
 
+const int *
+getIntPtr()
+{
+    if (curPtr + sizeof(int) > endPtr) return 0;
+    const int *res = (int*)curPtr;
+    curPtr += sizeof(int);
+    int val = *res;
+    if (val == MARKER) {
+        res = (int*)curPtr;
+        val = *res;
+        if (val == 0) return NULL;
+    }
+    return res;
+}
+
 float
 getFloat()
 {
@@ -258,6 +372,21 @@ getFloat()
     float val = *(float*)curPtr;
     curPtr += sizeof(float);
     return val;
+}
+
+const float *
+getFloatPtr()
+{
+    if (curPtr + sizeof(int) > endPtr) return 0;
+    const float *res = (float*)curPtr;
+    curPtr += sizeof(float);
+    float val = *res;
+    if (val == (float)MARKER) {
+        res = (float*)curPtr;
+        val = *res;
+        if (val == 0.) return NULL;
+    }
+    return res;
 }
 
 long long
@@ -269,12 +398,12 @@ getLongLong()
     return val;
 }
 
-const void      *
+uint64_t
 getPtr()
 {
-    if (curPtr + sizeof(void*) > endPtr) return NULL;
-    void *val = *(void**)curPtr;
-    curPtr += sizeof(void*);
+    if (curPtr + wsize > endPtr) return (uint64_t)0;
+    uint64_t val = wsize == 4 ? *(int32_t*)curPtr : *(int64_t*)curPtr;
+    curPtr += wsize;
     return val;
 }
 
