@@ -243,7 +243,7 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
     private TraversalEngine engine;
 
     private boolean resetToolbarState = false;
-    private String cachedHTMLText = "<html><body></body></html>";
+    private String cachedHTMLText = "<html><head></head><body contenteditable=\"true\"></body></html>";
     private ListChangeListener<Node> itemsListener = new ListChangeListener<Node>() {
         @Override public void onChanged(ListChangeListener.Change<? extends Node> c) {
             while (c.next()) {
