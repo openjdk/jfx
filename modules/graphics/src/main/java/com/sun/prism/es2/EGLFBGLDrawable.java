@@ -26,9 +26,19 @@
 package com.sun.prism.es2;
 
 import com.sun.prism.paint.Color;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 
 
 class EGLFBGLDrawable extends GLDrawable {
+
+    private static final boolean transparentFramebuffer =
+            AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
+                @Override
+                public Boolean run() {
+                    return Boolean.getBoolean("com.sun.javafx.transparentFramebuffer");
+                }
+            });
 
     private static native long nCreateDrawable(long nativeWindow, long nativeCtxInfo);
     private static native long nGetDummyDrawable(long nativeCtxInfo);
@@ -52,7 +62,9 @@ class EGLFBGLDrawable extends GLDrawable {
     @Override
     boolean swapBuffers(GLContext glCtx) {
         boolean retval = nSwapBuffers(getNativeDrawableInfo());
-        glCtx.clearBuffers(Color.BLACK, true, true, false);
+        glCtx.clearBuffers(
+                transparentFramebuffer ? Color.TRANSPARENT : Color.BLACK,
+                true, true, false);
         return retval;
     }
 }
