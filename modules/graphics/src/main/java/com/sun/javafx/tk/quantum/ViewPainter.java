@@ -161,9 +161,9 @@ abstract class ViewPainter implements Runnable {
                 PULSE_LOGGER.renderMessage(start, System.currentTimeMillis(), "Dirty Opts Computed");
             }
         }
-        final int dirtyRegionSize = dirtyRegionContainer.size();
 
         if (!PrismSettings.showDirtyRegions && status == DirtyRegionContainer.DTR_OK) {
+            final int dirtyRegionSize = dirtyRegionContainer.size();
             g.setHasPreCullingBits(true);
             if (PULSE_LOGGING_ENABLED && dirtyRegionSize > 1) {
                 PULSE_LOGGER.renderMessage(dirtyRegionSize + " different dirty regions to render");
@@ -219,7 +219,7 @@ abstract class ViewPainter implements Runnable {
             g.setDepthTest(false);
             if (status == DirtyRegionContainer.DTR_OK) {
                 g.setPaint(new Color(1, 0, 0, .3f));
-                for (int i = 0; i < dirtyRegionSize; i++) {
+                for (int i = 0; i < dirtyRegionContainer.size(); i++) {
                     RectBounds reg = dirtyRegionContainer.getDirtyRegion(i);
                     g.fillRect(reg.getMinX(), reg.getMinY(),
                                reg.getWidth(), reg.getHeight());
