@@ -25,6 +25,7 @@
 
 package com.sun.prism.es2;
 
+import com.sun.javafx.PlatformUtil;
 import com.sun.prism.MeshView;
 import com.sun.prism.PhongMaterial.MapType;
 import com.sun.prism.Texture.WrapMode;
@@ -111,6 +112,10 @@ abstract class GLContext {
     private boolean depthTest = false;
     private boolean msaa = false;
     private int maxSampleSize = -1;
+
+    private static final int FBO_ID_UNSET = -1;
+    private static final int FBO_ID_NOCACHE = -2;
+    private int nativeFBOID = PlatformUtil.isMac() ? FBO_ID_NOCACHE : FBO_ID_UNSET;
 
     private static native void nActiveTexture(long nativeCtxInfo, int texUnit);
     private static native void nBindFBO(long nativeCtxInfo, int nativeFBOID);
@@ -244,7 +249,21 @@ abstract class GLContext {
     }
 
     void bindFBO(int nativeFBOID) {
-        nBindFBO(nativeCtxInfo, nativeFBOID);
+        switch (this.nativeFBOID) {
+            case FBO_ID_UNSET:
+                this.nativeFBOID = nativeFBOID;
+                nBindFBO(nativeCtxInfo, nativeFBOID);
+                break;
+            case FBO_ID_NOCACHE:
+                nBindFBO(nativeCtxInfo, nativeFBOID);
+                break;
+            default:
+                if (this.nativeFBOID != nativeFBOID) {
+                    nBindFBO(nativeCtxInfo, nativeFBOID);
+                    this.nativeFBOID = nativeFBOID;
+                }
+                break;
+        }
     }
 
     void bindTexture(int texID) {
@@ -394,8 +413,16 @@ abstract class GLContext {
     }
 
     int getBoundFBO() {
-        return nGetFBO();
+        switch (nativeFBOID) {
+            case FBO_ID_UNSET:
+                nativeFBOID = nGetFBO();
+                return nativeFBOID;
+            case FBO_ID_NOCACHE:
+                return nGetFBO();
+            default:
+                return nativeFBOID;
         }
+    }
 
     int getBoundTextureID() {
         // return the single value param
