@@ -365,30 +365,23 @@ public class NGGroup extends NGNode {
         final BaseTransform chTx = tx.deriveWithConcatenation(getTransform());
         RenderRootResult result = RenderRootResult.NONE;
         int resultIdx;
+        boolean followingChildrenClean = true;
         for (resultIdx=children.size()-1; resultIdx>=0; resultIdx--) {
             final NGNode child = children.get(resultIdx);
             result = child.computeRenderRoot(path, dirtyRegion, cullingIndex, chTx, pvTx);
             if (result != RenderRootResult.NONE) break;
+            followingChildrenClean &= child.isClean();
         }
         // restore previous transform state
         tx.restoreTransform(mxx, mxy, mxz, mxt, myx, myy, myz, myt, mzx, mzy, mzz, mzt);
         if (result != RenderRootResult.NONE) {
             if (result == RenderRootResult.HAS_RENDER_ROOT || dirty != DirtyFlag.CLEAN ||
-                    (childDirty && childDirtyAfter(resultIdx))) {
+                    (childDirty && !followingChildrenClean)) {
                 path.add(this);
                 result = RenderRootResult.HAS_RENDER_ROOT;
             }
         }
         return result;
-    }
-
-    private boolean childDirtyAfter(int start) {
-        for (int i = start + 1, end = children.size(); i < end; ++i) {
-            if (!children.get(i).isClean()) {
-                return true;
-            }
-        }
-        return false;
     }
 
     @Override
