@@ -271,7 +271,8 @@ X86EGL.glass.fb.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/wm"),
     file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
     file("modules/graphics/src/main/native-glass/lens/input/udev"),
-    file("modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c")]
+    file("modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c"),
+    file("modules/graphics/src/main/native-glass/lens/platform-util") ]
     //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
 X86EGL.glass.fb.compiler = compiler
 X86EGL.glass.fb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX"].flatten()
