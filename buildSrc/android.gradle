@@ -349,7 +349,6 @@ android.prism.allowhidpi=false
 android.prism.maxTextureSize=2048
 android.prism.dirtyopts=true
 android.prism.vsync=false
-android.prism.device=true
 android.use.egl=true
 android.com.sun.javafx.isEmbedded=true
 """

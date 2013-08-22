@@ -188,18 +188,6 @@ class ES2Context extends BaseShaderContext {
     }
 
     @Override
-    public boolean isEdgeSmoothingSupported(PixelFormat format) {
-        if (ES2Pipeline.isEmbededDevice) {
-            // on an embeded device, the smoothing trick only works if the texture
-            // contains an alpha channel
-            return !format.isOpaque() && format.isRGB();
-        } else {
-            // on desktop, the smoothing trick is supported for any rgb format
-            return format.isRGB();
-        }
-    }
-
-    @Override
     protected void releaseRenderTarget() {
         currentTarget = null;
         super.releaseRenderTarget();

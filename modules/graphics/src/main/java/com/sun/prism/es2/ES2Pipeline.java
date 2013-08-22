@@ -38,14 +38,6 @@ import java.util.HashMap;
 
 public class ES2Pipeline extends GraphicsPipeline {
 
-    // Currently there are certain restrictions when running on an actual
-    // OpenGL ES 2.0 device (for example, limited pbuffer support, issues
-    // with multiple/shared contexts), so for now certain codepaths may be
-    // disabled depending on whether isEmbededDevice is set or not.
-    // NOTE: For the Embedded Team: The above comment is no longer valid on the
-    //       new prism-es2 pipe. This new pipe do not use pbuffer nor shared
-    //       context on Linux.
-    public static final boolean isEmbededDevice = PrismSettings.isEmbededDevice;
     public static final GLFactory glFactory;
     public static final GLPixelFormat.Attributes
             pixelFormatAttributes = new GLPixelFormat.Attributes();
@@ -94,9 +86,6 @@ public class ES2Pipeline extends GraphicsPipeline {
             theInstance = null;
         }
 
-        if (PrismSettings.verbose && isEmbededDevice) {
-            System.out.println("ES2Pipeline: OpenGL ES 2.0 embedded device detected");
-        }
         antiAliasingSupported = (glFactory.isGLExtensionSupported("GL_ARB_multisample"));
     }
     private static Thread creator;

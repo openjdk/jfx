@@ -120,7 +120,6 @@ IOS.javafxPlatformProperties ="""javafx.platform=ios
 ios.jfxmedia.platforms=IOSPlatform
 ios.glass.platform=ios
 ios.prism.allowhidpi=false
-ios.prism.device=true
 ios.prism.mintexturesize=16
 ios.prism.verbose=true
 ios.prism.static.libraries=true
