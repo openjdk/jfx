@@ -134,6 +134,10 @@
 #define IMAGE_MODE_NORMAL   com_sun_pisces_RendererBase_IMAGE_MODE_NORMAL
 #define IMAGE_MODE_MULTIPLY com_sun_pisces_RendererBase_IMAGE_MODE_MULTIPLY
 
+#define IMAGE_FRAC_EDGE_KEEP com_sun_pisces_RendererBase_IMAGE_FRAC_EDGE_KEEP
+#define IMAGE_FRAC_EDGE_PAD  com_sun_pisces_RendererBase_IMAGE_FRAC_EDGE_PAD
+#define IMAGE_FRAC_EDGE_TRIM com_sun_pisces_RendererBase_IMAGE_FRAC_EDGE_TRIM
+
 #define LG_GRADIENT_MAP_SIZE 8
 #define GRADIENT_MAP_SIZE (1 << LG_GRADIENT_MAP_SIZE)
 
@@ -176,7 +180,8 @@
 
 #define TEXTURE_TRANSFORM_IDENTITY 1
 #define TEXTURE_TRANSFORM_TRANSLATE 2
-#define TEXTURE_TRANSFORM_GENERIC 3
+#define TEXTURE_TRANSFORM_SCALE_TRANSLATE 3
+#define TEXTURE_TRANSFORM_GENERIC 4
 
 /**
  * \struct _Renderer

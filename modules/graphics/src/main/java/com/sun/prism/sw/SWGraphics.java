@@ -817,6 +817,15 @@ final class SWGraphics implements ReadbackGraphics {
                             float dx1, float dy1, float dx2, float dy2,
                             float sx1, float sy1, float sx2, float sy2)
     {
+        this.drawTexture(tex, dx1, dy1, dx2, dy2, sx1, sy1, sx2, sy2,
+                RendererBase.IMAGE_FRAC_EDGE_KEEP, RendererBase.IMAGE_FRAC_EDGE_KEEP,
+                RendererBase.IMAGE_FRAC_EDGE_KEEP, RendererBase.IMAGE_FRAC_EDGE_KEEP);
+    }
+
+    private void drawTexture(Texture tex,
+                             float dx1, float dy1, float dx2, float dy2,
+                             float sx1, float sy1, float sx2, float sy2,
+                             int lEdge, int rEdge, int tEdge, int bEdge) {
         final int imageMode;
         if (compositeAlpha == 1f) {
             imageMode = RendererBase.IMAGE_MODE_NORMAL;
@@ -824,12 +833,13 @@ final class SWGraphics implements ReadbackGraphics {
             imageMode = RendererBase.IMAGE_MODE_MULTIPLY;
             this.pr.setColor(255, 255, 255, (int)(255 * compositeAlpha));
         }
-        this.drawTexture(tex, imageMode, dx1, dy1, dx2, dy2, sx1, sy1, sx2, sy2);
+        this.drawTexture(tex, imageMode, dx1, dy1, dx2, dy2, sx1, sy1, sx2, sy2, lEdge, rEdge, tEdge, bEdge);
     }
 
     private void drawTexture(Texture tex, int imageMode,
                             float dx1, float dy1, float dx2, float dy2,
-                            float sx1, float sy1, float sx2, float sy2) {
+                            float sx1, float sy1, float sx2, float sy2,
+                            int lEdge, int rEdge, int tEdge, int bEdge) {
         if (PrismSettings.debug) {
             System.out.println("+ drawTexture: " + tex + ", imageMode: " + imageMode +
                     ", tex.w: " + tex.getPhysicalWidth() + ", tex.h: " + tex.getPhysicalHeight());
@@ -894,6 +904,7 @@ final class SWGraphics implements ReadbackGraphics {
                 piscesTx, false,
                 (int)(TO_PISCES * dstBBox.getMinX()), (int)(TO_PISCES * dstBBox.getMinY()),
                 (int)(TO_PISCES * dstBBox.getWidth()), (int)(TO_PISCES * dstBBox.getHeight()),
+                lEdge, rEdge, tEdge, bEdge,
                 interpolateMinX, interpolateMinY, interpolateMaxX, interpolateMaxY,
                 swTex.hasAlpha());
 
@@ -908,9 +919,15 @@ final class SWGraphics implements ReadbackGraphics {
                                    float sx1, float sy1, float sx2, float sy2,
                                    float dh1, float dh2, float sh1, float sh2)
     {
-        drawTexture(tex, dx1, dy1, dh1, dy2, sx1, sy1, sh1, sy2);
-        drawTexture(tex, dh1, dy1, dh2, dy2, sh1, sy1, sh2, sy2);
-        drawTexture(tex, dh2, dy1, dx2, dy2, sh2, sy1, sx2, sy2);
+        drawTexture(tex, dx1, dy1, dh1, dy2, sx1, sy1, sh1, sy2,
+                RendererBase.IMAGE_FRAC_EDGE_KEEP, RendererBase.IMAGE_FRAC_EDGE_PAD,
+                RendererBase.IMAGE_FRAC_EDGE_KEEP, RendererBase.IMAGE_FRAC_EDGE_KEEP);
+        drawTexture(tex, dh1, dy1, dh2, dy2, sh1, sy1, sh2, sy2,
+                RendererBase.IMAGE_FRAC_EDGE_TRIM, RendererBase.IMAGE_FRAC_EDGE_PAD,
+                RendererBase.IMAGE_FRAC_EDGE_KEEP, RendererBase.IMAGE_FRAC_EDGE_KEEP);
+        drawTexture(tex, dh2, dy1, dx2, dy2, sh2, sy1, sx2, sy2,
+                RendererBase.IMAGE_FRAC_EDGE_TRIM, RendererBase.IMAGE_FRAC_EDGE_KEEP,
+                RendererBase.IMAGE_FRAC_EDGE_KEEP, RendererBase.IMAGE_FRAC_EDGE_KEEP);
     }
 
     @Override
@@ -919,9 +936,15 @@ final class SWGraphics implements ReadbackGraphics {
                                    float sx1, float sy1, float sx2, float sy2,
                                    float dv1, float dv2, float sv1, float sv2)
     {
-        drawTexture(tex, dx1, dy1, dx2, dv1, sx1, sy1, sx2, sv1);
-        drawTexture(tex, dx1, dv1, dx2, dv2, sx1, sv1, sx2, sv2);
-        drawTexture(tex, dx1, dv2, dx2, dy2, sx1, sv2, sx2, sy2);
+        drawTexture(tex, dx1, dy1, dx2, dv1, sx1, sy1, sx2, sv1,
+                RendererBase.IMAGE_FRAC_EDGE_KEEP, RendererBase.IMAGE_FRAC_EDGE_KEEP,
+                RendererBase.IMAGE_FRAC_EDGE_KEEP, RendererBase.IMAGE_FRAC_EDGE_PAD);
+        drawTexture(tex, dx1, dv1, dx2, dv2, sx1, sv1, sx2, sv2,
+                RendererBase.IMAGE_FRAC_EDGE_KEEP, RendererBase.IMAGE_FRAC_EDGE_KEEP,
+                RendererBase.IMAGE_FRAC_EDGE_TRIM, RendererBase.IMAGE_FRAC_EDGE_PAD);
+        drawTexture(tex, dx1, dv2, dx2, dy2, sx1, sv2, sx2, sy2,
+                RendererBase.IMAGE_FRAC_EDGE_KEEP, RendererBase.IMAGE_FRAC_EDGE_KEEP,
+                RendererBase.IMAGE_FRAC_EDGE_TRIM, RendererBase.IMAGE_FRAC_EDGE_KEEP);
     }
 
     @Override
@@ -931,17 +954,35 @@ final class SWGraphics implements ReadbackGraphics {
                                   float dh1, float dv1, float dh2, float dv2,
                                   float sh1, float sv1, float sh2, float sv2)
     {
-        drawTexture(tex, dx1, dy1, dh1, dv1, sx1, sy1, sh1, sv1);
-        drawTexture(tex, dh1, dy1, dh2, dv1, sh1, sy1, sh2, sv1);
-        drawTexture(tex, dh2, dy1, dx2, dv1, sh2, sy1, sx2, sv1);
+        drawTexture(tex, dx1, dy1, dh1, dv1, sx1, sy1, sh1, sv1,
+                RendererBase.IMAGE_FRAC_EDGE_KEEP, RendererBase.IMAGE_FRAC_EDGE_PAD,
+                RendererBase.IMAGE_FRAC_EDGE_KEEP, RendererBase.IMAGE_FRAC_EDGE_PAD);
+        drawTexture(tex, dh1, dy1, dh2, dv1, sh1, sy1, sh2, sv1,
+                RendererBase.IMAGE_FRAC_EDGE_TRIM, RendererBase.IMAGE_FRAC_EDGE_PAD,
+                RendererBase.IMAGE_FRAC_EDGE_KEEP, RendererBase.IMAGE_FRAC_EDGE_PAD);
+        drawTexture(tex, dh2, dy1, dx2, dv1, sh2, sy1, sx2, sv1,
+                RendererBase.IMAGE_FRAC_EDGE_TRIM, RendererBase.IMAGE_FRAC_EDGE_KEEP,
+                RendererBase.IMAGE_FRAC_EDGE_KEEP, RendererBase.IMAGE_FRAC_EDGE_PAD);
 
-        drawTexture(tex, dx1, dv1, dh1, dv2, sx1, sv1, sh1, sv2);
-        drawTexture(tex, dh1, dv1, dh2, dv2, sh1, sv1, sh2, sv2);
-        drawTexture(tex, dh2, dv1, dx2, dv2, sh2, sv1, sx2, sv2);
+        drawTexture(tex, dx1, dv1, dh1, dv2, sx1, sv1, sh1, sv2,
+                RendererBase.IMAGE_FRAC_EDGE_KEEP, RendererBase.IMAGE_FRAC_EDGE_PAD,
+                RendererBase.IMAGE_FRAC_EDGE_TRIM, RendererBase.IMAGE_FRAC_EDGE_PAD);
+        drawTexture(tex, dh1, dv1, dh2, dv2, sh1, sv1, sh2, sv2,
+                RendererBase.IMAGE_FRAC_EDGE_TRIM, RendererBase.IMAGE_FRAC_EDGE_PAD,
+                RendererBase.IMAGE_FRAC_EDGE_TRIM, RendererBase.IMAGE_FRAC_EDGE_PAD);
+        drawTexture(tex, dh2, dv1, dx2, dv2, sh2, sv1, sx2, sv2,
+                RendererBase.IMAGE_FRAC_EDGE_TRIM, RendererBase.IMAGE_FRAC_EDGE_KEEP,
+                RendererBase.IMAGE_FRAC_EDGE_TRIM, RendererBase.IMAGE_FRAC_EDGE_PAD);
 
-        drawTexture(tex, dx1, dv2, dh1, dy2, sx1, sv2, sh1, sy2);
-        drawTexture(tex, dh1, dv2, dh2, dy2, sh1, sv2, sh2, sy2);
-        drawTexture(tex, dh2, dv2, dx2, dy2, sh2, sv2, sx2, sy2);
+        drawTexture(tex, dx1, dv2, dh1, dy2, sx1, sv2, sh1, sy2,
+                RendererBase.IMAGE_FRAC_EDGE_KEEP, RendererBase.IMAGE_FRAC_EDGE_PAD,
+                RendererBase.IMAGE_FRAC_EDGE_TRIM, RendererBase.IMAGE_FRAC_EDGE_KEEP);
+        drawTexture(tex, dh1, dv2, dh2, dy2, sh1, sv2, sh2, sy2,
+                RendererBase.IMAGE_FRAC_EDGE_TRIM, RendererBase.IMAGE_FRAC_EDGE_PAD,
+                RendererBase.IMAGE_FRAC_EDGE_TRIM, RendererBase.IMAGE_FRAC_EDGE_KEEP);
+        drawTexture(tex, dh2, dv2, dx2, dy2, sh2, sv2, sx2, sy2,
+                RendererBase.IMAGE_FRAC_EDGE_TRIM, RendererBase.IMAGE_FRAC_EDGE_KEEP,
+                RendererBase.IMAGE_FRAC_EDGE_TRIM, RendererBase.IMAGE_FRAC_EDGE_KEEP);
     }
 
     private void computeScaleAndPixelCorrection(float[] target, float dv1, float dv2, float sv1, float sv2) {
@@ -979,7 +1020,9 @@ final class SWGraphics implements ReadbackGraphics {
         convertToPiscesTransform(this.tx, t6);
         this.pr.setLinearGradient(0, (int)(TO_PISCES * dy1), 0, (int)(TO_PISCES * dy2), fractions, argb,
                                   GradientColorMap.CYCLE_NONE, t6);
-        this.drawTexture(tex, RendererBase.IMAGE_MODE_MULTIPLY, dx1, dy1, dx2, dy2, sx1, sy1, sx2, sy2);
+        this.drawTexture(tex, RendererBase.IMAGE_MODE_MULTIPLY, dx1, dy1, dx2, dy2, sx1, sy1, sx2, sy2,
+                RendererBase.IMAGE_FRAC_EDGE_KEEP, RendererBase.IMAGE_FRAC_EDGE_KEEP,
+                RendererBase.IMAGE_FRAC_EDGE_KEEP, RendererBase.IMAGE_FRAC_EDGE_KEEP);
     }
 
     public void drawTextureRaw(Texture tex,

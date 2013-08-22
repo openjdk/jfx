@@ -346,6 +346,7 @@ public final class PiscesRenderer {
     public void drawImage(int imageType, int imageMode, int data[],  int width, int height, int offset, int stride,
         Transform6 textureTransform, boolean repeat,
         int bboxX, int bboxY, int bboxW, int bboxH,
+        int lEdge, int rEdge, int tEdge, int bEdge,
         int interpolateMinX, int interpolateMinY, int interpolateMaxX, int interpolateMaxY,
         boolean hasAlpha)
     {
@@ -353,6 +354,7 @@ public final class PiscesRenderer {
         this.drawImageImpl(imageType, imageMode, data, width, height, offset, stride,
             textureTransform, repeat,
             bboxX, bboxY, bboxW, bboxH,
+            lEdge, rEdge, tEdge, bEdge,
             interpolateMinX, interpolateMinY, interpolateMaxX, interpolateMaxY,
             hasAlpha);
     }
@@ -360,6 +362,7 @@ public final class PiscesRenderer {
     private native void drawImageImpl(int imageType, int imageMode, int data[], int width, int height, int offset, int stride,
         Transform6 textureTransform, boolean repeat,
         int bboxX, int bboxY, int bboxW, int bboxH,
+        int lEdge, int rEdge, int tEdge, int bEdge,
         int interpolateMinX, int interpolateMinY, int interpolateMaxX, int interpolateMaxY,
         boolean hasAlpha);
 
