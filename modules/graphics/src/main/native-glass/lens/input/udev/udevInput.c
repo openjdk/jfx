@@ -371,7 +371,9 @@ jboolean lens_input_initialize(JNIEnv *env) {
         GLASS_LOG_SEVERE("Could not find %s", className);
     }
 
-    lens_wm_setPointerPosition(screenWidth / 2, screenHeight / 2);
+    mousePosX = screenWidth / 2;
+    mousePosY = screenHeight / 2;
+    lens_wm_setPointerPosition(mousePosX, mousePosY);
 
     glass_application_request_native_event_loop(env, &lens_input_eventLoop, NULL);
 
