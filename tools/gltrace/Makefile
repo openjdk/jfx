@@ -1,11 +1,6 @@
 CC      = gcc -O2 
 JDK     = /opt/java
 
-HDRS    = iolib.h map.h os.h
-SRCS    = trace.c agent.c iolib.c os-linux.c
-SRCS2   = retrace.c iolib.c enums.c map.c os-linux.c
-
-
 PLATFORM := $(shell if [ -x /opt/vc ]; then echo RASPBERRY; else echo BEAGLE; fi)
 
 ifeq ($(PLATFORM),RASPBERRY)
@@ -14,6 +9,7 @@ DEST = armv6hf-vfp
 endif
 
 ifeq ($(PLATFORM),BEAGLE)
+CFLAGS += -DBEAGLEBOARD
 DEST = armv6-vfp
 endif
 
@@ -30,8 +26,8 @@ $(DEST):
 #    gltrace.so
 #
 
-HDRS    = iolib.h map.h os.h
-DYNLIB_SRCS = trace.c agent.c iolib.c os-linux.c
+HDRS    = iolib.h map.h os.h trace.h
+DYNLIB_SRCS = trace-linux.c agent.c iolib.c os-linux.c egl.c gles.c
 
 $(DEST)/gltrace.so: $(HDRS) $(DYNLIB_SRCS)
 	$(CC) $(CFLAGS) -shared -fPIC \

@@ -32,12 +32,18 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include <GLES2/gl2.h>
+#include <GLES2/gl2ext.h>
+#include <EGL/egl.h>
+
 #include "os.h"
-#include "opengl.h"
 #include "iolib.h"
 #include "map.h"
 
 #define DIR_TEXTURES    "TEXTURES"
+
+typedef void             GLvoid;
+typedef char             GLchar;
 
 extern const char *eglEnum2str(EGLenum);
 extern const char *glEnum2str(GLenum);
@@ -2006,22 +2012,24 @@ proc_eglGetDisplay(EGLNativeDisplayType display_id)
 }
 
 static EGLBoolean
-proc_eglInitialize(EGLDisplay dpy, EGLint _major, EGLint _minor)
+proc_eglInitialize(EGLDisplay dpy, const EGLint *major, const EGLint *minor)
 {
     EGLBoolean res = EGL_FALSE;
     if (printFlag) {
         sb_appendStr("eglInitialize(");
         sb_appendPtr(dpy);
         sb_appendStr(", ");
-        sb_appendInt(_major);
+        if (major) sb_appendInt(*major);
+	else sb_appendStr("(null)");
         sb_appendStr(", ");
-        sb_appendInt(_minor);
+        if (minor) sb_appendInt(*minor);
+	else sb_appendStr("(null)");
         sb_appendStr(")");
     }
     if (execFlag) {
-        EGLint major, minor;
-        res = eglInitialize(dpy, &major, &minor);
-        if ((_major && (major != _major)) || (_minor && (minor != _minor))) {
+        EGLint _major, _minor;
+        res = eglInitialize(dpy, &_major, &_minor);
+        if ((major && (*major != _major)) || (minor && (*minor != _minor))) {
             fprintf(stderr, "ERROR: eglInitialize version mismatch\n");
         }
     }
@@ -3165,7 +3173,10 @@ process(int frames)
             break;
         }
         case OPC_eglInitialize: {
-            EGLBoolean curVal = proc_eglInitialize((EGLDisplay)getPtr(), getInt(), getInt());
+            EGLDisplay dpy = (EGLDisplay)getPtr();
+	    const GLint *major = getIntPtr();
+	    const GLint *minor = getIntPtr();
+            EGLBoolean curVal = proc_eglInitialize(dpy, major, minor);
             EGLBoolean oldVal = getInt();
             if (printFlag) {
                 sb_appendStr(" = ");

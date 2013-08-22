@@ -359,6 +359,7 @@ getIntPtr()
     int val = *res;
     if (val == MARKER) {
         res = (int*)curPtr;
+	curPtr += sizeof(int);
         val = *res;
         if (val == 0) return NULL;
     }
