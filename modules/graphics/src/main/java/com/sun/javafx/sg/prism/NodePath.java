@@ -30,17 +30,17 @@ import java.util.List;
 
 /**
  * Simple a reusable storage for root-to-node path.
- * 
+ *
  */
 public class NodePath<N extends NGNode> {
     private List<N> path = new ArrayList<>();
     private int position;
-    
+
     public NodePath() {
     }
-    
+
     // ITERATION methods
-    
+
     public N getCurrentNode() {
         return path.get(position);
     }
@@ -55,33 +55,29 @@ public class NodePath<N extends NGNode> {
         }
         position--;
     }
-    
+
     public void reset() {
         position = path.size() - 1;
     }
-    
+
     // MODIFICATION methods
-    
+
     public void clear() {
         position = -1;
         path.clear();
     }
-    
+
     public void add(N n) {
         path.add(n);
         position = path.size() - 1;
     }
-    
+
     public int size() {
         return path.size();
     }
-    
-    /*
-     * Remove root and set to beginning.
-     */
-    public void removeRoot() {
-        path.remove(path.size() - 1);
-        position = path.size() - 1;
+
+    public boolean isEmpty() {
+        return size() == 0;
     }
 
 }
