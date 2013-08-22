@@ -446,6 +446,10 @@ public class TreeTableRow<T> extends IndexedCell<T> {
         if (getIndex() == -1 || getTreeTableView() == null || getTreeItem() == null) return;
 
         final TreeTablePosition<T,?> editingCell = getTreeTableView().getEditingCell();
+        if (editingCell != null && editingCell.getTableColumn() != null) {
+            return;
+        }
+
         final TreeItem<T> editItem = editingCell == null ? null : editingCell.getTreeItem();
         if (! isEditing() && getTreeItem().equals(editItem)) {
             startEdit();

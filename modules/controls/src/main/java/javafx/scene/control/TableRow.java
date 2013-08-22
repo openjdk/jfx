@@ -323,6 +323,10 @@ public class TableRow<T> extends IndexedCell<T> {
         if (sm == null || sm.isCellSelectionEnabled()) return;
 
         TablePosition<T,?> editCell = table.getEditingCell();
+        if (editCell != null && editCell.getTableColumn() != null) {
+            return;
+        }
+
         boolean rowMatch = editCell == null ? false : editCell.getRow() == getIndex();
 
         if (! isEditing() && rowMatch) {

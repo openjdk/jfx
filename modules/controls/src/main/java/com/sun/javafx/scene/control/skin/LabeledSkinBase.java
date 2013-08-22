@@ -252,6 +252,51 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
     }
 
     /*
+    ** The Label is a mnemonic, and it's target node
+    ** has changed, but it's label hasn't so just
+    ** swap them over, and tidy up.
+    */
+    protected void mnemonicTargetChanged(Node oldNode, Node newNode) {
+        if (containsMnemonic == true) {
+            KeyCodeCombination mnemonicKeyCombo =
+                new KeyCodeCombination(
+                                       mnemonicCode,
+                                       com.sun.javafx.PlatformUtil.isMac()
+                                       ? KeyCombination.META_DOWN
+                                       : KeyCombination.ALT_DOWN);
+
+            /*
+            ** was there previously a labelFor
+            */
+            if (oldNode != null) {
+                Mnemonic myMnemonic = new Mnemonic(oldNode, mnemonicKeyCombo);
+                mnemonicScene.removeMnemonic(myMnemonic);
+                mnemonicScene = null;
+            }
+            else {
+                /*
+                ** maybe we were a target ourselves
+                */
+                Mnemonic myMnemonic = new Mnemonic(getSkinnable(), mnemonicKeyCombo);
+                mnemonicScene.removeMnemonic(myMnemonic);
+                mnemonicScene = null;
+            }
+
+            /*
+            ** is there a new labelFor
+            */
+            if (newNode != null) {
+                Mnemonic myMnemonic = new Mnemonic(newNode, mnemonicKeyCombo);
+                mnemonicScene = newNode.getScene();
+                if (mnemonicScene != null) {
+                    mnemonicScene.addMnemonic(myMnemonic);
+                }
+            }
+            labeledNode = newNode;
+        }
+    }
+
+    /*
     ** parent has changed,
     ** if it's null then remove any mnemonics from the scene,
     ** if it's valid then check to see if mnemonics should

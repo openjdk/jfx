@@ -42,7 +42,6 @@ import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
-import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
@@ -56,11 +55,13 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 import com.sun.javafx.Utils;
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.control.behavior.ScrollPaneBehavior;
 import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.scene.traversal.TraverseListener;
-import static com.sun.javafx.Utils.clamp;
-import static com.sun.javafx.scene.control.skin.Utils.boundedSize;
+import static com.sun.javafx.Utils.*;
+import static com.sun.javafx.scene.control.skin.Utils.*;
+import javafx.geometry.Insets;
 
 public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehavior> implements TraverseListener {
     /***************************************************************************
@@ -255,9 +256,6 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
                 // if scrollNode requested layout, will want to recompute
                 nodeWidth = -1;
                 nodeHeight = -1;
-                if (canChangeHorizontalSBVisibility() || canChangeVerticalSBVisibility()) {
-                    getSkinnable().requestLayout();
-                }
                 super.requestLayout(); // add as layout root for next layout pass
             }
             @Override protected void layoutChildren() {
@@ -266,6 +264,9 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
                 }
                 if (scrollNode != null && scrollNode.isResizable()) {
                     scrollNode.resize(snapSize(nodeWidth), snapSize(nodeHeight));
+                    if (vsbvis != determineVerticalSBVisible() || hsbvis != determineHorizontalSBVisible()) {
+                        getSkinnable().requestLayout();
+                    }
                 }
                 if (scrollNode != null) {
                     scrollNode.relocate(0,0);
@@ -934,42 +935,6 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
                  ((getSkinnable().isFitToWidth() && scrollNode != null ? scrollNode.isResizable() : false) ?
                   (nodeWidth > contentw && scrollNode.minWidth(-1) > contentw) : (nodeWidth > contentw)));
         }
-    }
-
-    private boolean canChangeVerticalSBVisibility() {
-        final ScrollPane c = getSkinnable();
-        if (c.isFitToHeight() || !c.getVbarPolicy().equals(ScrollBarPolicy.AS_NEEDED)) {
-            return false;
-        }
-        // Note, we can safely assume here that the content height won't change.
-        // Otherwise, the layout of the scrollpane will be triggered anyway.
-        // Also, as fitToHeight is false, the computation below is also safe
-        final double contenth = c.getHeight()- snappedBottomInset()- snappedTopInset();
-        if (c.getContentBias() != Orientation.HORIZONTAL) {
-            // Optimization: we can already compute the nodeHeight here
-            nodeHeight = snapSize(boundedSize(scrollNode.prefHeight(-1),
-                    scrollNode.minHeight(-1), scrollNode.maxHeight(-1)));
-            return vsbvis ? nodeHeight <= contenth : nodeHeight > contenth;
-        }
-        return true;
-    }
-    
-    private boolean canChangeHorizontalSBVisibility() {
-        final ScrollPane c = getSkinnable();
-        if (c.isFitToWidth()|| !c.getHbarPolicy().equals(ScrollBarPolicy.AS_NEEDED)) {
-            return false;
-        }
-        // Note, we can safely assume here that the content width won't change.
-        // Otherwise, the layout of the scrollpane will be triggered anyway.
-        // Also, as fitToWidth is false, the computation below is also safe
-        final double contentw = c.getWidth()- snappedLeftInset()- snappedRightInset();
-        if (c.getContentBias() != Orientation.VERTICAL) {
-            // Optimization: we can already compute the nodeHeight here
-            nodeWidth = snapSize(boundedSize(scrollNode.prefWidth(-1),
-                    scrollNode.minWidth(-1), scrollNode.maxWidth(-1)));
-            return hsbvis ? nodeWidth <= contentw : nodeWidth > contentw;
-        }
-        return true;
     }
 
     private boolean determineVerticalSBVisible() {

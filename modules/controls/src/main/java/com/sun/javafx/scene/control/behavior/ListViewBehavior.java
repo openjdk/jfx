@@ -709,7 +709,9 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         getControl().getSelectionModel().select(focusedIndex);
 
         // edit this row also
-        getControl().edit(focusedIndex);
+        if (focusedIndex >= 0) {
+            getControl().edit(focusedIndex);
+        }
     }
     
     private void toggleFocusOwnerSelection() {
