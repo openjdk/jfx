@@ -79,6 +79,7 @@ public final class PrismSettings {
     public static final long targetVram;
     public static final boolean poolStats;
     public static final boolean poolDebug;
+    public static final boolean disableEffects;
 
     private PrismSettings() {
     }
@@ -317,6 +318,8 @@ public final class PrismSettings {
                                           false);
 
         disableD3D9Ex = getBoolean(systemProperties, "prism.disableD3D9Ex", true);
+        
+        disableEffects = getBoolean(systemProperties, "prism.disableEffects", false);
     }
 
     private static int parseInt(String s, int dflt, int trueDflt,

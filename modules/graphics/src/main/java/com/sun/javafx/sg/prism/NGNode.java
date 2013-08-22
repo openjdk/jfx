@@ -497,6 +497,11 @@ public abstract class NGNode {
      * @param effect the effect (can be null to clear it)
      */
     public void setEffect(Object effect) {
+        // When effects are disabled, be sure to reset the effect filter
+        if (PrismSettings.disableEffects) {
+            effect = null;
+        }
+
         // We only need to take action if the effect is different than what was
         // set previously. There are four possibilities. Of these, #1 and #3 matter:
         // 0. effectFilter == null, effect == null
