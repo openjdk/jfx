@@ -34,6 +34,7 @@ import javafx.scene.control.TextInputControl;
 import javafx.scene.input.KeyEvent;
 
 import java.text.Bidi;
+import java.text.BreakIterator;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -72,6 +73,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     private KeyEvent lastEvent;
 
     private UndoManager undoManager = new UndoManager();
+
+    private BreakIterator charIterator;
 
     private InvalidationListener textListener = new InvalidationListener() {
         @Override public void invalidated(Observable observable) {
@@ -330,7 +333,9 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                 // which requires two chars to be deleted. However it
                 // does not, and should not, delete any other kind of
                 // cluster as a whole, just the last char. Compare
-                // with deleteNextChar().
+                // with how deleteNextChar() behaves. See also the
+                // comment in TextInputControl.deletePreviousChar().
+                // So, do not use charIterator here.
                 start = Character.offsetByCodePoints(textInputControl.getText(), end, -1);
             }
             undoManager.addChange(start, textInputControl.getText().substring(start, end), null);
@@ -348,10 +353,14 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             if (selection.getLength() == 0) {
                 // Note: This can handle the case of a surrogate
                 // pair which requires two chars to be deleted.
-                // TODO: It should also delete any kind of cluster as
+                // It will also delete any kind of cluster or ligature as
                 // a whole, not just the first char. Compare with
                 // deletePreviousChar().
-                end = Character.offsetByCodePoints(textInputControl.getText(), start, 1);
+                if (charIterator == null) {
+                    charIterator = BreakIterator.getCharacterInstance();
+                }
+                charIterator.setText(textInputControl.getText());
+                end = charIterator.following(start);
             }
             undoManager.addChange(start, textInputControl.getText().substring(start, end), null);
         }

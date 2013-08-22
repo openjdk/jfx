@@ -1761,6 +1761,35 @@ public class TextInputControlTest {
         assertEquals(new IndexRange(0, 4), textInput.getSelection());
     }
 
+    @Test public void test_rt26250_caret_issue_for_thai_characters() {
+        // Thai string containing two characters, consisting of three
+        // codepoints each.
+        String thaiStr = "\u0E17\u0E35\u0E48\u0E17\u0E35\u0E48";
+        textInput.setText(thaiStr);
+        textInput.positionCaret(0);
+
+        // Step past one character
+        textInput.forward();
+        assertEquals(3, textInput.getCaretPosition());
+
+        // Goto beginning
+        textInput.backward();
+        assertEquals(0, textInput.getCaretPosition());
+
+        // Delete entire first character forwards
+        textInput.deleteNextChar();
+        assertEquals("\u0E17\u0E35\u0E48", textInput.getText());
+        
+        // Break up and delete remaining character backwards in three steps
+        textInput.forward();
+        textInput.deletePreviousChar();
+        assertEquals("\u0E17\u0E35", textInput.getText());
+        textInput.deletePreviousChar();
+        assertEquals("\u0E17", textInput.getText());
+        textInput.deletePreviousChar();
+        assertEquals("", textInput.getText());
+    }
+
     // TODO tests for Content firing event notification properly
 
     // TODO tests for Content not allowing illegal characters

@@ -645,7 +645,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
 
     public void positionCaret(HitInfo hit, boolean select) {
 //         int pos = hit.getCharIndex();
-        int pos = hit.getInsertionIndex();
+        int pos = Utils.getHitInsertionIndex(hit, getSkinnable().getText());
 
         if (select) {
             getSkinnable().selectPositionCaret(pos);
