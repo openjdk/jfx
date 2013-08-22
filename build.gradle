@@ -1843,7 +1843,15 @@ compileTargets { t ->
 
         dependsOn(subprojects.collect { project -> project.getTasksByName("assemble", true)});
     }
-    jfxrt.dependsOn(jfxrtTask)
+    def jfxrtIndexTask = task("jfxrtIndex$t.capital") {
+        //the following is a workaround for the lack of indexing in gradle 1.4 through 1.7
+        dependsOn(jfxrtTask)
+
+        doLast() {
+            ant.jar (update: true, index: true, destfile: jfxrtTask.archiveName)
+        }
+    }
+    jfxrt.dependsOn(jfxrtIndexTask)
 
     // The 'sdk' task will build the rest of the SDK, and depends on the 'jfxrtTask' task. After
     // executing this task the sdk bundle for the current COMPILE_TARGETS will be fully created.
