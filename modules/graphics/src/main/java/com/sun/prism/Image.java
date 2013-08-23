@@ -25,6 +25,12 @@
 
 package com.sun.prism;
 
+import javafx.scene.image.PixelReader;
+import javafx.scene.image.WritablePixelFormat;
+import java.nio.Buffer;
+import java.nio.ByteBuffer;
+import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
 import com.sun.javafx.iio.ImageFrame;
 import com.sun.javafx.iio.ImageStorage;
 import com.sun.javafx.image.BytePixelGetter;
@@ -48,12 +54,6 @@ import com.sun.javafx.image.impl.ByteRgb;
 import com.sun.javafx.image.impl.ByteRgba;
 import com.sun.javafx.tk.PlatformImage;
 import com.sun.prism.impl.BufferUtil;
-import java.nio.Buffer;
-import java.nio.ByteBuffer;
-import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
-import javafx.scene.image.PixelReader;
-import javafx.scene.image.WritablePixelFormat;
 
 public class Image implements PlatformImage {
     static final javafx.scene.image.WritablePixelFormat FX_ByteBgraPre_FORMAT =
@@ -439,7 +439,7 @@ public class Image implements PlatformImage {
      * in cases where having extra pixels at the end of a scanline is not
      * desirable.
      *
-     * @param pixel the buffer containing the pixels to copy
+     * @param pixels the buffer containing the pixels to copy
      * @param format the format of the given buffer
      * @param minX the x offset of the upper-left corner of the pixel region
      * @param minX the y offset of the upper-left corner of the pixel region
@@ -713,6 +713,10 @@ public class Image implements PlatformImage {
     {
         getPixelAccessor().setPixels(dstx, dsty, w, h, reader, srcx, srcy);
         serial[0]++;
+    }
+
+    public boolean isOpaque() {
+        return pixelFormat.isOpaque();
     }
 
     abstract class Accessor<I extends Buffer> {

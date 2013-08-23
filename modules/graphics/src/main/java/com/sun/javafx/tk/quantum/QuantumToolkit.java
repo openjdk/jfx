@@ -53,6 +53,7 @@ import javafx.scene.shape.StrokeType;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.StageStyle;
+import javafx.stage.Window;
 import java.io.File;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -127,7 +128,6 @@ import com.sun.scenario.effect.impl.prism.PrFilterContext;
 import com.sun.scenario.effect.impl.prism.PrImage;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
-import javafx.stage.Window;
 
 public final class QuantumToolkit extends Toolkit {
 
@@ -1030,7 +1030,7 @@ public final class QuantumToolkit extends Toolkit {
         int intX = (int)x + pImage.getMinX();
         int intY = (int)y + pImage.getMinY();
 
-        if (pImage.getPixelFormat().isOpaque()) {
+        if (pImage.isOpaque()) {
             return true;
         }
 

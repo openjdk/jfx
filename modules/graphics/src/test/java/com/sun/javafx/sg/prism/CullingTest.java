@@ -25,134 +25,126 @@
 
 package com.sun.javafx.sg.prism;
 
-import javafx.scene.Group;
-import javafx.scene.Node;
-import javafx.scene.Scene;
-import javafx.scene.shape.Rectangle;
-import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.DirtyRegionContainer;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
-import junit.framework.Assert;
+import com.sun.javafx.geom.transform.GeneralTransform3D;
+import org.junit.Assert;
 import org.junit.Test;
 
-public class CullingTest {
+public class CullingTest extends NGTestBase {
 
     @Test
     public void test_setCullBits_intersect() {
-        NGNode bn = getPeerNode(new Rectangle(0, 0, 100, 100));
+        NGNode bn = createRectangle(0, 0, 100, 100);
         DirtyRegionContainer drc = new DirtyRegionContainer(2);
         drc.deriveWithNewRegions(new RectBounds[]
                     {
                     new RectBounds(50, 50, 150, 150),
                     new RectBounds(70, 70, 170, 170)
                     });
-        bn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, null);
+        bn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
         Assert.assertEquals(1 |(1 << 2), bn.cullingBits);
     }
 
     @Test
     public void test_setCullBits_disjoint() {
-        NGNode bn = getPeerNode(new Rectangle(0, 0, 100, 100));
+        NGNode bn = createRectangle(0, 0, 100, 100);
         DirtyRegionContainer drc = new DirtyRegionContainer(2);
         drc.deriveWithNewRegions(new RectBounds[]
                     {
                     new RectBounds(110, 110, 150, 150),
                     new RectBounds(0, 101, 170, 170)
                     });
-        bn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, null);
+        bn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
         Assert.assertEquals(0, bn.cullingBits);
     }
 
     @Test
     public void test_setCullBits_within() {
-        NGNode bn = getPeerNode(new Rectangle(50, 50, 100, 100));
+        NGNode bn = createRectangle(50, 50, 100, 100);
         DirtyRegionContainer drc = new DirtyRegionContainer(2);
         drc.deriveWithNewRegions(new RectBounds[]
                     {
                     new RectBounds(40, 40, 170, 170),
                     new RectBounds(0, 0, 200, 200)
                     });
-        bn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, null);
+        bn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
         Assert.assertEquals(2 | (2 << 2), bn.cullingBits);
     }
     
     @Test
     public void test_setCullBits_region_within() {
-        NGNode bn = getPeerNode(new Rectangle(0, 0, 100, 100));
+        NGNode bn = createRectangle(0, 0, 100, 100);
         DirtyRegionContainer drc = new DirtyRegionContainer(2);
         drc.deriveWithNewRegions(new RectBounds[]
                     {
                     new RectBounds(40, 40, 70, 70),
                     new RectBounds(10, 10, 20, 20)
                     });
-        bn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, null);
+        bn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
         Assert.assertEquals(1 | (1 << 2), bn.cullingBits);
     }
 
     @Test
     public void test_setCullBits_empty() {
-        NGNode bn = getPeerNode(new Rectangle(50, 50, 100, 100));
+        NGNode bn = createRectangle(50, 50, 100, 100);
         DirtyRegionContainer drc = new DirtyRegionContainer(2);
         drc.deriveWithNewRegions(new RectBounds[]
                     {
                     new RectBounds(40, 40, 170, 170),
                     new RectBounds().makeEmpty()
                     });
-        bn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, null);
+        bn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
         Assert.assertEquals(2, bn.cullingBits);
     }
 
     @Test
     public void test_setCullBits_null() {
-        NGNode bn = getPeerNode(new Rectangle(50, 50, 100, 100));
+        NGNode bn = createRectangle(50, 50, 100, 100);
         DirtyRegionContainer drc = new DirtyRegionContainer(2);
         drc.deriveWithNewRegions(new RectBounds[]
                     {
                     new RectBounds(40, 40, 170, 170),
                     null
                     });
-        bn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, null);
+        bn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
         Assert.assertEquals(2, bn.cullingBits);
     }
 
     @Test
     public void test_setCullBits_empty_regions() {
-        NGNode bn = getPeerNode(new Rectangle(50, 50, 100, 100));
+        NGNode bn = createRectangle(50, 50, 100, 100);
         DirtyRegionContainer drc = new DirtyRegionContainer(2);
         drc.deriveWithNewRegions(new RectBounds[]{});
-        bn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, null);
+        bn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
         Assert.assertEquals(0, bn.cullingBits);
     }
 
     @Test
     public void test_group_disjoint() {
-        Node g = group(new Rectangle(150, 0, 50, 50), new Rectangle(150, 60, 50, 50));
-        g.setTranslateX(10);
-        g.setTranslateY(10);
-        NGNode gbn = getPeerNode(g);
-        NGNode bn1 = getPeerNode(((Group) g).getChildren().get(0));
-        NGNode bn2 = getPeerNode(((Group) g).getChildren().get(1));
+        NGNode bn1 = createRectangle(150, 0, 50, 50);
+        NGNode bn2 = createRectangle(150, 60, 50, 50);
+        NGGroup gbn = createGroup(bn1, bn2);
+        translate(gbn, 10, 10);
         DirtyRegionContainer drc = new DirtyRegionContainer(2);
         drc.deriveWithNewRegions(new RectBounds[]{new RectBounds(0, 0, 100, 100), new RectBounds(0, 110, 100, 210)});
-        gbn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, null);
+        gbn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
         Assert.assertEquals(0, gbn.cullingBits);
-        for(Node n:((Group)g).getChildren()) {
-            Assert.assertEquals(0, getPeerNode(n).cullingBits);
+        for(NGNode n : gbn.getChildren()) {
+            Assert.assertEquals(0, n.cullingBits);
         }
     }
 
     @Test
     public void test_group_intersect() {
-        Node g = group(new Rectangle(50, 50, 30, 30), new Rectangle(50, 120, 30, 30));
-        g.setTranslateX(10);
-        g.setTranslateY(10);
-        NGNode gbn = getPeerNode(g);
-        NGNode bn1 = getPeerNode(((Group) g).getChildren().get(0));
-        NGNode bn2 = getPeerNode(((Group) g).getChildren().get(1));
+        NGNode bn1 = createRectangle(50, 50, 30, 30);
+        NGNode bn2 = createRectangle(50, 120, 30, 30);
+        NGGroup gbn = createGroup(bn1, bn2);
+        translate(gbn, 10, 10);
         DirtyRegionContainer drc = new DirtyRegionContainer(2);
         drc.deriveWithNewRegions(new RectBounds[]{new RectBounds(0, 0, 100, 100), new RectBounds(0, 110, 100, 210)});
-        gbn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, null);
+        gbn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
 
         //check group
         Assert.assertEquals(1 | (1 << 2), gbn.cullingBits);
@@ -164,15 +156,13 @@ public class CullingTest {
     
     @Test
     public void test_group_within() {
-        Node g = group(new Rectangle(50, 50, 30, 30), new Rectangle(50, 10, 30, 30));
-        g.setTranslateX(10);
-        g.setTranslateY(10);
-        NGNode gbn = getPeerNode(g);
-        NGNode bn1 = getPeerNode(((Group) g).getChildren().get(0));
-        NGNode bn2 = getPeerNode(((Group) g).getChildren().get(1));
+        NGNode bn1 = createRectangle(50, 50, 30, 30);
+        NGNode bn2 = createRectangle(50, 10, 30, 30);
+        NGGroup gbn = createGroup(bn1, bn2);
+        translate(gbn, 10, 10);
         DirtyRegionContainer drc = new DirtyRegionContainer(2);
         drc.deriveWithNewRegions(new RectBounds[]{new RectBounds(0, 0, 100, 100), new RectBounds(0, 110, 100, 210)});
-        gbn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, null);
+        gbn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
 
         //check group
         Assert.assertEquals(2, gbn.cullingBits);
@@ -184,15 +174,13 @@ public class CullingTest {
     
     @Test
     public void test_region_within_group() {
-        Node g = group(new Rectangle(50, 10, 100, 100), new Rectangle(50, 120, 100, 100));
-        g.setTranslateX(5);
-        g.setTranslateY(5);
-        NGNode gbn = getPeerNode(g);
-        NGNode bn1 = getPeerNode(((Group) g).getChildren().get(0));
-        NGNode bn2 = getPeerNode(((Group) g).getChildren().get(1));
+        NGNode bn1 = createRectangle(50, 10, 100, 100);
+        NGNode bn2 = createRectangle(50, 120, 100, 100);
+        NGGroup gbn = createGroup(bn1, bn2);
+        translate(gbn, 5, 5);
         DirtyRegionContainer drc = new DirtyRegionContainer(2);
         drc.deriveWithNewRegions(new RectBounds[]{new RectBounds(70, 20, 100, 105), new RectBounds(70, 130, 100, 200)});
-        gbn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, null);
+        gbn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
 
         //check group
         Assert.assertEquals(1 | (1 << 2), gbn.cullingBits);
@@ -204,22 +192,18 @@ public class CullingTest {
 
     @Test
     public void test_region_within_group_group() {
-        Node g1 = group(new Rectangle(50, 10, 100, 100), new Rectangle(50, 120, 100, 100));
-        g1.setTranslateX(5);
-        g1.setTranslateY(5);
-        NGNode g1bn = getPeerNode(g1);
-        NGNode bn1 = getPeerNode(((Group) g1).getChildren().get(0));
-        NGNode bn2 = getPeerNode(((Group) g1).getChildren().get(1));
+        NGNode bn1 = createRectangle(50, 10, 100, 100);
+        NGNode bn2 = createRectangle(50, 120, 100, 100);
+        NGNode g1bn = createGroup(bn1, bn2);
+        translate(g1bn, 5, 5);
 
-        Node g = group(g1, new Rectangle(200, 200, 100, 100));
-        g.setTranslateX(5);
-        g.setTranslateY(5);
-        NGNode gbn = getPeerNode(g);
-        NGNode bn3 = getPeerNode(((Group) g).getChildren().get(1));
+        NGNode bn3 = createRectangle(200, 200, 100, 100);
+        NGNode gbn = createGroup(g1bn, bn3);
+        translate(gbn, 5, 5);
 
         DirtyRegionContainer drc = new DirtyRegionContainer(2);
         drc.deriveWithNewRegions(new RectBounds[]{new RectBounds(70, 25, 100, 105), new RectBounds(70, 130, 100, 200)});
-        gbn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, null);
+        gbn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
 
         //check group
         Assert.assertEquals(1 | (1 << 2), gbn.cullingBits);
@@ -234,43 +218,15 @@ public class CullingTest {
     }
 
     @Test
-    public void test_region_group_full_withing_then_partial() {
-        Node g = group(new Rectangle(50, 50, 100, 100));
-        NGNode gbn = getPeerNode(g);
-        NGNode bn1 = getPeerNode(((Group) g).getChildren().get(0));
+    public void test_rectangle_group_full_within_then_partial() {
+        NGNode bn1 = createRectangle(50, 50, 100, 100);
+        NGNode gbn = createGroup(bn1);
 
         DirtyRegionContainer drc = new DirtyRegionContainer(2);
         drc.deriveWithNewRegions(new RectBounds[]{new RectBounds(0, 0, 160, 160), new RectBounds(80, 80, 100, 100)});
-        gbn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, null);
+        gbn.markCullRegions(drc, -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
 
         Assert.assertEquals(2 | (1 << 2), gbn.cullingBits);
         Assert.assertEquals(1 << 2, bn1.cullingBits);
-    }
-
-    public static NGNode getPeerNode(Node n) {
-        Scene.impl_setAllowPGAccess(true);
-        // Eeek, this is gross! I have to use reflection to invoke this
-        // method so that bounds are updated...
-        try {
-            java.lang.reflect.Method method = Node.class.getDeclaredMethod("updateBounds");
-            method.setAccessible(true);
-            method.invoke(n);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to update bounds", e);
-        }
-        n.impl_updatePeer();
-        NGNode bn = n.impl_getPeer();
-        Scene.impl_setAllowPGAccess(false);
-        return bn;
-    }
-
-    public static Node group(Node... n) {
-        Group g = new Group(n);
-        return g;
-    }
-
-    public static BaseBounds getBounds(Node n, BaseTransform tx) {
-        NGNode pgn = getPeerNode(n);
-        return pgn.getContentBounds(new RectBounds(), tx);
     }
 }

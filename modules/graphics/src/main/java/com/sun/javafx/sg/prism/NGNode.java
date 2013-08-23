@@ -115,9 +115,18 @@ public abstract class NGNode {
      * where we have multi-threaded rasterization, we might need to make
      * this per-instance instead of static.
      */
-    protected static final BoxBounds TEMP_BOUNDS = new BoxBounds();
-    protected static final RectBounds TEMP_RECT_BOUNDS = new RectBounds();
+    private static final BoxBounds TEMP_BOUNDS = new BoxBounds();
+    private static final RectBounds TEMP_RECT_BOUNDS = new RectBounds();
     protected static final Affine3D TEMP_TRANSFORM = new Affine3D();
+
+    /**
+     * Statics for defining what the culling bits are. We use 2 bits to
+     * determine culling status
+     */
+    static final int DIRTY_REGION_INTERSECTS_NODE_BOUNDS = 0x1;
+    static final int DIRTY_REGION_CONTAINS_NODE_BOUNDS = 0x2;
+    static final int DIRTY_REGION_CONTAINS_OR_INTERSECTS_NODE_BOUNDS =
+            DIRTY_REGION_INTERSECTS_NODE_BOUNDS | DIRTY_REGION_CONTAINS_NODE_BOUNDS;
 
     /**
      * The transform for this node. Although we are handed all the bounds
@@ -241,15 +250,20 @@ public abstract class NGNode {
      * Marks position of this node in dirty regions.
      */
     protected int cullingBits = 0x0;
-
-    static final int DIRTY_REGION_INTERSECTS_NODE_BOUNDS = 0x1;
-    static final int DIRTY_REGION_CONTAINS_NODE_BOUNDS = 0x2;
-    static final int DIRTY_REGION_CONTAINS_OR_INTERSECTS_NODE_BOUNDS =
-            DIRTY_REGION_INTERSECTS_NODE_BOUNDS | DIRTY_REGION_CONTAINS_NODE_BOUNDS;
-
-    private RectBounds opaqueRegion = null;
-    private boolean opaqueRegionInvalid = true;
     private DirtyHint hint;
+
+    /**
+     * A cached representation of the opaque region for this node. This
+     * cached version needs to be recomputed whenever the opaque region becomes
+     * invalid, which includes local transform changes (translations included!).
+     */
+    private RectBounds opaqueRegion = null;
+
+    /**
+     * To avoid object churn we keep opaqueRegion around, and just toggle this
+     * boolean to indicate whether we need to recompute the opaqueRegion.
+     */
+    private boolean opaqueRegionInvalid = true;
 
     protected NGNode() { }
 
@@ -370,6 +384,7 @@ public abstract class NGNode {
         } else {
             markDirty();
         }
+        invalidateOpaqueRegion();
     }
 
     /**
@@ -389,6 +404,7 @@ public abstract class NGNode {
             this.clipNode = clipNode;
             // Mark this node dirty, invalidate its cache, and all parents.
             visualsChanged();
+            invalidateOpaqueRegion();
         }
     }
 
@@ -406,8 +422,15 @@ public abstract class NGNode {
         // then we do not want to invalidate the cache due to an opacity
         // change. However, as usual, all parent caches must be invalidated.
         if (opacity != this.opacity) {
+            final float old = this.opacity;
             this.opacity = opacity;
             markDirty();
+            // Even though the opacity has changed, for example from .5 to .6,
+            // we don't need to invalidate the opaque region unless it has toggled
+            // from 1 to !1, or from !1 to 1.
+            if (old < 1 && (opacity == 1 || opacity == 0) || opacity < 1 && (old == 1 || old == 0)) {
+                invalidateOpaqueRegion();
+            }
         }
     }
 
@@ -416,12 +439,20 @@ public abstract class NGNode {
      * @param blendMode may be null to indicate "default"
      */
     public void setNodeBlendMode(Blend.Mode blendMode) {
+        // A SRC_OVER blend mode is the same as null, so just convert it here to save us trouble
+        // down the line.
+        if (blendMode == Blend.Mode.SRC_OVER) {
+            blendMode = null;
+        }
+
         // If the blend mode has changed, react. If this node is being cached,
         // then we do not want to invalidate the cache due to a compositing
         // change. However, as usual, all parent caches must be invalidated.
+
         if (this.nodeBlendMode != blendMode) {
             this.nodeBlendMode = blendMode;
             markDirty();
+            invalidateOpaqueRegion();
         }
     }
 
@@ -497,6 +528,7 @@ public abstract class NGNode {
      * @param effect the effect (can be null to clear it)
      */
     public void setEffect(Object effect) {
+        final Effect old = getEffect();
         // When effects are disabled, be sure to reset the effect filter
         if (PrismSettings.disableEffects) {
             effect = null;
@@ -521,6 +553,15 @@ public abstract class NGNode {
                 effectFilter = new EffectFilter((Effect)effect, this);
             }
             visualsChanged();
+        }
+
+        // The only thing we do with the effect in #computeOpaqueRegion is to check
+        // whether the effect is null / not null. If the answer to these question has
+        // not changed from last time, then there is no need to recompute the opaque region.
+        if (old != effect) {
+            if (old == null || effect == null) {
+                invalidateOpaqueRegion();
+            }
         }
     }
 
@@ -710,6 +751,7 @@ public abstract class NGNode {
 
     protected void geometryChanged() {
         invalidateCache();
+        invalidateOpaqueRegion();
         if (hasVisuals()) {
             markDirty();
         }
@@ -863,10 +905,10 @@ public abstract class NGNode {
     /***************************************************************************
      *                                                                         *
      * Dirty Regions                                                           *
-     *
+     *                                                                         *
      * Need to add documentation about dirty regions and how they work. One    *
      * thing to be aware of is that during the dirty region accumulation phase *
-     * we use precise floating point values, but during
+     * we use precise floating point values, but during                        *
      *                                                                         *
      **************************************************************************/
 
@@ -906,7 +948,6 @@ public abstract class NGNode {
      *         smaller than the clip.
      * TODO: Only made non-final for the sake of testing (see javafx-sg-prism tests) (RT-23957)
      */
-
     public /*final*/ int accumulateDirtyRegions(final RectBounds clip,
                                                 final RectBounds dirtyRegionTemp,
                                                 DirtyRegionPool regionPool,
@@ -914,6 +955,10 @@ public abstract class NGNode {
                                                 final BaseTransform tx,
                                                 final GeneralTransform3D pvTx)
     {
+        // This is the main entry point, make sure to check these inputs for validity
+        if (clip == null || dirtyRegionTemp == null || regionPool == null || dirtyRegionContainer == null ||
+                tx == null || pvTx == null) throw new NullPointerException();
+
         // Even though a node with 0 visibility or 0 opacity doesn't get
         // rendered, it may contribute to the dirty bounds, for example, if it
         // WAS visible or if it HAD an opacity > 0 last time we rendered then
@@ -996,11 +1041,11 @@ public abstract class NGNode {
      * TODO: Only made non-final for the sake of testing (see javafx-sg-prism tests) (RT-23957)
      */
     int accumulateGroupDirtyRegion(final RectBounds clip,
-                                             final RectBounds dirtyRegionTemp,
-                                             DirtyRegionPool regionPool,
-                                             DirtyRegionContainer dirtyRegionContainer,
-                                             final BaseTransform tx,
-                                             final GeneralTransform3D pvTx) {
+                                   final RectBounds dirtyRegionTemp,
+                                   final DirtyRegionPool regionPool,
+                                   DirtyRegionContainer dirtyRegionContainer,
+                                   final BaseTransform tx,
+                                   final GeneralTransform3D pvTx) {
         // We should have only made it to this point if this node has a dirty
         // child. If this node itself is dirty, this method never would get called.
         // If this node was not dirty and had no dirty children, then this
@@ -1231,33 +1276,13 @@ public abstract class NGNode {
     /**
      * Culling support for multiple dirty regions.
      * Set culling bits for the whole graph.
-     * @param drc Array of dirty regions.
-     * @param tx The transform for this render operation.
-     * @param pvTx Perspective camera transformation.
+     * @param drc Array of dirty regions. Cannot be null.
+     * @param tx The transform for this render operation. Cannot be null.
+     * @param pvTx Perspective camera transformation. Cannot be null.
      */
-    public void doPreCulling(DirtyRegionContainer drc, BaseTransform tx, GeneralTransform3D pvTx) {
+    public final void doPreCulling(DirtyRegionContainer drc, BaseTransform tx, GeneralTransform3D pvTx) {
+        if (drc == null || tx == null || pvTx == null) throw new NullPointerException();
         markCullRegions(drc, -1, tx, pvTx);
-    }
-
-    /**
-     * Set culling bits for the node.
-     * @param bounds Bounds of the node.
-     * @param regionIndex Index of dirty region used.
-     * @param region Dirty region being processed.
-     * @return Bit setting encoding node position to dirty region (without the shift)
-     */
-    protected int setCullBits(RectBounds bounds, int regionIndex, RectBounds region) {
-        int b = 0;
-        if (region != null && !region.isEmpty()) {
-            if (region.intersects(bounds)) {
-                b = DIRTY_REGION_INTERSECTS_NODE_BOUNDS;
-                if (region.contains(bounds)) {
-                    b = DIRTY_REGION_CONTAINS_NODE_BOUNDS;
-                }
-                cullingBits = cullingBits |  (b << (2 * regionIndex));
-            }
-        }
-        return b;
     }
 
     /**
@@ -1266,18 +1291,25 @@ public abstract class NGNode {
      * 01 - node intersecting dirty region
      * 11 - node completely within dirty region
      *
-     * 32 bits = 15 regions max. * 2 bit each.
+     * 32 bits = 15 regions max. * 2 bit each. The first two bits are not used
+     * because we have a special use case for -1, so they should only be set if
+     * in that case.
      *
      * @param drc The array of dirty regions.
      * @param cullingRegionsBitsOfParent culling bits of parent. -1 if there's no parent.
-     * @param tx The transform for this render operation.
-     * @param pvTx Perspective camera transform.
+     * @param tx The transform for this render operation. Cannot be null.
+     * @param pvTx Perspective camera transform. Cannot be null.
      */
-    protected void markCullRegions(
+    void markCullRegions(
             DirtyRegionContainer drc,
             int cullingRegionsBitsOfParent,
             BaseTransform tx,
             GeneralTransform3D pvTx) {
+
+        // Spent a long time tracking down how cullingRegionsBitsOfParent works. Note that it is
+        // not just the parent's bits, but also -1 in the case of the "root", where the root is
+        // either the actual root, or the root of a sub-render operation such as occurs with
+        // render-to-texture for effects!
 
         if (tx.isIdentity()) {
             TEMP_BOUNDS.deriveWithNewBounds(transformedBounds);
@@ -1285,10 +1317,8 @@ public abstract class NGNode {
             tx.transform(transformedBounds, TEMP_BOUNDS);
         }
 
-        if (pvTx != null) {
-            if (!pvTx.isIdentity()) {
-                pvTx.transform(TEMP_BOUNDS, TEMP_BOUNDS);
-            }
+        if (!pvTx.isIdentity()) {
+            pvTx.transform(TEMP_BOUNDS, TEMP_BOUNDS);
         }
 
         TEMP_BOUNDS.flattenInto(TEMP_RECT_BOUNDS);
@@ -1301,9 +1331,19 @@ public abstract class NGNode {
             if (region == null || region.isEmpty()) {
                 break;
             }
-            if (cullingRegionsBitsOfParent == -1 ||
-                (cullingRegionsBitsOfParent & mask) != 0) {
-                setCullBits(TEMP_RECT_BOUNDS, i, region);
+            // For each dirty region, we will check to see if this child
+            // intersects with the dirty region and whether it contains the
+            // dirty region. Note however, that we only care to mark those
+            // child nodes which are inside a group that intersects. We don't
+            // care about marking child nodes which are within a parent which
+            // is wholly contained within the dirty region.
+            if ((cullingRegionsBitsOfParent == -1 || (cullingRegionsBitsOfParent & mask) != 0) &&
+                    region.intersects(TEMP_RECT_BOUNDS)) {
+                int b = DIRTY_REGION_INTERSECTS_NODE_BOUNDS;
+                if (region.contains(TEMP_RECT_BOUNDS)) {
+                    b = DIRTY_REGION_CONTAINS_NODE_BOUNDS;
+                }
+                cullingBits = cullingBits | (b << (2 * i));
             }
             mask = mask << 2;
         }//for
@@ -1369,13 +1409,24 @@ public abstract class NGNode {
      * from which we should begin drawing. This is our support for occlusion culling.
      * This should only be called on the root node.
      *
-     * If no render root was found, we need to render everything from this root, so the path will be contain this node.
+     * If no render root was found, we need to render everything from this root, so the path will contain this node.
      * If no rendering is needed (everything dirty is occluded), the path will remain empty
      *
      * @param path node path to store the node path
      */
-    public final void getRenderRoot(NodePath<NGNode> path, RectBounds dirtyRegion, int cullingIndex, BaseTransform tx,
-             GeneralTransform3D pvTx) {
+    public final void getRenderRoot(NodePath<NGNode> path, RectBounds dirtyRegion, int cullingIndex,
+                                                BaseTransform tx, GeneralTransform3D pvTx) {
+
+        // This is the main entry point, make sure to check these inputs for validity
+        if (path == null || dirtyRegion == null || tx == null || pvTx == null) {
+            throw new NullPointerException();
+        }
+        if (cullingIndex < -1 || cullingIndex > 15) {
+            throw new IllegalArgumentException("cullingIndex cannot be < -1 or > 15");
+        }
+
+        // This method must NEVER BE CALLED if the depth buffer is turned on. I don't have a good way to test
+        // for that because NGNode doesn't have a reference to the scene it is a part of...
 
         RenderRootResult result = computeRenderRoot(path, dirtyRegion, cullingIndex, tx, pvTx);
         if (result == RenderRootResult.NONE) {
@@ -1388,21 +1439,21 @@ public abstract class NGNode {
      * Searches for the last node that covers all of the specified dirty region with opaque region,
      * in this node's subtree.
      * Such node can serve as a rendering root as all nodes preceding the node will be covered by it.
-     * @param dirtyRegion the current dirty region
+     * @param dirtyRegion the current dirty region. Cannot be null.
      * @param cullingIndex index of culling information
-     * @param tx current transform
-     * @param pvTx current perspective transform
+     * @param tx current transform. Cannot be null.
+     * @param pvTx current perspective transform. Cannot be null.
      * @return New rendering root or null if no such node exists in this subtree
      */
-    protected RenderRootResult computeRenderRoot(NodePath<NGNode> path, RectBounds dirtyRegion, int cullingIndex, BaseTransform tx,
-                                       GeneralTransform3D pvTx) {
+    RenderRootResult computeRenderRoot(NodePath<NGNode> path, RectBounds dirtyRegion,
+                                       int cullingIndex, BaseTransform tx, GeneralTransform3D pvTx) {
         return computeNodeRenderRoot(path, dirtyRegion, cullingIndex, tx, pvTx);
     }
 
     private static Point2D[] TEMP_POINTS2D_4 =
             new Point2D[] { new Point2D(), new Point2D(), new Point2D(), new Point2D() };
 
-    // Whether (px, py) is clockwise or counter-clowise to a->b
+    // Whether (px, py) is clockwise or counter-clockwise to a->b
     private static int ccw(double px, double py, Point2D a, Point2D b) {
         return (int)Math.signum(((b.x - a.x) * (py - a.y)) - (b.y - a.y) * (px - a.x));
     }
@@ -1431,14 +1482,14 @@ public abstract class NGNode {
 
     /**
      * Check if this node can serve as rendering root for this dirty region.
-     * @param dirtyRegion the current dirty region
+     * @param dirtyRegion the current dirty region. Cannot be null.
      * @param cullingIndex index of culling information, -1 means culling information should not be used
-     * @param tx current transform
-     * @param pvTx current perspective transform
+     * @param tx current transform. Cannot be null.
+     * @param pvTx current perspective transform. Cannot be null.
      * @return this node if this node's opaque region covers the specified dirty region. Null otherwise.
      */
-    protected final RenderRootResult computeNodeRenderRoot(NodePath<NGNode> path, RectBounds dirtyRegion, int cullingIndex, BaseTransform tx,
-                                       GeneralTransform3D pvTx) {
+    final RenderRootResult computeNodeRenderRoot(NodePath<NGNode> path, RectBounds dirtyRegion,
+                                                 int cullingIndex, BaseTransform tx, GeneralTransform3D pvTx) {
 
         // Nodes outside of the dirty region can be excluded immediately.
         // This can be used only if the culling information is provided.
@@ -1461,7 +1512,11 @@ public abstract class NGNode {
 
         BaseTransform localToSceneTx = TEMP_TRANSFORM.deriveWithNewTransform(tx).deriveWithConcatenation(localToParentTx);
 
-        // Now check if the dirty region is fully contained in our opaque region.
+        // Now check if the dirty region is fully contained in our opaque region. Suppose the above
+        // transform included a rotation about Z. In these cases, the transformed
+        // opaqueRegion might be some non-axis aligned quad. So what we need to do is to check
+        // that each corner of the dirty region lies within the (potentially rotated) quad
+        // of the opaqueRegion.
         if (checkBoundsInQuad(opaqueRegion, dirtyRegion, localToSceneTx, pvTx)) {
             // We have the potential render root, now check if it needs to be rendered
             if (dirty != DirtyFlag.CLEAN || childDirty) {
@@ -1475,13 +1530,13 @@ public abstract class NGNode {
         return RenderRootResult.NONE;
     }
 
-    protected static boolean checkBoundsInQuad(RectBounds untransformedQuad,
+    static boolean checkBoundsInQuad(RectBounds untransformedQuad,
             RectBounds innerBounds, BaseTransform tx, GeneralTransform3D pvTx) {
 
-        if ((pvTx == null || pvTx.isIdentity()) && (tx.getType() & ~(BaseTransform.TYPE_TRANSLATION
+        if (pvTx.isIdentity() && (tx.getType() & ~(BaseTransform.TYPE_TRANSLATION
                 | BaseTransform.TYPE_QUADRANT_ROTATION
                 | BaseTransform.TYPE_MASK_SCALE)) == 0) {
-            //If there's no pvTx and there's simple transformation that will result in axis-aligned rectangle,
+            // If pvTx is identity and there's simple transformation that will result in axis-aligned rectangle,
             // we can do a quick test by using bound.contains()
             if (tx.isIdentity()) {
                 TEMP_BOUNDS.deriveWithNewBounds(untransformedQuad);
@@ -1500,7 +1555,7 @@ public abstract class NGNode {
 
             for (Point2D p : TEMP_POINTS2D_4) {
                 tx.transform(p, p);
-                if (pvTx != null) {
+                if (!pvTx.isIdentity()) {
                     pvTx.transform(p, p);
                 }
             }
@@ -1512,20 +1567,127 @@ public abstract class NGNode {
         }
     }
 
+    /**
+     * Invalidates any cached representation of the opaque region for this node. On the next
+     * call to getOpaqueRegion, the opaque region will be recalculated. Any changes to state
+     * which is used in the {@link #hasOpaqueRegion()} call must invoke this method
+     * or the opaque region calculations will be wrong.
+     */
+    protected final void invalidateOpaqueRegion() {
+        opaqueRegionInvalid = true;
+        if (isClip) parent.invalidateOpaqueRegion();
+    }
+
+    /**
+     * Gets the opaque region for this node, if there is one, or returns null.
+     * @return The opaque region for this node, or null.
+     */
     final RectBounds getOpaqueRegion() {
+        // Note that when we invalidate the opaqueRegion of an NGNode, we don't
+        // walk up the tree or communicate with the parents (unlike dirty flags).
+        // An NGGroup does not compute an opaqueRegion based on the union of opaque
+        // regions of its children (although this is a fine idea to consider!). See RT-32441
+        // If we ever fix RT-32441, we must be sure to handle the case of a Group being used
+        // as a clip node (such that invalidating a child on the group invalidates the
+        // opaque region of every node up to the root).
         if (opaqueRegionInvalid) {
-            opaqueRegion = computeOpaqueRegion(opaqueRegion);
             opaqueRegionInvalid = false;
+            if (supportsOpaqueRegions() && hasOpaqueRegion()) {
+                opaqueRegion = computeOpaqueRegion(opaqueRegion == null ? new RectBounds() : opaqueRegion);
+                // If we got a null result then we encountered an error condition where somebody
+                // claimed supportsOpaqueRegions and hasOpaqueRegion, but then they
+                // returned null! This should never happen, so we have an assert here. However since
+                // assertions are disabled at runtime and we want to avoid the NPE, we also perform
+                // a null check.
+                assert opaqueRegion != null;
+                if (opaqueRegion == null) {
+                    return null;
+                }
+                // If there is a clip, then we need to determine the opaque region of the clip, and
+                // intersect that with our existing opaque region. For example, if I had a rectangle
+                // with a circle for its clip (centered over the rectangle), then the result needs to
+                // be the circle's opaque region.
+                final NGNode clip = getClipNode();
+                if (clip != null) {
+                    final RectBounds clipOpaqueRegion = clip.getOpaqueRegion();
+                    // Technically a flip/quadrant rotation is allowed as well, but we don't have a convenient
+                    // way to do that yet.
+                    if (clipOpaqueRegion == null || (clip.getTransform().getType() & ~(BaseTransform.TYPE_TRANSLATION | BaseTransform.TYPE_MASK_SCALE)) != 0) {
+                        // RT-25095: If this node has a clip who's opaque region cannot be determined, then
+                        // we cannot determine any opaque region for this node (in fact, it might not have one).
+                        // Also, if the transform is something other than identity, scale, or translate then
+                        // we're just going to bail (sorry, rotate, maybe next time!)
+                        return opaqueRegion = null;
+                    }
+                    // We have to take into account any transform specified on the clip to put
+                    // it into the same coordinate system as this node
+                    final BaseBounds b = clip.getTransform().transform(clipOpaqueRegion, TEMP_BOUNDS);
+                    b.flattenInto(TEMP_RECT_BOUNDS);
+                    opaqueRegion.intersectWith(TEMP_RECT_BOUNDS);
+
+                }
+            } else {
+                // The opaqueRegion may have been non-null in the past, but there isn't an opaque region now,
+                // so we will nuke it to save some memory
+                opaqueRegion = null;
+            }
         }
+
         return opaqueRegion;
     }
 
-    protected void invalidateOpaqueRegion() {
-        opaqueRegionInvalid = true;
+    /**
+     * Gets whether this NGNode supports opaque regions at all. Most node types do not,
+     * but some do. If an NGNode subclass is written to support opaque regions, it must override
+     * this method to return true. The subclass must then also override the computeDirtyRegion method
+     * to return the dirty region, or null if the node in its current state doesn't have one.
+     * This method is intended to be immutable.
+     *
+     * @return Whether this NGNode implementation supports opaque regions. This could also have been
+     *         implemented via an interface that some NGNodes implemented, but then we'd have instanceof
+     *         checks which I'd rather avoid.
+     */
+    protected boolean supportsOpaqueRegions() { return false; }
+
+    /**
+     * Called only on NGNode subclasses which override {@link #supportsOpaqueRegions()} to return
+     * true, this method will return whether or not this NGNode is in a state where it has
+     * an opaque region to actually return. If this method returns true, a subsequent call to
+     * {@link #computeOpaqueRegion(com.sun.javafx.geom.RectBounds)} <strong>must</strong> return
+     * a non-null result. Any state used in the computation of this method, when it changes, must
+     * result in a call to {@link #invalidateOpaqueRegion()}.
+     *
+     * @return Whether this NGNode currently has an opaque region.
+     */
+    protected boolean hasOpaqueRegion() {
+        final NGNode clip = getClipNode();
+        final Effect effect = getEffect();
+        return effect == null &&
+               getOpacity() == 1f &&
+               (nodeBlendMode == null || nodeBlendMode == Blend.Mode.SRC_OVER) &&
+               (clip == null ||
+               (clip.supportsOpaqueRegions() && clip.hasOpaqueRegion()));
     }
 
+    /**
+     * Computes and returns the opaque region for this node. This method
+     * @param opaqueRegion
+     * @return
+     */
     protected RectBounds computeOpaqueRegion(RectBounds opaqueRegion) {
         return null;
+    }
+
+    /**
+     * Returns whether a clip represented by this node can be rendered using
+     * axis aligned rect clip. The default implementation returns false,
+     * specific subclasses should override to return true when appropriate.
+     *
+     * @return whether this rectangle is axis aligned when rendered given node's
+     * and rendering transform
+     */
+    protected boolean isRectClip(BaseTransform xform, boolean permitRoundedRectangle) {
+        return false;
     }
 
     /***************************************************************************
@@ -1751,7 +1913,7 @@ public abstract class NGNode {
         newClip.intersectWith(PrEffectHelper.getGraphicsClipNoClone(g));
         if (newClip.isEmpty() ||
             newClip.getWidth() == 0 ||
-            newClip .getHeight() == 0) {
+            newClip.getHeight() == 0) {
             clearDirtyTree();
             return;
         }
@@ -1924,14 +2086,14 @@ public abstract class NGNode {
         // The first check is for any of its children contains a 3D Transform.
         // The second check is for any of its parents and itself has a 3D Transform
         if (isContentBounds2D() && g.getTransformNoClone().is2D()) {
-            ((CacheFilter) getCacheFilter()).render(g);
+            getCacheFilter().render(g);
         } else {
             renderContent(g);
         }
     }
 
     protected void renderEffect(Graphics g) {
-        ((EffectFilter)getEffectFilter()).render(g);
+        getEffectFilter().render(g);
     }
 
     protected abstract void renderContent(Graphics g);

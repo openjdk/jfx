@@ -73,7 +73,7 @@ public abstract class BaseTransform implements CanTransformVec3d{
 
     /**
      * This flag bit indicates that the transform defined by this object
-     * performs a translation in addition tto the conversions indicated
+     * performs a translation in addition to the conversions indicated
      * by other flag bits.
      * A translation moves the coordinates by a constant amount in x
      * and y without changing the length or angle of vectors.

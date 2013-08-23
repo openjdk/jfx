@@ -34,6 +34,7 @@ import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.prism.Graphics;
 import com.sun.prism.RTTexture;
 import com.sun.prism.Texture;
@@ -625,7 +626,7 @@ public class CacheFilter {
             if (dirtyBounds != null) {
                 TEMP_CONTAINER.deriveWithNewRegion((RectBounds)TEMP_BOUNDS.deriveWithNewBounds(dirtyBounds));
                 // Culling might save us a lot when there's a dirty region
-                node.doPreCulling(TEMP_CONTAINER, TEMP_CACHEFILTER_TRANSFORM, null);
+                node.doPreCulling(TEMP_CONTAINER, TEMP_CACHEFILTER_TRANSFORM, new GeneralTransform3D());
                 g.setHasPreCullingBits(true);
                 g.setClipRectIndex(0);
                 g.setClipRect(dirtyBounds);
@@ -692,8 +693,7 @@ public class CacheFilter {
         }
 
         NGNode clip = node.getClipNode();
-        return clip != null && clip instanceof NGRectangle &&
-                ((NGRectangle)clip).isRectClip(BaseTransform.IDENTITY_TRANSFORM, false);
+        return clip != null && clip.isRectClip(BaseTransform.IDENTITY_TRANSFORM, false);
     }
 
     /**

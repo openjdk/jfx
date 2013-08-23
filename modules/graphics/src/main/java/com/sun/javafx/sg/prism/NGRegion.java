@@ -69,7 +69,6 @@ import com.sun.prism.Texture;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.paint.ImagePattern;
 import com.sun.prism.paint.Paint;
-import com.sun.scenario.effect.Effect;
 import com.sun.scenario.effect.Offset;
 
 /**
@@ -356,56 +355,6 @@ public class NGRegion extends NGGroup {
         invalidateOpaqueRegion();
     }
 
-    /**
-     * Overridden so as to invalidate the opaque region, since the opaque region computation
-     * must take opacity into account.
-     *
-     * @param opacity A value between 0 and 1.
-     */
-    @Override public void setOpacity(float opacity) {
-        // We certainly don't want to do any work if opacity hasn't changed!
-        final float old = getOpacity();
-        if (old != opacity) {
-            super.setOpacity(opacity);
-            // Even though the opacity has changed, for example from .5 to .6,
-            // we don't need to invalidate the opaque region unless it has toggled
-            // from 1 to !1, or from !1 to 1.
-            if (old < 1 || opacity < 1) invalidateOpaqueRegion();
-        }
-    }
-
-    /**
-     * Overridden so that we can invalidate the opaque region when the clip
-     * has changed.
-     *
-     * @param clipNode can be null if the clip node is being cleared
-     */
-    @Override public void setClipNode(NGNode clipNode) {
-        super.setClipNode(clipNode);
-        invalidateOpaqueRegion();
-    }
-
-    /**
-     * Overridden so as to invalidate the opaque region when the effect changes.
-     *
-     * @param effect
-     */
-    @Override public void setEffect(Object effect) {
-        // Lets only do work if we have to
-        Effect old = getEffect();
-        if (old != effect) {
-            super.setEffect(effect);
-            // The only thing we do with the effect in #computeOpaqueRegion(RectBounds) is to check
-            // whether the effect is null / not null, and whether a not null effect reduces opaque
-            // pixels. If the answer to these question has not changed from last time, then there
-            // is no need to recompute the opaque region.
-            if (old == null || effect == null ||
-                    old.reducesOpaquePixels() != ((Effect)effect).reducesOpaquePixels()){
-                invalidateOpaqueRegion();
-            }
-        }
-    }
-
     /**************************************************************************
      *                                                                        *
      * Implementations of methods defined in the parent classes, with the     *
@@ -436,6 +385,15 @@ public class NGRegion extends NGGroup {
         return cacheKey;
     }
 
+    @Override protected boolean supportsOpaqueRegions() { return true; }
+
+    @Override
+    protected boolean hasOpaqueRegion() {
+        return super.hasOpaqueRegion() &&
+                !Float.isNaN(opaqueTop) && !Float.isNaN(opaqueRight) &&
+                !Float.isNaN(opaqueBottom) && !Float.isNaN(opaqueLeft);
+    }
+
     /**
      * The opaque region of an NGRegion takes into account the opaque insets
      * specified by the Region during synchronization. It also takes into
@@ -445,39 +403,8 @@ public class NGRegion extends NGGroup {
      * @return
      */
     @Override protected RectBounds computeOpaqueRegion(RectBounds opaqueRegion) {
-        final NGNode clip = getClipNode();
-        final Effect effect = getEffect();
-        // compute opaque region
-        if ((effect == null || !effect.reducesOpaquePixels()) &&
-                getOpacity() == 1f &&
-                (clip == null ||
-                (clip instanceof NGRectangle && ((NGRectangle)clip).isRectClip(BaseTransform.IDENTITY_TRANSFORM, true))))
-        {
-            if (Float.isNaN(opaqueTop) || Float.isNaN(opaqueRight) || Float.isNaN(opaqueBottom) || Float.isNaN(opaqueLeft)) {
-                return null;
-            }
-
-            // TODO what to do if the opaqueRegion has negative width or height due to excessive opaque insets? (RT-26979)
-            if (opaqueRegion == null) {
-                opaqueRegion = new RectBounds(opaqueLeft, opaqueTop, width - opaqueRight, height - opaqueBottom);
-            } else {
-                opaqueRegion.deriveWithNewBounds(opaqueLeft, opaqueTop, 0, width - opaqueRight, height - opaqueBottom, 0);
-            }
-
-            if (clip != null) { // We already know that clip is rectangular
-                // RT-25095: If this node has a clip who's opaque region cannot be determined, then
-                // we cannot determine any opaque region for this node (in fact, it might not have one).
-                final RectBounds clipOpaqueRegion = clip.getOpaqueRegion();
-                if (clipOpaqueRegion == null) {
-                    return null;
-                } else {
-                    opaqueRegion.intersectWith(clipOpaqueRegion);
-                }
-            }
-
-            return opaqueRegion;
-        }
-        return null;
+        // TODO what to do if the opaqueRegion has negative width or height due to excessive opaque insets? (RT-26979)
+        return (RectBounds) opaqueRegion.deriveWithNewBounds(opaqueLeft, opaqueTop, 0, width - opaqueRight, height - opaqueBottom, 0);
     }
 
     @Override protected RenderRootResult computeRenderRoot(NodePath<NGNode> path, RectBounds dirtyRegion,

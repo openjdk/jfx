@@ -42,9 +42,7 @@ import com.sun.javafx.geom.DirtyRegionPool;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
-import com.sun.javafx.sg.prism.NodeTestUtils.TestNGGroup;
 import com.sun.prism.paint.Color;
-import com.sun.scenario.effect.Effect;
 import org.junit.runners.Parameterized;
 import static org.junit.Assert.assertEquals;
 
@@ -59,18 +57,18 @@ import static org.junit.Assert.assertEquals;
  * changing, and so forth.
  * <p>
  * The DirtyRegionTestBase is parametrized, using different node types
- * (rectangle, circle, group) and different methods for becoming dirty
+ * (rectangle, ellipse, group) and different methods for becoming dirty
  * (visibility change, geometry change, etc). The cross product of these
  * forms the parameters for the test. Each test method is called using the
  * combination of a node type & dirty method.
  */
-public class DirtyRegionTestBase {
+public class DirtyRegionTestBase extends NGTestBase {
     /**
      * Gets the test parameters to use when running these tests. The parameters
      * are a combination of a Polluter and a Creator. The Creator is used to
      * create the node to be tested (might be a rectangle, or Group, or something
      * more complex), while the Polluter is responsible for making the test node
-     * dirty by some means. Since the Pollutor knows what it did to make the node
+     * dirty by some means. Since the Polluter knows what it did to make the node
      * dirty, it is also responsible for computing and returning what the expected
      * change to the node's geometry is, such that the test code can create the
      * union and test for the appropriate dirty region for this specific node.
@@ -213,7 +211,7 @@ public class DirtyRegionTestBase {
         // Construct the Creator / Polluter pair for Groups
         for (final Polluter polluter : polluters) {
             params.add(new Object[] {new Creator() {
-                @Override public NGNode create() { return NodeTestUtils.createGroup(NodeTestUtils.createRectangle(0, 0, 100, 100)); }
+                @Override public NGNode create() { return createGroup(createRectangle(0, 0, 100, 100)); }
                 @Override public String toString() { return "Group with one Rectangle"; }
             }, polluter});
         }
@@ -229,7 +227,7 @@ public class DirtyRegionTestBase {
         });
         for (final Polluter polluter : rectanglePolluters) {
             params.add(new Object[] {new Creator() {
-                @Override public NGNode create() { return NodeTestUtils.createRectangle(0, 0, 100, 100); }
+                @Override public NGNode create() { return createRectangle(0, 0, 100, 100); }
                 @Override public String toString() { return "Rectangle"; }
             }, polluter});
         }
@@ -248,7 +246,7 @@ public class DirtyRegionTestBase {
         });
         for (final Polluter polluter : circlePolluters) {
             params.add(new Object[] {new Creator() {
-                @Override public NGNode create() { return NodeTestUtils.createCircle(50, 50, 50); }
+                @Override public NGNode create() { return createCircle(50, 50, 50); }
                 @Override public String toString() { return "Circle"; }
             }, polluter});
         }
@@ -312,8 +310,8 @@ public class DirtyRegionTestBase {
         // such that we could test that the dirty region accumulation logic all works
         // correctly even in the presence of a non-identity device space transform
         // (RT-26928)
-		DirtyRegionPool pool = new DirtyRegionPool(1);
-		DirtyRegionContainer drc = pool.checkOut();
+        DirtyRegionPool pool = new DirtyRegionPool(1);
+        DirtyRegionContainer drc = pool.checkOut();
         int status = start.accumulateDirtyRegions(
                 windowClip,
                 new RectBounds(), pool,
@@ -349,8 +347,8 @@ public class DirtyRegionTestBase {
      * at any time.
      */
     protected void assertContainsClip(NGNode start, RectBounds expectedDirtyRegion, int expectedStatus) {
-		DirtyRegionPool pool = new DirtyRegionPool(1);
-		DirtyRegionContainer drc = pool.checkOut();
+        DirtyRegionPool pool = new DirtyRegionPool(1);
+        DirtyRegionContainer drc = pool.checkOut();
         int status = start.accumulateDirtyRegions(
                 windowClip,
                 new RectBounds(), pool,
@@ -408,7 +406,7 @@ public class DirtyRegionTestBase {
      * such as transforms or geometry changes.
      */
     private void accumulateDirtyRegions() {
-	    DirtyRegionPool pool = new DirtyRegionPool(1);
+        DirtyRegionPool pool = new DirtyRegionPool(1);
         DirtyRegionTestBase.resetGroupBounds(root);
         root.accumulateDirtyRegions(
                 new RectBounds(0, 0, 800, 600),
@@ -448,8 +446,6 @@ public class DirtyRegionTestBase {
         }
     }
 
-   
-
     static protected void resetGroupBounds(NGGroup group) {
         BaseBounds contentBounds = new RectBounds();
         for (NGNode child : group.getChildren()) {
@@ -474,49 +470,5 @@ public class DirtyRegionTestBase {
         BaseTransform existing = BaseTransform.IDENTITY_TRANSFORM.deriveWithNewTransform(node.getTransform());
         tx = existing.deriveWithConcatenation(tx);
         return node.getEffectBounds(new RectBounds(), tx);
-    }
-
-    static protected void transform(NGNode node, BaseTransform tx) {
-        // Concatenate this transform with the one already on the node
-        tx = node.getTransform().deriveWithConcatenation(tx);
-        // Compute & set the new transformed bounds for the node
-        node.setTransformedBounds(node.getEffectBounds(new RectBounds(), tx), false);
-        // Set the transform matrix
-        node.setTransformMatrix(tx);
-    }
-
-    static protected void translate(NGNode node, double tx, double ty) {
-        transform(node, BaseTransform.getTranslateInstance(tx, ty));
-    }
-
-    static protected void setEffect(NGNode node, Effect effect) {
-        node.setEffect(null); // so that when we ask for the getEffectBounds, it won't include an old effect
-        BaseBounds effectBounds = effect.getBounds();
-        BaseBounds clippedBounds = node.getEffectBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM);
-        node.setEffect(effect);
-        // The new transformed bounds should be the union of the old effect bounds, new effect bounds, and
-        // then transform those bounds. The reason I'm doing it this way is to expose any bugs in the
-        // getEffectBounds() implementation when an effect is present.
-        effectBounds = effectBounds.deriveWithUnion(clippedBounds);
-        node.setTransformedBounds(node.getTransform().transform(effectBounds, effectBounds), false);
-    }
-
-    public static abstract class Creator {
-        public abstract NGNode create();
-    }
-
-    public static abstract class Polluter {
-        protected BaseTransform tx = BaseTransform.IDENTITY_TRANSFORM;
-        protected abstract void pollute(NGNode node);
-        protected BaseBounds modifiedBounds(NGNode node) {
-            return DirtyRegionTestBase.getWhatTransformedBoundsWouldBe(node, tx);
-        }
-        public RectBounds polluteAndGetExpectedBounds(NGNode node) {
-            BaseBounds originalBounds = node.getCompleteBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM);
-            BaseBounds modifiedBounds = modifiedBounds(node);
-            BaseBounds expected = originalBounds.deriveWithUnion(modifiedBounds);
-            pollute(node);
-            return (RectBounds)expected;
-        }
     }
 }

@@ -27,29 +27,25 @@ package com.sun.javafx.sg.prism;
 
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.sg.prism.NodePath;
+import com.sun.javafx.geom.transform.GeneralTransform3D;
 import org.junit.Test;
-
-import static com.sun.javafx.sg.prism.NodeTestUtils.*;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 /**
  *
  */
-public class OcclusionCullingTest {
+public class OcclusionCullingTest extends NGTestBase {
 
 
     @Test
     public void testRectangleOcclusion() {
         final TestNGRectangle root = createRectangle(0, 0, 50, 50);
-        NodeTestUtils.TestNGGroup group = createGroup(
+        TestNGGroup group = createGroup(
                 createRectangle(0, 0, 100, 100), root);
         NodePath<NGNode> rootPath = new NodePath<>();
-        group.getRenderRoot(rootPath, new RectBounds(20, 20, 30, 30), -1, BaseTransform.IDENTITY_TRANSFORM, null);
+        group.getRenderRoot(rootPath, new RectBounds(20, 20, 30, 30), -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
         TestGraphics g = new TestGraphics();
         g.setRenderRoot(rootPath);
         group.render(g);
@@ -60,10 +56,10 @@ public class OcclusionCullingTest {
     @Test
     public void testGroupOcclusion() {
         final TestNGRectangle root = createRectangle(0, 0, 50, 50);
-        NodeTestUtils.TestNGGroup group = createGroup(createGroup(
+        TestNGGroup group = createGroup(createGroup(
                 createRectangle(0, 0, 100, 100)), createGroup(root));
         NodePath<NGNode> rootPath = new NodePath<>();
-        group.getRenderRoot(rootPath, new RectBounds(20, 20, 30, 30), -1, BaseTransform.IDENTITY_TRANSFORM, null);
+        group.getRenderRoot(rootPath, new RectBounds(20, 20, 30, 30), -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
         TestGraphics g = new TestGraphics();
         g.setRenderRoot(rootPath);
         group.render(g);
@@ -74,10 +70,10 @@ public class OcclusionCullingTest {
     @Test
     public void testRegionOcclusion() {
         final TestNGRegion root = createRegion(50, 50);
-        NodeTestUtils.TestNGGroup group = createGroup(
+        TestNGGroup group = createGroup(
                 createRegion(100, 100), root);
         NodePath<NGNode> rootPath = new NodePath<>();
-        group.getRenderRoot(rootPath, new RectBounds(20, 20, 30, 30), -1, BaseTransform.IDENTITY_TRANSFORM, null);
+        group.getRenderRoot(rootPath, new RectBounds(20, 20, 30, 30), -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
         TestGraphics g = new TestGraphics();
         g.setRenderRoot(rootPath);
         group.render(g);
@@ -89,11 +85,11 @@ public class OcclusionCullingTest {
     public void testPresetRegionOcclusion() {
         final TestNGRegion root = createRegion(100, 100);
         final TestNGRegion other = createRegion(50, 50);
-        NodeTestUtils.TestNGGroup group = createGroup(
+        TestNGGroup group = createGroup(
                 root, other);
         other.setOpaqueInsets(30, 30, 0, 0);
         NodePath<NGNode> rootPath = new NodePath<>();
-        group.getRenderRoot(rootPath, new RectBounds(20, 20, 30, 30), -1, BaseTransform.IDENTITY_TRANSFORM, null);
+        group.getRenderRoot(rootPath, new RectBounds(20, 20, 30, 30), -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
         TestGraphics g = new TestGraphics();
         g.setRenderRoot(rootPath);
         group.render(g);
@@ -102,13 +98,13 @@ public class OcclusionCullingTest {
     }
 
     @Test
-    public void test2SameRectanglesOclusion() {
+    public void test2SameRectanglesOcclusion() {
         final TestNGRectangle root = createRectangle(10, 10, 100, 100);
-        NodeTestUtils.TestNGGroup group = createGroup(
+        TestNGGroup group = createGroup(
                 createGroup(createRectangle(10, 10, 100, 100), createRectangle(20, 20, 20, 20)),
                 createGroup(root));
         NodePath<NGNode> rootPath = new NodePath<>();
-        group.getRenderRoot(rootPath, new RectBounds(10, 10, 100, 100), -1, BaseTransform.IDENTITY_TRANSFORM, null);
+        group.getRenderRoot(rootPath, new RectBounds(10, 10, 100, 100), -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
         TestGraphics g = new TestGraphics();
         g.setRenderRoot(rootPath);
         group.render(g);
@@ -117,10 +113,10 @@ public class OcclusionCullingTest {
     }
 
     @Test
-    public void test2SameRectanglesOclusionWithRootNotDirty() {
+    public void test2SameRectanglesOcclusionWithRootNotDirty() {
         final TestNGRectangle root = createRectangle(10, 10, 100, 100);
         final TestNGGroup rootParent = createGroup(root);
-        NodeTestUtils.TestNGGroup group = createGroup(
+        TestNGGroup group = createGroup(
                 createGroup(createRectangle(10, 10, 100, 100), createRectangle(20, 20, 20, 20)), rootParent);
 
         group.dirty =  NGNode.DirtyFlag.CLEAN; // need to clean default dirty flags
@@ -129,13 +125,13 @@ public class OcclusionCullingTest {
         root.dirty = NGNode.DirtyFlag.CLEAN;
         root.childDirty = false;
         NodePath<NGNode> rootPath = new NodePath<>();
-        group.getRenderRoot(rootPath, new RectBounds(10, 10, 100, 100), -1, BaseTransform.IDENTITY_TRANSFORM, null);
+        group.getRenderRoot(rootPath, new RectBounds(10, 10, 100, 100), -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
         assertTrue(rootPath.isEmpty());
 
         final TestNGRectangle dirtySibling = createRectangle(0,0,10,10);
         rootParent.add(-1,dirtySibling);
         rootPath = new NodePath<>();
-        group.getRenderRoot(rootPath, new RectBounds(10, 10, 100, 100), -1, BaseTransform.IDENTITY_TRANSFORM, null);
+        group.getRenderRoot(rootPath, new RectBounds(10, 10, 100, 100), -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
         assertRoot(rootPath, rootParent);
     }
 

@@ -35,7 +35,7 @@ import com.sun.javafx.geom.Vec3f;
  * GeneralTransform is typically used only for projection transforms.
  *
  */
-public class GeneralTransform3D implements CanTransformVec3d{
+public final class GeneralTransform3D implements CanTransformVec3d {
 
     //The 4x4 double-precision floating point matrix.  The mathematical
     //representation is row major, as in traditional matrix mathematics.

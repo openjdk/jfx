@@ -25,23 +25,19 @@
 
 package com.sun.javafx.sg.prism;
 
-import com.sun.javafx.geom.BaseBounds;
-import com.sun.javafx.geom.RectBounds;
-import com.sun.javafx.geom.transform.Affine2D;
-import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.sg.prism.NGNode;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
+import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.RectBounds;
+import com.sun.javafx.geom.transform.Affine2D;
+import com.sun.javafx.geom.transform.BaseTransform;
 import org.junit.Test;
-
 import static org.junit.Assert.assertEquals;
 
 /**
- * A base class for testing the content bounds methods of BaseNode used
- * by all of the FX toolkits.
  */
 public class ContentBoundsTest {
     public static final BaseTransform IDENTITY;

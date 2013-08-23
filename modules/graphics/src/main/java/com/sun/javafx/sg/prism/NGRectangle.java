@@ -34,7 +34,6 @@ import com.sun.prism.BasicStroke;
 import com.sun.prism.Graphics;
 import com.sun.prism.RectShadowGraphics;
 import com.sun.prism.paint.Color;
-import com.sun.prism.paint.Paint;
 import com.sun.prism.shape.ShapeRep;
 import com.sun.scenario.effect.Effect;
 import static com.sun.javafx.geom.transform.BaseTransform.TYPE_MASK_SCALE;
@@ -56,77 +55,45 @@ public class NGRectangle extends NGShape {
         rrect.arcWidth = arcWidth;
         rrect.arcHeight = arcHeight;
         geometryChanged();
-        invalidateOpaqueRegion();
     }
 
     @Override
-    public void setFillPaint(Object fillPaint) {
-        invalidateOpaqueRegion();
-        super.setFillPaint(fillPaint);
-    }
+    protected boolean supportsOpaqueRegions() { return true; }
 
     @Override
-    public void setMode(Mode mode) {
-        invalidateOpaqueRegion();
-        super.setMode(mode);
+    protected boolean hasOpaqueRegion() {
+        return super.hasOpaqueRegion() && rrect.width > 1 && rrect.height > 1;
     }
+
+    static final float HALF_MINUS_HALF_SQRT_HALF = 0.5f - NGCircle.HALF_SQRT_HALF;
 
     @Override
-    public void setOpacity(float opacity) {
-        invalidateOpaqueRegion();
-        super.setOpacity(opacity);
-    }
+    protected RectBounds computeOpaqueRegion(RectBounds opaqueRegion) {
+        // Normally the "opaque region" for a rectangle would be the
+        // x, y, w, h unless it has rounded corners, in which case
+        // we subtract the arc width and arc height.
+        final float x = rrect.x;
+        final float y = rrect.y;
+        final float w = rrect.width;
+        final float h = rrect.height;
+        final float aw = rrect.arcWidth;
+        final float ah = rrect.arcHeight;
 
-    @Override
-    public void setClipNode(NGNode clipNode) {
-        invalidateOpaqueRegion();
-        super.setClipNode(clipNode);
-    }
-
-    @Override
-    public void setEffect(Object effect) {
-        invalidateOpaqueRegion();
-        super.setEffect(effect);
-    }
-
-    @Override
-    public void setTransformMatrix(BaseTransform tx) {
-        invalidateOpaqueRegion();
-        super.setTransformMatrix(tx);
-    }
-
-    @Override protected RectBounds computeOpaqueRegion(RectBounds opaqueRegion) {
-        // compute opaque region
-        final Mode mode = getMode();
-        final Paint fillPaint = getFillPaint();
-        final NGNode clip = (NGNode) getClipNode();
-        final Effect effect = getEffect();
-        if ((effect == null || !effect.reducesOpaquePixels()) &&
-                getOpacity() == 1f &&
-                (mode == Mode.FILL || mode == Mode.STROKE_FILL) &&
-                (fillPaint != null && fillPaint.isOpaque()) &&
-                (clip == null || 
-                (clip instanceof NGRectangle && ((NGRectangle)clip).isRectClip(BaseTransform.IDENTITY_TRANSFORM, true)))) {
-            // Normally the "opaque region" for a rectangle would be the
-            // x, y, w, h unless it has rounded corners, in which case
-            // we subtract the arc width and arc height.
-            final float x = rrect.x + rrect.arcWidth;
-            final float y = rrect.y + rrect.arcHeight;
-            final float width = rrect.getWidth() - rrect.arcWidth - rrect.arcWidth;
-            final float height = rrect.getHeight() - rrect.arcHeight - rrect.arcHeight;
-            if (width > 1 && height > 1) {
-                if (opaqueRegion == null) {
-                    opaqueRegion = new RectBounds(x, y, x + width, y + height); 
-                } else {
-                    opaqueRegion.deriveWithNewBounds(x, y, 0, x + width, y + height, 0);
-                }
-                if (clip != null) {
-                    opaqueRegion.intersectWith((clip).getOpaqueRegion());
-                }
-                return opaqueRegion;
-            }
+        if (aw <= 0 || ah <= 0) {
+            // This is the simple case of a rectangle. Note the "||" is correct in the if statement,
+            // because regardless of the size of aw, if ah <= 0 (or vice versa) we draw a non-rounded
+            // rectangle, so we should always enter this case for things that get drawn as rectangles
+            return (RectBounds) opaqueRegion.deriveWithNewBounds(x, y, 0, x + w, y + h, 0);
+        } else {
+            // Gives us a reasonable number of pixels that are the interior of the rounded rectangle
+            // including when aw / ah is massive (in which case we just render an ellipse with w/h
+            // as the dimensions).
+            final float arcInsetWidth = Math.min(w, aw) * HALF_MINUS_HALF_SQRT_HALF;
+            final float arcInsetHeight = Math.min(h, ah) * HALF_MINUS_HALF_SQRT_HALF;
+            return (RectBounds) opaqueRegion.deriveWithNewBounds(
+                    x + arcInsetWidth, y + arcInsetHeight, 0,
+                    x + w - arcInsetWidth, y + h - arcInsetHeight, 0);
         }
-        return null;
     }
 
     boolean isRounded() {
@@ -281,7 +248,7 @@ public class NGRectangle extends NGShape {
      * @return whether this rectangle is axis aligned when rendered given node's
      * and rendering transform
      */
-    final boolean isRectClip(BaseTransform xform, boolean permitRoundedRectangle) {
+    @Override protected final boolean isRectClip(BaseTransform xform, boolean permitRoundedRectangle) {
         // must be a simple fill of a non-round rect with opaque paint
         // With more work we could optimize the case of a Rectangle with a
         // Rectangle as a clip, but that would likely slow down some more

@@ -26,7 +26,6 @@
 package com.sun.prism.paint;
 
 import com.sun.prism.Image;
-import com.sun.prism.paint.Paint.Type;
 
 public final class ImagePattern extends Paint {
 
@@ -72,6 +71,6 @@ public final class ImagePattern extends Paint {
     }
 
     public boolean isOpaque() {
-        return image.getPixelFormat().isOpaque();
+        return image.isOpaque();
     }
 }

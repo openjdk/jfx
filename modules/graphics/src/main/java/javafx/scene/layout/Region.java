@@ -25,6 +25,34 @@
 
 package javafx.scene.layout;
 
+import javafx.beans.InvalidationListener;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.beans.property.ReadOnlyDoubleWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.collections.ObservableList;
+import javafx.css.CssMetaData;
+import javafx.css.Styleable;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableProperty;
+import javafx.geometry.BoundingBox;
+import javafx.geometry.Bounds;
+import javafx.geometry.HPos;
+import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
+import javafx.geometry.VPos;
+import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.shape.Shape;
+import javafx.util.Callback;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import com.sun.javafx.Logging;
 import com.sun.javafx.TempState;
 import com.sun.javafx.binding.ExpressionHelper;
@@ -40,22 +68,8 @@ import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGRegion;
-import javafx.beans.InvalidationListener;
-import javafx.beans.property.*;
-import javafx.beans.value.ChangeListener;
-import javafx.collections.ObservableList;
-import javafx.css.*;
-import javafx.geometry.*;
-import javafx.scene.Node;
-import javafx.scene.Parent;
-import javafx.scene.shape.Shape;
-import javafx.util.Callback;
 import sun.util.logging.PlatformLogger;
 import sun.util.logging.PlatformLogger.Level;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * Region is the base class for all JavaFX Node-based UI Controls, and all layout containers.
@@ -2046,6 +2060,10 @@ public class Region extends Parent {
 
     /** @treatAsPrivate */
     @Override public void impl_updatePeer() {
+        // TODO I think we have a bug, where if you create a Region with an Image that hasn't
+        // been loaded, we have no listeners on that image so as to cause a pulse & repaint
+        // to happen once the image is loaded. We just assume the image has been loaded
+        // (since when the image is created using new Image(url) or CSS it happens eagerly).
         super.impl_updatePeer();
         if (_shape != null) _shape.impl_syncPeer();
         NGRegion pg = impl_getPeer();
@@ -2073,12 +2091,23 @@ public class Region extends Parent {
             pg.updateBorder(getBorder());
         }
 
+        // TODO given the note above, this *must* be called when an image which makes up the
+        // background images and border images changes (is loaded) if it was being loaded asynchronously
+        // Also note, one day we can add support for automatic opaque insets determination for border images.
+        // However right now it is impractical because the image pixel format is almost undoubtedly going
+        // to have alpha, and so without inspecting the source image's actual pixels for the filled center
+        // we can't automatically determine whether the interior is filled.
         if (sizeChanged || backgroundChanged || shapeChanged) {
-            // TODO Make sure there is a test ensuring that stroke borders do not contribute to insets or opaque insets
-            // If the background is determined by a shape, then we don't care (for now) what the opaque insets
-            // of the Background are. If the developer specified opaque insets, we will use them, otherwise
-            // we will make sure the opaque insets are cleared
+            // These are the opaque insets, as specified by the developer in code or CSS. If null,
+            // then we must compute the opaque insets. If not null, then we will still compute the
+            // opaque insets and combine them with these insets, as appropriate. We do ignore these
+            // developer specified insets in cases where we know without a doubt that the developer
+            // gave us bad data.
             final Insets i = getOpaqueInsets();
+
+            // If the background is determined by a shape, then we don't attempt to calculate the
+            // opaque insets. If the developer specified opaque insets, we will use them, otherwise
+            // we will make sure the opaque insets are cleared
             if (_shape != null) {
                 if (i != null) {
                     pg.setOpaqueInsets((float) i.getTop(), (float) i.getRight(),
@@ -2086,25 +2115,36 @@ public class Region extends Parent {
                 } else {
                     pg.setOpaqueInsets(Float.NaN, Float.NaN, Float.NaN, Float.NaN);
                 }
-            } else if (bg == null || bg.isEmpty() || !bg.hasOpaqueFill) {
-                // If the background is null or empty or has no opaque fills, then we will forbear
-                // computing the opaque insets, and just send null down.
-                pg.setOpaqueInsets(Float.NaN, Float.NaN, Float.NaN, Float.NaN);
-            } else if (i == null) {
-                // There are no opaqueInsets specified by the developer (the most common case), so
-                // I will have to compute them.
-                // TODO If I could determine whether an Image were opaque, I could also compute
-                // the opaqueInsets for a BackgroundImage and BorderImage.
-                final double[] trbl = new double[4];
-                bg.computeOpaqueInsets(getWidth(), getHeight(), trbl);
-                pg.setOpaqueInsets((float) trbl[0], (float) trbl[1], (float) trbl[2], (float) trbl[3]);
             } else {
-                // TODO For now, I'm just going to honor the opaqueInsets. Really I would want
-                // to check to see if the computed opaqueTop, right, etc on the Background is
-                // broader than the supplied opaque insets and adjust accordingly, but for now
-                // I won't bother.
-                pg.setOpaqueInsets((float) i.getTop(), (float) i.getRight(),
-                                   (float) i.getBottom(), (float) i.getLeft());
+                // This is a rectangle (not shape) region. The opaque insets must be calculated,
+                // even if the developer has supplied their own opaque insets. The first (and cheapest)
+                // check is whether the region has any backgrounds at all. If not, then
+                // we will ignore the developer supplied insets because they are clearly wrong.
+                if (bg == null || bg.isEmpty()) {
+                    pg.setOpaqueInsets(Float.NaN, Float.NaN, Float.NaN, Float.NaN);
+                } else {
+                    // There is a background, so it is conceivable that there are
+                    // opaque insets. From this point on, we have to honor the developer's supplied
+                    // insets, only expanding them if we know for certain the opaque insets are
+                    // bigger than what was supplied by the developer. Start by defining our initial
+                    // values for top, right, bottom, and left. If the developer supplied us
+                    // insets, use those. Otherwise initialize to NaN. Note that the developer may
+                    // also have given us NaN values (so we'd have to check for these anyway). We use
+                    // NaN to mean "not defined".
+                    final double[] trbl = new double[4];
+                    bg.computeOpaqueInsets(getWidth(), getHeight(), trbl);
+
+                    if (i != null) {
+                        trbl[0] = Double.isNaN(trbl[0]) ? i.getTop() : Double.isNaN(i.getTop()) ? trbl[0] : Math.min(trbl[0], i.getTop());
+                        trbl[1] = Double.isNaN(trbl[1]) ? i.getRight() : Double.isNaN(i.getRight()) ? trbl[1] : Math.min(trbl[1], i.getRight());
+                        trbl[2] = Double.isNaN(trbl[2]) ? i.getBottom() : Double.isNaN(i.getBottom()) ? trbl[2] : Math.min(trbl[2], i.getBottom());
+                        trbl[3] = Double.isNaN(trbl[3]) ? i.getLeft() : Double.isNaN(i.getLeft()) ? trbl[3] : Math.min(trbl[3], i.getLeft());
+                    }
+
+                    // Now set the insets onto the peer. Passing NaN here is perfectly
+                    // acceptable (even encouraged, to mean "unknown" or "disabled").
+                    pg.setOpaqueInsets((float) trbl[0], (float) trbl[1], (float) trbl[2], (float) trbl[3]);
+                }
             }
         }
     }

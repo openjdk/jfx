@@ -334,8 +334,8 @@ public class NGGroup extends NGNode {
         }
 
         if (getClipNode() != null) {
-            final NGNode clip = (NGNode)getClipNode();
-            RectBounds clipBounds = clip.computeOpaqueRegion(TEMP_RECT_BOUNDS);
+            final NGNode clip = getClipNode();
+            RectBounds clipBounds = clip.getOpaqueRegion();
             if (clipBounds == null) {
                 return RenderRootResult.NONE;
             }
@@ -456,7 +456,7 @@ public class NGGroup extends NGNode {
             g.transform(getTransform());
             NGNode child;
             for (int chldIdx = 0; chldIdx < children.size(); chldIdx++) {
-                child = (NGNode)children.get(chldIdx);
+                child = children.get(chldIdx);
                 child.drawCullBits(g);
             }
             // restore previous transform state
