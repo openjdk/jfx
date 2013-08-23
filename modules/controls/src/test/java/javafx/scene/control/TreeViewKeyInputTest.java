@@ -25,8 +25,10 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.tk.Toolkit;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.collections.FXCollections;
 import javafx.event.EventHandler;
 import javafx.scene.input.KeyCode;
 import java.util.List;
@@ -40,10 +42,9 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+
+import static org.junit.Assert.*;
+import static org.junit.Assert.assertNotSame;
 
 //@Ignore("Disabling tests as they fail with OOM in continuous builds")
 public class TreeViewKeyInputTest {
@@ -1367,5 +1368,59 @@ public class TreeViewKeyInputTest {
         assertFalse(sm.isSelected(1));
         assertNull(sm.getSelectedItem());
         assertEquals(2, rt31577_count);
+    }
+
+    @Test public void test_rt32383_pageDown() {
+        // this test requires a lot of data
+        for (int i = 0; i < 100; i++) {
+            root.getChildren().add(new TreeItem<String>("Row " + i));
+        }
+
+        final MultipleSelectionModel sm = treeView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.SINGLE);
+        sm.clearAndSelect(0);
+
+        final TreeItem<String> initialFocusOwner = fm.getFocusedItem();
+
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.CTRL);
+        Toolkit.getToolkit().firePulse();
+        final TreeItem<String> newFocusOwner = fm.getFocusedItem();
+        assertNotSame(initialFocusOwner, newFocusOwner);
+
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.CTRL);
+        Toolkit.getToolkit().firePulse();
+        final TreeItem<String> nextFocusOwner = fm.getFocusedItem();
+        assertNotSame(initialFocusOwner, nextFocusOwner);
+        assertNotSame(newFocusOwner, nextFocusOwner);
+    }
+
+    @Test public void test_rt32383_pageUp() {
+        // this test requires a lot of data
+        for (int i = 0; i < 100; i++) {
+            root.getChildren().add(new TreeItem<String>("Row " + i));
+        }
+
+        final int lastIndex = 99;
+
+        final MultipleSelectionModel sm = treeView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.SINGLE);
+        sm.clearAndSelect(lastIndex);
+
+        // need to make sure we scroll down to the bottom!
+        treeView.scrollTo(lastIndex);
+        Toolkit.getToolkit().firePulse();
+
+        final TreeItem<String> initialFocusOwner = fm.getFocusedItem();
+
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.CTRL);
+        Toolkit.getToolkit().firePulse();
+        final TreeItem<String> newFocusOwner = fm.getFocusedItem();
+        assertNotSame(initialFocusOwner, newFocusOwner);
+
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.CTRL);
+        Toolkit.getToolkit().firePulse();
+        final TreeItem<String> nextFocusOwner = fm.getFocusedItem();
+        assertNotSame(initialFocusOwner, nextFocusOwner);
+        assertNotSame(newFocusOwner, nextFocusOwner);
     }
 }
