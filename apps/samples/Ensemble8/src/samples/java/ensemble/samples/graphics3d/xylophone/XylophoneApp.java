@@ -40,24 +40,26 @@ import javafx.application.Application;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Parent;
+import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
+import javafx.scene.SubScene;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.media.AudioClip;
 import javafx.scene.paint.Color;
+import javafx.scene.transform.Rotate;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
 /**
- * A sample that demonstrates a xylophone made of 3D cubes. When the
- * application runs in standalone mode, the scene must be constructed with
- * the depthBuffer argument set to true, and the root node must have depthTest
- * set to true.
+ * A sample that demonstrates a xylophone made of 3D cubes.
  *
  * @sampleName Xylophone
  * @preview preview.png
  * @see javafx.scene.transform.Rotate
  * @see javafx.scene.paint.Color
+ * @see javafx.scene.PerspectiveCamera
  * @see javafx.scene.shape.RectangleBuilder
+ * @see javafx.scene.SubScene
  */
 public class XylophoneApp extends Application {
 
@@ -68,7 +70,7 @@ public class XylophoneApp extends Application {
         Xform sceneRoot = new Xform();
         sceneRoot.rx.setAngle(225.0);
         sceneRoot.ry.setAngle(30.0);
-        sceneRoot.setScale(2.1);
+        sceneRoot.setScale(1.2);
 
         final AudioClip bar1Note =
                 new AudioClip(XylophoneApp.class.getResource("/ensemble/samples/shared-resources/Note1.wav").toString());
@@ -98,7 +100,7 @@ public class XylophoneApp extends Application {
 
         // Base1
         Cube base1Cube = new Cube(1.0, new Color(0.2, 0.12, 0.1, 1.0), 1.0);
-        base1Cube.setTranslateX(xStart + 135);
+        base1Cube.setTranslateX(xStart + 128);
         base1Cube.setTranslateZ(yPos + 20.0);
         base1Cube.setTranslateY(11.0);
         base1Cube.setScaleX(barWidth * 11.5);
@@ -107,7 +109,7 @@ public class XylophoneApp extends Application {
 
         // Base2
         Cube base2Cube = new Cube(1.0, new Color(0.2, 0.12, 0.1, 1.0), 1.0);
-        base2Cube.setTranslateX(xStart + 135);
+        base2Cube.setTranslateX(xStart + 128);
         base2Cube.setTranslateZ(yPos - 20.0);
         base2Cube.setTranslateY(11.0);
         base2Cube.setScaleX(barWidth * 11.5);
@@ -221,6 +223,7 @@ public class XylophoneApp extends Application {
             }
         });
         bar8Cube.setOnMousePressed(new EventHandler<MouseEvent>() {
+            @Override
             public void handle(MouseEvent me) {
                 bar8Note.play();
             }
@@ -257,9 +260,19 @@ public class XylophoneApp extends Application {
                 Duration.seconds(1.0), 200d))));
         animation2.setCycleCount(Animation.INDEFINITE);
 
-        return sceneRoot;
+        PerspectiveCamera camera = new PerspectiveCamera();
 
+        SubScene subScene = new SubScene(sceneRoot, 460, 240, true, true); 
+        subScene.setCamera(camera);
+        
+        sceneRoot.translateXProperty().bind(subScene.widthProperty().divide(2.2));
+        sceneRoot.translateYProperty().bind(subScene.heightProperty().divide(2));
+        sceneRoot.getTransforms().addAll(new Rotate(180, Rotate.X_AXIS));
 
+        Group group = new Group();
+        group.getChildren().add(subScene);       
+        
+        return group;
     }
 
     public void play() {
