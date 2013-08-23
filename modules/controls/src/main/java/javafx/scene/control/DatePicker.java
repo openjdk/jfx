@@ -42,6 +42,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -57,7 +59,6 @@ import javafx.util.StringConverter;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.scene.control.skin.DatePickerSkin;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
-
 
 
 /**
@@ -104,11 +105,55 @@ import com.sun.javafx.scene.control.skin.resources.ControlResources;
  */
 public class DatePicker extends ComboBoxBase<LocalDate> {
 
+    private LocalDate lastValidDate = null;
+    private Chronology lastValidChronology = IsoChronology.INSTANCE;
+
     /**
      * Creates a default DatePicker instance with a <code>null</code> date value set.
      */
     public DatePicker() {
         this(null);
+
+        valueProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable observable) {
+                LocalDate date = getValue();
+                Chronology chrono = getChronology();
+
+                if (validateDate(chrono, date)) {
+                    lastValidDate = date;
+                } else {
+                    System.err.println("Restoring value to " +
+                                ((lastValidDate == null) ? "null" : getConverter().toString(lastValidDate)));
+                    setValue(lastValidDate);
+                }
+            }
+        });
+
+        chronologyProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable observable) {
+                LocalDate date = getValue();
+                Chronology chrono = getChronology();
+
+                if (validateDate(chrono, date)) {
+                    lastValidChronology = chrono;
+                } else {
+                    System.err.println("Restoring value to " + lastValidChronology);
+                    setChronology(lastValidChronology);
+                }
+            }
+        });
+    }
+
+    private boolean validateDate(Chronology chrono, LocalDate date) {
+        try {
+            if (date != null) {
+                chrono.date(date);
+            }
+            return true;
+        } catch (DateTimeException ex) {
+            System.err.println(ex);
+            return false;
+        }
     }
 
     /**

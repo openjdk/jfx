@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DecimalStyle;
@@ -79,6 +80,9 @@ import com.sun.javafx.scene.traversal.Direction;
 public class DatePickerContent extends VBox {
     protected DatePicker datePicker;
     private Button backMonthButton;
+    private Button forwardMonthButton;
+    private Button backYearButton;
+    private Button forwardYearButton;
     private Label monthLabel;
     private Label yearLabel;
     protected GridPane gridPane;
@@ -297,7 +301,7 @@ public class DatePickerContent extends VBox {
         backMonthButton = new Button();
         backMonthButton.getStyleClass().add("left-button");
 
-        Button forwardMonthButton = new Button();
+        forwardMonthButton = new Button();
         forwardMonthButton.getStyleClass().add("right-button");
 
         StackPane leftMonthArrow = new StackPane();
@@ -334,10 +338,10 @@ public class DatePickerContent extends VBox {
         HBox yearSpinner = new HBox();
         yearSpinner.getStyleClass().add("spinner");
 
-        Button backYearButton = new Button();
+        backYearButton = new Button();
         backYearButton.getStyleClass().add("left-button");
 
-        Button forwardYearButton = new Button();
+        forwardYearButton = new Button();
         forwardYearButton.getStyleClass().add("right-button");
 
         StackPane leftYearArrow = new StackPane();
@@ -452,7 +456,7 @@ yearSpinner.setFillHeight(false);
 
     void updateDayCells() {
         Locale locale = getLocale();
-        Chronology chrono = getChronology();
+        Chronology chrono = getPrimaryChronology();
         int firstOfMonthIdx = determineFirstOfMonthDayOfWeek();
         YearMonth curMonth = displayedYearMonth.get();
         YearMonth prevMonth = curMonth.minusMonths(1);
@@ -469,48 +473,57 @@ yearSpinner.setFillHeight(false);
             dayCell.setGraphic(null);
             dayCell.setTooltip(null);
 
-            YearMonth month = curMonth;
-            int day = i - firstOfMonthIdx + 1;
-            //int index = firstOfMonthIdx + i - 1;
-            if (i < firstOfMonthIdx) {
-                month = prevMonth;
-                day = i + daysInPrevMonth - firstOfMonthIdx + 1;
-                dayCell.getStyleClass().add("previous-month");
-            } else if (i >= firstOfMonthIdx + daysInCurMonth) {
-                month = nextMonth;
-                day = i - daysInCurMonth - firstOfMonthIdx + 1;
-                dayCell.getStyleClass().add("next-month");
+            try {
+                YearMonth month = curMonth;
+                int day = i - firstOfMonthIdx + 1;
+                //int index = firstOfMonthIdx + i - 1;
+                if (i < firstOfMonthIdx) {
+                    month = prevMonth;
+                    day = i + daysInPrevMonth - firstOfMonthIdx + 1;
+                    dayCell.getStyleClass().add("previous-month");
+                } else if (i >= firstOfMonthIdx + daysInCurMonth) {
+                    month = nextMonth;
+                    day = i - daysInCurMonth - firstOfMonthIdx + 1;
+                    dayCell.getStyleClass().add("next-month");
+                }
+                LocalDate date = month.atDay(day);
+                dayCellDates[i] = date;
+                ChronoLocalDate cDate = chrono.date(date);
+
+                dayCell.setDisable(false);
+
+                if (isToday(date)) {
+                    dayCell.getStyleClass().add("today");
+                }
+
+                if (date.equals(datePicker.getValue())) {
+                    dayCell.getStyleClass().add("selected");
+                }
+
+                String cellText =
+                    dayCellFormatter.withLocale(locale)
+                                    .withChronology(chrono)
+                                    .withDecimalStyle(DecimalStyle.of(locale))
+                                    .format(cDate);
+                dayCell.setText(cellText);
+
+                dayCell.updateItem(date, false);
+            } catch (DateTimeException ex) {
+                // Date is out of range.
+                // System.err.println(dayCellDate(dayCell) + " " + ex);
+                dayCell.setText(" ");
+                dayCell.setDisable(true);
             }
-            LocalDate date = month.atDay(day);
-            dayCellDates[i] = date;
-            ChronoLocalDate cDate = toChrono(date);
-
-            if (isToday(date)) {
-                dayCell.getStyleClass().add("today");
-            }
-
-            if (date.equals(datePicker.getValue())) {
-                dayCell.getStyleClass().add("selected");
-            }
-
-            String cellText =
-                dayCellFormatter.withLocale(locale)
-                                .withChronology(chrono)
-                                .withDecimalStyle(DecimalStyle.of(locale))
-                                .format(cDate);
-            dayCell.setText(cellText);
-
-            dayCell.updateItem(date, false);
         }
     }
 
     private int getDaysPerWeek() {
-        ValueRange range = getChronology().range(DAY_OF_WEEK);
+        ValueRange range = getPrimaryChronology().range(DAY_OF_WEEK);
         return (int)(range.getMaximum() - range.getMinimum() + 1);
     }
 
     private int getMonthsPerYear() {
-        ValueRange range = getChronology().range(MONTH_OF_YEAR);
+        ValueRange range = getPrimaryChronology().range(MONTH_OF_YEAR);
         return (int)(range.getMaximum() - range.getMinimum() + 1);
     }
 
@@ -532,54 +545,74 @@ yearSpinner.setFillHeight(false);
     }
 
     protected void updateMonthYearPane() {
-        String str = formatMonth(displayedYearMonth.get());
+        YearMonth yearMonth = displayedYearMonth.get();
+        String str = formatMonth(yearMonth);
         monthLabel.setText(str);
 
-        str = formatYear(displayedYearMonth.get());
+        str = formatYear(yearMonth);
         yearLabel.setText(str);
         double width = Utils.computeTextWidth(yearLabel.getFont(), str, 0);
         if (width > yearLabel.getMinWidth()) {
             yearLabel.setMinWidth(width);
         }
+
+        Chronology chrono = datePicker.getChronology();
+        LocalDate firstDayOfMonth = yearMonth.atDay(1);
+        backMonthButton.setDisable(!isValidDate(chrono, firstDayOfMonth.minusDays(1)));
+        forwardMonthButton.setDisable(!isValidDate(chrono, firstDayOfMonth.plusMonths(1)));
+        backYearButton.setDisable(!isValidDate(chrono, firstDayOfMonth.minusYears(1)));
+        forwardYearButton.setDisable(!isValidDate(chrono, firstDayOfMonth.plusYears(1)));
     }
 
     private String formatMonth(YearMonth yearMonth) {
         Locale locale = getLocale();
-        ChronoLocalDate cDate = toChrono(yearMonth.atDay(1));
+        Chronology chrono = getPrimaryChronology();
+        try {
+            ChronoLocalDate cDate = chrono.date(yearMonth.atDay(1));
 
-        String str = monthFormatterSO.withLocale(getLocale())
-                                     .withChronology(getChronology())
-                                     .format(cDate);
-        if (Character.isDigit(str.charAt(0))) {
-            // Fallback. The standalone format returned a number, so use standard format instead.
-            str = monthFormatter.withLocale(getLocale())
-                                .withChronology(getChronology())
-                                .format(cDate);
+            String str = monthFormatterSO.withLocale(getLocale())
+                                         .withChronology(chrono)
+                                         .format(cDate);
+            if (Character.isDigit(str.charAt(0))) {
+                // Fallback. The standalone format returned a number, so use standard format instead.
+                str = monthFormatter.withLocale(getLocale())
+                                    .withChronology(chrono)
+                                    .format(cDate);
+            }
+            return titleCaseWord(str);
+        } catch (DateTimeException ex) {
+            // Date is out of range.
+            return "";
         }
-        return titleCaseWord(str);
     }
 
     private String formatYear(YearMonth yearMonth) {
         Locale locale = getLocale();
-        DateTimeFormatter formatter = yearFormatter;
-        ChronoLocalDate cDate = toChrono(yearMonth.atDay(1));
-        int era = cDate.getEra().getValue();
-        int nEras = getChronology().eras().size();
+        Chronology chrono = getPrimaryChronology();
+        try {
+            DateTimeFormatter formatter = yearFormatter;
+            ChronoLocalDate cDate = chrono.date(yearMonth.atDay(1));
+            int era = cDate.getEra().getValue();
+            int nEras = chrono.eras().size();
 
-        /*if (cDate.get(YEAR) < 0) {
-            formatter = yearForNegYearFormatter;
-        } else */
-        if ((nEras == 2 && era == 0) || nEras > 2) {
-            formatter = yearWithEraFormatter;
+            /*if (cDate.get(YEAR) < 0) {
+                formatter = yearForNegYearFormatter;
+            } else */
+            if ((nEras == 2 && era == 0) || nEras > 2) {
+                formatter = yearWithEraFormatter;
+            }
+
+            // Fixme: Format Japanese era names with Japanese text.
+            String str = formatter.withLocale(getLocale())
+                                  .withChronology(chrono)
+                                  .withDecimalStyle(DecimalStyle.of(getLocale()))
+                                  .format(cDate);
+
+            return str;
+        } catch (DateTimeException ex) {
+            // Date is out of range.
+            return "";
         }
-
-        // Fixme: Format Japanese era names with Japanese text.
-        String str = formatter.withLocale(getLocale())
-                              .withChronology(getChronology())
-                              .withDecimalStyle(DecimalStyle.of(getLocale()))
-                              .format(cDate);
-
-        return str;
     }
 
     // Ensures that month and day names are titlecased (capitalized).
@@ -629,8 +662,10 @@ yearSpinner.setFillHeight(false);
 
     // public for behavior class
     public void goToDate(LocalDate date) {
-        displayedYearMonth.set(YearMonth.from(date));
-        findDayCellForDate(date).requestFocus();
+        if (isValidDate(datePicker.getChronology(), date)) {
+            displayedYearMonth.set(YearMonth.from(date));
+            findDayCellForDate(date).requestFocus();
+        }
     }
 
     // public for behavior class
@@ -702,13 +737,24 @@ yearSpinner.setFillHeight(false);
         return Locale.getDefault(Locale.Category.FORMAT);
     }
 
-    protected Chronology getChronology() {
+    /**
+     * The primary chronology for display. This may be overridden to
+     * be different than the DatePicker chronology. For example
+     * DatePickerHijrahContent uses ISO as primary and Hijrah as a
+     * secondary chronology.
+     */
+    protected Chronology getPrimaryChronology() {
         return datePicker.getChronology();
     }
 
-    protected ChronoLocalDate toChrono(LocalDate date) {
-        return getChronology().date(date);
+    protected boolean isValidDate(Chronology chrono, LocalDate date) {
+        try {
+            if (date != null) {
+                chrono.date(date);
+            }
+            return true;
+        } catch (DateTimeException ex) {
+            return false;
+        }
     }
-
-
 }
