@@ -111,14 +111,7 @@ public final class StyleCache {
         public Key(int[] styleMapIds, int count) {
             this.styleMapIds = new int[count];
             System.arraycopy(styleMapIds, 0, this.styleMapIds, 0, count);
-
-            int hc = 7;
-            for (int i=0; i<styleMapIds.length; i++) {
-                final int id = styleMapIds[i];
-                hc = 17 * (hc + id);
             }
-            this.hash = hc;
-        }
 
         public Key(Key other) {
             this(other.styleMapIds, other.styleMapIds.length);
@@ -134,6 +127,15 @@ public final class StyleCache {
 
         @Override
         public int hashCode() {
+            if (hash == Integer.MIN_VALUE) {
+                hash = 3;
+                if (styleMapIds != null) {
+                    for (int i=0; i<styleMapIds.length; i++) {
+                        final int id = styleMapIds[i];
+                        hash = 17 * (hash + id);
+                    }
+                }
+            }
             return hash;
         }
 
@@ -175,7 +177,7 @@ public final class StyleCache {
         }
 
         final int[] styleMapIds;
-        final int hash;
+        private int hash = Integer.MIN_VALUE;
     }
 
     private Map<StyleCacheEntry.Key,StyleCacheEntry> entries;

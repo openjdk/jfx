@@ -222,269 +222,224 @@ abstract class BitSet<T> implements ObservableSet<T> {
     @Override
     public boolean containsAll(Collection<?> c) {
 
-        if (c == null) {
+        if (c == null || this.getClass() != c.getClass()) {
             // this not modified!
             return false;
         }
-        
-        if (c instanceof BitSet) {
-            
-            BitSet other = (BitSet)c;
-            
-            // this contains all of other if both are empty
-            if (bits.length == 0 && other.bits.length == 0) {
-                return true;
-            }
-            // [foo] cannot contain all of [foo bar]
-            if (bits.length < other.bits.length) {
-                return false;
-            }
-            // does [foo bar bang] contain all of [foo bar]?
-            for (int n = 0, max = other.bits.length; n < max; n++) {
-                if ((bits[n] & other.bits[n]) != other.bits[n]) {
-                    return false;
-                }
-            }
+
+        BitSet other = (BitSet)c;
+
+        // this contains all of other if both are empty
+        if (bits.length == 0 && other.bits.length == 0) {
             return true;
         }
-        
         // [foo] cannot contain all of [foo bar]
-        if (size() < c.size()) {
+        if (bits.length < other.bits.length) {
             return false;
         }
-
-        // The hard way...        
-        for (Iterator<?> iter = c.iterator(); iter.hasNext();) {
-            final T bitSet = (T) iter.next();
-            if (!contains(bitSet)) {
+        // does [foo bar bang] contain all of [foo bar]?
+        for (int n = 0, max = other.bits.length; n < max; n++) {
+            if ((bits[n] & other.bits[n]) != other.bits[n]) {
                 return false;
             }
         }
         return true;
     }
+        
 
     /** {@inheritDoc} */
     @Override
     public boolean addAll(Collection<? extends T> c) {
         
-        if (c == null || c.isEmpty()) {
+        if (c == null || this.getClass() != c.getClass()) {
             // this not modified!
             return false;
         }
         
         boolean modified = false;
-        
-        if (c instanceof BitSet) {
-            
-            BitSet other = (BitSet)c;
 
-            final long[] maskOne = this.bits;
-            final long[] maskTwo = other.bits;
+        BitSet other = (BitSet)c;
 
-            final int max = Math.max(maskOne.length, maskTwo.length);
-            final long[] union = new long[max];
-            
-            for(int n = 0; n < max; n++) {
-                
-                if (n < maskOne.length && n < maskTwo.length) {
-                    union[n] = maskOne[n] | maskTwo[n];
-                    modified |= (union[n] != maskOne[n]);
-                } else if (n < maskOne.length) {
-                    union[n] = maskOne[n];
-                    modified |= false;
-                } else {
-                    union[n] = maskTwo[n];
-                    modified = true;
-                }
-                
+        final long[] maskOne = this.bits;
+        final long[] maskTwo = other.bits;
+
+        final int a = maskOne.length;
+        final int b = maskTwo.length;
+        // Math.max(maskOne.length, maskTwo.length) is too slow
+        final int max = a < b ? b : a;
+
+        final long[] union = max > 0 ? new long[max] : null;
+
+        for(int n = 0; n < max; n++) {
+
+            if (n < maskOne.length && n < maskTwo.length) {
+                union[n] = maskOne[n] | maskTwo[n];
+                modified |= (union[n] != maskOne[n]);
+            } else if (n < maskOne.length) {
+                union[n] = maskOne[n];
+                modified |= false;
+            } else {
+                union[n] = maskTwo[n];
+                modified = true;
             }
 
-            if (modified) {
+        }
 
-                if (SetListenerHelper.hasListeners(listenerHelper)) {
+        if (modified) {
 
-                    for (int n = 0; n < max; n++) {
+            if (SetListenerHelper.hasListeners(listenerHelper)) {
 
-                        long bitsAdded = 0l;
+                for (int n = 0; n < max; n++) {
 
-                        if (n < maskOne.length && n < maskTwo.length) {
-                            bitsAdded = ~maskOne[n] & maskTwo[n];
-                        } else if (n < maskOne.length) {
-                            // union[n] = maskOne[n], so no bits added
-                            continue;
-                        } else {
-                            bitsAdded = maskTwo[n];
-                        }
+                    long bitsAdded = 0l;
 
-                        for(int b = 0; b < Long.SIZE; b++) {
-                            long m = 1l << b;
-                            if ((m & bitsAdded) == m) {
-                                T t = getT(n*Long.SIZE + b);
-                                notifyObservers(t, Change.ELEMENT_ADDED);
-                            }
+                    if (n < maskOne.length && n < maskTwo.length) {
+                        bitsAdded = ~maskOne[n] & maskTwo[n];
+                    } else if (n < maskOne.length) {
+                        // union[n] = maskOne[n], so no bits added
+                        continue;
+                    } else {
+                        bitsAdded = maskTwo[n];
+                    }
+
+                    for(int bit = 0; bit < Long.SIZE; bit++) {
+                        long m = 1l << bit;
+                        if ((m & bitsAdded) == m) {
+                            T t = getT(n*Long.SIZE + bit);
+                            notifyObservers(t, Change.ELEMENT_ADDED);
                         }
                     }
                 }
-
-                this.bits = union;
             }
 
-            return modified;
+            this.bits = union != null ? union : new long[0];
         }
-        
-        // The hard way...
-        for (Iterator<?> iter = c.iterator(); iter.hasNext();) {
-            final T bitSet = (T) iter.next();
-            modified |= add(bitSet);
-        }
+
         return modified;
+
     }
 
     /** {@inheritDoc} */
     @Override
     public boolean retainAll(Collection<?> c) {
 
-        if (c == null) {
+        if (c == null || this.getClass() != c.getClass()) {
             clear();
             return true;
         }
         
         boolean modified = false;
-        if (c instanceof BitSet) {
-            
-            BitSet other = (BitSet)c;
-            
-            final long[] maskOne = this.bits;
-            final long[] maskTwo = other.bits;
 
-            final int max = Math.min(maskOne.length, maskTwo.length);
+        BitSet other = (BitSet)c;
 
-            final long[] intersection = new long[max];
+        final long[] maskOne = this.bits;
+        final long[] maskTwo = other.bits;
+
+        final int a = maskOne.length;
+        final int b = maskTwo.length;
+        // Math.min(maskOne.length, maskTwo.length) is too slow
+        final int max = a < b ? a : b;
+
+        final long[] intersection = max > 0 ? new long[max] : null;
 
 
-            //
-            // Make sure modified is set if maskOne has more bits than maskTwo.
-            // If max is zero, then the loop that does the intersection is
-            // never entered (since maskTwo is empty). If modified isn't set,
-            // then the if (modified) block isn't entered and this.bits isn't
-            // set to the intersection.
-            //
-            modified |= (maskOne.length > max);
+        //
+        // Make sure modified is set if maskOne has more bits than maskTwo.
+        // If max is zero, then the loop that does the intersection is
+        // never entered (since maskTwo is empty). If modified isn't set,
+        // then the if (modified) block isn't entered and this.bits isn't
+        // set to the intersection.
+        //
+        modified |= (maskOne.length > max);
 
-            for(int n = 0; n < max; n++) {
-                intersection[n] = maskOne[n] & maskTwo[n];
-                modified |= intersection[n] != maskOne[n];
-            }
+        for(int n = 0; n < max; n++) {
+            intersection[n] = maskOne[n] & maskTwo[n];
+            modified |= intersection[n] != maskOne[n];
+        }
 
-            if (modified) {
+        if (modified) {
 
-                if (SetListenerHelper.hasListeners(listenerHelper)) {
+            if (SetListenerHelper.hasListeners(listenerHelper)) {
 
-                    for (int n = 0; n < maskOne.length; n++) {
+                for (int n = 0; n < maskOne.length; n++) {
 
-                        long bitsRemoved = 0l;
+                    long bitsRemoved = 0l;
 
-                        if (n < maskTwo.length) {
-                            bitsRemoved = maskOne[n] & ~maskTwo[n];
-                        } else {
-                            // maskTwo was shorter than maskOne,
-                            // and remaining bits in maskOne (which is this.bits) were removed
-                            bitsRemoved = maskOne[n];
-                        }
+                    if (n < maskTwo.length) {
+                        bitsRemoved = maskOne[n] & ~maskTwo[n];
+                    } else {
+                        // maskTwo was shorter than maskOne,
+                        // and remaining bits in maskOne (which is this.bits) were removed
+                        bitsRemoved = maskOne[n];
+                    }
 
-                        for(int b = 0; b < Long.SIZE; b++) {
-                            long m = 1l << b;
-                            if ((m & bitsRemoved) == m) {
-                                T t = getT(n*Long.SIZE + b);
-                                notifyObservers(t, Change.ELEMENT_REMOVED);
-                            }
+                    for(int bit = 0; bit < Long.SIZE; bit++) {
+                        long m = 1l << bit;
+                        if ((m & bitsRemoved) == m) {
+                            T t = getT(n*Long.SIZE + bit);
+                            notifyObservers(t, Change.ELEMENT_REMOVED);
                         }
                     }
                 }
-
-                this.bits = intersection;
             }
 
-            return modified;
+            this.bits = intersection != null ? intersection : new long[0];
         }
-        
-        for (Iterator<?> iter = iterator(); iter.hasNext();) {
-            final T bitSet = (T) iter.next();
-            if (!c.contains(bitSet)) {
-                modified |= remove(bitSet);
-            }
-        }
+
         return modified;
     }
+        
 
     /** {@inheritDoc} */
     @Override
     public boolean removeAll(Collection<?> c) {
         
-        if (c == null || c.isEmpty()) {
+        if (c == null || this.getClass() != c.getClass()) {
             // this not modified!
             return false;
         }
         
         boolean modified = false;
-        
-        if (c instanceof BitSet) {
-            
-            BitSet other = (BitSet)c;
 
-            final long[] maskOne = bits;
-            final long[] maskTwo = other.bits;
+        BitSet other = (BitSet)c;
 
-            final int max = Math.min(maskOne.length, maskTwo.length);
+        final long[] maskOne = bits;
+        final long[] maskTwo = other.bits;
 
-            final long[] difference = new long[max];
+        final int a = maskOne.length;
+        final int b = maskTwo.length;
+        // Math.min(maskOne.length, maskTwo.length) is too slow
+        final int max = a < b ? a : b;
 
-            for(int n = 0; n < max; n++) {
-                difference[n] = maskOne[n] & ~maskTwo[n];
+        final long[] difference = max > 0 ? new long[max] : null;
 
-                modified |= difference[n] != maskOne[n];
-            }
+        for(int n = 0; n < max; n++) {
+            difference[n] = maskOne[n] & ~maskTwo[n];
 
-            if (modified) {
+            modified |= difference[n] != maskOne[n];
+        }
 
-                if (SetListenerHelper.hasListeners(listenerHelper)) {
+        if (modified) {
 
-                    for (int n = 0; n < max; n++) {
+            if (SetListenerHelper.hasListeners(listenerHelper)) {
 
-                        long bitsRemoved = maskOne[n] & maskTwo[n];
+                for (int n = 0; n < max; n++) {
 
-                        for(int b = 0; b < Long.SIZE; b++) {
-                            long m = 1l << b;
-                            if ((m & bitsRemoved) == m) {
-                                T t = getT(n*Long.SIZE + b);
-                                notifyObservers(t, Change.ELEMENT_REMOVED);
-                            }
+                    long bitsRemoved = maskOne[n] & maskTwo[n];
+
+                    for(int bit = 0; bit < Long.SIZE; bit++) {
+                        long m = 1l << bit;
+                        if ((m & bitsRemoved) == m) {
+                            T t = getT(n*Long.SIZE + bit);
+                            notifyObservers(t, Change.ELEMENT_REMOVED);
                         }
                     }
                 }
-
-                this.bits = difference;
             }
 
-            return modified;
+            this.bits = difference != null ? difference : new long[0];
         }
-        
-        // the hard way...
-        if (size() <= c.size()) {
-            for (Iterator<?> iter = c.iterator(); iter.hasNext();) {
-                final BitSet bitSet = (BitSet) iter.next();
-                if (contains(bitSet)) {
-                    modified |= remove(bitSet);
-                }
-            }
-        } else {
-            for (Iterator<T> iter = iterator(); iter.hasNext();) {
-                final BitSet bitSet = (BitSet) iter.next();
-                if (c.contains(bitSet)) {
-                    modified |= remove(bitSet);
-                }
-            }
-        }
+
         return modified;
     }
 
@@ -505,7 +460,7 @@ abstract class BitSet<T> implements ObservableSet<T> {
             }
         }
 
-        bits = new long[1];
+        bits = new long[0];
     }
     
     @Override
@@ -517,14 +472,30 @@ abstract class BitSet<T> implements ObservableSet<T> {
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof BitSet) {
-            final BitSet other = (BitSet) obj;
-            if (!Arrays.equals(this.bits, other.bits)) {
-                return false;
-            }
+
+        if (this == obj) {
             return true;
         }
-        return false;
+
+        if (obj == null || this.getClass() != obj.getClass()) {
+            return false;
+        }
+
+        final BitSet other = (BitSet) obj;
+
+        final int a = this.bits != null ? this.bits.length : 0;
+        final int b = other.bits != null ? other.bits.length : 0;
+
+        if (a != b) return false;
+
+        for(int m=0; m<a; m++) {
+            final long m0 = this.bits[m];
+            final long m1 = other.bits[m];
+            if (m0 != m1) {
+                return false;
+            }
+        }
+        return true;
     }
 
     abstract protected T getT(int index);

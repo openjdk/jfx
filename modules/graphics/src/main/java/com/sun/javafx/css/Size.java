@@ -129,8 +129,15 @@ final public class Size {
                 // millionth is more than adequate. In the case of rads and
                 // percents, this is also be more than adequate.
                 //
-                final double diff = Math.abs(value) - Math.abs(other.value);
-                return (Math.abs(diff) < 0.000001);
+                // Math.abs is too slow!
+                final double v0 = value > 0 ? value : -value;
+                final double v1 = other.value > 0 ? other.value : -other.value;
+                final double diff = value  - other.value;
+                if (diff < -0.000001 || 0.000001 < diff) {
+                    return false;
+                }
+
+                return true;
             }
         }
         return false;
