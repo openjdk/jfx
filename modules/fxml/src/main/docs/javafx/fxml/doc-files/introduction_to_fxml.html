@@ -3,19 +3,19 @@
 <html lang="en" xml:lang="en" xmlns="http://www.w3.org/1999/xhtml">    
 <head>
 <link href="fxml.css" rel="stylesheet"/>    
-<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
 <title>Introduction to FXML | JavaFX 2.2</title>
 <meta name="description" content="The document introduces FXML, an XML-based declarative markup language for defining user interfaces in JavaFX 2.2 applications."/>
 <meta name="keywords" content="JavaFX 2.2, FXML, JavaFX GUI development, web development, Java application development, GUI applications, rich internet applications, RIA, expressive content"/>
+</head>
 <body>
-<p>
+
 <div class="fx-code-header">
-<div class="version"><br/>Release: JavaFX 2.2</div>
+<div class="version"><br/>Release: JavaFX 8.0</div>
 </div>
-</p>
 
 <h1>Introduction to FXML</h1>
-<p class="subtitle">Last updated: 6/21/2012</p>
+<p class="subtitle">Last updated: 8/23/2013</p>
 
 <h2>Contents</h2>
 <ul class="contents">
@@ -632,10 +632,9 @@ public class MyController {
 
 &lt;VBox xmlns:fx="http://javafx.com/fxml"&gt;
     &lt;fx:script&gt;
-    importClass(java.lang.System);
 
     function handleButtonAction(event) {
-       System.out.println('You clicked me!');
+       java.lang.System.out.println('You clicked me!');
     }
     &lt;/fx:script&gt;
 
@@ -665,10 +664,9 @@ public class MyController {
 
 <div class="caption">example.js</div>
 <pre class="code">
-importClass(java.lang.System);
 
 function handleButtonAction(event) {
-   System.out.println('You clicked me!');
+   java.lang.System.out.println('You clicked me!');
 }
 </pre>
 
@@ -687,6 +685,17 @@ var myText = "This is the text of my label.";
 &lt;Label text="$myText"/&gt;
 </pre>
 </assert>
+
+<p><strong>Warning:</strong>As of JavaFX 8.0, <span class="code">importClass()</span> javascript function is no longer supported. You have to use fully qualified names as in the example above or load a nashorn compatibility script.</p>
+
+<pre class="code">
+load("nashorn:mozilla_compat.js");
+importClass(java.lang.System);
+
+function handleButtonAction(event) {
+   System.out.println('You clicked me!');
+}
+</pre> 
 
 <h2><a name="controllers">Controllers</a></h2>
 <p>While it can be convenient to write simple event handlers in script, either inline or defined in external files, it is often preferable to define more complex application logic in a compiled, strongly-typed language such as Java. As discussed earlier, the <span class="code">fx:controller</span> attribute allows a caller to associate a "controller" class with an FXML document. A controller is a compiled class that implements the "code behind" the object hierarchy defined by the document.</p>
