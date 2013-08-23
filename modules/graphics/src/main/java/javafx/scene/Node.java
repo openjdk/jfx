@@ -3666,16 +3666,15 @@ public abstract class Node implements EventTarget, Styleable {
      * clipParent) that this child Node's bounds have changed.
      */
     void transformedBoundsChanged() {
-        if (txBoundsInvalid) {
-            return;
+        if (!txBoundsInvalid) {
+            txBounds.makeEmpty();
+            txBoundsInvalid = true;
+            invalidateBoundsInParent();
+            impl_markDirty(DirtyBits.NODE_TRANSFORMED_BOUNDS);
         }
-        txBounds.makeEmpty();
-        txBoundsInvalid = true;
-        invalidateBoundsInParent();
         if (isVisible()) {
             notifyParentOfBoundsChange();
         }
-        impl_markDirty(DirtyBits.NODE_TRANSFORMED_BOUNDS);
     }
 
     /**

@@ -25,12 +25,16 @@
 
 package javafx.scene;
 
+import com.sun.javafx.test.TestHelper;
+import javafx.geometry.BoundingBox;
 import javafx.scene.transform.Rotate;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import javafx.geometry.Bounds;
+import javafx.geometry.Point2D;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.Circle;
+import javafx.scene.transform.Translate;
 
 import org.junit.Test;
 
@@ -525,5 +529,82 @@ public class Parent_recomputeBounds_Test {
         assertEquals(-100 * Math.sqrt(2) / 2, b.getMinY(), 0.1);
         assertEquals(100 * Math.sqrt(2), b.getWidth(), 0.1);
         assertEquals(100 * Math.sqrt(2), b.getHeight(), 0.1);
+    }
+
+    @Test
+    public void nodeShouldNotifyParentEvenIfItsTransformedBoundsAreDirty() {
+        final Rectangle child = new Rectangle(0, 0, 100, 100);
+        final Group parent = new Group(child);
+
+        // ensures that child's getTransformedBounds will be called with
+        // a non-identity transform argument during parent's bounds calculations
+        parent.getTransforms().add(new Rotate(-45));
+
+        // make the cached child's transformed bounds dirty
+        child.getTransforms().add(new Translate(50, 0));
+
+        // the cached child's transformed bounds will remain dirty because
+        // of a non-trivial parent transformation
+        TestHelper.assertSimilar(
+                boundsOfRotatedRect(50, 0, 100, 100, -45),
+                parent.getBoundsInParent());
+
+        // during the following call the child bounds changed notification
+        // should still be generated even though the child's cached transformed
+        // bounds are already dirty
+        child.getTransforms().add(new Translate(50, 0));
+
+        TestHelper.assertSimilar(
+                boundsOfRotatedRect(100, 0, 100, 100, -45),
+                parent.getBoundsInParent());
+    }
+
+    private static Bounds boundsOfRotatedRect(
+            final double x, final double y,
+            final double width, final double height,
+            final double angle) {
+        final Point2D p1 = rotatePoint(x, y, angle);
+        final Point2D p2 = rotatePoint(x + width, y, angle);
+        final Point2D p3 = rotatePoint(x, y + height, angle);
+        final Point2D p4 = rotatePoint(x + width, y + height, angle);
+
+        final double minx = min(p1.getX(), p2.getX(), p3.getX(), p4.getX());
+        final double miny = min(p1.getY(), p2.getY(), p3.getY(), p4.getY());
+        final double maxx = max(p1.getX(), p2.getX(), p3.getX(), p4.getX());
+        final double maxy = max(p1.getY(), p2.getY(), p3.getY(), p4.getY());
+
+        return new BoundingBox(minx, miny, maxx - minx, maxy - miny);
+    }
+
+    private static Point2D rotatePoint(final double x, final double y,
+                                       final double angle) {
+        final double rada = Math.toRadians(angle);
+        final double sina = Math.sin(rada);
+        final double cosa = Math.cos(rada);
+
+        return new Point2D(x * cosa - y * sina,
+                           x * sina + y * cosa);
+    }
+
+    private static double min(final double... values) {
+        double result = values[0];
+        for (int i = 1; i < values.length; ++i) {
+            if (result > values[i]) {
+                result = values[i];
+            }
+        }
+
+        return result;
+    }
+
+    private static double max(final double... values) {
+        double result = values[0];
+        for (int i = 1; i < values.length; ++i) {
+            if (result < values[i]) {
+                result = values[i];
+            }
+        }
+
+        return result;
     }
 }
