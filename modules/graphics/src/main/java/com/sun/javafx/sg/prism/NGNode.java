@@ -527,7 +527,7 @@ public abstract class NGNode {
      * Called by the FX scene graph to set the effect.
      * @param effect the effect (can be null to clear it)
      */
-    public void setEffect(Object effect) {
+    public void setEffect(Effect effect) {
         final Effect old = getEffect();
         // When effects are disabled, be sure to reset the effect filter
         if (PrismSettings.disableEffects) {
@@ -544,13 +544,13 @@ public abstract class NGNode {
         // the cache for this node (if there is one) and all parents, and mark
         // this node as dirty.
         if (effectFilter == null && effect != null) {
-            effectFilter = new EffectFilter((Effect)effect, this);
+            effectFilter = new EffectFilter(effect, this);
             visualsChanged();
         } else if (effectFilter != null && effectFilter.getEffect() != effect) {
             effectFilter.dispose();
             effectFilter = null;
             if (effect != null) {
-                effectFilter = new EffectFilter((Effect)effect, this);
+                effectFilter = new EffectFilter(effect, this);
             }
             visualsChanged();
         }
@@ -1590,7 +1590,14 @@ public abstract class NGNode {
         // If we ever fix RT-32441, we must be sure to handle the case of a Group being used
         // as a clip node (such that invalidating a child on the group invalidates the
         // opaque region of every node up to the root).
-        if (opaqueRegionInvalid) {
+
+        // Because the Effect classes have no reference to NGNode, they cannot tell the
+        // NGNode to invalidate the opaque region whenever properties on the Effect that
+        // would impact the opaqueRegion change. As a result, when an Effect is specified
+        // on the NGNode, we will always treat it as if it were invalid. A more invasive
+        // (but better) change would be to give Effect the ability to invalidate the
+        // NGNode's opaque region when needed.
+        if (opaqueRegionInvalid || getEffect() != null) {
             opaqueRegionInvalid = false;
             if (supportsOpaqueRegions() && hasOpaqueRegion()) {
                 opaqueRegion = computeOpaqueRegion(opaqueRegion == null ? new RectBounds() : opaqueRegion);
@@ -1662,7 +1669,7 @@ public abstract class NGNode {
     protected boolean hasOpaqueRegion() {
         final NGNode clip = getClipNode();
         final Effect effect = getEffect();
-        return effect == null &&
+        return (effect == null || !effect.reducesOpaquePixels()) &&
                getOpacity() == 1f &&
                (nodeBlendMode == null || nodeBlendMode == Blend.Mode.SRC_OVER) &&
                (clip == null ||

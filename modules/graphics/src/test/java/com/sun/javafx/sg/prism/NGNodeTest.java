@@ -25,13 +25,16 @@
 
 package com.sun.javafx.sg.prism;
 
+import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RectBounds;
+import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.prism.Graphics;
 import com.sun.prism.paint.Color;
 import com.sun.scenario.effect.Blend;
-import com.sun.scenario.effect.BoxBlur;
-import com.sun.scenario.effect.DropShadow;
+import com.sun.scenario.effect.Effect;
+import com.sun.scenario.effect.FilterContext;
+import com.sun.scenario.effect.ImageData;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
@@ -71,10 +74,16 @@ public class NGNodeTest extends NGTestBase {
     }
 
     @Test
-    public void hasOpaqueRegionIsFalseIfEffectIsNotNull() {
-        n.setEffect(new DropShadow());
+    public void hasOpaqueRegionIsFalseIfEffectIsNotNullAndEffect_reducesOpaquePixels_returnsFalse() {
+        n.setEffect(new TransparentEffect());
         assertFalse(n.hasOpaqueRegion());
         n.setEffect(null);
+        assertTrue(n.hasOpaqueRegion());
+    }
+
+    @Test
+    public void hasOpaqueRegionIsTrueIfEffectIsNotNullAndEffect_reducesOpaquePixels_returnsTrue() {
+        n.setEffect(new OpaqueEffect());
         assertTrue(n.hasOpaqueRegion());
     }
 
@@ -141,7 +150,7 @@ public class NGNodeTest extends NGTestBase {
         assertSame(or, n.getOpaqueRegion());
 
         // Changing to something that will cause the hasOpaqueRegions to return false
-        n.setEffect(new BoxBlur());
+        n.setEffect(new TransparentEffect());
         assertNull(n.getOpaqueRegion());
 
         // Change back to something that will work and get a different instance
@@ -432,20 +441,20 @@ public class NGNodeTest extends NGTestBase {
      * opaque regions.
      */
     @Test
-    public void opaqueRegionNotRecomputedWhenEffectReferenceGoesFromNotNullToNotNull() {
+    public void opaqueRegionNotRecomputedWhenEffectReferenceChanges() {
         n.getOpaqueRegion();
 
         // Set some effect (was null)
         n.opaqueRegionRecomputed = false;
-        n.setEffect(new DropShadow());
+        n.setEffect(new TransparentEffect());
         n.getOpaqueRegion();
         assertTrue(n.opaqueRegionRecomputed);
 
-        // Change to some other effect.
+        // Change to some effect which messes with alpha.
         n.opaqueRegionRecomputed = false;
-        n.setEffect(new BoxBlur());
+        n.setEffect(new TransparentEffect());
         n.getOpaqueRegion();
-        assertFalse(n.opaqueRegionRecomputed);
+        assertTrue(n.opaqueRegionRecomputed);
 
         // Change to null.
         n.opaqueRegionRecomputed = false;
@@ -453,18 +462,40 @@ public class NGNodeTest extends NGTestBase {
         n.getOpaqueRegion();
         assertTrue(n.opaqueRegionRecomputed);
 
-        // Change to some effect
+        // Change to some effect that messes with alpha
         n.opaqueRegionRecomputed = false;
-        BoxBlur blur = new BoxBlur();
-        n.setEffect(blur);
+        Effect effect = new TransparentEffect();
+        n.setEffect(effect);
         n.getOpaqueRegion();
         assertTrue(n.opaqueRegionRecomputed);
 
-        // Set the same effect again!
+        // Set the same effect again! Right now we simply recompute
+        // every time if an effect may mess with alpha
         n.opaqueRegionRecomputed = false;
-        n.setEffect(blur);
+        n.setEffect(effect);
         n.getOpaqueRegion();
-        assertFalse(n.opaqueRegionRecomputed);
+        assertTrue(n.opaqueRegionRecomputed);
+
+        // Set the effect to be one that will never mess with alpha
+        n.opaqueRegionRecomputed = false;
+        effect = new OpaqueEffect();
+        n.setEffect(effect);
+        n.getOpaqueRegion();
+        assertTrue(n.opaqueRegionRecomputed);
+
+        // Set it to the same instance. Right now we simply recompute
+        // every time if an effect may mess with alpha
+        n.opaqueRegionRecomputed = false;
+        n.setEffect(effect);
+        n.getOpaqueRegion();
+        assertTrue(n.opaqueRegionRecomputed);
+
+        // Set it to another instance that also doesn't mess with alpha.
+        // Right now we simply recompute every time if an effect may mess with alpha
+        n.opaqueRegionRecomputed = false;
+        n.setEffect(new OpaqueEffect());
+        n.getOpaqueRegion();
+        assertTrue(n.opaqueRegionRecomputed);
     }
 
     /**************************************************************************
@@ -481,7 +512,7 @@ public class NGNodeTest extends NGTestBase {
     }
 
     @Test public void testGetOpaqueRegionReturnsNullIf_hasOpaqueRegion_returnsFalse() {
-        n.setEffect(new DropShadow());
+        n.setEffect(new TransparentEffect());
         assertNull(n.getOpaqueRegion());
     }
 
@@ -528,7 +559,7 @@ public class NGNodeTest extends NGTestBase {
         clip.updateRectangle(0, 0, 4, 4, 0, 0);
         clip.setTransformMatrix(
                 BaseTransform.getTranslateInstance(2, 2).deriveWithConcatenation(
-                BaseTransform.getScaleInstance(.5, .5)));
+                        BaseTransform.getScaleInstance(.5, .5)));
         n.setClipNode(clip);
         assertEquals(new RectBounds(2, 2, 4, 4), n.getOpaqueRegion());
     }
@@ -576,5 +607,38 @@ public class NGNodeTest extends NGTestBase {
         protected boolean supportsOpaqueRegions() {
             return true;
         }
+    }
+
+    static abstract class MockEffect extends Effect {
+
+        @Override
+        public ImageData filter(FilterContext fctx, BaseTransform transform, Rectangle outputClip, Object renderHelper, Effect defaultInput) {
+            return null;
+        }
+
+        @Override
+        public BaseBounds getBounds(BaseTransform transform, Effect defaultInput) {
+            return null;
+        }
+
+        @Override
+        public AccelType getAccelType(FilterContext fctx) {
+            return AccelType.OPENGL;
+        }
+    }
+
+    class TransparentEffect extends MockEffect {
+        @Override
+        public boolean reducesOpaquePixels() {
+            return true;
+        }
+    }
+
+    class OpaqueEffect extends MockEffect {
+        @Override
+        public boolean reducesOpaquePixels() {
+            return false;
+        }
+
     }
 }

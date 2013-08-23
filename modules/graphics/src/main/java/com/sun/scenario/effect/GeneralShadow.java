@@ -72,7 +72,7 @@ public class GeneralShadow extends DelegateEffect {
     }
 
     protected Effect getDelegate() {
-        return (Effect) shadow;
+        return shadow;
     }
 
     /**
