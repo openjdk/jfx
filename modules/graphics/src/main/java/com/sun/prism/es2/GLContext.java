@@ -115,7 +115,7 @@ abstract class GLContext {
 
     private static final int FBO_ID_UNSET = -1;
     private static final int FBO_ID_NOCACHE = -2;
-    private int nativeFBOID = PlatformUtil.isMac() ? FBO_ID_NOCACHE : FBO_ID_UNSET;
+    private int nativeFBOID = PlatformUtil.isMac() || PlatformUtil.isIOS() ? FBO_ID_NOCACHE : FBO_ID_UNSET;
 
     private static native void nActiveTexture(long nativeCtxInfo, int texUnit);
     private static native void nBindFBO(long nativeCtxInfo, int nativeFBOID);
