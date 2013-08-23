@@ -191,7 +191,6 @@ public interface Graphics {
      * or "return to texture cache pool" operation.
      */
     public void sync();
-    public void reset();
 
     public Screen getAssociatedScreen();
     public ResourceFactory getResourceFactory();

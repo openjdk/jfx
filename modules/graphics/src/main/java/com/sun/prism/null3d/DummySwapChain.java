@@ -52,7 +52,7 @@ class DummySwapChain extends DummyResource implements Presentable {
         super.dispose();
     }
 
-    public boolean lockResources() {
+    public boolean lockResources(PresentableState pState) {
         texBackBuffer.lock();
         return false;
     }
@@ -100,10 +100,6 @@ class DummySwapChain extends DummyResource implements Presentable {
 
     public Screen getAssociatedScreen() {
         return context.getAssociatedScreen();
-    }
-
-    public boolean recreateOnResize() {
-        return false;
     }
 
     public boolean isOpaque() {

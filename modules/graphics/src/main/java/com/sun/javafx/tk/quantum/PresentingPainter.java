@@ -70,17 +70,11 @@ final class PresentingPainter extends ViewPainter {
                 return;
             }
 
-            boolean needsReset = (presentable == null) ||
-                                 (penWidth != viewWidth) || (penHeight != viewHeight);
-            if (presentable != null) {
-                needsReset = presentable.lockResources() || needsReset;
+            if (presentable != null && presentable.lockResources(sceneState)) {
+                disposePresentable();
             }
-            if (needsReset) {
-                if (presentable == null || presentable.recreateOnResize()) {
-                    disposePresentable();
-                    presentable = factory.createPresentable(sceneState);
-                    needsReset = false;
-                }
+            if (presentable == null) {
+                presentable = factory.createPresentable(sceneState);
                 penWidth  = viewWidth;
                 penHeight = viewHeight;
             }
@@ -90,9 +84,6 @@ final class PresentingPainter extends ViewPainter {
 
                 ViewScene vs = (ViewScene) sceneState.getScene();
                 if (g != null) {
-                    if (needsReset) {
-                        g.reset();
-                    }
                     paintImpl(g);
                 }
                 

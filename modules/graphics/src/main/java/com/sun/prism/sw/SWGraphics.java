@@ -130,10 +130,6 @@ final class SWGraphics implements ReadbackGraphics {
     public void sync() {
     }
 
-    public void reset() {
-        throw new UnsupportedOperationException("unimp: SWG.reset");
-    }
-
     private static void convertToPiscesTransform(BaseTransform prismTx, Transform6 piscesTx) {
         piscesTx.m00 = (int) (TO_PISCES * prismTx.getMxx());
         piscesTx.m10 = (int) (TO_PISCES * prismTx.getMyx());

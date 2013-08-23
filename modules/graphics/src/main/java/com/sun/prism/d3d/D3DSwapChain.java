@@ -30,6 +30,7 @@ import com.sun.javafx.geom.Rectangle;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.Graphics;
 import com.sun.prism.Presentable;
+import com.sun.prism.PresentableState;
 import com.sun.prism.RTTexture;
 
 class D3DSwapChain
@@ -116,7 +117,12 @@ class D3DSwapChain
         return d3dResRecord.getContext();
     }
 
-    public boolean lockResources() {
+    public boolean lockResources(PresentableState pState) {
+        if (pState.getWidth() != getPhysicalWidth() ||
+            pState.getHeight() != getPhysicalHeight())
+        {
+            return true;
+        }
         texBackBuffer.lock();
         return texBackBuffer.isSurfaceLost();
     }
@@ -131,10 +137,6 @@ class D3DSwapChain
 
     public Screen getAssociatedScreen() {
         return getContext().getAssociatedScreen();
-    }
-
-    public boolean recreateOnResize() {
-        return true;
     }
 
     public float getPixelScaleFactor() {
