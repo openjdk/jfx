@@ -27,32 +27,36 @@ package com.sun.prism.impl.packrect;
 
 import com.sun.javafx.geom.Rectangle;
 
-import java.util.ArrayList;
-import java.util.List;
-
 class Level {
-    int width;
-    int height;
-    private int yPos;
+    int length;
+    int size;
+    private int sizeOffset;
+    private int lengthOffset;
 
-    private List<Rectangle> rectangles = new ArrayList<Rectangle>();
-    private int nextAddX;
-
-    Level(int width, int height, int yPos) {
-        this.width = width;
-        this.height = height;
-        this.yPos = yPos;
+    Level(int length, int size, int sizeOffset) {
+        this.length = length;
+        this.size = size;
+        this.sizeOffset = sizeOffset;
     }
 
     /**
      * Tries to add the given rectangle to this level.
      */
-    boolean add(Rectangle rect) {
+    boolean add(Rectangle rect, int x, int y, int requestedLength, int requestedSize, boolean vertical) {
         // See whether we can add at the end
-        if (nextAddX + rect.width <= width && rect.height <= height) {
-            rect.setBounds(nextAddX, yPos, rect.width, rect.height);
-            rectangles.add(rect);
-            nextAddX += rect.width;
+        if (lengthOffset + requestedLength <= length && requestedSize <= size) {
+            if (vertical) {
+                rect.x = sizeOffset;
+                rect.y = lengthOffset;
+            } else {
+                rect.x = lengthOffset;
+                rect.y = sizeOffset;
+            }
+            lengthOffset += requestedLength;
+
+            // this x,y location are external offsets and should not be flipped
+            rect.x += x;
+            rect.y += y;
             return true;
         }
         return false;

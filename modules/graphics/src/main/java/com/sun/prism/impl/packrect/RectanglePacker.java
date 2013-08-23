@@ -48,12 +48,30 @@ public class RectanglePacker {
      algorithm for the contained Rects. */
     // Maintained in sorted order by increasing Y coordinate
     private List<Level> levels = new ArrayList<Level>(150);
-    private static final int MIN_HEIGHT = 8; // The minimum height of level
+    private static final int MIN_SIZE = 8; // The minimum size of level
     private static final int ROUND_UP = 4; // Round up to multiple of 4
     private int recentUsedLevelIndex = 0;
-    private int nextAddY;
-    private int w;
-    private int h;
+    private int length;
+    private int size;
+    private int sizeOffset;
+    private int x;
+    private int y;
+    private boolean vertical;
+
+    public RectanglePacker(Texture backingStore, int x, int y,
+                           int width, int height, boolean vertical) {
+        this.backingStore = backingStore;
+        if (vertical) {
+            this.length = height;
+            this.size = width;
+        } else {
+            this.length = width;
+            this.size = height;
+        }
+        this.x = x;
+        this.y = y;
+        this.vertical = vertical;
+    }
 
     /**
      * Creates a new RectanglePacker. You must specify the texture used as the
@@ -65,9 +83,7 @@ public class RectanglePacker {
      * @param height The height of the backing store, must be > 0 (typically > 512)
      */
     public RectanglePacker(Texture backingStore, int width, int height) {
-        this.backingStore = backingStore;
-        this.w = width;
-        this.h = height;
+        this(backingStore, 0, 0, width, height, false);
     }
 
     /**
@@ -85,25 +101,29 @@ public class RectanglePacker {
      */
     public final boolean add(Rectangle rect) {
         // N need to continue if the rectangle simply won't fit.
-        if (rect.width > w) return false;
+        final int requestedLength = vertical ? rect.height : rect.width;
+        final int requestedSize = vertical ? rect.width : rect.height;
 
-        int newHeight = MIN_HEIGHT > rect.height ? MIN_HEIGHT : rect.height;
+        if (requestedLength > length) return false;
+        if (requestedSize > size) return false;
+
+        int newSize = MIN_SIZE > requestedSize ? MIN_SIZE : requestedSize;
 
         // Round up
-        newHeight = (newHeight + ROUND_UP - 1) - (newHeight - 1) % ROUND_UP;
+        newSize = (newSize + ROUND_UP - 1) - (newSize - 1) % ROUND_UP;
 
         int newIndex;
         // If it does not match recent used level, using binary search to find
         // the best fit level's index
-        if (recentUsedLevelIndex < levels.size()
-                && levels.get(recentUsedLevelIndex).height != newHeight) {
-            newIndex = binarySearch(levels, newHeight);
+        if (recentUsedLevelIndex < levels.size() &&
+            levels.get(recentUsedLevelIndex).size != newSize) {
+            newIndex = binarySearch(levels, newSize);
         } else {
             newIndex = recentUsedLevelIndex;
         }
 
-        // Can create a new level with newHeight
-        boolean newLevelFlag = nextAddY + newHeight <= h;
+        // Can create a new level with newSize
+        final boolean newLevelFlag = sizeOffset + newSize <= size;
 
         // Go through the levels check whether we can satisfy the allocation
         // request
@@ -111,9 +131,9 @@ public class RectanglePacker {
             Level level = levels.get(i);
             // If level's height is more than (newHeight + ROUND_UP * 2) and
             // the cache still has some space left, go create a new level
-            if (level.height > (newHeight + ROUND_UP * 2) && newLevelFlag) {
+            if (level.size > (newSize + ROUND_UP * 2) && newLevelFlag) {
                 break;
-            } else if (level.add(rect)) {
+            } else if (level.add(rect, x, y, requestedLength, requestedSize, vertical)) {
                 recentUsedLevelIndex = i;
                 return true;
             }
@@ -124,19 +144,19 @@ public class RectanglePacker {
             return false;
         }
 
-        Level newLevel = new Level(w, newHeight, nextAddY);
-        nextAddY += newHeight;
+        Level newLevel = new Level(length, newSize, sizeOffset);
+        sizeOffset += newSize;
 
         // For a rect that cannot fit into the existing level, create a new
         // level and add at the end of levels that have the same height
-        if (newIndex < levels.size() && levels.get(newIndex).height <= newHeight) {
+        if (newIndex < levels.size() && levels.get(newIndex).size <= newSize) {
             levels.add(newIndex + 1, newLevel);
             recentUsedLevelIndex = newIndex + 1;
         } else {
             levels.add(newIndex, newLevel);
             recentUsedLevelIndex = newIndex;
         }
-        return newLevel.add(rect);
+        return newLevel.add(rect, x, y, requestedLength, requestedSize, vertical);
     }
 
     /**
@@ -144,7 +164,7 @@ public class RectanglePacker {
      */
     public void clear() {
         levels.clear();
-        nextAddY = 0;
+        sizeOffset = 0;
         recentUsedLevelIndex = 0;
     }
 
@@ -170,10 +190,13 @@ public class RectanglePacker {
         // likely, there are a bunch of levels have the same height. But, we always keep adding levels and
         // rects at the end. k+1 is a trick to find the last index by finding the next greater value's index
         // and go back one.
+        // Note that since the sizes are quantized, k+1 is a special value that will not appear in the list
+        // of level sizes and so the search for it will find the gap between the size for k and the size
+        // for the next quantum.
         int key = k + 1;
         int from = 0, to = levels.size() - 1;
         int mid = 0;
-        int height = 0;
+        int midSize = 0;
 
         if (to < 0) {
             return 0;
@@ -181,17 +204,17 @@ public class RectanglePacker {
 
         while (from <= to) {
             mid = (from + to) / 2;
-            height = levels.get(mid).height;
-            if (key < height) {
+            midSize = levels.get(mid).size;
+            if (key < midSize) {
                 to = mid - 1;
             } else {
                 from = mid + 1;
             }
         }
 
-        if (height < k) {
+        if (midSize < k) {
             return mid + 1;
-        } else if (height > k) {
+        } else if (midSize > k) {
             return mid > 0 ? mid - 1 : 0;
         } else {
             return mid;

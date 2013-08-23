@@ -25,16 +25,19 @@
 
 package com.sun.javafx.sg.prism;
 
-import java.lang.ref.ReferenceQueue;
-import java.lang.ref.SoftReference;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import com.sun.javafx.geom.Rectangle;
+import com.sun.javafx.geom.Shape;
 import com.sun.javafx.logging.PulseLogger;
+
+import java.util.HashMap;
+
+import javafx.scene.layout.Background;
+
+import com.sun.prism.Graphics;
 import com.sun.prism.RTTexture;
+import com.sun.prism.ResourceFactory;
+import com.sun.prism.Texture.WrapMode;
+import com.sun.prism.impl.packrect.RectanglePacker;
 
 /**
  * RegionImageCache - A fixed pixel count sized cache of Images keyed by arbitrary set of arguments. All images are held with
@@ -43,33 +46,31 @@ import com.sun.prism.RTTexture;
  *
  */
 class RegionImageCache {
-    // Ordered Map keyed by args hash, ordered by most recent accessed entry.
-    private final LinkedHashMap<Integer, PixelCountSoftReference> map =
-            new LinkedHashMap<Integer, PixelCountSoftReference>(16, 0.75f, true);
-    // Maximum number of pixels to cache, this is used if maxCount
-    private final int maxPixelCount;
+
     // Maximum cached image size in pixels
-    private final int maxSingleImagePixelSize;
-    // The current number of pixels stored in the cache
-    private int currentPixelCount = 0;
-    // Lock for concurrent access to map
-    private ReadWriteLock lock = new ReentrantReadWriteLock();
-    // Reference queue for tracking lost soft references to images in the cache
-    private ReferenceQueue<RTTexture> referenceQueue = new ReferenceQueue<RTTexture>();
+    private final static int MAX_SIZE = 300 * 300;
+    private static final int WIDTH = 1024;
+    private static final int HEIGHT = 1024;
 
-    RegionImageCache() {
-        this.maxPixelCount = (8 * 1024 * 1024) / 4; // 8Mb of pixels
-        this.maxSingleImagePixelSize = 300 * 300;
-    }
+    private HashMap<Integer, CachedImage> imageMap;
+    private RTTexture backingStore;
+    private RectanglePacker hPacker;
+    private RectanglePacker vPacker;
 
-    /** Clear the cache */
-    void flush() {
-        lock.readLock().lock();
-        try {
-            map.clear();
-        } finally {
-            lock.readLock().unlock();
-        }
+
+    RegionImageCache(Graphics g) {
+        imageMap = new HashMap<>();
+        ResourceFactory factory = g.getResourceFactory();
+
+        backingStore = factory.createRTTexture(WIDTH + WIDTH, HEIGHT, WrapMode.CLAMP_NOT_NEEDED);
+        backingStore.contentsUseful();
+        backingStore.makePermanent();
+        // Subdivide the texture in two halves where on half is used to store
+        // horizontal regions and the other vertical regions. Otherwise, mixing
+        // horizontal and vertical regions on the same area, would result in
+        // a lot of waste texture space.
+        hPacker = new RectanglePacker(backingStore, 0, 0, WIDTH, HEIGHT, false);
+        vPacker = new RectanglePacker(backingStore, WIDTH, 0, WIDTH, HEIGHT, true);
     }
 
     /**
@@ -80,139 +81,83 @@ class RegionImageCache {
      * @return True if the image size is less than max
      */
     boolean isImageCachable(int w, int h) {
-        return w > 0 && h > 0 && (w * h) < maxSingleImagePixelSize;
+        return 0 < w && w < WIDTH &&
+               0 < h && h < HEIGHT &&
+               (w * h) < MAX_SIZE;
+    }
+
+    RTTexture getBackingStore() {
+        return backingStore;
     }
 
     /**
-     * Get the cached image for given keys
+     * Search the cache for a background image representing the arguments.
+     * When this method succeeds the x and y coordinates in rect are adjust
+     * to the location in the backing store when the image is stored.
+     * If a failure occurred the rect is set to empty to indicate the caller
+     * to disable caching.
      *
-     * @param config The Screen used with the target Graphics. Used as part of cache key
-     * @param w      The image width, used as part of cache key
-     * @param h      The image height, used as part of cache key
-     * @param args   Other arguments to use as part of the cache key
-     * @return Returns the cached Image, or null there is no cached image for key
+     * @param key the hash key for the image
+     * @param rect the rect image. On input, width and height determine the requested
+     *        texture space. On ouput, the x and y the location in the texture
+     * @param background the background used to validated if the correct image was found
+     * @param shape the shape used to validated if the correct image was found
+     * @param g the graphics to flush if the texture needs to be restarted
+     * @return true means to caller needs to render to rect to initialize the content.
      */
-    RTTexture getImage(Object config, int w, int h, Object... args) {
-        lock.readLock().lock();
-        try {
-            final int hash = hash(config, w, h, args);
-            PixelCountSoftReference ref = map.get(hash);
-            // Check reference has not been lost and the key truly matches, in case of false positive hash match
-            if (ref != null && ref.equals(config, w, h, args)) {
-                RTTexture image = ref.get();
-                // If the image surface is lost, then we will remove it from the cache and report back
-                // to the caller that we have no cached image.
-                if (image != null && image.isSurfaceLost()) {
-                    if (PulseLogger.PULSE_LOGGING_ENABLED) {
-                        PulseLogger.PULSE_LOGGER.renderIncrementCounter("Region RTTexture surface lost");
-                    }
-                    currentPixelCount -= ref.pixelCount;
-                    map.remove(hash);
-                    return null;
-                }
-                return ref.get();
-            } else {
-                return null;
+    boolean getImageLocation(Integer key, Rectangle rect, Background background,
+                             Shape shape, Graphics g) {
+        CachedImage cache = imageMap.get(key);
+        if (cache != null) {
+            if (cache.equals(rect.width, rect.height, background, shape)) {
+                rect.x = cache.x;
+                rect.y = cache.y;
+                return false;
             }
-        } finally {
-            lock.readLock().unlock();
+            // hash collision, mark rectangle empty indicates the caller to
+            // disable caching
+            rect.width = rect.height = -1;
+            return false;
+        }
+        boolean vertical = rect.height > 64;
+        RectanglePacker packer = vertical ? vPacker : hPacker;
+
+        if (!packer.add(rect)) {
+            g.sync();
+
+            vPacker.clear();
+            hPacker.clear();
+            imageMap.clear();
+            packer.add(rect);
+            backingStore.createGraphics().clear();
+            if (PulseLogger.PULSE_LOGGING_ENABLED) {
+                PulseLogger.PULSE_LOGGER.renderIncrementCounter("Region image cache flushed");
+            }
+        }
+        imageMap.put(key, new CachedImage(rect, background, shape));
+        return true;
+    }
+
+    static class CachedImage {
+        Background background;
+        Shape shape;
+        int x, y, width, height;
+
+        CachedImage(Rectangle rect, Background background, Shape shape) {
+            this.x = rect.x;
+            this.y = rect.y;
+            this.width = rect.width;
+            this.height = rect.height;
+            this.background = background;
+            this.shape = shape;
+        }
+
+        public boolean equals(int width, int height, Background background, Shape shape) {
+            return this.width == width &&
+                   this.height == height &&
+                   (this.background == null ? background == null : this.background.equals(background)) &&
+                   (this.shape == null ? shape == null : this.shape.equals(shape));
         }
     }
 
-    /**
-     * Sets the cached image for the specified constraints.
-     *
-     * @param image  The image to store in cache
-     * @param config The Screen used with the target Graphics. Used as part of cache key
-     * @param w      The image width, used as part of cache key
-     * @param h      The image height, used as part of cache key
-     * @param args   Other arguments to use as part of the cache key
-     * @return true if the image could be cached or false if the image is too big
-     */
-    boolean setImage(RTTexture image, Object config, int w, int h, Object... args) {
-        if (!isImageCachable(w, h)) return false;
-        int hash = hash(config, w, h, args);
-        lock.writeLock().lock();
-        try {
-            PixelCountSoftReference ref = map.get(hash);
-            // check if currently in map
-            if (ref != null && ref.get() == image) {
-                return true;
-            }
-            // clear out old
-            if (ref != null) {
-                if (PulseLogger.PULSE_LOGGING_ENABLED) {
-                    PulseLogger.PULSE_LOGGER.renderIncrementCounter("Region RTTexture replaced in RegionImageCache");
-                }
-                currentPixelCount -= ref.pixelCount;
-                map.remove(hash);
-            }
-            // add new image to pixel count
-            int newPixelCount = image.getContentWidth() * image.getContentHeight();
-            currentPixelCount += newPixelCount;
-            // clean out lost references if not enough space
-            if (currentPixelCount > maxPixelCount) {
-                while ((ref = (PixelCountSoftReference)referenceQueue.poll()) != null){
-                    //reference lost
-                    map.remove(ref.hash);
-                    currentPixelCount -= ref.pixelCount;
-                }
-            }
-            // remove old items till there is enough free space
-            if (currentPixelCount > maxPixelCount) {
-                Iterator<Map.Entry<Integer, PixelCountSoftReference>> mapIter = map.entrySet().iterator();
-                while ((currentPixelCount > maxPixelCount) && mapIter.hasNext()) {
-                    Map.Entry<Integer, PixelCountSoftReference> entry = mapIter.next();
-                    mapIter.remove();
-                    RTTexture img = entry.getValue().get();
-//                    if (img != null) img.flush();
-                    currentPixelCount -= entry.getValue().pixelCount;
-                }
-            }
-            // finally put new in map
-            map.put(hash, new PixelCountSoftReference(image, referenceQueue, newPixelCount,hash, config, w, h, args));
-            return true;
-        } finally {
-            lock.writeLock().unlock();
-        }
-    }
-
-    /** Create a unique hash from all the input */
-    private int hash(Object config, int w, int h, Object ... args) {
-        int hash;
-        hash = (config != null ? config.hashCode() : 0);
-        hash = 31 * hash + w;
-        hash = 31 * hash + h;
-        hash = 31 * hash + Arrays.deepHashCode(args);
-        return hash;
-    }
-
-    /** Extended SoftReference that stores the pixel count even after the image is lost */
-    private static class PixelCountSoftReference extends SoftReference<RTTexture> {
-        private final int pixelCount;
-        private final int hash;
-        // key parts
-        private final Object config;
-        private final int w;
-        private final int h;
-        private final Object[] args;
-
-        public PixelCountSoftReference(RTTexture referent, ReferenceQueue<? super RTTexture> q, int pixelCount, int hash,
-                                       Object config, int w, int h, Object[] args) {
-            super(referent, q);
-            this.pixelCount = pixelCount;
-            this.hash = hash;
-            this.config = config;
-            this.w = w;
-            this.h = h;
-            this.args = args;
-        }
-
-        public boolean equals (Object config, int w, int h, Object[] args){
-            return config == this.config &&
-                            w == this.w &&
-                            h == this.h &&
-                            Arrays.equals(args, this.args);
-        }
-    }
 }
