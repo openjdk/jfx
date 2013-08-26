@@ -100,8 +100,11 @@ public class RadioMenuItem extends MenuItem implements Toggle {
      * Constructors                                                            *
      *                                                                         *
      **************************************************************************/
-
-    private RadioMenuItem() {
+    
+    /**
+     * Constructs a RadioMenuItem with no display text.
+     */
+    public RadioMenuItem() {
         this(null,null);
     }
 
