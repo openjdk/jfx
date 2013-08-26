@@ -214,13 +214,21 @@ public class StubStage implements TKStage {
     public void close() {
     }
 
+    private boolean focusGrabbed;
+
     @Override
     public boolean grabFocus() {
-        return false;
+        focusGrabbed = true;
+        return true;
     }
 
     @Override
     public void ungrabFocus() {
+        focusGrabbed = false;
+    }
+
+    public boolean isFocusGrabbed() {
+        return focusGrabbed;
     }
 
     @Override
