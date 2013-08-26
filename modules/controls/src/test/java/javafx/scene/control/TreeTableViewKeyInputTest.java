@@ -59,11 +59,11 @@ public class TreeTableViewKeyInputTest {
     
     private StageLoader stageLoader;
     
-    private final TreeTableColumn<String, String> col0 = new TreeTableColumn<String, String>("col0");
-    private final TreeTableColumn<String, String> col1 = new TreeTableColumn<String, String>("col1");
-    private final TreeTableColumn<String, String> col2 = new TreeTableColumn<String, String>("col2");
-    private final TreeTableColumn<String, String> col3 = new TreeTableColumn<String, String>("col3");
-    private final TreeTableColumn<String, String> col4 = new TreeTableColumn<String, String>("col4");
+    private TreeTableColumn<String, String> col0;
+    private TreeTableColumn<String, String> col1;
+    private TreeTableColumn<String, String> col2;
+    private TreeTableColumn<String, String> col3;
+    private TreeTableColumn<String, String> col4;
     
     private final TreeItem<String> root = new TreeItem<String>("Root");                     // 0
         private final TreeItem<String> child1 = new TreeItem<String>("Child 1");            // 1
@@ -115,6 +115,12 @@ public class TreeTableViewKeyInputTest {
         sm.setCellSelectionEnabled(false);
         
         tableView.setRoot(root);
+
+        col0 = new TreeTableColumn<String, String>("col0");
+        col1 = new TreeTableColumn<String, String>("col1");
+        col2 = new TreeTableColumn<String, String>("col2");
+        col3 = new TreeTableColumn<String, String>("col3");
+        col4 = new TreeTableColumn<String, String>("col4");
         tableView.getColumns().setAll(col0, col1, col2, col3, col4);
         
         sm.clearAndSelect(0);
@@ -2464,6 +2470,78 @@ public class TreeTableViewKeyInputTest {
         assertNotSame(initialFocusOwner, newFocusOwner);
 
         keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.CTRL);
+        Toolkit.getToolkit().firePulse();
+        final TreeItem<String> nextFocusOwner = fm.getFocusedItem();
+        assertNotSame(initialFocusOwner, nextFocusOwner);
+        assertNotSame(newFocusOwner, nextFocusOwner);
+    }
+
+    @Test public void test_rt27710_pageDown_singleSelection_cell() {
+        // this test requires a lot of data
+        for (int i = 0; i < 100; i++) {
+            root.getChildren().add(new TreeItem<String>("Row " + i));
+        }
+
+        col0.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
+            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
+                return new ReadOnlyStringWrapper(param.getValue().getValue());
+            }
+        });
+
+        final TableSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.SINGLE);
+        sm.setCellSelectionEnabled(true);
+        sm.clearAndSelect(0, col0);
+
+        final TreeItem<String> initialFocusOwner = fm.getFocusedItem();
+
+        // because single selection is enabled, shift+pgDown should result in
+        // the same result as ctrl+pgDown
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        final TreeItem<String> newFocusOwner = fm.getFocusedItem();
+        assertNotSame(initialFocusOwner, newFocusOwner);
+
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        final TreeItem<String> nextFocusOwner = fm.getFocusedItem();
+        assertNotSame(initialFocusOwner, nextFocusOwner);
+        assertNotSame(newFocusOwner, nextFocusOwner);
+    }
+
+    @Test public void test_rt27710_pageUp_singleSelection_cell() {
+        // this test requires a lot of data
+        for (int i = 0; i < 100; i++) {
+            root.getChildren().add(new TreeItem<String>("Row " + i));
+        }
+
+        col0.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
+            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
+                return new ReadOnlyStringWrapper(param.getValue().getValue());
+            }
+        });
+
+        final int lastIndex = 99;
+
+        final TableSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.SINGLE);
+        sm.setCellSelectionEnabled(true);
+        sm.clearAndSelect(lastIndex, col0);
+
+        // need to make sure we scroll down to the bottom!
+        tableView.scrollTo(lastIndex);
+        Toolkit.getToolkit().firePulse();
+
+        final TreeItem<String> initialFocusOwner = fm.getFocusedItem();
+
+        // because single selection is enabled, shift+pgUp should result in
+        // the same result as ctrl+pgUp
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        final TreeItem<String> newFocusOwner = fm.getFocusedItem();
+        assertNotSame(initialFocusOwner, newFocusOwner);
+
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
         Toolkit.getToolkit().firePulse();
         final TreeItem<String> nextFocusOwner = fm.getFocusedItem();
         assertNotSame(initialFocusOwner, nextFocusOwner);

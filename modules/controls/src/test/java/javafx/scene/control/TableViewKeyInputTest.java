@@ -58,11 +58,11 @@ public class TableViewKeyInputTest {
     
     private StageLoader stageLoader;
     
-    private final TableColumn<String, String> col0 = new TableColumn<String, String>("col0");
-    private final TableColumn<String, String> col1 = new TableColumn<String, String>("col1");
-    private final TableColumn<String, String> col2 = new TableColumn<String, String>("col2");
-    private final TableColumn<String, String> col3 = new TableColumn<String, String>("col3");
-    private final TableColumn<String, String> col4 = new TableColumn<String, String>("col4");
+    private TableColumn<String, String> col0;
+    private TableColumn<String, String> col1;
+    private TableColumn<String, String> col2;
+    private TableColumn<String, String> col3;
+    private TableColumn<String, String> col4;
     
     @Before public void setup() {
         tableView = new TableView<String>();
@@ -73,6 +73,12 @@ public class TableViewKeyInputTest {
         sm.setCellSelectionEnabled(false);
         
         tableView.getItems().setAll("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12");
+
+        col0 = new TableColumn<String, String>("col0");
+        col1 = new TableColumn<String, String>("col1");
+        col2 = new TableColumn<String, String>("col2");
+        col3 = new TableColumn<String, String>("col3");
+        col4 = new TableColumn<String, String>("col4");
         tableView.getColumns().setAll(col0, col1, col2, col3, col4);
         
         sm.clearAndSelect(0);
@@ -1954,5 +1960,81 @@ public class TableViewKeyInputTest {
         final String nextFocusOwner = fm.getFocusedItem();
         assertNotSame(initialFocusOwner, nextFocusOwner);
         assertNotSame(newFocusOwner, nextFocusOwner);
+    }
+
+    @Test public void test_rt27710_pageDown_singleSelection_cell() {
+        // this test requires a lot of data
+        tableView.getItems().clear();
+        for (int i = 0; i < 100; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        col0.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
+            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<String, String> param) {
+                return new ReadOnlyStringWrapper(param.getValue());
+            }
+        });
+
+        final TableSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.SINGLE);
+        sm.setCellSelectionEnabled(true);
+        sm.clearAndSelect(0, col0);
+
+        final String initialFocusOwner = fm.getFocusedItem();
+
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        final String newFocusOwner = fm.getFocusedItem();
+        assertNotSame(initialFocusOwner, newFocusOwner);
+
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        final String nextFocusOwner = fm.getFocusedItem();
+        assertNotSame(initialFocusOwner, nextFocusOwner);
+        assertNotSame(newFocusOwner, nextFocusOwner);
+    }
+
+    @Test public void test_rt27710_pageUp_singleSelection_cell() {
+        // this test requires a lot of data
+        tableView.getItems().clear();
+        for (int i = 0; i < 100; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        col0.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
+            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<String, String> param) {
+                return new ReadOnlyStringWrapper(param.getValue());
+            }
+        });
+
+        final int lastIndex = 99;
+
+        final TableSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.SINGLE);
+        sm.setCellSelectionEnabled(true);
+        sm.clearAndSelect(lastIndex, col0);
+
+        // need to make sure we scroll down to the bottom!
+        tableView.scrollTo(lastIndex);
+        Toolkit.getToolkit().firePulse();
+
+        final String initialFocusOwner = fm.getFocusedItem();
+        final Object initialSelectionOwner = sm.getSelectedItem();
+
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        final String newFocusOwner = fm.getFocusedItem();
+        final Object newSelectionOwner = sm.getSelectedItem();
+        assertNotSame(initialFocusOwner, newFocusOwner);
+        assertNotSame(initialSelectionOwner, newSelectionOwner);
+
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        final String nextFocusOwner = fm.getFocusedItem();
+        final Object nextSelectionOwner = sm.getSelectedItem();
+        assertNotSame(initialFocusOwner, nextFocusOwner);
+        assertNotSame(newFocusOwner, nextFocusOwner);
+        assertNotSame(initialSelectionOwner, nextSelectionOwner);
+        assertNotSame(newSelectionOwner, nextSelectionOwner);
     }
 }
