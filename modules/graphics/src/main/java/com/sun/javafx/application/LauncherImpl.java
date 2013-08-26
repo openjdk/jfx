@@ -25,8 +25,12 @@
 
 package com.sun.javafx.application;
 
-import com.sun.javafx.jmx.MXExtension;
-import com.sun.javafx.runtime.SystemProperties;
+import javafx.application.Application;
+import javafx.application.Preloader;
+import javafx.application.Preloader.ErrorNotification;
+import javafx.application.Preloader.PreloaderNotification;
+import javafx.application.Preloader.StateChangeNotification;
+import javafx.stage.Stage;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -43,13 +47,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
-
-import javafx.application.Application;
-import javafx.application.Preloader;
-import javafx.application.Preloader.ErrorNotification;
-import javafx.application.Preloader.PreloaderNotification;
-import javafx.application.Preloader.StateChangeNotification;
-import javafx.stage.Stage;
+import com.sun.javafx.jmx.MXExtension;
+import com.sun.javafx.runtime.SystemProperties;
 import sun.misc.BASE64Decoder;
 
 
@@ -275,6 +274,7 @@ public class LauncherImpl {
             }
         } else if (launchMode.equals(LAUNCH_MODE_CLASS)) {
             mainClassName = launchName;
+            preloaderClassName = System.getProperty("javafx.preloader");
         } else {
             abort(new IllegalArgumentException("The launchMode argument must be one of LM_CLASS or LM_JAR"),
                     "Invalid launch mode: %1$s", launchMode);
