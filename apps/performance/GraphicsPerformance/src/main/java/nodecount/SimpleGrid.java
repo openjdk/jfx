@@ -32,31 +32,10 @@
 
 package nodecount;
 
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
-
 /**
  */
-public class ImageBench extends BenchBase<ImageView> {
-    Image image = new Image(ImageBench.class.getResource("Duke_Wave_Opaque.png").toExternalForm());
-
-    @Override protected void resizeAndRelocate(ImageView i, double x, double y, double width, double height) {
-        i.setX(x);
-        i.setY(y);
-        i.setFitWidth(width);
-        i.setFitHeight(height);
-    }
-
-    @Override protected ImageView createNode() {
-        ImageView i = new ImageView();
-        i.setImage(image);
-        return i;
-    }
-
-    /**
-     * Java main for when running without JavaFX launcher
-     */
-    public static void main(String[] args) {
-        launch(args);
+public class SimpleGrid extends BenchTest {
+    public SimpleGrid(BenchBase benchmark, int rows, int cols) {
+        super(benchmark, rows, cols, false);
     }
 }

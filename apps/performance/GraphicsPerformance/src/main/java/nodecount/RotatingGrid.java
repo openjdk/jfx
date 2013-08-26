@@ -32,31 +32,37 @@
 
 package nodecount;
 
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
+import javafx.animation.ParallelTransition;
+import javafx.animation.RotateTransition;
+import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.util.Duration;
+import java.util.List;
 
 /**
  */
-public class ImageBench extends BenchBase<ImageView> {
-    Image image = new Image(ImageBench.class.getResource("Duke_Wave_Opaque.png").toExternalForm());
+public class RotatingGrid extends BenchTest {
+    private ParallelTransition tx;
 
-    @Override protected void resizeAndRelocate(ImageView i, double x, double y, double width, double height) {
-        i.setX(x);
-        i.setY(y);
-        i.setFitWidth(width);
-        i.setFitHeight(height);
+    RotatingGrid(BenchBase benchmark, int rows, int cols) {
+        super(benchmark, rows, cols, false);
     }
 
-    @Override protected ImageView createNode() {
-        ImageView i = new ImageView();
-        i.setImage(image);
-        return i;
+    @Override public void setup(Scene scene) {
+        super.setup(scene);
+        List<Node> children = scene.getRoot().getChildrenUnmodifiable();
+        tx = new ParallelTransition();
+        for (int i=1; i<children.size(); i++) {
+            Node n = children.get(i);
+            RotateTransition rot = new RotateTransition(Duration.seconds(5), n);
+            rot.setToAngle(360);
+            tx.getChildren().add(rot);
+        }
+        tx.setCycleCount(ParallelTransition.INDEFINITE);
+        tx.play();
     }
 
-    /**
-     * Java main for when running without JavaFX launcher
-     */
-    public static void main(String[] args) {
-        launch(args);
+    @Override public void tearDown() {
+        tx.stop();
     }
 }

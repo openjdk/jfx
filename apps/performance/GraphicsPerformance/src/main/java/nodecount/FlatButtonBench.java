@@ -32,25 +32,36 @@
 
 package nodecount;
 
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
+import javafx.scene.control.Button;
 
 /**
+ * Buttons rendered with a flat fill
  */
-public class ImageBench extends BenchBase<ImageView> {
-    Image image = new Image(ImageBench.class.getResource("Duke_Wave_Opaque.png").toExternalForm());
+public class FlatButtonBench extends ButtonBench {
+/*
+    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+    -fx-background-insets: 0 0 -1 0, 0, 1, 2;
+    -fx-background-radius: 3px, 3px, 2px, 1px;
+    -fx-padding: 0.333333em 0.666667em 0.333333em 0.666667em;
+    -fx-text-fill: -fx-text-base-color;
+    -fx-alignment: CENTER;
+    -fx-content-display: LEFT;
 
-    @Override protected void resizeAndRelocate(ImageView i, double x, double y, double width, double height) {
-        i.setX(x);
-        i.setY(y);
-        i.setFitWidth(width);
-        i.setFitHeight(height);
-    }
+ */
 
-    @Override protected ImageView createNode() {
-        ImageView i = new ImageView();
-        i.setImage(image);
-        return i;
+
+    @Override
+    protected Button createNode() {
+        Button button = super.createNode();
+        button.setStyle(
+                "-fx-background-color: BLACK, DARKGRAY, LIGHTGRAY, CORNFLOWERBLUE;" +
+                "-fx-background-insets: 0 0 -1 0, 0, 1, 2;" +
+                "-fx-background-radius: 3px, 3px, 2px, 1px;" +
+                "-fx-padding: 0.33333em 0.666667em 0.333333em 0.6666667em;" +
+                "-fx-text-fill: white;" +
+                "-fx-alignment: CENTER;" +
+                "-fx-content-display: LEFT;");
+        return button;
     }
 
     /**
