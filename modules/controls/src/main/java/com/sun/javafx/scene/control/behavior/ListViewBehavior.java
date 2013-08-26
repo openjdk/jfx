@@ -684,10 +684,14 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     }
     
     private void selectAllToFocus() {
-        MultipleSelectionModel<T> sm = getControl().getSelectionModel();
+        // Fix for RT-31241
+        final ListView listView = getControl();
+        if (listView.getEditingIndex() >= 0) return;
+
+        MultipleSelectionModel<T> sm = listView.getSelectionModel();
         if (sm == null) return;
 
-        FocusModel<T> fm = getControl().getFocusModel();
+        FocusModel<T> fm = listView.getFocusModel();
         if (fm == null) return;
 
         int focusIndex = fm.getFocusedIndex();

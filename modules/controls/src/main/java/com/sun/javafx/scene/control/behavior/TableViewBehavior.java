@@ -154,4 +154,19 @@ public class TableViewBehavior<T> extends TableViewBehaviorBase<TableView<T>, T,
         return new TablePosition(getControl(), row, (TableColumn)tc);
     }
 
+
+
+    /**************************************************************************
+     *                                                                        *
+     * Modify TableViewBehaviorBase behavior                                  *
+     *                                                                        *
+     *************************************************************************/
+
+    /** {@inheritDoc} */
+    @Override protected void selectAllToFocus() {
+        // Fix for RT-31241
+        if (getControl().getEditingCell() != null) return;
+
+        super.selectAllToFocus();
+    }
 }
