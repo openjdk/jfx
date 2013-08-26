@@ -44,12 +44,14 @@ public class LabelSkin extends LabeledSkinBase<Label, BehaviorBase<Label>> {
         // Labels do not block the mouse by default, unlike most other UI Controls.
         consumeMouseEvents(false);
 
-        label.labelForProperty().addListener(labelForListener);
+        registerChangeListener(label.labelForProperty(), "LABEL_FOR");
     }
 
-    private final ChangeListener<Node> labelForListener = new ChangeListener<Node>() {
-        @Override public void changed(ObservableValue<? extends Node> observable, Node oldNode, Node newNode) {
-            mnemonicTargetChanged(oldNode, newNode);
+
+    @Override protected void handleControlPropertyChanged(String p) {     
+        super.handleControlPropertyChanged(p);
+        if ("LABEL_FOR".equals(p)) {
+            mnemonicTargetChanged();
         }
-    };
+    }
 }

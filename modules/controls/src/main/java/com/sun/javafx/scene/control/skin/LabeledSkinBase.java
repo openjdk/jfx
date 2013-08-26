@@ -36,6 +36,7 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.ContentDisplay;
+import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.OverrunStyle;
@@ -256,7 +257,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
     ** has changed, but it's label hasn't so just
     ** swap them over, and tidy up.
     */
-    protected void mnemonicTargetChanged(Node oldNode, Node newNode) {
+    protected void mnemonicTargetChanged() {
         if (containsMnemonic == true) {
             KeyCodeCombination mnemonicKeyCombo =
                 new KeyCodeCombination(
@@ -268,31 +269,40 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             /*
             ** was there previously a labelFor
             */
-            if (oldNode != null) {
-                Mnemonic myMnemonic = new Mnemonic(oldNode, mnemonicKeyCombo);
-                mnemonicScene.removeMnemonic(myMnemonic);
-                mnemonicScene = null;
-            }
-            else {
-                /*
-                ** maybe we were a target ourselves
-                */
-                Mnemonic myMnemonic = new Mnemonic(getSkinnable(), mnemonicKeyCombo);
-                mnemonicScene.removeMnemonic(myMnemonic);
-                mnemonicScene = null;
+            if (mnemonicScene != null) {
+                if (labeledNode != null) {
+                    Mnemonic myMnemonic = new Mnemonic(labeledNode, mnemonicKeyCombo);
+                    mnemonicScene.removeMnemonic(myMnemonic);
+                    mnemonicScene = null;
+                }
+                else {
+                    /*
+                    ** maybe we were a target ourselves
+                    */
+                    Mnemonic myMnemonic = new Mnemonic(getSkinnable(), mnemonicKeyCombo);
+                    mnemonicScene.removeMnemonic(myMnemonic);
+                    mnemonicScene = null;
+                }
             }
 
             /*
             ** is there a new labelFor
             */
-            if (newNode != null) {
-                Mnemonic myMnemonic = new Mnemonic(newNode, mnemonicKeyCombo);
-                mnemonicScene = newNode.getScene();
-                if (mnemonicScene != null) {
-                    mnemonicScene.addMnemonic(myMnemonic);
+            Control control = getSkinnable();
+            if (control instanceof Label) {
+                Node newNode = ((Label)control).getLabelFor();
+                if (newNode != null) {
+                    Mnemonic myMnemonic = new Mnemonic(newNode, mnemonicKeyCombo);
+                    mnemonicScene = newNode.getScene();
+                    if (mnemonicScene != null) {
+                        mnemonicScene.addMnemonic(myMnemonic);
+                    }
                 }
+                labeledNode = newNode;
             }
-            labeledNode = newNode;
+            else {
+                labeledNode = null;
+            }
         }
     }
 
