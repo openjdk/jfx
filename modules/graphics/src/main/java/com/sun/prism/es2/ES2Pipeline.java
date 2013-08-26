@@ -186,7 +186,11 @@ public class ES2Pipeline extends GraphicsPipeline {
 
     @Override
     public boolean is3DSupported() {
-        return true;
+        // It is okay to just returns true if we plan to support 3D on all
+        // ES2 platforms that are PS 3 capable. However we are not ready to
+        // support 3D on the embedded platform. Some of this platforms may be
+        // PS 3 capable but have other limitations such as NPOT. 
+        return PlatformUtil.isEmbedded() ? PlatformUtil.isEmbedded3DEnabled() : true;
     }
 
     @Override
