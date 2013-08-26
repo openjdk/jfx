@@ -466,7 +466,7 @@ sub usesPerConfigurationBuildDirectory
     # autotool builds (non build-webkit). In this case and if
     # WEBKITOUTPUTDIR exist, use that as our configuration dir. This will
     # allows us to run run-webkit-tests without using build-webkit.
-    return ($ENV{"WEBKITOUTPUTDIR"} && isGtk()) || isAppleWinWebKit();
+    return ($ENV{"WEBKITOUTPUTDIR"} && isGtk()) || isAppleWinWebKit() || isJava();
 }
 
 sub determineConfigurationProductDir
