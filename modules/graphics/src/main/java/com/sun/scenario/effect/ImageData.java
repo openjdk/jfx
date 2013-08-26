@@ -82,8 +82,8 @@ public class ImageData {
         this(fctx, image, bounds, BaseTransform.IDENTITY_TRANSFORM);
     }
 
-    private ImageData(FilterContext fctx, Filterable image, Rectangle bounds,
-                      BaseTransform transform)
+    public ImageData(FilterContext fctx, Filterable image, Rectangle bounds,
+                     BaseTransform transform)
     {
         this.fctx = fctx;
         this.refcount = 1;
@@ -117,6 +117,9 @@ public class ImageData {
     }
 
     public void setReusable(boolean reusable) {
+        if (sharedOwner != null) {
+            throw new InternalError("cannot make a shared ImageData reusable");
+        }
         this.reusable = reusable;
     }
 

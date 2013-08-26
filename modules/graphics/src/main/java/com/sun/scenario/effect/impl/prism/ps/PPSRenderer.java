@@ -318,12 +318,15 @@ public class PPSRenderer extends PrRenderer {
         // depend on that texture...
         g.sync();
         tex.dispose();
-        ImageData id = new ImageData(fctx, dst, new Rectangle(w, h));
+        BaseTransform tx;
         float ps = img.getPixelScale();
         if (ps != 1.0f) {
             ps = 1.0f / ps;
-            id = id.transform(BaseTransform.getScaleInstance(ps, ps));
+            tx = BaseTransform.getScaleInstance(ps, ps);
+        } else {
+            tx = BaseTransform.IDENTITY_TRANSFORM;
         }
+        ImageData id = new ImageData(fctx, dst, new Rectangle(w, h), tx);
         return id;
     }
 
