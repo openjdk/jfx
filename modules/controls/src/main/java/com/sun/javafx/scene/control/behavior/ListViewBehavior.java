@@ -34,10 +34,7 @@ import javafx.collections.WeakListChangeListener;
 import javafx.event.EventType;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
-import javafx.scene.control.Control;
-import javafx.scene.control.FocusModel;
-import javafx.scene.control.ListView;
-import javafx.scene.control.MultipleSelectionModel;
+import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
@@ -608,8 +605,12 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         if (sm == null) return;
         
         selectionChanging = true;
-        sm.clearSelection();
-        sm.selectRange(leadSelectedIndex, leadIndex + 1);
+        if (sm.getSelectionMode() == SelectionMode.SINGLE) {
+            sm.select(leadSelectedIndex);
+        } else {
+            sm.clearSelection();
+            sm.selectRange(leadSelectedIndex, leadIndex + 1);
+        }
         selectionChanging = false;
     }
     
@@ -629,8 +630,12 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         if (sm == null) return;
         
         selectionChanging = true;
-        sm.clearSelection();
-        sm.selectRange(leadIndex, leadSelectedIndex + 1);
+        if (sm.getSelectionMode() == SelectionMode.SINGLE) {
+            sm.select(leadSelectedIndex);
+        } else {
+            sm.clearSelection();
+            sm.selectRange(leadIndex, leadSelectedIndex + 1);
+        }
         selectionChanging = false;
     }
 

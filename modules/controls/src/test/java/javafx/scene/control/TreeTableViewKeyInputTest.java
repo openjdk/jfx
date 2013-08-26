@@ -2547,4 +2547,72 @@ public class TreeTableViewKeyInputTest {
         assertNotSame(initialFocusOwner, nextFocusOwner);
         assertNotSame(newFocusOwner, nextFocusOwner);
     }
+
+    @Test public void test_rt19053_pageUp() {
+        final int items = 8;
+        root.getChildren().clear();
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        final int middleIndex = items / 2;
+
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        tableView.setShowRoot(false);
+        sm.setSelectionMode(SelectionMode.SINGLE);
+        sm.clearAndSelect(middleIndex);
+
+        assertEquals(middleIndex, sm.getSelectedIndex());
+
+        final Object initialSelectionOwner = sm.getSelectedItem();
+
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        final Object newSelectionOwner = sm.getSelectedItem();
+        assertNotSame(initialSelectionOwner + " == " + newSelectionOwner, initialSelectionOwner, newSelectionOwner);
+
+        // selection should go all the way to the top, but this bug
+        // shows that instead it seems to stop midway - where the anchor is
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(0, sm.getSelectedIndex());
+        final Object nextSelectionOwner =  sm.getSelectedItem();
+        assertNotSame(initialSelectionOwner, nextSelectionOwner);
+        assertNotSame(newSelectionOwner, nextSelectionOwner);
+    }
+
+    @Test public void test_rt19053_pageDown() {
+        final int items = 8;
+        root.getChildren().clear();
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        final int middleIndex = items / 2;
+
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        tableView.setShowRoot(false);
+        sm.setSelectionMode(SelectionMode.SINGLE);
+        sm.clearAndSelect(middleIndex);
+
+        assertEquals(middleIndex, sm.getSelectedIndex());
+
+        final Object initialSelectionOwner = sm.getSelectedItem();
+
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        final Object newSelectionOwner = sm.getSelectedItem();
+        assertNotSame(initialSelectionOwner, newSelectionOwner);
+
+        // selection should go all the way to the bottom, but this bug
+        // shows that instead it seems to stop midway - where the anchor is
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(items - 1, fm.getFocusedIndex());
+        assertEquals(items - 1, sm.getSelectedIndex());
+        final Object nextSelectionOwner =  sm.getSelectedItem();
+        assertNotSame(initialSelectionOwner, nextSelectionOwner);
+        assertNotSame(newSelectionOwner, nextSelectionOwner);
+    }
 }

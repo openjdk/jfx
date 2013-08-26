@@ -30,10 +30,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.WeakListChangeListener;
-import javafx.scene.control.FocusModel;
-import javafx.scene.control.MultipleSelectionModel;
-import javafx.scene.control.TreeItem;
-import javafx.scene.control.TreeView;
+import javafx.scene.control.*;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.util.Callback;
@@ -566,8 +563,12 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         if (sm == null) return;
         
         selectionChanging = true;
-        sm.clearSelection();
-        sm.selectRange(leadSelectedIndex, leadIndex + 1);
+        if (sm.getSelectionMode() == SelectionMode.SINGLE) {
+            sm.select(leadSelectedIndex);
+        } else {
+            sm.clearSelection();
+            sm.selectRange(leadSelectedIndex, leadIndex + 1);
+        }
         selectionChanging = false;
     }
     
@@ -587,8 +588,12 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         if (sm == null) return;
         
         selectionChanging = true;
-        sm.clearSelection();
-        sm.selectRange(leadIndex, leadSelectedIndex + 1);
+        if (sm.getSelectionMode() == SelectionMode.SINGLE) {
+            sm.select(leadSelectedIndex);
+        } else {
+            sm.clearSelection();
+            sm.selectRange(leadIndex, leadSelectedIndex + 1);
+        }
         selectionChanging = false;
     }
     
