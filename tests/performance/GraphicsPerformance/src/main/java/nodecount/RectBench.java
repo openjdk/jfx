@@ -31,25 +31,48 @@
  */
 package nodecount;
 
+import javafx.animation.AnimationTimer;
 import javafx.animation.FillTransition;
 import javafx.application.Application;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import com.sun.javafx.perf.PerformanceTracker;
 
 /**
  */
 public class RectBench extends Application {
+    static final int GAP = 6;
+    static final int NUM_COLS = 13;
+    static final int NUM_ROWS = 13;
 
     @Override
     public void start(Stage stage) throws Exception {
-        final int GAP = 6;
-        final int NUM_COLS = 13;
-        final int NUM_ROWS = 13;
+        Parent root = createSceneGraph(false, false, false);
+        Scene scene = new Scene(root, 640, 480);
+        stage.setScene(scene);
+        stage.show();
 
+        final PerformanceTracker tracker = PerformanceTracker.getSceneTracker(scene);
+        AnimationTimer fpsTimer = new AnimationTimer() {
+            long lastReset;
+            @Override
+            public void handle(long now) {
+                if (now - lastReset > 5000 * 1000000) {
+                    System.out.println(tracker.getAverageFPS());
+                    tracker.resetAverageFPS();
+                    lastReset = now;
+                }
+            }
+        };
+        fpsTimer.start();
+    }
+
+    private Parent createSceneGraph(boolean pixelSnap, boolean rotating, boolean moving) {
         Rectangle background = new Rectangle();
         Rectangle[][] rects = new Rectangle[NUM_ROWS][NUM_COLS];
         Pane root = new Pane() {
@@ -72,7 +95,6 @@ public class RectBench extends Application {
             }
         };
         root.getChildren().add(background);
-        Scene scene = new Scene(root, 640, 480);
 
         for (int r=0; r<NUM_ROWS; r++) {
             for (int c=0; c<NUM_COLS; c++) {
@@ -86,9 +108,7 @@ public class RectBench extends Application {
         FillTransition tx = new FillTransition(Duration.seconds(5), background, Color.WHITE, Color.BLACK);
         tx.setCycleCount(1000);
         tx.play();
-
-        stage.setScene(scene);
-        stage.show();
+        return root;
     }
 
     /**
