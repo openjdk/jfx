@@ -394,8 +394,12 @@ public class TreeViewTest {
         sm.select(tree_model.getChildren().get(0));
         // remove the 'Data item' from the root node
         tree_model.getChildren().remove(sm.getSelectedItem());
+
+        // Previously the selection was cleared, but this was changed to instead
+        // move the selection upwards.
         // assert the there are no selected items any longer
-        assertTrue("items: " + sm.getSelectedItem(), sm.getSelectedItems().isEmpty());
+        // assertTrue("items: " + sm.getSelectedItem(), sm.getSelectedItems().isEmpty());
+        assertEquals(tree_model, sm.getSelectedItem());
     }
     
     /*********************************************************************

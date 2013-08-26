@@ -28,12 +28,7 @@ package com.sun.javafx.scene.control.behavior;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
-import javafx.scene.control.Control;
-import javafx.scene.control.SelectionMode;
-import javafx.scene.control.TableColumnBase;
-import javafx.scene.control.TableFocusModel;
-import javafx.scene.control.TablePositionBase;
-import javafx.scene.control.TableSelectionModel;
+import javafx.scene.control.*;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.util.Callback;
@@ -955,44 +950,75 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
     }
     
     protected void selectAllPageUp() {
+        TableSelectionModel sm = getSelectionModel();
+        if (sm == null) return;
+
         TableFocusModel fm = getFocusModel();
         if (fm == null) return;
 
         int leadIndex = fm.getFocusedIndex();
+        final TableColumnBase col = sm.isCellSelectionEnabled() ? getFocusedCell().getTableColumn() : null;
         if (isShiftDown) {
             leadIndex = getAnchor() == null ? leadIndex : getAnchor().getRow();
-            setAnchor(leadIndex, null);
+            setAnchor(leadIndex, col);
         }
         
         int leadSelectedIndex = onScrollPageUp.call(null);
         
-        TableSelectionModel sm = getSelectionModel();
-        if (sm == null) return;
-        
         selectionChanging = true;
-        sm.clearSelection();
-        sm.selectRange(leadSelectedIndex, leadIndex + 1);
+        if (sm.getSelectionMode() == null || sm.getSelectionMode() == SelectionMode.SINGLE) {
+            if (sm.isCellSelectionEnabled()) {
+                sm.select(leadSelectedIndex, col);
+            } else {
+                sm.select(leadSelectedIndex);
+            }
+        } else {
+            sm.clearSelection();
+            if (sm.isCellSelectionEnabled()) {
+                for (int _row = leadSelectedIndex; _row <= leadIndex + 1; _row++) {
+                    sm.select(_row, col);
+                }
+            } else {
+                sm.selectRange(leadSelectedIndex, leadIndex + 1);
+            }
+        }
         selectionChanging = false;
     }
     
     protected void selectAllPageDown() {
+        TableSelectionModel sm = getSelectionModel();
+        if (sm == null) return;
+
         TableFocusModel fm = getFocusModel();
         if (fm == null) return;
         
         int leadIndex = fm.getFocusedIndex();
+        final TableColumnBase col = sm.isCellSelectionEnabled() ? getFocusedCell().getTableColumn() : null;
         if (isShiftDown) {
             leadIndex = getAnchor() == null ? leadIndex : getAnchor().getRow();
-            setAnchor(leadIndex, null);
+            setAnchor(leadIndex, col);
         }
         
         int leadSelectedIndex = onScrollPageDown.call(null);
         
-        TableSelectionModel sm = getSelectionModel();
-        if (sm == null) return;
-        
         selectionChanging = true;
-        sm.clearSelection();
-        sm.selectRange(leadIndex, leadSelectedIndex + 1);
+        if (sm.getSelectionMode() == null || sm.getSelectionMode() == SelectionMode.SINGLE) {
+            if (sm.isCellSelectionEnabled()) {
+                sm.select(leadSelectedIndex, col);
+            } else {
+                sm.select(leadSelectedIndex);
+            }
+        } else {
+            sm.clearSelection();
+
+            if (sm.isCellSelectionEnabled()) {
+                for (int _row = leadIndex; _row <= leadSelectedIndex + 1; _row++) {
+                    sm.select(_row, col);
+                }
+            } else {
+                sm.selectRange(leadIndex, leadSelectedIndex + 1);
+            }
+        }
         selectionChanging = false;
     }
     

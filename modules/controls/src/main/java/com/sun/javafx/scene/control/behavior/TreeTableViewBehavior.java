@@ -170,10 +170,23 @@ public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableVie
             getTablePosition(int row, TableColumnBase<TreeItem<T>, ?> tc) {
         return new TreeTablePosition(getControl(), row, (TreeTableColumn)tc);
     }
-    
-    
-    
-        
+
+
+
+    /**************************************************************************
+     *                                                                        *
+     * Modify TableViewBehaviorBase behavior                                  *
+     *                                                                        *
+     *************************************************************************/
+
+    /** {@inheritDoc} */
+    @Override protected void selectAllToFocus() {
+        // Fix for RT-31241
+        if (getControl().getEditingCell() != null) return;
+
+        super.selectAllToFocus();
+    }
+
     /**************************************************************************
      *                                                                        *
      * Tree-related implementation                                            *

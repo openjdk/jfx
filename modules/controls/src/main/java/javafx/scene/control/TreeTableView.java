@@ -2290,17 +2290,20 @@ public class TreeTableView<S> extends Control {
                     for (int i = 0; i < selectedIndices.size() && ! selectedItems.isEmpty(); i++) {
                         int index = selectedIndices.get(i);
                         if (index > selectedItems.size()) break;
-                        
-                        TreeItem<S> item = selectedItems.get(index);
-                        if (item == null || removedChildren.contains(item)) {
-                            clearSelection(index);
-                        } else if (removedChildren.size() == 1 && 
+
+                        // Removed as part of RT-30356 consistency effort
+//                        TreeItem<S> item = selectedItems.get(index);
+//                        if (item == null || removedChildren.contains(item)) {
+//                            clearSelection(index);
+//                        } else
+                        if (removedChildren.size() == 1 &&
                                 selectedItems.size() == 1 && 
                                 selectedItem != null && 
                                 selectedItem.equals(removedChildren.get(0))) {
                             // Bug fix for RT-28637
                             if (oldSelectedIndex < getItemCount()) {
-                                TreeItem<S> newSelectedItem = getModelItem(oldSelectedIndex);
+                                final int previousRow = oldSelectedIndex == 0 ? 0 : oldSelectedIndex - 1;
+                                TreeItem<S> newSelectedItem = getModelItem(previousRow);
                                 if (! selectedItem.equals(newSelectedItem)) {
                                     setSelectedItem(newSelectedItem);
                                 }

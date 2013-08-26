@@ -593,15 +593,19 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
     
     private void selectAllToFocus() {
-        MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
+        // Fix for RT-31241
+        final TreeView treeView = getControl();
+        if (treeView.getEditingItem() != null) return;
+
+        MultipleSelectionModel<TreeItem<T>> sm = treeView.getSelectionModel();
         if (sm == null) return;
 
-        FocusModel<TreeItem<T>> fm = getControl().getFocusModel();
+        FocusModel<TreeItem<T>> fm = treeView.getFocusModel();
         if (fm == null) return;
 
         int focusIndex = fm.getFocusedIndex();
         int anchor = getAnchor();
-        
+
         sm.clearSelection();
         int startPos = anchor;
         int endPos = anchor > focusIndex ? focusIndex - 1 : focusIndex + 1;

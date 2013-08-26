@@ -293,6 +293,9 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         if (getFocusedIndex() >= position && getFocusedIndex() > -1 && getFocusedIndex() + shift > -1) {
             final int newFocus = getFocusedIndex() + shift;
             setSelectedIndex(newFocus);
+
+            // added for RT-30356
+            selectedIndices.set(newFocus, true);
  
             // removed due to RT-27185
             // focus(newFocus);
