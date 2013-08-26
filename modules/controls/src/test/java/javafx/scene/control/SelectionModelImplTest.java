@@ -124,14 +124,14 @@ public class SelectionModelImplTest {
                 "Row 14", "Row 15", "Row 16", "Row 17", "Row 18", "Row 19", ROW_20_VALUE);
 
         // ListView init
-        listView = new ListView<String>(data);
+        listView = new ListView<>(data);
         // --- ListView init
 
         // TreeView init
-        root = new TreeItem<String>(ROW_1_VALUE);
+        root = new TreeItem<>(ROW_1_VALUE);
         root.setExpanded(true);
         for (int i = 1; i < data.size(); i++) {
-            root.getChildren().add(new TreeItem<String>(data.get(i)));
+            root.getChildren().add(new TreeItem<>(data.get(i)));
         }
         ROW_2_TREE_VALUE = root.getChildren().get(0);
         ROW_3_TREE_VALUE = root.getChildren().get(1);
@@ -228,8 +228,8 @@ public class SelectionModelImplTest {
     }
 
     private boolean isTree() {
-        return model instanceof TreeView.TreeViewBitSetSelectionModel ||
-               model instanceof TreeTableView.TreeTableViewArrayListSelectionModel;
+        return (model instanceof TreeView.TreeViewBitSetSelectionModel) ||
+               (model instanceof TreeTableView.TreeTableViewArrayListSelectionModel);
     }
 
     private Object getValue(Object item) {
@@ -398,6 +398,94 @@ public class SelectionModelImplTest {
             }
             
             assertFalse(cell_3.isSelected());
+        }
+    }
+
+    @Test public void test_rt_30356_selectRowAtIndex0() {
+        setUp();
+
+        // this test selects the 0th row, then removes it, and sees what happens
+        // to the selection.
+
+        if (isTree()) {
+            // we hide the root, so we have a bunch of children at the same level
+            if (currentControl instanceof TreeView) {
+                ((TreeView)currentControl).setShowRoot(false);
+            } else if (currentControl instanceof TreeTableView) {
+                ((TreeTableView)currentControl).setShowRoot(false);
+            }
+
+            model.select(0);
+
+            // for tree / tree table
+            assertEquals(ROW_2_TREE_VALUE, model.getSelectedItem());
+
+            root.getChildren().remove(0);
+            assertEquals(ROW_3_TREE_VALUE, model.getSelectedItem());
+        } else if (currentControl instanceof ChoiceBox || currentControl instanceof ComboBox) {
+            // TODO
+        } else {
+            // for list / table
+            model.select(0);
+            assertEquals("model is " + model, ROW_1_VALUE, model.getSelectedItem());
+
+            data.remove(0);
+            assertEquals(ROW_2_VALUE, model.getSelectedItem());
+        }
+
+        // we also check that the cell itself is selected (as often the selection
+        // model and the visuals disagree in this case).
+        // TODO remove the ComboBox conditional and test for that too
+        if (! (currentControl instanceof ChoiceBox || currentControl instanceof ComboBox)) {
+            IndexedCell cell = VirtualFlowTestUtils.getCell(currentControl, 0);
+            assertTrue(cell.isSelected());
+        }
+    }
+
+    @Test public void test_rt_30356_selectRowAtIndex1() {
+        setUp();
+
+        // this test selects the 1st row, then removes it, and sees what happens
+        // to the selection.
+
+        if (isTree()) {
+            // we hide the root, so we have a bunch of children at the same level
+            if (currentControl instanceof TreeView) {
+                ((TreeView)currentControl).setShowRoot(false);
+            } else if (currentControl instanceof TreeTableView) {
+                ((TreeTableView)currentControl).setShowRoot(false);
+            }
+
+            // select row 1, which is 'Row 3' because the root isn't showing
+            model.select(1);
+
+            assertEquals(ROW_3_TREE_VALUE, model.getSelectedItem());
+            assertTrue(root.isExpanded());
+            assertEquals(19, root.getChildren().size());
+
+            // remove row 1 (i.e. 'Row 3')
+            TreeItem<String> removed = root.getChildren().remove(1);
+            assertEquals("Row 3", getValue(removed));
+
+            // check where the selection moves to...
+            assertEquals(ROW_2_TREE_VALUE, model.getSelectedItem());
+        } else if (currentControl instanceof ChoiceBox || currentControl instanceof ComboBox) {
+            // TODO
+        } else {
+            // for list / table
+            model.select(1);
+            assertEquals(ROW_2_VALUE, model.getSelectedItem());
+            data.remove(1);
+            assertEquals(ROW_1_VALUE, model.getSelectedItem());
+        }
+
+        // we also check that the cell itself is selected (as often the selection
+        // model and the visuals disagree in this case).
+        // TODO remove the ComboBox conditional and test for that too
+        if (! (currentControl instanceof ChoiceBox || currentControl instanceof ComboBox)) {
+            // selection moves up from 1 to 0 in the current impl
+            IndexedCell cell = VirtualFlowTestUtils.getCell(currentControl, model.getSelectedIndex());
+            assertTrue(cell.isSelected());
         }
     }
 }
