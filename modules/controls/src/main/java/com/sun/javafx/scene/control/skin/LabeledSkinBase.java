@@ -200,6 +200,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             // have to worry about truncation. So just call request layout.
             getSkinnable().requestLayout();
         } else if ("MNEMONIC_PARSING".equals(p)) {
+            containsMnemonic = false;
             textMetricsChanged();
         } else if ("TEXT".equals(p)) {
             updateChildren();
@@ -417,17 +418,37 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                 /*
                 ** are we no longer a mnemonic, or have we changed code?
                 */
-                if (mnemonicIndex == -1 || (bindings != null && bindings.getMnemonic() != mnemonicCode)) {
-                    KeyCodeCombination mnemonicKeyCombo =
+                if (mnemonicScene != null) {
+                    if (mnemonicIndex == -1 || (bindings != null && bindings.getMnemonic() != mnemonicCode)) {
+                        KeyCodeCombination mnemonicKeyCombo =
                             new KeyCodeCombination(
-                                    mnemonicCode,
-                                    com.sun.javafx.PlatformUtil.isMac()
-                                            ? KeyCombination.META_DOWN
-                                            : KeyCombination.ALT_DOWN);
+                                                   mnemonicCode,
+                                                   com.sun.javafx.PlatformUtil.isMac()
+                                                   ? KeyCombination.META_DOWN
+                                                   : KeyCombination.ALT_DOWN);
+                        
+                        Mnemonic myMnemonic = new Mnemonic(labeledNode, mnemonicKeyCombo);
+                        mnemonicScene.removeMnemonic(myMnemonic);
+                        mnemonicScene = null;
+                    }
+                    containsMnemonic = false;
+                }
+            }
+            else {
+                /*
+                ** this can happen if mnemonic parsing is
+                ** disabled on a previously valid mnemonic
+                */
+                if (mnemonicScene != null && labeledNode != null) {
+                    KeyCodeCombination mnemonicKeyCombo =
+                        new KeyCodeCombination(
+                                               mnemonicCode,
+                                               com.sun.javafx.PlatformUtil.isMac()
+                                               ? KeyCombination.META_DOWN
+                                               : KeyCombination.ALT_DOWN);
 
                     Mnemonic myMnemonic = new Mnemonic(labeledNode, mnemonicKeyCombo);
                     mnemonicScene.removeMnemonic(myMnemonic);
-                    containsMnemonic = false;
                     mnemonicScene = null;
                 }
             }
