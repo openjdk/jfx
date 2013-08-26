@@ -4,6 +4,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/3DViewer.iml" filepath="$PROJECT_DIR$/.idea/3DViewer.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/Ensemble8.iml" filepath="$PROJECT_DIR$/.idea/Ensemble8.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/GraphicsPerformance.iml" filepath="$PROJECT_DIR$/.idea/GraphicsPerformance.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/Hello.iml" filepath="$PROJECT_DIR$/.idea/Hello.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/Modena.iml" filepath="$PROJECT_DIR$/.idea/Modena.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/RegionTests.iml" filepath="$PROJECT_DIR$/.idea/RegionTests.iml" />
