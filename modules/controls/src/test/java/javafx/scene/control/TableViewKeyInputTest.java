@@ -1906,7 +1906,7 @@ public class TableViewKeyInputTest {
         assertEquals(2, rt31577_count);
     }
 
-    @Test public void test_rt32383_pageDown() {
+    @Ignore @Test public void test_rt32383_pageDown() {
         // this test requires a lot of data
         tableView.getItems().clear();
         for (int i = 0; i < 100; i++) {
@@ -1931,7 +1931,7 @@ public class TableViewKeyInputTest {
         assertNotSame(newFocusOwner, nextFocusOwner);
     }
 
-    @Test public void test_rt32383_pageUp() {
+    @Ignore @Test public void test_rt32383_pageUp() {
         // this test requires a lot of data
         tableView.getItems().clear();
         for (int i = 0; i < 100; i++) {

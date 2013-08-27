@@ -2422,7 +2422,7 @@ public class TreeTableViewKeyInputTest {
         assertEquals(2, rt31577_count);
     }
 
-    @Test public void test_rt32383_pageDown() {
+    @Ignore @Test public void test_rt32383_pageDown() {
         // this test requires a lot of data
         for (int i = 0; i < 100; i++) {
             root.getChildren().add(new TreeItem<String>("Row " + i));
@@ -2446,7 +2446,7 @@ public class TreeTableViewKeyInputTest {
         assertNotSame(newFocusOwner, nextFocusOwner);
     }
 
-    @Test public void test_rt32383_pageUp() {
+    @Ignore @Test public void test_rt32383_pageUp() {
         // this test requires a lot of data
         for (int i = 0; i < 100; i++) {
             root.getChildren().add(new TreeItem<String>("Row " + i));
