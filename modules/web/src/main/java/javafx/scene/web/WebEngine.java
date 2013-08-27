@@ -747,7 +747,7 @@ final public class WebEngine {
         checkThread();
         loadWorker.cancelAndReset();
 
-        if (url == null) {
+        if (url == null || url.equals("") || url.equals("about:blank")) {
             url = "";
         } else {
             // verify and, if possible, adjust the url on the Java
@@ -759,6 +759,7 @@ final public class WebEngine {
                         PAGE_STARTED, url, null, 0.0, 0);
                 loadWorker.dispatchLoadEvent(getMainFrame(),
                         LOAD_FAILED, url, null, 0.0, MALFORMED_URL);
+                return;
             }
         }
         page.open(page.getMainFrame(), url);
@@ -1120,6 +1121,10 @@ final public class WebEngine {
                     updateTitle();
                     break;
                 case DOCUMENT_AVAILABLE:
+                    if (this.state.get() != State.RUNNING) {
+                        // We have empty load; send a synthetic event (RT-32097)
+                        dispatchLoadEvent(frame, PAGE_STARTED, url, contentType, workDone, errorCode);
+                    }
                     document.invalidate(true);
                     break;
             }

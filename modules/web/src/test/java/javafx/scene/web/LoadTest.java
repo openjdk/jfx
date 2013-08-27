@@ -9,14 +9,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-
 import java.io.File;
 import java.util.concurrent.Callable;
-
 import javafx.concurrent.Worker.State;
 import javafx.event.EventHandler;
-
-import org.junit.Ignore;
 import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -90,13 +86,18 @@ public class LoadTest extends TestBase {
         }});
     }
 
-    @Ignore("RT-31990")
-    @Test public void testLoadNull() {
-        load((String) null);
+    @Test public void testLoadEmpty() {
+        testLoadEmpty(null);
+        testLoadEmpty("");
+        testLoadEmpty("about:blank");
+    }
+    
+    private void testLoadEmpty(String url) {
+        load(url);
         final WebEngine web = getEngine();
 
         assertTrue("Load task completed successfully", getLoadState() == SUCCEEDED);
-        assertEquals("Location", "", web.getLocation());
+        assertEquals("Location", "about:blank", web.getLocation());
         assertNull("Title should be null", web.getTitle());
 
         submit(new Runnable() { public void run() {

@@ -10,9 +10,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.concurrent.Worker;
 import javafx.concurrent.Worker.State;
 import static javafx.concurrent.Worker.State.*;
-import javafx.scene.web.WebEngine;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -23,19 +21,29 @@ public class LoadNotificationsTest extends TestBase {
     
     Set<State> log = new HashSet<State>();
     AssertionError assertion;
+    String currentUrl;
 
     @Test public void testSuccessfulLoad() {
-        testFile("src/test/resources/html/ipsum.html");
+        currentUrl = "src/test/resources/html/ipsum.html";
+        testUrl(new File(currentUrl).toURI().toASCIIString());
     }
 
     @Test public void testFailedLoad() {
-        testFile("no.such.file");
+        currentUrl = "no.such.file";
+        testUrl(currentUrl);
     }
     
-    private void testFile(String fileName) {
+    @Test public void testEmptyLoad() {
+        currentUrl = "about:blank";
+        testUrl(null);
+        testUrl("");
+        testUrl("about:blank");
+    }
+    
+    private void testUrl(String url) {
         log.clear();
         assertion = null;
-        load(new File(fileName));
+        load(url);
         check();
     }
 
@@ -94,12 +102,12 @@ public class LoadNotificationsTest extends TestBase {
                     assertEquals("LoadWorker.progress", 0.0, worker.getProgress(), 0);
                     assertNull("LoadWorker.exception should be null", worker.getException());
                     assertTrue("LoadWorker.message should read 'Loading [url]'",
-                            worker.getMessage().startsWith("Loading file:"));
+                            worker.getMessage().matches("Loading .*" + currentUrl));
                     
                     assertNull("WebEngine.document should be null", web.getDocument());
                     assertNull("WebEngine.title should be null", web.getTitle());
                     assertTrue("WebEngine.location should be set",
-                            web.getLocation().startsWith("file:"));
+                            web.getLocation().endsWith(currentUrl));
                     break;
                 case SUCCEEDED:
                     assertEquals("LoadWorker.state", RUNNING, oldValue);
@@ -111,9 +119,13 @@ public class LoadNotificationsTest extends TestBase {
                             worker.getMessage().startsWith("Loading complete"));
                     
                     assertNotNull("WebEngine.document should be set", web.getDocument());
-                    assertNotNull("WebEngine.title should be set", web.getTitle());
                     assertTrue("WebEngine.location should be set",
-                            web.getLocation().startsWith("file:"));
+                            web.getLocation().endsWith(currentUrl));
+                    if (currentUrl == "about:blank") {
+                        assertNull("WebEngine.title should be null", web.getTitle());
+                    } else {
+                        assertNotNull("WebEngine.title should be set", web.getTitle());
+                    }
                     break;
                 case FAILED:
                     assertEquals("LoadWorker.state", RUNNING, oldValue);
