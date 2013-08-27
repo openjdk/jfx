@@ -25,6 +25,9 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.scene.Node;
 import javafx.scene.control.Label;
 import java.util.Collections;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
@@ -40,5 +43,15 @@ public class LabelSkin extends LabeledSkinBase<Label, BehaviorBase<Label>> {
 
         // Labels do not block the mouse by default, unlike most other UI Controls.
         consumeMouseEvents(false);
+
+        registerChangeListener(label.labelForProperty(), "LABEL_FOR");
+    }
+
+
+    @Override protected void handleControlPropertyChanged(String p) {     
+        super.handleControlPropertyChanged(p);
+        if ("LABEL_FOR".equals(p)) {
+            mnemonicTargetChanged();
+        }
     }
 }

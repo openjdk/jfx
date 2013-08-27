@@ -32,6 +32,7 @@ package com.sun.javafx.scene.control.skin;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.text.BreakIterator;
 
 import static javafx.scene.control.OverrunStyle.*;
 import javafx.application.Platform;
@@ -54,6 +55,7 @@ import javafx.scene.text.Text;
 import javafx.scene.text.TextBoundsType;
 
 import com.sun.javafx.scene.control.behavior.TextBinding;
+import com.sun.javafx.scene.text.HitInfo;
 
 /**
  * BE REALLY CAREFUL WITH RESTORING OR RESETTING STATE OF helper NODE AS LEFTOVER
@@ -740,5 +742,26 @@ public class Utils {
     */
     public static boolean isTwoLevelFocus() {
         return Platform.isSupported(ConditionalFeature.TWO_LEVEL_FOCUS);
+    }
+
+
+    // Workaround for RT-26961. HitInfo.getInsertionIndex() doesn't skip
+    // complex character clusters / ligatures.
+    private static BreakIterator charIterator = null;
+    public static int getHitInsertionIndex(HitInfo hit, String text) {
+        int charIndex = hit.getCharIndex();
+        if (!hit.isLeading()) {
+            if (charIterator == null) {
+                charIterator = BreakIterator.getCharacterInstance();
+            }
+            charIterator.setText(text);
+            int next = charIterator.following(charIndex);
+            if (next == BreakIterator.DONE) {
+                charIndex = hit.getInsertionIndex();
+            } else {
+                charIndex = next;
+            }
+        }
+        return charIndex;
     }
 }

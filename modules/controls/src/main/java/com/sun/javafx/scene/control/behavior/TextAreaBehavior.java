@@ -338,7 +338,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
             // if the primary button was pressed
             if (e.getButton() == MouseButton.PRIMARY && !(e.isMiddleButtonDown() || e.isSecondaryButtonDown())) {
                 HitInfo hit = skin.getIndex(e);
-                int i = hit.getInsertionIndex();
+                int i = com.sun.javafx.scene.control.skin.Utils.getHitInsertionIndex(hit, textArea.getText());
 //                 int i = skin.getInsertionPoint(e.getX(), e.getY());
                 final int anchor = textArea.getAnchor();
                 final int caretPosition = textArea.getCaretPosition();

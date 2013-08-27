@@ -885,7 +885,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
     }
 
     public void positionCaret(HitInfo hit, boolean select, boolean extendSelection) {
-        int pos = hit.getInsertionIndex();
+        int pos = Utils.getHitInsertionIndex(hit, getSkinnable().getText());
         boolean isNewLine =
                (pos > 0 &&
                 pos < getSkinnable().getLength() &&
@@ -920,7 +920,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
     private int getInsertionPoint(Text paragraphNode, double x, double y) {
         HitInfo hitInfo = paragraphNode.impl_hitTestChar(new Point2D(x, y));
-        return hitInfo.getInsertionIndex();
+        return Utils.getHitInsertionIndex(hitInfo, paragraphNode.getText());
     }
 
     public int getNextInsertionPoint(double x, int from, VerticalDirection scrollDirection) {

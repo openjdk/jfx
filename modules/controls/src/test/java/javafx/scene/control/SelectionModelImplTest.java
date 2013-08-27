@@ -25,13 +25,6 @@
 
 package javafx.scene.control;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-
 import java.util.Arrays;
 import java.util.Collection;
 
@@ -55,6 +48,8 @@ import org.junit.runners.Parameterized.Parameters;
 
 import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 
+import static org.junit.Assert.*;
+
 /**
  * Unit tests for the SelectionModel abstract class used by ListView
  * and TreeView. This unit test attempts to test all known implementations, and
@@ -73,69 +68,36 @@ public class SelectionModelImplTest {
     private Control currentControl;
 
     // ListView
-    private static final ListView<String> listView;
+    private ListView<String> listView;
 
     // ListView model data
-    private static ObservableList<String> defaultData = FXCollections.<String>observableArrayList();
+//    private static ObservableList<String> defaultData = FXCollections.<String>observableArrayList();
     private static ObservableList<String> data = FXCollections.<String>observableArrayList();
     private static final String ROW_1_VALUE = "Row 1";
     private static final String ROW_2_VALUE = "Row 2";
+    private static final String ROW_3_VALUE = "Row 3";
     private static final String ROW_5_VALUE = "Row 5";
     private static final String ROW_20_VALUE = "Row 20";
 
     // TreeView
-    private static final TreeView treeView;
-    private static final TreeItem<String> root;
-    private static final TreeItem<String> ROW_2_TREE_VALUE;
-    private static final TreeItem<String> ROW_5_TREE_VALUE;
+    private TreeView treeView;
+    private TreeItem<String> root;
+    private TreeItem<String> ROW_2_TREE_VALUE;
+    private TreeItem<String> ROW_3_TREE_VALUE;
+    private TreeItem<String> ROW_5_TREE_VALUE;
 
     // TableView
-    private static final TableView tableView;
+    private TableView tableView;
+
+    // TreeTableView
+    private TreeTableView treeTableView;
 
     // ChoiceBox
-    private static final ChoiceBox choiceBox;
+    private ChoiceBox choiceBox;
     
     // ComboBox
-    private static final ComboBox comboBox;
+    private ComboBox comboBox;
 
-    static {
-        // ListView init
-        defaultData.addAll(ROW_1_VALUE, ROW_2_VALUE, "Long Row 3", "Row 4", ROW_5_VALUE, "Row 6",
-                "Row 7", "Row 8", "Row 9", "Row 10", "Row 11", "Row 12", "Row 13",
-                "Row 14", "Row 15", "Row 16", "Row 17", "Row 18", "Row 19", ROW_20_VALUE);
-
-        data.setAll(defaultData);
-        listView = new ListView<String>(data);
-        // --- ListView init
-
-        // TreeView init
-        root = new TreeItem<String>(ROW_1_VALUE);
-        root.setExpanded(true);
-        for (int i = 1; i < data.size(); i++) {
-            root.getChildren().add(new TreeItem<String>(data.get(i)));
-        }
-        ROW_2_TREE_VALUE = root.getChildren().get(0);
-        ROW_5_TREE_VALUE = root.getChildren().get(3);
-
-        treeView = new TreeView(root);
-        // --- TreeView init
-
-        // TableView init
-        tableView = new TableView();
-        tableView.setItems(data);
-//        tableView.getColumns().add(new TableColumn());
-        // --- TableView init
-        
-        // ChoiceBox init
-        choiceBox = new ChoiceBox();
-        choiceBox.setItems(data);
-        // --- ChoiceBox init
-        
-        // ComboBox init
-        comboBox = new ComboBox();
-        comboBox.setItems(data);
-        // --- ComboBox init
-    }
     // --- ListView model data
 
     @Parameters public static Collection implementations() {
@@ -143,6 +105,7 @@ public class SelectionModelImplTest {
             { ListView.ListViewBitSetSelectionModel.class },
             { TreeView.TreeViewBitSetSelectionModel.class },
             { TableView.TableViewArrayListSelectionModel.class },
+            { TreeTableView.TreeTableViewArrayListSelectionModel.class },
             { ChoiceBox.ChoiceBoxSelectionModel.class },
             { ComboBox.ComboBoxSelectionModel.class }
         });
@@ -155,10 +118,51 @@ public class SelectionModelImplTest {
     @AfterClass public static void tearDownClass() throws Exception {    }
 
     @Before public void setUp() {
-        try {
-            // reset the data model
-            data.setAll(defaultData);
+        // reset the data model
+        data.setAll(ROW_1_VALUE, ROW_2_VALUE, ROW_3_VALUE, "Row 4", ROW_5_VALUE, "Row 6",
+                "Row 7", "Row 8", "Row 9", "Row 10", "Row 11", "Row 12", "Row 13",
+                "Row 14", "Row 15", "Row 16", "Row 17", "Row 18", "Row 19", ROW_20_VALUE);
 
+        // ListView init
+        listView = new ListView<>(data);
+        // --- ListView init
+
+        // TreeView init
+        root = new TreeItem<>(ROW_1_VALUE);
+        root.setExpanded(true);
+        for (int i = 1; i < data.size(); i++) {
+            root.getChildren().add(new TreeItem<>(data.get(i)));
+        }
+        ROW_2_TREE_VALUE = root.getChildren().get(0);
+        ROW_3_TREE_VALUE = root.getChildren().get(1);
+        ROW_5_TREE_VALUE = root.getChildren().get(3);
+
+        treeView = new TreeView(root);
+        // --- TreeView init
+
+        // TableView init
+        tableView = new TableView();
+        tableView.setItems(data);
+//        tableView.getColumns().add(new TableColumn());
+        // --- TableView init
+
+        // TreeTableView init
+        treeTableView = new TreeTableView(root);
+        // --- TreeTableView init
+
+        // ChoiceBox init
+        choiceBox = new ChoiceBox();
+        choiceBox.setItems(data);
+        // --- ChoiceBox init
+
+        // ComboBox init
+        comboBox = new ComboBox();
+        comboBox.setItems(data);
+        // --- ComboBox init
+
+
+
+        try {
             // we create a new SelectionModel per test to ensure it is always back
             // at the default settings
             if (modelClass.equals(ListView.ListViewBitSetSelectionModel.class)) {
@@ -188,6 +192,15 @@ public class SelectionModelImplTest {
                 focusModel = new TableViewFocusModel(tableView);
                 tableView.setFocusModel((TableViewFocusModel) focusModel);
                 currentControl = tableView;
+            } else if (TreeTableView.TreeTableViewSelectionModel.class.isAssignableFrom(modelClass)) {
+                // recreate the selection model
+                model = modelClass.getConstructor(TreeTableView.class).newInstance(treeTableView);
+                treeTableView.setSelectionModel((TreeTableView.TreeTableViewSelectionModel) model);
+
+                // create a new focus model
+                focusModel = new TreeTableView.TreeTableViewFocusModel(treeTableView);
+                treeTableView.setFocusModel((TreeTableView.TreeTableViewFocusModel) focusModel);
+                currentControl = treeTableView;
             } else if (ChoiceBoxSelectionModel.class.isAssignableFrom(modelClass)) {
                 // recreate the selection model
                 model = modelClass.getConstructor(ChoiceBox.class).newInstance(choiceBox);
@@ -212,6 +225,11 @@ public class SelectionModelImplTest {
 
     @After public void tearDown() {
         model = null;
+    }
+
+    private boolean isTree() {
+        return (model instanceof TreeView.TreeViewBitSetSelectionModel) ||
+               (model instanceof TreeTableView.TreeTableViewArrayListSelectionModel);
     }
 
     private Object getValue(Object item) {
@@ -330,7 +348,7 @@ public class SelectionModelImplTest {
         assertEquals(1, focusModel.getFocusedIndex());
         assertTrue(focusModel.isFocused(1));
         
-        if (model instanceof TreeView.TreeViewBitSetSelectionModel) {
+        if (isTree()) {
             assertEquals(root.getChildren().get(0), focusModel.getFocusedItem());
         } else {
             assertEquals(data.get(1), focusModel.getFocusedItem());
@@ -380,6 +398,94 @@ public class SelectionModelImplTest {
             }
             
             assertFalse(cell_3.isSelected());
+        }
+    }
+
+    @Test public void test_rt_30356_selectRowAtIndex0() {
+        setUp();
+
+        // this test selects the 0th row, then removes it, and sees what happens
+        // to the selection.
+
+        if (isTree()) {
+            // we hide the root, so we have a bunch of children at the same level
+            if (currentControl instanceof TreeView) {
+                ((TreeView)currentControl).setShowRoot(false);
+            } else if (currentControl instanceof TreeTableView) {
+                ((TreeTableView)currentControl).setShowRoot(false);
+            }
+
+            model.select(0);
+
+            // for tree / tree table
+            assertEquals(ROW_2_TREE_VALUE, model.getSelectedItem());
+
+            root.getChildren().remove(0);
+            assertEquals(ROW_3_TREE_VALUE, model.getSelectedItem());
+        } else if (currentControl instanceof ChoiceBox || currentControl instanceof ComboBox) {
+            // TODO
+        } else {
+            // for list / table
+            model.select(0);
+            assertEquals("model is " + model, ROW_1_VALUE, model.getSelectedItem());
+
+            data.remove(0);
+            assertEquals(ROW_2_VALUE, model.getSelectedItem());
+        }
+
+        // we also check that the cell itself is selected (as often the selection
+        // model and the visuals disagree in this case).
+        // TODO remove the ComboBox conditional and test for that too
+        if (! (currentControl instanceof ChoiceBox || currentControl instanceof ComboBox)) {
+            IndexedCell cell = VirtualFlowTestUtils.getCell(currentControl, 0);
+            assertTrue(cell.isSelected());
+        }
+    }
+
+    @Test public void test_rt_30356_selectRowAtIndex1() {
+        setUp();
+
+        // this test selects the 1st row, then removes it, and sees what happens
+        // to the selection.
+
+        if (isTree()) {
+            // we hide the root, so we have a bunch of children at the same level
+            if (currentControl instanceof TreeView) {
+                ((TreeView)currentControl).setShowRoot(false);
+            } else if (currentControl instanceof TreeTableView) {
+                ((TreeTableView)currentControl).setShowRoot(false);
+            }
+
+            // select row 1, which is 'Row 3' because the root isn't showing
+            model.select(1);
+
+            assertEquals(ROW_3_TREE_VALUE, model.getSelectedItem());
+            assertTrue(root.isExpanded());
+            assertEquals(19, root.getChildren().size());
+
+            // remove row 1 (i.e. 'Row 3')
+            TreeItem<String> removed = root.getChildren().remove(1);
+            assertEquals("Row 3", getValue(removed));
+
+            // check where the selection moves to...
+            assertEquals(ROW_2_TREE_VALUE, model.getSelectedItem());
+        } else if (currentControl instanceof ChoiceBox || currentControl instanceof ComboBox) {
+            // TODO
+        } else {
+            // for list / table
+            model.select(1);
+            assertEquals(ROW_2_VALUE, model.getSelectedItem());
+            data.remove(1);
+            assertEquals(ROW_1_VALUE, model.getSelectedItem());
+        }
+
+        // we also check that the cell itself is selected (as often the selection
+        // model and the visuals disagree in this case).
+        // TODO remove the ComboBox conditional and test for that too
+        if (! (currentControl instanceof ChoiceBox || currentControl instanceof ComboBox)) {
+            // selection moves up from 1 to 0 in the current impl
+            IndexedCell cell = VirtualFlowTestUtils.getCell(currentControl, model.getSelectedIndex());
+            assertTrue(cell.isSelected());
         }
     }
 }

@@ -431,10 +431,17 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
      * if this is a horizontal container, then the scrolling will be to the right.
      */
     public int onScrollPageDown() {
+        final int itemCount = getItemCount();
+
         I lastVisibleCell = flow.getLastVisibleCellWithinViewPort();
         if (lastVisibleCell == null) return -1;
         
         int lastVisibleCellIndex = lastVisibleCell.getIndex();
+
+        // we include this test here as the virtual flow will return cells that
+        // exceed past the item count, so we need to clamp here (and further down
+        // in this method also). See RT-19053 for more information.
+        lastVisibleCellIndex = lastVisibleCellIndex >= itemCount ? itemCount - 1 : lastVisibleCellIndex;
         
         boolean isSelected = lastVisibleCell.isSelected() || 
                 lastVisibleCell.isFocused() || 
@@ -449,6 +456,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
         } 
 
         int newSelectionIndex = lastVisibleCell.getIndex();
+        newSelectionIndex = newSelectionIndex >= itemCount ? itemCount - 1 : newSelectionIndex;
         flow.show(newSelectionIndex);
         return newSelectionIndex;
     }

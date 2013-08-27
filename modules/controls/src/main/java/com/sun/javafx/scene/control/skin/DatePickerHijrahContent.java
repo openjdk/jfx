@@ -61,7 +61,12 @@ class DatePickerHijrahContent extends DatePickerContent {
         super(datePicker);
     }
 
-    @Override protected Chronology getChronology() {
+    /**
+     * The primary chronology for display. This is overridden because
+     * DatePickerHijrahContent uses ISO as primary and Hijrah as a
+     * secondary chronology.
+     */
+    @Override protected Chronology getPrimaryChronology() {
         return IsoChronology.INSTANCE;
     }
 

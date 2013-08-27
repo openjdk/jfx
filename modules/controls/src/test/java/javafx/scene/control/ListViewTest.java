@@ -36,6 +36,7 @@ import static org.junit.Assert.fail;
 
 import java.util.Arrays;
 
+import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.SimpleObjectProperty;
@@ -43,9 +44,14 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.Event;
+import javafx.event.EventHandler;
 import javafx.scene.control.cell.CheckBoxListCell;
 import javafx.scene.control.cell.ComboBoxListCell;
+import javafx.scene.control.cell.TextFieldListCell;
+import javafx.scene.control.cell.TextFieldTreeCell;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -734,4 +740,46 @@ public class ListViewTest {
         VirtualFlowTestUtils.assertGraphicIsNotVisible(listView, 5);
     }
 
+    private int rt_29650_start_count = 0;
+    private int rt_29650_commit_count = 0;
+    private int rt_29650_cancel_count = 0;
+    @Test public void test_rt_29650() {
+        listView.setOnEditStart(new EventHandler() {
+            @Override public void handle(Event t) {
+                rt_29650_start_count++;
+            }
+        });
+        listView.setOnEditCommit(new EventHandler() {
+            @Override public void handle(Event t) {
+                rt_29650_commit_count++;
+            }
+        });
+        listView.setOnEditCancel(new EventHandler() {
+            @Override public void handle(Event t) {
+                rt_29650_cancel_count++;
+            }
+        });
+
+        listView.getItems().setAll("one", "two", "three", "four", "five");
+        listView.setEditable(true);
+        listView.setCellFactory(TextFieldListCell.forListView());
+
+        new StageLoader(listView);
+
+        listView.edit(0);
+
+        Toolkit.getToolkit().firePulse();
+
+        ListCell rootCell = (ListCell) VirtualFlowTestUtils.getCell(listView, 0);
+        TextField textField = (TextField) rootCell.getGraphic();
+        textField.setText("Testing!");
+        KeyEventFirer keyboard = new KeyEventFirer(textField);
+        keyboard.doKeyPress(KeyCode.ENTER);
+
+        // TODO should the following assert be enabled?
+//        assertEquals("Testing!", listView.getItems().get(0));
+        assertEquals(1, rt_29650_start_count);
+        assertEquals(1, rt_29650_commit_count);
+        assertEquals(0, rt_29650_cancel_count);
+    }
 }

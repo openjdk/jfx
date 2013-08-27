@@ -515,7 +515,11 @@ public abstract class TextInputControl extends Control {
         if (getCaretPosition() > 0 && getLength() > 0) {
             // because the anchor stays put, by moving the caret to the left
             // we ensure that a selection is registered and that it is correct
-            selectRange(getAnchor(), Character.offsetByCodePoints(getText(), getCaretPosition(), -1));
+            if (charIterator == null) {
+                charIterator = BreakIterator.getCharacterInstance();
+            }
+            charIterator.setText(getText());
+            selectRange(getAnchor(), charIterator.preceding(getCaretPosition()));
         }
     }
 
@@ -527,15 +531,19 @@ public abstract class TextInputControl extends Control {
     public void selectForward() {
         final int textLength = getLength();
         if (textLength > 0 && getCaretPosition() < textLength) {
-            selectRange(getAnchor(), Character.offsetByCodePoints(getText(), getCaretPosition(), 1));
+            if (charIterator == null) {
+                charIterator = BreakIterator.getCharacterInstance();
+            }
+            charIterator.setText(getText());
+            selectRange(getAnchor(), charIterator.following(getCaretPosition()));
         }
     }
 
     /**
-     * The break iterator instance.  Right now, it is only used to perform
-     * previous/next word navigation.
+     * The break iterator instances for navigation over words and complex characters.
      */
-    private BreakIterator breakIterator;
+    private BreakIterator charIterator;
+    private BreakIterator wordIterator;
 
     /**
      * Moves the caret to the beginning of previous word. This function
@@ -594,17 +602,17 @@ public abstract class TextInputControl extends Control {
             return;
         }
 
-        if (breakIterator == null) {
-            breakIterator = BreakIterator.getWordInstance();
+        if (wordIterator == null) {
+            wordIterator = BreakIterator.getWordInstance();
         }
-        breakIterator.setText(text);
+        wordIterator.setText(text);
 
-        int pos = breakIterator.preceding(Utils.clamp(0, getCaretPosition(), textLength - 1));
+        int pos = wordIterator.preceding(Utils.clamp(0, getCaretPosition(), textLength - 1));
 
         // Skip the non-word region, then move/select to the beginning of the word.
         while (pos != BreakIterator.DONE &&
                !Character.isLetterOrDigit(text.charAt(Utils.clamp(0, pos, textLength-1)))) {
-            pos = breakIterator.preceding(Utils.clamp(0, pos, textLength-1));
+            pos = wordIterator.preceding(Utils.clamp(0, pos, textLength-1));
         }
 
         // move/select
@@ -618,13 +626,13 @@ public abstract class TextInputControl extends Control {
             return;
         }
 
-        if (breakIterator == null) {
-            breakIterator = BreakIterator.getWordInstance();
+        if (wordIterator == null) {
+            wordIterator = BreakIterator.getWordInstance();
         }
-        breakIterator.setText(text);
+        wordIterator.setText(text);
 
-        int last = breakIterator.following(Utils.clamp(0, getCaretPosition(), textLength-1));
-        int current = breakIterator.next();
+        int last = wordIterator.following(Utils.clamp(0, getCaretPosition(), textLength-1));
+        int current = wordIterator.next();
 
         // skip the non-word region, then move/select to the beginning of the word.
         while (current != BreakIterator.DONE) {
@@ -639,7 +647,7 @@ public abstract class TextInputControl extends Control {
                 }
             }
             last = current;
-            current = breakIterator.next();
+            current = wordIterator.next();
         }
 
         // move/select to the end
@@ -657,13 +665,13 @@ public abstract class TextInputControl extends Control {
             return;
         }
 
-        if (breakIterator == null) {
-            breakIterator = BreakIterator.getWordInstance();
+        if (wordIterator == null) {
+            wordIterator = BreakIterator.getWordInstance();
         }
-        breakIterator.setText(text);
+        wordIterator.setText(text);
 
-        int last = breakIterator.following(Utils.clamp(0, getCaretPosition(), textLength-1));
-        int current = breakIterator.next();
+        int last = wordIterator.following(Utils.clamp(0, getCaretPosition(), textLength-1));
+        int current = wordIterator.next();
 
         // skip the non-word region, then move/select to the end of the word.
         while (current != BreakIterator.DONE) {
@@ -678,7 +686,7 @@ public abstract class TextInputControl extends Control {
                 }
             }
             last = current;
-            current = breakIterator.next();
+            current = wordIterator.next();
         }
 
         // move/select to the end
@@ -756,6 +764,8 @@ public abstract class TextInputControl extends Control {
                 // Typically you'd only be removing a single character, but
                 // in some cases you must remove two depending on the unicode
                 // characters
+                // Note: Do not use charIterator here, because we do want to
+                // break up clusters when deleting backwards.
                 int p = Character.offsetByCodePoints(text, dot, -1);
                 doNotAdjustCaret = true;
                 deleteText(p, dot);
@@ -789,7 +799,11 @@ public abstract class TextInputControl extends Control {
                 // Typically you'd only be removing a single character, but
                 // in some cases you must remove two depending on the unicode
                 // characters
-                int p = Character.offsetByCodePoints(text, dot, 1);
+                if (charIterator == null) {
+                    charIterator = BreakIterator.getCharacterInstance();
+                }
+                charIterator.setText(text);
+                int p = charIterator.following(dot);
                 doNotAdjustCaret = true;
                 //setText(text.substring(0, dot) + text.substring(dot + delChars));
                 deleteText(dot, p);
@@ -815,7 +829,11 @@ public abstract class TextInputControl extends Control {
             int pos = Math.max(dot, mark);
             selectRange(pos, pos);
         } else if (dot < textLength && textLength > 0) {
-            int pos = Character.offsetByCodePoints(getText(), dot, 1);
+            if (charIterator == null) {
+                charIterator = BreakIterator.getCharacterInstance();
+            }
+            charIterator.setText(getText());
+            int pos = charIterator.following(dot);
             selectRange(pos, pos);
         }
         deselect();
@@ -840,7 +858,11 @@ public abstract class TextInputControl extends Control {
             int pos = Math.min(dot, mark);
             selectRange(pos, pos);
         } else if (dot > 0 && textLength > 0) {
-            int pos = Character.offsetByCodePoints(getText(), dot, -1);
+            if (charIterator == null) {
+                charIterator = BreakIterator.getCharacterInstance();
+            }
+            charIterator.setText(getText());
+            int pos = charIterator.preceding(dot);
             selectRange(pos, pos);
         }
         deselect();

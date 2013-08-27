@@ -402,18 +402,22 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         ListCell<T> lastVisibleCell = flow.getLastVisibleCellWithinViewPort();
         if (lastVisibleCell == null) return -1;
 
+        final SelectionModel sm = getSkinnable().getSelectionModel();
+        final FocusModel fm = getSkinnable().getFocusModel();
+        if (sm == null || fm == null) return -1;
+
         int newSelectionIndex = -1;
         int lastVisibleCellIndex = lastVisibleCell.getIndex();
-        if (! (lastVisibleCell.isSelected() || lastVisibleCell.isFocused()) || (lastVisibleCellIndex != anchor)) {
-            // if the selection is not on the 'bottom' most cell, we firstly move
-            // the selection down to that, without scrolling the contents
-            newSelectionIndex = lastVisibleCell.getIndex();
-        } else {
+        if (sm.isSelected(lastVisibleCellIndex) || fm.isFocused(lastVisibleCellIndex) || lastVisibleCellIndex == anchor) {
             // if the last visible cell is selected, we want to shift that cell up
             // to be the top-most cell, or at least as far to the top as we can go.
             flow.showAsFirst(lastVisibleCell);
-            
+
             lastVisibleCell = flow.getLastVisibleCellWithinViewPort();
+            newSelectionIndex = lastVisibleCell.getIndex();
+        } else {
+            // if the selection is not on the 'bottom' most cell, we firstly move
+            // the selection down to that, without scrolling the contents
             newSelectionIndex = lastVisibleCell.getIndex();
         } 
 
@@ -430,20 +434,24 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         ListCell<T> firstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
         if (firstVisibleCell == null) return -1;
 
+        final SelectionModel sm = getSkinnable().getSelectionModel();
+        final FocusModel fm = getSkinnable().getFocusModel();
+        if (sm == null || fm == null) return -1;
+
         int newSelectionIndex = -1;
         int firstVisibleCellIndex = firstVisibleCell.getIndex();
-        if (! (firstVisibleCell.isSelected() || firstVisibleCell.isFocused()) || (firstVisibleCellIndex != anchor)) {
-            // if the selection is not on the 'top' most cell, we firstly move
-            // the selection up to that, without scrolling the contents
-            newSelectionIndex = firstVisibleCell.getIndex();
-        } else {
+        if (sm.isSelected(firstVisibleCellIndex) || fm.isFocused(firstVisibleCellIndex) || firstVisibleCellIndex == anchor) {
             // if the first visible cell is selected, we want to shift that cell down
             // to be the bottom-most cell, or at least as far to the bottom as we can go.
             flow.showAsLast(firstVisibleCell);
-            
+
             firstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
             newSelectionIndex = firstVisibleCell.getIndex();
-        } 
+        } else {
+            // if the selection is not on the 'top' most cell, we firstly move
+            // the selection up to that, without scrolling the contents
+            newSelectionIndex = firstVisibleCell.getIndex();
+        }
 
         flow.show(firstVisibleCell);
         

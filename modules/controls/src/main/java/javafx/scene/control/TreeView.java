@@ -1134,17 +1134,20 @@ public class TreeView<T> extends Control {
                     for (int i = 0; i < selectedIndices.size() && ! selectedItems.isEmpty(); i++) {
                         int index = selectedIndices.get(i);
                         if (index > selectedItems.size()) break;
-                        
-                        TreeItem<T> item = selectedItems.get(index);
-                        if (item == null || removedChildren.contains(item)) {
-                            clearSelection(index);
-                        } else if (removedChildren.size() == 1 && 
+
+                        // Removed as part of RT-30356 consistency effort
+//                        TreeItem<T> item = selectedItems.get(index);
+//                        if (item == null || removedChildren.contains(item)) {
+//                            clearSelection(index);
+//                        } else
+                        if (removedChildren.size() == 1 &&
                                 selectedItems.size() == 1 && 
                                 selectedItem != null && 
                                 selectedItem.equals(removedChildren.get(0))) {
                             // Bug fix for RT-28637
                             if (selectedIndex < getItemCount()) {
-                                TreeItem<T> newSelectedItem = getModelItem(selectedIndex);
+                                final int previousRow = selectedIndex == 0 ? 0 : selectedIndex - 1;
+                                TreeItem<T> newSelectedItem = getModelItem(previousRow);
                                 if (! selectedItem.equals(newSelectedItem)) {
                                     setSelectedItem(newSelectedItem);
                                 }

@@ -574,14 +574,17 @@ public class PlatformImpl {
     public static void setPlatformUserAgentStylesheet(String stylesheetUrl) {
         isModena = isCaspian = false;
         // check for command line override
-        String overrideStylesheetUrl =
-                AccessController.doPrivileged(
-                        new PrivilegedAction<String>() {
-                            @Override public String run() {
-                                return System.getProperty("javafx.userAgentStylesheetUrl");
-                            }
-                        });
-        if (overrideStylesheetUrl != null) stylesheetUrl = overrideStylesheetUrl;
+        final String overrideStylesheetUrl = AccessController.doPrivileged(
+            new PrivilegedAction<String>() {
+                @Override public String run() {
+                    return System.getProperty("javafx.userAgentStylesheetUrl");
+                }
+            });
+
+        if (overrideStylesheetUrl != null) {
+            stylesheetUrl = overrideStylesheetUrl;
+        }
+
         // check for named theme constants for modena and caspian
         if (Application.STYLESHEET_CASPIAN.equalsIgnoreCase(stylesheetUrl)) {
             isCaspian = true;
@@ -623,6 +626,27 @@ public class PlatformImpl {
                             return null;
                         }
                     });
+
+            // check to see if there is an override to enable a high-contrast theme
+            final String highContrastName = AccessController.doPrivileged(
+                    new PrivilegedAction<String>() {
+                        @Override public String run() {
+                            return System.getProperty("com.sun.javafx.highContrastTheme");
+                        }
+                    });
+            if (highContrastName != null) {
+                switch (highContrastName.toUpperCase()) {
+                    case "BLACKONWHITE": StyleManager.getInstance().addUserAgentStylesheet(
+                                                "com/sun/javafx/scene/control/skin/modena/blackOnWhite.css");
+                                         break;
+                    case "WHITEONBLACK": StyleManager.getInstance().addUserAgentStylesheet(
+                                                "com/sun/javafx/scene/control/skin/modena/whiteOnBlack.css");
+                                         break;
+                    case "YELLOWONBLACK": StyleManager.getInstance().addUserAgentStylesheet(
+                                                "com/sun/javafx/scene/control/skin/modena/yellowOnBlack.css");
+                                         break;
+                }
+            }
         } else {
             StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheetUrl);
         }

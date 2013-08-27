@@ -210,7 +210,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
             // if the primary button was pressed
             if (e.isPrimaryButtonDown() && !(e.isMiddleButtonDown() || e.isSecondaryButtonDown())) {
                 HitInfo hit = skin.getIndex(e);
-                int i = hit.getInsertionIndex();
+                int i = com.sun.javafx.scene.control.skin.Utils.getHitInsertionIndex(hit, textField.getText());
                 final int anchor = textField.getAnchor();
                 final int caretPosition = textField.getCaretPosition();
                 if (e.getClickCount() < 2 &&

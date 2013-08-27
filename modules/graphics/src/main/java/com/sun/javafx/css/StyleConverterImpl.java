@@ -30,6 +30,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.WeakHashMap;
 
 import javafx.css.CssMetaData;
 import javafx.css.ParsedValue;
@@ -83,7 +84,7 @@ public class StyleConverterImpl<F, T> extends StyleConverter<F, T> {
     }
 
     protected void cacheValue(ParsedValue key, Object value) {
-        if (cache == null) cache = new HashMap<>();
+        if (cache == null) cache = new WeakHashMap<>();
         cache.put(key, value);
     }
 

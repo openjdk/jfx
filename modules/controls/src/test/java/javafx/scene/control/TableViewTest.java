@@ -32,6 +32,7 @@ import static org.junit.Assert.*;
 
 import java.util.*;
 
+import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
@@ -40,12 +41,11 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.Event;
 import javafx.event.EventHandler;
-import javafx.scene.control.cell.CheckBoxTableCell;
-import javafx.scene.control.cell.ChoiceBoxTableCell;
-import javafx.scene.control.cell.ComboBoxListCell;
-import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.control.cell.*;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCode;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Callback;
@@ -1791,5 +1791,85 @@ public class TableViewTest {
         final double newWidth = rowCell.computePrefWidth(-1);
         assertEquals(200, newWidth, 0.0);
         assertTrue(initialWidth != newWidth);
+    }
+
+    private int rt_29650_start_count = 0;
+    private int rt_29650_commit_count = 0;
+    private int rt_29650_cancel_count = 0;
+    @Test public void test_rt_29650() {
+        TableView<Person> table = new TableView<>();
+        table.setEditable(true);
+        table.setItems(FXCollections.observableArrayList(
+                new Person("John", "Smith", "jacob.smith@example.com")
+        ));
+
+        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        first.setCellValueFactory(new PropertyValueFactory("firstName"));
+        first.setCellFactory(TextFieldTableCell.forTableColumn());
+        table.getColumns().addAll(first);
+        first.setOnEditStart(new EventHandler() {
+            @Override public void handle(Event t) {
+                rt_29650_start_count++;
+            }
+        });
+        first.setOnEditCommit(new EventHandler() {
+            @Override public void handle(Event t) {
+                rt_29650_commit_count++;
+            }
+        });
+        first.setOnEditCancel(new EventHandler() {
+            @Override public void handle(Event t) {
+                rt_29650_cancel_count++;
+            }
+        });
+
+        new StageLoader(table);
+
+        table.edit(0, first);
+
+        Toolkit.getToolkit().firePulse();
+
+        TableCell rootCell = (TableCell) VirtualFlowTestUtils.getCell(table, 0, 0);
+        TextField textField = (TextField) rootCell.getGraphic();
+        textField.setText("Testing!");
+        KeyEventFirer keyboard = new KeyEventFirer(textField);
+        keyboard.doKeyPress(KeyCode.ENTER);
+
+        // TODO should the following assert be enabled?
+//        assertEquals("Testing!", listView.getItems().get(0));
+        assertEquals(1, rt_29650_start_count);
+        assertEquals(1, rt_29650_commit_count);
+        assertEquals(0, rt_29650_cancel_count);
+    }
+
+    private int rt_29849_start_count = 0;
+    @Test public void test_rt_29849() {
+        TableView<Person> table = new TableView<>();
+        table.setEditable(true);
+        table.setItems(FXCollections.observableArrayList(
+            new Person("John", "Smith", "jacob.smith@example.com")
+        ));
+
+        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        first.setCellValueFactory(new PropertyValueFactory("firstName"));
+        first.setCellFactory(TextFieldTableCell.forTableColumn());
+        table.getColumns().addAll(first);
+        first.setOnEditStart(new EventHandler() {
+            @Override public void handle(Event t) {
+                rt_29849_start_count++;
+            }
+        });
+
+        // load the table so the default cells are created
+        new StageLoader(table);
+
+        // now replace the cell factory
+        first.setCellFactory(TextFieldTableCell.<Person>forTableColumn());
+
+        Toolkit.getToolkit().firePulse();
+
+        // now start an edit and count the start edit events - it should be just 1
+        table.edit(0, first);
+        assertEquals(1, rt_29849_start_count);
     }
 }

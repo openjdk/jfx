@@ -302,6 +302,9 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
         }
 
         final ParsedValueImpl other = (ParsedValueImpl)obj;
+
+        if (this.hash != other.hash) return false;
+
         if (this.value instanceof ParsedValueImpl[][]) {
 
             if (!(other.value instanceof ParsedValueImpl[][])) return false;
@@ -377,16 +380,16 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
 
     }
 
-    private int hc = -1;
+    private int hash = Integer.MIN_VALUE;
     @Override public int hashCode() {
-        if (hc == -1) {
-            hc = 17;
+        if (hash == Integer.MIN_VALUE) {
+            hash = 17;
             if (value instanceof ParsedValueImpl[][]) {
                 ParsedValueImpl[][] values = (ParsedValueImpl[][])value;
                 for (int i = 0; i < values.length; i++) {
                     for (int j = 0; j < values[i].length; j++) {
                         final ParsedValueImpl val = values[i][j];
-                        hc = 37 * hc + ((val != null && val.value != null) ? val.value.hashCode() : 0);
+                        hash = 37 * hash + ((val != null && val.value != null) ? val.value.hashCode() : 0);
                     }
                 }
             } else if (value instanceof ParsedValueImpl[]) {
@@ -394,18 +397,18 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
                 for (int i = 0; i < values.length; i++) {
                     if (values[i] == null || values[i].value == null) continue;
                     final ParsedValueImpl val = values[i];
-                    hc = 37 * hc + ((val != null && val.value != null) ? val.value.hashCode() : 0);
+                    hash = 37 * hash + ((val != null && val.value != null) ? val.value.hashCode() : 0);
                 }
             } else {
-                hc = 37 * hc + (value != null ? value.hashCode() : 0);
+                hash = 37 * hash + (value != null ? value.hashCode() : 0);
             }
 
 //            Converter could be null, but the values could still match.
 //            It makes sense that ParsedValueImpl<String,String>("abc", null) should equal
 //            ParsedValueImpl<String,String>("abc", StringConverter.getInstance())
-//            hc = 37 * hc + ((converter != null) ? converter.hashCode() : 1237);
+//            hash = 37 * hash + ((converter != null) ? converter.hashCode() : 1237);
         }
-        return hc;
+        return hash;
     }
 
 

@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.tk.Toolkit;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.event.EventHandler;
@@ -40,10 +41,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+
+import static org.junit.Assert.*;
 
 public class ListViewKeyInputTest {
     private ListView<String> listView;
@@ -1166,5 +1165,204 @@ public class ListViewKeyInputTest {
         assertFalse(sm.isSelected(1));
         assertNull(sm.getSelectedItem());
         assertEquals(2, rt31577_count);
+    }
+
+    @Test public void test_rt32383_pageDown() {
+        // this test requires a lot of data
+        listView.getItems().clear();
+        for (int i = 0; i < 100; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        final MultipleSelectionModel sm = listView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.SINGLE);
+        sm.clearAndSelect(0);
+
+        final String initialFocusOwner = fm.getFocusedItem();
+
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.CTRL);
+        Toolkit.getToolkit().firePulse();
+        final String newFocusOwner = fm.getFocusedItem();
+        assertNotSame(initialFocusOwner, newFocusOwner);
+
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.CTRL);
+        Toolkit.getToolkit().firePulse();
+        final String nextFocusOwner = fm.getFocusedItem();
+        assertNotSame(initialFocusOwner, nextFocusOwner);
+        assertNotSame(newFocusOwner, nextFocusOwner);
+    }
+
+    @Test public void test_rt32383_pageUp() {
+        // this test requires a lot of data
+        listView.getItems().clear();
+        for (int i = 0; i < 100; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        final int lastIndex = 99;
+
+        final MultipleSelectionModel sm = listView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.SINGLE);
+        sm.clearAndSelect(lastIndex);
+
+        // need to make sure we scroll down to the bottom!
+        listView.scrollTo(lastIndex);
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(lastIndex, sm.getSelectedIndex());
+        assertEquals(lastIndex, fm.getFocusedIndex());
+
+        final String initialFocusOwner = fm.getFocusedItem();
+
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.CTRL);
+        Toolkit.getToolkit().firePulse();
+        final String newFocusOwner = fm.getFocusedItem();
+        assertNotSame(initialFocusOwner, newFocusOwner);
+
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.CTRL);
+        Toolkit.getToolkit().firePulse();
+        final String nextFocusOwner = fm.getFocusedItem();
+        assertNotSame(initialFocusOwner, nextFocusOwner);
+        assertNotSame(newFocusOwner, nextFocusOwner);
+    }
+
+    @Test public void test_rt19053_pageUp() {
+        final int items = 8;
+        listView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        final int middleIndex = items / 2;
+
+        final MultipleSelectionModel sm = listView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.SINGLE);
+        sm.clearAndSelect(middleIndex);
+
+        assertEquals(middleIndex, sm.getSelectedIndex());
+
+        final Object initialSelectionOwner = sm.getSelectedItem();
+
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        final Object newSelectionOwner = sm.getSelectedItem();
+        assertNotSame(initialSelectionOwner, newSelectionOwner);
+
+        // selection should go all the way to the top, but this bug
+        // shows that instead it seems to stop midway - where the anchor is
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(0, sm.getSelectedIndex());
+        final Object nextSelectionOwner =  sm.getSelectedItem();
+        assertNotSame(initialSelectionOwner, nextSelectionOwner);
+        assertNotSame(newSelectionOwner, nextSelectionOwner);
+    }
+
+    @Test public void test_rt19053_pageDown() {
+        final int items = 8;
+        listView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        final int middleIndex = items / 2;
+
+        final MultipleSelectionModel sm = listView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.SINGLE);
+        sm.clearAndSelect(middleIndex);
+
+        assertEquals(middleIndex, sm.getSelectedIndex());
+
+        final Object initialSelectionOwner = sm.getSelectedItem();
+
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        final Object newSelectionOwner = sm.getSelectedItem();
+        assertNotSame(initialSelectionOwner, newSelectionOwner);
+
+        // selection should go all the way to the bottom, but this bug
+        // shows that instead it seems to stop midway - where the anchor is
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(items - 1, fm.getFocusedIndex());
+        assertEquals(items - 1, sm.getSelectedIndex());
+        final Object nextSelectionOwner =  sm.getSelectedItem();
+        assertNotSame(initialSelectionOwner, nextSelectionOwner);
+        assertNotSame(newSelectionOwner, nextSelectionOwner);
+    }
+
+    @Ignore("Fix not yet implemented")
+    @Test public void test_rt20641_pageUp() {
+        final int items = 20;
+        listView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        final MultipleSelectionModel sm = listView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(0);
+        assertEquals(0, sm.getSelectedIndex());
+
+        final int selectedIndex0 = sm.getSelectedIndex();
+
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        final int selectedIndex1 = sm.getSelectedIndex();
+        assertNotSame(selectedIndex0, selectedIndex1);
+        assertTrue(selectedIndex0 < selectedIndex1);
+
+        // selection should go up one page, but bug shows it goes right back
+        // to start
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        final int selectedIndex2 = sm.getSelectedIndex();
+        assertNotSame(selectedIndex0, selectedIndex1);
+        assertNotSame(selectedIndex0, selectedIndex2);
+        assertTrue(selectedIndex2 < selectedIndex1);
+        assertTrue(selectedIndex0 < selectedIndex2);
+    }
+
+    @Ignore("Fix not yet implemented")
+    @Test public void test_rt20641_pageDown() {
+        final int items = 100;
+        listView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        final MultipleSelectionModel sm = listView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(items - 1);
+        fm.setFocusedIndex(items - 1);
+        assertEquals(items - 1, sm.getSelectedIndex());
+        assertEquals(items - 1, fm.getFocusedIndex());
+
+        final int selectedIndex0 = sm.getSelectedIndex();
+
+        // need to make sure we scroll down to the bottom!
+        listView.scrollTo(items - 1);
+        Toolkit.getToolkit().firePulse();
+
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        final int selectedIndex1 = sm.getSelectedIndex();
+        assertNotSame(selectedIndex0, selectedIndex1);
+        assertTrue(selectedIndex0 > selectedIndex1);
+
+        // selection should go up down page, but bug shows it goes right back
+        // to end (where selection started)
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        final int selectedIndex2 = sm.getSelectedIndex();
+        assertNotSame(selectedIndex0, selectedIndex1);
+        assertNotSame(selectedIndex0, selectedIndex2);
+        assertTrue(selectedIndex2 > selectedIndex1);
+        assertTrue(selectedIndex0 > selectedIndex2);
     }
 }

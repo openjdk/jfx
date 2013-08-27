@@ -1841,7 +1841,7 @@ public class TableView<S> extends Control {
                                 
                                 if (selectedIndices.get(row)) {
                                     selectedIndices.clear(row);
-                                    newlySelectedRows.add(row);
+                                    newlyUnselectedRows.add(row);
                                 }
                             }
                         }
@@ -2155,7 +2155,12 @@ public class TableView<S> extends Control {
         }
 
         @Override public void clearAndSelect(int row, TableColumn<S,?> column) {
-            quietClearSelection();
+            // RT-32411 We used to call quietClearSelection() here, but this
+            // resulted in the selectedItems and selectedIndices lists never
+            // reporting that they were empty.
+            // quietClearSelection();
+            clearSelection();
+
             select(row, column);
         }
 

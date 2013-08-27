@@ -1851,7 +1851,7 @@ final public class StyleManager {
             int id = cacheContainer.nextSmapId();
             cache.put(keyObj, Integer.valueOf(id));
 
-            final StyleMap styleMap = new StyleMap(id, selectors, hasInlineStyle);
+            final StyleMap styleMap = new StyleMap(id, selectors);
             cacheContainer.addStyleMap(styleMap);
             return styleMap;
         }
@@ -1891,7 +1891,7 @@ final public class StyleManager {
         }
 
         // TODO: should have a cacheContainer for inline styles?
-        return new StyleMap(-1, selectorList, true);
+        return new StyleMap(-1, selectorList);
     }
 
 
