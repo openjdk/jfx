@@ -547,8 +547,8 @@ jboolean glass_window_setVisible(JNIEnv *env, NativeWindow window, jboolean visi
         //lose focus and grab
         lens_wm_unsetFocusedWindow(env, window);        
     } else {
-        if (!window->owner) {
-            //window become visible, grant it the focus if not a pop-up
+        if (window->isFocusable && window->isEnabled) {
+            //window become visible, grant it the focus
             lens_wm_setFocusedWindow(env, window);
         }
     }
@@ -590,12 +590,17 @@ jboolean glass_window_requestFocus(JNIEnv *env, NativeWindow window, jint focusT
     }
 
     if (!window->isFocusable) {
-        GLASS_LOG_WARNING("Focus requested on isFocusable=false");
+        GLASS_LOG_WARNING("Focus requested on isFocusable=false - ignore");
         return JNI_FALSE;
     }
 
     if (!window->isEnabled) {
-        GLASS_LOG_WARNING("Focus requested on isEnabled=false");
+        GLASS_LOG_WARNING("Focus requested on isEnabled=false - ignore");
+        return JNI_FALSE;
+    }
+
+    if (!window->isVisible) {
+        GLASS_LOG_WARNING("Focus requested on isVisible=false - ignore");
         return JNI_FALSE;
     }
 
