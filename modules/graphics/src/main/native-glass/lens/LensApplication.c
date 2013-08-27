@@ -450,8 +450,10 @@ void glass_application_notifyMouseEvent(JNIEnv *env,
         }
 
     } else {
-        GLASS_LOG_FINE("Window %d[%p] is disabled - sending FOCUS_DISABLED event",
-                       window->id, window);
+        GLASS_LOG_FINE("Window %d[%p] is disabled, can't send event %d - "
+                       "sending FOCUS_DISABLED event",
+                       window->id, window, eventType);
+
         glass_application_notifyWindowEvent(env,
                                             window,
                                             com_sun_glass_events_WindowEvent_FOCUS_DISABLED);

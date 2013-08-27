@@ -562,13 +562,11 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensWindow__1setEnabled
                        enabled?"true":"false",
                        window->id, window);
 
-        window->isEnabled = enabled;
-
         GLASS_LOG_FINE("glass_window_setFocusable(%s)", enabled?"true":"false");
         glass_window_setFocusable(env, window, enabled);
 
         //syntheticlly notify view for mouse exit
-        if (!enabled && window->view) {
+        if (!enabled && window->view && window == lens_wm_getMouseWindow()) {
             glass_application_notifyMouseEvent(env,
                                                window,
                                                com_sun_glass_events_MouseEvent_EXIT, 
@@ -576,6 +574,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensWindow__1setEnabled
                                                com_sun_glass_events_MouseEvent_BUTTON_NONE);
 
         }
+
+        window->isEnabled = enabled;
     }
 }
 
