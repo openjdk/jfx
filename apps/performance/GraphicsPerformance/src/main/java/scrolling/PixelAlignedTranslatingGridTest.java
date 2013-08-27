@@ -57,7 +57,7 @@ public class PixelAlignedTranslatingGridTest extends TranslatingGridTest {
         root.translateYProperty().bind(translation);
         Timeline t = new Timeline(
                 new KeyFrame(Duration.seconds(0), new KeyValue(translation, 0)),
-                new KeyFrame(Duration.seconds(3), new KeyValue(translation, -(root.getBoundsInLocal().getHeight()))));
+                new KeyFrame(Duration.seconds(3), new KeyValue(translation, scene.getHeight()-height)));
         t.setAutoReverse(true);
         t.setCycleCount(2);
         return t;

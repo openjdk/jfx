@@ -97,17 +97,20 @@ public class ScrollPaneGridTest extends BenchTest {
         super.setup(scene);
 
         // Wrap in a ScrollPane
+        double side = ((scene.getWidth() + GAP) / getCols()) - GAP;
+        double height = (side * getRows()) + (GAP * (getRows() - 1));
         final Pane pane = (Pane) scene.getRoot();
         final ScrollPane sp = new ScrollPane(pane);
         sp.setFitToWidth(true);
         sp.heightProperty().addListener(new InvalidationListener() {
             @Override
             public void invalidated(Observable observable) {
-                pane.setPrefHeight(sp.getHeight() * 8);
+                pane.setPrefHeight(height);
                 sp.setVmin(0);
                 sp.setVmax(pane.getPrefHeight());
             }
         });
+//        pane.resize(scene.getWidth(), height);
         scene.setRoot(sp);
     }
 }

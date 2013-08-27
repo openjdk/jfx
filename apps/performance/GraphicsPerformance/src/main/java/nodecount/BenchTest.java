@@ -44,7 +44,7 @@ import javafx.util.Duration;
 /**
  */
 public abstract class BenchTest {
-    static final int GAP = 6;
+    public static final int GAP = 6;
 
     double maxFPS;
     private final BenchBase benchmark;
@@ -63,6 +63,9 @@ public abstract class BenchTest {
     public int getNodeCount() {
         return rows * cols;
     }
+
+    public int getCols() { return cols; }
+    public int getRows() { return rows; }
     
     protected Animation createBenchmarkDriver(Scene scene) {
         Rectangle background = (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);

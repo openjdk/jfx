@@ -48,7 +48,8 @@ import nodecount.BenchTest;
  * Translates a grid of items to their "pure" fractional positions.
  */
 public class TranslatingGridTest extends BenchTest {
-    Rectangle clip = new Rectangle();
+    private Rectangle clip = new Rectangle();
+    protected double height;
 
     TranslatingGridTest(ScrollingBenchBase benchmark, int rows, int cols) {
         // Pixel snap the grid itself, always, so we know we are measuring
@@ -60,10 +61,9 @@ public class TranslatingGridTest extends BenchTest {
     // For each test, we need to start our timeline which will scroll stuff...
     @Override protected Animation createBenchmarkDriver(Scene scene) {
         final Parent root = (Parent) scene.getRoot().getChildrenUnmodifiable().get(0);
-        final Pane pane = (Pane) root.getChildrenUnmodifiable().get(0);
         Timeline t = new Timeline(
                 new KeyFrame(Duration.seconds(0), new KeyValue(root.translateYProperty(), 0)),
-                new KeyFrame(Duration.seconds(3), new KeyValue(root.translateYProperty(), -(pane.getHeight()))));
+                new KeyFrame(Duration.seconds(3), new KeyValue(root.translateYProperty(), scene.getHeight()-height)));
         t.setAutoReverse(true);
         t.setCycleCount(2);
         return t;
@@ -73,14 +73,18 @@ public class TranslatingGridTest extends BenchTest {
     public void setup(Scene scene) {
         super.setup(scene);
 
+        double side = ((scene.getWidth() + GAP) / getCols()) - GAP;
+        height = (side * getRows()) + (GAP * (getRows() - 1));
+
         // Gotta handle layout so the old root pane is taller than the window but wide as the window
         final Pane pane = (Pane) scene.getRoot();
         Pane root = new Pane(pane) {
             @Override
             protected void layoutChildren() {
-                pane.resize(getWidth(), getHeight() * 8);
+                pane.resize(getWidth(), height);
             }
         };
+        pane.resize(scene.getWidth(), height);
         clip.widthProperty().bind(scene.widthProperty());
         clip.heightProperty().bind(scene.heightProperty());
         Pane p = new StackPane(root);

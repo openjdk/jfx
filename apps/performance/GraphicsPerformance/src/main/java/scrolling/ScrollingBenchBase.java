@@ -44,12 +44,12 @@ public abstract class ScrollingBenchBase<T extends Node> extends BenchBase<T> {
 
     @Override protected BenchTest[] createTests() {
         int[][] sizes = new int[][] {
-                {50, 2},
-                {50, 4},
-                {100, 10},
-                {120, 10},
-                {180, 10},
-                {200, 10},
+                {30, 6},
+                {50, 6},
+                {100, 6},
+                {120, 6},
+                {180, 6},
+                {200, 6},
         };
         BenchTest[] tests = new BenchTest[3 * 6];
         int sizeIndex = 0;
