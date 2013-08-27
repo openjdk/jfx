@@ -30,39 +30,31 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package nodecount;
+package scrolling;
 
-import javafx.animation.ParallelTransition;
-import javafx.animation.RotateTransition;
-import javafx.scene.Node;
-import javafx.scene.Scene;
-import javafx.util.Duration;
-import java.util.List;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 
 /**
  */
-public class RotatingGrid extends BenchTest {
-    private ParallelTransition tx;
-
-    public RotatingGrid(BenchBase benchmark, int rows, int cols) {
-        super(benchmark, rows, cols, false);
+public class RectScrollingBench extends ScrollingBenchBase<Rectangle> {
+    @Override protected void resizeAndRelocate(Rectangle rect, double x, double y, double width, double height) {
+        rect.setX(x);
+        rect.setY(y);
+        rect.setWidth(width);
+        rect.setHeight(height);
     }
 
-    @Override public void setup(Scene scene) {
-        super.setup(scene);
-        List<Node> children = scene.getRoot().getChildrenUnmodifiable();
-        tx = new ParallelTransition();
-        for (int i=1; i<children.size(); i++) {
-            Node n = children.get(i);
-            RotateTransition rot = new RotateTransition(Duration.seconds(5), n);
-            rot.setToAngle(360);
-            tx.getChildren().add(rot);
-        }
-        tx.setCycleCount(ParallelTransition.INDEFINITE);
-        tx.play();
+    @Override protected Rectangle createNode() {
+        Rectangle rect = new Rectangle();
+        rect.setFill(new Color(Math.random(), Math.random(), Math.random(), 1));
+        return rect;
     }
 
-    @Override public void tearDown() {
-        tx.stop();
+    /**
+     * Java main for when running without JavaFX launcher
+     */
+    public static void main(String[] args) {
+        launch(args);
     }
 }

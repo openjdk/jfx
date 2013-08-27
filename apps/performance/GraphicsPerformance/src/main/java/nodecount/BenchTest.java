@@ -32,10 +32,14 @@
 
 package nodecount;
 
+import javafx.animation.Animation;
+import javafx.animation.FillTransition;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
+import javafx.util.Duration;
 
 /**
  */
@@ -47,17 +51,27 @@ public abstract class BenchTest {
     private final int rows, cols;
     private final boolean pixelSnap;
     
-    BenchTest(BenchBase benchmark, int rows, int cols, boolean pixelSnap) {
+    public BenchTest(BenchBase benchmark, int rows, int cols, boolean pixelSnap) {
         this.benchmark = benchmark;
         this.rows = rows;
         this.cols = cols;
         this.pixelSnap = pixelSnap;
     }
 
+    public double getMaxFPS() { return maxFPS; }
+
     public int getNodeCount() {
         return rows * cols;
     }
     
+    protected Animation createBenchmarkDriver(Scene scene) {
+        Rectangle background = (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
+        FillTransition t = new FillTransition(Duration.seconds(5), background, Color.WHITE, Color.BLACK);
+        t.setAutoReverse(true);
+        t.setCycleCount(2);
+        return t;
+    }
+
     public void setup(Scene scene) {
         final Rectangle background = new Rectangle();
         final Node[][] nodes = new Node[rows][cols];

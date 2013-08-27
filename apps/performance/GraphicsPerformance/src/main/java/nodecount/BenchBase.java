@@ -32,47 +32,25 @@
 
 package nodecount;
 
+import javafx.animation.Animation;
 import javafx.animation.AnimationTimer;
-import javafx.animation.FillTransition;
 import javafx.application.Application;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import javafx.util.Duration;
 import com.sun.javafx.perf.PerformanceTracker;
 
 /**
  */
 public abstract class BenchBase<T extends Node> extends Application {
-    private FillTransition driver;
+    protected Animation driver;
     private BenchTest currentTest;
 
     @Override
     public void start(Stage stage) throws Exception {
-
-        int[][] sizes = new int[][] {
-                {8, 8},
-                {10, 10},
-                {14, 14},
-                {20, 20},
-                {40, 40},
-                {60, 60},
-        };
-        BenchTest[] tests = new BenchTest[3 * 6];
-        int sizeIndex = 0;
-        for (int i=0; i<tests.length; i+=3) {
-            int rows = sizes[sizeIndex][0];
-            int cols = sizes[sizeIndex][1];
-            tests[i] = new SimpleGrid(this, rows, cols);
-            tests[i+1] = new PixelGrid(this, rows, cols);
-            tests[i+2] = new RotatingGrid(this, rows, cols);
-            sizeIndex++;
-        }
 
         Scene scene = new Scene(new Group(), 640, 480);
         stage.setScene(scene);
@@ -95,7 +73,42 @@ public abstract class BenchBase<T extends Node> extends Application {
         };
         fpsTimer.start();
 
+        BenchTest[] tests = createTests();
         runTest(scene, tests, 0);
+    }
+
+    protected BenchTest[] createTests() {
+        int[][] sizes = new int[][] {
+                {8, 8},
+                {10, 10},
+                {14, 14},
+                {20, 20},
+                {40, 40},
+                {60, 60},
+        };
+        BenchTest[] tests = new BenchTest[3 * 6];
+        int sizeIndex = 0;
+        for (int i=0; i<tests.length; i+=3) {
+            int rows = sizes[sizeIndex][0];
+            int cols = sizes[sizeIndex][1];
+            tests[i] = new SimpleGrid(this, rows, cols);
+            tests[i+1] = new PixelGrid(this, rows, cols);
+            tests[i+2] = new RotatingGrid(this, rows, cols);
+            sizeIndex++;
+        }
+        return tests;
+    }
+
+    protected void printResults(BenchTest[] tests) {
+        for (int i=0; i<tests.length; i+=3) {
+            // There are 3 types of tests involved, all at different pixel sizes
+            int nodeCount = tests[i].getNodeCount();
+            assert nodeCount == tests[i+1].getNodeCount() && nodeCount == tests[i+2].getNodeCount();
+            System.out.print(nodeCount + "\t");
+            System.out.print(tests[i].getMaxFPS() + "\t");
+            System.out.print(tests[i+1].getMaxFPS() + "\t");
+            System.out.println(tests[i+2].getMaxFPS() + "\t");
+        }
     }
 
     protected abstract void resizeAndRelocate(T node, double x, double y, double width, double height);
@@ -104,15 +117,7 @@ public abstract class BenchBase<T extends Node> extends Application {
 
     private void runTest(Scene scene, BenchTest[] tests, int index) {
         if (index >= tests.length) {
-            for (int i=0; i<tests.length; i+=3) {
-                // There are 3 types of tests involved, all at different pixel sizes
-                int nodeCount = tests[i].getNodeCount();
-                assert nodeCount == tests[i+1].getNodeCount() && nodeCount == tests[i+2].getNodeCount();
-                System.out.print(nodeCount + "\t");
-                System.out.print(tests[i].maxFPS + "\t");
-                System.out.print(tests[i+1].maxFPS + "\t");
-                System.out.println(tests[i+2].maxFPS + "\t");
-            }
+            printResults(tests);
             return; // we're done.
         }
 
@@ -122,10 +127,7 @@ public abstract class BenchBase<T extends Node> extends Application {
 
         currentTest = tests[index];
         tests[index].setup(scene);
-        Rectangle background = (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
-        driver = new FillTransition(Duration.seconds(5), background, Color.WHITE, Color.BLACK);
-        driver.setAutoReverse(true);
-        driver.setCycleCount(2);
+        driver = tests[index].createBenchmarkDriver(scene);
         driver.play();
         driver.setOnFinished(new EventHandler<ActionEvent>() {
             @Override

@@ -30,39 +30,37 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package nodecount;
+package scrolling;
 
-import javafx.animation.ParallelTransition;
-import javafx.animation.RotateTransition;
 import javafx.scene.Node;
-import javafx.scene.Scene;
-import javafx.util.Duration;
-import java.util.List;
+import nodecount.BenchBase;
+import nodecount.BenchTest;
 
 /**
+ * A type of grid-based test which scrolls in one dimension. The scrolling parent
+ * might be a Group with a translation, or a ScrollPane.
  */
-public class RotatingGrid extends BenchTest {
-    private ParallelTransition tx;
+public abstract class ScrollingBenchBase<T extends Node> extends BenchBase<T> {
 
-    public RotatingGrid(BenchBase benchmark, int rows, int cols) {
-        super(benchmark, rows, cols, false);
-    }
-
-    @Override public void setup(Scene scene) {
-        super.setup(scene);
-        List<Node> children = scene.getRoot().getChildrenUnmodifiable();
-        tx = new ParallelTransition();
-        for (int i=1; i<children.size(); i++) {
-            Node n = children.get(i);
-            RotateTransition rot = new RotateTransition(Duration.seconds(5), n);
-            rot.setToAngle(360);
-            tx.getChildren().add(rot);
+    @Override protected BenchTest[] createTests() {
+        int[][] sizes = new int[][] {
+                {50, 2},
+                {50, 4},
+                {100, 10},
+                {120, 10},
+                {180, 10},
+                {200, 10},
+        };
+        BenchTest[] tests = new BenchTest[3 * 6];
+        int sizeIndex = 0;
+        for (int i=0; i<tests.length; i+=3) {
+            int rows = sizes[sizeIndex][0];
+            int cols = sizes[sizeIndex][1];
+            tests[i] = new TranslatingGridTest(this, rows, cols);
+            tests[i+1] = new ScrollPaneGridTest(this, rows, cols);
+            tests[i+2] = new PixelAlignedTranslatingGridTest(this, rows, cols);
+            sizeIndex++;
         }
-        tx.setCycleCount(ParallelTransition.INDEFINITE);
-        tx.play();
-    }
-
-    @Override public void tearDown() {
-        tx.stop();
+        return tests;
     }
 }

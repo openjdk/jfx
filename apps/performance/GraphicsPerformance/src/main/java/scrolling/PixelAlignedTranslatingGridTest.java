@@ -30,39 +30,36 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package nodecount;
+package scrolling;
 
-import javafx.animation.ParallelTransition;
-import javafx.animation.RotateTransition;
-import javafx.scene.Node;
+import javafx.animation.Animation;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
+import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.util.Duration;
-import java.util.List;
 
 /**
+ * Translates a grid of items, but does so on pixel boundaries only.
  */
-public class RotatingGrid extends BenchTest {
-    private ParallelTransition tx;
-
-    public RotatingGrid(BenchBase benchmark, int rows, int cols) {
-        super(benchmark, rows, cols, false);
+public class PixelAlignedTranslatingGridTest extends TranslatingGridTest {
+    PixelAlignedTranslatingGridTest(ScrollingBenchBase benchmark, int rows, int cols) {
+        super(benchmark, rows, cols);
     }
 
-    @Override public void setup(Scene scene) {
-        super.setup(scene);
-        List<Node> children = scene.getRoot().getChildrenUnmodifiable();
-        tx = new ParallelTransition();
-        for (int i=1; i<children.size(); i++) {
-            Node n = children.get(i);
-            RotateTransition rot = new RotateTransition(Duration.seconds(5), n);
-            rot.setToAngle(360);
-            tx.getChildren().add(rot);
-        }
-        tx.setCycleCount(ParallelTransition.INDEFINITE);
-        tx.play();
-    }
-
-    @Override public void tearDown() {
-        tx.stop();
+    // For each test, we need to start our timeline which will scroll stuff...
+    @Override protected Animation createBenchmarkDriver(Scene scene) {
+        final Parent root = (Parent) scene.getRoot().getChildrenUnmodifiable().get(0);
+        final IntegerProperty translation = new SimpleIntegerProperty();
+        root.translateYProperty().bind(translation);
+        Timeline t = new Timeline(
+                new KeyFrame(Duration.seconds(0), new KeyValue(translation, 0)),
+                new KeyFrame(Duration.seconds(3), new KeyValue(translation, -(root.getBoundsInLocal().getHeight()))));
+        t.setAutoReverse(true);
+        t.setCycleCount(2);
+        return t;
     }
 }
