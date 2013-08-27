@@ -131,8 +131,11 @@ static jlong glass_create_native_window
 
         window->lensWindow = (*env)->NewGlobalRef(env, jWindow);
 
-        GLASS_LOG_FINE("Allocated NativeWindow window = %p, owner = %p lensWindow=%p", 
-                window,owner,window->lensWindow);
+        GLASS_LOG_FINE("Allocated NativeWindow window = %p, owner = %d[%p] lensWindow=%p", 
+                       window,
+                       owner?owner->id:-1,
+                       owner,
+                       window->lensWindow);
 
         if (window->lensWindow) {
             // set the default NativeWindow values
@@ -420,7 +423,9 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_lens_LensWindow__1requestFocus
             env, glass_NullPointerException, "Window handle is null");
     } else {
 
-        GLASS_LOG_FINE("request focus on window %p", window);
+        GLASS_LOG_FINE("request focus on window %d[%p]",
+                       window?window->id:-1,
+                       window);
         result = glass_window_requestFocus(env, window, focusEventType);
     }
 
@@ -441,8 +446,14 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensWindow__1setFocusable
         glass_throw_exception_by_name(
             env, glass_NullPointerException, "Window handle is null");
     } else {
-        GLASS_LOG_FINE("set focusable=%i on window %p", (int) isFocusable, window),
-        (void) glass_window_setFocusable(env, window, isFocusable);
+        GLASS_LOG_FINE("set focusable=%i on window %d[%p]", (int) isFocusable,
+                       window->id,
+                       window);
+        jboolean result = glass_window_setFocusable(env, window, isFocusable);
+        GLASS_LOG_FINE("setFocusable(window %d, %s) returned %s",
+                       window->id,
+                       isFocusable?"true":"false",
+                       result?"true":"false");
     }
 }
 
@@ -609,8 +620,11 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_lens_LensWindow__1setMaximumSiz
             env, glass_NullPointerException, "Window handle is null");
     } else {
 
-        GLASS_LOG_FINE("set window %p maximum size to %ix%i",
-                       window, width, height);
+        GLASS_LOG_FINE("set window %d[%p] maximum size to %ix%i",
+                       window->id,
+                       window,
+                       width,
+                       height);
         result = glass_window_setMaximumSize(env, window, width, height);
     }
 
@@ -677,7 +691,9 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_lens_LensWindow__1grabFocus
             env, glass_NullPointerException, "Window handle is null");
     } else {
 
-        GLASS_LOG_FINE("grab focus on window %p", window);
+        GLASS_LOG_FINE("grab focus request on window %d[%p]",
+                       window?window->id:-1,
+                       window);
         result = glass_window_grabFocus(env, window);
     }
 
@@ -693,7 +709,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensWindow__1ungrabFocus
             env, glass_NullPointerException, "Window handle is null");
     } else {
 
-        GLASS_LOG_FINE("ungrab focus on window %p", window);
+        GLASS_LOG_FINE("ungrab focus request on window %d[%p]",
+                       window?window->id:-1,
+                       window);
         glass_window_ungrabFocus(env, window);
     }
 }

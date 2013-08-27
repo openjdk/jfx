@@ -523,10 +523,12 @@ void glass_window_setBoundsImpl(JNIEnv *env,
     }
 
     if (!windowHasBeenUpdated) {
-        //if function got the same sizes as the current ones, it means that
-        //window have been restored.
+        //if this function input params are equal to the window current params,
+        // it means that window have been restored.
         //happens when swapping stages with same params, for example.
-        GLASS_LOG_FINE("Notifying window restore");
+        GLASS_LOG_FINE("Notifying window %d[%p] its been restored",
+                       window->id,
+                       window);
         glass_application_notifyWindowEvent_resize(env,window,
                                                    com_sun_glass_events_WindowEvent_RESTORE,
                                                    window->currentBounds.width,
@@ -583,25 +585,21 @@ void glass_view_drawEnd(NativeView view) {
 
 jboolean glass_window_requestFocus(JNIEnv *env, NativeWindow window, jint focusType) {
 
-    jboolean result;
+    NativeWindow focusWindow = glass_window_getFocusedWindow();
 
-    NativeWindow focusWindow;
-
-    if (lens_wm_getGrabbedWindow()) {
-        // no changing focus in a grab
-        return JNI_FALSE;
-    }
-
-    focusWindow = glass_window_getFocusedWindow();
-
+    GLASS_LOG_FINE("requestFocus on window %d[%p], event %d",
+                   window?window->id:-1,
+                   window,
+                   focusType);
+    
     if (!window) {
-        GLASS_LOG_WARNING("null window passes the glass_window_requestFocus");
+        GLASS_LOG_WARNING("requestFocus on a null window");
         return JNI_FALSE;
     }
 
     if (window == focusWindow) {
         // no change, no notification ?
-        GLASS_LOG_WARNING("Focus requested on current focus window");
+        GLASS_LOG_FINE("Focus requested on current focus window - ignore");
         return JNI_TRUE;
     }
 
@@ -615,6 +613,7 @@ jboolean glass_window_requestFocus(JNIEnv *env, NativeWindow window, jint focusT
         return JNI_FALSE;
     }
 
+    //this function will release the grab if someone holds it
     lens_wm_setFocusedWindow(env, window);
 
     return JNI_TRUE;
@@ -666,20 +665,30 @@ jboolean glass_window_grabFocus(JNIEnv *env, NativeWindow window) {
 
     if (window == lens_wm_getGrabbedWindow()) {
         //this is OK per spec
-        GLASS_LOG_FINE("RE-GRAB on %p root %p\n", window, window->root);
+        GLASS_LOG_FINE("RE-GRAB on %d[%p] root %d[%p]",
+                       window?window->id:-1,
+                       window,
+                       window->root?window->root->id:-1,
+                       window->root);
         return JNI_TRUE;
     }
     
     if (NULL == lens_wm_getGrabbedWindow() &&
             window == glass_window_getFocusedWindow()) {
         // we allow the grab, note: focus is also checked in Java.
-        GLASS_LOG_FINE("GRAB on %p root %p\n", window, window->root);
+        GLASS_LOG_FINE("GRAB on %d[%p] (root %d[%p])", 
+                       window?window->id:-1,
+                       window,
+                       window->root?window->root->id:-1,
+                       window->root);
         lens_wm_setGrabbedWindow(window);
         return JNI_TRUE;
     }
 
     // should not be able to happen
-    GLASS_LOG_FINE("ERROR NO-GRAB on %p\n", window);
+    GLASS_LOG_SEVERE("ERROR NO-GRAB on %d[%p]\n",
+                     window?window->id:-1,
+                     window);
     return JNI_FALSE;
 }
 
@@ -690,13 +699,22 @@ jboolean glass_window_grabFocus(JNIEnv *env, NativeWindow window) {
  */
 void glass_window_ungrabFocus(JNIEnv *env, NativeWindow window) {
 
+    NativeWindow grabbedWindow = lens_wm_getGrabbedWindow();
+
+    GLASS_LOG_FINE("ungrab request on window %i[%p], current grabbed window %i[%p]",
+                   window?window->id:-1,
+                   window,
+                   grabbedWindow?grabbedWindow->id:-1,
+                   grabbedWindow );
     if (window == NULL) {
-        GLASS_LOG_FINER("window=NULL - Nothing to do");
+        GLASS_LOG_FINE("window=NULL - Nothing to do");
         return;
     }
 
-    if (window != lens_wm_getGrabbedWindow()) {
-        GLASS_LOG_FINE("Given window is not grabbed, ignore");
+    if (window != grabbedWindow) {
+        GLASS_LOG_FINE("Window %d[%p] doesn't hold the grab, ignore",
+                       window?window->id:-1,
+                       window);
         return;
     }
 
@@ -1280,9 +1298,9 @@ void lens_wm_setFocusedWindow(JNIEnv *env, NativeWindow window) {
              window);
 
         if (_focusedWindow) {
-
-            //Release the grab if window holds it
-            glass_window_ungrabFocus(env, window); /* function will print the result*/
+                        
+            //Release the grab if the focused window holds it
+            glass_window_ungrabFocus(env, _focusedWindow); /* function will print the result*/
 
             GLASS_LOG_FINE("Notifying window %i[%p] focus lost ",
                            _focusedWindow->id,
