@@ -981,10 +981,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             if (n == 2) {
                 jboolean isCopy;
                 jdouble *elems = (*env)->GetDoubleArrayElements(env, theArray, &isCopy);
-                // We get the screen coordinates of the cursor, to make some room
-                // to avoid suggestion window overlapping the next symbol we
-                // create rectangle 20x20 pixels as a placeholder for the next glyph.
-                retVal = NSMakeRect((CGFloat)elems[0], (CGFloat)elems[1], 20.0, 20.0);
+                retVal = NSMakeRect((CGFloat)elems[0], (CGFloat)elems[1], 0, 0);
                 (*env)->ReleaseDoubleArrayElements(env, theArray, elems, 0);
                 (*env)->DeleteLocalRef(env, theArray);
             }

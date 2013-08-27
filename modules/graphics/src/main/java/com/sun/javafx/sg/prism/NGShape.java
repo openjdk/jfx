@@ -78,6 +78,7 @@ public abstract class NGShape extends NGNode {
         {           
             this.fillPaint = (Paint) fillPaint;
             visualsChanged();
+            invalidateOpaqueRegion();
         }
     }
 
@@ -275,5 +276,14 @@ public abstract class NGShape extends NGNode {
             cached3D.dispose();
             cached3D = null;
         }
+    }
+
+    @Override
+    protected boolean hasOpaqueRegion() {
+        final Mode mode = getMode();
+        final Paint fillPaint = getFillPaint();
+        return super.hasOpaqueRegion() &&
+                    (mode == Mode.FILL || mode == Mode.STROKE_FILL) &&
+                    (fillPaint != null && fillPaint.isOpaque());
     }
 }

@@ -48,7 +48,7 @@ public class DirtyRegionClipTest extends DirtyRegionTestBase {
      * are a combination of a Polluter and a Creator. The Creator is used to
      * create the node to be tested (might be a rectangle, or Group, or something
      * more complex), while the Polluter is responsible for making the test node
-     * dirty by some means. Since the Pollutor knows what it did to make the node
+     * dirty by some means. Since the Polluter knows what it did to make the node
      * dirty, it is also responsible for computing and returning what the expected
      * change to the node's geometry is, such that the test code can create the
      * union and test for the appropriate dirty region for this specific node.
@@ -73,7 +73,7 @@ public class DirtyRegionClipTest extends DirtyRegionTestBase {
         // Construct the Creator / Polluter pair for Groups
         for (final Polluter polluter : polluters) {
             params.add(new Object[] {new Creator() {
-                @Override public NGNode create() { return NodeTestUtils.createGroup(NodeTestUtils.createRectangle(0, 0, 100, 100)); }
+                @Override public NGNode create() { return createGroup(createRectangle(0, 0, 100, 100)); }
                 @Override public String toString() { return "Group with one Rectangle"; }
             }, polluter});
         }
@@ -90,7 +90,7 @@ public class DirtyRegionClipTest extends DirtyRegionTestBase {
         });
         for (final Polluter polluter : rectanglePolluters) {
             params.add(new Object[] {new Creator() {
-                @Override public NGNode create() { return NodeTestUtils.createRectangle(0, 0, 100, 100); }
+                @Override public NGNode create() { return createRectangle(0, 0, 100, 100); }
                 @Override public String toString() { return "Rectangle"; }
             }, polluter});
         }
@@ -120,7 +120,7 @@ public class DirtyRegionClipTest extends DirtyRegionTestBase {
                 content[(row * 3) + col] = node;
             }
         }
-        root = NodeTestUtils.createGroup(content);
+        root = createGroup(content);
 
         // The grid is created & populated. We'll now go through and manually
         // clean them all up so that when we perform the test, it is from the
@@ -129,15 +129,15 @@ public class DirtyRegionClipTest extends DirtyRegionTestBase {
     }
 
     @Test public void sanityCheck() {
-        NGNode node = (NGNode) root.getChildren().get(0);
+        NGNode node = root.getChildren().get(0);
         assertEquals(new RectBounds(0, 0, 100, 100), node.getContentBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM));
         assertEquals(new RectBounds(0, 0, 100, 100), node.getCompleteBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM));
 
-        node = (NGNode) root.getChildren().get(1);
+        node = root.getChildren().get(1);
         assertEquals(new RectBounds(0, 0, 100, 100), node.getContentBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM));
         assertEquals(new RectBounds(110, 0, 210, 100), node.getCompleteBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM));
 
-        node = (NGNode) root.getChildren().get(root.getChildren().size()/2); //middle child (index 4)
+        node = root.getChildren().get(root.getChildren().size()/2); //middle child (index 4)
         assertEquals(new RectBounds(0, 0, 100, 100), node.getContentBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM));
         assertEquals(new RectBounds(110, 110, 210, 210), node.getCompleteBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM));
     }
@@ -149,7 +149,7 @@ public class DirtyRegionClipTest extends DirtyRegionTestBase {
     @Test public void dirtyRegionContainsClip() {
         windowClip = new RectBounds(115, 115, 120, 120);
 
-        NGNode middleChild = (NGNode) root.getChildren().get(root.getChildren().size()/2);
+        NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
         assertContainsClip(root, polluter.polluteAndGetExpectedBounds(middleChild), DirtyRegionContainer.DTR_CONTAINS_CLIP);
     }
 
@@ -159,7 +159,7 @@ public class DirtyRegionClipTest extends DirtyRegionTestBase {
     @Test public void dirtyRegionPartiallyOverlapsClip() {
         windowClip = new RectBounds(90, 90, 120, 120);
 
-        NGNode middleChild = (NGNode) root.getChildren().get(root.getChildren().size()/2);
+        NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
         assertContainsClip(root, polluter.polluteAndGetExpectedBounds(middleChild), DirtyRegionContainer.DTR_OK);
     }
 
@@ -168,7 +168,7 @@ public class DirtyRegionClipTest extends DirtyRegionTestBase {
      * lies inside the clip.
      */
     @Test public void dirtyRegionDoesNotContainClip() {
-        NGNode middleChild = (NGNode) root.getChildren().get(root.getChildren().size()/2);
+        NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
         assertContainsClip(root, polluter.polluteAndGetExpectedBounds(middleChild), DirtyRegionContainer.DTR_OK);
     }
 

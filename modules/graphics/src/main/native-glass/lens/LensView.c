@@ -308,6 +308,11 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensView__1setParent
     NativeWindow parent = (NativeWindow) jlong_to_ptr(nativeWindowPtr);
     // window can be NULL if being removed
 
-    GLASS_LOG_FINE("set parent of view %p to window %p old window %p", view, parent, view->parent);
+    GLASS_LOG_FINE("set parent of view %p to window %d[%p] old window %d[%p]", 
+                   view, 
+                   parent?parent->id:-1,
+                   parent,
+                   view->parent?view->parent->id:-1,
+                   view->parent);
     glass_view_setParent(env, parent, view);
 }

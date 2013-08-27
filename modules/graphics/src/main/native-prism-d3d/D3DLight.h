@@ -39,7 +39,7 @@ public:
     virtual ~D3DLight();
     void setColor(float r, float g, float b);
     void setPosition(float x, float y, float z);
-    float position[3];
+    float position[4]; // Only need x, y, z. The last float is needed for padding when upload to shader.
     float color[3];
     float w;
 

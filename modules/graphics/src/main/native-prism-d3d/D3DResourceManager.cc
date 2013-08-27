@@ -38,6 +38,7 @@ D3DResource::Init(IDirect3DResource9 *pRes, IDirect3DSwapChain9 *pSC)
 {
     TraceLn(NWT_TRACE_INFO, "D3DResource::Init");
 
+    pDepthSurface = NULL;
     pResource  = NULL;
     pSwapChain = pSC;
     pSurface   = NULL;
@@ -76,7 +77,6 @@ D3DResource::Init(IDirect3DResource9 *pRes, IDirect3DSwapChain9 *pSC)
     if (pSurface != NULL) {
         pSurface->GetDesc(&desc);
     }
-
     SAFE_PRINTLN(pResource);
     SAFE_PRINTLN(pSurface);
     SAFE_PRINTLN(pTexture);
@@ -401,6 +401,96 @@ D3DResourceManager::CreateTexture(UINT width, UINT height,
     return res;
 }
 
+HRESULT D3DResourceManager::CreateRenderTarget(UINT width, UINT height,
+                                               BOOL isOpaque,
+                                               D3DFORMAT *pFormat,
+                                               D3DMULTISAMPLE_TYPE msType,
+                                               D3DResource **ppSurfaceResource)
+{
+    TraceLn(NWT_TRACE_INFO, "D3DRM::CreateRenderTarget");
+
+    IDirect3DDevice9 *pd3dDevice = pCtx->Get3DDevice();
+
+    if (pd3dDevice == NULL) {
+        return E_FAIL;
+    }
+
+    D3DFORMAT format;
+    if (pFormat != NULL && *pFormat != D3DFMT_UNKNOWN) {
+        format = *pFormat;
+    } else {
+        if (isOpaque) {
+            format = D3DFMT_X8R8G8B8;
+        } else {
+            format = D3DFMT_A8R8G8B8;
+        }
+    }
+
+    DWORD totalSamples = 0;
+    IDirect3D9 *pd3dObject = pCtx->Get3DObject();
+    HRESULT res;
+    if(FAILED(res = pd3dObject->CheckDeviceMultiSampleType(D3DADAPTER_DEFAULT,
+                                    D3DDEVTYPE_HAL, format, false,
+                                    msType, &totalSamples))) {
+        DebugPrintD3DError(res, "D3DRM::CreateRenderTarget failed D3DMULTISAMPLE_"/
+                + (int)msType +"_SAMPLES not supported");
+        return res;
+    }
+
+    if (pCtx->IsPow2TexturesOnly()) {
+          UINT w, h;
+          for (w = 1; width  > w; w <<= 1);
+          for (h = 1; height > h; h <<= 1);
+          width = w;
+          height = h;
+    }
+    if (pCtx->IsSquareTexturesOnly()) {
+        if (width > height) {
+            height = width;
+        } else {
+            width = height;
+        }
+    }
+
+    BOOL lockable = false;
+    DWORD multisampleQuality = totalSamples - 1;
+    IDirect3DSurface9 *pSurface = NULL;
+
+    res = pd3dDevice->CreateRenderTarget(width, height, format,
+            msType, multisampleQuality, lockable, &pSurface, NULL);
+
+    if (SUCCEEDED(res)) {
+        TraceLn1(NWT_TRACE_VERBOSE, "  created render target surface: 0x%x", pSurface);
+        *ppSurfaceResource = new D3DResource((IDirect3DResource9*)pSurface);
+        res = AddResource(*ppSurfaceResource);
+    } else {
+        DebugPrintD3DError(res, "D3DRM::CreateRenderTarget failed");
+
+        switch(res) {
+            case D3DERR_NOTAVAILABLE:
+                DebugPrintD3DError(res, "   D3DERR_NOTAVAILABLE ");
+                break;
+            case D3DERR_INVALIDCALL:
+                DebugPrintD3DError(res, "   D3DERR_INVALIDCALL ");
+                break;
+            case D3DERR_OUTOFVIDEOMEMORY:
+                DebugPrintD3DError(res, "   D3DERR_OUTOFVIDEOMEMORY ");
+                break;
+            case E_OUTOFMEMORY:
+                DebugPrintD3DError(res, "   E_OUTOFMEMORY ");
+                break;
+            default: break;
+        }
+        *ppSurfaceResource = NULL;
+        format = D3DFMT_UNKNOWN;
+    }
+
+    if (pFormat != NULL) {
+        *pFormat = format;
+    }
+
+    return res;
+}
 
 HRESULT D3DResourceManager::CreateOSPSurface(UINT width, UINT height,
                                          D3DFORMAT fmt,
@@ -436,7 +526,7 @@ HRESULT D3DResourceManager::CreateOSPSurface(UINT width, UINT height,
         res = AddResource(*ppSurfaceResource);
     } else {
         DebugPrintD3DError(res, "D3DRM::CreateOSPSurface failed");
-        ppSurfaceResource = NULL;
+        *ppSurfaceResource = NULL;
     }
     return res;
 }

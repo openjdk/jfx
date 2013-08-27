@@ -30,7 +30,6 @@ import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.PGFont;
 import com.sun.javafx.font.PrismFontFactory;
-import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.scene.text.TextSpan;
 import com.sun.javafx.text.GlyphLayout;
 import com.sun.javafx.text.PrismTextLayout;
@@ -159,8 +158,9 @@ public class DWGlyphLayout extends GlyphLayout {
         i = 0; j = rtl ? glyphCount - 1 : 0;
         float x = 0;
         while (i < pos.length - 2) {
-            pos[i++] = x;
-            pos[i++] = 0;
+            int g = j << 1;
+            pos[i++] = (rtl ? -offsets[g] : offsets[g]) + x;
+            pos[i++] = -offsets[g + 1];
             x += advances[j];
             j+=step;
         }
@@ -169,18 +169,6 @@ public class DWGlyphLayout extends GlyphLayout {
 
         analyzer.Release();
         run.shape(glyphCount, iglyphs, pos, indices);
-
-        /* Checking glyphs offsets */
-        i = 0;
-        j = 0;
-        while (i < glyphCount) {
-            float glyphOffsetX = offsets[j++];
-            float glyphOffsetY = offsets[j++];
-            if (glyphOffsetX != 0 || glyphOffsetY != 0) {
-                run.setGlyphData(i, new Point2D(glyphOffsetX, glyphOffsetY));
-            }
-            i++;
-        }
     }
 
     private String getName(IDWriteLocalizedStrings localizedStrings) {
@@ -322,10 +310,10 @@ public class DWGlyphLayout extends GlyphLayout {
         renderer.AddRef();
         layout.Draw(0, renderer, 0, 0);
 
-        int totalGlyphCount = renderer.GetTotalGlyphCount();
-        int[] glyphs = new int[totalGlyphCount];
-        float[] advances = new float[totalGlyphCount];
-        float[] offsets = new float[totalGlyphCount * 2];
+        int glyphCount = renderer.GetTotalGlyphCount();
+        int[] glyphs = new int[glyphCount];
+        float[] advances = new float[glyphCount];
+        float[] offsets = new float[glyphCount * 2];
         int[] clusterMap = new int[length];
         int glyphStart = 0;
         int textStart = 0;
@@ -349,14 +337,15 @@ public class DWGlyphLayout extends GlyphLayout {
         format.Release();
 
         /* Adjust glyphs positions */
-        float[] pos = new float[totalGlyphCount * 2 + 2];
+        float[] pos = new float[glyphCount * 2 + 2];
         boolean rtl = !run.isLeftToRight();
-        int i = 0, j = rtl ? totalGlyphCount - 1 : 0;
+        int i = 0, j = rtl ? glyphCount - 1 : 0;
         int step = rtl ? -1 : 1;
         float x = 0;
         while (i < pos.length - 2) {
-            pos[i++] = x;
-            pos[i++] = 0;
+            int g = j << 1;
+            pos[i++] = (rtl ? -offsets[g] : offsets[g]) + x;
+            pos[i++] = -offsets[g + 1];
             x += advances[j];
             j+=step;
         }
@@ -364,10 +353,10 @@ public class DWGlyphLayout extends GlyphLayout {
         pos[i++] = 0;
         if (rtl) {
             /* Adjust glyphs */
-            for (i = 0; i < totalGlyphCount / 2; i++) {
+            for (i = 0; i < glyphCount / 2; i++) {
                 int tmp = glyphs[i];
-                glyphs[i] = glyphs[totalGlyphCount - i - 1];
-                glyphs[totalGlyphCount - i - 1] = tmp;
+                glyphs[i] = glyphs[glyphCount - i - 1];
+                glyphs[glyphCount - i - 1] = tmp;
             }
             /* Adjust glyph indices */
             for (i = 0; i < length / 2; i++) {
@@ -376,18 +365,6 @@ public class DWGlyphLayout extends GlyphLayout {
                 clusterMap[length - i - 1] = tmp;
             }
         }
-        run.shape(totalGlyphCount, glyphs, pos, clusterMap);
-
-        /* Checking glyphs offsets */
-        i = 0;
-        j = 0;
-        while (i < totalGlyphCount) {
-            float glyphOffsetX = offsets[j++];
-            float glyphOffsetY = offsets[j++];
-            if (glyphOffsetX != 0 || glyphOffsetY != 0) {
-                run.setGlyphData(i, new Point2D(glyphOffsetX, glyphOffsetY));
-            }
-            i++;
-        }
+        run.shape(glyphCount, glyphs, pos, clusterMap);
     }
 }

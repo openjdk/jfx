@@ -23,12 +23,22 @@
  * questions.
  */
  
-#ifndef OGLTRACE_IOLIB_H
-#define OGLTRACE_IOLIB_H
+#ifndef GLTRACE_IOLIB_H
+#define GLTRACE_IOLIB_H
 
 #include <stdint.h>
 
+#define VERSION_MAJOR   1
+#define VERSION_MINOR   0
+#define VERSION_REV     0
+
 #define OPC_NONE                                        0
+
+#define OPC_VERSION                 0xdeafca1f
+#define OPC_MARK                    1
+#define OPC_THREAD                  2
+
+/* OpenGL ES */
 #define OPC_START                                       100
 #define OPC_glActiveTexture                             OPC_START+0
 #define OPC_glAttachShader                              OPC_START+1
@@ -173,40 +183,65 @@
 #define OPC_glVertexAttribPointer                       OPC_START+140
 #define OPC_glViewport                                  OPC_START+141
 
-#define OPC_eglGetError                                 OPC_START+200
-#define OPC_eglGetDisplay                               OPC_START+201
-#define OPC_eglInitialize                               OPC_START+202
-#define OPC_eglTerminate                                OPC_START+203
-#define OPC_eglQueryString                              OPC_START+204
-#define OPC_eglGetConfigs                               OPC_START+205
-#define OPC_eglChooseConfig                             OPC_START+206
-#define OPC_eglGetConfigAttrib                          OPC_START+207
-#define OPC_eglCreateWindowSurface                      OPC_START+208
-#define OPC_eglCreatePbufferSurface                     OPC_START+209
-#define OPC_eglCreatePixmapSurface                      OPC_START+210
-#define OPC_eglDestroySurface                           OPC_START+211
-#define OPC_eglQuerySurface                             OPC_START+212
-#define OPC_eglBindAPI                                  OPC_START+213
-#define OPC_eglQueryAPI                                 OPC_START+214
-#define OPC_eglWaitClient                               OPC_START+215
-#define OPC_eglReleaseThread                            OPC_START+216
-#define OPC_eglCreatePbufferFromClientBuffer            OPC_START+217
-#define OPC_eglSurfaceAttrib                            OPC_START+218
-#define OPC_eglBindTexImage                             OPC_START+219
-#define OPC_eglReleaseTexImage                          OPC_START+220
-#define OPC_eglCreateContext                            OPC_START+221
-#define OPC_eglDestroyContext                           OPC_START+222
-#define OPC_eglMakeCurrent                              OPC_START+223
-#define OPC_eglGetCurrentContext                        OPC_START+224
-#define OPC_eglGetCurrentSurface                        OPC_START+225
-#define OPC_eglGetCurrentDisplay                        OPC_START+226
-#define OPC_eglQueryContext                             OPC_START+227
-#define OPC_eglWaitGL                                   OPC_START+228
-#define OPC_eglWaitNative                               OPC_START+229
-#define OPC_eglSwapBuffers                              OPC_START+230
-#define OPC_eglCopyBuffers                              OPC_START+231
+#define OPC_glBegin                                     OPC_START+150
+#define OPC_glEnd                                       OPC_START+151
 
-#define OPC_EOF                                         OPC_START+500
+/* MAC OS X OpenGL Extensions */
+#define OPC_MACOSX_EXT                                  500
+#define OPC_glIsRenderbufferEXT                         OPC_MACOSX_EXT+1
+#define OPC_glBindRenderbufferEXT                       OPC_MACOSX_EXT+2
+#define OPC_glDeleteRenderbuffersEXT                    OPC_MACOSX_EXT+3
+#define OPC_glGenRenderbuffersEXT                       OPC_MACOSX_EXT+4
+#define OPC_glRenderbufferStorageEXT                    OPC_MACOSX_EXT+5
+#define OPC_glGetRenderbufferParameterivEXT             OPC_MACOSX_EXT+6
+#define OPC_glIsFramebufferEXT                          OPC_MACOSX_EXT+7
+#define OPC_glBindFramebufferEXT                        OPC_MACOSX_EXT+8
+#define OPC_glDeleteFramebuffersEXT                     OPC_MACOSX_EXT+9
+#define OPC_glGenFramebuffersEXT                        OPC_MACOSX_EXT+10
+#define OPC_glCheckFramebufferStatusEXT                 OPC_MACOSX_EXT+11
+#define OPC_glFramebufferTexture1DEXT                   OPC_MACOSX_EXT+12
+#define OPC_glFramebufferTexture2DEXT                   OPC_MACOSX_EXT+13
+#define OPC_glFramebufferTexture3DEXT                   OPC_MACOSX_EXT+14
+#define OPC_glFramebufferRenderbufferEXT                OPC_MACOSX_EXT+15
+#define OPC_glGetFramebufferAttachmentParameterivEXT    OPC_MACOSX_EXT+16
+#define OPC_glGenerateMipmapEXT                         OPC_MACOSX_EXT+17
+
+/* EGL */
+#define OPC_EGL                         700
+#define OPC_eglGetError                                 OPC_EGL+0
+#define OPC_eglGetDisplay                               OPC_EGL+1
+#define OPC_eglInitialize                               OPC_EGL+2
+#define OPC_eglTerminate                                OPC_EGL+3
+#define OPC_eglQueryString                              OPC_EGL+4
+#define OPC_eglGetConfigs                               OPC_EGL+5
+#define OPC_eglChooseConfig                             OPC_EGL+6
+#define OPC_eglGetConfigAttrib                          OPC_EGL+7
+#define OPC_eglCreateWindowSurface                      OPC_EGL+8
+#define OPC_eglCreatePbufferSurface                     OPC_EGL+9
+#define OPC_eglCreatePixmapSurface                      OPC_EGL+10
+#define OPC_eglDestroySurface                           OPC_EGL+11
+#define OPC_eglQuerySurface                             OPC_EGL+12
+#define OPC_eglBindAPI                                  OPC_EGL+13
+#define OPC_eglQueryAPI                                 OPC_EGL+14
+#define OPC_eglWaitClient                               OPC_EGL+15
+#define OPC_eglReleaseThread                            OPC_EGL+16
+#define OPC_eglCreatePbufferFromClientBuffer            OPC_EGL+17
+#define OPC_eglSurfaceAttrib                            OPC_EGL+18
+#define OPC_eglBindTexImage                             OPC_EGL+19
+#define OPC_eglReleaseTexImage                          OPC_EGL+20
+#define OPC_eglCreateContext                            OPC_EGL+21
+#define OPC_eglDestroyContext                           OPC_EGL+22
+#define OPC_eglMakeCurrent                              OPC_EGL+23
+#define OPC_eglGetCurrentContext                        OPC_EGL+24
+#define OPC_eglGetCurrentSurface                        OPC_EGL+25
+#define OPC_eglGetCurrentDisplay                        OPC_EGL+26
+#define OPC_eglQueryContext                             OPC_EGL+27
+#define OPC_eglWaitGL                                   OPC_EGL+28
+#define OPC_eglWaitNative                               OPC_EGL+29
+#define OPC_eglSwapBuffers                              OPC_EGL+30
+#define OPC_eglCopyBuffers                              OPC_EGL+31
+
+#define OPC_EOF                                         0xffffffff
 
 
 #define IO_WRITE        0
@@ -217,20 +252,25 @@ void    iolib_fini();
 
 void    putCmd(int cmd);
 void    putInt(int arg);
+void    putIntPtr(const int *arg);
 void    putFloat(float arg);
+void    putFloatPtr(const float *arg);
 void    putLongLong(long long arg);
 void    putPtr(const void *arg);
 void    putString(const char *str);
 void    putBytes(const void *data, int size);
 void    putTime(uint64_t bgn, uint64_t end);
+void    endCmd();
 
 int             getCmd();
 int             getInt();
+const int   *getIntPtr();
 float           getFloat();
+const float *getFloatPtr();
 long long       getLongLong();
-const void      *getPtr();
+uint64_t    getPtr();
 const char      *getString();
 const void      *getBytes();
 void            getTime(uint64_t *bgn, uint64_t *end);
 
-#endif /* OGLTRACE_IOLIB_H */
+#endif /* GLTRACE_IOLIB_H */

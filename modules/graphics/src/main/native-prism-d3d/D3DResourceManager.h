@@ -97,6 +97,8 @@ public:
     IDirect3DResource9*  GetResource() { return pResource; }
     IDirect3DTexture9*   GetTexture() { return pTexture; }
     IDirect3DSurface9*   GetSurface() { return pSurface; }
+    IDirect3DSurface9*   GetDepthSurface() { return pDepthSurface; }
+    void                 SetDepthSurface(IDirect3DSurface9* pDB) { pDepthSurface = pDB; }
     IDirect3DSwapChain9* GetSwapChain() { return pSwapChain; }
     D3DSURFACE_DESC*     GetDesc() { return &desc; }
     virtual BOOL         IsDefaultPool();
@@ -116,6 +118,7 @@ private:
     IDirect3DResource9*  pResource;
     IDirect3DSwapChain9* pSwapChain;
     IDirect3DSurface9*   pSurface;
+    IDirect3DSurface9*   pDepthSurface;
     IDirect3DTexture9*   pTexture;
 
     D3DSURFACE_DESC      desc;
@@ -193,6 +196,12 @@ public:
                           D3DFORMAT *pFormat/*in/out*/,
                           DWORD dwUsage,
                           D3DResource **ppTextureResource/*out*/);
+
+    HRESULT D3DResourceManager::CreateRenderTarget(UINT width, UINT height,
+                                  BOOL isOpaque,
+                                  D3DFORMAT *pFormat,
+                                  D3DMULTISAMPLE_TYPE msType,
+                                  D3DResource **ppSurfaceResource);
 
     HRESULT CreateSwapChain(HWND hWnd, UINT numBuffers, UINT width, UINT height,
                             D3DSWAPEFFECT swapEffect, UINT presentationInterval,

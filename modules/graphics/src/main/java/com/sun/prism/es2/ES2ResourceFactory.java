@@ -49,8 +49,6 @@ import com.sun.prism.ps.Shader;
 import com.sun.prism.ps.ShaderFactory;
 import java.lang.reflect.Method;
 import java.util.HashMap;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 public class ES2ResourceFactory extends BaseShaderFactory {
 
@@ -59,17 +57,8 @@ public class ES2ResourceFactory extends BaseShaderFactory {
 
     ES2ResourceFactory(Screen screen) {
         context = new ES2Context(screen, this);
-        int max = Integer.valueOf(
-                AccessController.doPrivileged(new PrivilegedAction<String>() {
-                    public String run() {
-                        return System.getProperty("maxTextureSize", "0");
-                    }
-                }));
-        if (max == 0) {
-            maxTextureSize = computeMaxTextureSize();
-        } else {
-            maxTextureSize = max;
-        }
+        maxTextureSize = computeMaxTextureSize();
+
         if (PrismSettings.verbose) {
             System.out.println("Non power of two texture support = " + 
                     context.getGLContext().canCreateNonPowTwoTextures());

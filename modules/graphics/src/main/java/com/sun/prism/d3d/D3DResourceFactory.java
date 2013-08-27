@@ -151,7 +151,7 @@ class D3DResourceFactory extends BaseShaderFactory {
         }
         long pResource = nCreateTexture(context.getContextHandle(),
                                         format.ordinal(), usagehint.ordinal(),
-                                        false /*isRTT*/, allocw, alloch);
+                                        false /*isRTT*/, allocw, alloch, 0);
         if (pResource == 0L) {
             return null;
         }
@@ -210,7 +210,7 @@ class D3DResourceFactory extends BaseShaderFactory {
             }
             long pResource = nCreateTexture(context.getContextHandle(),
                     texFormat.ordinal(), Usage.DYNAMIC.ordinal(),
-                    false, texWidth, texHeight);
+                    false, texWidth, texHeight, 0);
             if (0 == pResource) {
                 return null;
             }
@@ -270,6 +270,14 @@ class D3DResourceFactory extends BaseShaderFactory {
             createh = nextPowerOfTwo(createh, Integer.MAX_VALUE);
         }
         D3DVramPool pool = D3DVramPool.instance;
+        int aaSamples;
+        if (antiAliasing) {
+            int maxSamples = D3DPipeline.getInstance().getMaxSamples();
+            aaSamples =  maxSamples < 2 ? 0 : (maxSamples < 4 ? 2 : 4);
+        } else {
+            aaSamples = 0;
+        }
+        // TODO: 3D - Improve estimate to include if multisample rtt
         long size = pool.estimateRTTextureSize(width, height, false);
         if (!pool.prepareForAllocation(size)) {
             return null;
@@ -278,7 +286,7 @@ class D3DResourceFactory extends BaseShaderFactory {
         long pResource = nCreateTexture(context.getContextHandle(),
                                         PixelFormat.INT_ARGB_PRE.ordinal(),
                                         Usage.DEFAULT.ordinal(),
-                                        true /*isRTT*/, createw, createh);
+                                        true /*isRTT*/, createw, createh, aaSamples);
         if (pResource == 0L) {
             return null;
         }
@@ -286,7 +294,7 @@ class D3DResourceFactory extends BaseShaderFactory {
         int texw = nGetTextureWidth(pResource);
         int texh = nGetTextureHeight(pResource);
         D3DRTTexture rtt = new D3DRTTexture(context, wrapMode, pResource, texw, texh,
-                                            cx, cy, width, height);
+                                            cx, cy, width, height, aaSamples);
         // ensure the RTTexture is cleared to all zeros before returning
         // (Decora relies on the Java2D behavior, where an image is expected
         // to be fully transparent after initialization)
@@ -473,7 +481,7 @@ class D3DResourceFactory extends BaseShaderFactory {
     static native long nCreateTexture(long pContext,
                                       int format, int hint,
                                       boolean isRTT,
-                                      int width, int height);
+                                      int width, int height, int samples);
     static native long nCreateSwapChain(long pContext, long hwnd,
                                         boolean isVsyncEnabled);
     static native int nReleaseResource(long pContext, long resource);

@@ -22,21 +22,45 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
  
 #include <jvmti.h>
 
+#include "os.h"
+#include "iolib.h"
+
+/*
+ *    Init/fini
+ */
+
+static char tools_envvar[1024];
+
+static void init() __attribute__ ((constructor));
+static void
+init()
+{
+    char *lib = getenv("LD_PRELOAD");
+    if (lib == NULL) return;
+    strncpy(tools_envvar, "JAVA_TOOL_OPTIONS=-agentpath:", sizeof(tools_envvar));
+    strncat(tools_envvar, lib, sizeof(tools_envvar));
+    putenv(tools_envvar);
+}
+
+static void fini() __attribute__ ((destructor));
+static void fini()
+{
+}
+
 static JavaVM   *jvm;
 static jvmtiEnv *jvmti;
-static jniNativeInterface *original_jni_Functions;
-static jniNativeInterface *redirected_jni_Functions;
 static jclass classThread;
 static jmethodID mthdDumpStack;
 
 static void JNICALL jvmti_VMInit(jvmtiEnv*, JNIEnv*, jthread);
 static void JNICALL jvmti_VMStart(jvmtiEnv*, JNIEnv*);
-static jint JNICALL RegisterNatives(JNIEnv*, jclass, const JNINativeMethod*, jint);
-static void* JNICALL GetPrimitiveArrayCritical(JNIEnv*, jarray, jboolean*);
-static void JNICALL ReleasePrimitiveArrayCritical(JNIEnv*, jarray, void*, jint);
 
 static jvmtiEventCallbacks      callbacks =
 {
@@ -101,11 +125,48 @@ jvmti_VMStart( jvmtiEnv *jvmti, JNIEnv *jni )
 {
 }
 
+static void
+gltrace_putMark(JNIEnv *jni, jclass klass, jstring jstr)
+{
+    uint64_t bgn = gethrtime();
+    const char *str = (*jni)->GetStringUTFChars(jni, jstr, 0);
+    putCmd(OPC_MARK);
+    putString(str);
+    (*jni)->ReleaseStringUTFChars(jni, jstr, str);
+    uint64_t end = gethrtime();
+    putTime(bgn, end);
+}
+
+static const JNINativeMethod class_methods[] = {
+    { "_putMark",  "(Ljava/lang/String;)V", &gltrace_putMark }
+};
+
 static void JNICALL
 jvmti_VMInit(jvmtiEnv *jvmti, JNIEnv *jni, jthread jthr)
 {
     classThread = (*jni)->FindClass(jni, "java/lang/Thread");
     mthdDumpStack = (*jni)->GetStaticMethodID(jni, classThread, "dumpStack", "()V");
+    
+    /* GLTrace */
+    jclass classGLTrace = (*jni)->FindClass(jni, "com/sun/javafx/logging/GLTrace");
+    if ((*jni)->ExceptionOccurred(jni)) {
+        (*jni)->ExceptionClear(jni);
+    }
+    if (classGLTrace == NULL) {
+        return;
+    }
+    if ((*jni)->RegisterNatives(jni, classGLTrace, class_methods, (jint)1 ) != 0) {
+//        fprintf(stderr, "ERROR: GLTrace methods not registered\n" );
+        return;
+    }
+    
+    /* Set GLTrace.init to true */
+    jfieldID initField = (*jni)->GetStaticFieldID(jni, classGLTrace, "init", "Z" );
+    (*jni)->SetStaticBooleanField(jni, classGLTrace, initField, JNI_TRUE );
+    if ((*jni)->GetStaticBooleanField(jni, classGLTrace, initField ) != JNI_TRUE) {
+//        fprintf(stderr, "ERROR: GLTrace.init NOT set\n");
+        return;
+    }
 }
 
 static void

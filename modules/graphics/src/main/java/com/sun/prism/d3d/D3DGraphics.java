@@ -100,9 +100,4 @@ class D3DGraphics extends BaseShaderGraphics implements D3DContextSource {
 
     private static native int nClear(long pContext, int colorArgbPre,
                                       boolean clearDepth, boolean ignoreScissor);
-
-    public void reset() {
-        throw new RuntimeException("Reset is unsupported for resize operation");
-    }
-
 }

@@ -86,7 +86,6 @@ class D3DContext extends BaseShaderContext {
 
     NGCamera camera = null;
     private int targetWidth = 0, targetHeight = 0;
-    private boolean depthTest;
 
     private final D3DResourceFactory factory;
 
@@ -189,12 +188,11 @@ class D3DContext extends BaseShaderContext {
     protected State updateRenderTarget(RenderTarget target, NGCamera camera,
                                        boolean depthTest)  {
         long resourceHandle = ((D3DRenderTarget)target).getResourceHandle();
-        int res = nSetRenderTarget(pContext, resourceHandle);
+        int res = nSetRenderTarget(pContext, resourceHandle, depthTest, target.isAntiAliasing());
         validate(res);
         resetLastClip(state);
 
         this.camera = camera;
-        this.depthTest = depthTest;
         targetWidth = target.getPhysicalWidth();
         targetHeight = target.getPhysicalHeight();
 
@@ -329,7 +327,12 @@ class D3DContext extends BaseShaderContext {
         return nGetFrameStats(pContext, result, reset) ? result : null;
     }
 
-    private static native int nSetRenderTarget(long pContext, long pDest);
+    /*
+     * @param depthBuffer if true will create and attach a depthBuffer,
+     * if needed, of the same format as the render target. The depth test state
+     * is handled elsewhere.
+     */
+    private static native int nSetRenderTarget(long pContext, long pDest, boolean depthBuffer, boolean msaa);
     private static native int nSetTexture(long pContext, long pTex, int texUnit,
         boolean linear, int wrapMode);
     private static native int nResetTransform(long pContext);
@@ -384,6 +387,14 @@ class D3DContext extends BaseShaderContext {
     private static native void nRenderMeshView(long pContext, long nativeMeshView);
 
 
+    /*
+     * @param nSrcRTT must be valid native resource
+     * @param nDstRTT can be NULL if a valide render target is set
+     */
+    private static native void nBlit(long pContext, long nSrcRTT, long nDstRTT,
+            int srcX0, int srcY0, int srcX1, int srcY1,
+            int dstX0, int dstY0, int dstX1, int dstY1);
+
     private static native boolean nGetFrameStats(long pContext,
             D3DFrameStats returnValue, boolean bReset);
 
@@ -414,7 +425,7 @@ class D3DContext extends BaseShaderContext {
     }
 
     @Override
-    public void setDeviceParametersFor3D() {
+    protected void setDeviceParametersFor3D() {
         nSetDeviceParametersFor3D(pContext);
     }
 
@@ -506,6 +517,10 @@ class D3DContext extends BaseShaderContext {
     public void blit(RTTexture srcRTT, RTTexture dstRTT,
                      int srcX0, int srcY0, int srcX1, int srcY1,
                      int dstX0, int dstY0, int dstX1, int dstY1) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        long dstNativeHandle = dstRTT == null ? 0L : ((D3DTexture)dstRTT).getNativeSourceHandle();
+        long srcNativeHandle = ((D3DTexture)srcRTT).getNativeSourceHandle();
+        nBlit(pContext, srcNativeHandle, dstNativeHandle,
+                          srcX0, srcY0, srcX1, srcY1,
+                          dstX0, dstY0, dstX1, dstY1);
     }
 }

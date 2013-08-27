@@ -25,9 +25,9 @@
 
 package javafx.scene.paint;
 
+import javafx.scene.image.Image;
 import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.tk.Toolkit;
-import javafx.scene.image.Image;
 
 /**
  * <p>The {@code ImagePattern} class fills a shape with an image pattern. The
@@ -211,9 +211,11 @@ public final class ImagePattern extends Paint {
     }
 
     @Override public final boolean isOpaque() {
-        // RT-24827: isOpaque should return true if the image doesn't have an alpha.
-        // We haven't implemented this support yet, but should!
-        return false;
+        // We only ever have Prism as our painting system these days, so we can just
+        // cast this platformPaint to a prism paint type and check for isOpaque.
+        // It would be better to change the type on platformPaint accordingly and
+        // ditch the cast.
+        return ((com.sun.prism.paint.ImagePattern)acc_getPlatformPaint()).isOpaque();
     }
 
     private Object platformPaint;
@@ -286,6 +288,7 @@ public final class ImagePattern extends Paint {
     @Override Object acc_getPlatformPaint() {
         if (acc_isMutable() || platformPaint == null) {
             platformPaint = Toolkit.getToolkit().getPaint(this);
+            assert platformPaint != null;
         }
         return platformPaint;
     }

@@ -88,7 +88,7 @@ public class BoxShadow extends AbstractShadow {
      *
      * @param hsize the horizontal size of the BoxShadow kernel
      * @param vsize the vertical size of the BoxShadow kernel
-     * @param numpasses the number of blur passes to execute
+     * @param passes the number of blur passes to execute
      * @throws IllegalArgumentException if either {@code hsize}
      * or {@code vsize} or {@code passes}
      * is outside the allowable range
@@ -105,7 +105,7 @@ public class BoxShadow extends AbstractShadow {
      *
      * @param hsize the horizontal size of the BoxShadow kernel
      * @param vsize the vertical size of the BoxShadow kernel
-     * @param numpasses the number of blur passes to execute
+     * @param passes the number of blur passes to execute
      * @param input the single input {@code Effect}
      * @throws IllegalArgumentException if either {@code hsize}
      * or {@code vsize} or {@code passes}
@@ -222,8 +222,8 @@ public class BoxShadow extends AbstractShadow {
      * A setting of 1 creates a low quality blur.  A setting of 3 creates
      * a blur that is very close to a Gaussian blur.
      *
-     * @param radius the radius of the effect kernel
-     * @throws IllegalArgumentException if {@code radius} is outside the
+     * @param passes
+     * @throws IllegalArgumentException if {@code passes} is outside the
      * allowable range
      */
     public void setPasses(int passes) {

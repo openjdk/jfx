@@ -24,22 +24,39 @@
  */
  
 #define _GNU_SOURCE
+#include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
-#include "opengl.h"
+#include <GLES2/gl2.h>
+#include <GLES2/gl2ext.h>
+#include <EGL/egl.h>
+
+#include "os.h"
 #include "iolib.h"
 #include "map.h"
+
+#define DIR_TEXTURES    "TEXTURES"
+
+typedef void             GLvoid;
+typedef char             GLchar;
 
 extern const char *eglEnum2str(EGLenum);
 extern const char *glEnum2str(GLenum);
 static void readPixels();
+static int  savePNG(char *fName, GLenum format, GLenum type, uint32_t width, uint32_t height, const void *data);
 
 static int printFlag = 0;
+static int printArrays = 0;
 static int execFlag  = 0;
+static int dumpTexturesFlag = 0;
+static uint64_t printThread = (uint64_t)0;
+static uint64_t curThread   = (uint64_t)0;
+static int texCount = 0;
 
 /*
  *    StringBuffer
@@ -70,6 +87,13 @@ sb_appendInt(int val)
 }
 
 void
+sb_appendLong(uint64_t val)
+{
+    if (curPtr + 32 > endPtr) sb_enlarge(32);
+    curPtr += snprintf(curPtr, endPtr - curPtr, "%llu", val);
+}
+
+void
 sb_appendBool(int val)
 {
     if (curPtr + 8 > endPtr) sb_enlarge(8);
@@ -87,7 +111,7 @@ void
 sb_appendPtr(const void *val)
 {
     if (curPtr + 32 > endPtr) sb_enlarge(32);
-    curPtr += snprintf(curPtr, endPtr - curPtr, "0x%x", val);
+    curPtr += snprintf(curPtr, endPtr - curPtr, "%p", val);
 }
 
 void
@@ -138,21 +162,12 @@ sb_fini()
 #define REPORT_INTERVAL 2000000000ULL
 
 static int fpsFlag = 1;
-static uint64_t start_time;
 static uint64_t ts0Recorded;
 static uint64_t ts0Actual;
 static uint64_t tsRecorded[INST_FRAME_COUNT];
 static uint64_t tsActual[INST_FRAME_COUNT];
 static int curFrame = 0;
 static uint64_t nextReport;
-
-static uint64_t
-gethrtime()
-{
-    struct timespec tsp;
-    clock_gettime(CLOCK_MONOTONIC, &tsp);
-    return (tsp.tv_sec*1000000000ULL + tsp.tv_nsec - start_time);
-}
 
 static void
 fps_newFrame(int frame, uint64_t ts)
@@ -251,7 +266,7 @@ createNativeWindow()
     return &nativewindow;
 }
 
-#else 
+#elif BEAGLEBOARD
 
 static EGLNativeWindowType 
 createNativeWindow()
@@ -398,8 +413,35 @@ proc_glBindTexture(GLenum target, GLuint texture)
 }
 
 static void proc_glBlendColor();
-static void proc_glBlendEquation();
-static void proc_glBlendEquationSeparate();
+
+static void
+proc_glBlendEquation(GLenum mode)
+{
+    if (printFlag) {
+        sb_appendStr("glBlendEquation(");
+        sb_appendStr(glEnum2str(mode));
+        sb_appendStr(")");
+    }
+    if (execFlag) {
+        glBlendEquation(mode);
+    }
+    
+}
+
+static void
+proc_glBlendEquationSeparate(GLenum modeRGB, GLenum modeAlpha)
+{
+    if (printFlag) {
+        sb_appendStr("glBlendEquationSeparate(");
+        sb_appendStr(glEnum2str(modeRGB));
+        sb_appendStr(", ");
+        sb_appendStr(glEnum2str(modeAlpha));
+        sb_appendStr(")");
+    }
+    if (execFlag) {
+        glBlendEquationSeparate(modeRGB, modeAlpha);
+    }
+}
 
 static void
 proc_glBlendFunc(GLenum sfactor, GLenum dfactor)
@@ -416,7 +458,24 @@ proc_glBlendFunc(GLenum sfactor, GLenum dfactor)
     }
 }
 
-static void proc_glBlendFuncSeparate();
+static void
+proc_glBlendFuncSeparate(GLenum srcRGB, GLenum dstRGB, GLenum srcAlpha, GLenum dstAlpha)
+{
+    if (printFlag) {
+        sb_appendStr("glBlendFuncSeparate(");
+        sb_appendStr(glEnum2str(srcRGB));
+        sb_appendStr(", ");
+        sb_appendStr(glEnum2str(dstRGB));
+        sb_appendStr(", ");
+        sb_appendStr(glEnum2str(srcAlpha));
+        sb_appendStr(", ");
+        sb_appendStr(glEnum2str(dstAlpha));
+        sb_appendStr(")");
+    }
+    if (execFlag) {
+        glBlendFuncSeparate(srcRGB, dstRGB, srcAlpha, dstAlpha);
+    }
+}
 
 static void
 proc_glBufferData(GLenum target, GLsizeiptr size, const GLvoid* data, GLenum usage)
@@ -426,7 +485,7 @@ proc_glBufferData(GLenum target, GLsizeiptr size, const GLvoid* data, GLenum usa
         sb_appendStr(glEnum2str(target));
         sb_appendStr(", ");
         sb_appendInt(size);
-        sb_appendStr(", [...], ");
+        sb_appendStr(data ? ", [...], " : ", (null), ");
         sb_appendStr(glEnum2str(usage));
         sb_appendStr(")");
     }
@@ -435,7 +494,22 @@ proc_glBufferData(GLenum target, GLsizeiptr size, const GLvoid* data, GLenum usa
     }
 }
 
-static void proc_glBufferSubData();
+static void
+proc_glBufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid* data)
+{
+    if (printFlag) {
+        sb_appendStr("glBufferSubData(");
+        sb_appendStr(glEnum2str(target));
+        sb_appendStr(", ");
+        sb_appendInt(offset);
+        sb_appendStr(", ");
+        sb_appendInt(size);
+        sb_appendStr(data ? ", [...])" : ", (null))");
+    }
+    if (execFlag) {
+        glBufferSubData(target, offset, size, data);
+    }
+}
 
 static GLenum
 proc_glCheckFramebufferStatus(GLenum target)
@@ -484,9 +558,52 @@ proc_glClearColor(GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha)
     }
 }
 
-static void proc_glClearDepthf();
-static void proc_glClearStencil();
-static void proc_glColorMask    ();
+static void
+proc_glClearDepthf(GLclampf depth)
+{
+    if (printFlag) {
+        sb_appendStr("glClearDepthf(");
+        sb_appendFloat(depth);
+        sb_appendStr(")");
+    }
+#if !MACOSX
+    if (execFlag) {
+        glClearDepthf(depth);
+    }
+#endif
+}
+
+static void
+proc_glClearStencil(GLint s)
+{
+    if (printFlag) {
+        sb_appendStr("glClearStencil(");
+        sb_appendInt(s);
+        sb_appendStr(")");
+    }
+    if (execFlag) {
+        glClearStencil(s);
+    }
+}
+
+static void
+proc_glColorMask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha)
+{
+    if (printFlag) {
+        sb_appendStr("glColorMask(");
+        sb_appendBool(red);
+        sb_appendStr(", ");
+        sb_appendBool(green);
+        sb_appendStr(", ");
+        sb_appendBool(blue);
+        sb_appendStr(", ");
+        sb_appendBool(alpha);
+        sb_appendStr(")");
+    }
+    if (execFlag) {
+        glColorMask(red, green, blue, alpha);
+    }
+}
 
 static void
 proc_glCompileShader(GLuint shader)
@@ -501,10 +618,115 @@ proc_glCompileShader(GLuint shader)
     }
 }
 
-static void proc_glCompressedTexImage2D();
-static void proc_glCompressedTexSubImage2D();
-static void proc_glCopyTexImage2D();
-static void proc_glCopyTexSubImage2D();
+static void
+proc_glCompressedTexImage2D(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const GLvoid* data)
+{
+    if (printFlag) {
+        sb_appendStr("glCompressedTexImage2D(");
+        sb_appendStr(glEnum2str(target));
+        sb_appendStr(", ");
+        sb_appendInt(level);
+        sb_appendStr(", ");
+        sb_appendInt(internalformat);
+        sb_appendStr(", ");
+        sb_appendInt(width);
+        sb_appendStr(", ");
+        sb_appendInt(height);
+        sb_appendStr(", ");
+        sb_appendInt(border);
+        sb_appendStr(", ");
+        sb_appendInt(imageSize);
+        sb_appendStr(", ");
+        sb_appendStr(data ? "[...]" : "(null)");
+        sb_appendStr(")");
+    }
+    if (execFlag) {
+        glCompressedTexImage2D(target, level, internalformat, width, height, border, imageSize, data);
+    }
+}
+
+static void
+proc_glCompressedTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLsizei imageSize, const GLvoid* data)
+{
+    if (printFlag) {
+        sb_appendStr("glCompressedTexSubImage2D(");
+        sb_appendStr(glEnum2str(target));
+        sb_appendStr(", ");
+        sb_appendInt(level);
+        sb_appendStr(", ");
+        sb_appendInt(xoffset);
+        sb_appendStr(", ");
+        sb_appendInt(yoffset);
+        sb_appendStr(", ");
+        sb_appendInt(width);
+        sb_appendStr(", ");
+        sb_appendInt(height);
+        sb_appendStr(", ");
+        sb_appendStr(glEnum2str(format));
+        sb_appendStr(", ");
+        sb_appendInt(imageSize);
+        sb_appendStr(", ");
+        sb_appendStr(data ? "[...]" : "(null)");
+        sb_appendStr(")");
+    }
+    if (execFlag) {
+        glCompressedTexSubImage2D(target, level, xoffset, yoffset, width, height, format, imageSize, data);
+    }
+}
+
+static void
+proc_glCopyTexImage2D(GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLsizei height, GLint border)
+{
+    if (printFlag) {
+        sb_appendStr("glCopyTexImage2D(");
+        sb_appendStr(glEnum2str(target));
+        sb_appendStr(", ");
+        sb_appendInt(level);
+        sb_appendStr(", ");
+        sb_appendInt(internalformat);
+        sb_appendStr(", ");
+        sb_appendInt(x);
+        sb_appendStr(", ");
+        sb_appendInt(y);
+        sb_appendStr(", ");
+        sb_appendInt(width);
+        sb_appendStr(", ");
+        sb_appendInt(height);
+        sb_appendStr(", ");
+        sb_appendInt(border);
+        sb_appendStr(")");
+    }
+    if (execFlag) {
+        glCopyTexImage2D(target, level, internalformat, x, y, width, height, border);
+    }
+}
+
+static void
+proc_glCopyTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint x, GLint y, GLsizei width, GLsizei height)
+{
+    if (printFlag) {
+        sb_appendStr("glCopyTexSubImage2D(");
+        sb_appendStr(glEnum2str(target));
+        sb_appendStr(", ");
+        sb_appendInt(level);
+        sb_appendStr(", ");
+        sb_appendInt(xoffset);
+        sb_appendStr(", ");
+        sb_appendInt(yoffset);
+        sb_appendStr(", ");
+        sb_appendInt(x);
+        sb_appendStr(", ");
+        sb_appendInt(y);
+        sb_appendStr(", ");
+        sb_appendInt(width);
+        sb_appendStr(", ");
+        sb_appendInt(height);
+        sb_appendStr(")");
+    }
+    if (execFlag) {
+        glCopyTexSubImage2D(target, level, xoffset, yoffset, x, y, width, height);
+    }
+}
 
 static GLuint
 proc_glCreateProgram()
@@ -585,9 +807,50 @@ proc_glDeleteFramebuffers(GLsizei n, const GLuint* framebuffers)
     }
 }
 
-static void proc_glDeleteProgram();
-static void proc_glDeleteRenderbuffers();
-static void proc_glDeleteShader();
+static void
+proc_glDeleteProgram(GLuint program)
+{
+    if (printFlag) {
+        sb_appendStr("glDeleteProgram(");
+        sb_appendInt(program);
+        sb_appendStr(")");
+    }
+    if (execFlag) {
+        glDeleteProgram(program);
+    }
+}
+
+static void
+proc_glDeleteRenderbuffers(GLsizei n, const GLuint* renderbuffers)
+{
+    int i;
+    if (printFlag) {
+        sb_appendStr("glDeleteRenderbuffers(");
+        sb_appendInt(n);
+        sb_appendStr(", [");
+        for (i=0; i<n; ++i) {
+            if (i!=0) sb_appendStr(", ");
+            sb_appendInt(renderbuffers[i]);
+        }
+        sb_appendStr("])");
+    }
+    if (execFlag) {
+        glDeleteRenderbuffers(n, renderbuffers);
+    }
+}
+
+static void
+proc_glDeleteShader(GLuint shader)
+{
+    if (printFlag) {
+        sb_appendStr("glDeleteShader(");
+        sb_appendInt(shader);
+        sb_appendStr(")");
+    }
+    if (execFlag) {
+        glDeleteShader(shader);
+    }
+}
 
 static void
 proc_glDeleteTextures(GLsizei n, const GLuint* textures)
@@ -634,8 +897,37 @@ proc_glDepthMask(GLboolean flag)
     }
 }
 
-static void proc_glDepthRangef();
-static void proc_glDetachShader();
+static void
+proc_glDepthRangef(GLclampf zNear, GLclampf zFar)
+{
+    if (printFlag) {
+        sb_appendStr("glDepthRangef(");
+        sb_appendFloat(zNear);
+        sb_appendStr(", ");
+        sb_appendFloat(zFar);
+        sb_appendStr(")");
+    }
+#if !MACOSX
+    if (execFlag) {
+        glDepthRangef(zNear, zFar);
+    }
+#endif
+}
+
+static void
+proc_glDetachShader(GLuint program, GLuint shader)
+{
+    if (printFlag) {
+        sb_appendStr("glDetachShader(");
+        sb_appendInt(program);
+        sb_appendStr(", ");
+        sb_appendInt(shader);
+        sb_appendStr(")");
+    }
+    if (execFlag) {
+        glDetachShader(program, shader);
+    }
+}
 
 static void 
 proc_glDisable(GLenum cap)
@@ -664,7 +956,22 @@ proc_glDisableVertexAttribArray(GLuint index)
     vertexAttrib[index].enabled = 0;
 }
 
-static void proc_glDrawArrays();
+static void
+proc_glDrawArrays(GLenum mode, GLint first, GLsizei count)
+{
+    if (printFlag) {
+        sb_appendStr("glDrawArrays(");
+        sb_appendStr(glEnum2str(mode));
+        sb_appendStr(", ");
+        sb_appendInt(first);
+        sb_appendStr(", ");
+        sb_appendInt(count);
+        sb_appendStr(")");
+    }
+    if (execFlag) {
+        glDrawArrays(mode, first, count);
+    }
+}
 
 static void
 proc_glDrawElements(GLenum mode, GLsizei count, GLenum type, const GLvoid* indices)
@@ -813,7 +1120,18 @@ proc_glGenBuffers(GLsizei n, GLuint *_buffers)
     }
 }
 
-static void proc_glGenerateMipmap();
+static void
+proc_glGenerateMipmap(GLenum target)
+{
+    if (printFlag) {
+        sb_appendStr("glGenerateMipmap(");
+        sb_appendStr(glEnum2str(target));
+        sb_appendStr(")");
+    }
+    if (execFlag) {
+        glGenerateMipmap(target);
+    }
+}
 
 static void
 proc_glGenFramebuffers(GLsizei n, GLuint *_framebuffers)
@@ -894,10 +1212,92 @@ proc_glGenTextures(GLsizei n, GLuint* _textures)
 }
 
 static void proc_glGetActiveAttrib();
-static void proc_glGetActiveUniform();
-static void proc_glGetAttachedShaders();
-static void proc_glGetAttribLocation();
-static void proc_glGetBooleanv();
+
+static void
+proc_glGetActiveUniform(GLuint program, GLuint index, GLsizei bufsize, GLsizei* length, GLint* size, GLenum* type, GLchar* name)
+{    
+    if (printFlag) {
+        sb_appendStr("glGetActiveUniform(");
+        sb_appendInt(program);
+        sb_appendStr(", ");
+        sb_appendInt(index);
+        sb_appendStr(", ");
+        sb_appendInt(bufsize);
+        sb_appendStr(", ");
+        if (length) sb_appendInt(*length);
+        else sb_appendStr("(null)");
+        sb_appendStr(", ");
+        if (size) sb_appendInt(*size);
+        else sb_appendStr("(null)");
+        sb_appendStr(", ");
+        if (type) sb_appendStr(glEnum2str(*type));
+        else sb_appendStr("(null)");
+        if (name) sb_appendStr(name);
+        else sb_appendStr("(null)");
+        sb_appendStr(")");
+    }
+    if (execFlag) {
+        glGetActiveUniform(program, index, bufsize, length, size, type, name);
+    }
+}
+
+static void
+proc_glGetAttachedShaders(GLuint program, GLsizei maxcount, GLsizei* count, GLuint* shaders)
+{
+    if (printFlag) {
+        sb_appendStr("glGetAttachedShaders(");
+        sb_appendInt(program);
+        sb_appendStr(", ");
+        sb_appendInt(maxcount);
+        sb_appendStr(", ");
+        if (count) sb_appendInt(*count);
+        else sb_appendStr("(null)");
+        sb_appendStr(", ");
+        if (shaders) sb_appendStr("[...]");
+        else sb_appendStr("(null)");
+        sb_appendStr(")");
+    }
+    if (execFlag) {
+        glGetAttachedShaders(program, maxcount, count, shaders);
+    }
+}
+
+static int
+proc_glGetAttribLocation(GLuint program, const GLchar* name)
+{
+    int res = -1;
+    if (printFlag) {
+        sb_appendStr("glGetAttribLocation(");
+        sb_appendInt(program);
+        sb_appendStr(", ");
+        sb_appendStr(name);
+        sb_appendStr(")");
+    }
+    if (execFlag) {
+        res = glGetAttribLocation(program, name);
+    }
+    return res;
+}
+
+static void
+proc_glGetBooleanv(GLenum pname, GLboolean _params)
+{
+    if (printFlag) {
+        sb_appendStr("glGetBooleanv(");
+        sb_appendStr(glEnum2str(pname));
+        sb_appendStr(", ");
+        sb_appendInt(_params);
+        sb_appendStr(")");
+    }
+    if (execFlag) {
+        GLboolean params[4];
+        glGetBooleanv(pname, params);
+        if (_params != params[0]) {
+            fprintf(stderr, "ERROR: glGetBooleanv params mismatch\n");
+        }
+    }
+}
+
 static void proc_glGetBufferParameteriv();
 
 static GLenum
@@ -913,23 +1313,64 @@ proc_glGetError()
     return res;
 }
 
-static void proc_glGetFloatv    ();
-static void proc_glGetFramebufferAttachmentParameteriv();
-
 static void
-proc_glGetIntegerv(GLenum pname, GLint _params)
+proc_glGetFloatv(GLenum pname, const GLfloat* params)
 {
     if (printFlag) {
-        sb_appendStr("glGetIntegerv(");
+        sb_appendStr("glGetFloatv(");
+        sb_appendStr(glEnum2str(pname));
+        sb_appendStr(", ");
+        if (params) sb_appendFloat(*params);
+        else sb_appendStr("(null)");
+        sb_appendStr(")");
+    }
+    if (execFlag) {
+        GLfloat _params[4];
+        glGetFloatv(pname, params ? _params : NULL);
+        if (_params[0] != params[0]) {
+            fprintf(stderr, "ERROR: glGetFloatv params mismatch\n");
+        }
+    }
+}
+
+static void
+proc_glGetFramebufferAttachmentParameteriv(GLenum target, GLenum attachment, GLenum pname, GLint _params)
+{
+    if (printFlag) {
+        sb_appendStr("glGetFramebufferAttachmentParameteriv(");
+        sb_appendStr(glEnum2str(target));
+        sb_appendStr(", ");
+        sb_appendStr(glEnum2str(attachment));
+        sb_appendStr(", ");
         sb_appendStr(glEnum2str(pname));
         sb_appendStr(", ");
         sb_appendInt(_params);
         sb_appendStr(")");
     }
     if (execFlag) {
-        GLint params;
-        glGetIntegerv(pname, &params);
-        if (_params != params) {
+        GLint params[4];
+        glGetFramebufferAttachmentParameteriv(target, attachment, pname, params);
+        if (_params != params[0]) {
+            fprintf(stderr, "ERROR: glGetFramebufferAttachmentParameteriv params mismatch\n");
+        }
+    }    
+}
+
+static void
+proc_glGetIntegerv(GLenum pname, const GLint *params)
+{
+    if (printFlag) {
+        sb_appendStr("glGetIntegerv(");
+        sb_appendStr(glEnum2str(pname));
+        sb_appendStr(", ");
+        if (params) sb_appendInt(*params);
+        else sb_appendStr("(null)");
+        sb_appendStr(")");
+    }
+    if (execFlag) {
+        GLint _params[4];
+        glGetIntegerv(pname, params ? _params : NULL);
+        if (_params[0] != params[0]) {
             fprintf(stderr, "ERROR: glGetIntegerv params mismatch\n");
         }
     }
@@ -957,7 +1398,27 @@ proc_glGetProgramiv(GLuint program, GLenum pname, GLint _params)
 }
 
 static void proc_glGetProgramInfoLog();
-static void proc_glGetRenderbufferParameteriv();
+
+static void
+proc_glGetRenderbufferParameteriv(GLenum target, GLenum pname, GLint _params)
+{
+    if (printFlag) {
+        sb_appendStr("glGetRenderbufferParameteriv(");
+        sb_appendStr(glEnum2str(target));
+        sb_appendStr(", ");
+        sb_appendStr(glEnum2str(pname));
+        sb_appendStr(", ");
+        sb_appendInt(_params);
+        sb_appendStr(")");
+    }
+    if (execFlag) {
+        GLint params;
+        glGetRenderbufferParameteriv(target, pname, &params);
+        if (_params != params) {
+            fprintf(stderr, "ERROR: glGetRenderbufferParameteriv params mismatch\n");
+        }
+    }
+}
 
 static void
 proc_glGetShaderiv(GLuint shader, GLenum pname, GLint _params)
@@ -1062,7 +1523,21 @@ proc_glPixelStorei(GLenum pname, GLint param)
     }
 }
 
-static void proc_glPolygonOffset();
+static void
+proc_glPolygonOffset(GLfloat factor, GLfloat units)
+{
+    if (printFlag) {
+        sb_appendStr("glPolygonOffset(");
+        sb_appendFloat(factor);
+        sb_appendStr(", ");
+        sb_appendFloat(units);
+        sb_appendStr(")");
+    }
+    if (execFlag) {
+        glPolygonOffset(factor, units);
+    }
+}
+
 static void proc_glReadPixels();
 static void proc_glReleaseShaderCompiler();
 
@@ -1117,12 +1592,17 @@ proc_glShaderSource(GLuint shader, GLsizei count, const GLchar** string, const G
         sb_appendStr(", ");
         sb_appendInt(count);
         sb_appendStr(", [");
-        int i;
-        for (i=0; i<count; ++i) {
-            sb_appendStr("\n");
-            sb_appendStr(string[i]);
+        if (printArrays) {
+            int i;
+            for (i=0; i<count; ++i) {
+                sb_appendStr("\n");
+                sb_appendStr(string[i]);
+            }
         }
-        sb_appendStr("])");     
+        else {
+            sb_appendStr("...");
+        }
+        sb_appendStr("])");
     }
     if (execFlag) {
         glShaderSource(shader, count, string, length);
@@ -1231,7 +1711,20 @@ proc_glUniform1f(GLint location, GLfloat x)
     }
 }
 
-static void proc_glUniform1fv();
+static void
+proc_glUniform1fv(GLint location, GLsizei count, const GLfloat* v)
+{
+    if (printFlag) {
+        sb_appendStr("glUniform1fv(");
+        sb_appendInt(location);
+        sb_appendStr(", ");
+        sb_appendInt(count);
+        sb_appendStr(", [...])");
+    }
+    if (execFlag) {
+        glUniform1fv(location, count, v);
+    }
+}
 
 static void
 proc_glUniform1i(GLint location, GLint x)
@@ -1332,8 +1825,66 @@ proc_glUniform4fv(GLint location, GLsizei count, const GLfloat* v)
 
 static void proc_glUniform4i    ();
 static void proc_glUniform4iv();
-static void proc_glUniformMatrix2fv();
-static void proc_glUniformMatrix3fv();
+
+static void
+proc_glUniformMatrix2fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat* value)
+{
+    if (printFlag) {
+        sb_appendStr("glUniformMatrix2fv(");
+        sb_appendInt(location);
+        sb_appendStr(", ");
+        sb_appendInt(count);
+        sb_appendStr(", ");
+        sb_appendBool(transpose);
+        sb_appendStr(", [");
+        if (printArrays) {
+            int i;
+            for (i=0; i<count*4; ++i) {
+                if (i == 0) sb_appendStr("\n\t");
+                else if (i % 2 == 0) sb_appendStr(",\n\t");
+                else sb_appendStr(", ");
+                sb_appendFloat(value[i]);
+            }
+        }
+        else {
+            sb_appendStr("...");
+        }
+        sb_appendStr("])");
+    }
+    if (execFlag) {
+        glUniformMatrix2fv(location, count, transpose, value);
+    }
+}
+
+static void
+proc_glUniformMatrix3fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat* value)
+{
+    if (printFlag) {
+        sb_appendStr("glUniformMatrix3fv(");
+        sb_appendInt(location);
+        sb_appendStr(", ");
+        sb_appendInt(count);
+        sb_appendStr(", ");
+        sb_appendBool(transpose);
+        sb_appendStr(", [");
+        if (printArrays) {
+            int i;
+            for (i=0; i<count*9; ++i) {
+                if (i == 0) sb_appendStr("\n\t");
+                else if (i % 3 == 0) sb_appendStr(",\n\t");
+                else sb_appendStr(", ");
+                sb_appendFloat(value[i]);
+            }
+        }
+        else {
+            sb_appendStr("...");
+        }
+        sb_appendStr("])");
+    }
+    if (execFlag) {
+        glUniformMatrix3fv(location, count, transpose, value);
+    }
+}
 
 static void 
 proc_glUniformMatrix4fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat* value)
@@ -1346,12 +1897,17 @@ proc_glUniformMatrix4fv(GLint location, GLsizei count, GLboolean transpose, cons
         sb_appendStr(", ");
         sb_appendBool(transpose);
         sb_appendStr(", [");
-        int i;
-        for (i=0; i<count*16; ++i) {
-            if (i == 0) sb_appendStr("\n\t");
-            else if (i % 4 == 0) sb_appendStr(",\n\t");
-            else sb_appendStr(", ");
-            sb_appendFloat(value[i]);
+        if (printArrays) {
+            int i;
+            for (i=0; i<count*16; ++i) {
+                if (i == 0) sb_appendStr("\n\t");
+                else if (i % 4 == 0) sb_appendStr(",\n\t");
+                else sb_appendStr(", ");
+                sb_appendFloat(value[i]);
+            }
+        }
+        else {
+            sb_appendStr("...");
         }
         sb_appendStr("])");
     }
@@ -1456,22 +2012,24 @@ proc_eglGetDisplay(EGLNativeDisplayType display_id)
 }
 
 static EGLBoolean
-proc_eglInitialize(EGLDisplay dpy, EGLint _major, EGLint _minor)
+proc_eglInitialize(EGLDisplay dpy, const EGLint *major, const EGLint *minor)
 {
     EGLBoolean res = EGL_FALSE;
     if (printFlag) {
         sb_appendStr("eglInitialize(");
         sb_appendPtr(dpy);
         sb_appendStr(", ");
-        sb_appendInt(_major);
+        if (major) sb_appendInt(*major);
+	else sb_appendStr("(null)");
         sb_appendStr(", ");
-        sb_appendInt(_minor);
+        if (minor) sb_appendInt(*minor);
+	else sb_appendStr("(null)");
         sb_appendStr(")");
     }
     if (execFlag) {
-        EGLint major, minor;
-        res = eglInitialize(dpy, &major, &minor);
-        if ((_major && (major != _major)) || (_minor && (minor != _minor))) {
+        EGLint _major, _minor;
+        res = eglInitialize(dpy, &_major, &_minor);
+        if ((major && (*major != _major)) || (minor && (*minor != _minor))) {
             fprintf(stderr, "ERROR: eglInitialize version mismatch\n");
         }
     }
@@ -1756,7 +2314,25 @@ process(int frames)
     for (;frames != 0;) {
         sb_reset();
         int cmd = getCmd();
+
+        // prefix commands
+        if (cmd == OPC_THREAD) {
+            curThread = getPtr();
+            if (printFlag) {
+                fprintf(stdout, "THREAD %llu\n", curThread);
+            }
+            cmd = getCmd();
+        }
+        
         switch (cmd) {
+        case OPC_MARK: {
+            const char *str = getString();
+            if (printFlag) {
+                sb_appendStr("================ ");
+                sb_appendStr(str);
+            }
+            break;
+        }
         case OPC_glActiveTexture: {
             GLenum texture = getInt();
             proc_glActiveTexture(texture);
@@ -1806,15 +2382,31 @@ process(int frames)
             break;
         }
         case OPC_glBlendColor:          NOT_IMPLEMENTED();
-        case OPC_glBlendEquation:       NOT_IMPLEMENTED();
-        case OPC_glBlendEquationSeparate: NOT_IMPLEMENTED();
+        case OPC_glBlendEquation: {
+            GLenum mode = getInt();
+            proc_glBlendEquation(mode);
+            break;
+        }
+        case OPC_glBlendEquationSeparate: {
+            GLenum modeRGB = getInt();
+            GLenum modeAlpha = getInt();
+            proc_glBlendEquationSeparate(modeRGB, modeAlpha);
+            break;
+        }
         case OPC_glBlendFunc: {
             GLenum sfactor = getInt();
             GLenum dfactor = getInt();
             proc_glBlendFunc(sfactor, dfactor);
             break;
         }
-        case OPC_glBlendFuncSeparate:   NOT_IMPLEMENTED();
+        case OPC_glBlendFuncSeparate: {
+            GLenum srcRGB = getInt();
+            GLenum dstRGB = getInt();
+            GLenum srcAlpha = getInt();
+            GLenum dstAlpha = getInt();
+            proc_glBlendFuncSeparate(srcRGB, dstRGB, srcAlpha, dstAlpha);
+            break;
+        }
         case OPC_glBufferData: {
             GLenum target = getInt();
             GLsizeiptr size = getInt();
@@ -1823,7 +2415,14 @@ process(int frames)
             proc_glBufferData(target, size, data, usage);
             break;
         }
-        case OPC_glBufferSubData:       NOT_IMPLEMENTED();
+        case OPC_glBufferSubData: {
+            GLenum target = getInt();
+            GLintptr offset = getInt();
+            GLsizeiptr size = getInt();
+            const GLvoid* data = getBytes();
+            proc_glBufferSubData(target, offset, size, data);
+            break;
+        }
         case OPC_glCheckFramebufferStatus: {
             GLenum target = getInt();
             GLenum curVal = proc_glCheckFramebufferStatus(target);
@@ -1850,18 +2449,78 @@ process(int frames)
             proc_glClearColor(red, green, blue, alpha);
             break;
         }
-        case OPC_glClearDepthf:         NOT_IMPLEMENTED();
-        case OPC_glClearStencil:        NOT_IMPLEMENTED();
-        case OPC_glColorMask    :       NOT_IMPLEMENTED();
+        case OPC_glClearDepthf: {
+            GLclampf depth = getFloat();
+            proc_glClearDepthf(depth);
+            break;
+        }
+        case OPC_glClearStencil: {
+            GLint s = getInt();
+            proc_glClearStencil(s);
+            break;
+        }
+        case OPC_glColorMask: {
+            GLboolean red = getInt();
+            GLboolean green = getInt();
+            GLboolean blue = getInt();
+            GLboolean alpha = getInt();
+            proc_glColorMask(red, green, blue, alpha);
+            break;
+        }
         case OPC_glCompileShader: {
             GLuint shader = getInt();
             proc_glCompileShader(shader);
             break;
         }
-        case OPC_glCompressedTexImage2D: NOT_IMPLEMENTED();
-        case OPC_glCompressedTexSubImage2D: NOT_IMPLEMENTED();
-        case OPC_glCopyTexImage2D:      NOT_IMPLEMENTED();
-        case OPC_glCopyTexSubImage2D:   NOT_IMPLEMENTED();
+        case OPC_glCompressedTexImage2D: {
+            GLenum target = getInt();
+            GLint level = getInt();
+            GLenum internalformat = getInt();
+            GLsizei width = getInt();
+            GLsizei height = getInt();
+            GLint border = getInt();
+            GLsizei imageSize = getInt();
+            const GLvoid* data = getBytes();
+            proc_glCompressedTexImage2D(target, level, internalformat, width, height, border, imageSize, data);
+            break;
+        }
+        case OPC_glCompressedTexSubImage2D: {
+            GLenum target = getInt();
+            GLint level = getInt();
+            GLint xoffset = getInt();
+            GLint yoffset = getInt();
+            GLsizei width = getInt();
+            GLsizei height = getInt();
+            GLenum format = getInt();
+            GLsizei imageSize = getInt();
+            const GLvoid* data = getBytes();
+            proc_glCompressedTexSubImage2D(target, level, xoffset, yoffset, width, height, format, imageSize, data);
+            break;
+        }
+        case OPC_glCopyTexImage2D:{
+            GLenum target = getInt();
+            GLint level = getInt();
+            GLenum internalformat = getInt();
+            GLint x = getInt();
+            GLint y = getInt();
+            GLsizei width = getInt();
+            GLsizei height = getInt();
+            GLint border = getInt();
+            proc_glCopyTexImage2D(target, level, internalformat, x, y, width, height, border);
+            break;
+        }
+        case OPC_glCopyTexSubImage2D: {
+            GLenum target = getInt();
+            GLint level = getInt();
+            GLint xoffset = getInt();
+            GLint yoffset = getInt();
+            GLint x = getInt();
+            GLint y = getInt();
+            GLsizei width = getInt();
+            GLsizei height = getInt();
+            proc_glCopyTexSubImage2D(target, level, xoffset, yoffset, x, y, width, height);
+            break;
+        }
         case OPC_glCreateProgram: {
             GLuint curVal = proc_glCreateProgram();
             GLuint oldVal = getInt();
@@ -1912,9 +2571,26 @@ process(int frames)
             proc_glDeleteFramebuffers(n, framebuffers);
             break;
         }
-        case OPC_glDeleteProgram:       NOT_IMPLEMENTED();
-        case OPC_glDeleteRenderbuffers: NOT_IMPLEMENTED();
-        case OPC_glDeleteShader:        NOT_IMPLEMENTED();
+        case OPC_glDeleteProgram: {
+            GLuint program = getInt();
+            proc_glDeleteProgram(program);
+            break;
+        }
+        case OPC_glDeleteRenderbuffers: {
+            GLsizei n = getInt();
+            GLuint renderbuffers[n];
+                int i;
+                for (i=0; i<n; ++i) {
+                    renderbuffers[i] = getInt();
+                }
+                proc_glDeleteRenderbuffers(n, renderbuffers);
+                break;
+        }
+        case OPC_glDeleteShader: {
+            GLuint shader = getInt();
+            proc_glDeleteShader(shader);
+            break;
+        }
         case OPC_glDeleteTextures: {
             GLsizei n = getInt();
             GLuint textures[n];
@@ -1935,8 +2611,18 @@ process(int frames)
             proc_glDepthMask(flag);
             break;
         }
-        case OPC_glDepthRangef:         NOT_IMPLEMENTED();
-        case OPC_glDetachShader:        NOT_IMPLEMENTED();
+        case OPC_glDepthRangef: {
+            GLclampf zNear = getFloat();
+            GLclampf zFar  = getFloat();
+            proc_glDepthRangef(zNear, zFar);
+            break;
+        }
+        case OPC_glDetachShader: {
+            GLuint program = getInt();
+            GLuint shader  = getInt();
+            proc_glDetachShader(program, shader);
+            break;
+        }
         case OPC_glDisable: {
             GLenum cap = getInt();
             proc_glDisable(cap);
@@ -1947,12 +2633,18 @@ process(int frames)
             proc_glDisableVertexAttribArray(index);
             break;
         }
-        case OPC_glDrawArrays:          NOT_IMPLEMENTED();
+        case OPC_glDrawArrays: {
+            GLenum mode = getInt();
+            GLint first = getInt();
+            GLsizei count = getInt();
+            proc_glDrawArrays(mode, first, count);
+            break;
+        }
         case OPC_glDrawElements: {
             GLenum mode = getInt();
             GLsizei count = getInt();
             GLenum type = getInt();
-            const GLvoid* indices = getBytes();
+            const GLvoid* indices = elementArrayBufferBinding ? (const GLvoid*)getPtr() : getBytes();
             if (!arrayBufferBinding) {
                 int i;
                 for (i=0; i<MAX_VERTEX_ATTRIBS; ++i) {
@@ -2012,7 +2704,11 @@ process(int frames)
             proc_glGenBuffers(n, buffers);
             break;
         }
-        case OPC_glGenerateMipmap:      NOT_IMPLEMENTED();
+        case OPC_glGenerateMipmap: {
+            GLenum target = getInt();
+            proc_glGenerateMipmap(target);
+            break;
+        }
         case OPC_glGenFramebuffers: {
             GLsizei n = getInt();
             GLuint framebuffers[n];
@@ -2044,10 +2740,93 @@ process(int frames)
             break;
         }
         case OPC_glGetActiveAttrib:     NOT_IMPLEMENTED();
-        case OPC_glGetActiveUniform:    NOT_IMPLEMENTED();
-        case OPC_glGetAttachedShaders:  NOT_IMPLEMENTED();
-        case OPC_glGetAttribLocation:   NOT_IMPLEMENTED();
-        case OPC_glGetBooleanv:         NOT_IMPLEMENTED();
+        case OPC_glGetActiveUniform: {
+            GLuint program = getInt();
+            GLuint index = getInt();
+            GLsizei bufsize = getInt();
+            uint64_t lengthPtr = getPtr();
+            uint64_t sizePtr = getPtr();
+            uint64_t typePtr = getPtr();
+            uint64_t namePtr = getPtr();
+            GLsizei length = lengthPtr ? getInt() : 0;
+            GLint   size = sizePtr ? getInt() : 0;
+            GLenum type = typePtr ? getInt() : 0;
+            const GLchar *name = namePtr ? getString() : NULL;
+            GLsizei lengthOut = length;
+            GLint   sizeOut = size;
+            GLenum typeOut = type;
+            GLchar nameOut[bufsize];
+            if (name) strncpy(nameOut, name, bufsize);
+            proc_glGetActiveUniform(program, index, bufsize,
+                                    lengthPtr ? &lengthOut : NULL,
+                                    sizePtr ? &sizeOut : NULL,
+                                    typePtr ? &typeOut : NULL,
+                                    namePtr ? nameOut : NULL);
+            if (execFlag) {
+                if (lengthPtr && lengthOut != length) {
+                    fprintf(stderr, "ERROR: glGetActiveUniform length mismatch\n");
+                }
+                if (sizePtr && sizeOut != size) {
+                    fprintf(stderr, "ERROR: glGetActiveUniform size mismatch\n");
+                }
+                if (typePtr && typeOut != type) {
+                    fprintf(stderr, "ERROR: glGetActiveUniform type mismatch\n");
+                }
+                if (strcmp(name, nameOut) != 0) {
+                    fprintf(stderr, "ERROR: glGetActiveUniform name mismatch\n");
+                }
+            }
+            break;
+        }
+        case OPC_glGetAttachedShaders: {
+            GLuint program = getInt();
+            GLuint maxcount = getInt();
+            uint64_t countPtr = getPtr();
+            uint64_t shadersPtr = getPtr();
+            GLsizei count = countPtr ? getInt() : 0;
+            GLsizei countOut = count;
+            GLuint shadersOut[maxcount];
+
+            proc_glGetAttachedShaders(program, maxcount,
+                                      countPtr ? &countOut : NULL,
+                                      shadersPtr ? shadersOut : NULL);
+            if (execFlag) {
+                if (countPtr) {
+                    if(countOut != count) {
+                        fprintf(stderr, "ERROR: glGetAttachedShaders count mismatch\n");
+                    }
+                    if (shadersPtr) {
+                        int i;
+                        for (i=0; i<count; ++i) {
+                            if (shadersOut[i] != getInt()) {
+                                fprintf(stderr, "ERROR: glGetAttachedShaders shader %d mismatch\n", i);
+                            }
+                        }
+                    }
+                }
+            }
+            break;
+        }
+        case OPC_glGetAttribLocation: {
+            GLuint program = getInt();
+            const GLchar* name = (const GLchar*)getString();
+                int curVal = proc_glGetAttribLocation(program, name);
+                int oldVal = getInt();
+                if (printFlag) {
+                    sb_appendStr(" = ");
+                sb_appendInt(oldVal);
+            }
+                if (execFlag && curVal != oldVal) {
+                    fprintf(stderr, "ERROR: glGetAttribLocation return mismatch\n");
+                }
+                break;
+        }
+        case OPC_glGetBooleanv: {
+                GLenum pname = getInt();
+                GLboolean params = getInt();
+                proc_glGetBooleanv(pname, params);
+                break;
+        }
         case OPC_glGetBufferParameteriv: NOT_IMPLEMENTED();
         case OPC_glGetError: {
             GLuint curVal = proc_glGetError();
@@ -2061,11 +2840,23 @@ process(int frames)
             }
             break;
         }
-        case OPC_glGetFloatv    :       NOT_IMPLEMENTED();
-        case OPC_glGetFramebufferAttachmentParameteriv: NOT_IMPLEMENTED();
-        case OPC_glGetIntegerv: {
+        case OPC_glGetFloatv: {
+            GLenum pname = getInt();
+            const GLfloat *params = getFloatPtr();
+            proc_glGetFloatv(pname, params);
+            break;
+        }
+        case OPC_glGetFramebufferAttachmentParameteriv: {
+            GLenum target = getInt();
+            GLenum attachment = getInt();
             GLenum pname = getInt();
             GLint params = getInt();
+            proc_glGetFramebufferAttachmentParameteriv(target, attachment, pname, params);
+            break;
+        }
+        case OPC_glGetIntegerv: {
+            GLenum pname = getInt();
+            const GLint *params = getIntPtr();
             proc_glGetIntegerv(pname, params);
             break;
         }
@@ -2077,7 +2868,13 @@ process(int frames)
             break;
         }
         case OPC_glGetProgramInfoLog:   NOT_IMPLEMENTED();
-        case OPC_glGetRenderbufferParameteriv: NOT_IMPLEMENTED();
+        case OPC_glGetRenderbufferParameteriv: {
+            GLenum target = getInt();
+            GLenum pname = getInt();
+            GLint  params = getInt();
+            proc_glGetRenderbufferParameteriv(target, pname, params);
+            break;
+        }
         case OPC_glGetShaderiv: {
             GLuint shader = getInt();
             GLenum pname = getInt();
@@ -2111,6 +2908,10 @@ process(int frames)
             const GLchar* name = (const GLchar*)getString();
             int curVal = proc_glGetUniformLocation(program, name);
             int oldVal = getInt();
+            if (printFlag) {
+                sb_appendStr(" = ");
+                sb_appendInt(oldVal);
+            }
             if (execFlag && curVal != oldVal) {
                 fprintf(stderr, "ERROR: glGetUniformLocation return mismatch\n");
             }
@@ -2139,7 +2940,12 @@ process(int frames)
             proc_glPixelStorei(pname, param);
             break;
         }
-        case OPC_glPolygonOffset:       NOT_IMPLEMENTED();
+        case OPC_glPolygonOffset: {
+            GLfloat factor = getFloat();
+            GLfloat units = getFloat();
+            proc_glPolygonOffset(factor, units);
+            break;
+        }
         case OPC_glReadPixels:          NOT_IMPLEMENTED();
         case OPC_glReleaseShaderCompiler: NOT_IMPLEMENTED();
         case OPC_glRenderbufferStorage: {
@@ -2197,6 +3003,13 @@ process(int frames)
             GLenum type = getInt();
             const GLvoid* pixels = getBytes();
             proc_glTexImage2D(target, level, internalformat, width, height, border, format, type, pixels);
+
+            if (dumpTexturesFlag) {
+                char fName[32];
+                snprintf(fName, sizeof(fName), "%s/texture%06d.png", DIR_TEXTURES, ++texCount);
+                int err = savePNG(fName, format, type, width, height, pixels);
+                printf("%s %s\n", fName, err ? "FAIL" : "OK");
+            }
             break;
         }
         case OPC_glTexParameterf:       NOT_IMPLEMENTED();
@@ -2228,7 +3041,13 @@ process(int frames)
             proc_glUniform1f(location, x);
             break;
         }
-        case OPC_glUniform1fv:          NOT_IMPLEMENTED();
+        case OPC_glUniform1fv: {
+                GLint location = getInt();
+                GLsizei count = getInt();
+                const GLfloat* v = (const GLfloat*)getBytes();
+                proc_glUniform1fv(location, count, v);
+                break;
+        }
         case OPC_glUniform1i: {
             GLint location = getInt();
             GLint x = getInt();
@@ -2275,8 +3094,22 @@ process(int frames)
         }
         case OPC_glUniform4i    :       NOT_IMPLEMENTED();
         case OPC_glUniform4iv:          NOT_IMPLEMENTED();
-        case OPC_glUniformMatrix2fv:    NOT_IMPLEMENTED();
-        case OPC_glUniformMatrix3fv:    NOT_IMPLEMENTED();
+        case OPC_glUniformMatrix2fv: {
+                GLint location = getInt();
+                GLsizei count = getInt();
+                GLboolean transpose = getInt();
+                const GLfloat* value = (const GLfloat*)getBytes();
+                proc_glUniformMatrix2fv(location, count, transpose, value);
+                break;
+        }
+        case OPC_glUniformMatrix3fv: {
+                GLint location = getInt();
+                GLsizei count = getInt();
+                GLboolean transpose = getInt();
+                const GLfloat* value = (const GLfloat*)getBytes();
+                proc_glUniformMatrix3fv(location, count, transpose, value);
+                break;
+        }
         case OPC_glUniformMatrix4fv: {
             GLint location = getInt();
             GLsizei count = getInt();
@@ -2309,8 +3142,12 @@ process(int frames)
             GLenum type = getInt();
             GLboolean normalized = getInt();
             GLsizei stride = getInt();
-            const GLvoid* ptr = getPtr();
-            proc_glVertexAttribPointer(indx, size, type, normalized, stride, ptr);
+            uint64_t ptr = getPtr();
+//            if (execFlag && ptr) {
+//                fprintf(stderr, "ERROR: glVertexAttribPointer ptr not implemented\n");
+//                exit(1);
+//            }
+            proc_glVertexAttribPointer(indx, size, type, normalized, stride, (void*)ptr);
             break;
         }
         case OPC_glViewport: {
@@ -2336,7 +3173,10 @@ process(int frames)
             break;
         }
         case OPC_eglInitialize: {
-            EGLBoolean curVal = proc_eglInitialize((EGLDisplay)getPtr(), getInt(), getInt());
+            EGLDisplay dpy = (EGLDisplay)getPtr();
+	    const GLint *major = getIntPtr();
+	    const GLint *minor = getIntPtr();
+            EGLBoolean curVal = proc_eglInitialize(dpy, major, minor);
             EGLBoolean oldVal = getInt();
             if (printFlag) {
                 sb_appendStr(" = ");
@@ -2570,7 +3410,9 @@ process(int frames)
         
         getTime(&tbgn, &tend);
         if (printFlag) {
-            fprintf(stdout, "%llu %+10llu\t%s\n", tbgn, tend-tbgn, stringBuffer);
+            if (printThread == (uint64_t)0 || (printThread == curThread && cmd != OPC_THREAD)) {
+                fprintf(stdout, "%llu %10llu\t%s\n", tbgn, tend-tbgn, stringBuffer);
+            }
         }
         
         if (cmd == OPC_eglSwapBuffers) {
@@ -2624,21 +3466,76 @@ readPixels()
 
 #include <png.h>
 
-static void
-savePNG()
+static void *
+convertTexture565(uint32_t width, uint32_t height, const void *data)
 {
-    char fName[32];
-    snprintf(fName, sizeof(fName), "frame%06d.png", curFrame);
+    int pixcnt = width * height;
+    uint8_t *ldata = (uint8_t*)malloc(pixcnt*3);
+    if (ldata == NULL) return NULL;
+
+    uint16_t *src = (uint16_t*)data;
+    uint8_t  *dst = ldata;
+    int i;
+    for (i=0; i<pixcnt; ++i) {
+        uint16_t pix = *src++;
+        *dst++ = (pix & 0xf800) >> 8;
+        *dst++ = (pix & 0x07e0) >> 3;
+        *dst++ = (pix & 0x001f) << 3;
+    }
+    return ldata;
+}
+
+static int
+savePNG(char *fName, GLenum format, GLenum type, uint32_t width, uint32_t height, const void *data)
+{
+    int png_type = 0;
+    int pixel_size = 0;
+    void *ldata = NULL;
+    switch (format) {
+        case GL_RGB:
+            if (type == GL_UNSIGNED_SHORT_5_6_5) {
+                ldata = convertTexture565(width, height, data);
+                if (ldata == NULL) return 1;
+                data = ldata;
+            }
+            else if (type != GL_UNSIGNED_BYTE) {
+                fprintf(stderr, "ERROR: savePNG: unknown type %s\n", glEnum2str(type));
+                return 1;
+            }
+            png_type = PNG_COLOR_TYPE_RGB;
+            pixel_size = 3;
+            break;
+        case GL_RGBA:
+            png_type = PNG_COLOR_TYPE_RGBA;
+            pixel_size = 4;
+            break;
+        case GL_LUMINANCE:
+            png_type = PNG_COLOR_TYPE_GRAY;
+            pixel_size = 1;
+            break;
+        case GL_LUMINANCE_ALPHA:
+            png_type = PNG_COLOR_TYPE_GRAY_ALPHA;
+            pixel_size = 2;
+            break;
+        case GL_ALPHA:
+            png_type = PNG_COLOR_MASK_ALPHA;
+            pixel_size = 1;
+            break;
+        default:
+            fprintf(stderr, "ERROR: savePNG: unknown format %s\n", glEnum2str(format));
+            return 1;
+    }
+    
     FILE *file = fopen(fName, "w+");
     if (file == NULL) {
         fprintf(stderr, "ERROR: can't write to file: %s\n", fName);
-        return;
+        return 1;
     }
     png_structp png = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
     if (png == NULL) {
         fprintf(stderr, "ERROR: can't create PNG\n");
         fclose(file);
-        return;
+        return 1;
     }
     
     png_infop info = png_create_info_struct(png);
@@ -2651,23 +3548,25 @@ savePNG()
     else {
         png_init_io(png, file);
         
-        png_set_IHDR(png, info, wndWidth, wndHeight, 8,
-            PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
-            PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+        png_set_IHDR(png, info, width, height, 8,
+                     png_type, PNG_INTERLACE_NONE,
+                     PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
         
-        png_byte *rows[wndHeight];
+        png_byte *rows[height];
         int i;
-        for (i=0; i<wndHeight; ++i) {
-            rows[i] = (png_byte*)wndData + (wndHeight - 1 - i) * wndWidth * PIXEL_SIZE;
+        for (i=0; i<height; ++i) {
+            rows[i] = (png_byte*)data + (height - 1 - i) * width * pixel_size;
         }
-
+        
         png_set_rows(png, info, rows);
         png_write_png(png, info, PNG_TRANSFORM_IDENTITY, NULL);
-        fprintf(stdout, "%s written\n", fName);
     }
     
     png_destroy_write_struct(&png, &info);    
-    fclose(file);    
+    fclose(file);
+    if (ldata) free(ldata);
+    
+    return 0;
 }
 
 static void
@@ -2692,12 +3591,12 @@ interact()
             }
             else {
                 switch (c) {
-                case 'q': cmd = ICMD_QUIT; break;
-                case 'h':
-                case '?': cmd = ICMD_HELP; break;
-                case 'n': cmd = ICMD_NEXTFRAME; break;
-                case 'w': cmd = ICMD_WRITE; break;
-                default:  cmd = ICMD_INVALID; break;
+                    case 'q': cmd = ICMD_QUIT; break;
+                    case 'h':
+                    case '?': cmd = ICMD_HELP; break;
+                    case 'n': cmd = ICMD_NEXTFRAME; break;
+                    case 'w': cmd = ICMD_WRITE; break;
+                    default:  cmd = ICMD_INVALID; break;
                 }
             }
         }
@@ -2705,32 +3604,35 @@ interact()
         if (repeat == -1 && cmd != ICMD_NONE) repeat = 1;
         
         switch (cmd) {
-        case ICMD_NONE:
-            if (repeat >= 0) {
-                fprintf(stdout, "ERROR: no command\n");
+            case ICMD_NONE:
+                if (repeat >= 0) {
+                    fprintf(stdout, "ERROR: no command\n");
+                }
+                break;
+            case ICMD_QUIT:
+                return;
+            case ICMD_HELP:
+                fprintf(stdout, "Commands:\n"
+                        "\tq - quit\n"
+                        "\t? - help\n"
+                        "\t[<k>]n - skip <k> frames\n"
+                        );
+                break;
+            case ICMD_NEXTFRAME:
+                process(repeat);
+                fprintf(stdout, "current frame: %d\n", curFrame);
+                break;
+            case ICMD_WRITE: {
+                char fName[32];
+                snprintf(fName, sizeof(fName), "frame%06d.png", curFrame);
+                savePNG(fName, GL_RGBA, GL_UNSIGNED_BYTE, wndWidth, wndHeight, wndData);
+                fprintf(stdout, "%s written\n", fName);
+                break;
             }
-            break;
-        case ICMD_QUIT:
-            return;
-        case ICMD_HELP:
-            fprintf(stdout, "Commands:\n"
-                    "\tq - quit\n"
-                    "\t? - help\n"
-                    "\t[<k>]n - skip <k> frames\n"
-                    );
-            break;
-        case ICMD_NEXTFRAME:
-            process(repeat);
-            fprintf(stdout, "current frame: %d\n", curFrame);
-            break;
-        case ICMD_WRITE: {
-            savePNG();
-            break;
-        }
-        default:
-        case ICMD_INVALID:
-            fprintf(stderr, "ERROR: unknown command\n");
-            break;
+            default:
+            case ICMD_INVALID:
+                fprintf(stderr, "ERROR: unknown command\n");
+                break;
         }
     }
 }
@@ -2746,21 +3648,44 @@ usage(const char *progname)
 int
 main(int argc, const char *argv[])
 {
-    start_time = gethrtime();
-
     int i;
     const char *fileName = NULL;
+    int interactive = 1;
+
     for (i=1; i<argc; ++i) {
         const char *arg = argv[i];
         if (*arg == '-') {
             if (strcmp(arg, "-replay") == 0) {
+                interactive = 0;
                 execFlag = 1;
             }
             else if (strcmp(arg, "-print") == 0) {
+                interactive = 0;
                 printFlag = 1;
+            }
+            else if (strcmp(arg, "-printAll") == 0) {
+                interactive = 0;
+                printFlag = 1;
+                printArrays = 1;
             }
             else if (strcmp(arg, "-nofps") == 0) {
                 fpsFlag = 0;
+            }
+            else if (strcmp(arg, "-thread") == 0) {
+                if (++i >= argc) {
+                    usage(argv[0]);
+                    return;
+                }
+                printThread = atoll(argv[i]);
+            }            
+            else if (strcmp(arg, "-dumptextures") == 0) {
+                interactive = 0;
+                dumpTexturesFlag = 1;
+                if (mkdir(DIR_TEXTURES, S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH)) {
+                    if (errno != EEXIST) {
+                        fprintf(stderr, "ERROR: can't create directory %s", DIR_TEXTURES);
+                    }
+                }
             }
             else {
                 usage(argv[0]);
@@ -2776,7 +3701,7 @@ main(int argc, const char *argv[])
     sb_init();
     iolib_init(IO_READ, fileName);
     
-    if (!printFlag && !execFlag) {
+    if (interactive) {
         fpsFlag = 0;
         execFlag = 1;
         

@@ -137,6 +137,9 @@ class SWArgbPreTexture extends SWTexture {
             frame = f;
         }
 
+        this.offset = frame.offsetForPlane(0) / 4;
+        this.stride = frame.strideForPlane(0) / 4;
+
         IntBuffer ib = frame.getBuffer().asIntBuffer();
         if (ib.hasArray()) {
             this.allocated = false;
@@ -145,8 +148,6 @@ class SWArgbPreTexture extends SWTexture {
             this.allocate();
             ib.get(this.data);
         }
-        this.offset = frame.offsetForPlane(0) / 4;
-        this.stride = frame.strideForPlane(0) / 4;
 
         frame.releaseFrame();
     }
@@ -180,7 +181,10 @@ class SWArgbPreTexture extends SWTexture {
     }
 
     void allocateBuffer() {
-        this.data = new int[width * height];
+        if (stride < width) {
+            throw new IllegalArgumentException("STRIDE must be equal or greater than WIDTH");
+        }
+        this.data = new int[stride * height];
     }
 
     Texture createSharedLockedTexture(WrapMode altMode) {

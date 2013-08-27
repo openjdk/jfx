@@ -110,6 +110,7 @@ public final class D3DPipeline extends GraphicsPipeline {
             System.out.println("\tDriver " + di.driverName + ", version " + di.getDriverVersion());
             System.out.println("\tPixel Shader version " + di.psVersionMajor + "." + di.psVersionMinor);
             System.out.println("\tDevice : " + di.getDeviceID());
+            System.out.println("\tMax Multisamples supported: " + di.maxSamples);
             if (di.warningMessage != null) {
                 System.out.println("\t *** " + di.warningMessage);
             }
@@ -151,6 +152,8 @@ public final class D3DPipeline extends GraphicsPipeline {
      */
     private static native D3DDriverInformation nGetDriverInformation(
             int adapterOrdinal, D3DDriverInformation object);
+
+    private static native int nGetMaxSampleSupport(int adapterOrdinal);
 
     @Override
     public void dispose() {
@@ -237,10 +240,22 @@ public final class D3DPipeline extends GraphicsPipeline {
         return true;
     }
 
+    private int maxSamples = -1;
+
+    int getMaxSamples() {
+        if (maxSamples < 0) {
+            isAntiAliasingSupported();
+        }
+        return maxSamples;
+    }
+
     @Override
     public boolean isAntiAliasingSupported() {
-        //TODO: 3D - Add AA support for D3D
-        return false;
+        if (maxSamples < 0) {
+            //TODO: 3D - consider different adapters
+            maxSamples = nGetMaxSampleSupport(0);
+        }
+        return maxSamples > 0;
     }
 
     @Override

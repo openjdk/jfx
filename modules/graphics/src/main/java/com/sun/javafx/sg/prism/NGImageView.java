@@ -25,6 +25,7 @@
 
 package com.sun.javafx.sg.prism;
 
+import com.sun.javafx.geom.RectBounds;
 import com.sun.prism.Graphics;
 import com.sun.prism.Image;
 import com.sun.prism.ResourceFactory;
@@ -172,4 +173,20 @@ public class NGImageView extends NGNode {
     // RT-18701: this method does nothing
     public void setSmooth(boolean s) {}
 
+    @Override
+    protected boolean supportsOpaqueRegions() { return true; }
+
+    @Override
+    protected boolean hasOpaqueRegion() {
+        // An image, being a raster, needs to be at least 1 pixel in width to have any opaque
+        // pixel content, even when scaled up. So we check against w >= 1 and h >= 1 here, unlike
+        // in NGCircle or others where we test against > 0.
+        assert image == null || (image.getWidth() >= 1 && image.getHeight() >= 1);
+        return super.hasOpaqueRegion() && w >= 1 && h >= 1 && image != null && image.isOpaque();
+    }
+
+    @Override
+    protected RectBounds computeOpaqueRegion(RectBounds opaqueRegion) {
+        return (RectBounds) opaqueRegion.deriveWithNewBounds(x, y, 0, x+w, y+h, 0);
+    }
 }

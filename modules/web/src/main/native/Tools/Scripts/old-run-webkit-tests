@@ -229,6 +229,7 @@ if (isJava()) {
     } else {
         $platform = "java";
     }
+    setBaseProductDir("../../../../../../artifacts");
 } elsif (isAppleMacWebKit()) {
     if (isSnowLeopard()) {
         $platform = "mac-snowleopard";
@@ -460,13 +461,12 @@ if (isJava()) {
     my $javaHome = $ENV{'JAVA_HOME'};
     die "JAVA_HOME is undefined" if !defined($javaHome);
 
-    my $baseDir = "$productDir/../../../../../../../../artifacts";
     if (isCygwin()) {
-        chomp($baseDir = `cygpath -m \"$baseDir\"`);
+        chomp($productDir = `cygpath -m \"$productDir\"`);
     }
 
-    my $classpath = "$baseDir/sdk/rt/lib/ext/jfxrt.jar;$baseDir/test/drt.jar";
-    my $libpath = "$baseDir/test";
+    my $classpath = "$productDir/sdk/rt/lib/ext/jfxrt.jar;$productDir/test/drt.jar";
+    my $libpath = "$productDir/test";
     if (!isCygwin()) {
         #normalize class path
         $classpath =~ s/\;/\:/g;
@@ -474,7 +474,7 @@ if (isJava()) {
     }
     if (isDarwin()) {
         # Mac apparently needs this variable set
-        $ENV{'DYLD_LIBRARY_PATH'} = "$baseDir/sdk/rt/lib";
+        $ENV{'DYLD_LIBRARY_PATH'} = "$productDir/sdk/rt/lib";
     }
     if (isLinux()) {
         # Set LD_LIBRARY_PATH to allow libDumpRenderTreeJava.so
@@ -482,7 +482,7 @@ if (isJava()) {
        $_ = `arch`;
        my $arch = /x86_64/ ? "amd64" : "i386";
         $ENV{'LD_LIBRARY_PATH'} =
-                canonpath("$baseDir/sdk/rt/lib/$arch");
+                canonpath("$productDir/sdk/rt/lib/$arch");
     }
 
     @dumpToolJava = ("$javaHome/bin/java",

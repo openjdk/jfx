@@ -23,17 +23,12 @@
  * questions.
  */
  
-#include <GLES2/gl2.h>
-#include <GLES2/gl2ext.h>
-#include <EGL/egl.h>
+#ifndef GLTRACE_OS_H
+#define GLTRACE_OS_H
 
-typedef void             GLvoid;
-typedef char             GLchar;
+#include <stdint.h>
 
-#ifndef GL_BGRA
-#  ifdef GL_BGRA_EXT
-#  define GL_BGRA GL_BGRA_EXT
-#  else
-#  define GL_BGRA 0x80E1
-#  endif
-#endif
+#define gethrtime gltrace_gethrtime
+uint64_t    gltrace_gethrtime();
+
+#endif /* GLTRACE_OS_H */

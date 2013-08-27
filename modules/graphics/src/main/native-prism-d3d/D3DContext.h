@@ -83,6 +83,10 @@ class D3DContext {
 public:
 
     HRESULT drawIndexedQuads(struct PrismSourceVertex const *pSrcFloats, BYTE const *pSrcColors, int numVerts);
+    void D3DContext::stretchRect(IDirect3DSurface9* pSrcSurface,
+                                int srcX0, int srcY0, int srcX1, int srcY1,
+                                IDirect3DSurface9* pDstSurface,
+                                int dstX0, int dstY0, int dstX1, int dstY1);
 
     HRESULT drawTriangleList(struct PrismSourceVertex const *pSrcFloats, BYTE const *pSrcColors, int numTriangles);
 
@@ -139,7 +143,7 @@ public:
 
     D3DPOOL getResourcePool() { return defaulResourcePool; }
 
-    HRESULT SetRenderTarget(IDirect3DSurface9 *pSurface);
+    HRESULT SetRenderTarget(IDirect3DSurface9 *pSurface, IDirect3DSurface9 **ppTargetDepthSurface, BOOL depthBuffer, BOOL msaa);
     HRESULT SetCameraPosition(jdouble camPosX, jdouble camPosY, jdouble camPosZ);
     HRESULT SetProjViewMatrix(BOOL isOrtho,
                               jdouble m00, jdouble m01, jdouble m02, jdouble m03,
@@ -251,10 +255,10 @@ private:
 
     // finds appropriate to the target surface depth format,
     // creates the depth buffer and installs it onto the device
-    HRESULT InitDepthStencilBuffer(D3DSURFACE_DESC *pTargetDesc);
+    HRESULT InitDepthStencilBuffer(D3DSURFACE_DESC *pTargetDesc, IDirect3DSurface9 **ppDepthSSurfaceTarget);
     // returns true if the current depth buffer is compatible
     // with the new target, and the dimensions fit, false otherwise
-    BOOL IsDepthStencilBufferOk(D3DSURFACE_DESC *pTargetDesc);
+    BOOL IsDepthStencilBufferOk(D3DSURFACE_DESC *pTargetDesc, IDirect3DSurface9 *pTargetDepth);
 
     HRESULT UpdateVertexShaderTX();
 
@@ -263,6 +267,7 @@ private:
     HRESULT InitContextCaps();
     IDirect3DDevice9        *pd3dDevice;
     IDirect3DDevice9Ex      *pd3dDeviceEx;
+    IDirect3DSurface9       *currentSurface;
     HWND                     deviceWindow;
     IDirect3D9              *pd3dObject;
     IDirect3D9Ex            *pd3dObjectEx;

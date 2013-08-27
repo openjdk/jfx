@@ -67,7 +67,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_d3d_D3DResourceFactory_nGetContext
 JNIEXPORT jlong JNICALL
 Java_com_sun_prism_d3d_D3DResourceFactory_nCreateTexture
   (JNIEnv *env, jclass klass,
-   jlong ctx, jint formatHint, jint usageHint, jboolean isRTT, jint width, jint height)
+        jlong ctx, jint formatHint, jint usageHint, jboolean isRTT,
+        jint width, jint height, jint samples)
 {
     HRESULT res;
 
@@ -114,9 +115,15 @@ Java_com_sun_prism_d3d_D3DResourceFactory_nCreateTexture
             break;
     }
 
-    res = pMgr->CreateTexture(width, height, isRTT, isOpaque,
-            &format, dwUsage, &pTexResource);
-
+    if (samples) {
+        // assert isRTT == true
+        D3DMULTISAMPLE_TYPE msType = static_cast<D3DMULTISAMPLE_TYPE>(samples);
+        res = pMgr->CreateRenderTarget(width, height, isOpaque,
+                &format, msType, &pTexResource);
+    } else {
+        res = pMgr->CreateTexture(width, height, isRTT, isOpaque,
+                &format, dwUsage, &pTexResource);
+    }
     if (SUCCEEDED(res)) {
         return ptr_to_jlong(pTexResource);
     }

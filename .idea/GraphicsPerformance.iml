@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$/apps/performance/GraphicsPerformance">
+      <sourceFolder url="file://$MODULE_DIR$/apps/performance/GraphicsPerformance/src/main/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/apps/performance/GraphicsPerformance/src/main/resources" isTestSource="false" />
+    </content>
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module" module-name="base" />
+    <orderEntry type="module" module-name="controls" />
+    <orderEntry type="module" module-name="fxml" />
+    <orderEntry type="module" module-name="fxpackager" />
+    <orderEntry type="module" module-name="graphics" />
+    <orderEntry type="module" module-name="rt" />
+    <orderEntry type="inheritedJdk" />
+  </component>
+</module>
+

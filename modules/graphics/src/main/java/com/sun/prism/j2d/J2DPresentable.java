@@ -57,6 +57,7 @@ public abstract class J2DPresentable implements Presentable {
 
     private static class Glass extends J2DPresentable {
         private final PresentableState pState;
+        private final int theFormat;
         private Pixels pixels;
         private IntBuffer pixBuf;
         private final AtomicInteger uploadCount = new AtomicInteger(0);
@@ -65,19 +66,19 @@ public abstract class J2DPresentable implements Presentable {
         Glass(PresentableState pState, J2DResourceFactory factory) {
             super(null, factory);
             this.pState = pState;
-            setNeedsResize();
+            this.theFormat = pState.getPixelFormat();
+            needsResize = true;
         }
 
         @Override
         public BufferedImage createBuffer(int w, int h) {
             pixels = null;
             pixBuf = null;
-            int format = pState.getPixelFormat();
             if (PrismSettings.verbose) {
-                System.out.println("Glass native format: "+format);
+                System.out.println("Glass native format: "+theFormat);
             }
             ByteOrder byteorder = ByteOrder.nativeOrder();
-            switch (format) {
+            switch (theFormat) {
                 case Pixels.Format.BYTE_BGRA_PRE:
                     if (byteorder == ByteOrder.LITTLE_ENDIAN) {
                         return new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB_PRE);
@@ -93,11 +94,22 @@ public abstract class J2DPresentable implements Presentable {
                     }
                     /* NOTREACHED */
                 default:
-                    throw new UnsupportedOperationException("unrecognized pixel format: "+format);
+                    throw new UnsupportedOperationException("unrecognized pixel format: "+theFormat);
             }
         }
 
         private final Application app = Application.GetApplication();
+
+        @Override
+        public boolean lockResources(PresentableState pState) {
+            if (this.pState != pState || this.theFormat != pState.getPixelFormat()) {
+                return true;
+            }
+            needsResize = (buffer == null ||
+                           buffer.getWidth() != pState.getWidth() ||
+                           buffer.getHeight() != pState.getHeight());
+            return false;
+        }
 
         public boolean prepare(Rectangle dirty) {
             if (pState.isViewClosed() == false) {
@@ -155,6 +167,11 @@ public abstract class J2DPresentable implements Presentable {
             throw new UnsupportedOperationException("cannot create new buffers for image");
         }
 
+        @Override
+        public boolean lockResources(PresentableState pState) {
+            return false;
+        }
+
         public boolean prepare(Rectangle dirtyregion) {
             throw new UnsupportedOperationException("cannot prepare/present on image");
         }
@@ -193,14 +210,6 @@ public abstract class J2DPresentable implements Presentable {
         this.factory = factory;
     }
 
-    public boolean lockResources() {
-        return false;
-    }
-
-    public void setNeedsResize() {
-        this.needsResize = true;
-    }
-
     ResourceFactory getResourceFactory() {
         return factory;
     }
@@ -208,27 +217,20 @@ public abstract class J2DPresentable implements Presentable {
     public abstract BufferedImage createBuffer(int w, int h);
 
     public Graphics createGraphics() {
-        // RT-27385
-        // TODO: Figure out why needsResize is not always set appropriately
-        if (true || needsResize) {
+        if (needsResize) {
             int w = getContentWidth();
             int h = getContentHeight();
             // TODO: Have Glass Pixels class relax its constraints
             // so we can use an oversized buffer if we want to...
-            if (buffer == null ||
-                buffer.getWidth() != w ||
-                buffer.getHeight() != h)
-            {
-                buffer = null;
-                readbackBuffer = null;
-                buffer = createBuffer(w, h);
-                java.awt.image.Raster r = buffer.getRaster();
-                java.awt.image.DataBuffer db = r.getDataBuffer();
-                java.awt.image.SinglePixelPackedSampleModel sppsm =
-                    (java.awt.image.SinglePixelPackedSampleModel) r.getSampleModel();
-                int pixels[] = ((java.awt.image.DataBufferInt) db).getData();
-                ib = IntBuffer.wrap(pixels, db.getOffset(), db.getSize());
-            }
+            buffer = null;
+            readbackBuffer = null;
+            buffer = createBuffer(w, h);
+            java.awt.image.Raster r = buffer.getRaster();
+            java.awt.image.DataBuffer db = r.getDataBuffer();
+            java.awt.image.SinglePixelPackedSampleModel sppsm =
+                (java.awt.image.SinglePixelPackedSampleModel) r.getSampleModel();
+            int pixels[] = ((java.awt.image.DataBufferInt) db).getData();
+            ib = IntBuffer.wrap(pixels, db.getOffset(), db.getSize());
             needsResize = false;
         }
         Graphics2D g2d = (Graphics2D) buffer.getGraphics();
@@ -277,10 +279,6 @@ public abstract class J2DPresentable implements Presentable {
         // createGraphics() has not yet been called), we will plan to
         // create it at the content size initially.
         return (buffer == null) ? getContentHeight() : buffer.getHeight();
-    }
-
-    public boolean recreateOnResize() {
-        return false;
     }
 
     @Override public boolean isAntiAliasing() {

@@ -360,17 +360,17 @@ int checkFramebufferStatus(ContextInfo *ctxInfo) {
 /*
  * Class:     com_sun_prism_es2_GLContext
  * Method:    nBlit
- * Signature: (JIIIIIIIIII)I
+ * Signature: (JIIIIIIIIII)V
  */
-JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nBlit
+JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nBlit
 (JNIEnv *env, jclass class, jlong nativeCtxInfo, jint srcFBO, jint dstFBO,
-            int jsrcX0, int jsrcY0, jint srcX1, jint srcY1,
-            int jdstX0, int jdstY0, jint dstX1, jint dstY1) {
+            jint jsrcX0, jint jsrcY0, jint srcX1, jint srcY1,
+            jint jdstX0, jint jdstY0, jint dstX1, jint dstY1) {
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
     if ((ctxInfo == NULL) || (ctxInfo->glGenFramebuffers == NULL)
             || (ctxInfo->glBindFramebuffer == NULL)
             || (ctxInfo->glBlitFramebuffer == NULL)) {
-        return 0;
+        return;
     }
 
     if (dstFBO == 0) {
@@ -392,7 +392,6 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nBlit
 
     // Restore previous FBO
     ctxInfo->glBindFramebuffer(GL_FRAMEBUFFER, ctxInfo->state.fbo);
-    return ctxInfo->state.fbo;
 }
 
 GLuint attachRenderbuffer(ContextInfo *ctxInfo, GLuint rbID, GLenum attachment) {
@@ -459,7 +458,7 @@ GLuint createAndAttachRenderBuffer(ContextInfo *ctxInfo, GLsizei width, GLsizei 
  * Signature: (JIII)I
  */
 JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nCreateDepthBuffer
-(JNIEnv *env, jclass class, jlong nativeCtxInfo, jint width, jint height, int msaa) {
+(JNIEnv *env, jclass class, jlong nativeCtxInfo, jint width, jint height, jint msaa) {
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
     return createAndAttachRenderBuffer(ctxInfo, width, height, msaa, GL_DEPTH_ATTACHMENT);
 }
@@ -470,7 +469,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nCreateDepthBuffer
  * Signature: (JIII)I
  */
 JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nCreateRenderBuffer
-(JNIEnv *env, jclass class, jlong nativeCtxInfo, jint width, jint height, int msaa) {
+(JNIEnv *env, jclass class, jlong nativeCtxInfo, jint width, jint height, jint msaa) {
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
     return createAndAttachRenderBuffer(ctxInfo, width, height, msaa, GL_COLOR_ATTACHMENT0);
 }

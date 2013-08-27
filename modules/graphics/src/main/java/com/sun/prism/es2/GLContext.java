@@ -25,6 +25,7 @@
 
 package com.sun.prism.es2;
 
+import com.sun.javafx.PlatformUtil;
 import com.sun.prism.MeshView;
 import com.sun.prism.PhongMaterial.MapType;
 import com.sun.prism.Texture.WrapMode;
@@ -112,6 +113,10 @@ abstract class GLContext {
     private boolean msaa = false;
     private int maxSampleSize = -1;
 
+    private static final int FBO_ID_UNSET = -1;
+    private static final int FBO_ID_NOCACHE = -2;
+    private int nativeFBOID = PlatformUtil.isMac() || PlatformUtil.isIOS() ? FBO_ID_NOCACHE : FBO_ID_UNSET;
+
     private static native void nActiveTexture(long nativeCtxInfo, int texUnit);
     private static native void nBindFBO(long nativeCtxInfo, int nativeFBOID);
     private static native void nBindTexture(long nativeCtxInfo, int texID);
@@ -122,9 +127,9 @@ abstract class GLContext {
     private static native int nCompileShader(long nativeCtxInfo, String src,
             boolean vertex);
     private static native int nCreateDepthBuffer(long nativeCtxInfo, int width,
-            int height, int msaaSamples);
+            int height, int msaa);
     private static native int nCreateRenderBuffer(long nativeCtxInfo, int width,
-            int height, int msaaSamples);
+            int height, int msaa);
     private static native int nCreateFBO(long nativeCtxInfo, int texID);
     private static native int nCreateProgram(long nativeCtxInfo,
             int vertexShaderID, int[] fragmentShaderID,
@@ -235,7 +240,7 @@ abstract class GLContext {
     private static native void nSetPointLight(long nativeCtxInfo, long nativeMeshViewInfo,
             int index, float x, float y, float z, float r, float g, float b, float w);
     private static native void nRenderMeshView(long nativeCtxInfo, long nativeMeshViewInfo);
-    private static native int  nBlit(long nativeCtxInfo, int srcFBO, int dstFBO,
+    private static native void nBlit(long nativeCtxInfo, int srcFBO, int dstFBO,
             int srcX0, int srcY0, int srcX1, int srcY1,
             int dstX0, int dstY0, int dstX1, int dstY1);
 
@@ -244,7 +249,21 @@ abstract class GLContext {
     }
 
     void bindFBO(int nativeFBOID) {
-        nBindFBO(nativeCtxInfo, nativeFBOID);
+        switch (this.nativeFBOID) {
+            case FBO_ID_UNSET:
+                this.nativeFBOID = nativeFBOID;
+                nBindFBO(nativeCtxInfo, nativeFBOID);
+                break;
+            case FBO_ID_NOCACHE:
+                nBindFBO(nativeCtxInfo, nativeFBOID);
+                break;
+            default:
+                if (this.nativeFBOID != nativeFBOID) {
+                    nBindFBO(nativeCtxInfo, nativeFBOID);
+                    this.nativeFBOID = nativeFBOID;
+                }
+                break;
+        }
     }
 
     void bindTexture(int texID) {
@@ -394,8 +413,16 @@ abstract class GLContext {
     }
 
     int getBoundFBO() {
-        return nGetFBO();
+        switch (nativeFBOID) {
+            case FBO_ID_UNSET:
+                nativeFBOID = nGetFBO();
+                return nativeFBOID;
+            case FBO_ID_NOCACHE:
+                return nGetFBO();
+            default:
+                return nativeFBOID;
         }
+    }
 
     int getBoundTextureID() {
         // return the single value param

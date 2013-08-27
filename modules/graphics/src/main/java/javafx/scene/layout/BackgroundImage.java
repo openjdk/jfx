@@ -85,6 +85,14 @@ public final class BackgroundImage {
     final BackgroundSize size;
 
     /**
+     * The Background will cache here whether this BackgroundImage is opaque. If this
+     * value is null, then it means we don't yet know. If it is non null, then we
+     * know for certain it either is, or is not, opaque. Opaque in this case means
+     * that the BackgroundImage's image is opaque.
+     */
+    Boolean opaque = null;
+
+    /**
      * A cached hash code for faster secondary usage. It is expected
      * that BackgroundImage will be pulled from a cache in many cases.
      */

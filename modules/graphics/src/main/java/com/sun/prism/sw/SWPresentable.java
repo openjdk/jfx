@@ -46,8 +46,9 @@ final class SWPresentable extends SWRTTexture implements Presentable {
         this.pState = pState;
     }
 
-    public boolean lockResources() {
-        return false;
+    public boolean lockResources(PresentableState pState) {
+        return (getPhysicalWidth() != pState.getWidth() ||
+                getPhysicalHeight() != pState.getHeight());
     }
 
     public boolean prepare(Rectangle dirtyregion) {
@@ -80,10 +81,6 @@ final class SWPresentable extends SWRTTexture implements Presentable {
 
     public float getPixelScaleFactor() {
         return 1.0f;
-    }
-
-    public boolean recreateOnResize() {
-        return true;
     }
 
     public int getContentWidth() {

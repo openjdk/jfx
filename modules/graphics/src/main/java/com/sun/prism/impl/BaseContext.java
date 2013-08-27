@@ -160,16 +160,6 @@ public abstract class BaseContext {
         return glyphCache;
     }
 
-    /**
-     * Returns true if texture edge smoothing trickery is supported on
-     * this device for the given {@code PixelFormat}; otherwise returns false.
-     * See BaseGraphics.drawTextureVO() for more details on how the texture
-     * edge smoothing techniques are implemented.
-     */
-    public boolean isEdgeSmoothingSupported(PixelFormat format) {
-        return true;
-    }
-
     public Texture getMaskTexture(MaskData maskData, boolean canScale) {
         int maskW = maskData.getWidth();
         int maskH = maskData.getHeight();

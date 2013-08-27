@@ -119,7 +119,7 @@ public final class PrinterJob {
         if (printer == null) {
             return null;
         } else {
-            return new PrinterJob(printer, null);
+            return new PrinterJob(printer);
         }
     }
 
@@ -138,29 +138,13 @@ public final class PrinterJob {
         if (security != null) {
             security.checkPrintJobAccess();
         }
-        return new PrinterJob(printer, null);
+        return new PrinterJob(printer);
     }
 
-    private PrinterJob(Printer printer, JobSettings jobSettings) {
-        this.printer = new SimpleObjectProperty<Printer>(printer) {
+    private PrinterJob(Printer printer) {
 
-            @Override
-            public void bind(ObservableValue<? extends Printer> rawObservable)
-            {
-                throw new RuntimeException("Printer property cannot be bound");
-            }
-
-            @Override
-            public void bindBidirectional(Property<Printer> other) {
-                throw new RuntimeException("Printer property cannot be bound");
-            }
-        };
-        if (jobSettings == null) {
-            jobSettings = printer.getDefaultJobSettings();
-        } else {
-            jobSettings.updateForPrinter(printer);
-        }
-        settings = jobSettings;
+        this.printer = createPrinterProperty(printer);
+        settings = printer.getDefaultJobSettings();
         settings.setPrinterJob(this);
         createImplJob(printer, settings);
     }
@@ -175,7 +159,7 @@ public final class PrinterJob {
 
     /**
      * Updating settings or printer is only allowed on a new job,
-     * meaning beforee you start printing or cancel etc.
+     * meaning before you start printing or cancel etc.
      * The implementation needs to check this wherever job state
      * updates are received.
      */
@@ -183,37 +167,53 @@ public final class PrinterJob {
         return getJobStatus() == JobStatus.NOT_STARTED;
     }
 
+    private ObjectProperty<Printer> createPrinterProperty(Printer printer) {
+        
+        return new SimpleObjectProperty<Printer>(printer) {
+   
+            @Override
+            public void set(Printer value) {
+                if (value == get() || !isJobNew()) {
+                    return;
+                }
+                if (value == null) {
+                    value = Printer.getDefaultPrinter();
+                }
+                super.set(value);
+                jobImpl.setPrinterImpl(value.getPrinterImpl());
+                settings.updateForPrinter(value);
+            }
+
+            @Override
+            public void bind(ObservableValue<? extends Printer> rawObservable) {
+                throw new RuntimeException("Printer property cannot be bound");
+            }
+
+            @Override
+            public void bindBidirectional(Property<Printer> other) {
+                throw new RuntimeException("Printer property cannot be bound");
+            }
+
+            @Override
+            public Object getBean() {
+                return PrinterJob.this;
+            }
+
+            @Override
+            public String getName() {
+                return "printer";
+            }
+        };
+    }
+ 
     /**
-     * Property representing the <code>Printer</code> for this job.
+     * Property representing the
+     * <code>Printer</code> for this job.
      */
     public final ObjectProperty<Printer> printerProperty() {
-        if (printer == null) {
-            printer = new SimpleObjectProperty<Printer>() {
-
-                @Override
-                public void set(Printer value) {
-                    if (value == get() || !isJobNew()) {
-                        return;
-                    }
-                    if (value == null) {
-                        value = Printer.getDefaultPrinter();
-                    }
-                    super.set(value);
-                    jobImpl.setPrinterImpl(value.getPrinterImpl());
-                    settings.updateForPrinter(value);
-                }
-
-                @Override
-                public Object getBean() {
-                    return PrinterJob.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "printer";
-                }
-            };
-        }
+        /* The PrinterJob constructor always creates this property,
+         * so it can be returned directly.
+         */
         return printer;
     }
 
@@ -222,7 +222,7 @@ public final class PrinterJob {
      * @return printer for the job.
      */
     public synchronized Printer getPrinter() {
-        return printer.get();
+        return printerProperty().get();
     }
 
     /**
@@ -238,7 +238,8 @@ public final class PrinterJob {
      * this method, or as a side-effect of user interaction with a print
      * dialog.
      * <p>
-     * Setting a null printer or the current printer is ignored.
+     * Setting a null value for printer will install the default printer.
+     * Setting the current printer has no effect.
      * @param printer to be used for this print job.
      */
     public synchronized void setPrinter(Printer printer) {

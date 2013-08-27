@@ -1677,9 +1677,9 @@ task javadoc(type: Javadoc) {
     def projectsToDocument = [
             project(":base"), project(":graphics"), project(":controls"),
             project(":swing"), project(":swt"), project(":fxml"), project(":web")]
-    source(projectsToDocument.collect({
+    source = projectsToDocument.collect({
         [it.sourceSets.main.java, "$it.buildDir/generated-src/builders"]
-    }));
+    });
     setDestinationDir(new File(buildDir, 'javadoc'));
     // Might need a classpath
     classpath = files(projectsToDocument.collect { project ->
@@ -1688,6 +1688,13 @@ task javadoc(type: Javadoc) {
     classpath += files(projectsToDocument.collect { project ->
         project.sourceSets.main.output
     });
+
+    // TODO: temporary for javadoc build until media is open sourced
+    if (BUILD_CLOSED) {
+        source += fileTree(dir: "$mediaApiDir").include('**/*.java')
+        classpath += files("modules/media/build/classes/main")
+    }
+
     exclude("com/**/*", "javafx/scene/ParentDesignInfo*", "Compile*", "javafx/builder/**/*");
     options.windowTitle("JavaFX ${RELEASE_NAME}")
     options.links(JDK_DOCS);
@@ -1843,7 +1850,15 @@ compileTargets { t ->
 
         dependsOn(subprojects.collect { project -> project.getTasksByName("assemble", true)});
     }
-    jfxrt.dependsOn(jfxrtTask)
+    def jfxrtIndexTask = task("jfxrtIndex$t.capital") {
+        //the following is a workaround for the lack of indexing in gradle 1.4 through 1.7
+        dependsOn(jfxrtTask)
+
+        doLast() {
+            ant.jar (update: true, index: true, destfile: jfxrtTask.archiveName)
+        }
+    }
+    jfxrt.dependsOn(jfxrtIndexTask)
 
     // The 'sdk' task will build the rest of the SDK, and depends on the 'jfxrtTask' task. After
     // executing this task the sdk bundle for the current COMPILE_TARGETS will be fully created.

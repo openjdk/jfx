@@ -56,11 +56,12 @@ class D3DRTTexture extends D3DTexture
     D3DRTTexture(D3DContext context, WrapMode wrapMode, long pResource,
                  int physicalWidth, int physicalHeight,
                  int contentX, int contentY,
-                 int contentWidth, int contentHeight)
+                 int contentWidth, int contentHeight,
+                 int samples)
     {
         super(context, PixelFormat.INT_ARGB_PRE, wrapMode, pResource,
               physicalWidth, physicalHeight,
-              contentX, contentY, contentWidth, contentHeight, true);
+              contentX, contentY, contentWidth, contentHeight, true, samples);
         this.opaque = false;
     }
 
@@ -161,7 +162,6 @@ class D3DRTTexture extends D3DTexture
     }
 
     public boolean isAntiAliasing() {
-        //TODO: 3D - Add AA support for D3D
-        return false;
+        return resource.getResource().getSamples() != 0;
     }
 }

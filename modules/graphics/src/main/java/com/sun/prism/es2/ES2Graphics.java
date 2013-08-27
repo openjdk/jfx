@@ -83,15 +83,6 @@ public class ES2Graphics extends BaseShaderGraphics {
         context.getGLContext().finish();
     }
 
-    // glass bring up: need this for Glass window client, which has no intimate
-    // knowledge of the graphics mechansim
-    // (so we need public API)
-    // to force it to reset its viewport and matrices due to resize event of the
-    // window surface
-    public void reset() {
-        forceRenderTarget();
-    }
-
     /**
      * Called from ES2SwapChain to force the render target to be revalidated
      * (context made current, viewport and projection matrix updated, etc)

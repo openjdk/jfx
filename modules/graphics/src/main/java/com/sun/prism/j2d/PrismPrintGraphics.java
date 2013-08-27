@@ -26,6 +26,7 @@
 package com.sun.prism.j2d;
 
 import com.sun.javafx.geom.Rectangle;
+import com.sun.prism.PresentableState;
 import com.sun.prism.PrinterGraphics;
 
 public final class PrismPrintGraphics
@@ -47,6 +48,11 @@ public final class PrismPrintGraphics
         @Override
         public java.awt.image.BufferedImage createBuffer(int w, int h) {
             throw new UnsupportedOperationException("cannot create new buffers for image");
+        }
+
+        @Override
+        public boolean lockResources(PresentableState pState) {
+            return false;
         }
 
         public boolean prepare(Rectangle dirtyregion) {

@@ -361,6 +361,31 @@ static INLINE jboolean isInBounds(jint *a, jlong *la, jint min, jint max, jboole
     return inBounds;
 }
 
+//
+// this function is called when transform is translate or scale
+// because the bounding box will be always fully filled
+//
+static INLINE void isInBoundsFull(jint *a, jlong *la, jint min, jint max, jboolean repeat) {
+    jint aval = *a;
+    if (aval < min || aval > max) {
+        if (repeat) {
+            if (max > 0) {
+                *la = lmod(*la, (max+1) << 16);
+                *a = (jint)(*la >> 16);
+            } else {
+                *la = 0;
+                *a = 0;
+            }
+        } else if (aval < min) {
+            *la = (min << 16);
+            *a = min;
+        } else {
+            *la = (max << 16);
+            *a = max;
+        }
+    }
+}
+
 static INLINE void getPointsToInterpolate(jint *pts, jint *data, jint sidx, jint stride, jint p00,
     jint tx, jint txMin, jint txMax, jint ty, jint tyMin, jint tyMax)
 {
@@ -451,9 +476,9 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
         jint *a, *am;
         jlong ltx, lty;
         jint tx, ty, vfrac, hfrac;
-        jboolean inBoundsY;
         jint paintOffset = 0;
         jint pts[3];
+        jint sidx, p00;
 
         y = rdr->_currY;
 
@@ -472,48 +497,42 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
                 hfrac = (jint)(ltx & 0xffff);
                 vfrac = (jint)(lty & 0xffff);
 
-                inBoundsY = isInBounds(&ty, &lty, tyMin-1, tyMax, rdr->_texture_repeat);
+                isInBoundsFull(&ty, &lty, tyMin-1, tyMax, rdr->_texture_repeat);
 
                 a = paint + pidx;
                 am = a + paintStride;
                 while (a < am) {
-                    jboolean inBounds = inBoundsY && isInBounds(&tx, &ltx,
-                        txMin-1, txMax, rdr->_texture_repeat);
+                    isInBoundsFull(&tx, &ltx, txMin-1, txMax, rdr->_texture_repeat);
 
-                    if (inBounds) {
-                        jint sidx = MAX(tyMin, ty) * rdr->_texture_stride + MAX(txMin, tx);
-                        jint p00 = txtData[sidx];
-                        if (rdr->_texture_interpolate) {
-                            if (rdr->_texture_repeat) {
-                                getPointsToInterpolateRepeat(pts, txtData, sidx, rdr->_texture_stride, p00,
-                                    tx, txMin, txMax, ty, tyMin, tyMax);
-                            } else {
-                                getPointsToInterpolate(pts, txtData, sidx, rdr->_texture_stride, p00,
-                                    tx, txMin, txMax, ty, tyMin, tyMax);
-                            }
-
-                            if (hfrac && vfrac) {
-                                cval = interpolate4points(p00, pts[0], pts[1], pts[2], hfrac, vfrac);
-                            } else if (hfrac) {
-                                cval = interpolate2points(p00, pts[0], hfrac);
-                            } else if (vfrac) {
-                                cval = interpolate2points(p00, pts[1], vfrac);
-                            } else {
-                                cval = p00;
-                            }
-                            assert(pidx >= 0);
-                            assert(pidx < rdr->_paint_length);
-                            paint[pidx] = cval;
+                    sidx = MAX(tyMin, ty) * rdr->_texture_stride + MAX(txMin, tx);
+                    p00 = txtData[sidx];
+                    if (rdr->_texture_interpolate) {
+                        if (rdr->_texture_repeat) {
+                            getPointsToInterpolateRepeat(pts, txtData, sidx, rdr->_texture_stride, p00,
+                                tx, txMin, txMax, ty, tyMin, tyMax);
                         } else {
-                            assert(pidx >= 0);
-                            assert(pidx < rdr->_paint_length);
-                            paint[pidx] = p00;
+                            getPointsToInterpolate(pts, txtData, sidx, rdr->_texture_stride, p00,
+                                tx, txMin, txMax, ty, tyMin, tyMax);
                         }
+
+                        if (hfrac && vfrac) {
+                            cval = interpolate4points(p00, pts[0], pts[1], pts[2], hfrac, vfrac);
+                        } else if (hfrac) {
+                            cval = interpolate2points(p00, pts[0], hfrac);
+                        } else if (vfrac) {
+                            cval = interpolate2points(p00, pts[1], vfrac);
+                        } else {
+                            cval = p00;
+                        }
+                        assert(pidx >= 0);
+                        assert(pidx < rdr->_paint_length);
+                        paint[pidx] = cval;
                     } else {
                         assert(pidx >= 0);
                         assert(pidx < rdr->_paint_length);
-                        paint[pidx] = 0x00000000;
+                        paint[pidx] = p00;
                     }
+
                     ++a;
                     ++pidx;
                     ++tx;
@@ -536,48 +555,42 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
                 hfrac = (jint)(ltx & 0xffff);
                 vfrac = (jint)(lty & 0xffff);
 
-                inBoundsY = isInBounds(&ty, &lty, tyMin-1, tyMax, rdr->_texture_repeat);
+                isInBoundsFull(&ty, &lty, tyMin-1, tyMax, rdr->_texture_repeat);
 
                 a = paint + pidx;
                 am = a + paintStride;
                 while (a < am) {
-                    jboolean inBounds = inBoundsY && isInBounds(&tx, &ltx,
-                        txMin-1, txMax, rdr->_texture_repeat);
+                    isInBoundsFull(&tx, &ltx, txMin-1, txMax, rdr->_texture_repeat);
 
-                    if (inBounds) {
-                        jint sidx = MAX(tyMin, ty) * rdr->_texture_stride + MAX(txMin, tx);
-                        jint p00 = txtData[sidx];
-                        if (rdr->_texture_interpolate) {
-                            if (rdr->_texture_repeat) {
-                                getPointsToInterpolateRepeat(pts, txtData, sidx, rdr->_texture_stride, p00,
-                                    tx, txMin, txMax, ty, tyMin, tyMax);
-                            } else {
-                                getPointsToInterpolate(pts, txtData, sidx, rdr->_texture_stride, p00,
-                                    tx, txMin, txMax, ty, tyMin, tyMax);
-                            }
-
-                            if (hfrac && vfrac) {
-                                cval = interpolate4pointsNoAlpha(p00, pts[0], pts[1], pts[2], hfrac, vfrac);
-                            } else if (hfrac) {
-                                cval = interpolate2pointsNoAlpha(p00, pts[0], hfrac);
-                            } else if (vfrac) {
-                                cval = interpolate2pointsNoAlpha(p00, pts[1], vfrac);
-                            } else {
-                                cval = p00;
-                            }
-                            assert(pidx >= 0);
-                            assert(pidx < rdr->_paint_length);
-                            paint[pidx] = cval;
+                    sidx = MAX(tyMin, ty) * rdr->_texture_stride + MAX(txMin, tx);
+                    p00 = txtData[sidx];
+                    if (rdr->_texture_interpolate) {
+                        if (rdr->_texture_repeat) {
+                            getPointsToInterpolateRepeat(pts, txtData, sidx, rdr->_texture_stride, p00,
+                                tx, txMin, txMax, ty, tyMin, tyMax);
                         } else {
-                            assert(pidx >= 0);
-                            assert(pidx < rdr->_paint_length);
-                            paint[pidx] = p00;
+                            getPointsToInterpolate(pts, txtData, sidx, rdr->_texture_stride, p00,
+                                tx, txMin, txMax, ty, tyMin, tyMax);
                         }
+
+                        if (hfrac && vfrac) {
+                            cval = interpolate4pointsNoAlpha(p00, pts[0], pts[1], pts[2], hfrac, vfrac);
+                        } else if (hfrac) {
+                            cval = interpolate2pointsNoAlpha(p00, pts[0], hfrac);
+                        } else if (vfrac) {
+                            cval = interpolate2pointsNoAlpha(p00, pts[1], vfrac);
+                        } else {
+                            cval = p00;
+                        }
+                        assert(pidx >= 0);
+                        assert(pidx < rdr->_paint_length);
+                        paint[pidx] = cval;
                     } else {
                         assert(pidx >= 0);
                         assert(pidx < rdr->_paint_length);
-                        paint[pidx] = 0x00000000;
+                        paint[pidx] = p00;
                     }
+
                     ++a;
                     ++pidx;
                     ++tx;
@@ -585,6 +598,145 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
                 } // while (a < am)
                 paintOffset += paintStride;
             } // for
+        }
+        }
+        break;
+
+    // scale transform
+    case TEXTURE_TRANSFORM_SCALE_TRANSLATE:
+        {
+        jint cval, pidx;
+        jint *a, *am;
+        jlong ltx, lty;
+        jint paintOffset = 0;
+        jint pts[3];
+        jint sidx, p00;
+
+        y = rdr->_currY;
+
+        if (rdr->_texture_hasAlpha == XNI_TRUE) {
+            for (j = 0; j < height; j++, y++) {
+                pidx = paintOffset;
+
+                x = rdr->_currX;
+
+                ltx = x * rdr->_texture_m00 + y * rdr->_texture_m01 + rdr->_texture_m02;
+                lty = x * rdr->_texture_m10 + y * rdr->_texture_m11 + rdr->_texture_m12;
+
+                a = paint + pidx;
+                am = a + paintStride;
+                while (a < am) {
+                    jint tx = (jint)(ltx >> 16);
+                    jint ty = (jint)(lty >> 16);
+
+                    jint hfrac = (jint)(ltx & 0xffff);
+                    jint vfrac = (jint)(lty & 0xffff);
+
+                    isInBoundsFull(&tx, &ltx, txMin-1, txMax, rdr->_texture_repeat);
+                    isInBoundsFull(&ty, &lty, tyMin-1, tyMax, rdr->_texture_repeat);
+
+                    sidx = MAX(tyMin, ty) * rdr->_texture_stride + MAX(txMin, tx);
+                    p00 = txtData[sidx];
+                    if (rdr->_texture_interpolate) {
+                        if (rdr->_texture_repeat) {
+                            getPointsToInterpolateRepeat(pts, txtData, sidx, rdr->_texture_stride, p00,
+                                tx, txMin, txMax, ty, tyMin, tyMax);
+                        } else {
+                            getPointsToInterpolate(pts, txtData, sidx, rdr->_texture_stride, p00,
+                                tx, txMin, txMax, ty, tyMin, tyMax);
+                        }
+
+                        if (hfrac && vfrac) {
+                            cval = interpolate4points(p00, pts[0], pts[1], pts[2], hfrac, vfrac);
+                        } else if (hfrac) {
+                            cval = interpolate2points(p00, pts[0], hfrac);
+                        } else if (vfrac) {
+                            cval = interpolate2points(p00, pts[1], vfrac);
+                        } else {
+                            cval = p00;
+                        }
+
+                        assert(pidx >= 0);
+                        assert(pidx < rdr->_paint_length);
+
+                        paint[pidx] = cval;
+                    } else {
+                        assert(pidx >= 0);
+                        assert(pidx < rdr->_paint_length);
+
+                        paint[pidx] = p00;
+                    }
+
+                    ++a;
+                    ++pidx;
+
+                    ltx += rdr->_texture_m00;
+                    lty += rdr->_texture_m10;
+                } // while (a < am)b
+                paintOffset += paintStride;
+            }//for
+        }//else _texture_hasAlpha == XNI_FALSE
+        else {
+            for (j = 0; j < height; j++, y++) {
+                pidx = paintOffset;
+
+                x = rdr->_currX;
+
+                ltx = x * rdr->_texture_m00 + y * rdr->_texture_m01 + rdr->_texture_m02;
+                lty = x * rdr->_texture_m10 + y * rdr->_texture_m11 + rdr->_texture_m12;
+
+                a = paint + pidx;
+                am = a + paintStride;
+                while (a < am) {
+                    jint tx = (jint)(ltx >> 16);
+                    jint ty = (jint)(lty >> 16);
+
+                    jint hfrac = (jint)(ltx & 0xffff);
+                    jint vfrac = (jint)(lty & 0xffff);
+
+                    isInBoundsFull(&tx, &ltx, txMin-1, txMax, rdr->_texture_repeat);
+                    isInBoundsFull(&ty, &lty, tyMin-1, tyMax, rdr->_texture_repeat);
+
+                    sidx = MAX(tyMin, ty) * rdr->_texture_stride + MAX(txMin, tx);
+                    p00 = txtData[sidx];
+                    if (rdr->_texture_interpolate) {
+                        if (rdr->_texture_repeat) {
+                            getPointsToInterpolateRepeat(pts, txtData, sidx, rdr->_texture_stride, p00,
+                                tx, txMin, txMax, ty, tyMin, tyMax);
+                        } else {
+                            getPointsToInterpolate(pts, txtData, sidx, rdr->_texture_stride, p00,
+                                tx, txMin, txMax, ty, tyMin, tyMax);
+                        }
+
+                        if (hfrac && vfrac) {
+                            cval = interpolate4pointsNoAlpha(p00, pts[0], pts[1], pts[2], hfrac, vfrac);
+                        } else if (hfrac) {
+                            cval = interpolate2pointsNoAlpha(p00, pts[0], hfrac);
+                        } else if (vfrac) {
+                            cval = interpolate2pointsNoAlpha(p00, pts[1], vfrac);
+                        } else {
+                            cval = p00;
+                        }
+
+                        assert(pidx >= 0);
+                        assert(pidx < rdr->_paint_length);
+
+                        paint[pidx] = cval;
+                    } else {
+                        assert(pidx >= 0);
+                        assert(pidx < rdr->_paint_length);
+
+                        paint[pidx] = p00;
+                    }
+
+                    ++a;
+                    ++pidx;
+
+                    ltx += rdr->_texture_m00;
+                    lty += rdr->_texture_m10;
+                }
+                paintOffset += paintStride;
+            }
         }
         }
         break;
@@ -597,9 +749,9 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
         jlong ltx, lty;
         jint paintOffset = 0;
         jint pts[3];
-        
+
         y = rdr->_currY;
-        
+
         if (rdr->_texture_hasAlpha == XNI_TRUE) {
             for (j = 0; j < height; j++, y++) {
                 pidx = paintOffset;

@@ -188,18 +188,6 @@ class ES2Context extends BaseShaderContext {
     }
 
     @Override
-    public boolean isEdgeSmoothingSupported(PixelFormat format) {
-        if (ES2Pipeline.isEmbededDevice) {
-            // on an embeded device, the smoothing trick only works if the texture
-            // contains an alpha channel
-            return !format.isOpaque() && format.isRGB();
-        } else {
-            // on desktop, the smoothing trick is supported for any rgb format
-            return format.isRGB();
-        }
-    }
-
-    @Override
     protected void releaseRenderTarget() {
         currentTarget = null;
         super.releaseRenderTarget();
@@ -466,13 +454,13 @@ class ES2Context extends BaseShaderContext {
     }
 
     @Override
-    public void blit(RTTexture rtt, RTTexture dstRTT,
+    public void blit(RTTexture srcRTT, RTTexture dstRTT,
                      int srcX0, int srcY0, int srcX1, int srcY1,
                      int dstX0, int dstY0, int dstX1, int dstY1)
     {
         // If dstRTT is null then will blit to currently bound fbo
         int dstFboID = dstRTT == null ? 0 : ((ES2RTTexture)dstRTT).getFboID();
-        int srcFboID = ((ES2RTTexture)rtt).getFboID();
+        int srcFboID = ((ES2RTTexture)srcRTT).getFboID();
         glContext.blitFBO(srcFboID, dstFboID,
                           srcX0, srcY0, srcX1, srcY1,
                           dstX0, dstY0, dstX1, dstY1);

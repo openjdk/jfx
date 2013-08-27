@@ -58,7 +58,6 @@ public final class PrismSettings {
     public static final boolean doNativePisces;
     public static final String refType;
     public static final boolean forceRepaint;
-    public static final boolean isEmbededDevice;
     public static final boolean noFallback;
     public static final boolean showDirtyRegions;
     public static final boolean showCull;
@@ -79,6 +78,7 @@ public final class PrismSettings {
     public static final long targetVram;
     public static final boolean poolStats;
     public static final boolean poolDebug;
+    public static final boolean disableEffects;
 
     private PrismSettings() {
     }
@@ -243,8 +243,6 @@ public final class PrismSettings {
         shutdownHook = getBoolean(systemProperties, "prism.shutdownHook",
                                   PlatformUtil.isUnix());
 
-        isEmbededDevice = getBoolean(systemProperties, "prism.device", false);
-
         forcePow2 = getBoolean(systemProperties, "prism.forcepowerof2", false);
         noClampToZero = getBoolean(systemProperties, "prism.noclamptozero", false);
 
@@ -304,19 +302,24 @@ public final class PrismSettings {
          * This is a workaround for the bugs seen on device creating small textures (see TVP-256)
          * This value should not be set normally.
          */
-        minTextureSize = isEmbededDevice
-                             ? getInt(systemProperties, "prism.mintexturesize",
-                                      0, "Try -Dprism.mintexturesize=<number>")
-                             : 0;
+        minTextureSize = getInt(systemProperties, "prism.mintexturesize", 0,
+                "Try -Dprism.mintexturesize=<number>");
 
-        minRTTSize = getInt(systemProperties, "prism.minrttsize",
-                                      isEmbededDevice ? 16 : 0, "Try -Dprism.minrttsize=<number>");
+        /*
+         * Check minimum RTT size
+         * This is needed for some embedded platforms to avoid rendering artifacts
+         * when rendering into small RTT.
+         */
+       minRTTSize = getInt(systemProperties, "prism.minrttsize",                       
+               PlatformUtil.isEmbedded() ? 16 : 0, "Try -Dprism.minrttsize=<number>");
 
         disableRegionCaching = getBoolean(systemProperties,
                                           "prism.disableRegionCaching",
                                           false);
 
         disableD3D9Ex = getBoolean(systemProperties, "prism.disableD3D9Ex", true);
+        
+        disableEffects = getBoolean(systemProperties, "prism.disableEffects", false);
     }
 
     private static int parseInt(String s, int dflt, int trueDflt,

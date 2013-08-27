@@ -66,6 +66,7 @@ import java.awt.*;
 import java.awt.print.PageFormat;
 import java.awt.print.Pageable;
 import java.awt.print.Printable;
+import java.awt.print.PrinterException;
 import java.util.ArrayList;
 import java.util.Set;
 import com.sun.glass.ui.Application;
@@ -83,7 +84,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
     java.awt.print.PrinterJob pJob2D;
     javafx.print.Printer fxPrinter;
     J2DPrinter j2dPrinter;
-
+    
     private JobSettings settings;
     private PrintRequestAttributeSet printReqAttrSet;
 
@@ -94,6 +95,10 @@ public class J2DPrinterJob implements PrinterJobImpl {
         j2dPrinter = getJ2DPrinter(fxPrinter);
         settings = fxPrinterJob.getJobSettings();
         pJob2D = java.awt.print.PrinterJob.getPrinterJob();
+        try {
+            pJob2D.setPrintService(j2dPrinter.getService());
+        } catch (PrinterException pe) {
+        }
         printReqAttrSet = new HashPrintRequestAttributeSet();
         // dialog selection is a JDK 1.7 attribute.
         // We expect to run on 1.8 and above so this should be fine.
@@ -437,6 +442,10 @@ public class J2DPrinterJob implements PrinterJobImpl {
     public void setPrinterImpl(PrinterImpl impl) {
         j2dPrinter = (J2DPrinter)impl;
         fxPrinter = j2dPrinter.getPrinter();
+        try {
+            pJob2D.setPrintService(j2dPrinter.getService());
+        } catch (PrinterException pe) {
+        }
     }
 
     public PrinterImpl getPrinterImpl() {
@@ -454,6 +463,10 @@ public class J2DPrinterJob implements PrinterJobImpl {
     public void setPrinter(Printer printer) {
         fxPrinter = printer;
         j2dPrinter = getJ2DPrinter(printer);
+        try {
+            pJob2D.setPrintService(j2dPrinter.getService());
+        } catch (PrinterException pe) {
+        }
     }
 
     private void updatePrinter() {

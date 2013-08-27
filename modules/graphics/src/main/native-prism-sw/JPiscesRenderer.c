@@ -379,7 +379,8 @@ toPiscesCoords(unsigned int ff) {
 
 static void
 fillRect(JNIEnv *env, jobject this, Renderer* rdr, jint alphaOffset,
-    jint x, jint y, jint w, jint h)
+    jint x, jint y, jint w, jint h,
+    jint lEdge, jint rEdge, jint tEdge, jint bEdge)
 {
     Surface* surface;
     jobject surfaceHandle;
@@ -398,6 +399,47 @@ fillRect(JNIEnv *env, jobject this, Renderer* rdr, jint alphaOffset,
     y_from = y >> 16;
     y_to = y + h;
     y_to = (bfrac) ? y_to >> 16 : (y_to >> 16) - 1;
+
+    switch (lEdge) {
+    case IMAGE_FRAC_EDGE_PAD:
+        lfrac = 0;
+        break;
+    case IMAGE_FRAC_EDGE_TRIM:
+        if (lfrac) { x_from++; }
+        lfrac = 0;
+        break;
+    }
+
+    switch (rEdge) {
+    case IMAGE_FRAC_EDGE_PAD:
+        rfrac = 0;
+        break;
+    case IMAGE_FRAC_EDGE_TRIM:
+        if (rfrac) { x_to--; }
+        rfrac = 0;
+        break;
+    }
+
+    switch (tEdge) {
+    case IMAGE_FRAC_EDGE_PAD:
+        tfrac = 0;
+        break;
+    case IMAGE_FRAC_EDGE_TRIM:
+        if (tfrac) { y_from++; }
+        tfrac = 0;
+        break;
+    }
+
+    switch (bEdge) {
+    case IMAGE_FRAC_EDGE_PAD:
+        bfrac = 0;
+        break;
+    case IMAGE_FRAC_EDGE_TRIM:
+        if (bfrac) { y_to--; }
+        bfrac = 0;
+        break;
+    }
+
     // apply clip
     if (x_from < rdr->_clip_bbMinX) {
         x_from = rdr->_clip_bbMinX;
@@ -519,7 +561,9 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_fillRect
 {
     Renderer* rdr;
     rdr = (Renderer*)JLongToPointer((*env)->GetLongField(env, this, fieldIds[RENDERER_NATIVE_PTR]));
-    fillRect(env, this, rdr, 0, x, y, w, h);
+    fillRect(env, this, rdr, 0, x, y, w, h,
+        IMAGE_FRAC_EDGE_KEEP, IMAGE_FRAC_EDGE_KEEP,
+        IMAGE_FRAC_EDGE_KEEP, IMAGE_FRAC_EDGE_KEEP);
 }
 
 /*
@@ -606,6 +650,7 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_drawImageImpl
 (JNIEnv *env, jobject this, jint imageType, jint imageMode,
     jintArray dataArray, jint width, jint height, jint offset, jint stride,
     jobject jTransform, jboolean repeat, jint bboxX, jint bboxY, jint bboxW, jint bboxH,
+    jint lEdge, jint rEdge, jint tEdge, jint bEdge,
     jint interpolateMinX, jint interpolateMinY, jint interpolateMaxX, jint interpolateMaxY,
     jboolean hasAlpha)
 {
@@ -627,7 +672,8 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_drawImageImpl
             interpolateMinX, interpolateMinY, interpolateMaxX, interpolateMaxY);
 
         fillRect(env, this, rdr, (minY - bboxY2) * width + minX - bboxX2,
-            bboxX, bboxY, bboxW, bboxH);
+            bboxX, bboxY, bboxW, bboxH,
+            lEdge, rEdge, tEdge, bEdge);
 
         rdr->_texture_intData = NULL;
         (*env)->ReleasePrimitiveArrayCritical(env, dataArray, data, 0);

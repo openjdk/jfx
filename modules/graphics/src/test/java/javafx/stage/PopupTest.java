@@ -46,6 +46,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import com.sun.javafx.pgstub.StubPopupStage;
+import com.sun.javafx.pgstub.StubStage;
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import javafx.geometry.Bounds;
@@ -605,6 +606,23 @@ public class PopupTest {
         popup2.show(popup1);
         popup1.hide();
         popup1.show(popup2, 10, 20);
+    }
+
+    @Test
+    public void testFocusGrabbedWhenNecessary() {
+        final Popup popup = new Popup();
+
+        popup.show(stage);
+        stage.requestFocus();
+
+        final StubStage peer = (StubStage) stage.impl_getPeer();
+        assertFalse(peer.isFocusGrabbed());
+
+        popup.setAutoHide(true);
+        assertTrue(peer.isFocusGrabbed());
+
+        popup.hide();
+        assertFalse(peer.isFocusGrabbed());
     }
 
     private static final class EventCounter implements EventHandler<Event> {

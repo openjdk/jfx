@@ -41,6 +41,7 @@ D3DLight::D3DLight() {
     position[0] = 0;
     position[1] = 0;
     position[2] = 0;
+    position[3] = 0; // padding since SetPixelShaderConstantF only takes vec4f; position[3] is unused
     w = 0;
 }
 

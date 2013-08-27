@@ -303,7 +303,6 @@ renderer_setRadialGradient(Renderer* rdr,
     memcpy(rdr->_gradient_colors, colors, GRADIENT_MAP_SIZE*sizeof(jint));
 }
 
-
 static INLINE void
 renderer_setTexture(Renderer* rdr, jint renderMode, jint* data, jint width, jint height, jint stride,
                     jboolean repeat, jboolean smooth, 
@@ -377,7 +376,11 @@ renderer_setTexture(Renderer* rdr, jint renderMode, jint* data, jint width, jint
             }
         }
     } else {
-        rdr->_texture_transformType = TEXTURE_TRANSFORM_GENERIC;
+        if (rdr->_texture_m01 == 0 && rdr->_texture_m10 == 0) {
+            rdr->_texture_transformType = TEXTURE_TRANSFORM_SCALE_TRANSLATE;
+        } else {
+            rdr->_texture_transformType = TEXTURE_TRANSFORM_GENERIC;
+        }
     }
 }
 

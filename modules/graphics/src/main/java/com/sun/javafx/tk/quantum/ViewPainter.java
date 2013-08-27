@@ -53,7 +53,7 @@ import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
 
 abstract class ViewPainter implements Runnable {
-    private static final NodePath<NGNode> NODE_PATH = new NodePath<>();
+    private static NodePath<NGNode>[] ROOT_PATHS = new NodePath[PrismSettings.dirtyRegionCount];
 
     /*
      * This could be a per-scene lock but there is no guarantee that the
@@ -68,7 +68,7 @@ abstract class ViewPainter implements Runnable {
     protected int penHeight = -1;
     protected int viewWidth;
     protected int viewHeight;
-    
+
     protected final SceneState sceneState;
 
     protected Presentable presentable;
@@ -107,7 +107,7 @@ abstract class ViewPainter implements Runnable {
             dirtyRegionContainer = dirtyRegionPool.checkOut();
         }
     }
-        
+
     protected void setRoot(NGNode node) {
         root = node;
     }
@@ -163,12 +163,18 @@ abstract class ViewPainter implements Runnable {
         }
 
         if (!PrismSettings.showDirtyRegions && status == DirtyRegionContainer.DTR_OK) {
+            final int dirtyRegionSize = dirtyRegionContainer.size();
             g.setHasPreCullingBits(true);
-            if (PULSE_LOGGING_ENABLED && dirtyRegionContainer.size() > 1) {
-                PULSE_LOGGER.renderMessage(dirtyRegionContainer.size() + " different dirty regions to render");
+            if (PULSE_LOGGING_ENABLED && dirtyRegionSize > 1) {
+                PULSE_LOGGER.renderMessage(dirtyRegionSize + " different dirty regions to render");
             }
             float pixelScale = (presentable == null ? 1.0f : presentable.getPixelScaleFactor());
-            for (int i = 0; i < dirtyRegionContainer.size(); i++) {
+            if (!sceneState.getScene().getDepthBuffer() && PrismSettings.occlusionCullingEnabled) {
+                for (int i = 0; i < dirtyRegionSize; ++i) {
+                    root.getRenderRoot(getRootPath(i), dirtyRegionContainer.getDirtyRegion(i), i, tx, projTx);
+                }
+            }
+            for (int i = 0; i < dirtyRegionSize; ++i) {
                 final RectBounds dirtyRegion = dirtyRegionContainer.getDirtyRegion(i);
                 // make sure we are not trying to render in some invalid region
                 if (dirtyRegion.getWidth() > 0 && dirtyRegion.getHeight() > 0) {
@@ -187,11 +193,12 @@ abstract class ViewPainter implements Runnable {
                     g.setClipRectIndex(i);
 
                     // Disable occlusion culling if depth buffer is enabled for the scene.
-                    if (sceneState.getScene().getDepthBuffer()) {
+                    if (sceneState.getScene().getDepthBuffer() || !PrismSettings.occlusionCullingEnabled) {
                         doPaint(g, null);
                     } else {
-                        doPaint(g, root.getRenderRoot(NODE_PATH, dirtyRegion, i, tx, projTx));
-                        NODE_PATH.clear();
+                        final NodePath<NGNode> path = getRootPath(i);
+                        doPaint(g, path);
+                        path.clear();
                     }
                 }
             }
@@ -256,6 +263,13 @@ abstract class ViewPainter implements Runnable {
         }
     }
 
+    private static NodePath<NGNode> getRootPath(int i) {
+        if (ROOT_PATHS[i] == null) {
+            ROOT_PATHS[i] = new NodePath<>();
+        }
+        return ROOT_PATHS[i];
+    }
+
     protected void disposePresentable() {
         if (presentable instanceof GraphicsResource) {
             ((GraphicsResource)presentable).dispose();
@@ -265,8 +279,8 @@ abstract class ViewPainter implements Runnable {
 
     protected boolean validateStageGraphics() {
         if (!sceneState.isValid()) {
-            // indicates something happened between the scheduling of the 
-            // job and the running of this job. 
+            // indicates something happened between the scheduling of the
+            // job and the running of this job.
             return false;
         }
 
@@ -275,10 +289,21 @@ abstract class ViewPainter implements Runnable {
 
         return sceneState.isWindowVisible() && !sceneState.isWindowMinimized();
     }
-    
+
     private void doPaint(Graphics g, NodePath<NGNode> renderRootPath) {
         if (PrismSettings.showDirtyRegions) {
             g.setClipRect(null);
+        }
+        // Null path indicates that occlusion culling is not used
+        if (renderRootPath != null) {
+            if (renderRootPath.isEmpty()) {
+                // empty render path indicates that no rendering is needed.
+                // There may be occluded dirty Nodes however, so we need to clear them
+                root.clearDirtyTree();
+                return;
+            }
+            // If the path is not empty, the first node must be the root node
+            assert(renderRootPath.getCurrentNode() == root);
         }
         long start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
         try {
@@ -307,5 +332,5 @@ abstract class ViewPainter implements Runnable {
             }
         }
     }
-    
+
 }

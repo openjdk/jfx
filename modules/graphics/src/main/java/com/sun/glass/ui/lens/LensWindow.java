@@ -376,6 +376,10 @@ final class LensWindow extends Window {
         notifyFocusUngrab();
     }
 
+    protected void _notifyFocusDisabled() {
+        notifyFocusDisabled();
+    }
+
     //**************************************************************
     // upcalls from native, need to forward to event loop
 

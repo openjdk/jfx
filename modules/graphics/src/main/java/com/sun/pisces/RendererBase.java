@@ -72,4 +72,8 @@ public final class RendererBase {
 
     public static final int IMAGE_MODE_NORMAL = 1;
     public static final int IMAGE_MODE_MULTIPLY = 2;
+
+    public static final int IMAGE_FRAC_EDGE_KEEP = 0;
+    public static final int IMAGE_FRAC_EDGE_PAD  = 1;
+    public static final int IMAGE_FRAC_EDGE_TRIM = 2;
 }

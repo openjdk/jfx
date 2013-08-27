@@ -962,7 +962,7 @@ public class FXMLLoader {
                         loadListener.readInternalAttribute(localName, value);
                     }
 
-                    resources = ResourceBundle.getBundle(value, Locale.getDefault(), 
+                    resources = ResourceBundle.getBundle(value, Locale.getDefault(),
                             FXMLLoader.this.resources.getClass().getClassLoader());
                 } else if (localName.equals(INCLUDE_CHARSET_ATTRIBUTE)) {
                     if (loadListener != null) {
@@ -1370,8 +1370,6 @@ public class FXMLLoader {
                         + " extension " + extension + ".");
                 }
 
-                scriptEngine.setBindings(scriptEngineManager.getBindings(), ScriptContext.ENGINE_SCOPE);
-
                 try {
                     URL location;
                     if (source.charAt(0) == '/') {
@@ -1527,6 +1525,7 @@ public class FXMLLoader {
             Bindings engineBindings = scriptEngine.getBindings(ScriptContext.ENGINE_SCOPE);
             Bindings localBindings = scriptEngine.createBindings();
             localBindings.put(EVENT_KEY, event);
+            localBindings.putAll(engineBindings);
             scriptEngine.setBindings(localBindings, ScriptContext.ENGINE_SCOPE);
 
             // Execute the script
@@ -2459,7 +2458,6 @@ public class FXMLLoader {
         if (!staticLoad) {
             ScriptEngineManager scriptEngineManager = getScriptEngineManager();
             scriptEngine = scriptEngineManager.getEngineByName(language);
-            scriptEngine.setBindings(scriptEngineManager.getBindings(), ScriptContext.ENGINE_SCOPE);
         }
     }
 

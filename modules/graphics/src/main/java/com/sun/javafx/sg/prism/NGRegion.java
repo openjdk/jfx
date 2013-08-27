@@ -45,11 +45,16 @@ import javafx.scene.paint.LinearGradient;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.shape.StrokeType;
+
 import java.util.List;
+import java.util.WeakHashMap;
+
+import com.sun.glass.ui.Screen;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.RectBounds;
+import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -61,11 +66,9 @@ import com.sun.prism.Graphics;
 import com.sun.prism.Image;
 import com.sun.prism.RTTexture;
 import com.sun.prism.Texture;
-import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.paint.ImagePattern;
 import com.sun.prism.paint.Paint;
-import com.sun.scenario.effect.Effect;
 import com.sun.scenario.effect.Offset;
 
 /**
@@ -82,10 +85,18 @@ public class NGRegion extends NGGroup {
     private static final Affine2D SCRATCH_AFFINE = new Affine2D();
 
     /**
-     * The texture cache used by all regions for storing background fills / shapes which
-     * can be easily cached and reused.
+     * Temporary rect for general use. Because this is a static variable,
+     * it is only intended to be used from a single thread, the render thread
+     * in this case.
      */
-    private static final RegionImageCache CACHE = new RegionImageCache();
+    private static final Rectangle TEMP_RECT = new Rectangle();
+
+    /**
+     * Screen to RegionImageCache mapping. This mapping is required as textures
+     * are only valid in graphics context used to create them (relies on a one
+     * to one mapping between Screen and GraphicsContext).
+     */
+    private static WeakHashMap<Screen, RegionImageCache> imageCacheMap = new WeakHashMap<>();
 
     /**
      * Indicates the cached image can be sliced vertically.
@@ -164,6 +175,12 @@ public class NGRegion extends NGGroup {
     private int cacheMode;
 
     /**
+     * Is the key into the image cache that identifies the required background
+     * for the region.
+     */
+    private Integer cacheKey;
+
+    /**
      * Simple Helper Function for cleanup.
      */
     static Paint getPlatformPaint(javafx.scene.paint.Paint paint) {
@@ -198,6 +215,7 @@ public class NGRegion extends NGGroup {
         this.centerShape = positionShape;
         this.cacheShape = cacheShape;
         invalidateOpaqueRegion();
+        cacheKey = null;
     }
 
     /**
@@ -212,6 +230,7 @@ public class NGRegion extends NGGroup {
         this.height = height;
         invalidateOpaqueRegion();
         backgroundInsets = null;
+        cacheKey = null;
     }
 
     /**
@@ -278,6 +297,7 @@ public class NGRegion extends NGGroup {
             }
         }
         backgroundInsets = null;
+        cacheKey = null;
 
         // Only update the geom if the new background is geometrically different from the old
         if (!background.getOutsets().equals(old.getOutsets())) {
@@ -335,62 +355,44 @@ public class NGRegion extends NGGroup {
         invalidateOpaqueRegion();
     }
 
-    /**
-     * Overridden so as to invalidate the opaque region, since the opaque region computation
-     * must take opacity into account.
-     *
-     * @param opacity A value between 0 and 1.
-     */
-    @Override public void setOpacity(float opacity) {
-        // We certainly don't want to do any work if opacity hasn't changed!
-        final float old = getOpacity();
-        if (old != opacity) {
-            super.setOpacity(opacity);
-            // Even though the opacity has changed, for example from .5 to .6,
-            // we don't need to invalidate the opaque region unless it has toggled
-            // from 1 to !1, or from !1 to 1.
-            if (old < 1 || opacity < 1) invalidateOpaqueRegion();
-        }
-    }
-
-    /**
-     * Overridden so that we can invalidate the opaque region when the clip
-     * has changed.
-     *
-     * @param clipNode can be null if the clip node is being cleared
-     */
-    @Override public void setClipNode(NGNode clipNode) {
-        super.setClipNode(clipNode);
-        invalidateOpaqueRegion();
-    }
-
-    /**
-     * Overridden so as to invalidate the opaque region when the effect changes.
-     *
-     * @param effect
-     */
-    @Override public void setEffect(Object effect) {
-        // Lets only do work if we have to
-        Effect old = getEffect();
-        if (old != effect) {
-            super.setEffect(effect);
-            // The only thing we do with the effect in #computeOpaqueRegion(RectBounds) is to check
-            // whether the effect is null / not null, and whether a not null effect reduces opaque
-            // pixels. If the answer to these question has not changed from last time, then there
-            // is no need to recompute the opaque region.
-            if (old == null || effect == null ||
-                    old.reducesOpaquePixels() != ((Effect)effect).reducesOpaquePixels()){
-                invalidateOpaqueRegion();
-            }
-        }
-    }
-
     /**************************************************************************
      *                                                                        *
      * Implementations of methods defined in the parent classes, with the     *
      * exception of rendering methods.                                        *
      *                                                                        *
      *************************************************************************/
+
+    private RegionImageCache getImageCache(Graphics g) {
+        Screen screen = g.getAssociatedScreen();
+        RegionImageCache cache = imageCacheMap.get(screen);
+        if (cache == null) {
+            cache = new RegionImageCache(g);
+            imageCacheMap.put(screen, cache);
+        }
+        return cache;
+    }
+
+    private Integer getCacheKey(int w, int h) {
+        if (cacheKey == null) {
+            int key = 31 * w;
+            key = key * 37 + h;
+            key = key * 47 + background.hashCode();
+            if (shape != null) {
+                key = key * 73 + shape.hashCode();
+            }
+            cacheKey = key;
+        }
+        return cacheKey;
+    }
+
+    @Override protected boolean supportsOpaqueRegions() { return true; }
+
+    @Override
+    protected boolean hasOpaqueRegion() {
+        return super.hasOpaqueRegion() &&
+                !Float.isNaN(opaqueTop) && !Float.isNaN(opaqueRight) &&
+                !Float.isNaN(opaqueBottom) && !Float.isNaN(opaqueLeft);
+    }
 
     /**
      * The opaque region of an NGRegion takes into account the opaque insets
@@ -401,52 +403,21 @@ public class NGRegion extends NGGroup {
      * @return
      */
     @Override protected RectBounds computeOpaqueRegion(RectBounds opaqueRegion) {
-        final NGNode clip = getClipNode();
-        final Effect effect = getEffect();
-        // compute opaque region
-        if ((effect == null || !effect.reducesOpaquePixels()) &&
-                getOpacity() == 1f &&
-                (clip == null ||
-                (clip instanceof NGRectangle && ((NGRectangle)clip).isRectClip(BaseTransform.IDENTITY_TRANSFORM, true))))
-        {
-            if (Float.isNaN(opaqueTop) || Float.isNaN(opaqueRight) || Float.isNaN(opaqueBottom) || Float.isNaN(opaqueLeft)) {
-                return null;
-            }
-
-            // TODO what to do if the opaqueRegion has negative width or height due to excessive opaque insets? (RT-26979)
-            if (opaqueRegion == null) {
-                opaqueRegion = new RectBounds(opaqueLeft, opaqueTop, width - opaqueRight, height - opaqueBottom);
-            } else {
-                opaqueRegion.deriveWithNewBounds(opaqueLeft, opaqueTop, 0, width - opaqueRight, height - opaqueBottom, 0);
-            }
-
-            if (clip != null) { // We already know that clip is rectangular
-                // RT-25095: If this node has a clip who's opaque region cannot be determined, then
-                // we cannot determine any opaque region for this node (in fact, it might not have one).
-                final RectBounds clipOpaqueRegion = clip.getOpaqueRegion();
-                if (clipOpaqueRegion == null) {
-                    return null;
-                } else {
-                    opaqueRegion.intersectWith(clipOpaqueRegion);
-                }
-            }
-
-            return opaqueRegion;
-        }
-        return null;
+        // TODO what to do if the opaqueRegion has negative width or height due to excessive opaque insets? (RT-26979)
+        return (RectBounds) opaqueRegion.deriveWithNewBounds(opaqueLeft, opaqueTop, 0, width - opaqueRight, height - opaqueBottom, 0);
     }
 
-    @Override protected NodePath<NGNode> computeRenderRoot(NodePath<NGNode> path, RectBounds dirtyRegion,
+    @Override protected RenderRootResult computeRenderRoot(NodePath<NGNode> path, RectBounds dirtyRegion,
                                                            int cullingIndex, BaseTransform tx,
                                                            GeneralTransform3D pvTx) {
 
-        NodePath<NGNode> childPath = super.computeRenderRoot(path, dirtyRegion, cullingIndex, tx, pvTx);
-        if (childPath != null) {
-            childPath.add(this);
-        } else {
-            childPath = computeNodeRenderRoot(path, dirtyRegion, cullingIndex, tx, pvTx);
+        RenderRootResult result = super.computeRenderRoot(path, dirtyRegion, cullingIndex, tx, pvTx);
+        if (result == RenderRootResult.HAS_RENDER_ROOT) {
+            path.add(this);
+        } else if (result == RenderRootResult.NONE){
+            result = computeNodeRenderRoot(path, dirtyRegion, cullingIndex, tx, pvTx);
         }
-        return childPath;
+        return result;
     }
 
     @Override protected boolean hasVisuals() {
@@ -503,7 +474,8 @@ public class NGRegion extends NGGroup {
         if (shape != null) {
             if (!background.isEmpty()) {
                 final Insets outsets = background.getOutsets();
-                final Shape outsetShape = resizeShape((float) -outsets.getTop(), (float) -outsets.getRight(), (float) -outsets.getBottom(), (float) -outsets.getLeft());
+                final Shape outsetShape = resizeShape((float) -outsets.getTop(), (float) -outsets.getRight(),
+                                                      (float) -outsets.getBottom(), (float) -outsets.getLeft());
                 final RectBounds outsetShapeBounds = outsetShape.getBounds();
                 final int textureWidth = Math.round(outsetShapeBounds.getWidth()),
                           textureHeight = Math.round(outsetShapeBounds.getHeight());
@@ -513,89 +485,36 @@ public class NGRegion extends NGGroup {
                 // all examples of cases where we'd like to reuse a cached image for performance reasons rather
                 // than re-drawing everything each time.
 
+                RTTexture cached = null;
+                Rectangle rect = null;
                 // RT-25013: We need to make sure that we do not use a cached image in the case of a
                 // scaled region, or things won't look right (they'll looked scaled instead of vector-resized).
-                final boolean cache = cacheMode != 0 && g.getTransformNoClone().isTranslateOrIdentity();
-                RTTexture cached = cache ? CACHE.getImage(g.getAssociatedScreen(), textureWidth, textureHeight, background, shape) : null;
-                if (cached != null) {
-                    cached.lock();
-                    if (cached.isSurfaceLost()) {
-                        cached = null;
-                    }
-                }
-                // If there is not a cached texture already, then we need to render everything
-                if (cached == null) {
-                    // We will here check to see if we CAN cache the region background. If not, then
-                    // we will render as normal. If we can cache it, however, then we will setup a
-                    // texture and swizzle rendering onto the RTTexture's graphics, and then at the
-                    // end do render from the texture onto the graphics object we were passed.
-                    Graphics old = null;
-                    if (cache && CACHE.isImageCachable(textureWidth, textureHeight)) {
-                        old = g;
-                        cached = g.getResourceFactory().createRTTexture(textureWidth, textureHeight,
-                                                                        WrapMode.CLAMP_TO_ZERO);
-                        cached.contentsUseful();
-                        g = cached.createGraphics();
-                        // Have to move the origin such that when rendering to x=0, we actually end up rendering
-                        // at x=bounds.getMinX(). Otherwise anything rendered to the left of the origin would be lost
-                        g.translate(-outsetShapeBounds.getMinX(), -outsetShapeBounds.getMinY());
-                        CACHE.setImage(cached, old.getAssociatedScreen(), textureWidth, textureHeight, background, shape);
-                        if (PulseLogger.PULSE_LOGGING_ENABLED) {
-                            PulseLogger.PULSE_LOGGER.renderIncrementCounter("Region shape image cached");
+                if (cacheMode != 0 && g.getTransformNoClone().isTranslateOrIdentity()) {
+                    RegionImageCache imageCache = getImageCache(g);
+                    if (imageCache.isImageCachable(textureWidth, textureHeight)) {
+                        final Integer key = getCacheKey(textureWidth, textureHeight);
+                        rect = TEMP_RECT;
+                        rect.setBounds(0, 0, textureWidth, textureHeight);
+                        boolean render = imageCache.getImageLocation(key, rect, background, shape, g);
+                        if (!rect.isEmpty()) {
+                            // An empty rect indicates a failure occurred in the imageCache
+                            cached = imageCache.getBackingStore();
                         }
-                    }
+                        if (cached != null && render) {
+                            Graphics cachedGraphics = cached.createGraphics();
 
-                    // We first need to draw each background fill. We don't pay any attention
-                    // to the radii of the BackgroundFill, but we do honor the insets and
-                    // the fill paint itself.
-                    final List<BackgroundFill> fills = background.getFills();
-                    for (int i = 0, max = fills.size(); i < max; i++) {
-                        final BackgroundFill fill = fills.get(i);
-                        // Get the paint for this BackgroundFill. It should not be possible
-                        // for it to ever be null
-                        final Paint paint = getPlatformPaint(fill.getFill());
-                        assert paint != null;
-                        g.setPaint(paint);
-                        // Adjust the box within which we will fit the shape based on the
-                        // insets. The resize shape method will resize the shape to fit
-                        final Insets insets = fill.getInsets();
-                        g.fill(resizeShape((float) insets.getTop(), (float) insets.getRight(),
-                                           (float) insets.getBottom(), (float) insets.getLeft()));
-                    }
-                    // We now need to draw each background image. Only the "cover" property
-                    // of BackgroundImage, and the "image" property itself, have any impact
-                    // on how the image is applied to a Shape.
-                    final List<BackgroundImage> images = background.getImages();
-                    for (int i = 0, max = images.size(); i < max; i++) {
-                        final BackgroundImage image = images.get(i);
-                        final Image prismImage = (Image) image.getImage().impl_getPlatformImage();
-                        if (prismImage == null) {
-                            // The prismImage might be null if the Image has not completed loading.
-                            // In that case, we simply must skip rendering of that layer this
-                            // time around.
-                            continue;
+                            // Have to move the origin such that when rendering to x=0, we actually end up rendering
+                            // at x=bounds.getMinX(). Otherwise anything rendered to the left of the origin would be lost
+                            cachedGraphics.translate(rect.x - outsetShapeBounds.getMinX(),
+                                                     rect.y - outsetShapeBounds.getMinY());
+                            renderBackgroundShape(cachedGraphics);
+                            if (PulseLogger.PULSE_LOGGING_ENABLED) {
+                                PulseLogger.PULSE_LOGGER.renderIncrementCounter("Rendering region shape image to cache");
+                            }
                         }
-                        // We need to translate the shape based on 0 insets. This will for example
-                        // center and / or position the shape if necessary.
-                        final Shape translatedShape = resizeShape(0, 0, 0, 0);
-                        // Now ensure that the ImagePattern is based on the x/y position of the
-                        // shape and not on the 0,0 position of the region.
-                        final RectBounds bounds = translatedShape.getBounds();
-                        ImagePattern pattern = image.getSize().isCover() ?
-                                new ImagePattern(prismImage, bounds.getMinX(), bounds.getMinY(),
-                                                 bounds.getWidth(), bounds.getHeight(), false, false) :
-                                new ImagePattern(prismImage, bounds.getMinX(), bounds.getMinY(),
-                                                 prismImage.getWidth(), prismImage.getHeight(), false, false);
-                        g.setPaint(pattern);
-                        // Go ahead and finally fill!
-                        g.fill(translatedShape);
-                    }
-                    // If old != null then that means we were rendering into the "cached" texture, and
-                    // therefore need to reset the graphics.
-                    if (old != null) {
-                        g = old;
                     }
                 }
+
                 // cached might not be null if either there was a cached image, or we just created one.
                 // In either case, we need to now render from the cached texture to the graphics
                 if (cached != null) {
@@ -605,16 +524,18 @@ public class NGRegion extends NGGroup {
                     final float dstX2 = outsetShapeBounds.getMaxX();
                     final float dstY2 = outsetShapeBounds.getMaxY();
 
-                    final float srcX1 = 0f;
-                    final float srcY1 = 0f;
+                    final float srcX1 = rect.x;
+                    final float srcY1 = rect.y;
                     final float srcX2 = srcX1 + textureWidth;
                     final float srcY2 = srcY1 + textureHeight;
 
                     g.drawTexture(cached, dstX1, dstY1, dstX2, dstY2, srcX1, srcY1, srcX2, srcY2);
                     if (PulseLogger.PULSE_LOGGING_ENABLED) {
-                        PulseLogger.PULSE_LOGGER.renderIncrementCounter("Cached Region shape image used");
+                        PulseLogger.PULSE_LOGGER.renderIncrementCounter("Cached region shape image used");
                     }
-                    cached.unlock();
+                } else {
+                    // no cache, rendering backgrounds directly to graphics
+                    renderBackgroundShape(g);
                 }
             }
 
@@ -684,47 +605,49 @@ public class NGRegion extends NGGroup {
                         cacheMode != 0 &&
                         g.getTransformNoClone().isTranslateOrIdentity();
                 RTTexture cached = null;
-                if (cache && CACHE.isImageCachable(textureWidth, textureHeight)) {
-                    cached = CACHE.getImage(g.getAssociatedScreen(), textureWidth, textureHeight, background);
-                    if (cached != null) {
-                        cached.lock();
-                        if (cached.isSurfaceLost()) {
-                            cached = null;
+                Rectangle rect = null;
+                if (cache) {
+                    RegionImageCache imageCache = getImageCache(g);
+                    if (imageCache.isImageCachable(textureWidth, textureHeight)) {
+                        final Integer key = getCacheKey(textureWidth, textureHeight);
+                        rect = TEMP_RECT;
+                        rect.setBounds(0, 0, textureWidth, textureHeight);
+                        boolean render = imageCache.getImageLocation(key, rect, background, shape, g);
+                        if (!rect.isEmpty()) {
+                            // An empty rect indicates a failure occurred in the imageCache
+                            cached = imageCache.getBackingStore();
+                        }
+                        if (cached != null && render) {
+                            Graphics cacheGraphics = cached.createGraphics();
+
+                            // Have to move the origin such that when rendering to x=0, we actually end up rendering
+                            // at x=outsets.getLeft(). Otherwise anything rendered to the left of the origin would be lost
+                            // Round up to the nearest pixel
+                            cacheGraphics.translate(rect.x + outsetsLeft, rect.y + outsetsTop);
+
+                            //rendering backgrounds to the cache
+                            renderBackgrounds(cacheGraphics, cacheWidth, cacheHeight);
+
+                            if (PulseLogger.PULSE_LOGGING_ENABLED) {
+                                PulseLogger.PULSE_LOGGER.renderIncrementCounter("Rendering region background image to cache");
+                            }
                         }
                     }
-                    if (cached == null) {
-                        cached = g.getResourceFactory().createRTTexture(textureWidth, textureHeight, WrapMode.CLAMP_TO_ZERO);
-                        cached.contentsUseful();
-                        CACHE.setImage(cached, g.getAssociatedScreen(), textureWidth, textureHeight, background);
-                        if (PulseLogger.PULSE_LOGGING_ENABLED) {
-                            PulseLogger.PULSE_LOGGER.renderIncrementCounter("Region background image cached");
-                        }
-
-                        Graphics cacheGraphics = cached.createGraphics();
-                        // Have to move the origin such that when rendering to x=0, we actually end up rendering
-                        // at x=outsets.getLeft(). Otherwise anything rendered to the left of the origin would be lost
-                        // Round up to the nearest pixel
-                        cacheGraphics.translate(outsetsLeft, outsetsTop);
-
-                        //rendering backgrounds to the cache
-                        renderBackgrounds(cacheGraphics, cacheWidth, cacheHeight);
-                    }
-                } else {
-                    // no cache, rendering backgrounds directly to graphics
-                    renderBackgrounds(g, width, height);
                 }
 
                 // cached might not be null if either there was a cached image, or we just created one.
                 // In either case, we need to now render from the cached texture to the graphics
                 if (cached != null) {
-                    final boolean sameWidth = cacheWidth == width;
-                    final boolean sameHeight = cacheHeight == height;
+                    final float dstWidth = outsetsLeft + width + outsetsRight;
+                    final float dstHeight = outsetsTop + height + outsetsBottom;
+                    final boolean sameWidth = rect.width == dstWidth;
+                    final boolean sameHeight = rect.height == dstHeight;
                     final float dstX1 = -outsetsLeft;
                     final float dstY1 = -outsetsTop;
                     final float dstX2 = width + outsetsRight;
                     final float dstY2 = height + outsetsBottom;
-                    final float srcX1 = 0f;
-                    final float srcY1 = 0f;
+                    final float srcX1 = rect.x;
+                    final float srcY1 = rect.y;
                     final float srcX2 = srcX1 + textureWidth;
                     final float srcY2 = srcY1 + textureHeight;
 
@@ -799,10 +722,13 @@ public class NGRegion extends NGGroup {
                                             srcLeftX, srcTopY, srcRightX, srcBottomY);
                     }
                     if (PulseLogger.PULSE_LOGGING_ENABLED) {
-                        PulseLogger.PULSE_LOGGER.renderIncrementCounter("Cached Region background image used");
+                        PulseLogger.PULSE_LOGGER.renderIncrementCounter("Cached region background image used");
                     }
-                    cached.unlock();
+                } else {
+                    // no cache, rendering backgrounds directly to graphics
+                    renderBackgrounds(g, width, height);
                 }
+
 
                 final List<BackgroundImage> images = background.getImages();
                 for (int i = 0, max = images.size(); i < max; i++) {
@@ -1238,6 +1164,54 @@ public class NGRegion extends NGGroup {
 
         // Paint the children
         super.renderContent(g);
+    }
+
+    private void renderBackgroundShape(Graphics g) {
+        // We first need to draw each background fill. We don't pay any attention
+        // to the radii of the BackgroundFill, but we do honor the insets and
+        // the fill paint itself.
+        final List<BackgroundFill> fills = background.getFills();
+        for (int i = 0, max = fills.size(); i < max; i++) {
+            final BackgroundFill fill = fills.get(i);
+            // Get the paint for this BackgroundFill. It should not be possible
+            // for it to ever be null
+            final Paint paint = getPlatformPaint(fill.getFill());
+            assert paint != null;
+            g.setPaint(paint);
+            // Adjust the box within which we will fit the shape based on the
+            // insets. The resize shape method will resize the shape to fit
+            final Insets insets = fill.getInsets();
+            g.fill(resizeShape((float) insets.getTop(), (float) insets.getRight(),
+                               (float) insets.getBottom(), (float) insets.getLeft()));
+        }
+        // We now need to draw each background image. Only the "cover" property
+        // of BackgroundImage, and the "image" property itself, have any impact
+        // on how the image is applied to a Shape.
+        final List<BackgroundImage> images = background.getImages();
+        for (int i = 0, max = images.size(); i < max; i++) {
+            final BackgroundImage image = images.get(i);
+            final Image prismImage = (Image) image.getImage().impl_getPlatformImage();
+            if (prismImage == null) {
+                // The prismImage might be null if the Image has not completed loading.
+                // In that case, we simply must skip rendering of that layer this
+                // time around.
+                continue;
+            }
+            // We need to translate the shape based on 0 insets. This will for example
+            // center and / or position the shape if necessary.
+            final Shape translatedShape = resizeShape(0, 0, 0, 0);
+            // Now ensure that the ImagePattern is based on the x/y position of the
+            // shape and not on the 0,0 position of the region.
+            final RectBounds bounds = translatedShape.getBounds();
+            ImagePattern pattern = image.getSize().isCover() ?
+                    new ImagePattern(prismImage, bounds.getMinX(), bounds.getMinY(),
+                                     bounds.getWidth(), bounds.getHeight(), false, false) :
+                    new ImagePattern(prismImage, bounds.getMinX(), bounds.getMinY(),
+                                     prismImage.getWidth(), prismImage.getHeight(), false, false);
+            g.setPaint(pattern);
+            // Go ahead and finally fill!
+            g.fill(translatedShape);
+        }
     }
 
     private void renderBackgrounds(Graphics g, float width, float height) {

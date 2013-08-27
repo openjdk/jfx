@@ -244,7 +244,22 @@ public abstract class PopupWindow extends Window {
      * @defaultValue false
      */
     private BooleanProperty autoHide =
-            new SimpleBooleanProperty(this, "autoHide");
+            new BooleanPropertyBase() {
+                @Override
+                protected void invalidated() {
+                    handleAutohideActivation(isShowing(), get());
+                }
+
+                @Override
+                public Object getBean() {
+                    return PopupWindow.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "autoHide";
+                }
+            };
     public final void setAutoHide(boolean value) { autoHide.set(value); }
     public final boolean isAutoHide() { return autoHide.get(); }
     public final BooleanProperty autoHideProperty() { return autoHide; }
@@ -460,13 +475,13 @@ public abstract class PopupWindow extends Window {
             bindOwnerFocusedProperty(ownerWindowValue);
             setFocused(ownerWindowValue.isFocused());
             handleAutofixActivation(true, isAutoFix());
-            rootWindow.increaseFocusGrabCounter();
+            handleAutohideActivation(true, isAutoHide());
         } else {
             stopMonitorOwnerEvents(ownerWindowValue);
             unbindOwnerFocusedProperty(ownerWindowValue);
             setFocused(false);
             handleAutofixActivation(false, isAutoFix());
-            rootWindow.decreaseFocusGrabCounter();
+            handleAutohideActivation(false, isAutoHide());
             rootWindow = null;
         }
 
@@ -659,6 +674,21 @@ public abstract class PopupWindow extends Window {
                 heightProperty().removeListener(autofixHandler);
                 Screen.getScreens().removeListener(autofixHandler);
                 autofixHandler = null;
+            }
+        }
+    }
+
+    private boolean autohideActive;
+    private void handleAutohideActivation(final boolean visible,
+                                          final boolean autohide) {
+        final boolean newAutohideActive = visible && autohide;
+        if (autohideActive != newAutohideActive) {
+            // assert rootWindow != null;
+            autohideActive = newAutohideActive;
+            if (newAutohideActive) {
+                rootWindow.increaseFocusGrabCounter();
+            } else {
+                rootWindow.decreaseFocusGrabCounter();
             }
         }
     }

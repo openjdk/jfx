@@ -25,6 +25,8 @@
 
 package com.sun.javafx.sg.prism;
 
+import java.util.ArrayList;
+import java.util.List;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -33,10 +35,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-
-import java.util.ArrayList;
-import java.util.List;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
@@ -85,7 +83,7 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
                 content[(row * 3) + col] = node;
             }
         }
-        root = NodeTestUtils.createGroup(content);
+        root = createGroup(content);
 
         // The grid is created & populated. We'll now go through and manually
         // clean them all up so that when we perform the test, it is from the
@@ -94,15 +92,15 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
     }
 
     @Test public void sanityCheck() {
-        NGNode node = (NGNode) root.getChildren().get(0);
+        NGNode node = root.getChildren().get(0);
         assertEquals(new RectBounds(0, 0, 100, 100), node.getContentBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM));
         assertEquals(new RectBounds(0, 0, 100, 100), node.getCompleteBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM));
 
-        node = (NGNode) root.getChildren().get(1);
+        node = root.getChildren().get(1);
         assertEquals(new RectBounds(0, 0, 100, 100), node.getContentBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM));
         assertEquals(new RectBounds(110, 0, 210, 100), node.getCompleteBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM));
 
-        node = (NGNode) root.getChildren().get(3);
+        node = root.getChildren().get(3);
         assertEquals(new RectBounds(0, 0, 100, 100), node.getContentBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM));
         assertEquals(new RectBounds(0, 110, 100, 210), node.getCompleteBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM));
     }

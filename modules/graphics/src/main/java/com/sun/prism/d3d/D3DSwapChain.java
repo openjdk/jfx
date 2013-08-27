@@ -30,6 +30,7 @@ import com.sun.javafx.geom.Rectangle;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.Graphics;
 import com.sun.prism.Presentable;
+import com.sun.prism.PresentableState;
 import com.sun.prism.RTTexture;
 
 class D3DSwapChain
@@ -56,8 +57,21 @@ class D3DSwapChain
         if (g == null) {
             return false;
         }
-        g.setCompositeMode(CompositeMode.SRC);
-        g.drawTexture(texBackBuffer, 0, 0, this.getContentWidth(), this.getContentHeight());
+        Rectangle rectDST = new Rectangle(0, 0, this.getContentWidth(), this.getContentHeight());
+        if (clip != null) {
+            rectDST.intersectWith(clip);
+        }
+        int x0 = rectDST.x;
+        int y0 = rectDST.y;
+        int x1 = x0 + rectDST.width;
+        int y1 = y0 + rectDST.height;
+        if (isAntiAliasing()) {
+            context.flushVertexBuffer();
+            g.blit(texBackBuffer, null, x0, y0, x1, y1, x0, y0, x1, y1);
+        } else {
+            g.setCompositeMode(CompositeMode.SRC);
+            g.drawTexture(texBackBuffer, x0, y0, x1, y1);
+        }
         context.flushVertexBuffer();
         texBackBuffer.unlock();
         return true;
@@ -103,7 +117,12 @@ class D3DSwapChain
         return d3dResRecord.getContext();
     }
 
-    public boolean lockResources() {
+    public boolean lockResources(PresentableState pState) {
+        if (pState.getWidth() != getPhysicalWidth() ||
+            pState.getHeight() != getPhysicalHeight())
+        {
+            return true;
+        }
         texBackBuffer.lock();
         return texBackBuffer.isSurfaceLost();
     }
@@ -120,10 +139,6 @@ class D3DSwapChain
         return getContext().getAssociatedScreen();
     }
 
-    public boolean recreateOnResize() {
-        return true;
-    }
-
     public float getPixelScaleFactor() {
         return 1.0f;
     }
@@ -137,7 +152,6 @@ class D3DSwapChain
     }
 
     public boolean isAntiAliasing() {
-        //TODO: 3D - Add AA support for D3D
-        return false;
+        return texBackBuffer != null ? texBackBuffer.isAntiAliasing() : false;
     }
 }

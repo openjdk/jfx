@@ -23,11 +23,11 @@
  * questions.
  */
  
-#ifndef OGLTRACE_MAP_H
-#define OGLTRACE_MAP_H
+#ifndef GLTRACE_MAP_H
+#define GLTRACE_MAP_H
 
 void    *createMap();
 void    putMap(void *map, void *key, void *val);
 void    *getMap(void *map, void *key);
 
-#endif /* OGLTRACE_MAP_H */
+#endif /* GLTRACE_MAP_H */

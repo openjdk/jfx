@@ -179,6 +179,11 @@ public class Window implements EventTarget {
     }
 
     /**
+     * Indicates if a user requested the window to be sized to match the scene
+     * size.
+     */
+    private boolean sizeToScene = false;
+    /**
      * Set the width and height of this Window to match the size of the content
      * of this Window's Scene.
      */
@@ -186,6 +191,9 @@ public class Window implements EventTarget {
         if (getScene() != null && impl_peer != null) {
             getScene().impl_preferredSize();
             adjustSize(false);
+        } else {
+            // Remember the request to reapply it later if needed
+            sizeToScene = true;
         }
     }
 
@@ -782,6 +790,18 @@ public class Window implements EventTarget {
                 tk.requestNextPulse();
             }
             impl_visibleChanged(newVisible);
+
+            if (sizeToScene) {
+                if (newVisible) {
+                    // Now that the visibleChanged has completed, the insets of the window
+                    // might have changed (e.g. due to setResizable(false)). Reapply the
+                    // sizeToScene() request if needed to account for the new insets.
+                    sizeToScene();
+                }
+
+                // Reset the flag unconditionally upon visibility changes
+                sizeToScene = false;
+            }
         }
 
         @Override

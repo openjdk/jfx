@@ -68,10 +68,6 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
     private RTTexture stableBackbuffer;
     private boolean copyFullBuffer;
 
-    public boolean recreateOnResize() {
-        return false;
-    }
-
     public boolean isOpaque() {
         if (stableBackbuffer != null) {
             return stableBackbuffer.isOpaque();
@@ -88,31 +84,26 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
         }
     }
 
-    /**
-     * If needsResize is true, indicates that the underlying window has been
-     * resized and that the viewport and related state needs to be updated
-     * the next time that the hardware backbuffer is rendered to.
-     */
-    void setNeedsResize(boolean needsResize) {
-        this.needsResize = needsResize;
+    static float getScale(PresentableState pState) {
+        return PrismSettings.allowHiDPIScaling
+               ? pState.getScale() //TODO fix getScale
+               : 1.0f;
     }
 
     ES2SwapChain(ES2Context context, PresentableState pState) {
         this.context = context;
         this.pState = pState;
-        this.pixelScaleFactor = PrismSettings.allowHiDPIScaling
-                                ? pState.getScale() //TODO fix getScale
-                                : 1.0f;
+        this.pixelScaleFactor = getScale(pState);
         this.antiAliasing = pState.isAntiAliasing();
-        drawable = null;
-        if (pState != null) {
-            long nativeWindow = pState.getNativeWindow();
-            drawable = ES2Pipeline.glFactory.createGLDrawable(
-                    nativeWindow, context.getPixelFormat());
-        }
+        long nativeWindow = pState.getNativeWindow();
+        drawable = ES2Pipeline.glFactory.createGLDrawable(
+                nativeWindow, context.getPixelFormat());
     }
 
-    public boolean lockResources() {
+    public boolean lockResources(PresentableState pState) {
+        if (this.pState != pState || pixelScaleFactor != getScale(pState)) {
+            return true;
+        }
         needsResize = (w != getPhysicalWidth() || h != getPhysicalHeight());
         // the stableBackbuffer will be used as the render target
         if (stableBackbuffer != null && !needsResize) {

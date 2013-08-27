@@ -49,9 +49,6 @@ class DummyGraphics extends BaseShaderGraphics  {
     public void sync() {
     }
 
-    public void reset() {
-    }
-
     @Override
     public void setState3D(boolean flag) {
     }

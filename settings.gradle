@@ -55,6 +55,7 @@ def JFXApplications = [
     "experiments:3DViewer",
     //"experiments:ConferenceScheduleApp",
     "experiments:Modena",
+    "performance:GraphicsPerformance",
   ]
 
 JFXApplications.each { app-> 

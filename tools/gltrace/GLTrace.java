@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,17 +23,14 @@
  * questions.
  */
 
-package com.sun.javafx.sg.prism;
+package com.sun.javafx.logging;
 
-/**
- *
- */
-public interface TestNGNode {
+public class GLTrace {
 
-    public boolean askedToAccumulateDirtyRegion();
+    /* This private variable is set to true by the JVMTI agent when present */
+    private static boolean init = false;
 
-    public boolean computedDirtyRegion();
-    
-    public boolean rendered();
-    
+    public static void putMark(String arg) { if ( init ) _putMark(arg); }
+
+    private static native void _putMark(String arg);
 }

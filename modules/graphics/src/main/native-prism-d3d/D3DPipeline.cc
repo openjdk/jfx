@@ -178,6 +178,10 @@ void setIntField(JNIEnv *env, jobject object, jclass clazz, const char *name, in
     env->SetIntField(object, id, value);
 }
 
+void fillMSAASupportInformation(JNIEnv *env, jobject object, jclass clazz, int max) {
+    setIntField(env, object, clazz, "maxSamples", max);
+}
+
 void fillDriverInformation(JNIEnv *env, jobject object, jclass clazz, D3DADAPTER_IDENTIFIER9 &did, D3DCAPS9 &caps) {
     setStringField(env, object, clazz, "deviceDescription", did.Description);
     setStringField(env, object, clazz, "deviceName", did.DeviceName);
@@ -213,6 +217,29 @@ inline IDirect3D9* addRef(IDirect3D9* i) {
     return i;
 }
 
+int getMaxSampleSupport(IDirect3D9 *d3d9, UINT adapter) {
+    int maxSamples = 0;
+    if (SUCCEEDED(d3d9->CheckDeviceMultiSampleType(adapter,
+					D3DDEVTYPE_HAL , D3DFMT_X8R8G8B8, FALSE,
+					D3DMULTISAMPLE_2_SAMPLES, NULL))) {
+        const int MAX_SAMPLES_SEARCH = D3DMULTISAMPLE_16_SAMPLES;
+        maxSamples = D3DMULTISAMPLE_2_SAMPLES;
+        // Typically even samples are used, thus checking only even samples to
+        // save time
+        for (int i = maxSamples; i <= MAX_SAMPLES_SEARCH; i += 2) {
+            D3DMULTISAMPLE_TYPE msType = static_cast<D3DMULTISAMPLE_TYPE>(i);
+            if (SUCCEEDED(d3d9->CheckDeviceMultiSampleType(adapter,
+					D3DDEVTYPE_HAL, D3DFMT_X8R8G8B8, FALSE,
+					msType, NULL))) {
+                maxSamples = i;
+            } else {
+                break;
+            }
+        }
+    }
+    return maxSamples;
+}
+
 JNIEXPORT jobject JNICALL Java_com_sun_prism_d3d_D3DPipeline_nGetDriverInformation(JNIEnv *env, jclass, jint adapter, jobject obj) {
 
     if (!obj) {
@@ -240,11 +267,35 @@ JNIEXPORT jobject JNICALL Java_com_sun_prism_d3d_D3DPipeline_nGetDriverInformati
         return 0;
     }
 
+    int maxSamples = getMaxSampleSupport(d3d9, adapter);
+
     if (jclass cls = env->GetObjectClass(obj)) {
         fillDriverInformation(env, obj, cls, d_id, caps);
+        fillMSAASupportInformation(env, obj, cls, maxSamples);
         fillOsVersionInformation(env, obj, cls);
     }
 
     d3d9->Release();
     return obj;
+}
+
+JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DPipeline_nGetMaxSampleSupport(JNIEnv *env, jclass, jint adapter) {
+
+    // if there is D3DPipelineManager take ready D3D9 object, otherwise create new
+    IDirect3D9 * d3d9 = D3DPipelineManager::GetInstance() ?
+        addRef(D3DPipelineManager::GetInstance()->GetD3DObject()) : Direct3DCreate9();
+
+    if (!d3d9) {
+        return 0;
+    }
+
+    if (unsigned(adapter) >= d3d9->GetAdapterCount()) {
+        d3d9->Release();
+        return 0;
+    }
+
+    int maxSamples = getMaxSampleSupport(d3d9, adapter);
+
+    d3d9->Release();
+    return maxSamples;
 }

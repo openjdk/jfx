@@ -365,9 +365,8 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
                 Window window = scene.getWindow();
                 Rectangle2D characterBounds = getCharacterBounds(imstart + offset);
                 Point2D p = getSkinnable().localToScene(characterBounds.getMinX(), characterBounds.getMaxY());
-                // TODO: Find out where these offsets come from
-                Point2D location = new Point2D(window.getX() + scene.getX() + p.getX() -  6,
-                                               window.getY() + scene.getY() + p.getY() - 42);
+                Point2D location = new Point2D(window.getX() + scene.getX() + p.getX(),
+                                               window.getY() + scene.getY() + p.getY());
                 return location;
             }
 

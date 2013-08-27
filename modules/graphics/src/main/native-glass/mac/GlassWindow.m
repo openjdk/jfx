@@ -108,6 +108,13 @@ static inline NSView<GlassView> *getMacView(JNIEnv *env, jobject jview)
     return self;                                                                        \
 }                                                                                       \
                                                                                         \
+- (void)dealloc                                                                         \
+{                                                                                       \
+    id window = self->gWindow;                                                          \
+    [super dealloc];                                                                    \
+    [window release];                                                                   \
+}                                                                                       \
+                                                                                        \
 - (void)close                                                                           \
 {                                                                                       \
     self->gWindow->isClosed = YES;                                                      \
@@ -930,8 +937,8 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1close
         // this call will always close the window
         // without calling the windowShouldClose
         [window->nsWindow close];
-        // The nsWindow is released automatically since we don't retain it
-        // The window is released in the nsWindow -close override method
+        // The NSWindow will be automatically released after closing
+        // The GlassWindow is released in the [NSWindow dealloc] override        
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
