@@ -523,16 +523,7 @@ void glass_window_setBoundsImpl(JNIEnv *env,
     }
 
     if (!windowHasBeenUpdated) {
-        //if this function input params are equal to the window current params,
-        // it means that window have been restored.
-        //happens when swapping stages with same params, for example.
-        GLASS_LOG_FINE("Notifying window %d[%p] its been restored",
-                       window->id,
-                       window);
-        glass_application_notifyWindowEvent_resize(env,window,
-                                                   com_sun_glass_events_WindowEvent_RESTORE,
-                                                   window->currentBounds.width,
-                                                   window->currentBounds.height);
+        GLASS_LOG_FINE("Nothing to do");
     }
 }
 
@@ -560,14 +551,9 @@ jboolean glass_window_setVisible(JNIEnv *env, NativeWindow window, jboolean visi
             //window become visible, grant it the focus if not a pop-up
             lens_wm_setFocusedWindow(env, window);
         }
-
-        GLASS_LOG_FINE("notify window it has been restored");
-        glass_application_notifyWindowEvent_resize(env,
-                                                   window,
-                                                   com_sun_glass_events_WindowEvent_RESTORE,
-                                                   window->currentBounds.width,
-                                                   window->currentBounds.height);
     }
+
+    //no need to send an event to confirm window is visible
 
     return JNI_TRUE;
 }
