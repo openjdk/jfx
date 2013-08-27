@@ -1677,9 +1677,9 @@ task javadoc(type: Javadoc) {
     def projectsToDocument = [
             project(":base"), project(":graphics"), project(":controls"),
             project(":swing"), project(":swt"), project(":fxml"), project(":web")]
-    source = projectsToDocument.collect({
+    source(projectsToDocument.collect({
         [it.sourceSets.main.java, "$it.buildDir/generated-src/builders"]
-    });
+    }));
     setDestinationDir(new File(buildDir, 'javadoc'));
     // Might need a classpath
     classpath = files(projectsToDocument.collect { project ->
@@ -1688,13 +1688,6 @@ task javadoc(type: Javadoc) {
     classpath += files(projectsToDocument.collect { project ->
         project.sourceSets.main.output
     });
-
-    // TODO: temporary for javadoc build until media is open sourced
-    if (BUILD_CLOSED) {
-        source += fileTree(dir: "$mediaApiDir").include('**/*.java')
-        classpath += files("modules/media/build/classes/main")
-    }
-
     exclude("com/**/*", "javafx/scene/ParentDesignInfo*", "Compile*", "javafx/builder/**/*");
     options.windowTitle("JavaFX ${RELEASE_NAME}")
     options.links(JDK_DOCS);
