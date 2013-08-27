@@ -240,7 +240,7 @@ final class LensApplication extends Application {
     private static class LensWindowEvent extends Event {
 
         static enum EType {
-            CLOSE, DESTROY, EXPOSE, FOCUS, MOVE, RESIZE, UNGRAB
+            CLOSE, DESTROY, EXPOSE, FOCUS, MOVE, RESIZE, UNGRAB, FOCUS_DISABLED
         };
 
         private EType type;
@@ -320,6 +320,10 @@ final class LensApplication extends Application {
                 case EXPOSE:
                     window._notifyExpose(x, y, width, height);
                     break;
+                case FOCUS_DISABLED:
+                    window._notifyFocusDisabled();
+                    break;
+
                 default:
                     LensLogger.getLogger().severe(
                         "Unrecognized window event type");
@@ -1012,9 +1016,12 @@ final class LensApplication extends Application {
             case WindowEvent.FOCUS_UNGRAB:
                 etype = LensWindowEvent.EType.UNGRAB;
                 break;
+            case WindowEvent.FOCUS_DISABLED:
+                etype = LensWindowEvent.EType.FOCUS_DISABLED;
+                break;
             default:
                 LensLogger.getLogger().warning("Unsupported event type ("+
-                    WindowEvent.getEventName(windowEvent)+" skipping event");
+                    WindowEvent.getEventName(windowEvent)+") skipping event");
                 return;
         }
 
