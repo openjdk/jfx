@@ -244,6 +244,12 @@ public abstract class Application {
     }
 
     /**
+     * Constructs a new {@code Application} instance.
+     */
+    public Application() {
+    }
+
+    /**
      * The application initialization method. This method is called immediately
      * after the Application class is loaded and constructed. An application may
      * override this method to perform initialization prior to the actual starting
@@ -357,6 +363,12 @@ public abstract class Application {
      * @since JavaFX 2.0
      */
     public static abstract class Parameters {
+
+        /**
+         * Constructs a new {@code Parameters} instance.
+         */
+        public Parameters() {
+        }
 
         /**
          * Retrieves a read-only list of the raw arguments. This list
