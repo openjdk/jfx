@@ -32,9 +32,16 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#if linux
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 #include <EGL/egl.h>
+#endif
+
+#if MACOSX
+#include <OpenGL/gl.h>
+#include <OpenGL/glext.h>
+#endif
 
 #include "os.h"
 #include "iolib.h"
@@ -45,7 +52,6 @@
 typedef void             GLvoid;
 typedef char             GLchar;
 
-extern const char *eglEnum2str(EGLenum);
 extern const char *glEnum2str(GLenum);
 static void readPixels();
 static int  savePNG(char *fName, GLenum format, GLenum type, uint32_t width, uint32_t height, const void *data);
@@ -1996,6 +2002,142 @@ proc_glViewport(GLint x, GLint y, GLsizei width, GLsizei height)
     }
 }
 
+#if MACOSX
+static void
+proc_glBegin(GLenum mode)
+{
+    if (printFlag) {
+        sb_appendStr("glBegin(");
+        sb_appendStr(glEnum2str(mode));
+        sb_appendStr(")");
+    }
+    if (execFlag) {
+        glBegin(mode);
+    }
+}
+
+static void
+proc_glEnd()
+{
+    if (printFlag) {
+        sb_appendStr("glEnd()");
+    }
+    if (execFlag) {
+        glEnd();
+    }
+}
+
+static GLboolean
+proc_glIsRenderbufferEXT(GLuint renderbuffer);
+static void
+proc_glBindRenderbufferEXT(GLenum target, GLuint renderbuffer);
+static void
+proc_glDeleteRenderbuffersEXT(GLsizei n, const GLuint *renderbuffers);
+static void
+proc_glGenRenderbuffersEXT(GLsizei n, GLuint *renderbuffers);
+static void
+proc_glRenderbufferStorageEXT(GLenum target, GLenum internalformat, GLsizei width, GLsizei height);
+static void
+proc_glGetRenderbufferParameterivEXT(GLenum target, GLenum pname, GLint *params);
+static GLboolean
+proc_glIsFramebufferEXT(GLuint framebuffer);
+
+static void
+proc_glBindFramebufferEXT(GLenum target, GLuint framebuffer)
+{
+    if (printFlag) {
+        sb_appendStr("glBindFramebufferEXT(");
+        sb_appendStr(glEnum2str(target));
+        sb_appendStr(", ");
+        sb_appendInt(framebuffer);
+        sb_appendStr(")");
+    }
+    if (execFlag) {
+        glBindFramebufferEXT(target, framebuffer);
+    }
+}
+
+static void
+proc_glDeleteFramebuffersEXT(GLsizei n, const GLuint *framebuffers);
+
+static void
+proc_glGenFramebuffersEXT(GLsizei n, GLuint *_framebuffers)
+{
+    int i;
+    if (printFlag) {
+        sb_appendStr("glGenFramebuffersEXT(");
+        sb_appendInt(n);
+        sb_appendStr(", [");
+        for (i=0; i<n; ++i) {
+            if (i!=0) sb_appendStr(", ");
+            sb_appendInt(_framebuffers[i]);
+        }
+        sb_appendStr("])");
+    }
+    if (execFlag) {
+        GLuint framebuffers[n];
+        glGenFramebuffersEXT(n, framebuffers);
+        for (i=0; i<n; ++i) {
+            if (_framebuffers[i] != framebuffers[i]) {
+                fprintf(stderr, "FATAL: glGenFramebuffersEXT framebuffers mismatch\n");
+                exit(1);
+            }
+        }
+    }
+}
+
+static GLenum
+proc_glCheckFramebufferStatusEXT(GLenum target)
+{
+    GLenum res = 0;
+    if (printFlag) {
+        sb_appendStr("glCheckFramebufferStatusEXT(");
+        sb_appendStr(glEnum2str(target));
+        sb_appendStr(")");
+    }
+    if (execFlag) {
+        res = glCheckFramebufferStatusEXT(target);
+    }
+    return res;
+}
+
+static void
+proc_glFramebufferTexture1DEXT(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
+
+static void
+proc_glFramebufferTexture2DEXT(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level)
+{
+    if (printFlag) {
+        sb_appendStr("glFramebufferTexture2DEXT(");
+        sb_appendStr(glEnum2str(target));
+        sb_appendStr(", ");
+        sb_appendStr(glEnum2str(attachment));
+        sb_appendStr(", ");
+        sb_appendStr(glEnum2str(textarget));
+        sb_appendStr(", ");
+        sb_appendInt(texture);
+        sb_appendStr(", ");
+        sb_appendInt(level);
+        sb_appendStr(")");
+    }
+    if (execFlag) {
+        glFramebufferTexture2DEXT(target, attachment, textarget, texture, level);
+    }
+}
+
+static void
+proc_glFramebufferTexture3DEXT(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint zoffset);
+static void
+proc_glFramebufferRenderbufferEXT(GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer);
+static void
+proc_glGetFramebufferAttachmentParameterivEXT(GLenum target, GLenum attachment, GLenum pname, GLint *params);
+static void
+proc_glGenerateMipmapEXT(GLenum target);
+#endif /* MACOSX */
+
+#if linux
+extern const char *eglEnum2str(EGLenum);
+
 static EGLDisplay
 proc_eglGetDisplay(EGLNativeDisplayType display_id)
 {
@@ -2020,10 +2162,10 @@ proc_eglInitialize(EGLDisplay dpy, const EGLint *major, const EGLint *minor)
         sb_appendPtr(dpy);
         sb_appendStr(", ");
         if (major) sb_appendInt(*major);
-	else sb_appendStr("(null)");
+        else sb_appendStr("(null)");
         sb_appendStr(", ");
         if (minor) sb_appendInt(*minor);
-	else sb_appendStr("(null)");
+        else sb_appendStr("(null)");
         sb_appendStr(")");
     }
     if (execFlag) {
@@ -2305,6 +2447,7 @@ proc_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface)
 }
 
 static EGLBoolean proc_eglCopyBuffers() { return EGL_FALSE; }
+#endif
 
 static void
 process(int frames)
@@ -3158,7 +3301,69 @@ process(int frames)
             proc_glViewport(x, y, width, height);
             break;
         }
-        
+#if MACOSX
+            case OPC_glBegin: {
+                GLenum mode = getInt();
+                proc_glBegin(mode);
+                break;
+            }
+            case OPC_glEnd:
+                proc_glEnd();
+                break;
+            case OPC_glIsRenderbufferEXT:       NOT_IMPLEMENTED();
+            case OPC_glBindRenderbufferEXT:     NOT_IMPLEMENTED();
+            case OPC_glDeleteRenderbuffersEXT:  NOT_IMPLEMENTED();
+            case OPC_glGenRenderbuffersEXT:     NOT_IMPLEMENTED();
+            case OPC_glRenderbufferStorageEXT:  NOT_IMPLEMENTED();
+            case OPC_glGetRenderbufferParameterivEXT:   NOT_IMPLEMENTED();
+            case OPC_glIsFramebufferEXT:        NOT_IMPLEMENTED();
+            case OPC_glBindFramebufferEXT: {
+                GLenum target = getInt();
+                GLuint framebuffer = getInt();
+                proc_glBindFramebufferEXT(target, framebuffer);
+                break;
+            }
+            case OPC_glDeleteFramebuffersEXT:   NOT_IMPLEMENTED();
+            case OPC_glGenFramebuffersEXT: {
+                GLsizei n = getInt();
+                GLuint framebuffers[n];
+                int i;
+                for (i=0; i<n; ++i) {
+                    framebuffers[i] = getInt();
+                }
+                proc_glGenFramebuffersEXT(n, framebuffers);
+                break;
+            }
+            case OPC_glCheckFramebufferStatusEXT: {
+                GLenum target = getInt();
+                GLenum curVal = proc_glCheckFramebufferStatusEXT(target);
+                GLenum oldVal = getInt();
+                if (printFlag) {
+                    sb_appendStr(" = ");
+                    sb_appendStr(glEnum2str(oldVal));
+                }
+                if (execFlag && curVal != oldVal) {
+                    fprintf(stderr, "ERROR: glCheckFramebufferStatusEXT return mismatch\n");
+                }
+                break;
+            }
+            case OPC_glFramebufferTexture1DEXT: NOT_IMPLEMENTED();
+            case OPC_glFramebufferTexture2DEXT: {
+                GLenum target = getInt();
+                GLenum attachment = getInt();
+                GLenum textarget = getInt();
+                GLuint texture = getInt();
+                GLint level = getInt();
+                proc_glFramebufferTexture2DEXT(target, attachment, textarget, texture, level);
+                break;
+            }
+            case OPC_glFramebufferTexture3DEXT: NOT_IMPLEMENTED();
+            case OPC_glFramebufferRenderbufferEXT:      NOT_IMPLEMENTED();
+            case OPC_glGetFramebufferAttachmentParameterivEXT:  NOT_IMPLEMENTED();
+            case OPC_glGenerateMipmapEXT:       NOT_IMPLEMENTED();
+                
+#endif /* MACOSX */
+#if linux
         case OPC_eglGetError:   NOT_IMPLEMENTED();          
         case OPC_eglGetDisplay: {
             EGLDisplay curVal = proc_eglGetDisplay((EGLNativeDisplayType)getPtr());
@@ -3174,8 +3379,8 @@ process(int frames)
         }
         case OPC_eglInitialize: {
             EGLDisplay dpy = (EGLDisplay)getPtr();
-	    const GLint *major = getIntPtr();
-	    const GLint *minor = getIntPtr();
+            const GLint *major = getIntPtr();
+            const GLint *minor = getIntPtr();
             EGLBoolean curVal = proc_eglInitialize(dpy, major, minor);
             EGLBoolean oldVal = getInt();
             if (printFlag) {
@@ -3399,6 +3604,7 @@ process(int frames)
             break;
         }
         case OPC_eglCopyBuffers:        NOT_IMPLEMENTED();
+#endif /*linux */
 
         case OPC_NONE:
         case OPC_EOF:

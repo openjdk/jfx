@@ -26,10 +26,36 @@
 #include <stdio.h>
 #include <string.h>
 
+#if linux
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 #include <EGL/egl.h>
+#endif
 
+#if MACOSX
+#include <OpenGL/gl.h>
+#include <OpenGL/glext.h>
+
+#define GL_FIXED                            0x10000
+#define GL_MAX_VERTEX_UNIFORM_VECTORS       0x10001
+#define GL_MAX_VARYING_VECTORS              0x10002
+#define GL_MAX_FRAGMENT_UNIFORM_VECTORS     0x10003
+#define GL_IMPLEMENTATION_COLOR_READ_TYPE   0x10004
+#define GL_IMPLEMENTATION_COLOR_READ_FORMAT 0x10005
+#define GL_SHADER_COMPILER                  0x10006
+#define GL_SHADER_BINARY_FORMATS            0x10007
+#define GL_NUM_SHADER_BINARY_FORMATS        0x10008
+#define GL_LOW_FLOAT                        0x10009
+#define GL_MEDIUM_FLOAT                     0x10010
+#define GL_HIGH_FLOAT                       0x10011
+#define GL_LOW_INT                          0x10012
+#define GL_MEDIUM_INT                       0x10013
+#define GL_HIGH_INT                         0x10014
+#define GL_RGB565                           0x10015
+#define GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS 0x10016
+#endif
+
+#if linux
 const char *
 eglEnum2str(EGLenum val)
 {
@@ -141,6 +167,7 @@ eglEnum2str(EGLenum val)
     ptr += strlen(ptr) + 1;
     return res;
 }
+#endif /* linux */
 
 const char *
 glEnum2str(GLenum val)

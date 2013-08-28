@@ -40,41 +40,6 @@ extern struct dlfcn_hook *dlfcn_hook_trace;
 #define DLFCN_HOOK_POP()        _dlfcn_hook = dlfcn_hook_orig
 #define DLFCN_HOOK_PUSH()       _dlfcn_hook = dlfcn_hook_trace
 
-
-#define DEF(type, func) type func
-
-#define NOT_IMPLEMENTED() \
-    { \
-        fprintf(stderr, "FATAL: not implemented %s\n", __FUNCTION__); \
-        exit(1); \
-    }
-
-#define GLPROLOG(func) \
-    static void *orig = NULL;\
-    if (orig == NULL) {\
-        DLFCN_HOOK_POP(); \
-        orig = dlsym(libGLESv2, #func);\
-        DLFCN_HOOK_PUSH(); \
-        if (tLevel >= dbgLevel) {\
-            fprintf(stderr, "INTERPOSITION dlsym("#func") = %p\n", orig);\
-        }\
-    }
-
-#define GLEPILOG() 
-
-#define EGLPROLOG(func) \
-    static void *orig = NULL;\
-    if (orig == NULL) {\
-        DLFCN_HOOK_POP(); \
-        orig = dlsym(libEGL, #func);\
-        DLFCN_HOOK_PUSH(); \
-        if (tLevel >= dbgLevel) {\
-            fprintf(stderr, "INTERPOSITION dlsym("#func") = %p\n", orig);\
-        }\
-    }
-
-#define EGLEPILOG() 
-
 #endif /* linux */
 
 

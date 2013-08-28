@@ -24,21 +24,16 @@
  */
  
 #define _GNU_SOURCE
-#include <alloca.h>
 #include <dlfcn.h>
 #include <errno.h>
-#include <link.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <EGL/egl.h>
-
 #include "os.h"
 #include "iolib.h"
-#include "trace.h"
+#include "egl.h"
 
-static int tLevel = trcLevel;
 static void *libEGL = NULL;
 
 /*

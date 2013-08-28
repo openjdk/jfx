@@ -24,21 +24,16 @@
  */
  
 #define _GNU_SOURCE
-#include <alloca.h>
 #include <dlfcn.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <GLES2/gl2.h>
-#include <GLES2/gl2ext.h>
-
 #include "os.h"
 #include "iolib.h"
-#include "trace.h"
+#include "gles.h"
 
-static int tLevel = trcLevel;
 static void *libGLESv2 = NULL;
 
 /*
@@ -105,26 +100,68 @@ static int
 glElementSize(GLenum format, GLenum type)
 {
     switch (type) {
-    case GL_UNSIGNED_BYTE:
-        switch (format) {
-        case GL_ALPHA:          return 1;
-        case GL_RGB:            return 3;
-        case GL_RGBA:
-        case GL_BGRA:           return 4;
-        case GL_LUMINANCE:      return 1;       /* XXX validate */
-        case GL_LUMINANCE_ALPHA: return 2;      /* XXX validate */
-        }
-        fprintf(stderr, "FATAL: glElementSize: unknown format: 0x%x\n", format);
-        exit(1);
-        return 0;
-    case GL_UNSIGNED_SHORT_4_4_4_4:
-    case GL_UNSIGNED_SHORT_5_5_5_1:
-    case GL_UNSIGNED_SHORT_5_6_5:
-        return 2; /* XXX validate */
+        case GL_UNSIGNED_BYTE:
+            switch (format) {
+                case GL_ALPHA:          return 1;
+                case GL_RGB:            return 3;
+                case GL_RGBA:
+                case GL_BGRA:           return 4;
+                case GL_LUMINANCE:      return 1;
+                case GL_LUMINANCE_ALPHA: return 2;
+            }
+            fprintf(stderr, "FATAL: glElementSize: unknown format: 0x%x\n", format);
+            exit(1);
+            return 0;
+        case GL_UNSIGNED_SHORT_4_4_4_4:
+        case GL_UNSIGNED_SHORT_5_5_5_1:
+        case GL_UNSIGNED_SHORT_5_6_5:
+            return 2;
+#if MACOSX
+        case GL_UNSIGNED_INT_8_8_8_8_REV:
+            return 4;
+#endif
     }
     fprintf(stderr, "FATAL: glElementSize: unknown type: 0x%x\n", type);
     exit(1);
     return 0;
+}
+
+static GLuint arrayBufferBinding = 0;
+static GLuint elementArrayBufferBinding = 0;
+static GLuint elementArrayBufferData = 0;
+static GLvoid *elementArrayData = NULL;
+
+static GLsizei
+getVertexCount(GLsizei count, GLenum type, const GLvoid* indices)
+{
+#if MT_BUFFER_DATA_FIXED
+    uint8_t *ptr = (uint8_t*)indices;
+    if (elementArrayBufferBinding) {
+        if (elementArrayBufferData != elementArrayBufferBinding) {
+            fprintf(out, "FATAL: multiple element arrays not implemented\n");
+            exit(1);
+        }
+        ptr = (uint8_t*)elementArrayData + (long)indices;
+    }
+    
+    GLsizei i, maxval = 0;
+    for (i=0; i<count; ++i) {
+        int val;
+        switch (type) {
+            case GL_UNSIGNED_BYTE: val = ptr[i]; break;
+            case GL_UNSIGNED_SHORT: val = ((uint16_t*)ptr)[i]; break;
+            case GL_UNSIGNED_INT: val = ((uint32_t*)ptr)[i]; break;
+            default:
+                fprintf(out, "FATAL: glDrawElements: type %d not implemented\n", type);
+                exit(1);
+                break;
+        }
+        if (maxval < val) maxval = val;
+    }
+    return maxval + 1;  // count = max index + 1
+#else
+    return count/6*4; /* XXX hack for quads only */ 
+#endif
 }
 
 /* XXX use glGet(GL_MAX_VERTEX_ATTRIBS) */
@@ -141,17 +178,24 @@ typedef struct VertexAttrib_t {
 static VertexAttrib_t vertexAttrib[MAX_VERTEX_ATTRIBS];
 
 static void
-putVertexAttrib(int count)
+putVertexAttrib(GLsizei count, GLenum type, const GLvoid* indices)
 {
-    count = count/6 * 4; /* XXX hack for quads only */
-    char *buf = alloca(count * 4 * sizeof(float));
+    count = getVertexCount(count, type, indices);
+    int maxsz = 0;
+    int i;
+    for (i=0; i<MAX_VERTEX_ATTRIBS; ++i) {
+        if (!vertexAttrib[i].enabled) continue;
+        int sz = glSizeof(vertexAttrib[i].type) * vertexAttrib[i].size *count;
+        if (maxsz < sz) maxsz = sz;
+    }
+    char *buf = alloca(maxsz);
     
-    int i, j, k;
     for (i=0; i<MAX_VERTEX_ATTRIBS; ++i) {
         if (!vertexAttrib[i].enabled) continue;
         char *src = (char*)vertexAttrib[i].pointer;
         char *dst = buf;
         int elemsz = glSizeof(vertexAttrib[i].type) * vertexAttrib[i].size;
+        int j, k;
         for (j=0; j<count; ++j) {
             for (k=0; k<elemsz; ++k) *dst++ = *src++;
             if (vertexAttrib[i].stride > 0) {
@@ -162,45 +206,43 @@ putVertexAttrib(int count)
     }
 }
 
-static GLuint arrayBufferBinding = 0;
-static GLuint elementArrayBufferBinding = 0;
 
 DEF(void, glActiveTexture)(GLenum texture)
 {
-    GLPROLOG(glActiveTexture);
+    GLESPROLOG(glActiveTexture);
     
     putCmd(OPC_glActiveTexture);
     putInt(texture);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(texture);
+    ORIG(glActiveTexture)(texture);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
-DEF(void, glAttachShader) (GLuint program, GLuint shader)
+DEF(void, glAttachShader)(GLuint program, GLuint shader)
 {
-    GLPROLOG(glAttachShader);
+    GLESPROLOG(glAttachShader);
     
     putCmd(OPC_glAttachShader);
     putInt(program);
     putInt(shader);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(program, shader);
+    ORIG(glAttachShader)(program, shader);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glBindAttribLocation) (GLuint program, GLuint index, const GLchar* name)
 {
-    GLPROLOG(glBindAttribLocation);
+    GLESPROLOG(glBindAttribLocation);
     
     putCmd(OPC_glBindAttribLocation);
     putInt(program);
@@ -208,24 +250,24 @@ DEF(void, glBindAttribLocation) (GLuint program, GLuint index, const GLchar* nam
     putString(name);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(program, index, name);
+    ORIG(glBindAttribLocation)(program, index, name);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glBindBuffer) (GLenum target, GLuint buffer)
 {
-    GLPROLOG(glBindBuffer);
+    GLESPROLOG(glBindBuffer);
     
     putCmd(OPC_glBindBuffer);
     putInt(target);
     putInt(buffer);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(target, buffer);
+    ORIG(glBindBuffer)(target, buffer);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
@@ -237,63 +279,63 @@ DEF(void, glBindBuffer) (GLenum target, GLuint buffer)
         elementArrayBufferBinding = buffer;
     }
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glBindFramebuffer) (GLenum target, GLuint framebuffer)
 {
-    GLPROLOG(glBindFramebuffer);
+    GLESPROLOG(glBindFramebuffer);
     
     putCmd(OPC_glBindFramebuffer);
     putInt(target);
     putInt(framebuffer);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(target, framebuffer);
+    ORIG(glBindFramebuffer)(target, framebuffer);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glBindRenderbuffer) (GLenum target, GLuint renderbuffer)
 {
-    GLPROLOG(glBindRenderbuffer);
+    GLESPROLOG(glBindRenderbuffer);
     
     putCmd(OPC_glBindRenderbuffer);
     putInt(target);
     putInt(renderbuffer);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(target, renderbuffer);
+    ORIG(glBindRenderbuffer)(target, renderbuffer);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glBindTexture) (GLenum target, GLuint texture)
 {
-    GLPROLOG(glBindTexture);
+    GLESPROLOG(glBindTexture);
     
     putCmd(OPC_glBindTexture);
     putInt(target);
     putInt(texture);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(target, texture);
+    ORIG(glBindTexture)(target, texture);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glBlendColor) (GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha)
 {
-    GLPROLOG(glBlendColor);
+    GLESPROLOG(glBlendColor);
 
     putCmd(OPC_glBlendColor);
     putFloat(red);
@@ -302,67 +344,67 @@ DEF(void, glBlendColor) (GLclampf red, GLclampf green, GLclampf blue, GLclampf a
     putFloat(alpha);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)(GLclampf, GLclampf, GLclampf, GLclampf))orig)(red, green, blue, alpha);
+    ORIG(glBlendColor)(red, green, blue, alpha);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
     
-    GLEPILOG();
+    GLESEPILOG();
 }
 
 DEF(void, glBlendEquation) (GLenum mode)
 {
-    GLPROLOG(glBlendEquation);
+    GLESPROLOG(glBlendEquation);
     
     putCmd(OPC_glBlendEquation);
     putInt(mode);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(mode);
+    ORIG(glBlendEquation)(mode);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
     
-    GLEPILOG();
+    GLESEPILOG();
 }
 
 DEF(void, glBlendEquationSeparate) (GLenum modeRGB, GLenum modeAlpha)
 {
-    GLPROLOG(glBlendEquationSeparate);
+    GLESPROLOG(glBlendEquationSeparate);
 
     putCmd(OPC_glBlendEquationSeparate);
     putInt(modeRGB);
     putInt(modeAlpha);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(modeRGB, modeAlpha);
+    ORIG(glBlendEquationSeparate)(modeRGB, modeAlpha);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
     
-    GLEPILOG();
+    GLESEPILOG();
 }
 
 DEF(void, glBlendFunc) (GLenum sfactor, GLenum dfactor)
 {
-    GLPROLOG(glBlendFunc);
+    GLESPROLOG(glBlendFunc);
     
     putCmd(OPC_glBlendFunc);
     putInt(sfactor);
     putInt(dfactor);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(sfactor, dfactor);
+    ORIG(glBlendFunc)(sfactor, dfactor);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glBlendFuncSeparate) (GLenum srcRGB, GLenum dstRGB, GLenum srcAlpha, GLenum dstAlpha)
 {
-    GLPROLOG(glBlendFuncSeparate);
+    GLESPROLOG(glBlendFuncSeparate);
     
     putCmd(OPC_glBlendFuncSeparate);
     putInt(srcRGB);
@@ -371,17 +413,17 @@ DEF(void, glBlendFuncSeparate) (GLenum srcRGB, GLenum dstRGB, GLenum srcAlpha, G
     putInt(dstAlpha);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(srcRGB, dstRGB, srcAlpha, dstAlpha);
+    ORIG(glBlendFuncSeparate)(srcRGB, dstRGB, srcAlpha, dstAlpha);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
     
-    GLEPILOG();
+    GLESEPILOG();
 }
 
 DEF(void, glBufferData) (GLenum target, GLsizeiptr size, const GLvoid* data, GLenum usage)
 {
-    GLPROLOG(glBufferData);
+    GLESPROLOG(glBufferData);
     
     putCmd(OPC_glBufferData);
     putInt(target);
@@ -390,17 +432,17 @@ DEF(void, glBufferData) (GLenum target, GLsizeiptr size, const GLvoid* data, GLe
     putInt(usage);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(target, size, data, usage);
+    ORIG(glBufferData)(target, size, data, usage);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glBufferSubData) (GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid* data)
 {
-    GLPROLOG(glBufferSubData);
+    GLESPROLOG(glBufferSubData);
 
     putCmd(OPC_glBufferSubData);
     putInt(target);
@@ -409,52 +451,52 @@ DEF(void, glBufferSubData) (GLenum target, GLintptr offset, GLsizeiptr size, con
     putBytes(data, size);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(target, offset, size, data);
+    ORIG(glBufferSubData)(target, offset, size, data);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
     
-    GLEPILOG();
+    GLESEPILOG();
 }
 
 DEF(GLenum, glCheckFramebufferStatus) (GLenum target)
 {
-    GLPROLOG(glCheckFramebufferStatus);
+    GLESPROLOG(glCheckFramebufferStatus);
     
     putCmd(OPC_glCheckFramebufferStatus);
     putInt(target);
     
     uint64_t bgn = gethrtime();
-    GLenum res = (*(GLenum(*)())orig)(target);
+    GLenum res = ORIG(glCheckFramebufferStatus)(target);
     uint64_t end = gethrtime();
     
     putInt(res);
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
     
     return res;
 }    
 
 DEF(void, glClear) (GLbitfield mask)
 {
-    GLPROLOG(glClear);
+    GLESPROLOG(glClear);
     
     putCmd(OPC_glClear);
     putInt(mask);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(mask);
+    ORIG(glClear)(mask);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glClearColor) (GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha)
 {
-    GLPROLOG(glClearColor);
+    GLESPROLOG(glClearColor);
     
     putCmd(OPC_glClearColor);
     putFloat(red);
@@ -463,50 +505,51 @@ DEF(void, glClearColor) (GLclampf red, GLclampf green, GLclampf blue, GLclampf a
     putFloat(alpha);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)(GLclampf, GLclampf, GLclampf, GLclampf))orig)(red, green, blue, alpha);
+    ORIG(glClearColor)(red, green, blue, alpha);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
-GL_APICALL void GL_APIENTRY 
-glClearDepthf (GLclampf depth)
+#if !MACOSX
+DEF(void, glClearDepthf) (GLclampf depth)
 {
-    GLPROLOG(glClearDepthf);
+    GLESPROLOG(glClearDepthf);
     
     putCmd(OPC_glClearDepthf);
     putFloat(depth);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)(GLclampf))orig)(depth);
+    ORIG(glClearDepthf)(depth);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
-}    
+    GLESEPILOG();
+}
+#endif
 
 DEF(void, glClearStencil) (GLint s)
 {
-    GLPROLOG(glClearStencil);
+    GLESPROLOG(glClearStencil);
     
     putCmd(OPC_glClearStencil);
     putInt(s);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(s);
+    ORIG(glClearStencil)(s);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
     
-    GLEPILOG();
+    GLESEPILOG();
 }
 
 DEF(void, glColorMask) (GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha)
 {
-    GLPROLOG(glColorMask);
+    GLESPROLOG(glColorMask);
     
     putCmd(OPC_glColorMask);
     putInt(red);
@@ -515,33 +558,33 @@ DEF(void, glColorMask) (GLboolean red, GLboolean green, GLboolean blue, GLboolea
     putInt(alpha);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(red, green, blue, alpha);
+    ORIG(glColorMask)(red, green, blue, alpha);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
     
-    GLEPILOG();
+    GLESEPILOG();
 }
 
 DEF(void, glCompileShader) (GLuint shader)
 {
-    GLPROLOG(glCompileShader);
+    GLESPROLOG(glCompileShader);
     
     putCmd(OPC_glCompileShader);
     putInt(shader);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(shader);
+    ORIG(glCompileShader)(shader);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glCompressedTexImage2D) (GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const GLvoid* data)
 {
-    GLPROLOG(glCompressedTexImage2D);
+    GLESPROLOG(glCompressedTexImage2D);
 
     putCmd(OPC_glCompressedTexImage2D);
     putInt(target);
@@ -554,17 +597,17 @@ DEF(void, glCompressedTexImage2D) (GLenum target, GLint level, GLenum internalfo
     putBytes(data, imageSize);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(target, level, internalformat, width, height, border, imageSize, data);
+    ORIG(glCompressedTexImage2D)(target, level, internalformat, width, height, border, imageSize, data);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
     
-    GLEPILOG();
+    GLESEPILOG();
 }
 
 DEF(void, glCompressedTexSubImage2D) (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLsizei imageSize, const GLvoid* data)
 {
-    GLPROLOG(glCompressedTexSubImage2D);
+    GLESPROLOG(glCompressedTexSubImage2D);
 
     putCmd(OPC_glCompressedTexSubImage2D);
     putInt(target);
@@ -578,17 +621,17 @@ DEF(void, glCompressedTexSubImage2D) (GLenum target, GLint level, GLint xoffset,
     putBytes(data, imageSize);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(target, level, xoffset, yoffset, width, height, format, imageSize, data);
+    ORIG(glCompressedTexSubImage2D)(target, level, xoffset, yoffset, width, height, format, imageSize, data);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
     
-    GLEPILOG();
+    GLESEPILOG();
 }
 
 DEF(void, glCopyTexImage2D) (GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLsizei height, GLint border)
 {
-    GLPROLOG(glCopyTexImage2D);
+    GLESPROLOG(glCopyTexImage2D);
     
     putCmd(OPC_glCopyTexImage2D);
     putInt(target);
@@ -601,17 +644,17 @@ DEF(void, glCopyTexImage2D) (GLenum target, GLint level, GLenum internalformat, 
     putInt(border);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(target, level, internalformat, x, y, width, height, border);
+    ORIG(glCopyTexImage2D)(target, level, internalformat, x, y, width, height, border);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
     
-    GLEPILOG();
+    GLESEPILOG();
 }
 
 DEF(void, glCopyTexSubImage2D) (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint x, GLint y, GLsizei width, GLsizei height)
 {
-    GLPROLOG(glCopyTexSubImage2D);
+    GLESPROLOG(glCopyTexSubImage2D);
     
     putCmd(OPC_glCopyTexSubImage2D);
     putInt(target);
@@ -624,70 +667,70 @@ DEF(void, glCopyTexSubImage2D) (GLenum target, GLint level, GLint xoffset, GLint
     putInt(height);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(target, level, xoffset, yoffset, x, y, width, height);
+    ORIG(glCopyTexSubImage2D)(target, level, xoffset, yoffset, x, y, width, height);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
     
-    GLEPILOG();
+    GLESEPILOG();
 }
 
 DEF(GLuint, glCreateProgram) (void)
 {
-    GLPROLOG(glCreateProgram);
+    GLESPROLOG(glCreateProgram);
     
     putCmd(OPC_glCreateProgram);
     
     uint64_t bgn = gethrtime();
-    GLuint res = (*(GLuint(*)())orig)();
+    GLuint res = ORIG(glCreateProgram)();
     uint64_t end = gethrtime();
     
     putInt(res);
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
     
     return res;
 }    
 
 DEF(GLuint, glCreateShader) (GLenum type)
 {
-    GLPROLOG(glCreateShader);
+    GLESPROLOG(glCreateShader);
     
     putCmd(OPC_glCreateShader);
     putInt(type);
     
     uint64_t bgn = gethrtime();
-    GLuint res = (*(GLuint(*)())orig)(type);
+    GLuint res = ORIG(glCreateShader)(type);
     uint64_t end = gethrtime();
     
     putInt(res);
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
     
     return res;
 }    
 
 DEF(void, glCullFace) (GLenum mode)
 {
-    GLPROLOG(glCullFace);
+    GLESPROLOG(glCullFace);
     
     putCmd(OPC_glCullFace);
     putInt(mode);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(mode);
+    ORIG(glCullFace)(mode);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glDeleteBuffers) (GLsizei n, const GLuint* buffers)
 {
-    GLPROLOG(glDeleteBuffers);
+    GLESPROLOG(glDeleteBuffers);
     
     putCmd(OPC_glDeleteBuffers);
     putInt(n);
@@ -697,17 +740,17 @@ DEF(void, glDeleteBuffers) (GLsizei n, const GLuint* buffers)
     }
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(n, buffers);
+    ORIG(glDeleteBuffers)(n, buffers);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glDeleteFramebuffers) (GLsizei n, const GLuint* framebuffers)
 {
-    GLPROLOG(glDeleteFramebuffers);
+    GLESPROLOG(glDeleteFramebuffers);
     
     putCmd(OPC_glDeleteFramebuffers);
     putInt(n);
@@ -717,33 +760,33 @@ DEF(void, glDeleteFramebuffers) (GLsizei n, const GLuint* framebuffers)
     }
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(n, framebuffers);
+    ORIG(glDeleteFramebuffers)(n, framebuffers);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glDeleteProgram) (GLuint program)
 {
-    GLPROLOG(glDeleteProgram);
+    GLESPROLOG(glDeleteProgram);
     
     putCmd(OPC_glDeleteProgram);
     putInt(program);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(program);
+    ORIG(glDeleteProgram)(program);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
     
-    GLEPILOG();
+    GLESEPILOG();
 }
 
 DEF(void, glDeleteRenderbuffers) (GLsizei n, const GLuint* renderbuffers)
 {
-    GLPROLOG(glDeleteRenderbuffers);
+    GLESPROLOG(glDeleteRenderbuffers);
     
     putCmd(OPC_glDeleteRenderbuffers);
     putInt(n);
@@ -753,33 +796,33 @@ DEF(void, glDeleteRenderbuffers) (GLsizei n, const GLuint* renderbuffers)
     }
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(n, renderbuffers);
+    ORIG(glDeleteRenderbuffers)(n, renderbuffers);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
     
-    GLEPILOG();
+    GLESEPILOG();
 }
 
 DEF(void, glDeleteShader) (GLuint shader)
 {
-    GLPROLOG(glDeleteShader);
+    GLESPROLOG(glDeleteShader);
     
     putCmd(OPC_glDeleteShader);
     putInt(shader);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(shader);
+    ORIG(glDeleteShader)(shader);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
     
-    GLEPILOG();
+    GLESEPILOG();
 }
 
 DEF(void, glDeleteTextures) (GLsizei n, const GLuint* textures)
 {
-    GLPROLOG(glDeleteTextures);
+    GLESPROLOG(glDeleteTextures);
     
     putCmd(OPC_glDeleteTextures);
     putInt(n);
@@ -789,116 +832,118 @@ DEF(void, glDeleteTextures) (GLsizei n, const GLuint* textures)
     }
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(n, textures);
+    ORIG(glDeleteTextures)(n, textures);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glDepthFunc) (GLenum func)
 {
-    GLPROLOG(glDepthFunc);
+    GLESPROLOG(glDepthFunc);
     
     putCmd(OPC_glDepthFunc);
     putInt(func);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(func);
+    ORIG(glDepthFunc)(func);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glDepthMask) (GLboolean flag)
 {
-    GLPROLOG(glDepthMask);
+    GLESPROLOG(glDepthMask);
     
     putCmd(OPC_glDepthMask);
     putInt(flag);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(flag);
+    ORIG(glDepthMask)(flag);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
+#if !MACOSX
 DEF(void, glDepthRangef) (GLclampf zNear, GLclampf zFar)
 {
-    GLPROLOG(glDepthRangef);
+    GLESPROLOG(glDepthRangef);
     
     putCmd(OPC_glDepthRangef);
     putFloat(zNear);
     putFloat(zFar);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)(GLclampf, GLclampf))orig)(zNear, zFar);
+    ORIG(glDepthRangef)(zNear, zFar);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
     
-    GLEPILOG();
+    GLESEPILOG();
 }
+#endif
 
 DEF(void, glDetachShader) (GLuint program, GLuint shader)
 {
-    GLPROLOG(glDetachShader);
+    GLESPROLOG(glDetachShader);
     
     putCmd(OPC_glDetachShader);
     putInt(program);
     putInt(shader);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(program, shader);
+    ORIG(glDetachShader)(program, shader);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
     
-    GLEPILOG();
+    GLESEPILOG();
 }
 
 DEF(void, glDisable) (GLenum cap)
 {
-    GLPROLOG(glDisable);
+    GLESPROLOG(glDisable);
     
     putCmd(OPC_glDisable);
     putInt(cap);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(cap);
+    ORIG(glDisable)(cap);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glDisableVertexAttribArray) (GLuint index)
 {
-    GLPROLOG(glDisableVertexAttribArray);
+    GLESPROLOG(glDisableVertexAttribArray);
     
     putCmd(OPC_glDisableVertexAttribArray);
     putInt(index);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(index);
+    ORIG(glDisableVertexAttribArray)(index);
     uint64_t end = gethrtime();
     
     vertexAttrib[index].enabled = 0;
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glDrawArrays) (GLenum mode, GLint first, GLsizei count)
 {
-    GLPROLOG(glDrawArrays);
+    GLESPROLOG(glDrawArrays);
     
     putCmd(OPC_glDrawArrays);
     putInt(mode);
@@ -906,102 +951,107 @@ DEF(void, glDrawArrays) (GLenum mode, GLint first, GLsizei count)
     putInt(count);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(mode, first, count);
+    ORIG(glDrawArrays)(mode, first, count);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glDrawElements) (GLenum mode, GLsizei count, GLenum type, const GLvoid* indices)
 {
-    GLPROLOG(glDrawElements);
+    GLESPROLOG(glDrawElements);
     
     putCmd(OPC_glDrawElements);
     putInt(mode);
     putInt(count);
     putInt(type);
-    putBytes(indices, count * glSizeof(type));
+    if (elementArrayBufferBinding) {
+        putPtr(indices);
+    }
+    else {
+        putBytes(indices, count * glSizeof(type));
+    }    
     if (!arrayBufferBinding) {
-        putVertexAttrib(count);
+        putVertexAttrib(count, type, indices);
     }
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(mode, count, type, indices);
+    ORIG(glDrawElements)(mode, count, type, indices);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glEnable) (GLenum cap)
 {
-    GLPROLOG(glEnable);
+    GLESPROLOG(glEnable);
     
     putCmd(OPC_glEnable);
     putInt(cap);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(cap);
+    ORIG(glEnable)(cap);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glEnableVertexAttribArray) (GLuint index)
 {
-    GLPROLOG(glEnableVertexAttribArray);
+    GLESPROLOG(glEnableVertexAttribArray);
     
     putCmd(OPC_glEnableVertexAttribArray);
     putInt(index);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(index);
+    ORIG(glEnableVertexAttribArray)(index);
     uint64_t end = gethrtime();
     
     vertexAttrib[index].enabled = 1;
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glFinish) (void)
 {
-    GLPROLOG(glFinish);
+    GLESPROLOG(glFinish);
     
     putCmd(OPC_glFinish);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)();
+    ORIG(glFinish)();
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glFlush) (void)
 {
-    GLPROLOG(glFlush);
+    GLESPROLOG(glFlush);
     
     putCmd(OPC_glFlush);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)();
+    ORIG(glFlush)();
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glFramebufferRenderbuffer) (GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer)
 {
-    GLPROLOG(glFramebufferRenderbuffer);
+    GLESPROLOG(glFramebufferRenderbuffer);
     
     putCmd(OPC_glFramebufferRenderbuffer);
     putInt(target);
@@ -1010,17 +1060,17 @@ DEF(void, glFramebufferRenderbuffer) (GLenum target, GLenum attachment, GLenum r
     putInt(renderbuffer);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(target, attachment, renderbuffertarget, renderbuffer);
+    ORIG(glFramebufferRenderbuffer)(target, attachment, renderbuffertarget, renderbuffer);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glFramebufferTexture2D) (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level)
 {
-    GLPROLOG(glFramebufferTexture2D);
+    GLESPROLOG(glFramebufferTexture2D);
     
     putCmd(OPC_glFramebufferTexture2D);
     putInt(target);
@@ -1030,39 +1080,39 @@ DEF(void, glFramebufferTexture2D) (GLenum target, GLenum attachment, GLenum text
     putInt(level);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(target, attachment, textarget, texture, level);
+    ORIG(glFramebufferTexture2D)(target, attachment, textarget, texture, level);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glFrontFace) (GLenum mode)
 {
-    GLPROLOG(glFrontFace);
+    GLESPROLOG(glFrontFace);
     
     putCmd(OPC_glFrontFace);
     putInt(mode);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(mode);
+    ORIG(glFrontFace)(mode);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glGenBuffers) (GLsizei n, GLuint* buffers)
 {
-    GLPROLOG(glGenBuffers);
+    GLESPROLOG(glGenBuffers);
     
     putCmd(OPC_glGenBuffers);
     putInt(n);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(n, buffers);
+    ORIG(glGenBuffers)(n, buffers);
     uint64_t end = gethrtime();
     
     int i;
@@ -1071,34 +1121,34 @@ DEF(void, glGenBuffers) (GLsizei n, GLuint* buffers)
     }
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glGenerateMipmap) (GLenum target)
 {
-    GLPROLOG(glGenerateMipmap);
+    GLESPROLOG(glGenerateMipmap);
     
     putCmd(OPC_glGenerateMipmap);
     putInt(target);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(target);
+    ORIG(glGenerateMipmap)(target);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
     
-    GLEPILOG();
+    GLESEPILOG();
 }
 
 DEF(void, glGenFramebuffers) (GLsizei n, GLuint* framebuffers)
 {
-    GLPROLOG(glGenFramebuffers);
+    GLESPROLOG(glGenFramebuffers);
     
     putCmd(OPC_glGenFramebuffers);
     putInt(n);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(n, framebuffers);
+    ORIG(glGenFramebuffers)(n, framebuffers);
     uint64_t end = gethrtime();
     
     int i;
@@ -1107,18 +1157,18 @@ DEF(void, glGenFramebuffers) (GLsizei n, GLuint* framebuffers)
     }
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glGenRenderbuffers) (GLsizei n, GLuint* renderbuffers)
 {
-    GLPROLOG(glGenRenderbuffers);
+    GLESPROLOG(glGenRenderbuffers);
     
     putCmd(OPC_glGenRenderbuffers);
     putInt(n);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(n, renderbuffers);
+    ORIG(glGenRenderbuffers)(n, renderbuffers);
     uint64_t end = gethrtime();
     
     int i;
@@ -1127,18 +1177,18 @@ DEF(void, glGenRenderbuffers) (GLsizei n, GLuint* renderbuffers)
     }
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glGenTextures) (GLsizei n, GLuint* textures)
 {
-    GLPROLOG(glGenTextures);
+    GLESPROLOG(glGenTextures);
     
     putCmd(OPC_glGenTextures);
     putInt(n);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(n, textures);
+    ORIG(glGenTextures)(n, textures);
     uint64_t end = gethrtime();
     
     int i;
@@ -1147,18 +1197,18 @@ DEF(void, glGenTextures) (GLsizei n, GLuint* textures)
     }
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glGetActiveAttrib) (GLuint program, GLuint index, GLsizei bufsize, GLsizei* length, GLint* size, GLenum* type, GLchar* name)
 {
-    GLPROLOG(glGetActiveAttrib);
+    GLESPROLOG(glGetActiveAttrib);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glGetActiveUniform) (GLuint program, GLuint index, GLsizei bufsize, GLsizei* length, GLint* size, GLenum* type, GLchar* name)
 {
-    GLPROLOG(glGetActiveUniform);
+    GLESPROLOG(glGetActiveUniform);
 
     putCmd(OPC_glGetActiveUniform);
     putInt(program);
@@ -1170,7 +1220,7 @@ DEF(void, glGetActiveUniform) (GLuint program, GLuint index, GLsizei bufsize, GL
     putPtr(name);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(program, index, bufsize, length, size, type, name);
+    ORIG(glGetActiveUniform)(program, index, bufsize, length, size, type, name);
     uint64_t end = gethrtime();
     
     if (length) putInt(*length);
@@ -1179,12 +1229,12 @@ DEF(void, glGetActiveUniform) (GLuint program, GLuint index, GLsizei bufsize, GL
     if (name)   putString(name);
     putTime(bgn, end);
     
-    GLEPILOG();
+    GLESEPILOG();
 }
 
 DEF(void, glGetAttachedShaders) (GLuint program, GLsizei maxcount, GLsizei* count, GLuint* shaders)
 {
-    GLPROLOG(glGetAttachedShaders);
+    GLESPROLOG(glGetAttachedShaders);
     
     putCmd(OPC_glGetAttachedShaders);
     putInt(program);
@@ -1193,7 +1243,7 @@ DEF(void, glGetAttachedShaders) (GLuint program, GLsizei maxcount, GLsizei* coun
     putPtr(shaders);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(program, maxcount, count, shaders);
+    ORIG(glGetAttachedShaders)(program, maxcount, count, shaders);
     uint64_t end = gethrtime();
 
     if (count) {
@@ -1205,90 +1255,90 @@ DEF(void, glGetAttachedShaders) (GLuint program, GLsizei maxcount, GLsizei* coun
     }
     putTime(bgn, end);
     
-    GLEPILOG();
+    GLESEPILOG();
 }
 
 DEF(int, glGetAttribLocation) (GLuint program, const GLchar* name)
 {
-    GLPROLOG(glGetAttribLocation);
+    GLESPROLOG(glGetAttribLocation);
     
     putCmd(OPC_glGetAttribLocation);
     putInt(program);
     putString(name);
     
     uint64_t bgn = gethrtime();
-    int res = (*(int(*)())orig)(program, name);
+    int res = ORIG(glGetAttribLocation)(program, name);
     uint64_t end = gethrtime();
     
     putInt(res);
     putTime(bgn, end);
     
-    GLEPILOG();
+    GLESEPILOG();
     
     return res;
 }
 
 DEF(void, glGetBooleanv) (GLenum pname, GLboolean* params)
 {
-    GLPROLOG(glGetBooleanv);
+    GLESPROLOG(glGetBooleanv);
     
     putCmd(OPC_glGetBooleanv);
     putInt(pname);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(pname, params);
+    ORIG(glGetBooleanv)(pname, params);
     uint64_t end = gethrtime();
     
     putInt(params == NULL ? 0 : *params);
     putTime(bgn, end);
     
-    GLEPILOG();
+    GLESEPILOG();
 }
 
 DEF(void, glGetBufferParameteriv) (GLenum target, GLenum pname, GLint* params)
 {
-    GLPROLOG(glGetBufferParameteriv);
+    GLESPROLOG(glGetBufferParameteriv);
     NOT_IMPLEMENTED();
 }    
 
 DEF(GLenum, glGetError) (void)
 {
-    GLPROLOG(glGetError);
+    GLESPROLOG(glGetError);
     
     putCmd(OPC_glGetError);
     
     uint64_t bgn = gethrtime();
-    GLenum res = (*(GLenum(*)())orig)();
+    GLenum res = ORIG(glGetError)();
     uint64_t end = gethrtime();
     
     putInt(res);
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
     
     return res;
 }    
 
 DEF(void, glGetFloatv) (GLenum pname, GLfloat* params)
 {
-    GLPROLOG(glGetFloatv);
+    GLESPROLOG(glGetFloatv);
     
     putCmd(OPC_glGetFloatv);
     putInt(pname);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)(GLenum, GLfloat*))orig)(pname, params);
+    ORIG(glGetFloatv)(pname, params);
     uint64_t end = gethrtime();
     
     putFloatPtr(params);
     putTime(bgn, end);
     
-    GLEPILOG();
+    GLESEPILOG();
 }
 
 DEF(void, glGetFramebufferAttachmentParameteriv) (GLenum target, GLenum attachment, GLenum pname, GLint* params)
 {
-    GLPROLOG(glGetFramebufferAttachmentParameteriv);
+    GLESPROLOG(glGetFramebufferAttachmentParameteriv);
     
     putCmd(OPC_glGetFramebufferAttachmentParameteriv);
     putInt(target);
@@ -1296,310 +1346,314 @@ DEF(void, glGetFramebufferAttachmentParameteriv) (GLenum target, GLenum attachme
     putInt(pname);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(target, attachment, pname, params);
+    ORIG(glGetFramebufferAttachmentParameteriv)(target, attachment, pname, params);
     uint64_t end = gethrtime();
     
     putInt(params == NULL ? 0 : *params);
     putTime(bgn, end);
     
-    GLEPILOG();
+    GLESEPILOG();
 }
 
 DEF(void, glGetIntegerv) (GLenum pname, GLint* params)
 {
-    GLPROLOG(glGetIntegerv);
+    GLESPROLOG(glGetIntegerv);
     
     putCmd(OPC_glGetIntegerv);
     putInt(pname);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(pname, params);
+    ORIG(glGetIntegerv)(pname, params);
     uint64_t end = gethrtime();
     
     putIntPtr(params);
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glGetProgramiv) (GLuint program, GLenum pname, GLint* params)
 {
-    GLPROLOG(glGetProgramiv);
+    GLESPROLOG(glGetProgramiv);
     
     putCmd(OPC_glGetProgramiv);
     putInt(program);
     putInt(pname);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(program, pname, params);
+    ORIG(glGetProgramiv)(program, pname, params);
     uint64_t end = gethrtime();
     
     putInt(params == NULL ? 0 : *params);
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glGetProgramInfoLog) (GLuint program, GLsizei bufsize, GLsizei* length, GLchar* infolog)
 {
-    GLPROLOG(glGetProgramInfoLog);
+    GLESPROLOG(glGetProgramInfoLog);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glGetRenderbufferParameteriv) (GLenum target, GLenum pname, GLint* params)
 {
-    GLPROLOG(glGetRenderbufferParameteriv);
+    GLESPROLOG(glGetRenderbufferParameteriv);
     
     putCmd(OPC_glGetRenderbufferParameteriv);
     putInt(target);
     putInt(pname);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(target, pname, params);
+    ORIG(glGetRenderbufferParameteriv)(target, pname, params);
     uint64_t end = gethrtime();
     
     putInt(params == NULL ? 0 : *params);
     putTime(bgn, end);
     
-    GLEPILOG();
+    GLESEPILOG();
 }
 
- DEF(void, glGetShaderiv) (GLuint shader, GLenum pname, GLint* params)
+DEF(void, glGetShaderiv) (GLuint shader, GLenum pname, GLint* params)
 {
-    GLPROLOG(glGetShaderiv);
+    GLESPROLOG(glGetShaderiv);
     
     putCmd(OPC_glGetShaderiv);
     putInt(shader);
     putInt(pname);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(shader, pname, params);
+    ORIG(glGetShaderiv)(shader, pname, params);
     uint64_t end = gethrtime();
     
     putInt(params == NULL ? 0 : *params);
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glGetShaderInfoLog) (GLuint shader, GLsizei bufsize, GLsizei* length, GLchar* infolog)
 {
-    GLPROLOG(glGetShaderInfoLog);
+    GLESPROLOG(glGetShaderInfoLog);
     NOT_IMPLEMENTED();
 }    
 
+#if !MACOSX
 DEF(void, glGetShaderPrecisionFormat) (GLenum shadertype, GLenum precisiontype, GLint* range, GLint* precision)
 {
-    GLPROLOG(glGetShaderPrecisionFormat);
+    GLESPROLOG(glGetShaderPrecisionFormat);
     NOT_IMPLEMENTED();
 }
+#endif
 
 DEF(void, glGetShaderSource) (GLuint shader, GLsizei bufsize, GLsizei* length, GLchar* source)
 {
-    GLPROLOG(glGetShaderSource);
+    GLESPROLOG(glGetShaderSource);
     NOT_IMPLEMENTED();
 }    
 
 DEF(const GLubyte*, glGetString) (GLenum name)
 {
-    GLPROLOG(glGetString);
+    GLESPROLOG(glGetString);
     
     putCmd(OPC_glGetString);
     putInt(name);
     
     uint64_t bgn = gethrtime();
-    const GLubyte* res = (*(const GLubyte*(*)())orig)(name);
+    const GLubyte* res = ORIG(glGetString)(name);
     uint64_t end = gethrtime();
     
     putString(res);
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
     
     return res;
 }    
 
 DEF(void, glGetTexParameterfv) (GLenum target, GLenum pname, GLfloat* params)
 {
-    GLPROLOG(glGetTexParameterfv);
+    GLESPROLOG(glGetTexParameterfv);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glGetTexParameteriv) (GLenum target, GLenum pname, GLint* params)
 {
-    GLPROLOG(glGetTexParameteriv);
+    GLESPROLOG(glGetTexParameteriv);
     NOT_IMPLEMENTED();
 }
 
 DEF(void, glGetUniformfv) (GLuint program, GLint location, GLfloat* params)
 {
-    GLPROLOG(glGetUniformfv);
+    GLESPROLOG(glGetUniformfv);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glGetUniformiv) (GLuint program, GLint location, GLint* params)
 {
-    GLPROLOG(glGetUniformiv);
+    GLESPROLOG(glGetUniformiv);
     NOT_IMPLEMENTED();
 }    
 
 DEF(int, glGetUniformLocation) (GLuint program, const GLchar* name)
 {
-    GLPROLOG(glGetUniformLocation);
+    GLESPROLOG(glGetUniformLocation);
     
     putCmd(OPC_glGetUniformLocation);
     putInt(program);
     putString(name);
     
     uint64_t bgn = gethrtime();
-    int res = (*(int(*)())orig)(program, name);
+    int res = ORIG(glGetUniformLocation)(program, name);
     uint64_t end = gethrtime();
     
     putInt(res);
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
     
     return res;
 }    
 
 DEF(void, glGetVertexAttribfv) (GLuint index, GLenum pname, GLfloat* params)
 {
-    GLPROLOG(glGetVertexAttribfv);
+    GLESPROLOG(glGetVertexAttribfv);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glGetVertexAttribiv) (GLuint index, GLenum pname, GLint* params)
 {
-    GLPROLOG(glGetVertexAttribiv);
+    GLESPROLOG(glGetVertexAttribiv);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glGetVertexAttribPointerv) (GLuint index, GLenum pname, GLvoid** pointer)
 {
-    GLPROLOG(glGetVertexAttribPointerv);
+    GLESPROLOG(glGetVertexAttribPointerv);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glHint) (GLenum target, GLenum mode)
 {
-    GLPROLOG(glHint);
+    GLESPROLOG(glHint);
     NOT_IMPLEMENTED();
 }    
 
 DEF(GLboolean, glIsBuffer) (GLuint buffer)
 {
-    GLPROLOG(glIsBuffer);
+    GLESPROLOG(glIsBuffer);
     NOT_IMPLEMENTED();
 }    
 
 DEF(GLboolean, glIsEnabled) (GLenum cap)
 {
-    GLPROLOG(glIsEnabled);
+    GLESPROLOG(glIsEnabled);
     NOT_IMPLEMENTED();
 }    
 
 DEF(GLboolean, glIsFramebuffer) (GLuint framebuffer)
 {
-    GLPROLOG(glIsFramebuffer);
+    GLESPROLOG(glIsFramebuffer);
     NOT_IMPLEMENTED();
 }    
 
 DEF(GLboolean, glIsProgram) (GLuint program)
 {
-    GLPROLOG(glIsProgram);
+    GLESPROLOG(glIsProgram);
     NOT_IMPLEMENTED();
 }    
 
 DEF(GLboolean, glIsRenderbuffer) (GLuint renderbuffer)
 {
-    GLPROLOG(glIsRenderbuffer);
+    GLESPROLOG(glIsRenderbuffer);
     NOT_IMPLEMENTED();
 }    
 
 DEF(GLboolean, glIsShader) (GLuint shader)
 {
-    GLPROLOG(glIsShader);
+    GLESPROLOG(glIsShader);
     NOT_IMPLEMENTED();
 }    
 
 DEF(GLboolean, glIsTexture) (GLuint texture)
 {
-    GLPROLOG(glIsTexture);
+    GLESPROLOG(glIsTexture);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glLineWidth) (GLfloat width)
 {
-    GLPROLOG(glLineWidth);
+    GLESPROLOG(glLineWidth);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glLinkProgram) (GLuint program)
 {
-    GLPROLOG(glLinkProgram);
+    GLESPROLOG(glLinkProgram);
     
     putCmd(OPC_glLinkProgram);
     putInt(program);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(program);
+    ORIG(glLinkProgram)(program);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glPixelStorei) (GLenum pname, GLint param)
 {
-    GLPROLOG(glPixelStorei);
+    GLESPROLOG(glPixelStorei);
     
     putCmd(OPC_glPixelStorei);
     putInt(pname);
     putInt(param);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(pname, param);
+    ORIG(glPixelStorei)(pname, param);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glPolygonOffset) (GLfloat factor, GLfloat units)
 {
-    GLPROLOG(glPolygonOffset);
+    GLESPROLOG(glPolygonOffset);
     
     putCmd(OPC_glPolygonOffset);
     putFloat(factor);
     putFloat(units);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)(GLfloat, GLfloat))orig)(factor, units);
+    ORIG(glPolygonOffset)(factor, units);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
     
-    GLEPILOG();
+    GLESEPILOG();
 }
 
 DEF(void, glReadPixels) (GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid* pixels)
 {
-    GLPROLOG(glReadPixels);
+    GLESPROLOG(glReadPixels);
     NOT_IMPLEMENTED();
 }    
 
+#if !MACOSX
 DEF(void, glReleaseShaderCompiler) (void)
 {
-    GLPROLOG(glReleaseShaderCompiler);
+    GLESPROLOG(glReleaseShaderCompiler);
     NOT_IMPLEMENTED();
 }
+#endif
 
 DEF(void, glRenderbufferStorage) (GLenum target, GLenum internalformat, GLsizei width, GLsizei height)
 {
-    GLPROLOG(glRenderbufferStorage);
+    GLESPROLOG(glRenderbufferStorage);
     
     putCmd(OPC_glRenderbufferStorage);
     putInt(target);
@@ -1608,23 +1662,23 @@ DEF(void, glRenderbufferStorage) (GLenum target, GLenum internalformat, GLsizei 
     putInt(height);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(target, internalformat, width, height);
+    ORIG(glRenderbufferStorage)(target, internalformat, width, height);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glSampleCoverage) (GLclampf value, GLboolean invert)
 {
-    GLPROLOG(glSampleCoverage);
+    GLESPROLOG(glSampleCoverage);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glScissor) (GLint x, GLint y, GLsizei width, GLsizei height)
 {
-    GLPROLOG(glScissor);
+    GLESPROLOG(glScissor);
     
     putCmd(OPC_glScissor);
     putInt(x);
@@ -1633,23 +1687,23 @@ DEF(void, glScissor) (GLint x, GLint y, GLsizei width, GLsizei height)
     putInt(height);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(x, y, width, height);
+    ORIG(glScissor)(x, y, width, height);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glShaderBinary) (GLsizei n, const GLuint* shaders, GLenum binaryformat, const GLvoid* binary, GLsizei length)
 {
-    GLPROLOG(glShaderBinary);
+    GLESPROLOG(glShaderBinary);
     NOT_IMPLEMENTED();
 }
 
 DEF(void, glShaderSource) (GLuint shader, GLsizei count, const GLchar** string, const GLint* length)
 {
-    GLPROLOG(glShaderSource);
+    GLESPROLOG(glShaderSource);
     
     putCmd(OPC_glShaderSource);
     putInt(shader);
@@ -1667,47 +1721,47 @@ DEF(void, glShaderSource) (GLuint shader, GLsizei count, const GLchar** string, 
     }
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(shader, count, string, length);
+    ORIG(glShaderSource)(shader, count, string, length);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glStencilFunc) (GLenum func, GLint ref, GLuint mask)
 {
-    GLPROLOG(glStencilFunc);
+    GLESPROLOG(glStencilFunc);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glStencilFuncSeparate) (GLenum face, GLenum func, GLint ref, GLuint mask)
 {
-    GLPROLOG(glStencilFuncSeparate);
+    GLESPROLOG(glStencilFuncSeparate);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glStencilMask) (GLuint mask)
 {
-    GLPROLOG(glStencilMask);
+    GLESPROLOG(glStencilMask);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glStencilMaskSeparate) (GLenum face, GLuint mask)
 {
-    GLPROLOG(glStencilMaskSeparate);
+    GLESPROLOG(glStencilMaskSeparate);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glStencilOp) (GLenum fail, GLenum zfail, GLenum zpass)
 {
-    GLPROLOG(glStencilOp);
+    GLESPROLOG(glStencilOp);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glStencilOpSeparate) (GLenum face, GLenum fail, GLenum zfail, GLenum zpass)
 {
-    GLPROLOG(glStencilOpSeparate);
+    GLESPROLOG(glStencilOpSeparate);
     NOT_IMPLEMENTED();
 }    
 
@@ -1717,7 +1771,7 @@ DEF(void, glTexImage2D) (GLenum target, GLint level, GLint internalformat, GLsiz
 DEF(void, glTexImage2D) (GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid* pixels)
 #endif
 {
-    GLPROLOG(glTexImage2D);
+    GLESPROLOG(glTexImage2D);
     
     putCmd(OPC_glTexImage2D);
     putInt(target);
@@ -1731,29 +1785,29 @@ DEF(void, glTexImage2D) (GLenum target, GLint level, GLenum internalformat, GLsi
     putBytes(pixels, width * height * glElementSize(format, type));
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(target, level, internalformat, width, height, border, format, type, pixels);
+    ORIG(glTexImage2D)(target, level, internalformat, width, height, border, format, type, pixels);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glTexParameterf) (GLenum target, GLenum pname, GLfloat param)
 {
-    GLPROLOG(glTexParameterf);
+    GLESPROLOG(glTexParameterf);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glTexParameterfv) (GLenum target, GLenum pname, const GLfloat* params)
 {
-    GLPROLOG(glTexParameterfv);
+    GLESPROLOG(glTexParameterfv);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glTexParameteri) (GLenum target, GLenum pname, GLint param)
 {
-    GLPROLOG(glTexParameteri);
+    GLESPROLOG(glTexParameteri);
     
     putCmd(OPC_glTexParameteri);
     putInt(target);
@@ -1761,23 +1815,23 @@ DEF(void, glTexParameteri) (GLenum target, GLenum pname, GLint param)
     putInt(param);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(target, pname, param);
+    ORIG(glTexParameteri)(target, pname, param);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glTexParameteriv) (GLenum target, GLenum pname, const GLint* params)
 {
-    GLPROLOG(glTexParameteriv);
+    GLESPROLOG(glTexParameteriv);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glTexSubImage2D) (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid* pixels)
 {
-    GLPROLOG(glTexSubImage2D);
+    GLESPROLOG(glTexSubImage2D);
     
     putCmd(OPC_glTexSubImage2D);
     putInt(target);
@@ -1791,34 +1845,34 @@ DEF(void, glTexSubImage2D) (GLenum target, GLint level, GLint xoffset, GLint yof
     putBytes(pixels, width * height * glElementSize(format, type));
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(target, level, xoffset, yoffset, width, height, format, type, pixels);
+    ORIG(glTexSubImage2D)(target, level, xoffset, yoffset, width, height, format, type, pixels);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glUniform1f) (GLint location, GLfloat x)
 {
-    GLPROLOG(glUniform1f);
+    GLESPROLOG(glUniform1f);
     
     putCmd(OPC_glUniform1f);
     putInt(location);
     putFloat(x);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)(GLint, GLfloat))orig)(location, x);
+    ORIG(glUniform1f)(location, x);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glUniform1fv) (GLint location, GLsizei count, const GLfloat* v)
 {
-    GLPROLOG(glUniform1fv);
+    GLESPROLOG(glUniform1fv);
     
     putCmd(OPC_glUniform1fv);
     putInt(location);
@@ -1826,40 +1880,40 @@ DEF(void, glUniform1fv) (GLint location, GLsizei count, const GLfloat* v)
     putBytes(v, count * sizeof(GLfloat));
     
     uint64_t bgn = gethrtime();
-    (*(void(*)(GLint, GLsizei, const GLfloat*))orig)(location, count, v);
+    ORIG(glUniform1fv)(location, count, v);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
     
-    GLEPILOG();
+    GLESEPILOG();
 }
 
 DEF(void, glUniform1i) (GLint location, GLint x)
 {
-    GLPROLOG(glUniform1i);
+    GLESPROLOG(glUniform1i);
 
     putCmd(OPC_glUniform1i);
     putInt(location);
     putInt(x);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(location, x);
+    ORIG(glUniform1i)(location, x);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glUniform1iv) (GLint location, GLsizei count, const GLint* v)
 {
-    GLPROLOG(glUniform1iv);
+    GLESPROLOG(glUniform1iv);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glUniform2f) (GLint location, GLfloat x, GLfloat y)
 {
-    GLPROLOG(glUniform2f);
+    GLESPROLOG(glUniform2f);
 
     putCmd(OPC_glUniform2f);
     putInt(location);
@@ -1867,23 +1921,23 @@ DEF(void, glUniform2f) (GLint location, GLfloat x, GLfloat y)
     putFloat(y);
 
     uint64_t bgn = gethrtime();
-    (*(void(*)(GLint, GLfloat, GLfloat))orig)(location, x, y);
+    ORIG(glUniform2f)(location, x, y);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glUniform2fv) (GLint location, GLsizei count, const GLfloat* v)
 {
-    GLPROLOG(glUniform2fv);
+    GLESPROLOG(glUniform2fv);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glUniform2i) (GLint location, GLint x, GLint y)
 {
-    GLPROLOG(glUniform2i);
+    GLESPROLOG(glUniform2i);
 
     putCmd(OPC_glUniform2i);
     putInt(location);
@@ -1891,23 +1945,23 @@ DEF(void, glUniform2i) (GLint location, GLint x, GLint y)
     putInt(y);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(location, x, y);
+    ORIG(glUniform2i)(location, x, y);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glUniform2iv) (GLint location, GLsizei count, const GLint* v)
 {
-    GLPROLOG(glUniform2iv);
+    GLESPROLOG(glUniform2iv);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glUniform3f) (GLint location, GLfloat x, GLfloat y, GLfloat z)
 {
-    GLPROLOG(glUniform3f);
+    GLESPROLOG(glUniform3f);
 
     putCmd(OPC_glUniform3f);
     putInt(location);
@@ -1916,23 +1970,23 @@ DEF(void, glUniform3f) (GLint location, GLfloat x, GLfloat y, GLfloat z)
     putFloat(z);
 
     uint64_t bgn = gethrtime();
-    (*(void(*)(GLint, GLfloat, GLfloat, GLfloat))orig)(location, x, y, z);
+    ORIG(glUniform3f)(location, x, y, z);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glUniform3fv) (GLint location, GLsizei count, const GLfloat* v)
 {
-    GLPROLOG(glUniform3fv);
+    GLESPROLOG(glUniform3fv);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glUniform3i) (GLint location, GLint x, GLint y, GLint z)
 {
-    GLPROLOG(glUniform3i);
+    GLESPROLOG(glUniform3i);
 
     putCmd(OPC_glUniform3i);
     putInt(location);
@@ -1941,23 +1995,23 @@ DEF(void, glUniform3i) (GLint location, GLint x, GLint y, GLint z)
     putInt(z);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(location, x, y, z);
+    ORIG(glUniform3i)(location, x, y, z);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glUniform3iv) (GLint location, GLsizei count, const GLint* v)
 {
-    GLPROLOG(glUniform3iv);
+    GLESPROLOG(glUniform3iv);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glUniform4f) (GLint location, GLfloat x, GLfloat y, GLfloat z, GLfloat w)
 {
-    GLPROLOG(glUniform4f);
+    GLESPROLOG(glUniform4f);
 
     putCmd(OPC_glUniform4f);
     putInt(location);
@@ -1967,17 +2021,17 @@ DEF(void, glUniform4f) (GLint location, GLfloat x, GLfloat y, GLfloat z, GLfloat
     putFloat(w);
 
     uint64_t bgn = gethrtime();
-    (*(void(*)(GLint, GLfloat, GLfloat, GLfloat, GLfloat))orig)(location, x, y, z, w);
+    ORIG(glUniform4f)(location, x, y, z, w);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glUniform4fv) (GLint location, GLsizei count, const GLfloat* v)
 {
-    GLPROLOG(glUniform4fv);
+    GLESPROLOG(glUniform4fv);
 
     putCmd(OPC_glUniform4fv);
     putInt(location);
@@ -1985,17 +2039,17 @@ DEF(void, glUniform4fv) (GLint location, GLsizei count, const GLfloat* v)
     putBytes(v, count * sizeof(GLfloat));
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(location, count, v);
+    ORIG(glUniform4fv)(location, count, v);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glUniform4i) (GLint location, GLint x, GLint y, GLint z, GLint w)
 {
-    GLPROLOG(glUniform4i);
+    GLESPROLOG(glUniform4i);
 
     putCmd(OPC_glUniform4i);
     putInt(location);
@@ -2005,17 +2059,17 @@ DEF(void, glUniform4i) (GLint location, GLint x, GLint y, GLint z, GLint w)
     putInt(w);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(location, x, y, z, w);
+    ORIG(glUniform4i)(location, x, y, z, w);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glUniform4iv) (GLint location, GLsizei count, const GLint* v)
 {
-    GLPROLOG(glUniform4iv);
+    GLESPROLOG(glUniform4iv);
 
     putCmd(OPC_glUniform4iv);
     putInt(location);
@@ -2023,17 +2077,17 @@ DEF(void, glUniform4iv) (GLint location, GLsizei count, const GLint* v)
     putBytes(v, count * sizeof(GLint));
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(location, count, v);
+    ORIG(glUniform4iv)(location, count, v);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glUniformMatrix2fv) (GLint location, GLsizei count, GLboolean transpose, const GLfloat* value)
 {
-    GLPROLOG(glUniformMatrix2fv);
+    GLESPROLOG(glUniformMatrix2fv);
     
     putCmd(OPC_glUniformMatrix2fv);
     putInt(location);
@@ -2042,17 +2096,17 @@ DEF(void, glUniformMatrix2fv) (GLint location, GLsizei count, GLboolean transpos
     putBytes(value, 4 * count * sizeof(GLfloat));
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(location, count, transpose, value);
+    ORIG(glUniformMatrix2fv)(location, count, transpose, value);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
     
-    GLEPILOG();
+    GLESEPILOG();
 }
 
 DEF(void, glUniformMatrix3fv) (GLint location, GLsizei count, GLboolean transpose, const GLfloat* value)
 {
-    GLPROLOG(glUniformMatrix3fv);
+    GLESPROLOG(glUniformMatrix3fv);
     
     putCmd(OPC_glUniformMatrix3fv);
     putInt(location);
@@ -2061,17 +2115,17 @@ DEF(void, glUniformMatrix3fv) (GLint location, GLsizei count, GLboolean transpos
     putBytes(value, 9 * count * sizeof(GLfloat));
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(location, count, transpose, value);
+    ORIG(glUniformMatrix3fv)(location, count, transpose, value);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
     
-    GLEPILOG();
+    GLESEPILOG();
 }
 
 DEF(void, glUniformMatrix4fv) (GLint location, GLsizei count, GLboolean transpose, const GLfloat* value)
 {
-    GLPROLOG(glUniformMatrix4fv);
+    GLESPROLOG(glUniformMatrix4fv);
     
     putCmd(OPC_glUniformMatrix4fv);
     putInt(location);
@@ -2080,97 +2134,97 @@ DEF(void, glUniformMatrix4fv) (GLint location, GLsizei count, GLboolean transpos
     putBytes(value, count * sizeof(GLfloat) * 16);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(location, count, transpose, value);
+    ORIG(glUniformMatrix4fv)(location, count, transpose, value);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glUseProgram) (GLuint program)
 {
-    GLPROLOG(glUseProgram);
+    GLESPROLOG(glUseProgram);
     
     putCmd(OPC_glUseProgram);
     putInt(program);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(program);
+    ORIG(glUseProgram)(program);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glValidateProgram) (GLuint program)
 {
-    GLPROLOG(glValidateProgram);
+    GLESPROLOG(glValidateProgram);
     
     putCmd(OPC_glValidateProgram);
     putInt(program);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(program);
+    ORIG(glValidateProgram)(program);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glVertexAttrib1f) (GLuint indx, GLfloat x)
 {
-    GLPROLOG(glVertexAttrib1f);
+    GLESPROLOG(glVertexAttrib1f);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glVertexAttrib1fv) (GLuint indx, const GLfloat* values)
 {
-    GLPROLOG(glVertexAttrib1fv);
+    GLESPROLOG(glVertexAttrib1fv);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glVertexAttrib2f) (GLuint indx, GLfloat x, GLfloat y)
 {
-    GLPROLOG(glVertexAttrib2f);
+    GLESPROLOG(glVertexAttrib2f);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glVertexAttrib2fv) (GLuint indx, const GLfloat* values)
 {
-    GLPROLOG(glVertexAttrib2fv);
+    GLESPROLOG(glVertexAttrib2fv);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glVertexAttrib3f) (GLuint indx, GLfloat x, GLfloat y, GLfloat z)
 {
-    GLPROLOG(glVertexAttrib3f);
+    GLESPROLOG(glVertexAttrib3f);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glVertexAttrib3fv) (GLuint indx, const GLfloat* values)
 {
-    GLPROLOG(glVertexAttrib3fv);
+    GLESPROLOG(glVertexAttrib3fv);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glVertexAttrib4f) (GLuint indx, GLfloat x, GLfloat y, GLfloat z, GLfloat w)
 {
-    GLPROLOG(glVertexAttrib4f);
+    GLESPROLOG(glVertexAttrib4f);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glVertexAttrib4fv) (GLuint indx, const GLfloat* values)
 {
-    GLPROLOG(glVertexAttrib4fv);
+    GLESPROLOG(glVertexAttrib4fv);
     NOT_IMPLEMENTED();
 }    
 
 DEF(void, glVertexAttribPointer) (GLuint indx, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const GLvoid* ptr)
 {
-    GLPROLOG(glVertexAttribPointer);
+    GLESPROLOG(glVertexAttribPointer);
     
     putCmd(OPC_glVertexAttribPointer);
     putInt(indx);
@@ -2186,17 +2240,17 @@ DEF(void, glVertexAttribPointer) (GLuint indx, GLint size, GLenum type, GLboolea
     vertexAttrib[indx].pointer = ptr;
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(indx, size, type, normalized, stride, ptr);
+    ORIG(glVertexAttribPointer)(indx, size, type, normalized, stride, ptr);
     uint64_t end = gethrtime();
 
     putTime(bgn, end);
 
-    GLEPILOG();
+    GLESEPILOG();
 }    
 
 DEF(void, glViewport) (GLint x, GLint y, GLsizei width, GLsizei height)
 {
-    GLPROLOG(glViewport);
+    GLESPROLOG(glViewport);
     
     putCmd(OPC_glViewport);
     putInt(x);
@@ -2205,10 +2259,250 @@ DEF(void, glViewport) (GLint x, GLint y, GLsizei width, GLsizei height)
     putInt(height);
     
     uint64_t bgn = gethrtime();
-    (*(void(*)())orig)(x, y, width, height);
+    ORIG(glViewport)(x, y, width, height);
     uint64_t end = gethrtime();
     
     putTime(bgn, end);
 
-    GLEPILOG();
-}    
+    GLESEPILOG();
+}
+
+#if MACOSX
+/*
+ * Mac OS X extensions
+ */
+
+DEF(void, glBegin) (GLenum mode)
+{
+    GLESPROLOG(glBegin);
+    
+    putCmd(OPC_glBegin);
+    putInt(mode);
+    
+    uint64_t bgn = gethrtime();
+    ORIG(glBegin)(mode);
+    uint64_t end = gethrtime();
+    
+    putTime(bgn, end);
+    
+    GLESEPILOG();
+}
+
+DEF(void, glEnd) ()
+{
+    GLESPROLOG(glEnd);
+    putCmd(OPC_glEnd);
+    
+    uint64_t bgn = gethrtime();
+    ORIG(glEnd)();
+    uint64_t end = gethrtime();
+    
+    putTime(bgn, end);
+    
+    GLESEPILOG();
+}
+
+DEF(GLboolean, glIsRenderbufferEXT) (GLuint renderbuffer)
+{
+    GLESPROLOG(glIsRenderbufferEXT);
+    NOT_IMPLEMENTED();
+}
+
+DEF(void, glBindRenderbufferEXT) (GLenum target, GLuint renderbuffer)
+{
+    GLESPROLOG(glIsRenderbufferEXT);
+    NOT_IMPLEMENTED();
+}
+
+DEF(void, glDeleteRenderbuffersEXT) (GLsizei n, const GLuint *renderbuffers)
+{
+    GLESPROLOG(glDeleteRenderbuffersEXT);
+    NOT_IMPLEMENTED();
+}
+
+DEF(void, glGenRenderbuffersEXT) (GLsizei n, GLuint *renderbuffers)
+{
+    GLESPROLOG(glGenRenderbuffersEXT);
+    NOT_IMPLEMENTED();
+}
+
+DEF(void, glRenderbufferStorageEXT) (GLenum target, GLenum internalformat, GLsizei width, GLsizei height)
+{
+    GLESPROLOG(glRenderbufferStorageEXT);
+    NOT_IMPLEMENTED();
+}
+
+DEF(void, glGetRenderbufferParameterivEXT) (GLenum target, GLenum pname, GLint *params)
+{
+    GLESPROLOG(glGetRenderbufferParameterivEXT);
+    NOT_IMPLEMENTED();
+}
+
+DEF(GLboolean, glIsFramebufferEXT) (GLuint framebuffer)
+{
+    GLESPROLOG(glIsFramebufferEXT);
+    NOT_IMPLEMENTED();
+}
+
+DEF(void, glBindFramebufferEXT) (GLenum target, GLuint framebuffer)
+{
+    GLESPROLOG(glBindFramebufferEXT);
+    
+    putCmd(OPC_glBindFramebufferEXT);
+    putInt(target);
+    putInt(framebuffer);
+    
+    uint64_t bgn = gethrtime();
+    ORIG(glBindFramebufferEXT)(target, framebuffer);
+    uint64_t end = gethrtime();
+    
+    putTime(bgn, end);
+    
+    GLESEPILOG();
+}
+
+DEF(void, glDeleteFramebuffersEXT) (GLsizei n, const GLuint *framebuffers)
+{
+    GLESPROLOG(glDeleteFramebuffersEXT);
+    NOT_IMPLEMENTED();
+}
+
+DEF(void, glGenFramebuffersEXT) (GLsizei n, GLuint *framebuffers)
+{
+    GLESPROLOG(glGenFramebuffersEXT);
+    
+    putCmd(OPC_glGenFramebuffersEXT);
+    putInt(n);
+    
+    uint64_t bgn = gethrtime();
+    ORIG(glGenFramebuffersEXT)(n, framebuffers);
+    uint64_t end = gethrtime();
+    
+    int i;
+    for (i=0; i<n; ++i) {
+        putInt(framebuffers[i]);
+    }
+    putTime(bgn, end);
+    
+    GLESEPILOG();
+}
+
+DEF(GLenum, glCheckFramebufferStatusEXT) (GLenum target)
+{
+    GLESPROLOG(glCheckFramebufferStatusEXT);
+    
+    putCmd(OPC_glCheckFramebufferStatusEXT);
+    putInt(target);
+    
+    uint64_t bgn = gethrtime();
+    GLenum res = ORIG(glCheckFramebufferStatusEXT)(target);
+    uint64_t end = gethrtime();
+    
+    putInt(res);
+    putTime(bgn, end);
+    
+    GLESEPILOG();
+    
+    return res;
+}
+
+DEF(void, glFramebufferTexture1DEXT) (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level)
+{
+    GLESPROLOG(glFramebufferTexture1DEXT);
+    NOT_IMPLEMENTED();
+}
+
+DEF(void, glFramebufferTexture2DEXT) (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level)
+{
+    GLESPROLOG(glFramebufferTexture2DEXT);
+    
+    putCmd(OPC_glFramebufferTexture2DEXT);
+    putInt(target);
+    putInt(attachment);
+    putInt(textarget);
+    putInt(texture);
+    putInt(level);
+    
+    uint64_t bgn = gethrtime();
+    ORIG(glFramebufferTexture2DEXT)(target, attachment, textarget, texture, level);
+    uint64_t end = gethrtime();
+    
+    putTime(bgn, end);
+    
+    GLESEPILOG();
+}
+
+DEF(void, glFramebufferTexture3DEXT) (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint zoffset)
+{
+    GLESPROLOG(glFramebufferTexture3DEXT);
+    NOT_IMPLEMENTED();
+}
+
+DEF(void, glFramebufferRenderbufferEXT) (GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer)
+{
+    GLESPROLOG(glFramebufferRenderbufferEXT);
+    NOT_IMPLEMENTED();
+}
+
+DEF(void, glGetFramebufferAttachmentParameterivEXT) (GLenum target, GLenum attachment, GLenum pname, GLint *params)
+{
+    GLESPROLOG(glGetFramebufferAttachmentParameterivEXT);
+    NOT_IMPLEMENTED();
+}
+
+DEF(void, glGenerateMipmapEXT) (GLenum target)
+{
+    GLESPROLOG(glGenerateMipmapEXT);
+    NOT_IMPLEMENTED();
+}
+
+DEF(void, glGenFencesAPPLE) (GLsizei n, GLint *fences)
+{
+    GLESPROLOG(glGenFencesAPPLE);
+    NOT_IMPLEMENTED();
+}
+
+DEF(void, glDeleteFencesAPPLE) (GLsizei n, const GLint *fences)
+{
+    GLESPROLOG(glDeleteFencesAPPLE);
+    NOT_IMPLEMENTED();
+}
+
+DEF(void, glSetFenceAPPLE) (GLint fence)
+{
+    GLESPROLOG(glSetFenceAPPLE);
+    NOT_IMPLEMENTED();
+}
+
+DEF(GLboolean, glIsFenceAPPLE) (GLint fence)
+{
+    GLESPROLOG(glIsFenceAPPLE);
+    NOT_IMPLEMENTED();
+}
+
+DEF(GLboolean, glTestFenceAPPLE) (GLint fence)
+{
+    GLESPROLOG(glTestFenceAPPLE);
+    NOT_IMPLEMENTED();
+}
+
+DEF(void, glFinishFenceAPPLE) (GLint fence)
+{
+    GLESPROLOG(glFinishFenceAPPLE);
+    NOT_IMPLEMENTED();
+}
+
+DEF(GLboolean, glTestObjectAPPLE) (GLenum object, GLint name)
+{
+    GLESPROLOG(glTestObjectAPPLE);
+    NOT_IMPLEMENTED();
+}
+
+DEF(void, glFinishObjectAPPLE) (GLenum object, GLint name)
+{
+    GLESPROLOG(glFinishObjectAPPLE);
+    NOT_IMPLEMENTED();
+}
+
+#endif /* MACOSX */
+
