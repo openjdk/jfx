@@ -2580,7 +2580,8 @@ public class TreeTableViewTest {
         treeTableView.setEditable(true);
 
         TreeTableColumn<String, String> col = new TreeTableColumn<>("column");
-        col.setCellFactory(TextFieldTreeTableCell.forTreeTableColumn());
+        Callback<TreeTableColumn<String, String>, TreeTableCell<String, String>> factory = TextFieldTreeTableCell.forTreeTableColumn();
+        col.setCellFactory(factory);
         col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
             @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
                 return new ReadOnlyObjectWrapper<>(param.getValue().getValue());
@@ -2647,7 +2648,8 @@ public class TreeTableViewTest {
         new StageLoader(treeTableView);
 
         // now replace the cell factory
-        col.setCellFactory(TextFieldTreeTableCell.forTreeTableColumn());
+        Callback<TreeTableColumn<String, String>, TreeTableCell<String, String>> factory = TextFieldTreeTableCell.forTreeTableColumn();
+        col.setCellFactory(factory);
 
         Toolkit.getToolkit().firePulse();
 

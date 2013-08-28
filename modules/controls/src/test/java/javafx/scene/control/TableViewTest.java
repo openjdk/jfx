@@ -1805,7 +1805,8 @@ public class TableViewTest {
 
         TableColumn<Person,String> first = new TableColumn<Person,String>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
-        first.setCellFactory(TextFieldTableCell.forTableColumn());
+        Callback<TableColumn<Person, String>, TableCell<Person, String>> factory = TextFieldTableCell.forTableColumn();
+        first.setCellFactory(factory);
         table.getColumns().addAll(first);
         first.setOnEditStart(new EventHandler() {
             @Override public void handle(Event t) {
@@ -1852,7 +1853,8 @@ public class TableViewTest {
 
         TableColumn<Person,String> first = new TableColumn<Person,String>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
-        first.setCellFactory(TextFieldTableCell.forTableColumn());
+        Callback<TableColumn<Person, String>, TableCell<Person, String>> factory = TextFieldTableCell.forTableColumn();
+        first.setCellFactory(factory);
         table.getColumns().addAll(first);
         first.setOnEditStart(new EventHandler() {
             @Override public void handle(Event t) {
