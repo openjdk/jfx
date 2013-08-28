@@ -176,9 +176,10 @@ public abstract class GlyphLayout {
         while (i < length) {
             char ch = chars[i];
             int codePoint = ch;
+            boolean delimiter = ch == '\t' || ch == '\n' || ch == '\r';
 
             /* special handling for delimiters */
-            if (ch == '\t' || ch == '\n' || ch == '\r') {
+            if (delimiter) {
                 if (i != start) {
                     run = addTextRun(layout, chars, start, i - start,
                                      font, span, bidiLevel, complex);
@@ -193,22 +194,11 @@ public abstract class GlyphLayout {
                 if (ch == '\r' && i < spanEnd && chars[i] == '\n') {
                     i++;
                 }
-
-                /* Create delimiter run */
-                run = new TextRun(start, i - start, bidiLevel, false,
-                                  ScriptMapper.COMMON, span, 0, false);
-                if (ch == '\t') {
-                    run.setTab();
-                    flags |= FLAGS_HAS_TABS;
-                } else {
-                    run.setLinebreak();
-                }
-                layout.addTextRun(run);
-                start = i;
-            } else {
-                boolean spanChanged = i >= spanEnd;
-                boolean levelChanged = i >= bidiEnd;
-                boolean scriptChanged = false;
+            }
+            boolean spanChanged = i >= spanEnd && i < length;
+            boolean levelChanged = i >= bidiEnd && i < length;
+            boolean scriptChanged = false;
+            if (!delimiter) {
                 boolean oldComplex = complex;
                 if (checkComplex) {
                     if (Character.isHighSurrogate(ch)) {
@@ -241,35 +231,47 @@ public abstract class GlyphLayout {
                        start = i;
                     }
                 }
-                if (spanChanged) {
-                    /* Only true for rich text (spans != null) */
-                    span = spans[++spanIndex];
-                    spanEnd += span.getText().length();
-                    font = (PGFont)span.getFont();
-                    if (font == null) {
-                        flags |= FLAGS_HAS_EMBEDDED;
-                    } else {
-                        FontResource fr = font.getFontResource();
-                        int requestedFeatures = font.getFeatures();
-                        int supportedFeatures = fr.getFeatures();
-                        feature = (requestedFeatures & supportedFeatures) != 0;
-                    }
-                }
-                if (levelChanged) {
-                    bidiIndex++;
-                    /* Temporary Code: See RT-26997 */
-//                    bidiLevel = (byte)bidi.getRunLevel(bidiIndex);
-                    bidiLevel = (byte)bidi.getLevelAt(bidi.getRunStart(bidiIndex));
-                    bidiEnd = bidi.getRunLimit(bidiIndex);
-                    if ((bidiLevel & 1) != 0) {
-                        flags |= FLAGS_HAS_BIDI;
-                    }
-                }
-                if (scriptChanged) {
-                    scriptRun = script;
-                }
-
                 i++;
+            }
+            if (spanChanged) {
+                /* Only true for rich text (spans != null) */
+                span = spans[++spanIndex];
+                spanEnd += span.getText().length();
+                font = (PGFont)span.getFont();
+                if (font == null) {
+                    flags |= FLAGS_HAS_EMBEDDED;
+                } else {
+                    FontResource fr = font.getFontResource();
+                    int requestedFeatures = font.getFeatures();
+                    int supportedFeatures = fr.getFeatures();
+                    feature = (requestedFeatures & supportedFeatures) != 0;
+                }
+            }
+            if (levelChanged) {
+                bidiIndex++;
+                /* Temporary Code: See RT-26997 */
+//                bidiLevel = (byte)bidi.getRunLevel(bidiIndex);
+                bidiLevel = (byte)bidi.getLevelAt(bidi.getRunStart(bidiIndex));
+                bidiEnd = bidi.getRunLimit(bidiIndex);
+                if ((bidiLevel & 1) != 0) {
+                    flags |= FLAGS_HAS_BIDI;
+                }
+            }
+            if (scriptChanged) {
+                scriptRun = script;
+            }
+            if (delimiter) {
+                /* Create delimiter run */
+                run = new TextRun(start, i - start, bidiLevel, false,
+                                  ScriptMapper.COMMON, span, 0, false);
+                if (ch == '\t') {
+                    run.setTab();
+                    flags |= FLAGS_HAS_TABS;
+                } else {
+                    run.setLinebreak();
+                }
+                layout.addTextRun(run);
+                start = i;
             }
         }
 
