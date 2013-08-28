@@ -1,0 +1,36 @@
+CC	 = gcc
+JDK     = /System/Library/Frameworks/JavaVM.framework/Versions/Current
+DEST	= macosx-universal
+CFLAGS	= -O2 -DMACOSX=1
+TARGETS = $(DEST)/gltrace.dylib $(DEST)/gltrace
+
+default: all
+
+all: $(DEST) $(TARGETS)
+
+$(DEST):
+	if [ ! -x $(DEST) ]; then mkdir -m 755 -p $(DEST); fi
+
+#
+#    gltrace.dylib
+#
+
+HDRS    = trace.h iolib.h map.h os.h
+DYNLIB_SRCS = trace-macosx.c agent.c iolib.c os-macosx.c gles.c
+
+$(DEST)/gltrace.dylib: $(HDRS) $(DYNLIB_SRCS)
+	$(CC) $(CFLAGS) -I$(JDK)/Headers \
+	-dynamiclib -framework OpenGL -ldl -lpthread -lobjc \
+	-o $@ $(DYNLIB_SRCS) 
+
+#
+#    gltrace
+#
+
+GLTRACE_SRCS = retrace.c iolib.c enums.c map.c os-macosx.c
+
+$(DEST)/gltrace: $(HDRS) $(GLTRACE_SRCS)
+	$(CC) $(CFLAGS) -o $@ $(GLTRACE_SRCS) -framework OpenGL -framework libpng
+
+
+
