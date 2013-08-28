@@ -2069,6 +2069,7 @@ project(":web") {
                      "com.sun.webkit.PageCache",
                      "com.sun.webkit.PopupMenu",
                      "com.sun.webkit.SharedBuffer",
+                     "com.sun.webkit.WatchdogTimer",
                      "com.sun.webkit.WebPage",
                      "com.sun.webkit.LoadListenerClient",
                      "com.sun.webkit.event.WCFocusEvent",
