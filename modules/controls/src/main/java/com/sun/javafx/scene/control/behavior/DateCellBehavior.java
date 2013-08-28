@@ -61,8 +61,6 @@ public class DateCellBehavior extends CellBehaviorBase<DateCell> {
         DATE_CELL_BINDINGS.add(new KeyBinding(LEFT, "TraverseLeft"));
         DATE_CELL_BINDINGS.add(new KeyBinding(RIGHT, "TraverseRight"));
         DATE_CELL_BINDINGS.add(new KeyBinding(HOME, "Today"));
-        DATE_CELL_BINDINGS.add(new KeyBinding(PAGE_UP, "PreviousMonth"));
-        DATE_CELL_BINDINGS.add(new KeyBinding(PAGE_DOWN, "NextMonth"));
         DATE_CELL_BINDINGS.add(new KeyBinding(ENTER, "SelectDate"));
         DATE_CELL_BINDINGS.add(new KeyBinding(SPACE, "SelectDate"));
     }
@@ -79,8 +77,6 @@ public class DateCellBehavior extends CellBehaviorBase<DateCell> {
         if (dpc != null) {
             switch (name) {
               case "Today":         dpc.goToDate(LocalDate.now()); break;
-              case "PreviousMonth": dpc.goToDayCell(cell, -1, MONTHS); break;
-              case "NextMonth":     dpc.goToDayCell(cell, +1, MONTHS); break;
               case "SelectDate":    dpc.selectDayCell(cell); break;
               default: super.callAction(name);
             }
