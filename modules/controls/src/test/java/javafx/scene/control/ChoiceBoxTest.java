@@ -31,6 +31,9 @@ import com.sun.javafx.tk.Toolkit;
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassDoesNotExist;
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassExists;
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
+import com.sun.javafx.scene.control.skin.ChoiceBoxSkin;
+import com.sun.javafx.scene.control.skin.ChoiceBoxSkinNodesRetriever;
+import javafx.application.Platform;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -53,7 +56,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 public class ChoiceBoxTest {
-    private ChoiceBox<String> box;
+    private final ChoiceBox<String> box = new ChoiceBox<String>();
     private Toolkit tk;
     private Scene scene;
     private Stage stage;
@@ -61,7 +64,6 @@ public class ChoiceBoxTest {
     @Before public void setup() {
         //This step is not needed (Just to make sure StubToolkit is loaded into VM)
         tk = (StubToolkit)Toolkit.getToolkit();
-        box = new ChoiceBox<String>();
     }
     
     protected void startApp(Parent root) {
@@ -438,5 +440,23 @@ public class ChoiceBoxTest {
         box.getSelectionModel().select("Orange");
         startApp(pane);
         assertEquals(1, box.getSelectionModel().getSelectedIndex());
+    }
+     
+    @Test public void checkLabelAfterCallingSetItemsFromPlatformRunLater_RT30317() {
+        final String[] items = {"Apple", "Orange", "Banana"};
+        StackPane pane = new StackPane();
+        pane.getChildren().add(box);
+        Runnable runnable = new Runnable() {
+            public void run() {
+                box.setItems(FXCollections.observableArrayList(items));
+                box.getSelectionModel().setSelectedItem("Apple");
+            }
+        };
+        Platform.runLater(runnable); 
+        startApp(pane);
+        assertEquals(0, box.getSelectionModel().getSelectedIndex());
+        ChoiceBoxSkin skin = (ChoiceBoxSkin)box.getSkin();
+        assertEquals("Apple", ChoiceBoxSkinNodesRetriever.getChoiceBoxSelectedText(skin));
+        
     }
 }
