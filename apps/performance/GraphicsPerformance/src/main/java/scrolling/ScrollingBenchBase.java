@@ -56,9 +56,9 @@ public abstract class ScrollingBenchBase<T extends Node> extends BenchBase<T> {
         for (int i=0; i<tests.length; i+=3) {
             int rows = sizes[sizeIndex][0];
             int cols = sizes[sizeIndex][1];
-            tests[i] = new TranslatingGridTest(this, rows, cols);
-            tests[i+1] = new ScrollPaneGridTest(this, rows, cols);
-            tests[i+2] = new PixelAlignedTranslatingGridTest(this, rows, cols);
+            tests[i] = new TranslatingGridTest(this, rows, cols); // Causing all rects to be drawn? Grows with each iteration!
+            tests[i+1] = new ScrollPaneGridTest(this, rows, cols); // Very few rects drawn
+            tests[i+2] = new PixelAlignedTranslatingGridTest(this, rows, cols); // causes all rects to be drawn at first and then only very few thereafter
             sizeIndex++;
         }
         return tests;

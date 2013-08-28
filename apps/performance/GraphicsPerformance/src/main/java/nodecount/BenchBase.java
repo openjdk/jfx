@@ -135,6 +135,7 @@ public abstract class BenchBase<T extends Node> extends Application {
                 runTest(scene, tests, index+1);
             }
         });
+        System.out.println("Starting test: " + currentTest);
     }
 
     /**
