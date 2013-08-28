@@ -46,10 +46,10 @@ public class SimpleMeshTexCoordTest extends Application {
 
         // Create points
         float points[] = {
-            -200.0f, -200.0f, 0.0f,
-            200.0f, -200.0f, 0.0f,
-            -200.0f, 200.0f, 0.0f,
-            200.0f, 200.0f, 0.0f};
+            0.0f, 0.0f, 0.0f,
+            400.0f, 0.0f, 0.0f,
+            0.0f, 400.0f, 0.0f,
+            400.0f, 400.0f, 0.0f};
 
         // Create texCoords
         float texCoords[] = {
@@ -83,8 +83,8 @@ public class SimpleMeshTexCoordTest extends Application {
         material.setDiffuseMap(diffuseMap);
         material.setSpecularColor(Color.rgb(30, 30, 30));
         meshView = new MeshView(triMesh);
-        meshView.setTranslateX(400);
-        meshView.setTranslateY(400);
+        meshView.setTranslateX(200);
+        meshView.setTranslateY(200);
         meshView.setTranslateZ(20);
         meshView.setMaterial(material);
         meshView.setDrawMode(DrawMode.FILL);
