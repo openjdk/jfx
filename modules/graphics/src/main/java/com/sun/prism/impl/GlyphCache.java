@@ -236,7 +236,6 @@ public class GlyphCache {
     }
 
     private void clearAll() {
-        System.out.println("ASDFAS");
         // flush any pending vertices that may depend on the current state
         // of the glyph cache texture.
         context.flushVertexBuffer();
