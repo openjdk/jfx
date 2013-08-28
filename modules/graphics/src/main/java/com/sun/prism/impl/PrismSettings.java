@@ -79,6 +79,8 @@ public final class PrismSettings {
     public static final boolean poolStats;
     public static final boolean poolDebug;
     public static final boolean disableEffects;
+    public static final int glyphCacheWidth;
+    public static final int glyphCacheHeight;
 
     private PrismSettings() {
     }
@@ -320,6 +322,11 @@ public final class PrismSettings {
         disableD3D9Ex = getBoolean(systemProperties, "prism.disableD3D9Ex", true);
         
         disableEffects = getBoolean(systemProperties, "prism.disableEffects", false);
+
+        glyphCacheWidth = getInt(systemProperties, "prism.glyphCacheWidth", 1024,
+                "Try -Dprism.glyphCacheWidth=<number>");
+        glyphCacheHeight = getInt(systemProperties, "prism.glyphCacheHeight", 1024,
+                "Try -Dprism.glyphCacheHeight=<number>");
     }
 
     private static int parseInt(String s, int dflt, int trueDflt,
