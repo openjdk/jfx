@@ -711,7 +711,12 @@ public class FXCanvas extends Canvas {
             dropTarget.setTransfer(getAllTransfers());
             dropTarget.addDropListener(new DropTargetListener() {
                 Object data;
-                TransferData [] transferData;
+                // In SWT, the list of available types that the source can provide
+                // is part of the event.  FX queries this directly from the operating
+                // system and bypasses SWT.  This variable is commented out to remind
+                // us of this potential inconsistency.
+                //
+                //TransferData [] transferData;
                 TransferData currentTransferData;
                 boolean ignoreLeave;
                 int detail = DND.DROP_NONE, operations = DND.DROP_NONE;
@@ -736,7 +741,7 @@ public class FXCanvas extends Canvas {
                     }
                     public void dragDropEnd(TransferMode performedAction) {
                         data = null;
-                        transferData = null;
+                        //transferData = null;
                         currentTransferData = null;
                     }
                 };
@@ -749,7 +754,7 @@ public class FXCanvas extends Canvas {
                 public void dragLeave(DropTargetEvent event) {
                     detail = operations = DND.DROP_NONE;
                     data = null;
-                    transferData = null;
+                    //transferData = null;
                     currentTransferData = null;
                     getDisplay().asyncExec(new Runnable () {
                         public void run () {
@@ -768,7 +773,7 @@ public class FXCanvas extends Canvas {
                     dragOver (event, false, detail);
                 }
                 public void dragOver(DropTargetEvent event, boolean enter, int detail) {
-                    transferData = event.dataTypes;
+                    //transferData = event.dataTypes;
                     currentTransferData = event.currentDataType;
                     Point pt = toControl(event.x, event.y);
                     if (detail == DND.DROP_NONE) detail = DND.DROP_COPY;
@@ -784,14 +789,14 @@ public class FXCanvas extends Canvas {
                     detail = event.detail;
                     operations = event.operations;
                     data = event.data;
-                    transferData = event.dataTypes;
+                    //transferData = event.dataTypes;
                     currentTransferData = event.currentDataType;
                     Point pt = toControl(event.x, event.y);
                     TransferMode recommendedDropAction = getTransferMode(event.detail);
                     TransferMode acceptedMode = fxDropTarget.handleDragDrop(pt.x, pt.y, event.x, event.y, recommendedDropAction);
                     event.detail = getDragAction(acceptedMode);
                     data = null;
-                    transferData = null;
+                    //transferData = null;
                     currentTransferData = null;
                 }
                 public void dropAccept(DropTargetEvent event) {
