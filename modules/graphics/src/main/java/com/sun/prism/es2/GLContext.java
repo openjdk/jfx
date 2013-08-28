@@ -25,15 +25,15 @@
 
 package com.sun.prism.es2;
 
+import java.nio.Buffer;
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 import com.sun.javafx.PlatformUtil;
 import com.sun.prism.MeshView;
 import com.sun.prism.PhongMaterial.MapType;
 import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.paint.Color;
-import java.nio.Buffer;
-import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
 
 abstract class GLContext {
 
@@ -108,6 +108,7 @@ abstract class GLContext {
     // track some other state here to avoid redundant state changes
     private int activeTexUnit;
     private int[] boundTextures = new int[4];
+    private int viewportX, viewportY, viewportWidth, viewportHeight;
     // depthTest is initialized to false in the native initState method
     private boolean depthTest = false;
     private boolean msaa = false;
@@ -585,7 +586,13 @@ abstract class GLContext {
 
     void updateViewportAndDepthTest(int x, int y, int w, int h,
             boolean depthTest) {
-        nUpdateViewport(nativeCtxInfo, x, y, w, h);
+        if (viewportX != x || viewportY != y || viewportWidth != w || viewportHeight != h) {
+            viewportX = x;
+            viewportY = y;
+            viewportWidth = w;
+            viewportHeight = h;
+            nUpdateViewport(nativeCtxInfo, x, y, w, h);
+        }
         if (this.depthTest != depthTest) {
             nSetDepthTest(nativeCtxInfo, depthTest);
             this.depthTest = depthTest;
