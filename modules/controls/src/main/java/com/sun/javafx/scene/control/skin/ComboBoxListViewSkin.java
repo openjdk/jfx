@@ -137,23 +137,10 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         
         updateButtonCell();
         
-        // move focus in to the textfield if the comboBox is editable
-        comboBox.focusedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean hasFocus) {
-                if (comboBox.isEditable() && hasFocus) {
-                    Platform.runLater(new Runnable() {
-                        @Override public void run() {
-                            textField.requestFocus();
-                        }
-                    });
-                }
-            }
-        });
-        
         comboBox.addEventFilter(KeyEvent.ANY, new EventHandler<KeyEvent>() {
             @Override public void handle(KeyEvent ke) {
                 if (textField == null) return;
-                
+
                 // When the user hits the enter or F4 keys, we respond before 
                 // ever giving the event to the TextField.
                 if (ke.getCode() == KeyCode.ENTER) {
@@ -368,11 +355,15 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         // Fix for RT-21406: ComboBox do not show initial text value
         initialTextFieldValue = textField.getText();
         // End of fix (see updateDisplayNode below for the related code)
-        
+
         textField.focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean hasFocus) {
                 if (! comboBox.isEditable()) return;
-                
+
+                // Fix for RT-29885
+                comboBox.getProperties().put("FOCUSED", hasFocus);
+                // --- end of RT-29885
+
                 // RT-21454 starts here
                 if (! hasFocus) {
                     setTextFromTextFieldIntoComboBoxValue();
@@ -380,6 +371,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 } else {
                     pseudoClassStateChanged(CONTAINS_FOCUS_PSEUDOCLASS_STATE, true);
                 }
+                // --- end of RT-21454
             }
         });
 
