@@ -25,35 +25,46 @@
 
 package com.sun.javafx.tk.quantum;
 
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 import com.sun.javafx.geom.DirtyRegionContainer;
 import com.sun.javafx.geom.DirtyRegionPool;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.Affine3D;
+import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
-import com.sun.javafx.jmx.HighlightRegion;
-import com.sun.javafx.runtime.SystemProperties;
 import com.sun.javafx.sg.prism.NGCamera;
+import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGPerspectiveCamera;
 import com.sun.javafx.sg.prism.NodePath;
-import com.sun.javafx.sg.prism.NGNode;
-import com.sun.javafx.tk.Toolkit;
-import com.sun.prism.BasicStroke;
 import com.sun.prism.Graphics;
 import com.sun.prism.GraphicsResource;
+import com.sun.prism.Image;
 import com.sun.prism.Presentable;
+import com.sun.prism.RTTexture;
 import com.sun.prism.ResourceFactory;
+import com.sun.prism.Texture;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Paint;
-
-import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
+import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 
+/**
+ * Responsible for "painting" a scene. It invokes as appropriate API on the root NGNode
+ * of a scene to determine dirty regions, render roots, etc. Also calls the render root
+ * to render. Also invokes code to print dirty opts and paint overdraw rectangles according
+ * to debug flags.
+ */
 abstract class ViewPainter implements Runnable {
-    private static NodePath<NGNode>[] ROOT_PATHS = new NodePath[PrismSettings.dirtyRegionCount];
+    /**
+     * An array of initially empty ROOT_PATHS. They are created on demand as
+     * needed. Each path is associated with a different dirty region. We have
+     * up to PrismSettings.dirtyRegionCount max dirty regions
+     */
+    private static NodePath[] ROOT_PATHS = new NodePath[PrismSettings.dirtyRegionCount];
 
     /*
      * This could be a per-scene lock but there is no guarantee that the
@@ -79,6 +90,15 @@ abstract class ViewPainter implements Runnable {
 
     private boolean renderOverlay = false;
 
+    /**
+     * root is the root node of the scene. overlayRoot is the root node of any
+     * overlay which may be present (such as used for full screen overlay).
+     */
+    private NGNode root, overlayRoot;
+
+    // These variables are all used as part of the dirty region optimizations,
+    // and if dirty opts are turned off via a runtime flag, then these fields
+    // are never initialized or used.
     private Rectangle dirtyRect;
     private RectBounds clip;
     private RectBounds dirtyRegionTemp;
@@ -88,13 +108,28 @@ abstract class ViewPainter implements Runnable {
     private Affine3D scaleTx;
     private GeneralTransform3D viewProjTx;
     private GeneralTransform3D projTx;
-    private NGNode root, overlayRoot;
+
+    /**
+     * This is used for drawing dirty regions and overdraw rectangles in cases where we are
+     * not drawing the entire scene every time (specifically, when depth buffer is disabled).
+     * In those cases we will draw the scene to the sceneBuffer, clear the actual back buffer,
+     * blit the sceneBuffer into the back buffer, and then scribble on top of the back buffer
+     * with the dirty regions and/or overdraw rectangles.
+     *
+     * When the depthBuffer is enabled on a scene, we always end up drawing the entire scene
+     * anyway, so we don't bother with this sceneBuffer in that case. Of course, if dirty
+     * region / overdraw rectangle drawing is turned off, then we don't use this. Thus,
+     * only when you are doing some kind of debugging would this field be used and the
+     * extra buffer copy incurred.
+     */
+    private RTTexture sceneBuffer;
 
     protected ViewPainter(GlassScene gs) {
         sceneState = gs.getSceneState();
         if (sceneState == null) {
             throw new NullPointerException("Scene state is null");
         }
+
         if (PrismSettings.dirtyOptsEnabled) {
             tx = new Affine3D();
             viewProjTx = new GeneralTransform3D();
@@ -108,81 +143,173 @@ abstract class ViewPainter implements Runnable {
         }
     }
 
-    protected void setRoot(NGNode node) {
+    protected final void setRoot(NGNode node) {
         root = node;
     }
 
-    protected void setOverlayRoot(NGNode node) {
+    protected final void setOverlayRoot(NGNode node) {
         overlayRoot = node;
     }
 
-    protected void setRenderOverlay(boolean val) {
+    protected final void setRenderOverlay(boolean val) {
         renderOverlay = val;
     }
 
     private void adjustPerspective(NGCamera camera) {
+        // This should definitely be true since this is only called by setDirtyRect
+        assert PrismSettings.dirtyOptsEnabled;
         if (camera instanceof NGPerspectiveCamera) {
-            NGPerspectiveCamera perspCamera = (NGPerspectiveCamera) camera;
             scaleTx.setToScale(width / 2.0, -height / 2.0, 1);
             scaleTx.translate(1, -1);
             projTx.mul(scaleTx);
-            viewProjTx = perspCamera.getProjViewTx(viewProjTx);
+            viewProjTx = camera.getProjViewTx(viewProjTx);
             projTx.mul(viewProjTx);
         }
     }
 
-    private int setDirtyRect() {
-        clip.setBounds(0, 0, width, height);
-        dirtyRegionTemp.makeEmpty();
-        dirtyRegionContainer.reset();
-        tx.setToIdentity();
-        projTx.setIdentity();
-        adjustPerspective(sceneState.getScene().getCamera());
-        int status = root.accumulateDirtyRegions(clip, dirtyRegionTemp,
-                                                 dirtyRegionPool, dirtyRegionContainer,
-                                                 tx, projTx);
-        dirtyRegionContainer.roundOut();
-
-        return status;
-    }
-
-    protected void paintImpl(Graphics g) {
-        int status = DirtyRegionContainer.DTR_CONTAINS_CLIP;
-        if (PrismSettings.dirtyOptsEnabled) {
-            long start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
-            if (!sceneState.getScene().isEntireSceneDirty() && !renderOverlay) {
-                status = setDirtyRect();
-                if (status == DirtyRegionContainer.DTR_OK) {
-                    root.doPreCulling(dirtyRegionContainer,
-                                      tx, projTx);
+    protected void paintImpl(final Graphics backBufferGraphics) {
+        // This "g" variable might represent the back buffer graphics, or it
+        // might be reassigned to the sceneBuffer graphics.
+        Graphics g = backBufferGraphics;
+        // Take into account the pixel scale factor for retina displays
+        final float pixelScale = presentable == null ? 1.0f : presentable.getPixelScaleFactor();
+        // Initialize renderEverything based on various conditions that will cause us to render
+        // the entire scene every time.
+        // TODO is calling isEntireSceneDirty on the GlassScene safe from this thread?
+        boolean renderEverything = renderOverlay ||
+                sceneState.getScene().isEntireSceneDirty() ||
+                sceneState.getScene().getDepthBuffer() ||
+                !PrismSettings.dirtyOptsEnabled;
+        // We are going to draw dirty opt boxes either if we're supposed to show the dirty
+        // regions, or if we're supposed to show the overdraw boxes.
+        final boolean showDirtyOpts = PrismSettings.showDirtyRegions || PrismSettings.showOverdraw;
+        // If showDirtyOpts is turned on and we're not using a depth buffer
+        // then we will render the scene to an intermediate texture, and then at the end we'll
+        // draw that intermediate texture to the back buffer.
+        if (showDirtyOpts && !sceneState.getScene().getDepthBuffer()) {
+            final int bufferWidth = (int) Math.ceil(width * pixelScale);
+            final int bufferHeight = (int) Math.ceil(height * pixelScale);
+            // Check whether the sceneBuffer texture needs to be reconstructed
+            if (sceneBuffer != null) {
+                sceneBuffer.lock();
+                if (sceneBuffer.isSurfaceLost() ||
+                        bufferWidth != sceneBuffer.getContentWidth() ||
+                        bufferHeight != sceneBuffer.getContentHeight()) {
+                    sceneBuffer.unlock();
+                    sceneBuffer.dispose();
+                    sceneBuffer = null;
                 }
+            }
+            // If sceneBuffer is null, we need to create a new texture. In this
+            // case we will also need to render the whole scene (so don't bother
+            // with dirty opts)
+            if (sceneBuffer == null) {
+                sceneBuffer = g.getResourceFactory().createRTTexture(
+                        bufferWidth,
+                        bufferHeight,
+                        Texture.WrapMode.CLAMP_TO_ZERO,
+                        false);
+                renderEverything = true;
+            }
+            sceneBuffer.contentsUseful();
+            // Hijack the "g" graphics variable
+            g = sceneBuffer.createGraphics();
+            g.scale(pixelScale, pixelScale);
+        } else if (sceneBuffer != null) {
+            // We're in a situation where we have previously rendered to the sceneBuffer, but in
+            // this render pass for whatever reason we're going to draw directly to the back buffer.
+            // In this case we need to release the sceneBuffer.
+            sceneBuffer.dispose();
+            sceneBuffer = null;
+        }
+
+        // The status will be set only if we're rendering with dirty regions
+        int status = -1;
+
+        // If we're rendering with dirty regions, then we'll call the root node to accumulate
+        // the dirty regions and then again to do the pre culling.
+        if (!renderEverything) {
+            long start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
+            clip.setBounds(0, 0, width, height);
+            dirtyRegionTemp.makeEmpty();
+            dirtyRegionContainer.reset();
+            tx.setToIdentity();
+            projTx.setIdentity();
+            adjustPerspective(sceneState.getScene().getCamera());
+            status = root.accumulateDirtyRegions(clip, dirtyRegionTemp,
+                                                     dirtyRegionPool, dirtyRegionContainer,
+                                                     tx, projTx);
+            dirtyRegionContainer.roundOut();
+            if (status == DirtyRegionContainer.DTR_OK) {
+                root.doPreCulling(dirtyRegionContainer, tx, projTx);
             }
             if (PULSE_LOGGING_ENABLED) {
                 PULSE_LOGGER.renderMessage(start, System.currentTimeMillis(), "Dirty Opts Computed");
             }
         }
 
-        if (!PrismSettings.showDirtyRegions && status == DirtyRegionContainer.DTR_OK) {
-            final int dirtyRegionSize = dirtyRegionContainer.size();
+        // We're going to need to iterate over the dirty region container a lot, so we
+        // might as well save this reference.
+        final int dirtyRegionSize = status == DirtyRegionContainer.DTR_OK ? dirtyRegionContainer.size() : 0;
+
+        if (dirtyRegionSize > 0) {
+            // We set this flag on Graphics so that subsequent code in the render paths of
+            // NGNode know whether they ought to be paying attention to dirty region
+            // culling bits.
             g.setHasPreCullingBits(true);
-            if (PULSE_LOGGING_ENABLED && dirtyRegionSize > 1) {
-                PULSE_LOGGER.renderMessage(dirtyRegionSize + " different dirty regions to render");
+
+            // Find the render roots. There is a different render root for each dirty region
+            long start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
+            for (int i = 0; i < dirtyRegionSize; ++i) {
+                NodePath path = getRootPath(i);
+                path.clear();
+                root.getRenderRoot(getRootPath(i), dirtyRegionContainer.getDirtyRegion(i), i, tx, projTx);
+                System.out.println(path);
             }
-            float pixelScale = (presentable == null ? 1.0f : presentable.getPixelScaleFactor());
-            if (!sceneState.getScene().getDepthBuffer() && PrismSettings.occlusionCullingEnabled) {
-                for (int i = 0; i < dirtyRegionSize; ++i) {
-                    root.getRenderRoot(getRootPath(i), dirtyRegionContainer.getDirtyRegion(i), i, tx, projTx);
+            if (PULSE_LOGGING_ENABLED) {
+                PULSE_LOGGER.renderMessage(start, System.currentTimeMillis(), "Render Roots Discovered");
+            }
+
+            // For debug purposes, write out to the pulse logger the number and size of the dirty
+            // regions that are being used to render this pulse.
+            if (PULSE_LOGGING_ENABLED) {
+                PULSE_LOGGER.renderMessage(dirtyRegionSize + " different dirty regions to render");
+                for (int i=0; i<dirtyRegionSize; i++) {
+                    PULSE_LOGGER.renderMessage("Dirty Region " + i + ": " + dirtyRegionContainer.getDirtyRegion(i));
+                    PULSE_LOGGER.renderMessage("Render Root Path " + i + ": " + getRootPath(i));
                 }
             }
+
+            // If -Dprism.printrendergraph=true then we want to print out the render graph to the
+            // pulse logger, annotated with all the dirty opts. Invisible nodes are skipped.
+            if (PULSE_LOGGING_ENABLED && PrismSettings.printRenderGraph) {
+                StringBuilder s = new StringBuilder();
+                List<NGNode> roots = new ArrayList<>();
+                for (int i = 0; i < dirtyRegionSize; i++) {
+                    final RectBounds dirtyRegion = dirtyRegionContainer.getDirtyRegion(i);
+                    // TODO it should be impossible to have ever created a dirty region that was empty...
+                    if (dirtyRegion.getWidth() > 0 && dirtyRegion.getHeight() > 0) {
+                        NodePath nodePath = getRootPath(i);
+                        if (!nodePath.isEmpty()) {
+                            roots.add(nodePath.last());
+                        }
+                    }
+                }
+                root.printDirtyOpts(s, roots);
+                PULSE_LOGGER.renderMessage(s.toString());
+            }
+
+            // Paint each dirty region
             for (int i = 0; i < dirtyRegionSize; ++i) {
                 final RectBounds dirtyRegion = dirtyRegionContainer.getDirtyRegion(i);
-                // make sure we are not trying to render in some invalid region
+                // TODO it should be impossible to have ever created a dirty region that was empty...
+                // Make sure we are not trying to render in some invalid region
                 if (dirtyRegion.getWidth() > 0 && dirtyRegion.getHeight() > 0) {
-                    // set the clip rectangle using integer
-                    // bounds since a fractional bounding box will
-                    // still require a complete repaint on
-                    // pixel boundaries
+                    // Set the clip rectangle using integer bounds since a fractional bounding box will
+                    // still require a complete repaint on pixel boundaries
                     dirtyRect.setBounds(dirtyRegion);
+                    // TODO I don't understand why this is needed. And if it is, are fractional pixelScale
+                    // values OK? And if not, shouldn't pixelScale be an int instead?
                     if (pixelScale != 1.0f) {
                         dirtyRect.x *= pixelScale;
                         dirtyRect.y *= pixelScale;
@@ -191,81 +318,98 @@ abstract class ViewPainter implements Runnable {
                     }
                     g.setClipRect(dirtyRect);
                     g.setClipRectIndex(i);
-
-                    // Disable occlusion culling if depth buffer is enabled for the scene.
-                    if (sceneState.getScene().getDepthBuffer() || !PrismSettings.occlusionCullingEnabled) {
-                        doPaint(g, null);
-                    } else {
-                        final NodePath<NGNode> path = getRootPath(i);
-                        doPaint(g, path);
-                        path.clear();
-                    }
+                    doPaint(g, getRootPath(i));
                 }
             }
         } else {
+            // There are no dirty regions, so just paint everything
             g.setHasPreCullingBits(false);
             g.setClipRect(null);
             this.doPaint(g, null);
         }
 
-        if (PrismSettings.showDirtyRegions) {
-            if (PrismSettings.showCull) {
-                 root.drawCullBits(g);
-            }
-
-            // save current depth test state
-            boolean prevDepthTest = g.isDepthTest();
-
-            g.setDepthTest(false);
-            if (status == DirtyRegionContainer.DTR_OK) {
-                g.setPaint(new Color(1, 0, 0, .3f));
-                for (int i = 0; i < dirtyRegionContainer.size(); i++) {
-                    RectBounds reg = dirtyRegionContainer.getDirtyRegion(i);
-                    g.fillRect(reg.getMinX(), reg.getMinY(),
-                               reg.getWidth(), reg.getHeight());
-                }
-            } else {
-                g.setPaint(new Color(1, 0, 0, .3f));
-                g.fillRect(0, 0, width, height);
-            }
-
-            // restore previous depth test state
-            g.setDepthTest(prevDepthTest);
-
-        }
-
-        if (SystemProperties.isDebug()) {
-            Set<HighlightRegion> highlightRegions =
-                    Toolkit.getToolkit().getHighlightedRegions();
-            if (highlightRegions != null) {
-                g.setStroke(new BasicStroke(1f,
-                                            BasicStroke.CAP_BUTT,
-                                            BasicStroke.JOIN_BEVEL,
-                                            10f));
-                for (HighlightRegion region: highlightRegions) {
-                    if (sceneState.getScene().equals(region.getTKScene())) {
-                        g.setPaint(new Color(1, 1, 1, 1));
-                        g.drawRect((float) region.getMinX(),
-                                   (float) region.getMinY(),
-                                   (float) region.getWidth(),
-                                   (float) region.getHeight());
-                        g.setPaint(new Color(0, 0, 0, 1));
-                        g.drawRect((float) region.getMinX() - 1,
-                                   (float) region.getMinY() - 1,
-                                   (float) region.getWidth() + 2,
-                                   (float) region.getHeight() + 2);
-                    }
-                }
-            }
-        }
+        // If we have an overlay then we need to render it too.
         if (renderOverlay) {
             overlayRoot.render(g);
         }
+
+        // If we're showing dirty regions or overdraw, then we're going to need to draw
+        // over-top the normal scene. If we have been drawing do the back buffer, then we
+        // will just draw on top of it. If we have been drawing to the sceneBuffer, then
+        // we will first blit the sceneBuffer into the back buffer, and then draw directly
+        // on the back buffer.
+        if (showDirtyOpts) {
+            if (sceneBuffer != null) {
+                g.sync();
+                backBufferGraphics.clear();
+                backBufferGraphics.drawTexture(sceneBuffer, 0, 0, width, height,
+                        sceneBuffer.getContentX(), sceneBuffer.getContentY(),
+                        sceneBuffer.getContentX() + sceneBuffer.getContentWidth(),
+                        sceneBuffer.getContentY() + sceneBuffer.getContentHeight());
+                sceneBuffer.unlock();
+            }
+
+            if (PrismSettings.showOverdraw) {
+                // We are going to show the overdraw rectangles.
+                if (dirtyRegionSize > 0) {
+                    // In this case we have dirty regions, so we will iterate over them all
+                    // and draw each dirty region's overdraw individually
+                    for (int i = 0; i < dirtyRegionSize; i++) {
+                        final Rectangle clip = new Rectangle(dirtyRegionContainer.getDirtyRegion(i));
+                        backBufferGraphics.setClipRectIndex(i);
+                        paintOverdraw(backBufferGraphics, clip);
+                        backBufferGraphics.setPaint(new Color(1, 0, 0, .3f));
+                        backBufferGraphics.drawRect(clip.x, clip.y, clip.width, clip.height);
+                    }
+                } else {
+                    // In this case there were no dirty regions, so the clip is the entire scene
+                    final Rectangle clip = new Rectangle(0, 0, width, height);
+                    assert backBufferGraphics.getClipRectIndex() == 0;
+                    paintOverdraw(backBufferGraphics, clip);
+                    backBufferGraphics.setPaint(new Color(1, 0, 0, .3f));
+                    backBufferGraphics.drawRect(clip.x, clip.y, clip.width, clip.height);
+                }
+            } else {
+                // We are going to show the dirty regions
+                if (dirtyRegionSize > 0) {
+                    // We have dirty regions to draw
+                    backBufferGraphics.setPaint(new Color(1, 0, 0, .3f));
+                    for (int i = 0; i < dirtyRegionSize; i++) {
+                        final RectBounds reg = dirtyRegionContainer.getDirtyRegion(i);
+                        backBufferGraphics.fillRect(reg.getMinX(), reg.getMinY(), reg.getWidth(), reg.getHeight());
+                    }
+                } else {
+                    // No dirty regions, fill the entire view area
+                    backBufferGraphics.setPaint(new Color(1, 0, 0, .3f));
+                    backBufferGraphics.fillRect(0, 0, width, height);
+                }
+            }
+            root.clearPainted();
+        }
     }
 
-    private static NodePath<NGNode> getRootPath(int i) {
+    /**
+     * Utility method for painting the overdraw rectangles. Right now we're using a computationally
+     * intensive approach of having an array of integers (image data) that we then write to in the
+     * NGNodes, recording how many times each pixel position has been touched (well, technically, we're
+     * just recording the bounds of drawn objects, so some pixels might be "red" but actually were never
+     * drawn).
+     *
+     * @param g
+     * @param clip
+     */
+    private void paintOverdraw(final Graphics g, final Rectangle clip) {
+        final int[] pixels = new int[clip.width * clip.height];
+        root.drawDirtyOpts(BaseTransform.IDENTITY_TRANSFORM, projTx, clip, pixels, g.getClipRectIndex());
+        final Image image = Image.fromIntArgbPreData(pixels, clip.width, clip.height);
+        final Texture texture = factory.getCachedTexture(image, Texture.WrapMode.CLAMP_TO_EDGE);
+        g.drawTexture(texture, clip.x, clip.y, clip.x+clip.width, clip.y+clip.height, 0, 0, clip.width, clip.height);
+        texture.unlock();
+    }
+
+    private static NodePath getRootPath(int i) {
         if (ROOT_PATHS[i] == null) {
-            ROOT_PATHS[i] = new NodePath<>();
+            ROOT_PATHS[i] = new NodePath();
         }
         return ROOT_PATHS[i];
     }
@@ -290,10 +434,7 @@ abstract class ViewPainter implements Runnable {
         return sceneState.isWindowVisible() && !sceneState.isWindowMinimized();
     }
 
-    private void doPaint(Graphics g, NodePath<NGNode> renderRootPath) {
-        if (PrismSettings.showDirtyRegions) {
-            g.setClipRect(null);
-        }
+    private void doPaint(Graphics g, NodePath renderRootPath) {
         // Null path indicates that occlusion culling is not used
         if (renderRootPath != null) {
             if (renderRootPath.isEmpty()) {
@@ -332,5 +473,4 @@ abstract class ViewPainter implements Runnable {
             }
         }
     }
-
 }

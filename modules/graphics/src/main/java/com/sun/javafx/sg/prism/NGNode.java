@@ -26,6 +26,7 @@
 package com.sun.javafx.sg.prism;
 
 import javafx.scene.CacheHint;
+import java.util.ArrayList;
 import java.util.List;
 import com.sun.glass.ui.Screen;
 import com.sun.javafx.geom.BaseBounds;
@@ -45,7 +46,6 @@ import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.RTTexture;
 import com.sun.prism.ReadbackGraphics;
 import com.sun.prism.impl.PrismSettings;
-import com.sun.prism.paint.Color;
 import com.sun.scenario.effect.Blend;
 import com.sun.scenario.effect.Effect;
 import com.sun.scenario.effect.FilterContext;
@@ -100,14 +100,17 @@ public abstract class NGNode {
     private final static Boolean effectsSupported =
         (pipeline == null ? false : pipeline.isEffectSupported());
 
-    protected static enum DirtyFlag {
+    public static enum DirtyFlag {
         CLEAN,
         // Means that the node is dirty, but only because of translation
         DIRTY_BY_TRANSLATION,
         DIRTY
     }
 
-    public boolean debug = false;
+    /**
+     * Used for debug purposes. Set during sync.
+     */
+    private String name;
 
     /**
      * Temporary bounds for use by this class or subclasses, designed to
@@ -264,6 +267,16 @@ public abstract class NGNode {
      * boolean to indicate whether we need to recompute the opaqueRegion.
      */
     private boolean opaqueRegionInvalid = true;
+
+    /**
+     * Used for debug purposes. This field will keep track of which nodes were
+     * rendered as a result of different dirty regions. These correspond to the
+     * same positions as the cullingBits. So for example, if a node was rendered
+     * by dirty region 0, then painted will have the lowest bit set. If it
+     * was rendered by dirty region 3, then it would have the 3rd bit from the
+     * right set ( that is, 1 << 2)
+     */
+    private int painted = 0;
 
     protected NGNode() { }
 
@@ -609,6 +622,20 @@ public abstract class NGNode {
         this.isClip = isClip;
     }
 
+    /**
+     * Used for debug purposes.
+     */
+    public final void setName(String value) {
+        this.name = value;
+    }
+
+    /**
+     * Used for debug purposes.
+     */
+    public final String getName() {
+        return name;
+    }
+
     protected final Effect getEffect() { return effectFilter == null ? null : effectFilter.getEffect(); }
 
     /**
@@ -862,6 +889,20 @@ public abstract class NGNode {
         childDirty = false;
         dirtyBounds.makeEmpty();
         dirtyChildrenAccumulated = 0;
+    }
+
+    /**
+     * Walks down the tree clearing the "painted" bits for each node. This is only
+     * called if we're drawing dirty rectangles or overdraw rectangles.
+     */
+    public void clearPainted() {
+        painted = 0;
+        if (this instanceof NGGroup) {
+            List<NGNode> children = ((NGGroup)this).getChildren();
+            for (int i=0; i<children.size(); i++) {
+                children.get(i).clearPainted();
+            }
+        }
     }
 
     public void clearDirtyTree() {
@@ -1354,27 +1395,178 @@ public abstract class NGNode {
             clearDirtyTree();
         }
 
-        if (debug) {
-            System.out.printf("%s bits: %s bounds: %s\n",
-                this, Integer.toBinaryString(cullingBits), TEMP_RECT_BOUNDS);
+//        System.out.printf("%s bits: %s bounds: %s\n",
+//            this, Integer.toBinaryString(cullingBits), TEMP_RECT_BOUNDS);
+    }
+
+    /**
+     * Fills the given StringBuilder with text representing the structure of the NG graph insofar as dirty
+     * opts is concerned. Used for debug purposes. This is typically called on the root node. The List of
+     * roots is the list of dirty roots as determined by successive calls to getRenderRoot for each dirty
+     * region. The output will be prefixed with a key indicating how to interpret the printout.
+     *
+     * @param s A StringBuilder to fill with the output.
+     * @param roots The list of render roots (may be empty, must not be null).
+     */
+    public final void printDirtyOpts(StringBuilder s, List<NGNode> roots) {
+        s.append("\n*=Render Root\n");
+        s.append("d=Dirty\n");
+        s.append("dt=Dirty By Translation\n");
+        s.append("i=Dirty Region Intersects the NGNode\n");
+        s.append("c=Dirty Region Contains the NGNode\n");
+        s.append("ef=Effect Filter\n");
+        s.append("cf=Cache Filter\n");
+        s.append("cl=This node is a clip node\n");
+        s.append("b=Blend mode is set\n");
+        s.append("or=Opaque Region\n");
+        printDirtyOpts(s, this, BaseTransform.IDENTITY_TRANSFORM, "", roots);
+    }
+
+    /**
+     * Used for debug purposes. Recursively visits all NGNodes and prints those that are possibly part of
+     * the render operation and annotates each node.
+     *
+     * @param s The String builder
+     * @param node The node that we're printing out information about
+     * @param tx The transform
+     * @param prefix Some prefix to put in front of the node output (mostly spacing)
+     * @param roots The different dirty roots, if any.
+     */
+    private final void printDirtyOpts(StringBuilder s, NGNode node, BaseTransform tx, String prefix, List<NGNode> roots) {
+        if (!node.isVisible() || node.getOpacity() == 0) return;
+
+        BaseTransform copy = tx.copy();
+        copy = copy.deriveWithConcatenation(node.getTransform());
+        List<String> stuff = new ArrayList<>();
+        for (int i=0; i<roots.size(); i++) {
+            NGNode root = roots.get(i);
+            if (node == root) stuff.add("*" + i);
+        }
+
+        if (node.dirty != NGNode.DirtyFlag.CLEAN) {
+            stuff.add(node.dirty == NGNode.DirtyFlag.DIRTY ? "d" : "dt");
+        }
+
+        if (node.cullingBits != 0) {
+            int mask = 0x11;
+            for (int i=0; i<15; i++) {
+                int bits = node.cullingBits & mask;
+                if (bits != 0) {
+                    stuff.add(bits == 1 ? "i" + i : bits == 0 ? "c" + i : "ci" + i);
+                }
+                mask = mask << 2;
+            }
+        }
+
+        if (node.effectFilter != null) stuff.add("ef");
+        if (node.cacheFilter != null) stuff.add("cf");
+        if (node.nodeBlendMode != null) stuff.add("b");
+
+        RectBounds opaqueRegion = node.getOpaqueRegion();
+        if (opaqueRegion != null) {
+            RectBounds or = new RectBounds();
+            copy.transform(opaqueRegion, or);
+            stuff.add("or=" + or.getMinX() + ", " + or.getMinY() + ", " + or.getWidth() + ", " + or.getHeight());
+        }
+
+        if (stuff.isEmpty()) {
+            s.append(prefix + node.name + "\n");
+        } else {
+            String postfix = " [";
+            for (int i=0; i<stuff.size(); i++) {
+                postfix = postfix + stuff.get(i);
+                if (i < stuff.size() - 1) postfix += " ";
+            }
+            s.append(prefix + node.name + postfix + "]\n");
+        }
+
+        if (node.getClipNode() != null) {
+            printDirtyOpts(s, node.getClipNode(), copy, prefix + "  cl ", roots);
+        }
+
+        if (node instanceof NGGroup) {
+            NGGroup g = (NGGroup)node;
+            for (int i=0; i<g.getChildren().size(); i++) {
+                printDirtyOpts(s, g.getChildren().get(i), copy, prefix + "  ", roots);
+            }
         }
     }
 
     /**
-     * Helper method draws culling bits for each node.
-     * @param g Graphics.
+     * Helper method draws rectangles indicating the overdraw rectangles.
+     *
+     * @param tx The scene->parent transform.
+     * @param pvTx The perspective camera transform.
+     * @param clipBounds The bounds in scene coordinates
+     * @param colorBuffer A pixel array where each pixel contains a color indicating how many times
+     *                    it has been "drawn"
+     * @param dirtyRegionIndex the index of the dirty region we're gathering information for. This is
+     *                         needed so we can shift the "painted" field to find out if this node
+     *                         was drawn in this dirty region.
      */
-    public void drawCullBits(Graphics g) {
-        if (cullingBits == 0){
-            g.setPaint(new Color(0, 0, 0, .3f));
-        } else {
-            g.setPaint(new Color(0, 1, 0, .3f));
+    public void drawDirtyOpts(final BaseTransform tx, final GeneralTransform3D pvTx,
+                              Rectangle clipBounds, int[] colorBuffer, int dirtyRegionIndex) {
+        if ((painted & (1 << dirtyRegionIndex)) != 0) {
+            // Transforming the content bounds (which includes the clip) to screen coordinates
+            tx.copy().deriveWithConcatenation(getTransform()).transform(contentBounds, TEMP_BOUNDS);
+            if (pvTx != null) pvTx.transform(TEMP_BOUNDS, TEMP_BOUNDS);
+            RectBounds bounds = new RectBounds();
+            TEMP_BOUNDS.flattenInto(bounds);
+
+            // Adjust the bounds so that they are relative to the clip. The colorBuffer is sized
+            // exactly the same as the clip, and the elements of the colorBuffer represent the
+            // pixels inside the clip. However the bounds of this node may overlap the clip in
+            // some manner, so we adjust them such that x, y, w, h will be the adjusted bounds.
+            assert clipBounds.width * clipBounds.height == colorBuffer.length;
+            bounds.intersectWith(clipBounds);
+            int x = (int) bounds.getMinX() - clipBounds.x;
+            int y = (int) bounds.getMinY() - clipBounds.y;
+            int w = (int) (bounds.getWidth() + .5);
+            int h = (int) (bounds.getHeight() + .5);
+
+            if (w == 0 || h == 0) {
+                // I would normally say we should never reach this point, as it means something was
+                // marked as painted but really couldn't have been.
+                return;
+            }
+
+            // x, y, w, h are 0 based and will fit within the clip, so now we can simply update
+            // all the pixels that fall within these bounds.
+            for (int i = y; i < y+h; i++) {
+                for (int j = x; j < x+w; j++) {
+                    final int index = i * clipBounds.width + j;
+                    int color = colorBuffer[index];
+
+                    // This is kind of a dirty hack. The idea is to show green if 0 or 1
+                    // times a pixel is drawn, Yellow for 2 or 3 times, and red for more
+                    // Than that. So I use 0x80007F00 as the first green color, and
+                    // 0x80008000 as the second green color, but their so close to the same
+                    // thing you probably won't be able to tell them apart, but I can tell
+                    // numerically they're different and increment (so I use the colors
+                    // as my counters).
+                    switch (color) {
+                        case 0:
+                            color = 0x80007F00;
+                            break;
+                        case 0x80007F00:
+                            color = 0x80008000;
+                            break;
+                        case 0x80008000:
+                            color = 0x807F7F00;
+                            break;
+                        case 0x807F7F00:
+                            color = 0x80808000;
+                            break;
+                        case 0x80808000:
+                            color = 0x807F0000;
+                            break;
+                        default:
+                            color = 0x80800000;
+                    }
+                    colorBuffer[index] = color;
+                }
+            }
         }
-        g.fillRect(
-                transformedBounds.getMinX(),
-                transformedBounds.getMinY(),
-                transformedBounds.getWidth(),
-                transformedBounds.getHeight());
     }
 
     /***************************************************************************
@@ -1414,8 +1606,8 @@ public abstract class NGNode {
      *
      * @param path node path to store the node path
      */
-    public final void getRenderRoot(NodePath<NGNode> path, RectBounds dirtyRegion, int cullingIndex,
-                                                BaseTransform tx, GeneralTransform3D pvTx) {
+    public final void getRenderRoot(NodePath path, RectBounds dirtyRegion, int cullingIndex,
+                                    BaseTransform tx, GeneralTransform3D pvTx) {
 
         // This is the main entry point, make sure to check these inputs for validity
         if (path == null || dirtyRegion == null || tx == null || pvTx == null) {
@@ -1445,7 +1637,7 @@ public abstract class NGNode {
      * @param pvTx current perspective transform. Cannot be null.
      * @return New rendering root or null if no such node exists in this subtree
      */
-    RenderRootResult computeRenderRoot(NodePath<NGNode> path, RectBounds dirtyRegion,
+    RenderRootResult computeRenderRoot(NodePath path, RectBounds dirtyRegion,
                                        int cullingIndex, BaseTransform tx, GeneralTransform3D pvTx) {
         return computeNodeRenderRoot(path, dirtyRegion, cullingIndex, tx, pvTx);
     }
@@ -1488,7 +1680,7 @@ public abstract class NGNode {
      * @param pvTx current perspective transform. Cannot be null.
      * @return this node if this node's opaque region covers the specified dirty region. Null otherwise.
      */
-    final RenderRootResult computeNodeRenderRoot(NodePath<NGNode> path, RectBounds dirtyRegion,
+    final RenderRootResult computeNodeRenderRoot(NodePath path, RectBounds dirtyRegion,
                                                  int cullingIndex, BaseTransform tx, GeneralTransform3D pvTx) {
 
         // Nodes outside of the dirty region can be excluded immediately.
@@ -1503,7 +1695,6 @@ public abstract class NGNode {
         if (!isVisible()) {
             return RenderRootResult.NONE;
         }
-
 
         final RectBounds opaqueRegion = getOpaqueRegion();
         if (opaqueRegion == null) return RenderRootResult.NONE;
@@ -1520,9 +1711,14 @@ public abstract class NGNode {
         if (checkBoundsInQuad(opaqueRegion, dirtyRegion, localToSceneTx, pvTx)) {
             // We have the potential render root, now check if it needs to be rendered
             if (dirty != DirtyFlag.CLEAN || childDirty) {
+                // In this case, we're saying "I have to be painted, and I am a render root"
                 path.add(this);
                 return RenderRootResult.HAS_RENDER_ROOT;
             } else {
+                // In this case, we're saying "I do not need to be painted but the dirty region
+                // is completely contained within my opaque region". If there are any nodes after
+                // this one which are dirty, then this guy will be painted, otherwise we don't
+                // actually have to paint anything.
                 return RenderRootResult.EXISTS_BUT_NOT_DIRTY;
             }
         }
@@ -1582,7 +1778,7 @@ public abstract class NGNode {
      * Gets the opaque region for this node, if there is one, or returns null.
      * @return The opaque region for this node, or null.
      */
-    final RectBounds getOpaqueRegion() {
+    public final RectBounds getOpaqueRegion() {
         // Note that when we invalidate the opaqueRegion of an NGNode, we don't
         // walk up the tree or communicate with the parents (unlike dirty flags).
         // An NGGroup does not compute an opaqueRegion based on the union of opaque
@@ -1715,13 +1911,10 @@ public abstract class NGNode {
      */
     public final void render(Graphics g) {
         if (PULSE_LOGGING_ENABLED) PULSE_LOGGER.renderIncrementCounter("Nodes visited during render");
-        if (debug) System.out.println("render called on " + getClass().getSimpleName());
         // Clear the visuals changed flag
         clearDirty();
         // If it isn't visible, then punt
         if (!visible || opacity == 0f) return;
-        // If we are supposed to cull, then go ahead and do so
-//        if (cull(clip, tx)) return;
 
         // We know that we are going to render this node, so we call the
         // doRender method, which subclasses implement to do the actual
@@ -1797,18 +1990,30 @@ public abstract class NGNode {
         // The clip must be below the cache filter, as this is expected in the
         // CacheFilter in order to apply scrolling optimization
         g.transform(getTransform());
+        // Try to keep track of whether this node was *really* painted. Still an
+        // approximation, but somewhat more accurate (at least it doesn't include
+        // groups which don't paint anything themselves).
+        boolean p = false;
         if (g instanceof ReadbackGraphics && needsBlending()) {
             renderNodeBlendMode(g);
+            p = true;
         } else if (getOpacity() < 1f) {
             renderOpacity(g);
+            p = true;
         } else if (getCacheFilter() != null) {
             renderCached(g);
+            p = true;
         } else if (getClipNode() != null) {
             renderClip(g);
+            p = true;
         } else if (getEffectFilter() != null && effectsSupported) {
             renderEffect(g);
+            p = true;
         } else {
             renderContent(g);
+            if (PrismSettings.showOverdraw) {
+                p = this instanceof NGRegion || !(this instanceof NGGroup);
+            }
         }
 
         if (preCullingTurnedOff) {
@@ -1824,6 +2029,14 @@ public abstract class NGNode {
         g.setDepthTest(prevDepthTest);
 
         if (PULSE_LOGGING_ENABLED) PULSE_LOGGER.renderIncrementCounter("Nodes rendered");
+
+        // Used for debug purposes. This is not entirely accurate, as it doesn't measure the
+        // number of times this node drew to the pixels, and in some cases reports a node as
+        // having been drawn even when it didn't lay down any pixels. We'd need to integrate
+        // with our shaders or do something much more invasive to get better data here.
+        if (PrismSettings.showOverdraw && p) {
+            painted |= 1 << g.getClipRectIndex();
+        }
     }
 
     /**
@@ -2184,6 +2397,10 @@ public abstract class NGNode {
      **************************************************************************/
 
     public void release() {
+    }
+
+    @Override public String toString() {
+        return name == null ? super.toString() : name;
     }
 
     public void applyTransform(final BaseTransform tx, DirtyRegionContainer drc) {

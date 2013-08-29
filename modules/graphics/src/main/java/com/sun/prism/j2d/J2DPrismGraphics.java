@@ -48,6 +48,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
+import com.sun.javafx.sg.prism.NodePath;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.MaskTextureGraphics;
@@ -1326,14 +1327,14 @@ public class J2DPrismGraphics
         return hasPreCullingBits;
     }
 
-    private Object renderRoot;
+    private NodePath renderRoot;
     @Override
-    public void setRenderRoot(Object root) {
+    public void setRenderRoot(NodePath root) {
         this.renderRoot = root;
     }
 
     @Override
-    public Object getRenderRoot() {
+    public NodePath getRenderRoot() {
         return renderRoot;
     }
 

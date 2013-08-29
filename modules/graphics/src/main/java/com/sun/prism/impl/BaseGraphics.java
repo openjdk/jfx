@@ -35,6 +35,7 @@ import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.sg.prism.NGCamera;
+import com.sun.javafx.sg.prism.NodePath;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.PixelFormat;
@@ -209,14 +210,14 @@ public abstract class BaseGraphics implements RectShadowGraphics {
         return hasPreCullingBits;
     }
 
-    private Object renderRoot;
+    private NodePath renderRoot;
     @Override
-    public final void setRenderRoot(Object root) {
+    public final void setRenderRoot(NodePath root) {
         this.renderRoot = root;
     }
 
     @Override
-    public final Object getRenderRoot() {
+    public final NodePath getRenderRoot() {
         return renderRoot;
     }
 

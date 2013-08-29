@@ -32,32 +32,33 @@ import java.util.List;
  * Simple a reusable storage for root-to-node path.
  *
  */
-public class NodePath<N extends NGNode> {
-    private List<N> path = new ArrayList<>();
+public class NodePath {
+    private List<NGNode> path = new ArrayList<>();
     private int position;
 
-    public NodePath() {
+    public NGNode last() {
+        return path.isEmpty() ? null : path.get(path.size() - 1);
     }
 
     // ITERATION methods
 
-    public N getCurrentNode() {
+    public NGNode getCurrentNode() {
         return path.get(position);
     }
 
     public boolean hasNext() {
-        return position > 0;
+        return position < path.size() -1 && !isEmpty();
     }
 
     public void next() {
         if (!hasNext()) {
             throw new IllegalStateException();
         }
-        position--;
+        position++;
     }
 
     public void reset() {
-        position = path.size() - 1;
+        position = -1;
     }
 
     // MODIFICATION methods
@@ -67,9 +68,9 @@ public class NodePath<N extends NGNode> {
         path.clear();
     }
 
-    public void add(N n) {
-        path.add(n);
-        position = path.size() - 1;
+    public void add(NGNode n) {
+        path.add(0, n);
+        if (position == -1) position = 0;
     }
 
     public int size() {
@@ -77,7 +78,10 @@ public class NodePath<N extends NGNode> {
     }
 
     public boolean isEmpty() {
-        return size() == 0;
+        return path.isEmpty();
     }
 
+    @Override public String toString() {
+        return path.toString();
+    }
 }

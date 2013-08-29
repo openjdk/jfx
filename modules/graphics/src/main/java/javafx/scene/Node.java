@@ -107,6 +107,7 @@ import java.util.Set;
 import com.sun.javafx.Logging;
 import com.sun.javafx.TempState;
 import com.sun.javafx.Utils;
+import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.beans.IDProperty;
 import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.binding.ExpressionHelper;
@@ -148,12 +149,9 @@ import com.sun.javafx.scene.transform.TransformUtils;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
+import com.sun.prism.impl.PrismSettings;
 import sun.util.logging.PlatformLogger;
 import sun.util.logging.PlatformLogger.Level;
-import javafx.css.StyleableProperty;
-import javafx.geometry.NodeOrientation;
-import javafx.stage.Window;
 
 /**
  * Base class for scene graph nodes. A scene graph is a set of tree data structures
@@ -536,6 +534,23 @@ public abstract class Node implements EventTarget, Styleable {
     @Deprecated
     public void impl_updatePeer() {
         final NGNode peer = impl_getPeer();
+
+        // For debug / diagnostic purposes, we will copy across a name for this node down to
+        // the NG layer, where we can use the name to figure out what the NGNode represents.
+        // An alternative would be to have a back-reference from the NGNode back to the Node it
+        // is a peer to, however it was felt that this would make it too easy to communicate back
+        // to the Node and possibly violate thread invariants. But of course, we only need to do this
+        // if we're going to print the render graph (otherwise all the work we'd do to keep the name
+        // properly updated would be a waste).
+        if (PrismSettings.printRenderGraph && impl_isDirty(DirtyBits.DEBUG)) {
+            final String id = getId();
+            String className = getClass().getSimpleName();
+            if (className.isEmpty()) {
+                className = getClass().getName();
+            }
+            peer.setName(id == null ? className : id + "(" + className + ")");
+        }
+
         if (impl_isDirty(DirtyBits.NODE_TRANSFORM)) {
             peer.setTransformMatrix(localToParentTx);
         }
@@ -898,7 +913,10 @@ public abstract class Node implements EventTarget, Styleable {
 
                 @Override
                 protected void invalidated() {
-                     impl_reapplyCSS();
+                    impl_reapplyCSS();
+                    if (PrismSettings.printRenderGraph) {
+                        impl_markDirty(DirtyBits.DEBUG);
+                    }
                 }
 
                 @Override
@@ -3835,7 +3853,7 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * Transforms a point from the coordinate space of the {@link Screen}
+     * Transforms a point from the coordinate space of the {@link javafx.stage.Screen}
      * into the local coordinate space of this {@code Node}.
      * @param screenX x coordinate of a point on a Screen
      * @param screenY y coordinate of a point on a Screen

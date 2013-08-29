@@ -191,14 +191,11 @@ public class NGGroup extends NGNode {
 
     @Override
     protected void renderContent(Graphics g) {
-        renderChildren(g, (NodePath<NGNode>)g.getRenderRoot());
-    }
-
-    private void renderChildren(Graphics g, NodePath<NGNode> renderRoot) {
         if (children == null) {
             return;
         }
 
+        NodePath renderRoot = g.getRenderRoot();
         int startPos = 0;
         if (renderRoot != null) {
             if (renderRoot.hasNext()) {
@@ -309,7 +306,7 @@ public class NGGroup extends NGNode {
      *                                                                         *
      **************************************************************************/
     @Override
-    protected RenderRootResult computeRenderRoot(NodePath<NGNode> path, RectBounds dirtyRegion, int cullingIndex, BaseTransform tx,
+    protected RenderRootResult computeRenderRoot(NodePath path, RectBounds dirtyRegion, int cullingIndex, BaseTransform tx,
                                        GeneralTransform3D pvTx) {
 
         // If the NGGroup is completely outside the culling area, then we don't have to traverse down
@@ -430,39 +427,15 @@ public class NGGroup extends NGNode {
     }
 
     @Override
-    public void drawCullBits(Graphics g) {
-        if (getParent() != null) {
-            super.drawCullBits(g);
-        }
-        if (cullingBits != 0) {
-            // save current transform state
-            BaseTransform prevXform = g.getTransformNoClone();
-
-            double mxx = prevXform.getMxx();
-            double mxy = prevXform.getMxy();
-            double mxz = prevXform.getMxz();
-            double mxt = prevXform.getMxt();
-
-            double myx = prevXform.getMyx();
-            double myy = prevXform.getMyy();
-            double myz = prevXform.getMyz();
-            double myt = prevXform.getMyt();
-
-            double mzx = prevXform.getMzx();
-            double mzy = prevXform.getMzy();
-            double mzz = prevXform.getMzz();
-            double mzt = prevXform.getMzt();
-
-            g.transform(getTransform());
-            NGNode child;
-            for (int chldIdx = 0; chldIdx < children.size(); chldIdx++) {
-                child = children.get(chldIdx);
-                child.drawCullBits(g);
-            }
-            // restore previous transform state
-            g.setTransform3D(mxx, mxy, mxz, mxt,
-                             myx, myy, myz, myt,
-                             mzx, mzy, mzz, mzt);
+    public void drawDirtyOpts(final BaseTransform tx, final GeneralTransform3D pvTx,
+                              Rectangle clipBounds, int[] countBuffer, int dirtyRegionIndex) {
+        // Not really efficient but this code is only executed during debug. This makes sure
+        // that the source transform (tx) is not modified.
+        BaseTransform clone = tx.copy();
+        clone = clone.deriveWithConcatenation(getTransform());
+        for (int childIndex = 0; childIndex < children.size(); childIndex++) {
+            final NGNode child = children.get(childIndex);
+            child.drawDirtyOpts(clone, pvTx, clipBounds, countBuffer, dirtyRegionIndex);
         }
     }
 

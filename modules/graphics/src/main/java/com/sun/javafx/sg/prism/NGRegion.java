@@ -407,7 +407,7 @@ public class NGRegion extends NGGroup {
         return (RectBounds) opaqueRegion.deriveWithNewBounds(opaqueLeft, opaqueTop, 0, width - opaqueRight, height - opaqueBottom, 0);
     }
 
-    @Override protected RenderRootResult computeRenderRoot(NodePath<NGNode> path, RectBounds dirtyRegion,
+    @Override protected RenderRootResult computeRenderRoot(NodePath path, RectBounds dirtyRegion,
                                                            int cullingIndex, BaseTransform tx,
                                                            GeneralTransform3D pvTx) {
 
