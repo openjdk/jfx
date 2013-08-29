@@ -118,13 +118,16 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1setParent
   (JNIEnv * env, jobject obj, jlong ptr, jlong parent)
 {
     GlassView* view = JLONG_TO_GLASSVIEW(ptr);
-    if (view->current_window && !parent) {
+    bool is_removing = view->current_window && !parent;
+
+    view->current_window = (WindowContext*)JLONG_TO_PTR(parent);
+
+    if (is_removing) {
         env->CallVoidMethod(obj, jViewNotifyView, com_sun_glass_events_ViewEvent_REMOVE);
     } else {
         env->CallVoidMethod(obj, jViewNotifyView, com_sun_glass_events_ViewEvent_ADD);
     }
     CHECK_JNI_EXCEPTION(env);
-    view->current_window = (WindowContext*)JLONG_TO_PTR(parent);
 }
 
 /*

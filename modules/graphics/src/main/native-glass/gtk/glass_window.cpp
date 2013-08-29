@@ -823,9 +823,13 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
                                            + geometry.extents.right;
     geometry.current_height = event->height + geometry.extents.top
                                              + geometry.extents.bottom;
-
-    int x, y;
-    gtk_window_get_position(GTK_WINDOW(gtk_widget), &x, &y);
+    gint x, y;
+    if (gtk_window_get_decorated(GTK_WINDOW(gtk_widget))) {
+        gtk_window_get_position(GTK_WINDOW(gtk_widget), &x, &y);
+    } else {
+        x = event->x;
+        y = event->y;
+    }
 
     if (stale_config_notifications == 0) {
         if ((geometry_get_content_width(&geometry) != event->width)
