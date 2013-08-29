@@ -62,8 +62,6 @@ public class TreeTableViewMouseInputTest {
     private TreeTableView.TreeTableViewSelectionModel<String> sm;
     private TreeTableView.TreeTableViewFocusModel<String> fm;
     
-    private KeyEventFirer keyboard;
-    
     private StageLoader stageLoader;
     
     private final TreeTableColumn<String, String> col0 = new TreeTableColumn<String, String>("col0");
@@ -71,23 +69,38 @@ public class TreeTableViewMouseInputTest {
     private final TreeTableColumn<String, String> col2 = new TreeTableColumn<String, String>("col2");
     private final TreeTableColumn<String, String> col3 = new TreeTableColumn<String, String>("col3");
     private final TreeTableColumn<String, String> col4 = new TreeTableColumn<String, String>("col4");
-    
-    private final TreeItem<String> root = new TreeItem<String>("Root");                     // 0
-        private final TreeItem<String> child1 = new TreeItem<String>("Child 1");            // 1
-        private final TreeItem<String> child2 = new TreeItem<String>("Child 2");            // 2
-        private final TreeItem<String> child3 = new TreeItem<String>("Child 3");            // 3
-            private final TreeItem<String> subchild1 = new TreeItem<String>("Subchild 1");  // 4
-            private final TreeItem<String> subchild2 = new TreeItem<String>("Subchild 2");  // 5
-            private final TreeItem<String> subchild3 = new TreeItem<String>("Subchild 3");  // 6
-        private final TreeItem<String> child4 = new TreeItem<String>("Child 4");            // 7
-        private final TreeItem<String> child5 = new TreeItem<String>("Child 5");            // 8
-        private final TreeItem<String> child6 = new TreeItem<String>("Child 6");            // 9
-        private final TreeItem<String> child7 = new TreeItem<String>("Child 7");            // 10
-        private final TreeItem<String> child8 = new TreeItem<String>("Child 8");            // 11
-        private final TreeItem<String> child9 = new TreeItem<String>("Child 9");            // 12
-        private final TreeItem<String> child10 = new TreeItem<String>("Child 10");          // 13
-    
+
+    private TreeItem<String> root;                  // 0
+    private TreeItem<String> child1;            // 1
+    private TreeItem<String> child2;            // 2
+    private TreeItem<String> child3;            // 3
+    private TreeItem<String> subchild1;     // 4
+    private TreeItem<String> subchild2;     // 5
+    private TreeItem<String> subchild3;     // 6
+    private TreeItem<String> child4;            // 7
+    private TreeItem<String> child5;            // 8
+    private TreeItem<String> child6;            // 9
+    private TreeItem<String> child7;            // 10
+    private TreeItem<String> child8;            // 11
+    private TreeItem<String> child9;            // 12
+    private TreeItem<String> child10;           // 13
+
     @Before public void setup() {
+        root = new TreeItem<String>("Root");             // 0
+        child1 = new TreeItem<String>("Child 1");        // 1
+        child2 = new TreeItem<String>("Child 2");        // 2
+        child3 = new TreeItem<String>("Child 3");        // 3
+        subchild1 = new TreeItem<String>("Subchild 1");  // 4
+        subchild2 = new TreeItem<String>("Subchild 2");  // 5
+        subchild3 = new TreeItem<String>("Subchild 3");  // 6
+        child4 = new TreeItem<String>("Child 4");        // 7
+        child5 = new TreeItem<String>("Child 5");        // 8
+        child6 = new TreeItem<String>("Child 6");        // 9
+        child7 = new TreeItem<String>("Child 7");        // 10
+        child8 = new TreeItem<String>("Child 8");        // 11
+        child9 = new TreeItem<String>("Child 9");        // 12
+        child10 = new TreeItem<String>("Child 10");      // 13
+
         // reset tree structure
         root.getChildren().clear();
         root.setExpanded(true);
@@ -126,8 +139,6 @@ public class TreeTableViewMouseInputTest {
         
         sm.clearAndSelect(0);
         
-        keyboard = new KeyEventFirer(tableView);
-        
         stageLoader = new StageLoader(tableView);
         stageLoader.getStage().show();
     }
@@ -135,6 +146,7 @@ public class TreeTableViewMouseInputTest {
     @After public void tearDown() {
         tableView.getSkin().dispose();
         stageLoader.dispose();
+        sm = null;
     }
     
     /***************************************************************************
@@ -301,5 +313,93 @@ public class TreeTableViewMouseInputTest {
         assertTrue(sm.isSelected(3));
         assertTrue(sm.isSelected(4));
         assertTrue(sm.isSelected(5));
+    }
+
+    @Test public void test_rt21444_up_cell() {
+        final int items = 8;
+        root.getChildren().clear();
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        final int selectRow = 3;
+
+        tableView.setShowRoot(false);
+        final MultipleSelectionModel<TreeItem<String>> sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(selectRow);
+
+        assertEquals(selectRow, sm.getSelectedIndex());
+        assertEquals("Row 3", sm.getSelectedItem().getValue());
+
+        VirtualFlowTestUtils.clickOnRow(tableView, selectRow - 1, KeyModifier.SHIFT);
+        assertEquals(2, sm.getSelectedItems().size());
+        assertEquals("Row 2", sm.getSelectedItem().getValue());
+        assertEquals("Row 2", sm.getSelectedItems().get(1).getValue());
+    }
+
+    @Test public void test_rt21444_down_cell() {
+        final int items = 8;
+        root.getChildren().clear();
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        final int selectRow = 3;
+
+        tableView.setShowRoot(false);
+        final MultipleSelectionModel<TreeItem<String>> sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(selectRow);
+
+        assertEquals(selectRow, sm.getSelectedIndex());
+        assertEquals("Row 3", sm.getSelectedItem().getValue());
+
+        VirtualFlowTestUtils.clickOnRow(tableView, selectRow + 1, KeyModifier.SHIFT);
+        assertEquals("Row 4", sm.getSelectedItem().getValue());
+    }
+
+    @Test public void test_rt21444_up_row() {
+        final int items = 8;
+        root.getChildren().clear();
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        final int selectRow = 3;
+
+        tableView.setShowRoot(false);
+        final MultipleSelectionModel<TreeItem<String>> sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(selectRow);
+
+        assertEquals(selectRow, sm.getSelectedIndex());
+        assertEquals("Row 3", sm.getSelectedItem().getValue());
+
+        VirtualFlowTestUtils.clickOnRow(tableView, selectRow - 1, true, KeyModifier.SHIFT);
+        assertEquals(2, sm.getSelectedItems().size());
+        assertEquals("Row 2", sm.getSelectedItem().getValue());
+        assertEquals("Row 2", sm.getSelectedItems().get(1).getValue());
+    }
+
+    @Test public void test_rt21444_down_row() {
+        final int items = 8;
+        root.getChildren().clear();
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        final int selectRow = 3;
+
+        tableView.setShowRoot(false);
+        final MultipleSelectionModel<TreeItem<String>> sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(selectRow);
+
+        assertEquals(selectRow, sm.getSelectedIndex());
+        assertEquals("Row 3", sm.getSelectedItem().getValue());
+
+        VirtualFlowTestUtils.clickOnRow(tableView, selectRow + 1, true, KeyModifier.SHIFT);
+        assertEquals("Row 4", sm.getSelectedItem().getValue());
     }
 }

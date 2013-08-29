@@ -232,6 +232,7 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
                     // we add all rows between the current selection focus and
                     // this row (inclusive) to the current selection.
                     final int focusedIndex = getAnchor(treeView);
+                    final boolean asc = focusedIndex < index;
 
                     // and then determine all row and columns which must be selected
                     int minRow = Math.min(focusedIndex, index);
@@ -250,7 +251,16 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
                             sm.clearSelection(selectedIndex);
                         }
                     }
-                    sm.selectRange(minRow, maxRow+1);
+
+                    // RT-21444: We need to put the range in in the correct
+                    // order or else the last selected row will not be the
+                    // last item in the selectedItems list of the selection
+                    // model,
+                    if (asc) {
+                        sm.selectRange(minRow, maxRow + 1);
+                    } else {
+                        sm.selectRange(maxRow, minRow - 1);
+                    }
 
                     fm.focus(index);
                 } else {

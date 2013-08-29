@@ -91,6 +91,8 @@ public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
                     // we add all rows between the current focus and
                     // this row (inclusive) to the current selection.
                     TablePositionBase anchor = TreeTableCellBehavior.getAnchor(table, table.getFocusModel().getFocusedCell());
+                    final int anchorRow = anchor.getRow();
+                    final boolean asc = anchorRow < index;
 
                     // and then determine all row and columns which must be selected
                     int minRow = Math.min(anchor.getRow(), index);
@@ -107,7 +109,15 @@ public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
                         }
                     }
 
-                    sm.selectRange(minRow, maxRow + 1);
+                    // RT-21444: We need to put the range in in the correct
+                    // order or else the last selected row will not be the
+                    // last item in the selectedItems list of the selection
+                    // model,
+                    if (asc) {
+                        sm.selectRange(minRow, maxRow + 1);
+                    } else {
+                        sm.selectRange(maxRow, minRow - 1);
+                    }
                 } else {
                     sm.clearAndSelect(treeTableRow.getIndex());
                 }

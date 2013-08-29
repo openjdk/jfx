@@ -240,7 +240,10 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
                 } else if (e.isShiftDown()) {
                     // we add all cells/rows between the current selection focus and
                     // this cell/row (inclusive) to the current selection.
-                    TablePositionBase anchor = getAnchor(tableView, focusedCell);
+                    final TablePositionBase anchor = getAnchor(tableView, focusedCell);
+
+                    final int anchorRow = anchor.getRow();
+                    final boolean asc = anchorRow < row;
                     
                     // and then determine all row and columns which must be selected
                     int minRow = Math.min(anchor.getRow(), row);
@@ -269,8 +272,16 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
                                 sm.clearSelection(selectedIndex);
                             }
                         }
-                        
-                        sm.selectRange(minRow, maxRow + 1);
+
+                        // RT-21444: We need to put the range in in the correct
+                        // order or else the last selected row will not be the
+                        // last item in the selectedItems list of the selection
+                        // model,
+                        if (asc) {
+                            sm.selectRange(minRow, maxRow + 1);
+                        } else {
+                            sm.selectRange(maxRow, minRow - 1);
+                        }
                     }
 
                     // This line of code below was disabled as a fix for RT-30394.
