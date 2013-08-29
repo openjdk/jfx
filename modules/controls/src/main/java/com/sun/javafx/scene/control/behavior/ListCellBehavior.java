@@ -219,7 +219,8 @@ public class ListCellBehavior<T> extends CellBehaviorBase<ListCell<T>> {
                 } else if (e.isShiftDown()) {
                     // we add all rows between the current focus and
                     // this row (inclusive) to the current selection.
-                    int focusIndex = getAnchor(listView);
+                    final int focusIndex = getAnchor(listView);
+                    final boolean asc = focusIndex < index;
 
                     // and then determine all row and columns which must be selected
                     int minRow = Math.min(focusIndex, index);
@@ -238,7 +239,16 @@ public class ListCellBehavior<T> extends CellBehaviorBase<ListCell<T>> {
                             sm.clearSelection(selectedIndex);
                         }
                     }
-                    sm.selectRange(minRow, maxRow+1);
+
+                    // RT-21444: We need to put the range in in the correct
+                    // order or else the last selected row will not be the
+                    // last item in the selectedItems list of the selection
+                    // model,
+                    if (asc) {
+                        sm.selectRange(minRow, maxRow + 1);
+                    } else {
+                        sm.selectRange(maxRow, minRow - 1);
+                    }
 
                     // return selection back to the focus owner
                     fm.focus(index);

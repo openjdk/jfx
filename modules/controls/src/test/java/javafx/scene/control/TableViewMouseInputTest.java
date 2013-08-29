@@ -244,4 +244,92 @@ public class TableViewMouseInputTest {
         assertTrue(sm.isSelected(4));
         assertTrue(sm.isSelected(5));
     }
+
+    @Test public void test_rt21444_up_cell() {
+        final int items = 8;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        final int selectRow = 3;
+
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(selectRow);
+
+        assertEquals(selectRow, sm.getSelectedIndex());
+        assertEquals("Row 3", sm.getSelectedItem());
+
+        VirtualFlowTestUtils.clickOnRow(tableView, selectRow - 1, KeyModifier.SHIFT);
+        assertEquals(2, sm.getSelectedItems().size());
+        assertEquals("Row 2", sm.getSelectedItem());
+        assertEquals("Row 2", sm.getSelectedItems().get(0));
+    }
+
+    @Test public void test_rt21444_down_cell() {
+        final int items = 8;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        final int selectRow = 3;
+
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(selectRow);
+
+        assertEquals(selectRow, sm.getSelectedIndex());
+        assertEquals("Row 3", sm.getSelectedItem());
+
+        VirtualFlowTestUtils.clickOnRow(tableView, selectRow + 1, KeyModifier.SHIFT);
+        assertEquals(2, sm.getSelectedItems().size());
+        assertEquals("Row 4", sm.getSelectedItem());
+        assertEquals("Row 4", sm.getSelectedItems().get(1));
+    }
+
+    @Test public void test_rt21444_up_row() {
+        final int items = 8;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        final int selectRow = 3;
+
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(selectRow);
+
+        assertEquals(selectRow, sm.getSelectedIndex());
+        assertEquals("Row 3", sm.getSelectedItem());
+
+        VirtualFlowTestUtils.clickOnRow(tableView, selectRow - 1, true, KeyModifier.SHIFT);
+        assertEquals(2, sm.getSelectedItems().size());
+        assertEquals("Row 2", sm.getSelectedItem());
+        assertEquals("Row 2", sm.getSelectedItems().get(0));
+    }
+
+    @Test public void test_rt21444_down_row() {
+        final int items = 8;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        final int selectRow = 3;
+
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(selectRow);
+
+        assertEquals(selectRow, sm.getSelectedIndex());
+        assertEquals("Row 3", sm.getSelectedItem());
+
+        VirtualFlowTestUtils.clickOnRow(tableView, selectRow + 1, true, KeyModifier.SHIFT);
+        assertEquals(2, sm.getSelectedItems().size());
+        assertEquals("Row 4", sm.getSelectedItem());
+        assertEquals("Row 4", sm.getSelectedItems().get(1));
+    }
 }

@@ -199,4 +199,48 @@ public class ListViewMouseInputTest {
         assertFalse(sm.isSelected(4));
         assertFalse(sm.isSelected(5));
     }
+
+    @Test public void test_rt21444_up() {
+        final int items = 8;
+        listView.getItems().clear();
+        for (int i = 1; i <= items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        final int selectRow = 3;
+
+        final MultipleSelectionModel sm = listView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(selectRow);
+
+        assertEquals(selectRow, sm.getSelectedIndex());
+        assertEquals("Row 4", sm.getSelectedItem());
+
+        VirtualFlowTestUtils.clickOnRow(listView, selectRow - 1, KeyModifier.SHIFT);
+        assertEquals(2, sm.getSelectedItems().size());
+        assertEquals("Row 3", sm.getSelectedItem());
+        assertEquals("Row 3", sm.getSelectedItems().get(0));
+    }
+
+    @Test public void test_rt21444_down() {
+        final int items = 8;
+        listView.getItems().clear();
+        for (int i = 1; i <= items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        final int selectRow = 3;
+
+        final MultipleSelectionModel sm = listView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(selectRow);
+
+        assertEquals(selectRow, sm.getSelectedIndex());
+        assertEquals("Row 4", sm.getSelectedItem());
+
+        VirtualFlowTestUtils.clickOnRow(listView, selectRow + 1, KeyModifier.SHIFT);
+        assertEquals(2, sm.getSelectedItems().size());
+        assertEquals("Row 5", sm.getSelectedItem());
+        assertEquals("Row 5", sm.getSelectedItems().get(1));
+    }
 }
