@@ -28,5 +28,6 @@
 
 jint WindowsKeyToJavaKey(UINT wKey);
 void JavaKeyToWindowsKey(jint jkey, UINT &vkey, UINT &modifiers);
+BOOL IsExtendedKey(UINT vkey);
 
 #endif // _KEY_TABLE_

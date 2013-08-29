@@ -40,7 +40,20 @@ static BOOL KeyEvent(JNIEnv *env, int code, bool isPress) {
         return FALSE;
     } else {
         UINT scancode = ::MapVirtualKey(vkey, 0);
-        ::keybd_event(vkey, scancode, isPress ? 0 : KEYEVENTF_KEYUP, 0);
+
+        INPUT keyInput = {0};
+        keyInput.type = INPUT_KEYBOARD;
+        keyInput.ki.wVk = vkey;
+        keyInput.ki.wScan = scancode;
+        keyInput.ki.time = 0;
+        keyInput.ki.dwExtraInfo = 0;
+        keyInput.ki.dwFlags = isPress ?  0 : KEYEVENTF_KEYUP;
+        if (IsExtendedKey(vkey)) {
+            keyInput.ki.dwFlags |= KEYEVENTF_EXTENDEDKEY;
+        }
+
+        ::SendInput(1, &keyInput, sizeof(keyInput));
+
         return TRUE;
     }
 }

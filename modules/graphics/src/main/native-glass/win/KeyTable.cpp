@@ -198,6 +198,36 @@ void JavaKeyToWindowsKey(jint jkey, UINT &vkey, UINT &modifiers)
     modifiers = 0;
 }
 
+BOOL IsExtendedKey(UINT vkey) {
+    switch (vkey) {
+        case VK_INSERT:
+        case VK_DELETE:
+        case VK_HOME:
+        case VK_END:
+        case VK_PRIOR:
+        case VK_NEXT:
+        case VK_LEFT:
+        case VK_UP:
+        case VK_RIGHT:
+        case VK_DOWN:
+        case VK_NUMLOCK:
+        case VK_NUMPAD0:
+        case VK_NUMPAD1:
+        case VK_NUMPAD2:
+        case VK_NUMPAD3:
+        case VK_NUMPAD4:
+        case VK_NUMPAD5:
+        case VK_NUMPAD6:
+        case VK_NUMPAD7:
+        case VK_NUMPAD8:
+        case VK_NUMPAD9:
+        case VK_SNAPSHOT:
+            return true;
+        default:
+            return false;
+    }
+}
+
 /*
  * Class:     com_sun_glass_events_KeyEvent
  * Method:    _getKeyCodeForChar
