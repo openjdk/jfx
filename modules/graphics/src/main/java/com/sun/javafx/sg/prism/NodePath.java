@@ -58,7 +58,7 @@ public class NodePath {
     }
 
     public void reset() {
-        position = -1;
+        position = path.isEmpty() ? -1 : 0;
     }
 
     // MODIFICATION methods
