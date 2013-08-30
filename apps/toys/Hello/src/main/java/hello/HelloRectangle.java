@@ -28,12 +28,7 @@ package hello;
 import javafx.application.Application;
 import javafx.scene.Group;
 import javafx.scene.Scene;
-import javafx.scene.control.Slider;
-import javafx.scene.effect.BlendMode;
-import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Circle;
-import javafx.scene.shape.Ellipse;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 
@@ -46,47 +41,14 @@ public class HelloRectangle extends Application {
         Group root = new Group();
         Scene scene = new Scene(root, 600, 450);
 
-        Slider aw = new Slider(-300, 300, 0);
-        Slider ah = new Slider(-300, 300, 0);
-
         Rectangle rect = new Rectangle();
         rect.setX(25);
         rect.setY(40);
         rect.setWidth(300);
         rect.setHeight(300);
         rect.setFill(Color.RED);
-        rect.arcWidthProperty().bind(aw.valueProperty());
-        rect.arcHeightProperty().bind(ah.valueProperty());
 
-        Circle circle = new Circle();
-        circle.setCenterX(450);
-        circle.setCenterY(200);
-        circle.setRadius(50);
-        circle.setFill(Color.RED);
-        circle.radiusProperty().bind(aw.valueProperty());
-
-        Ellipse ellipse = new Ellipse();
-        ellipse.setCenterX(450);
-        ellipse.setCenterY(375);
-        ellipse.radiusXProperty().bind(aw.valueProperty());
-        ellipse.radiusYProperty().bind(ah.valueProperty());
-        ellipse.setFill(Color.RED);
-
-        VBox box = new VBox(aw, ah);
-        box.relocate(350, 20);
-
-//        root.getChildren().addAll(rect, circle, ellipse, box);
-
-        Rectangle behind = new Rectangle(100, 100, new Color(1, 0, 0, .1));
-        Rectangle front = new Rectangle(10, 10, Color.GREEN);
-        front.setBlendMode(BlendMode.SRC_ATOP);
-
-        root.getChildren().addAll(behind, front);
-
-//        FillTransition tx = new FillTransition(Duration.seconds(3), behind, Color.RED, Color.BLUE);
-//        tx.setAutoReverse(true);
-//        tx.setCycleCount(FillTransition.INDEFINITE);
-//        tx.play();
+        root.getChildren().addAll(rect);
 
         stage.setScene(scene);
         stage.show();
