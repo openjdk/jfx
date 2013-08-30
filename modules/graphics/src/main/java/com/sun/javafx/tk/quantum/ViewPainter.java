@@ -168,6 +168,10 @@ abstract class ViewPainter implements Runnable {
     }
 
     protected void paintImpl(final Graphics backBufferGraphics) {
+        // We should not be painting anything with a width / height
+        // that is <= 0, so we might as well bail right off.
+        if (width <= 0 || height <= 0) return;
+
         // This "g" variable might represent the back buffer graphics, or it
         // might be reassigned to the sceneBuffer graphics.
         Graphics g = backBufferGraphics;
@@ -360,7 +364,7 @@ abstract class ViewPainter implements Runnable {
                         backBufferGraphics.setPaint(new Color(1, 0, 0, .3f));
                         backBufferGraphics.drawRect(clip.x, clip.y, clip.width, clip.height);
                     }
-                } else if (width > 0 && height > 0) {
+                } else {
                     // In this case there were no dirty regions, so the clip is the entire scene
                     final Rectangle clip = new Rectangle(0, 0, width, height);
                     assert backBufferGraphics.getClipRectIndex() == 0;
