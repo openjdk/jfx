@@ -229,8 +229,14 @@ public class NGRegion extends NGGroup {
         this.width = width;
         this.height = height;
         invalidateOpaqueRegion();
-        backgroundInsets = null;
         cacheKey = null;
+        // We only have to clear the background insets when the size changes if the
+        // background has fills who's insets are dependent on the size (as would be
+        // true only if a CornerRadii of any background fill on the background had
+        // a percentage based radius).
+        if (background != null && background.isFillPercentageBased()) {
+            backgroundInsets = null;
+        }
     }
 
     /**
@@ -239,10 +245,10 @@ public class NGRegion extends NGGroup {
      *
      * @param b Border, of type javafx.scene.layout.Border
      */
-    public void updateBorder(Object b) {
+    public void updateBorder(Border b) {
         // Make sure that the border instance we store on this NGRegion is never null
         final Border old = border;
-        border = b == null ? Border.EMPTY : (Border) b;
+        border = b == null ? Border.EMPTY : b;
 
         // Determine whether the geometry has changed, or if only the visuals have
         // changed. Geometry changes will require more work, and an equals check
