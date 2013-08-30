@@ -264,7 +264,6 @@ abstract class ViewPainter implements Runnable {
                 NodePath path = getRootPath(i);
                 path.clear();
                 root.getRenderRoot(getRootPath(i), dirtyRegionContainer.getDirtyRegion(i), i, tx, projTx);
-                System.out.println(path);
             }
             if (PULSE_LOGGING_ENABLED) {
                 PULSE_LOGGER.renderMessage(start, System.currentTimeMillis(), "Render Roots Discovered");
@@ -361,7 +360,7 @@ abstract class ViewPainter implements Runnable {
                         backBufferGraphics.setPaint(new Color(1, 0, 0, .3f));
                         backBufferGraphics.drawRect(clip.x, clip.y, clip.width, clip.height);
                     }
-                } else {
+                } else if (width > 0 && height > 0) {
                     // In this case there were no dirty regions, so the clip is the entire scene
                     final Rectangle clip = new Rectangle(0, 0, width, height);
                     assert backBufferGraphics.getClipRectIndex() == 0;
