@@ -143,7 +143,7 @@ public final class PrismSettings {
         /* Force scene repaint on every frame */
         forceRepaint = getBoolean(systemProperties, "prism.forcerepaint", false);
 
-        /* disable fallback to another toolkit if prism coudln't be init-ed */
+        /* disable fallback to another toolkit if prism couldn't be init-ed */
         noFallback = getBoolean(systemProperties, "prism.noFallback", false);
 
         /* Shape caching optimizations */
