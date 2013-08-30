@@ -738,6 +738,14 @@ yearSpinner.setFillHeight(false);
             // focus month spinner (should not happen)
             backMonthButton.requestFocus();
         }
+
+        // RT-31857
+        if (backMonthButton.getWidth() == 0) {
+            backMonthButton.requestLayout();
+            forwardMonthButton.requestLayout();
+            backYearButton.requestLayout();
+            forwardYearButton.requestLayout();
+        }
     }
 
     protected void createDayCells() {
