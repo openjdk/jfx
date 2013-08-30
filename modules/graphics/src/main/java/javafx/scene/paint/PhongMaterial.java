@@ -454,7 +454,7 @@ public class PhongMaterial extends Material {
     }
 
     @Override public String toString() {
-        return "PGPhongMaterial[" + "diffuseColor=" + getDiffuseColor() +
+        return "PhongMaterial[" + "diffuseColor=" + getDiffuseColor() +
                 ", specularColor=" + getSpecularColor() +
                 ", specularPower=" + getSpecularPower() +
                 ", diffuseMap=" + getDiffuseMap() +

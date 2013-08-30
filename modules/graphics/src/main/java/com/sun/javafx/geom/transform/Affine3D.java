@@ -41,8 +41,6 @@ public class Affine3D extends AffineBase {
     private double mzz;
     private double mzt;
 
-    private Vec3d tempV3d = new Vec3d();
-
     public Affine3D() {
         mxx = myy = mzz = 1.0;
 //        mxy = mxz = mxt = 0.0;  /* Not needed. */
@@ -328,6 +326,7 @@ public class Affine3D extends AffineBase {
             case (APPLY_SHEAR | APPLY_TRANSLATE):
             /* NOBREAK */
             case (APPLY_SHEAR):
+                Vec3d tempV3d = new Vec3d();
                 dst = TransformHelper.general3dBoundsTransform(this, src, dst, tempV3d);
                 break;
             case (APPLY_SCALE | APPLY_TRANSLATE):
