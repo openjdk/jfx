@@ -24,6 +24,8 @@
  */
 package com.sun.glass.ui;
 
+import java.util.Locale;
+
 import com.sun.glass.ui.accessible.AccessibleBaseProvider;
 import com.sun.glass.ui.accessible.AccessibleRoot;
 import com.sun.glass.ui.delegate.ClipboardDelegate;
@@ -38,7 +40,7 @@ public abstract class PlatformFactory {
         if (instance == null) {
             try {
                 String platform = Platform.determinePlatform();
-                String factory = "com.sun.glass.ui." +  platform.toLowerCase() + "."+ platform + "PlatformFactory";
+                String factory = "com.sun.glass.ui." +  platform.toLowerCase(Locale.ROOT) + "."+ platform + "PlatformFactory";
                 // System.out.println("Loading Glass Factory " + factory);
                 Class c = Class.forName(factory);
                 instance = (PlatformFactory) c.newInstance();

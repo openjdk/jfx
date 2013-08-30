@@ -25,6 +25,8 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import java.util.Locale;
+
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.scene.Node;
@@ -92,7 +94,7 @@ class WebColorFieldSkin extends InputFieldSkin {
     protected void updateValue() {
         if (noChangeInValue) return;
         Color value = ((WebColorField) control).getValue();
-        String text = getTextField().getText() == null ? "" : getTextField().getText().trim().toUpperCase();
+        String text = getTextField().getText() == null ? "" : getTextField().getText().trim().toUpperCase(Locale.ROOT);
         if (text.matches("#[A-F0-9]{6}") || text.matches("[A-F0-9]{6}")) {
             try {
                 Color newValue = (text.charAt(0) == '#')? Color.web(text) : Color.web("#"+text);

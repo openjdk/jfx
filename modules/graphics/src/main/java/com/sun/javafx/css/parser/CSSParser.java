@@ -38,6 +38,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import javafx.geometry.Insets;
 import javafx.scene.effect.BlurType;
@@ -697,7 +698,7 @@ final public class CSSParser {
     ////////////////////////////////////////////////////////////////////////////
 
     ParsedValueImpl valueFor(String property, Term root) throws ParseException {
-        final String prop = property.toLowerCase();
+        final String prop = property.toLowerCase(Locale.ROOT);
         properties.put(prop, prop);
         if (root == null || root.token == null) {
             error(root, "Expected value for property \'" + prop + "\'");
@@ -849,7 +850,7 @@ final public class CSSParser {
         case CSSLexer.IDENT:
             boolean isIdent = ttype == CSSLexer.IDENT;
             final String str = stripQuotes(token.getText());
-            final String text = str.toLowerCase();
+            final String text = str.toLowerCase(Locale.ROOT);
             if ("ladder".equals(text)) {
                 value = ladder(root);
             } else if ("linear".equals(text)) {
@@ -1404,7 +1405,7 @@ final public class CSSParser {
             final String msg = "Expected \'gaussian\', \'one-pass-box\', \'two-pass-box\', or \'three-pass-box\'";
             error(root, msg);
         }
-        final String blurStr = root.token.getText().toLowerCase();
+        final String blurStr = root.token.getText().toLowerCase(Locale.ROOT);
         BlurType blurType = BlurType.THREE_PASS_BOX;
         if ("gaussian".equals(blurStr)) {
             blurType = BlurType.GAUSSIAN;
@@ -1528,7 +1529,7 @@ final public class CSSParser {
         CycleMethod cycleMethod = null;
         if (root != null && root.token.getType() == CSSLexer.IDENT) {
 
-            final String text = root.token.getText().toLowerCase();
+            final String text = root.token.getText().toLowerCase(Locale.ROOT);
             if ("repeat".equals(text)) {
                 cycleMethod = CycleMethod.REPEAT;
             } else if ("reflect".equals(text)) {
@@ -1732,7 +1733,7 @@ final public class CSSParser {
             int endX = 0;
             int endY = 0;
 
-            String sideOrCorner1 = arg.token.getText().toLowerCase();
+            String sideOrCorner1 = arg.token.getText().toLowerCase(Locale.ROOT);
             // The keywords denote the direction.
             if ("top".equals(sideOrCorner1)) {
                 // going toward the top, then start at the bottom
@@ -1765,7 +1766,7 @@ final public class CSSParser {
                     arg.token.getType() == CSSLexer.IDENT &&
                     !arg.token.getText().isEmpty()) {
 
-                    String sideOrCorner2 = arg.token.getText().toLowerCase();
+                    String sideOrCorner2 = arg.token.getText().toLowerCase(Locale.ROOT);
 
                     // if right or left has already been given,
                     // then either startX or endX will not be zero.
@@ -1891,7 +1892,7 @@ final public class CSSParser {
 
         ParsedValueImpl<?,Size> focusAngle = null;
         if (term.token.getType() == CSSLexer.IDENT) {
-            final String keyword = term.token.getText().toLowerCase();
+            final String keyword = term.token.getText().toLowerCase(Locale.ROOT);
             if ("focus-angle".equals(keyword)) {
 
                 prev = term;
@@ -1908,7 +1909,7 @@ final public class CSSParser {
 
         ParsedValueImpl<?,Size> focusDistance = null;
         if (term.token.getType() == CSSLexer.IDENT) {
-            final String keyword = term.token.getText().toLowerCase();
+            final String keyword = term.token.getText().toLowerCase(Locale.ROOT);
             if ("focus-distance".equals(keyword)) {
 
                 prev = term;
@@ -1925,7 +1926,7 @@ final public class CSSParser {
 
         ParsedValueImpl<?,Size>[] centerPoint = null;
         if (term.token.getType() == CSSLexer.IDENT) {
-            final String keyword = term.token.getText().toLowerCase();
+            final String keyword = term.token.getText().toLowerCase(Locale.ROOT);
             if ("center".equals(keyword)) {
 
                 prev = term;
@@ -2548,8 +2549,8 @@ final public class CSSParser {
                 }
             } else if( valueOne != null && valueTwo != null && valueThree == null && valueFour == null ) {
                 // 2 values
-                String v1 = valueOne.getText().toLowerCase();
-                String v2 = valueTwo.getText().toLowerCase();
+                String v1 = valueOne.getText().toLowerCase(Locale.ROOT);
+                String v2 = valueTwo.getText().toLowerCase(Locale.ROOT);
 
                 if( ! isPositionKeyWord(v1) ) {
                     left = parseSize(termOne);
@@ -2612,9 +2613,9 @@ final public class CSSParser {
                     }
                 }
             } else if( valueOne != null && valueTwo != null && valueThree != null && valueFour == null ) {
-                String v1 = valueOne.getText().toLowerCase();
-                String v2 = valueTwo.getText().toLowerCase();
-                String v3 = valueThree.getText().toLowerCase();
+                String v1 = valueOne.getText().toLowerCase(Locale.ROOT);
+                String v2 = valueTwo.getText().toLowerCase(Locale.ROOT);
+                String v3 = valueThree.getText().toLowerCase(Locale.ROOT);
 
                 if( ! isPositionKeyWord(v1) || "center".equals(v1) ) {
                     // 1 is horizontal
@@ -2690,10 +2691,10 @@ final public class CSSParser {
                     }
                 }
             } else {
-                String v1 = valueOne.getText().toLowerCase();
-                String v2 = valueTwo.getText().toLowerCase();
-                String v3 = valueThree.getText().toLowerCase();
-                String v4 = valueFour.getText().toLowerCase();
+                String v1 = valueOne.getText().toLowerCase(Locale.ROOT);
+                String v2 = valueTwo.getText().toLowerCase(Locale.ROOT);
+                String v3 = valueThree.getText().toLowerCase(Locale.ROOT);
+                String v4 = valueFour.getText().toLowerCase(Locale.ROOT);
 
                 if( (v1.equals("left") || v1.equals("right")) && (v3.equals("top") || v3.equals("bottom") ) && ! isPositionKeyWord(v2) && ! isPositionKeyWord(v4) ) {
                     if( v1.equals("left") ) {
@@ -2753,7 +2754,7 @@ final public class CSSParser {
             term.token.getText() == null ||
             term.token.getText().isEmpty()) error(term, "Expected \'<repeat-style>\'");
 
-        String text = term.token.getText().toLowerCase();
+        String text = term.token.getText().toLowerCase(Locale.ROOT);
         if ("repeat-x".equals(text)) {
             xAxis = BackgroundRepeat.REPEAT;
             yAxis = BackgroundRepeat.NO_REPEAT;
@@ -2785,7 +2786,7 @@ final public class CSSParser {
              term.token.getText() != null &&
              !term.token.getText().isEmpty()) {
 
-            text = term.token.getText().toLowerCase();
+            text = term.token.getText().toLowerCase(Locale.ROOT);
             if ("repeat-x".equals(text)) {
                 error(term, "Unexpected \'repeat-x\'");
             } else if ("repeat-y".equals(text)) {
@@ -2855,7 +2856,7 @@ final public class CSSParser {
 
         if (term.token.getType() == CSSLexer.IDENT) {
             final String text =
-                (term.token.getText() != null) ? term.token.getText().toLowerCase() : null;
+                (term.token.getText() != null) ? term.token.getText().toLowerCase(Locale.ROOT) : null;
 
             if ("auto".equals(text)) {
                 // We don't do anything because width / height are already initialized
@@ -2881,7 +2882,7 @@ final public class CSSParser {
 
             if (term.token.getType() == CSSLexer.IDENT) {
                 final String text =
-                    (term.token.getText() != null) ? term.token.getText().toLowerCase() : null;
+                    (term.token.getText() != null) ? term.token.getText().toLowerCase(Locale.ROOT) : null;
 
                 if ("auto".equals(text)) {
                     height = null;
@@ -3002,7 +3003,7 @@ final public class CSSParser {
              term.token.getText() != null &&
              !term.token.getText().isEmpty()) {
 
-            return term.token.getText().toLowerCase();
+            return term.token.getText().toLowerCase(Locale.ROOT);
         }
         return null;
     }
@@ -3142,7 +3143,7 @@ final public class CSSParser {
             root.token.getText() == null ||
             root.token.getText().isEmpty()) error(root, "Expected \'<border-style>\'");
 
-        final String text = root.token.getText().toLowerCase();
+        final String text = root.token.getText().toLowerCase(Locale.ROOT);
 
         if ("none".equals(text)) {
             return BorderStyleConverter.NONE;
@@ -3449,7 +3450,7 @@ final public class CSSParser {
 
         Size size = null;
         if (token.getType() == CSSLexer.IDENT) {
-            final String ident = token.getText().toLowerCase();
+            final String ident = token.getText().toLowerCase(Locale.ROOT);
             double value = -1;
             if ("inherit".equals(ident)) {
                 value = 100;
@@ -3497,7 +3498,7 @@ final public class CSSParser {
             token.getText() == null ||
             token.getText().isEmpty()) error(root, "Expected \'<font-style>\'");
 
-        final String ident = token.getText().toLowerCase();
+        final String ident = token.getText().toLowerCase(Locale.ROOT);
         String posture = FontPosture.REGULAR.name();
 
         if ("normal".equals(ident)) {
@@ -3524,7 +3525,7 @@ final public class CSSParser {
             token.getText() == null ||
             token.getText().isEmpty()) error(root, "Expected \'<font-weight>\'");
 
-        final String ident = token.getText().toLowerCase();
+        final String ident = token.getText().toLowerCase(Locale.ROOT);
         String weight = FontWeight.NORMAL.name();
 
         if ("inherit".equals(ident)) {
@@ -3572,7 +3573,7 @@ final public class CSSParser {
             (text = token.getText()) == null ||
             text.isEmpty()) error(root, "Expected \'<font-family>\'");
 
-        final String fam = stripQuotes(text.toLowerCase());
+        final String fam = stripQuotes(text.toLowerCase(Locale.ROOT));
         if ("inherit".equals(fam)) {
             return new ParsedValueImpl<String,String>("inherit", StringConverter.getInstance());
         } else if ("serif".equals(fam) ||

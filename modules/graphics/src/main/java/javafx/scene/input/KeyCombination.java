@@ -28,6 +28,7 @@ package javafx.scene.input;
 import com.sun.javafx.tk.Toolkit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 // PENDING_DOC_REVIEW
 /**
@@ -580,8 +581,8 @@ public abstract class KeyCombination {
                 sb.append(' ');
             }
 
-            sb.append(word.substring(0, 1).toUpperCase());
-            sb.append(word.substring(1).toLowerCase());
+            sb.append(word.substring(0, 1).toUpperCase(Locale.ROOT));
+            sb.append(word.substring(1).toLowerCase(Locale.ROOT));
         }
 
         return sb.toString();

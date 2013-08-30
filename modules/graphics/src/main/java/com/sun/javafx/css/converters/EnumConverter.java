@@ -37,6 +37,7 @@ import javafx.css.StyleConverter;
 import javafx.scene.text.Font;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 import com.sun.javafx.Logging;
@@ -64,7 +65,7 @@ public final class EnumConverter<E extends Enum<E>> extends StyleConverterImpl<S
         }
         try {
             string = string.replace('-', '_');
-            return Enum.valueOf(enumClass, string.toUpperCase());
+            return Enum.valueOf(enumClass, string.toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
             // may throw another IllegalArgumentException
             return Enum.valueOf(enumClass, string);

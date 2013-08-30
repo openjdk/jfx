@@ -40,6 +40,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import javafx.css.StyleableProperty;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -468,7 +469,7 @@ public class StylesheetTest {
 
                         if ("inherit".equals(pv.getValue())) continue;
 
-                        String prop = d.getProperty().toLowerCase();
+                        String prop = d.getProperty().toLowerCase(Locale.ROOT);
                         if ("-fx-shape".equals(prop)) {
                             StringConverter.getInstance().convert(pv, null);
                         } else if ("-fx-font-smoothing-type".equals(prop)) {

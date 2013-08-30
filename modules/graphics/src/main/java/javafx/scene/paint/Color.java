@@ -27,6 +27,7 @@ package javafx.scene.paint;
 
 import javafx.animation.Interpolatable;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import com.sun.javafx.Utils;
 import com.sun.javafx.beans.annotations.Default;
@@ -388,7 +389,7 @@ public final class Color extends Paint implements Interpolatable<Color> {
             throw new IllegalArgumentException("Invalid color specification");
         }
 
-        String color = colorString.toLowerCase();
+        String color = colorString.toLowerCase(Locale.ROOT);
 
         if (color.startsWith("#")) {
             color = color.substring(1);

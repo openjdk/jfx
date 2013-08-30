@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import java.util.Locale;
 import java.util.StringTokenizer;
 
 import javafx.scene.input.KeyCode;
@@ -331,7 +332,7 @@ public class TextBinding {
             if (!tokenizer.hasMoreTokens()) {
                 text = token;
             } else {
-                KeyCode code = KeyCode.getKeyCode(token.toUpperCase());
+                KeyCode code = KeyCode.getKeyCode(token.toUpperCase(Locale.ROOT));
                 if (code != null) {
                     switch (code) {
                       case CONTROL:

@@ -29,6 +29,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -1507,7 +1508,7 @@ final class CssStyleHelper {
     /*package access for testing*/ FontPosture getFontPosture(Font font) {
         if (font == null) return FontPosture.REGULAR;
 
-        String fontName = font.getName().toLowerCase();
+        String fontName = font.getName().toLowerCase(Locale.ROOT);
 
         if (fontName.contains("italic")) {
             return FontPosture.ITALIC;
@@ -1519,7 +1520,7 @@ final class CssStyleHelper {
     /*package access for testing*/ FontWeight getFontWeight(Font font) {
         if (font == null) return FontWeight.NORMAL;
 
-        String fontName = font.getName().toLowerCase();
+        String fontName = font.getName().toLowerCase(Locale.ROOT);
 
         if (fontName.contains("bold")) {
             if (fontName.contains("extra")) return FontWeight.EXTRA_BOLD;

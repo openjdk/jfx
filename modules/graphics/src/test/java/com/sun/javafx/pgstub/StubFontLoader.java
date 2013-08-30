@@ -38,6 +38,7 @@ import javafx.scene.text.FontWeight;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 
 public class StubFontLoader extends FontLoader {
 
@@ -45,7 +46,7 @@ public class StubFontLoader extends FontLoader {
     public void loadFont(Font font) {
         StubFont nativeFont = new StubFont();
         nativeFont.font = font;
-        String name = font.getName().trim().toLowerCase();
+        String name = font.getName().trim().toLowerCase(Locale.ROOT);
         if (name.equals("system") || name.equals("system regular")) {
             font.impl_setNativeFont(nativeFont, font.getName(), "System", "Regular");
         } else if (name.equals("amble regular")) {
@@ -95,7 +96,7 @@ public class StubFontLoader extends FontLoader {
 
     @Override
     public List<String> getFontNames(String family) {
-        String lower = family.trim().toLowerCase();
+        String lower = family.trim().toLowerCase(Locale.ROOT);
         if ("amble".equals(lower)) {
             return Arrays.asList("Amble Regular", "Amble Bold", "Amble Italic",
                     "Amble Bold Italic");
@@ -116,7 +117,7 @@ public class StubFontLoader extends FontLoader {
     public Font font(String family, FontWeight weight, FontPosture posture,
             float size) {
         family = family.trim();
-        String fam = family.toLowerCase();
+        String fam = family.toLowerCase(Locale.ROOT);
         String name = "";
         if ("amble".equals(fam)) {
             if (weight != null

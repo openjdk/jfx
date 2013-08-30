@@ -28,6 +28,7 @@ package com.sun.javafx.css.converters;
 import com.sun.javafx.Utils;
 import com.sun.javafx.css.Size;
 import com.sun.javafx.css.StyleConverterImpl;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import javafx.css.CssMetaData;
@@ -132,7 +133,7 @@ public final class FontConverter extends StyleConverterImpl<ParsedValue[], Font>
 
             if (val instanceof String) {
                 try {
-                    String sval = ((String)val).toUpperCase();
+                    String sval = ((String)val).toUpperCase(Locale.ROOT);
                     style = Enum.valueOf(FontPosture.class, sval);
                 } catch (IllegalArgumentException iae) {
                     style =  FontPosture.REGULAR;
@@ -178,7 +179,7 @@ public final class FontConverter extends StyleConverterImpl<ParsedValue[], Font>
 
             if (val instanceof String) {
                 try {
-                    String sval = ((String)val).toUpperCase();
+                    String sval = ((String)val).toUpperCase(Locale.ROOT);
                     weight = Enum.valueOf(FontWeight.class, sval);
                 } catch (IllegalArgumentException iae) {
                     weight =  FontWeight.NORMAL;

@@ -54,6 +54,7 @@ import javafx.util.Callback;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import static com.sun.javafx.scene.control.TableColumnSortTypeWrapper.getSortTypeName;
@@ -637,7 +638,7 @@ public class TableColumnHeader extends Region {
             
             String sortTypeName = getSortTypeName(column);
             if (sortTypeName != null && ! sortTypeName.isEmpty()) {
-                r.getStyleClass().add(sortTypeName.toLowerCase());
+                r.getStyleClass().add(sortTypeName.toLowerCase(Locale.ROOT));
             }
             
             sortOrderDots.getChildren().add(r);

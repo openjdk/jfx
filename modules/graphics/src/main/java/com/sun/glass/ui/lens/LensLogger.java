@@ -27,6 +27,7 @@ package com.sun.glass.ui.lens;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Locale;
 import sun.util.logging.PlatformLogger;
 import sun.util.logging.PlatformLogger.Level;
 
@@ -39,7 +40,7 @@ final class LensLogger {
         String levelString = AccessController.doPrivileged(
         new PrivilegedAction<String>() {
             public String run() {
-                return System.getProperty("log.lens", "SEVERE").toUpperCase();
+                return System.getProperty("log.lens", "SEVERE").toUpperCase(Locale.ROOT);
             }
         });
         try {
