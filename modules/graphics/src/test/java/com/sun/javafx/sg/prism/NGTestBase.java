@@ -101,14 +101,29 @@ public class NGTestBase {
         return c;
     }
 
-    public static TestNGEllipse createEllipse(int cx, int cy, int radiusX, int radiusY) {
-        TestNGEllipse e = new TestNGEllipse();
-        e.updateEllipse(cx, cy, radiusX, radiusY);
-        final RectBounds bounds = new RectBounds(cx - radiusX, cy - radiusY, cx + radiusX, cy + radiusY);
-        e.setContentBounds(bounds);
-        e.setTransformMatrix(BaseTransform.IDENTITY_TRANSFORM);
-        e.setTransformedBounds(bounds, false);
-        return e;
+    public static TestNGRegion createOpaqueRegion(int x, int y, int width, int height, NGNode... children) {
+        TestNGRegion r = createTransparentRegion(x, y, width, height, children);
+        r.updateBackground(new Background(new BackgroundFill(javafx.scene.paint.Color.BLACK, null, null)));
+        r.setOpaqueInsets(0, 0, 0, 0);
+        return r;
+    }
+
+    public static TestNGRegion createTransparentRegion(int x, int y, int width, int height, NGNode... children) {
+        TestNGRegion r = new TestNGRegion();
+        for (NGNode child : children) {
+            r.add(-1, child);
+        }
+        r.setSize(width, height);
+        final RectBounds bounds = new RectBounds(0, 0, width, height);
+        r.setContentBounds(bounds);
+        if (x != 0 || y != 0) {
+            r.setTransformMatrix(BaseTransform.getTranslateInstance(x, y));
+            r.setTransformedBounds(r.getTransform().transform(bounds, new RectBounds()), true);
+        } else {
+            r.setTransformMatrix(BaseTransform.IDENTITY_TRANSFORM);
+            r.setTransformedBounds(bounds, false);
+        }
+        return r;
     }
 
     public static TestNGGroup createGroup(NGNode... children) {
@@ -275,32 +290,6 @@ public class NGTestBase {
         @Override public boolean computedDirtyRegion() { return computedDirtyRegion; }
         @Override public boolean rendered() { return rendered; }
 
-    }
-
-    public  static final class TestNGEllipse extends NGEllipse implements TestNGNode {
-        private boolean askedToAccumulateDirtyRegion;
-        private boolean computedDirtyRegion;
-        private boolean rendered;
-
-        @Override
-        protected void renderContent(Graphics g) {
-            rendered = true;
-        }
-
-        @Override public int accumulateDirtyRegions(final RectBounds clip,
-                RectBounds dirtyRegion, DirtyRegionPool pool, DirtyRegionContainer drc, BaseTransform tx, GeneralTransform3D pvTx) {
-            askedToAccumulateDirtyRegion = true;
-            return super.accumulateDirtyRegions(clip, dirtyRegion, pool, drc, tx, pvTx);
-        }
-        @Override protected int accumulateNodeDirtyRegion(
-                final RectBounds clip, RectBounds dirtyRegion, DirtyRegionContainer drc, BaseTransform tx, GeneralTransform3D pvTx)
-        {
-            computedDirtyRegion = true;
-            return super.accumulateNodeDirtyRegion(clip, dirtyRegion, drc,tx, pvTx);
-        }
-        @Override public boolean askedToAccumulateDirtyRegion() { return askedToAccumulateDirtyRegion; }
-        @Override public boolean computedDirtyRegion() { return computedDirtyRegion; }
-        @Override public boolean rendered() { return rendered; }
     }
 
     public interface TestNGNode {

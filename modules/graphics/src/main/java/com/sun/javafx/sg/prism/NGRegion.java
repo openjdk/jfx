@@ -262,10 +262,10 @@ public class NGRegion extends NGGroup {
      *
      * @param b    Background, of type javafx.scene.layout.Background. Can be null.
      */
-    public void updateBackground(Object b) {
+    public void updateBackground(Background b) {
         // Make sure that the background instance we store on this NGRegion is never null
         final Background old = background;
-        background = b == null ? Background.EMPTY : (Background) b;
+        background = b == null ? Background.EMPTY : b;
 
         final List<BackgroundFill> fills = background.getFills();
         cacheMode = 0;
@@ -412,9 +412,7 @@ public class NGRegion extends NGGroup {
                                                            GeneralTransform3D pvTx) {
 
         RenderRootResult result = super.computeRenderRoot(path, dirtyRegion, cullingIndex, tx, pvTx);
-        if (result == RenderRootResult.HAS_RENDER_ROOT) {
-            path.add(this);
-        } else if (result == RenderRootResult.NONE){
+        if (result == RenderRootResult.NO_RENDER_ROOT){
             result = computeNodeRenderRoot(path, dirtyRegion, cullingIndex, tx, pvTx);
         }
         return result;

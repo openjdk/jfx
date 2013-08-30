@@ -129,10 +129,56 @@ public class OcclusionCullingTest extends NGTestBase {
         assertTrue(rootPath.isEmpty());
 
         final TestNGRectangle dirtySibling = createRectangle(0,0,10,10);
-        rootParent.add(-1,dirtySibling);
+        rootParent.add(-1, dirtySibling);
         rootPath = new NodePath();
         group.getRenderRoot(rootPath, new RectBounds(10, 10, 100, 100), -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
-        assertRoot(rootPath, rootParent);
+        assertRoot(rootPath, root);
+    }
+
+    @Test
+    public void testTransparentRegionWithChildren() {
+        final TestNGRectangle root = createRectangle(10, 10, 100, 100);
+        final TestNGGroup rootParent = createGroup(root);
+        TestNGRegion region = createTransparentRegion(0, 0, 100, 100,
+                createGroup(createRectangle(10, 10, 100, 100), createRectangle(20, 20, 20, 20)), rootParent);
+
+        region.dirty =  NGNode.DirtyFlag.CLEAN; // need to clean default dirty flags
+        rootParent.dirty = NGNode.DirtyFlag.CLEAN;
+        rootParent.childDirty = false;
+        root.dirty = NGNode.DirtyFlag.CLEAN;
+        root.childDirty = false;
+        NodePath rootPath = new NodePath();
+        region.getRenderRoot(rootPath, new RectBounds(10, 10, 100, 100), -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
+        assertTrue(rootPath.isEmpty());
+
+        final TestNGRectangle dirtySibling = createRectangle(0,0,10,10);
+        rootParent.add(-1,dirtySibling);
+        rootPath = new NodePath();
+        region.getRenderRoot(rootPath, new RectBounds(10, 10, 100, 100), -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
+        assertRoot(rootPath, root);
+    }
+
+    @Test
+    public void testOpaqueRegion() {
+        final TestNGRectangle rect = createRectangle(10, 10, 100, 100);
+        TestNGRegion region = createOpaqueRegion(0, 0, 200, 200, rect);
+        TestNGGroup root = createGroup(region);
+
+        NodePath rootPath = new NodePath();
+        root.getRenderRoot(rootPath, new RectBounds(10, 10, 100, 100), -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
+        assertRoot(rootPath, rect);
+
+        rootPath.clear();
+        root.getRenderRoot(rootPath, new RectBounds(5, 5, 150, 150), -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
+        assertRoot(rootPath, region);
+        TestGraphics g = new TestGraphics();
+        g.setRenderRoot(rootPath);
+        root.render(g);
+        checkRootRendering(root, rootPath);
+
+        rootPath.clear();
+        root.getRenderRoot(rootPath, new RectBounds(-5, -5, 150, 150), -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
+        assertRoot(rootPath, root);
     }
 
     private void checkRootRendering(TestNGNode node, NodePath root) {

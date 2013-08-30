@@ -1506,7 +1506,7 @@ public abstract class NGNode {
      */
     public void drawDirtyOpts(final BaseTransform tx, final GeneralTransform3D pvTx,
                               Rectangle clipBounds, int[] colorBuffer, int dirtyRegionIndex) {
-        if ((painted & (1 << dirtyRegionIndex)) != 0) {
+        if ((painted & (1 << (dirtyRegionIndex * 2))) != 0) {
             // Transforming the content bounds (which includes the clip) to screen coordinates
             tx.copy().deriveWithConcatenation(getTransform()).transform(contentBounds, TEMP_BOUNDS);
             if (pvTx != null) pvTx.transform(TEMP_BOUNDS, TEMP_BOUNDS);
@@ -1544,24 +1544,25 @@ public abstract class NGNode {
                     // thing you probably won't be able to tell them apart, but I can tell
                     // numerically they're different and increment (so I use the colors
                     // as my counters).
-                    switch (color) {
-                        case 0:
-                            color = 0x80007F00;
-                            break;
-                        case 0x80007F00:
-                            color = 0x80008000;
-                            break;
-                        case 0x80008000:
-                            color = 0x807F7F00;
-                            break;
-                        case 0x807F7F00:
-                            color = 0x80808000;
-                            break;
-                        case 0x80808000:
-                            color = 0x807F0000;
-                            break;
-                        default:
-                            color = 0x80800000;
+                    if (color == 0) {
+                        color = 0x8007F00;
+                    } else if ((painted & (3 << (dirtyRegionIndex * 2))) == 3) {
+                        switch (color) {
+                            case 0x80007F00:
+                                color = 0x80008000;
+                                break;
+                            case 0x80008000:
+                                color = 0x807F7F00;
+                                break;
+                            case 0x807F7F00:
+                                color = 0x80808000;
+                                break;
+                            case 0x80808000:
+                                color = 0x807F0000;
+                                break;
+                            default:
+                                color = 0x80800000;
+                        }
                     }
                     colorBuffer[index] = color;
                 }
@@ -1576,24 +1577,32 @@ public abstract class NGNode {
      **************************************************************************/
     protected static enum RenderRootResult {
         /**
-         * The computation to determine whether a branch of the scene graph has
-         * a render root has concluded that indeed, there is one.
+         * A Node returns NO_RENDER_ROOT when it is not a render root because
+         * it does not have an opaqueRegion which completely covers the area
+         * of the clip. Maybe the node is dirty, but outside the dirty region
+         * that we're currently processing. For an NGGroup, returning
+         * NO_RENDER_ROOT means that there is no render root (occluder) within
+         * this entire branch of the tree.
+         */
+        NO_RENDER_ROOT,
+        /**
+         * A Node returns HAS_RENDER_ROOT when its opaque region completely
+         * covers the clip. An NGGroup returns HAS_RENDER_ROOT when one of
+         * its children either returned HAS_RENDER_ROOT or HAS_RENDER_ROOT_AND_IS_CLEAN.
          */
         HAS_RENDER_ROOT,
         /**
-         * A RenderRootResult of this value means that although we discovered a
-         * render root, we also determined that there were no dirty nodes that
-         * followed the render root. Therefore, we don't actually have to render
-         * anything (the only dirty nodes are completely occluded by clean
-         * nodes).
+         * A Node returns HAS_RENDER_ROOT_AND_IS_CLEAN when its opaque region
+         * completely covers the clip and the Node is, itself, clean. An NGNode
+         * returns HAS_RENDER_ROOT_AND_IS_CLEAN only if it had a child that
+         * returned HAS_RENDER_ROOT_AND_IS_CLEAN and none of its children drawn
+         * above the render root are dirty.
+         *
+         * This optimization allows us to recognize situations where perhaps there
+         * were some dirty nodes, but they are completely covered by an occluder,
+         * and therefore we don't actually have to draw anything.
          */
-        EXISTS_BUT_NOT_DIRTY,
-        /**
-         * Represents the case where we did not find an opaque node that covered
-         * the dirty region, and thus we must start rendering from the actual
-         * root of the hierarchy.
-         */
-        NONE
+        HAS_RENDER_ROOT_AND_IS_CLEAN,
     }
 
     /**
@@ -1621,21 +1630,32 @@ public abstract class NGNode {
         // for that because NGNode doesn't have a reference to the scene it is a part of...
 
         RenderRootResult result = computeRenderRoot(path, dirtyRegion, cullingIndex, tx, pvTx);
-        if (result == RenderRootResult.NONE) {
-            //Render from the root
+        if (result == RenderRootResult.NO_RENDER_ROOT) {
+            // We didn't find any render root, which means that no one node was large enough
+            // to obscure the entire dirty region (or, possibly, some combination of nodes in an
+            // NGGroup were not, together, large enough to do the job). So we need to render
+            // from the root node, which is this node.
             path.add(this);
+        } else if (result == RenderRootResult.HAS_RENDER_ROOT_AND_IS_CLEAN) {
+            // We've found a render root, and it is clean and everything above it in painter order
+            // is clean, so actually we have nothing to paint this time around (some stuff must
+            // have been dirty which is completely occluded by the render root). So we can clear
+            // the path, which indicates to the caller that nothing needs to be painted.
+            path.clear();
         }
     }
 
     /**
-     * Searches for the last node that covers all of the specified dirty region with opaque region,
-     * in this node's subtree.
-     * Such node can serve as a rendering root as all nodes preceding the node will be covered by it.
+     * Searches for the last node that covers all of the specified dirty region with an opaque region,
+     * in this node's subtree. Such a node can serve as a rendering root as all nodes preceding the node
+     * will be covered by it.
+     *
+     * @param path the NodePath to populate with the path to the render root. Cannot be null.
      * @param dirtyRegion the current dirty region. Cannot be null.
      * @param cullingIndex index of culling information
      * @param tx current transform. Cannot be null.
      * @param pvTx current perspective transform. Cannot be null.
-     * @return New rendering root or null if no such node exists in this subtree
+     * @return The result of visiting this node.
      */
     RenderRootResult computeRenderRoot(NodePath path, RectBounds dirtyRegion,
                                        int cullingIndex, BaseTransform tx, GeneralTransform3D pvTx) {
@@ -1674,11 +1694,15 @@ public abstract class NGNode {
 
     /**
      * Check if this node can serve as rendering root for this dirty region.
+     *
+     * @param path the NodePath to populate with the path to the render root. Cannot be null.
      * @param dirtyRegion the current dirty region. Cannot be null.
      * @param cullingIndex index of culling information, -1 means culling information should not be used
      * @param tx current transform. Cannot be null.
      * @param pvTx current perspective transform. Cannot be null.
-     * @return this node if this node's opaque region covers the specified dirty region. Null otherwise.
+     * @return NO_RENDER_ROOT if this node does <em>not</em> have an opaque
+     *         region that fills the entire dirty region. Returns HAS_RENDER_ROOT
+     *         if the opaque region fills the dirty region.
      */
     final RenderRootResult computeNodeRenderRoot(NodePath path, RectBounds dirtyRegion,
                                                  int cullingIndex, BaseTransform tx, GeneralTransform3D pvTx) {
@@ -1688,16 +1712,16 @@ public abstract class NGNode {
         if (cullingIndex != -1) {
             final int bits = cullingBits >> (cullingIndex * 2);
             if ((bits & DIRTY_REGION_CONTAINS_OR_INTERSECTS_NODE_BOUNDS) == 0x00) {
-                return RenderRootResult.NONE;
+                return RenderRootResult.NO_RENDER_ROOT;
             }
         }
 
         if (!isVisible()) {
-            return RenderRootResult.NONE;
+            return RenderRootResult.NO_RENDER_ROOT;
         }
 
         final RectBounds opaqueRegion = getOpaqueRegion();
-        if (opaqueRegion == null) return RenderRootResult.NONE;
+        if (opaqueRegion == null) return RenderRootResult.NO_RENDER_ROOT;
 
         final BaseTransform localToParentTx = getTransform();
 
@@ -1709,21 +1733,12 @@ public abstract class NGNode {
         // that each corner of the dirty region lies within the (potentially rotated) quad
         // of the opaqueRegion.
         if (checkBoundsInQuad(opaqueRegion, dirtyRegion, localToSceneTx, pvTx)) {
-            // We have the potential render root, now check if it needs to be rendered
-            if (dirty != DirtyFlag.CLEAN || childDirty) {
-                // In this case, we're saying "I have to be painted, and I am a render root"
-                path.add(this);
-                return RenderRootResult.HAS_RENDER_ROOT;
-            } else {
-                // In this case, we're saying "I do not need to be painted but the dirty region
-                // is completely contained within my opaque region". If there are any nodes after
-                // this one which are dirty, then this guy will be painted, otherwise we don't
-                // actually have to paint anything.
-                return RenderRootResult.EXISTS_BUT_NOT_DIRTY;
-            }
+            // This node is a render root.
+            path.add(this);
+            return isClean() ? RenderRootResult.HAS_RENDER_ROOT_AND_IS_CLEAN : RenderRootResult.HAS_RENDER_ROOT;
         }
 
-        return RenderRootResult.NONE;
+        return RenderRootResult.NO_RENDER_ROOT;
     }
 
     static boolean checkBoundsInQuad(RectBounds untransformedQuad,
@@ -2034,8 +2049,12 @@ public abstract class NGNode {
         // number of times this node drew to the pixels, and in some cases reports a node as
         // having been drawn even when it didn't lay down any pixels. We'd need to integrate
         // with our shaders or do something much more invasive to get better data here.
-        if (PrismSettings.showOverdraw && p) {
-            painted |= 1 << g.getClipRectIndex();
+        if (PrismSettings.showOverdraw) {
+            if (p) {
+                painted |= 3 << (g.getClipRectIndex() * 2);
+            } else {
+                painted |= 1 << (g.getClipRectIndex() * 2);
+            }
         }
     }
 
