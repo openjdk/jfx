@@ -569,7 +569,9 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
                             }
                         }));
             }
+            indeterminateTimeline.stop();
             indeterminateTimeline.getKeyFrames().setAll(keyFrames);
+            indeterminateTimeline.playFromStart();
         }
 
         private void pauseIndicator(boolean pause) {
