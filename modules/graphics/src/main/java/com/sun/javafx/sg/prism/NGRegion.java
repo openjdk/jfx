@@ -739,6 +739,8 @@ public class NGRegion extends NGGroup {
                     final int imgWidth = img.getWidth();
                     final int imgHeight = img.getHeight();
                     // TODO need to write tests which demonstrate this works when the image hasn't loaded yet. (RT-26978)
+                    // This doesn't work today. An NPE will occur, and then when the image does finally load,
+                    // we don't cause another pulse to occur so it doesn't ever get drawn.
                     // TODO need to write tests where we use a writable image and draw to it a lot. (RT-26978)
                     if (img != null && imgWidth != 0 && imgHeight != 0) {
                         final BackgroundSize size = image.getSize();
