@@ -603,8 +603,6 @@ public class NGRegion extends NGGroup {
                 // will not look the same as though drawn by vector
                 final boolean cache =
                         background.getFills().size() > 1 && // Not worth the overhead otherwise
-                        width == (int)width &&
-                        height == (int)height &&
                         cacheMode != 0 &&
                         g.getTransformNoClone().isTranslateOrIdentity();
                 RTTexture cached = null;
@@ -654,22 +652,34 @@ public class NGRegion extends NGGroup {
                     final float srcX2 = srcX1 + textureWidth;
                     final float srcY2 = srcY1 + textureHeight;
 
+                    // If total destination width is < the source width, then we need to start
+                    // shrinking the left and right sides to accommodate. Likewise in the other dimension.
+                    double adjustedLeftInset = leftInset;
+                    double adjustedRightInset = rightInset;
+                    double adjustedTopInset = topInset;
+                    double adjustedBottomInset = bottomInset;
+                    if (leftInset + rightInset > width) {
+                        double fraction = width / (leftInset + rightInset);
+                        adjustedLeftInset *= fraction;
+                        adjustedRightInset *= fraction;
+                    }
+                    if (topInset + bottomInset > height) {
+                        double fraction = height / (topInset + bottomInset);
+                        adjustedTopInset *= fraction;
+                        adjustedBottomInset *= fraction;
+                    }
+
                     if (sameWidth && sameHeight) {
                         g.drawTexture(cached, dstX1, dstY1, dstX2, dstY2, srcX1, srcY1, srcX2, srcY2);
                     } else if (sameHeight) {
                         // We do 3-patch rendering fixed height
-                        final float left = (float) (leftInset + outsetsLeft);
-                        final float right = (float) (rightInset + outsetsRight);
+                        final float left = (float) (adjustedLeftInset + outsetsLeft);
+                        final float right = (float) (adjustedRightInset + outsetsRight);
 
                         final float dstLeftX = dstX1 + left;
                         final float dstRightX = dstX2 - right;
                         final float srcLeftX = srcX1 + left;
                         final float srcRightX = srcX2 - right;
-
-                        // These assertions must hold, or rendering artifacts are highly likely to occur
-                        assert dstX1 != dstLeftX;
-                        assert dstLeftX != dstRightX;
-                        assert dstRightX != dstX2;
 
                         g.drawTexture3SliceH(cached,
                                              dstX1, dstY1, dstX2, dstY2,
@@ -677,18 +687,13 @@ public class NGRegion extends NGGroup {
                                              dstLeftX, dstRightX, srcLeftX, srcRightX);
                     } else if (sameWidth) {
                         // We do 3-patch rendering fixed width
-                        final float top = (float) (topInset + outsetsTop);
-                        final float bottom = (float) (bottomInset + outsetsBottom);
+                        final float top = (float) (adjustedTopInset + outsetsTop);
+                        final float bottom = (float) (adjustedBottomInset + outsetsBottom);
 
                         final float dstTopY = dstY1 + top;
                         final float dstBottomY = dstY2 - bottom;
                         final float srcTopY = srcY1 + top;
                         final float srcBottomY = srcY2 - bottom;
-
-                        // These assertions must hold, or rendering artifacts are highly likely to occur
-                        assert dstY1 != dstTopY;
-                        assert dstTopY != dstBottomY;
-                        assert dstBottomY != dstY2;
 
                         g.drawTexture3SliceV(cached,
                                              dstX1, dstY1, dstX2, dstY2,
@@ -696,10 +701,10 @@ public class NGRegion extends NGGroup {
                                              dstTopY, dstBottomY, srcTopY, srcBottomY);
                     } else {
                         // We do 9-patch rendering
-                        final float left = (float) (leftInset + outsetsLeft);
-                        final float top = (float) (topInset + outsetsTop);
-                        final float right = (float) (rightInset + outsetsRight);
-                        final float bottom = (float) (bottomInset + outsetsBottom);
+                        final float left = (float) (adjustedLeftInset + outsetsLeft);
+                        final float top = (float) (adjustedTopInset + outsetsTop);
+                        final float right = (float) (adjustedRightInset + outsetsRight);
+                        final float bottom = (float) (adjustedBottomInset + outsetsBottom);
 
                         final float dstLeftX = dstX1 + left;
                         final float dstRightX = dstX2 - right;
@@ -709,14 +714,6 @@ public class NGRegion extends NGGroup {
                         final float dstBottomY = dstY2 - bottom;
                         final float srcTopY = srcY1 + top;
                         final float srcBottomY = srcY2 - bottom;
-
-                        // These assertions must hold, or rendering artifacts are highly likely to occur
-                        assert dstY1 != dstTopY;
-                        assert dstTopY != dstBottomY;
-                        assert dstBottomY != dstY2;
-                        assert dstX1 != dstLeftX;
-                        assert dstLeftX != dstRightX;
-                        assert dstRightX != dstX2;
 
                         g.drawTexture9Slice(cached,
                                             dstX1, dstY1, dstX2, dstY2,
