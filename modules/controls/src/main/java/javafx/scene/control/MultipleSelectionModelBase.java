@@ -313,8 +313,10 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         // RT-32411 We used to call quietClearSelection() here, but this
         // resulted in the selectedItems and selectedIndices lists never
         // reporting that they were empty.
-        // quietClearSelection();
+        // makeAtomic toggle added to resolve RT-32618
+        makeAtomic = true;
         clearSelection();
+        makeAtomic = false;
 
         // and select
         select(row);

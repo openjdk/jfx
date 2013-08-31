@@ -1874,7 +1874,8 @@ public class TableView<S> extends Control {
                     // There is a unit test for this, so if a more elegant solution
                     // can be found in the future and this code removed, the unit
                     // test will fail if it isn't fixed elsewhere.
-                    if (selectedItems.isEmpty() && getSelectedItem() != null) {
+                    // makeAtomic toggle added to resolve RT-32618
+                    if (! makeAtomic && selectedItems.isEmpty() && getSelectedItem() != null) {
                         setSelectedItem(null);
                     }
                     
@@ -2158,9 +2159,12 @@ public class TableView<S> extends Control {
             // RT-32411 We used to call quietClearSelection() here, but this
             // resulted in the selectedItems and selectedIndices lists never
             // reporting that they were empty.
-            // quietClearSelection();
+            // makeAtomic toggle added to resolve RT-32618
+            makeAtomic = true;
             clearSelection();
+            makeAtomic = false;
 
+            // and select
             select(row, column);
         }
 
@@ -2372,8 +2376,11 @@ public class TableView<S> extends Control {
         }
 
         @Override public void clearSelection() {
-            updateSelectedIndex(-1);
-            focus(-1);
+            if (! makeAtomic) {
+                updateSelectedIndex(-1);
+                focus(-1);
+            }
+
             quietClearSelection();
         }
 
