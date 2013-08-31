@@ -368,11 +368,11 @@ public class NGRegion extends NGGroup {
      *                                                                        *
      *************************************************************************/
 
-    private RegionImageCache getImageCache(Graphics g) {
-        Screen screen = g.getAssociatedScreen();
+    private RegionImageCache getImageCache(final Graphics g) {
+        final Screen screen = g.getAssociatedScreen();
         RegionImageCache cache = imageCacheMap.get(screen);
         if (cache == null) {
-            cache = new RegionImageCache(g);
+            cache = new RegionImageCache(g.getResourceFactory());
             imageCacheMap.put(screen, cache);
         }
         return cache;
@@ -449,11 +449,10 @@ public class NGRegion extends NGGroup {
      *************************************************************************/
 
     @Override protected void renderContent(Graphics g) {
-        // Use Effect to render 3D transformed Region that does not contain 3D
-        // transformed children.
-        // This is done in order to render the Region's content and children
-        // into an image in local coordinates using the identity transform.
-        // The resulting image will then be correctly transformed in 3D by
+        // Use Effect to render a 3D transformed Region that does not contain 3D
+        // transformed children. This is done in order to render the Region's
+        // content and children into an image in local coordinates using the identity
+        // transform. The resulting image will then be correctly transformed in 3D by
         // the composite transform used to render this Region.
         // However, we avoid doing this for Regions whose children have a 3D
         // transform, because it will flatten the transforms of those children
@@ -564,9 +563,9 @@ public class NGRegion extends NGGroup {
             if (!background.isEmpty()) {
                 // cacheWidth is the width of the region used within the cached image. For example,
                 // perhaps normally the width of a region is 200px. But instead I will render the
-                // region as though it is 20px wide instead into the cached image. 20px in this
-                // case is the cache width. Although it may draw into more pixels than this (for
-                // example, drawing the focus rectangle extends beyond the width of the region).
+                // region as though it is 20px wide into the cached image. 20px in this case is
+                // the cache width. Although it may draw into more pixels than this (for example,
+                // drawing the focus rectangle extends beyond the width of the region).
                 // left + right background insets give us the left / right slice locations, plus 1 pixel for the center.
                 // Round the whole thing up to be a whole number.
                 if (backgroundInsets == null) updateBackgroundInsets();
