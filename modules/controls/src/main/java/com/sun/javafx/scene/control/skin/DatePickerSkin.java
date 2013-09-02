@@ -77,9 +77,24 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
             });
         }
 
+        // move fake focus in to the textfield if the comboBox is editable
+        datePicker.focusedProperty().addListener(new ChangeListener<Boolean>() {
+            @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean hasFocus) {
+                if (datePicker.isEditable()) {
+                    // Fix for the regression noted in a comment in RT-29885.
+                    ((ComboBoxListViewSkin.FakeFocusTextField)textField).setFakeFocus(hasFocus);
+                }
+            }
+        });
+
         datePicker.addEventFilter(KeyEvent.ANY, new EventHandler<KeyEvent>() {
             @Override public void handle(KeyEvent ke) {
                 if (textField == null) return;
+
+                // This prevents a stack overflow from our rebroadcasting of the
+                // event to the textfield that occurs in the final else statement
+                // of the conditions below.
+                if (ke.getTarget().equals(textField)) return;
 
                 // When the user hits the enter or F4 keys, we respond before
                 // ever giving the event to the TextField.
@@ -106,6 +121,11 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
                     // events and stop them from going any further.
                     ke.consume();
                     return;
+                } else {
+                    // Fix for the regression noted in a comment in RT-29885.
+                    // This forwards the event down into the TextField when
+                    // the key event is actually received by the ComboBox.
+                    textField.fireEvent(ke.copyFor(textField, textField));
                 }
             }
         });

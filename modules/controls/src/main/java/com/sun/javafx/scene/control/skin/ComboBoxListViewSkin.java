@@ -27,6 +27,9 @@ package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
 import java.util.List;
+
+import com.sun.javafx.scene.control.behavior.TextFieldBehavior;
+import com.sun.javafx.scene.traversal.TraversalEngine;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -81,8 +84,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     
     private boolean listSelectionLock = false;
     private boolean listViewSelectionDirty = false;
-    
-    
+
     
     /***************************************************************************
      *                                                                         *
@@ -136,10 +138,25 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         updateCellFactory();
         
         updateButtonCell();
+
+        // move fake focus in to the textfield if the comboBox is editable
+        comboBox.focusedProperty().addListener(new ChangeListener<Boolean>() {
+            @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean hasFocus) {
+                if (comboBox.isEditable()) {
+                    // Fix for the regression noted in a comment in RT-29885.
+                    ((FakeFocusTextField)textField).setFakeFocus(hasFocus);
+                }
+            }
+        });
         
         comboBox.addEventFilter(KeyEvent.ANY, new EventHandler<KeyEvent>() {
             @Override public void handle(KeyEvent ke) {
                 if (textField == null) return;
+
+                // This prevents a stack overflow from our rebroadcasting of the
+                // event to the textfield that occurs in the final else statement
+                // of the conditions below.
+                if (ke.getTarget().equals(textField)) return;
 
                 // When the user hits the enter or F4 keys, we respond before 
                 // ever giving the event to the TextField.
@@ -166,6 +183,11 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                     // events and stop them from going any further.
                     ke.consume();
                     return;
+                } else {
+                    // Fix for the regression noted in a comment in RT-29885.
+                    // This forwards the event down into the TextField when
+                    // the key event is actually received by the ComboBox.
+                    textField.fireEvent(ke.copyFor(textField, textField));
                 }
             }
         });
@@ -636,4 +658,19 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             PseudoClass.getPseudoClass("empty");
     private static final PseudoClass PSEUDO_CLASS_FILLED =
             PseudoClass.getPseudoClass("filled");
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Support classes                                                         *
+     *                                                                         *
+     **************************************************************************/
+
+    public static final class FakeFocusTextField extends TextField {
+
+        public void setFakeFocus(boolean b) {
+            setFocused(b);
+        }
+    }
 }

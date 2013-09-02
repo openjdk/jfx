@@ -366,7 +366,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     public final ReadOnlyObjectProperty<TextField> editorProperty() { 
         if (editor == null) {
             editor = new ReadOnlyObjectWrapper<TextField>(this, "editor");
-            textField = new TextField();
+            textField = new ComboBoxListViewSkin.FakeFocusTextField();
             editor.set(textField);
         }
         return editor.getReadOnlyProperty(); 
