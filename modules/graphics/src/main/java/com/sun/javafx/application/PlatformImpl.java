@@ -571,7 +571,19 @@ public class PlatformImpl {
      * Set the platform user agent stylesheet to the given URL. This method has special handling for platform theme
      * name constants.
      */
-    public static void setPlatformUserAgentStylesheet(String stylesheetUrl) {
+    public static void setPlatformUserAgentStylesheet(final String stylesheetUrl) {
+        if (isFxApplicationThread()) {
+            _setPlatformUserAgentStylesheet(stylesheetUrl);
+        } else {
+            runLater(new Runnable() {
+                @Override public void run() {
+                    _setPlatformUserAgentStylesheet(stylesheetUrl);
+                }
+            });
+        }
+    }
+
+    private static void _setPlatformUserAgentStylesheet(String stylesheetUrl) {
         isModena = isCaspian = false;
         // check for command line override
         final String overrideStylesheetUrl = AccessController.doPrivileged(
