@@ -538,6 +538,9 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         if (expanded == null) {
             expanded = new BooleanPropertyBase() {
                 @Override protected void invalidated() {
+                    // We don't fire expanded events for leaf nodes (RT-32620)
+                    if (isLeaf()) return;
+
                     EventType<?> evtType = isExpanded() ?
                         BRANCH_EXPANDED_EVENT : BRANCH_COLLAPSED_EVENT;
                     
