@@ -67,7 +67,7 @@ public class EnsembleApp extends Application {
     private static final String OS_NAME = System.getProperty("ensemble.os.name", System.getProperty("os.name"));
     private static final String OS_ARCH = System.getProperty("ensemble.os.arch", System.getProperty("os.arch"));
     public static final boolean IS_IPHONE = false;
-    public static final boolean IS_IOS = "isOS".equals(OS_NAME);
+    public static final boolean IS_IOS = "iOS".equals(OS_NAME);
     public static final boolean IS_EMBEDDED = "arm".equals(OS_ARCH) && !IS_IOS;
     public static final boolean IS_DESKTOP = !IS_EMBEDDED && !IS_IOS;
     public static final boolean IS_MAC = OS_NAME.startsWith("Mac");
@@ -309,7 +309,7 @@ public class EnsembleApp extends Application {
     @Override public void start(final Stage stage) throws Exception {
         // CREATE SCENE
         scene = new Scene(root, 1024, 768, Color.BLACK);
-        if (IS_EMBEDDED || IS_IOS) {
+        if (IS_EMBEDDED) {
             new ScrollEventSynthesizer(scene);
         }
         setStylesheets(SELECT_IOS_THEME);
