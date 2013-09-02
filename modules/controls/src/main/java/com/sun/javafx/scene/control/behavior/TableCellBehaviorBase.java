@@ -25,13 +25,7 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import javafx.scene.control.Control;
-import javafx.scene.control.IndexedCell;
-import javafx.scene.control.SelectionMode;
-import javafx.scene.control.TableColumnBase;
-import javafx.scene.control.TableFocusModel;
-import javafx.scene.control.TablePositionBase;
-import javafx.scene.control.TableSelectionModel;
+import javafx.scene.control.*;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import java.util.ArrayList;
@@ -139,9 +133,9 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
      **************************************************************************/    
     
     @Override public void mousePressed(MouseEvent event) {
-        boolean selectedBefore = getControl().isSelected();
+        boolean selectedBefore = isSelected();
         
-        if (getControl().isSelected()) {
+        if (isSelected()) {
             latePress = true;
             return;
         }
@@ -149,7 +143,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
         doSelect(event);
         
         if (IS_TOUCH_SUPPORTED && selectedBefore) {
-            wasSelected = getControl().isSelected();
+            wasSelected = isSelected();
         }
     }
     
@@ -168,7 +162,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
         // the mouse has now been dragged on a touch device, we should
         // remove the selection if we just added it in the last mouse press
         // event
-        if (IS_TOUCH_SUPPORTED && ! wasSelected && getControl().isSelected()) {
+        if (IS_TOUCH_SUPPORTED && ! wasSelected && isSelected()) {
             getSelectionModel().clearSelection(getControl().getIndex());
         }
     }
@@ -199,7 +193,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
         TableSelectionModel<S> sm = getSelectionModel();
         if (sm == null) return;
 
-        final boolean selected = ! sm.isCellSelectionEnabled() ? isTableRowSelected() : tableCell.isSelected();
+        final boolean selected = isSelected();
         final int row = tableCell.getIndex();
         final int column = getColumn();
         final TableColumnBase<S,T> tableColumn = getTableColumn();
@@ -333,5 +327,17 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
         }
 
         return -1;
+    }
+
+    private boolean isSelected() {
+        TableSelectionModel<S> sm = getSelectionModel();
+        if (sm == null) return false;
+
+        if (sm.isCellSelectionEnabled()) {
+            final C cell = getControl();
+            return cell.isSelected();
+        } else {
+            return isTableRowSelected();
+        }
     }
 }

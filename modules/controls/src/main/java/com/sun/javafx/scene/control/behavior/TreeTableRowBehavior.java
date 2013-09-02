@@ -37,11 +37,97 @@ import java.util.List;
 
 public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
 
+    /***************************************************************************
+     *                                                                         *
+     * Private fields                                                          *
+     *                                                                         *
+     **************************************************************************/
+
+    // For RT-17456: have selection occur as fast as possible with mouse input.
+    // The idea is (consistently with some native applications we've tested) to
+    // do the action as soon as you can. It takes a bit more coding but provides
+    // the best feel:
+    //  - when you click on a not-selected item, you can select immediately on press
+    //  - when you click on a selected item, you need to wait whether DragDetected or Release comes first
+    //
+    // To support touch devices, we have to slightly modify this behavior, such
+    // that selection only happens on mouse release, if only minimal dragging
+    // has occurred.
+    private boolean latePress = false;
+    private boolean wasSelected = false;
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Constructors                                                            *
+     *                                                                         *
+     **************************************************************************/
+
     public TreeTableRowBehavior(TreeTableRow<T> control) {
         super(control, Collections.EMPTY_LIST);
     }
 
-    @Override public void mouseReleased(MouseEvent e) {
+    /***************************************************************************
+     *                                                                         *
+     * Public API                                                              *
+     *                                                                         *
+     **************************************************************************/
+
+    @Override public void mousePressed(MouseEvent event) {
+        // we only care about clicks to the right of the right-most column
+        if (! isClickOutsideCellBounds(event.getX())) return;
+
+        boolean selectedBefore = getControl().isSelected();
+
+        if (getControl().isSelected()) {
+            latePress = true;
+            return;
+        }
+
+        doSelect(event);
+
+        if (IS_TOUCH_SUPPORTED && selectedBefore) {
+            wasSelected = getControl().isSelected();
+        }
+    }
+
+    @Override public void mouseReleased(MouseEvent event) {
+        // we only care about clicks to the right of the right-most column
+        if (! isClickOutsideCellBounds(event.getX())) return;
+
+        if (latePress) {
+            latePress = false;
+            doSelect(event);
+        }
+
+        wasSelected = false;
+    }
+
+    @Override public void mouseDragged(MouseEvent event) {
+        // we only care about clicks to the right of the right-most column
+        if (! isClickOutsideCellBounds(event.getX())) return;
+
+        latePress = false;
+
+        // the mouse has now been dragged on a touch device, we should
+        // remove the selection if we just added it in the last mouse press
+        // event
+        if (IS_TOUCH_SUPPORTED && ! wasSelected && getControl().isSelected()) {
+            getControl().getTreeTableView().getSelectionModel().clearSelection(getControl().getIndex());
+        }
+    }
+
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Private implementation                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    private void doSelect(MouseEvent e) {
         super.mouseReleased(e);
         
         if (e.getButton() != MouseButton.PRIMARY) return;
@@ -123,5 +209,20 @@ public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
                 }
             }
         }
+    }
+
+    private boolean isClickOutsideCellBounds(final double x) {
+        // get width of all visible columns (we only care about clicks to the
+        // right of the right-most column)
+        final TreeTableRow<T> tableRow = getControl();
+        final TreeTableView<T> table = tableRow.getTreeTableView();
+        if (table == null) return false;
+        List<TreeTableColumn<T, ?>> columns = table.getVisibleLeafColumns();
+        double width = 0.0;
+        for (int i = 0; i < columns.size(); i++) {
+            width += columns.get(i).getWidth();
+        }
+
+        return x > width;
     }
 }
