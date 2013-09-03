@@ -277,20 +277,20 @@ public class TreeTableCellTest {
         assertEquals(apples, tree.getEditingCell().getTreeItem());
     }
 
-    @Ignore // TODO file bug!
-    @Test public void editCellFiresEventOnTree() {
-        tree.setEditable(true);
-        cell.updateTreeTableView(tree);
-        cell.updateIndex(2);
-        final boolean[] called = new boolean[] { false };
-        tree.setOnEditStart(new EventHandler<TreeTableView.EditEvent<String>>() {
-            @Override public void handle(TreeTableView.EditEvent<String> event) {
-                called[0] = true;
-            }
-        });
-        cell.startEdit();
-        assertTrue(called[0]);
-    }
+//    @Ignore // TODO file bug!
+//    @Test public void editCellFiresEventOnTree() {
+//        tree.setEditable(true);
+//        cell.updateTreeTableView(tree);
+//        cell.updateIndex(2);
+//        final boolean[] called = new boolean[] { false };
+//        tree.setOnEditStart(new EventHandler<TreeTableView.EditEvent<String>>() {
+//            @Override public void handle(TreeTableView.EditEvent<String> event) {
+//                called[0] = true;
+//            }
+//        });
+//        cell.startEdit();
+//        assertTrue(called[0]);
+//    }
 
     // commitEdit()
     @Test public void commitWhenTreeIsNullIsOK() {
@@ -310,21 +310,21 @@ public class TreeTableCellTest {
         assertEquals("Watermelon", tree.getRoot().getChildren().get(0).getValue());
     }
 
-    @Ignore // TODO file bug!
-    @Test public void commitSendsEventToTree() {
-        tree.setEditable(true);
-        cell.updateTreeTableView(tree);
-        cell.updateIndex(1);
-        cell.startEdit();
-        final boolean[] called = new boolean[] { false };
-        tree.setOnEditCommit(new EventHandler<TreeTableView.EditEvent<String>>() {
-            @Override public void handle(TreeTableView.EditEvent<String> event) {
-                called[0] = true;
-            }
-        });
-        cell.commitEdit("Watermelon");
-        assertTrue(called[0]);
-    }
+//    @Ignore // TODO file bug!
+//    @Test public void commitSendsEventToTree() {
+//        tree.setEditable(true);
+//        cell.updateTreeTableView(tree);
+//        cell.updateIndex(1);
+//        cell.startEdit();
+//        final boolean[] called = new boolean[] { false };
+//        tree.setOnEditCommit(new EventHandler<TreeTableView.EditEvent<String>>() {
+//            @Override public void handle(TreeTableView.EditEvent<String> event) {
+//                called[0] = true;
+//            }
+//        });
+//        cell.commitEdit("Watermelon");
+//        assertTrue(called[0]);
+//    }
 
     @Test public void afterCommitTreeTableViewEditingCellIsNull() {
         tree.setEditable(true);
@@ -344,21 +344,21 @@ public class TreeTableCellTest {
         cell.cancelEdit();
     }
 
-    @Ignore // TODO file bug!
-    @Test public void cancelEditFiresChangeEvent() {
-        tree.setEditable(true);
-        cell.updateTreeTableView(tree);
-        cell.updateIndex(1);
-        cell.startEdit();
-        final boolean[] called = new boolean[] { false };
-        tree.setOnEditCancel(new EventHandler<TreeTableView.EditEvent<String>>() {
-            @Override public void handle(TreeTableView.EditEvent<String> event) {
-                called[0] = true;
-            }
-        });
-        cell.cancelEdit();
-        assertTrue(called[0]);
-    }
+//    @Ignore // TODO file bug!
+//    @Test public void cancelEditFiresChangeEvent() {
+//        tree.setEditable(true);
+//        cell.updateTreeTableView(tree);
+//        cell.updateIndex(1);
+//        cell.startEdit();
+//        final boolean[] called = new boolean[] { false };
+//        tree.setOnEditCancel(new EventHandler<TreeTableView.EditEvent<String>>() {
+//            @Override public void handle(TreeTableView.EditEvent<String> event) {
+//                called[0] = true;
+//            }
+//        });
+//        cell.cancelEdit();
+//        assertTrue(called[0]);
+//    }
 
     @Test public void cancelSetsTreeTableViewEditingIndexToNegativeOne() {
         tree.setEditable(true);
