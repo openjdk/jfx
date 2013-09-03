@@ -208,11 +208,16 @@ public class SwingNode extends Node {
             lwFrame.setContent(new SwingNodeContent(content));
             lwFrame.setVisible(true);
 
-            locateLwFrame(); // initialize location
+            Platform.runLater(new Runnable() {
+                @Override
+                public void run() {
+                    locateLwFrame(); // initialize location
 
-            if (focusedProperty().get()) {
-                activateLwFrame(true);
-            }
+                    if (focusedProperty().get()) {
+                        activateLwFrame(true);
+                    }
+                }
+            });
         }
     }
 
@@ -461,7 +466,8 @@ public class SwingNode extends Node {
     public void impl_updatePeer() {
         super.impl_updatePeer();
 
-        if (impl_isDirty(DirtyBits.NODE_VISIBLE)) {
+        if (impl_isDirty(DirtyBits.NODE_VISIBLE)
+                || impl_isDirty(DirtyBits.NODE_BOUNDS)) {
             locateLwFrame(); // initialize location
         }
         if (impl_isDirty(DirtyBits.NODE_CONTENTS)) {
@@ -470,7 +476,11 @@ public class SwingNode extends Node {
     }
 
     private void locateLwFrame() {
-        if (getScene() == null || lwFrame == null) {
+        if (getScene() == null
+                || lwFrame == null
+                || getScene().getWindow() == null
+                || !getScene().getWindow().isShowing()) {
+            // Not initialized yet. Skip the update to set the real values later
             return;
         }
         final Point2D loc = localToScene(0, 0);
