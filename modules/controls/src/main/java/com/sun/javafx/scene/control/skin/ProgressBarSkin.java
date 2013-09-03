@@ -380,8 +380,10 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
 
     private boolean stopIfInvisibleOrDisconnected() {
         if (isInvisibleOrDisconnected()) {
-            indeterminateTimeline.stop();
-            indeterminateTimeline = null;
+            if (indeterminateTimeline != null) {
+                indeterminateTimeline.stop();
+                indeterminateTimeline = null;
+            }
             return true;
         }
         return false;

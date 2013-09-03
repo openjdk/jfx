@@ -119,10 +119,14 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
 
                 if (spinner != null) {
                     if (getSkinnable().impl_isTreeVisible() && getSkinnable().getScene() != null) {
-                        spinner.indeterminateTimeline.play();
+                        if (spinner.indeterminateTimeline != null) {
+                            spinner.indeterminateTimeline.play();
+                        }
                     }
                     else {
-                        spinner.indeterminateTimeline.pause();
+                        if (spinner.indeterminateTimeline != null) {
+                            spinner.indeterminateTimeline.pause();
+                        }
                         getChildren().remove(spinner);
                         spinner = null;
                         timelineNulled = true;
@@ -137,7 +141,9 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
             @Override public void invalidated(Observable valueModel) {
                 if (spinner != null) {
                     if (getSkinnable().getScene() == null) {
-                        spinner.indeterminateTimeline.pause();
+                        if (spinner.indeterminateTimeline != null) {
+                            spinner.indeterminateTimeline.pause();
+                        }
                         getChildren().remove(spinner);
                         spinner = null;
                         timelineNulled = true;
@@ -149,7 +155,9 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
                         spinner = new IndeterminateSpinner(getSkinnable(), ProgressIndicatorSkin.this, spinEnabled.get(), progressColor.get());
                         getChildren().add(spinner);
                         if (getSkinnable().impl_isTreeVisible()) {
-                            spinner.indeterminateTimeline.play();
+                            if (spinner.indeterminateTimeline != null) {
+                                spinner.indeterminateTimeline.play();
+                            }
                         }
                         getSkinnable().requestLayout();
                     }
@@ -173,12 +181,16 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
             getChildren().clear();
             getChildren().add(spinner);
             if (getSkinnable().impl_isTreeVisible()) {
-                spinner.indeterminateTimeline.play();
+                if (spinner.indeterminateTimeline != null) {
+                    spinner.indeterminateTimeline.play();
+                }
             }
         } else {
             // clean up after spinner
             if (spinner != null) {
-                spinner.indeterminateTimeline.stop();
+                if (spinner.indeterminateTimeline != null) {
+                    spinner.indeterminateTimeline.stop();
+                }
                 spinner = null;
             }
             // create determinateIndicator
@@ -191,7 +203,9 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
     @Override public void dispose() {
         super.dispose();
         if (spinner != null) {
-            spinner.indeterminateTimeline.stop();
+            if (spinner.indeterminateTimeline != null) {
+                spinner.indeterminateTimeline.stop();
+            }
             spinner = null;
         }
     }
