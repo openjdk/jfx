@@ -41,6 +41,7 @@ import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.TextField;
+import javafx.scene.input.DragEvent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
@@ -129,6 +130,25 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
                 }
             }
         });
+
+        // Fix for RT-31093 - drag events from the textfield were not surfacing
+        // properly for the DatePicker.
+        if (textField != null) {
+            textField.addEventFilter(MouseEvent.DRAG_DETECTED, new EventHandler<MouseEvent>() {
+                @Override public void handle(MouseEvent event) {
+                    if (event.getTarget().equals(datePicker)) return;
+                    datePicker.fireEvent(event.copyFor(datePicker, datePicker));
+                    event.consume();
+                }
+            });
+            textField.addEventFilter(DragEvent.ANY, new EventHandler<DragEvent>() {
+                @Override public void handle(DragEvent event) {
+                    if (event.getTarget().equals(datePicker)) return;
+                    datePicker.fireEvent(event.copyFor(datePicker, datePicker));
+                    event.consume();
+                }
+            });
+        }
 
         registerChangeListener(datePicker.chronologyProperty(), "CHRONOLOGY");
         registerChangeListener(datePicker.converterProperty(), "CONVERTER");

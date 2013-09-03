@@ -50,9 +50,7 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.SelectionModel;
 import javafx.scene.control.TextField;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseEvent;
+import javafx.scene.input.*;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
@@ -191,6 +189,25 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 }
             }
         });
+
+        // Fix for RT-31093 - drag events from the textfield were not surfacing
+        // properly for the ComboBox.
+        if (textField != null) {
+            textField.addEventFilter(MouseEvent.DRAG_DETECTED, new EventHandler<MouseEvent>() {
+                @Override public void handle(MouseEvent event) {
+                    if (event.getTarget().equals(comboBox)) return;
+                    comboBox.fireEvent(event.copyFor(comboBox, comboBox));
+                    event.consume();
+                }
+            });
+            textField.addEventFilter(DragEvent.ANY, new EventHandler<DragEvent>() {
+                @Override public void handle(DragEvent event) {
+                    if (event.getTarget().equals(comboBox)) return;
+                        comboBox.fireEvent(event.copyFor(comboBox, comboBox));
+                        event.consume();
+                }
+            });
+        }
         
         // Fix for RT-19431 (also tested via ComboBoxListViewSkinTest)
         updateValue();
