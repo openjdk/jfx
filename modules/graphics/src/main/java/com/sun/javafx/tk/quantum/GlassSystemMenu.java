@@ -340,7 +340,7 @@ class GlassSystemMenu implements TKSystemMenu {
             assert PlatformUtil.isMac() || PlatformUtil.isLinux();
             int modifier = glassModifiers(kcc);
             if (PlatformUtil.isMac()) {
-                int finalCode = code.isLetterKey() ? code.impl_getChar().toLowerCase().charAt(0)
+                int finalCode = code.isLetterKey() ? code.impl_getChar().toUpperCase().charAt(0)
                         : code.impl_getCode();
                 glassSubMenuItem.setShortcut(finalCode, modifier);
             } else if (PlatformUtil.isLinux()) {

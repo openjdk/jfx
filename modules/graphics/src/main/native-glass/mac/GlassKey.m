@@ -362,7 +362,7 @@ NSString* GetStringForJavaKey(jchar jKeyCode) {
     }
     else
     {
-        return [NSString stringWithFormat:@"%c", jKeyCode];
+        return [[NSString stringWithFormat:@"%c", jKeyCode] lowercaseString];
     }
 
 }
