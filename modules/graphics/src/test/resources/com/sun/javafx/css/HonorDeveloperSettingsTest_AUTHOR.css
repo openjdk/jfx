@@ -9,3 +9,6 @@
 #rectangle { -fx-stroke: red; -fx-stroke-width: 1em; }
 
 #rt-20686-author { -fx-font-smoothing-type: lcd; }
+
+/* FontTypeTest testRT_32551 */
+#test-rt-32551 { -fx-font-style: italic; }

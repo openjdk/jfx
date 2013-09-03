@@ -1555,56 +1555,24 @@ final class CssStyleHelper {
 
 
     /*package access for testing*/ Font deriveFont(
-            String fontFamily, FontWeight fontWeight, FontPosture fontPosture, double fontSize) {
+            Font font,
+            String fontFamily,
+            FontWeight fontWeight,
+            FontPosture fontPosture,
+            double fontSize) {
+
+        if (font != null && fontFamily == null) fontFamily = getFontFamily(font);
+        else if (fontFamily != null) fontFamily = Utils.stripQuotes(fontFamily);
+
+        if (font != null && fontWeight == null) fontWeight = getFontWeight(font);
+        if (font != null && fontPosture == null) fontPosture = getFontPosture(font);
+        if (font != null && fontSize <= 0) fontSize = font.getSize();
 
         return  Font.font(
-                Utils.stripQuotes(fontFamily),
-                fontWeight != FontWeight.NORMAL ? fontWeight : null,
-                fontPosture != FontPosture.REGULAR ? fontPosture : null,
+                fontFamily,
+                fontWeight,
+                fontPosture,
                 fontSize);
-    }
-
-    /*package access for testing*/ Font deriveFont(Font font, String fontFamily) {
-
-        if (font == null) return Font.getDefault();
-
-        FontPosture fontPosture = getFontPosture(font);
-        FontWeight fontWeight = getFontWeight(font);
-        double fontSize = font.getSize();
-
-        return deriveFont(fontFamily, fontWeight, fontPosture, fontSize);
-    }
-
-    /*package access for testing*/ Font deriveFont(Font font, double fontSize) {
-        if (font == null) return Font.getDefault();
-
-        String fontFamily = getFontFamily(font);
-        FontPosture fontPosture = getFontPosture(font);
-        FontWeight fontWeight = getFontWeight(font);
-
-        return deriveFont(fontFamily, fontWeight, fontPosture, fontSize);
-    }
-
-    /*package access for testing*/ Font deriveFont(Font font, FontPosture fontPosture) {
-
-        if (font == null) return Font.getDefault();
-
-        String fontFamily = getFontFamily(font);
-        FontWeight fontWeight = getFontWeight(font);
-        double fontSize = font.getSize();
-
-        return deriveFont(fontFamily, fontWeight, fontPosture, fontSize);
-    }
-
-    /*package access for testing*/ Font deriveFont(Font font, FontWeight fontWeight) {
-
-        if (font == null) return Font.getDefault();
-
-        String fontFamily = getFontFamily(font);
-        FontPosture fontPosture = getFontPosture(font);
-        double fontSize = font.getSize();
-
-        return deriveFont(fontFamily, fontWeight, fontPosture, fontSize);
     }
 
     /**
@@ -1630,11 +1598,19 @@ final class CssStyleHelper {
     {
 
         StyleOrigin origin = null;
+
+        // How far from this node did we travel to find a font shorthand?
+        // Don't look past this distance for other font properties.
         int distance = 0;
 
-        // Each time a sub-property is encountered, cvFont is passed along to
-        // calculateValue and the resulting font becomes cvFont. In the end
-        // cvFont is returned.
+        // Did we find a style?
+        boolean foundStyle = false;
+
+        String family = null;
+        double size = -1;
+        FontWeight weight = null;
+        FontPosture posture = null;
+
         CalculatedValue cvFont = cachedFont;
 
         Set<PseudoClass> states = styleable instanceof Node ? ((Node)styleable).pseudoClassStates : styleable.getPseudoClassStates();
@@ -1649,11 +1625,13 @@ final class CssStyleHelper {
             if (fpOrigin == StyleOrigin.USER) {
                 origin = fpOrigin;
                 Font font = styleableProp.getValue();
-                cvFont = new CalculatedValue(font, origin, false);
+                family = getFontFamily(font);
+                size = font.getSize();
+                weight = getFontWeight(font);
+                posture = getFontPosture(font);
+                cvFont = new CalculatedValue(font, fpOrigin, false);
             }
         }
-
-        final boolean userSetFont = (origin == StyleOrigin.USER);
 
         //
         // Look up the font- properties
@@ -1661,7 +1639,6 @@ final class CssStyleHelper {
         CascadingStyle fontShorthand = getStyle(styleable, property, styleMap, states);
 
         // don't look past current node for font shorthand if user set the font
-        // or if we're looking up the font for font cache.
         if (fontShorthand == null && origin != StyleOrigin.USER) {
 
             Styleable parent = styleable != null ? styleable.getStyleableParent() : null;
@@ -1713,7 +1690,13 @@ final class CssStyleHelper {
                 // cv could be SKIP
                 if (cv.getValue() instanceof Font) {
                     origin = cv.getOrigin();
+                    Font font = (Font)cv.getValue();
+                    family = getFontFamily(font);
+                    size = font.getSize();
+                    weight = getFontWeight(font);
+                    posture = getFontPosture(font);
                     cvFont = cv;
+                    foundStyle = true;
                 }
 
             }
@@ -1731,25 +1714,27 @@ final class CssStyleHelper {
 
             if (fontShorthand == null || fontShorthand.compareTo(fontSize) >= 0) {
 
-                if (origin == null || origin.compareTo(fontSize.getOrigin()) <= 0) {
+                final CalculatedValue cv =
+                        calculateValue(fontSize, styleable, dummyFontProperty,
+                                styleMap, states, styleable, cvFont, styleList);
 
-                    final CalculatedValue cv =
-                            calculateValue(fontSize, styleable, dummyFontProperty,
-                                    styleMap, states, styleable, cvFont, styleList);
+                if (cv.getValue() instanceof Double) {
+                    if (origin == null || origin.compareTo(fontSize.getOrigin()) <= 0) {
 
-                    if (cv.getValue() instanceof Double) {
                         origin = cv.getOrigin();
-
-                        if (cvFont != null) {
-                            boolean isRelative = cvFont.isRelative() || cv.isRelative();
-                            Font font = deriveFont((Font) cvFont.getValue(), ((Double) cv.getValue()).doubleValue());
-                            cvFont = new CalculatedValue(font, origin, isRelative);
-                        } else {
-                            boolean isRelative = cv.isRelative();
-                            Font font = deriveFont(Font.getDefault(), ((Double) cv.getValue()).doubleValue());
-                            cvFont = new CalculatedValue(font, origin, isRelative);
-                        }
                     }
+                    size = ((Double) cv.getValue()).doubleValue();
+
+                    if (cvFont != null) {
+                        boolean isRelative = cvFont.isRelative() || cv.isRelative();
+                        Font font = deriveFont((Font) cvFont.getValue(), family, weight, posture, size);
+                        cvFont = new CalculatedValue(font, origin, isRelative);
+                    } else {
+                        boolean isRelative = cv.isRelative();
+                        Font font = deriveFont(Font.getDefault(), family, weight, posture, size);
+                        cvFont = new CalculatedValue(font, origin, isRelative);
+                    }
+                    foundStyle = true;
                 }
 
             }
@@ -1758,124 +1743,91 @@ final class CssStyleHelper {
 
         // if cachedFont is null, then we're in this method to look up a font for the CacheContainer's fontSizeCache
         // and we only care about font-size or the size from font shorthand.
-        if (cachedFont != null ) {
+        if (cachedFont == null) {
+            return (cvFont != null) ? cvFont : SKIP;
+        }
 
-            CascadingStyle fontWeight = getStyle(styleable, property.concat("-weight"), styleMap, states);
-            // don't look past current node for font weight if user set the font
-            if (fontWeight == null && origin != StyleOrigin.USER) {
-                fontWeight = lookupInheritedFont(styleable,property.concat("-weight"), styleMap, distance);
-            }
+        CascadingStyle fontWeight = getStyle(styleable, property.concat("-weight"), styleMap, states);
+        // don't look past current node for font weight if user set the font
+        if (fontWeight == null && origin != StyleOrigin.USER) {
+            fontWeight = lookupInheritedFont(styleable,property.concat("-weight"), styleMap, distance);
+        }
 
-            if (fontWeight != null) {
+        if (fontWeight != null) {
 
-                if (fontShorthand == null || fontShorthand.compareTo(fontWeight) >= 0) {
+            if (fontShorthand == null || fontShorthand.compareTo(fontWeight) >= 0) {
 
+                final CalculatedValue cv =
+                        calculateValue(fontWeight, styleable, dummyFontProperty,
+                                styleMap, states, styleable, null, null);
+
+                if (cv.getValue() instanceof FontWeight) {
                     if (origin == null || origin.compareTo(fontWeight.getOrigin()) <= 0) {
-
-                        final CalculatedValue cv =
-                                calculateValue(fontWeight, styleable, dummyFontProperty,
-                                        styleMap, states, styleable, null, null);
-
-                        if (cv.getValue() instanceof FontWeight) {
-                            origin = cv.getOrigin();
-
-                            if (cvFont != null) {
-                                boolean isRelative = cvFont.isRelative();
-                                Font font = deriveFont((Font) cvFont.getValue(), (FontWeight) cv.getValue());
-                                cvFont = new CalculatedValue(font, origin, isRelative);
-                            } else {
-                                Font font = deriveFont(Font.getDefault(), (FontWeight) cv.getValue());
-                                cvFont = new CalculatedValue(font, origin, false);
-                            }
-                        }
+                        origin = cv.getOrigin();
                     }
+                    weight = (FontWeight)cv.getValue();
+                    foundStyle = true;
                 }
-
             }
 
-            CascadingStyle fontStyle = getStyle(styleable, property.concat("-style"), styleMap, states);
-            // don't look past current node for font style if user set the font
-            if (fontStyle == null && origin != StyleOrigin.USER) {
-                fontStyle = lookupInheritedFont(styleable, property.concat("-style"), styleMap, distance);
-            }
+        }
 
-            if (fontStyle != null) {
+        CascadingStyle fontStyle = getStyle(styleable, property.concat("-style"), styleMap, states);
+        // don't look past current node for font style if user set the font
+        if (fontStyle == null && origin != StyleOrigin.USER) {
+            fontStyle = lookupInheritedFont(styleable, property.concat("-style"), styleMap, distance);
+        }
 
-                if (fontShorthand == null || fontShorthand.compareTo(fontStyle) >= 0) {
+        if (fontStyle != null) {
 
+            if (fontShorthand == null || fontShorthand.compareTo(fontStyle) >= 0) {
+
+                final CalculatedValue cv =
+                        calculateValue(fontStyle, styleable, dummyFontProperty,
+                                styleMap, states, styleable, null, null);
+
+                if (cv.getValue() instanceof FontPosture) {
                     if (origin == null || origin.compareTo(fontStyle.getOrigin()) <= 0) {
-
-                        final CalculatedValue cv =
-                                calculateValue(fontStyle, styleable, dummyFontProperty,
-                                        styleMap, states, styleable, null, null);
-
-                        if (cv.getValue() instanceof FontPosture) {
-                            origin = cv.getOrigin();
-
-                            if (cvFont != null) {
-                                boolean isRelative = cvFont.isRelative();
-                                Font font = deriveFont((Font) cvFont.getValue(), (FontPosture) cv.getValue());
-                                cvFont = new CalculatedValue(font, origin, isRelative);
-                            } else {
-                                boolean isRelative = cv.isRelative();
-                                Font font = deriveFont(Font.getDefault(), (FontPosture) cv.getValue());
-                                cvFont = new CalculatedValue(font, origin, false);
-                            }
-                        }
+                        origin = cv.getOrigin();
                     }
-
-                }
-            }
-
-            CascadingStyle fontFamily = getStyle(styleable, property.concat("-family"), styleMap, states);
-            // don't look past current node for font family if user set the font
-            if (fontFamily == null && origin != StyleOrigin.USER) {
-                fontFamily = lookupInheritedFont(styleable,property.concat("-family"), styleMap, distance);
-            }
-
-            if (fontFamily != null) {
-
-                if (fontShorthand == null || fontShorthand.compareTo(fontFamily) >= 0) {
-
-                    if (origin == null || origin.compareTo(fontFamily.getOrigin()) <= 0) {
-
-                        final CalculatedValue cv =
-                                calculateValue(fontFamily, styleable, dummyFontProperty,
-                                        styleMap, states, styleable, null, null);
-
-                        if (cv.getValue() instanceof String) {
-                            origin = cv.getOrigin();
-
-                            if (cvFont != null) {
-                                boolean isRelative = cvFont.isRelative();
-                                Font font = deriveFont((Font) cvFont.getValue(), (String) cv.getValue());
-                                cvFont = new CalculatedValue(font, origin, isRelative);
-                            } else {
-                                Font font = deriveFont(Font.getDefault(), (String) cv.getValue());
-                                cvFont = new CalculatedValue(font, origin, false);
-                            }
-                        }
-                    }
+                    posture = (FontPosture)cv.getValue();
+                    foundStyle = true;
                 }
 
             }
         }
 
-        // If cvFont is null, then the node doesn't have a font property and
-        // there are no font styles.
-        // If cvFont is not null but the origin is null, then cvFont is from
-        // font property that hasn't been set by the user or by css.
-        // If the origin is USER, then skip the value.
-        if (cvFont != null) {
+        CascadingStyle fontFamily = getStyle(styleable, property.concat("-family"), styleMap, states);
+        // don't look past current node for font family if user set the font
+        if (fontFamily == null && origin != StyleOrigin.USER) {
+            fontFamily = lookupInheritedFont(styleable,property.concat("-family"), styleMap, distance);
+        }
 
-            // if cachedFont is null, then we're in this method to look up a font for the CacheContainer's fontSizeCache
-            if (cachedFont == null) {
-                return cvFont;
+        if (fontFamily != null) {
 
-            } else if (origin != null && origin != StyleOrigin.USER) {
-                return cvFont;
+            if (fontShorthand == null || fontShorthand.compareTo(fontFamily) >= 0) {
 
+                final CalculatedValue cv =
+                        calculateValue(fontFamily, styleable, dummyFontProperty,
+                                styleMap, states, styleable, null, null);
+
+                if (cv.getValue() instanceof String) {
+                    if (origin == null || origin.compareTo(fontFamily.getOrigin()) <= 0) {
+                        origin = cv.getOrigin();
+                    }
+                    family = (String)cv.getValue();
+                    foundStyle = true;
+                }
             }
+
+        }
+
+        if (foundStyle) {
+
+            Font font = cvFont != null ? (Font)cvFont.getValue() : Font.getDefault();
+            Font derivedFont = deriveFont(font, family, weight, posture, size);
+            return new CalculatedValue(derivedFont,origin,false);
+
         }
 
         return SKIP;
