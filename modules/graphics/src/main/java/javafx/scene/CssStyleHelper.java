@@ -1625,6 +1625,7 @@ final class CssStyleHelper {
             if (fpOrigin == StyleOrigin.USER) {
                 origin = fpOrigin;
                 Font font = styleableProp.getValue();
+                if (font == null) font = Font.getDefault();
                 family = getFontFamily(font);
                 size = font.getSize();
                 weight = getFontWeight(font);
