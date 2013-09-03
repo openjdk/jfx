@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.StringTokenizer;
 import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.Utils;
 
 /**
  * Contains the runtime arguments used by Prism.
@@ -122,8 +123,7 @@ public final class PrismSettings {
 
         // The maximum number of dirty regions to use. The absolute max that we can
         // support at present is 15.
-        dirtyRegionCount = Math.max(getInt(systemProperties, "prism.dirtyregioncount",
-                                  6, null), 15);
+        dirtyRegionCount = Utils.clamp(0, getInt(systemProperties, "prism.dirtyregioncount", 6, null), 15);
 
         /* Dirty region optimizations */
         threadCheck = getBoolean(systemProperties, "prism.threadcheck", false);
