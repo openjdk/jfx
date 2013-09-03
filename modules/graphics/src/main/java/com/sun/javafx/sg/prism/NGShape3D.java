@@ -184,11 +184,9 @@ public abstract class NGShape3D extends NGNode {
 
     @Override
     protected void renderContent(Graphics g) {
-
         if (!Platform.isSupported(ConditionalFeature.SCENE3D) || material == null) {
             return;
         }
-
         renderMeshView(g);
     }
 

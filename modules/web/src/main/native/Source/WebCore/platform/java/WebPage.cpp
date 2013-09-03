@@ -38,6 +38,7 @@
 #include "InspectorClientJava.h"
 #include "InspectorController.h"
 #include "InitializeLogging.h"
+#include "JSContextRefPrivate.h"
 #include "JavaEnv.h"
 #include "JavaRef.h"
 #include "Logging.h"
@@ -816,6 +817,10 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
     frameLoaderClient->setFrame(frame.get());
 
     frame->init();
+
+    JSGlobalContextRef globalContext = getGlobalContext(frame->script());
+    JSContextGroupRef contextGroup = JSContextGetGroup(globalContext);
+    JSContextGroupSetExecutionTimeLimit(contextGroup, 10, 0, 0);
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkDestroyPage

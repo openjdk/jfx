@@ -38,6 +38,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WeakChangeListener;
 import javafx.scene.Node;
 import javafx.scene.paint.Material;
 import javafx.scene.paint.PhongMaterial;
@@ -96,28 +97,34 @@ public abstract class Shape3D extends Node {
     public final Material getMaterial() {
         return material == null ? null : material.get();
     }
-
-    private final ChangeListener<Boolean> materialListener = new ChangeListener<Boolean>() {
-        @Override public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-            if (newValue) {
-                impl_markDirty(DirtyBits.MATERIAL);
-            }
-        }
-    };
- 
+   
     public final ObjectProperty<Material> materialProperty() {
         if (material == null) {
             material = new SimpleObjectProperty<Material>(Shape3D.this,
                     "material") {
 
                 private Material old = null;
+                private final ChangeListener<Boolean> materialChangeListener =
+                        new ChangeListener<Boolean>() {
+                            
+                    @Override
+                    public void changed(ObservableValue<? extends Boolean> observable,
+                            Boolean oldValue, Boolean newValue) {
+                        if (newValue) {
+                            impl_markDirty(DirtyBits.MATERIAL);
+                        }
+                    }
+                };
+                private final WeakChangeListener<Boolean> weakMaterialChangeListener =
+                        new WeakChangeListener(materialChangeListener);
+
                 @Override protected void invalidated() {
                     if (old != null) {
-                        old.impl_dirtyProperty().removeListener(materialListener);
+                        old.impl_dirtyProperty().removeListener(weakMaterialChangeListener);
                     }
                     Material newMaterial = get();
                     if (newMaterial != null) {
-                        newMaterial.impl_dirtyProperty().addListener(materialListener);
+                        newMaterial.impl_dirtyProperty().addListener(weakMaterialChangeListener);
                     }
                     impl_markDirty(DirtyBits.MATERIAL);
                     impl_geomChanged();

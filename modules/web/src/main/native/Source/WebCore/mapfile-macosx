@@ -1836,6 +1836,7 @@
                _Java_com_sun_webkit_WCPluginWidget_twkInvalidateWindowlessPluginRect
                _Java_com_sun_webkit_WCPluginWidget_twkSetPlugunFocused
                _Java_com_sun_webkit_WCWidget_initIDs
+               _Java_com_sun_webkit_WatchdogTimer_twkFire
                _Java_com_sun_webkit_WebPage_twkAddJavaScriptBinding
                _Java_com_sun_webkit_WebPage_twkAdjustFrameHeight
                _Java_com_sun_webkit_WebPage_twkBeginPrinting

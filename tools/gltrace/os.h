@@ -31,4 +31,9 @@
 #define gethrtime gltrace_gethrtime
 uint64_t    gltrace_gethrtime();
 
+#if MACOSX
+#define MAP_POPULATE 0
+#define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP PTHREAD_RECURSIVE_MUTEX_INITIALIZER
+#endif
+
 #endif /* GLTRACE_OS_H */

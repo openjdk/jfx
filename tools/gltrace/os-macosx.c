@@ -23,41 +23,24 @@
  * questions.
  */
 
-package hello;
+#include <mach/mach_time.h>
 
-import javafx.application.Application;
-import javafx.scene.Group;
-import javafx.scene.Scene;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
-import javafx.stage.Stage;
+#include "os.h"
 
-/**
- */
-public class HelloRectangle extends Application {
-    @Override public void start(Stage stage) {
-        stage.setTitle("Hello Rectangle");
+static mach_timebase_info_data_t timebase_info;
+static uint64_t start_abstime;
 
-        Group root = new Group();
-        Scene scene = new Scene(root, 600, 450);
+static void init() __attribute__ ((constructor));
+static void
+init()
+{
+    mach_timebase_info(&timebase_info);
+    start_abstime = mach_absolute_time();
+}
 
-        Rectangle rect = new Rectangle();
-        rect.setX(25);
-        rect.setY(40);
-        rect.setWidth(300);
-        rect.setHeight(300);
-        rect.setFill(Color.RED);
-
-        root.getChildren().addAll(rect);
-
-        stage.setScene(scene);
-        stage.show();
-    }
-
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String[] args) {
-        Application.launch(args);
-    }
+uint64_t
+gltrace_gethrtime()
+{
+        uint64_t ats = mach_absolute_time();
+        return (ats - start_abstime) * timebase_info.numer / timebase_info.denom;
 }

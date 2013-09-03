@@ -639,6 +639,75 @@ public class BackgroundTest {
         assertEquals(22.5, trbl[3], 0); // bottom-left-horizontal dominates at 22.5
     }
 
+    @Test public void backgroundFillsArePercentageBased_AllPercentageBased() {
+        BackgroundFill f = new BackgroundFill(Color.RED, new CornerRadii(.5, true), new Insets(10, 0, 0, 0));
+        BackgroundFill f2 = new BackgroundFill(Color.GREEN, new CornerRadii(.4, true), new Insets(0, 10, 0, 0));
+        BackgroundFill f3 = new BackgroundFill(Color.BLUE, new CornerRadii(.3, true), new Insets(0, 0, 10, 0));
+        BackgroundFill f4 = new BackgroundFill(Color.YELLOW, new CornerRadii(.2, true), new Insets(0, 0, 0, 10));
+        Background b = new Background(new BackgroundFill[] { f, f2, f3, f4 }, null);
+        assertTrue(b.isFillPercentageBased());
+    }
+
+    @Test public void backgroundFillsArePercentageBased_OnePercentageBased() {
+        BackgroundFill f = new BackgroundFill(Color.RED, new CornerRadii(5), new Insets(10, 0, 0, 0));
+        BackgroundFill f2 = new BackgroundFill(Color.GREEN, new CornerRadii(4), new Insets(0, 10, 0, 0));
+        BackgroundFill f3 = new BackgroundFill(Color.BLUE, new CornerRadii(.3, true), new Insets(0, 0, 10, 0));
+        BackgroundFill f4 = new BackgroundFill(Color.YELLOW, new CornerRadii(2), new Insets(0, 0, 0, 10));
+        Background b = new Background(new BackgroundFill[] { f, f2, f3, f4 }, null);
+        assertTrue(b.isFillPercentageBased());
+    }
+
+    @Test public void backgroundFillsArePercentageBased_OneCornerOfOne() {
+        BackgroundFill f = new BackgroundFill(Color.RED, new CornerRadii(5, 5, .5, 5, 5, 5, 5, 5,
+                false, false, true, false, false, false, false, false), new Insets(10, 0, 0, 0));
+        BackgroundFill f2 = new BackgroundFill(Color.GREEN, new CornerRadii(4), new Insets(0, 10, 0, 0));
+        BackgroundFill f3 = new BackgroundFill(Color.BLUE, new CornerRadii(3), new Insets(0, 0, 10, 0));
+        BackgroundFill f4 = new BackgroundFill(Color.YELLOW, new CornerRadii(2), new Insets(0, 0, 0, 10));
+        Background b = new Background(new BackgroundFill[] { f, f2, f3, f4 }, null);
+        assertTrue(b.isFillPercentageBased());
+    }
+
+    @Test public void backgroundFillsAreNotPercentageBased() {
+        BackgroundFill f = new BackgroundFill(Color.RED, new CornerRadii(5), new Insets(10, 0, 0, 0));
+        BackgroundFill f2 = new BackgroundFill(Color.GREEN, new CornerRadii(4), new Insets(0, 10, 0, 0));
+        BackgroundFill f3 = new BackgroundFill(Color.BLUE, new CornerRadii(3), new Insets(0, 0, 10, 0));
+        BackgroundFill f4 = new BackgroundFill(Color.YELLOW, new CornerRadii(2), new Insets(0, 0, 0, 10));
+        Background b = new Background(new BackgroundFill[] { f, f2, f3, f4 }, null);
+        assertFalse(b.isFillPercentageBased());
+    }
+
+    @Test public void backgroundFillsAreNotPercentageBased_NoFills() {
+        Background b = new Background(new BackgroundFill[0]);
+        assertFalse(b.isFillPercentageBased());
+    }
+
+    @Test public void backgroundFillsAreNotPercentageBased_NullRadii() {
+        BackgroundFill f = new BackgroundFill(Color.RED, null, new Insets(10, 0, 0, 0));
+        BackgroundFill f2 = new BackgroundFill(Color.GREEN, null, new Insets(0, 10, 0, 0));
+        BackgroundFill f3 = new BackgroundFill(Color.BLUE, null, new Insets(0, 0, 10, 0));
+        BackgroundFill f4 = new BackgroundFill(Color.YELLOW, null, new Insets(0, 0, 0, 10));
+        Background b = new Background(new BackgroundFill[] { f, f2, f3, f4 }, null);
+        assertFalse(b.isFillPercentageBased());
+    }
+
+    @Test public void backgroundFillsAreNotPercentageBased_OneEmpty() {
+        BackgroundFill f = new BackgroundFill(Color.RED, CornerRadii.EMPTY, new Insets(10, 0, 0, 0));
+        BackgroundFill f2 = new BackgroundFill(Color.GREEN, new CornerRadii(4), new Insets(0, 10, 0, 0));
+        BackgroundFill f3 = new BackgroundFill(Color.BLUE, new CornerRadii(3), new Insets(0, 0, 10, 0));
+        BackgroundFill f4 = new BackgroundFill(Color.YELLOW, new CornerRadii(2), new Insets(0, 0, 0, 10));
+        Background b = new Background(new BackgroundFill[] { f, f2, f3, f4 }, null);
+        assertFalse(b.isFillPercentageBased());
+    }
+
+    @Test public void backgroundFillsAreNotPercentageBased_AllEmpty() {
+        BackgroundFill f = new BackgroundFill(Color.RED, CornerRadii.EMPTY, new Insets(10, 0, 0, 0));
+        BackgroundFill f2 = new BackgroundFill(Color.GREEN, CornerRadii.EMPTY, new Insets(0, 10, 0, 0));
+        BackgroundFill f3 = new BackgroundFill(Color.BLUE, CornerRadii.EMPTY, new Insets(0, 0, 10, 0));
+        BackgroundFill f4 = new BackgroundFill(Color.YELLOW, CornerRadii.EMPTY, new Insets(0, 0, 0, 10));
+        Background b = new Background(new BackgroundFill[] { f, f2, f3, f4 }, null);
+        assertFalse(b.isFillPercentageBased());
+    }
+
     // TODO: What happens if the corner radii become so big that we would end up with a negative opaque
     // inset in one dimension?
 

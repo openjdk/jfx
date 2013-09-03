@@ -186,11 +186,15 @@ static NSArray *allModes = nil;
 - (void)flush
 {
     [(GlassOffscreen*)_glassOffscreen blitFromOffscreen:(GlassOffscreen*)_painterOffscreen];
-    [[NSRunLoop mainRunLoop] performSelector:@selector(setNeedsDisplay)
-                                      target:[self->_glassOffscreen getLayer]
-                                    argument:nil
-                                       order:0
-                                       modes:allModes];
+    if ([NSThread isMainThread]) {
+        [[self->_glassOffscreen getLayer] setNeedsDisplay];
+    } else {
+        [[NSRunLoop mainRunLoop] performSelector:@selector(setNeedsDisplay)
+                                          target:[self->_glassOffscreen getLayer]
+                                        argument:nil
+                                           order:0
+                                           modes:allModes];
+    }
 }
 
 - (uint32_t)getRemoteLayerIdForServer:(NSString*)serverName

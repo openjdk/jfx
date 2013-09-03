@@ -31,9 +31,6 @@
  */
 package ensemble;
 
-import ensemble.generated.Samples;
-import ensemble.samplepage.SamplePage;
-import java.util.LinkedList;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyStringProperty;
@@ -42,6 +39,9 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.scene.Node;
 import javafx.scene.layout.Region;
+import java.util.LinkedList;
+import ensemble.generated.Samples;
+import ensemble.samplepage.SamplePage;
 
 /**
  * Sample page navigation with history.
@@ -152,7 +152,7 @@ public class PageBrowser extends Region {
                 throw new UnsupportedOperationException("Unknown sample url ["+url+"]");
             }
         } else {
-            throw new UnsupportedOperationException("Unknown ensmeble page url ["+url+"]");
+            throw new UnsupportedOperationException("Unknown ensemble page url ["+url+"]");
         }
         // update properties
         atHome.set(url.equals(HOME_URL));

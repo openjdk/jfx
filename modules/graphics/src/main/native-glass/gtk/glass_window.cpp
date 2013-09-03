@@ -71,6 +71,9 @@ bool WindowContextBase::isEnabled() {
 }
 
 void WindowContextBase::process_focus(GdkEventFocus* event) {
+    if (!event->in && WindowContextBase::sm_mouse_drag_window == this) {
+        ungrab_mouse_drag_focus();
+    }
     if (!event->in && WindowContextBase::sm_grab_window == this) {
         ungrab_focus();
     }
@@ -213,6 +216,17 @@ void WindowContextBase::process_mouse_button(GdkEventButton* event) {
         }
     }
 
+    // Upper layers expects from us Windows behavior:
+    // all mouse events should be delivered to window where drag begins
+    // and no exit/enter event should be reported during this drag.
+    // We can grab mouse pointer for these needs.
+    if (press) {
+        grab_mouse_drag_focus();
+    } else if ((event->state & MOUSE_BUTTONS_MASK)
+            && !(state & MOUSE_BUTTONS_MASK)) { // all buttons released
+        ungrab_mouse_drag_focus();
+    }
+
     jint button = gtk_button_number_to_mouse_button(event->button);
 
     if (jview && button != com_sun_glass_events_MouseEvent_BUTTON_NONE) {
@@ -233,17 +247,6 @@ void WindowContextBase::process_mouse_button(GdkEventButton* event) {
                     JNI_FALSE);
             CHECK_JNI_EXCEPTION(mainEnv)
         }
-    }
-
-    // Upper layers expects from us Windows behavior:
-    // all mouse events should be delivered to window where drag begins 
-    // and no exit/enter event should be reported during this drag.
-    // We can grab mouse pointer for these needs.
-    if (press) {
-        grab_mouse_drag_focus();
-    } else if ((event->state & MOUSE_BUTTONS_MASK)
-            && !(state & MOUSE_BUTTONS_MASK)) { // all buttons released
-        ungrab_mouse_drag_focus();
     }
 }
 
@@ -823,9 +826,13 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
                                            + geometry.extents.right;
     geometry.current_height = event->height + geometry.extents.top
                                              + geometry.extents.bottom;
-
-    int x, y;
-    gtk_window_get_position(GTK_WINDOW(gtk_widget), &x, &y);
+    gint x, y;
+    if (gtk_window_get_decorated(GTK_WINDOW(gtk_widget))) {
+        gtk_window_get_position(GTK_WINDOW(gtk_widget), &x, &y);
+    } else {
+        x = event->x;
+        y = event->y;
+    }
 
     if (stale_config_notifications == 0) {
         if ((geometry_get_content_width(&geometry) != event->width)

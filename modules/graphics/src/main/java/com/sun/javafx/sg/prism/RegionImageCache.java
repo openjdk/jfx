@@ -25,14 +25,11 @@
 
 package com.sun.javafx.sg.prism;
 
+import javafx.scene.layout.Background;
+import java.util.HashMap;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.logging.PulseLogger;
-
-import java.util.HashMap;
-
-import javafx.scene.layout.Background;
-
 import com.sun.prism.Graphics;
 import com.sun.prism.RTTexture;
 import com.sun.prism.ResourceFactory;
@@ -58,10 +55,8 @@ class RegionImageCache {
     private RectanglePacker vPacker;
 
 
-    RegionImageCache(Graphics g) {
+    RegionImageCache(final ResourceFactory factory) {
         imageMap = new HashMap<>();
-        ResourceFactory factory = g.getResourceFactory();
-
         backingStore = factory.createRTTexture(WIDTH + WIDTH, HEIGHT, WrapMode.CLAMP_NOT_NEEDED);
         backingStore.contentsUseful();
         backingStore.makePermanent();

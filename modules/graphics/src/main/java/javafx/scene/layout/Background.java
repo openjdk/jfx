@@ -70,37 +70,37 @@ import com.sun.javafx.tk.Toolkit;
 @SuppressWarnings("unchecked")
 public final class Background {
     static final CssMetaData<Node,Paint[]> BACKGROUND_COLOR =
-            new SubCssMetaData<Paint[]>("-fx-background-color",
+            new SubCssMetaData<>("-fx-background-color",
                     PaintConverter.SequenceConverter.getInstance(),
                     new Paint[] {Color.TRANSPARENT});
 
     static final CssMetaData<Node,Insets[]> BACKGROUND_RADIUS =
-            new SubCssMetaData<Insets[]>("-fx-background-radius",
+            new SubCssMetaData<>("-fx-background-radius",
                     InsetsConverter.SequenceConverter.getInstance(),
                     new Insets[] {Insets.EMPTY});
 
     static final CssMetaData<Node,Insets[]> BACKGROUND_INSETS =
-            new SubCssMetaData<Insets[]>("-fx-background-insets",
+            new SubCssMetaData<>("-fx-background-insets",
                     InsetsConverter.SequenceConverter.getInstance(),
                     new Insets[] {Insets.EMPTY});
 
     static final CssMetaData<Node,Image[]> BACKGROUND_IMAGE =
-            new SubCssMetaData<Image[]>("-fx-background-image",
+            new SubCssMetaData<>("-fx-background-image",
                     URLConverter.SequenceConverter.getInstance());
 
     static final CssMetaData<Node,RepeatStruct[]> BACKGROUND_REPEAT =
-            new SubCssMetaData<RepeatStruct[]>("-fx-background-repeat",
+            new SubCssMetaData<>("-fx-background-repeat",
                     RepeatStructConverter.getInstance(),
                     new RepeatStruct[] {new RepeatStruct(BackgroundRepeat.REPEAT,
                                                          BackgroundRepeat.REPEAT) });
 
     static final CssMetaData<Node,BackgroundPosition[]> BACKGROUND_POSITION =
-            new SubCssMetaData<BackgroundPosition[]>("-fx-background-position",
+            new SubCssMetaData<>("-fx-background-position",
                     LayeredBackgroundPositionConverter.getInstance(),
                     new BackgroundPosition[] { BackgroundPosition.DEFAULT });
 
     static final CssMetaData<Node,BackgroundSize[]> BACKGROUND_SIZE =
-            new SubCssMetaData<BackgroundSize[]>("-fx-background-size",
+            new SubCssMetaData<>("-fx-background-size",
                     LayeredBackgroundSizeConverter.getInstance(),
                     new BackgroundSize[] { BackgroundSize.DEFAULT } );
 
@@ -174,6 +174,13 @@ public final class Background {
      */
     private final double opaqueFillTop, opaqueFillRight, opaqueFillBottom, opaqueFillLeft;
     final boolean hasPercentageBasedOpaqueFills;
+
+    /**
+     * True if there are any fills that are in some way based on the size of the region.
+     * For example, if a CornerRadii on the fill is percentage based in either or both
+     * dimensions.
+     */
+    final boolean hasPercentageBasedFills;
 
     /**
      * The cached hash code computation for the Background. One very big
@@ -253,6 +260,7 @@ public final class Background {
         // The cumulative insets
         double outerTop = 0, outerRight = 0, outerBottom = 0, outerLeft = 0;
         boolean hasPercentOpaqueInsets = false;
+        boolean hasPercentFillRadii = false;
         boolean opaqueFill = false;
 
         // If the fills is empty or null then we know we can just use the shared
@@ -279,9 +287,12 @@ public final class Background {
                     outerBottom = outerBottom <= fillBottom ? outerBottom : fillBottom; // min
                     outerLeft = outerLeft <= fillLeft ? outerLeft : fillLeft; // min
 
+                    // The common case is to NOT have percent based radii
+                    final boolean b = fill.getRadii().hasPercentBasedRadii;
+                    hasPercentFillRadii |= b;
                     if (fill.fill.isOpaque()) {
                         opaqueFill = true;
-                        if (fill.getRadii().hasPercentBasedRadii) {
+                        if (b) {
                             hasPercentOpaqueInsets = true;
                         }
                     }
@@ -289,6 +300,7 @@ public final class Background {
             }
             this.fills = new UnmodifiableArrayList<>(noNulls, size);
         }
+        hasPercentageBasedFills = hasPercentFillRadii;
 
         // This ensures that we either have outsets of 0, if all the insets were positive,
         // or a value greater than zero if they were negative.
@@ -334,6 +346,18 @@ public final class Background {
         int result = this.fills.hashCode();
         result = 31 * result + this.images.hashCode();
         hash = result;
+    }
+
+    /**
+     * Gets whether the fill of this Background is based on percentages (that is, relative to the
+     * size of the region being styled). Specifically, this returns true if any of the CornerRadii
+     * on any of the fills on this Background has a radius that is based on percentages.
+     *
+     * @return True if any CornerRadii of any BackgroundFill on this background would return true, false otherwise.
+     * @since JavaFX 8.0
+     */
+    public boolean isFillPercentageBased() {
+        return hasPercentageBasedFills;
     }
 
     /**

@@ -34,6 +34,9 @@ import com.sun.glass.ui.Window;
 import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.prism.GraphicsPipeline;
+import com.sun.prism.j2d.J2DPipeline;
+import com.sun.prism.sw.SWPipeline;
 
 class ViewScene extends GlassScene {
 
@@ -69,7 +72,7 @@ class ViewScene extends GlassScene {
         super.setStage(stage);
         if (stage != null) {
             WindowStage wstage  = (WindowStage)stage;
-            if (wstage.needsUpdateWindow()) {
+            if (wstage.needsUpdateWindow() || GraphicsPipeline.getPipeline().isUploading()) {
                 if (Pixels.getNativeFormat() != Pixels.Format.BYTE_BGRA_PRE ||
                     ByteOrder.nativeOrder() != ByteOrder.LITTLE_ENDIAN) {
                     throw new UnsupportedOperationException(UNSUPPORTED_FORMAT);

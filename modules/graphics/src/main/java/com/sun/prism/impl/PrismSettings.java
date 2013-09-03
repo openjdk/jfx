@@ -60,7 +60,8 @@ public final class PrismSettings {
     public static final boolean forceRepaint;
     public static final boolean noFallback;
     public static final boolean showDirtyRegions;
-    public static final boolean showCull;
+    public static final boolean showOverdraw;
+    public static final boolean printRenderGraph;
     public static final boolean shutdownHook;
     public static final int minTextureSize;
     public static final int minRTTSize;
@@ -79,6 +80,8 @@ public final class PrismSettings {
     public static final boolean poolStats;
     public static final boolean poolDebug;
     public static final boolean disableEffects;
+    public static final int glyphCacheWidth;
+    public static final int glyphCacheHeight;
 
     private PrismSettings() {
     }
@@ -117,25 +120,30 @@ public final class PrismSettings {
                                                "prism.occlusion.culling",
                                                true);
 
-        dirtyRegionCount = getInt(systemProperties, "prism.dirtyregioncount",
-                                  6, null);
+        // The maximum number of dirty regions to use. The absolute max that we can
+        // support at present is 15.
+        dirtyRegionCount = Math.max(getInt(systemProperties, "prism.dirtyregioncount",
+                                  6, null), 15);
 
         /* Dirty region optimizations */
         threadCheck = getBoolean(systemProperties, "prism.threadcheck", false);
 
+        /* Draws overlay rectangles showing where the dirty regions were */
+        showDirtyRegions = getBoolean(systemProperties, "prism.showdirty", false);
+
+        /*
+         * Draws overlay rectangles showing not only the dirty regions, but how many times
+         * each area within that dirty region was drawn (covered by bounds of a drawn object).
+         */
+        showOverdraw = getBoolean(systemProperties, "prism.showoverdraw", false);
+
+        /* Prints out the render graph, annotated with dirty opts information */
+        printRenderGraph = getBoolean(systemProperties, "prism.printrendergraph", false);
+
         /* Force scene repaint on every frame */
-        showDirtyRegions = getBoolean(systemProperties, "prism.showdirty",
-                                      false);
+        forceRepaint = getBoolean(systemProperties, "prism.forcerepaint", false);
 
-        /* marks all nodes with color green=render gray=culloff */
-        showCull = getBoolean(systemProperties, "prism.showcull",
-                              false);
-
-        /* Force scene repaint on every frame */
-        forceRepaint = getBoolean(systemProperties, "prism.forcerepaint",
-                                  false);
-
-        /* disable fallback to another toolkit if prism coudln't be init-ed */
+        /* disable fallback to another toolkit if prism couldn't be init-ed */
         noFallback = getBoolean(systemProperties, "prism.noFallback", false);
 
         /* Shape caching optimizations */
@@ -320,6 +328,11 @@ public final class PrismSettings {
         disableD3D9Ex = getBoolean(systemProperties, "prism.disableD3D9Ex", true);
         
         disableEffects = getBoolean(systemProperties, "prism.disableEffects", false);
+
+        glyphCacheWidth = getInt(systemProperties, "prism.glyphCacheWidth", 1024,
+                "Try -Dprism.glyphCacheWidth=<number>");
+        glyphCacheHeight = getInt(systemProperties, "prism.glyphCacheHeight", 1024,
+                "Try -Dprism.glyphCacheHeight=<number>");
     }
 
     private static int parseInt(String s, int dflt, int trueDflt,

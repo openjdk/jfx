@@ -114,6 +114,6 @@ public abstract class BenchTest {
     public void tearDown() { }
 
     @Override public String toString() {
-        return getClass().getSimpleName() + " " + rows + "x" + cols + ": " + maxFPS;
+        return getClass().getSimpleName() + " " + rows + "x" + cols;
     }
 }

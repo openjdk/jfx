@@ -95,6 +95,15 @@ bool Watchdog::didFire(ExecState* exec)
     if (!m_timerDidFire)
         return false;
     m_timerDidFire = false;
+
+#if PLATFORM(JAVA)
+    if (m_isStopped) {
+        // If the timer is stopped, it is not counting and m_startTime
+        // is junk so it does not make any sense to proceed
+        return false;
+    }
+#endif
+
     stopCountdown();
 
     double currentTime = currentCPUTime();
@@ -150,8 +159,18 @@ void Watchdog::arm()
 void Watchdog::disarm()
 {
     ASSERT(m_reentryCount > 0);
+#if PLATFORM(JAVA)
+    if (m_reentryCount == 1) {
+        stopCountdown();
+        // Now that the timer is going out of scope the m_didFire
+        // flag needs to be reset as otherwise the timer would
+        // remain "fired" forever
+        m_didFire = false;
+    }
+#else
     if (m_reentryCount == 1)
         stopCountdown();
+#endif
     m_reentryCount--;
 }
 

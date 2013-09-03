@@ -76,11 +76,12 @@ void notifyTouchEvent(
         int yabs) {
     
    ATTACH_JNI_THREAD();
-   lens_wm_notifyTouchEvent(env,
-           state,
-           id,
-           xabs,
-           yabs);
+   lens_wm_notifyMultiTouchEvent(env,
+           1,
+           &state,
+           &id,
+           &xabs,
+           &yabs);
                    
    if (sendAlsoButtonEvent) {
         lens_wm_notifyButtonEvent(env,

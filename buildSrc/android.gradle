@@ -342,7 +342,7 @@ ANDROID.javafxPlatformProperties = """
 javafx.platform=android
 android.glass.platform=Lens
 android.glass.lens=eglfb
-android.egl.depthSize=16
+android.prism.glDepthSize=16
 android.prism.lcdtext=false
 android.embedded=eglfb
 android.prism.allowhidpi=false
@@ -451,7 +451,8 @@ ANDROID.glass.eglfb.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/wm"),
     file("modules/graphics/src/main/native-glass/lens/cursor/nullCursor"),
     file("modules/graphics/src/main/native-glass/lens/input/android"),
-    file("modules/graphics/src/main/native-glass/lens/wm/screen/androidScreen.c")]
+    file("modules/graphics/src/main/native-glass/lens/wm/screen/androidScreen.c"),
+    file("modules/graphics/src/main/native-glass/lens/platform-util")]
 ANDROID.glass.eglfb.compiler = compiler
 ANDROID.glass.eglfb.linker = linker
 ANDROID.glass.eglfb.lib = "glass_lens_eglfb"

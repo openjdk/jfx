@@ -52,8 +52,9 @@ class GlassSceneDnDEventHandler {
             @Override
             public TransferMode run() {
                 if (scene.dropTargetListener != null) {
+                    QuantumClipboard dragboard = QuantumClipboard.getDragboardInstance(dropTargetAssistant);
                     return scene.dropTargetListener.dragEnter(x, y, xAbs, yAbs,
-                            recommendedTransferMode);
+                            recommendedTransferMode, dragboard);
                 }
                 return null;
             }
@@ -108,15 +109,16 @@ class GlassSceneDnDEventHandler {
     }
 
     public void handleDragStart(final int button, final int x, final int y, final int xAbs, final int yAbs,
-                                final ClipboardAssistance dropSourceAssistant)
+                                final ClipboardAssistance dragSourceAssistant)
     {
         assert Platform.isFxApplicationThread();
         AccessController.doPrivileged(new PrivilegedAction<Void>() {
             @Override
             public Void run() {
                 if (scene.dragGestureListener != null) {
+                    QuantumClipboard dragboard = QuantumClipboard.getDragboardInstance(dragSourceAssistant);
                     scene.dragGestureListener.dragGestureRecognized(
-                            x, y, xAbs, yAbs, button);
+                            x, y, xAbs, yAbs, button, dragboard);
                 }
                 return null;
             }
@@ -127,7 +129,7 @@ class GlassSceneDnDEventHandler {
     // it's delivered by Glass itself.
     // Otherwise, see QuantumToolkit.createDragboard() and startDrag()
     public void handleDragEnd(final TransferMode performedTransferMode,
-                              final ClipboardAssistance dropSourceAssistant)
+                              final ClipboardAssistance dragSourceAssistant)
     {
         assert Platform.isFxApplicationThread();
         AccessController.doPrivileged(new PrivilegedAction<Void>() {

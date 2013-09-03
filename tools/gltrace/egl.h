@@ -22,42 +22,21 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+ 
+#ifndef GLTRACE_EGL_H
+#define GLTRACE_EGL_H
 
-package hello;
+#include <EGL/egl.h>
+#include "trace.h"
 
-import javafx.application.Application;
-import javafx.scene.Group;
-import javafx.scene.Scene;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
-import javafx.stage.Stage;
-
-/**
- */
-public class HelloRectangle extends Application {
-    @Override public void start(Stage stage) {
-        stage.setTitle("Hello Rectangle");
-
-        Group root = new Group();
-        Scene scene = new Scene(root, 600, 450);
-
-        Rectangle rect = new Rectangle();
-        rect.setX(25);
-        rect.setY(40);
-        rect.setWidth(300);
-        rect.setHeight(300);
-        rect.setFill(Color.RED);
-
-        root.getChildren().addAll(rect);
-
-        stage.setScene(scene);
-        stage.show();
+#define EGLPROLOG(func) \
+    static void *orig = NULL;\
+    if (orig == NULL) {\
+        DLFCN_HOOK_POP(); \
+        orig = dlsym(libEGL, #func);\
+        DLFCN_HOOK_PUSH(); \
     }
 
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String[] args) {
-        Application.launch(args);
-    }
-}
+#define EGLEPILOG() 
+
+#endif /* GLTRACE_EGL_H */

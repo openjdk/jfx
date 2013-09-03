@@ -33,6 +33,12 @@ package javafx.geometry;
  * @since JavaFX 2.0
  */
 public class Point3D {
+
+    /**
+     * Point or vector with all three coordinates set to 0.
+     */
+    public static final Point3D ZERO = new Point3D(0.0, 0.0, 0.0);
+
     /**
      * The x coordinate.
      *

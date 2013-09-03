@@ -27,9 +27,9 @@ package javafx.embed.swt;
 
 import java.lang.reflect.Field;
 import java.nio.IntBuffer;
-
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -80,7 +80,6 @@ import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.events.MouseMoveListener;
 import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
-
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
@@ -90,7 +89,6 @@ import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.PaletteData;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
-
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.ControlListener;
 import org.eclipse.swt.events.FocusListener;
@@ -150,6 +148,8 @@ public class FXCanvas extends Canvas {
     private volatile int pPreferredHeight = -1;
     
     private IntBuffer pixelsBuf = null;
+    
+    private DropTarget dropTarget;
     
     static Transfer [] StandardTransfers = new Transfer [] {
         TextTransfer.getInstance(),
@@ -229,6 +229,39 @@ public class FXCanvas extends Canvas {
         });
     }
     
+    static ArrayList<DropTarget> targets = new ArrayList<>();
+    
+    DropTarget getDropTarget() {
+        return dropTarget;
+    }
+    
+    void setDropTarget(DropTarget newTarget) {
+        if (dropTarget != null) {
+            targets.remove(dropTarget);
+            dropTarget.dispose();
+        }
+        dropTarget = newTarget;
+        if (dropTarget != null) {
+            targets.add(dropTarget);
+        }
+    }
+    
+    static void updateDropTarget() {
+        // Update all drop targets rather than just this target
+        //
+        // In order for a drop target to recognise a custom format,
+        // the format must be registered and the transfer type added
+        // to the list of transfers that the target accepts.  This
+        // must happen before the drag and drop operations starts
+        // or the drop target will not accept the format.  Therefore,
+        // set all transfers for all targets before any drag and drop
+        // operation starts
+        //
+        for (DropTarget target : targets) {
+            target.setTransfer(getAllTransfers());
+        }
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -386,6 +419,7 @@ public class FXCanvas extends Canvas {
     }
 
     private void widgetDisposed(DisposeEvent de) {
+        setDropTarget(null);
         if (stage != null) {
             stage.hide();
         }
@@ -711,7 +745,12 @@ public class FXCanvas extends Canvas {
             dropTarget.setTransfer(getAllTransfers());
             dropTarget.addDropListener(new DropTargetListener() {
                 Object data;
-                TransferData [] transferData;
+                // In SWT, the list of available types that the source can provide
+                // is part of the event.  FX queries this directly from the operating
+                // system and bypasses SWT.  This variable is commented out to remind
+                // us of this potential inconsistency.
+                //
+                //TransferData [] transferData;
                 TransferData currentTransferData;
                 boolean ignoreLeave;
                 int detail = DND.DROP_NONE, operations = DND.DROP_NONE;
@@ -736,7 +775,7 @@ public class FXCanvas extends Canvas {
                     }
                     public void dragDropEnd(TransferMode performedAction) {
                         data = null;
-                        transferData = null;
+                        //transferData = null;
                         currentTransferData = null;
                     }
                 };
@@ -749,7 +788,7 @@ public class FXCanvas extends Canvas {
                 public void dragLeave(DropTargetEvent event) {
                     detail = operations = DND.DROP_NONE;
                     data = null;
-                    transferData = null;
+                    //transferData = null;
                     currentTransferData = null;
                     getDisplay().asyncExec(new Runnable () {
                         public void run () {
@@ -768,7 +807,7 @@ public class FXCanvas extends Canvas {
                     dragOver (event, false, detail);
                 }
                 public void dragOver(DropTargetEvent event, boolean enter, int detail) {
-                    transferData = event.dataTypes;
+                    //transferData = event.dataTypes;
                     currentTransferData = event.currentDataType;
                     Point pt = toControl(event.x, event.y);
                     if (detail == DND.DROP_NONE) detail = DND.DROP_COPY;
@@ -784,14 +823,14 @@ public class FXCanvas extends Canvas {
                     detail = event.detail;
                     operations = event.operations;
                     data = event.data;
-                    transferData = event.dataTypes;
+                    //transferData = event.dataTypes;
                     currentTransferData = event.currentDataType;
                     Point pt = toControl(event.x, event.y);
                     TransferMode recommendedDropAction = getTransferMode(event.detail);
                     TransferMode acceptedMode = fxDropTarget.handleDragDrop(pt.x, pt.y, event.x, event.y, recommendedDropAction);
                     event.detail = getDragAction(acceptedMode);
                     data = null;
-                    transferData = null;
+                    //transferData = null;
                     currentTransferData = null;
                 }
                 public void dropAccept(DropTargetEvent event) {
@@ -801,7 +840,6 @@ public class FXCanvas extends Canvas {
             return dropTarget;
         }
 
-        DropTarget dropTarget;
         @Override
         public void setEmbeddedScene(EmbeddedSceneInterface embeddedScene) {
             scenePeer = embeddedScene;
@@ -820,15 +858,14 @@ public class FXCanvas extends Canvas {
                             if (dragSource == null) {
                                 fxDragSource.dragDropEnd(null);
                             } else {
-                                if (dropTarget != null) dropTarget.setTransfer(getAllTransfers());
+                                updateDropTarget();
                                 FXCanvas.this.notifyListeners(SWT.DragDetect, null);
                             }
                         }
                     });
                 }
             });
-            if (dropTarget != null) dropTarget.dispose();
-            dropTarget = createDropTarget(embeddedScene);
+            setDropTarget(createDropTarget(embeddedScene));
         }
 
         @Override

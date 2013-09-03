@@ -76,14 +76,14 @@ public class RenderRootTest extends NGTestBase {
      * @param dirtyHeight The height of the dirty region
      * @return The NodePath, or null if there are no path elements
      */
-    private NodePath<NGNode> getRenderRoot(NGGroup root, int dirtyX, int dirtyY, int dirtyWidth, int dirtyHeight) {
+    private NodePath getRenderRoot(NGGroup root, int dirtyX, int dirtyY, int dirtyWidth, int dirtyHeight) {
         final DirtyRegionContainer drc = new DirtyRegionContainer(1);
         final RectBounds dirtyRegion = new RectBounds(dirtyX, dirtyY, dirtyX+dirtyWidth, dirtyY+dirtyHeight);
         drc.addDirtyRegion(dirtyRegion);
         final BaseTransform tx = BaseTransform.IDENTITY_TRANSFORM;
         final GeneralTransform3D pvTx = new GeneralTransform3D();
         root.markCullRegions(drc, -1, tx, pvTx);
-        NodePath<NGNode> path = new NodePath<>();
+        NodePath path = new NodePath();
         root.getRenderRoot(path, dirtyRegion, 0, tx, pvTx);
         return path;
     }
@@ -106,7 +106,7 @@ public class RenderRootTest extends NGTestBase {
      * never be null). If expectedRoot is null, rootPath must be empty. Otherwise,
      * expectedRoot must be the last item in rootPath.
      */
-    private void assertRenderRoot(NGNode expectedRoot, NodePath<NGNode> rootPath) {
+    private void assertRenderRoot(NGNode expectedRoot, NodePath rootPath) {
         if (expectedRoot == null) {
             assertTrue(rootPath.isEmpty());
         } else {
@@ -122,7 +122,7 @@ public class RenderRootTest extends NGTestBase {
      */
     @Test
     public void dirtyRegionWithinOpaqueRegion() {
-        NodePath<NGNode> rootPath = getRenderRoot(root, 20, 20, 70, 70);
+        NodePath rootPath = getRenderRoot(root, 20, 20, 70, 70);
         assertRenderRoot(rect, rootPath);
     }
 
@@ -133,7 +133,7 @@ public class RenderRootTest extends NGTestBase {
     @Test
     public void dirtyRegionWithinOpaqueRegion_Clean() {
         root.clearDirtyTree();
-        NodePath<NGNode> rootPath = getRenderRoot(root, 20, 20, 70, 70);
+        NodePath rootPath = getRenderRoot(root, 20, 20, 70, 70);
         assertRenderRoot(null, rootPath);
     }
 
@@ -143,7 +143,7 @@ public class RenderRootTest extends NGTestBase {
      */
     @Test
     public void dirtyRegionMatchesOpaqueRegion() {
-        NodePath<NGNode> rootPath = getRenderRoot(root, 10, 10, 90, 90);
+        NodePath rootPath = getRenderRoot(root, 10, 10, 90, 90);
         assertRenderRoot(rect, rootPath);
     }
 
@@ -154,7 +154,7 @@ public class RenderRootTest extends NGTestBase {
     @Test
     public void dirtyRegionMatchesOpaqueRegion_Clean() {
         root.clearDirtyTree();
-        NodePath<NGNode> rootPath = getRenderRoot(root, 10, 10, 90, 90);
+        NodePath rootPath = getRenderRoot(root, 10, 10, 90, 90);
         assertRenderRoot(null, rootPath);
     }
 
@@ -164,7 +164,7 @@ public class RenderRootTest extends NGTestBase {
      */
     @Test
     public void dirtyRegionWithinOpaqueRegionTouchesTop() {
-        NodePath<NGNode> rootPath = getRenderRoot(root, 20, 10, 70, 70);
+        NodePath rootPath = getRenderRoot(root, 20, 10, 70, 70);
         assertRenderRoot(rect, rootPath);
     }
 
@@ -175,7 +175,7 @@ public class RenderRootTest extends NGTestBase {
     @Test
     public void dirtyRegionWithinOpaqueRegionTouchesTop_Clean() {
         root.clearDirtyTree();
-        NodePath<NGNode> rootPath = getRenderRoot(root, 20, 10, 70, 70);
+        NodePath rootPath = getRenderRoot(root, 20, 10, 70, 70);
         assertRenderRoot(null, rootPath);
     }
 
@@ -185,7 +185,7 @@ public class RenderRootTest extends NGTestBase {
      */
     @Test
     public void dirtyRegionWithinOpaqueRegionTouchesRight() {
-        NodePath<NGNode> rootPath = getRenderRoot(root, 20, 20, 80, 70);
+        NodePath rootPath = getRenderRoot(root, 20, 20, 80, 70);
         assertRenderRoot(rect, rootPath);
     }
     /**
@@ -195,7 +195,7 @@ public class RenderRootTest extends NGTestBase {
     @Test
     public void dirtyRegionWithinOpaqueRegionTouchesRight_Clean() {
         root.clearDirtyTree();
-        NodePath<NGNode> rootPath = getRenderRoot(root, 20, 20, 80, 70);
+        NodePath rootPath = getRenderRoot(root, 20, 20, 80, 70);
         assertRenderRoot(null, rootPath);
     }
 
@@ -205,7 +205,7 @@ public class RenderRootTest extends NGTestBase {
      */
     @Test
     public void dirtyRegionWithinOpaqueRegionTouchesBottom() {
-        NodePath<NGNode> rootPath = getRenderRoot(root, 20, 20, 70, 80);
+        NodePath rootPath = getRenderRoot(root, 20, 20, 70, 80);
         assertRenderRoot(rect, rootPath);
     }
 
@@ -216,7 +216,7 @@ public class RenderRootTest extends NGTestBase {
     @Test
     public void dirtyRegionWithinOpaqueRegionTouchesBottom_Clean() {
         root.clearDirtyTree();
-        NodePath<NGNode> rootPath = getRenderRoot(root, 20, 20, 70, 80);
+        NodePath rootPath = getRenderRoot(root, 20, 20, 70, 80);
         assertRenderRoot(null, rootPath);
     }
 
@@ -226,7 +226,7 @@ public class RenderRootTest extends NGTestBase {
      */
     @Test
     public void dirtyRegionWithinOpaqueRegionTouchesLeft() {
-        NodePath<NGNode> rootPath = getRenderRoot(root, 10, 20, 70, 70);
+        NodePath rootPath = getRenderRoot(root, 10, 20, 70, 70);
         assertRenderRoot(rect, rootPath);
     }
 
@@ -237,99 +237,99 @@ public class RenderRootTest extends NGTestBase {
     @Test
     public void dirtyRegionWithinOpaqueRegionTouchesLeft_Clean() {
         root.clearDirtyTree();
-        NodePath<NGNode> rootPath = getRenderRoot(root, 10, 20, 70, 70);
+        NodePath rootPath = getRenderRoot(root, 10, 20, 70, 70);
         assertRenderRoot(null, rootPath);
     }
 
     @Test
     public void opaqueRegionWithinDirtyRegion() {
-        NodePath<NGNode> rootPath = getRenderRoot(root, 0, 0, 110, 110);
+        NodePath rootPath = getRenderRoot(root, 0, 0, 110, 110);
         assertRenderRoot(root, rootPath);
     }
 
     @Test
     public void opaqueRegionWithinDirtyRegion_Clean() {
         root.clearDirtyTree();
-        NodePath<NGNode> rootPath = getRenderRoot(root, 0, 0, 110, 110);
+        NodePath rootPath = getRenderRoot(root, 0, 0, 110, 110);
         assertRenderRoot(root, rootPath);
     }
 
     @Test
     public void dirtyRegionIntersectsOpaqueRegionTop() {
-        NodePath<NGNode> rootPath = getRenderRoot(root, 20, 0, 70, 30);
+        NodePath rootPath = getRenderRoot(root, 20, 0, 70, 30);
         assertRenderRoot(root, rootPath);
     }
 
     @Test
     public void dirtyRegionIntersectsOpaqueRegionTop_Clean() {
         root.clearDirtyTree();
-        NodePath<NGNode> rootPath = getRenderRoot(root, 20, 0, 70, 30);
+        NodePath rootPath = getRenderRoot(root, 20, 0, 70, 30);
         assertRenderRoot(root, rootPath);
     }
 
     @Test
     public void dirtyRegionIntersectsOpaqueRegionRight() {
-        NodePath<NGNode> rootPath = getRenderRoot(root, 90, 20, 30, 70);
+        NodePath rootPath = getRenderRoot(root, 90, 20, 30, 70);
         assertRenderRoot(root, rootPath);
     }
 
     @Test
     public void dirtyRegionIntersectsOpaqueRegionRight_Clean() {
         root.clearDirtyTree();
-        NodePath<NGNode> rootPath = getRenderRoot(root, 90, 20, 30, 70);
+        NodePath rootPath = getRenderRoot(root, 90, 20, 30, 70);
         assertRenderRoot(root, rootPath);
     }
 
     @Test
     public void dirtyRegionIntersectsOpaqueRegionBottom() {
-        NodePath<NGNode> rootPath = getRenderRoot(root, 20, 90, 70, 30);
+        NodePath rootPath = getRenderRoot(root, 20, 90, 70, 30);
         assertRenderRoot(root, rootPath);
     }
 
     @Test
     public void dirtyRegionIntersectsOpaqueRegionBottom_Clean() {
         root.clearDirtyTree();
-        NodePath<NGNode> rootPath = getRenderRoot(root, 20, 90, 70, 30);
+        NodePath rootPath = getRenderRoot(root, 20, 90, 70, 30);
         assertRenderRoot(root, rootPath);
     }
 
     @Test
     public void dirtyRegionIntersectsOpaqueRegionLeft() {
-        NodePath<NGNode> rootPath = getRenderRoot(root, 0, 20, 30, 70);
+        NodePath rootPath = getRenderRoot(root, 0, 20, 30, 70);
         assertRenderRoot(root, rootPath);
     }
 
     @Test
     public void dirtyRegionIntersectsOpaqueRegionLeft_Clean() {
         root.clearDirtyTree();
-        NodePath<NGNode> rootPath = getRenderRoot(root, 0, 20, 30, 70);
+        NodePath rootPath = getRenderRoot(root, 0, 20, 30, 70);
         assertRenderRoot(root, rootPath);
     }
 
     @Test
     public void dirtyRegionCompletelyOutsideOfOpaqueRegion() {
-        NodePath<NGNode> rootPath = getRenderRoot(root, 0, 0, 5, 5);
+        NodePath rootPath = getRenderRoot(root, 0, 0, 5, 5);
         assertRenderRoot(root, rootPath);
     }
 
     @Test
     public void dirtyRegionCompletelyOutsideOfOpaqueRegion_Clean() {
         root.clearDirtyTree();
-        NodePath<NGNode> rootPath = getRenderRoot(root, 0, 0, 5, 5);
+        NodePath rootPath = getRenderRoot(root, 0, 0, 5, 5);
         assertRenderRoot(root, rootPath);
     }
 
     @Ignore("What is the right thing here? It seems that an empty dirty region should result in no rendering?")
     @Test
     public void emptyDirtyRegion() {
-        NodePath<NGNode> rootPath = getRenderRoot(root, 0, 0, -1, -1);
+        NodePath rootPath = getRenderRoot(root, 0, 0, -1, -1);
         assertRenderRoot(root, rootPath);
     }
 
     @Ignore("Currently fails because isEmpty doesn't take into account width == 0, height == 0")
     @Test
     public void zeroSizeDirtyRegionWithinOpaqueRegion() {
-        NodePath<NGNode> rootPath = getRenderRoot(root, 20, 20, 0, 0);
+        NodePath rootPath = getRenderRoot(root, 20, 20, 0, 0);
         assertRenderRoot(root, rootPath);
     }
 
@@ -342,7 +342,7 @@ public class RenderRootTest extends NGTestBase {
     public void withRectangularClip() {
         NGRectangle clip = createRectangle(20, 20, 70, 70);
         rect.setClipNode(clip);
-        NodePath<NGNode> rootPath = getRenderRoot(root, 20, 20, 70, 70);
+        NodePath rootPath = getRenderRoot(root, 20, 20, 70, 70);
         assertRenderRoot(rect, rootPath);
     }
 
@@ -353,7 +353,7 @@ public class RenderRootTest extends NGTestBase {
     public void withRectangularClip_negative() {
         NGRectangle clip = createRectangle(20, 20, 70, 70);
         rect.setClipNode(clip);
-        NodePath<NGNode> rootPath = getRenderRoot(root, 19, 20, 70, 70);
+        NodePath rootPath = getRenderRoot(root, 19, 20, 70, 70);
         assertRenderRoot(root, rootPath);
     }
 
@@ -365,7 +365,7 @@ public class RenderRootTest extends NGTestBase {
         NGRectangle clip = createRectangle(20, 20, 70, 70);
         clip.setTransformMatrix(BaseTransform.getTranslateInstance(10, 10));
         rect.setClipNode(clip);
-        NodePath<NGNode> rootPath = getRenderRoot(root, 30, 30, 70, 70);
+        NodePath rootPath = getRenderRoot(root, 30, 30, 70, 70);
         assertRenderRoot(rect, rootPath);
     }
 
@@ -377,7 +377,7 @@ public class RenderRootTest extends NGTestBase {
         NGRectangle clip = createRectangle(20, 20, 70, 70);
         clip.setTransformMatrix(BaseTransform.getTranslateInstance(10, 10));
         rect.setClipNode(clip);
-        NodePath<NGNode> rootPath = getRenderRoot(root, 29, 30, 70, 70);
+        NodePath rootPath = getRenderRoot(root, 29, 30, 70, 70);
         assertRenderRoot(root, rootPath);
     }
 
@@ -389,7 +389,7 @@ public class RenderRootTest extends NGTestBase {
         NGRectangle clip = createRectangle(20, 20, 70, 70);
         clip.setTransformMatrix(BaseTransform.getScaleInstance(.5, .5));
         rect.setClipNode(clip);
-        NodePath<NGNode> rootPath = getRenderRoot(root, 10, 10, 35, 35);
+        NodePath rootPath = getRenderRoot(root, 10, 10, 35, 35);
         assertRenderRoot(rect, rootPath);
     }
 
@@ -401,7 +401,7 @@ public class RenderRootTest extends NGTestBase {
         NGRectangle clip = createRectangle(20, 20, 70, 70);
         clip.setTransformMatrix(BaseTransform.getScaleInstance(.5, .5));
         rect.setClipNode(clip);
-        NodePath<NGNode> rootPath = getRenderRoot(root, 9, 10, 35, 35);
+        NodePath rootPath = getRenderRoot(root, 9, 10, 35, 35);
         assertRenderRoot(root, rootPath);
     }
 
@@ -414,7 +414,7 @@ public class RenderRootTest extends NGTestBase {
     public void withCircleClip() {
         NGCircle clip = createCircle(50, 50, 45);
         rect.setClipNode(clip);
-        NodePath<NGNode> rootPath = getRenderRoot(root, 40, 40, 20, 20);
+        NodePath rootPath = getRenderRoot(root, 40, 40, 20, 20);
         assertRenderRoot(rect, rootPath);
     }
 
@@ -425,7 +425,7 @@ public class RenderRootTest extends NGTestBase {
     public void withCircleClip_negative() {
         NGCircle clip = createCircle(50, 50, 45);
         rect.setClipNode(clip);
-        NodePath<NGNode> rootPath = getRenderRoot(root, 10, 10, 90, 90);
+        NodePath rootPath = getRenderRoot(root, 10, 10, 90, 90);
         assertRenderRoot(root, rootPath);
     }
 }

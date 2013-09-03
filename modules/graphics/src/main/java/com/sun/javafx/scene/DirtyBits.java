@@ -93,6 +93,9 @@ public enum DirtyBits {
     MESH,
     MESH_GEOM,
 
+    // Used for any debug information we want to sync down.
+    DEBUG,
+
     // NOTE: The following MUST be the last enum value in this class. The ordinal
     // of this enum indicates the number of dirty bits in this set, exclusive of
     // the MAX_DIRTY bit itself, which will never be set or tested.

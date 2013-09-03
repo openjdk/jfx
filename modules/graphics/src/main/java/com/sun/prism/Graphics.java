@@ -34,6 +34,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
+import com.sun.javafx.sg.prism.NodePath;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Paint;
 
@@ -196,8 +197,8 @@ public interface Graphics {
     public ResourceFactory getResourceFactory();
     public RenderTarget getRenderTarget();
 
-    public void setRenderRoot(Object root);
-    public Object getRenderRoot();
+    public void setRenderRoot(NodePath root);
+    public NodePath getRenderRoot();
 
     public void setState3D(boolean flag);
     public boolean isState3D();

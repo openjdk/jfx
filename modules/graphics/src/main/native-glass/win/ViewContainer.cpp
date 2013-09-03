@@ -78,6 +78,7 @@ ViewContainer::ViewContainer() :
     m_bTrackingMouse(FALSE),
     m_manipProc(NULL),
     m_inertiaProc(NULL),
+    m_manipEventSink(NULL),
     m_gestureSupportCls(NULL),
     m_lastMouseMovePosition(-1),
     m_mouseButtonDownCounter(0)

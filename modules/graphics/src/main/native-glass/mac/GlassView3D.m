@@ -617,8 +617,8 @@
         NSSize size = [self bounds].size;
         if ((size.width != w) || (size.height != h))
         {
-            //NSLog(@"Glass View3D size: %dx%d, but pixels size: %dx%d", (int)size.width, (int)size.height, (int)w, (int)h);
-            //glClear(GL_COLOR_BUFFER_BIT);
+            // This could happen on live resize, clear the FBO to avoid rendering garbage
+            glClear(GL_COLOR_BUFFER_BIT);
         }
         
         glMatrixMode(GL_PROJECTION);
@@ -651,8 +651,8 @@
     glDisable(GL_TEXTURE_RECTANGLE_EXT);
     
     glFinish();
-    
-    [[self layer] setNeedsDisplay];
+
+    // The layer will be notified about redraw in _end()
 }
 
 - (GlassViewDelegate*)delegate

@@ -701,6 +701,40 @@ final class LensApplication extends Application {
         }
     }
 
+    /** Posts a mouse event, filtering out sequences of similar motion or drag
+     * events. */
+    private void postMouseEvent(LensView view, int eventType,
+                                int x, int y, int absx, int absy,
+                                int button, int modifiers,
+                                boolean isPopupTrigger, boolean isSynthesized) {
+        synchronized (eventList) {
+            if (!eventList.isEmpty() && (eventType == MouseEvent.DRAG
+                    || eventType == MouseEvent.MOVE)) {
+                Event lastEvent = eventList.getLast();
+                if (lastEvent instanceof LensMouseEvent) {
+                    LensMouseEvent e = (LensMouseEvent) lastEvent;
+                    if (e.target == view
+                            && e.action == eventType
+                            && e.button == button
+                            && e.modifiers == modifiers
+                            && e.isPopupTrigger == isPopupTrigger
+                            && e.isSynthesized == isSynthesized) {
+                        // rewrite the coordinates of the scheduled event with
+                        // the coordinates of this event.
+                        e.x = x;
+                        e.y = y;
+                        e.absx = absx;
+                        e.absy = absy;
+                        return;
+                    }
+                }
+            }
+            postEvent(new LensMouseEvent(view, eventType, x, y, absx, absy,
+                                         button, modifiers, isPopupTrigger,
+                                         isSynthesized));
+        }
+    }
+
     private static class RunLoopControl {
         boolean active; // thread should continue to process events.
         Object release; // object to return with on leave nested
@@ -1106,11 +1140,9 @@ final class LensApplication extends Application {
 
             //continue process events only if not already consumed
             if (!handleDragEvents(view, eventType, x, y, absx, absy, button, modifiers)) {
-                postEvent(new LensMouseEvent(view, eventType,
-                                             x, y, absx, absy,
-                                             button, modifiers,
-                                             isPopupTrigger,
-                                             isSynthesized));
+                postMouseEvent(view, eventType, x, y, absx, absy,
+                               button, modifiers,
+                               isPopupTrigger, isSynthesized);
             }
         } catch (Exception e) {
             reportException(e);
@@ -1280,12 +1312,10 @@ final class LensApplication extends Application {
                 if (LensLogger.getLogger().isLoggable(Level.FINEST)) {
                     LensLogger.getLogger().finest("Drag detected - sending DRAG event");
                 }
-                postEvent(new LensMouseEvent(view, eventType,
-                                             x, y, absx, absy,
-                                             button,
-                                             modifiers,
-                                             false /*isPopupTrigger*/,
-                                             false /*isSynthesized*/));
+                postMouseEvent(view, eventType, x, y, absx, absy,
+                               button, modifiers,
+                               false /*isPopupTrigger*/,
+                               false /*isSynthesized*/);
                 eventConsumed = true;
 
             }

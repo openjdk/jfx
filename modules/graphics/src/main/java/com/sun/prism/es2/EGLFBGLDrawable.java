@@ -62,9 +62,14 @@ class EGLFBGLDrawable extends GLDrawable {
     @Override
     boolean swapBuffers(GLContext glCtx) {
         boolean retval = nSwapBuffers(getNativeDrawableInfo());
+        // TODO: This looks hacky. Need to find a better approach.
+        // For eglfb, we are painting in Z-order from the back,
+        // possibly (likely) with an app that does not cover the
+        // full screen. We need to start each paint with an empty canvas.
+        // The assumption here was that we would do that by clearing the buffer. 
         glCtx.clearBuffers(
                 transparentFramebuffer ? Color.TRANSPARENT : Color.BLACK,
-                true, true, false);
+                true, true, true);
         return retval;
     }
 }

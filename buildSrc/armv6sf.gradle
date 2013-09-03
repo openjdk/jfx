@@ -323,7 +323,8 @@ ARMV6SF.glass.fb.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/wm"),
     file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
     file("modules/graphics/src/main/native-glass/lens/input/udev"),
-    file("modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c")]
+    file("modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c"),
+    file("modules/graphics/src/main/native-glass/lens/platform-util") ]
 ARMV6SF.glass.fb.compiler = compiler
 ARMV6SF.glass.fb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX"].flatten()
 ARMV6SF.glass.fb.linker = linker

@@ -191,14 +191,11 @@ public class NGGroup extends NGNode {
 
     @Override
     protected void renderContent(Graphics g) {
-        renderChildren(g, (NodePath<NGNode>)g.getRenderRoot());
-    }
-
-    private void renderChildren(Graphics g, NodePath<NGNode> renderRoot) {
         if (children == null) {
             return;
         }
 
+        NodePath renderRoot = g.getRenderRoot();
         int startPos = 0;
         if (renderRoot != null) {
             if (renderRoot.hasNext()) {
@@ -309,7 +306,7 @@ public class NGGroup extends NGNode {
      *                                                                         *
      **************************************************************************/
     @Override
-    protected RenderRootResult computeRenderRoot(NodePath<NGNode> path, RectBounds dirtyRegion, int cullingIndex, BaseTransform tx,
+    protected RenderRootResult computeRenderRoot(NodePath path, RectBounds dirtyRegion, int cullingIndex, BaseTransform tx,
                                        GeneralTransform3D pvTx) {
 
         // If the NGGroup is completely outside the culling area, then we don't have to traverse down
@@ -317,7 +314,7 @@ public class NGGroup extends NGNode {
         if (cullingIndex != -1) {
             final int bits = cullingBits >> (cullingIndex*2);
             if ((bits & DIRTY_REGION_CONTAINS_OR_INTERSECTS_NODE_BOUNDS) == 0) {
-                return RenderRootResult.NONE;
+                return RenderRootResult.NO_RENDER_ROOT;
             }
             if ((bits & DIRTY_REGION_CONTAINS_NODE_BOUNDS) != 0) {
                 cullingIndex = -1; // Do not check culling in children,
@@ -326,25 +323,24 @@ public class NGGroup extends NGNode {
         }
 
         if (!isVisible()) {
-            return RenderRootResult.NONE;
+            return RenderRootResult.NO_RENDER_ROOT;
         }
 
         if (getOpacity() != 1.0 || (getEffect() != null && getEffect().reducesOpaquePixels()) || needsBlending()) {
-            return RenderRootResult.NONE;
+            return RenderRootResult.NO_RENDER_ROOT;
         }
 
         if (getClipNode() != null) {
             final NGNode clip = getClipNode();
             RectBounds clipBounds = clip.getOpaqueRegion();
             if (clipBounds == null) {
-                return RenderRootResult.NONE;
+                return RenderRootResult.NO_RENDER_ROOT;
             }
             TEMP_TRANSFORM.deriveWithNewTransform(tx).deriveWithConcatenation(getTransform()).deriveWithConcatenation(clip.getTransform());
             if (!checkBoundsInQuad(clipBounds, dirtyRegion, TEMP_TRANSFORM, pvTx)) {
-                return RenderRootResult.NONE;
+                return RenderRootResult.NO_RENDER_ROOT;
             }
         }
-
 
         // An NGGroup itself never draws pixels, so we don't have to call super. Just visit
         // each child, starting with the top-most.
@@ -363,24 +359,39 @@ public class NGGroup extends NGNode {
         double mzz = tx.getMzz();
         double mzt = tx.getMzt();
         final BaseTransform chTx = tx.deriveWithConcatenation(getTransform());
-        RenderRootResult result = RenderRootResult.NONE;
-        int resultIdx;
+
+        // We need to keep a reference to the result of calling computeRenderRoot on each child
+        RenderRootResult result = RenderRootResult.NO_RENDER_ROOT;
+        // True if every child _after_ the the found render root is clean
         boolean followingChildrenClean = true;
-        for (resultIdx=children.size()-1; resultIdx>=0; resultIdx--) {
+        // Iterate over all children, looking for a render root.
+        for (int resultIdx=children.size()-1; resultIdx>=0; resultIdx--) {
+            // Get the render root result from the child
             final NGNode child = children.get(resultIdx);
             result = child.computeRenderRoot(path, dirtyRegion, cullingIndex, chTx, pvTx);
-            if (result != RenderRootResult.NONE) break;
+            // Update this flag, which if true means that this child and all subsequent children
+            // of this group are all clean.
             followingChildrenClean &= child.isClean();
+
+            if (result == RenderRootResult.HAS_RENDER_ROOT) {
+                // If we have a render root and it is dirty, then we don't really care whether
+                // followingChildrenClean is true or false, we just add this group to the
+                // path and we're done.
+                path.add(this);
+                break;
+            } else if (result == RenderRootResult.HAS_RENDER_ROOT_AND_IS_CLEAN) {
+                path.add(this);
+                // If we have a result which is itself reporting that it is clean, but
+                // we have some following children which are dirty, then we need to
+                // switch the result for this Group to be HAS_RENDER_ROOT.
+                if (!followingChildrenClean) {
+                    result = RenderRootResult.HAS_RENDER_ROOT;
+                }
+                break;
+            }
         }
         // restore previous transform state
         tx.restoreTransform(mxx, mxy, mxz, mxt, myx, myy, myz, myt, mzx, mzy, mzz, mzt);
-        if (result != RenderRootResult.NONE) {
-            if (result == RenderRootResult.HAS_RENDER_ROOT || dirty != DirtyFlag.CLEAN ||
-                    (childDirty && !followingChildrenClean)) {
-                path.add(this);
-                result = RenderRootResult.HAS_RENDER_ROOT;
-            }
-        }
         return result;
     }
 
@@ -430,39 +441,16 @@ public class NGGroup extends NGNode {
     }
 
     @Override
-    public void drawCullBits(Graphics g) {
-        if (getParent() != null) {
-            super.drawCullBits(g);
-        }
-        if (cullingBits != 0) {
-            // save current transform state
-            BaseTransform prevXform = g.getTransformNoClone();
-
-            double mxx = prevXform.getMxx();
-            double mxy = prevXform.getMxy();
-            double mxz = prevXform.getMxz();
-            double mxt = prevXform.getMxt();
-
-            double myx = prevXform.getMyx();
-            double myy = prevXform.getMyy();
-            double myz = prevXform.getMyz();
-            double myt = prevXform.getMyt();
-
-            double mzx = prevXform.getMzx();
-            double mzy = prevXform.getMzy();
-            double mzz = prevXform.getMzz();
-            double mzt = prevXform.getMzt();
-
-            g.transform(getTransform());
-            NGNode child;
-            for (int chldIdx = 0; chldIdx < children.size(); chldIdx++) {
-                child = children.get(chldIdx);
-                child.drawCullBits(g);
-            }
-            // restore previous transform state
-            g.setTransform3D(mxx, mxy, mxz, mxt,
-                             myx, myy, myz, myt,
-                             mzx, mzy, mzz, mzt);
+    public void drawDirtyOpts(final BaseTransform tx, final GeneralTransform3D pvTx,
+                              Rectangle clipBounds, int[] countBuffer, int dirtyRegionIndex) {
+        super.drawDirtyOpts(tx, pvTx, clipBounds, countBuffer, dirtyRegionIndex);
+        // Not really efficient but this code is only executed during debug. This makes sure
+        // that the source transform (tx) is not modified.
+        BaseTransform clone = tx.copy();
+        clone = clone.deriveWithConcatenation(getTransform());
+        for (int childIndex = 0; childIndex < children.size(); childIndex++) {
+            final NGNode child = children.get(childIndex);
+            child.drawDirtyOpts(clone, pvTx, clipBounds, countBuffer, dirtyRegionIndex);
         }
     }
 

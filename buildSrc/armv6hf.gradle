@@ -291,7 +291,8 @@ ARMV6HF.glass.directfb.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/wm"),
     file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
     file("modules/graphics/src/main/native-glass/lens/input/udev"),
-    file("modules/graphics/src/main/native-glass/lens/wm/screen/dfbScreen.c")]
+    file("modules/graphics/src/main/native-glass/lens/wm/screen/dfbScreen.c"),
+    file("modules/graphics/src/main/native-glass/lens/platform-util") ]
     //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
 ARMV6HF.glass.directfb.compiler = compiler
 ARMV6HF.glass.directfb.ccFlags = ["-ffast-math", extraCFlags, "-I$sdk/usr/include/directfb", "-DLINUX"].flatten()
@@ -305,7 +306,8 @@ ARMV6HF.glass.fb.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/wm"),
     file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
     file("modules/graphics/src/main/native-glass/lens/input/udev"),
-    file("modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c")]
+    file("modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c"),
+    file("modules/graphics/src/main/native-glass/lens/platform-util") ]
     //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
 ARMV6HF.glass.fb.compiler = compiler
 ARMV6HF.glass.fb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX"].flatten()

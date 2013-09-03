@@ -65,7 +65,6 @@ final class UploadingPainter extends ViewPainter implements Runnable {
     @Override public void run() {
         renderLock.lock();
 
-        boolean locked = false;
         boolean valid = false;
         try {
             valid = validateStageGraphics();
@@ -76,13 +75,6 @@ final class UploadingPainter extends ViewPainter implements Runnable {
                 }
                 return;
             }
-
-            /*
-             * As Glass is responsible for creating the rendering contexts,
-             * locking should be done prior to the Prism calls.
-             */
-            sceneState.lock();
-            locked = true;
             
             if (factory == null) {
                 factory = GraphicsPipeline.getDefaultResourceFactory();
@@ -162,9 +154,6 @@ final class UploadingPainter extends ViewPainter implements Runnable {
         } finally {
             if (valid) {
                 Disposer.cleanUp();
-            }
-            if (locked) {
-                sceneState.unlock();
             }
 
             sceneState.getScene().setPainting(false);

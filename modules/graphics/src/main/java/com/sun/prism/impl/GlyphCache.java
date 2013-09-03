@@ -59,8 +59,8 @@ public class GlyphCache {
     // 2048 pixels introduced very noticeable pauses when trying
     // to free 1/4 of the glyphs, which for spiral text also amounts
     // to 1/4 of the strikes.
-    private static final int WIDTH = 1024; // in pixels
-    private static final int HEIGHT = 1024; // in pixels
+    private static final int WIDTH = PrismSettings.glyphCacheWidth; // in pixels
+    private static final int HEIGHT = PrismSettings.glyphCacheHeight; // in pixels
     private static ByteBuffer emptyMask;
 
     private final BaseContext context;

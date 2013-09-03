@@ -35,6 +35,7 @@ package nodecount;
 import javafx.animation.Animation;
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
@@ -51,8 +52,7 @@ public abstract class BenchBase<T extends Node> extends Application {
 
     @Override
     public void start(Stage stage) throws Exception {
-
-        Scene scene = new Scene(new Group(), 640, 480);
+        Scene scene = new Scene(new Group(), 1024, 768);
         stage.setScene(scene);
         stage.show();
 
@@ -118,6 +118,7 @@ public abstract class BenchBase<T extends Node> extends Application {
     private void runTest(Scene scene, BenchTest[] tests, int index) {
         if (index >= tests.length) {
             printResults(tests);
+            Platform.exit();
             return; // we're done.
         }
 
@@ -135,6 +136,7 @@ public abstract class BenchBase<T extends Node> extends Application {
                 runTest(scene, tests, index+1);
             }
         });
+        System.out.println("Starting test: " + currentTest);
     }
 
     /**

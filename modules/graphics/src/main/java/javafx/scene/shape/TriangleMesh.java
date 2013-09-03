@@ -126,7 +126,7 @@ public class TriangleMesh extends Mesh {
      * @return {@code ObservableFloatArray} of points where each point is
      * represented by 3 float values x, y and z, in that order.
      */    
-    public ObservableFloatArray getPoints() {
+    public final ObservableFloatArray getPoints() {
         return points;
     }
 
@@ -137,7 +137,7 @@ public class TriangleMesh extends Mesh {
      * where each texture coordinate is represented by 2 float values: u and v,
      * in that order
      */    
-    public ObservableFloatArray getTexCoords() {
+    public final ObservableFloatArray getTexCoords() {
         return texCoords;
     }
  
@@ -152,7 +152,7 @@ public class TriangleMesh extends Mesh {
      * Both indices are in terms of vertices (points or texCoords), not individual
      * floats.
      */    
-    public ObservableIntegerArray getFaces() {
+    public final ObservableIntegerArray getFaces() {
         return faces;
     }
 
@@ -178,7 +178,7 @@ public class TriangleMesh extends Mesh {
      * <p> Note: If faceSmoothingGroups is not empty, is size must
      * be equal to number of faces.
      */    
-    public ObservableIntegerArray getFaceSmoothingGroups() {
+    public final ObservableIntegerArray getFaceSmoothingGroups() {
         return faceSmoothingGroups;
     }
 

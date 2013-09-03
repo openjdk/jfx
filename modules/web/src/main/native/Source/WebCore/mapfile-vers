@@ -1836,6 +1836,7 @@ SUNWprivate_1.0 {
                Java_com_sun_webkit_WCPluginWidget_twkInvalidateWindowlessPluginRect;
                Java_com_sun_webkit_WCPluginWidget_twkSetPlugunFocused;
                Java_com_sun_webkit_WCWidget_initIDs;
+               Java_com_sun_webkit_WatchdogTimer_twkFire;
                Java_com_sun_webkit_WebPage_twkAddJavaScriptBinding;
                Java_com_sun_webkit_WebPage_twkAdjustFrameHeight;
                Java_com_sun_webkit_WebPage_twkBeginPrinting;

@@ -32,14 +32,6 @@
 
 package ensemble;
 
-import ensemble.generated.Samples;
-import java.lang.ref.Reference;
-import java.lang.ref.WeakReference;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.WeakHashMap;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.value.ChangeListener;
@@ -48,8 +40,17 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.scene.control.*;
-import javafx.scene.effect.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.ContentDisplay;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ListView;
+import javafx.scene.control.Pagination;
+import javafx.scene.control.Skin;
+import javafx.scene.effect.BlendBuilder;
+import javafx.scene.effect.BlurType;
+import javafx.scene.effect.DropShadowBuilder;
+import javafx.scene.effect.Effect;
+import javafx.scene.effect.InnerShadowBuilder;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
@@ -57,7 +58,15 @@ import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.util.Callback;
-import static ensemble.EnsembleApp.*;
+import java.lang.ref.Reference;
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
+import ensemble.generated.Samples;
+import static ensemble.EnsembleApp.SHOW_HIGHLIGHTS;
 
 /**
  * The home page for ensemble.
@@ -97,7 +106,7 @@ public class HomePage extends ListView<HomePage.HomePageRow> implements Callback
         setId("HomePage");
         // don't use any of the standard ListView CSS
         //   getStyleClass().clear();
-       
+
         // listen for when the list views width changes and recalculate number of columns
         widthProperty().addListener(this);
         // set our custom cell factory
@@ -137,7 +146,7 @@ public class HomePage extends ListView<HomePage.HomePageRow> implements Callback
     @Override public ListCell<HomePageRow> call(ListView<HomePageRow> homePageRowListView) {
         return new HomeListCell();
     }
-    
+
     // Called to rebuild the list's items based on the current number of columns
     private void rebuild() {
         // build new list of titles and samples
@@ -306,62 +315,6 @@ public class HomePage extends ListView<HomePage.HomePageRow> implements Callback
             return sampleButton;
         }
     }
-
-
-//    private class HomeListCell extends ListCell<HomePageRow> implements ChangeListener<HomePageRow>, Callback<Integer,Node> {
-//        private HomeListCell() {
-//            super();
-//            // don't use any of the standard CSS
-//            getStyleClass().setAll("home-page-cell");
-//            itemProperty().addListener(this);
-////            setSkin(new Label("DUDE"));
-//        }
-//
-//        @Override protected void updateItem(HomePageRow item, boolean empty) {
-//            super.updateItem(item, empty);
-//        }
-//
-//        @Override public void changed(ObservableValue<? extends HomePageRow> observableValue, HomePageRow oldRow, HomePageRow newRow) {
-//            setText(null);
-//            if (newRow == null) {
-//                setGraphic(null);
-//            } else {
-//                switch(newRow.rowType) {
-//                    case Highlights:
-////                        Pagination pagination = new Pagination(Samples.HIGHLIGHTS.length);
-////                        pagination.setMaxWidth(USE_PREF_SIZE);
-////                        pagination.setPageFactory(this);
-////                        setGraphic(pagination);
-//                        setGraphic(Samples.HIGHLIGHTS[0].getLargePreview());
-//                        setAlignment(Pos.CENTER);
-//                        break;
-//                    case Title:
-//                        SectionRibbon sectionRibbon = new SectionRibbon(newRow.title+"  public void changed(Obs");
-//                        setAlignment(Pos.CENTER_LEFT);
-//                        setGraphic(sectionRibbon);
-//                        break;
-//                    case Samples:
-//                        setAlignment(Pos.CENTER);
-//                        HBox hbox = new HBox(ITEM_GAP);
-//                        setGraphic(hbox);
-//                        hbox.setMaxWidth(USE_PREF_SIZE);
-//                        hbox.setAlignment(Pos.CENTER);
-//                        for (SampleInfo sample:newRow.samples) {
-//                            Label sampleLabel = new Label(sample.name);
-//                            sampleLabel.getStyleClass().add("sample-label");
-//                            sampleLabel.setGraphic(sample.getMediumPreview());
-//                            sampleLabel.setContentDisplay(ContentDisplay.TOP);
-//                            hbox.getChildren().add(sampleLabel);
-//                        }
-//                        break;
-//                }
-//            }
-//        }
-//
-//        @Override public Node call(Integer integer) {
-//            return Samples.HIGHLIGHTS[integer].getLargePreview();
-//        }
-//    }
 
     public static class HomePageRow {
         public final RowType rowType;

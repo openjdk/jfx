@@ -30,6 +30,10 @@
 #include <dispatch/dispatch.h>    
 #endif
 
+#if PLATFORM(JAVA)
+#include <wtf/java/JavaRef.h>
+#endif
+
 namespace JSC {
 
 class ExecState;
@@ -96,6 +100,10 @@ private:
 #if PLATFORM(MAC) || PLATFORM(IOS)
     dispatch_queue_t m_queue;
     dispatch_source_t m_timer;
+#endif
+
+#if PLATFORM(JAVA)
+    JGObject m_timer;
 #endif
 
     friend class Watchdog::Scope;

@@ -229,8 +229,14 @@ public class NGRegion extends NGGroup {
         this.width = width;
         this.height = height;
         invalidateOpaqueRegion();
-        backgroundInsets = null;
         cacheKey = null;
+        // We only have to clear the background insets when the size changes if the
+        // background has fills who's insets are dependent on the size (as would be
+        // true only if a CornerRadii of any background fill on the background had
+        // a percentage based radius).
+        if (background != null && background.isFillPercentageBased()) {
+            backgroundInsets = null;
+        }
     }
 
     /**
@@ -239,10 +245,10 @@ public class NGRegion extends NGGroup {
      *
      * @param b Border, of type javafx.scene.layout.Border
      */
-    public void updateBorder(Object b) {
+    public void updateBorder(Border b) {
         // Make sure that the border instance we store on this NGRegion is never null
         final Border old = border;
-        border = b == null ? Border.EMPTY : (Border) b;
+        border = b == null ? Border.EMPTY : b;
 
         // Determine whether the geometry has changed, or if only the visuals have
         // changed. Geometry changes will require more work, and an equals check
@@ -262,10 +268,10 @@ public class NGRegion extends NGGroup {
      *
      * @param b    Background, of type javafx.scene.layout.Background. Can be null.
      */
-    public void updateBackground(Object b) {
+    public void updateBackground(Background b) {
         // Make sure that the background instance we store on this NGRegion is never null
         final Background old = background;
-        background = b == null ? Background.EMPTY : (Background) b;
+        background = b == null ? Background.EMPTY : b;
 
         final List<BackgroundFill> fills = background.getFills();
         cacheMode = 0;
@@ -362,11 +368,11 @@ public class NGRegion extends NGGroup {
      *                                                                        *
      *************************************************************************/
 
-    private RegionImageCache getImageCache(Graphics g) {
-        Screen screen = g.getAssociatedScreen();
+    private RegionImageCache getImageCache(final Graphics g) {
+        final Screen screen = g.getAssociatedScreen();
         RegionImageCache cache = imageCacheMap.get(screen);
         if (cache == null) {
-            cache = new RegionImageCache(g);
+            cache = new RegionImageCache(g.getResourceFactory());
             imageCacheMap.put(screen, cache);
         }
         return cache;
@@ -407,14 +413,12 @@ public class NGRegion extends NGGroup {
         return (RectBounds) opaqueRegion.deriveWithNewBounds(opaqueLeft, opaqueTop, 0, width - opaqueRight, height - opaqueBottom, 0);
     }
 
-    @Override protected RenderRootResult computeRenderRoot(NodePath<NGNode> path, RectBounds dirtyRegion,
+    @Override protected RenderRootResult computeRenderRoot(NodePath path, RectBounds dirtyRegion,
                                                            int cullingIndex, BaseTransform tx,
                                                            GeneralTransform3D pvTx) {
 
         RenderRootResult result = super.computeRenderRoot(path, dirtyRegion, cullingIndex, tx, pvTx);
-        if (result == RenderRootResult.HAS_RENDER_ROOT) {
-            path.add(this);
-        } else if (result == RenderRootResult.NONE){
+        if (result == RenderRootResult.NO_RENDER_ROOT){
             result = computeNodeRenderRoot(path, dirtyRegion, cullingIndex, tx, pvTx);
         }
         return result;
@@ -445,11 +449,10 @@ public class NGRegion extends NGGroup {
      *************************************************************************/
 
     @Override protected void renderContent(Graphics g) {
-        // Use Effect to render 3D transformed Region that does not contain 3D
-        // transformed children.
-        // This is done in order to render the Region's content and children
-        // into an image in local coordinates using the identity transform.
-        // The resulting image will then be correctly transformed in 3D by
+        // Use Effect to render a 3D transformed Region that does not contain 3D
+        // transformed children. This is done in order to render the Region's
+        // content and children into an image in local coordinates using the identity
+        // transform. The resulting image will then be correctly transformed in 3D by
         // the composite transform used to render this Region.
         // However, we avoid doing this for Regions whose children have a 3D
         // transform, because it will flatten the transforms of those children
@@ -560,9 +563,9 @@ public class NGRegion extends NGGroup {
             if (!background.isEmpty()) {
                 // cacheWidth is the width of the region used within the cached image. For example,
                 // perhaps normally the width of a region is 200px. But instead I will render the
-                // region as though it is 20px wide instead into the cached image. 20px in this
-                // case is the cache width. Although it may draw into more pixels than this (for
-                // example, drawing the focus rectangle extends beyond the width of the region).
+                // region as though it is 20px wide into the cached image. 20px in this case is
+                // the cache width. Although it may draw into more pixels than this (for example,
+                // drawing the focus rectangle extends beyond the width of the region).
                 // left + right background insets give us the left / right slice locations, plus 1 pixel for the center.
                 // Round the whole thing up to be a whole number.
                 if (backgroundInsets == null) updateBackgroundInsets();
@@ -600,8 +603,6 @@ public class NGRegion extends NGGroup {
                 // will not look the same as though drawn by vector
                 final boolean cache =
                         background.getFills().size() > 1 && // Not worth the overhead otherwise
-                        width == (int)width &&
-                        height == (int)height &&
                         cacheMode != 0 &&
                         g.getTransformNoClone().isTranslateOrIdentity();
                 RTTexture cached = null;
@@ -651,22 +652,34 @@ public class NGRegion extends NGGroup {
                     final float srcX2 = srcX1 + textureWidth;
                     final float srcY2 = srcY1 + textureHeight;
 
+                    // If total destination width is < the source width, then we need to start
+                    // shrinking the left and right sides to accommodate. Likewise in the other dimension.
+                    double adjustedLeftInset = leftInset;
+                    double adjustedRightInset = rightInset;
+                    double adjustedTopInset = topInset;
+                    double adjustedBottomInset = bottomInset;
+                    if (leftInset + rightInset > width) {
+                        double fraction = width / (leftInset + rightInset);
+                        adjustedLeftInset *= fraction;
+                        adjustedRightInset *= fraction;
+                    }
+                    if (topInset + bottomInset > height) {
+                        double fraction = height / (topInset + bottomInset);
+                        adjustedTopInset *= fraction;
+                        adjustedBottomInset *= fraction;
+                    }
+
                     if (sameWidth && sameHeight) {
                         g.drawTexture(cached, dstX1, dstY1, dstX2, dstY2, srcX1, srcY1, srcX2, srcY2);
                     } else if (sameHeight) {
                         // We do 3-patch rendering fixed height
-                        final float left = (float) (leftInset + outsetsLeft);
-                        final float right = (float) (rightInset + outsetsRight);
+                        final float left = (float) (adjustedLeftInset + outsetsLeft);
+                        final float right = (float) (adjustedRightInset + outsetsRight);
 
                         final float dstLeftX = dstX1 + left;
                         final float dstRightX = dstX2 - right;
                         final float srcLeftX = srcX1 + left;
                         final float srcRightX = srcX2 - right;
-
-                        // These assertions must hold, or rendering artifacts are highly likely to occur
-                        assert dstX1 != dstLeftX;
-                        assert dstLeftX != dstRightX;
-                        assert dstRightX != dstX2;
 
                         g.drawTexture3SliceH(cached,
                                              dstX1, dstY1, dstX2, dstY2,
@@ -674,18 +687,13 @@ public class NGRegion extends NGGroup {
                                              dstLeftX, dstRightX, srcLeftX, srcRightX);
                     } else if (sameWidth) {
                         // We do 3-patch rendering fixed width
-                        final float top = (float) (topInset + outsetsTop);
-                        final float bottom = (float) (bottomInset + outsetsBottom);
+                        final float top = (float) (adjustedTopInset + outsetsTop);
+                        final float bottom = (float) (adjustedBottomInset + outsetsBottom);
 
                         final float dstTopY = dstY1 + top;
                         final float dstBottomY = dstY2 - bottom;
                         final float srcTopY = srcY1 + top;
                         final float srcBottomY = srcY2 - bottom;
-
-                        // These assertions must hold, or rendering artifacts are highly likely to occur
-                        assert dstY1 != dstTopY;
-                        assert dstTopY != dstBottomY;
-                        assert dstBottomY != dstY2;
 
                         g.drawTexture3SliceV(cached,
                                              dstX1, dstY1, dstX2, dstY2,
@@ -693,10 +701,10 @@ public class NGRegion extends NGGroup {
                                              dstTopY, dstBottomY, srcTopY, srcBottomY);
                     } else {
                         // We do 9-patch rendering
-                        final float left = (float) (leftInset + outsetsLeft);
-                        final float top = (float) (topInset + outsetsTop);
-                        final float right = (float) (rightInset + outsetsRight);
-                        final float bottom = (float) (bottomInset + outsetsBottom);
+                        final float left = (float) (adjustedLeftInset + outsetsLeft);
+                        final float top = (float) (adjustedTopInset + outsetsTop);
+                        final float right = (float) (adjustedRightInset + outsetsRight);
+                        final float bottom = (float) (adjustedBottomInset + outsetsBottom);
 
                         final float dstLeftX = dstX1 + left;
                         final float dstRightX = dstX2 - right;
@@ -706,14 +714,6 @@ public class NGRegion extends NGGroup {
                         final float dstBottomY = dstY2 - bottom;
                         final float srcTopY = srcY1 + top;
                         final float srcBottomY = srcY2 - bottom;
-
-                        // These assertions must hold, or rendering artifacts are highly likely to occur
-                        assert dstY1 != dstTopY;
-                        assert dstTopY != dstBottomY;
-                        assert dstBottomY != dstY2;
-                        assert dstX1 != dstLeftX;
-                        assert dstLeftX != dstRightX;
-                        assert dstRightX != dstX2;
 
                         g.drawTexture9Slice(cached,
                                             dstX1, dstY1, dstX2, dstY2,
@@ -739,6 +739,8 @@ public class NGRegion extends NGGroup {
                     final int imgWidth = img.getWidth();
                     final int imgHeight = img.getHeight();
                     // TODO need to write tests which demonstrate this works when the image hasn't loaded yet. (RT-26978)
+                    // This doesn't work today. An NPE will occur, and then when the image does finally load,
+                    // we don't cause another pulse to occur so it doesn't ever get drawn.
                     // TODO need to write tests where we use a writable image and draw to it a lot. (RT-26978)
                     if (img != null && imgWidth != 0 && imgHeight != 0) {
                         final BackgroundSize size = image.getSize();
@@ -1167,6 +1169,9 @@ public class NGRegion extends NGGroup {
     }
 
     private void renderBackgroundShape(Graphics g) {
+        if (PulseLogger.PULSE_LOGGING_ENABLED) {
+            PulseLogger.PULSE_LOGGER.renderIncrementCounter("NGRegion renderBackgroundShape slow path");
+        }
         // We first need to draw each background fill. We don't pay any attention
         // to the radii of the BackgroundFill, but we do honor the insets and
         // the fill paint itself.
@@ -1215,6 +1220,9 @@ public class NGRegion extends NGGroup {
     }
 
     private void renderBackgrounds(Graphics g, float width, float height) {
+        if (PulseLogger.PULSE_LOGGING_ENABLED) {
+            PulseLogger.PULSE_LOGGER.renderIncrementCounter("NGRegion renderBackgrounds slow path");
+        }
         final List<BackgroundFill> fills = background.getFills();
         for (int i = 0, max = fills.size(); i < max; i++) {
             final BackgroundFill fill = fills.get(i);

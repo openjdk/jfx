@@ -43,7 +43,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class AnimationTest {
-	
+
     private static final Duration ONE_SEC = Duration.millis(1000);
     private static final Duration TWO_SECS = Duration.millis(2000);
     private static final Duration THREE_SECS = Duration.millis(3000);
@@ -52,7 +52,7 @@ public class AnimationTest {
     private static final double DEFAULT_RATE = 1.0;
     private static final int DEFAULT_REPEAT_COUNT = 1;
     private static final boolean DEFAULT_AUTO_REVERSE = false;
-    
+
     private static final double EPSILON = 1e-12;
 
     private AbstractMasterTimerMock timer;
@@ -97,23 +97,23 @@ public class AnimationTest {
         // currentRate
         assertEquals("currentRate", animation.currentRateProperty().getName());
         assertEquals(animation, animation.currentRateProperty().getBean());
-        
+
         // cycleDuration
         assertEquals("cycleDuration", animation.cycleDurationProperty().getName());
         assertEquals(animation, animation.cycleDurationProperty().getBean());
-        
+
         // totalDuration
         assertEquals("totalDuration", animation.totalDurationProperty().getName());
         assertEquals(animation, animation.totalDurationProperty().getBean());
-        
+
         // currentTime
         assertEquals("currentTime", animation.currentTimeProperty().getName());
         assertEquals(animation, animation.currentTimeProperty().getBean());
-        
+
         // status
         assertEquals("status", animation.statusProperty().getName());
         assertEquals(animation, animation.statusProperty().getBean());
-        
+
     }
 
     @Test
@@ -438,6 +438,22 @@ public class AnimationTest {
         // cycleDuration = 0
         animation.setCycleDuration(Duration.ZERO);
         assertFalse(animation.impl_startable(true));
+    }
+
+    @Test
+    public void testChangeCycleDurationAfterFinish_RT32657() {
+        animation.setCycleDuration(TWO_SECS);
+        animation.play();
+        assertEquals(Status.RUNNING, animation.getStatus());
+        assertEquals(Duration.ZERO, animation.getCurrentTime());
+        animation.impl_setCurrentTicks(12000);
+        assertEquals(TWO_SECS, animation.getCurrentTime());
+        animation.impl_finished();
+
+        animation.setCycleDuration(ONE_SEC);
+        animation.play();
+        assertEquals(Status.RUNNING, animation.getStatus());
+        assertEquals(Duration.ZERO, animation.getCurrentTime());
     }
 
     @Test

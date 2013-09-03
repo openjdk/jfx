@@ -36,6 +36,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WeakChangeListener;
 
 /**
  * The {@code MeshView} class defines a surface with the specified 3D
@@ -74,28 +75,34 @@ public class MeshView extends Shape3D {
         return mesh == null ? null : mesh.get();
     }
 
-    private final ChangeListener<Boolean> meshListener = new ChangeListener<Boolean>() {
-        @Override public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-            if (newValue) {
-                impl_markDirty(DirtyBits.MESH_GEOM);
-                impl_geomChanged();
-            }
-        }
-    };
-
     public final ObjectProperty<Mesh> meshProperty() {
         if (mesh == null) {
             mesh = new SimpleObjectProperty<Mesh>(MeshView.this, "mesh") {
+                
                 private Mesh old = null;
+                private final ChangeListener<Boolean> meshChangeListener =
+                        new ChangeListener<Boolean>() {
+                            
+                    @Override
+                    public void changed(ObservableValue<? extends Boolean> observable,
+                            Boolean oldValue, Boolean newValue) {
+                        if (newValue) {
+                            impl_markDirty(DirtyBits.MESH_GEOM);
+                            impl_geomChanged();
+                        }
+                    }
+                };
+                private final WeakChangeListener<Boolean> weakMeshChangeListener =
+                        new WeakChangeListener(meshChangeListener);
 
                 @Override
                 protected void invalidated() {
                     if (old != null) {
-                        old.dirtyProperty().removeListener(meshListener);
+                        old.dirtyProperty().removeListener(weakMeshChangeListener);
                     }
                     Mesh newMesh = get();
                     if (newMesh != null) {
-                        newMesh.dirtyProperty().addListener(meshListener);
+                        newMesh.dirtyProperty().addListener(weakMeshChangeListener);
                     }
                     impl_markDirty(DirtyBits.MESH);
                     impl_markDirty(DirtyBits.MESH_GEOM);

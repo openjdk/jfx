@@ -32,6 +32,12 @@ package javafx.geometry;
  * @since JavaFX 2.0
  */
 public class Point2D {
+
+    /**
+     * Point or vector with both coordinates set to 0.
+     */
+    public static final Point2D ZERO = new Point2D(0.0, 0.0);
+
     /**
      * The x coordinate.
      *
