@@ -75,13 +75,10 @@ import java.util.concurrent.locks.ReentrantLock;
  * <pre>
  *     public class SwingFx extends Application {
  *
- *         private SwingNode swingNode;
- *
  *         &#064;Override
  *         public void start(Stage stage) {
- *             swingNode = new SwingNode();
- *
- *             createAndSetSwingContent();
+ *             final SwingNode swingNode = new SwingNode();
+ *             createAndSetSwingContent(swingNode);
  *
  *             StackPane pane = new StackPane();
  *             pane.getChildren().add(swingNode);
@@ -90,13 +87,17 @@ import java.util.concurrent.locks.ReentrantLock;
  *             stage.show();
  *         }
  *
- *         private void createAndSetSwingContent() {
+ *         private void createAndSetSwingContent(final SwingNode swingNode) {
  *             SwingUtilities.invokeLater(new Runnable() {
  *                 &#064;Override
  *                 public void run() {
  *                     swingNode.setContent(new JButton("Click me!"));
  *                 }
  *             });
+ *         }
+ * 
+ *         public static void main(String[] args) {
+ *             launch(args);
  *         }
  *     }
  * </pre>
@@ -143,9 +144,9 @@ public class SwingNode extends Node {
     /**
      * Attaches a {@code JComponent} instance to display in this {@code SwingNode}.
      * <p>
-     * The method can be called either on the JavaFX Application thread or the Swing thread.
-     * Note however, that access to a Swing component must occur from the Swing thread according
-     * to the Swing threading restrictions.
+     * The method can be called either on the JavaFX Application thread or the Event Dispatch thread.
+     * Note however, that access to a Swing component must occur from the Event Dispatch thread
+     * according to the Swing threading restrictions.
      *
      * @param content a Swing component to display in this {@code SwingNode}
      *
@@ -166,9 +167,9 @@ public class SwingNode extends Node {
    /**
      * Returns the {@code JComponent} instance attached to this {@code SwingNode}.
      * <p>
-     * The method can be called either on the JavaFX Application thread or the Swing thread.
-     * Note however, that access to a Swing component must occur from the Swing thread according
-     * to the Swing threading restrictions.
+     * The method can be called either on the JavaFX Application thread or the Event Dispatch thread.
+     * Note however, that access to a Swing component must occur from the Event Dispatch thread
+     * according to the Swing threading restrictions.
      *
      * @see java.awt.EventQueue#isDispatchThread()
      * @see javafx.application.Platform#isFxApplicationThread()
@@ -180,7 +181,7 @@ public class SwingNode extends Node {
     }
 
     /*
-     * Called on Swing thread
+     * Called on EDT
      */
     private void setContentImpl(JComponent content) {
         if (lwFrame != null) {
@@ -224,7 +225,7 @@ public class SwingNode extends Node {
     private List<Runnable> peerRequests = new ArrayList<>();
 
     /*
-     * Called on Swing thread
+     * Called on EDT
      */
     void setImageBuffer(final int[] data,
                         final int x, final int y,
@@ -246,7 +247,7 @@ public class SwingNode extends Node {
     }
 
     /*
-     * Called on Swing thread
+     * Called on EDT
      */
     void setImageBounds(final int x, final int y, final int w, final int h) {
         Runnable r = new Runnable() {
@@ -263,7 +264,7 @@ public class SwingNode extends Node {
     }
 
     /*
-     * Called on Swing thread
+     * Called on EDT
      */
     void repaintDirtyRegion(final int dirtyX, final int dirtyY, final int dirtyWidth, final int dirtyHeight) {
         Runnable r = new Runnable() {
