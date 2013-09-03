@@ -63,8 +63,8 @@ public final class Dragboard extends Clipboard {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static Dragboard impl_createDragboard(TKScene scene, boolean isDragSource) {
-        return new Dragboard(scene.createDragboard(isDragSource));
+    public static Dragboard impl_createDragboard(TKClipboard peer) {
+        return new Dragboard(peer);
     }
 
     // PENDING_DOC_REVIEW

@@ -111,7 +111,7 @@ public class DataFormat {
      *     DataFormat fmt = new DataFormat("text/foo", "text/bar");
      *     Clipboard clipboard = Clipboard.getSystemClipboard();
      *     ClipboardContent content = new ClipboardContent();
-     *     content.pu(fmt, "Hello");
+     *     content.put(fmt, "Hello");
      *     clipboard.setContent(content);
      * </code></pre>
      *

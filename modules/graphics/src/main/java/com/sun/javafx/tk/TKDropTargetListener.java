@@ -45,7 +45,7 @@ public interface TKDropTargetListener {
      * @return transfer mode chosen by potential target
      */
     public TransferMode dragEnter(double x, double y, double screenX, double screenY,
-                                  TransferMode transferMode);
+                                  TransferMode transferMode, TKClipboard dragboard);
 
     /**
      * Called during a drag gesture, while the mouse pointer is still
