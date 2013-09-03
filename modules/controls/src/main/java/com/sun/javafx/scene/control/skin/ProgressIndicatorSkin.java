@@ -28,6 +28,7 @@ package com.sun.javafx.scene.control.skin;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import javafx.application.Platform;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
@@ -118,10 +119,14 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
 
                 if (spinner != null) {
                     if (getSkinnable().impl_isTreeVisible() && getSkinnable().getScene() != null) {
-                        spinner.indeterminateTimeline.play();
+                        if (spinner.indeterminateTimeline != null) {
+                            spinner.indeterminateTimeline.play();
+                        }
                     }
                     else {
-                        spinner.indeterminateTimeline.pause();
+                        if (spinner.indeterminateTimeline != null) {
+                            spinner.indeterminateTimeline.pause();
+                        }
                         getChildren().remove(spinner);
                         spinner = null;
                         timelineNulled = true;
@@ -136,7 +141,9 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
             @Override public void invalidated(Observable valueModel) {
                 if (spinner != null) {
                     if (getSkinnable().getScene() == null) {
-                        spinner.indeterminateTimeline.pause();
+                        if (spinner.indeterminateTimeline != null) {
+                            spinner.indeterminateTimeline.pause();
+                        }
                         getChildren().remove(spinner);
                         spinner = null;
                         timelineNulled = true;
@@ -148,7 +155,9 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
                         spinner = new IndeterminateSpinner(getSkinnable(), ProgressIndicatorSkin.this, spinEnabled.get(), progressColor.get());
                         getChildren().add(spinner);
                         if (getSkinnable().impl_isTreeVisible()) {
-                            spinner.indeterminateTimeline.play();
+                            if (spinner.indeterminateTimeline != null) {
+                                spinner.indeterminateTimeline.play();
+                            }
                         }
                         getSkinnable().requestLayout();
                     }
@@ -172,12 +181,16 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
             getChildren().clear();
             getChildren().add(spinner);
             if (getSkinnable().impl_isTreeVisible()) {
-                spinner.indeterminateTimeline.play();
+                if (spinner.indeterminateTimeline != null) {
+                    spinner.indeterminateTimeline.play();
+                }
             }
         } else {
             // clean up after spinner
             if (spinner != null) {
-                spinner.indeterminateTimeline.stop();
+                if (spinner.indeterminateTimeline != null) {
+                    spinner.indeterminateTimeline.stop();
+                }
                 spinner = null;
             }
             // create determinateIndicator
@@ -190,7 +203,9 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
     @Override public void dispose() {
         super.dispose();
         if (spinner != null) {
-            spinner.indeterminateTimeline.stop();
+            if (spinner.indeterminateTimeline != null) {
+                spinner.indeterminateTimeline.stop();
+            }
             spinner = null;
         }
     }
@@ -447,6 +462,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
 
             indeterminateTimeline = new Timeline();
             indeterminateTimeline.setCycleCount(Timeline.INDEFINITE);
+            indeterminateTimeline.setDelay(UNCLIPPED_DELAY);
             rebuildTimeline();
 
             rebuild();
@@ -479,29 +495,6 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
         return true;
     }
 
-    /*
-    ** see if we're clipped...
-    */
-    private void pauseIfNotVisibleInClip() {
-        if (!isVisibleInClip()) {
-            indeterminateTimeline.pause();
-            
-            Thread t = new Thread(new Runnable() {
-                 @Override
-                     public void run() {
-                        while (!isVisibleInClip()) {
-                            try {
-                                Thread.sleep(500);
-                            }
-                            catch (Exception e) {};
-                        }
-                        indeterminateTimeline.play();
-                    }
-                });
-            t.start();
-        }
-    }
-
     private boolean isInvisibleOrDisconnected() {
         Scene s = control.getScene();
         if (s == null) {
@@ -531,32 +524,55 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
     }
 
 
-        private void stopIfNotNeeded() {
-            if (!stopIfInvisibleOrDisconnected()) {
-                pauseIfNotVisibleInClip();
-            }
-        }
+        static final private Duration CLIPPED_DELAY = new Duration(300);
+        static final private Duration UNCLIPPED_DELAY = new Duration(0);
 
         private void rebuildTimeline() {
             final ObservableList<KeyFrame> keyFrames = FXCollections.<KeyFrame>observableArrayList();
-            if(spinEnabled) {
-                keyFrames.add(new KeyFrame(Duration.millis(0), new KeyValue(pathsG.rotateProperty(), 360)));
-                keyFrames.add(new KeyFrame(Duration.millis(3900), new KeyValue(pathsG.rotateProperty(), 0)));
-            }
             keyFrames.add(
               new KeyFrame(
-                Duration.millis(50), new EventHandler<ActionEvent>() {
+                Duration.millis(0), new EventHandler<ActionEvent>() {
                   @Override public void handle(ActionEvent event) {
-                      /*
-                      ** Stop the animation if the ProgressBar is removed
-                      ** from a Scene, or is invisible.
-                      ** Pause the animation if it's outside of a clipped
-                      ** region (e.g. not visible in a ScrollPane)
-                      */
-                      stopIfNotNeeded();
+                      /**
+                       * Stop the animation if the ProgressBar is removed
+                       * from a Scene, or is invisible.
+                       * Pause the animation if it's outside of a clipped
+                       * region (e.g. not visible in a ScrollPane)
+                       */
+                      if (indeterminateTimeline != null) {
+                          stopIfInvisibleOrDisconnected();
+                          if (!isVisibleInClip()) {
+                              Platform.runLater(new Runnable() {
+                                @Override public void run() {
+                                    if (indeterminateTimeline != null) {
+                                        if (indeterminateTimeline.getDelay().compareTo(CLIPPED_DELAY) != 0) {
+                                            indeterminateTimeline.setDelay(CLIPPED_DELAY);
+                                        }
+                                        indeterminateTimeline.stop();
+                                        indeterminateTimeline.jumpTo(Duration.ZERO);
+                                        indeterminateTimeline.play();
+                                    }
+                                }
+                              });
+                          }
+                          else {
+                              Platform.runLater(new Runnable() {
+                                @Override public void run() {
+                                    if (indeterminateTimeline != null) {
+                                        if (indeterminateTimeline.getDelay().compareTo(UNCLIPPED_DELAY) != 0) {
+                                            indeterminateTimeline.setDelay(UNCLIPPED_DELAY);
+                                        }
+                                    }
+                                }
+                              });
+                          }
+                      }
                   }
                 }));
-
+            if(spinEnabled) {
+                keyFrames.add(new KeyFrame(Duration.millis(1), new KeyValue(pathsG.rotateProperty(), 360)));
+                keyFrames.add(new KeyFrame(Duration.millis(3900), new KeyValue(pathsG.rotateProperty(), 0)));
+            }
 
             for (int i = 100; i <= 3900; i += 100) {
                 keyFrames.add(
@@ -567,7 +583,9 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
                             }
                         }));
             }
+            indeterminateTimeline.stop();
             indeterminateTimeline.getKeyFrames().setAll(keyFrames);
+            indeterminateTimeline.playFromStart();
         }
 
         private void pauseIndicator(boolean pause) {

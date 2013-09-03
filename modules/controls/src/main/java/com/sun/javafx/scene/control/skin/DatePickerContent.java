@@ -72,6 +72,8 @@ import javafx.scene.layout.StackPane;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
 import com.sun.javafx.scene.traversal.Direction;
 
+import static com.sun.javafx.PlatformUtil.*;
+
 /**
  * The full content for the DatePicker popup. This class could
  * probably be used more or less as-is with an embeddable type of date
@@ -228,6 +230,10 @@ public class DatePickerContent extends VBox {
         addEventHandler(KeyEvent.ANY, new EventHandler<KeyEvent>() {
             @Override public void handle(KeyEvent e) {
                 Node node = getScene().getFocusOwner();
+                if (node instanceof DateCell) {
+                    lastFocusedDayCell = (DateCell)node;
+                }
+
                 if (e.getEventType() == KeyEvent.KEY_PRESSED) {
                     switch (e.getCode()) {
                       case TAB:
@@ -258,8 +264,36 @@ public class DatePickerContent extends VBox {
                           node.impl_traverse(Direction.RIGHT);
                           e.consume();
                           break;
+
+                      case PAGE_UP:
+                          if ((isMac() && e.isMetaDown()) || (!isMac() && e.isControlDown())) {
+                              if (!backYearButton.isDisabled()) {
+                                  forward(-1, YEARS);
+                              }
+                          } else {
+                              if (!backMonthButton.isDisabled()) {
+                                  forward(-1, MONTHS);
+                              }
+                          }
+                          e.consume();
+                          break;
+
+                      case PAGE_DOWN:
+                          if ((isMac() && e.isMetaDown()) || (!isMac() && e.isControlDown())) {
+                              if (!forwardYearButton.isDisabled()) {
+                                  forward(1, YEARS);
+                              }
+                          } else {
+                              if (!forwardMonthButton.isDisabled()) {
+                                  forward(1, MONTHS);
+                              }
+                          }
+                          e.consume();
+                          break;
                     }
-                    if (e.isConsumed() && node instanceof DateCell) {
+
+                    node = getScene().getFocusOwner();
+                    if (node instanceof DateCell) {
                         lastFocusedDayCell = (DateCell)node;
                     }
                 }
@@ -317,7 +351,7 @@ public class DatePickerContent extends VBox {
 
         backMonthButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent t) {
-                displayedYearMonth.set(displayedYearMonth.get().minusMonths(1));
+                forward(-1, MONTHS);
             }
         });
 
@@ -326,7 +360,7 @@ public class DatePickerContent extends VBox {
 
         forwardMonthButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent t) {
-                displayedYearMonth.set(displayedYearMonth.get().plusMonths(1));
+                forward(1, MONTHS);
             }
         });
 
@@ -357,7 +391,7 @@ public class DatePickerContent extends VBox {
 
         backYearButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent t) {
-                displayedYearMonth.set(displayedYearMonth.get().minusYears(1));
+                forward(-1, YEARS);
             }
         });
 
@@ -366,7 +400,7 @@ public class DatePickerContent extends VBox {
 
         forwardYearButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent t) {
-                displayedYearMonth.set(displayedYearMonth.get().plusYears(1));
+                forward(1, YEARS);
             }
         });
 
@@ -660,6 +694,15 @@ yearSpinner.setFillHeight(false);
         goToDate(dayCellDate(dateCell).plus(offset, unit));
     }
 
+    protected void forward(int offset, ChronoUnit unit) {
+        YearMonth yearMonth = displayedYearMonth.get();
+        DateCell dateCell = lastFocusedDayCell;
+        if (dateCell == null || !dayCellDate(dateCell).getMonth().equals(yearMonth.getMonth())) {
+            dateCell = findDayCellForDate(yearMonth.atDay(1));
+        }
+        goToDayCell(dateCell, offset, unit);
+    }
+
     // public for behavior class
     public void goToDate(LocalDate date) {
         if (isValidDate(datePicker.getChronology(), date)) {
@@ -694,6 +737,14 @@ yearSpinner.setFillHeight(false);
         } else {
             // focus month spinner (should not happen)
             backMonthButton.requestFocus();
+        }
+
+        // RT-31857
+        if (backMonthButton.getWidth() == 0) {
+            backMonthButton.requestLayout();
+            forwardMonthButton.requestLayout();
+            backYearButton.requestLayout();
+            forwardYearButton.requestLayout();
         }
     }
 

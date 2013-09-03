@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,35 +23,17 @@
  * questions.
  */
 
-package com.sun.glass.ui.lens;
+package com.sun.javafx.scene.control.skin;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.util.Locale;
-import sun.util.logging.PlatformLogger;
-import sun.util.logging.PlatformLogger.Level;
-
-final class LensLogger {
-
-    private static final PlatformLogger logger = initLogger();
-
-    private static PlatformLogger initLogger() {
-        PlatformLogger logger = PlatformLogger.getLogger("lens");
-        String levelString = AccessController.doPrivileged(
-        new PrivilegedAction<String>() {
-            public String run() {
-                return System.getProperty("log.lens", "SEVERE").toUpperCase(Locale.ROOT);
-            }
-        });
-        try {
-            logger.setLevel(Level.valueOf(levelString));
-        } catch (Exception e) {
-            logger.setLevel(Level.SEVERE);
-        }
-        return logger;
-    }
-
-    public static PlatformLogger getLogger() {
-        return logger;
+/**
+ *
+ * @author paru
+ */
+public class ChoiceBoxSkinNodesRetriever {
+    
+    // can only access the getChoiceBoxSelectedText method in ChoiceBoxSkin 
+    // from this package.
+    public static String getChoiceBoxSelectedText(ChoiceBoxSkin skin) {
+        return skin.getChoiceBoxSelectedText();
     }
 }

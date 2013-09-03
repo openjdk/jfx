@@ -58,6 +58,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import static javafx.scene.input.MouseEvent.MOUSE_PRESSED;
@@ -224,7 +225,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
         Object typeValue = attachedNode.getProperties().get(FXVK.VK_TYPE_PROP_KEY);
         String typeStr = null;
         if (typeValue instanceof String) {
-            typeStr = ((String)typeValue).toLowerCase();
+            typeStr = ((String)typeValue).toLowerCase(Locale.ROOT);
         }
         vkType = (typeStr != null ? typeStr : "text");
         

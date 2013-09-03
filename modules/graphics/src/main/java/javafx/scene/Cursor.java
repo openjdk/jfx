@@ -27,6 +27,7 @@ package javafx.scene;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Locale;
 import javafx.scene.image.Image;
 import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.cursor.CursorType;
@@ -219,7 +220,7 @@ public abstract class Cursor {
             return new ImageCursor(new Image(identifier));
         }
 
-        String uName = identifier.toUpperCase();
+        String uName = identifier.toUpperCase(Locale.ROOT);
         if (uName.equals(DEFAULT.name)) {
             return DEFAULT;
         } else if(uName.equals(CROSSHAIR.name)) {

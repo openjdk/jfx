@@ -159,7 +159,7 @@ void compileTargets(Closure c) {
     COMPILE_TARGETS.split(",").each { target ->
         CompileTarget ct = new CompileTarget();
         ct.name = target;
-        ct.upper = target.trim().toUpperCase()
+        ct.upper = target.trim().toUpperCase(Locale.ROOT)
         ct.capital = target.trim().capitalize()
         c(ct)
     }
@@ -503,7 +503,7 @@ if (COMPILE_TARGETS == "all") {
     File buildSrcDir = file("buildSrc")
     buildSrcDir.listFiles().each { File f ->
         if (f.isFile() && f.name.endsWith(".gradle") && !f.name.equals("build.gradle")) {
-            def target = f.name.substring(0, f.name.lastIndexOf('.gradle')).toUpperCase()
+            def target = f.name.substring(0, f.name.lastIndexOf('.gradle')).toUpperCase(Locale.ROOT)
             apply from: f
             if (project.ext["${target}"].canBuild) {
                 tmp.add(target)
@@ -522,7 +522,7 @@ if (COMPILE_TARGETS == "all") {
 if (COMPILE_TARGETS != "") {
     def tmp = []
     COMPILE_TARGETS.split(",").each {target ->
-        if (project.ext["${target.toUpperCase()}"].canBuild) {
+        if (project.ext["${target.toUpperCase(Locale.ROOT)}"].canBuild) {
             tmp.add(target)
         }
     }

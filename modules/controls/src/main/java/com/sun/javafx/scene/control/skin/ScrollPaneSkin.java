@@ -256,6 +256,8 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
                 // if scrollNode requested layout, will want to recompute
                 nodeWidth = -1;
                 nodeHeight = -1;
+                updateVerticalSB();
+                updateHorizontalSB();
                 super.requestLayout(); // add as layout root for next layout pass
             }
             @Override protected void layoutChildren() {

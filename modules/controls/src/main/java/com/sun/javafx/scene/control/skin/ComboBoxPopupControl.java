@@ -26,16 +26,13 @@
 package com.sun.javafx.scene.control.skin;
 
 import javafx.css.Styleable;
+import javafx.geometry.*;
 import javafx.scene.control.ComboBoxBase;
 import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.event.Event;
 import javafx.event.EventHandler;
-import javafx.geometry.HPos;
-import javafx.geometry.NodeOrientation;
-import javafx.geometry.Point2D;
-import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.control.PopupControl;
 import javafx.scene.control.Skin;
@@ -98,6 +95,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         
         Point2D p = getPrefPopupPosition();
         getPopup().getScene().setNodeOrientation(getSkinnable().getEffectiveNodeOrientation());
+        reconfigurePopup();
         getPopup().show(getSkinnable().getScene().getWindow(), p.getX(), p.getY());
     }
     
@@ -144,24 +142,27 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         getSkinnable().layoutXProperty().addListener(layoutPosListener);
         getSkinnable().layoutYProperty().addListener(layoutPosListener);
         getSkinnable().widthProperty().addListener(layoutPosListener);
+        getSkinnable().heightProperty().addListener(layoutPosListener);
     }
     
     void reconfigurePopup() {
-        // RT-26861. Don't call getPopup() here because it may cause the popup
-        // to be created too early.
-        if (popup == null || !popup.isShowing()) return;
+        final PopupControl popupControl = getPopup();
+        if (popupControl == null) return;
                 
-        Point2D p = getPrefPopupPosition();
-        reconfigurePopup(p.getX(), p.getY(), 
-                getPopupContent().prefWidth(1), getPopupContent().prefHeight(1));
-    }   
-    
-    void reconfigurePopup(double x, double y, double minWidth, double minHeight) {
-        if (! getPopup().isShowing()) return;
-        
-        if (x > -1) getPopup().setX(x);
-        if (y > -1) getPopup().setY(y);
-        if (minWidth > -1) getPopup().setMinWidth(minWidth);
-        if (minHeight > -1) getPopup().setMinHeight(minHeight);
+        final Point2D p = getPrefPopupPosition();
+
+        final Node popupContent = getPopupContent();
+        final double minWidth = popupContent.prefWidth(1);
+        final double minHeight = popupContent.prefHeight(1);
+
+        if (p.getX() > -1) popupControl.setX(p.getX());
+        if (p.getY() > -1) popupControl.setY(p.getY());
+        if (minWidth > -1) popupControl.setMinWidth(minWidth);
+        if (minHeight > -1) popupControl.setMinHeight(minHeight);
+
+        final Bounds b = popupContent.getLayoutBounds();
+        final double w = b.getWidth() < minWidth ? minWidth : b.getWidth();
+        final double h = b.getHeight() < minHeight ? minHeight : b.getHeight();
+        popupContent.resize(w, h);
     }
 }

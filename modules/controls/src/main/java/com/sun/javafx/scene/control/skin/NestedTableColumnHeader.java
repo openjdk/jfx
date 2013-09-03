@@ -339,8 +339,9 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
         // children columns need to share the total available width
         double x = snappedLeftInset();
-        int i = 0;
-        for (TableColumnHeader n : getColumnHeaders()) {
+        int pos = 0;
+        for (int i = 0, max = getColumnHeaders().size(); i < max; i++) {
+            TableColumnHeader n = getColumnHeaders().get(i);
             if (! n.isVisible()) continue;
 
             double prefWidth = snapSize(n.prefWidth(-1));
@@ -364,7 +365,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
             // position drag overlay to intercept column resize requests
             if (dragRects != null && i < dragRects.size()) {
-                Rectangle dragRect = dragRects.get(i++);
+                Rectangle dragRect = dragRects.get(pos++);
                 dragRect.setHeight(getHeight() - label.getHeight());
                 dragRect.relocate(x - DRAG_RECT_WIDTH / 2, snappedTopInset() + labelHeight);
             }
@@ -498,7 +499,10 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         if (updateColumns) {
             updateTableColumnHeaders();
             updateColumns = false;
-            getParent().requestLayout();
+
+            // Added to resolve RT-32559, where reordering columns resulted in
+            // their disappearance
+            impl_processCSS(false);
         }
     }
 

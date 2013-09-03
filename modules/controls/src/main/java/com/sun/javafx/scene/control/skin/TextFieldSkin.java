@@ -240,9 +240,11 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
                 if (caretPath.getElements().size() == 0) {
                     // The caret pos is invalid.
                     updateTextNodeCaretPos(textField.getCaretPosition());
-                    return;
+                } else if (caretPath.getElements().size() == 4) {
+                    // The caret is split. Ignore and keep the previous width value.
+                } else {
+                    caretWidth = Math.round(caretPath.getLayoutBounds().getWidth());
                 }
-                caretWidth = Math.round(caretPath.getLayoutBounds().getWidth());
             }
         });
 

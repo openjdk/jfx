@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import javafx.collections.MapChangeListener;
 import javafx.css.PseudoClass;
 import javafx.beans.property.*;
 import javafx.event.ActionEvent;
@@ -116,6 +117,19 @@ public abstract class ComboBoxBase<T> extends Control {
      */
     public ComboBoxBase() {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
+
+        // Fix for RT-29885
+        getProperties().addListener(new MapChangeListener<Object, Object>() {
+            @Override public void onChanged(Change<?,?> change) {
+                if (change.wasAdded()) {
+                    if (change.getKey() == "FOCUSED") {
+                        setFocused((Boolean)change.getValueAdded());
+                        getProperties().remove("FOCUSED");
+                    }
+                }
+            }
+        });
+        // End of fix for RT-29885
     }
     
     void valueInvalidated() {

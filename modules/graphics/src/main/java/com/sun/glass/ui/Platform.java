@@ -26,6 +26,7 @@ package com.sun.glass.ui;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Locale;
 
 final class Platform {
 
@@ -65,7 +66,7 @@ final class Platform {
             }
 
             String osName = System.getProperty("os.name");
-            String osNameLowerCase = osName.toLowerCase();
+            String osNameLowerCase = osName.toLowerCase(Locale.ROOT);
             if (osNameLowerCase.startsWith("mac") || osNameLowerCase.startsWith("darwin")) {
                 type = MAC;
             } else if (osNameLowerCase.startsWith("wind")) {

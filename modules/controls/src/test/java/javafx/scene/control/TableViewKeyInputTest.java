@@ -2103,4 +2103,46 @@ public class TableViewKeyInputTest {
         assertNotSame(initialSelectionOwner, nextSelectionOwner);
         assertNotSame(newSelectionOwner, nextSelectionOwner);
     }
+
+    @Test public void test_rt21444_up() {
+        final int items = 8;
+        tableView.getItems().clear();
+        for (int i = 1; i <= items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(3);
+
+        assertEquals(3, sm.getSelectedIndex());
+        assertEquals("Row 4", sm.getSelectedItem());
+
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(2, sm.getSelectedItems().size());
+        assertEquals("Row 3", sm.getSelectedItem());
+        assertEquals("Row 3", sm.getSelectedItems().get(0));
+    }
+
+    @Test public void test_rt21444_down() {
+        final int items = 8;
+        tableView.getItems().clear();
+        for (int i = 1; i <= items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(3);
+
+        assertEquals(3, sm.getSelectedIndex());
+        assertEquals("Row 4", sm.getSelectedItem());
+
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(2, sm.getSelectedItems().size());
+        assertEquals("Row 5", sm.getSelectedItem());
+        assertEquals("Row 5", sm.getSelectedItems().get(1));
+    }
 }

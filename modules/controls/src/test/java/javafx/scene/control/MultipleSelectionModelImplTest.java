@@ -37,6 +37,8 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -199,6 +201,9 @@ public class MultipleSelectionModelImplTest {
                 treeTableView.setFocusModel((TreeTableViewFocusModel) focusModel);
                 currentControl = treeTableView;
             }
+
+            // ensure the selection mode is set to multiple
+            model.setSelectionMode(SelectionMode.MULTIPLE);
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -270,12 +275,12 @@ public class MultipleSelectionModelImplTest {
     }
 
     @Test public void testSelectAllWithSingleSelection() {
+        msModel().setSelectionMode(SelectionMode.SINGLE);
         msModel().selectAll();
         ensureInEmptyState();
     }
 
     @Test public void testSelectAllWithMultipleSelection() {
-        msModel().setSelectionMode(SelectionMode.MULTIPLE);
         msModel().selectAll();
 
         assertEquals(19, model.getSelectedIndex());
@@ -895,5 +900,24 @@ public class MultipleSelectionModelImplTest {
         model.clearAndSelect(4);
         assertEquals(2, rt_32411_add_count);
         assertEquals(1, rt_32411_remove_count);
+    }
+
+    private int rt32618_count = 0;
+    @Test public void test_rt32618_multipleSelection() {
+        model.selectedItemProperty().addListener(new ChangeListener<Object>() {
+            @Override public void changed(ObservableValue<? extends Object> ov, Object t, Object t1) {
+                rt32618_count++;
+            }
+        });
+
+        assertEquals(0, rt32618_count);
+
+        model.select(0);
+        assertEquals(1, rt32618_count);
+        assertEquals(ROW_1_VALUE, getValue(model.getSelectedItem()));
+
+        model.clearAndSelect(1);
+        assertEquals(2, rt32618_count);
+        assertEquals(ROW_2_VALUE, getValue(model.getSelectedItem()));
     }
 }

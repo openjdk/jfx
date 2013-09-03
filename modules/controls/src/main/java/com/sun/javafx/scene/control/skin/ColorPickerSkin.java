@@ -269,7 +269,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
 //                name = name.substring(name.lastIndexOf("Color."));
 //                
 //                String displayName = f.getName();
-//                displayName = displayName.substring(0, 1) + displayName.substring(1).toLowerCase();
+//                displayName = displayName.substring(0, 1) + displayName.substring(1).toLowerCase(Locale.ROOT);
 //                
 //                System.out.println("colorNameMap.put(" + name + ", \"" + displayName + "\");");
 //            }

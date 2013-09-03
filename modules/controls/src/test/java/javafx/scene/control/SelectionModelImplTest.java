@@ -28,6 +28,8 @@ package javafx.scene.control;
 import java.util.Arrays;
 import java.util.Collection;
 
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.ChoiceBox.ChoiceBoxSelectionModel;
@@ -49,6 +51,7 @@ import org.junit.runners.Parameterized.Parameters;
 import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Unit tests for the SelectionModel abstract class used by ListView
@@ -217,6 +220,12 @@ public class SelectionModelImplTest {
                 // create a new focus model
                 focusModel = null;
                 currentControl = comboBox;
+            }
+
+            // ensure the selection mode is set to single (if the selection model
+            // is actually a MultipleSelectionModel subclass)
+            if (model instanceof MultipleSelectionModel) {
+                ((MultipleSelectionModel)model).setSelectionMode(SelectionMode.SINGLE);
             }
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -487,5 +496,24 @@ public class SelectionModelImplTest {
             IndexedCell cell = VirtualFlowTestUtils.getCell(currentControl, model.getSelectedIndex());
             assertTrue(cell.isSelected());
         }
+    }
+
+    private int rt32618_count = 0;
+    @Test public void test_rt32618_singleSelection() {
+        model.selectedItemProperty().addListener(new ChangeListener<Object>() {
+            @Override public void changed(ObservableValue<? extends Object> ov, Object t, Object t1) {
+                rt32618_count++;
+            }
+        });
+
+        assertEquals(0, rt32618_count);
+
+        model.select(0);
+        assertEquals(1, rt32618_count);
+        assertEquals(ROW_1_VALUE, getValue(model.getSelectedItem()));
+
+        model.clearAndSelect(1);
+        assertEquals(2, rt32618_count);
+        assertEquals(ROW_2_VALUE, getValue(model.getSelectedItem()));
     }
 }

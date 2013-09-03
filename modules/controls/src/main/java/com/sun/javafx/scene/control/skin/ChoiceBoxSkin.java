@@ -180,6 +180,11 @@ import javafx.collections.WeakListChangeListener;
             choiceBoxItems.addListener(weakChoiceBoxItemsListener);
         }
     }
+    
+    // Test only purpose    
+    String getChoiceBoxSelectedText() {
+        return label.getText();
+    }
 
     @SuppressWarnings("rawtypes")
     @Override protected void handleControlPropertyChanged(String p) {
@@ -187,6 +192,11 @@ import javafx.collections.WeakListChangeListener;
         if ("ITEMS".equals(p)) {
             updateChoiceBoxItems();
             updatePopupItems();
+            updateSelectionModel();
+            updateSelection();
+            if(selectionModel != null && selectionModel.getSelectedIndex() == -1) {
+                label.setText(""); // clear label text when selectedIndex is -1
+            }
         } else if (("SELECTION_MODEL").equals(p)) {
             updateSelectionModel();
         } else if ("SELECTION_CHANGED".equals(p)) {

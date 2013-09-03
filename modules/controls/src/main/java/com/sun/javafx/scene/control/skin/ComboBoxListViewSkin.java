@@ -27,6 +27,9 @@ package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
 import java.util.List;
+
+import com.sun.javafx.scene.control.behavior.TextFieldBehavior;
+import com.sun.javafx.scene.traversal.TraversalEngine;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -47,9 +50,7 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.SelectionModel;
 import javafx.scene.control.TextField;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseEvent;
+import javafx.scene.input.*;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
@@ -81,8 +82,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     
     private boolean listSelectionLock = false;
     private boolean listViewSelectionDirty = false;
-    
-    
+
     
     /***************************************************************************
      *                                                                         *
@@ -136,16 +136,13 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         updateCellFactory();
         
         updateButtonCell();
-        
-        // move focus in to the textfield if the comboBox is editable
+
+        // move fake focus in to the textfield if the comboBox is editable
         comboBox.focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean hasFocus) {
-                if (comboBox.isEditable() && hasFocus) {
-                    Platform.runLater(new Runnable() {
-                        @Override public void run() {
-                            textField.requestFocus();
-                        }
-                    });
+                if (comboBox.isEditable()) {
+                    // Fix for the regression noted in a comment in RT-29885.
+                    ((FakeFocusTextField)textField).setFakeFocus(hasFocus);
                 }
             }
         });
@@ -153,7 +150,12 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         comboBox.addEventFilter(KeyEvent.ANY, new EventHandler<KeyEvent>() {
             @Override public void handle(KeyEvent ke) {
                 if (textField == null) return;
-                
+
+                // This prevents a stack overflow from our rebroadcasting of the
+                // event to the textfield that occurs in the final else statement
+                // of the conditions below.
+                if (ke.getTarget().equals(textField)) return;
+
                 // When the user hits the enter or F4 keys, we respond before 
                 // ever giving the event to the TextField.
                 if (ke.getCode() == KeyCode.ENTER) {
@@ -179,9 +181,33 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                     // events and stop them from going any further.
                     ke.consume();
                     return;
+                } else {
+                    // Fix for the regression noted in a comment in RT-29885.
+                    // This forwards the event down into the TextField when
+                    // the key event is actually received by the ComboBox.
+                    textField.fireEvent(ke.copyFor(textField, textField));
                 }
             }
         });
+
+        // Fix for RT-31093 - drag events from the textfield were not surfacing
+        // properly for the ComboBox.
+        if (textField != null) {
+            textField.addEventFilter(MouseEvent.DRAG_DETECTED, new EventHandler<MouseEvent>() {
+                @Override public void handle(MouseEvent event) {
+                    if (event.getTarget().equals(comboBox)) return;
+                    comboBox.fireEvent(event.copyFor(comboBox, comboBox));
+                    event.consume();
+                }
+            });
+            textField.addEventFilter(DragEvent.ANY, new EventHandler<DragEvent>() {
+                @Override public void handle(DragEvent event) {
+                    if (event.getTarget().equals(comboBox)) return;
+                        comboBox.fireEvent(event.copyFor(comboBox, comboBox));
+                        event.consume();
+                }
+            });
+        }
         
         // Fix for RT-19431 (also tested via ComboBoxListViewSkinTest)
         updateValue();
@@ -368,11 +394,15 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         // Fix for RT-21406: ComboBox do not show initial text value
         initialTextFieldValue = textField.getText();
         // End of fix (see updateDisplayNode below for the related code)
-        
+
         textField.focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean hasFocus) {
                 if (! comboBox.isEditable()) return;
-                
+
+                // Fix for RT-29885
+                comboBox.getProperties().put("FOCUSED", hasFocus);
+                // --- end of RT-29885
+
                 // RT-21454 starts here
                 if (! hasFocus) {
                     setTextFromTextFieldIntoComboBoxValue();
@@ -380,6 +410,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 } else {
                     pseudoClassStateChanged(CONTAINS_FOCUS_PSEUDOCLASS_STATE, true);
                 }
+                // --- end of RT-21454
             }
         });
 
@@ -644,4 +675,19 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             PseudoClass.getPseudoClass("empty");
     private static final PseudoClass PSEUDO_CLASS_FILLED =
             PseudoClass.getPseudoClass("filled");
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Support classes                                                         *
+     *                                                                         *
+     **************************************************************************/
+
+    public static final class FakeFocusTextField extends TextField {
+
+        public void setFakeFocus(boolean b) {
+            setFocused(b);
+        }
+    }
 }

@@ -36,7 +36,7 @@ import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 import org.junit.Test;
 
 
@@ -239,5 +239,27 @@ public class FontTypeTest {
         assertEquals(32, f.getSize(),0);
 
     }
+
+    @Test public void testRT_32551() {
+
+        Text txt = new Text("testRT_32551");
+        txt.setId("test-rt-32551");
+        txt.setStyle("-fx-font-weight:bold;");
+
+        Group g = new Group();
+
+        Scene scene  = new Scene(g);
+        scene.getStylesheets().add(FontTypeTest.class.getResource("HonorDeveloperSettingsTest_AUTHOR.css").toExternalForm());
+        g.getChildren().add(txt);
+
+        g.impl_processCSS(true);
+
+        Font f = txt.getFont();
+        // should get size and amble from .root, 'italic' from #test-rt-32551, bold from inline.
+        assertEquals("Amble Bold Italic", f.getName());
+        assertEquals(20, f.getSize(),0);
+
+    }
+
 
 }

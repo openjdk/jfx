@@ -28,6 +28,7 @@ package com.sun.javafx.scene.control.skin;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import javafx.application.Platform;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
@@ -358,29 +359,6 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
         return true;
     }
 
-    /*
-    ** see if we're clipped...
-    */
-    private void pauseIfNotVisibleInClip() {
-        if (!isVisibleInClip()) {
-            indeterminateTimeline.pause();
-            
-            Thread t = new Thread(new Runnable() {
-                 @Override
-                     public void run() {
-                        while (!isVisibleInClip()) {
-                            try {
-                                Thread.sleep(500);
-                            }
-                            catch (Exception e) {};
-                        }
-                        indeterminateTimeline.play();
-                    }
-                });
-            t.start();
-        }
-    }
-
     private boolean isInvisibleOrDisconnected() {
         Scene s = getSkinnable().getScene();
         if (s == null) {
@@ -402,21 +380,17 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
 
     private boolean stopIfInvisibleOrDisconnected() {
         if (isInvisibleOrDisconnected()) {
-            indeterminateTimeline.stop();
-            indeterminateTimeline = null;
+            if (indeterminateTimeline != null) {
+                indeterminateTimeline.stop();
+                indeterminateTimeline = null;
+            }
             return true;
         }
         return false;
     }
 
-
-    private void stopIfNotNeeded() {
-        if (!stopIfInvisibleOrDisconnected()) {
-            pauseIfNotVisibleInClip();
-        }
-    }
-
-
+    static final private Duration CLIPPED_DELAY = new Duration(300);
+    static final private Duration UNCLIPPED_DELAY = new Duration(0);
 
     private void createIndeterminateTimeline() {
         if (indeterminateTimeline != null) indeterminateTimeline.stop();
@@ -429,6 +403,7 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
         // Set up the timeline.  We do not want to reverse if we are not flipping.
         indeterminateTimeline = new Timeline();
         indeterminateTimeline.setCycleCount(Timeline.INDEFINITE);
+        indeterminateTimeline.setDelay(UNCLIPPED_DELAY);
 
         if (getIndeterminateBarFlip()) {
             indeterminateTimeline.getKeyFrames().addAll(
@@ -438,13 +413,40 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
                                 @Override public void handle(ActionEvent event) {
                                     bar.setScaleX(-1);
 
-                                    /*
-                                    ** Stop the animation if the ProgressBar is removed
-                                    ** from a Scene, or is invisible.
-                                    ** Pause the animation if it's outside of a clipped
-                                    ** region (e.g. not visible in a ScrollPane)
-                                    */
-                                    stopIfNotNeeded();
+                                    /**
+                                     * Stop the animation if the ProgressBar is removed
+                                     * from a Scene, or is invisible.
+                                     * Pause the animation if it's outside of a clipped
+                                     * region (e.g. not visible in a ScrollPane)
+                                     */
+                                    if (indeterminateTimeline != null) {
+                                        stopIfInvisibleOrDisconnected();
+                                        if (!isVisibleInClip()) {
+                                            Platform.runLater(new Runnable() {
+                                              @Override public void run() {
+                                                  if (indeterminateTimeline != null) {
+                                                      if (indeterminateTimeline.getDelay().compareTo(CLIPPED_DELAY) != 0) {
+                                                          indeterminateTimeline.setDelay(CLIPPED_DELAY);
+                                                      }
+                                                      indeterminateTimeline.stop();
+                                                      indeterminateTimeline.jumpTo(Duration.ZERO);
+                                                      indeterminateTimeline.play();
+                                                  }
+                                              }
+                                            });
+                                        }
+                                        else {
+                                            Platform.runLater(new Runnable() {
+                                              @Override public void run() {
+                                                  if (indeterminateTimeline != null) {
+                                                      if (indeterminateTimeline.getDelay().compareTo(UNCLIPPED_DELAY) != 0) {
+                                                          indeterminateTimeline.setDelay(UNCLIPPED_DELAY);
+                                                      }
+                                                  }
+                                              }
+                                            });
+                                        }
+                                    }
                                 }
                             },
                             new KeyValue(clipRegion.translateXProperty(), startX-(w - getIndeterminateBarLength())),
@@ -475,13 +477,40 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
                             Duration.millis(0),
                             new EventHandler<ActionEvent>() {
                                 @Override public void handle(ActionEvent event) {
-                                    /*
-                                    ** Stop the animation if the ProgressBar is removed
-                                    ** from a Scene, or is invisible.
-                                    ** Pause the animation if it's outside of a clipped
-                                    ** region (e.g. not visible in a ScrollPane)
-                                    */
-                                    stopIfNotNeeded();
+                                    /**
+                                     * Stop the animation if the ProgressBar is removed
+                                     * from a Scene, or is invisible.
+                                     * Pause the animation if it's outside of a clipped
+                                     * region (e.g. not visible in a ScrollPane)
+                                     */
+                                    if (indeterminateTimeline != null) {
+                                        stopIfInvisibleOrDisconnected();
+                                        if (!isVisibleInClip()) {
+                                            Platform.runLater(new Runnable() {
+                                              @Override public void run() {
+                                                  if (indeterminateTimeline != null) {
+                                                      if (indeterminateTimeline.getDelay().compareTo(CLIPPED_DELAY) != 0) {
+                                                          indeterminateTimeline.setDelay(CLIPPED_DELAY);
+                                                      }
+                                                      indeterminateTimeline.stop();
+                                                      indeterminateTimeline.jumpTo(Duration.ZERO);
+                                                      indeterminateTimeline.play();
+                                                  }
+                                              }
+                                            });
+                                        }
+                                        else {
+                                            Platform.runLater(new Runnable() {
+                                              @Override public void run() {
+                                                  if (indeterminateTimeline != null) {
+                                                      if (indeterminateTimeline.getDelay().compareTo(UNCLIPPED_DELAY) != 0) {
+                                                          indeterminateTimeline.setDelay(UNCLIPPED_DELAY);
+                                                      }
+                                                  }
+                                              }
+                                            });
+                                        }
+                                    }
                                 }
                             },
 

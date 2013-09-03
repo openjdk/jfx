@@ -538,7 +538,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             if (w == -1) {
                 w = availableWidth;
             }
-            double minW = Math.min(computeMinWidth(-1, snappedTopInset() , snappedRightInset(), snappedBottomInset(), snappedLeftInset()), availableWidth);
+            double minW = Math.min(computeMinLabeledPartWidth(-1, snappedTopInset() , snappedRightInset(), snappedBottomInset(), snappedLeftInset()), availableWidth);
             if (horizontalPosition && !isIgnoreGraphic()) {
                 double graphicW = (labeled.getGraphic().getLayoutBounds().getWidth() + labeled.getGraphicTextGap());
                 w -= graphicW;
@@ -557,7 +557,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             if (h == -1) {
                 h = availableHeight;
             }
-            double minH = Math.min(computeMinHeight(wrapWidth, snappedTopInset() , snappedRightInset(), snappedBottomInset(), snappedLeftInset()), availableHeight);
+            double minH = Math.min(computeMinLabeledPartHeight(wrapWidth, snappedTopInset() , snappedRightInset(), snappedBottomInset(), snappedLeftInset()), availableHeight);
             if (verticalPosition && labeled.getGraphic() != null) {
                 double graphicH = labeled.getGraphic().getLayoutBounds().getHeight() + labeled.getGraphicTextGap();
                 h -= graphicH;
@@ -722,6 +722,10 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
      * the width of the "..." is as small as it will ever get.
      */
     @Override protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
+        return computeMinLabeledPartWidth(height, topInset, rightInset, bottomInset, leftInset);
+    }
+
+    private double computeMinLabeledPartWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         // First compute the minTextWidth by checking the width of the string
         // made by the ellipsis "...", and then by checking the width of the
         // string made up by labeled.text. We want the smaller of the two.
@@ -774,6 +778,10 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
     }
 
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+        return computeMinLabeledPartHeight(width, topInset, rightInset, bottomInset, leftInset);
+    }
+
+    private double computeMinLabeledPartHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         final Labeled labeled = getSkinnable();
         final Font font = text.getFont();
 

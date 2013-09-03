@@ -25,6 +25,7 @@
 
 package com.sun.javafx.fxml.builder;
 
+import java.util.Locale;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.StringTokenizer;
@@ -92,7 +93,7 @@ public class TriangleMeshBuilder extends TreeMap<String, Object> implements Buil
             }
         }
 
-        return super.put(key.toLowerCase(), value);
+        return super.put(key.toLowerCase(Locale.ROOT), value);
     }
 
     @Override

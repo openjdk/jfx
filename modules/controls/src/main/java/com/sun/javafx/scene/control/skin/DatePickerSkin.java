@@ -41,6 +41,7 @@ import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.TextField;
+import javafx.scene.input.DragEvent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
@@ -77,15 +78,12 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
             });
         }
 
-        // move focus in to the textfield if the comboBox is editable
+        // move fake focus in to the textfield if the comboBox is editable
         datePicker.focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean hasFocus) {
-                if (datePicker.isEditable() && hasFocus) {
-                    Platform.runLater(new Runnable() {
-                        @Override public void run() {
-                            textField.requestFocus();
-                        }
-                    });
+                if (datePicker.isEditable()) {
+                    // Fix for the regression noted in a comment in RT-29885.
+                    ((ComboBoxListViewSkin.FakeFocusTextField)textField).setFakeFocus(hasFocus);
                 }
             }
         });
@@ -93,6 +91,11 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
         datePicker.addEventFilter(KeyEvent.ANY, new EventHandler<KeyEvent>() {
             @Override public void handle(KeyEvent ke) {
                 if (textField == null) return;
+
+                // This prevents a stack overflow from our rebroadcasting of the
+                // event to the textfield that occurs in the final else statement
+                // of the conditions below.
+                if (ke.getTarget().equals(textField)) return;
 
                 // When the user hits the enter or F4 keys, we respond before
                 // ever giving the event to the TextField.
@@ -119,9 +122,33 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
                     // events and stop them from going any further.
                     ke.consume();
                     return;
+                } else {
+                    // Fix for the regression noted in a comment in RT-29885.
+                    // This forwards the event down into the TextField when
+                    // the key event is actually received by the ComboBox.
+                    textField.fireEvent(ke.copyFor(textField, textField));
                 }
             }
         });
+
+        // Fix for RT-31093 - drag events from the textfield were not surfacing
+        // properly for the DatePicker.
+        if (textField != null) {
+            textField.addEventFilter(MouseEvent.DRAG_DETECTED, new EventHandler<MouseEvent>() {
+                @Override public void handle(MouseEvent event) {
+                    if (event.getTarget().equals(datePicker)) return;
+                    datePicker.fireEvent(event.copyFor(datePicker, datePicker));
+                    event.consume();
+                }
+            });
+            textField.addEventFilter(DragEvent.ANY, new EventHandler<DragEvent>() {
+                @Override public void handle(DragEvent event) {
+                    if (event.getTarget().equals(datePicker)) return;
+                    datePicker.fireEvent(event.copyFor(datePicker, datePicker));
+                    event.consume();
+                }
+            });
+        }
 
         registerChangeListener(datePicker.chronologyProperty(), "CHRONOLOGY");
         registerChangeListener(datePicker.converterProperty(), "CONVERTER");
@@ -242,6 +269,10 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
         textField.focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean hasFocus) {
                 if (!datePicker.isEditable()) return;
+
+                // Fix for RT-29885
+                datePicker.getProperties().put("FOCUSED", hasFocus);
+                // --- end of RT-29885
 
                 // RT-21454 starts here
                 if (! hasFocus) {
