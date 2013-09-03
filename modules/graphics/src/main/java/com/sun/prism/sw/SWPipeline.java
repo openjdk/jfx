@@ -103,4 +103,9 @@ public final class SWPipeline extends GraphicsPipeline {
         // TODO: implement (RT-27375)
         super.dispose();
     }
+
+    @Override
+    public boolean isUploading() {
+        return true;
+    }
 }

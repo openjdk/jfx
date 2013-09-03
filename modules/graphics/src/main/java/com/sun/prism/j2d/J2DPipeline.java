@@ -111,4 +111,9 @@ public class J2DPipeline extends GraphicsPipeline {
         }
         return j2DFontFactory;
     }
+
+    @Override
+    public boolean isUploading() {
+        return true;
+    }
 }

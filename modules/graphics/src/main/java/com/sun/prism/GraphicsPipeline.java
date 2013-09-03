@@ -222,4 +222,12 @@ public abstract class GraphicsPipeline {
     public boolean isEffectSupported() {
         return true;
     }
+
+    /**
+     * Checks if the GraphicsPipeline uses uploading or presenting painter
+     * @return true if the pipeline uses an uploading painter
+     */
+    public boolean isUploading() {
+        return false;
+    }
 }
