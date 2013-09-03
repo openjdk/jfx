@@ -80,10 +80,10 @@ import static com.sun.javafx.animation.TickCalculation.*;
  * the {@code Animation} from the specified position.
  * <p>
  * Inverting the value of {@link #rate} toggles the play direction.
- * 
+ *
  * @see Timeline
  * @see Transition
- * 
+ *
  * @since JavaFX 2.0
  */
 public abstract class Animation {
@@ -171,7 +171,7 @@ public abstract class Animation {
 
     private class CurrentRateProperty extends ReadOnlyDoublePropertyBase {
         private double value;
-        
+
         @Override
         public Object getBean() {
             return Animation.this;
@@ -186,18 +186,18 @@ public abstract class Animation {
         public double get() {
             return value;
         }
-        
+
         private void set(double value) {
             this.value = value;
             fireValueChangedEvent();
         }
     }
-    
+
     private class AnimationReadOnlyProperty<T> extends ReadOnlyObjectPropertyBase<T> {
-        
+
         private final String name;
         private T value;
-        
+
         private AnimationReadOnlyProperty(String name, T value) {
             this.name = name;
             this.value = value;
@@ -217,13 +217,13 @@ public abstract class Animation {
         public T get() {
             return value;
         }
-        
+
         private void set(T value) {
             this.value = value;
             fireValueChangedEvent();
         }
     }
-    
+
     /**
      * The parent of this {@code Animation}. If this animation has not been
      * added to another animation, such as {@link ParallelTransition} and
@@ -237,7 +237,7 @@ public abstract class Animation {
     ClipEnvelope clipEnvelope;
 
     private boolean lastPlayedFinished = false;
-    
+
     private boolean lastPlayedForward = true;
     /**
      * Defines the direction/speed at which the {@code Animation} is expected to
@@ -251,12 +251,12 @@ public abstract class Animation {
      * <p>
      * Rate {@code 1.0} is normal play, {@code 2.0} is 2 time normal,
      * {@code -1.0} is backwards, etc...
-     * 
+     *
      * <p>
      * Inverting the rate of a running {@code Animation} will cause the
      * {@code Animation} to reverse direction in place and play back over the
      * portion of the {@code Animation} that has already elapsed.
-     * 
+     *
      * @defaultValue 1.0
      */
     private DoubleProperty rate;
@@ -316,7 +316,7 @@ public abstract class Animation {
                 }
 
                 @Override
-                public String getName() { 
+                public String getName() {
                     return "rate";
                 }
             };
@@ -340,12 +340,12 @@ public abstract class Animation {
      * {@code currentRate} is set to {@code 0.0} when animation is paused or
      * stopped. {@code currentRate} may also point to different direction during
      * reverse cycles when {@code autoReverse} is {@code true}
-     * 
+     *
      * @defaultValue 0.0
      */
     private ReadOnlyDoubleProperty currentRate;
     private static final double DEFAULT_CURRENT_RATE = 0.0;
-    
+
     private void setCurrentRate(double value) {
         if ((currentRate != null) || (Math.abs(value - DEFAULT_CURRENT_RATE) > EPSILON)) {
             ((CurrentRateProperty)currentRateProperty()).set(value);
@@ -368,7 +368,7 @@ public abstract class Animation {
      * {@code Animation}: the time it takes to play from time 0 to the
      * end of the Animation (at the default {@code rate} of
      * 1.0).
-     * 
+     *
      * @defaultValue 0ms
      */
     private ReadOnlyObjectProperty<Duration> cycleDuration;
@@ -400,10 +400,10 @@ public abstract class Animation {
      * {@code Animation}, including repeats. A {@code Animation} with a {@code cycleCount}
      * of {@code Animation.INDEFINITE} will have a {@code totalDuration} of
      * {@code Duration.INDEFINITE}.
-     * 
+     *
      * <p>
      * This is set to cycleDuration * cycleCount.
-     * 
+     *
      * @defaultValue 0ms
      */
     private ReadOnlyObjectProperty<Duration> totalDuration;
@@ -432,20 +432,23 @@ public abstract class Animation {
         if ((totalDuration != null) || (!DEFAULT_TOTAL_DURATION.equals(newTotalDuration))) {
             ((AnimationReadOnlyProperty<Duration>)totalDurationProperty()).set(newTotalDuration);
         }
-        if (newTotalDuration.lessThan(getCurrentTime())) {
-            jumpTo(newTotalDuration);
+        if (getStatus() == Status.STOPPED) {
+            syncClipEnvelope();
+            if (newTotalDuration.lessThan(getCurrentTime())) {
+                clipEnvelope.jumpTo(fromDuration(newTotalDuration));
+            }
         }
     }
 
     /**
      * Defines the {@code Animation}'s play head position.
-     * 
+     *
      * @defaultValue 0ms
      */
     private CurrentTimeProperty currentTime;
     private long currentTicks;
     private class CurrentTimeProperty extends ReadOnlyObjectPropertyBase<Duration> {
-        
+
         @Override
         public Object getBean() {
             return Animation.this;
@@ -460,14 +463,14 @@ public abstract class Animation {
         public Duration get() {
             return getCurrentTime();
         }
-        
+
         @Override
         public void fireValueChangedEvent() {
             super.fireValueChangedEvent();
         }
-        
+
     }
-    
+
     public final Duration getCurrentTime() {
         return TickCalculation.toDuration(currentTicks);
     }
@@ -483,7 +486,7 @@ public abstract class Animation {
      * Delays the start of an animation.
      *
      * Cannot be negative. Setting to a negative number will result in {@link IllegalArgumentException}.
-     * 
+     *
      * @defaultValue 0ms
      */
     private ObjectProperty<Duration> delay;
@@ -524,7 +527,7 @@ public abstract class Animation {
                             throw new IllegalArgumentException("Cannot set delay to negative value. Setting to Duration.ZERO");
                         }
                 }
-                
+
             };
         }
         return delay;
@@ -539,9 +542,9 @@ public abstract class Animation {
      * {@code Animation}. If the value of {@code cycleCount} is changed for a
      * running {@code Animation}, the animation has to be stopped and started again to pick
      * up the new value.
-     * 
+     *
      * @defaultValue 1.0
-     * 
+     *
      */
     private IntegerProperty cycleCount;
     private static final int DEFAULT_CYCLE_COUNT = 1;
@@ -586,12 +589,12 @@ public abstract class Animation {
      * {@code Animation} will proceed forward on the first cycle,
      * then reverses on the second cycle, and so on. Otherwise, animation will
      * loop such that each cycle proceeds forward from the start.
-     * 
+     *
      * It is not possible to change the {@code autoReverse} flag of a running
      * {@code Animation}. If the value of {@code autoReverse} is changed for a
      * running {@code Animation}, the animation has to be stopped and started again to pick
      * up the new value.
-     * 
+     *
      * @defaultValue false
      */
     private BooleanProperty autoReverse;
@@ -616,7 +619,7 @@ public abstract class Animation {
 
     /**
      * The status of the {@code Animation}.
-     * 
+     *
      * In {@code Animation} can be in one of three states:
      * {@link Status#STOPPED}, {@link Status#PAUSED} or {@link Status#RUNNING}.
      */
@@ -639,7 +642,7 @@ public abstract class Animation {
         }
         return status;
     }
-    
+
     private final double targetFramerate;
     private final int resolution;
     private long lastPulse;
@@ -708,11 +711,11 @@ public abstract class Animation {
 
     /**
      * Jumps to a given position in this {@code Animation}.
-     * 
+     *
      * If the given time is less than {@link Duration#ZERO}, this method will
      * jump to the start of the animation. If the given time is larger than the
      * duration of this {@code Animation}, this method will jump to the end.
-     * 
+     *
      * @param time
      *            the new position
      * @throws NullPointerException
@@ -735,7 +738,7 @@ public abstract class Animation {
         }
 
         lastPlayedFinished = false;
-        
+
         final Duration totalDuration = getTotalDuration();
         time = time.lessThan(Duration.ZERO) ? Duration.ZERO : time
                 .greaterThan(totalDuration) ? totalDuration : time;
@@ -762,7 +765,7 @@ public abstract class Animation {
      * There are two predefined cue points {@code "start"} and {@code "end"}
      * which are defined to be at the start respectively the end of this
      * {@code Animation}.
-     * 
+     *
      * @param cuePoint
      *            the name of the cue point
      * @throws NullPointerException
@@ -792,17 +795,17 @@ public abstract class Animation {
      * A convenience method to play this {@code Animation} from a predefined
      * position. The position has to be predefined in cue points.
      * Calling this method is equivalent to
-     * 
+     *
      * <pre>
      * <code>
      * animation.jumpTo(cuePoint);
      * animation.play();
      * </code>
      * </pre>
-     * 
+     *
      * Note that unlike {@link #playFromStart()} calling this method will not
      * change the playing direction of this {@code Animation}.
-     * 
+     *
      * @param cuePoint
      *            name of the cue point
      * @throws NullPointerException
@@ -820,17 +823,17 @@ public abstract class Animation {
     /**
      * A convenience method to play this {@code Animation} from a specific
      * position. Calling this method is equivalent to
-     * 
+     *
      * <pre>
      * <code>
      * animation.jumpTo(time);
      * animation.play();
      * </code>
      * </pre>
-     * 
+     *
      * Note that unlike {@link #playFromStart()} calling this method will not
      * change the playing direction of this {@code Animation}.
-     * 
+     *
      * @param time
      *            position where to play from
      * @throws NullPointerException
@@ -890,13 +893,12 @@ public abstract class Animation {
                     if (lastPlayedFinished) {
                         jumpTo((rate < 0)? getTotalDuration() : Duration.ZERO);
                     }
-                    lastPlayedFinished = false;
                     impl_start(forceSync);
                     startReceiver(TickCalculation.fromDuration(getDelay()));
                     if (Math.abs(rate) < EPSILON) {
                         pauseReceiver();
                     } else {
-                        
+
                     }
                 } else {
                     final EventHandler<ActionEvent> handler = getOnFinished();
@@ -925,7 +927,7 @@ public abstract class Animation {
      *      animation.jumpTo(Duration.ZERO);<br>
      *      animation.play();<br>
      *  </code>
-     * 
+     *
      * <p>
      * Note: <ul>
      * <li>{@code playFromStart()} is an asynchronous call, {@code Animation} may
@@ -989,9 +991,9 @@ public abstract class Animation {
 
     /**
      * The constructor of {@code Animation}.
-     * 
+     *
      * This constructor allows to define a target framerate.
-     * 
+     *
      * @param targetFramerate
      *            The custom target frame rate for this {@code Animation}
      * @see #getTargetFramerate()
@@ -1039,7 +1041,7 @@ public abstract class Animation {
             syncClipEnvelope();
         }
     }
-    
+
     private void syncClipEnvelope() {
         final int publicCycleCount = getCycleCount();
         final int internalCycleCount = (publicCycleCount <= 0)
