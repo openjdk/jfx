@@ -4,7 +4,11 @@
 package com.sun.webkit;
 
 import java.io.File;
+import java.io.IOException;
 import static java.lang.String.format;
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Paths;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -18,6 +22,9 @@ final class FileSystem {
         throw new AssertionError();
     }
 
+    private static boolean fwkFileExists(String path) {
+        return new File(path).exists();
+    }
 
     private static long fwkGetFileSize(String path) {
         try {
@@ -30,6 +37,23 @@ final class FileSystem {
                     + "size of file [%s]", path), ex);
         }
         return -1;
+    }
+
+    private static String fwkPathByAppendingComponent(String path,
+                                                      String component)
+    {
+        return new File(path, component).getPath();
+    }
+
+    private static boolean fwkMakeAllDirectories(String path) {
+        try {
+            Files.createDirectories(Paths.get(path));
+            return true;
+        } catch (InvalidPathException|IOException ex) {
+            logger.log(Level.FINE, format("Error creating "
+                    + "directory [%s]", path), ex);
+            return false;
+        }
     }
 
     private static String fwkPathGetFileName(String path) {

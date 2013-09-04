@@ -1900,6 +1900,24 @@ public final class WebPage {
         }
     }
 
+    public void setLocalStorageDatabasePath(String path) {
+        lockPage();
+        try {
+            twkSetLocalStorageDatabasePath(getPage(), path);
+        } finally {
+            unlockPage();
+        }
+    }
+
+    public void setLocalStorageEnabled(boolean enabled) {
+        lockPage();
+        try {
+            twkSetLocalStorageEnabled(getPage(), enabled);
+        } finally {
+            unlockPage();
+        }
+    }
+
     // ---- INSPECTOR SUPPORT ---- //
 
     public void connectInspectorFrontend() {
@@ -2488,6 +2506,8 @@ public final class WebPage {
     private native void twkSetUserStyleSheetLocation(long page, String url);
     private native String twkGetUserAgent(long page);
     private native void twkSetUserAgent(long page, String userAgent);
+    private native void twkSetLocalStorageDatabasePath(long page, String path);
+    private native void twkSetLocalStorageEnabled(long page, boolean enabled);
 
     private native int twkGetUnloadEventListenersCount(long pFrame);
 

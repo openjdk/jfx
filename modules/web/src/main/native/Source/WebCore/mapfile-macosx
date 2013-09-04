@@ -1909,6 +1909,8 @@
                _Java_com_sun_webkit_WebPage_twkSetEditable
                _Java_com_sun_webkit_WebPage_twkSetEncoding
                _Java_com_sun_webkit_WebPage_twkSetJavaScriptEnabled
+               _Java_com_sun_webkit_WebPage_twkSetLocalStorageDatabasePath
+               _Java_com_sun_webkit_WebPage_twkSetLocalStorageEnabled
                _Java_com_sun_webkit_WebPage_twkSetTransparent
                _Java_com_sun_webkit_WebPage_twkSetUsePageCache
                _Java_com_sun_webkit_WebPage_twkSetUserAgent

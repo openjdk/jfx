@@ -2089,6 +2089,26 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetUserAgent
     page->settings()->setUserAgent(String(env, userAgent));
 }
 
+JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetLocalStorageDatabasePath
+  (JNIEnv* env, jobject, jlong pPage, jstring path)
+{
+    ASSERT(pPage);
+    Page* page = WebPage::pageFromJLong(pPage);
+    ASSERT(page);
+    Settings* settings = page->settings();
+    settings->setLocalStorageDatabasePath(String(env, path));
+}
+
+JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetLocalStorageEnabled
+  (JNIEnv*, jobject, jlong pPage, jboolean enabled)
+{
+    ASSERT(pPage);
+    Page* page = WebPage::pageFromJLong(pPage);
+    ASSERT(page);
+    Settings* settings = page->settings();
+    settings->setLocalStorageEnabled(jbool_to_bool(enabled));
+}
+
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkGetDeveloperExtrasEnabled
   (JNIEnv *, jobject, jlong pPage)
 {

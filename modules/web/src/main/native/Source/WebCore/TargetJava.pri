@@ -129,6 +129,18 @@ INCLUDEPATH += \
     $$PWD/platform/image-decoders/webp
 }
 
+INCLUDEPATH += $(WEBKITOUTPUTDIR)/import/include
+LIBS += -L$(WEBKITOUTPUTDIR)/import/lib -lsqlite3
+
+# The following line ensures that __STDC_FORMAT_MACROS is defined when
+# <inttypes.h> is included in the precompiled header. Note that the file
+# that actually requires <inttypes.h>'s format macros, SQLiteFileSystem.cpp,
+# does include <inttypes.h> and define __STDC_FORMAT_MACROS prior to that.
+# The problem is that with certain versions of GCC the SQLiteFileSystem.cpp's
+# include has no effect because <inttypes.h> is already included in the
+# precompiled header.
+QMAKE_CXXFLAGS += -D__STDC_FORMAT_MACROS
+
 win32-* {
     QMAKE_CXXFLAGS += -DLIBXML_STATIC
     LIBS += -llibxml2_a -lole32 -ladvapi32 -luser32
@@ -442,6 +454,7 @@ SOURCES += \
     Modules/notifications/WorkerContextNotifications.cpp \
     Modules/proximity/DeviceProximityController.cpp \
     Modules/proximity/DeviceProximityEvent.cpp \
+    Modules/webdatabase/DatabaseAuthorizer.cpp \
     css/BasicShapeFunctions.cpp \
     css/CSSAspectRatioValue.cpp \
     css/CSSBasicShapes.cpp \
@@ -1373,12 +1386,12 @@ SOURCES += \
     platform/ScrollView.cpp \
     platform/SharedBuffer.cpp \
     platform/SharedBufferChunkReader.cpp \
-#    platform/sql/SQLiteAuthorizer.cpp \
-#    platform/sql/SQLiteDatabase.cpp \
-#    platform/sql/SQLiteFileSystem.cpp \
-#    platform/sql/SQLiteStatement.cpp \
-#    platform/sql/SQLiteTransaction.cpp \
-#    platform/sql/SQLValue.cpp \
+    platform/sql/SQLValue.cpp \
+    platform/sql/SQLiteAuthorizer.cpp \
+    platform/sql/SQLiteDatabase.cpp \
+    platform/sql/SQLiteFileSystem.cpp \
+    platform/sql/SQLiteStatement.cpp \
+    platform/sql/SQLiteTransaction.cpp \
     platform/text/SegmentedString.cpp \
     platform/text/TextBoundaries.cpp \
     platform/text/TextBreakIterator.cpp \
@@ -1548,14 +1561,18 @@ SOURCES += \
 #    storage/Database.cpp \
 #    storage/DatabaseAuthorizer.cpp \
 #    storage/DatabaseSync.cpp \
-#    storage/LocalStorageTask.cpp \
-#    storage/LocalStorageThread.cpp \
-#    storage/Storage.cpp \
-#    storage/StorageAreaImpl.cpp \
-#    storage/StorageAreaSync.cpp \
-#    storage/StorageEvent.cpp \
-#    storage/StorageEventDispatcher.cpp \
-#    storage/StorageMap.cpp \
+    storage/Storage.cpp \
+    storage/StorageAreaImpl.cpp \
+    storage/StorageAreaSync.cpp \
+    storage/StorageEvent.cpp \
+    storage/StorageEventDispatcher.cpp \
+    storage/StorageMap.cpp \
+    storage/StorageNamespace.cpp \
+    storage/StorageNamespaceImpl.cpp \
+    storage/StorageStrategy.cpp \
+    storage/StorageSyncManager.cpp \
+    storage/StorageThread.cpp \
+    storage/StorageTracker.cpp \
     testing/Internals.cpp \
     testing/InternalSettings.cpp \
     xml/DOMParser.cpp \
@@ -1574,13 +1591,6 @@ SOURCES += \
     loader/appcache/ApplicationCacheResource.cpp \
     loader/appcache/ApplicationCacheGroup.cpp \
     loader/appcache/ManifestParser.cpp \
-    storage/Storage.cpp \
-    storage/StorageEvent.cpp \
-    storage/StorageMap.cpp \
-    storage/StorageNamespace.cpp \
-    storage/StorageStrategy.cpp \
-    storage/java/StorageNamespaceJava.cpp \
-    storage/java/StorageAreaJava.cpp \
 
 
 contains(DEFINES, ENABLE_XML=1) {

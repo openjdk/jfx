@@ -28,6 +28,7 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.property.*;
 import javafx.concurrent.Worker;
 import javafx.event.EventHandler;
+import javafx.event.EventType;
 import javafx.geometry.Rectangle2D;
 import javafx.print.PageLayout;
 import javafx.print.PrinterJob;
@@ -37,12 +38,20 @@ import org.w3c.dom.Document;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
+import static java.lang.String.format;
 import java.lang.ref.WeakReference;
 import java.net.MalformedURLException;
 import java.net.URLConnection;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Objects;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import static com.sun.webkit.LoadListenerClient.*;
 
@@ -267,6 +276,9 @@ final public class WebEngine {
         Utilities.setUtilities(new UtilitiesImpl());
     }
 
+    private static final Logger logger =
+            Logger.getLogger(WebEngine.class.getName());
+
     /**
      * The number of instances of this class.
      * Used to start and stop the pulse timer.
@@ -290,10 +302,12 @@ final public class WebEngine {
      */
     private final WebPage page;
 
-    /**
-     * The debugger associated with this web engine.
-     */
+    private final SelfDisposer disposer;
+
     private final DebuggerImpl debugger = new DebuggerImpl();
+
+    private boolean userDataDirectoryApplied = false;
+
 
     /**
      * Returns a {@link javafx.concurrent.Worker} object that can be used to
@@ -474,7 +488,58 @@ final public class WebEngine {
         }
         return userStyleSheetLocation;
     }
-    
+
+    /**
+     * Specifies the directory to be used by this {@code WebEngine}
+     * to store local user data.
+     *
+     * <p>If the value of this property is not {@code null},
+     * the {@code WebEngine} will attempt to store local user data
+     * in the respective directory.
+     * If the value of this property is {@code null},
+     * the {@code WebEngine} will attempt to store local user data
+     * in an automatically selected system-dependent user- and
+     * application-specific directory.
+     *
+     * <p>When a {@code WebEngine} is about to start loading a web
+     * page or executing a script for the first time, it checks whether
+     * it can actually use the directory specified by this property.
+     * If the check fails for some reason, the {@code WebEngine} invokes
+     * the {@link WebEngine#onErrorProperty WebEngine.onError} event handler,
+     * if any, with a {@link WebErrorEvent} describing the reason.
+     * If the invoked event handler modifies the {@code userDataDirectory}
+     * property, the {@code WebEngine} retries with the new value as soon
+     * as the handler returns. If the handler does not modify the
+     * {@code userDataDirectory} property (which is the default),
+     * the {@code WebEngine} continues without local user data.
+     *
+     * <p>Once the {@code WebEngine} has started loading a web page or
+     * executing a script, changes made to this property have no effect
+     * on where the {@code WebEngine} stores or will store local user
+     * data.
+     *
+     * <p>Currently, the directory specified by this property is used
+     * only to store the data that backs the {@code window.localStorage}
+     * objects. In the future, more types of data can be added.
+     * 
+     * @defaultValue {@code null}
+     * @since JavaFX 8.0
+     */
+    private final ObjectProperty<File> userDataDirectory =
+            new SimpleObjectProperty<>(this, "userDataDirectory");
+
+    public final File getUserDataDirectory() {
+        return userDataDirectory.get();
+    }
+
+    public final void setUserDataDirectory(File value) {
+        userDataDirectory.set(value);
+    }
+
+    public final ObjectProperty<File> userDataDirectoryProperty() {
+        return userDataDirectory;
+    }
+
     /**
      * Specifies user agent ID string. This string is the value of the
      * {@code User-Agent} HTTP header.
@@ -704,21 +769,43 @@ final public class WebEngine {
     public final ObjectProperty<Callback<PromptData, String>> promptHandlerProperty() { return promptHandler; }
 
     /**
+     * The event handler called when an error occurs.
+     *
+     * @defaultValue {@code null}
+     * @since JavaFX 8.0
+     */
+    private final ObjectProperty<EventHandler<WebErrorEvent>> onError =
+            new SimpleObjectProperty<>(this, "onError");
+
+    public final EventHandler<WebErrorEvent> getOnError() {
+        return onError.get();
+    }
+
+    public final void setOnError(EventHandler<WebErrorEvent> handler) {
+        onError.set(handler);
+    }
+
+    public final ObjectProperty<EventHandler<WebErrorEvent>> onErrorProperty() {
+        return onError;
+    }
+
+
+    /**
      * Creates a new engine.
      */
     public WebEngine() {
-        this(null);
+        this(null, false);
     }
 
     /**
      * Creates a new engine and loads a Web page into it.
      */
     public WebEngine(String url) {
-        if (instanceCount == 0 &&
-            Timer.getMode() == Timer.Mode.PLATFORM_TICKS)
-        {
-            PulseTimer.start();
-        }
+        this(url, true);
+    }
+
+    private WebEngine(String url, boolean callLoad) {
+        checkThread();
         Accessor accessor = new AccessorImpl(this);
         page = new WebPage(
             new WebPageClientImpl(accessor),
@@ -731,10 +818,18 @@ final public class WebEngine {
         
         history = new WebHistory(page);
 
-        Disposer.addRecord(this, new SelfDisposer(page));
+        disposer = new SelfDisposer(page);
+        Disposer.addRecord(this, disposer);
 
-        load(url);
-        
+        if (callLoad) {
+            load(url);
+        }
+
+        if (instanceCount == 0 &&
+            Timer.getMode() == Timer.Mode.PLATFORM_TICKS)
+        {
+            PulseTimer.start();
+        }
         instanceCount++;
     }
 
@@ -762,6 +857,7 @@ final public class WebEngine {
                 return;
             }
         }
+        applyUserDataDirectory();
         page.open(page.getMainFrame(), url);
     }
 
@@ -786,6 +882,7 @@ final public class WebEngine {
     public void loadContent(String content, String contentType) {
         checkThread();
         loadWorker.cancelAndReset();
+        applyUserDataDirectory();
         page.load(page.getMainFrame(), content, contentType);
     }
 
@@ -833,6 +930,7 @@ final public class WebEngine {
      */
     public Object executeScript(String script) {
         checkThread();
+        applyUserDataDirectory();
         return page.executeScript(page.getMainFrame(), script);
     }
 
@@ -853,15 +951,136 @@ final public class WebEngine {
         page.stop(page.getMainFrame());
     }
 
+    private void applyUserDataDirectory() {
+        if (userDataDirectoryApplied) {
+            return;
+        }
+        userDataDirectoryApplied = true;
+        File nominalUserDataDir = getUserDataDirectory();
+        while (true) {
+            File userDataDir;
+            String displayString;
+            if (nominalUserDataDir == null) {
+                userDataDir = defaultUserDataDirectory();
+                displayString = format("null (%s)", userDataDir);
+            } else {
+                userDataDir = nominalUserDataDir;
+                displayString = userDataDir.toString();
+            }
+            logger.log(Level.FINE, "Trying to apply user data "
+                    + "directory [{0}]", displayString);
+            String errorMessage;
+            EventType<WebErrorEvent> errorType;
+            Throwable error;
+            try {
+                userDataDir = DirectoryLock.canonicalize(userDataDir);
+                File localStorageDir = new File(userDataDir, "localstorage");
+                File[] dirs = new File[] {
+                    userDataDir,
+                    localStorageDir,
+                };
+                for (File dir : dirs) {
+                    createDirectories(dir);
+                    // Additional security check to make sure the caller
+                    // has permission to write to the target directory
+                    File test = new File(dir, ".test");
+                    if (test.createNewFile()) {
+                        test.delete();
+                    }
+                }
+                disposer.userDataDirectoryLock = new DirectoryLock(userDataDir);
+
+                page.setLocalStorageDatabasePath(localStorageDir.getPath());
+                page.setLocalStorageEnabled(true);
+
+                logger.log(Level.FINE, "User data directory [{0}] has "
+                        + "been applied successfully", displayString);
+                return;
+
+            } catch (DirectoryLock.DirectoryAlreadyInUseException ex) {
+                errorMessage = "User data directory [%s] is already in use";
+                errorType = WebErrorEvent.USER_DATA_DIRECTORY_ALREADY_IN_USE;
+                error = ex;
+            } catch (IOException ex) {
+                errorMessage = "An I/O error occurred while setting up "
+                        + "user data directory [%s]";
+                errorType = WebErrorEvent.USER_DATA_DIRECTORY_IO_ERROR;
+                error = ex;
+            } catch (SecurityException ex) {
+                errorMessage = "A security error occurred while setting up "
+                        + "user data directory [%s]";
+                errorType = WebErrorEvent.USER_DATA_DIRECTORY_SECURITY_ERROR;
+                error = ex;
+            }
+
+            errorMessage = format(errorMessage, displayString);
+            logger.log(Level.FINE, "{0}, calling error handler", errorMessage);
+            File oldNominalUserDataDir = nominalUserDataDir;
+            fireError(errorType, errorMessage, error);
+            nominalUserDataDir = getUserDataDirectory();
+            if (Objects.equals(nominalUserDataDir, oldNominalUserDataDir)) {
+                logger.log(Level.FINE, "Error handler did not "
+                        + "modify user data directory, continuing "
+                        + "without user data directory");
+                return;
+            } else {
+                logger.log(Level.FINE, "Error handler has set "
+                        + "user data directory to [{0}], "
+                        + "retrying", nominalUserDataDir);
+                continue;
+            }
+        }
+    }
+
+    private static File defaultUserDataDirectory() {
+        return new File(
+                com.sun.glass.ui.Application.GetApplication()
+                        .getDataDirectory(),
+                "webview");
+    }
+
+    private static void createDirectories(File directory) throws IOException {
+        Path path = directory.toPath();
+        try {
+            Files.createDirectories(path, PosixFilePermissions.asFileAttribute(
+                    PosixFilePermissions.fromString("rwx------")));
+        } catch (UnsupportedOperationException ex) {
+            Files.createDirectories(path);
+        }
+    }
+
+    private void fireError(EventType<WebErrorEvent> eventType, String message,
+                           Throwable exception)
+    {
+        EventHandler<WebErrorEvent> handler = getOnError();
+        if (handler != null) {
+            handler.handle(new WebErrorEvent(this, eventType,
+                                             message, exception));
+        }
+    }
+
+    // for testing purposes only
+    void dispose() {
+        disposer.dispose();
+    }
+
     private static final class SelfDisposer implements DisposerRecord {
-        private final WebPage page;
+        private WebPage page;
+        private DirectoryLock userDataDirectoryLock;
 
         private SelfDisposer(WebPage page) {
             this.page = page;
         }
 
         @Override public void dispose() {
+            if (page == null) {
+                return;
+            }
             page.dispose();
+            page = null;
+            if (userDataDirectoryLock != null) {
+                userDataDirectoryLock.close();
+            }
             instanceCount--;
             if (instanceCount == 0 &&
                 Timer.getMode() == Timer.Mode.PLATFORM_TICKS)
