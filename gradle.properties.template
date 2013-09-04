@@ -107,9 +107,9 @@
 #JDK_DOCS = file:///Library/Java/JavaVirtualMachines/jdk1.8.0/Content/Home/docs/api
 #JDK_DOCS = relative/path/to/docs/api
 
-# Specify the build configuration (Release or Debug). The default setting is Debug.
+# Specify the build configuration (Release or Debug). The default setting is Release.
 
-#CONF = Release
+#CONF = Debug
 
 # Enables the use of the "use depend" feature. This speeds up incremental builds, but at the
 # cost of accuracy. Under normal circumstances, if you modify a single source file in the

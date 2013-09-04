@@ -326,8 +326,8 @@ if (hasProperty("BUILD_JAVADOC")) {
 ext.BUILD_JAVADOC = buildJavadoc;
 
 // Specify the build configuration (Release or Debug)
-defineProperty("CONF", "Debug")
-ext.IS_DEBUG = CONF != "Release"
+defineProperty("CONF", "Release")
+ext.IS_DEBUG = CONF == "Debug"
 
 // Defines the compiler warning levels to use. If empty, then no warnings are generated. If
 // not empty, then the expected syntax is as a space or comma separated list of names, such
@@ -591,7 +591,7 @@ if (!file(JAVADOC).exists()) throw new Exception("Missing or incorrect path to '
 if (BINARY_STUB != null && !BINARY_STUB.getSingleFile().exists()) logger.warn("Missing or incorrect path to 'jfxrt.jar': '${BINARY_STUB.asPath}'. Perhaps bad JDK_HOME? $JDK_HOME")
 
 // Verify that CONF is something useful
-if (CONF != "Release" && CONF != "Debug") logger.warn("Unknown configuration CONF='$CONF'. Treating as 'Debug'")
+if (CONF != "Release" && CONF != "Debug") logger.warn("Unknown configuration CONF='$CONF'. Treating as 'Release'")
 
 // If the number of compile threads is less than 1 then we have a problem!
 if (Integer.parseInt(NUM_COMPILE_THREADS.toString()) < 1) {
