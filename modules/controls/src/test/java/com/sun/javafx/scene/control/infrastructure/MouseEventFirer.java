@@ -51,6 +51,11 @@ public final class MouseEventFirer {
         fireMouseEvent(MouseEvent.MOUSE_PRESSED, modifiers);
         fireMouseEvent(MouseEvent.MOUSE_RELEASED, modifiers);
     }
+
+    public void fireMousePressAndRelease(int clickCount, KeyModifier... modifiers) {
+        fireMouseEvent(MouseEvent.MOUSE_PRESSED, MouseButton.PRIMARY, clickCount, 0, 0, modifiers);
+        fireMouseEvent(MouseEvent.MOUSE_RELEASED, MouseButton.PRIMARY, clickCount, 0, 0, modifiers);
+    }
     
     public void fireMouseClicked() {
         fireMouseEvent(MouseEvent.MOUSE_CLICKED);
@@ -82,6 +87,10 @@ public final class MouseEventFirer {
 
     public void fireMousePressed(double deltaX, double deltaY, KeyModifier... modifiers) {
         fireMouseEvent(MouseEvent.MOUSE_PRESSED, deltaX, deltaY, modifiers);
+    }
+
+    public void fireMousePressed(int clickCount, double deltaX, double deltaY, KeyModifier... modifiers) {
+        fireMouseEvent(MouseEvent.MOUSE_PRESSED, MouseButton.PRIMARY, clickCount, deltaX, deltaY, modifiers);
     }
     
     public void fireMouseReleased() {

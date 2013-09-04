@@ -51,12 +51,20 @@ public class VirtualFlowTestUtils {
     }
 
     public static void clickOnRow(final Control control, int row, KeyModifier... modifiers) {
-        clickOnRow(control, row, false, modifiers);
+        clickOnRow(control, row, 1, false, modifiers);
+    }
+
+    public static void clickOnRow(final Control control, int row, int clickCount, KeyModifier... modifiers) {
+        clickOnRow(control, row, clickCount, false, modifiers);
+    }
+
+    public static void clickOnRow(final Control control, int row, boolean ignoreChildren, KeyModifier... modifiers) {
+        clickOnRow(control, row, 1, ignoreChildren, modifiers);
     }
 
     // ignore children allows clicking on the row, rather than a child in that row.
     // This is good for testing, for example, TableRowBehavior
-    public static void clickOnRow(final Control control, int row, boolean ignoreChildren, KeyModifier... modifiers) {
+    public static void clickOnRow(final Control control, int row, int clickCount, boolean ignoreChildren, KeyModifier... modifiers) {
         IndexedCell cell = VirtualFlowTestUtils.getCell(control, row);
 
         if (! ignoreChildren && ((cell instanceof TableRow) || (cell instanceof TreeTableRow))) {
@@ -65,7 +73,7 @@ public class VirtualFlowTestUtils {
                     continue;
                 }
                 IndexedCell<?> childCell = (IndexedCell<?>)n;
-                new MouseEventFirer(childCell).fireMousePressAndRelease(modifiers);
+                new MouseEventFirer(childCell).fireMousePressAndRelease(clickCount, modifiers);
                 break;
             }
         } else {
@@ -76,7 +84,7 @@ public class VirtualFlowTestUtils {
                 mef.fireMousePressed(cell.getWidth(), cell.getHeight() / 2.0, modifiers);
                 mef.fireMouseReleased(cell.getWidth(), cell.getHeight() / 2.0, modifiers);
             } else {
-                new MouseEventFirer(cell).fireMousePressAndRelease(modifiers);
+                new MouseEventFirer(cell).fireMousePressAndRelease(clickCount, modifiers);
             }
         }
     }
