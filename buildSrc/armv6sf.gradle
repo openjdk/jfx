@@ -436,8 +436,7 @@ ARMV6SF.fontT2K.nativeSource = [
         file("$closedDir/javafx-font-t2k-native/src/layout"),
         file("$closedDir/javafx-font-t2k-native/src/layoutfx")]
 ARMV6SF.fontT2K.compiler = compiler
-ARMV6SF.fontT2K.ccFlags = [fontCFlags].flatten()
-ARMV6SF.fontT2K.ccFlags -= ["-Werror=implicit-function-declaration"]
+ARMV6SF.fontT2K.ccFlags = fontCFlags
 ARMV6SF.fontT2K.linker = linker
 ARMV6SF.fontT2K.linkFlags = fontLFlags
 ARMV6SF.fontT2K.lib = "javafx_font_t2k"
