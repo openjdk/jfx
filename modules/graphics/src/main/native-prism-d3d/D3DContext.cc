@@ -88,7 +88,6 @@ D3DContext::D3DContext(IDirect3D9 *pd3d, IDirect3D9Ex *pd3dEx, UINT adapter)
     pd3dObjectEx = pd3dEx;
     pd3dDevice = NULL;
     pd3dDeviceEx = NULL;
-    deviceWindow = 0;
     adapterOrdinal = adapter;
     defaulResourcePool = D3DPOOL_SYSTEMMEM;
 
@@ -160,10 +159,6 @@ int D3DContext::release() {
     ReleaseContextResources(RELEASE_ALL);
     SAFE_RELEASE(pd3dDevice);
     SAFE_RELEASE(pd3dDeviceEx);
-
-    if (deviceWindow) {
-        DestroyWindow(deviceWindow);
-    }
 
     if (phongShader) {
         delete phongShader;

@@ -38,6 +38,7 @@ HRESULT D3DContext::InitContext() {
 
     params.Windowed = TRUE;
     params.SwapEffect = D3DSWAPEFFECT_DISCARD;
+    params.hDeviceWindow = GetDesktopWindow();
 
     D3DCAPS9 d3dCaps;
 
@@ -54,16 +55,14 @@ HRESULT D3DContext::InitContext() {
 
     RlsTraceLn(NWT_TRACE_VERBOSE, (hwVertexProcessing ? "\tHARDWARE_VERTEXPROCESSING": "\tSOFTWARE_VERTEXPROCESSING"));
 
-    deviceWindow = D3DPipelineManager::GetInstance()->CreateDeviceFocusWindow(adapterOrdinal);
-
     if (pd3dObjectEx) {
-        hr = pd3dObjectEx->CreateDeviceEx(adapterOrdinal, devType, deviceWindow,
+        hr = pd3dObjectEx->CreateDeviceEx(adapterOrdinal, devType, 0,
             dwBehaviorFlags, &params, 0, &pd3dDeviceEx);
         if (SUCCEEDED(hr)) {
             pd3dDevice = addRef<IDirect3DDevice9>(pd3dDeviceEx);
         }
     } else {
-        hr = pd3dObject->CreateDevice(adapterOrdinal, devType, deviceWindow,
+        hr = pd3dObject->CreateDevice(adapterOrdinal, devType, 0,
             dwBehaviorFlags, &params, &pd3dDevice);
     }
 

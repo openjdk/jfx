@@ -268,7 +268,6 @@ private:
     IDirect3DDevice9        *pd3dDevice;
     IDirect3DDevice9Ex      *pd3dDeviceEx;
     IDirect3DSurface9       *currentSurface;
-    HWND                     deviceWindow;
     IDirect3D9              *pd3dObject;
     IDirect3D9Ex            *pd3dObjectEx;
 
