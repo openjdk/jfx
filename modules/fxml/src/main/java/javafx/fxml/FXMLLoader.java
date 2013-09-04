@@ -2809,9 +2809,9 @@ public class FXMLLoader {
     private HashMap<Class, Map<String, Method>> getControllerMethods() throws LoadException {
         if (controllerMethods == null) {
             controllerMethods = new HashMap<>();
-            controllerMethods.put(null, new HashMap<>());
+            controllerMethods.put(null, new HashMap<String,Method>());
             for (Class c: SUPPORTED_TYPES) {
-                controllerMethods.put(c, new HashMap<>());
+                controllerMethods.put(c, new HashMap<String,Method>());
             }
 
             Class<?> controllerType = controller.getClass();
