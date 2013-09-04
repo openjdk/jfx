@@ -150,7 +150,6 @@ abstract class GLContext {
     private static native int nGetMaxTextureSize();
     private static native int nGetUniformLocation(long nativeCtxInfo,
             int programID, String name);
-    private static native int nOneValueGetIntegerv(int pname);
     private static native void nPixelStorei(int pname, int param);
     private static native boolean nReadPixelsByte(long nativeCtxInfo, int length,
             Buffer buffer, byte[] pixelArr, int x, int y, int w, int h);
@@ -426,11 +425,6 @@ abstract class GLContext {
             default:
                 return nativeFBOID;
         }
-    }
-
-    int getBoundTextureID() {
-        // return the single value param
-        return nOneValueGetIntegerv(GL_TEXTURE_BINDING_2D);
     }
 
     long getNativeCtxInfo() {

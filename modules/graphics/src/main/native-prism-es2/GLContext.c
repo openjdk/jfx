@@ -153,6 +153,7 @@ void initState(ContextInfo *ctxInfo) {
     ctxInfo->state.fillMode = GL_FILL;
     ctxInfo->state.cullEnable = JNI_FALSE;
     ctxInfo->state.cullMode = GL_BACK;
+    ctxInfo->state.fbo = 0;    
 }
 
 void clearBuffers(ContextInfo *ctxInfo,
@@ -855,7 +856,11 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nGenAndBindTexture
 JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nGetFBO
 (JNIEnv *env, jclass class) {
     GLint param;
-    /* TODO: Should use state.fbo vs Querying GL */
+    /* The caching logic has been done on Java side if 
+     * platform isn't MAC or IOS. On these platforms Glass
+     * can change the FBO under us. We should be able to simplify the
+     * logic in Java and remove this method once once Glass stop doing it.
+     */
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &param);
     return (jint) param;
 }
@@ -953,18 +958,6 @@ int translatePrismToGL(int value) {
             fprintf(stderr, "warning: Unknown value. Returning value = %d\n", value);
     }
     return value;
-}
-
-/*
- * Class:     com_sun_prism_es2_GLContext
- * Method:    nOneValueGetIntegerv
- * Signature: (I)I
- */
-JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nOneValueGetIntegerv
-(JNIEnv *env, jclass class, jint pname) {
-    GLint param;
-    glGetIntegerv((GLenum) translatePrismToGL(pname), &param);
-    return (jint) param;
 }
 
 GLint translatePixelStore(int pname) {
