@@ -287,7 +287,9 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_WinGLContext_nInitialize
 
     // initialize platform states and properties to match
     // cached states and properties
-    ctxInfo->wglSwapIntervalEXT(0);
+    if (ctxInfo->wglSwapIntervalEXT != NULL) {
+        ctxInfo->wglSwapIntervalEXT(0);
+    }
     ctxInfo->state.vSyncEnabled = JNI_FALSE;
     ctxInfo->vSyncRequested = vSyncRequested;
 
@@ -339,5 +341,7 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_WinGLContext_nMakeCurrent
     }
     interval = (vSyncNeeded) ? 1 : 0;
     ctxInfo->state.vSyncEnabled = vSyncNeeded;
-    ctxInfo->wglSwapIntervalEXT(interval);
+    if (ctxInfo->wglSwapIntervalEXT != NULL) {
+        ctxInfo->wglSwapIntervalEXT(interval);
+    }
 }

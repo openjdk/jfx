@@ -271,11 +271,18 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLContext_nInitialize
             "GLX_SGI_swap_control")) {
         ctxInfo->glXSwapIntervalSGI = (PFNGLXSWAPINTERVALSGIPROC)
                 dlsym(RTLD_DEFAULT, "glXSwapIntervalSGI");
+
+        if (ctxInfo->glXSwapIntervalSGI == NULL) {
+            ctxInfo->glXSwapIntervalSGI = glXGetProcAddress("glXSwapIntervalSGI");
+        }
+
     }
 
     // initialize platform states and properties to match
     // cached states and properties
-    ctxInfo->glXSwapIntervalSGI(0);
+    if (ctxInfo->glXSwapIntervalSGI != NULL) {
+        ctxInfo->glXSwapIntervalSGI(0);
+    }
     ctxInfo->state.vSyncEnabled = JNI_FALSE;
     ctxInfo->vSyncRequested = vSyncRequested;
 
@@ -323,5 +330,7 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_X11GLContext_nMakeCurrent
     }
     interval = (vSyncNeeded) ? 1 : 0;
     ctxInfo->state.vSyncEnabled = vSyncNeeded;
-    ctxInfo->glXSwapIntervalSGI(interval);
+    if (ctxInfo->glXSwapIntervalSGI != NULL) {
+        ctxInfo->glXSwapIntervalSGI(interval);
+    }
 }
