@@ -80,7 +80,7 @@ echo windows.vs.MSVCDIR=%MSVCDIR%@@ENDOFLINE@@
 echo windows.vs.INCLUDE=%INCLUDE%@@ENDOFLINE@@
 echo windows.vs.LIB=%LIB%@@ENDOFLINE@@
 echo windows.vs.LIBPATH=%LIBPATH%@@ENDOFLINE@@
-echo windows.vs.PATH=%PATH%@@ENDOFLINE@@
+echo windows.vs.PATH=%PARFAIT_PATH%;%PATH%@@ENDOFLINE@@
 echo windows.vs.VER=%VSVER%@@ENDOFLINE@@
 echo WINDOWS_SDK_DIR=%WindowsSdkDir%@@ENDOFLINE@@
 echo ############################################################

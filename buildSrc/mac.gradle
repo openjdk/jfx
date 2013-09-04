@@ -91,8 +91,9 @@ def ccFlags = [
         commonParams,
         IS_DEBUG ? "-DDEBUG" : ["-O3", "-DNDEBUG"]].flatten()
 
-def compiler = "gcc"
-def linker = "g++"
+def compiler = COMPILE_PARFAIT ? "parfait-gcc" : "gcc";
+def cc_compiler = COMPILE_PARFAIT ? "parfait-cc" : "cc";
+def linker = COMPILE_PARFAIT ? "parfait-g++" : "g++";
 
 MAC.glass = [:]
 MAC.glass.javahInclude = [
@@ -123,7 +124,7 @@ MAC.decora.lib = "decora_sse"
 MAC.prism = [:]
 MAC.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
 MAC.prism.nativeSource = file("modules/graphics/src/main/native-prism")
-MAC.prism.compiler = "cc"
+MAC.prism.compiler = cc_compiler
 MAC.prism.ccFlags = ["-O3", "-DINLINE=inline",
         "-I$JDK_HOME/include",
         "-I$JDK_HOME/include/darwin",
@@ -138,7 +139,7 @@ MAC.prism.lib = "prism_common"
 MAC.prismSW = [:]
 MAC.prismSW.javahInclude = ["com/sun/pisces/**/*"]
 MAC.prismSW.nativeSource = file("modules/graphics/src/main/native-prism-sw")
-MAC.prismSW.compiler = "cc"
+MAC.prismSW.compiler = cc_compiler
 MAC.prismSW.ccFlags = [MAC.prism.ccFlags].flatten()
 MAC.prismSW.linker = linker
 MAC.prismSW.linkFlags = [MAC.prism.linkFlags].flatten()

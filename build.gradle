@@ -309,6 +309,10 @@ if (COMPILE_GSTREAMER instanceof String) ext.COMPILE_GSTREAMER = Boolean.parseBo
 defineProperty("COMPILE_PANGO", "false")
 if (COMPILE_PANGO instanceof String) ext.COMPILE_PANGO = Boolean.parseBoolean(COMPILE_PANGO)
 
+// COMPILE_PARFAIT specifies whether to build parfait
+defineProperty("COMPILE_PARFAIT", "false")
+if (COMPILE_PARFAIT instanceof String) ext.COMPILE_PARFAIT = Boolean.parseBoolean(COMPILE_PARFAIT)
+
 
 // Define the SWT.jar that we are going to have to download during the build process based
 // on what platform we are compiling from (not based on our target).
@@ -2129,8 +2133,9 @@ project(":web") {
                 workingDir("$projectDir/src/main/native")
                 if (t.name == "win") {
                     String qtDir = cygpath(System.getenv().get("QTSDK_DIR"))
+                    String parfaitPath = COMPILE_PARFAIT ? System.getenv().get("PARFAIT_PATH") + ";" : "";
                     Map environmentSettings = new HashMap(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
-                    environmentSettings["PATH"] = "$WINDOWS_VS_PATH;$qtDir/bin;$qtDir/qt/bin"
+                    environmentSettings["PATH"] = parfaitPath + "$WINDOWS_VS_PATH;$qtDir/bin;$qtDir/qt/bin"
                     environmentSettings["QMAKESPEC"] = "win32-msvc2008"
                     environment(environmentSettings)
                     /* To build with ICU:
@@ -2179,6 +2184,19 @@ load(qt_config)""")
                     "JAVA_HOME"       : JAVA_HOME,
                     "WEBKITOUTPUTDIR" : webkitOutputDir,
                 ])
+
+                if (COMPILE_PARFAIT) {
+                    environment([
+                        "CC"        : "parfait-gcc",
+                        "QMAKE_CC"  : "parfait-gcc",
+                        "CXX"       : "parfait-g++",
+                        "QMAKE_CXX" : "parfait-g++",
+                        "CPP"       : "parfait-g++",
+                        "cc"        : "parfait-gcc",
+                        "LINK"      : "parfait-g++",
+                        "QMAKE_LINK": "parfait-g++",
+                    ])
+                }
                 commandLine("perl", "Tools/Scripts/build-webkit", "--java", "--imageio")
             }
 

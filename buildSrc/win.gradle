@@ -103,7 +103,8 @@ setupTools("windows_tools",
         defineProperty("WINDOWS_VS_VER", properties, "70")
         defineProperty("WINDOWS_VS_LIB", properties, "$WINDOWS_VS_VCINSTALLDIR/LIB;" + "$WINDOWS_SDK_DIR/lib;")
         defineProperty("WINDOWS_VS_LIBPATH", properties, "$WINDOWS_VS_VCINSTALLDIR/LIB;")
-        defineProperty("WINDOWS_VS_PATH", properties, "$WINDOWS_VS_DEVENVDIR;" +
+        def parfaitPath = COMPILE_PARFAIT ? System.getenv().get("PARFAIT_PATH") + ";" : "";
+        defineProperty("WINDOWS_VS_PATH", properties, parfaitPath + "$WINDOWS_VS_DEVENVDIR;" +
                 "$WINDOWS_VS_VSINSTALLDIR/VC/BIN;" +
                 "$WINDOWS_VS_VSINSTALLDIR/Common7/Tools;" +
                 "$WINDOWS_VS_VCINSTALLDIR/VCPackages;" +
@@ -128,8 +129,8 @@ WINDOWS_NATIVE_COMPILE_ENVIRONMENT = [
 String msvcBinDir = (IS_64
                   ? "$WINDOWS_VS_VSINSTALLDIR/VC/BIN/amd64"
                   : "$WINDOWS_VS_VSINSTALLDIR/VC/BIN")
-def compiler = cygpath("$msvcBinDir/cl.exe")
-def linker = cygpath("$msvcBinDir/link.exe")
+def compiler = COMPILE_PARFAIT ? "cl.exe" : cygpath("$msvcBinDir/cl.exe")
+def linker = COMPILE_PARFAIT ? "link.exe" : cygpath("$msvcBinDir/link.exe")
 ext.RC = cygpath("$WINDOWS_SDK_DIR/Bin/RC.Exe")
 ext.FXC = cygpath("$WINDOWS_DXSDK_DIR/utilities/bin/x86/fxc.exe")
 ext.MC = cygpath("$WINDOWS_SDK_DIR/Bin/mt.exe")
