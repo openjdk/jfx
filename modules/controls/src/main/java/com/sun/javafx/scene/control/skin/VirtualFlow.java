@@ -1586,7 +1586,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         }
 
         if (pile.size() > 0) {
-            accumCell = pile.get(0);
+            return pile.get(0);
         }
 
         // We need to use the accumCell and return that
