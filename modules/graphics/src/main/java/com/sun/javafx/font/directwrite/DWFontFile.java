@@ -111,6 +111,7 @@ class DWFontFile extends PrismFontFile {
 
     Path2D getGlyphOutline(int gc, float size) {
         if (fontFace == null) return null;
+        if (size == 0) return new Path2D();
         return fontFace.GetGlyphRunOutline(size, (short)gc, false);
     }
 
