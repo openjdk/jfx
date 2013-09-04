@@ -325,6 +325,7 @@ public class UserDataDirectoryTest extends TestBase {
         assertHasLocalStorage(webEngine);
     }
 
+    @org.junit.Ignore
     @Test
     public void testIOError() {
         String osName = System.getProperty("os.name");
@@ -336,6 +337,7 @@ public class UserDataDirectoryTest extends TestBase {
         assertHasNoLocalStorage(webEngine);
     }
 
+    @org.junit.Ignore
     @Test
     public void testIOErrorWithPassiveHandler() {
         String osName = System.getProperty("os.name");
@@ -350,6 +352,7 @@ public class UserDataDirectoryTest extends TestBase {
         assertOccurred(USER_DATA_DIRECTORY_IO_ERROR, handler);
     }
 
+    @org.junit.Ignore
     @Test
     public void testIOErrorWithRecoveringHandler() {
         String osName = System.getProperty("os.name");
