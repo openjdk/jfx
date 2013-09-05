@@ -91,6 +91,7 @@ public class ProgressBarTableCell<S> extends TableCell<S, Double> {
         this.getStyleClass().add("progress-bar-table-cell");
         
         this.progressBar = new ProgressBar();
+        this.progressBar.setMaxWidth(Double.MAX_VALUE);
     }
     
     
@@ -109,8 +110,10 @@ public class ProgressBarTableCell<S> extends TableCell<S, Double> {
             setGraphic(null);
         } else {
             progressBar.progressProperty().unbind();
-            
-            observable = getTableColumn().getCellObservableValue(getIndex());
+
+            final TableColumn<S,Double> column = getTableColumn();
+            observable = column == null ? null : column.getCellObservableValue(getIndex());
+
             if (observable != null) {
                 progressBar.progressProperty().bind(observable);
             } else if (item != null) {
