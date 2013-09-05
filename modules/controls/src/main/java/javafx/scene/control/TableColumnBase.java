@@ -76,7 +76,7 @@ import javafx.collections.ObservableMap;
  *      right-clicks the column header area
  *    <li>Have the contents of the table be sorted (using 
  *      {@link #comparatorProperty() comparator}, {@link #sortable sortable} and
- *      {@link #sortTypeProperty() sortType})
+ *      sortType).
  * </ul>
  * </p>
  * 
@@ -222,9 +222,13 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     // --- Parent Column
     /**
      * This read-only property will always refer to the parent of this column,
-     * in the situation where nested columns are being used. To create a nested
-     * column is simply a matter of placing TableColumnBase instances inside the
-     * {@link #columns} ObservableList of a TableColumnBase.
+     * in the situation where nested columns are being used.
+     *
+     * <p>In the currently existing subclasses, to create a nested
+     * column is simply a matter of placing the relevant TableColumnBase instances
+     * inside the columns ObservableList (for example, see
+     * {@link javafx.scene.control.TableColumn#getColumns()} and
+     * {@link javafx.scene.control.TreeTableColumn#getColumns()}.
      */
     private ReadOnlyObjectWrapper<TableColumnBase<S,?>> parentColumn;
     void setParentColumn(TableColumnBase<S,?> value) { parentColumnPropertyImpl().set(value); }
