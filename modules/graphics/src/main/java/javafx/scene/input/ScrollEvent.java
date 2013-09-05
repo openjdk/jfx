@@ -226,14 +226,14 @@ public final class ScrollEvent extends GestureEvent {
             boolean direct,
             boolean inertia,
             double deltaX, double deltaY,
-            double gestureDeltaX, double gestureDeltaY,
+            double totalDeltaX, double totalDeltaY,
             HorizontalTextScrollUnits textDeltaXUnits, double textDeltaX,
             VerticalTextScrollUnits textDeltaYUnits, double textDeltaY,
             int touchCount,
             PickResult pickResult) {
         this(null, null, eventType, x, y, screenX, screenY, shiftDown, controlDown,
-                altDown, metaDown, direct, inertia, deltaX, deltaY, gestureDeltaX,
-                gestureDeltaY, textDeltaXUnits, textDeltaX, textDeltaYUnits, textDeltaY, 
+                altDown, metaDown, direct, inertia, deltaX, deltaY, totalDeltaX,
+                totalDeltaY, textDeltaXUnits, textDeltaX, textDeltaYUnits, textDeltaY,
                 touchCount, pickResult);
     }
     
