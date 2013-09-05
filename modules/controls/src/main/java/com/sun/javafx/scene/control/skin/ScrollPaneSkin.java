@@ -150,9 +150,15 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
                     (scrollNode.getLayoutBounds().getHeight() != 0.0 && nodeHeight != scrollNode.getLayoutBounds().getHeight())) {
                     getSkinnable().requestLayout();
                 } else {
-                    // otherwise just update scrollbars based on new scrollNode size
-                    updateVerticalSB();
-                    updateHorizontalSB();
+                    /**
+                     * we just need to update scrollbars based on new scrollNode size,
+                     * but we don't do this while dragging, there's no need,
+                     * and it jumps, as dragging updates the scrollbar too.
+                     */
+                    if (!dragDetected) {
+                        updateVerticalSB();
+                        updateHorizontalSB();
+                    }
                 }
             }
         }
