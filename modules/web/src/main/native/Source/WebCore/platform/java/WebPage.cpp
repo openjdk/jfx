@@ -818,8 +818,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
 
     frame->init();
 
-    JSGlobalContextRef globalContext = getGlobalContext(frame->script());
-    JSContextGroupRef contextGroup = JSContextGetGroup(globalContext);
+    JSContextGroupRef contextGroup = toRef(mainThreadNormalWorld()->vm());
     JSContextGroupSetExecutionTimeLimit(contextGroup, 10, 0, 0);
 }
 
