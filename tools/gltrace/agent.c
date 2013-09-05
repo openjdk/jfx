@@ -42,7 +42,7 @@ static void init() __attribute__ ((constructor));
 static void
 init()
 {
-    char *lib = getenv("LD_PRELOAD");
+    char *lib = getenv(OS_ENV_PRELOAD);
     if (lib == NULL) return;
     strncpy(tools_envvar, "JAVA_TOOL_OPTIONS=-agentpath:", sizeof(tools_envvar));
     strncat(tools_envvar, lib, sizeof(tools_envvar));
