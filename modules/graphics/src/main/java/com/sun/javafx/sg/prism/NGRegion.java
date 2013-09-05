@@ -1171,6 +1171,7 @@ public class NGRegion extends NGGroup {
     private void renderBackgroundShape(Graphics g) {
         if (PulseLogger.PULSE_LOGGING_ENABLED) {
             PulseLogger.PULSE_LOGGER.renderIncrementCounter("NGRegion renderBackgroundShape slow path");
+            PulseLogger.PULSE_LOGGER.renderMessage("Slow shape path for " + getName());
         }
         // We first need to draw each background fill. We don't pay any attention
         // to the radii of the BackgroundFill, but we do honor the insets and
@@ -1220,9 +1221,6 @@ public class NGRegion extends NGGroup {
     }
 
     private void renderBackgrounds(Graphics g, float width, float height) {
-        if (PulseLogger.PULSE_LOGGING_ENABLED) {
-            PulseLogger.PULSE_LOGGER.renderIncrementCounter("NGRegion renderBackgrounds slow path");
-        }
         final List<BackgroundFill> fills = background.getFills();
         for (int i = 0, max = fills.size(); i < max; i++) {
             final BackgroundFill fill = fills.get(i);
@@ -1269,6 +1267,10 @@ public class NGRegion extends NGGroup {
                         g.fillRoundRect(l, t, w, h, arcWidth, arcHeight);
                     }
                 } else {
+                    if (PulseLogger.PULSE_LOGGING_ENABLED) {
+                        PulseLogger.PULSE_LOGGER.renderIncrementCounter("NGRegion renderBackgrounds slow path");
+                        PulseLogger.PULSE_LOGGER.renderMessage("Slow background path for " + getName());
+                    }
                     // The edges are not uniform, so we have to render each edge independently
                     // TODO document the issue number which will give us a fast path for rendering
                     // non-uniform corners, and that we want to implement that instead of createPath2
