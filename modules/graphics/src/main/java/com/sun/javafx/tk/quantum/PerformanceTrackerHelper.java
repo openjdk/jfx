@@ -26,6 +26,8 @@
 package com.sun.javafx.tk.quantum;
 
 import com.sun.javafx.tk.Toolkit;
+import com.sun.prism.impl.PrismSettings;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.security.AccessController;
@@ -52,12 +54,11 @@ abstract class PerformanceTrackerHelper {
                     @Override
                     public PerformanceTrackerHelper run() {
                         try {
-                            if (System.getProperty("sun.perflog") != null) {
+                            if (PrismSettings.perfLog) {
                                 final PerformanceTrackerHelper trackerImpl =
                                         new PerformanceTrackerDefaultImpl();
 
-                                if (System.getProperty(
-                                        "sun.perflog.fx.exitflush") != null) {
+                                if (PrismSettings.perfLogExitFlush) {
                                     Runtime.getRuntime().addShutdownHook(
                                             new Thread() {
 

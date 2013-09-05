@@ -83,6 +83,10 @@ public final class PrismSettings {
     public static final boolean disableEffects;
     public static final int glyphCacheWidth;
     public static final int glyphCacheHeight;
+    public static final boolean perfLog;
+    public static final boolean perfLogExitFlush;
+    public static final boolean perfLogFirstPaintFlush;
+    public static final boolean perfLogFirstPaintExit;
 
     private PrismSettings() {
     }
@@ -333,6 +337,16 @@ public final class PrismSettings {
                 "Try -Dprism.glyphCacheWidth=<number>");
         glyphCacheHeight = getInt(systemProperties, "prism.glyphCacheHeight", 1024,
                 "Try -Dprism.glyphCacheHeight=<number>");
+
+        /*
+         * Performance Logger flags
+         * Enable the performance logger, print on exit, print on first paint etc.
+         */
+        perfLog = getBoolean(systemProperties, "sun.perflog", false, true);
+        perfLogExitFlush = getBoolean(systemProperties, "sun.perflog.fx.exitflush", false, true);
+        perfLogFirstPaintFlush = getBoolean(systemProperties, "sun.perflog.fx.firstpaintflush", false, true);
+        perfLogFirstPaintExit = getBoolean(systemProperties, "sun.perflog.fx.firstpaintexit", false, true);
+
     }
 
     private static int parseInt(String s, int dflt, int trueDflt,
@@ -396,6 +410,15 @@ public final class PrismSettings {
                                       String key,
                                       boolean dflt) {
         final String strval = properties.getProperty(key);
+        return (strval != null) ? Boolean.parseBoolean(strval) : dflt;
+    }
+    
+    private static boolean getBoolean(Properties properties,
+                                      String key,
+                                      boolean dflt,
+                                      boolean dfltIfDefined) {
+        final String strval = properties.getProperty(key);
+        if (strval != null && strval.length() == 0) return dfltIfDefined;
         return (strval != null) ? Boolean.parseBoolean(strval) : dflt;
     }
 

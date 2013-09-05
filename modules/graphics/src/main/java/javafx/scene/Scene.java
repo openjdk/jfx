@@ -138,6 +138,7 @@ import com.sun.javafx.tk.TKScenePaintListener;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.scene.LayoutFlags;
+import com.sun.prism.impl.PrismSettings;
 
 import sun.util.logging.PlatformLogger;
 import sun.util.logging.PlatformLogger.Level;
@@ -2337,14 +2338,12 @@ public class Scene implements EventTarget {
             if (firstPulse) {
                 if (PerformanceTracker.isLoggingEnabled()) {
                     PerformanceTracker.logEvent("Scene - first repaint - layout complete");
-                    AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                        @Override public Object run() {
-                            if (System.getProperty("sun.perflog.fx.firstpaintflush") != null) {
-                                PerformanceTracker.outputLog();
-                            }
-                            return null;
-                        }
-                    });
+                    if (PrismSettings.perfLogFirstPaintFlush) {
+                        PerformanceTracker.outputLog();
+                    }
+                    if (PrismSettings.perfLogFirstPaintExit) {
+                        System.exit(0);
+                    }
                 }
                 firstPulse = false;
             }
