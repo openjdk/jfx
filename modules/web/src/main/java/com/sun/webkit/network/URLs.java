@@ -23,6 +23,7 @@ public final class URLs {
     static {
         Map<String,URLStreamHandler> map =
                 new HashMap<String,URLStreamHandler>(2);
+        map.put("about", new com.sun.webkit.network.about.Handler());
         map.put("data", new com.sun.webkit.network.data.Handler());
         handlerMap = Collections.unmodifiableMap(map);
     }
