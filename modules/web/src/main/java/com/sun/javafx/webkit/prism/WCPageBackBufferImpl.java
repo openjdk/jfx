@@ -3,6 +3,7 @@
  */
 package com.sun.javafx.webkit.prism;
 
+import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.prism.Graphics;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.Image;
@@ -13,18 +14,26 @@ import com.sun.prism.paint.Color;
 import com.sun.webkit.graphics.WCGraphicsContext;
 import com.sun.webkit.graphics.WCGraphicsManager;
 import com.sun.webkit.graphics.WCPageBackBuffer;
+import javafx.scene.transform.Transform;
 
 final class WCPageBackBufferImpl extends WCPageBackBuffer implements ResourceFactoryListener {
     private RTTexture texture;
     private boolean listenerAdded = false;
+    private float pixelScale;
 
+    WCPageBackBufferImpl(float pixelScale) {
+        this.pixelScale = pixelScale;
+    }
+    
     private static RTTexture createTexture(int w, int h) {
         return GraphicsPipeline.getDefaultResourceFactory()
                 .createRTTexture(w, h, Texture.WrapMode.CLAMP_NOT_NEEDED);
     }
 
     public WCGraphicsContext createGraphics() {
-        return WCGraphicsManager.getGraphicsManager().createGraphicsContext(texture.createGraphics());
+        Graphics g = texture.createGraphics();
+        g.scale(pixelScale, pixelScale);
+        return WCGraphicsManager.getGraphicsManager().createGraphicsContext(g);
     }
 
     public void disposeGraphics(WCGraphicsContext gc) {
@@ -32,35 +41,17 @@ final class WCPageBackBufferImpl extends WCPageBackBuffer implements ResourceFac
     }
 
     public void flush(final WCGraphicsContext gc, int x, int y, final int w, final int h) {
-        PrismImage img = new PrismImage() {
-            @Override public int getWidth() {
-                return w;
-            }
-            @Override public int getHeight() {
-                return h;
-            }
-            @Override public Graphics getGraphics() {
-                return (Graphics)gc.getPlatformGraphics();
-            }
-            @Override public Image getImage() {
-                throw new UnsupportedOperationException();
-            }
-            @Override public void draw(Graphics g,
-                    int dstx1, int dsty1, int dstx2, int dsty2,
-                    int srcx1, int srcy1, int srcx2, int srcy2)
-            {
-                g.drawTexture(texture,
-                        dstx1, dsty1, dstx2, dsty2,
-                        srcx1, srcy1, srcx2, srcy2);
-            }
-            @Override public void dispose() {
-                throw new UnsupportedOperationException();
-            }
-        };
-        gc.drawImage(img, x, y, w, h, x, y, w, h);
+        ((Graphics) gc.getPlatformGraphics()).drawTexture(texture, x, y, w, h,
+                x * pixelScale, y * pixelScale, w * pixelScale, h * pixelScale);
     }
 
     protected void copyArea(int x, int y, int w, int h, int dx, int dy) {
+        x *= pixelScale;
+        y *= pixelScale;
+        w = (int) Math.ceil(w * pixelScale);
+        h = (int) Math.ceil(h * pixelScale);
+        dx *= pixelScale;
+        dy *= pixelScale;
         RTTexture aux = createTexture(w, h);
         aux.createGraphics().drawTexture(texture, 0, 0, w, h, x, y, x + w, y + h);
         texture.createGraphics().drawTexture(aux, x + dx, y + dy, x + w + dx, y + h + dy,
@@ -69,6 +60,8 @@ final class WCPageBackBufferImpl extends WCPageBackBuffer implements ResourceFac
     }
 
     public boolean validate(int width, int height) {
+        width = (int) Math.ceil(width * pixelScale);
+        height = (int) Math.ceil(height * pixelScale);
         if (texture == null) {
             texture = createTexture(width, height);
             texture.contentsUseful();
