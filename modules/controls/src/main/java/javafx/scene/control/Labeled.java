@@ -468,7 +468,9 @@ public abstract class Labeled extends Control {
                         }
                         if (url != null) {
                             final Image img = StyleManager.getInstance().getCachedImage(url.toExternalForm());
-                            ((StyleableProperty)graphicProperty()).applyStyle(origin, new ImageView(img));
+                            if (img != null) {
+                                ((StyleableProperty)graphicProperty()).applyStyle(origin, new ImageView(img));
+                            }
                         }
                     }
                 }

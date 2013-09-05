@@ -25,6 +25,8 @@
 
 package com.sun.javafx.css;
 
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.css.Styleable;
 import java.io.FileNotFoundException;
 import java.io.FilePermission;
@@ -672,26 +674,40 @@ final public class StyleManager {
 
     public Image getCachedImage(String url) {
 
-        Image image = imageCache.get(url);
-        if (image == null) {
+        Image image = null;
+        if (imageCache.containsKey(url)) {
+
+            image = imageCache.get(url);
+
+        } else {
 
             try {
 
                 image = new Image(url);
-                imageCache.put(url, image);
+
+                // RT-31865
+                if (image.isError() == false) {
+                    imageCache.put(url, image);
+                } else {
+                    imageCache.put(url, null);
+                    final PlatformLogger logger = getLogger();
+                    if (logger != null && logger.isLoggable(Level.WARNING)) {
+                        logger.warning("Error loading image: " + url);
+                    }
+                }
 
             } catch (IllegalArgumentException iae) {
                 // url was empty!
                 final PlatformLogger logger = getLogger();
                 if (logger != null && logger.isLoggable(Level.WARNING)) {
-                        LOGGER.warning(iae.getLocalizedMessage());
+                    logger.warning(iae.getLocalizedMessage());
                 }
 
             } catch (NullPointerException npe) {
                 // url was null!
                 final PlatformLogger logger = getLogger();
                 if (logger != null && logger.isLoggable(Level.WARNING)) {
-                        LOGGER.warning(npe.getLocalizedMessage());
+                    logger.warning(npe.getLocalizedMessage());
                 }
             }
         }
