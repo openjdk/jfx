@@ -1254,7 +1254,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             bufferGraphics.fill(p2d);
 
             // blend buffer and clipImg onto |g|
-            if (g instanceof MaskTextureGraphics) {
+            if (g instanceof MaskTextureGraphics && ! (g instanceof PrinterGraphics)) {
                 MaskTextureGraphics mg = (MaskTextureGraphics) g;
                 if (srcover) {
                     mg.drawPixelsMasked(buffer.getTextureObject(),
@@ -1451,10 +1451,13 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     }
 
     private static FilterContext getFilterContext(Graphics g) {
-        Screen screen = g.getAssociatedScreen();  // can be null when printing
-        return (screen != null
-                ? PrFilterContext.getInstance(screen)
-                : PrFilterContext.getDefaultInstance());
+        Screen screen = g.getAssociatedScreen();
+        if (screen == null) {
+            ResourceFactory factory = g.getResourceFactory();
+            return PrFilterContext.getPrinterContext(factory);
+        } else {
+            return PrFilterContext.getInstance(screen);
+        }
     }
 
     @Override public void strokeArc(final int x, final int y, final int w, final int h,
