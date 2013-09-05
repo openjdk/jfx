@@ -8669,21 +8669,34 @@ public abstract class Node implements EventTarget, Styleable {
             return;
         }
 
+        if (cssFlag == CssFlags.RECALCULATE) {
+            // TODO: re-evalutate handling of CssFlags.RECALCULATE - see below
+            cssFlag = CssFlags.REAPPLY;
+        }
+
         if (cssFlag == CssFlags.REAPPLY) {
+
+            // RT-24621 - If this node's parent's cssFlag is REAPPLY, then CSS should be applied to the parent first,
+            // otherwise the styles this node uses will be incomplete (missing lookups, missing inherited styles, etc).
+            // find the top-most parent whose flag is REAPPLY and start from there, if there is one.
+            Parent _parent = getParent();
+            if(_parent != null && _parent.cssFlag == this.cssFlag) {
+                // TODO: danger of infinite loop here!
+                _parent.impl_processCSS();
+            }
 
             // Match new styles if my own indicates I need to reapply
             styleHelper = CssStyleHelper.createStyleHelper(this);
 
-        } else if (cssFlag == CssFlags.RECALCULATE) {
-
-            // Recalculate means that the in-line style has changed.
-
-            // Note: recalculate used to do something different than reapply,
-            // but the way calculated values are cached has changed.
-            // TODO: re-evalutate handling of CssFlags.RECALCULATE
-            cssFlag = CssFlags.REAPPLY;
-            styleHelper = CssStyleHelper.createStyleHelper(this);
-
+//        } else if (cssFlag == CssFlags.RECALCULATE) {
+//
+//            // Recalculate means that the in-line style has changed.
+//
+//            // Note: recalculate used to do something different than reapply,
+//            // but the way calculated values are cached has changed.
+//            cssFlag = CssFlags.REAPPLY;
+//            styleHelper = CssStyleHelper.createStyleHelper(this);
+//
         }
 
         final CssFlags flag = cssFlag;
