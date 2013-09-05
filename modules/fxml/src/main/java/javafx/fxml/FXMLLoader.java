@@ -380,13 +380,19 @@ public class FXMLLoader {
                     warnDeprecatedEscapeSequence(RELATIVE_PATH_PREFIX);
                     return aValue;
                 } else {
-                    try {
-                        return (aValue.charAt(0) == '/') ?
-                                classLoader.getResource(aValue.substring(1)).toString() :
-                                new URL(FXMLLoader.this.location, aValue).toString();
-                    } catch (MalformedURLException e) {
-                        System.err.println(FXMLLoader.this.location + "/" + aValue);
-                    }
+                        if (aValue.charAt(0) == '/') {
+                            final URL res = classLoader.getResource(aValue.substring(1));
+                            if (res == null) {
+                                throw new LoadException("Invalid resource: " + aValue + " not found on the classpath");
+                            }
+                            return res.toString();
+                        } else {
+                            try {
+                                return new URL(FXMLLoader.this.location, aValue).toString();
+                            } catch (MalformedURLException e) {
+                                System.err.println(FXMLLoader.this.location + "/" + aValue);
+                            }
+                        }
                 }
             } else if (aValue.startsWith(RESOURCE_KEY_PREFIX)) {
                 aValue = aValue.substring(RESOURCE_KEY_PREFIX.length());
