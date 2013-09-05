@@ -27,7 +27,10 @@ package javafx.scene;
 
 import com.sun.javafx.geom.BoxBounds;
 import com.sun.javafx.geom.PickRay;
+import com.sun.javafx.geom.transform.Affine2D;
+import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.geom.transform.Translate2D;
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.input.PickResultChooser;
@@ -55,9 +58,14 @@ import org.junit.rules.ExpectedException;
 import java.lang.reflect.Method;
 import java.util.Comparator;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.transform.Affine;
+import javafx.scene.transform.Scale;
+import javafx.scene.transform.Shear;
+import javafx.scene.transform.Translate;
 import javafx.stage.Stage;
 
 import static org.junit.Assert.*;
+import org.junit.Ignore;
 /**
  * Tests various aspects of Node.
  *
@@ -1360,7 +1368,7 @@ public class NodeTest {
 
         final Rectangle clip = new Rectangle(100, 100) {
             @Override protected NGNode impl_createPeer() {
-                return new MockClip();
+                return new MockNGRect();
             }
         };
         circle.setClip(clip);
@@ -1378,15 +1386,261 @@ public class NodeTest {
 
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
 
-        assertEquals(300, ((MockClip) clip.impl_getPeer()).w, 1e-10);
+        assertEquals(300, ((MockNGRect) clip.impl_getPeer()).w, 1e-10);
     }
 
-    private class MockClip extends NGRectangle {
+    @Test
+    public void untransformedNodeShouldSyncIdentityTransform() {
+        final Node node = createTestRect();
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertSame(BaseTransform.IDENTITY_TRANSFORM,
+                ((MockNGRect) node.impl_getPeer()).t);
+    }
+
+    @Test
+    public void nodeTransfomedByIdentitiesShouldSyncIdentityTransform() {
+        final Node node = createTestRect();
+        node.setRotationAxis(Rotate.X_AXIS);
+        node.getTransforms().add(new Translate());
+        node.getTransforms().add(new Scale());
+        node.getTransforms().add(new Affine());
+        node.getTransforms().add(new Rotate(0, Rotate.Y_AXIS));
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertSame(BaseTransform.IDENTITY_TRANSFORM,
+                ((MockNGRect) node.impl_getPeer()).t);
+    }
+
+    @Test
+    public void translatedNodeShouldSyncTranslateTransform1() {
+        final Node node = createTestRect();
+        node.setTranslateX(30);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertSame(Translate2D.class,
+                ((MockNGRect) node.impl_getPeer()).t.getClass());
+    }
+
+    @Test
+    public void translatedNodeShouldSyncTranslateTransform2() {
+        final Node node = createTestRect();
+        node.getTransforms().add(new Translate(20, 10));
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertSame(Translate2D.class,
+                ((MockNGRect) node.impl_getPeer()).t.getClass());
+    }
+
+    @Test
+    public void multitranslatedNodeShouldSyncTranslateTransform() {
+        final Node node = createTestRect();
+        node.setTranslateX(30);
+        node.getTransforms().add(new Translate(20, 10));
+        node.getTransforms().add(new Translate(10, 20));
+        node.getTransforms().add(new Translate(5, 5, 0));
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertSame(Translate2D.class,
+                ((MockNGRect) node.impl_getPeer()).t.getClass());
+    }
+
+    @Test
+    public void mirroringShouldSyncAffine2DTransform() {
+        final Node node = createTestRect();
+        node.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertSame(Affine2D.class,
+                ((MockNGRect) node.impl_getPeer()).t.getClass());
+    }
+
+    @Test
+    public void rotatedNodeShouldSyncAffine2DTransform1() {
+        final Node node = createTestRect();
+        node.setRotate(20);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertSame(Affine2D.class,
+                ((MockNGRect) node.impl_getPeer()).t.getClass());
+    }
+
+    @Test
+    public void rotatedNodeShouldSyncAffine2DTransform2() {
+        final Node node = createTestRect();
+        node.getTransforms().add(new Rotate(20));
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertSame(Affine2D.class,
+                ((MockNGRect) node.impl_getPeer()).t.getClass());
+    }
+
+    @Test
+    public void multiRotatedNodeShouldSyncAffine2DTransform() {
+        final Node node = createTestRect();
+        node.setRotate(20);
+        node.getTransforms().add(new Rotate(20));
+        node.getTransforms().add(new Rotate(0, Rotate.X_AXIS));
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertSame(Affine2D.class,
+                ((MockNGRect) node.impl_getPeer()).t.getClass());
+    }
+
+    @Test
+    public void scaledNodeShouldSyncAffine2DTransform1() {
+        final Node node = createTestRect();
+        node.setScaleX(2);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertSame(Affine2D.class,
+                ((MockNGRect) node.impl_getPeer()).t.getClass());
+    }
+
+    @Test
+    public void scaledNodeShouldSyncAffine2DTransform2() {
+        final Node node = createTestRect();
+        node.getTransforms().add(new Scale(2, 1));
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertSame(Affine2D.class,
+                ((MockNGRect) node.impl_getPeer()).t.getClass());
+    }
+
+    @Test
+    public void multiScaledNodeShouldSyncAffine2DTransform() {
+        final Node node = createTestRect();
+        node.setScaleX(20);
+        node.getTransforms().add(new Scale(2, 1));
+        node.getTransforms().add(new Scale(0.5, 2, 1));
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertSame(Affine2D.class,
+                ((MockNGRect) node.impl_getPeer()).t.getClass());
+    }
+
+    @Test
+    public void shearedNodeShouldSyncAffine2DTransform() {
+        final Node node = createTestRect();
+        node.getTransforms().add(new Shear(2, 1));
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertSame(Affine2D.class,
+                ((MockNGRect) node.impl_getPeer()).t.getClass());
+    }
+
+    @Test
+    public void ztranslatedNodeShouldSyncAffine3DTransform1() {
+        final Node node = createTestRect();
+        node.setTranslateZ(30);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertSame(Affine3D.class,
+                ((MockNGRect) node.impl_getPeer()).t.getClass());
+    }
+
+    @Test
+    public void ztranslatedNodeShouldSyncAffine3DTransform2() {
+        final Node node = createTestRect();
+        node.getTransforms().add(new Translate(0, 0, 10));
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertSame(Affine3D.class,
+                ((MockNGRect) node.impl_getPeer()).t.getClass());
+    }
+
+    @Test
+    public void zscaledNodeShouldSyncAffine3DTransform1() {
+        final Node node = createTestRect();
+        node.setScaleZ(0.5);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertSame(Affine3D.class,
+                ((MockNGRect) node.impl_getPeer()).t.getClass());
+    }
+
+    @Test
+    public void zscaledNodeShouldSyncAffine3DTransform2() {
+        final Node node = createTestRect();
+        node.getTransforms().add(new Scale(1, 1, 2));
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertSame(Affine3D.class,
+                ((MockNGRect) node.impl_getPeer()).t.getClass());
+    }
+
+    @Test
+    public void nonZRotatedNodeShouldSyncAffine3DTransform1() {
+        final Node node = createTestRect();
+        node.setRotationAxis(Rotate.Y_AXIS);
+        node.setRotate(10);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertSame(Affine3D.class,
+                ((MockNGRect) node.impl_getPeer()).t.getClass());
+    }
+
+    @Test
+    public void nonZRotatedNodeShouldSyncAffine3DTransform2() {
+        final Node node = createTestRect();
+        node.getTransforms().add(new Rotate(10, Rotate.X_AXIS));
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertSame(Affine3D.class,
+                ((MockNGRect) node.impl_getPeer()).t.getClass());
+    }
+
+    @Test
+    public void translateTransformShouldBeReusedWhenPossible() {
+        final Node node = createTestRect();
+        node.setTranslateX(10);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+
+        BaseTransform t = ((MockNGRect) node.impl_getPeer()).t;
+
+        ((MockNGRect) node.impl_getPeer()).t = null;
+        node.setTranslateX(20);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+
+        assertSame(t, ((MockNGRect) node.impl_getPeer()).t);
+    }
+
+    @Test
+    public void affine2DTransformShouldBeReusedWhenPossible() {
+        final Node node = createTestRect();
+        node.setScaleX(10);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+
+        BaseTransform t = ((MockNGRect) node.impl_getPeer()).t;
+
+        ((MockNGRect) node.impl_getPeer()).t = null;
+        node.setRotate(20);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+
+        assertSame(t, ((MockNGRect) node.impl_getPeer()).t);
+    }
+
+    @Test
+    public void affine3DTransformShouldBeReusedWhenPossible() {
+        final Node node = createTestRect();
+        node.setScaleZ(10);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+
+        BaseTransform t = ((MockNGRect) node.impl_getPeer()).t;
+
+        ((MockNGRect) node.impl_getPeer()).t = null;
+        node.setRotate(20);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+
+        assertSame(t, ((MockNGRect) node.impl_getPeer()).t);
+    }
+
+    private Node createTestRect() {
+        final Rectangle rect = new Rectangle() {
+            @Override protected NGNode impl_createPeer() {
+                return new MockNGRect();
+            }
+        };
+        Scene scene = new Scene(new Group(rect));
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+        return rect;
+    }
+
+    private class MockNGRect extends NGRectangle {
         double w = 0;
+        BaseTransform t = null;
 
         @Override public void updateRectangle(float x, float y, float width,
                 float height, float arcWidth, float arcHeight) {
             w = width;
+        }
+
+        @Override
+        public void setTransformMatrix(BaseTransform tx) {
+            t = tx;
         }
     }
 }

@@ -32,6 +32,7 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.geometry.Point3D;
 
 import com.sun.javafx.geom.transform.Affine3D;
+import com.sun.javafx.geom.transform.BaseTransform;
 import javafx.geometry.Point2D;
 
 
@@ -730,6 +731,33 @@ public class Rotate extends Transform {
             trans.translate(-localPivotX, -localPivotY, -localPivotZ);
         } else {
             trans.rotate(Math.toRadians(localAngle),
+                         getAxis().getX(), getAxis().getY(), getAxis().getZ());
+        }
+    }
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    @Override
+    public BaseTransform impl_derive(BaseTransform trans) {
+        if (isIdentity()) {
+            return trans;
+        }
+
+        double localPivotX = getPivotX();
+        double localPivotY = getPivotY();
+        double localPivotZ = getPivotZ();
+        double localAngle = getAngle();
+
+        if (localPivotX != 0 || localPivotY != 0 || localPivotZ != 0) {
+            trans = trans.deriveWithTranslation(localPivotX, localPivotY, localPivotZ);
+            trans = trans.deriveWithRotation(Math.toRadians(localAngle),
+                         getAxis().getX(),getAxis().getY(), getAxis().getZ());
+            return trans.deriveWithTranslation(-localPivotX, -localPivotY, -localPivotZ);
+        } else {
+            return trans.deriveWithRotation(Math.toRadians(localAngle),
                          getAxis().getX(), getAxis().getY(), getAxis().getZ());
         }
     }

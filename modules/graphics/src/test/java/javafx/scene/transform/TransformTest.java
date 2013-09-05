@@ -154,6 +154,9 @@ public class TransformTest {
         final Transform t = new Transform() {
             @Override
             public void impl_apply(com.sun.javafx.geom.transform.Affine3D ad) {}
+
+            @Override
+            public BaseTransform impl_derive(BaseTransform ad) { return null; }
         };
 
         TransformHelper.assertMatrix(t,

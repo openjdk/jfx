@@ -33,7 +33,10 @@ import javafx.scene.Node;
 import com.sun.javafx.WeakReferenceQueue;
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.event.EventHandlerManager;
+import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.Affine3D;
+import com.sun.javafx.geom.transform.AffineBase;
+import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.transform.TransformUtils;
 import java.lang.ref.SoftReference;
 import javafx.beans.InvalidationListener;
@@ -1976,6 +1979,13 @@ public abstract class Transform implements Cloneable, EventTarget {
      */
     @Deprecated
     public abstract void impl_apply(Affine3D t);
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    public abstract BaseTransform impl_derive(BaseTransform t);
 
     /**
      * @treatAsPrivate implementation detail

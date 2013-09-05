@@ -1323,6 +1323,48 @@ public class Affine2D extends AffineBase {
     }
 
     @Override
+    public BaseTransform deriveWithTranslation(double mxt, double myt, double mzt) {
+        if (mzt == 0.0) {
+            translate(mxt, myt);
+            return this;
+        }
+        Affine3D a = new Affine3D(this);
+        a.translate(mxt, myt, mzt);
+        return a;
+    }
+
+    @Override
+    public BaseTransform deriveWithScale(double mxx, double myy, double mzz) {
+        if (mzz == 1.0) {
+            scale(mxx, myy);
+            return this;
+        }
+        Affine3D a = new Affine3D(this);
+        a.scale(mxx, myy, mzz);
+        return a;
+
+    }
+
+    @Override
+    public BaseTransform deriveWithRotation(double theta,
+            double axisX, double axisY, double axisZ) {
+        if (theta == 0.0) {
+            return this;
+        }
+        if (almostZero(axisX) && almostZero(axisY)) {
+            if (axisZ > 0) {
+                rotate(theta);
+            } else if (axisZ < 0) {
+                rotate(-theta);
+            } // else rotating about zero vector - NOP
+            return this;
+        }
+        Affine3D a = new Affine3D(this);
+        a.rotate(theta, axisX, axisY, axisZ);
+        return a;
+    }
+
+    @Override
     public BaseTransform deriveWithPreTranslation(double mxt, double myt) {
         this.mxt += mxt;
         this.myt += myt;
@@ -1351,6 +1393,27 @@ public class Affine2D extends AffineBase {
                                           mxt, myt);
         concatenate(tmpTx);
         return this;
+    }
+
+    @Override
+    public BaseTransform deriveWithConcatenation(
+            double mxx,   double mxy,   double mxz,   double mxt,
+            double myx,   double myy,   double myz,   double myt,
+            double mzx,   double mzy,   double mzz,   double mzt) {
+        if (                                   mxz == 0.0
+                                            && myz == 0.0
+                && mzx == 0.0 && mzy == 0.0 && mzz == 1.0 && mzt == 0.0) {
+            concatenate(mxx, mxy,
+                        mxt, myx,
+                        myy, myt);
+            return this;
+        }
+
+        Affine3D t3d = new Affine3D(this);
+        t3d.concatenate(mxx, mxy, mxz, mxt,
+                        myx, myy, myz, myt,
+                        mzx, mzy, mzz, mzt);
+        return t3d;
     }
 
     @Override

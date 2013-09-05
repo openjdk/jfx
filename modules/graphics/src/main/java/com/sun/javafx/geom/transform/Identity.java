@@ -281,6 +281,58 @@ public final class Identity extends BaseTransform {
     }
 
     @Override
+    public BaseTransform deriveWithTranslation(double mxt, double myt, double mzt) {
+        if (mzt == 0.0) {
+            if (mxt == 0.0 && myt == 0.0) {
+                return this;
+            }
+            return new Translate2D(mxt, myt);
+        }
+        Affine3D a = new Affine3D();
+        a.translate(mxt, myt, mzt);
+        return a;
+    }
+
+    @Override
+    public BaseTransform deriveWithScale(double mxx, double myy, double mzz) {
+        if (mzz == 1.0) {
+            if (mxx == 1.0 && myy == 1.0) {
+                return this;
+            }
+            Affine2D a = new Affine2D();
+            a.scale(mxx, myy);
+            return a;
+        }
+        Affine3D a = new Affine3D();
+        a.scale(mxx, myy, mzz);
+        return a;
+
+    }
+
+    @Override
+    public BaseTransform deriveWithRotation(double theta,
+            double axisX, double axisY, double axisZ) {
+        if (theta == 0.0) {
+            return this;
+        }
+        if (almostZero(axisX) && almostZero(axisY)) {
+            if (axisZ == 0.0) {
+                return this;
+            }
+            Affine2D a = new Affine2D();
+            if (axisZ > 0) {
+                a.rotate(theta);
+            } else if (axisZ < 0) {
+                a.rotate(-theta);
+            }
+            return a;
+        }
+        Affine3D a = new Affine3D();
+        a.rotate(theta, axisX, axisY, axisZ);
+        return a;
+    }
+
+    @Override
     public BaseTransform deriveWithConcatenation(double mxx, double myx,
                                                  double mxy, double myy,
                                                  double mxt, double myt)
@@ -288,6 +340,16 @@ public final class Identity extends BaseTransform {
         return getInstance(mxx, myx,
                            mxy, myy,
                            mxt, myt);
+    }
+
+    @Override
+    public BaseTransform deriveWithConcatenation(
+            double mxx, double mxy, double mxz, double mxt,
+            double myx, double myy, double myz, double myt,
+            double mzx, double mzy, double mzz, double mzt) {
+        return getInstance(mxx, mxy, mxz, mxt,
+                           myx, myy, myz, myt,
+                           mzx, mzy, mzz, mzt);
     }
 
     @Override

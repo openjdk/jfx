@@ -647,6 +647,25 @@ public class Affine3D extends AffineBase {
         return this;
     }
 
+    @Override
+    public BaseTransform deriveWithTranslation(double mxt, double myt, double mzt) {
+        translate(mxt, myt, mzt);
+        return this;
+    }
+
+    @Override
+    public BaseTransform deriveWithScale(double mxx, double myy, double mzz) {
+        scale(mxx, myy, mzz);
+        return this;
+    }
+
+    @Override
+    public BaseTransform deriveWithRotation(double theta,
+            double axisX, double axisY, double axisZ) {
+        rotate(theta, axisX, axisY, axisZ);
+        return this;
+    }
+
     public void preTranslate(double mxt, double myt, double mzt) {
         this.mxt += mxt;
         this.myt += myt;
@@ -940,6 +959,17 @@ public class Affine3D extends AffineBase {
         return this;
     }
 
+    @Override
+    public BaseTransform deriveWithConcatenation(
+            double mxx, double mxy, double mxz, double mxt,
+            double myx, double myy, double myz, double myt,
+            double mzx, double mzy, double mzz, double mzt) {
+        concatenate(mxx, mxy, mxz, mxt,
+                    myx, myy, myz, myt,
+                    mzx, mzy, mzz, mzt);
+        return this;
+    }
+
     public void preConcatenate(BaseTransform transform) {
         switch (transform.getDegree()) {
             case IDENTITY:
@@ -1089,12 +1119,6 @@ public class Affine3D extends AffineBase {
 
         updateState();
         return this;
-    }
-
-    private static final double EPSILON_ABSOLUTE = 1.0e-5;
-
-    public static boolean almostZero(double a) {
-        return ((a < EPSILON_ABSOLUTE) && (a > -EPSILON_ABSOLUTE));
     }
 
     static boolean almostOne(double a) {

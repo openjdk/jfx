@@ -451,6 +451,61 @@ public class Translate2D extends BaseTransform {
     }
 
     @Override
+    public BaseTransform deriveWithTranslation(double mxt, double myt, double mzt) {
+        if (mzt == 0.0) {
+            this.mxt += mxt;
+            this.myt += myt;
+            return this;
+        }
+        Affine3D a = new Affine3D();
+        a.translate(this.mxt + mxt, this.myt + myt, mzt);
+        return a;
+    }
+
+    @Override
+    public BaseTransform deriveWithScale(double mxx, double myy, double mzz) {
+        if (mzz == 1.0) {
+            if (mxx == 1.0 && myy == 1.0) {
+                return this;
+            }
+            Affine2D a = new Affine2D();
+            a.translate(this.mxt, this.myt);
+            a.scale(mxx, myy);
+            return a;
+        }
+        Affine3D a = new Affine3D();
+        a.translate(this.mxt, this.myt);
+        a.scale(mxx, myy, mzz);
+        return a;
+
+    }
+
+    @Override
+    public BaseTransform deriveWithRotation(double theta,
+            double axisX, double axisY, double axisZ) {
+        if (theta == 0.0) {
+            return this;
+        }
+        if (almostZero(axisX) && almostZero(axisY)) {
+            if (axisZ == 0.0) {
+                return this;
+            }
+            Affine2D a = new Affine2D();
+            a.translate(this.mxt, this.myt);
+            if (axisZ > 0) {
+                a.rotate(theta);
+            } else if (axisZ < 0) {
+                a.rotate(-theta);
+            }
+            return a;
+        }
+        Affine3D a = new Affine3D();
+        a.translate(this.mxt, this.myt);
+        a.rotate(theta, axisX, axisY, axisZ);
+        return a;
+    }
+
+    @Override
     public BaseTransform deriveWithPreTranslation(double mxt, double myt) {
         this.mxt += mxt;
         this.myt += myt;
@@ -471,6 +526,24 @@ public class Translate2D extends BaseTransform {
                                 mxy, myy,
                                 this.mxt + mxt, this.myt + myt);
         }
+    }
+
+    @Override
+    public BaseTransform deriveWithConcatenation(
+            double mxx,   double mxy,   double mxz,   double mxt,
+            double myx,   double myy,   double myz,   double myt,
+            double mzx,   double mzy,   double mzz,   double mzt) {
+        if (                                   mxz == 0.0
+                                            && myz == 0.0
+                && mzx == 0.0 && mzy == 0.0 && mzz == 1.0 && mzt == 0.0) {
+            return deriveWithConcatenation(mxx, myx,
+                                           mxy, myy,
+                                           mxt, myt);
+        }
+
+        return new Affine3D(mxx, mxy, mxz, mxt + this.mxt,
+                            myx, myy, myz, myt + this.myt,
+                            mzx, mzy, mzz, mzt);
     }
 
     @Override
