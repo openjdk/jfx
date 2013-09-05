@@ -135,11 +135,6 @@ final public class CSSParser {
     private Styleable  sourceOfInlineStyle;
 
     // source is a file
-//    private void setInputSource(String url) {
-//        setInputSource(url, null);
-//    }
-
-    // source is a file
     private void setInputSource(String url, String str) {
         stylesheetAsText = str;
         sourceOfStylesheet = url;
@@ -244,7 +239,7 @@ final public class CSSParser {
         final String path = url != null ? url.toExternalForm() : null;
         final Stylesheet stylesheet = new Stylesheet(path);
         if (url != null) {
-            setInputSource(path);
+            setInputSource(path, null);
             Reader reader = new BufferedReader(new InputStreamReader(url.openStream()));
             parse(stylesheet, reader);
         }

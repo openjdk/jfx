@@ -12,3 +12,5 @@
 
 /* FontTypeTest testRT_32551 */
 #test-rt-32551 { -fx-font-style: italic; }
+
+#test-rt-29773 { -fx-font-family: 'Amble Cn'; }
