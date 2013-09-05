@@ -2422,7 +2422,7 @@ public class TreeTableViewKeyInputTest {
         assertEquals(2, rt31577_count);
     }
 
-    @Ignore @Test public void test_rt32383_pageDown() {
+    @Test public void test_rt32383_pageDown() {
         // this test requires a lot of data
         for (int i = 0; i < 100; i++) {
             root.getChildren().add(new TreeItem<String>("Row " + i));
@@ -2434,19 +2434,19 @@ public class TreeTableViewKeyInputTest {
 
         final TreeItem<String> initialFocusOwner = fm.getFocusedItem();
 
-        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.CTRL);
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.getShortcutKey());
         Toolkit.getToolkit().firePulse();
         final TreeItem<String> newFocusOwner = fm.getFocusedItem();
         assertNotSame(initialFocusOwner, newFocusOwner);
 
-        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.CTRL);
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.getShortcutKey());
         Toolkit.getToolkit().firePulse();
         final TreeItem<String> nextFocusOwner = fm.getFocusedItem();
         assertNotSame(initialFocusOwner, nextFocusOwner);
         assertNotSame(newFocusOwner, nextFocusOwner);
     }
 
-    @Ignore @Test public void test_rt32383_pageUp() {
+    @Test public void test_rt32383_pageUp() {
         // this test requires a lot of data
         for (int i = 0; i < 100; i++) {
             root.getChildren().add(new TreeItem<String>("Row " + i));
@@ -2464,12 +2464,12 @@ public class TreeTableViewKeyInputTest {
 
         final TreeItem<String> initialFocusOwner = fm.getFocusedItem();
 
-        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.CTRL);
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.getShortcutKey());
         Toolkit.getToolkit().firePulse();
         final TreeItem<String> newFocusOwner = fm.getFocusedItem();
         assertNotSame(initialFocusOwner, newFocusOwner);
 
-        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.CTRL);
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.getShortcutKey());
         Toolkit.getToolkit().firePulse();
         final TreeItem<String> nextFocusOwner = fm.getFocusedItem();
         assertNotSame(initialFocusOwner, nextFocusOwner);
