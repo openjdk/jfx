@@ -810,7 +810,7 @@ final public class WebEngine {
         page = new WebPage(
             new WebPageClientImpl(accessor),
             new UIClientImpl(accessor),
-            new PolicyClientImpl(),
+            null,
             new InspectorClientImpl(this),
             new ThemeClientImpl(accessor),
             false);
