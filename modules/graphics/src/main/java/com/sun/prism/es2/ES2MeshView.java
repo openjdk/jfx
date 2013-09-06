@@ -42,6 +42,7 @@ class ES2MeshView extends BaseMeshView {
     private float ambientLightBlue = 0;
     private float ambientLightGreen = 0;
 
+    // NOTE: We only support up to 3 point lights at the present
     private ES2Light[] lights = new ES2Light[3];
 
     // TODO: 3D - Need a mechanism to "decRefCount" Mesh and Material
@@ -101,8 +102,11 @@ class ES2MeshView extends BaseMeshView {
 
     @Override
     public void setPointLight(int index, float x, float y, float z, float r, float g, float b, float w) {
-        lights[index] = new ES2Light(x, y, z, r, g, b, w);
-        context.setPointLight(nativeHandle, index, x, y, z, r, g, b, w);
+        // NOTE: We only support up to 3 point lights at the present
+        if (index >= 0 && index <= 2) {
+            lights[index] = new ES2Light(x, y, z, r, g, b, w);
+            context.setPointLight(nativeHandle, index, x, y, z, r, g, b, w);
+        }
     }
 
     ES2Light[] getPointLights() {

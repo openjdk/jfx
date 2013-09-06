@@ -2252,7 +2252,8 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetPointLight
 {
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
     MeshViewInfo *meshViewInfo = (MeshViewInfo *) jlong_to_ptr(nativeMeshViewInfo);
-    if ((ctxInfo == NULL) || (meshViewInfo == NULL)) {
+    // NOTE: We only support up to 3 point lights at the present
+    if ((ctxInfo == NULL) || (meshViewInfo == NULL) || (index < 0) || (index > 2)) {
         return;
     }
     meshViewInfo->pointLightIndex = index;
