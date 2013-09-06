@@ -248,6 +248,13 @@ public class Clipboard {
      */
     public final Object getContent(DataFormat dataFormat) {
         Toolkit.getToolkit().checkFxUserThread();
+        return getContentImpl(dataFormat);
+    }
+
+    /**
+     * Getting content overridable by internal subclasses.
+     */
+    Object getContentImpl(DataFormat dataFormat) {
         return peer.getContent(dataFormat);
     }
 
