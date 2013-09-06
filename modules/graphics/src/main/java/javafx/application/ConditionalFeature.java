@@ -132,6 +132,16 @@ public enum ConditionalFeature {
      * NOTE: Currently, this support is available on all platforms
      * except Linux systems without the XComposite extension. The
      * XShape extension is used in that case, so the window edges are aliased.
+     * </p>
+     * <p>
+     * NOTE: In an environment with enabled security manager (for example in
+     * applet mode), usage of transparent windows is protected by security
+     * checks. If the application doesn't have the required permissions, it
+     * won't be able to use this feature and the system will appear as if the
+     * support for transparent windows wasn't implemented. This includes
+     * returning false from the Platform.isSupported(TRANSPARENT_WINDOW) test.
+     * </p>
+     *
      * @since JavaFX 2.2
      */
     TRANSPARENT_WINDOW,

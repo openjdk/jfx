@@ -46,6 +46,7 @@ import com.sun.javafx.tk.TKListener;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
 import java.security.AccessController;
+import java.security.AllPermission;
 import java.security.PrivilegedAction;
 
 public class PlatformImpl {
@@ -456,77 +457,26 @@ public class PlatformImpl {
     }
 
     public static boolean isSupported(ConditionalFeature feature) {
-        switch (feature) {
-            case GRAPHICS:
-                if (isGraphicsSupported == null) {
-                    isGraphicsSupported = checkForClass("javafx.stage.Stage");
+        final boolean supported = isSupportedImpl(feature);
+        if (supported && (feature == ConditionalFeature.TRANSPARENT_WINDOW)) {
+            // some features require the application to have the corresponding
+            // permissions, if the application doesn't have them, the platform
+            // will behave as if the feature wasn't supported
+            final SecurityManager securityManager =
+                    System.getSecurityManager();
+            if (securityManager != null) {
+                try {
+                    securityManager.checkPermission(new AllPermission());
+                } catch (final SecurityException e) {
+                    return false;
                 }
-                return isGraphicsSupported;
-            case CONTROLS:
-                if (isControlsSupported == null) {
-                    isControlsSupported = checkForClass(
-                            "javafx.scene.control.Control");
-                }
-                return isControlsSupported;
-            case MEDIA:
-                if (isMediaSupported == null) {
-                    isMediaSupported = checkForClass(
-                            "javafx.scene.media.MediaView");
-                }
-                return isMediaSupported;
-            case WEB:
-                if (isWebSupported == null) {
-                    isWebSupported = checkForClass("javafx.scene.web.WebView");
-                }
-                return isWebSupported;
-            case SWT:
-                if (isSWTSupported == null) {
-                    isSWTSupported = checkForClass("javafx.embed.swt.FXCanvas");
-                }
-                return isSWTSupported;
-            case SWING:
-                if (isSwingSupported == null) {
-                    isSwingSupported = 
-                        // check for JComponent first, it may not be present
-                        checkForClass("javax.swing.JComponent") &&
-                        checkForClass("javafx.embed.swing.JFXPanel");
-                }
-                return isSwingSupported;
-            case FXML:
-                if (isFXMLSupported == null) {
-                    isFXMLSupported = checkForClass("javafx.fxml.FXMLLoader")
-                            && checkForClass("javax.xml.stream.XMLInputFactory");
-                }
-                return isFXMLSupported;
-            case TWO_LEVEL_FOCUS:
-                if (hasTwoLevelFocus == null) {
-                    return Toolkit.getToolkit().isSupported(feature);
-                }
-                return hasTwoLevelFocus;
-            case VIRTUAL_KEYBOARD:
-                if (hasVirtualKeyboard == null) {
-                    return Toolkit.getToolkit().isSupported(feature);
-                }
-                return hasVirtualKeyboard;
-            case INPUT_TOUCH:
-                if (hasTouch == null) {
-                    return Toolkit.getToolkit().isSupported(feature);
-                }
-                return hasTouch;
-            case INPUT_MULTITOUCH:
-                if (hasMultiTouch == null) {
-                    return Toolkit.getToolkit().isSupported(feature);
-                }
-                return hasMultiTouch;
-            case INPUT_POINTER:
-                if (hasPointer == null) {
-                    return Toolkit.getToolkit().isSupported(feature);
-                }
-                return hasPointer;
-            default:
-                return Toolkit.getToolkit().isSupported(feature);
+            }
+
+            return true;
         }
-    }
+
+        return supported;
+   }
 
     public static interface FinishListener {
         public void idle(boolean implicitExit);
@@ -649,6 +599,79 @@ public class PlatformImpl {
             }
         } else {
             StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheetUrl);
+        }
+    }
+
+    private static boolean isSupportedImpl(ConditionalFeature feature) {
+        switch (feature) {
+            case GRAPHICS:
+                if (isGraphicsSupported == null) {
+                    isGraphicsSupported = checkForClass("javafx.stage.Stage");
+                }
+                return isGraphicsSupported;
+            case CONTROLS:
+                if (isControlsSupported == null) {
+                    isControlsSupported = checkForClass(
+                            "javafx.scene.control.Control");
+                }
+                return isControlsSupported;
+            case MEDIA:
+                if (isMediaSupported == null) {
+                    isMediaSupported = checkForClass(
+                            "javafx.scene.media.MediaView");
+                }
+                return isMediaSupported;
+            case WEB:
+                if (isWebSupported == null) {
+                    isWebSupported = checkForClass("javafx.scene.web.WebView");
+                }
+                return isWebSupported;
+            case SWT:
+                if (isSWTSupported == null) {
+                    isSWTSupported = checkForClass("javafx.embed.swt.FXCanvas");
+                }
+                return isSWTSupported;
+            case SWING:
+                if (isSwingSupported == null) {
+                    isSwingSupported =
+                        // check for JComponent first, it may not be present
+                        checkForClass("javax.swing.JComponent") &&
+                        checkForClass("javafx.embed.swing.JFXPanel");
+                }
+                return isSwingSupported;
+            case FXML:
+                if (isFXMLSupported == null) {
+                    isFXMLSupported = checkForClass("javafx.fxml.FXMLLoader")
+                            && checkForClass("javax.xml.stream.XMLInputFactory");
+                }
+                return isFXMLSupported;
+            case TWO_LEVEL_FOCUS:
+                if (hasTwoLevelFocus == null) {
+                    return Toolkit.getToolkit().isSupported(feature);
+                }
+                return hasTwoLevelFocus;
+            case VIRTUAL_KEYBOARD:
+                if (hasVirtualKeyboard == null) {
+                    return Toolkit.getToolkit().isSupported(feature);
+                }
+                return hasVirtualKeyboard;
+            case INPUT_TOUCH:
+                if (hasTouch == null) {
+                    return Toolkit.getToolkit().isSupported(feature);
+                }
+                return hasTouch;
+            case INPUT_MULTITOUCH:
+                if (hasMultiTouch == null) {
+                    return Toolkit.getToolkit().isSupported(feature);
+                }
+                return hasMultiTouch;
+            case INPUT_POINTER:
+                if (hasPointer == null) {
+                    return Toolkit.getToolkit().isSupported(feature);
+                }
+                return hasPointer;
+            default:
+                return Toolkit.getToolkit().isSupported(feature);
         }
     }
 }

@@ -154,7 +154,10 @@ class WindowStage extends GlassStage {
                 boolean focusable = true;
                 int windowMask = rtl ? Window.RIGHT_TO_LEFT : 0;
                 if (isPopupStage) { // TODO: make it a stage style?
-                    windowMask |= Window.TRANSPARENT | Window.POPUP;
+                    windowMask |= Window.POPUP;
+                    if (style == StageStyle.TRANSPARENT) {
+                        windowMask |= Window.TRANSPARENT;
+                    }
                     focusable = false;
                 } else {
                     switch (style) {
