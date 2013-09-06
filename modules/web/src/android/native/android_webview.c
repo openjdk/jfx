@@ -19,7 +19,7 @@ static jmethodID jInternalWebView_setVisible;
 static jmethodID jInternalWebView_dispose;
 static jmethodID jInternalWebView_setEncoding;
 static jmethodID jFXActivity_getInstance;
-static jmethodID jFXActivity_getLDPath;
+static jmethodID jFXActivity_getDataDir;
 static JavaVM *jvm;
 
 static void (*_VM_fire_load_event)(int id, int frameId, int state,
@@ -85,22 +85,27 @@ void init_ids(JNIEnv *env) {
             "getInstance", "()Lcom/oracle/dalvik/FXActivity;");
     CHECK_EXCEPTION(env);
 
-    jFXActivity_getLDPath = (*env)->GetMethodID(env, jFXActivityClass,
-            "getLDPath", "()Ljava/lang/String;");
+    jFXActivity_getDataDir = (*env)->GetMethodID(env, jFXActivityClass,
+            "getDataDir", "()Ljava/lang/String;");
     CHECK_EXCEPTION(env);
 }
 
 #define LIBWEBVIEW_SO "libwebview.so"
+#define LIB_DIR       "lib"
+#define PATH_SEP      "/"
 
 void init_functions(JNIEnv *env) {
     jobject fxactivity = (*env)->CallStaticObjectMethod(env, jFXActivityClass, jFXActivity_getInstance);
-    jstring jldpath = (*env)->CallObjectMethod(env, fxactivity, jFXActivity_getLDPath);
-    char *ld_path = (char*)(*env)->GetStringUTFChars(env, jldpath, 0);
-    int ld_path_len = (*env)->GetStringUTFLength(env, jldpath);
+    jstring jdatadir = (*env)->CallObjectMethod(env, fxactivity, jFXActivity_getDataDir);
+    char *cdatadir = (char*)(*env)->GetStringUTFChars(env, jdatadir, 0);
+    int cdatadir_len = (*env)->GetStringUTFLength(env, jdatadir);
 
-    char *fullpath = (char *) calloc(ld_path_len + strlen(LIBWEBVIEW_SO) + 2, 1);
-    strcpy(fullpath, ld_path);
-    strcat(fullpath, "/");    
+    char *fullpath = (char *) calloc(cdatadir_len + strlen(LIBWEBVIEW_SO) + 
+                                2 * strlen(PATH_SEP) + strlen(LIB_DIR) + 1, 1);
+    strcpy(fullpath, cdatadir);
+    strcat(fullpath, PATH_SEP);    
+    strcat(fullpath, LIB_DIR);
+    strcat(fullpath, PATH_SEP);
     strcat(fullpath, LIBWEBVIEW_SO);
 
     void *libwebview = dlopen(fullpath, RTLD_LAZY | RTLD_GLOBAL);
