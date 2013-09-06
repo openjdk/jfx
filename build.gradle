@@ -1538,6 +1538,17 @@ project(":fxpackager") {
             compiler = WIN.fxpackager.compiler
             output(file("$buildDir/native/javafxpackager"))
             source WIN.fxpackager.nativeSource
+            doFirst {
+                copy {
+                    mkdir "$buildDir/native"
+                    mkdir "$buildDir/native/javafxpackager"
+                    from file("src/main/native/javafxpackager/win/javafxpackager.manifest")
+                    into file("$buildDir/native/javafxpackager")
+                    filter { line->
+                        line = line.replace("FXVERSION", "${RAW_VERSION}.${HUDSON_BUILD_NUMBER}");
+                    }
+                }
+            }
             doLast {
                 mkdir "$buildDir/native"
                 exec({
@@ -1558,15 +1569,12 @@ project(":fxpackager") {
                 })
             }
             doLast {
-                copy {
-                    from file("src/main/native/javafxpackager/win/javafxpackager.manifest")
-                    into file("$buildDir/native/javafxpackager")
-                }
-                // TODO, not sure MT.exe is actually being used currently, so for now skipping.
-//                exec({
-//                    commandLine("$MT -nologo -manifest $buildDir/native/javafxpackager/javafxpackager.manifest")
-//                    environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
-//                })
+                exec({
+                    commandLine("$MC", "-manifest",
+                                       "$buildDir/native/javafxpackager/javafxpackager.manifest",
+                                       "-outputresource:$buildDir/native/javafxpackager/javafxpackager.exe")
+                    environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
+                })
                 copy {
                     from file("$buildDir/native/javafxpackager/javafxpackager.exe")
                     into file("$buildDir/javafxpackager")
