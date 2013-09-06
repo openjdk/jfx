@@ -97,7 +97,6 @@ public class FXMLLoader {
     // Abstract base class for elements
     private abstract class Element {
         public final Element parent;
-        public final int lineNumber;
 
         public Object value = null;
         private BeanAdapter valueAdapter = null;
@@ -109,7 +108,6 @@ public class FXMLLoader {
 
         public Element() {
             parent = current;
-            lineNumber = getLineNumber();
         }
 
         public boolean isCollection() {
@@ -2449,7 +2447,7 @@ public class FXMLLoader {
 
             if (loader.current != null) {
                 messageBuilder.append(":");
-                messageBuilder.append(loader.current.lineNumber);
+                messageBuilder.append(loader.getLineNumber());
             }
 
             messageBuilder.append("\n");
@@ -2491,7 +2489,7 @@ public class FXMLLoader {
         int i = 0;
         for (FXMLLoader loader : loaders) {
             parseTrace[i++] = new ParseTraceElement(loader.location, (loader.current != null) ?
-                loader.current.lineNumber : -1);
+                loader.getLineNumber() : -1);
         }
 
         return parseTrace;
