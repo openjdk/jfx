@@ -225,7 +225,7 @@ public final class EventType<T extends Event> implements Serializable{
         
         private EventType findSubType(Set<EventType> subTypes, String name) {
             for (EventType t : subTypes) {
-                if (((t.name == null && name == null) || (t != null && t.name.equals(name)))) {
+                if (((t.name == null && name == null) || (t.name != null && t.name.equals(name)))) {
                     return t;
                 }
             }
