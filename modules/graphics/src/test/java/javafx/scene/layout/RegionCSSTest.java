@@ -25,6 +25,10 @@
 
 package javafx.scene.layout;
 
+import com.sun.javafx.pgstub.StubImageLoaderFactory;
+import com.sun.javafx.pgstub.StubPlatformImageInfo;
+import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.tk.Toolkit;
 import javafx.geometry.Insets;
 import javafx.geometry.Side;
 import javafx.scene.Scene;
@@ -32,6 +36,11 @@ import javafx.scene.paint.Color;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 
 import static javafx.scene.layout.BackgroundSize.*;
 import static org.junit.Assert.*;
@@ -59,10 +68,60 @@ public class RegionCSSTest {
     private void processCSS() {
         scene.getRoot().impl_processCSS(true);
     }
+
+    private static void installImage(final String str) {
+
+        if (str == null || str.trim().isEmpty()) return;
+
+        URL imageUrl = null;
+
+        try {
+
+            URI uri =  new URI(str.trim());
+
+            // if url doesn't have a scheme
+            if (uri.isAbsolute() == false) {
+
+                final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+                final String path = uri.getPath();
+
+                URL resource = null;
+
+                if (path.startsWith("/")) {
+                    resource = contextClassLoader.getResource(path.substring(1));
+                } else {
+                    resource = contextClassLoader.getResource(path);
+                }
+
+                imageUrl = resource;
+
+            } else {
+                // else, url does have a scheme
+                imageUrl = uri.toURL();
+            }
+
+        } catch (MalformedURLException malf) {
+
+        } catch (URISyntaxException urise) {
+        }
+
+        if (imageUrl != null) {
+
+            StubImageLoaderFactory imageLoaderFactory =
+                    ((StubToolkit) Toolkit.getToolkit()).getImageLoaderFactory();
+
+            imageLoaderFactory.registerImage(
+                    imageUrl.toExternalForm(), new StubPlatformImageInfo(100, 100));
+        }
+
+    }
     
     @Before public void setUp() {
         region = new Region();
         scene = new Scene(region);
+
+        installImage("javafx/scene/layout/red.png");
+        installImage("javafx/scene/layout/center-btn.png");
     }
 
     /**************************************************************************

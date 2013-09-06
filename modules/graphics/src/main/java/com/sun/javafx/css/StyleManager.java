@@ -686,15 +686,17 @@ final public class StyleManager {
                 image = new Image(url);
 
                 // RT-31865
-                if (image.isError() == false) {
-                    imageCache.put(url, image);
-                } else {
-                    imageCache.put(url, null);
+                if (image.isError()) {
+
                     final PlatformLogger logger = getLogger();
                     if (logger != null && logger.isLoggable(Level.WARNING)) {
                         logger.warning("Error loading image: " + url);
                     }
+
+                    image = null;
                 }
+
+                imageCache.put(url, image);
 
             } catch (IllegalArgumentException iae) {
                 // url was empty!
