@@ -50,6 +50,7 @@ import com.sun.javafx.stage.StagePeerListener;
 import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
+import java.security.AllPermission;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
@@ -1043,7 +1044,20 @@ public class Stage extends Window {
             Scene scene = getScene();
             boolean rtl = scene != null && scene.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
 
-            impl_peer = toolkit.createTKStage(this, getStyle(), isPrimary(), getModality(), tkStage, rtl, acc);
+            StageStyle stageStyle = getStyle();
+            if (stageStyle == StageStyle.TRANSPARENT) {
+                final SecurityManager securityManager =
+                        System.getSecurityManager();
+                if (securityManager != null) {
+                    try {
+                        securityManager.checkPermission(new AllPermission());
+                    } catch (final SecurityException e) {
+                        stageStyle = StageStyle.UNDECORATED;
+                    }
+                }
+            }
+            impl_peer = toolkit.createTKStage(this, stageStyle, isPrimary(),
+                                              getModality(), tkStage, rtl, acc);
             impl_peer.setMinimumSize((int) Math.ceil(getMinWidth()),
                     (int) Math.ceil(getMinHeight()));
             impl_peer.setMaximumSize((int) Math.floor(getMaxWidth()),
