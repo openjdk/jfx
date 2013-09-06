@@ -48,12 +48,24 @@ public final class CursorConverter extends StyleConverterImpl<String, Cursor> {
 
     @Override
     public Cursor convert(ParsedValue<String, Cursor> value, Font not_used) {
+
         // the parser doesn't covert cusor, so convert it from the raw value
         String string = value.getValue();
-        if (string.startsWith("Cursor.")) {
-            string = string.substring("Cursor.".length());
+
+        if (string != null) {
+
+            int index = string.indexOf("Cursor.");
+            if (index > -1) {
+                string = string.substring(index+"Cursor.".length());
+            }
+            string = string.replace('-','_').toUpperCase();
         }
-        return Cursor.cursor(string);
+
+        try {
+            return Cursor.cursor(string);
+        } catch (IllegalArgumentException | NullPointerException exception) {
+            return Cursor.DEFAULT;
+        }
     }
 
     @Override
