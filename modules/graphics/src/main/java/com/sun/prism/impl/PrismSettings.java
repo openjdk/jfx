@@ -87,6 +87,7 @@ public final class PrismSettings {
     public static final boolean perfLogExitFlush;
     public static final boolean perfLogFirstPaintFlush;
     public static final boolean perfLogFirstPaintExit;
+    public static final boolean superShader;
 
     private PrismSettings() {
     }
@@ -322,7 +323,7 @@ public final class PrismSettings {
          * This is needed for some embedded platforms to avoid rendering artifacts
          * when rendering into small RTT.
          */
-       minRTTSize = getInt(systemProperties, "prism.minrttsize",                       
+       minRTTSize = getInt(systemProperties, "prism.minrttsize",
                PlatformUtil.isEmbedded() ? 16 : 0, "Try -Dprism.minrttsize=<number>");
 
         disableRegionCaching = getBoolean(systemProperties,
@@ -330,7 +331,7 @@ public final class PrismSettings {
                                           false);
 
         disableD3D9Ex = getBoolean(systemProperties, "prism.disableD3D9Ex", true);
-        
+
         disableEffects = getBoolean(systemProperties, "prism.disableEffects", false);
 
         glyphCacheWidth = getInt(systemProperties, "prism.glyphCacheWidth", 1024,
@@ -347,6 +348,7 @@ public final class PrismSettings {
         perfLogFirstPaintFlush = getBoolean(systemProperties, "sun.perflog.fx.firstpaintflush", false, true);
         perfLogFirstPaintExit = getBoolean(systemProperties, "sun.perflog.fx.firstpaintexit", false, true);
 
+        superShader = getBoolean(systemProperties, "prism.supershader", true);
     }
 
     private static int parseInt(String s, int dflt, int trueDflt,
@@ -412,7 +414,7 @@ public final class PrismSettings {
         final String strval = properties.getProperty(key);
         return (strval != null) ? Boolean.parseBoolean(strval) : dflt;
     }
-    
+
     private static boolean getBoolean(Properties properties,
                                       String key,
                                       boolean dflt,

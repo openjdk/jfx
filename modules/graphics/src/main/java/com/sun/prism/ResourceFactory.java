@@ -167,6 +167,12 @@ public interface ResourceFactory extends GraphicsResource {
     public void addFactoryListener(ResourceFactoryListener l);
     public void removeFactoryListener(ResourceFactoryListener l);
 
+    public void setRegionTexture(Texture texture);
+    public Texture getRegionTexture();
+    public void setGlyphTexture(Texture texture);
+    public Texture getGlyphTexture();
+    public boolean isSuperShaderAllowed();
+
     public void dispose();
 
     /*

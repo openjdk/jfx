@@ -36,7 +36,7 @@ public class VertexBuffer {
     protected static final int FLOATS_PER_TC   = 2;
     protected static final int FLOATS_PER_VC   = 3;
     protected static final int FLOATS_PER_VERT = FLOATS_PER_VC + (2 * FLOATS_PER_TC);
-    
+
     protected static final int BYTES_PER_VERT = 4;
 
     protected static final int VCOFF = 0;
@@ -46,22 +46,22 @@ public class VertexBuffer {
     protected int capacity, index;
 
     protected byte r, g, b, a;
-    
+
     protected byte  colorArray[];
     protected float coordArray[];
-    
+
     public VertexBuffer(int maxQuads) {
         capacity = maxQuads * VERTS_PER_QUAD;
         index = 0;
-        
+
         colorArray = new byte [capacity * BYTES_PER_VERT];
         coordArray = new float[capacity * FLOATS_PER_VERT];
     }
-    
+
     protected void drawQuads(int numVertices) {
         throw new Error ("flush not implemented for lightweight");
     }
-    
+
     // it had better be the case if this method be moved to Graphics
     // so that we can delete D3DVertexBuffer and ES2(N)VertexBuffer
     protected void drawTriangles(int numTriangles, float fData[], byte cData[]) {
@@ -85,7 +85,7 @@ public class VertexBuffer {
             putColor(i);
         }
     }
-    
+
     private void putColor(int idx) {
         int i = idx * BYTES_PER_VERT;
         colorArray[i+0] = r;
@@ -93,7 +93,7 @@ public class VertexBuffer {
         colorArray[i+2] = b;
         colorArray[i+3] = a;
     }
-    
+
     /**
      * Flushes (renders) all pending vertices (triangles) in the buffer to the
      * destination render target.  This operation only applies to heavyweight
@@ -106,7 +106,7 @@ public class VertexBuffer {
             index = 0;
         }
     }
-    
+
     public final void rewind() {
         index = 0;
     }
@@ -142,7 +142,7 @@ public class VertexBuffer {
         coordArray[i+1] = y;
         coordArray[i+2] = 0f;
         coordArray[i+3] = tx;
-        coordArray[i+4] = ty;       
+        coordArray[i+4] = ty;
         putColor(index);
         index++;
     }
@@ -152,7 +152,7 @@ public class VertexBuffer {
         if (index == capacity) {
             grow();
         }
-        
+
         int i = FLOATS_PER_VERT * index;
         coordArray[i+0] = x;
         coordArray[i+1] = y;
@@ -182,7 +182,7 @@ public class VertexBuffer {
         coordArray[i+1] = y;
         coordArray[i+2] = 0f;
         coordArray[i+3] = tx;
-        coordArray[i+4] = ty;         
+        coordArray[i+4] = ty;
         putColor(index);
         index++;
     }
@@ -194,9 +194,9 @@ public class VertexBuffer {
         coordArray[i+1] = y;
         coordArray[i+2] = 0f;
         coordArray[i+3] = t0x;
-        coordArray[i+4] = t0y;         
+        coordArray[i+4] = t0y;
         coordArray[i+5] = t1x;
-        coordArray[i+6] = t1y;         
+        coordArray[i+6] = t1y;
         putColor(index);
         index++;
     }
@@ -226,7 +226,7 @@ public class VertexBuffer {
     public final void addQuad(
             float dx1, float dy1, float dx2, float dy2,
             float t1x1, float t1y1, float t1x2, float t1y2,
-            float t2x1, float t2y1, float t2x2, float t2y2) 
+            float t2x1, float t2y1, float t2x2, float t2y2)
     {
         ensureCapacityForQuad();
 
@@ -239,7 +239,7 @@ public class VertexBuffer {
     public final void addMappedQuad(
             float dx1, float dy1, float dx2, float dy2,
             float tx11, float ty11, float tx21, float ty21,
-            float tx12, float ty12, float tx22, float ty22) 
+            float tx12, float ty12, float tx22, float ty22)
     {
         ensureCapacityForQuad();
 
@@ -254,7 +254,7 @@ public class VertexBuffer {
             float ux11, float uy11, float ux21, float uy21,
             float ux12, float uy12, float ux22, float uy22,
             float vx11, float vy11, float vx21, float vy21,
-            float vx12, float vy12, float vx22, float vy22) 
+            float vx12, float vy12, float vx22, float vy22)
     {
         ensureCapacityForQuad();
 
@@ -267,7 +267,7 @@ public class VertexBuffer {
     public final void addQuad(
             float dx1, float dy1, float dx2, float dy2,
             float tx1, float ty1, float tx2, float ty2,
-            AffineBase tx) 
+            AffineBase tx)
     {
         addQuad(dx1, dy1, dx2, dy2, tx1, ty1, tx2, ty2);
 
@@ -283,9 +283,56 @@ public class VertexBuffer {
         }
     }
 
+    public final void addSuperQuad(
+            float dx1, float dy1, float dx2, float dy2,
+            float tx1, float ty1, float tx2, float ty2,
+            boolean isText)
+    {
+//        ensureCapacityForQuad();
+        int idx = index;
+        if (idx + VERTS_PER_QUAD > capacity) {
+//            grow();
+            drawQuads(idx);
+            idx = index = 0;
+        }
+
+        int i = FLOATS_PER_VERT * idx;
+        float farr[] = coordArray;
+
+        float text = isText ? 1 : 0;
+        float image = isText ? 0 : 1;
+
+//        addVertNoCheck(dx1, dy1, tx1, ty1);
+        farr[  i] = dx1; farr[++i] = dy1; farr[++i] = 0;
+        farr[++i] = tx1; farr[++i] = ty1;
+        farr[++i] = image; farr[++i] = text; i++;
+//        addVertNoCheck(dx1, dy2, tx1, ty2);
+        farr[  i] = dx1; farr[++i] = dy2; farr[++i] = 0;
+        farr[++i] = tx1; farr[++i] = ty2;
+        farr[++i] = image; farr[++i] = text; i++;
+//        addVertNoCheck(dx2, dy1, tx2, ty1);
+        farr[  i] = dx2; farr[++i] = dy1; farr[++i] = 0;
+        farr[++i] = tx2; farr[++i] = ty1;
+        farr[++i] = image; farr[++i] = text; i++;
+//        addVertNoCheck(dx2, dy2, tx2, ty2);
+        farr[  i] = dx2; farr[++i] = dy2; farr[++i] = 0;
+        farr[++i] = tx2; farr[++i] = ty2;
+        farr[++i] = image; farr[++i] = text; i++;
+
+        byte barr[] = colorArray;
+        byte r = this.r, g = this.g, b = this.b, a = this.a;
+        int j = BYTES_PER_VERT * idx;
+        barr[  j] = r; barr[++j] = g; barr[++j] = b; barr[++j] = a;
+        barr[++j] = r; barr[++j] = g; barr[++j] = b; barr[++j] = a;
+        barr[++j] = r; barr[++j] = g; barr[++j] = b; barr[++j] = a;
+        barr[++j] = r; barr[++j] = g; barr[++j] = b; barr[++j] = a;
+
+        index = idx + VERTS_PER_QUAD;
+    }
+
     public final void addQuad(
             float dx1, float dy1, float dx2, float dy2,
-            float tx1, float ty1, float tx2, float ty2) 
+            float tx1, float ty1, float tx2, float ty2)
     {
 //        ensureCapacityForQuad();
         int idx = index;
@@ -293,7 +340,7 @@ public class VertexBuffer {
             drawQuads(idx);
             idx = index = 0;
         }
-        
+
         int i = FLOATS_PER_VERT * idx;
         float farr[] = coordArray;
 
@@ -321,32 +368,32 @@ public class VertexBuffer {
         barr[++j] = r; barr[++j] = g; barr[++j] = b; barr[++j] = a;
         barr[++j] = r; barr[++j] = g; barr[++j] = b; barr[++j] = a;
 
-        index = idx + VERTS_PER_QUAD;        
+        index = idx + VERTS_PER_QUAD;
     }
-    
+
     public final void addQuadVO(float topopacity, float botopacity,
             float dx1, float dy1, float dx2, float dy2,
-            float tx1, float ty1, float tx2, float ty2) 
+            float tx1, float ty1, float tx2, float ty2)
     {
         int idx = index;
         if (idx + VERTS_PER_QUAD > capacity) {
             drawQuads(idx);
             idx = index = 0;
         }
-        
+
         int i = FLOATS_PER_VERT * idx;
         float farr[] = coordArray;
-  
+
         // addVertNoCheck(dx1, dy1, tx1, ty1, topopacity);
         farr[  i] = dx1; farr[++i] = dy1; farr[++i] = 0;
         farr[++i] = tx1; farr[++i] = ty1;
         i += 3;
-        
+
         // addVertNoCheck(dx1, dy2, tx1, ty2, botopacity);
         farr[  i] = dx1; farr[++i] = dy2; farr[++i] = 0;
         farr[++i] = tx1; farr[++i] = ty2;
         i += 3;
-        
+
         // addVertNoCheck(dx2, dy1, tx2, ty1, topopacity);
         farr[  i] = dx2; farr[++i] = dy1; farr[++i] = 0;
         farr[++i] = tx2; farr[++i] = ty1;
@@ -367,8 +414,8 @@ public class VertexBuffer {
         barr[++j] = to; barr[++j] = to; barr[++j] = to; barr[++j] = to;
         barr[++j] = bo; barr[++j] = bo; barr[++j] = bo; barr[++j] = bo;
 
-        index = idx + VERTS_PER_QUAD;        
-    }   
+        index = idx + VERTS_PER_QUAD;
+    }
 
     public final void addMappedPgram(
             float dx11, float dy11, float dx21, float dy21,
@@ -397,27 +444,27 @@ public class VertexBuffer {
             float dx12, float dy12, float dx22, float dy22,
             float ux11, float uy11, float ux21, float uy21,
             float ux12, float uy12, float ux22, float uy22,
-            float vx, float vy) 
+            float vx, float vy)
     {
         int idx = index;
         if (idx + VERTS_PER_QUAD > capacity) {
             drawQuads(idx);
             idx = index = 0;
         }
-        
+
         int i = FLOATS_PER_VERT * idx;
         float farr[] = coordArray;
-        
+
         //addVertNoCheck(dx11, dy11, ux11, uy11, vx, vy);
         farr[i]   = dx11; farr[++i] = dy11; farr[++i] = 0;
         farr[++i] = ux11; farr[++i] = uy11;
         farr[++i] = vx; farr[++i] = vy;
-        
+
         //addVertNoCheck(dx12, dy12, ux12, uy12, vx, vy);
         farr[++i] = dx12; farr[++i] = dy12; farr[++i] = 0;
         farr[++i] = ux12; farr[++i] = uy12;
         farr[++i] = vx; farr[++i] = vy;
-        
+
         //addVertNoCheck(dx21, dy21, ux21, uy21, vx, vy);
         farr[++i] = dx21; farr[++i] = dy21; farr[++i] = 0;
         farr[++i] = ux21; farr[++i] = uy21;
@@ -435,7 +482,7 @@ public class VertexBuffer {
         barr[++j] = r; barr[++j] = g; barr[++j] = b; barr[++j] = a;
         barr[++j] = r; barr[++j] = g; barr[++j] = b; barr[++j] = a;
         barr[++j] = r; barr[++j] = g; barr[++j] = b; barr[++j] = a;
-        
+
         index = idx + VERTS_PER_QUAD;
     }
 
@@ -445,7 +492,7 @@ public class VertexBuffer {
             float ux11, float uy11, float ux21, float uy21,
             float ux12, float uy12, float ux22, float uy22,
             float vx11, float vy11, float vx21, float vy21,
-            float vx12, float vy12, float vx22, float vy22) 
+            float vx12, float vy12, float vx22, float vy22)
     {
         int idx = index;
         if (idx + VERTS_PER_QUAD > capacity) {

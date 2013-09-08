@@ -69,7 +69,7 @@ class ES2Context extends BaseShaderContext {
     private int indexBuffer = 0;
     private int shaderProgram;
 
-    public static final int NUM_QUADS = 256;
+    public static final int NUM_QUADS = PrismSettings.superShader ? 4096 : 256;
 
     private static ES2VertexBuffer createVertexBuffer() {
         return new ES2VertexBuffer(NUM_QUADS);
