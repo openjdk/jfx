@@ -238,6 +238,9 @@ public class AccordionSkin extends BehaviorSkinBase<Accordion, AccordionBehavior
                     expandedPane = getSkinnable().getExpandedPane();
                     getSkinnable().setExpandedPane(null);
                 }
+
+                // added to resolve RT-32787
+                previousHeight = 0;
             }
         };
     }
