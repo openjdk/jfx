@@ -1708,7 +1708,7 @@ public final class WebPage {
         }
     }
 
-    public void print(final WCGraphicsContext gc, final int pageNumber) {
+    public void print(final WCGraphicsContext gc, final int pageNumber, final float width) {
         lockPage();
         try {
             if (isDisposed) {
@@ -1721,7 +1721,7 @@ public final class WebPage {
             Invoker.getInvoker().invokeOnEventThread(new Runnable() {
                 public void run() {
                     try {
-                        twkPrint(getPage(), rq, pageNumber);
+                        twkPrint(getPage(), rq, pageNumber, width);
                     } finally {
                         l.countDown();
                     }
@@ -2435,7 +2435,7 @@ public final class WebPage {
     private native int twkGetFrameHeight(long pFrame);
     private native int twkBeginPrinting(long pPage, float width, float height);
     private native void twkEndPrinting(long pPage);
-    private native void twkPrint(long pPage, WCRenderQueue gc, int pageNumber);
+    private native void twkPrint(long pPage, WCRenderQueue gc, int pageNumber, float width);
     private native float twkAdjustFrameHeight(long pFrame, float oldTop, float oldBottom, float bottomLimit);
 
     private native int[] twkGetVisibleRect(long pFrame);

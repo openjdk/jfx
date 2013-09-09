@@ -70,7 +70,7 @@ public:
                 const IntRect& clipRect);
     void repaint(const IntRect&);
     int beginPrinting(float width, float height);
-    void print(GraphicsContext& gc, int pageIndex);
+    void print(GraphicsContext& gc, int pageIndex, float pageWidth);
     void endPrinting();
 #if USE(ACCELERATED_COMPOSITING)
     void setRootChildLayer(GraphicsLayer*);

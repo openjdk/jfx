@@ -1551,11 +1551,12 @@ final public class WebEngine {
      */
     public void print(PrinterJob job) {
         PageLayout pl = job.getJobSettings().getPageLayout();
-        int pageCount = page.beginPrinting(
-                (float) pl.getPrintableWidth(), (float) pl.getPrintableHeight());
+        float width = (float) pl.getPrintableWidth();
+        float height = (float) pl.getPrintableHeight();
+        int pageCount = page.beginPrinting(width, height);
         
         for (int i = 0; i < pageCount; i++) {
-            Node printable = new Printable(i);
+            Node printable = new Printable(i, width);
             job.printPage(printable);
         }
         page.endPrinting();
@@ -1563,9 +1564,9 @@ final public class WebEngine {
     
     final class Printable extends Node {
         private final NGNode peer;
-
-        Printable(int pageIndex) {
-            peer = new Peer(pageIndex);
+        
+        Printable(int pageIndex, float width) {
+            peer = new Peer(pageIndex, width);
         }
         
         @Override protected NGNode impl_createPeer() {
@@ -1586,15 +1587,17 @@ final public class WebEngine {
         
         private final class Peer extends NGNode {
             private final int pageIndex;
-            
-            Peer(int pageIndex) {
+            private final float width;
+
+            Peer(int pageIndex, float width) {
                 this.pageIndex = pageIndex;
+                this.width = width;
             }
             
             @Override protected void renderContent(Graphics g) {
                 WCGraphicsContext gc = WCGraphicsManager.getGraphicsManager().
                         createGraphicsContext(g);
-                page.print(gc, pageIndex);
+                page.print(gc, pageIndex, width);
             }
 
             @Override protected boolean hasOverlappingContents() {

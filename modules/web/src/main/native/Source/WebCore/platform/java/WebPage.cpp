@@ -725,15 +725,13 @@ void WebPage::endPrinting()
     m_printContext.clear();
 }
 
-void WebPage::print(GraphicsContext& gc, int pageIndex)
+void WebPage::print(GraphicsContext& gc, int pageIndex, float pageWidth)
 {
     ASSERT(m_printContext);
     ASSERT(pageIndex >= 0 && pageIndex < m_printContext->pageCount());
 
     if (!m_printContext || pageIndex < 0 || pageIndex >= m_printContext->pageCount())
         return;
-
-    float pageWidth = m_printContext->pageRect(pageIndex).width();
 
     gc.save();
     gc.translate(0, 0);
@@ -1222,11 +1220,11 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkEndPrinting
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkPrint
-    (JNIEnv* env, jobject self, jlong pPage, jobject rq, jint pageIndex)
+    (JNIEnv* env, jobject self, jlong pPage, jobject rq, jint pageIndex, jfloat width)
 {
     PlatformContextJava* ppgc = new PlatformContextJava(rq);
     GraphicsContext gc(ppgc);
-    WebPage::webPageFromJLong(pPage)->print(gc, pageIndex);
+    WebPage::webPageFromJLong(pPage)->print(gc, pageIndex, width);
 }
 
 JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkGetFrameHeight
