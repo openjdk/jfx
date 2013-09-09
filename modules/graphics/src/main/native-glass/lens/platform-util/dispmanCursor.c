@@ -93,14 +93,14 @@ static void fbDispmanSetNativeCursor(jlong nativeCursorHandle) {
 
             fbDispmanAddDispmanxElement();
         }
-
-        update = vc_dispmanx_update_start(0);
-        vc_dispmanx_element_change_source(update, cursor.element, cursorImage->resource);
-        vc_dispmanx_update_submit_sync(update);
-
-        cursor.isVisible = 1;
-
         cursor.currentCursor = nativeCursorHandle;
+
+        if (cursor.isVisible) {
+            update = vc_dispmanx_update_start(0);
+            vc_dispmanx_element_change_source(update, cursor.element, cursorImage->resource);
+            vc_dispmanx_update_submit_sync(update);
+        }
+
     }
 }
 
@@ -257,10 +257,20 @@ static void fbDispmanReleaseNativeCursor(jlong nativeCursorHandle) {
     DispmanCursorImage *cursorImage = (DispmanCursorImage *)jlong_to_ptr(nativeCursorHandle);
 
     if (cursorImage != NULL && cursorImage->resource != 0) {
+        if (cursor.currentCursor == nativeCursorHandle && cursor.isVisible) {
+            DISPMANX_UPDATE_HANDLE_T update;
+            update = vc_dispmanx_update_start(0);
+            vc_dispmanx_element_change_source(update, 
+                                              cursor.element, 0 /* resource*/);
+            vc_dispmanx_update_submit_sync(update);
+        }
         vc_dispmanx_resource_delete(cursorImage->resource);
     }
 
     free(cursorImage);
+    if (cursor.currentCursor == nativeCursorHandle) {
+        cursor.currentCursor = 0;
+    }
 }
 
 
@@ -269,15 +279,20 @@ static void fbDispmanSetVisible(jboolean isVisible) {
     if (isVisible) {
         if (!cursor.isVisible && cursor.currentCursor != 0) {
             fbDispmanSetNativeCursor(cursor.currentCursor);
+            DispmanCursorImage *cursorImage = 
+                (DispmanCursorImage *)jlong_to_ptr(cursor.currentCursor);
+            DISPMANX_UPDATE_HANDLE_T update = vc_dispmanx_update_start(0);
+            vc_dispmanx_element_change_source(update, cursor.element, 
+                                              cursorImage->resource);
+            vc_dispmanx_update_submit_sync(update);
         }
     } else {
         DISPMANX_UPDATE_HANDLE_T update;
         update = vc_dispmanx_update_start(0);
         vc_dispmanx_element_change_source(update, cursor.element, 0 );
         vc_dispmanx_update_submit_sync(update);
-
-        cursor.isVisible = 0;
     }
+    cursor.isVisible = isVisible;
 }
 
 

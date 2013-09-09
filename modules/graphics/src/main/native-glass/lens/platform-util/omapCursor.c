@@ -132,7 +132,6 @@ void fbOmapCreateCursor(jbyte *cursorImage, int width, int height, int bpp) {
         GLASS_LOG_SEVERE("Cannot write cursor plane");
         return;
     }
-    cursor.isVisible = 1;   
 }
 
 jlong fbOmapCreateNativeCursor(JNIEnv *env, jint x, jint y,  jbyte *srcArray, jint width, jint height) {
@@ -223,8 +222,10 @@ void fbOmapReleaseNativeCursor(jlong nativeCursorPointer) {
 void fbOmapSetVisible(jboolean isVisible) {
     if (isVisible) {
         if (!cursor.isVisible && cursor.currentCursor != 0) {
-            FBCursorImage *cursorImage = (FBCursorImage *)jlong_to_ptr(cursor.currentCursor);
-            fbOmapCreateCursor(cursorImage->buffer, cursorImage->width, cursorImage->height, cursorImage->bpp);
+            FBCursorImage *cursorImage = 
+                (FBCursorImage *)jlong_to_ptr(cursor.currentCursor);
+            fbOmapCreateCursor(cursorImage->buffer, cursorImage->width, 
+                               cursorImage->height, cursorImage->bpp);
         }
     } else {
         fbOmapCursorClose();
