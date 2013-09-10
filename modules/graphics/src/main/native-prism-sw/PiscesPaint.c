@@ -716,8 +716,8 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
                     jint ty = (jint)(lty >> 16);
                     jint hfrac = (jint)(ltx & 0xffff);
                     jint vfrac = (jint)(lty & 0xffff);
-                    checkBoundsNoRepeat(&tx, &ltx, txMin-1, txMax, rdr->_texture_repeat);
-                    checkBoundsNoRepeat(&ty, &lty, tyMin-1, tyMax, rdr->_texture_repeat);
+                    checkBoundsNoRepeat(&tx, &ltx, txMin-1, txMax);
+                    checkBoundsNoRepeat(&ty, &lty, tyMin-1, tyMax);
                     sidx = MAX(tyMin, ty) * rdr->_texture_stride + MAX(txMin, tx);
                     p00 = txtData[sidx];
                     getPointsToInterpolate(pts, txtData, sidx, rdr->_texture_stride, p00,
@@ -747,8 +747,8 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
                     jint ty = (jint)(lty >> 16);
                     jint hfrac = (jint)(ltx & 0xffff);
                     jint vfrac = (jint)(lty & 0xffff);
-                    checkBoundsRepeat(&tx, &ltx, txMin-1, txMax, rdr->_texture_repeat);
-                    checkBoundsRepeat(&ty, &lty, tyMin-1, tyMax, rdr->_texture_repeat);
+                    checkBoundsRepeat(&tx, &ltx, txMin-1, txMax);
+                    checkBoundsRepeat(&ty, &lty, tyMin-1, tyMax);
                     sidx = MAX(tyMin, ty) * rdr->_texture_stride + MAX(txMin, tx);
                     p00 = txtData[sidx];
                     getPointsToInterpolateRepeat(pts, txtData, sidx, rdr->_texture_stride, p00,
@@ -778,8 +778,8 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
                     jint ty = (jint)(lty >> 16);
                     jint hfrac = (jint)(ltx & 0xffff);
                     jint vfrac = (jint)(lty & 0xffff);
-                    checkBoundsNoRepeat(&tx, &ltx, txMin-1, txMax, rdr->_texture_repeat);
-                    checkBoundsNoRepeat(&ty, &lty, tyMin-1, tyMax, rdr->_texture_repeat);
+                    checkBoundsNoRepeat(&tx, &ltx, txMin-1, txMax);
+                    checkBoundsNoRepeat(&ty, &lty, tyMin-1, tyMax);
                     sidx = MAX(tyMin, ty) * rdr->_texture_stride + MAX(txMin, tx);
                     p00 = txtData[sidx];
                     getPointsToInterpolate(pts, txtData, sidx, rdr->_texture_stride, p00,
@@ -809,8 +809,8 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
                     jint ty = (jint)(lty >> 16);
                     jint hfrac = (jint)(ltx & 0xffff);
                     jint vfrac = (jint)(lty & 0xffff);
-                    checkBoundsRepeat(&tx, &ltx, txMin-1, txMax, rdr->_texture_repeat);
-                    checkBoundsRepeat(&ty, &lty, tyMin-1, tyMax, rdr->_texture_repeat);
+                    checkBoundsRepeat(&tx, &ltx, txMin-1, txMax);
+                    checkBoundsRepeat(&ty, &lty, tyMin-1, tyMax);
                     sidx = MAX(tyMin, ty) * rdr->_texture_stride + MAX(txMin, tx);
                     p00 = txtData[sidx];
                     getPointsToInterpolateRepeat(pts, txtData, sidx, rdr->_texture_stride, p00,
