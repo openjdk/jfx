@@ -718,7 +718,6 @@ public class TreeViewTest {
         VirtualFlowTestUtils.assertRowsEmpty(tree, 3, -1); // rows 3+ should be empty
     }
 
-    @Ignore("Test has started failing - I have reopened the jira issue")
     @Test public void test_rt28556() {
         List<Employee> employees = Arrays.<Employee>asList(
             new Employee("Ethan Williams", "Sales Department"),

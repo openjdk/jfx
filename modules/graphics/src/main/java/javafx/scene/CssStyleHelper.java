@@ -1704,40 +1704,48 @@ final class CssStyleHelper {
         }
 
         CascadingStyle fontSize = getStyle(styleable, property.concat("-size"), styleMap, states);
-        // don't look past current node for font size if user set the font
-        // or if we're looking up the font for font cache.
-        if (fontSize == null && origin != StyleOrigin.USER) {
-            fontSize = lookupInheritedFont(styleable, property.concat("-size"), styleMap, distance);
+        if (fontSize != null) {
+            // if we have a font shorthand and it is more specific than font-size, then don't use the font-size style
+            if (fontShorthand != null && fontShorthand.compareTo(fontSize) < 0) {
+                fontSize = null;
+            }
+
+        } else if (origin != StyleOrigin.USER) {
+            //
+            // If we don't have a font-size, see if there is an inherited font-size.
+            // If lookupInheritedFontProperty returns other than null, then we know that font-size is closer (more specific)
+            // than the font shorthand
+            //
+            fontSize = lookupInheritedFontProperty(styleable, property.concat("-size"), styleMap, distance, fontShorthand);
         }
 
-        // font-size must be closer and more specific than font shorthand
         if (fontSize != null) {
 
-            if (fontShorthand == null || fontShorthand.compareTo(fontSize) >= 0) {
+            // The logic above ensures that, if fontSize is not null, then it is either
+            // 1) a style matching this node and is more specific than the font shorthand or
+            // 2) an inherited style that is more specific than the font shorthand
+            // and, therefore, we can use the fontSize style
+            final CalculatedValue cv =
+                    calculateValue(fontSize, styleable, dummyFontProperty,
+                            styleMap, states, styleable, cvFont, styleList);
 
-                final CalculatedValue cv =
-                        calculateValue(fontSize, styleable, dummyFontProperty,
-                                styleMap, states, styleable, cvFont, styleList);
+            if (cv.getValue() instanceof Double) {
+                if (origin == null || origin.compareTo(fontSize.getOrigin()) <= 0) {
 
-                if (cv.getValue() instanceof Double) {
-                    if (origin == null || origin.compareTo(fontSize.getOrigin()) <= 0) {
-
-                        origin = cv.getOrigin();
-                    }
-                    size = ((Double) cv.getValue()).doubleValue();
-
-                    if (cvFont != null) {
-                        boolean isRelative = cvFont.isRelative() || cv.isRelative();
-                        Font font = deriveFont((Font) cvFont.getValue(), family, weight, posture, size);
-                        cvFont = new CalculatedValue(font, origin, isRelative);
-                    } else {
-                        boolean isRelative = cv.isRelative();
-                        Font font = deriveFont(Font.getDefault(), family, weight, posture, size);
-                        cvFont = new CalculatedValue(font, origin, isRelative);
-                    }
-                    foundStyle = true;
+                    origin = cv.getOrigin();
                 }
+                size = ((Double) cv.getValue()).doubleValue();
 
+                if (cvFont != null) {
+                    boolean isRelative = cvFont.isRelative() || cv.isRelative();
+                    Font font = deriveFont((Font) cvFont.getValue(), family, weight, posture, size);
+                    cvFont = new CalculatedValue(font, origin, isRelative);
+                } else {
+                    boolean isRelative = cv.isRelative();
+                    Font font = deriveFont(Font.getDefault(), family, weight, posture, size);
+                    cvFont = new CalculatedValue(font, origin, isRelative);
+                }
+                foundStyle = true;
             }
 
         }
@@ -1749,76 +1757,112 @@ final class CssStyleHelper {
         }
 
         CascadingStyle fontWeight = getStyle(styleable, property.concat("-weight"), styleMap, states);
-        // don't look past current node for font weight if user set the font
-        if (fontWeight == null && origin != StyleOrigin.USER) {
-            fontWeight = lookupInheritedFont(styleable,property.concat("-weight"), styleMap, distance);
+        if (fontWeight != null) {
+            // if we have a font shorthand and it is more specific than font-weight, then don't use the font-weight style
+            if (fontShorthand != null && fontShorthand.compareTo(fontWeight) < 0) {
+                fontWeight = null;
+            }
+
+        } else if (origin != StyleOrigin.USER) {
+            //
+            // If we don't have a font-weight, see if there is an inherited font-weight.
+            // If lookupInheritedFontProperty returns other than null, then we know that font-weight is closer (more specific)
+            // than the font shorthand
+            //
+            fontWeight = lookupInheritedFontProperty(styleable, property.concat("-weight"), styleMap, distance, fontShorthand);
         }
 
         if (fontWeight != null) {
 
-            if (fontShorthand == null || fontShorthand.compareTo(fontWeight) >= 0) {
+            // The logic above ensures that, if fontWeight is not null, then it is either
+            // 1) a style matching this node and is more specific than the font shorthand or
+            // 2) an inherited style that is more specific than the font shorthand
+            // and, therefore, we can use the fontWeight style
 
-                final CalculatedValue cv =
-                        calculateValue(fontWeight, styleable, dummyFontProperty,
-                                styleMap, states, styleable, null, null);
+            final CalculatedValue cv =
+                    calculateValue(fontWeight, styleable, dummyFontProperty,
+                            styleMap, states, styleable, null, null);
 
-                if (cv.getValue() instanceof FontWeight) {
-                    if (origin == null || origin.compareTo(fontWeight.getOrigin()) <= 0) {
-                        origin = cv.getOrigin();
-                    }
-                    weight = (FontWeight)cv.getValue();
-                    foundStyle = true;
+            if (cv.getValue() instanceof FontWeight) {
+                if (origin == null || origin.compareTo(fontWeight.getOrigin()) <= 0) {
+                    origin = cv.getOrigin();
                 }
+                weight = (FontWeight)cv.getValue();
+                foundStyle = true;
             }
-
         }
 
+
         CascadingStyle fontStyle = getStyle(styleable, property.concat("-style"), styleMap, states);
-        // don't look past current node for font style if user set the font
-        if (fontStyle == null && origin != StyleOrigin.USER) {
-            fontStyle = lookupInheritedFont(styleable, property.concat("-style"), styleMap, distance);
+        if (fontStyle != null) {
+            // if we have a font shorthand and it is more specific than font-style, then don't use the font-style style
+            if (fontShorthand != null && fontShorthand.compareTo(fontStyle) < 0) {
+                fontStyle = null;
+            }
+
+        } else if (origin != StyleOrigin.USER) {
+            //
+            // If we don't have a font-style, see if there is an inherited font-style.
+            // If lookupInheritedFontProperty returns other than null, then we know that font-style is closer (more specific)
+            // than the font shorthand
+            //
+            fontStyle = lookupInheritedFontProperty(styleable, property.concat("-style"), styleMap, distance, fontShorthand);
         }
 
         if (fontStyle != null) {
 
-            if (fontShorthand == null || fontShorthand.compareTo(fontStyle) >= 0) {
+            // The logic above ensures that, if fontStyle is not null, then it is either
+            // 1) a style matching this node and is more specific than the font shorthand or
+            // 2) an inherited style that is more specific than the font shorthand
+            // and, therefore, we can use the fontStyle style
 
-                final CalculatedValue cv =
-                        calculateValue(fontStyle, styleable, dummyFontProperty,
-                                styleMap, states, styleable, null, null);
+            final CalculatedValue cv =
+                    calculateValue(fontStyle, styleable, dummyFontProperty,
+                            styleMap, states, styleable, null, null);
 
-                if (cv.getValue() instanceof FontPosture) {
-                    if (origin == null || origin.compareTo(fontStyle.getOrigin()) <= 0) {
-                        origin = cv.getOrigin();
-                    }
-                    posture = (FontPosture)cv.getValue();
-                    foundStyle = true;
+            if (cv.getValue() instanceof FontPosture) {
+                if (origin == null || origin.compareTo(fontStyle.getOrigin()) <= 0) {
+                    origin = cv.getOrigin();
                 }
-
+                posture = (FontPosture)cv.getValue();
+                foundStyle = true;
             }
+
         }
 
         CascadingStyle fontFamily = getStyle(styleable, property.concat("-family"), styleMap, states);
-        // don't look past current node for font family if user set the font
-        if (fontFamily == null && origin != StyleOrigin.USER) {
-            fontFamily = lookupInheritedFont(styleable,property.concat("-family"), styleMap, distance);
+        if (fontFamily != null) {
+            // if we have a font shorthand and it is more specific than font-family, then don't use the font-family style
+            if (fontShorthand != null && fontShorthand.compareTo(fontFamily) < 0) {
+                fontFamily = null;
+            }
+
+        } else if (origin != StyleOrigin.USER) {
+            //
+            // If we don't have a font-family, see if there is an inherited font-family.
+            // If lookupInheritedFontProperty returns other than null, then we know that font-family is closer (more specific)
+            // than the font shorthand
+            //
+            fontFamily = lookupInheritedFontProperty(styleable, property.concat("-family"), styleMap, distance, fontShorthand);
         }
 
         if (fontFamily != null) {
 
-            if (fontShorthand == null || fontShorthand.compareTo(fontFamily) >= 0) {
+            // The logic above ensures that, if fontFamily is not null, then it is either
+            // 1) a style matching this node and is more specific than the font shorthand or
+            // 2) an inherited style that is more specific than the font shorthand
+            // and, therefore, we can use the fontFamily style
 
-                final CalculatedValue cv =
-                        calculateValue(fontFamily, styleable, dummyFontProperty,
-                                styleMap, states, styleable, null, null);
+            final CalculatedValue cv =
+                    calculateValue(fontFamily, styleable, dummyFontProperty,
+                            styleMap, states, styleable, null, null);
 
-                if (cv.getValue() instanceof String) {
-                    if (origin == null || origin.compareTo(fontFamily.getOrigin()) <= 0) {
-                        origin = cv.getOrigin();
-                    }
-                    family = (String)cv.getValue();
-                    foundStyle = true;
+            if (cv.getValue() instanceof String) {
+                if (origin == null || origin.compareTo(fontFamily.getOrigin()) <= 0) {
+                    origin = cv.getOrigin();
                 }
+                family = (String)cv.getValue();
+                foundStyle = true;
             }
 
         }
@@ -1834,14 +1878,12 @@ final class CssStyleHelper {
         return SKIP;
     }
 
-    /**
-     * Called when we must getInheritedStyle a value from a parent node in the scenegraph.
-     */
-    private CascadingStyle lookupInheritedFont(
+    private CascadingStyle lookupInheritedFontProperty(
             final Styleable styleable,
             final String property,
             final StyleMap styleMap,
-            final int distance) {
+            final int distance,
+            CascadingStyle fontShorthand) {
 
         Styleable parent = styleable != null ? styleable.getStyleableParent() : null;
 
@@ -1858,6 +1900,14 @@ final class CssStyleHelper {
                 CascadingStyle cascadingStyle = parentStyleHelper.getStyle(parent, property, parentStyleMap, transitionStates);
 
                 if (cascadingStyle != null) {
+
+                    // If we are closer to the node than the font shorthand, then font shorthand doesn't matter.
+                    // If the font shorthand and this style are the same distance, then we need to compare.
+                    if (fontShorthand != null && nlooks == 0) {
+                        if (fontShorthand.compareTo(cascadingStyle) < 0) {
+                            return null;
+                        }
+                    }
 
                     final ParsedValueImpl cssValue = cascadingStyle.getParsedValueImpl();
 

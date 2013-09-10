@@ -56,7 +56,7 @@ public class TextFieldTreeTableCell<S,T> extends TreeTableCell<S,T> {
     /**
      * Provides a {@link TextField} that allows editing of the cell content when
      * the cell is double-clicked, or when 
-     * {@link TableView#edit(int, javafx.scene.control.TreeTableColumn)} is called. 
+     * {@link javafx.scene.control.TreeTableView#edit(int, javafx.scene.control.TreeTableColumn)} is called.
      * This method will only  work on {@link TreeTableColumn} instances which are of
      * type String.
      * 
@@ -71,7 +71,7 @@ public class TextFieldTreeTableCell<S,T> extends TreeTableCell<S,T> {
     /**
      * Provides a {@link TextField} that allows editing of the cell content when
      * the cell is double-clicked, or when 
-     * {@link TableView#edit(int, javafx.scene.control.TreeTableColumn) } is called. 
+     * {@link javafx.scene.control.TreeTableView#edit(int, javafx.scene.control.TreeTableColumn) } is called.
      * This method will work  on any {@link TreeTableColumn} instance, regardless of 
      * its generic type. However, to enable this, a {@link StringConverter} must 
      * be provided that will convert the given String (from what the user typed 

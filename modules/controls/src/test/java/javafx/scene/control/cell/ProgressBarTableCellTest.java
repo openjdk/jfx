@@ -140,8 +140,21 @@ public class ProgressBarTableCellTest {
         assertNotNull(cell.getGraphic());
         assertTrue(cell.getGraphic() instanceof ProgressBar);
     }
-    
 
+
+
+    /**************************************************************************
+     *
+     * misc tests
+     *
+     **************************************************************************/
+
+    @Test public void test_graphicMaxWidthIsDoubleMaxValue() {
+        ProgressBarTableCell<Object> cell = new ProgressBarTableCell<>();
+        cell.updateItem(0.5, false);
+        assertNotNull(cell.getGraphic());
+        assertEquals(Double.MAX_VALUE, ((ProgressBar)cell.getGraphic()).getMaxWidth(), 0.0);
+    }
     
 //    /**************************************************************************
 //     * 

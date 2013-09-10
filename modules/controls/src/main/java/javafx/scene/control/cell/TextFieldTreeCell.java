@@ -216,8 +216,6 @@ public class TextFieldTreeCell<T> extends DefaultTreeCell<T> {
     /** {@inheritDoc} */
     @Override public void updateItem(T item, boolean empty) {
         super.updateItem(item, empty);
-        
-        TreeItem<T> treeItem = getTreeItem();
         CellUtils.updateItem(this, getConverter(), hbox, getTreeItemGraphic(), textField);
     }
     
