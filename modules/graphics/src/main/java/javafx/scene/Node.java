@@ -8680,9 +8680,18 @@ public abstract class Node implements EventTarget, Styleable {
             // otherwise the styles this node uses will be incomplete (missing lookups, missing inherited styles, etc).
             // find the top-most parent whose flag is REAPPLY and start from there, if there is one.
             Parent _parent = getParent();
-            if(_parent != null && _parent.cssFlag == this.cssFlag) {
-                // TODO: danger of infinite loop here!
-                _parent.impl_processCSS();
+            Parent _topmostParent = null;
+            while(_parent != null) {
+                if (_parent.cssFlag == CssFlags.REAPPLY) {
+                    _topmostParent = _parent;
+                }
+                _parent = _parent.getParent();
+
+            }
+            // TODO: danger of infinite loop here!
+            if (_topmostParent != null) {
+                _topmostParent.impl_processCSS();
+                return;
             }
 
             // Match new styles if my own indicates I need to reapply
