@@ -25,7 +25,10 @@
 
 package com.sun.prism.es2;
 
+import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.prism.CompositeMode;
+import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.RenderTarget;
 import com.sun.prism.impl.ps.BaseShaderGraphics;
 import com.sun.prism.paint.Color;
@@ -92,4 +95,42 @@ public class ES2Graphics extends BaseShaderGraphics {
         context.forceRenderTarget(this);
     }
 
+    @Override
+    public void transform(BaseTransform transform) {
+        // Treat transform as identity matrix if platform doesn't support 3D
+        // and transform isn't a 2D matrix
+        if (!GraphicsPipeline.getPipeline().is3DSupported() 
+                && !transform.is2D()) {
+            return;
+        }
+        super.transform(transform);
+    }
+
+    @Override
+    public void translate(float tx, float ty, float tz) {
+        // Treat translate as identity translate if platform doesn't support 3D
+        // and it isn't a 2D translate
+        if (!GraphicsPipeline.getPipeline().is3DSupported() &&  tz != 0.0f) {
+            return;
+        } 
+        super.translate(tx, ty, tz);
+    }
+
+    @Override
+    public void scale(float sx, float sy, float sz) {
+        // Treat scale as identity scale if platform doesn't support 3D
+        // and it isn't a 2D scale
+        if (!GraphicsPipeline.getPipeline().is3DSupported() &&  sz != 1.0f) {
+            return;
+        } 
+        super.scale(sx, sy, sz);
+    }
+
+    @Override
+    public void setCamera(NGCamera camera) {
+        // Use the default ParallelCamera if platform doesn't support 3D
+        if (GraphicsPipeline.getPipeline().is3DSupported()) {
+            super.setCamera(camera);
+        }
+    }
 }

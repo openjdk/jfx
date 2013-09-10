@@ -26,12 +26,7 @@
 #include "config.h"
 #include "StorageStrategy.h"
 
-#if PLATFORM(JAVA)
-#include "StorageNamespaceJava.h"
-#define StorageNamespaceImpl StorageNamespaceJava
-#else
 #include "StorageNamespaceImpl.h"
-#endif
 
 namespace WebCore {
 

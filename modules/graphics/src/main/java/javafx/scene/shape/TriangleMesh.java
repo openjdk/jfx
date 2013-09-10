@@ -267,16 +267,30 @@ public class TriangleMesh extends Mesh {
 
     /**
      * Computes the centroid of the given triangle
-     * @param v0 vertex of the triangle
-     * @param v1 vertex of the triangle
-     * @param v2 vertex of the triangle
+     * @param v0x x coord of first vertex of the triangle
+     * @param v0y y coord of first vertex of the triangle
+     * @param v0z z coord of first vertex of the triangle
+     * @param v1x x coord of second vertex of the triangle
+     * @param v1y y coord of second vertex of the triangle
+     * @param v1z z coord of second vertex of the triangle
+     * @param v2x x coord of third vertex of the triangle
+     * @param v2y y coord of third vertex of the triangle
+     * @param v2z z coord of third vertex of the triangle
      * @return the triangle centroid
      */
-    private Point3D computeCentroid(Point3D v0, Point3D v1, Point3D v2) {
-        Point3D center = v1.midpoint(v2);
+    private Point3D computeCentroid(
+            double v0x, double v0y, double v0z,
+            double v1x, double v1y, double v1z,
+            double v2x, double v2y, double v2z) {
 
-        Point3D vec = center.subtract(v0);
-        return v0.add(new Point3D(vec.getX() / 3.0, vec.getY() / 3.0, vec.getZ() / 3.0));
+//        Point3D center = v1.midpoint(v2);
+//        Point3D vec = center.subtract(v0);
+//        return v0.add(new Point3D(vec.getX() / 3.0, vec.getY() / 3.0, vec.getZ() / 3.0));
+
+        return new Point3D(
+            v0x + (v2x + (v1x - v2x) / 2.0 - v0x) / 3.0,
+            v0y + (v2y + (v1y - v2y) / 2.0 - v0y) / 3.0,
+            v0z + (v2z + (v1z - v2z) / 2.0 - v0z) / 3.0);
     }
 
     /**
@@ -313,50 +327,89 @@ public class TriangleMesh extends Mesh {
      *              the result has been updated)
      */
     private boolean computeIntersectsFace(
-            PickRay pickRay, Point3D origin, Point3D dir, int faceIndex,
-            CullFace cullFace, Node candidate, boolean reportFace, PickResultChooser result) {
+            PickRay pickRay, Vec3d origin, Vec3d dir, int faceIndex,
+            CullFace cullFace, Node candidate, boolean reportFace, PickResultChooser result) {//, BoxBounds rayBounds) {
+
+        // This computation was naturally done by Point3D and its operations,
+        // but it needs a lot of points and there is often a lot of triangles
+        // so it is vital for performance to use only primitive variables
+        // and do the computing manually.
 
         final int v0Idx = faces.get(faceIndex) * NUM_COMPONENTS_PER_POINT;
         final int v1Idx = faces.get(faceIndex + 2) * NUM_COMPONENTS_PER_POINT;
         final int v2Idx = faces.get(faceIndex + 4) * NUM_COMPONENTS_PER_POINT;
 
-        final Point3D v0 = new Point3D(points.get(v0Idx), points.get(v0Idx + 1), points.get(v0Idx + 2));
-        final Point3D v1 = new Point3D(points.get(v1Idx), points.get(v1Idx + 1), points.get(v1Idx + 2));
-        final Point3D v2 = new Point3D(points.get(v2Idx), points.get(v2Idx + 1), points.get(v2Idx + 2));
+        final float v0x = points.get(v0Idx);
+        final float v0y = points.get(v0Idx + 1);
+        final float v0z = points.get(v0Idx + 2);
+        final float v1x = points.get(v1Idx);
+        final float v1y = points.get(v1Idx + 1);
+        final float v1z = points.get(v1Idx + 2);
+        final float v2x = points.get(v2Idx);
+        final float v2y = points.get(v2Idx + 1);
+        final float v2z = points.get(v2Idx + 2);
 
-        final Point3D e1 = v1.subtract(v0);
-        final Point3D e2 = v2.subtract(v0);
+        // e1 = v1.subtract(v0)
+        final float e1x = v1x - v0x;
+        final float e1y = v1y - v0y;
+        final float e1z = v1z - v0z;
+        // e2 = v2.subtract(v0)
+        final float e2x = v2x - v0x;
+        final float e2y = v2y - v0y;
+        final float e2z = v2z - v0z;
 
-        final Point3D h = dir.crossProduct(e2);
+        // h = dir.crossProduct(e2)
+        final double hx = dir.y * e2z - dir.z * e2y;
+        final double hy = dir.z * e2x - dir.x * e2z;
+        final double hz = dir.x * e2y - dir.y * e2x;
 
-        final double a = e1.dotProduct(h);
+        // a = e1.dotProduct(h)
+        final double a = e1x * hx + e1y * hy + e1z * hz;
         if (a == 0.0) {
             return false;
         }
         final double f = 1.0 / a;
 
-        final Point3D s = origin.subtract(v0);
+        // s = origin.subtract(v0)
+        final double sx = origin.x - v0x;
+        final double sy = origin.y - v0y;
+        final double sz = origin.z - v0z;
 
-        final double u = f * (s.dotProduct(h));
+        // u = f * (s.dotProduct(h))
+        final double u = f * (sx * hx + sy * hy + sz * hz);
 
         if (u < 0.0 || u > 1.0) {
             return false;
         }
 
-        Point3D q = s.crossProduct(e1);
-        double v = f * dir.dotProduct(q);
+        // q = s.crossProduct(e1)
+        final double qx = sy * e1z - sz * e1y;
+        final double qy = sz * e1x - sx * e1z;
+        final double qz = sx * e1y - sy * e1x;
+
+        // v = f * dir.dotProduct(q)
+        double v = f * (dir.x * qx + dir.y * qy + dir.z * qz);
 
         if (v < 0.0 || u + v > 1.0) {
             return false;
         }
 
-        final double t = f * e2.dotProduct(q);
+        // t = f * e2.dotProduct(q)
+        final double t = f * (e2x * qx + e2y * qy + e2z * qz);
 
         if (t >= pickRay.getNearClip() && t <= pickRay.getFarClip()) {
+            // This branch is entered only for hit triangles (not so often),
+            // so we can get smoothly back to the nice code using Point3Ds.
+
             if (cullFace != CullFace.NONE) {
-                final Point3D normal = e1.crossProduct(e2);
+                // normal = e1.crossProduct(e2)
+                final Point3D normal = new Point3D(
+                    e1y * e2z - e1z * e2y,
+                    e1z * e2x - e1x * e2z,
+                    e1x * e2y - e1y * e2x);
+
                 final double nangle = normal.angle(
-                        new Point3D(-dir.getX(), -dir.getY(), -dir.getZ()));
+                        new Point3D(-dir.x, -dir.y, -dir.z));
                 if ((nangle >= 90 || cullFace != CullFace.BACK) &&
                         (nangle <= 90 || cullFace != CullFace.FRONT)) {
                     // hit culled face
@@ -381,10 +434,27 @@ public class TriangleMesh extends Mesh {
             // Now compute texture mapping. First rotate the triangle
             // so that we can compute in 2D
 
-            final Point3D centroid = computeCentroid(v0, v1, v2);
-            final Point3D cv0 = v0.subtract(centroid);
-            final Point3D cv1 = v1.subtract(centroid);
-            final Point3D cv2 = v2.subtract(centroid);
+            // centroid = computeCentroid(v0, v1, v2);
+            final Point3D centroid = computeCentroid(
+                    v0x, v0y, v0z,
+                    v1x, v1y, v1z,
+                    v2x, v2y, v2z);
+
+            // cv0 = v0.subtract(centroid)
+            final Point3D cv0 = new Point3D(
+                    v0x - centroid.getX(),
+                    v0y - centroid.getY(),
+                    v0z - centroid.getZ());
+            // cv1 = v1.subtract(centroid)
+            final Point3D cv1 = new Point3D(
+                    v1x - centroid.getX(),
+                    v1y - centroid.getY(),
+                    v1z - centroid.getZ());
+            // cv2 = v2.subtract(centroid)
+            final Point3D cv2 = new Point3D(
+                    v2x - centroid.getX(),
+                    v2y - centroid.getY(),
+                    v2z - centroid.getZ());
 
             final Point3D ce1 = cv1.subtract(cv0);
             final Point3D ce2 = cv2.subtract(cv0);
@@ -465,13 +535,11 @@ public class TriangleMesh extends Mesh {
         final int size = faces.size();
 
         final Vec3d o = pickRay.getOriginNoClone();
-        final Point3D origin = new Point3D(o.x, o.y, o.z);
 
         final Vec3d d = pickRay.getDirectionNoClone();
-        final Point3D dir = new Point3D(d.x, d.y, d.z);
 
         for (int i = 0; i < size; i += NUM_COMPONENTS_PER_FACE) {
-            if (computeIntersectsFace(pickRay, origin, dir, i, cullFace, candidate, 
+            if (computeIntersectsFace(pickRay, o, d, i, cullFace, candidate, 
                     reportFace, pickResult)) {
                 found = true;
             }

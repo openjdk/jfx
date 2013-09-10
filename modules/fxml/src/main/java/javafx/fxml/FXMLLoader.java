@@ -50,15 +50,12 @@ import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import com.sun.javafx.fxml.*;
 import javafx.beans.DefaultProperty;
 import javafx.beans.property.Property;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.collections.FXCollections;
-import javafx.collections.ListChangeListener;
-import javafx.collections.MapChangeListener;
-import javafx.collections.ObservableList;
-import javafx.collections.ObservableMap;
+import javafx.collections.*;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
@@ -79,12 +76,6 @@ import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.util.StreamReaderDelegate;
 
 import com.sun.javafx.beans.IDProperty;
-import com.sun.javafx.fxml.BeanAdapter;
-import com.sun.javafx.fxml.LoadListener;
-import com.sun.javafx.fxml.ObservableListChangeEvent;
-import com.sun.javafx.fxml.ObservableMapChangeEvent;
-import com.sun.javafx.fxml.PropertyChangeEvent;
-import com.sun.javafx.fxml.PropertyNotFoundException;
 import com.sun.javafx.fxml.expression.Expression;
 import com.sun.javafx.fxml.expression.ExpressionValue;
 import com.sun.javafx.fxml.expression.KeyPath;
@@ -106,7 +97,6 @@ public class FXMLLoader {
     // Abstract base class for elements
     private abstract class Element {
         public final Element parent;
-        public final int lineNumber;
 
         public Object value = null;
         private BeanAdapter valueAdapter = null;
@@ -118,7 +108,6 @@ public class FXMLLoader {
 
         public Element() {
             parent = current;
-            lineNumber = getLineNumber();
         }
 
         public boolean isCollection() {
@@ -389,13 +378,19 @@ public class FXMLLoader {
                     warnDeprecatedEscapeSequence(RELATIVE_PATH_PREFIX);
                     return aValue;
                 } else {
-                    try {
-                        return (aValue.charAt(0) == '/') ?
-                                classLoader.getResource(aValue.substring(1)).toString() :
-                                new URL(FXMLLoader.this.location, aValue).toString();
-                    } catch (MalformedURLException e) {
-                        System.err.println(FXMLLoader.this.location + "/" + aValue);
-                    }
+                        if (aValue.charAt(0) == '/') {
+                            final URL res = classLoader.getResource(aValue.substring(1));
+                            if (res == null) {
+                                throw new LoadException("Invalid resource: " + aValue + " not found on the classpath");
+                            }
+                            return res.toString();
+                        } else {
+                            try {
+                                return new URL(FXMLLoader.this.location, aValue).toString();
+                            } catch (MalformedURLException e) {
+                                System.err.println(FXMLLoader.this.location + "/" + aValue);
+                            }
+                        }
                 }
             } else if (aValue.startsWith(RESOURCE_KEY_PREFIX)) {
                 aValue = aValue.substring(RESOURCE_KEY_PREFIX.length());
@@ -506,59 +501,82 @@ public class FXMLLoader {
             }
         }
 
+        private <T> T getExpressionObjectOfType(String handlerName, Class<T> type) throws LoadException{
+            if (handlerName.startsWith(EXPRESSION_PREFIX)) {
+                handlerName = handlerName.substring(EXPRESSION_PREFIX.length());
+
+                if (handlerName.length() == 0) {
+                    throw new LoadException("Missing expression reference.");
+                }
+
+                Object expression = Expression.get(namespace, KeyPath.parse(handlerName));
+                if (type.isInstance(expression)) {
+                    return (T) expression;
+                }
+            }
+            return null;
+        }
+
+        private <T> MethodHandler<T> getControllerMethodHandle(String handlerName, Class<T> type) throws LoadException{
+            if (handlerName.startsWith(CONTROLLER_METHOD_PREFIX)) {
+                handlerName = handlerName.substring(CONTROLLER_METHOD_PREFIX.length());
+
+                if (!handlerName.startsWith(CONTROLLER_METHOD_PREFIX)) {
+                    if (handlerName.length() == 0) {
+                        throw new LoadException("Missing controller method.");
+                    }
+
+                    if (controller == null) {
+                        throw new LoadException("No controller specified.");
+                    }
+
+                    Method method = getControllerMethods().get(type).get(handlerName);
+                    if (method == null) {
+                        method = getControllerMethods().get(null).get(handlerName);
+                    }
+
+                    if (method == null) {
+                        return null;
+                    }
+
+                    return new MethodHandler<>(controller, method);
+                }
+
+            }
+            return null;
+        }
+
         public void processEventHandlerAttributes() throws LoadException {
             if (eventHandlerAttributes.size() > 0 && !staticLoad) {
                 for (Attribute attribute : eventHandlerAttributes) {
-                    EventHandler<? extends Event> eventHandler = null;
+                    String handlerName = attribute.value;
+                    if (value instanceof ObservableList && attribute.name.equals(COLLECTION_HANDLER_NAME)) {
+                        processObservableListHandler(handlerName);
+                    } else if (value instanceof ObservableMap && attribute.name.equals(COLLECTION_HANDLER_NAME)) {
+                        processObservableMapHandler(handlerName);
+                    } else if (value instanceof ObservableSet && attribute.name.equals(COLLECTION_HANDLER_NAME)) {
+                        processObservableSetHandler(handlerName);
+                    } else {
+                        EventHandler<? extends Event> eventHandler = null;
+                        MethodHandler handler = getControllerMethodHandle(handlerName, Event.class);
+                        if (handler != null) {
+                            eventHandler = new ControllerMethodEventHandler<>(handler);
+                        }
 
-                    String attrValue = attribute.value;
+                        if (eventHandler == null) {
+                            eventHandler = getExpressionObjectOfType(handlerName, EventHandler.class);
+                        }
 
-                    if (attrValue.startsWith(CONTROLLER_METHOD_PREFIX)) {
-                        attrValue = attrValue.substring(CONTROLLER_METHOD_PREFIX.length());
-
-                        if (!attrValue.startsWith(CONTROLLER_METHOD_PREFIX)) {
-                            if (attrValue.length() == 0) {
-                                throw new LoadException("Missing controller method.");
+                        if (eventHandler == null) {
+                            if (handlerName.length() == 0 || scriptEngine == null) {
+                                throw new LoadException("Error resolving " + attribute.name + "='" + attribute.value
+                                        + "', either the event handler is not in the Namespace or there is an error in the script.");
                             }
 
-                            if (controller == null) {
-                                throw new LoadException("No controller specified.");
-                            }
-
-                            Method method = getControllerMethods().get(attrValue);
-
-                            if (method == null) {
-                                throw new LoadException("Controller method \"" + attrValue + "\" not found.");
-                            }
-
-                            eventHandler = new ControllerMethodEventHandler(controller, method);
+                            eventHandler = new ScriptEventHandler(handlerName, scriptEngine);
                         }
 
-                    } else if (attrValue.startsWith(EXPRESSION_PREFIX)) {
-                        attrValue = attrValue.substring(EXPRESSION_PREFIX.length());
-
-                        if (attrValue.length() == 0) {
-                            throw new LoadException("Missing expression reference.");
-                        }
-
-                        Object expression = Expression.get(namespace, KeyPath.parse(attrValue));
-                        if (expression instanceof EventHandler) {
-                            eventHandler = (EventHandler<? extends Event>) expression;
-                        }
-
-                    }
-
-                    if (eventHandler == null) {
-                        if (attrValue.length() == 0 || scriptEngine == null) {
-                            throw new LoadException("Error resolving "  + attribute.name + "='" + attribute.value
-                                + "', either the event handler is not in the Namespace or there is an error in the script.");
-                        }
-
-                        eventHandler = new ScriptEventHandler(attrValue, scriptEngine);
-                    }
-
-                    // Add the handler
-                    if (eventHandler != null){
+                        // Add the handler
                         addEventHandler(attribute, eventHandler);
                     }
                 }
@@ -572,19 +590,7 @@ public class FXMLLoader {
                 int i = EVENT_HANDLER_PREFIX.length();
                 int j = attribute.name.length() - CHANGE_EVENT_HANDLER_SUFFIX.length();
 
-                if (i == j) {
-                    if (value instanceof ObservableList<?>) {
-                        ObservableList<Object> list = (ObservableList<Object>)value;
-                        list.addListener(new ObservableListChangeAdapter(list,
-                            (EventHandler<ObservableListChangeEvent<?>>)eventHandler));
-                    } else if (value instanceof ObservableMap<?, ?>) {
-                        ObservableMap<Object, Object> map = (ObservableMap<Object, Object>)value;
-                        map.addListener(new ObservableMapChangeAdapter(map,
-                            (EventHandler<ObservableMapChangeEvent<?, ?>>)eventHandler));
-                    } else {
-                        throw new LoadException("Invalid event source.");
-                    }
-                } else {
+                if (i != j) {
                     String key = Character.toLowerCase(attribute.name.charAt(i))
                         + attribute.name.substring(i + 1, j);
 
@@ -599,6 +605,57 @@ public class FXMLLoader {
                 }
             } else {
                 getValueAdapter().put(attribute.name, eventHandler);
+            }
+        }
+
+        private void processObservableListHandler(String handlerName) throws LoadException {
+            ObservableList list = (ObservableList)value;
+            if (handlerName.startsWith(CONTROLLER_METHOD_PREFIX)) {
+                MethodHandler handler = getControllerMethodHandle(handlerName, ListChangeListener.Change.class);
+                if (handler != null) {
+                    list.addListener(new ObservableListChangeAdapter(list, handler));
+                } else {
+                    throw new LoadException("Controller method \"" + handlerName + "\" not found.");
+                }
+            } else if (handlerName.startsWith(EXPRESSION_PREFIX)) {
+                ListChangeListener listener = getExpressionObjectOfType(handlerName, ListChangeListener.class);
+                if (listener != null) {
+                    list.addListener(listener);
+                }
+            }
+        }
+
+        private void processObservableMapHandler(String handlerName) throws LoadException {
+            ObservableMap map = (ObservableMap)value;
+            if (handlerName.startsWith(CONTROLLER_METHOD_PREFIX)) {
+                MethodHandler handler = getControllerMethodHandle(handlerName, MapChangeListener.Change.class);
+                if (handler != null) {
+                    map.addListener(new ObservableMapChangeAdapter(map, handler));
+                } else {
+                    throw new LoadException("Controller method \"" + handlerName + "\" not found.");
+                }
+            } else if (handlerName.startsWith(EXPRESSION_PREFIX)) {
+                MapChangeListener listener = getExpressionObjectOfType(handlerName, MapChangeListener.class);
+                if (listener != null) {
+                    map.addListener(listener);
+                }
+            }
+        }
+
+        private void processObservableSetHandler(String handlerName) throws LoadException {
+            ObservableSet set = (ObservableSet)value;
+            if (handlerName.startsWith(CONTROLLER_METHOD_PREFIX)) {
+                MethodHandler handler = getControllerMethodHandle(handlerName, SetChangeListener.Change.class);
+                if (handler != null) {
+                    set.addListener(new ObservableSetChangeAdapter(set, handler));
+                } else {
+                    throw new LoadException("Controller method \"" + handlerName + "\" not found.");
+                }
+            } else if (handlerName.startsWith(EXPRESSION_PREFIX)) {
+                SetChangeListener listener = getExpressionObjectOfType(handlerName, SetChangeListener.class);
+                if (listener != null) {
+                    set.addListener(listener);
+                }
             }
         }
     }
@@ -1482,30 +1539,16 @@ public class FXMLLoader {
     }
 
     // Event handler that delegates to a method defined by the controller object
-    private static class ControllerMethodEventHandler implements EventHandler<Event> {
-        public final Object controller;
-        public final Method method;
-        public final boolean typed;
+    private static class ControllerMethodEventHandler<T extends Event> implements EventHandler<T> {
+        private final MethodHandler<T> handler;
 
-        public ControllerMethodEventHandler(Object controller, Method method) {
-            this.controller = controller;
-            this.method = method;
-            this.typed = (method.getParameterTypes().length == 1);
+        public ControllerMethodEventHandler(MethodHandler<T> handler) {
+            this.handler = handler;
         }
 
         @Override
-        public void handle(Event event) {
-            try {
-                if (typed) {
-                    MethodUtil.invoke(method, controller, new Object[] { event });
-                } else {
-                    MethodUtil.invoke(method, controller, new Object[] {});
-                }
-            } catch (InvocationTargetException exception) {
-                throw new RuntimeException(exception);
-            } catch (IllegalAccessException exception) {
-                throw new RuntimeException(exception);
-            }
+        public void handle(T event) {
+            handler.invoke(event);
         }
     }
 
@@ -1541,69 +1584,60 @@ public class FXMLLoader {
     }
 
     // Observable list change listener
-    private static class ObservableListChangeAdapter implements ListChangeListener<Object> {
-        public final ObservableList<Object> source;
-        public final EventHandler<ObservableListChangeEvent<?>> handler;
+    private static class ObservableListChangeAdapter implements ListChangeListener {
+        private final ObservableList source;
+        private final MethodHandler<Change> handler;
 
-        public ObservableListChangeAdapter(ObservableList<Object> source,
-            EventHandler<ObservableListChangeEvent<?>> handler) {
+        public ObservableListChangeAdapter(ObservableList source,
+                                           MethodHandler<Change> handler) {
             this.source = source;
             this.handler = handler;
         }
 
         @Override
         @SuppressWarnings("unchecked")
-        public void onChanged(Change<? extends Object> change) {
-            while (change.next()) {
-                EventType<ObservableListChangeEvent<?>> eventType;
-                List<Object> removed = (List<Object>)change.getRemoved();
-
-                if (change.wasPermutated()) {
-                    eventType = ObservableListChangeEvent.UPDATE;
-                    removed = null;
-                } else if (change.wasAdded() && change.wasRemoved()) {
-                    eventType = ObservableListChangeEvent.UPDATE;
-                } else if (change.wasAdded()) {
-                    eventType = ObservableListChangeEvent.ADD;
-                } else if (change.wasRemoved()) {
-                    eventType = ObservableListChangeEvent.REMOVE;
-                } else {
-                    throw new UnsupportedOperationException();
-                }
-
-                handler.handle(new ObservableListChangeEvent<Object>(source,
-                    eventType, change.getFrom(), change.getTo(),
-                    removed));
+        public void onChanged(Change change) {
+            if (handler != null) {
+                handler.invoke(change);
             }
         }
     }
 
     // Observable map change listener
-    private static class ObservableMapChangeAdapter implements MapChangeListener<Object, Object> {
-        public final ObservableMap<Object, Object> source;
-        public final EventHandler<ObservableMapChangeEvent<?, ?>> handler;
+    private static class ObservableMapChangeAdapter implements MapChangeListener {
+        public final ObservableMap source;
+        public final MethodHandler<Change> handler;
 
-        public ObservableMapChangeAdapter(ObservableMap<Object, Object> source,
-            EventHandler<ObservableMapChangeEvent<?, ?>> handler) {
+        public ObservableMapChangeAdapter(ObservableMap source,
+                                          MethodHandler<Change> handler) {
             this.source = source;
             this.handler = handler;
         }
 
         @Override
-        public void onChanged(Change<? extends Object, ? extends Object> change) {
-            EventType<ObservableMapChangeEvent<?, ?>> eventType;
-            if (change.wasAdded() && change.wasRemoved()) {
-                eventType = ObservableMapChangeEvent.UPDATE;
-            } else if (change.wasAdded()) {
-                eventType = ObservableMapChangeEvent.ADD;
-            } else if (change.wasRemoved()) {
-                eventType = ObservableMapChangeEvent.REMOVE;
-            } else {
-                throw new UnsupportedOperationException();
+        public void onChanged(Change change) {
+            if (handler != null) {
+                handler.invoke(change);
             }
+        }
+    }
 
-            handler.handle(new ObservableMapChangeEvent<Object, Object>(source,
-                eventType, change.getKey(), change.getValueRemoved()));
+    // Observable set change listener
+    private static class ObservableSetChangeAdapter implements SetChangeListener {
+        public final ObservableSet source;
+        public final MethodHandler<Change> handler;
+
+        public ObservableSetChangeAdapter(ObservableSet source,
+                                          MethodHandler<Change> handler) {
+            this.source = source;
+            this.handler = handler;
+        }
+
+        @Override
+        public void onChanged(Change change) {
+            if (handler != null) {
+                handler.invoke(change);
+            }
         }
     }
 
@@ -1628,6 +1662,32 @@ public class FXMLLoader {
         @Override
         public void changed(ObservableValue<? extends Object> observable, Object oldValue, Object newValue) {
             handler.handle(new PropertyChangeEvent<Object>(source, oldValue));
+        }
+    }
+
+    private static class MethodHandler<E> {
+        private final Object controller;
+        private final Method method;
+        private final boolean typed;
+
+        private MethodHandler(Object controller, Method method) {
+            this.method = method;
+            this.controller = controller;
+            this.typed = (method.getParameterTypes().length == 1);
+        }
+
+        public void invoke(E event) {
+            try {
+                if (typed) {
+                    MethodUtil.invoke(method, controller, new Object[] { event });
+                } else {
+                    MethodUtil.invoke(method, controller, new Object[] {});
+                }
+            } catch (InvocationTargetException exception) {
+                throw new RuntimeException(exception);
+            } catch (IllegalAccessException exception) {
+                throw new RuntimeException(exception);
+            }
         }
     }
 
@@ -1674,7 +1734,7 @@ public class FXMLLoader {
     private HashMap<String, Class<?>> classes = new HashMap<String, Class<?>>();
 
     private HashMap<String, Field> controllerFields = null;
-    private HashMap<String, Method> controllerMethods = null;
+    private HashMap<Class, Map<String, Method>> controllerMethods = null;
 
     private ScriptEngineManager scriptEngineManager = null;
 
@@ -1726,6 +1786,7 @@ public class FXMLLoader {
     public static final String EVENT_HANDLER_PREFIX = "on";
     public static final String EVENT_KEY = "event";
     public static final String CHANGE_EVENT_HANDLER_SUFFIX = "Change";
+    private static final String COLLECTION_HANDLER_NAME = EVENT_HANDLER_PREFIX + CHANGE_EVENT_HANDLER_SUFFIX;
 
     public static final String NULL_KEYWORD = "null";
 
@@ -2343,7 +2404,7 @@ public class FXMLLoader {
                 }
 
                 // Initialize the controller
-                Method initializeMethod = getControllerMethods().get(INITIALIZE_METHOD_NAME);
+                Method initializeMethod = getControllerMethods().get(null).get(INITIALIZE_METHOD_NAME);
 
                 if (initializeMethod != null) {
                     try {
@@ -2386,7 +2447,7 @@ public class FXMLLoader {
 
             if (loader.current != null) {
                 messageBuilder.append(":");
-                messageBuilder.append(loader.current.lineNumber);
+                messageBuilder.append(loader.getLineNumber());
             }
 
             messageBuilder.append("\n");
@@ -2428,7 +2489,7 @@ public class FXMLLoader {
         int i = 0;
         for (FXMLLoader loader : loaders) {
             parseTrace[i++] = new ParseTraceElement(loader.location, (loader.current != null) ?
-                loader.current.lineNumber : -1);
+                loader.getLineNumber() : -1);
         }
 
         return parseTrace;
@@ -2736,9 +2797,26 @@ public class FXMLLoader {
         return controllerFields;
     }
 
-    private HashMap<String, Method> getControllerMethods() throws LoadException {
+    private static final Class[] SUPPORTED_TYPES = { Event.class, ListChangeListener.Change.class,
+        MapChangeListener.Change.class, SetChangeListener.Change.class
+    };
+
+    private Class<?> toSupportedEventType(Class<?> type) {
+        for (Class c : SUPPORTED_TYPES) {
+            if (c.isAssignableFrom(type)) {
+                return c;
+            }
+        }
+        return null;
+    }
+
+    private HashMap<Class, Map<String, Method>> getControllerMethods() throws LoadException {
         if (controllerMethods == null) {
-            controllerMethods = new HashMap<String, Method>();
+            controllerMethods = new HashMap<>();
+            controllerMethods.put(null, new HashMap<String,Method>());
+            for (Class c: SUPPORTED_TYPES) {
+                controllerMethods.put(c, new HashMap<String,Method>());
+            }
 
             Class<?> controllerType = controller.getClass();
             Class<?> type = controllerType;
@@ -2771,14 +2849,17 @@ public class FXMLLoader {
                         //    name has not already been defined
                         String methodName = method.getName();
                         Class<?>[] parameterTypes = method.getParameterTypes();
+                        Class convertedType;
 
                         if (methodName.equals(INITIALIZE_METHOD_NAME)) {
                             if (parameterTypes.length == 0) {
-                                controllerMethods.put(method.getName(), method);
+                                controllerMethods.get(null).put(method.getName(), method);
                             }
-                        } else if ((parameterTypes.length == 1 && Event.class.isAssignableFrom(parameterTypes[0]))
-                            || (parameterTypes.length == 0 && !controllerMethods.containsKey(methodName))) {
-                            controllerMethods.put(method.getName(), method);
+                        } else if (parameterTypes.length == 1 &&
+                                (convertedType = toSupportedEventType(parameterTypes[0])) != null) {
+                            controllerMethods.get(convertedType).put(methodName, method);
+                        } else if (parameterTypes.length == 0) {
+                            controllerMethods.get(null).put(methodName, method);
                         }
                     }
                 }

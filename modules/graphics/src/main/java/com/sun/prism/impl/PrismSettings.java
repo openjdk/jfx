@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.StringTokenizer;
 import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.Utils;
 
 /**
  * Contains the runtime arguments used by Prism.
@@ -82,6 +83,11 @@ public final class PrismSettings {
     public static final boolean disableEffects;
     public static final int glyphCacheWidth;
     public static final int glyphCacheHeight;
+    public static final boolean perfLog;
+    public static final boolean perfLogExitFlush;
+    public static final boolean perfLogFirstPaintFlush;
+    public static final boolean perfLogFirstPaintExit;
+    public static final boolean superShader;
 
     private PrismSettings() {
     }
@@ -122,8 +128,7 @@ public final class PrismSettings {
 
         // The maximum number of dirty regions to use. The absolute max that we can
         // support at present is 15.
-        dirtyRegionCount = Math.max(getInt(systemProperties, "prism.dirtyregioncount",
-                                  6, null), 15);
+        dirtyRegionCount = Utils.clamp(0, getInt(systemProperties, "prism.dirtyregioncount", 6, null), 15);
 
         /* Dirty region optimizations */
         threadCheck = getBoolean(systemProperties, "prism.threadcheck", false);
@@ -318,7 +323,7 @@ public final class PrismSettings {
          * This is needed for some embedded platforms to avoid rendering artifacts
          * when rendering into small RTT.
          */
-       minRTTSize = getInt(systemProperties, "prism.minrttsize",                       
+       minRTTSize = getInt(systemProperties, "prism.minrttsize",
                PlatformUtil.isEmbedded() ? 16 : 0, "Try -Dprism.minrttsize=<number>");
 
         disableRegionCaching = getBoolean(systemProperties,
@@ -326,13 +331,24 @@ public final class PrismSettings {
                                           false);
 
         disableD3D9Ex = getBoolean(systemProperties, "prism.disableD3D9Ex", true);
-        
+
         disableEffects = getBoolean(systemProperties, "prism.disableEffects", false);
 
         glyphCacheWidth = getInt(systemProperties, "prism.glyphCacheWidth", 1024,
                 "Try -Dprism.glyphCacheWidth=<number>");
         glyphCacheHeight = getInt(systemProperties, "prism.glyphCacheHeight", 1024,
                 "Try -Dprism.glyphCacheHeight=<number>");
+
+        /*
+         * Performance Logger flags
+         * Enable the performance logger, print on exit, print on first paint etc.
+         */
+        perfLog = getBoolean(systemProperties, "sun.perflog", false, true);
+        perfLogExitFlush = getBoolean(systemProperties, "sun.perflog.fx.exitflush", false, true);
+        perfLogFirstPaintFlush = getBoolean(systemProperties, "sun.perflog.fx.firstpaintflush", false, true);
+        perfLogFirstPaintExit = getBoolean(systemProperties, "sun.perflog.fx.firstpaintexit", false, true);
+
+        superShader = getBoolean(systemProperties, "prism.supershader", true);
     }
 
     private static int parseInt(String s, int dflt, int trueDflt,
@@ -396,6 +412,15 @@ public final class PrismSettings {
                                       String key,
                                       boolean dflt) {
         final String strval = properties.getProperty(key);
+        return (strval != null) ? Boolean.parseBoolean(strval) : dflt;
+    }
+
+    private static boolean getBoolean(Properties properties,
+                                      String key,
+                                      boolean dflt,
+                                      boolean dfltIfDefined) {
+        final String strval = properties.getProperty(key);
+        if (strval != null && strval.length() == 0) return dfltIfDefined;
         return (strval != null) ? Boolean.parseBoolean(strval) : dflt;
     }
 

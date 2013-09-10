@@ -27,6 +27,7 @@ package javafx.scene.transform;
 
 
 import com.sun.javafx.geom.transform.Affine3D;
+import com.sun.javafx.geom.transform.BaseTransform;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.geometry.Point2D;
@@ -5711,6 +5712,47 @@ public class Affine extends Transform {
         trans.concatenate(getMxx(), getMxy(), getMxz(), getTx(),
                           getMyx(), getMyy(), getMyz(), getTy(),
                           getMzx(), getMzy(), getMzz(), getTz());
+    }
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    @Override
+    public BaseTransform impl_derive(final BaseTransform trans) {
+        switch(state3d) {
+            default:
+                stateError();
+                // cannot reach
+            case APPLY_NON_3D:
+                switch(state2d) {
+                    case APPLY_IDENTITY:
+                        return trans;
+                    case APPLY_TRANSLATE:
+                        return trans.deriveWithTranslation(getTx(), getTy());
+                    case APPLY_SCALE:
+                        return trans.deriveWithScale(getMxx(), getMyy(), 1.0);
+                    case APPLY_SCALE | APPLY_TRANSLATE:
+                        // fall through
+                    default:
+                        return trans.deriveWithConcatenation(
+                                getMxx(), getMyx(),
+                                getMxy(), getMyy(),
+                                getTx(), getTy());
+                }
+            case APPLY_TRANSLATE:
+                return trans.deriveWithTranslation(getTx(), getTy(), getTz());
+            case APPLY_SCALE:
+                return trans.deriveWithScale(getMxx(), getMyy(), getMzz());
+            case APPLY_SCALE | APPLY_TRANSLATE:
+                // fall through
+            case APPLY_3D_COMPLEX:
+                return trans.deriveWithConcatenation(
+                        getMxx(), getMxy(), getMxz(), getTx(),
+                        getMyx(), getMyy(), getMyz(), getTy(),
+                        getMzx(), getMzy(), getMzz(), getTz());
+        }
     }
 
     /**

@@ -60,6 +60,7 @@ class RegionImageCache {
         backingStore = factory.createRTTexture(WIDTH + WIDTH, HEIGHT, WrapMode.CLAMP_NOT_NEEDED);
         backingStore.contentsUseful();
         backingStore.makePermanent();
+        factory.setRegionTexture(backingStore);
         // Subdivide the texture in two halves where on half is used to store
         // horizontal regions and the other vertical regions. Otherwise, mixing
         // horizontal and vertical regions on the same area, would result in

@@ -599,12 +599,21 @@ final public class WebEngine {
     }
 
     private String escapeScript(String script) {
-        return script.replace((CharSequence) "\\", (CharSequence) "\\\\")
-                .replace((CharSequence) "'", (CharSequence) "\\'")
-                .replace((CharSequence) "\"", (CharSequence) "\\\"")
-                .replace((CharSequence) "\n", (CharSequence) "\\n")
-                .replace((CharSequence) "\r", (CharSequence) "\\r")
-                .replace((CharSequence) "\t", (CharSequence) "\\t");
+        final int len = script.length();
+        StringBuilder sb = new StringBuilder((int) (len * 1.2));
+        for (int i = 0; i < len; i++) {
+            char ch = script.charAt(i);
+            switch (ch) {
+                case '\\': sb.append("\\\\"); break;
+                case '\'': sb.append("\\'"); break;
+                case '"': sb.append("\\\""); break;
+                case '\n': sb.append("\\n"); break;
+                case '\r': sb.append("\\r"); break;
+                case '\t': sb.append("\\t"); break;
+                default: sb.append(ch);
+            }
+        }
+        return sb.toString();
     }
 
     /**

@@ -39,6 +39,7 @@ import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
+import javafx.collections.ObservableSet;
 
 @IDProperty("id")
 @DefaultProperty("children")
@@ -47,6 +48,7 @@ public class Widget {
     private StringProperty name = new SimpleStringProperty();
     private IntegerProperty number = new SimpleIntegerProperty();
     private ObservableList<Widget> children = FXCollections.observableArrayList();
+    private ObservableSet<String> set = FXCollections.observableSet();
     private ObservableMap<String, Object> properties = FXCollections.observableHashMap();
     private BooleanProperty enabledProperty = new SimpleBooleanProperty(true);
     private ArrayList<String> styles = new ArrayList<String>();
@@ -152,6 +154,10 @@ public class Widget {
 
     public void setNames(String[] names) {
         this.names = Arrays.copyOf(names, names.length);
+    }
+
+    public ObservableSet<String> getSet() {
+        return set;
     }
 
 

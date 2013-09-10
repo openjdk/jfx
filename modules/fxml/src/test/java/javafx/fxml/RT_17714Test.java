@@ -25,6 +25,7 @@
 
 package javafx.fxml;
 
+import javafx.util.Callback;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -36,24 +37,12 @@ public class RT_17714Test {
         Widget widget = (Widget)fxmlLoader.load();
         RT_17714Controller controller = (RT_17714Controller)fxmlLoader.getController();
 
-        assertEquals(widget.getChildren(), controller.getChildren());
-
-        // Test add
+        assertFalse(controller.listWithParamCalled);
+        assertFalse(controller.listNoParamCalled);
+        // Test
         widget.getChildren().add(new Widget("Widget 4"));
-        widget.getChildren().add(new Widget("Widget 5"));
-
-        assertEquals(widget.getChildren(), controller.getChildren());
-
-        // Test update
-        widget.getChildren().set(0, new Widget("Widget 1a"));
-        widget.getChildren().set(2, new Widget("Widget 3a"));
-
-        assertEquals(widget.getChildren(), controller.getChildren());
-
-        // Test remove
-        widget.getChildren().remove(1);
-
-        assertEquals(widget.getChildren(), controller.getChildren());
+        assertTrue(controller.listWithParamCalled);
+        assertFalse(controller.listNoParamCalled);
     }
 
     @Test
@@ -62,23 +51,80 @@ public class RT_17714Test {
         Widget widget = (Widget)fxmlLoader.load();
         RT_17714Controller controller = (RT_17714Controller)fxmlLoader.getController();
 
-        assertEquals(widget.getProperties(), controller.getProperties());
-
-        // Test add
+        assertFalse(controller.mapWithParamCalled);
+        assertFalse(controller.mapNoParamCalled);
+        // Test
         widget.getProperties().put("d", 1000);
-        widget.getProperties().put("e", 10000);
 
-        assertEquals(widget.getProperties(), controller.getProperties());
+        assertTrue(controller.mapWithParamCalled);
+        assertFalse(controller.mapNoParamCalled);
+    }
 
-        // Test update
-        widget.getProperties().put("a", 2);
-        widget.getProperties().put("c", 200);
+    @Test
+    public void testSetEvents() throws Exception {
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_17714.fxml"));
+        Widget widget = (Widget)fxmlLoader.load();
+        RT_17714Controller controller = (RT_17714Controller)fxmlLoader.getController();
 
-        assertEquals(widget.getProperties(), controller.getProperties());
+        assertFalse(controller.setWithParamCalled);
+        assertFalse(controller.setNoParamCalled);
+        // Test
+        widget.getSet().add("x");
 
-        // Test remove
-        widget.getProperties().remove("b");
+        assertTrue(controller.setWithParamCalled);
+        assertFalse(controller.setNoParamCalled);
+    }
 
-        assertEquals(widget.getProperties(), controller.getProperties());
+    @Test
+    public void testListEvents_NoParam() throws Exception {
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_17714.fxml"), null, null, new Callback<Class<?>, Object>() {
+            @Override
+            public Object call(Class<?> param) {
+                return new RT_17714Controller2();
+            }
+        });
+        Widget widget = (Widget)fxmlLoader.load();
+        RT_17714Controller2 controller = (RT_17714Controller2)fxmlLoader.getController();
+
+        assertFalse(controller.listNoParamCalled);
+        // Test
+        widget.getChildren().add(new Widget("Widget 4"));
+        assertTrue(controller.listNoParamCalled);
+    }
+
+    @Test
+    public void testMapEvents_NoParam() throws Exception {
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_17714.fxml"), null, null, new Callback<Class<?>, Object>() {
+            @Override
+            public Object call(Class<?> param) {
+                return new RT_17714Controller2();
+            }
+        });
+        Widget widget = (Widget)fxmlLoader.load();
+        RT_17714Controller2 controller = (RT_17714Controller2)fxmlLoader.getController();
+
+        assertFalse(controller.mapNoParamCalled);
+        // Test
+        widget.getProperties().put("d", 1000);
+
+        assertTrue(controller.mapNoParamCalled);
+    }
+
+    @Test
+    public void testSetEvents_NoParam() throws Exception {
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_17714.fxml"), null, null, new Callback<Class<?>, Object>() {
+            @Override
+            public Object call(Class<?> param) {
+                return new RT_17714Controller2();
+            }
+        });
+        Widget widget = (Widget)fxmlLoader.load();
+        RT_17714Controller2 controller = (RT_17714Controller2)fxmlLoader.getController();
+
+        assertFalse(controller.setNoParamCalled);
+        // Test
+        widget.getSet().add("x");
+
+        assertTrue(controller.setNoParamCalled);
     }
 }

@@ -81,7 +81,8 @@ GlassWindow::GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated,
     m_beforeFullScreenMenu(NULL),
     m_pProvider(NULL),
     m_a11yInitRequested(false),
-    m_a11yTreeIsReady(false)
+    m_a11yTreeIsReady(false),
+    m_hIcon(NULL)
 {
     m_grefThis = GetEnv()->NewGlobalRef(jrefThis);
     m_minSize.x = m_minSize.y = -1;   // "not set" value
@@ -104,6 +105,10 @@ GlassWindow::GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated,
 
 GlassWindow::~GlassWindow()
 {
+    if (m_hIcon) {
+        ::DestroyIcon(m_hIcon);
+    }
+
     if (m_grefThis) {
         GetEnv()->DeleteGlobalRef(m_grefThis);
     }
@@ -940,6 +945,17 @@ void GlassWindow::SetEnabled(bool enabled)
     m_isEnabled = enabled;
 }
 
+void GlassWindow::SetIcon(HICON hIcon)
+{
+    ::SendMessage(GetHWND(), WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+    ::SendMessage(GetHWND(), WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+
+    if (m_hIcon) {
+        ::DestroyIcon(m_hIcon);
+    }
+    m_hIcon = hIcon;
+}
+
 /*
  * JNI methods section
  *
@@ -1627,16 +1643,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1setIcon
     (JNIEnv *env, jobject jThis, jlong ptr, jobject jPixels)
 {
     HWND hWnd = (HWND)ptr;
-
-    // ::SendMessage() is OK to call from any thread - don't bother with ENTER...
-    if (!jPixels) {
-        ::SendMessage(hWnd, WM_SETICON, ICON_SMALL, NULL);
-        ::SendMessage(hWnd, WM_SETICON, ICON_BIG, NULL);
-    } else {
-        HICON hIcon = Pixels::CreateIcon(env, jPixels);
-
-        ::SendMessage(hWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
-        ::SendMessage(hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+    GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
+    if (pWindow) {
+        pWindow->SetIcon(!jPixels ? NULL : Pixels::CreateIcon(env, jPixels));
     }
 }
 

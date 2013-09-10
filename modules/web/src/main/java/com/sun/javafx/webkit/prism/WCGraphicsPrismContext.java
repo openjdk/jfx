@@ -40,12 +40,11 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         Logger.getLogger(WCGraphicsPrismContext.class.getName());
 
     private Graphics baseGraphics;
+    private BaseTransform baseTransform;
 
     private final List<ContextState> states = new ArrayList<ContextState>();
 
     private ContextState state = new ContextState();
-
-    private boolean isInitialized;
 
     // Cache for getPlatformGraphics
     private Graphics cachedGraphics = null;
@@ -60,16 +59,13 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     }
 
     final void init(Graphics g, boolean inherit) {
-        if (isInitialized) {
-            return;
-        }
         if (g != null && inherit) {
             state.setClip(g.getClipRect());
-            state.setTransform(new Affine3D(g.getTransformNoClone()));
             state.setAlpha(g.getExtraAlpha());
         }
         baseGraphics = g;
-        isInitialized = true;
+        baseTransform = new Affine3D(g.getTransformNoClone());
+        state.setTransform(new Affine3D(baseTransform));
     }
 
     private void resetCachedGraphics() {
@@ -1254,7 +1250,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             bufferGraphics.fill(p2d);
 
             // blend buffer and clipImg onto |g|
-            if (g instanceof MaskTextureGraphics) {
+            if (g instanceof MaskTextureGraphics && ! (g instanceof PrinterGraphics)) {
                 MaskTextureGraphics mg = (MaskTextureGraphics) g;
                 if (srcover) {
                     mg.drawPixelsMasked(buffer.getTextureObject(),
@@ -1451,10 +1447,13 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     }
 
     private static FilterContext getFilterContext(Graphics g) {
-        Screen screen = g.getAssociatedScreen();  // can be null when printing
-        return (screen != null
-                ? PrFilterContext.getInstance(screen)
-                : PrFilterContext.getDefaultInstance());
+        Screen screen = g.getAssociatedScreen();
+        if (screen == null) {
+            ResourceFactory factory = g.getResourceFactory();
+            return PrFilterContext.getPrinterContext(factory);
+        } else {
+            return PrFilterContext.getInstance(screen);
+        }
     }
 
     @Override public void strokeArc(final int x, final int y, final int w, final int h,
@@ -1551,6 +1550,9 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     public void setTransform(WCTransform tm) {
         double m[] = tm.getMatrix();
         Affine3D at = new Affine3D(new Affine2D(m[0], m[1], m[2], m[3], m[4], m[5]));
+        if (state.getLayerNoClone() == null) {
+            at.preConcatenate(baseTransform);
+        }
         state.setTransform(at);
         resetCachedGraphics();
     }

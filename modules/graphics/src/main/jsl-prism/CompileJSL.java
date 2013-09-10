@@ -488,6 +488,7 @@ public class CompileJSL {
         // create the basic Solid+Texture* shaders
         compileSolidTexture(jslcinfo, "RGB");
         compileMaskTexture(jslcinfo, "RGB");
+        compileMaskTexture(jslcinfo, "Super");
         compileSolidTexture(jslcinfo, "YV12");
         compileSolidTexture(jslcinfo, "FirstPassLCD");
         compileLCDShader(jslcinfo, "SecondPassLCD");

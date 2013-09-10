@@ -33,6 +33,7 @@ import java.util.LinkedList;
 import java.util.List;
 import com.sun.glass.events.KeyEvent;
 import com.sun.glass.events.MouseEvent;
+import com.sun.glass.events.TouchEvent;
 import com.sun.glass.events.ViewEvent;
 import com.sun.glass.events.WindowEvent;
 import com.sun.glass.ui.Application;
@@ -489,7 +490,8 @@ final class LensApplication extends Application {
         @Override
         void dispatch() {
             LensTouchInputSupport.postTouchEvent(view, state, id, x, y, absX, absY);
-
+            view._notifyMouse(MouseEvent.DRAG, MouseEvent.BUTTON_NONE,
+                    x, y, absX, absY, 0, false, true);
         }
 
         @Override
@@ -530,6 +532,8 @@ final class LensApplication extends Application {
         void dispatch() {
             LensTouchInputSupport.postMultiTouchEvent(
                     view, states, ids, xs, ys, dx, dy);
+            view._notifyMouse(MouseEvent.DRAG, MouseEvent.BUTTON_NONE,
+                    xs[0] + dx, ys[0] + dy, xs[0], ys[0], 0, false, true);
 
         }
 
@@ -1388,7 +1392,26 @@ final class LensApplication extends Application {
                                             + x + "," + y
                                             + " on " + view);
             }
-
+            synchronized (eventList) {
+                if (!eventList.isEmpty()
+                        && state == TouchEvent.TOUCH_MOVED) {
+                    Event lastEvent = eventList.getLast();
+                    if (lastEvent instanceof LensTouchEvent) {
+                        LensTouchEvent e = (LensTouchEvent) lastEvent;
+                        if (e.view == view
+                                && e.state == state
+                                && e.id == id) {
+                            // rewrite the coordinates of the scheduled event
+                            // with the coordinates of this event.
+                            e.x = x;
+                            e.y = y;
+                            e.absX = absX;
+                            e.absY = absY;
+                            return;
+                        }
+                    }
+                }
+            }
             postEvent(new LensTouchEvent(view, state, id,
                                          x, y, absX, absY));
 
@@ -1417,9 +1440,41 @@ final class LensApplication extends Application {
                                             + states.length + " points "
                                             + " on " + view);
             }
-
-            postEvent(new LensMultiTouchEvent(view, states, ids,
-                                              xs, ys, dx, dy));
+            synchronized (eventList) {
+                // Try to match this multitouch event against a pending event
+                boolean match = false;
+                if (!eventList.isEmpty()) {
+                    Event lastEvent = eventList.getLast();
+                    if (lastEvent instanceof LensMultiTouchEvent) {
+                        LensMultiTouchEvent e = (LensMultiTouchEvent) lastEvent;
+                        if (e.view == view
+                                && e.states.length == states.length
+                                && e.dx == dx && e.dy == dy) {
+                            assert(states.length == ids.length);
+                            assert(e.states.length == e.ids.length);
+                            match = true;
+                            for (int i = 0; i < states.length && match; i++) {
+                                if (e.states[i] != states[i]) {
+                                    match = false;
+                                }
+                                if (e.ids[i] != ids[i]) {
+                                    match = false;
+                                }
+                            }
+                            if (match) {
+                                // rewrite the coordinates of the scheduled event
+                                // with the coordinates of this event.
+                                e.xs = xs;
+                                e.ys = ys;
+                            }
+                        }
+                    }
+                }
+                if (!match) {
+                    postEvent(new LensMultiTouchEvent(view, states, ids,
+                                                      xs, ys, dx, dy));
+                }
+            }
 
         } catch (Exception e) {
             reportException(e);

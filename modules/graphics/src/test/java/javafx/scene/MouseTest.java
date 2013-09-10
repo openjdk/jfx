@@ -1465,9 +1465,61 @@ public class MouseTest {
         assertTrue(s.smallSquareTracker.exitedMe);
     }
 
+    @Test
+    public void pdrGestureShouldHandleDraggedNodeRemoval() {
+        final SimpleTestScene s = new SimpleTestScene();
+
+        s.processEvent(MouseEventGenerator.generateMouseEvent(
+                MouseEvent.MOUSE_MOVED, 250, 250));
+        assertTrue(s.smallSquareTracker.node.isHover());
+        assertFalse(s.smallSquareTracker.node.isPressed());
+
+        s.processEvent(MouseEventGenerator.generateMouseEvent(
+                MouseEvent.MOUSE_PRESSED, 250, 250));
+        assertTrue(s.smallSquareTracker.node.isHover());
+        assertTrue(s.smallSquareTracker.node.isPressed());
+        assertTrue(s.smallSquareTracker.wasPressed());
+        assertTrue(s.groupTracker.wasPressed());
+
+        s.processEvent(MouseEventGenerator.generateMouseEvent(
+                MouseEvent.MOUSE_DRAGGED, 255, 255));
+        assertTrue(s.smallSquareTracker.node.isHover());
+        assertTrue(s.smallSquareTracker.node.isPressed());
+        assertTrue(s.smallSquareTracker.wasDragged());
+        assertTrue(s.groupTracker.wasDragged());
+
+        s.smallSquareTracker.clear();
+        s.groupTracker.clear();
+        s.rootTracker.clear();
+
+        s.scene.getRoot().getChildren().clear();
+        assertFalse(s.smallSquareTracker.node.isHover());
+        assertFalse(s.smallSquareTracker.node.isPressed());
+        assertFalse(s.groupTracker.node.isHover());
+        assertFalse(s.groupTracker.node.isPressed());
+        assertTrue(s.rootTracker.node.isHover());
+        assertTrue(s.rootTracker.node.isPressed());
+        assertTrue(s.smallSquareTracker.wasExitedMe());
+        assertTrue(s.groupTracker.wasExitedMe());
+        assertFalse(s.rootTracker.wasExitedMe());
+
+        s.processEvent(MouseEventGenerator.generateMouseEvent(
+                MouseEvent.MOUSE_DRAGGED, 260, 260));
+        assertFalse(s.smallSquareTracker.wasDragged());
+        assertFalse(s.groupTracker.wasDragged());
+        assertTrue(s.rootTracker.wasDragged());
+
+        s.processEvent(MouseEventGenerator.generateMouseEvent(
+                MouseEvent.MOUSE_RELEASED, 270, 270));
+        assertFalse(s.smallSquareTracker.wasReleased());
+        assertFalse(s.groupTracker.wasReleased());
+        assertTrue(s.rootTracker.wasReleased());
+    }
+
     private static class SimpleTestScene {
 
         MouseEventTracker sceneTracker;
+        MouseEventTracker rootTracker;
         MouseEventTracker groupTracker;
         MouseEventTracker bigSquareTracker;
         MouseEventTracker smallSquareTracker;
@@ -1499,6 +1551,7 @@ public class MouseTest {
             root.getChildren().add(group);
 
             sceneTracker = new MouseEventTracker(scene);
+            rootTracker = new MouseEventTracker(root);
             groupTracker = new MouseEventTracker(group);
             bigSquareTracker = new MouseEventTracker(bigSquare);
             smallSquareTracker = new MouseEventTracker(smallSquare);

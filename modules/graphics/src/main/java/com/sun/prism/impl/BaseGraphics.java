@@ -115,7 +115,7 @@ public abstract class BaseGraphics implements RectShadowGraphics {
 
     @Override
     public void setState3D(boolean flag) {
-        this.state3D = flag;            
+        this.state3D = flag;
     }
 
     @Override
@@ -399,8 +399,12 @@ public abstract class BaseGraphics implements RectShadowGraphics {
         float tx2 = (cx1 + sx2) / pw;
         float ty2 = (cy1 + sy2) / ph;
 
-        context.getVertexBuffer().addQuad(dx1, dy1, dx2, dy2,
-                                          tx1, ty1, tx2, ty2);
+        VertexBuffer vb = context.getVertexBuffer();
+        if (context.isSuperShaderEnabled()) {
+            vb.addSuperQuad(dx1, dy1, dx2, dy2, tx1, ty1, tx2, ty2, false);
+        } else {
+            vb.addQuad(dx1, dy1, dx2, dy2, tx1, ty1, tx2, ty2);
+        }
     }
 
     @Override
@@ -448,9 +452,15 @@ public abstract class BaseGraphics implements RectShadowGraphics {
      // float tv2 = (cy1 + sv2) / ph;
 
         VertexBuffer vb = context.getVertexBuffer();
-        vb.addQuad(dx1, dy1, dh1, dy2, tx1, ty1, th1, ty2);
-        vb.addQuad(dh1, dy1, dh2, dy2, th1, ty1, th2, ty2);
-        vb.addQuad(dh2, dy1, dx2, dy2, th2, ty1, tx2, ty2);
+        if (context.isSuperShaderEnabled()) {
+            vb.addSuperQuad(dx1, dy1, dh1, dy2, tx1, ty1, th1, ty2, false);
+            vb.addSuperQuad(dh1, dy1, dh2, dy2, th1, ty1, th2, ty2, false);
+            vb.addSuperQuad(dh2, dy1, dx2, dy2, th2, ty1, tx2, ty2, false);
+        } else {
+            vb.addQuad(dx1, dy1, dh1, dy2, tx1, ty1, th1, ty2);
+            vb.addQuad(dh1, dy1, dh2, dy2, th1, ty1, th2, ty2);
+            vb.addQuad(dh2, dy1, dx2, dy2, th2, ty1, tx2, ty2);
+        }
     }
 
     @Override
@@ -498,9 +508,15 @@ public abstract class BaseGraphics implements RectShadowGraphics {
         float tv2 = (cy1 + sv2) / ph;
 
         VertexBuffer vb = context.getVertexBuffer();
-        vb.addQuad(dx1, dy1, dx2, dv1, tx1, ty1, tx2, tv1);
-        vb.addQuad(dx1, dv1, dx2, dv2, tx1, tv1, tx2, tv2);
-        vb.addQuad(dx1, dv2, dx2, dy2, tx1, tv2, tx2, ty2);
+        if (context.isSuperShaderEnabled()) {
+            vb.addSuperQuad(dx1, dy1, dx2, dv1, tx1, ty1, tx2, tv1, false);
+            vb.addSuperQuad(dx1, dv1, dx2, dv2, tx1, tv1, tx2, tv2, false);
+            vb.addSuperQuad(dx1, dv2, dx2, dy2, tx1, tv2, tx2, ty2, false);
+        } else {
+            vb.addQuad(dx1, dy1, dx2, dv1, tx1, ty1, tx2, tv1);
+            vb.addQuad(dx1, dv1, dx2, dv2, tx1, tv1, tx2, tv2);
+            vb.addQuad(dx1, dv2, dx2, dy2, tx1, tv2, tx2, ty2);
+        }
     }
 
     @Override
@@ -549,17 +565,31 @@ public abstract class BaseGraphics implements RectShadowGraphics {
         float tv2 = (cy1 + sv2) / ph;
 
         VertexBuffer vb = context.getVertexBuffer();
-        vb.addQuad(dx1, dy1, dh1, dv1, tx1, ty1, th1, tv1);
-        vb.addQuad(dh1, dy1, dh2, dv1, th1, ty1, th2, tv1);
-        vb.addQuad(dh2, dy1, dx2, dv1, th2, ty1, tx2, tv1);
+        if (context.isSuperShaderEnabled()) {
+            vb.addSuperQuad(dx1, dy1, dh1, dv1, tx1, ty1, th1, tv1, false);
+            vb.addSuperQuad(dh1, dy1, dh2, dv1, th1, ty1, th2, tv1, false);
+            vb.addSuperQuad(dh2, dy1, dx2, dv1, th2, ty1, tx2, tv1, false);
 
-        vb.addQuad(dx1, dv1, dh1, dv2, tx1, tv1, th1, tv2);
-        vb.addQuad(dh1, dv1, dh2, dv2, th1, tv1, th2, tv2);
-        vb.addQuad(dh2, dv1, dx2, dv2, th2, tv1, tx2, tv2);
+            vb.addSuperQuad(dx1, dv1, dh1, dv2, tx1, tv1, th1, tv2, false);
+            vb.addSuperQuad(dh1, dv1, dh2, dv2, th1, tv1, th2, tv2, false);
+            vb.addSuperQuad(dh2, dv1, dx2, dv2, th2, tv1, tx2, tv2, false);
 
-        vb.addQuad(dx1, dv2, dh1, dy2, tx1, tv2, th1, ty2);
-        vb.addQuad(dh1, dv2, dh2, dy2, th1, tv2, th2, ty2);
-        vb.addQuad(dh2, dv2, dx2, dy2, th2, tv2, tx2, ty2);
+            vb.addSuperQuad(dx1, dv2, dh1, dy2, tx1, tv2, th1, ty2, false);
+            vb.addSuperQuad(dh1, dv2, dh2, dy2, th1, tv2, th2, ty2, false);
+            vb.addSuperQuad(dh2, dv2, dx2, dy2, th2, tv2, tx2, ty2, false);
+        } else {
+            vb.addQuad(dx1, dy1, dh1, dv1, tx1, ty1, th1, tv1);
+            vb.addQuad(dh1, dy1, dh2, dv1, th1, ty1, th2, tv1);
+            vb.addQuad(dh2, dy1, dx2, dv1, th2, ty1, tx2, tv1);
+
+            vb.addQuad(dx1, dv1, dh1, dv2, tx1, tv1, th1, tv2);
+            vb.addQuad(dh1, dv1, dh2, dv2, th1, tv1, th2, tv2);
+            vb.addQuad(dh2, dv1, dx2, dv2, th2, tv1, tx2, tv2);
+
+            vb.addQuad(dx1, dv2, dh1, dy2, tx1, tv2, th1, ty2);
+            vb.addQuad(dh1, dv2, dh2, dy2, th1, tv2, th2, ty2);
+            vb.addQuad(dh2, dv2, dx2, dy2, th2, tv2, tx2, ty2);
+        }
     }
 
     public void drawTextureVO(Texture tex,

@@ -159,6 +159,7 @@ FrameLoaderClientJava::FrameLoaderClientJava(const JLObject &webPage)
 void FrameLoaderClientJava::frameLoaderDestroyed()
 {
     JNIEnv* env = WebCore_GetJavaEnv();
+    initRefs(env);
 
     ASSERT(m_webPage);
     ASSERT(m_frame);

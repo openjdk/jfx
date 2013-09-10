@@ -95,8 +95,6 @@ public:
     static void SetErrorMessage(char const *msg);
     static void SetErrorMessageV(char const *msg, ...);
 
-    HWND CreateDeviceFocusWindow(int adapterOrdinal);
-
 private:
     D3DPipelineManager(IConfig &);
 
@@ -149,7 +147,6 @@ private:
     static D3DPipelineManager* pMgr;
 
     D3DMULTISAMPLE_TYPE userMultiSampleType;
-    ATOM classAtom;
 };
 
 #define OS_UNDEFINED    (0 << 0)

@@ -29,6 +29,7 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 
 import com.sun.javafx.geom.transform.Affine3D;
+import com.sun.javafx.geom.transform.BaseTransform;
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
 
@@ -524,6 +525,16 @@ public class Translate extends Transform {
     @Override
     public void impl_apply(final Affine3D trans) {
         trans.translate(getX(), getY(), getZ());
+    }
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    @Override
+    public BaseTransform impl_derive(final BaseTransform trans) {
+        return trans.deriveWithTranslation(getX(), getY(), getZ());
     }
 
     @Override

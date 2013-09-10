@@ -48,8 +48,6 @@ bool OS::isWinverAtleast(int maj, int min) {
         maj == LOBYTE(LOWORD(winVer)) && min <= HIBYTE(LOWORD(winVer));
 }
 
-static LPCTSTR D3DFocusWindowClassName = L"D3DPrismFocusWindow";
-
 inline bool isForcedGPU(IConfig &cfg) { return cfg.getBool("forceGPU"); }
 
 D3DPipelineManager * D3DPipelineManager::CreateInstance(IConfig &cfg) {
@@ -74,7 +72,6 @@ D3DPipelineManager::D3DPipelineManager(IConfig &cfg)
     pd3d9Ex = NULL;
     pAdapters = NULL;
     adapterCount = 0;
-    classAtom = 0;
 
     devType = SelectDeviceType();
 
@@ -169,10 +166,6 @@ HRESULT D3DPipelineManager::ReleaseAdapters()
         }
         delete[] pAdapters;
         pAdapters = NULL;
-    }
-    if (classAtom != 0) {
-        UnregisterClass(D3DFocusWindowClassName, GetModuleHandle(NULL));
-        classAtom = 0;
     }
     return S_OK;
 }
@@ -590,42 +583,6 @@ D3DPipelineManager::GetMatchingDepthStencilFormat(UINT adapterOrdinal,
         break;
     }
     return newFormat;
-}
-
-HWND D3DPipelineManager::CreateDeviceFocusWindow(int adapterOrdinal) {
-
-    if (classAtom == 0) {
-        WNDCLASS wc = {};
-        wc.hInstance = GetModuleHandle(NULL);
-        wc.lpfnWndProc = DefWindowProc;
-        wc.lpszClassName = D3DFocusWindowClassName;
-
-        classAtom = RegisterClass(&wc);
-        if (classAtom == 0) {
-            DWORD lastError = GetLastError();
-            RlsTraceLn1(NWT_TRACE_ERROR,
-                "CreateFocusWindow: error registering window class, lastError=%d", lastError);
-            return 0;
-        }
-    }
-
-    MONITORINFO mi = { sizeof(MONITORINFO) };
-    HMONITOR hMon = pd3d9->GetAdapterMonitor(adapterOrdinal);
-    if (hMon == 0 || !GetMonitorInfo(hMon, (LPMONITORINFO)&mi)) {
-        RlsTraceLn1(NWT_TRACE_ERROR,
-            "CreateFocusWindow: error getting monitor info for adapter=%d", adapterOrdinal);
-        return 0;
-    }
-
-    HWND hWnd = CreateWindow(D3DFocusWindowClassName, D3DFocusWindowClassName, WS_POPUP,
-        mi.rcMonitor.left, mi.rcMonitor.top, 1, 1,
-        NULL, NULL, GetModuleHandle(NULL), NULL);
-
-    if (hWnd == 0) {
-        RlsTraceLn(NWT_TRACE_ERROR, "CreateFocusWindow: CreateWindow failed");
-    }
-
-    return hWnd;
 }
 
 HRESULT D3DPipelineManager::GetD3DContext(UINT adapterOrdinal,

@@ -46,6 +46,12 @@
 
 #BUILD_JAVADOC = true
 
+# Specifies whether to do a full test run or a "smoke test" run. By default we
+# do a smoke test run which excludes all tests that show a window or play media.
+# Certain long running tests might also be excluded when this is not set.
+
+#FULL_TEST = true
+
 # Specify the COMPILE_TARGETS when performing cross compiles. A Cross-Compile is
 # when you build for a platform other than the one you are building on. For example,
 # to build for Apple iOS, you would specify ios as one of the COMPILE_TARGETS.

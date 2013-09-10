@@ -39,7 +39,8 @@ class LinkTask extends DefaultTask {
         lib.getParentFile().mkdirs();
         project.exec({
             commandLine(linker);
-            args(objectDir.listFiles());
+            // Exclude parfait files (.bc)
+            args(objectDir.listFiles().findAll{ !it.getAbsolutePath().endsWith(".bc") });
             if (project.IS_WINDOWS) {
                 args("/out:$lib");
             } else {

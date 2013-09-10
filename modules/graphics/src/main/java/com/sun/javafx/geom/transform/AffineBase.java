@@ -2841,6 +2841,28 @@ public abstract class AffineBase extends BaseTransform {
     }
 
     /**
+     * Similar to {@link #concatenate(com.sun.javafx.geom.transform.BaseTransform)},
+     * passing the individual elements of the transformation.
+     */
+    public void concatenate(double Txx, double Txy, double Txt,
+                            double Tyx, double Tyy, double Tyt)
+    {
+        double rxx = (mxx * Txx + mxy * Tyx /* + mxt * 0.0 */);
+        double rxy = (mxx * Txy + mxy * Tyy /* + mxt * 0.0 */);
+        double rxt = (mxx * Txt + mxy * Tyt + mxt /* * 1.0 */);
+        double ryx = (myx * Txx + myy * Tyx /* + myt * 0.0 */);
+        double ryy = (myx * Txy + myy * Tyy /* + myt * 0.0 */);
+        double ryt = (myx * Txt + myy * Tyt + myt /* * 1.0 */);
+        this.mxx = rxx;
+        this.mxy = rxy;
+        this.mxt = rxt;
+        this.myx = ryx;
+        this.myy = ryy;
+        this.myt = ryt;
+        updateState();
+    }
+
+    /**
      * Sets this transform to the inverse of itself.
      * The inverse transform Tx' of this transform Tx
      * maps coordinates transformed by Tx back

@@ -25,69 +25,57 @@
 
 package javafx.fxml;
 
-import com.sun.javafx.fxml.ObservableListChangeEvent;
-import com.sun.javafx.fxml.ObservableMapChangeEvent;
 import java.net.URL;
 import java.util.*;
-import javafx.collections.ObservableList;
-import javafx.collections.ObservableMap;
+
+import javafx.collections.*;
 
 public class RT_17714Controller implements Initializable {
     @FXML private Widget root;
 
-    private ArrayList<Widget> children = new ArrayList<Widget>();
-    private HashMap<String, Object> properties = new HashMap<String, Object>();
+    boolean listWithParamCalled = false;
+    boolean listNoParamCalled = false;
+    boolean setWithParamCalled = false;
+    boolean setNoParamCalled = false;
+    boolean mapWithParamCalled = false;
+    boolean mapNoParamCalled = false;
+
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        children.addAll(root.getChildren());
-        properties.putAll(root.getProperties());
-    }
-
-    public List<Widget> getChildren() {
-        return children;
-    }
-
-    public Map<String, Object> getProperties() {
-        return properties;
     }
 
     @FXML
     @SuppressWarnings("unchecked")
-    protected void handleChildListChange(ObservableListChangeEvent<Widget> event) {
-        ObservableList<Widget> list = (ObservableList<Widget>)event.getSource();
-        int from = event.getFrom();
-        int to = event.getTo();
-        List<Widget> removed = event.getRemoved();
-
-        if (event.getEventType() == ObservableListChangeEvent.ADD) {
-            children.addAll(list.subList(from, to));
-        } else if (event.getEventType() == ObservableListChangeEvent.UPDATE) {
-            if (removed != null) {
-                for (int i = from, n = from + removed.size(); i < n; i++) {
-                    children.set(i, list.get(i));
-                }
-            }
-        } else if (event.getEventType() == ObservableListChangeEvent.REMOVE) {
-            children.subList(from, from + removed.size()).clear();
-        } else {
-            throw new UnsupportedOperationException();
-        }
+    protected void handleChildListChange(ListChangeListener.Change<Widget> event) {
+        listWithParamCalled = true;
+    }
+    @FXML
+    @SuppressWarnings("unchecked")
+    protected void handleChildListChange() {
+        listNoParamCalled = true;
     }
 
     @FXML
     @SuppressWarnings("unchecked")
-    protected void handlePropertiesChange(ObservableMapChangeEvent<String, Object> event) {
-        ObservableMap<String, Object> map = (ObservableMap<String, Object>)event.getSource();
-        String key = event.getKey();
+    protected void handlePropertiesChange(MapChangeListener.Change<String, Object> event) {
+        mapWithParamCalled = true;
+    }
 
-        if (event.getEventType() == ObservableMapChangeEvent.ADD
-            || event.getEventType() == ObservableMapChangeEvent.UPDATE) {
-            properties.put(key, map.get(key));
-        } else if (event.getEventType() == ObservableMapChangeEvent.REMOVE) {
-            properties.remove(key);
-        } else {
-            throw new UnsupportedOperationException();
-        }
+    @FXML
+    @SuppressWarnings("unchecked")
+    protected void handlePropertiesChange() {
+        mapNoParamCalled = true;
+    }
+
+    @FXML
+    @SuppressWarnings("unchecked")
+    protected void handleSetChange(SetChangeListener.Change<String> event) {
+        setWithParamCalled = true;
+    }
+    @FXML
+    @SuppressWarnings("unchecked")
+    protected void handleSetChange() {
+        setNoParamCalled = true;
     }
 }

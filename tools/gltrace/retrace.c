@@ -2461,7 +2461,7 @@ process(int frames)
         // prefix commands
         if (cmd == OPC_THREAD) {
             curThread = getPtr();
-            if (printFlag) {
+            if (printFlag && !printThread) {
                 fprintf(stdout, "THREAD %llu\n", curThread);
             }
             cmd = getCmd();

@@ -105,7 +105,7 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved) {
 jobject jFXActivity;
 jclass jFXActivityClass;
 jmethodID jFXActivity_getInstance;
-jmethodID jFXActivity_getLDPath;
+jmethodID jFXActivity_getDataDir;
 jmethodID jFXActivity_showIME;
 jmethodID jFXActivity_hideIME;
 jmethodID jFXActivity_shutdown;
@@ -134,20 +134,27 @@ void init_ids(JNIEnv *env) {
     jFXActivity = (*env)->CallStaticObjectMethod(env, jFXActivityClass, jFXActivity_getInstance);
     CHECK_EXCEPTION(env);
 
-    jFXActivity_getLDPath = (*env)->GetMethodID(env, jFXActivityClass,
-            "getLDPath", "()Ljava/lang/String;");
+    jFXActivity_getDataDir = (*env)->GetMethodID(env, jFXActivityClass,
+            "getDataDir", "()Ljava/lang/String;");
     CHECK_EXCEPTION(env);
 }
 
+#define LIB_DIR     "lib"
+#define PATH_SEP    "/"
+
 void init_functions(JNIEnv *env) {
     const char *libglass_name = "libglass_lens_eglfb.so";
-    jstring jldpath = (*env)->CallObjectMethod(env, jFXActivity, jFXActivity_getLDPath);
-    const char *cpath = (*env)->GetStringUTFChars(env, jldpath, 0);
-    int cpath_len = (*env)->GetStringUTFLength(env, jldpath);
+    jstring jdatadir = (*env)->CallObjectMethod(env, jFXActivity, jFXActivity_getDataDir);
+    
+    const char *cpath = (*env)->GetStringUTFChars(env, jdatadir, 0);
+    int cpath_len = (*env)->GetStringUTFLength(env, jdatadir);
 
-    char *fullpath = (char *) calloc(cpath_len + strlen(libglass_name) + 2, 1);
+    char *fullpath = (char *) calloc(cpath_len + strlen(libglass_name) + 
+                                     2 * strlen(PATH_SEP) + strlen(LIB_DIR) + 1, 1);
     strcpy(fullpath, cpath);
-    strcat(fullpath, "/");
+    strcat(fullpath, PATH_SEP);
+    strcat(fullpath, LIB_DIR);
+    strcat(fullpath, PATH_SEP);
     strcat(fullpath, libglass_name);
 
     void *libglass = dlopen(fullpath, RTLD_LAZY | RTLD_GLOBAL);

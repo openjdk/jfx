@@ -69,7 +69,7 @@ public final class TransformHelper {
     /**
      * Asserts the {@code matrix} equals to the specified expected values
      */
-    public static void assertMatrix(Affine3D matrix,
+    public static void assertMatrix(BaseTransform matrix,
             double mxx, double mxy, double mxz, double tx,
             double myx, double myy, double myz, double ty,
             double mzx, double mzy, double mzz, double tz) {
@@ -247,6 +247,41 @@ public final class TransformHelper {
                 rzx, rzy, rzz, rzt);
     }
 
+    /**
+     * Concatenates the two transforms.
+     */
+    public static Transform concatenate(BaseTransform t1, Transform t2) {
+
+        final double txx = t2.getMxx();
+        final double txy = t2.getMxy();
+        final double txz = t2.getMxz();
+        final double ttx = t2.getTx();
+        final double tyx = t2.getMyx();
+        final double tyy = t2.getMyy();
+        final double tyz = t2.getMyz();
+        final double tty = t2.getTy();
+        final double tzx = t2.getMzx();
+        final double tzy = t2.getMzy();
+        final double tzz = t2.getMzz();
+        final double ttz = t2.getTz();
+        final double rxx = (t1.getMxx() * txx + t1.getMxy() * tyx + t1.getMxz() * tzx /* + getMxt * 0.0 */);
+        final double rxy = (t1.getMxx() * txy + t1.getMxy() * tyy + t1.getMxz() * tzy /* + getMxt * 0.0 */);
+        final double rxz = (t1.getMxx() * txz + t1.getMxy() * tyz + t1.getMxz() * tzz /* + getMxt * 0.0 */);
+        final double rxt = (t1.getMxx() * ttx + t1.getMxy() * tty + t1.getMxz() * ttz + t1.getMxt() /* * 1.0 */);
+        final double ryx = (t1.getMyx() * txx + t1.getMyy() * tyx + t1.getMyz() * tzx /* + getMyt * 0.0 */);
+        final double ryy = (t1.getMyx() * txy + t1.getMyy() * tyy + t1.getMyz() * tzy /* + getMyt * 0.0 */);
+        final double ryz = (t1.getMyx() * txz + t1.getMyy() * tyz + t1.getMyz() * tzz /* + getMyt * 0.0 */);
+        final double ryt = (t1.getMyx() * ttx + t1.getMyy() * tty + t1.getMyz() * ttz + t1.getMyt() /* * 1.0 */);
+        final double rzx = (t1.getMzx() * txx + t1.getMzy() * tyx + t1.getMzz() * tzx /* + getMzt * 0.0 */);
+        final double rzy = (t1.getMzx() * txy + t1.getMzy() * tyy + t1.getMzz() * tzy /* + getMzt * 0.0 */);
+        final double rzz = (t1.getMzx() * txz + t1.getMzy() * tyz + t1.getMzz() * tzz /* + getMzt * 0.0 */);
+        final double rzt = (t1.getMzx() * ttx + t1.getMzy() * tty + t1.getMzz() * ttz + t1.getMzt() /* * 1.0 */);
+
+        return TransformUtils.immutableTransform(
+                rxx, rxy, rxz, rxt,
+                ryx, ryy, ryz, ryt,
+                rzx, rzy, rzz, rzt);
+    }
 
     /**
      * Computes determinant of the specified transform.
@@ -715,6 +750,14 @@ public final class TransformHelper {
         @Override
         public void impl_apply(Affine3D t) {
             t.concatenate(
+                    getMxx(), getMxy(), getMxz(), getTx(),
+                    getMyx(), getMyy(), getMyz(), getTy(),
+                    getMzx(), getMzy(), getMzz(), getTz());
+        }
+
+        @Override
+        public BaseTransform impl_derive(BaseTransform t) {
+            return t.deriveWithConcatenation(
                     getMxx(), getMxy(), getMxz(), getTx(),
                     getMyx(), getMyy(), getMyz(), getTy(),
                     getMzx(), getMzy(), getMzz(), getTz());

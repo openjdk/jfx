@@ -3,6 +3,7 @@
  */
 package com.sun.javafx.webkit.prism;
 
+import com.sun.glass.ui.Screen;
 import com.sun.media.jfxmedia.MediaManager;
 import com.sun.prism.Graphics;
 import com.sun.webkit.perf.WCFontPerfLogger;
@@ -15,6 +16,13 @@ import java.nio.ByteOrder;
 
 public final class PrismGraphicsManager extends WCGraphicsManager {
 
+    private float highestPixelScale;
+    {
+        for (Screen s : Screen.getScreens()) {
+            highestPixelScale = Math.max(s.getScale(), highestPixelScale);
+        }
+    }
+    
     @Override protected WCImageDecoder getImageDecoder() {
         return new WCImageDecoderImpl();
     }
@@ -54,7 +62,7 @@ public final class PrismGraphicsManager extends WCGraphicsManager {
     }
 
     @Override public WCPageBackBuffer createPageBackBuffer() {
-        return new WCPageBackBufferImpl();
+        return new WCPageBackBufferImpl(highestPixelScale);
     }
 
     @Override
@@ -74,7 +82,7 @@ public final class PrismGraphicsManager extends WCGraphicsManager {
 
     @Override
     protected WCImage createRTImage(int w, int h) {
-        return new RTImage(w, h);
+        return new RTImage(w, h, highestPixelScale);
     }
 
     @Override public WCImage getIconImage(String iconURL) {
