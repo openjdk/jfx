@@ -37,6 +37,7 @@ import javafx.util.Pair;
 
 import com.sun.javafx.tk.TKClipboard;
 import com.sun.javafx.tk.Toolkit;
+import java.security.AllPermission;
 
 /**
  * Represents an operating system clipboard, on which data may be placed during, for
@@ -158,20 +159,23 @@ public class Clipboard {
      * the system will invoke the provided callback to stream the image data over to the client.
      */
 
-    private static Clipboard systemClipboard = null;
-
     private final AccessControlContext acc = AccessController.getContext();
-    
+
     /**
      * Gets the current system clipboard, through which data can be stored and
      * retrieved. There is ever only one system clipboard for a JavaFX application.
      * @return The single system clipboard, used for cut / copy / paste operations
      */
     public static Clipboard getSystemClipboard() {
-        if (systemClipboard == null) {
-            systemClipboard = new Clipboard(Toolkit.getToolkit().getSystemClipboard());
+        try {
+            final SecurityManager securityManager = System.getSecurityManager();
+            if (securityManager != null) {
+                securityManager.checkPermission(new AllPermission());
+            }
+            return getSystemClipboardImpl();
+        } catch (final SecurityException e) {
+            return getLocalClipboardImpl();
         }
-        return systemClipboard;
     }
 
     TKClipboard peer;
@@ -389,5 +393,25 @@ public class Clipboard {
     @Deprecated
     public boolean impl_contentPut() {
         return contentPut;
+    }
+
+    private static Clipboard systemClipboard;
+
+    private static synchronized Clipboard getSystemClipboardImpl() {
+        if (systemClipboard == null) {
+            systemClipboard =
+                    new Clipboard(Toolkit.getToolkit().getSystemClipboard());
+        }
+        return systemClipboard;
+    }
+
+    private static Clipboard localClipboard;
+
+    private static synchronized Clipboard getLocalClipboardImpl() {
+        if (localClipboard == null) {
+            localClipboard =
+                    new Clipboard(Toolkit.getToolkit().createLocalClipboard());
+        }
+        return localClipboard;
     }
 }
