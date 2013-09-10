@@ -329,6 +329,13 @@ if (hasProperty("BUILD_JAVADOC")) {
 }
 ext.BUILD_JAVADOC = buildJavadoc;
 
+// Specifies whether to run full tests (true) or smoke tests (false)
+def isFullTest = false;
+if (hasProperty("FULL_TEST")) {
+    isFullTest = Boolean.parseBoolean(FULL_TEST);
+}
+ext.IS_FULL_TEST = isFullTest;
+
 // Specify the build configuration (Release or Debug)
 defineProperty("CONF", "Release")
 ext.IS_DEBUG = CONF == "Debug"
@@ -1415,6 +1422,20 @@ project(":designTime") {
     }
 }
 
+// This project is for system tests that need to run with a full SDK.
+// Most of them display a stage or do other things that preclude running
+// them in a shared JVM or as part of the "smoke test" run (which must
+// not pop up any windows or use audio). As such, they are only enabled
+// when FULL_TEST is specified, and each test runs in its own JVM
+project(":systemTests") {
+    def sdkDir = "build/${defaultHostTarget}-sdk"
+    test {
+        enabled = IS_FULL_TEST
+        forkEvery = 1
+        classpath = files("$sdkDir/rt/lib/ext/jfxrt.jar") + classpath
+    }
+}
+
 project(":fxpackager") {
     tasks.all {
         if (!COMPILE_FXPACKAGER) it.enabled = false
@@ -1673,6 +1694,7 @@ task clean() {
     }
 }
 
+
 task javadoc(type: Javadoc) {
     enabled = BUILD_JAVADOC
     group = "Basic"
@@ -1710,7 +1732,10 @@ task javadoc(type: Javadoc) {
     dependsOn(projectsToDocument.collect { project -> project.getTasksByName("classes", true)});
 }
 
-task jfxrt()
+task jfxrt() {
+    def t = project(":systemTests").test
+    if (t.enabled) t.dependsOn(jfxrt)
+}
 
 task sdk() {
     dependsOn(checkJfxrtJar)
@@ -1723,16 +1748,6 @@ task copyAppsArtifacts()
 task apps() {
     dependsOn(sdk)
     dependsOn(copyAppsArtifacts)
-}
-
-task fullTest() {
-// TODO: WHY DOES THE FOLLOWING NOT WORK???
-//    dependsOn(test)
-
-    // TODO additional tests
-    doLast {
-        println "fullTest task is not implemented"
-    }
 }
 
 task findbugs() {
