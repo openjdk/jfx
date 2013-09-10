@@ -32,7 +32,8 @@ import com.sun.prism.PhongMaterial;
 public class NGHelper {
 
     public static NGPhongMaterial getMaterial(NGShape3D ngShape3D) {
-        return ngShape3D.material;
+        // TODO: return ngShape3D.test_getMaterial();
+        throw new UnsupportedOperationException("not yet supported");
     }
 
     public static PhongMaterial createMaterial(NGPhongMaterial mat) {

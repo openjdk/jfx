@@ -63,13 +63,17 @@ public class RT30650GUI extends Application {
         return passed;
     }
 
+    private AnimationTimer animationTimer;
+    private TKPulseListener pulseListener;
+
     @Override
     public void start(final Stage stage) {
         
         // start constant pulse activity
-        new AnimationTimer() {
+        animationTimer = new AnimationTimer() {
             @Override public void handle(long l) {}
-        }.start();
+        };
+        animationTimer.start();
 
         swingNode = new SwingNode();
 
@@ -89,7 +93,7 @@ public class RT30650GUI extends Application {
                 panel.setBackground(Color.RED);
                 swingNode.setContent(panel);
                 
-                com.sun.javafx.tk.Toolkit.getToolkit().addSceneTkPulseListener(new TKPulseListener() {
+                pulseListener = new TKPulseListener() {
                     @Override
                     public void pulse() {
                         if (--pulseCount == 0) {
@@ -107,7 +111,8 @@ public class RT30650GUI extends Application {
                             });
                         }
                     }
-                });
+                };
+                com.sun.javafx.tk.Toolkit.getToolkit().addSceneTkPulseListener(pulseListener);
             }
         });        
     }
