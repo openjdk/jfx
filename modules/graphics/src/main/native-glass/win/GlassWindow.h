@@ -104,6 +104,9 @@ public:
 
     virtual BOOL EnterFullScreenMode(GlassView * view, BOOL animate, BOOL keepRatio);
     virtual void ExitFullScreenMode(BOOL animate);
+
+    void SetIcon(HICON hIcon);
+
 protected:
     virtual LRESULT WindowProc(UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -145,6 +148,8 @@ private:
     BYTE m_alpha;
 
     HMENU m_hMenu;
+
+    HICON m_hIcon;
 
     //NOTE: this is not a rectangle. The left, top, right, and bottom
     //components contain corresponding insets values.
