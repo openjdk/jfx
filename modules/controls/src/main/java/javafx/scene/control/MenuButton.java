@@ -237,7 +237,9 @@ public class MenuButton extends ButtonBase {
      */
     @Override
     public void fire() {
-        fireEvent(new ActionEvent());
+        if (!isDisabled()) {
+            fireEvent(new ActionEvent());
+        }
     }
 
     /** {@inheritDoc} */

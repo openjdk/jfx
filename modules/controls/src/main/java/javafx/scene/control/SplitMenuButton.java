@@ -105,7 +105,9 @@ public class SplitMenuButton extends MenuButton {
      * Call the action when button is pressed.
      */
     @Override public void fire() {
-        fireEvent(new ActionEvent());
+        if (!isDisabled()) {
+            fireEvent(new ActionEvent());
+        }
     }
 
     /***************************************************************************
