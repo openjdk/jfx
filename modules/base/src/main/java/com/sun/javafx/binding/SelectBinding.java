@@ -94,7 +94,7 @@ public class SelectBinding {
                 return null;
             }
             try {
-                return (T)helper.getObservableValue().getValue();
+                return (T)observable.getValue();
             } catch (ClassCastException ex) {
                 Logging.getLogger().warning("Value of select-binding has wrong type, returning null.", ex);
             }

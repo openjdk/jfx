@@ -16,10 +16,23 @@ static jclass GetFileSystemClass(JNIEnv* env)
 
 namespace WebCore {
 
-bool fileExists(const String&)
+bool fileExists(const String& path)
 {
-    notImplemented();
-    return false;
+    JNIEnv* env = WebCore_GetJavaEnv();
+
+    static jmethodID mid = env->GetStaticMethodID(
+            GetFileSystemClass(env),
+            "fwkFileExists",
+            "(Ljava/lang/String;)Z");
+    ASSERT(mid);
+
+    jboolean result = env->CallStaticBooleanMethod(
+            GetFileSystemClass(env),
+            mid,
+            (jstring)path.toJavaString(env));
+    CheckAndClearException(env);
+
+    return jbool_to_bool(result);
 }
 
 bool deleteFile(const String&)
@@ -66,14 +79,41 @@ bool getFileModificationTime(const String&, time_t& result)
 
 String pathByAppendingComponent(const String& path, const String& component)
 {
-    notImplemented();
-    return path + "/" + component;
+    JNIEnv* env = WebCore_GetJavaEnv();
+
+    static jmethodID mid = env->GetStaticMethodID(
+            GetFileSystemClass(env),
+            "fwkPathByAppendingComponent",
+            "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;");
+    ASSERT(mid);
+
+    JLString result = static_cast<jstring>(env->CallStaticObjectMethod(
+            GetFileSystemClass(env),
+            mid,
+            (jstring)path.toJavaString(env),
+            (jstring)component.toJavaString(env)));
+    CheckAndClearException(env);
+
+    return String(env, result);
 }
 
 bool makeAllDirectories(const String& path)
 {
-    notImplemented();
-    return false;
+    JNIEnv* env = WebCore_GetJavaEnv();
+
+    static jmethodID mid = env->GetStaticMethodID(
+            GetFileSystemClass(env),
+            "fwkMakeAllDirectories",
+            "(Ljava/lang/String;)Z");
+    ASSERT(mid);
+
+    jboolean result = env->CallStaticBooleanMethod(
+            GetFileSystemClass(env),
+            mid,
+            (jstring)path.toJavaString(env));
+    CheckAndClearException(env);
+
+    return jbool_to_bool(result);
 }
 
 String homeDirectoryPath()

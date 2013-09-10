@@ -109,6 +109,8 @@ class BackgroundConverter extends StyleConverterImpl<ParsedValue[], Background> 
                 if (imageUrls[i] == null) continue;
 
                 final Image image = StyleManager.getInstance().getCachedImage(imageUrls[i]);
+                if (image == null) continue;
+
                 final RepeatStruct repeat = (repeats.length > 0) ?
                         repeats[i <= lastRepeatIndex ? i : lastRepeatIndex] : null; // min
                 final BackgroundPosition position = (positions.length > 0) ?

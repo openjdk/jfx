@@ -29,6 +29,7 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 
 import com.sun.javafx.geom.transform.Affine3D;
+import com.sun.javafx.geom.transform.BaseTransform;
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
 
@@ -760,6 +761,25 @@ public class Scale extends Transform {
             trans.translate(-getPivotX(), -getPivotY(), -getPivotZ());
         } else {
             trans.scale(getX(), getY(), getZ());
+        }
+    }
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    @Override
+    public BaseTransform impl_derive(BaseTransform trans) {
+        if (isIdentity()) {
+            return trans;
+        }
+        if (getPivotX() != 0 || getPivotY() != 0 || getPivotZ() != 0) {
+            trans = trans.deriveWithTranslation(getPivotX(), getPivotY(), getPivotZ());
+            trans = trans.deriveWithScale(getX(), getY(), getZ());
+            return trans.deriveWithTranslation(-getPivotX(), -getPivotY(), -getPivotZ());
+        } else {
+            return trans.deriveWithScale(getX(), getY(), getZ());
         }
     }
 

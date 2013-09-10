@@ -29,6 +29,7 @@ import com.sun.javafx.tk.Toolkit;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.collections.FXCollections;
+import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.input.KeyCode;
 import java.util.List;
@@ -1370,7 +1371,7 @@ public class TreeViewKeyInputTest {
         assertEquals(2, rt31577_count);
     }
 
-    @Ignore @Test public void test_rt32383_pageDown() {
+    @Test public void test_rt32383_pageDown() {
         // this test requires a lot of data
         for (int i = 0; i < 100; i++) {
             root.getChildren().add(new TreeItem<String>("Row " + i));
@@ -1382,19 +1383,19 @@ public class TreeViewKeyInputTest {
 
         final TreeItem<String> initialFocusOwner = fm.getFocusedItem();
 
-        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.CTRL);
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.getShortcutKey());
         Toolkit.getToolkit().firePulse();
         final TreeItem<String> newFocusOwner = fm.getFocusedItem();
         assertNotSame(initialFocusOwner, newFocusOwner);
 
-        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.CTRL);
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.getShortcutKey());
         Toolkit.getToolkit().firePulse();
         final TreeItem<String> nextFocusOwner = fm.getFocusedItem();
         assertNotSame(initialFocusOwner, nextFocusOwner);
         assertNotSame(newFocusOwner, nextFocusOwner);
     }
 
-    @Ignore @Test public void test_rt32383_pageUp() {
+    @Test public void test_rt32383_pageUp() {
         // this test requires a lot of data
         for (int i = 0; i < 100; i++) {
             root.getChildren().add(new TreeItem<String>("Row " + i));
@@ -1412,12 +1413,12 @@ public class TreeViewKeyInputTest {
 
         final TreeItem<String> initialFocusOwner = fm.getFocusedItem();
 
-        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.CTRL);
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.getShortcutKey());
         Toolkit.getToolkit().firePulse();
         final TreeItem<String> newFocusOwner = fm.getFocusedItem();
         assertNotSame(initialFocusOwner, newFocusOwner);
 
-        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.CTRL);
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.getShortcutKey());
         Toolkit.getToolkit().firePulse();
         final TreeItem<String> nextFocusOwner = fm.getFocusedItem();
         assertNotSame(initialFocusOwner, nextFocusOwner);
@@ -1490,5 +1491,72 @@ public class TreeViewKeyInputTest {
         final Object nextSelectionOwner =  sm.getSelectedItem();
         assertNotSame(initialSelectionOwner, nextSelectionOwner);
         assertNotSame(newSelectionOwner, nextSelectionOwner);
+    }
+
+    private int rt32783_count_start = 0;
+    private int rt32783_count_commit = 0;
+    private int rt32783_count_cancel = 0;
+    private int rt32783_count = 0;
+    @Test public void test_rt32683() {
+        // set up test
+        final int items = 8;
+        TreeItem<String> newRoot = new TreeItem<>("New root");
+        newRoot.setExpanded(false);
+        for (int i = 0; i < items; i++) {
+            newRoot.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        treeView.setRoot(newRoot);
+        treeView.setEditable(true);
+        treeView.setOnEditStart(new EventHandler() {
+            @Override public void handle(Event t) {
+                rt32783_count_start++;
+            }
+        });
+
+        treeView.setOnEditCommit(new EventHandler() {
+            @Override public void handle(Event t) {
+                rt32783_count_commit++;
+            }
+        });
+
+        treeView.setOnEditCancel(new EventHandler() {
+            @Override public void handle(Event t) {
+                rt32783_count_cancel++;
+            }
+        });
+
+        treeView.editingItemProperty().addListener(new InvalidationListener() {
+            @Override
+            public void invalidated(Observable observable) {
+                assertNotNull(treeView.getEditingItem());
+                System.out.println("editing item: " + treeView.getEditingItem());
+                rt32783_count++;
+            }
+        });
+
+        // start test
+//        final int middleIndex = items / 2;
+
+        newRoot.setExpanded(true);
+        Toolkit.getToolkit().firePulse();
+        newRoot.setExpanded(false);
+        Toolkit.getToolkit().firePulse();
+
+        final MultipleSelectionModel sm = treeView.getSelectionModel();
+        sm.clearAndSelect(0);
+
+        // need to get the cell before the editing starts
+//        TreeCell cell = (TreeCell)VirtualFlowTestUtils.getCell(treeView, 0);
+
+        // this forces the selected cell to go into editing mode
+        keyboard.doKeyPress(KeyCode.F2);
+//        Toolkit.getToolkit().firePulse();
+
+        assertEquals(1, rt32783_count_start);
+        assertEquals(0, rt32783_count_commit);
+        assertEquals(0, rt32783_count_cancel);
+//        assertTrue(cell.isEditing());
+        assertEquals(newRoot, treeView.getEditingItem());
     }
 }

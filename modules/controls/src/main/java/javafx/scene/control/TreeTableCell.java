@@ -533,9 +533,11 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         final int index = getIndex();
         final boolean isEmpty = isEmpty();
         final T oldValue = getItem();
+
+        final boolean indexExceedsItemCount = index >= itemCount;
         
         // there is a whole heap of reasons why we should just punt...
-        if (index >= itemCount ||
+        if (indexExceedsItemCount ||
                 index < 0 || 
                 columnIndex < 0 ||
                 !isVisible() ||
@@ -549,7 +551,12 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
             // refer to Ensemble8PopUpTree.png - in this case the arrows are being
             // shown as the new cells are instantiated with the arrows in the
             // children list, and are only hidden in updateItem.
-            if ((!isEmpty && oldValue != null) || isFirstRun) {
+            // RT-32621: There are circumstances where we need to updateItem,
+            // even when the index is greater than the itemCount. For example,
+            // RT-32621 identifies issues where a TreeTableView collapses a
+            // TreeItem but the custom cells remain visible. This is now
+            // resolved with the check for indexExceedsItemCount.
+            if ((!isEmpty && oldValue != null) || isFirstRun || indexExceedsItemCount) {
                 updateItem(null, true);
                 isFirstRun = false;
             }

@@ -150,6 +150,10 @@ public abstract class BaseContext {
         return getGlyphCache(strike, glyphCaches);
     }
 
+    public boolean isSuperShaderEnabled() {
+        return false;
+    }
+
     private GlyphCache getGlyphCache(FontStrike strike,
                                      Map<FontStrike, GlyphCache> glyphCaches) {
         GlyphCache glyphCache = glyphCaches.get(strike);

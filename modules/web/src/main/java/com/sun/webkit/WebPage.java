@@ -1708,7 +1708,7 @@ public final class WebPage {
         }
     }
 
-    public void print(final WCGraphicsContext gc, final int pageNumber) {
+    public void print(final WCGraphicsContext gc, final int pageNumber, final float width) {
         lockPage();
         try {
             if (isDisposed) {
@@ -1721,7 +1721,7 @@ public final class WebPage {
             Invoker.getInvoker().invokeOnEventThread(new Runnable() {
                 public void run() {
                     try {
-                        twkPrint(getPage(), rq, pageNumber);
+                        twkPrint(getPage(), rq, pageNumber, width);
                     } finally {
                         l.countDown();
                     }
@@ -1895,6 +1895,24 @@ public final class WebPage {
         lockPage();
         try {
             twkSetUserAgent(getPage(), userAgent);
+        } finally {
+            unlockPage();
+        }
+    }
+
+    public void setLocalStorageDatabasePath(String path) {
+        lockPage();
+        try {
+            twkSetLocalStorageDatabasePath(getPage(), path);
+        } finally {
+            unlockPage();
+        }
+    }
+
+    public void setLocalStorageEnabled(boolean enabled) {
+        lockPage();
+        try {
+            twkSetLocalStorageEnabled(getPage(), enabled);
         } finally {
             unlockPage();
         }
@@ -2417,7 +2435,7 @@ public final class WebPage {
     private native int twkGetFrameHeight(long pFrame);
     private native int twkBeginPrinting(long pPage, float width, float height);
     private native void twkEndPrinting(long pPage);
-    private native void twkPrint(long pPage, WCRenderQueue gc, int pageNumber);
+    private native void twkPrint(long pPage, WCRenderQueue gc, int pageNumber, float width);
     private native float twkAdjustFrameHeight(long pFrame, float oldTop, float oldBottom, float bottomLimit);
 
     private native int[] twkGetVisibleRect(long pFrame);
@@ -2488,6 +2506,8 @@ public final class WebPage {
     private native void twkSetUserStyleSheetLocation(long page, String url);
     private native String twkGetUserAgent(long page);
     private native void twkSetUserAgent(long page, String userAgent);
+    private native void twkSetLocalStorageDatabasePath(long page, String path);
+    private native void twkSetLocalStorageEnabled(long page, boolean enabled);
 
     private native int twkGetUnloadEventListenersCount(long pFrame);
 

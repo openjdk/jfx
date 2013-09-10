@@ -76,7 +76,7 @@ import javafx.collections.ObservableMap;
  *      right-clicks the column header area
  *    <li>Have the contents of the table be sorted (using 
  *      {@link #comparatorProperty() comparator}, {@link #sortable sortable} and
- *      {@link #sortTypeProperty() sortType})
+ *      sortType).
  * </ul>
  * </p>
  * 
@@ -222,9 +222,13 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     // --- Parent Column
     /**
      * This read-only property will always refer to the parent of this column,
-     * in the situation where nested columns are being used. To create a nested
-     * column is simply a matter of placing TableColumnBase instances inside the
-     * {@link #columns} ObservableList of a TableColumnBase.
+     * in the situation where nested columns are being used.
+     *
+     * <p>In the currently existing subclasses, to create a nested
+     * column is simply a matter of placing the relevant TableColumnBase instances
+     * inside the columns ObservableList (for example, see
+     * {@link javafx.scene.control.TableColumn#getColumns()} and
+     * {@link javafx.scene.control.TreeTableColumn#getColumns()}.
      */
     private ReadOnlyObjectWrapper<TableColumnBase<S,?>> parentColumn;
     void setParentColumn(TableColumnBase<S,?> value) { parentColumnPropertyImpl().set(value); }
@@ -265,7 +269,6 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
      * The id of this TableColumnBase. This simple string identifier is useful 
      * for finding a specific TableColumnBase within a UI control that uses 
      * TableColumnBase instances. The default value is {@code null}.
-     * @since JavaFX 2.2
      */
     private StringProperty id;
     public final void setId(String value) { idProperty().set(value); }
@@ -288,7 +291,6 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
      * <p>
      * Parsing this style might not be supported on some limited
      * platforms. It is recommended to use a standalone CSS file instead.
-     * @since JavaFX 2.2
      */
     private StringProperty style;
     public final void setStyle(String value) { styleProperty().set(value); }
@@ -310,7 +312,6 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
      * each element of the list is a style class to which this Node belongs.
      *
      * @see <a href="http://www.w3.org/TR/css3-selectors/#class-html">CSS3 class selectors</a>
-     * @since JavaFX 2.2
      */
     @Override public ObservableList<String> getStyleClass() {
         return styleClass;
@@ -321,7 +322,6 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     /**
      * <p>The graphic to show in the table column to allow the user to
      * indicate graphically what is in the column. </p>
-     * @since JavaFX 2.2
      */
     private ObjectProperty<Node> graphic;
     public final void setGraphic(Node value) {
@@ -353,8 +353,6 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
      * on screen to indicate whether the table column is part of the sort order, 
      * and if so, whether the sort is ascending or descending, and what position in 
      * the sort order it is in.
-     * 
-     * @since JavaFX 2.2
      */
     private ObjectProperty<Node> sortNode = new SimpleObjectProperty<Node>(this, "sortNode");
     public final void setSortNode(Node value) { sortNodeProperty().set(value); }
@@ -597,7 +595,6 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
       *
       * @return an observable map of properties on this table column for use 
       * primarily by application developers
-     * @since JavaFX 2.2
      */
     public final ObservableMap<Object, Object> getProperties() {
         if (properties == null) {
@@ -609,7 +606,6 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     /**
      * Tests if this table column has properties.
      * @return true if node has properties.
-     * @since JavaFX 2.2
      */
     public boolean hasProperties() {
         return properties != null && ! properties.isEmpty();
@@ -625,7 +621,6 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
      *
      * @param value The value to be stored - this can later be retrieved by calling
      *          {@link TableColumnBase#getUserData()}.
-     * @since JavaFX 2.2
      */
     public void setUserData(Object value) {
         getProperties().put(USER_DATA_KEY, value);
@@ -637,7 +632,6 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
      *
      * @return The Object that was previously set, or null if no property
      *          has been set or if null was set.
-     * @since JavaFX 2.2
      */
     public Object getUserData() {
         return getProperties().get(USER_DATA_KEY);

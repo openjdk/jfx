@@ -617,6 +617,30 @@ public class MyController {
 
 <p><assert id="handler_method_signature" group="event_handlers">In general, a handler method should conform to the signature of a standard event handler; that is, it should take a single argument of a type that extends <span class="code">javafx.event.Event</span> and should return void (similar to an event delegate in C#). The event argument often carries important and useful information about the nature of the event;</assert> <assert id="handler_method_opt_arg" group="event_handlers">however, it is optional and may be omitted if desired</assert>.</p>
 
+<p> One exception to this rule are collections. <span class="code">ObservableList</span>, <span class="code">ObservableMap</span> or <span class="code">ObservableSet</span>
+ uses a special <span class="code">onChange</span> attribute that points to a handler method with a <span class="code">ListChangeListner.Change</span>, <span class="code">MapChangeListener.Change</span> or <span class="code">SetChangeListener.Change</span> parameter respectively.
+
+<pre class="code">
+&lt;VBox fx:controller="com.foo.MyController"
+    xmlns:fx="http://javafx.com/fxml"&gt;
+    &lt;children onChange="#handleChildrenChange"/&gt;
+&lt;/VBox&gt;
+</pre>
+
+where the handler method looks like this:
+
+<pre class="code">
+package com.foo;
+
+import javafx.collections.ListChangeListener.Change;
+
+public class MyController {
+    public void handleChildrenChange(ListChangeListener.Change c) {
+        System.out.println("Children changed!");
+    }
+}
+</pre>
+
 <p>Controllers are discussed in more detail in a later section.</p>
 
 <h2><a name="scripting">Scripting</a></h2>

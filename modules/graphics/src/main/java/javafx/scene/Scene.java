@@ -138,6 +138,7 @@ import com.sun.javafx.tk.TKScenePaintListener;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.scene.LayoutFlags;
+import com.sun.prism.impl.PrismSettings;
 
 import sun.util.logging.PlatformLogger;
 import sun.util.logging.PlatformLogger.Level;
@@ -2337,14 +2338,12 @@ public class Scene implements EventTarget {
             if (firstPulse) {
                 if (PerformanceTracker.isLoggingEnabled()) {
                     PerformanceTracker.logEvent("Scene - first repaint - layout complete");
-                    AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                        @Override public Object run() {
-                            if (System.getProperty("sun.perflog.fx.firstpaintflush") != null) {
-                                PerformanceTracker.outputLog();
-                            }
-                            return null;
-                        }
-                    });
+                    if (PrismSettings.perfLogFirstPaintFlush) {
+                        PerformanceTracker.outputLog();
+                    }
+                    if (PrismSettings.perfLogFirstPaintExit) {
+                        System.exit(0);
+                    }
                 }
                 firstPulse = false;
             }
@@ -3445,6 +3444,30 @@ public class Scene implements EventTarget {
             }
 
             queue.fire();
+
+            if (pdrInProgress && pdrEventTargets.contains(removing)) {
+                int i = 0;
+                EventTarget trg = null;
+                while (trg != removing) {
+                    trg = pdrEventTargets.get(i++);
+
+                    // trg.setHover(false) - already taken care of
+                    // by the code above which sent a mouse exited event
+                    ((Node) trg).setPressed(false);
+                }
+                pdrEventTargets.subList(0, i).clear();
+
+                trg = pdrEventTargets.get(0);
+                final PickResult res = pdrEventTarget.getResult();
+                if (trg instanceof Node) {
+                    pdrEventTarget.setNodeResult(new PickResult((Node) trg,
+                            res.getIntersectedPoint(), res.getIntersectedDistance()));
+                } else {
+                    pdrEventTarget.setSceneResult(new PickResult(null,
+                            res.getIntersectedPoint(), res.getIntersectedDistance()),
+                            (Scene) trg);
+                }
+            }
         }
 
         private void handleEnterExit(MouseEvent e, TargetWrapper pickedTarget) {

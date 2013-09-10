@@ -506,12 +506,16 @@ public final class Background {
         for (BackgroundImage bi : images) {
             if (bi.opaque == null) {
                 // If the image is not yet loaded, just skip it
-                final com.sun.prism.Image platformImage = (com.sun.prism.Image) acc.getImageProperty(bi.image).get();
+                // Note: Unit test wants this to be com.sun.javafx.tk.PlatformImage, not com.sun.prism.Image
+                final com.sun.javafx.tk.PlatformImage platformImage = acc.getImageProperty(bi.image).get();
                 if (platformImage == null) continue;
 
                 // The image has been loaded, so update the opaque flag
-                assert platformImage != null;
-                bi.opaque = platformImage.isOpaque();
+                if (platformImage instanceof com.sun.prism.Image) {
+                    bi.opaque = ((com.sun.prism.Image)platformImage).isOpaque();
+                } else {
+                    continue;
+                }
             }
 
             // At this point we know that we're processing an image which has already been resolved

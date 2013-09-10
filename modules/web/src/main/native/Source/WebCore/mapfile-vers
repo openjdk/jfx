@@ -1909,6 +1909,8 @@ SUNWprivate_1.0 {
                Java_com_sun_webkit_WebPage_twkSetEditable;
                Java_com_sun_webkit_WebPage_twkSetEncoding;
                Java_com_sun_webkit_WebPage_twkSetJavaScriptEnabled;
+               Java_com_sun_webkit_WebPage_twkSetLocalStorageDatabasePath;
+               Java_com_sun_webkit_WebPage_twkSetLocalStorageEnabled;
                Java_com_sun_webkit_WebPage_twkSetTransparent;
                Java_com_sun_webkit_WebPage_twkSetUsePageCache;
                Java_com_sun_webkit_WebPage_twkSetUserAgent;

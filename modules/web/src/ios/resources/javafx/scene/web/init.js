@@ -47,6 +47,10 @@ var JavaBridge = {
                 }
             }
             var iframe = document.createElement('iframe');
+            iframe.setAttribute("width","1");
+            iframe.setAttribute("height","1");
+            iframe.setAttribute("frameborder",0);
+            iframe.setAttribute("style","display:none");
             iframe.setAttribute('src', 'javacall:' + key + ':' + cbId + ':' + method + ':' + encodeURIComponent(JSON.stringify(args)));
             document.documentElement.appendChild(iframe);
             iframe.parentNode.removeChild(iframe);

@@ -226,8 +226,10 @@ import javafx.css.StyleableProperty;
     /** {@inheritDoc} */
     @Override public void fire() {
         // TODO (aruiz): if (!isReadOnly(isSelected()) {
-        setSelected(!isSelected());
-        fireEvent(new ActionEvent());
+        if (!isDisabled()) {
+            setSelected(!isSelected());
+            fireEvent(new ActionEvent());
+        }
     }
 
     /** {@inheritDoc} */

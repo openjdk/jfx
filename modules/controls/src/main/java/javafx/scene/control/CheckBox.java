@@ -218,20 +218,22 @@ public class CheckBox extends ButtonBase {
      * false.
      */
     @Override public void fire() {
-        if (isAllowIndeterminate()) {
-            if (!isSelected() && !isIndeterminate()) {
-                setIndeterminate(true);
-            } else if (isSelected() && !isIndeterminate()) {
-                setSelected(false);
-            } else if (isIndeterminate()) {
-                setSelected(true);
+        if (!isDisabled()) {
+            if (isAllowIndeterminate()) {
+                if (!isSelected() && !isIndeterminate()) {
+                    setIndeterminate(true);
+                } else if (isSelected() && !isIndeterminate()) {
+                    setSelected(false);
+                } else if (isIndeterminate()) {
+                    setSelected(true);
+                    setIndeterminate(false);
+                }
+            } else {
+                setSelected(!isSelected());
                 setIndeterminate(false);
             }
-        } else {
-            setSelected(!isSelected());
-            setIndeterminate(false);
+            fireEvent(new ActionEvent());
         }
-        fireEvent(new ActionEvent());
     }
 
     /** {@inheritDoc} */

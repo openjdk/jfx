@@ -329,9 +329,11 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
         super.handleControlPropertyChanged(p);
         if ("ORIENTATION".equals(p)) {
             getSkinnable().requestLayout();
-        } else if ("MIN".equals(p) || "MAX".equals(p) || "VALUE".equals(p) || "VISIBLE_AMOUNT".equals(p)) {
+        } else if ("MIN".equals(p) || "MAX".equals(p) || "VISIBLE_AMOUNT".equals(p)) {
             positionThumb();
             getSkinnable().requestLayout();
+        } else if ("VALUE".equals(p)) {
+            positionThumb();
         }
     }
 

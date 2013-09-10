@@ -29,6 +29,7 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 
 import com.sun.javafx.geom.transform.Affine3D;
+import com.sun.javafx.geom.transform.BaseTransform;
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
 
@@ -696,6 +697,19 @@ public class Shear extends Transform {
         } else {
             trans.shear(getX(), getY());
         }
+    }
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    @Override
+    public BaseTransform impl_derive(final BaseTransform trans) {
+        return trans.deriveWithConcatenation(
+                1.0, getY(),
+                getX(), 1.0,
+                getTx(), getTy());
     }
 
     @Override

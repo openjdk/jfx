@@ -27,6 +27,7 @@ package javafx.scene.control.cell;
 
 import javafx.beans.value.ObservableValue;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.TableColumn;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
 import javafx.util.Callback;
@@ -91,6 +92,7 @@ public class ProgressBarTreeTableCell<S> extends TreeTableCell<S, Double> {
         this.getStyleClass().add("progress-bar-tree-table-cell");
         
         this.progressBar = new ProgressBar();
+        this.progressBar.setMaxWidth(Double.MAX_VALUE);
     }
     
     
@@ -110,7 +112,9 @@ public class ProgressBarTreeTableCell<S> extends TreeTableCell<S, Double> {
         } else {
             progressBar.progressProperty().unbind();
             
-            observable = getTableColumn().getCellObservableValue(getIndex());
+            final TreeTableColumn<S,Double> column = getTableColumn();
+            observable = column == null ? null : column.getCellObservableValue(getIndex());
+
             if (observable != null) {
                 progressBar.progressProperty().bind(observable);
             } else if (item != null) {

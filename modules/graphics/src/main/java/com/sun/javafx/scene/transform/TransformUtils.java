@@ -25,7 +25,9 @@
 
 package com.sun.javafx.scene.transform;
 
+import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.Affine3D;
+import com.sun.javafx.geom.transform.BaseTransform;
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
 import javafx.scene.transform.NonInvertibleTransformException;
@@ -838,6 +840,18 @@ public class TransformUtils {
             trans.concatenate(xx, xy, xz, xt,
                               yx, yy, yz, yt,
                               zx, zy, zz, zt);
+        }
+
+        /**
+         * @treatAsPrivate implementation detail
+         * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+         */
+        @Deprecated
+        @Override
+        public BaseTransform impl_derive(final BaseTransform trans) {
+            return trans.deriveWithConcatenation(xx, xy, xz, xt,
+                                                 yx, yy, yz, yt,
+                                                 zx, zy, zz, zt);
         }
 
         /**

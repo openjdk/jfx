@@ -432,8 +432,8 @@ HRESULT D3DResourceManager::CreateRenderTarget(UINT width, UINT height,
     if(FAILED(res = pd3dObject->CheckDeviceMultiSampleType(D3DADAPTER_DEFAULT,
                                     D3DDEVTYPE_HAL, format, false,
                                     msType, &totalSamples))) {
-        DebugPrintD3DError(res, "D3DRM::CreateRenderTarget failed D3DMULTISAMPLE_"/
-                + (int)msType +"_SAMPLES not supported");
+        DebugPrintD3DError(res, "D3DRM::CreateRenderTarget failed, specified"
+                                " D3DMULTISAMPLE type is not supported");
         return res;
     }
 

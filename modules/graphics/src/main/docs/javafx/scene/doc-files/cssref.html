@@ -963,7 +963,7 @@
       <a href="#typesize" class="typelink">&lt;size&gt;</a>[,
       <a href="#typeboolean" class="typelink">&lt;boolean&gt;</a>]?]?)</p>
     <p>The parameters, in order, are:<br>
-    <p style="margin-left: 40px;">  
+    <p style="margin-left: 40px;">
     <span class="grammar"><a href="#typestring" class="typelink">&lt;string&gt;</a></span>
       The URL of the image.<br>
       <span class="grammar"><a href="#typesize" class="typelink">&lt;size&gt;</a></span>
@@ -977,8 +977,8 @@
       <span class="grammar"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></span>
       The proportional flag which indicates whether start and end locations are proportional or absolute<br>
     </p>
-    <p>For a full explanation of the parameters, refer to the 
-        <a href="../paint/ImagePattern.html" class="typelink">ImagePattern</a> javadoc.</p>    
+    <p>For a full explanation of the parameters, refer to the
+        <a href="../paint/ImagePattern.html" class="typelink">ImagePattern</a> javadoc.</p>
     <p>Following are examples of the use of image-pattern:</p>
     <p class="example">image-pattern("images/Duke.png")</p>
     <p class="example">image-pattern("images/Duke.png", 20%, 20%, 80%, 80%)</p>
@@ -2674,7 +2674,7 @@
           <td class="propertyname">-fx-min-height, -fx-pref-height, -fx-max-height</td>
           <td class="value"><a href="#typenumber" class="typelink">&lt;number&gt;</a></td>
           <td class="default">-1</td>
-          <td>Percentage values are not useful since the actual value would be 
+          <td>Percentage values are not useful since the actual value would be
               computed from the width and/or height of the Regions's parent before
               the parent is laid out.</td>
         </tr>
@@ -2682,7 +2682,7 @@
           <td class="propertyname">-fx-min-width, -fx-pref-width, -fx-max-width</td>
           <td class="value"><a href="#typenumber" class="typelink">&lt;number&gt;</a></td>
           <td class="default">-1</td>
-          <td>Percentage values are not useful since the actual value would be 
+          <td>Percentage values are not useful since the actual value would be
               computed from the width and/or height of the Region's parent before
               the parent is laid out.</td>
         </tr>
@@ -4296,6 +4296,18 @@
           <td class="value"><a href="#typenumber" class="typelink">&lt;integer&gt;</a></td>
           <td>Double.MAX_VALUE</td>
           <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-open-tab-animation</td>
+            <td class="value">[ grow | none ]</td>
+            <td>grow</td>
+            <td>&#39;none&#39; disables Tab opening animation</td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-close-tab-animation</td>
+            <td class="value">[ grow | none ]</td>
+            <td>grow</td>
+            <td>&#39;none&#39; disables Tab closing animation</td>
         </tr>
         <tr>
           <td colspan="4" class="parents">Also has all properties of <a href="#control">Control</a></td>

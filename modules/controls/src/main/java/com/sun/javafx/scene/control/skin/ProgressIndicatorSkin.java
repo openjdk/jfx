@@ -528,64 +528,66 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
         static final private Duration UNCLIPPED_DELAY = new Duration(0);
 
         private void rebuildTimeline() {
-            final ObservableList<KeyFrame> keyFrames = FXCollections.<KeyFrame>observableArrayList();
-            keyFrames.add(
-              new KeyFrame(
-                Duration.millis(0), new EventHandler<ActionEvent>() {
-                  @Override public void handle(ActionEvent event) {
-                      /**
-                       * Stop the animation if the ProgressBar is removed
-                       * from a Scene, or is invisible.
-                       * Pause the animation if it's outside of a clipped
-                       * region (e.g. not visible in a ScrollPane)
-                       */
-                      if (indeterminateTimeline != null) {
-                          stopIfInvisibleOrDisconnected();
-                          if (!isVisibleInClip()) {
-                              Platform.runLater(new Runnable() {
-                                @Override public void run() {
-                                    if (indeterminateTimeline != null) {
-                                        if (indeterminateTimeline.getDelay().compareTo(CLIPPED_DELAY) != 0) {
-                                            indeterminateTimeline.setDelay(CLIPPED_DELAY);
-                                        }
-                                        indeterminateTimeline.stop();
-                                        indeterminateTimeline.jumpTo(Duration.ZERO);
-                                        indeterminateTimeline.play();
-                                    }
-                                }
-                              });
-                          }
-                          else {
-                              Platform.runLater(new Runnable() {
-                                @Override public void run() {
-                                    if (indeterminateTimeline != null) {
-                                        if (indeterminateTimeline.getDelay().compareTo(UNCLIPPED_DELAY) != 0) {
-                                            indeterminateTimeline.setDelay(UNCLIPPED_DELAY);
+            if (indeterminateTimeline != null) {
+                final ObservableList<KeyFrame> keyFrames = FXCollections.<KeyFrame>observableArrayList();
+                keyFrames.add(
+                  new KeyFrame(
+                    Duration.millis(0), new EventHandler<ActionEvent>() {
+                      @Override public void handle(ActionEvent event) {
+                          /**
+                           * Stop the animation if the ProgressBar is removed
+                           * from a Scene, or is invisible.
+                           * Pause the animation if it's outside of a clipped
+                           * region (e.g. not visible in a ScrollPane)
+                           */
+                          if (indeterminateTimeline != null) {
+                              stopIfInvisibleOrDisconnected();
+                              if (!isVisibleInClip()) {
+                                  Platform.runLater(new Runnable() {
+                                    @Override public void run() {
+                                        if (indeterminateTimeline != null) {
+                                            if (indeterminateTimeline.getDelay().compareTo(CLIPPED_DELAY) != 0) {
+                                                indeterminateTimeline.setDelay(CLIPPED_DELAY);
+                                            }
+                                            indeterminateTimeline.stop();
+                                            indeterminateTimeline.jumpTo(Duration.ZERO);
+                                            indeterminateTimeline.play();
                                         }
                                     }
-                                }
-                              });
+                                  });
+                              }
+                              else {
+                                  Platform.runLater(new Runnable() {
+                                    @Override public void run() {
+                                        if (indeterminateTimeline != null) {
+                                            if (indeterminateTimeline.getDelay().compareTo(UNCLIPPED_DELAY) != 0) {
+                                                indeterminateTimeline.setDelay(UNCLIPPED_DELAY);
+                                            }
+                                        }
+                                    }
+                                  });
+                              }
                           }
                       }
-                  }
-                }));
-            if(spinEnabled) {
-                keyFrames.add(new KeyFrame(Duration.millis(1), new KeyValue(pathsG.rotateProperty(), 360)));
-                keyFrames.add(new KeyFrame(Duration.millis(3900), new KeyValue(pathsG.rotateProperty(), 0)));
-            }
+                    }));
+                if(spinEnabled) {
+                    keyFrames.add(new KeyFrame(Duration.millis(1), new KeyValue(pathsG.rotateProperty(), 360)));
+                    keyFrames.add(new KeyFrame(Duration.millis(3900), new KeyValue(pathsG.rotateProperty(), 0)));
+                }
 
-            for (int i = 100; i <= 3900; i += 100) {
-                keyFrames.add(
-                        new KeyFrame(
-                                Duration.millis(i), new EventHandler<ActionEvent>() {
-                            @Override public void handle(ActionEvent event) {
-                                shiftColors();
-                            }
-                        }));
+                for (int i = 100; i <= 3900; i += 100) {
+                    keyFrames.add(
+                            new KeyFrame(
+                                    Duration.millis(i), new EventHandler<ActionEvent>() {
+                                @Override public void handle(ActionEvent event) {
+                                    shiftColors();
+                                }
+                            }));
+                }
+                indeterminateTimeline.stop();
+                indeterminateTimeline.getKeyFrames().setAll(keyFrames);
+                indeterminateTimeline.playFromStart();
             }
-            indeterminateTimeline.stop();
-            indeterminateTimeline.getKeyFrames().setAll(keyFrames);
-            indeterminateTimeline.playFromStart();
         }
 
         private void pauseIndicator(boolean pause) {

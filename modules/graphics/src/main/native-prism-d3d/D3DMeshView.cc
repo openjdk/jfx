@@ -74,18 +74,17 @@ void D3DMeshView::setAmbientLight(float r, float g, float b) {
 
 void D3DMeshView::setPointLight(int index, float x, float y, float z,
     float r, float g, float b, float w) {
-    if (index < 0 && index > 2) {
-        cerr << "Error in D3DMeshView::setPointLight: index out of range! index = "
-                << index << endl;
+    // NOTE: We only support up to 3 point lights at the present
+    if (index >= 0 && index <= 2) {
+        lights[index].position[0] = x;
+        lights[index].position[1] = y;
+        lights[index].position[2] = z;
+        lights[index].color[0] = r;
+        lights[index].color[1] = g;
+        lights[index].color[2] = b;
+        lights[index].w = w;
+        lightsDirty = TRUE;
     }
-    lights[index].position[0] = x;
-    lights[index].position[1] = y;
-    lights[index].position[2] = z;
-    lights[index].color[0] = r;
-    lights[index].color[1] = g;
-    lights[index].color[2] = b;
-    lights[index].w = w;
-    lightsDirty = TRUE;
 }
 
 void D3DMeshView::sortLights() {

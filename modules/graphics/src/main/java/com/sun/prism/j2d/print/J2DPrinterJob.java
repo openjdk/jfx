@@ -130,19 +130,13 @@ public class J2DPrinterJob implements PrinterJobImpl {
 
     private class PrintDialogRunnable implements Runnable {
 
-        volatile boolean inNestedLoop = true;
-
         public void run() {
             boolean rv = false;
             try {
                 rv = pJob2D.printDialog(printReqAttrSet);
             } catch (Exception e) {
             } finally {
-                synchronized (this) {
-                    inNestedLoop = false;
-                    Application.invokeLater(new ExitLoopRunnable(this, rv));
-                    this.notify();
-                }
+                Application.invokeLater(new ExitLoopRunnable(this, rv));
             }
         }
     }
@@ -152,16 +146,8 @@ public class J2DPrinterJob implements PrinterJobImpl {
         Thread prtThread = new Thread(dr, "FX Print Dialog Thread");
         prtThread.start();
         // the nested event loop will return after the runnable exits.
-        Object rv = null;
-        synchronized (dr) {
-            if (dr.inNestedLoop) {
-                try {
-                    dr.wait();
-                } catch (InterruptedException e) {
-                }
-                rv = Toolkit.getToolkit().enterNestedEventLoop(dr);
-            }
-        }
+        Object rv = Toolkit.getToolkit().enterNestedEventLoop(dr);
+
         boolean rvbool = false;
         try {
             rvbool = ((Boolean)rv).booleanValue();
@@ -193,20 +179,14 @@ public class J2DPrinterJob implements PrinterJobImpl {
 
     private class PageDialogRunnable implements Runnable {
 
-        volatile boolean inNestedLoop = true;
-
         public void run() {
             PageFormat pf = null;
             try {
                 pf = pJob2D.pageDialog(printReqAttrSet);
             } catch (Exception e) {
             } finally {
-                synchronized (this) {
-                    inNestedLoop = false;
-                    Boolean rv = Boolean.valueOf(pf != null);
-                    Application.invokeLater(new ExitLoopRunnable(this, rv));
-                    this.notify();
-                }
+                Boolean rv = Boolean.valueOf(pf != null);
+                Application.invokeLater(new ExitLoopRunnable(this, rv));
             }
         }
     }
@@ -217,16 +197,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
         Thread prtThread = new Thread(dr, "FX Page Setup Dialog Thread");
         prtThread.start();
         // the nested event loop will return after the runnable exits.
-        Object rv = null;
-        synchronized (dr) {
-            if (dr.inNestedLoop) {
-                try {
-                    dr.wait();
-                } catch (InterruptedException e) {
-                }
-                rv = Toolkit.getToolkit().enterNestedEventLoop(dr);
-            }
-        }
+        Object rv = Toolkit.getToolkit().enterNestedEventLoop(dr);
         boolean rvbool = false;
         try {
             rvbool = ((Boolean)rv).booleanValue();

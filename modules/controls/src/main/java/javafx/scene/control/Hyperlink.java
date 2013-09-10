@@ -139,11 +139,13 @@ public class Hyperlink extends ButtonBase {
      * function will also {@link #setVisited} to true.
      */
     @Override public void fire() {
-        // Avoid causing an exception in the case that visited was bound
-        if (visited == null || !visited.isBound()) {
-            setVisited(true);
+        if (!isDisabled()) {
+            // Avoid causing an exception in the case that visited was bound
+            if (visited == null || !visited.isBound()) {
+                setVisited(true);
+            }
+            fireEvent(new ActionEvent());
         }
-        fireEvent(new ActionEvent());
     }
 
     /** {@inheritDoc} */

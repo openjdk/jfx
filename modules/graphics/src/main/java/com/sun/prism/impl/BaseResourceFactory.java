@@ -48,6 +48,10 @@ public abstract class BaseResourceFactory implements ResourceFactory {
     private final WeakHashMap<ResourceFactoryListener,Boolean> listenerMap =
             new WeakHashMap<ResourceFactoryListener,Boolean>();
 
+    private Texture regionTexture;
+    private Texture glyphTexture;
+    private boolean superShaderAllowed;
+
     @Override public void addFactoryListener(ResourceFactoryListener l) {
         listenerMap.put(l, Boolean.TRUE);
     }
@@ -211,4 +215,35 @@ public abstract class BaseResourceFactory implements ResourceFactory {
                              width, height);
     }
 
+    @Override
+    public void setRegionTexture(Texture texture) {
+        regionTexture = texture;
+        superShaderAllowed = PrismSettings.superShader &&
+                             regionTexture != null &&
+                             glyphTexture != null;
     }
+
+    @Override
+    public Texture getRegionTexture() {
+        return regionTexture;
+    }
+
+    @Override
+    public void setGlyphTexture(Texture texture) {
+        glyphTexture = texture;
+        superShaderAllowed = PrismSettings.superShader &&
+                             regionTexture != null &&
+                             glyphTexture != null;
+    }
+
+    @Override
+    public Texture getGlyphTexture() {
+        return glyphTexture;
+    }
+
+    @Override
+    public boolean isSuperShaderAllowed() {
+        return superShaderAllowed;
+    }
+
+}

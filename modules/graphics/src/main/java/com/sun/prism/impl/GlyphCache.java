@@ -108,6 +108,9 @@ public class GlyphCache {
                                                     WrapMode.CLAMP_NOT_NEEDED);
             tex.contentsUseful();
             tex.makePermanent();
+            if (!isLCDCache) {
+                factory.setGlyphTexture(tex);
+            }
             tex.setLinearFiltering(false);
             packer = new RectanglePacker(tex, WIDTH, HEIGHT);
             packerMap.put(context, packer);
@@ -223,7 +226,11 @@ public class GlyphCache {
         } else {
             dx1 = Math.round(dx1);
             dx2 = dx1 + gw;
-            vb.addQuad(dx1, dy1, dx2, dy2, tx1, ty1, tx2, ty2);
+            if (context.isSuperShaderEnabled()) {
+                vb.addSuperQuad(dx1, dy1, dx2, dy2, tx1, ty1, tx2, ty2, true);
+            } else {
+                vb.addQuad(dx1, dy1, dx2, dy2, tx1, ty1, tx2, ty2);
+            }
         }
     }
 

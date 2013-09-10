@@ -126,6 +126,7 @@ public abstract class BaseShaderContext extends BaseContext {
     private Shader textureYV12Shader;
     private Shader textureFirstLCDShader;
     private Shader textureSecondLCDShader;
+    private Shader superShader;
     private Shader externalShader;
 
     private RTTexture lcdBuffer;
@@ -178,7 +179,7 @@ public abstract class BaseShaderContext extends BaseContext {
 
     protected abstract void updateShaderTransform(Shader shader,
                                                   BaseTransform xform);
-    
+
     protected abstract void updateWorldTransform(BaseTransform xform);
 
     protected abstract void updateClipRect(Rectangle clipRect);
@@ -319,6 +320,20 @@ public abstract class BaseShaderContext extends BaseContext {
         return textureSecondLCDShader;
     }
 
+    private Shader getSuperShader() {
+        if (superShader != null && !superShader.isValid()) {
+            superShader.dispose();
+            superShader = null;
+        }
+        if (superShader == null) {
+            superShader = factory.createStockShader("Mask_TextureSuper");
+        }
+        return superShader;
+    }
+
+    public boolean isSuperShaderEnabled() {
+        return state.lastShader == superShader;
+    }
 
     private void updatePerVertexColor(Paint paint, float extraAlpha) {
         if (paint != null && paint.getType() == Paint.Type.COLOR) {
@@ -439,23 +454,36 @@ public abstract class BaseShaderContext extends BaseContext {
                 ResourceFactory rf = g.getResourceFactory();
                 paintTex = rf.getCachedTexture(texPaint.getImage(), Texture.WrapMode.REPEAT);
             }
-            // NOTE: We are making assumptions here about which texture
-            // corresponds to which texture unit.  In a JSL file the
-            // first sampler mentioned will correspond to texture unit 0,
-            // the second sampler will correspond to texture unit 1,
-            // and so on, and there's currently no way to explicitly
-            // associate a sampler with a texture unit in the JSL file.
-            // So for now we assume that mask-related samplers are
-            // declared before any paint-related samplers in the
-            // composed JSL files.
-            if (maskTex != null) {
-                tex0 = maskTex;
-                tex1 = paintTex;
+            Shader shader = null;
+            if (factory.isSuperShaderAllowed() &&
+                paintTex == null &&
+                maskTex == factory.getGlyphTexture())
+            {
+                // Enabling the super shader to be used to render text.
+                // The texture pointed by tex0 is the region cache texture
+                // and it does not affect text rendering
+                shader = getSuperShader();
+                tex0 = factory.getRegionTexture();
+                tex1 = maskTex;
             } else {
-                tex0 = paintTex;
-                tex1 = null;
+                // NOTE: We are making assumptions here about which texture
+                // corresponds to which texture unit.  In a JSL file the
+                // first sampler mentioned will correspond to texture unit 0,
+                // the second sampler will correspond to texture unit 1,
+                // and so on, and there's currently no way to explicitly
+                // associate a sampler with a texture unit in the JSL file.
+                // So for now we assume that mask-related samplers are
+                // declared before any paint-related samplers in the
+                // composed JSL files.
+                if (maskTex != null) {
+                    tex0 = maskTex;
+                    tex1 = paintTex;
+                } else {
+                    tex0 = paintTex;
+                    tex1 = null;
+                }
+                shader = getPaintShader(maskType, paint);
             }
-            Shader shader = getPaintShader(maskType, paint);
             checkState(g, xform, shader, tex0, tex1);
             updatePaintShader(g, shader, maskType, paint, bx, by, bw, bh);
             updatePerVertexColor(paint, g.getExtraAlpha());
@@ -475,7 +503,6 @@ public abstract class BaseShaderContext extends BaseContext {
     {
         validateTextureOp((BaseShaderGraphics)g, xform, tex0, null, format);
     }
-
 
     //This function sets the first LCD sample shader.
     public Shader validateLCDOp(BaseShaderGraphics g, BaseTransform xform,
@@ -528,7 +555,19 @@ public abstract class BaseShaderContext extends BaseContext {
             case BYTE_RGB:
             case BYTE_GRAY:
             case BYTE_APPLE_422: // uses GL_RGBA as internal format
-                shader = getTextureRGBShader();
+                if (factory.isSuperShaderAllowed() &&
+                    tex0 == factory.getRegionTexture() &&
+                    tex1 == null)
+                {
+                    // Enabling the super shader to be used for texture rendering.
+                    // The shader was designed to render many Regions (from the Region
+                    // texture cache) and text (from the glyph cache texture) without
+                    // changing the state in the context.
+                    shader = getSuperShader();
+                    tex1 = factory.getGlyphTexture();
+                } else {
+                    shader = getTextureRGBShader();
+                }
                 break;
             case MULTI_YCbCr_420: // Must use multitexture method
             case BYTE_ALPHA:

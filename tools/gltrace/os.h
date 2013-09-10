@@ -34,6 +34,11 @@ uint64_t    gltrace_gethrtime();
 #if MACOSX
 #define MAP_POPULATE 0
 #define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP PTHREAD_RECURSIVE_MUTEX_INITIALIZER
+#define OS_ENV_PRELOAD "DYLD_INSERT_LIBRARIES"
+#endif
+
+#if linux
+#define OS_ENV_PRELOAD "LD_PRELOAD"
 #endif
 
 #endif /* GLTRACE_OS_H */

@@ -89,8 +89,10 @@ class D3DContext extends BaseShaderContext {
 
     private final D3DResourceFactory factory;
 
+    public static final int NUM_QUADS = PrismSettings.superShader ? 4096 : 256;
+
     static VertexBuffer createVertexBuffer(long contextHandle) {
-        return new D3DVertexBuffer(contextHandle, 256);
+        return new D3DVertexBuffer(contextHandle, NUM_QUADS);
     }
 
     D3DContext(long pContext, Screen screen, D3DResourceFactory factory) {

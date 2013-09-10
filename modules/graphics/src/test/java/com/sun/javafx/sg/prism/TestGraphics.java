@@ -251,6 +251,12 @@ public class TestGraphics extends BaseGraphics {
         @Override public PhongMaterial createPhongMaterial() { return null; }
         @Override public MeshView createMeshView(Mesh mesh) { return null; }
         @Override public Mesh createMesh() { return null; }
+        @Override public void setRegionTexture(Texture texture) { }
+        @Override public Texture getRegionTexture() { return null; }
+        @Override public void setGlyphTexture(Texture texture) { }
+        @Override public Texture getGlyphTexture() { return null; }
+        @Override public boolean isSuperShaderAllowed() {return false; }
+
     }
 
     private static class TestRenderTarget implements RenderTarget {

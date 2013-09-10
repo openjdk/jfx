@@ -181,7 +181,9 @@ public class Button extends ButtonBase {
 
     /** {@inheritDoc} */
     @Override public void fire() {
-        fireEvent(new ActionEvent());
+        if (!isDisabled()) {
+            fireEvent(new ActionEvent());
+        }
     }
 
     /** {@inheritDoc} */

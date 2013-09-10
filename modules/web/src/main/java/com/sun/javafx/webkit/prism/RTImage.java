@@ -3,6 +3,7 @@
  */
 package com.sun.javafx.webkit.prism;
 
+import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.prism.Graphics;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.Image;
@@ -25,10 +26,12 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
     private final int width, height;
     private boolean listenerAdded = false;
     private ByteBuffer pixelBuffer;
+    private float pixelScale;
 
-    RTImage(int w, int h) {
+    RTImage(int w, int h, float pixelScale) {
         width = w;
         height = h;
+        this.pixelScale = pixelScale;
     }
 
     @Override
@@ -40,13 +43,18 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
 
     @Override
     Graphics getGraphics() {
-        return getTexture().createGraphics();
+        Graphics g = getTexture().createGraphics();
+        g.scale(pixelScale, pixelScale);
+        return g;
     }
 
     private RTTexture getTexture() {
         if (txt == null) {
             ResourceFactory f = GraphicsPipeline.getDefaultResourceFactory();
-            txt = f.createRTTexture(width, height, Texture.WrapMode.CLAMP_NOT_NEEDED);
+            txt = f.createRTTexture(
+                    (int) Math.ceil(width * pixelScale),
+                    (int) Math.ceil(height * pixelScale),
+                    Texture.WrapMode.CLAMP_NOT_NEEDED);
             txt.contentsUseful();
             txt.makePermanent();
             if (! listenerAdded) {
@@ -83,7 +91,8 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
         } else {
             g.drawTexture(getTexture(),
                     dstx1, dsty1, dstx2, dsty2,
-                    srcx1, srcy1, srcx2, srcy2);
+                    srcx1 * pixelScale, srcy1 * pixelScale,
+                    srcx2 * pixelScale, srcy2 * pixelScale);
         }
     }
 
@@ -131,13 +140,26 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
                             throw new AssertionError("Unexpected pixel format: " + pf);
                         }
 
-
+                        RTTexture t = txt;
+                        if (pixelScale != 1.0f) {
+                            // Convert [txt] to a texture the size of the image
+                            ResourceFactory f = GraphicsPipeline.getDefaultResourceFactory();
+                            t = f.createRTTexture(width, height, Texture.WrapMode.CLAMP_NOT_NEEDED);
+                            Graphics g = t.createGraphics();
+                            g.drawTexture(txt, 0, 0, width, height,
+                                    0, 0, width * pixelScale, height * pixelScale);
+                        }
+                        
                         pixelBuffer.rewind();
-                        int[] pixels = txt.getPixels();
+                        int[] pixels = t.getPixels();
                         if (pixels != null) {
                             pixelBuffer.asIntBuffer().put(pixels);
                         } else {
-                            txt.readPixels(pixelBuffer);
+                            t.readPixels(pixelBuffer);
+                        }
+
+                        if (t != txt) {
+                            t.dispose();
                         }
                     }
                 }

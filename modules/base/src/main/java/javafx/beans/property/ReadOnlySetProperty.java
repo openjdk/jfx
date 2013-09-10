@@ -133,7 +133,7 @@ public abstract class ReadOnlySetProperty<E> extends SetExpression<E> implements
     @Override
     public int hashCode() {
         int h = 0;
-        for (E e : get()) {
+        for (E e : this) {
             if (e != null)
                 h += e.hashCode();
         }

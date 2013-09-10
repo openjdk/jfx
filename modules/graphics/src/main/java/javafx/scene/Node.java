@@ -149,7 +149,12 @@ import com.sun.javafx.scene.transform.TransformUtils;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.accessible.providers.AccessibleProvider;
+import com.sun.javafx.geom.transform.Affine2D;
+import com.sun.javafx.geom.transform.AffineBase;
+import com.sun.javafx.geom.transform.Translate2D;
 import com.sun.prism.impl.PrismSettings;
+import javafx.scene.transform.Translate;
 import sun.util.logging.PlatformLogger;
 import sun.util.logging.PlatformLogger.Level;
 
@@ -3237,7 +3242,7 @@ public abstract class Node implements EventTarget, Styleable {
      * This is the concatenation of all transforms in this node, including all
      * of the convenience transforms.
      */
-    private final Affine3D localToParentTx = new Affine3D();
+    private BaseTransform localToParentTx = BaseTransform.IDENTITY_TRANSFORM;
 
     /**
      * This flag is used to indicate that localToParentTx is dirty and needs
@@ -4443,9 +4448,12 @@ public abstract class Node implements EventTarget, Styleable {
                     // (must be the last transformation)
                     mirroringCenter = sceneValue.getWidth() / 2;
 
-                    localToParentTx.translate(mirroringCenter, 0, 0);
-                    localToParentTx.scale(-1, 1);
-                    localToParentTx.translate(-mirroringCenter, 0, 0);
+                    localToParentTx = localToParentTx.deriveWithTranslation(
+                            mirroringCenter, 0.0);
+                    localToParentTx = localToParentTx.deriveWithScale(
+                            -1.0, 1.0, 1.0);
+                    localToParentTx = localToParentTx.deriveWithTranslation(
+                            -mirroringCenter, 0.0);
                 } else {
                     // mirror later
                     mirror = true;
@@ -4458,25 +4466,39 @@ public abstract class Node implements EventTarget, Styleable {
                 double pivotX = impl_getPivotX();
                 double pivotY = impl_getPivotY();
                 double pivotZ = impl_getPivotZ();
-                localToParentTx.translate(getTranslateX() + getLayoutX() + pivotX, getTranslateY() + getLayoutY() + pivotY, getTranslateZ() + pivotZ);
-                localToParentTx.rotate(Math.toRadians(getRotate()), getRotationAxis().getX(), getRotationAxis().getY(), getRotationAxis().getZ());
-                localToParentTx.scale(getScaleX(), getScaleY(), getScaleZ());
-                localToParentTx.translate(-pivotX, -pivotY, -pivotZ);
+
+                localToParentTx = localToParentTx.deriveWithTranslation(
+                        getTranslateX() + getLayoutX() + pivotX,
+                        getTranslateY() + getLayoutY() + pivotY,
+                        getTranslateZ() + pivotZ);
+                localToParentTx = localToParentTx.deriveWithRotation(
+                        Math.toRadians(getRotate()), getRotationAxis().getX(),
+                        getRotationAxis().getY(), getRotationAxis().getZ());
+                localToParentTx = localToParentTx.deriveWithScale(
+                        getScaleX(), getScaleY(), getScaleZ());
+                localToParentTx = localToParentTx.deriveWithTranslation(
+                        -pivotX, -pivotY, -pivotZ);
             } else {
-                localToParentTx.translate(getTranslateX() + getLayoutX(), getTranslateY() + getLayoutY(), getTranslateZ());
+                localToParentTx = localToParentTx.deriveWithTranslation(
+                        getTranslateX() + getLayoutX(),
+                        getTranslateY() + getLayoutY(),
+                        getTranslateZ());
             }
 
             if (impl_hasTransforms()) {
                 for (Transform t : getTransforms()) {
-                    t.impl_apply(localToParentTx);
+                    localToParentTx = t.impl_derive(localToParentTx);
                 }
             }
 
             // Check to see whether the node requires mirroring
             if (mirror) {
-                localToParentTx.translate(mirroringCenter, 0, 0);
-                localToParentTx.scale(-1, 1);
-                localToParentTx.translate(-mirroringCenter, 0, 0);
+                localToParentTx = localToParentTx.deriveWithTranslation(
+                        mirroringCenter, 0);
+                localToParentTx = localToParentTx.deriveWithScale(
+                        -1.0, 1.0, 1.0);
+                localToParentTx = localToParentTx.deriveWithTranslation(
+                        -mirroringCenter, 0);
             }
 
             transformDirty = false;
@@ -8669,21 +8691,34 @@ public abstract class Node implements EventTarget, Styleable {
             return;
         }
 
+        if (cssFlag == CssFlags.RECALCULATE) {
+            // TODO: re-evalutate handling of CssFlags.RECALCULATE - see below
+            cssFlag = CssFlags.REAPPLY;
+        }
+
         if (cssFlag == CssFlags.REAPPLY) {
+
+            // RT-24621 - If this node's parent's cssFlag is REAPPLY, then CSS should be applied to the parent first,
+            // otherwise the styles this node uses will be incomplete (missing lookups, missing inherited styles, etc).
+            // find the top-most parent whose flag is REAPPLY and start from there, if there is one.
+            Parent _parent = getParent();
+            if(_parent != null && _parent.cssFlag == this.cssFlag) {
+                // TODO: danger of infinite loop here!
+                _parent.impl_processCSS();
+            }
 
             // Match new styles if my own indicates I need to reapply
             styleHelper = CssStyleHelper.createStyleHelper(this);
 
-        } else if (cssFlag == CssFlags.RECALCULATE) {
-
-            // Recalculate means that the in-line style has changed.
-
-            // Note: recalculate used to do something different than reapply,
-            // but the way calculated values are cached has changed.
-            // TODO: re-evalutate handling of CssFlags.RECALCULATE
-            cssFlag = CssFlags.REAPPLY;
-            styleHelper = CssStyleHelper.createStyleHelper(this);
-
+//        } else if (cssFlag == CssFlags.RECALCULATE) {
+//
+//            // Recalculate means that the in-line style has changed.
+//
+//            // Note: recalculate used to do something different than reapply,
+//            // but the way calculated values are cached has changed.
+//            cssFlag = CssFlags.REAPPLY;
+//            styleHelper = CssStyleHelper.createStyleHelper(this);
+//
         }
 
         final CssFlags flag = cssFlag;

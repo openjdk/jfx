@@ -204,7 +204,7 @@ DWRITE_GLYPH_RUN *getDWRITE_GLYPH_RUNFields(JNIEnv *env, jobject lpObject, DWRIT
     lpStruct->fontFace = (IDWriteFontFace *)env->GetLongField(lpObject, DWRITE_GLYPH_RUNFc.fontFace);
     lpStruct->fontEmSize = env->GetFloatField(lpObject, DWRITE_GLYPH_RUNFc.fontEmSize);
     ((jshort*)lpStruct->glyphIndices)[0] = env->GetShortField(lpObject, DWRITE_GLYPH_RUNFc.glyphIndices);
-    ((float*)lpStruct->glyphAdvances)[0] = env->GetShortField(lpObject, DWRITE_GLYPH_RUNFc.glyphAdvances);
+    ((float*)lpStruct->glyphAdvances)[0] = env->GetFloatField(lpObject, DWRITE_GLYPH_RUNFc.glyphAdvances);
     ((float)lpStruct->glyphOffsets[0].advanceOffset) = env->GetFloatField(lpObject, DWRITE_GLYPH_RUNFc.advanceOffset);
     ((float)lpStruct->glyphOffsets[0].ascenderOffset) = env->GetFloatField(lpObject, DWRITE_GLYPH_RUNFc.ascenderOffset);
     lpStruct->isSideways = env->GetBooleanField(lpObject, DWRITE_GLYPH_RUNFc.isSideways);
