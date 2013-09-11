@@ -50,7 +50,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.StrokeType;
-
+import javafx.stage.WindowEvent;
 
 public class ColorPalette extends VBox {
 
@@ -123,7 +123,12 @@ public class ColorPalette extends VBox {
                 customColorDialog.setCurrentColor(colorPicker.valueProperty().get());
                 if (popupControl != null) popupControl.setAutoHide(false);
                 customColorDialog.show();
-                if (popupControl != null) popupControl.setAutoHide(true);
+                 customColorDialog.setOnHidden(new EventHandler<WindowEvent>() {
+ 
+                     @Override public void handle(WindowEvent event) {
+                        if (popupControl != null) popupControl.setAutoHide(true);
+                     }
+                 });
             }
         });
         
