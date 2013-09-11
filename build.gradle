@@ -261,14 +261,15 @@ ext.IS_LINUX = OS_NAME.contains("linux")
 // Because of this, you may sometimes get the jdk's JRE (in which case the logic we used to have here
 // was correct and consistent with all other platforms), or it might be the standalone JRE (for the love!).
 def envJavaHome = cygpath(System.getenv("JAVA_HOME"))
-ext.JAVA_HOME = envJavaHome == null || envJavaHome.equals("") ? System.getProperty("java.home") : envJavaHome
-def javaHomeFile = file(JAVA_HOME)
+def javaHome = envJavaHome == null || envJavaHome.equals("") ? System.getProperty("java.home") : envJavaHome
+def javaHomeFile = file(javaHome)
 defineProperty("JDK_HOME",
         javaHomeFile.name == "jre" ?
         javaHomeFile.getParent().toString() :
         javaHomeFile.name.startsWith("jre") ?
         new File(javaHomeFile.getParent(), "jdk1.${javaHomeFile.name.substring(3)}.0").toString() :
-        JAVA_HOME) // we have to bail and set it to something and this is as good as any!
+        javaHome) // we have to bail and set it to something and this is as good as any!
+ext.JAVA_HOME = JDK_HOME
 defineProperty("JAVA", cygpath("$JDK_HOME/bin/java${IS_WINDOWS ? '.exe' : ''}"))
 defineProperty("JAVAC", cygpath("$JDK_HOME/bin/javac${IS_WINDOWS ? '.exe' : ''}"))
 defineProperty("JAVAH", cygpath("$JDK_HOME/bin/javah${IS_WINDOWS ? '.exe' : ''}"))
