@@ -37,6 +37,7 @@ var JavaBridge = {
                 alert(e);
             }
         },
+        callFrame: null,
         call: function(method, args) {
             var cbId = cbId = ++JavaBridge.callbackCnt;
             JavaBridge.callbacks[cbId] = {'success': false, 'result': null};
@@ -46,25 +47,30 @@ var JavaBridge = {
                     args[i] = JavaBridge.encodeObject(args[i]);
                 }
             }
-            var iframe = document.createElement('iframe');
-            iframe.setAttribute("width","1");
-            iframe.setAttribute("height","1");
-            iframe.setAttribute("frameborder",0);
-            iframe.setAttribute("style","display:none");
-            iframe.setAttribute('src', 'javacall:' + key + ':' + cbId + ':' + method + ':' + encodeURIComponent(JSON.stringify(args)));
-            document.documentElement.appendChild(iframe);
-            iframe.parentNode.removeChild(iframe);
-            iframe = null;
+            if ((JavaBridge.callFrame === null) || 
+                (JavaBridge.callFrame.ownerDocument !== document)) {
+                
+                JavaBridge.callFrame = document.createElement('iframe');
+                
+                JavaBridge.callFrame.setAttribute("width","1");
+                JavaBridge.callFrame.setAttribute("height","1");
+                JavaBridge.callFrame.setAttribute("frameborder",0);
+                JavaBridge.callFrame.setAttribute("style","display:none");
+            }
+            
+            JavaBridge.callFrame.setAttribute('src', 'javacall:' + key + ':' + cbId + ':' + method + ':' + encodeURIComponent(JSON.stringify(args)));
+            document.documentElement.appendChild(JavaBridge.callFrame);
+            JavaBridge.callFrame.parentNode.removeChild(JavaBridge.callFrame);
 
             var success = JavaBridge.callbacks[cbId]['success'];
-            var result = JavaBridge.callbacks[cbId]['result']
+            var result = JavaBridge.callbacks[cbId]['result'];
             delete JavaBridge.callbacks[cbId];
 
             if (success) {
                 return result;
             }
             // on failure result should contain error (exception) message
-            if (result == null) {
+            if (result === null) {
                 // Java didn't set error message. it means something went wrong
                 throw new Error("Internal java call error");
             }
