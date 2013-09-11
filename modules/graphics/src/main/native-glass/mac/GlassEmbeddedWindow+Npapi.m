@@ -162,7 +162,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_events_mac_NpapiEvent__1dispatchCocoaN
                 NSPoint eventPoint = NSMakePoint((CGFloat)jPluginX, (CGFloat)windowY);
                 event = [NSEvent mouseEventWithType:type
                                            location:eventPoint
-                                      modifierFlags:0
+                                      modifierFlags:(NSUInteger)jModifierFlags
                                           timestamp:[NSDate timeIntervalSinceReferenceDate]
                                        windowNumber:[window->child windowNumber]
                                             context:nil
