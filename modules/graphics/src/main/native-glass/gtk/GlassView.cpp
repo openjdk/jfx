@@ -155,27 +155,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1scheduleRepaint
 
 /*
  * Class:     com_sun_glass_ui_gtk_GtkView
- * Method:    _begin
- * Signature: (J)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1begin
-  (JNIEnv * env, jobject obj, jlong ptr)
-{
-    // No need to lock, done automatically by GDK
-}
-
-/*
- * Class:     com_sun_glass_ui_gtk_GtkView
- * Method:    _end
- * Signature: (J)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1end
-  (JNIEnv * env, jobject obj, jlong ptr)
-{
-}
-
-/*
- * Class:     com_sun_glass_ui_gtk_GtkView
  * Method:    _uploadPixelsDirect
  * Signature: (JLjava/nio/Buffer;II)V
  */

@@ -152,6 +152,8 @@ public:
     virtual void process_mouse_cross(GdkEventCrossing*) = 0;
     virtual void process_key(GdkEventKey*) = 0;
     virtual void process_state(GdkEventWindowState*) = 0;
+    
+    virtual void notify_state(jint) = 0;
 
     virtual void add_child(WindowContextTop* child) = 0;
     virtual void remove_child(WindowContextTop* child) = 0;
@@ -190,6 +192,8 @@ protected:
     GtkWidget* gtk_widget;
     GdkWindow* gdk_window;
 
+    bool is_iconified;
+    bool is_maximized;
     bool is_mouse_entered;
 
     /*
@@ -246,6 +250,9 @@ public:
     void process_mouse_scroll(GdkEventScroll*);
     void process_mouse_cross(GdkEventCrossing*);
     void process_key(GdkEventKey*);
+    void process_state(GdkEventWindowState*);
+
+    void notify_state(jint);
 
     int getEmbeddedX() { return 0; }
     int getEmbeddedY() { return 0; }
@@ -289,7 +296,6 @@ public:
     void process_property_notify(GdkEventProperty*) {}
     void process_configure(GdkEventConfigure*);
     void process_gtk_configure(GdkEventConfigure*);
-    void process_state(GdkEventWindowState*);
 
     void applyShapeMask(cairo_surface_t*, uint width, uint height) {}
     GtkWindow *get_gtk_window(); // TODO, get window from parent
@@ -333,7 +339,6 @@ public:
     void set_gravity(float, float) {}
     void process_property_notify(GdkEventProperty*) {}
     void process_configure(GdkEventConfigure*);
-    void process_state(GdkEventWindowState*);
     void process_destroy();
     void set_visible(bool visible);
 
@@ -376,8 +381,9 @@ public:
     void process_map();
     void process_property_notify(GdkEventProperty*);
     void process_configure(GdkEventConfigure*);
-    void process_state(GdkEventWindowState*);
     void process_destroy();
+    void process_net_wm_property();
+
     WindowFrameExtents get_frame_extents();
 
     void set_minimized(bool);
