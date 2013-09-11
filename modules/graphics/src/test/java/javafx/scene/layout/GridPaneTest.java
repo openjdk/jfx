@@ -2432,6 +2432,8 @@ public class GridPaneTest {
         GridPane.setMargin(child1, new Insets(120, 0, 0, 0));
         GridPane.setMargin(child2, new Insets(10, 0, 0, 0));
 
+        GridPane.setFillHeight(child2, false);
+
         RowConstraints rc = new RowConstraints();
         rc.setValignment(VPos.BASELINE);
         gridpane.getRowConstraints().addAll(rc);
@@ -2448,7 +2450,7 @@ public class GridPaneTest {
         assertEquals(0, child1.getLayoutX(), 1e-100);
         assertEquals(120, child1.getLayoutY(), 1e-100);
         assertEquals(200, child1.getLayoutBounds().getWidth(), 1e-100);
-        assertEquals(200, child1.getLayoutBounds().getHeight(), 1e-100);
+        assertEquals(300, child1.getLayoutBounds().getHeight(), 1e-100); // Max height thanks to fillHeight
 
         assertEquals(200, child2.getLayoutX(), 1e-100);
         assertEquals(20, child2.getLayoutY(), 1e-100);

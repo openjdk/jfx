@@ -2877,15 +2877,26 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
+     * This is a special value that might be returned by {@link #getBaselineOffset()}.
+     * This means that the Parent (layout Pane) of this Node should use the height of this Node as a baseline.
+     */
+    public static final double BASELINE_OFFSET_SAME_AS_HEIGHT = Double.NEGATIVE_INFINITY;
+
+    /**
      * The 'alphabetic' (or 'roman') baseline offset from the node's layoutBounds.minY location
      * that should be used when this node is being vertically aligned by baseline with
-     * other nodes.  By default this returns the layoutBounds height of the node.  Subclasses
+     * other nodes.  By default this returns {@link #BASELINE_OFFSET_SAME_AS_HEIGHT} for resizable Nodes
+     * and layoutBounds height for non-resizable.  Subclasses
      * which contain text should override this method to return their actual text baseline offset.
      *
-     * @return offset of text baseline from layoutBounds.minY
+     * @return offset of text baseline from layoutBounds.minY for non-resizable Nodes or {@link #BASELINE_OFFSET_SAME_AS_HEIGHT} otherwise
      */
     public double getBaselineOffset() {
-        return getLayoutBounds().getHeight();
+        if (isResizable()) {
+            return BASELINE_OFFSET_SAME_AS_HEIGHT;
+        } else {
+            return getLayoutBounds().getHeight();
+        }
     }
 
     /**

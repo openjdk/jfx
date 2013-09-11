@@ -36,7 +36,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import com.sun.javafx.Logging;
+
 import com.sun.javafx.TempState;
 import com.sun.javafx.Utils;
 import com.sun.javafx.collections.TrackableObservableList;
@@ -60,10 +60,6 @@ import com.sun.javafx.sg.prism.NGGroup;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.scene.LayoutFlags;
-import sun.util.logging.PlatformLogger;
-import sun.util.logging.PlatformLogger.Level;
-import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
-import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 
 /**
  * The base class for all nodes that have children in the scene graph.
@@ -1034,7 +1030,11 @@ public abstract class Parent extends Node {
         for (int i=0, max=children.size(); i<max; i++) {
             final Node child = children.get(i);
             if (child.isManaged()) {
-                return child.getLayoutBounds().getMinY() + child.getLayoutY() + child.getBaselineOffset();
+                double offset = child.getBaselineOffset();
+                if (offset == BASELINE_OFFSET_SAME_AS_HEIGHT) {
+                    continue;
+                }
+                return child.getLayoutBounds().getMinY() + child.getLayoutY() + offset;
             }
         }
         return super.getBaselineOffset();

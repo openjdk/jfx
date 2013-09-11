@@ -331,7 +331,7 @@ public class HBoxTest {
         Rectangle child2 = new Rectangle(100, 100);
         hbox.getChildren().addAll(child1, child2);
 
-        // BASELINE makes fillHeight false
+        hbox.setFillHeight(false);
         hbox.setAlignment(Pos.BASELINE_LEFT);
         hbox.resize(500,500);
         hbox.layout();
@@ -350,7 +350,7 @@ public class HBoxTest {
         Rectangle child2 = new Rectangle(100, 100);
         hbox.getChildren().addAll(child1, child2);
 
-        // BASELINE makes fillHeight false
+        hbox.setFillHeight(false);
         hbox.setAlignment(Pos.BASELINE_CENTER);
         hbox.resize(500,500);
         hbox.layout();
@@ -369,7 +369,7 @@ public class HBoxTest {
         Rectangle child2 = new Rectangle(100, 100);
         hbox.getChildren().addAll(child1, child2);
 
-        // BASELINE makes fillHeight false
+        hbox.setFillHeight(false);
         hbox.setAlignment(Pos.BASELINE_RIGHT);
         hbox.resize(500,500);
         hbox.layout();
@@ -379,6 +379,76 @@ public class HBoxTest {
         assertEquals(300, child1.getLayoutBounds().getHeight(), 1e-100);
         assertEquals(400, child2.getLayoutX(), 1e-100);
         assertEquals(190, child2.getLayoutY(), 1e-100);
+        assertEquals(100, child2.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
+    }
+
+    @Test public void testHBoxAlignmentBaselineLeftComputed() {
+        MockResizable child1 = new MockResizable(300,300) {
+            @Override public double getBaselineOffset() {
+                return BASELINE_OFFSET_SAME_AS_HEIGHT; // should be prefHeight
+            }
+        };
+        Rectangle child2 = new Rectangle(100, 100);
+        hbox.getChildren().addAll(child1, child2);
+
+        hbox.setFillHeight(false);
+        hbox.setAlignment(Pos.BASELINE_LEFT);
+        hbox.resize(500,500);
+        hbox.layout();
+        assertEquals(0, child1.getLayoutX(), 1e-100);
+        assertEquals(0, child1.getLayoutY(), 1e-100);
+        assertEquals(300, child1.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(300, child1.getLayoutBounds().getHeight(), 1e-100);
+        assertEquals(300, child2.getLayoutX(), 1e-100);
+        assertEquals(200, child2.getLayoutY(), 1e-100);
+        assertEquals(100, child2.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
+    }
+
+    @Test public void testHBoxAlignmentBaselineCenterComputed() {
+        MockResizable child1 = new MockResizable(300,300) {
+            @Override public double getBaselineOffset() {
+                return BASELINE_OFFSET_SAME_AS_HEIGHT; // should be prefHeight
+            }
+        };
+        Rectangle child2 = new Rectangle(100, 100);
+        hbox.getChildren().addAll(child1, child2);
+
+        hbox.setFillHeight(false);
+        hbox.setAlignment(Pos.BASELINE_CENTER);
+        hbox.resize(500,500);
+        hbox.layout();
+        assertEquals(50, child1.getLayoutX(), 1e-100);
+        assertEquals(0, child1.getLayoutY(), 1e-100);
+        assertEquals(300, child1.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(300, child1.getLayoutBounds().getHeight(), 1e-100);
+        assertEquals(350, child2.getLayoutX(), 1e-100);
+        assertEquals(200, child2.getLayoutY(), 1e-100);
+        assertEquals(100, child2.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
+    }
+
+    @Test public void testHBoxAlignmentBaselineRightComputed() {
+        MockResizable child1 = new MockResizable(300,300) {
+            @Override public double getBaselineOffset() {
+                return BASELINE_OFFSET_SAME_AS_HEIGHT; // should be prefHeight
+            }
+        };
+        Rectangle child2 = new Rectangle(100, 100);
+        hbox.getChildren().addAll(child1, child2);
+
+        hbox.setFillHeight(false);
+        hbox.setAlignment(Pos.BASELINE_RIGHT);
+        hbox.resize(500,500);
+        hbox.layout();
+
+        assertEquals(100, child1.getLayoutX(), 1e-100);
+        assertEquals(0, child1.getLayoutY(), 1e-100);
+        assertEquals(300, child1.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(300, child1.getLayoutBounds().getHeight(), 1e-100);
+        assertEquals(400, child2.getLayoutX(), 1e-100);
+        assertEquals(200, child2.getLayoutY(), 1e-100);
         assertEquals(100, child2.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
