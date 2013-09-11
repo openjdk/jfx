@@ -25,7 +25,7 @@
 
 package javafx.scene;
 
-import util2.Util;
+import util.Util;
 import javafx.scene.image.WritableImage;
 import javafx.stage.Stage;
 import java.util.concurrent.CountDownLatch;
@@ -38,7 +38,7 @@ import javafx.util.Callback;
 import junit.framework.AssertionFailedError;
 
 import static org.junit.Assert.*;
-import static util2.Util.TIMEOUT;
+import static util.Util.TIMEOUT;
 
 /**
  * Common base class for testing snapshot.

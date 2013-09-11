@@ -38,10 +38,10 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import util2.Util;
+import util.Util;
 
 import static org.junit.Assert.*;
-import static util2.Util.TIMEOUT;
+import static util.Util.TIMEOUT;
 
 /**
  * Tests for snapshot.
