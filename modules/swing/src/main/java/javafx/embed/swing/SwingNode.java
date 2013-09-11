@@ -207,6 +207,7 @@ public class SwingNode extends Node {
             });
 
             lwFrame.setContent(new SwingNodeContent(content));
+            lwFrame.setSize((int)width, (int)height);
             lwFrame.setVisible(true);
 
             Platform.runLater(new Runnable() {
@@ -381,14 +382,14 @@ public class SwingNode extends Node {
         return true;
     }
 
-    private InvalidationListener locationListener = new InvalidationListener() {
+    private final InvalidationListener locationListener = new InvalidationListener() {
         @Override
         public void invalidated(Observable observable) {
             locateLwFrame();
         }
     };
 
-    private EventHandler<FocusUngrabEvent> ungrabHandler = new EventHandler<FocusUngrabEvent>() {
+    private final EventHandler<FocusUngrabEvent> ungrabHandler = new EventHandler<FocusUngrabEvent>() {
         @Override
         public void handle(FocusUngrabEvent event) {
             if (!skipBackwardUnrgabNotification) {
@@ -397,36 +398,57 @@ public class SwingNode extends Node {
         }
     };
 
-    private ChangeListener<Boolean> windowVisibleListener = new ChangeListener<Boolean>() {
+    private final ChangeListener<Boolean> windowVisibleListener = new ChangeListener<Boolean>() {
         @Override
         public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
             if (!newValue) {
                 disposeLwFrame();
-
             } else {
                 setContent(content);
             }
         }
     };
 
-    private void removeListeners(Scene scene) {
+    private final ChangeListener<Window> sceneWindowListener = new ChangeListener<Window>() {
+        @Override
+        public void changed(ObservableValue<? extends Window> observable, Window oldValue, Window newValue) {
+            if (oldValue != null) {
+                removeWindowListeners(oldValue);
+            }
+            if (newValue != null) {
+                addWindowListeners(newValue);
+            }
+        }
+    };
+
+    private void removeSceneListeners(Scene scene) {
         Window window = scene.getWindow();
         if (window != null) {
-            window.xProperty().removeListener(locationListener);
-            window.yProperty().removeListener(locationListener);
-            window.removeEventHandler(FocusUngrabEvent.FOCUS_UNGRAB, ungrabHandler);
-            window.showingProperty().removeListener(windowVisibleListener);
+            removeWindowListeners(window);
         }
+        scene.windowProperty().removeListener(sceneWindowListener);
     }
 
-    private void addListeners(Scene scene) {
+    private void addSceneListeners(final Scene scene) {
         Window window = scene.getWindow();
         if (window != null) {
-            window.xProperty().addListener(locationListener);
-            window.yProperty().addListener(locationListener);
-            window.addEventHandler(FocusUngrabEvent.FOCUS_UNGRAB, ungrabHandler);
-            window.showingProperty().addListener(windowVisibleListener);
+            addWindowListeners(window);
         }
+        scene.windowProperty().addListener(sceneWindowListener);
+    }
+
+    private void addWindowListeners(final Window window) {
+        window.xProperty().addListener(locationListener);
+        window.yProperty().addListener(locationListener);
+        window.addEventHandler(FocusUngrabEvent.FOCUS_UNGRAB, ungrabHandler);
+        window.showingProperty().addListener(windowVisibleListener);
+    }
+
+    private void removeWindowListeners(final Window window) {
+        window.xProperty().removeListener(locationListener);
+        window.yProperty().removeListener(locationListener);
+        window.removeEventHandler(FocusUngrabEvent.FOCUS_UNGRAB, ungrabHandler);
+        window.showingProperty().removeListener(windowVisibleListener);
     }
 
     @Override
@@ -438,18 +460,25 @@ public class SwingNode extends Node {
         }
         peerRequests = null;
 
-        if (content != null) {
-            setContent(content); // in case the Node is re-added to Scene
+        if (getScene() != null) {
+            addSceneListeners(getScene());
         }
-        addListeners(getScene());
 
         sceneProperty().addListener(new ChangeListener<Scene>() {
             @Override
             public void changed(ObservableValue<? extends Scene> observable, Scene oldValue, Scene newValue) {
-                // Removed from scene, or added to another scene.
-                // The lwFrame will be recreated from impl_createPGNode().
-                removeListeners(oldValue);
-                disposeLwFrame();
+                if (oldValue != null) {
+                    // Removed from scene
+                    removeSceneListeners(oldValue);
+                    disposeLwFrame();
+                }
+                if (newValue != null) {
+                    // Added to another scene
+                    if (content != null && lwFrame == null) {
+                        setContent(content);
+                    }
+                    addSceneListeners(newValue);
+                }
             }
         });
 
