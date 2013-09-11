@@ -48,14 +48,7 @@ import javafx.beans.DefaultProperty;
  * will display to the user these choices and allow them to pick exactly one
  * choice. When not showing, the current choice is displayed.
  * <p>
- * The ChoiceBox can be configured either to support <code>null</code> as a
- * valid choice, or to prohibit it. In the case that it is prohibited, there
- * will always be some item that is selected, as long as there is at least
- * one item defined. By default, no item is selected unless
- * otherwise specified. In the case that <code>null</code> is acceptable,
- * a default entry may be inserted into the list of choices at the top,
- * with a name similar to "None" and localized for different Locales.
- * <p>
+ * By default, the ChoiceBox has no item selected unless otherwise specified. 
  * Although the ChoiceBox will only allow a user to select from the predefined
  * list, it is possible for the developer to specify the selected item to be
  * something other than what is available in the predefined list. This is
