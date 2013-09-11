@@ -504,8 +504,7 @@ HRESULT D3DContext::setDeviceParametersFor2D() {
         //       invalidated on the Java side.
         SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE)) &&
         SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID)) &&
-        SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_LIGHTING, FALSE)) &&
-        SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_CLIPPING, FALSE));
+        SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_LIGHTING, FALSE));
     }
     return res;
 }
@@ -555,7 +554,6 @@ HRESULT D3DContext::setDeviceParametersFor3D() {
         SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE)) &&
         SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE)) &&
         SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_LIGHTING, TRUE)) &&
-        SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_CLIPPING, TRUE)) &&
         // Set texture unit 0 to its default texture addressing mode for Prism
         SUCCEEDED(res = pd3dDevice->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP)) &&
         SUCCEEDED(res = pd3dDevice->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP));
@@ -598,11 +596,13 @@ HRESULT D3DContext::InitDevice(IDirect3DDevice9 *pd3dDevice)
     // disable some of the unneeded and costly d3d functionality
     pd3dDevice->SetRenderState(D3DRS_SPECULARENABLE, FALSE);
     pd3dDevice->SetRenderState(D3DRS_LIGHTING,  FALSE);
-    pd3dDevice->SetRenderState(D3DRS_CLIPPING,  FALSE);
     pd3dDevice->SetRenderState(D3DRS_ZENABLE, D3DZB_FALSE);
     pd3dDevice->SetRenderState(D3DRS_ZWRITEENABLE, D3DZB_FALSE);
     pd3dDevice->SetRenderState(D3DRS_COLORVERTEX, FALSE);
     pd3dDevice->SetRenderState(D3DRS_STENCILENABLE, FALSE);
+
+    // set clipping to true inorder support near and far clipping
+    pd3dDevice->SetRenderState(D3DRS_CLIPPING,  TRUE);
 
     // set the default texture addressing mode
     pd3dDevice->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
