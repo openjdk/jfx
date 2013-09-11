@@ -629,7 +629,10 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     NSRunLoop *theRL = [NSRunLoop currentRunLoop];
     NSApplication * app = [NSApplication sharedApplication];
     shouldKeepRunningNestedLoop = YES;
-    while (shouldKeepRunningNestedLoop && [theRL runMode:NSDefaultRunLoopMode beforeDate:[NSDate distantFuture]])
+    // Cannot use [NSDate distantFuture] because the period is big the app could hang in a runloop
+    // if the event came before entering the RL
+    while (shouldKeepRunningNestedLoop && [theRL runMode:NSDefaultRunLoopMode
+                                              beforeDate:[NSDate dateWithTimeIntervalSinceNow:0.010]])
     {
         NSEvent * event = [app nextEventMatchingMask: 0xFFFFFFFF untilDate:nil inMode:NSDefaultRunLoopMode dequeue:YES];
 
