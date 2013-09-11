@@ -354,6 +354,8 @@ public class TableCell<S,T> extends IndexedCell<T> {
             TablePosition editingCell = table.getEditingCell();
             if (updateEditingIndex) table.edit(-1, null);
 
+            table.requestFocus();
+
             CellEditEvent editEvent = new CellEditEvent(
                 table,
                 editingCell,

@@ -354,6 +354,8 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
             
             if (updateEditingIndex) table.edit(-1, null);
 
+            table.requestFocus();
+
             CellEditEvent<S,T> editEvent = new CellEditEvent<S,T>(
                 table,
                 editingCell,
