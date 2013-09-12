@@ -95,99 +95,20 @@ public class TriangleMesh extends Mesh {
     public static final int NUM_COMPONENTS_PER_TEXCOORD = 2;
     public static final int NUM_COMPONENTS_PER_FACE = 6;
 
-    public static final int MAX_LENGTH = 65536;
-    public static final int MAX_POINTS_LENGTH = NUM_COMPONENTS_PER_POINT * MAX_LENGTH;
-    public static final int MAX_TEXCOORDS_LENGTH = NUM_COMPONENTS_PER_TEXCOORD * MAX_LENGTH;
-    public static final int MAX_FACES_LENGTH = NUM_COMPONENTS_PER_FACE * MAX_LENGTH;
-    public static final int MAX_FACESMOOTHINGGROUPS_LENGTH = MAX_LENGTH;
-
-    // TODO: 3D - Need to validate the range of these arrays.
+    // TODO: 3D - Need to validate the size and range of these arrays.
     // A warning will be recorded to the logger and the mesh will have an empty
-    // bounds if the validation failed. (RT-26587)
+    // bounds if the validation failed. (RT-30451)
     // The values in faces must be within range and the length of points,
-    // texCoords and faces.
+    // texCoords and faces must be divisible by 3, 2 and 6 respectively.
     private final ObservableFloatArray points = FXCollections.observableFloatArray();
     private final ObservableFloatArray texCoords = FXCollections.observableFloatArray();
     private final ObservableIntegerArray faces = FXCollections.observableIntegerArray();
     private final ObservableIntegerArray faceSmoothingGroups = FXCollections.observableIntegerArray();
-
-    private final Listener pointsSyncer = new Listener<ObservableFloatArray>(points) {
-        
-        @Override
-        public void onChanged(ObservableFloatArray t, boolean sizeChanged, int from, int to) {
-            if (sizeChanged) {
-                if (t.size() > MAX_POINTS_LENGTH) {
-                    throw new IllegalArgumentException("points.length has "
-                            + "to be smaller or equal to MAX_POINTS_LENGTH.");
-                }
-                // Check that points.length is divisible by NUM_COMPONENTS_PER_POINT
-                if ((t.size() % NUM_COMPONENTS_PER_POINT) != 0) {
-                    throw new IllegalArgumentException("points.length has "
-                            + "to be divisible by NUM_COMPONENTS_PER_POINT."
-                            + " It is to store multiple x, y, and z coordinates of this mesh");
-                }
-            }
-            super.onChanged(t, sizeChanged, from, to);
-        }
-    };
-
-    private final Listener texCoordsSyncer = new Listener<ObservableFloatArray>(texCoords) {
-
-        @Override
-        public void onChanged(ObservableFloatArray t, boolean sizeChanged, int from, int to) {
-            if (sizeChanged) {
-                if (t.size() > MAX_TEXCOORDS_LENGTH) {
-                    throw new IllegalArgumentException("texCoords.length "
-                            + "has to be smaller or equal to MAX_TEXCOORDS_LENGTH.");
-                }
-                // Check that texCoords.length is divisible by NUM_COMPONENTS_PER_TEXCOORD
-                if ((t.size() % NUM_COMPONENTS_PER_TEXCOORD) != 0) {
-                    throw new IllegalArgumentException("texCoords.length "
-                            + "has to be divisible by NUM_COMPONENTS_PER_TEXCOORD."
-                            + " It is to store multiple u and v texture coordinates of this mesh");
-                }
-            }
-            super.onChanged(t, sizeChanged, from, to);
-        }
-    };
-
-    private final Listener facesSyncer = new Listener<ObservableIntegerArray>(faces) {
-
-        @Override
-        public void onChanged(ObservableIntegerArray t, boolean sizeChanged, int from, int to) {
-            if (sizeChanged) {
-                if (t.size() > MAX_FACES_LENGTH) {
-                    throw new IllegalArgumentException("faces.length has "
-                            + "to be smaller or equal to MAX_FACES_LENGTH.");
-                }
-                // Check that faces.length is divisible by NUM_COMPONENTS_PER_FACE
-                if ((t.size() % NUM_COMPONENTS_PER_FACE) != 0) {
-                    throw new IllegalArgumentException("faces.length has "
-                            + "to be divisible by NUM_COMPONENTS_PER_FACE.");
-                }
-            }
-            super.onChanged(t, sizeChanged, from, to);
-        }
-    };
     
-    private final Listener faceSmoothingGroupsSyncer = new Listener<ObservableIntegerArray>(faceSmoothingGroups) {
-
-        @Override
-        public void onChanged(ObservableIntegerArray t, boolean sizeChanged, int from, int to) {
-            if (sizeChanged) {
-                if (t.size() > MAX_FACESMOOTHINGGROUPS_LENGTH) {
-                    throw new IllegalArgumentException("faceSmoothingGroups.length has "
-                            + "to be smaller or equal to MAX_FACESMOOTHINGGROUPS_LENGTH.");
-                }
-                // Check that faceSmoothingGroups.length is 1/NUM_COMPONENTS_PER_FACE of faces.length
-                if (t.size() != (faces.size() / NUM_COMPONENTS_PER_FACE)) {
-                    throw new IllegalArgumentException("faceSmoothingGroups.length "
-                            + "has to be equal to (faces.length / NUM_COMPONENTS_PER_FACE).");
-                }
-            }
-            super.onChanged(t, sizeChanged, from, to);
-        }
-    };
+    private final Listener pointsSyncer = new Listener(points);
+    private final Listener texCoordsSyncer = new Listener(texCoords);
+    private final Listener facesSyncer = new Listener(faces);
+    private final Listener faceSmoothingGroupsSyncer = new Listener(faceSmoothingGroups);
 
     private int refCount = 1;
 
