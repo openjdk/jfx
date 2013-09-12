@@ -196,6 +196,14 @@ MacroAssemblerCodeRef stringLengthTrampolineGenerator(VM* vm)
         JSInterfaceJIT::TrustedImmPtr(vm->stringStructure.get()));
 
     // Checks out okay! - get the length from the Ustring.
+#if PLATFORM(JAVA) // RT-26306
+    jit.load32(
+        JSInterfaceJIT::Address(JSInterfaceJIT::regT0, JSString::offsetOfLength()),
+        JSInterfaceJIT::regT0);
+
+    JSInterfaceJIT::Jump failureCases3 = jit.branch32(
+        JSInterfaceJIT::Above, JSInterfaceJIT::regT0, JSInterfaceJIT::TrustedImm32(INT_MAX));
+#else // PLATFORM(JAVA)
     jit.load32(
         JSInterfaceJIT::Address(JSInterfaceJIT::regT0, JSString::offsetOfLength()),
         JSInterfaceJIT::regT2);
@@ -203,6 +211,7 @@ MacroAssemblerCodeRef stringLengthTrampolineGenerator(VM* vm)
     JSInterfaceJIT::Jump failureCases3 = jit.branch32(
         JSInterfaceJIT::Above, JSInterfaceJIT::regT2, JSInterfaceJIT::TrustedImm32(INT_MAX));
     jit.move(JSInterfaceJIT::regT2, JSInterfaceJIT::regT0);
+#endif // PLATFORM(JAVA)
     jit.move(JSInterfaceJIT::TrustedImm32(JSValue::Int32Tag), JSInterfaceJIT::regT1);
 #endif // USE(JSVALUE64)
 

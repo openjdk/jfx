@@ -83,6 +83,17 @@ public class MiscellaneousTest extends TestBase {
         assertEquals(location, records.get(0).location);
     }
 
+    @Test public void testRT26306() {
+        loadContent(
+                "<script language='javascript'>\n" +
+                "var s = '0123456789abcdef';\n" +
+                "while (true) {\n" +
+                "    alert(s.length);\n" +
+                "    s = s + s;\n" +
+                "}\n" +
+                "</script>");
+    }
+
     private WebEngine createWebEngine() {
         return submit(new Callable<WebEngine>() {
             public WebEngine call() {
