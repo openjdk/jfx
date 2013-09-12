@@ -1691,25 +1691,13 @@ public class FXMLLoader {
         }
     }
 
-    /**
-     * @since JavaFX 8.0
-     */
-    protected URL location;
-    /**
-     * @since JavaFX 8.0
-     */
-    protected ResourceBundle resources;
+    private URL location;
+    private ResourceBundle resources;
 
     private ObservableMap<String, Object> namespace = FXCollections.observableHashMap();
 
-    /**
-     * @since JavaFX 8.0
-     */
-    protected Object root = null;
-    /**
-     * @since JavaFX 8.0
-     */
-    protected Object controller = null;
+    private Object root = null;
+    private Object controller = null;
 
     private BuilderFactory builderFactory;
     private Callback<Class<?>, Object> controllerFactory;
