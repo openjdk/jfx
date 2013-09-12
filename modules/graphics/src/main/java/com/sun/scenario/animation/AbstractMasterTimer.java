@@ -26,12 +26,12 @@
 package com.sun.scenario.animation;
 
 import java.util.Arrays;
-import javafx.animation.AnimationTimer;
 import javafx.util.Callback;
 import com.sun.javafx.animation.TickCalculation;
 import com.sun.scenario.DelayedRunnable;
 import com.sun.scenario.Settings;
 import com.sun.scenario.animation.shared.PulseReceiver;
+import com.sun.scenario.animation.shared.TimerReceiver;
 
 public abstract class AbstractMasterTimer {
 
@@ -95,7 +95,7 @@ public abstract class AbstractMasterTimer {
     private boolean receiversLocked;
 
     // synchronize to update frameJobList and frameJobs
-    private AnimationTimer animationTimers[] = new AnimationTimer[2]; // frameJobList
+    private TimerReceiver animationTimers[] = new TimerReceiver[2]; // frameJobList
                                                                      // snapshot
     private int animationTimersLength;
     private boolean animationTimersLocked;
@@ -200,7 +200,7 @@ public abstract class AbstractMasterTimer {
         }
     }
 
-    public void addAnimationTimer(AnimationTimer timer) {
+    public void addAnimationTimer(TimerReceiver timer) {
         boolean needMoreSize = animationTimersLength == animationTimers.length;
         if (animationTimersLocked || needMoreSize) {
             animationTimers = Arrays.copyOf(animationTimers, needMoreSize ? animationTimers.length * 3 / 2 + 1 : animationTimers.length);
@@ -212,7 +212,7 @@ public abstract class AbstractMasterTimer {
         }
     }
 
-    public void removeAnimationTimer(AnimationTimer timer) {
+    public void removeAnimationTimer(TimerReceiver timer) {
         if (animationTimersLocked) {
             animationTimers = animationTimers.clone();
             animationTimersLocked = false;
@@ -348,7 +348,7 @@ public abstract class AbstractMasterTimer {
         }
         recordAnimationEnd();
 
-        final AnimationTimer animationTimersSnapshot[] = animationTimers;
+        final TimerReceiver animationTimersSnapshot[] = animationTimers;
         final int aTLength = animationTimersLength;
         try {
             animationTimersLocked = true;

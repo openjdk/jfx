@@ -297,47 +297,68 @@ public abstract class Toolkit {
      */
     public abstract void closeAppletWindow();
 
-    private final Map<TKPulseListener,Object> stagePulseListeners =
-            new WeakHashMap<TKPulseListener,Object>();
-    private final Map<TKPulseListener,Object> scenePulseListeners =
-            new WeakHashMap<TKPulseListener,Object>();
-    private final Map<TKPulseListener,Object> postScenePulseListeners =
-            new WeakHashMap<TKPulseListener,Object>();
-    private final Map<TKListener,Object> toolkitListeners =
-            new WeakHashMap<TKListener,Object>();
+    private final Map<TKPulseListener,AccessControlContext> stagePulseListeners =
+            new WeakHashMap<TKPulseListener,AccessControlContext>();
+    private final Map<TKPulseListener,AccessControlContext> scenePulseListeners =
+            new WeakHashMap<TKPulseListener,AccessControlContext>();
+    private final Map<TKPulseListener,AccessControlContext> postScenePulseListeners =
+            new WeakHashMap<TKPulseListener,AccessControlContext>();
+    private final Map<TKListener,AccessControlContext> toolkitListeners =
+            new WeakHashMap<TKListener,AccessControlContext>();
 
     // The set of shutdown hooks is strongly held to avoid premature GC.
     private final Set<Runnable> shutdownHooks = new HashSet<Runnable>();
 
+    private void runPulse(final TKPulseListener listener,
+            final AccessControlContext acc) {
+
+        if (acc == null) {
+            throw new IllegalStateException("Invalid AccessControlContext");
+        }
+
+        AccessController.doPrivileged(new PrivilegedAction<Void>() {
+            @Override public Void run() {
+                listener.pulse();
+                return null;
+            }
+        }, acc);
+    }
 
     public void firePulse() {
         // Stages need to be notified of pulses before scenes so the Stage can resized
         // and those changes propogated to scene before it gets its pulse to update
 
-        ArrayList<TKPulseListener> stagePulseList = new ArrayList<TKPulseListener>();
-        ArrayList<TKPulseListener> scenePulseList = new ArrayList<TKPulseListener>();
-        ArrayList<TKPulseListener> postScenePulseList = new ArrayList<TKPulseListener>();
+        // Copy of listener map
+        final Map<TKPulseListener,AccessControlContext> stagePulseList =
+                new WeakHashMap<TKPulseListener,AccessControlContext>();
+        final Map<TKPulseListener,AccessControlContext> scenePulseList =
+                new WeakHashMap<TKPulseListener,AccessControlContext>();
+        final Map<TKPulseListener,AccessControlContext> postScenePulseList =
+                new WeakHashMap<TKPulseListener,AccessControlContext>();
+
         synchronized (this) {
-            stagePulseList.addAll(stagePulseListeners.keySet());
-            scenePulseList.addAll(scenePulseListeners.keySet());
-            postScenePulseList.addAll(postScenePulseListeners.keySet());
+            stagePulseList.putAll(stagePulseListeners);
+            scenePulseList.putAll(scenePulseListeners);
+            postScenePulseList.putAll(postScenePulseListeners);
         }
-        for (TKPulseListener listener: stagePulseList) {
-            listener.pulse();
+        for (Map.Entry<TKPulseListener,AccessControlContext> entry : stagePulseList.entrySet()) {
+            runPulse(entry.getKey(), entry.getValue());
         }
-        for (TKPulseListener listener: scenePulseList) {
-            listener.pulse();
+        for (Map.Entry<TKPulseListener,AccessControlContext> entry : scenePulseList.entrySet()) {
+            runPulse(entry.getKey(), entry.getValue());
         }
-        for (TKPulseListener listener: postScenePulseList) {
-            listener.pulse();
+        for (Map.Entry<TKPulseListener,AccessControlContext> entry : postScenePulseList.entrySet()) {
+            runPulse(entry.getKey(), entry.getValue());
         }
+
         if (lastTkPulseListener != null) {
-            lastTkPulseListener.pulse();
+            runPulse(lastTkPulseListener, lastTkPulseAcc);
         }
     }
     public void addStageTkPulseListener(TKPulseListener listener) {
         synchronized (this) {
-            stagePulseListeners.put(listener, null);
+            AccessControlContext acc = AccessController.getContext();
+            stagePulseListeners.put(listener, acc);
         }
     }
     public void removeStageTkPulseListener(TKPulseListener listener) {
@@ -347,7 +368,8 @@ public abstract class Toolkit {
     }
     public void addSceneTkPulseListener(TKPulseListener listener) {
         synchronized (this) {
-            scenePulseListeners.put(listener, null);
+            AccessControlContext acc = AccessController.getContext();
+            scenePulseListeners.put(listener, acc);
         }
     }
     public void removeSceneTkPulseListener(TKPulseListener listener) {
@@ -357,7 +379,8 @@ public abstract class Toolkit {
     }
     public void addPostSceneTkPulseListener(TKPulseListener listener) {
         synchronized (this) {
-            postScenePulseListeners.put(listener, null);
+            AccessControlContext acc = AccessController.getContext();
+            postScenePulseListeners.put(listener, acc);
         }
     }
     public void removePostSceneTkPulseListener(TKPulseListener listener) {
@@ -367,7 +390,8 @@ public abstract class Toolkit {
     }
 
     public void addTkListener(TKListener listener) {
-        toolkitListeners.put(listener, null);
+        AccessControlContext acc = AccessController.getContext();
+        toolkitListeners.put(listener, acc);
     }
 
     public void removeTkListener(TKListener listener) {
@@ -375,7 +399,9 @@ public abstract class Toolkit {
     }
 
     private TKPulseListener lastTkPulseListener = null;
+    private AccessControlContext lastTkPulseAcc = null;
     public void setLastTkPulseListener(TKPulseListener listener) {
+        lastTkPulseAcc = AccessController.getContext();
         lastTkPulseListener = listener;
     }
 
@@ -403,9 +429,20 @@ public abstract class Toolkit {
         }
     }
 
-    public void notifyWindowListeners(List<TKStage> windows) {
-        for (TKListener listener: toolkitListeners.keySet()) {
-            listener.changedTopLevelWindows(windows);
+    public void notifyWindowListeners(final List<TKStage> windows) {
+        for (Map.Entry<TKListener,AccessControlContext> entry : toolkitListeners.entrySet()) {
+            final TKListener listener = entry.getKey();
+            final AccessControlContext acc = entry.getValue();
+            if (acc == null) {
+                throw new IllegalStateException("Invalid AccessControlContext");
+            }
+
+            AccessController.doPrivileged(new PrivilegedAction<Void>() {
+                @Override public Void run() {
+                    listener.changedTopLevelWindows(windows);
+                    return null;
+                }
+            }, acc);
         }
     }
 

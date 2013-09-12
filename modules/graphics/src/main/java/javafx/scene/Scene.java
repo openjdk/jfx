@@ -1235,7 +1235,7 @@ public class Scene implements EventTarget {
     private static List<Runnable> snapshotRunnableListB;
     private static List<Runnable> snapshotRunnableList;
 
-    static void addSnapshotRunnable(Runnable r) {
+    static void addSnapshotRunnable(final Runnable runnable) {
         Toolkit.getToolkit().checkFxUserThread();
 
         if (snapshotPulseListener == null) {
@@ -1269,7 +1269,18 @@ public class Scene implements EventTarget {
             // had layout and CSS processing, and have been synced
             Toolkit.getToolkit().addPostSceneTkPulseListener(snapshotPulseListener);
         }
-        snapshotRunnableList.add(r);
+
+        final AccessControlContext acc = AccessController.getContext();
+        snapshotRunnableList.add(new Runnable() {
+            @Override public void run() {
+                AccessController.doPrivileged(new PrivilegedAction<Void>() {
+                    @Override public Void run() {
+                        runnable.run();
+                        return null;
+                    }
+                }, acc);
+            }
+        });
         Toolkit.getToolkit().requestNextPulse();
     }
 
