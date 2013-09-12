@@ -24,8 +24,6 @@
  */
 package com.sun.glass.ui.mac;
 
-import com.sun.glass.ui.Application;
-import com.sun.glass.ui.CommonDialogs;
 import com.sun.glass.ui.CommonDialogs.Type;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
@@ -34,8 +32,6 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 
 import java.io.File;
-import java.util.List;
-import java.util.ArrayList;
 
 /**
  * MacOSX platform implementation class for CommonDialogs.
@@ -52,7 +48,7 @@ final class MacCommonDialogs {
     private static native FileChooserResult _showFileSaveChooser(long owner, String folder, String filename, String title,
                                                                  ExtensionFilter[] extensionFilters, int defaultFilterIndex);
 
-    private static native File _showFolderChooser(String folder, String title);
+    private static native File _showFolderChooser(long owner, String folder, String title);
 
     static FileChooserResult showFileChooser_impl(Window owner, String folder, String filename, String title, int type,
                                          boolean multipleMode, ExtensionFilter[] extensionFilters, int defaultFilterIndex) {
@@ -68,8 +64,9 @@ final class MacCommonDialogs {
         }
     }
     
-    static File showFolderChooser_impl() {
-        return _showFolderChooser(null, null);
+    static File showFolderChooser_impl(Window owner, String folder, String title) {
+        final long ownerPtr = owner != null ? owner.getNativeWindow() : 0L;
+        return _showFolderChooser(ownerPtr, folder, title);
     }
 
     static boolean isFileNSURLEnabled() {

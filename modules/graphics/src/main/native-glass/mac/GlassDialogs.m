@@ -580,10 +580,10 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCommonDialogs__1showFileS
 /*
  * Class:     com_sun_glass_ui_mac_MacCommonDialogs
  * Method:    _showFolderChooser
- * Signature: (Ljava/lang/String;Ljava/lang/String;)Ljava/io/File;
+ * Signature: (JLjava/lang/String;Ljava/lang/String;)Ljava/io/File;
  */
 JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCommonDialogs__1showFolderChooser
-(JNIEnv *env, jclass cls, jstring jFolder, jstring jTitle)
+(JNIEnv *env, jclass cls, jlong owner, jstring jFolder, jstring jTitle)
 {
     LOG("Java_com_sun_glass_ui_mac_MacCommonDialogs__1showFolderChooser");
     
@@ -610,7 +610,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCommonDialogs__1showFolde
         [panel setAllowsOtherFileTypes:NO];
         [panel setCanCreateDirectories:YES];
         
-        DialogDispatcher *dispatcher = [[DialogDispatcher alloc] initWithPanel:panel owner:nil];
+        DialogDispatcher *dispatcher = [[DialogDispatcher alloc] initWithPanel:panel owner:(NSWindow*)jlong_to_ptr(owner)];
         {
             [dispatcher performSelectorOnMainThread:@selector(runModally) withObject:panel waitUntilDone:YES];
             NSArray *urls = [panel URLs];
