@@ -190,8 +190,8 @@ public class Tooltip extends PopupControl {
         if (isShowing() && value != null && !value.equals(getText())) {
             //Dynamic tooltip content is location-dependant.
             //Chromium trick.
-            setX(BEHAVIOR.lastMouseX);
-            setY(BEHAVIOR.lastMouseY);
+            setAnchorX(BEHAVIOR.lastMouseX);
+            setAnchorY(BEHAVIOR.lastMouseY);
         }
         textProperty().setValue(value);
     }

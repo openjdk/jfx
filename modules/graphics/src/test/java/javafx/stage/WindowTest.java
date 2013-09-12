@@ -66,34 +66,6 @@ public final class WindowTest {
         assertEquals(1.0f, peer.opacity);
     }
 
-    @Test
-    public void testWindowTranslate() {
-        testWindow.show();
-        final StubStage peer = getPeer(testWindow);
-
-        testWindow.setWindowTranslate(20, 10);
-        testWindow.setX(30);
-        testWindow.setY(30);
-        toolkit.fireTestPulse();
-
-        assertEquals(30.0, testWindow.getX());
-        assertEquals(30.0, testWindow.getY());
-        assertEquals(50f, peer.x);
-        assertEquals(40f, peer.y);
-
-        testWindow.setWindowTranslate(10, 20);
-        toolkit.fireTestPulse();
-
-        assertEquals(30.0, testWindow.getX());
-        assertEquals(30.0, testWindow.getY());
-        assertEquals(40f, peer.x);
-        assertEquals(50f, peer.y);
-
-        peer.setLocation(60, 60);
-        assertEquals(50.0, testWindow.getX());
-        assertEquals(40.0, testWindow.getY());
-    }
-
     private static StubStage getPeer(final Window window) {
         final TKStage unkPeer = window.impl_getPeer();
         assertTrue(unkPeer instanceof StubStage);

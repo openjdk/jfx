@@ -82,22 +82,21 @@ public class Window implements EventTarget {
         WindowHelper.setWindowAccessor(
                 new WindowHelper.WindowAccessor() {
                     /**
-                     * Allow window peer listeners to directly change window
-                     * location and size without changing the xExplicit,
+                     * Allow window peer listeners to directly change reported
+                     * window location and size without changing the xExplicit,
                      * yExplicit, widthExplicit and heightExplicit values.
                      */
                     @Override
-                    public void setLocation(Window window, double x, double y) {
-                        window.x.set(x - window.winTranslateX);
-                        window.y.set(y - window.winTranslateY);
+                    public void notifyLocationChanged(
+                            Window window, double x, double y) {
+                        window.notifyLocationChanged(x, y);
                     }
 
                     @Override
-                    public void setSize(Window window,
-                                        double width,
-                                        double height) {
-                        window.width.set(width);
-                        window.height.set(height);
+                    public void notifySizeChanged(Window window,
+                                                  double width,
+                                                  double height) {
+                        window.notifySizeChanged(width, height);
                     }
 
                     @Override
@@ -246,36 +245,13 @@ public class Window implements EventTarget {
                     bounds.getMinY() + (bounds.getHeight() - getHeight())
                                            * CENTER_ON_SCREEN_Y_FRACTION;
 
-            x.set(centerX - winTranslateX);
-            y.set(centerY - winTranslateY);
+            x.set(centerX);
+            y.set(centerY);
             peerBoundsConfigurator.setLocation(centerX, centerY,
                                                CENTER_ON_SCREEN_X_FRACTION,
                                                CENTER_ON_SCREEN_Y_FRACTION);
             applyBounds();
         }
-    }
-
-    private double winTranslateX;
-    private double winTranslateY;
-
-    final void setWindowTranslate(final double translateX,
-                                  final double translateY) {
-        if (translateX != winTranslateX) {
-            winTranslateX = translateX;
-            peerBoundsConfigurator.setX(getX() + translateX, 0);
-        }
-        if (translateY != winTranslateY) {
-            winTranslateY = translateY;
-            peerBoundsConfigurator.setY(getY() + translateY, 0);
-        }
-    }
-
-    final double getWindowTranslateX() {
-        return winTranslateX;
-    }
-
-    final double getWindowTranslateY() {
-        return winTranslateY;
     }
 
     private boolean xExplicit = false;
@@ -290,12 +266,16 @@ public class Window implements EventTarget {
             new ReadOnlyDoubleWrapper(this, "x", Double.NaN);
 
     public final void setX(double value) {
-        x.set(value);
-        peerBoundsConfigurator.setX(value + winTranslateX, 0);
-        xExplicit = true;
+        setXInternal(value);
     }
     public final double getX() { return x.get(); }
     public final ReadOnlyDoubleProperty xProperty() { return x.getReadOnlyProperty(); }
+
+    void setXInternal(double value) {
+        x.set(value);
+        peerBoundsConfigurator.setX(value, 0);
+        xExplicit = true;
+    }
 
     private boolean yExplicit = false;
     /**
@@ -309,14 +289,31 @@ public class Window implements EventTarget {
             new ReadOnlyDoubleWrapper(this, "y", Double.NaN);
 
     public final void setY(double value) {
-        y.set(value);
-        peerBoundsConfigurator.setY(value + winTranslateY, 0);
-        yExplicit = true;
+        setYInternal(value);
     }
     public final double getY() { return y.get(); }
     public final ReadOnlyDoubleProperty yProperty() { return y.getReadOnlyProperty(); }
 
+    void setYInternal(double value) {
+        y.set(value);
+        peerBoundsConfigurator.setY(value, 0);
+        yExplicit = true;
+    }
+
+    /**
+     * Notification from the windowing system that the window's position has
+     * changed.
+     *
+     * @param newX the new window x position
+     * @param newY the new window y position
+     */
+    void notifyLocationChanged(double newX, double newY) {
+        x.set(newX);
+        y.set(newY);
+    }
+
     private boolean widthExplicit = false;
+
     /**
      * The width of this {@code Stage}. Changing this attribute will narrow or
      * widen the width of the {@code Stage}. Changing this
@@ -366,6 +363,18 @@ public class Window implements EventTarget {
     }
     public final double getHeight() { return height.get(); }
     public final ReadOnlyDoubleProperty heightProperty() { return height.getReadOnlyProperty(); }
+
+    /**
+     * Notification from the windowing system that the window's size has
+     * changed.
+     *
+     * @param newWidth the new window width
+     * @param newHeight the new window height
+     */
+    void notifySizeChanged(double newWidth, double newHeight) {
+        width.set(newWidth);
+        height.set(newHeight);
+    }
 
     /**
      * Whether or not this {@code Window} has the keyboard or input focus.
@@ -752,10 +761,8 @@ public class Window implements EventTarget {
                     if (!xExplicit && !yExplicit) {
                         centerOnScreen();
                     } else {
-                        peerBoundsConfigurator.setLocation(
-                                getX() + winTranslateX,
-                                getY() + winTranslateY,
-                                0, 0);
+                        peerBoundsConfigurator.setLocation(getX(), getY(),
+                                                           0, 0);
                     }
 
                     // set peer bounds before the window is shown

@@ -118,6 +118,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
         bridge.idProperty().bind(idProperty());
         bridge.styleProperty().bind(styleProperty());
 
+        setAnchorLocation(AnchorLocation.CONTENT_TOP_LEFT);
         getContent().add(bridge);
 
         // TODO the fact that PopupWindow uses a group for auto-moving things

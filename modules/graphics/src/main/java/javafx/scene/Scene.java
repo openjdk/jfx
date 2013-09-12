@@ -415,10 +415,21 @@ public class Scene implements EventTarget {
                         }
 
                         @Override
-                        public void setSceneDelta(Scene scene,
-                                                  double deltaX,
-                                                  double deltaY) {
-                            scene.setSceneDelta(deltaX, deltaY);
+                        public Scene createPopupScene(Parent root) {
+                            return new Scene(root) {
+                                       @Override
+                                       void doLayoutPass() {
+                                           resizeRootToPreferredSize(getRoot());
+                                           super.doLayoutPass();
+                                       }
+
+                                       @Override
+                                       void resizeRootOnSceneSizeChange(
+                                               double newWidth,
+                                               double newHeight) {
+                                           // don't resize
+                                       }
+                                   };
                         }
                     });
         }
@@ -542,7 +553,7 @@ public class Scene implements EventTarget {
         }
     }
 
-    private void doLayoutPass() {
+    void doLayoutPass() {
         final Parent r = getRoot();
         if (r != null) {
             r.layout();
@@ -814,7 +825,7 @@ public class Scene implements EventTarget {
                         _root.impl_transformsChanged();
                     }
                     if (_root.isResizable()) {
-                        _root.resize(get() - _root.getLayoutX() - _root.getTranslateX(), _root.getLayoutBounds().getHeight());
+                        resizeRootOnSceneSizeChange(get() - _root.getLayoutX() - _root.getTranslateX(), _root.getLayoutBounds().getHeight());
                     }
 
                     getEffectiveCamera().setViewWidth(get());
@@ -859,7 +870,7 @@ public class Scene implements EventTarget {
                 protected void invalidated() {
                     final Parent _root = getRoot();
                     if (_root.isResizable()) {
-                        _root.resize(_root.getLayoutBounds().getWidth(), get() - _root.getLayoutY() - _root.getTranslateY());
+                        resizeRootOnSceneSizeChange(_root.getLayoutBounds().getWidth(), get() - _root.getLayoutY() - _root.getTranslateY());
                     }
 
                     getEffectiveCamera().setViewHeight(get());
@@ -879,17 +890,8 @@ public class Scene implements EventTarget {
         return height;
     }
 
-    private double sceneDeltaX;
-    private double sceneDeltaY;
-
-    private void setSceneDelta(final double deltaX, final double deltaY) {
-        if ((sceneDeltaX != deltaX) || (sceneDeltaY != deltaY)) {
-            setX(getX() - sceneDeltaX + deltaX);
-            setY(getY() - sceneDeltaY + deltaY);
-
-            sceneDeltaX = deltaX;
-            sceneDeltaY = deltaY;
-        }
+    void resizeRootOnSceneSizeChange(double newWidth, double newHeight) {
+        getRoot().resize(newWidth, newHeight);
     }
 
     // Reusable target wrapper (to avoid creating new one for each picking)
@@ -1499,54 +1501,17 @@ public class Scene implements EventTarget {
         // scene
         doCSSPass();
 
-        boolean computeWidth = false;
-        boolean computeHeight = false;
-
-        double rootWidth = widthSetByUser;
-        double rootHeight = heightSetByUser;
-
-        if (widthSetByUser < 0) {
-            rootWidth = root.prefWidth(heightSetByUser >= 0 ? heightSetByUser : -1);
-            rootWidth = root.boundedSize(rootWidth,
-                    root.minWidth(heightSetByUser >= 0 ? heightSetByUser : -1),
-                    root.maxWidth(heightSetByUser >= 0 ? heightSetByUser : -1));
-            computeWidth = true;
-        }
-        if (heightSetByUser < 0) {
-            rootHeight = root.prefHeight(widthSetByUser >= 0 ? widthSetByUser : -1);
-            rootHeight = root.boundedSize(rootHeight,
-                    root.minHeight(widthSetByUser >= 0 ? widthSetByUser : -1),
-                    root.maxHeight(widthSetByUser >= 0 ? widthSetByUser : -1));
-            computeHeight = true;
-        }
-        if (root.getContentBias() == Orientation.HORIZONTAL) {
-            if (heightSetByUser < 0) {
-                rootHeight = root.boundedSize(
-                        root.prefHeight(rootWidth),
-                        root.minHeight(rootWidth),
-                        root.maxHeight(rootWidth));
-                computeHeight = true;
-            }
-        } else if (root.getContentBias() == Orientation.VERTICAL) {
-            if (widthSetByUser < 0) {
-                rootWidth = root.boundedSize(
-                        root.prefWidth(rootHeight),
-                        root.minWidth(rootHeight),
-                        root.maxWidth(rootHeight));
-                computeWidth = true;
-            }
-        }
-        root.resize(rootWidth, rootHeight);
+        resizeRootToPreferredSize(root);
         doLayoutPass();
 
-        if (computeWidth) {
+        if (widthSetByUser < 0) {
             setWidth(root.isResizable()? root.getLayoutX() + root.getTranslateX() + root.getLayoutBounds().getWidth() :
                             root.getBoundsInParent().getMaxX());
         } else {
             setWidth(widthSetByUser);
         }
 
-        if (computeHeight) {
+        if (heightSetByUser < 0) {
             setHeight(root.isResizable()? root.getLayoutY() + root.getTranslateY() + root.getLayoutBounds().getHeight() :
                             root.getBoundsInParent().getMaxY());
         } else {
@@ -1556,6 +1521,53 @@ public class Scene implements EventTarget {
         sizeInitialized = (getWidth() > 0) && (getHeight() > 0);
 
         PerformanceTracker.logEvent("Scene preferred bounds computation complete");
+    }
+
+    final void resizeRootToPreferredSize(Parent root) {
+        final double preferredWidth;
+        final double preferredHeight;
+
+        final Orientation contentBias = root.getContentBias();
+        if (contentBias == null) {
+            preferredWidth = getPreferredWidth(root, widthSetByUser, -1);
+            preferredHeight = getPreferredHeight(root, heightSetByUser, -1);
+        } else if (contentBias == Orientation.HORIZONTAL) {
+            // height depends on width
+            preferredWidth = getPreferredWidth(root, widthSetByUser, -1);
+            preferredHeight = getPreferredHeight(root, heightSetByUser,
+                                                       preferredWidth);
+        } else /* if (contentBias == Orientation.VERTICAL) */ {
+            // width depends on height
+            preferredHeight = getPreferredHeight(root, heightSetByUser, -1);
+            preferredWidth = getPreferredWidth(root, widthSetByUser,
+                                                     preferredHeight);
+        }
+
+        root.resize(preferredWidth, preferredHeight);
+    }
+
+    private static double getPreferredWidth(Parent root,
+                                            double forcedWidth,
+                                            double height) {
+        if (forcedWidth >= 0) {
+            return forcedWidth;
+        }
+        final double normalizedHeight = (height >= 0) ? height : -1;
+        return root.boundedSize(root.prefWidth(normalizedHeight),
+                                root.minWidth(normalizedHeight),
+                                root.maxWidth(normalizedHeight));
+    }
+
+    private static double getPreferredHeight(Parent root,
+                                             double forcedHeight,
+                                             double width) {
+        if (forcedHeight >= 0) {
+            return forcedHeight;
+        }
+        final double normalizedWidth = (width >= 0) ? width : -1;
+        return root.boundedSize(root.prefHeight(normalizedWidth),
+                                root.minHeight(normalizedWidth),
+                                root.maxHeight(normalizedWidth));
     }
 
     /**
@@ -2363,11 +2375,11 @@ public class Scene implements EventTarget {
     class ScenePeerListener implements TKSceneListener {
         @Override
         public void changedLocation(float x, float y) {
-            if ((x + sceneDeltaX) != Scene.this.getX()) {
-                Scene.this.setX(x + sceneDeltaX);
+            if (x != Scene.this.getX()) {
+                Scene.this.setX(x);
             }
-            if ((y + sceneDeltaY) != Scene.this.getY()) {
-                Scene.this.setY(y + sceneDeltaY);
+            if (y != Scene.this.getY()) {
+                Scene.this.setY(y);
             }
         }
 

@@ -46,12 +46,12 @@ public class WindowPeerListener implements TKStageListener {
 
     @Override
     public void changedLocation(float x, float y) {
-        WindowHelper.setLocation(window, x, y);
+        WindowHelper.notifyLocationChanged(window, x, y);
     }
 
     @Override
     public void changedSize(float width, float height) {
-        WindowHelper.setSize(window, width, height);
+        WindowHelper.notifySizeChanged(window, width, height);
     }
 
     public void changedFocused(boolean focused, FocusCause cause) {

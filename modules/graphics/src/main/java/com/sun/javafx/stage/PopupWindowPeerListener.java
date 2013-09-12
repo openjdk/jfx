@@ -51,9 +51,6 @@ public class PopupWindowPeerListener extends WindowPeerListener {
     public void closing() {
     }
 
-    public void changedLocation(float x, float y) {
-    }
-
     public void changedIconified(boolean iconified) {
         // Not applicable for popups
     }
