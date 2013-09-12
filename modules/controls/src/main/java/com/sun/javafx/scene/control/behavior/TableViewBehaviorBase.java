@@ -1091,13 +1091,24 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         TableFocusModel fm = getFocusModel();
         if (fm == null) return;
         
-        int index = fm.getFocusedIndex() - 1;
-        if (index < 0) return;
-        
+        int focusIndex = fm.getFocusedIndex();
+        final int newFocusIndex = focusIndex - 1;
+        if (newFocusIndex < 0) return;
+
+        int startIndex = focusIndex;
+        final TableColumnBase col = sm.isCellSelectionEnabled() ? getFocusedCell().getTableColumn() : null;
+        if (isShiftDown) {
+            startIndex = getAnchor() == null ? focusIndex : getAnchor().getRow();
+        }
+
         if (! sm.isCellSelectionEnabled()) {
-            sm.select(index);
+            sm.selectRange(newFocusIndex, startIndex + 1);
+            fm.focus(newFocusIndex);
         } else {
-            sm.select(index, getFocusedCell().getTableColumn());
+            for (int i = newFocusIndex; i < startIndex + 1; i++) {
+                sm.select(i, col);
+            }
+            fm.focus(newFocusIndex, col);
         }
     }
     
@@ -1108,12 +1119,22 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         TableFocusModel fm = getFocusModel();
         if (fm == null) return;
 
-        int index = fm.getFocusedIndex() + 1;
-        
+        int focusIndex = fm.getFocusedIndex();
+        final int newFocusIndex = focusIndex + 1;
+        int startIndex = focusIndex;
+        final TableColumnBase col = sm.isCellSelectionEnabled() ? getFocusedCell().getTableColumn() : null;
+        if (isShiftDown) {
+            startIndex = getAnchor() == null ? focusIndex : getAnchor().getRow();
+        }
+
         if (! sm.isCellSelectionEnabled()) {
-            sm.select(index);
+            sm.selectRange(startIndex, newFocusIndex + 1);
+            fm.focus(newFocusIndex);
         } else {
-            sm.select(index, getFocusedCell().getTableColumn());
+            for (int i = startIndex; i < newFocusIndex + 1; i++) {
+                sm.select(i, col);
+            }
+            fm.focus(newFocusIndex, col);
         }
     }
     

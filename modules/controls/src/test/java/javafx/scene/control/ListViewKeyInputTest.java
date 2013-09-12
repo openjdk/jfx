@@ -1365,4 +1365,164 @@ public class ListViewKeyInputTest {
         assertTrue(selectedIndex2 > selectedIndex1);
         assertTrue(selectedIndex0 > selectedIndex2);
     }
+
+    @Test public void test_rt21375_scenario_1a_down() {
+        final int items = 8;
+        listView.getItems().clear();
+        for (int i = 1; i <= items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        final MultipleSelectionModel sm = listView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(0);
+
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertTrue(isSelected(0,1,2,3));
+        assertEquals(4, sm.getSelectedItems().size());
+    }
+
+    @Test public void test_rt21375_scenario_1b_down() {
+        final int items = 8;
+        listView.getItems().clear();
+        for (int i = 1; i <= items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        final MultipleSelectionModel sm = listView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(0);
+
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertTrue(isSelected(0,1,2,3));
+        assertEquals(4, sm.getSelectedItems().size());
+    }
+
+    @Test public void test_rt21375_scenario_2_down() {
+        final int items = 8;
+        listView.getItems().clear();
+        for (int i = 1; i <= items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        final MultipleSelectionModel sm = listView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(0);
+
+        keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertTrue(isSelected(2,3,4));
+        assertEquals(3, sm.getSelectedItems().size());
+    }
+
+    @Test public void test_rt21375_scenario_3_down() {
+        final int items = 8;
+        listView.getItems().clear();
+        for (int i = 1; i <= items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        final MultipleSelectionModel sm = listView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(0);
+
+        keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertTrue(isSelected(0,2,3,4));
+        assertEquals(4, sm.getSelectedItems().size());
+    }
+
+    @Test public void test_rt21375_scenario_1a_up() {
+        final int items = 8;
+        listView.getItems().clear();
+        for (int i = 1; i <= items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        final MultipleSelectionModel sm = listView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(7);
+
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertTrue(isSelected(7,6,5,4));
+        assertEquals(4, sm.getSelectedItems().size());
+    }
+
+    @Test public void test_rt21375_scenario_1b_up() {
+        final int items = 8;
+        listView.getItems().clear();
+        for (int i = 1; i <= items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        final MultipleSelectionModel sm = listView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(7);
+
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertTrue(isSelected(7,6,5,4));
+        assertEquals(4, sm.getSelectedItems().size());
+    }
+
+    @Test public void test_rt21375_scenario_2_up() {
+        final int items = 8;
+        listView.getItems().clear();
+        for (int i = 1; i <= items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        final MultipleSelectionModel sm = listView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(7);
+
+        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertTrue(isSelected(5,4,3));
+        assertEquals(3, sm.getSelectedItems().size());
+    }
+
+    @Test public void test_rt21375_scenario_3_up() {
+        final int items = 8;
+        listView.getItems().clear();
+        for (int i = 1; i <= items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        final MultipleSelectionModel sm = listView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(7);
+
+        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertTrue(isSelected(7,5,4,3));
+        assertEquals(4, sm.getSelectedItems().size());
+    }
 }
