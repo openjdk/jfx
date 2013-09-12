@@ -490,8 +490,11 @@ final class LensApplication extends Application {
         @Override
         void dispatch() {
             LensTouchInputSupport.postTouchEvent(view, state, id, x, y, absX, absY);
-            view._notifyMouse(MouseEvent.DRAG, MouseEvent.BUTTON_NONE,
-                    x, y, absX, absY, 0, false, true);
+            if (state == TouchEvent.TOUCH_MOVED) {
+                view._notifyMouse(MouseEvent.DRAG, MouseEvent.BUTTON_NONE,
+                                  x, y, absX, absY, 0, false, true);
+            } 
+	    // else do nothing; other events are synthesized in native code
         }
 
         @Override
@@ -532,9 +535,11 @@ final class LensApplication extends Application {
         void dispatch() {
             LensTouchInputSupport.postMultiTouchEvent(
                     view, states, ids, xs, ys, dx, dy);
-            view._notifyMouse(MouseEvent.DRAG, MouseEvent.BUTTON_NONE,
+            if (states.length > 0 && states[0] == TouchEvent.TOUCH_MOVED) {
+                view._notifyMouse(MouseEvent.DRAG, MouseEvent.BUTTON_NONE,
                     xs[0] + dx, ys[0] + dy, xs[0], ys[0], 0, false, true);
-
+            }
+	    // else do nothing; other events are synthesized in native code
         }
 
         @Override
