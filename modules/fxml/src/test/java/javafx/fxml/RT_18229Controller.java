@@ -25,7 +25,8 @@
 
 package javafx.fxml;
 
-import com.sun.javafx.fxml.PropertyChangeEvent;
+import javafx.event.Event;
+
 import java.net.URL;
 import java.util.ResourceBundle;
 
@@ -69,7 +70,7 @@ public class RT_18229Controller implements Initializable {
     }
 
     @FXML
-    protected void handleChildNameChange(PropertyChangeEvent<String> event) {
+    protected void handleChildNameChange(Event event) {
         updateChildName();
     }
 
