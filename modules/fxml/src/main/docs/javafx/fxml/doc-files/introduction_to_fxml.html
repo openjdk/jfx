@@ -4,9 +4,9 @@
 <head>
 <link href="fxml.css" rel="stylesheet"/>    
 <meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
-<title>Introduction to FXML | JavaFX 2.2</title>
-<meta name="description" content="The document introduces FXML, an XML-based declarative markup language for defining user interfaces in JavaFX 2.2 applications."/>
-<meta name="keywords" content="JavaFX 2.2, FXML, JavaFX GUI development, web development, Java application development, GUI applications, rich internet applications, RIA, expressive content"/>
+<title>Introduction to FXML | JavaFX 8.0</title>
+<meta name="description" content="The document introduces FXML, an XML-based declarative markup language for defining user interfaces in JavaFX 8.0 applications."/>
+<meta name="keywords" content="JavaFX 8.0, FXML, JavaFX GUI development, web development, Java application development, GUI applications, rich internet applications, RIA, expressive content"/>
 </head>
 <body>
 
@@ -15,7 +15,7 @@
 </div>
 
 <h1>Introduction to FXML</h1>
-<p class="subtitle">Last updated: 8/23/2013</p>
+<p class="subtitle">Last updated: 9/10/2013</p>
 
 <h2>Contents</h2>
 <ul class="contents">
@@ -69,6 +69,8 @@
         <ul>
         <li><a href="#script_event_handlers">Script Event Handlers</a></li>
         <li><a href="#controller_method_event_handlers">Controller Method Event Handlers</a></li>
+        <li><a href="#expression_handlers">Event handlers from expressions</a></li>
+        <li><a href="#collections_and_property_handlers">Special handlers for collections and properties</a></li>
         </ul>
     </li>
     </ul>
@@ -566,9 +568,9 @@ myText = This is the text!
 <p><assert id="static_property_attributes_use" group="attributes">In addition to being more concise, static property attributes, like instance property attributes, support location, resource, and variable resolution operators, the only limitation being that it is not possible to create an expression binding to a static property.</assert></p>
 
 <h3><a name="event_handler_attributes">Event Handlers</a></h3>
-<p>Event handler attributes are a convenient means of attaching behaviors to document elements. Any class that defines a <span class="code">setOn<span class="variable">Event</span>()</span> method can be assigned an event handler in markup, as can any observable property (via an "on<span class="variable">Property</span>Change" attribute).</p>
+<p>Event handler attributes are a convenient means of attaching behaviors to document elements. Any class that defines a <span class="code">setOn<span class="variable">Event</span>()</span> method can be assigned an event handler in markup.</p>
 
-<p>FXML supports two types of event handler attributes: script event handlers and controller method event handlers. Each are discussed below.</p>
+<p>FXML supports three types of event handler attributes: script event handlers, controller method event handlers and expressions. Each are discussed below.</p>
 
 <h4><a name="script_event_handlers">Script Event Handlers</a></h4>
 <p><assert id="script_event_handlers" group="event_handlers">A script event handler is an event handler that executes script code when the event is fired, similar to event handlers in HTML.</assert> For example, the following script-based handler for the button's "onAction" event uses JavaScript to write the text "You clicked me!" to the console when the user presses the button:</p>
@@ -615,11 +617,57 @@ public class MyController {
 
 <p>the <span class="code">handleButtonAction()</span> will be called when the user presses the button, and the text "You clicked me!" will be written to the console.</p>
 
-<p><assert id="handler_method_signature" group="event_handlers">In general, a handler method should conform to the signature of a standard event handler; that is, it should take a single argument of a type that extends <span class="code">javafx.event.Event</span> and should return void (similar to an event delegate in C#). The event argument often carries important and useful information about the nature of the event;</assert> <assert id="handler_method_opt_arg" group="event_handlers">however, it is optional and may be omitted if desired</assert>.</p>
+<p><assert id="handler_method_signature" group="event_handlers">In general, a handler method should conform to the signature of a standard event handler; that is, it should take a single argument of a type that extends <span class="code">javafx.event.Event</span> and should return void (similar to an event delegate in C#). The event argument often carries important and useful information about the nature of the event;</assert> <assert id="handler_method_opt_arg" group="event_handlers">however, it is optional and may be omitted if desired</assert>.
+So this is also a valid handler:</p>
 
-<p> One exception to this rule are collections. <span class="code">ObservableList</span>, <span class="code">ObservableMap</span> or <span class="code">ObservableSet</span>
+<pre class="code">
+package com.foo;
+
+public class MyController {
+    public void handleButtonAction() {
+        System.out.println("You clicked me!");
+    }
+}
+</pre>
+
+<p>Controllers are discussed in more detail in a later section.</p>
+
+<h4><a name="expression_handlers">Event handlers from expressions</a></h4>
+<p>Any expression that point to a <a href="#variable_resolution">variable</a> of javafx.event.EventHandler type
+    can be used as an expression handler. </p>
+<p>
+Previous example using an expression handler:
+</p>
+<pre class="code">
+&lt;VBox fx:controller="com.foo.MyController"
+    xmlns:fx="http://javafx.com/fxml"&gt;
+    &lt;children&gt;
+        &lt;Button text="Click Me!" onAction="$controller.onActionHandler"/&gt;
+    &lt;/children&gt;
+&lt;/VBox&gt;
+</pre>
+
+<p> With the controller that contains a field like this </p>
+    
+<pre class="code">
+public class MyController {
+    
+    @FXML
+    public EventHandler<ActionEvent> onActionHandler = new EventHandler<>() { ... }
+
+    ...
+}  
+</pre>
+
+<p> Note that other kinds of expressions, like <a href="#expression_binding">binding expressions</a>
+    are not supported in this context. </p>
+
+<h4><a name="collections_and_property_handlers">Special handlers for collections and properties</a></h4>
+<p> Collections and object properties cannot be listen to using <span class="code">setOn<span class="variable">Event</span>()</span> methods.
+    For these reason, special handler methods need to be used.
+<span class="code">ObservableList</span>, <span class="code">ObservableMap</span> or <span class="code">ObservableSet</span>
  uses a special <span class="code">onChange</span> attribute that points to a handler method with a <span class="code">ListChangeListner.Change</span>, <span class="code">MapChangeListener.Change</span> or <span class="code">SetChangeListener.Change</span> parameter respectively.
-
+</p>
 <pre class="code">
 &lt;VBox fx:controller="com.foo.MyController"
     xmlns:fx="http://javafx.com/fxml"&gt;
@@ -641,7 +689,30 @@ public class MyController {
 }
 </pre>
 
-<p>Controllers are discussed in more detail in a later section.</p>
+<p>Similarly, the property handlers are methods that have the same parameters as changed method of ChangeListener :</p>
+<p><span class="code">changed(ObservableValue&lt;? extends T&gt; observable, T oldValue, T newValue)</span></p>
+
+<p>A handler for parent property would look like this</p>
+<pre class="code">
+public class MyController {
+    public void handleParentChange(ObservableValue value, Parent oldValue, Parent newValue) {
+        System.out.println("Parent changed!");
+    }
+}
+</pre>
+
+<p>For convenience, the first parameter can be a subclass of <span class="code">ObservableValue</span>,
+    e.g. <span class="code">Property</span></p>
+
+<p>For registering to a property, a special <span class="code">on&lt;propertyName&gt;Change</span>
+attribute must be used.</p>
+
+<pre class="code">
+&lt;VBox fx:controller="com.foo.MyController"
+    xmlns:fx="http://javafx.com/fxml" onParentChange="#handleParentChange"/&gt;
+</pre>
+    
+<p>Note that collections and properties do not currently support scripting handlers.</p>
 
 <h2><a name="scripting">Scripting</a></h2>
 <assert id="script_tag" group="scripting">The <span class="code">&lt;fx:script&gt;</span> tag allows a caller to import scripting code into or embed script within a FXML file. Any JVM scripting language can be used, including JavaScript, Groovy, and Clojure, among others. Script code is often used to define event handlers directly in markup or in an associated source file, since event handlers can often be written more concisely in more loosely-typed scripting languages than they can in a statically-typed language such as Java.</assert></p>
