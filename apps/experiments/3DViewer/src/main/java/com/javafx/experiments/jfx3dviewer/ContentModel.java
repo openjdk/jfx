@@ -69,11 +69,12 @@ public class ContentModel {
     private final Rotate cameraYRotate = new Rotate(-20,0,0,0,Rotate.Y_AXIS);
     private final Rotate cameraLookXRotate = new Rotate(0,0,0,0,Rotate.X_AXIS);
     private final Rotate cameraLookZRotate = new Rotate(0,0,0,0,Rotate.Z_AXIS);
-    private final Translate cameraPosition = new Translate(0,0,-7);
+    //private final Translate cameraPosition = new Translate(0,0,-7);
+    private final Translate cameraPosition = new Translate(0,0,0);
     final Xform cameraXform = new Xform();
     final Xform cameraXform2 = new Xform();
     final Xform cameraXform3 = new Xform();
-    final double cameraDistance = 20;
+    final double cameraDistance = 200;
     private double dragStartX, dragStartY, dragStartRotateX, dragStartRotateY;
     private ObjectProperty<Node> content = new SimpleObjectProperty<>();
     private AutoScalingGroup autoScalingGroup = new AutoScalingGroup(2);
@@ -140,10 +141,10 @@ public class ContentModel {
         @Override protected void invalidated() {
             if (get()) {
                 yUpRotate.setAngle(180);
-                camera.setTranslateZ(500.0);
+                camera.setTranslateZ(cameraDistance);
             } else {
                 yUpRotate.setAngle(0);
-                camera.setTranslateZ(-500.0);
+                camera.setTranslateZ(-cameraDistance);
             }
         }
     };
@@ -180,10 +181,8 @@ public class ContentModel {
         cameraXform.getChildren().add(cameraXform2);
         cameraXform2.getChildren().add(cameraXform3);
         cameraXform3.getChildren().add(camera);
-        //camera.setTranslateZ(-cameraDistance);
+        camera.setTranslateZ(-cameraDistance);
         root3D.getChildren().add(autoScalingGroup);
-        // disable autoScalingGroup by default
-        autoScalingGroup.setEnabled(true);
 
         // SCENE EVENT HANDLING FOR CAMERA NAV
         subScene.addEventHandler(MouseEvent.ANY, new EventHandler<MouseEvent>() {
