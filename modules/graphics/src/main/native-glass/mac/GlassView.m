@@ -133,11 +133,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1initIDs
         jViewNotifyMouse = (*env)->GetMethodID(env, jViewClass, "notifyMouse", "(IIIIIIIZZ)V");
     }
     
-    if (jViewNotifyScroll == NULL)
-    {
-        jViewNotifyScroll = (*env)->GetMethodID(env, jViewClass, "notifyScroll", "(IIIIDDIIIIIDD)V");
-    }
-    
     if (jViewNotifyInputMethod == NULL)
     {
         jViewNotifyInputMethod = (*env)->GetMethodID(env, jViewClass, "notifyInputMethod", "(Ljava/lang/String;[I[I[BIII)V");

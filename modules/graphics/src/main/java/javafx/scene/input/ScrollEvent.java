@@ -130,6 +130,40 @@ public final class ScrollEvent extends GestureEvent {
     public static final EventType<ScrollEvent> SCROLL_FINISHED =
             new EventType<ScrollEvent> (ScrollEvent.ANY, "SCROLL_FINISHED");
 
+
+    private ScrollEvent(Object source, EventTarget target,
+                       final EventType<ScrollEvent> eventType,
+                       double x, double y,
+                       double screenX, double screenY,
+                       boolean shiftDown,
+                       boolean controlDown,
+                       boolean altDown,
+                       boolean metaDown,
+                       boolean direct,
+                       boolean inertia,
+                       double deltaX, double deltaY,
+                       double totalDeltaX, double totalDeltaY,
+                       double multiplierX, double multiplierY,
+                       HorizontalTextScrollUnits textDeltaXUnits, double textDeltaX,
+                       VerticalTextScrollUnits textDeltaYUnits, double textDeltaY,
+                       int touchCount, PickResult pickResult) {
+
+        super(source, target, eventType, x, y, screenX, screenY,
+                shiftDown, controlDown, altDown, metaDown, direct, inertia,
+                pickResult);
+        this.deltaX = deltaX;
+        this.deltaY = deltaY;
+        this.totalDeltaX = totalDeltaX;
+        this.totalDeltaY = totalDeltaY;
+        this.textDeltaXUnits = textDeltaXUnits;
+        this.textDeltaX = textDeltaX;
+        this.textDeltaYUnits = textDeltaYUnits;
+        this.textDeltaY = textDeltaY;
+        this.touchCount = touchCount;
+        this.multiplierX = multiplierX;
+        this.multiplierY = multiplierY;
+    }
+
     /**
      * Constructs new ScrollEvent event.
      * @param source the source of the event. Can be null.
@@ -160,33 +194,24 @@ public final class ScrollEvent extends GestureEvent {
      * @since JavaFX 8.0
      */
     public ScrollEvent(Object source, EventTarget target,
-            final EventType<ScrollEvent> eventType,
-            double x, double y,
-            double screenX, double screenY,
-            boolean shiftDown,
-            boolean controlDown,
-            boolean altDown,
-            boolean metaDown,
-            boolean direct,
-            boolean inertia,
-            double deltaX, double deltaY,
-            double totalDeltaX, double totalDeltaY,
-            HorizontalTextScrollUnits textDeltaXUnits, double textDeltaX,
-            VerticalTextScrollUnits textDeltaYUnits, double textDeltaY,
-            int touchCount, PickResult pickResult) {
-
-        super(source, target, eventType, x, y, screenX, screenY,
-                shiftDown, controlDown, altDown, metaDown, direct, inertia,
-                pickResult);
-        this.deltaX = deltaX;
-        this.deltaY = deltaY;
-        this.totalDeltaX = totalDeltaX;
-        this.totalDeltaY = totalDeltaY;
-        this.textDeltaXUnits = textDeltaXUnits;
-        this.textDeltaX = textDeltaX;
-        this.textDeltaYUnits = textDeltaYUnits;
-        this.textDeltaY = textDeltaY;
-        this.touchCount = touchCount;
+                       final EventType<ScrollEvent> eventType,
+                       double x, double y,
+                       double screenX, double screenY,
+                       boolean shiftDown,
+                       boolean controlDown,
+                       boolean altDown,
+                       boolean metaDown,
+                       boolean direct,
+                       boolean inertia,
+                       double deltaX, double deltaY,
+                       double totalDeltaX, double totalDeltaY,
+                       HorizontalTextScrollUnits textDeltaXUnits, double textDeltaX,
+                       VerticalTextScrollUnits textDeltaYUnits, double textDeltaY,
+                       int touchCount, PickResult pickResult) {
+        this(source, target, eventType, x, y, screenX, screenY, shiftDown, controlDown,
+                altDown, metaDown, direct, inertia, deltaX, deltaY, totalDeltaX,
+                totalDeltaY, 1.0, 1.0, textDeltaXUnits, textDeltaX, textDeltaYUnits, textDeltaY,
+                touchCount, pickResult);
     }
 
     /**
@@ -233,10 +258,60 @@ public final class ScrollEvent extends GestureEvent {
             PickResult pickResult) {
         this(null, null, eventType, x, y, screenX, screenY, shiftDown, controlDown,
                 altDown, metaDown, direct, inertia, deltaX, deltaY, totalDeltaX,
-                totalDeltaY, textDeltaXUnits, textDeltaX, textDeltaYUnits, textDeltaY,
+                totalDeltaY, 1.0, 1.0, textDeltaXUnits, textDeltaX, textDeltaYUnits, textDeltaY,
                 touchCount, pickResult);
     }
-    
+
+    /**
+     * Constructs new ScrollEvent event with null source and target
+     * @param eventType The type of the event.
+     * @param x The x with respect to the scene.
+     * @param y The y with respect to the scene.
+     * @param screenX The x coordinate relative to screen.
+     * @param screenY The y coordinate relative to screen.
+     * @param shiftDown true if shift modifier was pressed.
+     * @param controlDown true if control modifier was pressed.
+     * @param altDown true if alt modifier was pressed.
+     * @param metaDown true if meta modifier was pressed.
+     * @param direct true if the event was caused by direct input device. See {@link #isDirect() }
+     * @param inertia if represents inertia of an already finished gesture.
+     * @param deltaX horizontal scroll amount
+     * @param deltaY vertical scroll amount
+     * @param totalDeltaX cumulative horizontal scroll amount
+     * @param totalDeltaY cumulative vertical scroll amount
+     * @param multiplierX an X multiplier used to convert wheel rotations to pixels
+     * @param multiplierY an Y multiplier used to convert wheel rotations to pixels
+     * @param textDeltaXUnits units for horizontal text-based scroll amount
+     * @param textDeltaX horizontal text-based scroll amount
+     * @param textDeltaYUnits units for vertical text-based scroll amount
+     * @param textDeltaY vertical text-based scroll amount
+     * @param touchCount number of touch points
+     * @param pickResult pick result. Can be null, in this case a 2D pick result
+     *                   without any further values is constructed
+     *                   based on the scene coordinates
+     * @since JavaFX 8.0
+     */
+    public ScrollEvent(final EventType<ScrollEvent> eventType,
+                       double x, double y,
+                       double screenX, double screenY,
+                       boolean shiftDown,
+                       boolean controlDown,
+                       boolean altDown,
+                       boolean metaDown,
+                       boolean direct,
+                       boolean inertia,
+                       double deltaX, double deltaY,
+                       double totalDeltaX, double totalDeltaY,
+                       double multiplierX, double multiplierY,
+                       HorizontalTextScrollUnits textDeltaXUnits, double textDeltaX,
+                       VerticalTextScrollUnits textDeltaYUnits, double textDeltaY,
+                       int touchCount,
+                       PickResult pickResult) {
+        this(null, null, eventType, x, y, screenX, screenY, shiftDown, controlDown,
+                altDown, metaDown, direct, inertia, deltaX, deltaY, totalDeltaX,
+                totalDeltaY, multiplierX, multiplierY, textDeltaXUnits, textDeltaX,
+                textDeltaYUnits, textDeltaY, touchCount, pickResult);
+    }
     
     private final double deltaX;
 
@@ -385,6 +460,28 @@ public final class ScrollEvent extends GestureEvent {
      */
     public int getTouchCount() {
         return touchCount;
+    }
+
+    private final double multiplierX;
+
+    /**
+     * Gets the multiplier used to convert mouse wheel rotation units to pixels
+     * @return the x multiplier
+     * @since JavaFX 8.0
+     */
+    public double getMultiplierX() {
+        return multiplierX;
+    }
+
+    private final double multiplierY;
+
+    /**
+     * Gets the multiplier used to convert mouse wheel rotation units to pixels
+     * @return the y multiplier
+     * @since JavaFX 8.0
+     */
+    public double getMultiplierY() {
+        return multiplierY;
     }
 
     /**

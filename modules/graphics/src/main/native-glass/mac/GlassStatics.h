@@ -64,7 +64,6 @@ extern jmethodID jViewNotifyResize;
 extern jmethodID jViewNotifyKey;
 extern jmethodID jViewNotifyMouse;
 extern jmethodID jViewNotifyMenu;
-extern jmethodID jViewNotifyScroll;
 extern jmethodID jViewNotifyInputMethod;
 extern jmethodID jViewNotifyInputMethodMac;
 extern jmethodID jViewNotifyInputMethodCandidatePosRequest;

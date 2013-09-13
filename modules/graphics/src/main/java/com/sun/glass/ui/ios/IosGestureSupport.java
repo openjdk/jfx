@@ -38,6 +38,9 @@ final class IosGestureSupport {
         _initIDs();
     }
 
+    // The multiplier used to convert scroll units to pixels
+    private final static double multiplier = 1.0;
+
     private final static boolean isDirect = true;
 
     private final static GestureSupport gestures = new GestureSupport(false);
@@ -76,7 +79,7 @@ final class IosGestureSupport {
             float dx, float dy) {
         gestures.handleDeltaScrolling(view, modifiers, isDirect, inertia,
                 touches.getTouchCount(), (int)x, (int)y,
-                (int)xAbs, (int)yAbs, dx, dy);
+                (int)xAbs, (int)yAbs, dx, dy, multiplier, multiplier);
     }
 
 

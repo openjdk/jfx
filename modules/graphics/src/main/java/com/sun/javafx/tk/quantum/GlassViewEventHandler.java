@@ -714,7 +714,7 @@ class GlassViewEventHandler extends View.EventHandler {
             View view, final long time, final int type,
             final int modifiers, final boolean isDirect, final boolean isInertia, final int touchCount,
             final int x, final int y, final int xAbs, final int yAbs, final double dx, final double dy,
-            final double totaldx, final double totaldy)
+            final double totaldx, final double totaldy, final double multiplierX, final double multiplierY)
     {
         WindowStage stage = scene.getWindowStage();
         try {
@@ -740,7 +740,7 @@ class GlassViewEventHandler extends View.EventHandler {
                                 throw new RuntimeException("Unknown scroll event type: " + type);
                         }
                         scene.sceneListener.scrollEvent(eventType, dx, dy, totaldx, totaldy,
-                                1.0, 1.0,
+                                multiplierX, multiplierY,
                                 touchCount,
                                 0, 0, 0, 0,
                                 x == View.GESTURE_NO_VALUE ? Double.NaN : x,

@@ -42,9 +42,8 @@ import javafx.event.EventHandler;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.input.KeyCode;
+import javafx.scene.input.*;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.stage.Window;
 import sun.awt.UngrabEvent;
@@ -53,8 +52,8 @@ import sun.swing.LightweightContent;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.WindowEvent;
-import java.awt.event.WindowFocusListener;
+import java.awt.event.*;
+import java.awt.event.InputEvent;
 import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -132,6 +131,7 @@ public class SwingNode extends Node {
         setFocusTraversable(true);
         setEventHandler(MouseEvent.ANY, new SwingMouseEventHandler());
         setEventHandler(KeyEvent.ANY, new SwingKeyEventHandler());
+        setEventHandler(ScrollEvent.SCROLL, new SwingScrollEventHandler());
 
         focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override
@@ -735,6 +735,47 @@ public class SwingNode extends Node {
                         (int)event.getX(), (int)event.getY(), (int)event.getScreenX(), (int)event.getSceneY(),
                         event.getClickCount(), swingPopupTrigger, swingButton);
             AccessController.doPrivileged(new PostEventAction(mouseEvent));
+        }
+    }
+
+    private class SwingScrollEventHandler implements EventHandler<ScrollEvent> {
+        @Override
+        public void handle(ScrollEvent event) {
+            JLightweightFrame frame = lwFrame;
+            if (frame == null) {
+                return;
+            }
+
+            int swingModifiers = SwingEvents.fxScrollModsToMouseWheelMods(event);
+            final boolean isShift = (swingModifiers & InputEvent.SHIFT_DOWN_MASK) != 0;
+
+            // Vertical scroll.
+            if (!isShift && event.getDeltaY() != 0.0) {
+                sendMouseWheelEvent(frame, (int)event.getX(), (int)event.getY(),
+                        swingModifiers, event.getDeltaY() / event.getMultiplierY());
+            }
+            // Horizontal scroll or shirt+vertical scroll.
+            final double delta = isShift && event.getDeltaY() != 0.0
+                                  ? event.getDeltaY() / event.getMultiplierY()
+                                  : event.getDeltaX() / event.getMultiplierX();
+            if (delta != 0.0) {
+                swingModifiers |= InputEvent.SHIFT_DOWN_MASK;
+                sendMouseWheelEvent(frame, (int)event.getX(), (int)event.getY(),
+                        swingModifiers, delta);
+            }
+        }
+
+        private void sendMouseWheelEvent(Component source, int x, int y, int swingModifiers, double delta) {
+            int wheelRotation = (int) delta;
+            int signum = (int) Math.signum(delta);
+            if (signum * delta < 1) {
+                wheelRotation = signum;
+            }
+            MouseWheelEvent mouseWheelEvent =
+                    new MouseWheelEvent(source, java.awt.event.MouseEvent.MOUSE_WHEEL,
+                            System.currentTimeMillis(), swingModifiers, x, y, 0, 0,
+                            0, false, MouseWheelEvent.WHEEL_UNIT_SCROLL, 1 , -wheelRotation);
+            AccessController.doPrivileged(new PostEventAction(mouseWheelEvent));
         }
     }
 

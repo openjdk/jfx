@@ -429,13 +429,6 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
         {
             return;
         }
-
-        // The rotation values start from 0.1 because by default Mac divides
-        // the values to a constant value of 10 (see CGEventSource.h and
-        // CGEventSourceGetPixelsPerLine). So we multiply them to get scroll
-        // amounts in pixels.
-        rotationX *= 10.0;
-        rotationY *= 10.0;
     }
     
     BOOL block = NO;

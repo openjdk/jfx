@@ -232,13 +232,21 @@ public abstract class View {
          * @param totaldy total vertical scroll calculated from all
          *        sequential scroll gestures, i.e. sum of all 'dy' values from
          *        previous sequential calls to this method
+         * @param multiplierX the X multiplier
+         * @param multiplierY the Y multiplier
+         *
+         * Multiplers are used when an app receives a non-zero unit values (i.e.
+         * either the lines or chars are not zeroes), but wants instead get delta
+         * values in pixels. In this case the app needs to multiply the deltas
+         * on the provided multiplier parameter.
          */
         public void handleScrollGestureEvent(View view, long time, int type,
                                              int modifiers, boolean isDirect,
                                              boolean isInertia, int touchCount,
                                              int x, int y, int xAbs, int yAbs,
                                              double dx, double dy,
-                                             double totaldx, double totaldy) {
+                                             double totaldx, double totaldy,
+                                             double multiplierX, double multiplierY) {
         }
 
         /**
@@ -553,11 +561,12 @@ public abstract class View {
                                          boolean isInertia, int touchCount,
                                          int x, int y, int xAbs, int yAbs,
                                          double dx, double dy, double totaldx,
-                                         double totaldy) {
+                                         double totaldy, double multiplierX,
+                                         double multiplierY) {
         if (eventHandler != null) {
             eventHandler.handleScrollGestureEvent(view, time, type, modifiers, isDirect,
                     isInertia, touchCount, x, y, xAbs, yAbs,
-                    dx, dy, totaldx, totaldy);
+                    dx, dy, totaldx, totaldy, multiplierX, multiplierY);
         }
     }
 
@@ -1004,10 +1013,11 @@ public abstract class View {
                                          boolean isDirect, boolean isInertia,
                                          int touchCount, int x, int y, int xAbs,
                                          int yAbs, double dx, double dy,
-                                         double totaldx, double totaldy) {
+                                         double totaldx, double totaldy,
+                                         double multiplierX, double multiplierY) {
         handleScrollGestureEvent(this, System.nanoTime(), type, modifiers,
                                  isDirect, isInertia, touchCount, x, y, xAbs,
-                                 yAbs, dx, dy, totaldx, totaldy);
+                                 yAbs, dx, dy, totaldx, totaldy, multiplierX, multiplierY);
     }
 
     public void notifyZoomGestureEvent(int type, int modifiers, boolean isDirect,

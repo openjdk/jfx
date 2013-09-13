@@ -2483,6 +2483,7 @@ public class Scene implements EventTarget {
                     _direct, _inertia,
                     scrollX * xMultiplier, scrollY * yMultiplier,
                     totalScrollX * xMultiplier, totalScrollY * yMultiplier,
+                    xMultiplier, yMultiplier,
                     xUnits, xText, yUnits, yText, touchCount, pick(x, y)),
                     scrollGesture);
             inMousePick = false;
