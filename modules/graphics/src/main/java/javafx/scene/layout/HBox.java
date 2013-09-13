@@ -594,6 +594,7 @@ public class HBox extends Pane {
                     double offset = child.getBaselineOffset();
                     if (offset == BASELINE_OFFSET_SAME_AS_HEIGHT) {
                         baselineOffset = BASELINE_OFFSET_SAME_AS_HEIGHT;
+                        break;
                     } else {
                         Insets margin = getMargin(child);
                         double top = margin != null ? margin.getTop() : 0;
