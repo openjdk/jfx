@@ -1520,7 +1520,10 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     private void fitCells() {
         double size = Math.max(getMaxPrefBreadth(), getViewportBreadth());
         boolean isVertical = isVertical();
-        for (int i = 0, max = cells.size(); i < max; i++) {
+
+        // Note: Do not optimise this loop by pre-calculating the cells size and
+        // storing that into a int value - this can lead to RT-32828
+        for (int i = 0; i < cells.size(); i++) {
             Cell cell = cells.get(i);
             if (isVertical) {
                 cell.resize(size, cell.getHeight());
