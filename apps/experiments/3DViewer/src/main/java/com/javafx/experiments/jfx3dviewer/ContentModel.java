@@ -164,7 +164,9 @@ public class ContentModel {
         subScene.setFill(Color.ALICEBLUE);
 
         // CAMERA
-        camera.setNearClip(0.0001); // TODO: Workaround as per RT-31255
+        camera.setNearClip(1.0); // TODO: Workaround as per RT-31255
+        camera.setFarClip(10000.0); // TODO: Workaround as per RT-31255
+
         camera.getTransforms().addAll(
                 yUpRotate,
                 //cameraXRotate,
@@ -180,6 +182,8 @@ public class ContentModel {
         cameraXform3.getChildren().add(camera);
         //camera.setTranslateZ(-cameraDistance);
         root3D.getChildren().add(autoScalingGroup);
+        // disable autoScalingGroup by default
+        autoScalingGroup.setEnabled(true);
 
         // SCENE EVENT HANDLING FOR CAMERA NAV
         subScene.addEventHandler(MouseEvent.ANY, new EventHandler<MouseEvent>() {
