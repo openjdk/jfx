@@ -1110,16 +1110,20 @@ public class GridPane extends Pane {
             rowPrefBaselineComplement = createDoubleArray(numRows, -1);
             rowMaxBaselineComplement = createDoubleArray(numRows, -1);
             rowBaseline = new List[numRows];
-            for (int i = 0, sz = Math.min(numRows, rowConstraints.size()); i < sz; ++i) {
-                List<Node> baselineNodes = new ArrayList<>(numColumns);
-                final RowConstraints rc = rowConstraints.get(i);
-                double percentHeight = rc.getPercentHeight();
-                Priority vGrow = rc.getVgrow();
-                if (percentHeight >= 0)
-                    rowPercentHeight[i] = percentHeight;
-                if (vGrow != null)
-                    rowGrow[i] = vGrow;
+            for (int i = 0, sz = numRows; i < sz; ++i) {
+                if (i < rowConstraints.size()) {
+                    final RowConstraints rc = rowConstraints.get(i);
+                    double percentHeight = rc.getPercentHeight();
+                    Priority vGrow = rc.getVgrow();
+                    if (percentHeight >= 0) {
+                        rowPercentHeight[i] = percentHeight;
+                    }
+                    if (vGrow != null) {
+                        rowGrow[i] = vGrow;
+                    }
+                }
 
+                List<Node> baselineNodes = new ArrayList<>(numColumns);
                 for (int j = 0, size = managed.size(); j < size; j++) {
                     Node n = managed.get(j);
                     if (getNodeRowIndex(n) == i && isNodePositionedByBaseline(n)) {
@@ -1646,7 +1650,7 @@ public class GridPane extends Pane {
         // If metricsDirty is set true during a layout pass the next call to computeGridMetrics()
         // will clear all the cell bounds resulting in out of date info until the
         // next layout pass.
-        if (performingLayout) {
+        if (performingLayout || metricsDirty) {
             return;
         }
         metricsDirty = true;
@@ -1655,6 +1659,7 @@ public class GridPane extends Pane {
         rowMinHeight = rowPrefHeight = rowMaxHeight = null;
         columnGrow = null;
         columnMinWidth = columnPrefWidth = columnMaxWidth = null;
+        rowMinBaselineComplement = rowPrefBaselineComplement = rowMaxBaselineComplement = null;
         super.requestLayout();
     }
 

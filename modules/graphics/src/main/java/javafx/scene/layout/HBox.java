@@ -551,6 +551,7 @@ public class HBox extends Pane {
         bias = null;
         minBaselineComplement = Double.NaN;
         prefBaselineComplement = Double.NaN;
+        baselineOffset = Double.NaN;
         super.requestLayout();
     }
 
@@ -574,6 +575,37 @@ public class HBox extends Pane {
             }
         }
         return prefBaselineComplement;
+    }
+
+    private double baselineOffset = Double.NaN;
+
+    @Override
+    public double getBaselineOffset() {
+        List<Node> managed = getManagedChildren();
+        if (managed.isEmpty()) {
+            return BASELINE_OFFSET_SAME_AS_HEIGHT;
+        }
+        if (Double.isNaN(baselineOffset)) {
+            VPos vpos = getAlignmentInternal().getVpos();
+            if (vpos == VPos.BASELINE) {
+                double max = 0;
+                for (int i =0, sz = managed.size(); i < sz; ++i) {
+                    final Node child = managed.get(i);
+                    double offset = child.getBaselineOffset();
+                    if (offset == BASELINE_OFFSET_SAME_AS_HEIGHT) {
+                        baselineOffset = BASELINE_OFFSET_SAME_AS_HEIGHT;
+                    } else {
+                        Insets margin = getMargin(child);
+                        double top = margin != null ? margin.getTop() : 0;
+                        max = Math.max(max, top + child.getLayoutBounds().getMinY() + offset);
+                    }
+                }
+                baselineOffset = max + snappedTopInset();
+            } else {
+                baselineOffset = BASELINE_OFFSET_SAME_AS_HEIGHT;
+            }
+        }
+        return baselineOffset;
     }
 
     @Override protected void layoutChildren() {

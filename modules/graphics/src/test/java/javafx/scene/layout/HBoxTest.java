@@ -31,6 +31,7 @@ import static org.junit.Assert.assertTrue;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.shape.Rectangle;
 
 import org.junit.Before;
@@ -883,6 +884,20 @@ public class HBoxTest {
         assertEquals(0, child.getLayoutX(), 0);
         assertEquals(200, child2.getWidth(), 0);
         assertEquals(300, child2.getLayoutX(), 0);
+    }
+
+    @Test public void testBaselineOffset() {
+        hbox.setAlignment(Pos.BASELINE_CENTER);
+        MockResizable child = new MockResizable(100, 100);
+        MockResizable child2 = new MockResizable(100, 150);
+
+        HBox.setMargin(child, new Insets(55, 0, 0, 0));
+
+        assertEquals(Node.BASELINE_OFFSET_SAME_AS_HEIGHT, hbox.getBaselineOffset(), 1e-100);
+
+        hbox.getChildren().addAll(child, child2);
+
+        assertEquals(145, hbox.getBaselineOffset(), 1e-100);
     }
 
 }
