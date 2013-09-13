@@ -25,7 +25,7 @@
 
 package javafx.fxml;
 
-import com.sun.javafx.fxml.PropertyChangeEvent;
+import javafx.beans.property.Property;
 
 public class RT_16722ControllerB extends RT_16722ControllerA {
     @FXML protected Widget child;
@@ -41,7 +41,7 @@ public class RT_16722ControllerB extends RT_16722ControllerA {
     }
 
     @FXML
-    protected void handleChildNameChange(PropertyChangeEvent<String> event) {
-        childName = ((Widget)event.getSource()).getName();
+    protected void handleChildNameChange(Property prop, String oldS, String newS) {
+        childName = newS;
     }
 }

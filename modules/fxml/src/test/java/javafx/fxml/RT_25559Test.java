@@ -25,11 +25,13 @@
 
 package javafx.fxml;
 
-import com.sun.javafx.fxml.PropertyChangeEvent;
+import java.beans.PropertyChangeEvent;
 import javafx.event.EventHandler;
 import org.junit.Test;
 
 import java.io.IOException;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -41,9 +43,9 @@ public class RT_25559Test {
     public void testControllerFactory() throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_25559.fxml"));
         final boolean[] ref = new boolean[] { false };
-        fxmlLoader.getNamespace().put("manualAction", new EventHandler<PropertyChangeEvent<String>>() {
+        fxmlLoader.getNamespace().put("manualAction", new ChangeListener<Object>() {
             @Override
-            public void handle(PropertyChangeEvent<String> stringPropertyChangeEvent) {
+            public void changed(ObservableValue<? extends Object> ov, Object o, Object n) {
                 ref[0] = true;
             }
         });
@@ -66,7 +68,7 @@ public class RT_25559Test {
             fxmlLoader.load();
             fail("Exception should have been thrown.");
         } catch (LoadException loadException) {
-            assertTrue(loadException.getMessage().contains("onNameChange='$doesNotExist'"));
+            assertTrue(loadException.getMessage().contains("$doesNotExist"));
         }
     }
 

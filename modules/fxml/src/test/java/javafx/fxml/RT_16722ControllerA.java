@@ -25,7 +25,7 @@
 
 package javafx.fxml;
 
-import com.sun.javafx.fxml.PropertyChangeEvent;
+import javafx.beans.value.ObservableValue;
 
 public abstract class RT_16722ControllerA {
     @FXML protected Widget root;
@@ -41,7 +41,8 @@ public abstract class RT_16722ControllerA {
     }
 
     @FXML
-    protected void handleRootNameChange(PropertyChangeEvent<String> event) {
-        rootName = ((Widget)event.getSource()).getName();
+    // Note: Object class is used here for purpose
+    protected void handleRootNameChange(ObservableValue value, Object oldO, Object newO ) {
+        rootName = (String)newO;
     }
 }
