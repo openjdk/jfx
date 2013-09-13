@@ -366,7 +366,7 @@ public class SwingNode extends Node {
     @Override public double minWidth(double height) {
         return minWidth;
     }
-    
+
     /**
      * Returns the {@code SwingNode}'s minimum height for use in layout calculations.
      * This value corresponds to the minimum height of the Swing component.
@@ -670,6 +670,15 @@ public class SwingNode extends Node {
                     SwingNode.this.impl_notifyLayoutBoundsChanged();
                 }
             });            
+        }
+
+        public void setCursor(Cursor cursor) {
+            Platform.runLater(new Runnable() {
+                @Override
+                public void run() {
+                    SwingNode.this.setCursor(SwingCursors.embedCursorToCursor(cursor));
+                }
+            });
         }
     }
 
