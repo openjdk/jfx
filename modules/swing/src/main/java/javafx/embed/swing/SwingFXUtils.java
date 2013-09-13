@@ -49,6 +49,8 @@ import sun.awt.AWTAccessor;
 import sun.awt.FwDispatcher;
 import sun.awt.image.IntegerComponentRaster;
 
+import javax.swing.*;
+
 /**
  * This class provides utility methods for converting data types between
  * Swing/AWT and JavaFX formats.
@@ -205,6 +207,20 @@ public class SwingFXUtils {
             runnable.run();
         } else {
             Platform.runLater(runnable);
+        }
+    }
+
+    /**
+     * If called from the event dispatch thread
+     * invokes a runnable directly blocking the calling code
+     * Otherwise
+     * uses SwingUtilities.invokeLater without blocking
+     */
+    static void runOnEDT(final Runnable r) {
+        if (SwingUtilities.isEventDispatchThread()) {
+            r.run();
+        } else {
+            SwingUtilities.invokeLater(r);
         }
     }
 
