@@ -623,6 +623,12 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
         fontFamilyComboBox.setTooltip(new Tooltip(resources.getString("fontFamily")));
         toolbar2.getItems().add(fontFamilyComboBox);
 
+        // Fix for RT-32906, where all rows were being put through the cell factory
+        // so that they could be measured. Because we have a fixed width for the
+        // button this is unnecessary and so we tell the ComboBox to not measure
+        // any rows.
+        fontFamilyComboBox.getProperties().put("comboBoxRowsToMeasureWidth", 0);
+
         fontFamilyComboBox.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
             @Override public ListCell<String> call(ListView<String> param) {
                 final ListCell<String> cell = new ListCell<String>() {
