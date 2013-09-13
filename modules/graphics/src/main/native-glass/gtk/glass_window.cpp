@@ -613,10 +613,17 @@ WindowContextBase::~WindowContextBase() {
 
 
 WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long _screen,
-        WindowFrameType _frame_type, WindowType type)
-: WindowContextBase(), screen(_screen), frame_type(_frame_type),
-        owner(_owner), geometry(), stale_config_notifications(), resizable(),
-        xshape(), frame_extents_initialized(), map_received(false)
+        WindowFrameType _frame_type, WindowType type) :
+            WindowContextBase(),
+            screen(_screen),
+            frame_type(_frame_type),
+            owner(_owner),
+            geometry(),
+            stale_config_notifications(),
+            resizable(),
+            xshape(),
+            frame_extents_initialized(),
+            map_received(false)
 {
     jwindow = mainEnv->NewGlobalRef(_jwindow);
 
@@ -966,6 +973,11 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
             screen = to_screen;
         }
     }
+
+    if (resizable.request != REQUEST_NONE) {
+        set_window_resizable(resizable.request == REQUEST_RESIZABLE, true);
+        resizable.request = REQUEST_NONE;
+    }
 }
 
 void WindowContextTop::update_window_constraints() {
@@ -1010,7 +1022,9 @@ void WindowContextTop::set_window_resizable(bool res, bool grip) {
 }
 
 void WindowContextTop::set_resizable(bool res) {
-    if (map_received) {
+    gint w, h;
+    gtk_window_get_size(GTK_WINDOW(gtk_widget), &w, &h);
+    if (map_received || w > 1 || h > 1) {
         set_window_resizable(res, true);
     } else {
         //Since window is not ready yet set only request for change of resizable.
@@ -1081,10 +1095,6 @@ void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int
 
 void WindowContextTop::process_map() {
     map_received = true;
-    if (resizable.request != REQUEST_NONE) {
-        set_window_resizable(resizable.request == REQUEST_RESIZABLE, true);
-        resizable.request = REQUEST_NONE;
-    }
 }
 
 void WindowContextTop::window_configure(XWindowChanges *windowChanges,
@@ -1362,7 +1372,10 @@ static gboolean plug_configure(GtkWidget *widget, GdkEvent *event, gpointer user
     return FALSE;
 }
 
-WindowContextPlug::WindowContextPlug(jobject _jwindow, void* _owner): WindowContextBase(), parent() {
+WindowContextPlug::WindowContextPlug(jobject _jwindow, void* _owner) :
+        WindowContextBase(),
+        parent() 
+{
     jwindow = mainEnv->NewGlobalRef(_jwindow);
 
     gtk_widget = gtk_plug_new((GdkNativeWindow)PTR_TO_JLONG(_owner));
@@ -1515,8 +1528,12 @@ static gboolean child_focus_callback(GtkWidget *widget, GdkEvent *event, gpointe
 WindowContextChild::WindowContextChild(jobject _jwindow,
                                        void* _owner,
                                        GtkWidget *parent_widget,
-                                       WindowContextPlug *parent_ctx)
-        : WindowContextBase(), parent(), full_screen_window(), view() {
+                                       WindowContextPlug *parent_ctx) :
+        WindowContextBase(),
+        parent(),
+        full_screen_window(),
+        view()
+{
     jwindow = mainEnv->NewGlobalRef(_jwindow);
     gtk_widget = gtk_drawing_area_new();
     parent = parent_ctx;
