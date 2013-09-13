@@ -70,6 +70,10 @@ public class ContentModel {
     private final Rotate cameraLookXRotate = new Rotate(0,0,0,0,Rotate.X_AXIS);
     private final Rotate cameraLookZRotate = new Rotate(0,0,0,0,Rotate.Z_AXIS);
     private final Translate cameraPosition = new Translate(0,0,-7);
+    final Xform cameraXform = new Xform();
+    final Xform cameraXform2 = new Xform();
+    final Xform cameraXform3 = new Xform();
+    final double cameraDistance = 20;
     private double dragStartX, dragStartY, dragStartRotateX, dragStartRotateY;
     private ObjectProperty<Node> content = new SimpleObjectProperty<>();
     private AutoScalingGroup autoScalingGroup = new AutoScalingGroup(2);
@@ -142,6 +146,13 @@ public class ContentModel {
     private int subdivisionLevel = 0;
     private SubdivisionMesh.BoundaryMode boundaryMode = SubdivisionMesh.BoundaryMode.CREASE_EDGES;
     private SubdivisionMesh.MapBorderMode mapBorderMode = SubdivisionMesh.MapBorderMode.NOT_SMOOTH;
+    
+    double mousePosX;
+    double mousePosY;
+    double mouseOldX;
+    double mouseOldY;
+    double mouseDeltaX;
+    double mouseDeltaY;
 
     public ContentModel() {
         subScene = new SubScene(root3D,400,400,true,false);
@@ -151,13 +162,18 @@ public class ContentModel {
         camera.setNearClip(0.0001); // TODO: Workaround as per RT-31255
         camera.getTransforms().addAll(
                 yUpRotate,
-                cameraXRotate,
-                cameraYRotate,
+                //cameraXRotate,
+                //cameraYRotate,
                 cameraPosition,
                 cameraLookXRotate,
                 cameraLookZRotate);
         subScene.setCamera(camera);
-        root3D.getChildren().add(camera);
+        //root3D.getChildren().add(camera);
+        root3D.getChildren().add(cameraXform);
+        cameraXform.getChildren().add(cameraXform2);
+        cameraXform2.getChildren().add(cameraXform3);
+        cameraXform3.getChildren().add(camera);
+        //camera.setTranslateZ(-cameraDistance);
         root3D.getChildren().add(autoScalingGroup);
 
         // SCENE EVENT HANDLING FOR CAMERA NAV
@@ -168,18 +184,57 @@ public class ContentModel {
                     dragStartY = event.getSceneY();
                     dragStartRotateX = cameraXRotate.getAngle();
                     dragStartRotateY = cameraYRotate.getAngle();
+                    mousePosX = event.getSceneX();
+                    mousePosY = event.getSceneY();
+                    mouseOldX = event.getSceneX();
+                    mouseOldY = event.getSceneY();
+
                 } else if (event.getEventType() == MouseEvent.MOUSE_DRAGGED) {
                     double xDelta = event.getSceneX() -  dragStartX;
                     double yDelta = event.getSceneY() -  dragStartY;
-                    cameraXRotate.setAngle(dragStartRotateX - (yDelta*0.7));
-                    cameraYRotate.setAngle(dragStartRotateY + (xDelta*0.7));
+                    //cameraXRotate.setAngle(dragStartRotateX - (yDelta*0.7));
+                    //cameraYRotate.setAngle(dragStartRotateY + (xDelta*0.7));
+                    
+                    double modifier = 1.0;
+                    double modifierFactor = 0.3;
+
+                    if (event.isControlDown()) {
+                        modifier = 0.1;
+                    } 
+                    if (event.isShiftDown()) {
+                        modifier = 10.0;
+                    }     
+
+                    mouseOldX = mousePosX;
+                    mouseOldY = mousePosY;
+                    mousePosX = event.getSceneX();
+                    mousePosY = event.getSceneY();
+                    mouseDeltaX = (mousePosX - mouseOldX); //*DELTA_MULTIPLIER;
+                    mouseDeltaY = (mousePosY - mouseOldY); //*DELTA_MULTIPLIER;    
+                    
+                    double flip = -1.0;
+
+                    boolean alt = (true || event.isAltDown());
+                    if (alt && event.isPrimaryButtonDown()) {
+                        cameraXform.ry.setAngle(cameraXform.ry.getAngle() - mouseDeltaX*modifierFactor*modifier*2.0);  // +
+                        cameraXform.rx.setAngle(cameraXform.rx.getAngle() + flip*mouseDeltaY*modifierFactor*modifier*2.0);  // -
+                    }
+                    else if (alt && event.isSecondaryButtonDown()) {
+                        double z = camera.getTranslateZ();
+                        double newZ = z + flip*mouseDeltaX*modifierFactor*modifier;
+                        camera.setTranslateZ(newZ);
+                    }
+                    else if (alt && event.isMiddleButtonDown()) {
+                        cameraXform2.t.setX(cameraXform2.t.getX() + flip*mouseDeltaX*modifierFactor*modifier*0.3);  // -
+                        cameraXform2.t.setY(cameraXform2.t.getY() + mouseDeltaY*modifierFactor*modifier*0.3);  // -
                     }
                 }
+            }
         });
         subScene.addEventHandler(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
             @Override public void handle(ScrollEvent event) {
                 double z = cameraPosition.getZ()-(event.getDeltaY()*0.2);
-                z = Math.max(z,-100);
+                z = Math.max(z,-1000);
                 z = Math.min(z,0);
                 cameraPosition.setZ(z);
             }
