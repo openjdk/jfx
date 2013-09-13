@@ -77,7 +77,8 @@ public class ContentModel {
     private double dragStartX, dragStartY, dragStartRotateX, dragStartRotateY;
     private ObjectProperty<Node> content = new SimpleObjectProperty<>();
     private AutoScalingGroup autoScalingGroup = new AutoScalingGroup(2);
-    private Box xAxis,yAxis,zAxis;
+    private Box xAxis, yAxis, zAxis;
+    private Sphere xSphere, ySphere, zSphere;
     private AmbientLight ambientLight = new AmbientLight(Color.DARKGREY);
     private PointLight light1 = new PointLight(Color.WHITE);
     private PointLight light2 = new PointLight(Color.ANTIQUEWHITE);
@@ -127,8 +128,10 @@ public class ContentModel {
             if (get()) {
                 if (xAxis == null) createAxes();
                 root3D.getChildren().addAll(xAxis, yAxis, zAxis);
+                root3D.getChildren().addAll(xSphere, ySphere, zSphere);
             } else if (xAxis != null) {
                 root3D.getChildren().removeAll(xAxis, yAxis, zAxis);
+                root3D.getChildren().removeAll(xSphere, ySphere, zSphere);
             }
         }
     };
@@ -461,6 +464,9 @@ public class ContentModel {
     }
 
     private void createAxes() {
+        double length = 200.0;
+        double width = 1.0;
+        double radius = 2.0;
         final PhongMaterial redMaterial = new PhongMaterial();
         redMaterial.setDiffuseColor(Color.DARKRED);
         redMaterial.setSpecularColor(Color.RED);
@@ -470,13 +476,21 @@ public class ContentModel {
         final PhongMaterial blueMaterial = new PhongMaterial();
         blueMaterial.setDiffuseColor(Color.DARKBLUE);
         blueMaterial.setSpecularColor(Color.BLUE);
-        final Sphere red = new Sphere(50);
-        red.setMaterial(redMaterial);
-        final Sphere blue = new Sphere(50);
-        blue.setMaterial(blueMaterial);
-        xAxis = new Box(24.0, 0.05, 0.05);
-        yAxis = new Box(0.05, 24.0, 0.05);
-        zAxis = new Box(0.05, 0.05, 24.0);
+        
+        xSphere = new Sphere(radius);
+        ySphere = new Sphere(radius);
+        zSphere = new Sphere(radius);
+        xSphere.setMaterial(redMaterial);
+        ySphere.setMaterial(greenMaterial);
+        zSphere.setMaterial(blueMaterial);
+        
+        xSphere.setTranslateX(100.0);
+        ySphere.setTranslateY(100.0);
+        zSphere.setTranslateZ(100.0);
+        
+        xAxis = new Box(length, width, width);
+        yAxis = new Box(width, length, width);
+        zAxis = new Box(width, width, length);
         xAxis.setMaterial(redMaterial);
         yAxis.setMaterial(greenMaterial);
         zAxis.setMaterial(blueMaterial);
