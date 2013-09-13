@@ -25,6 +25,8 @@
 
 package test3d;
 
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
 import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
@@ -46,7 +48,7 @@ public class NearAndFarClipTest extends VisualTestBase {
     private static final double OFFSET = 0.05;
 
     @Test(timeout=5000)
-    public void testSceneDefaultFill() {
+    public void testNearAndFarClips() {
         final int WIDTH = 500;
         final int HEIGHT = 500;
         final double FOV = 30.0;
@@ -116,8 +118,15 @@ public class NearAndFarClipTest extends VisualTestBase {
         waitFirstFrame();
         runAndWait(new Runnable() {
             @Override public void run() {
-                Color color;
+                
+                if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
+                    System.out.println("*************************************************************");
+                    System.out.println("*      Platform isn't SCENE3D capable, skipping 3D test.    *");
+                    System.out.println("*************************************************************");
+                    return;
+                }
 
+                Color color;
                 // Enable Near Clip test once RT-32880 is fixed.
                 // D3D: Near clip appears to clip further (away from viewer) than the specified near value 
 //                // Verify Near Clip
