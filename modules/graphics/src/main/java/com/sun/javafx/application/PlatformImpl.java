@@ -218,19 +218,31 @@ public class PlatformImpl {
 
         //Initialize the thread merging mechanism
         if (isThreadMerged) {
-            //Use reflection in case we are running compact profile
-            try {
-                Class swingFXUtilsClass = Class.forName("javafx.embed.swing.SwingFXUtils");
-                Method installFwEventQueue = swingFXUtilsClass.getMethod("installFwEventQueue");
+            installFwEventQueue();
+        }
+    }
 
-                waitForStart();
-                installFwEventQueue.invoke(null);
+    private static void installFwEventQueue() {
+        invokeSwingFXUtilsMethod("installFwEventQueue");
+    }
 
-            } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException e) {
-                throw new RuntimeException("Property javafx.embed.singleThread is not supported");
-            } catch (InvocationTargetException e) {
-                throw new RuntimeException(e);
-            }
+    private static void removeFwEventQueue() {
+        invokeSwingFXUtilsMethod("removeFwEventQueue");
+    }
+
+    private static void invokeSwingFXUtilsMethod(final String methodName) {
+        //Use reflection in case we are running compact profile
+        try {
+            Class swingFXUtilsClass = Class.forName("javafx.embed.swing.SwingFXUtils");
+            Method installFwEventQueue = swingFXUtilsClass.getMethod(methodName);
+
+            waitForStart();
+            installFwEventQueue.invoke(null);
+
+        } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException e) {
+            throw new RuntimeException("Property javafx.embed.singleThread is not supported");
+        } catch (InvocationTargetException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -426,6 +438,10 @@ public class PlatformImpl {
                     Toolkit.getToolkit().exit();
                 }
             }, true);
+
+            if (isThreadMerged) {
+                removeFwEventQueue();
+            }
 
             Toolkit.getToolkit().removeTkListener(toolkitListener);
             toolkitListener = null;

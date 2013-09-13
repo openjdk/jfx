@@ -267,14 +267,22 @@ public class SwingFXUtils {
         }
     }
 
-    //Called with reflection from PlatformImpl to avoid dependency
-    public static void installFwEventQueue() {
-        EventQueue eq = AccessController.doPrivileged(
+    private static EventQueue getEventQueue() {
+        return AccessController.doPrivileged(
                 new PrivilegedAction<EventQueue>() {
                     @Override public EventQueue run() {
                         return java.awt.Toolkit.getDefaultToolkit().getSystemEventQueue();
                     }
                 });
-        AWTAccessor.getEventQueueAccessor().setFwDispatcher(eq, new FXDispatcher());
+    }
+
+    //Called with reflection from PlatformImpl to avoid dependency
+    public static void installFwEventQueue() {
+        AWTAccessor.getEventQueueAccessor().setFwDispatcher(getEventQueue(), new FXDispatcher());
+    }
+
+    //Called with reflection from PlatformImpl to avoid dependency
+    public static void removeFwEventQueue() {
+        AWTAccessor.getEventQueueAccessor().setFwDispatcher(getEventQueue(), null);
     }
 }
