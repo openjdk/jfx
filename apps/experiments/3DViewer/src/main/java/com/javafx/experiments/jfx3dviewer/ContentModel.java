@@ -140,8 +140,10 @@ public class ContentModel {
         @Override protected void invalidated() {
             if (get()) {
                 yUpRotate.setAngle(180);
+                camera.setTranslateZ(500.0);
             } else {
                 yUpRotate.setAngle(0);
+                camera.setTranslateZ(-500.0);
             }
         }
     };
@@ -182,6 +184,13 @@ public class ContentModel {
         // SCENE EVENT HANDLING FOR CAMERA NAV
         subScene.addEventHandler(MouseEvent.ANY, new EventHandler<MouseEvent>() {
             @Override public void handle(MouseEvent event) {
+                double yFlip = 1.0;
+                if (getYUp()) {
+                    yFlip = 1.0;
+                }
+                else {
+                    yFlip = -1.0;
+                }
                 if (event.getEventType() == MouseEvent.MOUSE_PRESSED) {
                     dragStartX = event.getSceneX();
                     dragStartY = event.getSceneY();
@@ -219,17 +228,18 @@ public class ContentModel {
 
                     boolean alt = (true || event.isAltDown());
                     if (alt && event.isPrimaryButtonDown()) {
-                        cameraXform.ry.setAngle(cameraXform.ry.getAngle() - mouseDeltaX*modifierFactor*modifier*2.0);  // +
+                        cameraXform.ry.setAngle(cameraXform.ry.getAngle() - yFlip*mouseDeltaX*modifierFactor*modifier*2.0);  // +
                         cameraXform.rx.setAngle(cameraXform.rx.getAngle() + flip*mouseDeltaY*modifierFactor*modifier*2.0);  // -
                     }
                     else if (alt && event.isSecondaryButtonDown()) {
                         double z = camera.getTranslateZ();
-                        double newZ = z + flip*mouseDeltaX*modifierFactor*modifier;
+                        double newZ = z + yFlip*flip*mouseDeltaX*modifierFactor*modifier;
+                        System.out.println("newZ = " + newZ);
                         camera.setTranslateZ(newZ);
                     }
                     else if (alt && event.isMiddleButtonDown()) {
                         cameraXform2.t.setX(cameraXform2.t.getX() + flip*mouseDeltaX*modifierFactor*modifier*0.3);  // -
-                        cameraXform2.t.setY(cameraXform2.t.getY() + mouseDeltaY*modifierFactor*modifier*0.3);  // -
+                        cameraXform2.t.setY(cameraXform2.t.getY() + yFlip*mouseDeltaY*modifierFactor*modifier*0.3);  // -
                     }
                 }
             }
