@@ -607,12 +607,12 @@ public abstract class TextInputControl extends Control {
         }
         wordIterator.setText(text);
 
-        int pos = wordIterator.preceding(Utils.clamp(0, getCaretPosition(), textLength - 1));
+        int pos = wordIterator.preceding(Utils.clamp(0, getCaretPosition(), textLength));
 
         // Skip the non-word region, then move/select to the beginning of the word.
         while (pos != BreakIterator.DONE &&
-               !Character.isLetterOrDigit(text.charAt(Utils.clamp(0, pos, textLength-1)))) {
-            pos = wordIterator.preceding(Utils.clamp(0, pos, textLength-1));
+               !Character.isLetterOrDigit(text.charAt(Utils.clamp(0, pos, textLength)))) {
+            pos = wordIterator.preceding(Utils.clamp(0, pos, textLength));
         }
 
         // move/select
@@ -670,13 +670,13 @@ public abstract class TextInputControl extends Control {
         }
         wordIterator.setText(text);
 
-        int last = wordIterator.following(Utils.clamp(0, getCaretPosition(), textLength-1));
+        int last = wordIterator.following(Utils.clamp(0, getCaretPosition(), textLength));
         int current = wordIterator.next();
 
         // skip the non-word region, then move/select to the end of the word.
         while (current != BreakIterator.DONE) {
             for (int p=last; p<=current; p++) {
-                if (!Character.isLetterOrDigit(text.charAt(Utils.clamp(0, p, textLength-1)))) {
+                if (!Character.isLetterOrDigit(text.charAt(Utils.clamp(0, p, textLength)))) {
                     if (select) {
                         selectRange(getAnchor(), p);
                     } else {

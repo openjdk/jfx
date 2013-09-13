@@ -163,7 +163,10 @@ public class TreeTableViewKeyInputTest {
     // Returns true if ALL indices are selected
     private boolean isSelected(int... indices) {
         for (int index : indices) {
-            if (! sm.isSelected(index)) return false;
+            if (! sm.isSelected(index)) {
+                System.out.println("Index " + index + " is not selected, but it is expected to be (selected indices: " + sm.getSelectedIndices() + ")");
+                return false;
+            }
         }
         return true;
     }
@@ -171,7 +174,10 @@ public class TreeTableViewKeyInputTest {
     // Returns true if ALL indices are NOT selected
     private boolean isNotSelected(int... indices) {
         for (int index : indices) {
-            if (sm.isSelected(index)) return false;
+            if (sm.isSelected(index)) {
+                System.out.println("Index " + index + " is selected, but it is not expected to be");
+                return false;
+            }
         }
         return true;
     }
@@ -2614,5 +2620,171 @@ public class TreeTableViewKeyInputTest {
         final Object nextSelectionOwner =  sm.getSelectedItem();
         assertNotSame(initialSelectionOwner, nextSelectionOwner);
         assertNotSame(newSelectionOwner, nextSelectionOwner);
+    }
+
+    @Test public void test_rt21375_scenario_1a_down() {
+        sm.clearSelection();
+
+        final int items = 8;
+        root.getChildren().clear();
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(0);
+
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertTrue(isSelected(0,1,2,3));
+        assertEquals(4, sm.getSelectedItems().size());
+    }
+
+    @Test public void test_rt21375_scenario_1b_down() {
+        final int items = 8;
+        root.getChildren().clear();
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(0);
+
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertTrue(isSelected(0,1,2,3));
+        assertEquals(4, sm.getSelectedItems().size());
+    }
+
+    @Test public void test_rt21375_scenario_2_down() {
+        final int items = 8;
+        root.getChildren().clear();
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(0);
+
+        keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertTrue(isSelected(2,3,4));
+        assertEquals(3, sm.getSelectedItems().size());
+    }
+
+    @Test public void test_rt21375_scenario_3_down() {
+        final int items = 8;
+        root.getChildren().clear();
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(0);
+
+        keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertTrue(isSelected(0,2,3,4));
+        assertEquals(4, sm.getSelectedItems().size());
+    }
+
+    @Test public void test_rt21375_scenario_1a_up() {
+        sm.clearSelection();
+
+        final int items = 8;
+        root.getChildren().clear();
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(7);
+
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertTrue(isSelected(7,6,5,4));
+        assertEquals(4, sm.getSelectedItems().size());
+    }
+
+    @Test public void test_rt21375_scenario_1b_up() {
+        sm.clearSelection();
+
+        final int items = 8;
+        root.getChildren().clear();
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(7);
+
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertTrue(isSelected(7,6,5,4));
+        assertEquals(4, sm.getSelectedItems().size());
+    }
+
+    @Test public void test_rt21375_scenario_2_up() {
+        final int items = 8;
+        root.getChildren().clear();
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(7);
+
+        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertTrue(isSelected(5,4,3));
+        assertEquals(3, sm.getSelectedItems().size());
+    }
+
+    @Test public void test_rt21375_scenario_3_up() {
+        final int items = 8;
+        root.getChildren().clear();
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(7);
+
+        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertTrue(isSelected(7,5,4,3));
+        assertEquals(4, sm.getSelectedItems().size());
     }
 }

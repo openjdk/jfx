@@ -269,8 +269,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         if (bidi == null) {
             bidi = new Bidi(textInputControl.getText(),
                             (textInputControl.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT)
-                                    ? Bidi.DIRECTION_DEFAULT_RIGHT_TO_LEFT
-                                    : Bidi.DIRECTION_DEFAULT_LEFT_TO_RIGHT);
+                                    ? Bidi.DIRECTION_RIGHT_TO_LEFT
+                                    : Bidi.DIRECTION_LEFT_TO_RIGHT);
         }
         return bidi;
     }

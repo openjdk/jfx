@@ -64,6 +64,7 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
      * If true, the control should behave like a button for mouse button events.
      */
     protected boolean behaveLikeButton = false;
+    private ListChangeListener<MenuItem> itemsChangedListener;
 
     /***************************************************************************
      *                                                                         *
@@ -115,14 +116,15 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
 
         getSkinnable().requestLayout();
         
-        control.getItems().addListener(new ListChangeListener<MenuItem>() {
+        itemsChangedListener = new ListChangeListener<MenuItem>() {
             @Override public void onChanged(Change<? extends MenuItem> c) {
                 while (c.next()) {
                     popup.getItems().removeAll(c.getRemoved());
                     popup.getItems().addAll(c.getFrom(), c.getAddedSubList());
                 }
             }
-        });
+        };
+        control.getItems().addListener(itemsChangedListener);
         
         if (getSkinnable().getScene() != null) {
             addAccelerators(getSkinnable().getItems());
@@ -158,6 +160,7 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
 
      /** {@inheritDoc} */
     @Override public void dispose() { 
+        getSkinnable().getItems().removeListener(itemsChangedListener);
         super.dispose();
         if (popup != null ) {
             if (popup.getSkin() != null && popup.getSkin().getNode() != null) {

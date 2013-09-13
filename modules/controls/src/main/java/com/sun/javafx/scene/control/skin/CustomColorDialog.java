@@ -49,6 +49,7 @@ import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.input.KeyEvent;
 import javafx.stage.Screen;
+import javafx.stage.WindowEvent;
 /**
  *
  * @author paru
@@ -140,6 +141,10 @@ public class CustomColorDialog extends HBox {
     public void setOnCancel(Runnable onCancel) {
         this.onCancel = onCancel;
     }
+    
+     public void setOnHidden(EventHandler<WindowEvent> onHidden) {
+         dialog.setOnHidden(onHidden);
+     }
 
     Stage getDialog() {
         return dialog;

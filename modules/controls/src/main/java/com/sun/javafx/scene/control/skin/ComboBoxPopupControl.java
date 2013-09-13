@@ -89,14 +89,16 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     }
     
     private void positionAndShowPopup() {
-        if (getPopup().getSkin() == null) {
-            getSkinnable().getScene().getRoot().impl_processCSS(true);
+        final PopupControl _popup = getPopup();
+        final ComboBoxBase<T> comboBoxBase = getSkinnable();
+        if (_popup.getSkin() == null) {
+            comboBoxBase.getScene().getRoot().impl_processCSS(true);
         }
         
         Point2D p = getPrefPopupPosition();
-        getPopup().getScene().setNodeOrientation(getSkinnable().getEffectiveNodeOrientation());
+        _popup.getScene().setNodeOrientation(getSkinnable().getEffectiveNodeOrientation());
         reconfigurePopup();
-        getPopup().show(getSkinnable().getScene().getWindow(), p.getX(), p.getY());
+        _popup.show(comboBoxBase.getScene().getWindow(), p.getX(), p.getY());
     }
     
     private void createPopup() {
@@ -146,23 +148,39 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     }
     
     void reconfigurePopup() {
-        final PopupControl popupControl = getPopup();
-        if (popupControl == null) return;
-                
+        // RT-26861. Don't call getPopup() here because it may cause the popup
+        // to be created too early, which leads to memory leaks like those noted
+        // in RT-32827.
+        if (popup == null) return;
+
+        final boolean isShowing = popup.isShowing();
+        if (! isShowing) return;
+
         final Point2D p = getPrefPopupPosition();
 
         final Node popupContent = getPopupContent();
         final double minWidth = popupContent.prefWidth(1);
         final double minHeight = popupContent.prefHeight(1);
 
-        if (p.getX() > -1) popupControl.setX(p.getX());
-        if (p.getY() > -1) popupControl.setY(p.getY());
-        if (minWidth > -1) popupControl.setMinWidth(minWidth);
-        if (minHeight > -1) popupControl.setMinHeight(minHeight);
+        if (p.getX() > -1) popup.setX(p.getX());
+        if (p.getY() > -1) popup.setY(p.getY());
+        if (minWidth > -1) popup.setMinWidth(minWidth);
+        if (minHeight > -1) popup.setMinHeight(minHeight);
 
         final Bounds b = popupContent.getLayoutBounds();
-        final double w = b.getWidth() < minWidth ? minWidth : b.getWidth();
-        final double h = b.getHeight() < minHeight ? minHeight : b.getHeight();
-        popupContent.resize(w, h);
+        final double currentWidth = b.getWidth();
+        final double currentHeight = b.getHeight();
+        final double newWidth  = currentWidth < minWidth ? minWidth : currentWidth;
+        final double newHeight = currentHeight < minHeight ? minHeight : currentHeight;
+
+        if (newWidth != currentWidth || newHeight != currentHeight) {
+            popupContent.resize(newWidth, newHeight);
+
+            // fix for RT-32582. It seems that resizing the popup whilst it is showing
+            // doesn't work, so we briefly hide and then show it again with the correct
+            // sizes having been worked out as above.
+            hide();
+            popup.show(getSkinnable().getScene().getWindow(), p.getX(), p.getY());
+        }
     }
 }

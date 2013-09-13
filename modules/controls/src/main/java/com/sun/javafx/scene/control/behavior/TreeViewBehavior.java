@@ -743,10 +743,18 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         
         FocusModel<TreeItem<T>> fm = getControl().getFocusModel();
         if (fm == null) return;
-        
-        int index = fm.getFocusedIndex() - 1;
-        if (index < 0) return;
-        sm.select(index);
+
+        int focusIndex = fm.getFocusedIndex();
+        final int newFocusIndex = focusIndex - 1;
+        if (newFocusIndex < 0) return;
+
+        int startIndex = focusIndex;
+        if (isShiftDown) {
+            startIndex = getAnchor() == -1 ? focusIndex : getAnchor();
+        }
+
+        sm.selectRange(newFocusIndex, startIndex + 1);
+        fm.focus(newFocusIndex);
     }
     
     private void discontinuousSelectNextRow() {
@@ -756,8 +764,15 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         FocusModel<TreeItem<T>> fm = getControl().getFocusModel();
         if (fm == null) return;
 
-        int index = fm.getFocusedIndex() + 1;
-        sm.select(index);
+        int focusIndex = fm.getFocusedIndex();
+        final int newFocusIndex = focusIndex + 1;
+        int startIndex = focusIndex;
+        if (isShiftDown) {
+            startIndex = getAnchor() == -1 ? focusIndex : getAnchor();
+        }
+
+        sm.selectRange(startIndex, newFocusIndex + 1);
+        fm.focus(newFocusIndex);
     }
     
     private void discontinuousSelectPageUp() {

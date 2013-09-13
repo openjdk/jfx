@@ -680,8 +680,11 @@ final class CssStyleHelper {
                     // there was no style for the property in the current
                     // state, so reset the property to its initial value.
                     if (initialValue != null) {
+
                         StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(node);
-                        styleableProperty.applyStyle(initialValue.getOrigin(), initialValue.getValue());
+                        if (styleableProperty.getStyleOrigin() != StyleOrigin.USER) {
+                            styleableProperty.applyStyle(initialValue.getOrigin(), initialValue.getValue());
+                        }
                     }
 
                     continue;

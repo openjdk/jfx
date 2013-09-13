@@ -56,7 +56,7 @@ import com.sun.javafx.tk.Toolkit;
  *
  * @author lubermud
  */
-@Ignore
+
 public class MenuBarTest {
     private MenuBar menuBar;
     private Toolkit tk;
@@ -395,5 +395,24 @@ public class MenuBarTest {
             MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+20, yval+20));
         tk.firePulse(); 
         assertEquals(menu.showingProperty().get(), false);
+    }
+     
+    @Test public void testRemovingMenuItemFromMenuNotInScene() {
+        VBox root = new VBox();
+        Menu menu = new Menu("Menu");
+
+        MenuItem menuItem1 = new MenuItem("MenuItem1");
+        menu.getItems().addAll(menuItem1);
+        
+        menuBar.getMenus().add(menu);
+        root.getChildren().addAll(menuBar);
+        startApp(root);
+        tk.firePulse();
+        
+        // remove menu from menubar
+        menuBar.getMenus().remove(menu);
+        //remove menuitem from menu that was just removed itself.
+        menu.getItems().remove(menuItem1);
+        assertEquals(true, menu.getItems().isEmpty());
     }
 }
