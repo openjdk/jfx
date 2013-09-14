@@ -30,7 +30,7 @@ import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.LinkedList;
-import java.util.List;
+
 import com.sun.glass.events.KeyEvent;
 import com.sun.glass.events.MouseEvent;
 import com.sun.glass.events.TouchEvent;
@@ -69,6 +69,33 @@ final class LensApplication extends Application {
     private static final int DEVICE_MAX = 4;
     /** A running count of the numbers of devices with each device capability */
     private int[] deviceFlags = new int[DEVICE_MAX + 1];
+
+    /**
+     * Used to filter out extra "noisy" touch events. The OS delivers us multiple touch events,
+     * which are essentially samples. To be very accurate, we would have to collect many samples
+     * and average them out. If we don't do so, when the user touches and holds, they will see
+     * many slightly different mouse drag events, which can cause, for example, the thing being
+     * dragged to jump around.
+     *
+     * When the first touch move point comes in, we assume it is accurate and assign it to previousTouchMoveScreenX
+     * and previousTouchMoveScreenY. All subsequent events will be measured from this point, such that if
+     * they are nearer these points than the hysteresis, then we drop them. If they are farther away
+     * than the hysteresis, then we assume they must be valid events, and we post them (and update the
+     * previousTouchMoveX and previousTouchMoveY accordingly).
+     *
+     * This should probably be configurable via a system property, as different quality touch screens
+     * may require some tweaking to this value.
+     */
+    private static final int TOUCH_HYSTERESIS = 3;
+    /**
+     * Values of -1 mean that these variables are not set. We will reset them to -1 whenever we
+     * get a non-touch move event.
+     */
+    private int previousTouchMoveX = -1;
+    private int previousTouchMoveY = -1;
+    private int previousTouchMoveScreenX = -1;
+    private int previousTouchMoveScreenY = -1;
+
     /** True if the application wishes to show the cursor */
     private boolean cursorVisible = true;
 
@@ -492,7 +519,7 @@ final class LensApplication extends Application {
             LensTouchInputSupport.postTouchEvent(view, state, id, x, y, absX, absY);
             if (state == TouchEvent.TOUCH_MOVED) {
                 view._notifyMouse(MouseEvent.DRAG, MouseEvent.BUTTON_NONE,
-                                  x, y, absX, absY, 0, false, true);
+                                  x, y, absX, absY, KeyEvent.MODIFIER_BUTTON_PRIMARY, false, true);
             } 
 	    // else do nothing; other events are synthesized in native code
         }
@@ -537,7 +564,7 @@ final class LensApplication extends Application {
                     view, states, ids, xs, ys, dx, dy);
             if (states.length > 0 && states[0] == TouchEvent.TOUCH_MOVED) {
                 view._notifyMouse(MouseEvent.DRAG, MouseEvent.BUTTON_NONE,
-                    xs[0] + dx, ys[0] + dy, xs[0], ys[0], 0, false, true);
+                    xs[0] + dx, ys[0] + dy, xs[0], ys[0], KeyEvent.MODIFIER_BUTTON_PRIMARY, false, true);
             }
 	    // else do nothing; other events are synthesized in native code
         }
@@ -625,6 +652,17 @@ final class LensApplication extends Application {
                 default:
                     return;
             }
+        }
+
+        @Override
+        public String toString() {
+            return "LensDragEvent[x=" + x
+                    + ", y=" + y
+                    + ", absx=" + absx
+                    + ", absy=" + absy
+                    + ", action " + action
+                    + ", view "
+                    + view;
         }
     }
 
@@ -1098,7 +1136,7 @@ final class LensApplication extends Application {
     /**
      * Notify key event from native layer
      *
-     * @param window  the window which the view is related to
+     * @param view  the window which the view is related to
      * @param type event type (KeyEvent.PRESS ...)
      * @param keyCode key code for the event (KeyEvent.VK_*)
      * @param modifiers bit mask of key modifiers
@@ -1122,7 +1160,7 @@ final class LensApplication extends Application {
     /**
      * Notify mouse event from native layer
      *
-     * @param window the window which the view is related to
+     * @param view the window which the view is related to
      * @param eventType one of MouseEvent constants
      * @param x location of event inside the view
      * @param y location of event inside the view
@@ -1202,10 +1240,10 @@ final class LensApplication extends Application {
     private native void _notfyPlatformDnDStarted();
     private native void _notfyPlatformDnDEnded();
     /**
-     * This funtion should be only called from LensDnDClipboard after it has
+     * This function should be only called from LensDnDClipboard after it has
      * been initialized.
      * After this method have called it meand that we are inside nested event
-     * loop, which is resposible to handle all drag events, all other mouse
+     * loop, which is responsible to handle all drag events, all other mouse
      * events are discarded until Drag Drop is detected.
      */
     void notifyDragStart() {
@@ -1235,9 +1273,8 @@ final class LensApplication extends Application {
                                      int button, int modifiers) {
         boolean eventConsumed = false;
 
-
         if (eventType == MouseEvent.DOWN && cachedButtonPressed == MouseEvent.BUTTON_NONE) {
-            //save the button that might have strated the drag event
+            //save the button that might have started the drag event
             cachedButtonPressed = button;
             if (LensLogger.getLogger().isLoggable(Level.FINEST)) {
                 LensLogger.getLogger().finest("Caching mouse button - " + button);
@@ -1256,7 +1293,7 @@ final class LensApplication extends Application {
                 }
                 postEvent(new LensDragEvent(view, x, y, absx, absy, DragActions.DROP));
 
-                //notify platform DnD endded
+                //notify platform DnD ended
                 _notfyPlatformDnDEnded();
 
                 //reset internal state machine
@@ -1337,7 +1374,7 @@ final class LensApplication extends Application {
     /**
      * Notify scroll event from native layer
      *
-     * @param window the window which the view is related to
+     * @param view the window which the view is related to
      * @param x
      * @param y
      * @param absx
@@ -1375,21 +1412,72 @@ final class LensApplication extends Application {
         }
     }
 
+    /**
+     * Posts the touch move event. This method will inspect to see if the previous event on the queue is another
+     * TouchMoveEvent with the same view and id. If so, it will update that event with the new x, y, absX and absY
+     * so as to reduce the number of events on the queue.
+     *
+     * @param view the view which owns the event
+     * @param id the id of the finger slot (usually 1)
+     * @param x the x coordinate of the event
+     * @param y the y coordinate of the event
+     * @param absX not sure
+     * @param absY not sure
+     */
+    private void postTouchMoveEvent(LensView view, long id, int x, int y, int absX, int absY) {
+        synchronized (eventList) {
+            if (!eventList.isEmpty()) {
+                Event lastEvent = eventList.getLast();
+                if (lastEvent instanceof LensTouchEvent) {
+                    LensTouchEvent e = (LensTouchEvent) lastEvent;
+                    if (e.view == view && e.state == TouchEvent.TOUCH_MOVED && e.id == id) {
+                        // Rewrite the coordinates of the scheduled event
+                        // with the coordinates of this event.
+                        e.x = x;
+                        e.y = y;
+                        e.absX = absX;
+                        e.absY = absY;
+                        return;
+                    }
+                }
+            } else {
+                postEvent(new LensTouchEvent(view, TouchEvent.TOUCH_MOVED, id, x, y, absX, absY));
+            }
+        }
+    }
 
     /**
-    * Notify touch event from native layer
-    *
-    * @param window the window which the view is related to
-    * @param state the finger state (e.g. TouchEvent.TOUCH_PRESSED)
-    * @param id the id of the finger slot
-    * @param x
-    * @param y
-    * @param absX
-    * @param absY
-    */
+     * Notify touch event from native layer
+     *
+     * @param view the window which the view is related to
+     * @param state the finger state (e.g. TouchEvent.TOUCH_PRESSED)
+     * @param id the id of the finger slot
+     * @param x the x coordinate relative to the view origin
+     * @param y the y coordinate relative to the view origin
+     * @param absX the x coordinate relative to the screen origin
+     * @param absY the y coordinate relative to the screen origin
+     */
     private void notifyTouchEvent(LensView view, int state, long id,
                                   int x, int y, int absX, int absY) {
         try {
+            final boolean hadPreviousTouchMove = previousTouchMoveScreenX >= 0;
+            if (state == TouchEvent.TOUCH_MOVED) {
+                if (!hadPreviousTouchMove ||
+                        Math.abs(absX - previousTouchMoveScreenX) > TOUCH_HYSTERESIS ||
+                        Math.abs(absY - previousTouchMoveScreenY) > TOUCH_HYSTERESIS) {
+                    previousTouchMoveX = x;
+                    previousTouchMoveY = y;
+                    previousTouchMoveScreenX = absX;
+                    previousTouchMoveScreenY = absY;
+                    postTouchMoveEvent(view, id, x, y, absX, absY);
+                }
+            } else {
+                if (hadPreviousTouchMove) {
+                    postTouchMoveEvent(view, id, previousTouchMoveX, previousTouchMoveY, previousTouchMoveScreenX, previousTouchMoveScreenY);
+                    previousTouchMoveX = previousTouchMoveY = previousTouchMoveScreenX = previousTouchMoveScreenY = -1;
+                }
+                postEvent(new LensTouchEvent(view, state, id, x, y, absX, absY));
+            }
 
             if (LensLogger.getLogger().isLoggable(Level.FINE)) {
                 LensLogger.getLogger().fine("Touch event "
@@ -1397,29 +1485,6 @@ final class LensApplication extends Application {
                                             + x + "," + y
                                             + " on " + view);
             }
-            synchronized (eventList) {
-                if (!eventList.isEmpty()
-                        && state == TouchEvent.TOUCH_MOVED) {
-                    Event lastEvent = eventList.getLast();
-                    if (lastEvent instanceof LensTouchEvent) {
-                        LensTouchEvent e = (LensTouchEvent) lastEvent;
-                        if (e.view == view
-                                && e.state == state
-                                && e.id == id) {
-                            // rewrite the coordinates of the scheduled event
-                            // with the coordinates of this event.
-                            e.x = x;
-                            e.y = y;
-                            e.absX = absX;
-                            e.absY = absY;
-                            return;
-                        }
-                    }
-                }
-            }
-            postEvent(new LensTouchEvent(view, state, id,
-                                         x, y, absX, absY));
-
         } catch (Exception e) {
             reportException(e);
         }
@@ -1428,7 +1493,7 @@ final class LensApplication extends Application {
     /**
     * Notify multitouch event from native layer
     *
-    * @param window the window which the view is related to
+    * @param view the window which the view is related to
     * @param states list of the finger states of each touch point
     * @param ids list of the IDs of each touch point
     * @param xs list of of the absolute X coordinates of each touch point
