@@ -1557,7 +1557,7 @@ final class LensApplication extends Application {
      * Notify view event from native
      * View events are one of the events listed in ViewEvent.java
      *
-     * @param view the event occured in
+     * @param view the event occurred in
      * @param viewEventType the type of event as listed in
      *                      ViewEvent.java
      */
