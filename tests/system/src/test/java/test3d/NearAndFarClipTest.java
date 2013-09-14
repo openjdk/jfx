@@ -44,7 +44,7 @@ public class NearAndFarClipTest extends VisualTestBase {
     private Stage testStage;
     private Scene testScene;
 
-    private static final double TOLERANCE = 0.01;
+    private static final double TOLERANCE = 0.03;
     private static final double OFFSET = 0.05;
 
     @Test(timeout=5000)
