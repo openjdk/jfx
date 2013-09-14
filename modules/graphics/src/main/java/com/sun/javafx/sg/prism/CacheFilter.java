@@ -25,6 +25,7 @@
 
 package com.sun.javafx.sg.prism;
 
+import com.sun.javafx.logging.PulseLogger;
 import javafx.scene.CacheHint;
 import java.util.List;
 import com.sun.javafx.geom.BaseBounds;
@@ -147,11 +148,17 @@ public class CacheFilter {
 
     public void setHint(CacheHint cacheHint) {
         this.cacheHint = cacheHint;
-        this.scaleHint = (cacheHint == CacheHint.SCALE ||
+        this.scaleHint = (cacheHint == CacheHint.SPEED ||
+                          cacheHint == CacheHint.SCALE ||
                           cacheHint == CacheHint.SCALE_AND_ROTATE);
-        this.rotateHint = (cacheHint == CacheHint.ROTATE ||
+        this.rotateHint = (cacheHint == CacheHint.SPEED ||
+                           cacheHint == CacheHint.ROTATE ||
                            cacheHint == CacheHint.SCALE_AND_ROTATE);
     }
+
+    // These two methods exist only for the sake of testing.
+    final boolean isScaleHint() { return scaleHint; }
+    final boolean isRotateHint() { return rotateHint; }
 
     /**
      * Indicates whether this CacheFilter's hint matches the CacheHint
@@ -524,6 +531,7 @@ public class CacheFilter {
             }
         }
         if (needToRenderCache(xform, xformInfo)) {
+            if (PulseLogger.PULSE_LOGGING_ENABLED) PulseLogger.PULSE_LOGGER.renderIncrementCounter("CacheFilter rebuilding");
             if (cachedImageData != null) {
                 Filterable implImage = cachedImageData.getUntransformedImage();
                 if (implImage != null) {
@@ -579,6 +587,7 @@ public class CacheFilter {
 
         Filterable implImage = cachedImageData.getUntransformedImage();
         if (implImage == null) {
+            if (PulseLogger.PULSE_LOGGING_ENABLED) PulseLogger.PULSE_LOGGER.renderIncrementCounter("CacheFilter not used");
             impl_renderNodeToScreen(g);
         } else {
             impl_renderCacheToScreen(g, implImage, mxt, myt);
