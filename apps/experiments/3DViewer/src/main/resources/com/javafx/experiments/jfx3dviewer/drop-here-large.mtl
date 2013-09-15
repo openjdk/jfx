@@ -1,0 +1,9 @@
+newmtl Material
+illum 4
+Kd 0.00 0.00 0.00
+Ka 0.10 0.10 0.10
+Tf 1.00 1.00 1.00
+map_Kd blue.jpg
+Ni 1.00
+Ks 1.00 1.00 1.00
+Ns 80.00
