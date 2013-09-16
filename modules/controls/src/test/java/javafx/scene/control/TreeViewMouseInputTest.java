@@ -312,4 +312,33 @@ public class TreeViewMouseInputTest {
         assertEquals("Row 4", sm.getSelectedItem().getValue());
         assertEquals("Row 4", sm.getSelectedItems().get(1).getValue());
     }
+
+    @Test public void test_rt_32963() {
+        final int items = 8;
+        root.getChildren().clear();
+        root.setExpanded(true);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+        treeView.setRoot(root);
+
+        treeView.setShowRoot(true);
+        final MultipleSelectionModel sm = treeView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(0);
+
+        assertEquals(9, treeView.getExpandedItemCount());
+
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(root, sm.getSelectedItem());
+        assertEquals(1, sm.getSelectedItems().size());
+
+        VirtualFlowTestUtils.clickOnRow(treeView, 5, KeyModifier.SHIFT);
+        assertEquals("Actual selected index: " + sm.getSelectedIndex(), 5, sm.getSelectedIndex());
+        assertEquals("Actual focused index: " + fm.getFocusedIndex(), 5, fm.getFocusedIndex());
+        assertTrue("Selected indices: " + sm.getSelectedIndices(), sm.getSelectedIndices().contains(0));
+        assertTrue("Selected items: " + sm.getSelectedItems(), sm.getSelectedItems().contains(root));
+        assertEquals(6, sm.getSelectedItems().size());
+    }
 }

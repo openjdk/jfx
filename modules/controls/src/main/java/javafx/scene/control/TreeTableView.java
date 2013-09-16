@@ -2167,6 +2167,14 @@ public class TreeTableView<S> extends Control {
                 } else if (e.wasAdded()) {
                     // shuffle selection by the number of added items
                     shift = treeItem.isExpanded() ? e.getAddedSize() : 0;
+
+                    // RT-32963: We were taking the startRow from the TreeItem
+                    // in which the children were added, rather than from the
+                    // actual position of the new child. This led to selection
+                    // being moved off the parent TreeItem by mistake.
+                    if (e.getAddedSize() == 1) {
+                        startRow = treeTableView.getRow(e.getAddedChildren().get(0));
+                    }
                 } else if (e.wasRemoved()) {
                     // shuffle selection by the number of removed items
                     shift = treeItem.isExpanded() ? -e.getRemovedSize() : 0;

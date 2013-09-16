@@ -335,7 +335,7 @@ public class TreeTableViewMouseInputTest {
         VirtualFlowTestUtils.clickOnRow(tableView, selectRow - 1, KeyModifier.SHIFT);
         assertEquals(2, sm.getSelectedItems().size());
         assertEquals("Row 2", sm.getSelectedItem().getValue());
-        assertEquals("Row 2", sm.getSelectedItems().get(1).getValue());
+        assertEquals("Row 2", sm.getSelectedItems().get(0).getValue());
     }
 
     @Test public void test_rt21444_down_cell() {
@@ -379,7 +379,7 @@ public class TreeTableViewMouseInputTest {
         VirtualFlowTestUtils.clickOnRow(tableView, selectRow - 1, true, KeyModifier.SHIFT);
         assertEquals(2, sm.getSelectedItems().size());
         assertEquals("Row 2", sm.getSelectedItem().getValue());
-        assertEquals("Row 2", sm.getSelectedItems().get(1).getValue());
+        assertEquals("Row 2", sm.getSelectedItems().get(0).getValue());
     }
 
     @Test public void test_rt21444_down_row() {
@@ -401,5 +401,34 @@ public class TreeTableViewMouseInputTest {
 
         VirtualFlowTestUtils.clickOnRow(tableView, selectRow + 1, true, KeyModifier.SHIFT);
         assertEquals("Row 4", sm.getSelectedItem().getValue());
+    }
+
+    @Test public void test_rt_32963() {
+        final int items = 8;
+        root.getChildren().clear();
+        root.setExpanded(true);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+        tableView.setRoot(root);
+
+        tableView.setShowRoot(true);
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(0);
+
+        assertEquals(9, tableView.getExpandedItemCount());
+
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(root, sm.getSelectedItem());
+        assertEquals(1, sm.getSelectedItems().size());
+
+        VirtualFlowTestUtils.clickOnRow(tableView, 5, KeyModifier.SHIFT);
+        assertEquals("Actual selected index: " + sm.getSelectedIndex(), 5, sm.getSelectedIndex());
+        assertEquals("Actual focused index: " + fm.getFocusedIndex(), 5, fm.getFocusedIndex());
+        assertTrue("Selected indices: " + sm.getSelectedIndices(), sm.getSelectedIndices().contains(0));
+        assertTrue("Selected items: " + sm.getSelectedItems(), sm.getSelectedItems().contains(root));
+        assertEquals(6, sm.getSelectedItems().size());
     }
 }
