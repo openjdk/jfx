@@ -69,7 +69,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             <Label text="Show Axis:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
             <Label text="Y Up:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
             <CheckBox fx:id="showAxisCheckBox" mnemonicParsing="false" text="" GridPane.columnIndex="1" GridPane.rowIndex="0" />
-            <CheckBox fx:id="yUpCheckBox" mnemonicParsing="false" text="" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+            <CheckBox fx:id="yUpCheckBox" mnemonicParsing="false" selected="true" text="" GridPane.columnIndex="1" GridPane.rowIndex="1" />
             <Label text="Scale to Fit" GridPane.columnIndex="0" GridPane.rowIndex="2" />
             <CheckBox id="yUpCheckBox" fx:id="scaleToFitCheckBox" mnemonicParsing="false" selected="false" text="" GridPane.columnIndex="1" GridPane.rowIndex="2" />
             <Label text="Background Color" GridPane.columnIndex="0" GridPane.rowIndex="3" />
