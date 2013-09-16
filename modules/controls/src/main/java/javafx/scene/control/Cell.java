@@ -182,7 +182,7 @@ import javafx.css.StyleableProperty;
  * <pre>
  * public class BoundLabelCell extends ListCell&lt;String&gt; {
  *
- *     public TextFieldCell() {
+ *     public BoundLabelCell() {
  *         textProperty().bind(itemProperty());
  *     }
  * }
