@@ -243,4 +243,29 @@ public class ListViewMouseInputTest {
         assertEquals("Row 5", sm.getSelectedItem());
         assertEquals("Row 5", sm.getSelectedItems().get(1));
     }
+
+    @Test public void test_rt32560_cell() {
+        final int items = 8;
+        listView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        final MultipleSelectionModel sm = listView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(0);
+
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(0, fm.getFocusedIndex());
+
+        VirtualFlowTestUtils.clickOnRow(listView, 5, KeyModifier.SHIFT);
+        assertEquals(5, sm.getSelectedIndex());
+        assertEquals(5, fm.getFocusedIndex());
+        assertEquals(6, sm.getSelectedItems().size());
+
+        VirtualFlowTestUtils.clickOnRow(listView, 0, KeyModifier.SHIFT);
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(1, sm.getSelectedItems().size());
+    }
 }

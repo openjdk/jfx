@@ -403,6 +403,59 @@ public class TreeTableViewMouseInputTest {
         assertEquals("Row 4", sm.getSelectedItem().getValue());
     }
 
+    @Test public void test_rt32560_cell() {
+        final int items = 8;
+        root.getChildren().clear();
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(0);
+
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(root, sm.getSelectedItem());
+        assertEquals(0, fm.getFocusedIndex());
+
+        VirtualFlowTestUtils.clickOnRow(tableView, 5, KeyModifier.SHIFT);
+        assertEquals(5, sm.getSelectedIndex());
+        assertEquals(5, fm.getFocusedIndex());
+        assertEquals(6, sm.getSelectedItems().size());
+
+        VirtualFlowTestUtils.clickOnRow(tableView, 0, KeyModifier.SHIFT);
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(1, sm.getSelectedItems().size());
+    }
+
+    @Test public void test_rt32560_row() {
+        final int items = 8;
+        root.getChildren().clear();
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        tableView.setShowRoot(true);
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(0);
+
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(root, sm.getSelectedItem());
+        assertEquals(0, fm.getFocusedIndex());
+
+        VirtualFlowTestUtils.clickOnRow(tableView, 5, true, KeyModifier.SHIFT);
+        assertEquals(5, sm.getSelectedIndex());
+        assertEquals(5, fm.getFocusedIndex());
+        assertEquals(sm.getSelectedItems().toString(), 6, sm.getSelectedItems().size());
+
+        VirtualFlowTestUtils.clickOnRow(tableView, 0, true, KeyModifier.SHIFT);
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(1, sm.getSelectedItems().size());
+    }
+
     @Test public void test_rt_32963() {
         final int items = 8;
         root.getChildren().clear();

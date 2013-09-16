@@ -332,4 +332,54 @@ public class TableViewMouseInputTest {
         assertEquals("Row 4", sm.getSelectedItem());
         assertEquals("Row 4", sm.getSelectedItems().get(1));
     }
+
+    @Test public void test_rt32560_cell() {
+        final int items = 8;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(0);
+
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(0, fm.getFocusedIndex());
+
+        VirtualFlowTestUtils.clickOnRow(tableView, 5, KeyModifier.SHIFT);
+        assertEquals(5, sm.getSelectedIndex());
+        assertEquals(5, fm.getFocusedIndex());
+        assertEquals(6, sm.getSelectedItems().size());
+
+        VirtualFlowTestUtils.clickOnRow(tableView, 0, KeyModifier.SHIFT);
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(1, sm.getSelectedItems().size());
+    }
+
+    @Test public void test_rt32560_row() {
+        final int items = 8;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(0);
+
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(0, fm.getFocusedIndex());
+
+        VirtualFlowTestUtils.clickOnRow(tableView, 5, true, KeyModifier.SHIFT);
+        assertEquals(5, sm.getSelectedIndex());
+        assertEquals(5, fm.getFocusedIndex());
+        assertEquals(6, sm.getSelectedItems().size());
+
+        VirtualFlowTestUtils.clickOnRow(tableView, 0, true, KeyModifier.SHIFT);
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(1, sm.getSelectedItems().size());
+    }
 }

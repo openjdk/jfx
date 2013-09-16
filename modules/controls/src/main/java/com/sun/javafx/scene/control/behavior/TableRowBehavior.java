@@ -175,14 +175,22 @@ public class TableRowBehavior<T> extends CellBehaviorBase<TableRow<T>> {
                         }
                     }
 
-                    // RT-21444: We need to put the range in in the correct
-                    // order or else the last selected row will not be the
-                    // last item in the selectedItems list of the selection
-                    // model,
-                    if (asc) {
-                        sm.selectRange(minRow, maxRow + 1);
+                    if (minRow == maxRow) {
+                        // RT-32560: This prevents the anchor 'sticking' in
+                        // the wrong place when a range is selected and then
+                        // selection goes back to the anchor position.
+                        // (Refer to the video in RT-32560 for more detail).
+                        sm.select(minRow);
                     } else {
-                        sm.selectRange(maxRow, minRow - 1);
+                        // RT-21444: We need to put the range in the correct
+                        // order or else the last selected row will not be the
+                        // last item in the selectedItems list of the selection
+                        // model,
+                        if (asc) {
+                            sm.selectRange(minRow, maxRow + 1);
+                        } else {
+                            sm.selectRange(maxRow, minRow - 1);
+                        }
                     }
                 } else {
                     sm.clearAndSelect(tableRow.getIndex());
