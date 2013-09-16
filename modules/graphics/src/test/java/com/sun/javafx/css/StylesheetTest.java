@@ -396,6 +396,42 @@ public class StylesheetTest {
 
     }
 
+    @Test public void testRT_32229() {
+
+        try {
+
+            Rectangle rect = new Rectangle(50,50);
+            rect.setStyle("-fx-base: red; -fx-fill: radial-gradient(radius 100%, derive(-fx-base, -25%), derive(-fx-base, 25%));");
+            rect.setFill(Color.GREEN);
+
+            Group root = new Group();
+            root.getChildren().add(rect);
+            Scene scene = new Scene(root, 500, 500);
+
+            root.impl_processCSS(true);
+
+            // Shows inline style works.
+            assertTrue(rect.getFill() instanceof RadialGradient);
+
+            // reset fill
+            ((StyleableProperty<Paint>)rect.fillProperty()).applyStyle(null, null);
+
+            // loop in style!
+            root.setStyle("-fx-base: -fx-fill;");
+            rect.setStyle("-fx-fill: radial-gradient(radius 100%, derive(-fx-base, -25%), derive(-fx-base, 25%));");
+
+
+            root.impl_processCSS(true);
+
+            // Shows value was left alone
+            assertNull(rect.getFill());
+
+        } catch (Exception e) {
+            // The code generates an IllegalArgumentException that should never reach here
+            fail("Exception not expected: " + e.toString());
+        }
+    }
+
     @Test
     public void testRT_30953_parse() {
 
