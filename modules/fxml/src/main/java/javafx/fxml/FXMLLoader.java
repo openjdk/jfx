@@ -2891,7 +2891,7 @@ public class FXMLLoader {
         if (controllerMethods == null) {
             controllerMethods = new EnumMap<>(SupportedType.class);
             for (SupportedType t: SupportedType.values()) {
-                controllerMethods.put(t, new HashMap<>());
+                controllerMethods.put(t, new HashMap<String, Method>());
             }
 
             Class<?> controllerType = controller.getClass();
