@@ -43,6 +43,7 @@ import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
+import javafx.scene.control.TextInputControl;
 import javafx.scene.Scene;
 import javafx.scene.input.InputEvent;
 import javafx.scene.input.KeyCode;
@@ -51,6 +52,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.text.Text;
 import javafx.stage.Popup;
+import javafx.stage.Window;
 import javafx.util.Duration;
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -64,6 +66,8 @@ import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import static javafx.scene.input.MouseEvent.MOUSE_PRESSED;
 import static javafx.scene.input.TouchEvent.TOUCH_PRESSED;
 import static javafx.scene.layout.Region.USE_PREF_SIZE;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 
 
 public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
@@ -164,6 +168,20 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
     double keyWidth = PREF_KEY_WIDTH;
     double keyHeight = PREF_KEY_HEIGHT;
 
+    static boolean vkAdjustWindow = false;
+
+    static {
+        AccessController.doPrivileged(new PrivilegedAction<Void>() {
+            @Override public Void run() {
+                String s = System.getProperty("com.sun.javafx.vk.adjustwindow");
+                if (s != null) {
+                    vkAdjustWindow = Boolean.valueOf(s);
+                }
+                return null;
+            }
+        });
+    }    
+    
     // Proxy for read-only Window.yProperty() so we can animate.
     private static DoubleProperty winY = new SimpleDoubleProperty();
     static {
@@ -188,19 +206,62 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
         slideOutTimeline.playFromStart();
     }
 
+    private void adjustWindowPosition(final Node node) {
+        // attached node y position in window coordinates
+        double inputControlYPos = node.localToScene(0.0, 0.0).getY() + node.getScene().getY();
+        double inputControlHeight = ((TextInputControl) node).getHeight();
+        double screenHeight =
+            com.sun.javafx.Utils.getScreen(node).getBounds().getHeight();
+        double VKWindowYPos = screenHeight - VK_HEIGHT;
+        double newWindowYPos = 0.0;
+
+        Window w = node.getScene().getWindow();
+        // check if inputControl is hidden by VK in the original position
+        if (origWindowYPos + inputControlYPos + inputControlHeight > VKWindowYPos) {
+            newWindowYPos = VKWindowYPos / 2 - inputControlHeight / 2 - inputControlYPos;
+
+            //Don't allow down shifts
+            newWindowYPos = Math.min(newWindowYPos, 0);
+            w.setY(newWindowYPos);
+        } else {
+            w.setY(origWindowYPos);
+        }
+    }
+
+    private void saveWindowPosition(final Node node) {
+        Window w = node.getScene().getWindow();
+        origWindowYPos = w.getY();
+    }
+
+    private void restoreWindowPosition(final Node node) {
+        if (node != null) {
+            Scene scene = node.getScene();
+            if (scene != null) {
+                Window window = scene.getWindow();
+                if (window != null) {
+                    window.setY(origWindowYPos);
+                }
+            }
+        }
+    }
+
     EventHandler<InputEvent> unHideEventHandler;
 
     private boolean isVKHidden = false;
+    private Double origWindowYPos = null;
     
     private void registerUnhideHandler(final Node node) {
         if (unHideEventHandler == null) {
             unHideEventHandler = new EventHandler<InputEvent> () {
                 public void handle(InputEvent event) {
-                    if (node != null && isVKHidden) {
-                        double screenHeight = com.sun.javafx.Utils.getScreen(node).getBounds().getHeight();
+                    if (attachedNode != null && isVKHidden) {
+                        double screenHeight = com.sun.javafx.Utils.getScreen(attachedNode).getBounds().getHeight();
                         if (fxvk.getHeight() > 0 && (vkPopup.getY() > screenHeight - fxvk.getHeight())) {
                             if (slideInTimeline.getStatus() != Animation.Status.RUNNING) {
                                 startSlideIn();
+                                if (vkAdjustWindow) {
+                                    adjustWindowPosition(attachedNode);
+                                }
                             }
                         }
                     }
@@ -208,8 +269,8 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
                 }                    
             };
         }
-        attachedNode.addEventHandler(TOUCH_PRESSED, unHideEventHandler);
-        attachedNode.addEventHandler(MOUSE_PRESSED, unHideEventHandler);
+        node.addEventHandler(TOUCH_PRESSED, unHideEventHandler);
+        node.addEventHandler(MOUSE_PRESSED, unHideEventHandler);
     }
 
     private void unRegisterUnhideHandler(Node node) {
@@ -345,6 +406,19 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
                                 (fxvk.getLayoutY() == 0 || fxvk.getLayoutY() > attachedNode.getScene().getHeight() - fxvk.getHeight())) {
                             startSlideIn();
                         }
+                        
+                        //update previous window position only if moving from non-input control node or window has changed.
+                        if (vkAdjustWindow) {
+                            if (oldNode == null || oldNode.getScene() == null 
+                                || oldNode.getScene().getWindow() != attachedNode.getScene().getWindow()) {
+                                saveWindowPosition(attachedNode);
+                            }
+                        }
+
+                        // Move window containing input node
+                        if (vkAdjustWindow) {
+                            adjustWindowPosition(attachedNode);
+                        }
                     }
                 } else {
                     if (fxvk != secondaryVK) {
@@ -352,6 +426,10 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
                             unRegisterUnhideHandler(oldNode);
                         }
                         startSlideOut();
+                        // Restore window position
+                        if (vkAdjustWindow) {
+                            restoreWindowPosition(oldNode);
+                        }
                     }
 
                     if (secondaryVK != null) {
@@ -935,6 +1013,10 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
                                     @Override protected void release() {
                                         isVKHidden = true;
                                         startSlideOut();
+                                        // Restore window position
+                                        if (vkAdjustWindow) {
+                                            restoreWindowPosition(attachedNode);
+                                        }
                                     }
                                 };
                                 key.getStyleClass().add("hide");
