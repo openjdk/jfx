@@ -25,7 +25,7 @@
 
 package javafx.scene.control;
 
-// editor and converter code in sync with ComboBox 4413:89c969858c63
+// editor and converter code in sync with ComboBox 4858:e60e9a5396e6
 
 import java.time.LocalDate;
 import java.time.DateTimeException;
@@ -265,12 +265,8 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
      * Whether the DatePicker popup should display a column showing
      * week numbers.
      *
-     * <p>The default value is false unless otherwise defined in a
-     * resource bundle for the current locale.
-     *
-     * <p>This property may be toggled by the end user by using a
-     * context menu in the DatePicker popup, so it is recommended that
-     * applications save and restore the value between sessions.
+     * <p>The default value is specified in a resource bundle, and
+     * depends on the country of the current locale.
      */
     public final BooleanProperty showWeekNumbersProperty() {
         if (showWeekNumbers == null) {

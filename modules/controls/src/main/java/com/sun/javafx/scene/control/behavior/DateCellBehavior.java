@@ -37,7 +37,6 @@ import static java.time.temporal.ChronoUnit.MONTHS;
 import static java.time.temporal.ChronoUnit.WEEKS;
 import static javafx.scene.input.KeyCode.DOWN;
 import static javafx.scene.input.KeyCode.ENTER;
-import static javafx.scene.input.KeyCode.HOME;
 import static javafx.scene.input.KeyCode.LEFT;
 import static javafx.scene.input.KeyCode.PAGE_DOWN;
 import static javafx.scene.input.KeyCode.PAGE_UP;
@@ -60,7 +59,6 @@ public class DateCellBehavior extends CellBehaviorBase<DateCell> {
         DATE_CELL_BINDINGS.add(new KeyBinding(DOWN, "TraverseDown"));
         DATE_CELL_BINDINGS.add(new KeyBinding(LEFT, "TraverseLeft"));
         DATE_CELL_BINDINGS.add(new KeyBinding(RIGHT, "TraverseRight"));
-        DATE_CELL_BINDINGS.add(new KeyBinding(HOME, "Today"));
         DATE_CELL_BINDINGS.add(new KeyBinding(ENTER, "SelectDate"));
         DATE_CELL_BINDINGS.add(new KeyBinding(SPACE, "SelectDate"));
     }
@@ -76,7 +74,6 @@ public class DateCellBehavior extends CellBehaviorBase<DateCell> {
 
         if (dpc != null) {
             switch (name) {
-              case "Today":         dpc.goToDate(LocalDate.now()); break;
               case "SelectDate":    dpc.selectDayCell(cell); break;
               default: super.callAction(name);
             }

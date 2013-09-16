@@ -25,7 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
-// Note: The TextField code is in sync with ComboBoxListViewSkin 4101:bcd662ba5826
+// Note: The TextField code is in sync with ComboBoxListViewSkin 4945:f3dcad659452
 
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -41,10 +41,7 @@ import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.TextField;
-import javafx.scene.input.DragEvent;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseEvent;
+import javafx.scene.input.*;
 import javafx.util.StringConverter;
 
 import com.sun.javafx.scene.control.behavior.DatePickerBehavior;
@@ -78,13 +75,14 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
             });
         }
 
-        // move fake focus in to the textfield if the comboBox is editable
+        // Move fake focus in to the textfield.
+        // Note: DatePicker uses TextField for both editable and non-editable modes
         datePicker.focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean hasFocus) {
-                if (datePicker.isEditable()) {
+                //if (datePicker.isEditable()) {
                     // Fix for the regression noted in a comment in RT-29885.
                     ((ComboBoxListViewSkin.FakeFocusTextField)textField).setFakeFocus(hasFocus);
-                }
+                //}
             }
         });
 
@@ -268,7 +266,9 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
 
         textField.focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean hasFocus) {
-                if (!datePicker.isEditable()) return;
+                // Note: DatePicker uses TextField for both editable and non-editable
+                // modes, so don't perform this test here.
+                // if (!datePicker.isEditable()) return;
 
                 // Fix for RT-29885
                 datePicker.getProperties().put("FOCUSED", hasFocus);
@@ -281,6 +281,7 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
                 } else {
                     pseudoClassStateChanged(CONTAINS_FOCUS_PSEUDOCLASS_STATE, true);
                 }
+                // --- end of RT-21454
             }
         });
 

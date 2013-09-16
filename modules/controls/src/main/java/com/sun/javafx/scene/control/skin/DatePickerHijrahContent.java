@@ -177,6 +177,7 @@ class DatePickerHijrahContent extends DatePickerContent {
                                     .format(cDate);
 
                 secondaryText.setText(hijrahStr);
+                dayCell.requestLayout();
                 dayCell.setDisable(false);
             } catch (DateTimeException ex) {
                 // Date is out of range.

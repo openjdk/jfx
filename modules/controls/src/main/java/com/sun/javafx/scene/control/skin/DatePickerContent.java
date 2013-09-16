@@ -51,14 +51,9 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
-import javafx.scene.control.CheckMenuItem;
-import javafx.scene.control.ContextMenu;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.DateCell;
 import javafx.scene.control.Label;
-import javafx.scene.control.MenuItem;
-import javafx.scene.control.SeparatorMenuItem;
-import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
@@ -117,8 +112,6 @@ public class DatePickerContent extends VBox {
     final DateTimeFormatter dayCellFormatter =
         DateTimeFormatter.ofPattern("d");
 
-    final ContextMenu contextMenu = new ContextMenu();
-
     static String getString(String key) {
         return ControlResources.getString("DatePicker."+key);
     }
@@ -129,27 +122,6 @@ public class DatePickerContent extends VBox {
         getStyleClass().add("date-picker-popup");
 
         daysPerWeek = getDaysPerWeek();
-
-        contextMenu.getItems().addAll(
-            new MenuItem(getString("contextMenu.showToday")) {{
-                setOnAction(new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent t) {
-                        displayedYearMonth.set(YearMonth.now());
-                    }
-                });
-            }},
-            new SeparatorMenuItem(),
-            new CheckMenuItem(getString("contextMenu.showWeekNumbers")) {{
-                selectedProperty().bindBidirectional(datePicker.showWeekNumbersProperty());
-            }}
-        );
-
-        setOnContextMenuRequested(new EventHandler<ContextMenuEvent>() {
-            @Override public void handle(ContextMenuEvent me) {
-                contextMenu.show(DatePickerContent.this, me.getScreenX(), me.getScreenY());
-                me.consume();
-            }
-        });
 
         {
             LocalDate date = datePicker.getValue();
@@ -180,6 +152,13 @@ public class DatePickerContent extends VBox {
                 final double hgaps = snaphgap * (nCols - 1);
                 final double contentWidth = width - left - right - hgaps;
                 return ((snapSize(contentWidth / nCols)) * nCols) + left + right + hgaps;
+            }
+
+            @Override protected void layoutChildren() {
+                // Prevent AssertionError in GridPane
+                if (getWidth() > 0 && getHeight() > 0) {
+                    super.layoutChildren();
+                }
             }
         };
         gridPane.setFocusTraversable(true);
@@ -264,6 +243,12 @@ public class DatePickerContent extends VBox {
                           node.impl_traverse(Direction.RIGHT);
                           e.consume();
                           break;
+
+                      case HOME:
+                          goToDate(LocalDate.now());
+                          e.consume();
+                          break;
+
 
                       case PAGE_UP:
                           if ((isMac() && e.isMetaDown()) || (!isMac() && e.isControlDown())) {
@@ -404,7 +389,6 @@ public class DatePickerContent extends VBox {
             }
         });
 
-
         yearSpinner.getChildren().addAll(backYearButton, yearLabel, forwardYearButton);
 yearSpinner.setFillHeight(false);
         monthYearPane.setRight(yearSpinner);
@@ -501,7 +485,7 @@ yearSpinner.setFillHeight(false);
 
         for (int i = 0; i < 6 * daysPerWeek; i++) {
             DateCell dayCell = dayCells.get(i);
-            dayCell.getStyleClass().setAll("cell", "day-cell");
+            dayCell.getStyleClass().setAll("cell", "date-cell", "day-cell");
             dayCell.setDisable(false);
             dayCell.setStyle(null);
             dayCell.setGraphic(null);
