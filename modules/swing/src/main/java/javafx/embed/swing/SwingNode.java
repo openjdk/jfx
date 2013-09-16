@@ -193,6 +193,12 @@ public class SwingNode extends Node {
             lwFrame.addWindowFocusListener(new WindowFocusListener() {
                 @Override
                 public void windowGainedFocus(WindowEvent e) {
+                    SwingFXUtils.runOnFxThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            SwingNode.this.requestFocus();
+                        }
+                    });
                 }
                 @Override
                 public void windowLostFocus(WindowEvent e) {
@@ -709,11 +715,6 @@ public class SwingNode extends Node {
     private class SwingMouseEventHandler implements EventHandler<MouseEvent> {
         @Override
         public void handle(MouseEvent event) {
-            if (event.getEventType() == MouseEvent.MOUSE_PRESSED &&
-                !SwingNode.this.isFocused() && SwingNode.this.isFocusTraversable())
-            {
-                SwingNode.this.requestFocus();
-            }
             JLightweightFrame frame = lwFrame;
             if (frame == null) {
                 return;
