@@ -25,6 +25,7 @@
 
 package javafx.scene.web;
 
+import com.sun.javafx.scene.web.Debugger;
 import javafx.animation.AnimationTimer;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
@@ -176,7 +177,14 @@ final public class WebEngine {
     public final boolean isJavaScriptEnabled() {
         return javaScriptEnabled == null ? true : javaScriptEnabled.get();
     }
-
+    
+    private Debugger debugger = new DebuggerImpl();
+    
+    @Deprecated 
+    public Debugger impl_getDebugger(){
+        return debugger;
+    }
+    
     public final BooleanProperty javaScriptEnabledProperty() {
         if (javaScriptEnabled == null) {
             javaScriptEnabled = new BooleanPropertyBase(true) {
@@ -905,4 +913,32 @@ final public class WebEngine {
             }
         }, getAccessControlContext());
     }
+    
+    private class DebuggerImpl implements Debugger {
+        private Callback<String, Void> callback;
+
+        @Override
+        public boolean isEnabled() {
+            return false;
+        }
+
+        @Override
+        public void setEnabled(boolean enabled) {
+
+        }
+
+        @Override
+        public void sendMessage(String message) {
+        }
+
+        @Override
+        public Callback<String, Void> getMessageCallback() {
+            return callback;
+        }
+
+        @Override
+        public void setMessageCallback(Callback<String, Void> callback) {
+            this.callback = callback;
+        }
+    };
 }
