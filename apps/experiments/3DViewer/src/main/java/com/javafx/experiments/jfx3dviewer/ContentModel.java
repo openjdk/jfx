@@ -128,11 +128,15 @@ public class ContentModel {
         @Override protected void invalidated() {
             if (get()) {
                 if (xAxis == null) createAxes();
-                root3D.getChildren().addAll(xAxis, yAxis, zAxis);
-                root3D.getChildren().addAll(xSphere, ySphere, zSphere);
+                autoScalingGroup.getChildren().addAll(xAxis, yAxis, zAxis);
+                autoScalingGroup.getChildren().addAll(xSphere, ySphere, zSphere);
+                //root3D.getChildren().addAll(xAxis, yAxis, zAxis);
+                //root3D.getChildren().addAll(xSphere, ySphere, zSphere);
             } else if (xAxis != null) {
-                root3D.getChildren().removeAll(xAxis, yAxis, zAxis);
-                root3D.getChildren().removeAll(xSphere, ySphere, zSphere);
+                autoScalingGroup.getChildren().removeAll(xAxis, yAxis, zAxis);
+                autoScalingGroup.getChildren().removeAll(xSphere, ySphere, zSphere);
+                //root3D.getChildren().removeAll(xAxis, yAxis, zAxis);
+                //root3D.getChildren().removeAll(xSphere, ySphere, zSphere);
             }
         }
     };

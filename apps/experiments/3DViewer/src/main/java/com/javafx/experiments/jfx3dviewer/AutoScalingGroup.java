@@ -14,7 +14,7 @@ import javafx.scene.transform.Translate;
 public class AutoScalingGroup extends Group {
     private double size;
     private double twoSize;
-    private boolean autoScale = false;
+    private boolean autoScale = true;
     private Translate translate = new Translate(0,0,0);
     private Scale scale = new Scale(1,1,1,0,0,0);
     private SimpleBooleanProperty enabled = new SimpleBooleanProperty(true) {
