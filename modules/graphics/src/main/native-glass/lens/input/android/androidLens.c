@@ -80,17 +80,18 @@ void notifyWindowEvent_resize(
 }
 
 void notifyTouchEvent(
-        int state,
-        int id,
-        int sendAlsoButtonEvent,
-        int xabs,
-        int yabs) {
+        int  state,
+        int  id,
+        int  sendAlsoButtonEvent,
+        int  xabs,
+        int  yabs) {
     
    ATTACH_JNI_THREAD();
+   jlong jlid = id;
    lens_wm_notifyMultiTouchEvent(env,
            1,
            &state,
-           &id,
+           &jlid,
            &xabs,
            &yabs);
                    

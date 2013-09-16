@@ -42,11 +42,11 @@ extern "C" {
         int height);
     
     void notifyTouchEvent(
-        int state,
-        int id,
-        int sendAlsoButtonEvent,
-        int xabs,
-        int yabs);
+        int  state,
+        int  id,
+        int  sendAlsoButtonEvent,
+        int  xabs,
+        int  yabs);
 
     void notifyMotionEvent(
         int mousePosX,
