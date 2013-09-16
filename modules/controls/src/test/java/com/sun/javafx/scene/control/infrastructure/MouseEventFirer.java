@@ -43,8 +43,25 @@ import java.util.List;
 public final class MouseEventFirer {
     private final EventTarget target;
 
+    private final Scene scene;
+    private final Bounds targetBounds;
+
     public MouseEventFirer(EventTarget target) {
         this.target = target;
+
+        // Force the target node onto a stage so that it is accessible
+        if (target instanceof Node) {
+            Node n = (Node)target;
+            new StageLoader(n);
+            scene = n.getScene();
+            targetBounds = n.getLayoutBounds();
+        } else if (target instanceof Scene) {
+            scene = (Scene)target;
+            new StageLoader(scene);
+            targetBounds = new BoundingBox(0, 0, scene.getWidth(), scene.getHeight());
+        } else {
+            throw new RuntimeException("EventTarget of invalid type");
+        }
     }
 
     public void fireMousePressAndRelease(KeyModifier... modifiers) {
@@ -122,21 +139,6 @@ public final class MouseEventFirer {
     }
     
     private void fireMouseEvent(EventType<MouseEvent> evtType, MouseButton button, int clickCount, double deltaX, double deltaY, KeyModifier... modifiers) {
-        Scene scene = null;
-        Bounds targetBounds = null;
-        
-        // Force the target node onto a stage so that it is accessible
-        if (target instanceof Node) {
-            Node n = (Node)target;
-            new StageLoader(n);
-            scene = n.getScene();
-            targetBounds = n.getLayoutBounds();
-        } else if (target instanceof Scene) {
-            scene = (Scene)target;
-            new StageLoader(scene);
-            targetBounds = new BoundingBox(0, 0, scene.getWidth(), scene.getHeight());
-        }
-
         // calculate bounds
         final Stage stage = (Stage) scene.getWindow();
         

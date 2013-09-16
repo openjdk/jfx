@@ -25,10 +25,17 @@
 
 package javafx.scene.control.cell;
 
+import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
+import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
+import com.sun.javafx.scene.control.skin.VirtualFlow;
+import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TextField;
+import javafx.scene.input.MouseButton;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 import org.junit.Before;
@@ -374,5 +381,48 @@ public class TextFieldTableCellTest {
         tableView.edit(-1, null);
         assertFalse(cell.isEditing());
         assertNull(cell.getGraphic());
+    }
+
+
+    /**************************************************************************
+     *
+     * Tests for specific bugs
+     *
+     **************************************************************************/
+
+    @Test public void test_rt_32869() {
+        TableColumn tc = new TableColumn();
+        tc.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
+                        @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<String, String> param) {
+                return new ReadOnlyStringWrapper("Dummy Text");
+            }
+        });
+
+        TableView tableView = new TableView(FXCollections.observableArrayList("TEST"));
+        tableView.getColumns().add(tc);
+        tableView.setEditable(true);
+        TextFieldTableCell<Object,Object> cell = new TextFieldTableCell<>();
+        cell.updateTableView(tableView);
+        cell.updateIndex(0);
+        cell.updateTableColumn(tc);
+        cell.setEditable(true);
+
+        tableView.edit(0, tc);
+        assertTrue(cell.isEditing());
+        assertNotNull(cell.getGraphic());
+
+        TextField textField = (TextField) cell.getGraphic();
+        MouseEventFirer mouse = new MouseEventFirer(textField);
+
+        textField.requestFocus();
+        textField.selectAll();
+        assertEquals("Dummy Text", textField.getSelectedText());
+
+        assertEquals("Dummy Text", textField.getSelectedText());
+
+        mouse.fireMousePressed(MouseButton.SECONDARY);
+        assertEquals("Dummy Text", textField.getSelectedText());
+        mouse.fireMouseReleased(MouseButton.SECONDARY);
+        assertEquals("Dummy Text", textField.getSelectedText());
     }
 }
