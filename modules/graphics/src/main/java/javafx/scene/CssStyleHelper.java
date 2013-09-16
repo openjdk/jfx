@@ -1132,23 +1132,17 @@ final class CssStyleHelper {
 
                 if (resolved != null) {
 
-                    if (resolves != null ) {
+                    if (resolves.contains(resolved.getParsedValueImpl())) {
 
-                        if (resolves.contains(resolved.getParsedValueImpl())) {
-
-                            if (LOGGER.isLoggable(Level.WARNING)) {
-                                LOGGER.warning("Loop detected in " + resolved.getRule().toString() + " while resolving '" + sval + "'");
-                            }
-                            throw new IllegalArgumentException("Loop detected in " + resolved.getRule().toString() + " while resolving '" + sval + "'");
-
-                        } else {
-                            resolves.add(parsedValue);
+                        if (LOGGER.isLoggable(Level.WARNING)) {
+                            LOGGER.warning("Loop detected in " + resolved.getRule().toString() + " while resolving '" + sval + "'");
                         }
+                        throw new IllegalArgumentException("Loop detected in " + resolved.getRule().toString() + " while resolving '" + sval + "'");
 
                     } else {
-                        resolves = new HashSet<>();
                         resolves.add(parsedValue);
                     }
+
 
                     if (styleList != null) {
                         final Style style = resolved.getStyle();
@@ -1192,6 +1186,7 @@ final class CssStyleHelper {
         final Object val = parsedValue.getValue();
 
         if (val instanceof ParsedValueImpl[][]) {
+
             // If ParsedValueImpl is a layered sequence of values, resolve the lookups for each.
             final ParsedValueImpl[][] layers = (ParsedValueImpl[][])val;
             ParsedValueImpl[][] resolved = new ParsedValueImpl[layers.length][0];
@@ -1200,21 +1195,26 @@ final class CssStyleHelper {
                 for (int ll=0; ll<layers[l].length; ll++) {
                     if (layers[l][ll] == null) continue;
                     resolved[l][ll] =
-                        resolveLookups(styleable, layers[l][ll], styleMap, states, whence, null, styleList);
+                        resolveLookups(styleable, layers[l][ll], styleMap, states, whence, resolves, styleList);
                 }
             }
+
+            resolves.clear();
 
             return new ParsedValueImpl(resolved, parsedValue.getConverter(), false);
 
         } else if (val instanceof ParsedValueImpl[]) {
-        // If ParsedValueImpl is a sequence of values, resolve the lookups for each.
+
+            // If ParsedValueImpl is a sequence of values, resolve the lookups for each.
             final ParsedValueImpl[] layer = (ParsedValueImpl[])val;
             ParsedValueImpl[] resolved = new ParsedValueImpl[layer.length];
             for (int l=0; l<layer.length; l++) {
                 if (layer[l] == null) continue;
                 resolved[l] =
-                    resolveLookups(styleable, layer[l], styleMap, states, whence, null, styleList);
+                    resolveLookups(styleable, layer[l], styleMap, states, whence, resolves, styleList);
             }
+
+            resolves.clear();
 
             return new ParsedValueImpl(resolved, parsedValue.getConverter(), false);
 
@@ -1326,7 +1326,7 @@ final class CssStyleHelper {
             try {
 
                 ObjectProperty<StyleOrigin> whence = new SimpleObjectProperty<StyleOrigin>(style.getOrigin());
-                resolved = resolveLookups(styleable, cssValue, styleMap, states, whence, null, styleList);
+                resolved = resolveLookups(styleable, cssValue, styleMap, states, whence, new HashSet<>(), styleList);
 
                 final String property = cssMetaData.getProperty();
 
