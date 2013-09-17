@@ -1429,7 +1429,7 @@ project(":designTime") {
 // not pop up any windows or use audio). As such, they are only enabled
 // when FULL_TEST is specified, and each test runs in its own JVM
 project(":systemTests") {
-    def sdkDir = "build/${defaultHostTarget}-sdk"
+    def sdkDir = "${rootProject.buildDir}/${defaultHostTarget}-sdk"
     test {
         enabled = IS_FULL_TEST
         forkEvery = 1
