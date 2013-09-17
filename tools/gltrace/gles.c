@@ -2364,7 +2364,21 @@ DEF(void, glBindFramebufferEXT) (GLenum target, GLuint framebuffer)
 DEF(void, glDeleteFramebuffersEXT) (GLsizei n, const GLuint *framebuffers)
 {
     GLESPROLOG(glDeleteFramebuffersEXT);
-    NOT_IMPLEMENTED();
+
+    putCmd(OPC_glDeleteFramebuffersEXT);
+    putInt(n);
+    int i;
+    for (i=0; i<n; ++i) {
+        putInt(framebuffers[i]);
+    }
+    
+    uint64_t bgn = gethrtime();
+    ORIG(glDeleteFramebuffersEXT)(n, framebuffers);
+    uint64_t end = gethrtime();
+    
+    putTime(bgn, end);
+    
+    GLESEPILOG();
 }
 
 DEF(void, glGenFramebuffersEXT) (GLsizei n, GLuint *framebuffers)

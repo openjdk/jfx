@@ -2058,7 +2058,23 @@ proc_glBindFramebufferEXT(GLenum target, GLuint framebuffer)
 }
 
 static void
-proc_glDeleteFramebuffersEXT(GLsizei n, const GLuint *framebuffers);
+proc_glDeleteFramebuffersEXT(GLsizei n, const GLuint *framebuffers)
+{
+    int i;
+    if (printFlag) {
+        sb_appendStr("glDeleteFramebuffersEXT(");
+        sb_appendInt(n);
+        sb_appendStr(", [");
+        for (i=0; i<n; ++i) {
+            if (i!=0) sb_appendStr(", ");
+            sb_appendInt(framebuffers[i]);
+        }
+        sb_appendStr("])");
+    }
+    if (execFlag) {
+        glDeleteFramebuffersEXT(n, framebuffers);
+    }
+}
 
 static void
 proc_glGenFramebuffersEXT(GLsizei n, GLuint *_framebuffers)
@@ -3323,7 +3339,16 @@ process(int frames)
                 proc_glBindFramebufferEXT(target, framebuffer);
                 break;
             }
-            case OPC_glDeleteFramebuffersEXT:   NOT_IMPLEMENTED();
+            case OPC_glDeleteFramebuffersEXT: {
+                GLsizei n = getInt();
+                GLuint framebuffers[n];
+                int i;
+                for (i=0; i<n; ++i) {
+                    framebuffers[i] = getInt();
+                }
+                proc_glDeleteFramebuffersEXT(n, framebuffers);
+                break;
+            }
             case OPC_glGenFramebuffersEXT: {
                 GLsizei n = getInt();
                 GLuint framebuffers[n];
