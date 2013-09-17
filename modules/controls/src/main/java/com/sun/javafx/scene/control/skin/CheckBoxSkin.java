@@ -80,7 +80,7 @@ public class CheckBoxSkin extends LabeledSkinBase<CheckBox, ButtonBehavior<Check
         final CheckBox checkBox = getSkinnable(); 
         final double boxWidth = snapSize(box.prefWidth(-1));
         final double boxHeight = snapSize(box.prefHeight(-1));
-        final double computeWidth = Math.min(checkBox.prefWidth(-1),checkBox.minWidth(-1));
+        final double computeWidth = Math.max(checkBox.prefWidth(-1), checkBox.minWidth(-1));
         final double labelWidth = Math.min( computeWidth - boxWidth, w - snapSize(boxWidth));
         final double labelHeight = Math.min(checkBox.prefHeight(labelWidth), h);
         final double maxHeight = Math.max(boxHeight, labelHeight);
