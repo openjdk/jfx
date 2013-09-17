@@ -519,7 +519,8 @@ public class FXCanvas extends Canvas {
                 me.x, me.y,
                 los.x, los.y,
                 shift, control, alt, meta,
-                SWTEvents.getWheelRotation(me, embedMouseType), false);  // TODO: popup trigger
+                SWTEvents.getWheelRotation(me, embedMouseType),
+                false);  // RT-32990: popup trigger not implemented
     }
     
     private void sendKeyEventToFX(final KeyEvent e, int type) {

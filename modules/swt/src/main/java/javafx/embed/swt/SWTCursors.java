@@ -40,7 +40,6 @@ import com.sun.javafx.cursor.ImageCursorFrame;
 class SWTCursors {
 
     private static Cursor createCustomCursor(ImageCursorFrame cursorFrame) {
-        //TODO - implement custom cursors
         /*
         Toolkit awtToolkit = Toolkit.getDefaultToolkit();
 
