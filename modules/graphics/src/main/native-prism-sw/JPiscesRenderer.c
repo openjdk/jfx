@@ -733,7 +733,7 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_fillLCDAlphaMaskImpl
     jint offset, jint stride)
 {
     Renderer* rdr;
-    jint minX, minY, maxX, maxY, maxXNoCplip;
+    jint minX, minY, maxX, maxY;
     jint maskOffset;
     rdr = (Renderer*)JLongToPointer((*env)->GetLongField(env, this, fieldIds[RENDERER_NATIVE_PTR]));
 

@@ -377,10 +377,8 @@ static INLINE void checkBoundsRepeat(jint *a, jlong *la, jint min, jint max) {
 static INLINE void checkBoundsNoRepeat(jint *a, jlong *la, jint min, jint max) {
     jint aval = *a;
     if (aval < min) {
-        *la = (min << 16);
         *a = min;
     } else if (aval > max) {
-        *la = (max << 16);
         *a = max;
     }
 }
@@ -521,6 +519,7 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
             switch (repeatInterpolateMode) {
             case NO_REPEAT_NO_INTERPOLATE:
                 while (a < am) {
+                    tx = (jint)(ltx >> 16);
                     checkBoundsNoRepeat(&tx, &ltx, txMin-1, txMax);
                     sidx = MAX(tyMin, ty) * rdr->_texture_stride + MAX(txMin, tx);
                     assert(pidx >= 0);
@@ -528,12 +527,12 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
                     paint[pidx] = txtData[sidx];
                     ++a;
                     ++pidx;
-                    ++tx;
                     ltx += 0x10000;
                 } // while (a < am)
                 break;
             case REPEAT_NO_INTERPOLATE:
                 while (a < am) {
+                    tx = (jint)(ltx >> 16);
                     checkBoundsRepeat(&tx, &ltx, txMin-1, txMax);
                     sidx = MAX(tyMin, ty) * rdr->_texture_stride + MAX(txMin, tx);
                     assert(pidx >= 0);
@@ -541,12 +540,12 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
                     paint[pidx] = txtData[sidx];
                     ++a;
                     ++pidx;
-                    ++tx;
                     ltx += 0x10000;
                 } // while (a < am)
                 break;
             case NO_REPEAT_INTERPOLATE_ALPHA:
                 while (a < am) {
+                    tx = (jint)(ltx >> 16);
                     checkBoundsNoRepeat(&tx, &ltx, txMin-1, txMax);
                     sidx = MAX(tyMin, ty) * rdr->_texture_stride + MAX(txMin, tx);
                     p00 = txtData[sidx];
@@ -566,12 +565,12 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
                     paint[pidx] = cval;
                     ++a;
                     ++pidx;
-                    ++tx;
                     ltx += 0x10000;
                 } // while (a < am)
                 break;
             case REPEAT_INTERPOLATE_ALPHA:
                 while (a < am) {
+                    tx = (jint)(ltx >> 16);
                     checkBoundsRepeat(&tx, &ltx, txMin-1, txMax);
                     sidx = MAX(tyMin, ty) * rdr->_texture_stride + MAX(txMin, tx);
                     p00 = txtData[sidx];
@@ -591,12 +590,12 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
                     paint[pidx] = cval;
                     ++a;
                     ++pidx;
-                    ++tx;
                     ltx += 0x10000;
                 } // while (a < am)
                 break;
             case NO_REPEAT_INTERPOLATE_NO_ALPHA:
                 while (a < am) {
+                    tx = (jint)(ltx >> 16);
                     checkBoundsNoRepeat(&tx, &ltx, txMin-1, txMax);
                     sidx = MAX(tyMin, ty) * rdr->_texture_stride + MAX(txMin, tx);
                     p00 = txtData[sidx];
@@ -616,12 +615,12 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
                     paint[pidx] = cval;
                     ++a;
                     ++pidx;
-                    ++tx;
                     ltx += 0x10000;
                 } // while (a < am)
                 break;
             case REPEAT_INTERPOLATE_NO_ALPHA:
                 while (a < am) {
+                    tx = (jint)(ltx >> 16);
                     checkBoundsRepeat(&tx, &ltx, txMin-1, txMax);
                     sidx = MAX(tyMin, ty) * rdr->_texture_stride + MAX(txMin, tx);
                     p00 = txtData[sidx];
@@ -641,7 +640,6 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
                     paint[pidx] = cval;
                     ++a;
                     ++pidx;
-                    ++tx;
                     ltx += 0x10000;
                 } // while (a < am)
                 break;
@@ -657,6 +655,7 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
         jint cval, pidx;
         jint *a, *am;
         jlong ltx, lty;
+        jint tx, ty, vfrac, hfrac;
         jint paintOffset = 0;
         jint pts[3];
         jint sidx, p00;
@@ -676,10 +675,10 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
             switch (repeatInterpolateMode) {
             case NO_REPEAT_NO_INTERPOLATE:
                 while (a < am) {
-                    jint tx = (jint)(ltx >> 16);
-                    jint ty = (jint)(lty >> 16);
-                    jint hfrac = (jint)(ltx & 0xffff);
-                    jint vfrac = (jint)(lty & 0xffff);
+                    tx = (jint)(ltx >> 16);
+                    ty = (jint)(lty >> 16);
+                    hfrac = (jint)(ltx & 0xffff);
+                    vfrac = (jint)(lty & 0xffff);
                     checkBoundsNoRepeat(&tx, &ltx, txMin-1, txMax);
                     checkBoundsNoRepeat(&ty, &lty, tyMin-1, tyMax);
                     sidx = MAX(tyMin, ty) * rdr->_texture_stride + MAX(txMin, tx);
@@ -694,10 +693,10 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
                 break;
             case REPEAT_NO_INTERPOLATE:
                 while (a < am) {
-                    jint tx = (jint)(ltx >> 16);
-                    jint ty = (jint)(lty >> 16);
-                    jint hfrac = (jint)(ltx & 0xffff);
-                    jint vfrac = (jint)(lty & 0xffff);
+                    tx = (jint)(ltx >> 16);
+                    ty = (jint)(lty >> 16);
+                    hfrac = (jint)(ltx & 0xffff);
+                    vfrac = (jint)(lty & 0xffff);
                     checkBoundsRepeat(&tx, &ltx, txMin-1, txMax);
                     checkBoundsRepeat(&ty, &lty, tyMin-1, tyMax);
                     sidx = MAX(tyMin, ty) * rdr->_texture_stride + MAX(txMin, tx);
@@ -712,10 +711,10 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
                 break;
             case NO_REPEAT_INTERPOLATE_ALPHA:
                 while (a < am) {
-                    jint tx = (jint)(ltx >> 16);
-                    jint ty = (jint)(lty >> 16);
-                    jint hfrac = (jint)(ltx & 0xffff);
-                    jint vfrac = (jint)(lty & 0xffff);
+                    tx = (jint)(ltx >> 16);
+                    ty = (jint)(lty >> 16);
+                    hfrac = (jint)(ltx & 0xffff);
+                    vfrac = (jint)(lty & 0xffff);
                     checkBoundsNoRepeat(&tx, &ltx, txMin-1, txMax);
                     checkBoundsNoRepeat(&ty, &lty, tyMin-1, tyMax);
                     sidx = MAX(tyMin, ty) * rdr->_texture_stride + MAX(txMin, tx);
@@ -743,10 +742,10 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
                 break;
             case REPEAT_INTERPOLATE_ALPHA:
                 while (a < am) {
-                    jint tx = (jint)(ltx >> 16);
-                    jint ty = (jint)(lty >> 16);
-                    jint hfrac = (jint)(ltx & 0xffff);
-                    jint vfrac = (jint)(lty & 0xffff);
+                    tx = (jint)(ltx >> 16);
+                    ty = (jint)(lty >> 16);
+                    hfrac = (jint)(ltx & 0xffff);
+                    vfrac = (jint)(lty & 0xffff);
                     checkBoundsRepeat(&tx, &ltx, txMin-1, txMax);
                     checkBoundsRepeat(&ty, &lty, tyMin-1, tyMax);
                     sidx = MAX(tyMin, ty) * rdr->_texture_stride + MAX(txMin, tx);
@@ -774,10 +773,10 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
                 break;
             case NO_REPEAT_INTERPOLATE_NO_ALPHA:
                 while (a < am) {
-                    jint tx = (jint)(ltx >> 16);
-                    jint ty = (jint)(lty >> 16);
-                    jint hfrac = (jint)(ltx & 0xffff);
-                    jint vfrac = (jint)(lty & 0xffff);
+                    tx = (jint)(ltx >> 16);
+                    ty = (jint)(lty >> 16);
+                    hfrac = (jint)(ltx & 0xffff);
+                    vfrac = (jint)(lty & 0xffff);
                     checkBoundsNoRepeat(&tx, &ltx, txMin-1, txMax);
                     checkBoundsNoRepeat(&ty, &lty, tyMin-1, tyMax);
                     sidx = MAX(tyMin, ty) * rdr->_texture_stride + MAX(txMin, tx);
@@ -805,10 +804,10 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
                 break;
             case REPEAT_INTERPOLATE_NO_ALPHA:
                 while (a < am) {
-                    jint tx = (jint)(ltx >> 16);
-                    jint ty = (jint)(lty >> 16);
-                    jint hfrac = (jint)(ltx & 0xffff);
-                    jint vfrac = (jint)(lty & 0xffff);
+                    tx = (jint)(ltx >> 16);
+                    ty = (jint)(lty >> 16);
+                    hfrac = (jint)(ltx & 0xffff);
+                    vfrac = (jint)(lty & 0xffff);
                     checkBoundsRepeat(&tx, &ltx, txMin-1, txMax);
                     checkBoundsRepeat(&ty, &lty, tyMin-1, tyMax);
                     sidx = MAX(tyMin, ty) * rdr->_texture_stride + MAX(txMin, tx);
@@ -846,9 +845,11 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
         jint cval, pidx;
         jint *a, *am;
         jlong ltx, lty;
+        jint tx, ty, vfrac, hfrac;
         jint paintOffset = 0;
         jint pts[3];
         jint sidx, p00;
+        jboolean inBounds;
 
         y = rdr->_currY;
 
@@ -865,12 +866,12 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
             switch (repeatInterpolateMode) {
             case NO_REPEAT_NO_INTERPOLATE:
                 while (a < am) {
-                    jint tx = (jint)(ltx >> 16);
-                    jint ty = (jint)(lty >> 16);
-                    jint hfrac = (jint)(ltx & 0xffff);
-                    jint vfrac = (jint)(lty & 0xffff);
+                    tx = (jint)(ltx >> 16);
+                    ty = (jint)(lty >> 16);
+                    hfrac = (jint)(ltx & 0xffff);
+                    vfrac = (jint)(lty & 0xffff);
 
-                    jboolean inBounds =
+                    inBounds =
                         isInBoundsNoRepeat(&tx, &ltx, txMin-1, txMax) &&
                         isInBoundsNoRepeat(&ty, &lty, tyMin-1, tyMax);
                     if (inBounds) {
@@ -892,10 +893,10 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
                 break;
             case REPEAT_NO_INTERPOLATE:
                 while (a < am) {
-                    jint tx = (jint)(ltx >> 16);
-                    jint ty = (jint)(lty >> 16);
-                    jint hfrac = (jint)(ltx & 0xffff);
-                    jint vfrac = (jint)(lty & 0xffff);
+                    tx = (jint)(ltx >> 16);
+                    ty = (jint)(lty >> 16);
+                    hfrac = (jint)(ltx & 0xffff);
+                    vfrac = (jint)(lty & 0xffff);
                     checkBoundsRepeat(&tx, &ltx, txMin-1, txMax);
                     checkBoundsRepeat(&ty, &lty, tyMin-1, tyMax);
                     sidx = MAX(tyMin, ty) * rdr->_texture_stride + MAX(txMin, tx);
@@ -911,12 +912,12 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
                 break;
             case NO_REPEAT_INTERPOLATE_ALPHA:
                 while (a < am) {
-                    jint tx = (jint)(ltx >> 16);
-                    jint ty = (jint)(lty >> 16);
-                    jint hfrac = (jint)(ltx & 0xffff);
-                    jint vfrac = (jint)(lty & 0xffff);
+                    tx = (jint)(ltx >> 16);
+                    ty = (jint)(lty >> 16);
+                    hfrac = (jint)(ltx & 0xffff);
+                    vfrac = (jint)(lty & 0xffff);
 
-                    jboolean inBounds =
+                    inBounds =
                         isInBoundsNoRepeat(&tx, &ltx, txMin-1, txMax) &&
                         isInBoundsNoRepeat(&ty, &lty, tyMin-1, tyMax);
                     if (inBounds) {
@@ -950,10 +951,10 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
                 break;
             case REPEAT_INTERPOLATE_ALPHA:
                 while (a < am) {
-                    jint tx = (jint)(ltx >> 16);
-                    jint ty = (jint)(lty >> 16);
-                    jint hfrac = (jint)(ltx & 0xffff);
-                    jint vfrac = (jint)(lty & 0xffff);
+                    tx = (jint)(ltx >> 16);
+                    ty = (jint)(lty >> 16);
+                    hfrac = (jint)(ltx & 0xffff);
+                    vfrac = (jint)(lty & 0xffff);
                     checkBoundsRepeat(&tx, &ltx, txMin-1, txMax);
                     checkBoundsRepeat(&ty, &lty, tyMin-1, tyMax);
                     sidx = MAX(tyMin, ty) * rdr->_texture_stride + MAX(txMin, tx);
@@ -980,12 +981,12 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
                 break;
             case NO_REPEAT_INTERPOLATE_NO_ALPHA:
                 while (a < am) {
-                    jint tx = (jint)(ltx >> 16);
-                    jint ty = (jint)(lty >> 16);
-                    jint hfrac = (jint)(ltx & 0xffff);
-                    jint vfrac = (jint)(lty & 0xffff);
+                    tx = (jint)(ltx >> 16);
+                    ty = (jint)(lty >> 16);
+                    hfrac = (jint)(ltx & 0xffff);
+                    vfrac = (jint)(lty & 0xffff);
 
-                    jboolean inBounds =
+                    inBounds =
                         isInBoundsNoRepeat(&tx, &ltx, txMin-1, txMax) &&
                         isInBoundsNoRepeat(&ty, &lty, tyMin-1, tyMax);
                     if (inBounds) {
@@ -1019,10 +1020,10 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
                 break;
             case REPEAT_INTERPOLATE_NO_ALPHA:
                 while (a < am) {
-                    jint tx = (jint)(ltx >> 16);
-                    jint ty = (jint)(lty >> 16);
-                    jint hfrac = (jint)(ltx & 0xffff);
-                    jint vfrac = (jint)(lty & 0xffff);
+                    tx = (jint)(ltx >> 16);
+                    ty = (jint)(lty >> 16);
+                    hfrac = (jint)(ltx & 0xffff);
+                    vfrac = (jint)(lty & 0xffff);
                     checkBoundsRepeat(&tx, &ltx, txMin-1, txMax);
                     checkBoundsRepeat(&ty, &lty, tyMin-1, tyMax);
                     sidx = MAX(tyMin, ty) * rdr->_texture_stride + MAX(txMin, tx);
