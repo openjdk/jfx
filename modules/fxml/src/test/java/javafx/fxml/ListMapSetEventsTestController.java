@@ -22,20 +22,23 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.fxml;
 
-import javafx.collections.ListChangeListener;
-import javafx.collections.MapChangeListener;
-import javafx.collections.SetChangeListener;
-
 import java.net.URL;
-import java.util.ResourceBundle;
+import java.util.*;
 
-public class RT_17714Controller2 implements Initializable {
+import javafx.collections.*;
+
+public class ListMapSetEventsTestController
+        implements Initializable {
     @FXML private Widget root;
 
+    boolean listWithParamCalled = false;
     boolean listNoParamCalled = false;
+    boolean setWithParamCalled = false;
     boolean setNoParamCalled = false;
+    boolean mapWithParamCalled = false;
     boolean mapNoParamCalled = false;
 
 
@@ -45,8 +48,19 @@ public class RT_17714Controller2 implements Initializable {
 
     @FXML
     @SuppressWarnings("unchecked")
+    protected void handleChildListChange(ListChangeListener.Change<Widget> event) {
+        listWithParamCalled = true;
+    }
+    @FXML
+    @SuppressWarnings("unchecked")
     protected void handleChildListChange() {
         listNoParamCalled = true;
+    }
+
+    @FXML
+    @SuppressWarnings("unchecked")
+    protected void handlePropertiesChange(MapChangeListener.Change<String, Object> event) {
+        mapWithParamCalled = true;
     }
 
     @FXML
@@ -55,6 +69,11 @@ public class RT_17714Controller2 implements Initializable {
         mapNoParamCalled = true;
     }
 
+    @FXML
+    @SuppressWarnings("unchecked")
+    protected void handleSetChange(SetChangeListener.Change<String> event) {
+        setWithParamCalled = true;
+    }
     @FXML
     @SuppressWarnings("unchecked")
     protected void handleSetChange() {

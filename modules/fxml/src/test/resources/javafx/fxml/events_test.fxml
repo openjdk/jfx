@@ -26,9 +26,6 @@ questions.
 
 <?import javafx.fxml.*?>
 
-<Widget fx:id="root" fx:controller="javafx.fxml.RT_16722ControllerB"
-    onNameChange="#handleRootNameChange"
-    xmlns:fx="http://javafx.com/fxml">
-    <Widget fx:id="child" onNameChange="#handleChildNameChange"/>
-</Widget>
 
+<Widget fx:controller="javafx.fxml.EventsTestController"
+        xmlns:fx="http://javafx.com/fxml" id="widget" onAction="#handleButtonAction"/>

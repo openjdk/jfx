@@ -25,57 +25,60 @@
 
 package javafx.fxml;
 
+import javafx.event.Event;
+
 import java.net.URL;
-import java.util.*;
+import java.util.ResourceBundle;
 
-import javafx.collections.*;
-
-public class RT_17714Controller implements Initializable {
+public class PropertyEventsTestDeprecatedController implements Initializable {
     @FXML private Widget root;
+    @FXML private Widget child;
 
-    boolean listWithParamCalled = false;
-    boolean listNoParamCalled = false;
-    boolean setWithParamCalled = false;
-    boolean setNoParamCalled = false;
-    boolean mapWithParamCalled = false;
-    boolean mapNoParamCalled = false;
-
+    private String rootName = null;
+    private String childName = null;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
+        updateRootName();
+        updateChildName();
+    }
+
+    public Widget getRoot() {
+        return root;
+    }
+
+    public String getRootName() {
+        return rootName;
+    }
+
+    public Widget getChild() {
+        return child;
+    }
+
+    public String getChildName() {
+        return childName;
     }
 
     @FXML
-    @SuppressWarnings("unchecked")
-    protected void handleChildListChange(ListChangeListener.Change<Widget> event) {
-        listWithParamCalled = true;
-    }
-    @FXML
-    @SuppressWarnings("unchecked")
-    protected void handleChildListChange() {
-        listNoParamCalled = true;
+    protected void handleRootNameChange() {
+        updateRootName();
     }
 
     @FXML
-    @SuppressWarnings("unchecked")
-    protected void handlePropertiesChange(MapChangeListener.Change<String, Object> event) {
-        mapWithParamCalled = true;
+    protected void handleChildNameChange() {
+        throw new RuntimeException();
     }
 
     @FXML
-    @SuppressWarnings("unchecked")
-    protected void handlePropertiesChange() {
-        mapNoParamCalled = true;
+    protected void handleChildNameChange(Event event) {
+        updateChildName();
     }
 
-    @FXML
-    @SuppressWarnings("unchecked")
-    protected void handleSetChange(SetChangeListener.Change<String> event) {
-        setWithParamCalled = true;
+    private void updateRootName() {
+        rootName = root.getName();
     }
-    @FXML
-    @SuppressWarnings("unchecked")
-    protected void handleSetChange() {
-        setNoParamCalled = true;
+
+    private void updateChildName() {
+        childName = child.getName();
     }
 }

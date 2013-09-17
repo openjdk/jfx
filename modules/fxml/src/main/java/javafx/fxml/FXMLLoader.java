@@ -502,7 +502,7 @@ public class FXMLLoader {
                 BeanAdapter.put(this.value, sourceType, name, value);
             }
         }
-        
+
         private Object getExpressionObject(String handlerValue) throws LoadException{
             if (handlerValue.startsWith(EXPRESSION_PREFIX)) {
                 handlerValue = handlerValue.substring(EXPRESSION_PREFIX.length());
@@ -669,11 +669,11 @@ public class FXMLLoader {
         private void processPropertyHandler(String attributeName, String handlerValue) throws LoadException {
             int i = EVENT_HANDLER_PREFIX.length();
             int j = attributeName.length() - CHANGE_EVENT_HANDLER_SUFFIX.length();
-            
+
             if (i != j) {
                 String key = Character.toLowerCase(attributeName.charAt(i))
                         + attributeName.substring(i + 1, j);
-                
+
                 ObservableValue<Object> propertyModel = getValueAdapter().getPropertyModel(key);
                 if (propertyModel == null) {
                     throw new LoadException(value.getClass().getName() + " does not define"
@@ -710,7 +710,7 @@ public class FXMLLoader {
                                 + "Must be either ChangeListener or InvalidationListener");
                     }
                 }
-                
+
             }
         }
     }
@@ -2818,7 +2818,7 @@ public class FXMLLoader {
 
         return controllerFields;
     }
-    
+
     private static enum SupportedType {
         PARAMETERLESS {
 
@@ -2826,16 +2826,16 @@ public class FXMLLoader {
             protected boolean methodIsOfType(Method m) {
                 return m.getParameterCount() == 0;
             }
-          
+
         },
         EVENT {
 
             @Override
             protected boolean methodIsOfType(Method m) {
                 return m.getParameterCount() == 1 &&
-                        m.getParameterTypes()[0].isAssignableFrom(Event.class);
+                        Event.class.isAssignableFrom(m.getParameterTypes()[0]);
             }
-            
+
         },
         LIST_CHANGE_LISTENER {
 
@@ -2844,7 +2844,7 @@ public class FXMLLoader {
                 return m.getParameterCount() == 1 &&
                         m.getParameterTypes()[0].equals(ListChangeListener.Change.class);
             }
-            
+
         },
         MAP_CHANGE_LISTENER {
 
@@ -2853,7 +2853,7 @@ public class FXMLLoader {
                 return m.getParameterCount() == 1 &&
                         m.getParameterTypes()[0].equals(MapChangeListener.Change.class);
             }
-            
+
         },
         SET_CHANGE_LISTENER {
 
@@ -2862,7 +2862,7 @@ public class FXMLLoader {
                 return m.getParameterCount() == 1 &&
                         m.getParameterTypes()[0].equals(SetChangeListener.Change.class);
             }
-            
+
         },
         PROPERTY_CHANGE_LISTENER {
 
@@ -2872,9 +2872,9 @@ public class FXMLLoader {
                         ObservableValue.class.isAssignableFrom(m.getParameterTypes()[0])
                         && m.getParameterTypes()[1].equals(m.getParameterTypes()[2]);
             }
-            
+
         };
-        
+
         protected abstract boolean methodIsOfType(Method m);
     }
 

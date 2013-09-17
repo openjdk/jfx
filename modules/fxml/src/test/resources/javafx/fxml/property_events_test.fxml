@@ -26,7 +26,7 @@ questions.
 
 <?import javafx.fxml.Widget?>
 
-<Widget fx:id="root" fx:controller="javafx.fxml.RT_18229Controller"
+<Widget fx:id="root"
     name="abc" onNameChange="#handleRootNameChange"
     xmlns:fx="http://javafx.com/fxml">
     <Widget fx:id="child" name="def" onNameChange="#handleChildNameChange"/>

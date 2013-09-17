@@ -24,15 +24,11 @@ or visit www.oracle.com if you need additional information or have any
 questions.
 -->
 
-<?import javafx.scene.*?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
+<?import javafx.fxml.*?>
 
-<Scene width="320" height="240" fx:controller="javafx.fxml.RT_21559Controller" 
+<Widget fx:id="root" fx:controller="javafx.fxml.PropertyEventsTestValueController"
+    onNameChange="#handleRootNameChange"
     xmlns:fx="http://javafx.com/fxml">
-    <VBox> 
-        <TextField fx:id="textField"/>
-        <Label fx:id="label" text="${textField.text}"/>
-        <Button text="Unbind" onAction="#handleUnbindAction"/> 
-    </VBox> 
-</Scene>
+    <Widget fx:id="child" onNameChange="#handleChildNameChange"/>
+</Widget>
+

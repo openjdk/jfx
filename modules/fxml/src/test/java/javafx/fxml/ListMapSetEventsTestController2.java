@@ -22,30 +22,42 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
 package javafx.fxml;
 
-import java.io.IOException;
-import org.junit.Test;
+import javafx.collections.ListChangeListener;
+import javafx.collections.MapChangeListener;
+import javafx.collections.SetChangeListener;
 
-import static org.junit.Assert.*;
+import java.net.URL;
+import java.util.ResourceBundle;
 
-public class RT_18229 {
-    @Test
-    public void testControllerFactory() throws IOException {
-        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_18229.fxml"));
-        fxmlLoader.load();
+public class ListMapSetEventsTestController2 implements Initializable {
+    @FXML private Widget root;
 
-        RT_18229Controller controller = (RT_18229Controller)fxmlLoader.getController();
-        assertEquals(controller.getRootName(), "abc");
-        assertEquals(controller.getChildName(), "def");
+    boolean listNoParamCalled = false;
+    boolean setNoParamCalled = false;
+    boolean mapNoParamCalled = false;
 
-        final String rootName = "123";
-        controller.getRoot().setName(rootName);
-        assertEquals(controller.getRootName(), rootName);
 
-        final String childName = "456";
-        controller.getChild().setName(childName);
-        assertEquals(controller.getChildName(), childName);
+    @Override
+    public void initialize(URL location, ResourceBundle resources) {
+    }
+
+    @FXML
+    @SuppressWarnings("unchecked")
+    protected void handleChildListChange() {
+        listNoParamCalled = true;
+    }
+
+    @FXML
+    @SuppressWarnings("unchecked")
+    protected void handlePropertiesChange() {
+        mapNoParamCalled = true;
+    }
+
+    @FXML
+    @SuppressWarnings("unchecked")
+    protected void handleSetChange() {
+        setNoParamCalled = true;
     }
 }

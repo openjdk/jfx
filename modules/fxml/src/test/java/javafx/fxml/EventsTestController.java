@@ -25,20 +25,16 @@
 
 package javafx.fxml;
 
-import java.io.IOException;
-import org.junit.Test;
+import javafx.event.ActionEvent;
 
-import static org.junit.Assert.*;
+public class EventsTestController {
+    @FXML
+    Widget widget;
 
-public class RT_16722Test {
-    @Test
-    public void testControllerInheritance() throws IOException {
-        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_16722.fxml"));
+    boolean called;
 
-        fxmlLoader.load();
-        RT_16722ControllerB controller = (RT_16722ControllerB)fxmlLoader.getController();
-
-        assertEquals(controller.getRoot().getName(), controller.getRootName());
-        assertEquals(controller.getChild().getName(), controller.getChildName());
+    @FXML
+    protected void handleWidgetAction(ActionEvent event) {
+        called = true;
     }
 }

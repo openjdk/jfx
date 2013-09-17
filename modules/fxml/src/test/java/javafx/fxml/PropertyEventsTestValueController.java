@@ -25,13 +25,23 @@
 
 package javafx.fxml;
 
-import javafx.event.ActionEvent;
-import javafx.scene.control.Label;
+import javafx.beans.property.Property;
 
-public class RT_21559Controller {
-    @FXML private Label label;
+public class PropertyEventsTestValueController extends RT_16722ControllerA {
+    @FXML protected Widget child;
 
-    protected void handleUnbindAction(ActionEvent event) {
-        label.textProperty().unbind();
+    private String childName = null;
+
+    public Widget getChild() {
+        return child;
+    }
+
+    public String getChildName() {
+        return childName;
+    }
+
+    @FXML
+    protected void handleChildNameChange(Property prop, String oldS, String newS) {
+        childName = newS;
     }
 }

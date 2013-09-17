@@ -40,6 +40,8 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.collections.ObservableSet;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 
 @IDProperty("id")
 @DefaultProperty("children")
@@ -58,6 +60,7 @@ public class Widget {
 
     public static final String ALIGNMENT_KEY = "alignment";
     public static final int TEN = 10;
+    private EventHandler<ActionEvent> actionHandler;
 
     public Widget() {
         this(null);
@@ -167,5 +170,13 @@ public class Widget {
 
     public static void setAlignment(Widget widget, Alignment alignment) {
         widget.getProperties().put(ALIGNMENT_KEY, alignment);
+    }
+
+    public final void setOnAction(EventHandler<ActionEvent> value) {
+        actionHandler = value;
+    }
+
+    public final void fire() {
+        actionHandler.handle(new ActionEvent());
     }
 }

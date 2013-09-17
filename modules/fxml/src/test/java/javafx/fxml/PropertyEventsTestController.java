@@ -25,12 +25,32 @@
 
 package javafx.fxml;
 
-import javafx.beans.property.Property;
+import javafx.beans.value.ObservableValue;
+import javafx.event.Event;
 
-public class RT_16722ControllerB extends RT_16722ControllerA {
-    @FXML protected Widget child;
+import java.net.URL;
+import java.util.ResourceBundle;
 
+public class PropertyEventsTestController implements Initializable {
+    @FXML private Widget root;
+    @FXML private Widget child;
+
+    private String rootName = null;
     private String childName = null;
+
+    @Override
+    public void initialize(URL location, ResourceBundle resources) {
+        updateRootName();
+        updateChildName();
+    }
+
+    public Widget getRoot() {
+        return root;
+    }
+
+    public String getRootName() {
+        return rootName;
+    }
 
     public Widget getChild() {
         return child;
@@ -41,7 +61,25 @@ public class RT_16722ControllerB extends RT_16722ControllerA {
     }
 
     @FXML
-    protected void handleChildNameChange(Property prop, String oldS, String newS) {
-        childName = newS;
+    protected void handleRootNameChange() {
+        updateRootName();
+    }
+
+    @FXML
+    protected void handleChildNameChange() {
+        throw new RuntimeException();
+    }
+
+    @FXML
+    protected void handleChildNameChange(ObservableValue value, String oldV, String newV) {
+        updateChildName();
+    }
+
+    private void updateRootName() {
+        rootName = root.getName();
+    }
+
+    private void updateChildName() {
+        childName = child.getName();
     }
 }
