@@ -51,7 +51,7 @@ final class EmbeddedState extends SceneState {
         if (isValid()) {
             EmbeddedScene escene = (EmbeddedScene) scene;
             // Pixels are always stored in an IntBuffer for uploading
-            escene.uploadPixels((IntBuffer)pixels.getPixels());
+            escene.uploadPixels((IntBuffer)pixels.getPixels(), getWidth());
             if (uploadCount != null) {
                 uploadCount.decrementAndGet();
             }
