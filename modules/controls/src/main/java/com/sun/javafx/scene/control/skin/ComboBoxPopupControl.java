@@ -162,8 +162,8 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         final double minWidth = popupContent.prefWidth(1);
         final double minHeight = popupContent.prefHeight(1);
 
-        if (p.getX() > -1) popup.setX(p.getX());
-        if (p.getY() > -1) popup.setY(p.getY());
+        if (p.getX() > -1) popup.setAnchorX(p.getX());
+        if (p.getY() > -1) popup.setAnchorY(p.getY());
         if (minWidth > -1) popup.setMinWidth(minWidth);
         if (minHeight > -1) popup.setMinHeight(minHeight);
 

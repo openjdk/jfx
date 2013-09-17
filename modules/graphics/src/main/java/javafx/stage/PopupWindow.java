@@ -35,6 +35,8 @@ import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
@@ -42,6 +44,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
@@ -59,6 +62,7 @@ import com.sun.javafx.stage.PopupWindowPeerListener;
 import com.sun.javafx.stage.WindowCloseRequestHandler;
 import com.sun.javafx.stage.WindowEventDispatcher;
 import com.sun.javafx.tk.Toolkit;
+import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.event.EventTarget;
@@ -66,6 +70,8 @@ import javafx.event.EventType;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.Pane;
 
 /**
  * PopupWindow is the parent for a variety of different types of popup
@@ -95,20 +101,22 @@ public abstract class PopupWindow extends Window {
     private final List<PopupWindow> children = new ArrayList<PopupWindow>();
 
     /**
-     * Keeps track of the bounds of the group, and adjust the size of the
-     * popup window accordingly. This way as the popup content changes, the
-     * window will be changed to match.
+     * Keeps track of the bounds of the content, and adjust the position and
+     * size of the popup window accordingly. This way as the popup content
+     * changes, the window will be changed to match.
      */
-    private final InvalidationListener rootBoundsListener =
+    private final InvalidationListener popupWindowUpdater =
             new InvalidationListener() {
                 @Override
                 public void invalidated(final Observable observable) {
-                    syncWithRootBounds();
+                    cachedExtendedBounds = null;
+                    cachedAnchorBounds = null;
+                    updateWindow(getAnchorX(), getAnchorY());
                 }
             };
 
     /**
-     * RT-28454: When a parent node or parent window we are associated with is not 
+     * RT-28454: When a parent node or parent window we are associated with is not
      * visible anymore, possibly because the scene was not valid anymore, we should hide.
      */
     private final ChangeListener<Boolean> ownerNodeListener = new ChangeListener<Boolean>() {
@@ -120,13 +128,17 @@ public abstract class PopupWindow extends Window {
             }
         }
     };
-    
+
     public PopupWindow() {
-        final Scene scene = new Scene(new Group());
+        final Pane popupRoot = new Pane();
+        popupRoot.setBackground(Background.EMPTY);
+
+        final Scene scene = SceneHelper.createPopupScene(popupRoot);
         scene.setFill(null);
         super.setScene(scene);
 
-        scene.getRoot().layoutBoundsProperty().addListener(rootBoundsListener);
+        popupRoot.layoutBoundsProperty().addListener(popupWindowUpdater);
+        popupRoot.boundsInLocalProperty().addListener(popupWindowUpdater);
         scene.rootProperty().addListener(
                 new InvalidationListener() {
                     private Node oldRoot = scene.getRoot();
@@ -137,20 +149,26 @@ public abstract class PopupWindow extends Window {
                         if (oldRoot != newRoot) {
                             if (oldRoot != null) {
                                 oldRoot.layoutBoundsProperty()
-                                       .removeListener(rootBoundsListener);
+                                       .removeListener(popupWindowUpdater);
+                                oldRoot.boundsInLocalProperty()
+                                       .removeListener(popupWindowUpdater);
                             }
 
                             if (newRoot != null) {
                                 newRoot.layoutBoundsProperty()
-                                       .addListener(rootBoundsListener);
+                                       .addListener(popupWindowUpdater);
+                                newRoot.boundsInLocalProperty()
+                                       .addListener(popupWindowUpdater);
                             }
 
                             oldRoot = newRoot;
-                            syncWithRootBounds();
+
+                            cachedExtendedBounds = null;
+                            cachedAnchorBounds = null;
+                            updateWindow(getAnchorX(), getAnchorY());
                         }
                     }
                 });
-        syncWithRootBounds();
     }
 
     /**
@@ -164,12 +182,16 @@ public abstract class PopupWindow extends Window {
     @Deprecated
     protected ObservableList<Node> getContent() {
         final Parent rootNode = getScene().getRoot();
-        if (!(rootNode instanceof Group)) {
-            throw new IllegalStateException(
-                    "The content of the Popup can't be accessed");
+        if (rootNode instanceof Group) {
+            return ((Group) rootNode).getChildren();
         }
 
-        return ((Group) rootNode).getChildren();
+        if (rootNode instanceof Pane) {
+            return ((Pane) rootNode).getChildren();
+        }
+
+        throw new IllegalStateException(
+                "The content of the Popup can't be accessed");
     }
 
     /**
@@ -320,23 +342,26 @@ public abstract class PopupWindow extends Window {
     }
 
     /**
-     * Shows the popup at the specified x,y location relative to the screen.
+     * Shows the popup at the specified location on the screen. The popup window
+     * is positioned in such way that its anchor point ({@see #anchorLocation})
+     * is displayed at the specified {@code anchorX} and {@code anchorY}
+     * coordinates.
+     * <p>
      * The popup is associated with the specified owner node. The {@code Window}
      * which contains the owner node at the time of the call becomes an owner
      * window of the displayed popup.
-     * 
+     * </p>
+     *
      * @param ownerNode The owner Node of the popup. It must not be null
      *        and must be associated with a Window.
-     * @param screenX the x location in screen coordinates at which to
-     *        show this PopupWindow.
-     * @param screenY the y location in screen coordiates at which to
-     *        show this PopupWindow.
+     * @param anchorX the x position of the popup anchor in screen coordinates
+     * @param anchorY the y position of the popup anchor in screen coordinates
      * @throws NullPointerException if ownerNode is null
      * @throws IllegalArgumentException if the specified owner node is not
      *      associated with a Window or when the window would create cycle
      *      in the window hierarchy
      */
-    public void show(Node ownerNode, double screenX, double screenY) {
+    public void show(Node ownerNode, double anchorX, double anchorY) {
         if (ownerNode == null) {
             throw new NullPointerException("The owner node must not be null");
         }
@@ -352,44 +377,37 @@ public abstract class PopupWindow extends Window {
         validateOwnerWindow(newOwnerWindow);
 
         this.ownerNode.set(ownerNode);
-        
+
         // RT-28454 PopupWindow should disappear when owner node is not visible
-        if (ownerNode != null) { 
+        if (ownerNode != null) {
             ownerNode.visibleProperty().addListener(ownerNodeListener);
         }
-       
-        setX(screenX);
-        setY(screenY);
+
+        updateWindow(anchorX, anchorY);
         showImpl(newOwnerWindow);
     }
 
     /**
-     * Show the Popup at the specified x,y location relative to the screen
+     * Shows the popup at the specified location on the screen. The popup window
+     * is positioned in such way that its anchor point ({@see #anchorLocation})
+     * is displayed at the specified {@code anchorX} and {@code anchorY}
+     * coordinates.
+     *
      * @param ownerWindow The owner of the popup. This must not be null.
-     * @param screenX the x location in screen coordinates at which to
-     *        show this PopupWindow.
-     * @param screenY the y location in screen coordiates at which to
-     *        show this PopupWindow.
+     * @param anchorX the x position of the popup anchor in screen coordinates
+     * @param anchorY the y position of the popup anchor in screen coordinates
      * @throws NullPointerException if ownerWindow is null
      * @throws IllegalArgumentException if the specified owner window would
      *      create cycle in the window hierarchy
      */
-    public void show(Window ownerWindow, double screenX, double screenY) {
+    public void show(Window ownerWindow, double anchorX, double anchorY) {
         validateOwnerWindow(ownerWindow);
 
-        setX(screenX);
-        setY(screenY);
+        updateWindow(anchorX, anchorY);
         showImpl(ownerWindow);
     }
 
     private void showImpl(final Window owner) {
-        if (isShowing()) {
-            if (autofixHandler != null) {
-                autofixHandler.adjustPosition();
-            }
-            return;
-        }
-
         // Update the owner field
         this.ownerWindow.set(owner);
         if (owner instanceof PopupWindow) {
@@ -488,73 +506,68 @@ public abstract class PopupWindow extends Window {
         PerformanceTracker.logEvent("PopupWindow.storeVisible for [PopupWindow] finished");
     }
 
-    private void syncWithRootBounds() {
-        final Parent rootNode = getScene().getRoot();
-        final Bounds layoutBounds = rootNode.getLayoutBounds();
+    /**
+     * Specifies the x coordinate of the popup anchor point on the screen. If
+     * the {@code anchorLocation} is set to {@code WINDOW_TOP_LEFT} or
+     * {@code WINDOW_BOTTOM_LEFT} the {@code x} and {@code anchorX} values will
+     * be identical.
+     *
+     * @since JavaFX 8.0
+     */
+    private final ReadOnlyDoubleWrapper anchorX =
+            new ReadOnlyDoubleWrapper(this, "anchorX", Double.NaN);
 
-        final double layoutX = layoutBounds.getMinX();
-        final double layoutY = layoutBounds.getMinY();
-
-        // update popup dimensions
-        setWidth(layoutBounds.getMaxX() - layoutX);
-        setHeight(layoutBounds.getMaxY() - layoutY);
-        // update transform
-        rootNode.setTranslateX(-layoutX);
-        rootNode.setTranslateY(-layoutY);
-
-        if (isAlignWithContentOrigin()) {
-            // update window position
-            setWindowTranslate(layoutX, layoutY);
-            // compensate with scene's delta, so the manual Node.localToScene
-            // + sceenXY + windowXY calculation still works for local to screen
-            // conversions
-            SceneHelper.setSceneDelta(getScene(), layoutX, layoutY);
-
-            if (autofixActive) {
-                autofixHandler.adjustPosition();
-            }
-        }
+    public final void setAnchorX(final double value) {
+        updateWindow(value, getAnchorY());
+    }
+    public final double getAnchorX() {
+        return anchorX.get();
+    }
+    public final ReadOnlyDoubleProperty anchorXProperty() {
+        return anchorX.getReadOnlyProperty();
     }
 
     /**
-     * Specifies the reference point associated with the x, y location of the
-     * window on the screen. If set to {@code false} this point corresponds to
-     * the window's upper left corner. If set to {@code true} the reference
-     * point is moved to the origin of the popup content coordinate space. This
-     * simplifies placement of popup windows which content have some additional
-     * borders extending past their origins. Setting the property to {code true}
-     * for such windows makes their position independent of their borders.
+     * Specifies the y coordinate of the popup anchor point on the screen. If
+     * the {@code anchorLocation} is set to {@code WINDOW_TOP_LEFT} or
+     * {@code WINDOW_TOP_RIGHT} the {@code y} and {@code anchorY} values will
+     * be identical.
      *
-     * @defaultValue {@code true}
      * @since JavaFX 8.0
      */
-    private BooleanProperty alignWithContentOrigin =
-            new BooleanPropertyBase(true) {
-                private boolean oldValue = true;
+    private final ReadOnlyDoubleWrapper anchorY =
+            new ReadOnlyDoubleWrapper(this, "anchorY", Double.NaN);
 
+    public final void setAnchorY(final double value) {
+        updateWindow(getAnchorX(), value);
+    }
+    public final double getAnchorY() {
+        return anchorY.get();
+    }
+    public final ReadOnlyDoubleProperty anchorYProperty() {
+        return anchorY.getReadOnlyProperty();
+    }
+
+    /**
+     * Specifies the popup anchor point which is used in popup positioning. The
+     * point can be set to a corner of the popup window or a corner of its
+     * content. In this context the content corners are derived from the popup
+     * root node's layout bounds.
+     * <p>
+     * In general changing of the anchor location won't change the current
+     * window position. Instead of that, the {@code anchorX} and {@code anchorY}
+     * values are recalculated to correspond to the new anchor point.
+     * </p>
+     * @since JavaFX 8.0
+     */
+    private final ObjectProperty<AnchorLocation> anchorLocation =
+            new ObjectPropertyBase<AnchorLocation>(
+                    AnchorLocation.WINDOW_TOP_LEFT) {
                 @Override
                 protected void invalidated() {
-                    final boolean newValue = get();
-                    if (oldValue != newValue) {
-                        if (newValue) {
-                            final Bounds layoutBounds =
-                                    getScene().getRoot().getLayoutBounds();
-                            setWindowTranslate(layoutBounds.getMinX(),
-                                               layoutBounds.getMinY());
-                            SceneHelper.setSceneDelta(getScene(),
-                                                      layoutBounds.getMinX(),
-                                                      layoutBounds.getMinY());
-                        } else {
-                            setWindowTranslate(0, 0);
-                            SceneHelper.setSceneDelta(getScene(), 0, 0);
-                        }
-
-                        if (autofixActive) {
-                            autofixHandler.adjustPosition();
-                        }
-
-                        oldValue = newValue;
-                    }
+                    cachedAnchorBounds = null;
+                    updateWindow(windowToAnchorX(getX()),
+                                 windowToAnchorY(getY()));
                 }
 
                 @Override
@@ -564,20 +577,211 @@ public abstract class PopupWindow extends Window {
 
                 @Override
                 public String getName() {
-                    return "alignWithContentOrigin";
+                    return "anchorLocation";
                 }
             };
-
-    public final void setAlignWithContentOrigin(boolean value) {
-        alignWithContentOrigin.set(value);
+    public final void setAnchorLocation(final AnchorLocation value) {
+        anchorLocation.set(value);
+    }
+    public final AnchorLocation getAnchorLocation() {
+        return anchorLocation.get();
+    }
+    public final ObjectProperty<AnchorLocation> anchorLocationProperty() {
+        return anchorLocation;
     }
 
-    public final boolean isAlignWithContentOrigin() {
-        return alignWithContentOrigin.get();
+    /**
+     * Anchor location constants for popup anchor point selection.
+     *
+     * @since JavaFX 8.0
+     */
+    public enum AnchorLocation {
+        /** Represents top left window corner. */
+        WINDOW_TOP_LEFT(0, 0, false),
+        /** Represents top right window corner. */
+        WINDOW_TOP_RIGHT(1, 0, false),
+        /** Represents bottom left window corner. */
+        WINDOW_BOTTOM_LEFT(0, 1, false),
+        /** Represents bottom right window corner. */
+        WINDOW_BOTTOM_RIGHT(1, 1, false),
+        /** Represents top left content corner. */
+        CONTENT_TOP_LEFT(0, 0, true),
+        /** Represents top right content corner. */
+        CONTENT_TOP_RIGHT(1, 0, true),
+        /** Represents bottom left content corner. */
+        CONTENT_BOTTOM_LEFT(0, 1, true),
+        /** Represents bottom right content corner. */
+        CONTENT_BOTTOM_RIGHT(1, 1, true);
+
+        private final double xCoef;
+        private final double yCoef;
+        private final boolean contentLocation;
+
+        private AnchorLocation(final double xCoef, final double yCoef,
+                               final boolean contentLocation) {
+            this.xCoef = xCoef;
+            this.yCoef = yCoef;
+            this.contentLocation = contentLocation;
+        }
+
+        double getXCoef() {
+            return xCoef;
+        }
+
+        double getYCoef() {
+            return yCoef;
+        }
+
+        boolean isContentLocation() {
+            return contentLocation;
+        }
+    };
+
+    @Override
+    void setXInternal(final double value) {
+        updateWindow(windowToAnchorX(value), getAnchorY());
     }
 
-    public final BooleanProperty alignWithContentOriginProperty() {
-        return alignWithContentOrigin;
+    @Override
+    void setYInternal(final double value) {
+        updateWindow(getAnchorX(), windowToAnchorY(value));
+    }
+
+    @Override
+    void notifyLocationChanged(final double newX, final double newY) {
+        super.notifyLocationChanged(newX, newY);
+        anchorX.set(windowToAnchorX(newX));
+        anchorY.set(windowToAnchorY(newY));
+    }
+
+    private Bounds cachedExtendedBounds;
+    private Bounds cachedAnchorBounds;
+
+    private Bounds getExtendedBounds() {
+        if (cachedExtendedBounds == null) {
+            final Parent rootNode = getScene().getRoot();
+            cachedExtendedBounds = union(rootNode.getLayoutBounds(),
+                                         rootNode.getBoundsInLocal());
+        }
+
+        return cachedExtendedBounds;
+    }
+
+    private Bounds getAnchorBounds() {
+        if (cachedAnchorBounds == null) {
+            cachedAnchorBounds = getAnchorLocation().isContentLocation()
+                                         ? getScene().getRoot()
+                                                     .getLayoutBounds()
+                                         : getExtendedBounds();
+        }
+
+        return cachedAnchorBounds;
+    }
+
+    private void updateWindow(final double newAnchorX,
+                              final double newAnchorY) {
+        final AnchorLocation anchorLocationValue = getAnchorLocation();
+        final Parent rootNode = getScene().getRoot();
+        final Bounds extendedBounds = getExtendedBounds();
+        final Bounds anchorBounds = getAnchorBounds();
+
+        final double anchorXCoef = anchorLocationValue.getXCoef();
+        final double anchorYCoef = anchorLocationValue.getYCoef();
+        final double anchorDeltaX = anchorXCoef * anchorBounds.getWidth();
+        final double anchorDeltaY = anchorYCoef * anchorBounds.getHeight();
+        double anchorScrMinX = newAnchorX - anchorDeltaX;
+        double anchorScrMinY = newAnchorY - anchorDeltaY;
+
+        if (autofixActive) {
+            final Screen currentScreen =
+                    Utils.getScreenForPoint(newAnchorX, newAnchorY);
+            final Rectangle2D screenBounds =
+                    Utils.hasFullScreenStage(currentScreen)
+                            ? currentScreen.getBounds()
+                            : currentScreen.getVisualBounds();
+
+            if (anchorXCoef <= 0.5) {
+                // left side of the popup is more important, try to keep it
+                // visible if the popup width is larger than screen width
+                anchorScrMinX = Math.min(anchorScrMinX,
+                                         screenBounds.getMaxX()
+                                             - anchorBounds.getWidth());
+                anchorScrMinX = Math.max(anchorScrMinX, screenBounds.getMinX());
+            } else {
+                // right side of the popup is more important
+                anchorScrMinX = Math.max(anchorScrMinX, screenBounds.getMinX());
+                anchorScrMinX = Math.min(anchorScrMinX,
+                                         screenBounds.getMaxX()
+                                             - anchorBounds.getWidth());
+            }
+
+            if (anchorYCoef <= 0.5) {
+                // top side of the popup is more important
+                anchorScrMinY = Math.min(anchorScrMinY,
+                                         screenBounds.getMaxY()
+                                             - anchorBounds.getHeight());
+                anchorScrMinY = Math.max(anchorScrMinY, screenBounds.getMinY());
+            } else {
+                // bottom side of the popup is more important
+                anchorScrMinY = Math.max(anchorScrMinY, screenBounds.getMinY());
+                anchorScrMinY = Math.min(anchorScrMinY,
+                                         screenBounds.getMaxY()
+                                             - anchorBounds.getHeight());
+            }
+        }
+
+        final double windowScrMinX =
+                anchorScrMinX - anchorBounds.getMinX()
+                              + extendedBounds.getMinX();
+        final double windowScrMinY =
+                anchorScrMinY - anchorBounds.getMinY()
+                              + extendedBounds.getMinY();
+
+        // update popup dimensions
+        setWidth(extendedBounds.getWidth());
+        setHeight(extendedBounds.getHeight());
+        // update transform
+        rootNode.setTranslateX(-extendedBounds.getMinX());
+        rootNode.setTranslateY(-extendedBounds.getMinY());
+
+        // update popup position
+        // don't set Window.xExplicit unnecessarily
+        if (!Double.isNaN(windowScrMinX) || !Double.isNaN(getX())) {
+            super.setXInternal(windowScrMinX);
+        }
+        // don't set Window.yExplicit unnecessarily
+        if (!Double.isNaN(windowScrMinY) || !Double.isNaN(getY())) {
+            super.setYInternal(windowScrMinY);
+        }
+
+        // set anchor x, anchor y
+        anchorX.set(anchorScrMinX + anchorDeltaX);
+        anchorY.set(anchorScrMinY + anchorDeltaY);
+    }
+
+    private Bounds union(final Bounds bounds1, final Bounds bounds2) {
+        final double minX = Math.min(bounds1.getMinX(), bounds2.getMinX());
+        final double minY = Math.min(bounds1.getMinY(), bounds2.getMinY());
+        final double maxX = Math.max(bounds1.getMaxX(), bounds2.getMaxX());
+        final double maxY = Math.max(bounds1.getMaxY(), bounds2.getMaxY());
+
+        return new BoundingBox(minX, minY, maxX - minX, maxY - minY);
+    }
+
+    private double windowToAnchorX(final double windowX) {
+        final Bounds anchorBounds = getAnchorBounds();
+        return windowX - getExtendedBounds().getMinX()
+                       + anchorBounds.getMinX()
+                       + getAnchorLocation().getXCoef()
+                             * anchorBounds.getWidth();
+    }
+
+    private double windowToAnchorY(final double windowY) {
+        final Bounds anchorBounds = getAnchorBounds();
+        return windowY - getExtendedBounds().getMinY()
+                       + anchorBounds.getMinY()
+                       + getAnchorLocation().getYCoef()
+                             * anchorBounds.getHeight();
     }
 
     /**
@@ -657,23 +861,16 @@ public abstract class PopupWindow extends Window {
     }
 
     private boolean autofixActive;
-    private AutofixHandler autofixHandler;
     private void handleAutofixActivation(final boolean visible,
                                          final boolean autofix) {
         final boolean newAutofixActive = visible && autofix;
         if (autofixActive != newAutofixActive) {
             autofixActive = newAutofixActive;
             if (newAutofixActive) {
-                autofixHandler = new AutofixHandler();
-                widthProperty().addListener(autofixHandler);
-                heightProperty().addListener(autofixHandler);
-                Screen.getScreens().addListener(autofixHandler);
-                autofixHandler.adjustPosition();
+                Screen.getScreens().addListener(popupWindowUpdater);
+                updateWindow(getAnchorX(), getAnchorY());
             } else {
-                widthProperty().removeListener(autofixHandler);
-                heightProperty().removeListener(autofixHandler);
-                Screen.getScreens().removeListener(autofixHandler);
-                autofixHandler = null;
+                Screen.getScreens().removeListener(popupWindowUpdater);
             }
         }
     }
@@ -720,38 +917,6 @@ public abstract class PopupWindow extends Window {
        }
 
        return false;
-    }
-
-    private final class AutofixHandler implements InvalidationListener {
-        @Override
-        public void invalidated(final Observable observable) {
-            adjustPosition();
-        }
-
-        public void adjustPosition() {
-            final Screen currentScreen =
-                    Utils.getScreenForPoint(getX(), getY());
-            final Rectangle2D screenBounds =
-                    Utils.hasFullScreenStage(currentScreen)
-                            ? currentScreen.getBounds()
-                            : currentScreen.getVisualBounds();
-            double wtX = getWindowTranslateX();
-            double wtY = getWindowTranslateY();
-            double oldWindowX = getX() + wtX;
-            double oldWindowY = getY() + wtY;
-            double _x = Math.min(oldWindowX,
-                                 screenBounds.getMaxX() - getWidth());
-            double _y = Math.min(oldWindowY,
-                                 screenBounds.getMaxY() - getHeight());
-            _x = Math.max(_x, screenBounds.getMinX());
-            _y = Math.max(_y, screenBounds.getMinY());
-            if (_x != oldWindowX) {
-                setX(_x - wtX);
-            }
-            if (_y != oldWindowY) {
-                setY(_y - wtY);
-            }
-        }
     }
 
     static class PopupEventRedirector extends EventRedirector {

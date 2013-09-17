@@ -249,8 +249,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     }
 
     @Override protected File staticCommonDialogs_showFolderChooser(Window owner, String folder, String title) {
-        // TODO: handle owner, folder and title
-        return MacCommonDialogs.showFolderChooser_impl();
+        return MacCommonDialogs.showFolderChooser_impl(owner, folder, title);
     }
 
     @Override protected long staticView_getMultiClickTime() {

@@ -465,7 +465,11 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
     }
 
     @Override public double computeBaselineOffset(double topInset, double rightInset, double bottomInset, double leftInset) {
-        return tabHeaderArea.getBaselineOffset() + tabHeaderArea.getLayoutY();
+        Side tabPosition = getSkinnable().getSide();
+        if (tabPosition == Side.TOP) {
+            return tabHeaderArea.getBaselineOffset() + topInset;
+        }
+        return 0;
     }
 
     @Override protected void layoutChildren(final double x, final double y,
@@ -947,7 +951,10 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         }
 
         @Override public double getBaselineOffset() {
-            return headersRegion.getBaselineOffset() + headersRegion.getLayoutY();
+            if (getSkinnable().getSide() == Side.TOP) {
+                return headersRegion.getBaselineOffset() + snappedTopInset();
+            }
+            return 0;
         }
 
         @Override protected void layoutChildren() {

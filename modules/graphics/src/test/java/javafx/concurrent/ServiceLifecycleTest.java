@@ -319,6 +319,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertSame(Worker.State.SCHEDULED, service.stateProperty().get());
     }
 
+    @Ignore("RT-30173")
     @Test public void callingCancelInRunningStateResultsInCancelledState() {
         service.start();
         executor.executeScheduled();

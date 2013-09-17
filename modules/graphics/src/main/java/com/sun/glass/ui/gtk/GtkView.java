@@ -70,10 +70,10 @@ final class GtkView extends View {
     protected native void _scheduleRepaint(long ptr);
 
     @Override
-    protected native void _begin(long ptr);
+    protected void _begin(long ptr) {}
 
     @Override
-    protected native void _end(long ptr);
+    protected void _end(long ptr) {}
 
     @Override 
     protected void _uploadPixels(long ptr, Pixels pixels) {

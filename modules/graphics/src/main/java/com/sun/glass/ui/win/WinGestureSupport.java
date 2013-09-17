@@ -38,6 +38,9 @@ final class WinGestureSupport {
         _initIDs();
     }
 
+    // The multiplier used to convert scroll units to pixels
+    private static final double multiplier = 1.0;
+
     private final static GestureSupport gestures = new GestureSupport(true);
     private final static TouchInputSupport touches =
             new TouchInputSupport(gestures.createTouchCountListener(), true);    
@@ -116,6 +119,6 @@ final class WinGestureSupport {
 
         gestures.handleTotalScrolling(view, modifiers, isDirect, isInertia,
                                       touchCount, x, y, xAbs, yAbs, totaldx,
-                                      totaldy);
+                                      totaldy, multiplier, multiplier);
     }
 }

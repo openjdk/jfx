@@ -32,6 +32,7 @@ import java.awt.event.MouseWheelEvent;
 
 import com.sun.javafx.embed.AbstractEvents;
 import javafx.event.EventType;
+import javafx.scene.input.ScrollEvent;
 
 /**
  * An utility class to translate cursor types between embedded
@@ -223,4 +224,20 @@ class SwingEvents {
         return mods;
     }
 
+    static int fxScrollModsToMouseWheelMods(ScrollEvent event) {
+        int mods = 0;
+        if (event.isAltDown()) {
+            mods |= InputEvent.ALT_DOWN_MASK;
+        }
+        if (event.isControlDown()) {
+            mods |= InputEvent.CTRL_DOWN_MASK;
+        }
+        if (event.isMetaDown()) {
+            mods |= InputEvent.META_DOWN_MASK;
+        }
+        if (event.isShiftDown()) {
+            mods |= InputEvent.SHIFT_DOWN_MASK;
+        }
+        return mods;
+    }
 }

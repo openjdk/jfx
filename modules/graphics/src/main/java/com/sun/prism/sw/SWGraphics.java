@@ -396,7 +396,9 @@ final class SWGraphics implements ReadbackGraphics {
                     }
                     this.pr.setTexture(RendererBase.TYPE_INT_ARGB_PRE, tex.getDataNoClone(),
                             tex.getPhysicalWidth(), tex.getPhysicalHeight(),
-                            piscesTx, true, tex.hasAlpha());
+                            piscesTx,
+                            tex.getWrapMode() == Texture.WrapMode.REPEAT,
+                            tex.hasAlpha());
                 }
                 break;
             default:
@@ -890,15 +892,18 @@ final class SWGraphics implements ReadbackGraphics {
             System.out.println("dstBBox: " + dstBBox);
         }
 
-        final int interpolateMinX = SWUtils.fastFloor(Math.min(sx1, sx2));
-        final int interpolateMinY = SWUtils.fastFloor(Math.min(sy1, sy2));
-        final int interpolateMaxX = SWUtils.fastCeil(Math.max(sx1, sx2)) - 1;
-        final int interpolateMaxY = SWUtils.fastCeil(Math.max(sy1, sy2)) - 1;
+        final int interpolateMinX = Math.max(0, SWUtils.fastFloor(Math.min(sx1, sx2)));
+        final int interpolateMinY = Math.max(0, SWUtils.fastFloor(Math.min(sy1, sy2)));
+        final int interpolateMaxX = Math.min(tex.getContentWidth() - 1,
+                SWUtils.fastCeil(Math.max(sx1, sx2)) - 1);
+        final int interpolateMaxY = Math.min(tex.getContentHeight() - 1,
+                SWUtils.fastCeil(Math.max(sy1, sy2)) - 1);
 
         this.pr.drawImage(RendererBase.TYPE_INT_ARGB_PRE, imageMode,
                 data, tex.getPhysicalWidth(), tex.getPhysicalHeight(),
                 swTex.getOffset(), swTex.getStride(),
-                piscesTx, false,
+                piscesTx,
+                tex.getWrapMode() == Texture.WrapMode.REPEAT,
                 (int)(TO_PISCES * dstBBox.getMinX()), (int)(TO_PISCES * dstBBox.getMinY()),
                 (int)(TO_PISCES * dstBBox.getWidth()), (int)(TO_PISCES * dstBBox.getHeight()),
                 lEdge, rEdge, tEdge, bEdge,

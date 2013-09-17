@@ -748,8 +748,10 @@ public class RegionTest {
         pane.layoutInArea(c3, 10, 10, 300, 100, 20, Insets.EMPTY, false, false, HPos.CENTER, VPos.BASELINE);
 
         assertEquals(100, c1.getHeight(), 1e-100); // min height == pref height
-        assertEquals(80, c2.getHeight(), 1e-100);
-        assertEquals(80, c3.getHeight(), 1e-100);
+        // As the other 2 Regions don't have a baseline offset, their baseline offset is "same as height", therefore
+        // they can be max 20px tall
+        assertEquals(20, c2.getHeight(), 1e-100);
+        assertEquals(20, c3.getHeight(), 1e-100);
     }
 
     @Test public void testComputeChildPrefAreaWidthHonorsMaxWidthOverPref() {
@@ -769,7 +771,7 @@ public class RegionTest {
         child.setMaxHeight(100); // max less than pref
         pane.getChildren().add(child);
 
-        assertEquals(100, pane.computeChildPrefAreaHeight(child, -1, Insets.EMPTY), 1e-100);
+        assertEquals(100, pane.computeChildPrefAreaHeight(child, Insets.EMPTY), 1e-100);
     }
 
     @Test public void testComputeChildPrefAreaWidthHonorsMinWidthOverPref() {
@@ -789,7 +791,7 @@ public class RegionTest {
         child.setMinHeight(400); // max less than pref
         pane.getChildren().add(child);
 
-        assertEquals(400, pane.computeChildPrefAreaHeight(child, -1, Insets.EMPTY), 1e-100);
+        assertEquals(400, pane.computeChildPrefAreaHeight(child, Insets.EMPTY), 1e-100);
     }
 
     @Test public void testComputeChildPrefAreaWidthHonorsMinWidthOverMax() {
@@ -809,7 +811,7 @@ public class RegionTest {
         child.setMinHeight(600); // max less than pref
         pane.getChildren().add(child);
 
-        assertEquals(600, pane.computeChildPrefAreaHeight(child, -1, Insets.EMPTY), 1e-100);
+        assertEquals(600, pane.computeChildPrefAreaHeight(child, Insets.EMPTY), 1e-100);
     }
 
     @Test public void testChildMinAreaWidth() {
@@ -821,13 +823,13 @@ public class RegionTest {
 
         pane.getChildren().addAll(c1, c2, c3);
 
-        assertEquals(12, pane.computeChildMinAreaWidth(c1, -1, new Insets(1), -1), 1e-100);
-        assertEquals(12, pane.computeChildMinAreaWidth(c1, -1, new Insets(1), 50), 1e-100);
-        assertEquals(3, pane.computeChildMinAreaWidth(c2, -1, new Insets(1), -1), 1e-100); /*Insets + minimal for biased is 1 */
-        assertEquals(2 + Math.ceil(100*100/48.0), pane.computeChildMinAreaWidth(c2, -1, new Insets(1), 50), 1e-100); // vertically biased, effective height is 49
-        assertEquals(2 + Math.ceil(100*100/39.0), pane.computeChildMinAreaWidth(c2, 10, new Insets(1), 50), 1e-100); // vertically biased, effective height is 49
-        assertEquals(12, pane.computeChildMinAreaWidth(c3, -1, new Insets(1), -1), 1e-100);
-        assertEquals(12, pane.computeChildMinAreaWidth(c3, -1, new Insets(1), 50), 1e-100);
+        assertEquals(12, pane.computeChildMinAreaWidth(c1, new Insets(1)), 1e-100);
+        assertEquals(12, pane.computeChildMinAreaWidth(c1, 0, new Insets(1), 50, false), 1e-100);
+        assertEquals(102, pane.computeChildMinAreaWidth(c2, new Insets(1)), 1e-100);
+        assertEquals(2 + Math.ceil(100*100/48.0), pane.computeChildMinAreaWidth(c2, -1, new Insets(1), 50, false), 1e-100); // vertically biased, effective height is 49
+        assertEquals(2 + Math.ceil(100*100/38.0), pane.computeChildMinAreaWidth(c2, 10, new Insets(1), 50, false), 1e-100); // vertically biased, effective height is 49
+        assertEquals(12, pane.computeChildMinAreaWidth(c3, new Insets(1)), 1e-100);
+        assertEquals(12, pane.computeChildMinAreaWidth(c3, 0, new Insets(1), 50, false), 1e-100);
 
     }
     @Test public void testChildMinAreaHeight() {
@@ -841,7 +843,7 @@ public class RegionTest {
 
         assertEquals(3, pane.computeChildMinAreaHeight(c1, -1, new Insets(1), -1), 1e-100); /*Insets + minimal for biased is 1 */
         assertEquals(2 + Math.ceil(100*100/48.0), pane.computeChildMinAreaHeight(c1, -1, new Insets(1), 50), 1e-100);
-        assertEquals(11 + Math.ceil(100*100/48.0), pane.computeChildMinAreaHeight(c1, 10, new Insets(1), 50), 1e-100);
+        assertEquals(12 + Math.ceil(100*100/48.0), pane.computeChildMinAreaHeight(c1, 10, new Insets(1), 50), 1e-100);
         assertEquals(12, pane.computeChildMinAreaHeight(c2, -1, new Insets(1), -1), 1e-100);
         assertEquals(12, pane.computeChildMinAreaHeight(c2, -1, new Insets(1), 50), 1e-100);
         assertEquals(12, pane.computeChildMinAreaHeight(c3, -1, new Insets(1), -1), 1e-100);
@@ -856,13 +858,13 @@ public class RegionTest {
 
         pane.getChildren().addAll(c1, c2, c3);
 
-        assertEquals(10002, pane.computeChildMaxAreaWidth(c1, -1, new Insets(1), -1), 1e-100);
-        assertEquals(10002, pane.computeChildMaxAreaWidth(c1, -1, new Insets(1), 50), 1e-100);
-        assertEquals(1002, pane.computeChildMaxAreaWidth(c2,-1,  new Insets(1), -1), 1e-100); /* 100 * 100 / 10 + 2*/
-        assertEquals(2 + Math.ceil(100*100/48.0), pane.computeChildMaxAreaWidth(c2, -1, new Insets(1), 50), 1e-100);
-        assertEquals(2 + Math.ceil(100*100/39.0), pane.computeChildMaxAreaWidth(c2, 10, new Insets(1), 50), 1e-100);
-        assertEquals(1002, pane.computeChildMaxAreaWidth(c3, -1, new Insets(1), -1), 1e-100);
-        assertEquals(1002, pane.computeChildMaxAreaWidth(c3, -1, new Insets(1), 50), 1e-100);
+        assertEquals(10002, pane.computeChildMaxAreaWidth(c1, -1, new Insets(1), -1, false), 1e-100);
+        assertEquals(10002, pane.computeChildMaxAreaWidth(c1, -1, new Insets(1), 50, false), 1e-100);
+        assertEquals(102, pane.computeChildMaxAreaWidth(c2, -1,  new Insets(1), -1, false), 1e-100); // Vertival bias is not applied when no height/baseline offset is set
+        assertEquals(2 + Math.ceil(100*100/48.0), pane.computeChildMaxAreaWidth(c2, -1, new Insets(1), 50, false), 1e-100);
+        assertEquals(2 + Math.ceil(100*100/38.0), pane.computeChildMaxAreaWidth(c2, 10, new Insets(1), 50, false), 1e-100);
+        assertEquals(1002, pane.computeChildMaxAreaWidth(c3, -1, new Insets(1), -1, false), 1e-100);
+        assertEquals(1002, pane.computeChildMaxAreaWidth(c3, -1, new Insets(1), 50, false), 1e-100);
     }
     @Test public void testChildMaxAreaHeight() {
         Pane pane = new Pane();
@@ -875,7 +877,7 @@ public class RegionTest {
 
         assertEquals(1002, pane.computeChildMaxAreaHeight(c1, -1, new Insets(1), -1), 1e-100);
         assertEquals(2 + Math.ceil(100*100/48.0), pane.computeChildMaxAreaHeight(c1, -1, new Insets(1), 50), 1e-100);
-        assertEquals(11 + Math.ceil(100*100/48.0), pane.computeChildMaxAreaHeight(c1, 10, new Insets(1), 50), 1e-100);
+        assertEquals(12 + Math.ceil(100*100/48.0), pane.computeChildMaxAreaHeight(c1, 10, new Insets(1), 50), 1e-100);
         assertEquals(10002, pane.computeChildMaxAreaHeight(c2, -1, new Insets(1), -1), 1e-100);
         assertEquals(10002, pane.computeChildMaxAreaHeight(c2, -1, new Insets(1), 50), 1e-100);
         assertEquals(1002, pane.computeChildMaxAreaHeight(c3, -1, new Insets(1), -1), 1e-100);

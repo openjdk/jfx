@@ -46,6 +46,11 @@ final class MacGestureSupport {
     private final static int SCROLL_SRC_GESTURE = 51;
     private final static int SCROLL_SRC_INERTIA = 52;
 
+    /**
+     * The value used on Mac to convert scroll wheel rotations to pixels.
+     */
+    private final static double multiplier = 10.0;
+
     private final static boolean isDirect = false;
 
     private final static GestureSupport gestures = new GestureSupport(false);
@@ -102,14 +107,15 @@ final class MacGestureSupport {
                 //
                 // Note: inertial scrolling may occur even when some 
                 // touch points still present.
-                gestures.handleScrollingPerformed(view, modifiers, isDirect,
+                GestureSupport.handleScrollingPerformed(view, modifiers, isDirect,
                                                   isInertia, touchCount, x, y,
-                                                  xAbs, yAbs, dx, dy);
+                                                  xAbs, yAbs, dx, dy, multiplier,
+                                                  multiplier);
                 break;
             case SCROLL_SRC_GESTURE:
                 gestures.handleDeltaScrolling(view, modifiers, isDirect,
                                               isInertia, touchCount, x, y, xAbs,
-                                              yAbs, dx, dy);
+                                              yAbs, dx, dy, multiplier, multiplier);
                 break;
             default:
                 System.err.println("Unknown scroll gesture sender: " + sender);

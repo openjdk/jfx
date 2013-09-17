@@ -27,7 +27,7 @@ ext.IOS = [:]
 
 if (BUILD_CLOSED) {
     fetchExternalTools('IOS', 
-      ["ios-libs-07.tgz"], 
+      ["ios-libs-08.tgz"], 
       rootProject.CROSS_TOOLS_DIR, rootProject.IMPORT_CROSS_TOOLS)
 }
 

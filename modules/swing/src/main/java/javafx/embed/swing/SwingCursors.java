@@ -103,4 +103,43 @@ class SwingCursors {
 
        return Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR);
     }
+
+    static javafx.scene.Cursor embedCursorToCursor(Cursor cursor) {
+        if (cursor == null) {
+            return javafx.scene.Cursor.DEFAULT;
+        }
+
+        switch (cursor.getType()) {
+            case Cursor.DEFAULT_CURSOR:
+                return javafx.scene.Cursor.DEFAULT;
+            case Cursor.CROSSHAIR_CURSOR:
+                return javafx.scene.Cursor.CROSSHAIR;
+            case Cursor.E_RESIZE_CURSOR:
+                return javafx.scene.Cursor.E_RESIZE;
+            case Cursor.HAND_CURSOR:
+                return javafx.scene.Cursor.HAND;
+            case Cursor.MOVE_CURSOR:
+                return javafx.scene.Cursor.MOVE;
+            case Cursor.N_RESIZE_CURSOR:
+                return javafx.scene.Cursor.N_RESIZE;
+            case Cursor.NE_RESIZE_CURSOR:
+                return javafx.scene.Cursor.NE_RESIZE;
+            case Cursor.NW_RESIZE_CURSOR:
+                return javafx.scene.Cursor.NW_RESIZE;
+            case Cursor.S_RESIZE_CURSOR:
+                return javafx.scene.Cursor.S_RESIZE;
+            case Cursor.SE_RESIZE_CURSOR:
+                return javafx.scene.Cursor.SE_RESIZE;
+            case Cursor.SW_RESIZE_CURSOR:
+                return javafx.scene.Cursor.SW_RESIZE;
+            case Cursor.TEXT_CURSOR:
+                return javafx.scene.Cursor.TEXT;
+            case Cursor.W_RESIZE_CURSOR:
+                return javafx.scene.Cursor.W_RESIZE;
+            case Cursor.WAIT_CURSOR:
+                return javafx.scene.Cursor.WAIT;
+            default:
+                return javafx.scene.Cursor.DEFAULT;
+        }
+    }
 }

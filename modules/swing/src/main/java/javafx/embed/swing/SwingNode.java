@@ -33,7 +33,6 @@ import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.prism.NGExternalNode;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.stage.FocusUngrabEvent;
-import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
@@ -42,9 +41,8 @@ import javafx.event.EventHandler;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.input.KeyCode;
+import javafx.scene.input.*;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.stage.Window;
 import sun.awt.UngrabEvent;
@@ -53,8 +51,8 @@ import sun.swing.LightweightContent;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.WindowEvent;
-import java.awt.event.WindowFocusListener;
+import java.awt.event.*;
+import java.awt.event.InputEvent;
 import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -132,6 +130,7 @@ public class SwingNode extends Node {
         setFocusTraversable(true);
         setEventHandler(MouseEvent.ANY, new SwingMouseEventHandler());
         setEventHandler(KeyEvent.ANY, new SwingKeyEventHandler());
+        setEventHandler(ScrollEvent.SCROLL, new SwingScrollEventHandler());
 
         focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override
@@ -156,7 +155,7 @@ public class SwingNode extends Node {
     public void setContent(final JComponent content) {
         this.content = content;
 
-        invokeOnEDT(new Runnable() {
+        SwingFXUtils.runOnEDT(new Runnable() {
             @Override
             public void run() {
                 setContentImpl(content);
@@ -194,10 +193,16 @@ public class SwingNode extends Node {
             lwFrame.addWindowFocusListener(new WindowFocusListener() {
                 @Override
                 public void windowGainedFocus(WindowEvent e) {
+                    SwingFXUtils.runOnFxThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            SwingNode.this.requestFocus();
+                        }
+                    });
                 }
                 @Override
                 public void windowLostFocus(WindowEvent e) {
-                    Platform.runLater(new Runnable() {
+                    SwingFXUtils.runOnFxThread(new Runnable() {
                         @Override
                         public void run() {
                             ungrabFocus(true);
@@ -207,9 +212,10 @@ public class SwingNode extends Node {
             });
 
             lwFrame.setContent(new SwingNodeContent(content));
+            lwFrame.setSize((int)width, (int)height);
             lwFrame.setVisible(true);
 
-            Platform.runLater(new Runnable() {
+            SwingFXUtils.runOnFxThread(new Runnable() {
                 @Override
                 public void run() {
                     locateLwFrame(); // initialize location
@@ -239,7 +245,7 @@ public class SwingNode extends Node {
             }
         };
         if (peer != null) {
-            Platform.runLater(r);
+            SwingFXUtils.runOnFxThread(r);
         } else {
             peerRequests.clear();
             peerRequests.add(r);
@@ -257,7 +263,7 @@ public class SwingNode extends Node {
             }
         };
         if (peer != null) {
-            Platform.runLater(r);
+            SwingFXUtils.runOnFxThread(r);
         } else {
             peerRequests.add(r);
         }
@@ -275,7 +281,7 @@ public class SwingNode extends Node {
             }
         };
         if (peer != null) {
-            Platform.runLater(r);
+            SwingFXUtils.runOnFxThread(r);
         } else {
             peerRequests.add(r);
         }
@@ -303,11 +309,11 @@ public class SwingNode extends Node {
             this.height = height;
             impl_geomChanged();
             impl_markDirty(DirtyBits.NODE_GEOMETRY);
-            SwingUtilities.invokeLater(new Runnable() {
+            SwingFXUtils.runOnEDT(new Runnable() {
                 @Override
                 public void run() {
                     if (lwFrame != null) {
-                        lwFrame.setSize((int)width, (int)height);
+                        lwFrame.setSize((int) width, (int) height);
                     }
                 }
             });
@@ -365,7 +371,7 @@ public class SwingNode extends Node {
     @Override public double minWidth(double height) {
         return minWidth;
     }
-    
+
     /**
      * Returns the {@code SwingNode}'s minimum height for use in layout calculations.
      * This value corresponds to the minimum height of the Swing component.
@@ -381,14 +387,14 @@ public class SwingNode extends Node {
         return true;
     }
 
-    private InvalidationListener locationListener = new InvalidationListener() {
+    private final InvalidationListener locationListener = new InvalidationListener() {
         @Override
         public void invalidated(Observable observable) {
             locateLwFrame();
         }
     };
 
-    private EventHandler<FocusUngrabEvent> ungrabHandler = new EventHandler<FocusUngrabEvent>() {
+    private final EventHandler<FocusUngrabEvent> ungrabHandler = new EventHandler<FocusUngrabEvent>() {
         @Override
         public void handle(FocusUngrabEvent event) {
             if (!skipBackwardUnrgabNotification) {
@@ -397,36 +403,57 @@ public class SwingNode extends Node {
         }
     };
 
-    private ChangeListener<Boolean> windowVisibleListener = new ChangeListener<Boolean>() {
+    private final ChangeListener<Boolean> windowVisibleListener = new ChangeListener<Boolean>() {
         @Override
         public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
             if (!newValue) {
                 disposeLwFrame();
-
             } else {
                 setContent(content);
             }
         }
     };
 
-    private void removeListeners(Scene scene) {
+    private final ChangeListener<Window> sceneWindowListener = new ChangeListener<Window>() {
+        @Override
+        public void changed(ObservableValue<? extends Window> observable, Window oldValue, Window newValue) {
+            if (oldValue != null) {
+                removeWindowListeners(oldValue);
+            }
+            if (newValue != null) {
+                addWindowListeners(newValue);
+            }
+        }
+    };
+
+    private void removeSceneListeners(Scene scene) {
         Window window = scene.getWindow();
         if (window != null) {
-            window.xProperty().removeListener(locationListener);
-            window.yProperty().removeListener(locationListener);
-            window.removeEventHandler(FocusUngrabEvent.FOCUS_UNGRAB, ungrabHandler);
-            window.showingProperty().removeListener(windowVisibleListener);
+            removeWindowListeners(window);
         }
+        scene.windowProperty().removeListener(sceneWindowListener);
     }
 
-    private void addListeners(Scene scene) {
+    private void addSceneListeners(final Scene scene) {
         Window window = scene.getWindow();
         if (window != null) {
-            window.xProperty().addListener(locationListener);
-            window.yProperty().addListener(locationListener);
-            window.addEventHandler(FocusUngrabEvent.FOCUS_UNGRAB, ungrabHandler);
-            window.showingProperty().addListener(windowVisibleListener);
+            addWindowListeners(window);
         }
+        scene.windowProperty().addListener(sceneWindowListener);
+    }
+
+    private void addWindowListeners(final Window window) {
+        window.xProperty().addListener(locationListener);
+        window.yProperty().addListener(locationListener);
+        window.addEventHandler(FocusUngrabEvent.FOCUS_UNGRAB, ungrabHandler);
+        window.showingProperty().addListener(windowVisibleListener);
+    }
+
+    private void removeWindowListeners(final Window window) {
+        window.xProperty().removeListener(locationListener);
+        window.yProperty().removeListener(locationListener);
+        window.removeEventHandler(FocusUngrabEvent.FOCUS_UNGRAB, ungrabHandler);
+        window.showingProperty().removeListener(windowVisibleListener);
     }
 
     @Override
@@ -438,18 +465,25 @@ public class SwingNode extends Node {
         }
         peerRequests = null;
 
-        if (content != null) {
-            setContent(content); // in case the Node is re-added to Scene
+        if (getScene() != null) {
+            addSceneListeners(getScene());
         }
-        addListeners(getScene());
 
         sceneProperty().addListener(new ChangeListener<Scene>() {
             @Override
             public void changed(ObservableValue<? extends Scene> observable, Scene oldValue, Scene newValue) {
-                // Removed from scene, or added to another scene.
-                // The lwFrame will be recreated from impl_createPGNode().
-                removeListeners(oldValue);
-                disposeLwFrame();
+                if (oldValue != null) {
+                    // Removed from scene
+                    removeSceneListeners(oldValue);
+                    disposeLwFrame();
+                }
+                if (newValue != null) {
+                    // Added to another scene
+                    if (content != null && lwFrame == null) {
+                        setContent(content);
+                    }
+                    addSceneListeners(newValue);
+                }
             }
         });
 
@@ -490,12 +524,12 @@ public class SwingNode extends Node {
         final int sceneX = (int)getScene().getX();
         final int sceneY = (int)getScene().getY();
 
-        invokeOnEDT(new Runnable() {
+        SwingFXUtils.runOnEDT(new Runnable() {
             @Override
             public void run() {
                 if (lwFrame != null) {
-                    lwFrame.setLocation(windowX + sceneX + (int)loc.getX(),
-                                        windowY + sceneY + (int)loc.getY());
+                    lwFrame.setLocation(windowX + sceneX + (int) loc.getX(),
+                            windowY + sceneY + (int) loc.getY());
                 }
             }
         });
@@ -505,7 +539,7 @@ public class SwingNode extends Node {
         if (lwFrame == null) {
             return;
         }
-        invokeOnEDT(new Runnable() {
+        SwingFXUtils.runOnEDT(new Runnable() {
             @Override
             public void run() {
                 if (lwFrame != null) {
@@ -519,7 +553,7 @@ public class SwingNode extends Node {
         if (lwFrame == null) {
             return;
         }
-        invokeOnEDT(new Runnable() {
+        SwingFXUtils.runOnEDT(new Runnable() {
             @Override
             public void run() {
                 if (lwFrame != null) {
@@ -534,7 +568,7 @@ public class SwingNode extends Node {
         if (lwFrame == null) {
             return;
         }
-        invokeOnEDT(new Runnable() {
+        SwingFXUtils.runOnEDT(new Runnable() {
             @Override
             public void run() {
                 if (lwFrame != null) {
@@ -587,13 +621,12 @@ public class SwingNode extends Node {
         }
         @Override
         public void focusGrabbed() {
-            Platform.runLater(new Runnable() {
+            SwingFXUtils.runOnFxThread(new Runnable() {
                 @Override
                 public void run() {
                     if (getScene() != null &&
-                        getScene().getWindow() != null &&
-                        getScene().getWindow().impl_getPeer() != null)
-                    {
+                            getScene().getWindow() != null &&
+                            getScene().getWindow().impl_getPeer() != null) {
                         getScene().getWindow().impl_getPeer().grabFocus();
                         grabbed = true;
                     }
@@ -602,7 +635,7 @@ public class SwingNode extends Node {
         }
         @Override
         public void focusUngrabbed() {
-            Platform.runLater(new Runnable() {
+            SwingFXUtils.runOnFxThread(new Runnable() {
                 @Override
                 public void run() {
                     ungrabFocus(false);
@@ -611,7 +644,7 @@ public class SwingNode extends Node {
         }
         @Override
         public void preferredSizeChanged(final int width, final int height) {
-            Platform.runLater(new Runnable() {
+            SwingFXUtils.runOnFxThread(new Runnable() {
                 @Override
                 public void run() {
                     SwingNode.this.prefWidth = width;
@@ -622,7 +655,7 @@ public class SwingNode extends Node {
         }
         @Override
         public void maximumSizeChanged(final int width, final int height) {
-            Platform.runLater(new Runnable() {
+            SwingFXUtils.runOnFxThread(new Runnable() {
                 @Override
                 public void run() {
                     SwingNode.this.maxWidth = width;
@@ -633,7 +666,7 @@ public class SwingNode extends Node {
         }
         @Override
         public void minimumSizeChanged(final int width, final int height) {
-            Platform.runLater(new Runnable() {
+            SwingFXUtils.runOnFxThread(new Runnable() {
                 @Override
                 public void run() {
                     SwingNode.this.minWidth = width;
@@ -641,6 +674,15 @@ public class SwingNode extends Node {
                     SwingNode.this.impl_notifyLayoutBoundsChanged();
                 }
             });            
+        }
+
+        public void setCursor(Cursor cursor) {
+            SwingFXUtils.runOnFxThread(new Runnable() {
+                @Override
+                public void run() {
+                    SwingNode.this.setCursor(SwingCursors.embedCursorToCursor(cursor));
+                }
+            });
         }
     }
 
@@ -673,11 +715,6 @@ public class SwingNode extends Node {
     private class SwingMouseEventHandler implements EventHandler<MouseEvent> {
         @Override
         public void handle(MouseEvent event) {
-            if (event.getEventType() == MouseEvent.MOUSE_PRESSED &&
-                !SwingNode.this.isFocused() && SwingNode.this.isFocusTraversable())
-            {
-                SwingNode.this.requestFocus();
-            }
             JLightweightFrame frame = lwFrame;
             if (frame == null) {
                 return;
@@ -697,6 +734,47 @@ public class SwingNode extends Node {
                         (int)event.getX(), (int)event.getY(), (int)event.getScreenX(), (int)event.getSceneY(),
                         event.getClickCount(), swingPopupTrigger, swingButton);
             AccessController.doPrivileged(new PostEventAction(mouseEvent));
+        }
+    }
+
+    private class SwingScrollEventHandler implements EventHandler<ScrollEvent> {
+        @Override
+        public void handle(ScrollEvent event) {
+            JLightweightFrame frame = lwFrame;
+            if (frame == null) {
+                return;
+            }
+
+            int swingModifiers = SwingEvents.fxScrollModsToMouseWheelMods(event);
+            final boolean isShift = (swingModifiers & InputEvent.SHIFT_DOWN_MASK) != 0;
+
+            // Vertical scroll.
+            if (!isShift && event.getDeltaY() != 0.0) {
+                sendMouseWheelEvent(frame, (int)event.getX(), (int)event.getY(),
+                        swingModifiers, event.getDeltaY() / event.getMultiplierY());
+            }
+            // Horizontal scroll or shirt+vertical scroll.
+            final double delta = isShift && event.getDeltaY() != 0.0
+                                  ? event.getDeltaY() / event.getMultiplierY()
+                                  : event.getDeltaX() / event.getMultiplierX();
+            if (delta != 0.0) {
+                swingModifiers |= InputEvent.SHIFT_DOWN_MASK;
+                sendMouseWheelEvent(frame, (int)event.getX(), (int)event.getY(),
+                        swingModifiers, delta);
+            }
+        }
+
+        private void sendMouseWheelEvent(Component source, int x, int y, int swingModifiers, double delta) {
+            int wheelRotation = (int) delta;
+            int signum = (int) Math.signum(delta);
+            if (signum * delta < 1) {
+                wheelRotation = signum;
+            }
+            MouseWheelEvent mouseWheelEvent =
+                    new MouseWheelEvent(source, java.awt.event.MouseEvent.MOUSE_WHEEL,
+                            System.currentTimeMillis(), swingModifiers, x, y, 0, 0,
+                            0, false, MouseWheelEvent.WHEEL_UNIT_SCROLL, 1 , -wheelRotation);
+            AccessController.doPrivileged(new PostEventAction(mouseWheelEvent));
         }
     }
 
@@ -740,19 +818,6 @@ public class SwingNode extends Node {
                     frame, swingID, swingWhen, swingModifiers,
                     swingKeyCode, swingChar);
             AccessController.doPrivileged(new PostEventAction(keyEvent));
-        }
-    }
-
-    private static void invokeOnEDT(final Runnable r) {
-        if (SwingUtilities.isEventDispatchThread()) {
-            r.run();
-        } else {
-            SwingUtilities.invokeLater(new Runnable() {
-                @Override
-                public void run() {
-                    r.run();
-                }
-            });
         }
     }
 }

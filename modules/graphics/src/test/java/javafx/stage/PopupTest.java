@@ -50,17 +50,16 @@ import com.sun.javafx.pgstub.StubStage;
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import javafx.geometry.Bounds;
-import javafx.geometry.Point3D;
-import javafx.scene.shape.Box;
+import javafx.scene.Parent;
 import static org.junit.Assert.assertEquals;
 
 public class PopupTest {
-    
+
     private StubToolkit toolkit;
     private Stage stage;
     private Scene scene;
     private boolean done = false;
-    
+
     @Before
     public void setUp() {
         stage = new Stage();
@@ -122,83 +121,111 @@ public class PopupTest {
         assertEquals(20, peer.y, 1e-100);
     }
 
-    @Test
-    public void testContentAlignment() {
-        final Popup popup = new Popup();
-        final Rectangle contentRect = new Rectangle(10, 20, 100, 100);
+    private static final class PopupRoot extends Parent {
+        private final Rectangle geomBoundsRect;
 
-        popup.setAlignWithContentOrigin(true);
-        popup.getContent().add(contentRect);
-        popup.show(stage, 50, 50);
-        pulse();
+        private double layoutBoundsX;
+        private double layoutBoundsY;
+        private double layoutBoundsWidth;
+        private double layoutBoundsHeight;
+
+        public PopupRoot() {
+            geomBoundsRect = new Rectangle(0, 0, 100, 100);
+            layoutBoundsWidth = 100;
+            layoutBoundsHeight = 100;
+
+            getChildren().add(geomBoundsRect);
+        }
+
+        public void setGeomBounds(final double x, final double y,
+                                  final double width,
+                                  final double height) {
+            geomBoundsRect.setX(x);
+            geomBoundsRect.setY(y);
+            geomBoundsRect.setWidth(width);
+            geomBoundsRect.setHeight(height);
+        }
+
+        public void setLayoutBounds(final double x, final double y,
+                                    final double width,
+                                    final double height) {
+            layoutBoundsX = x;
+            layoutBoundsY = y;
+            layoutBoundsWidth = width;
+            layoutBoundsHeight = height;
+
+            impl_layoutBoundsChanged();
+        }
+
+        @Override
+        protected Bounds impl_computeLayoutBounds() {
+            return new BoundingBox(layoutBoundsX, layoutBoundsY,
+                                   layoutBoundsWidth, layoutBoundsHeight);
+        }
+    }
+
+    @Test
+    public void testAnchorPositioning() {
+        final Popup popup = new Popup();
+        final PopupRoot root = new PopupRoot();
+
+        root.setGeomBounds(-10, 20, 120, 100);
+        root.setLayoutBounds(0, 0, 100, 140);
+
+        popup.getScene().setRoot(root);
+
+        popup.setAnchorLocation(PopupWindow.AnchorLocation.WINDOW_BOTTOM_RIGHT);
+        popup.show(stage, 400, 400);
+
         final StubPopupStage peer = (StubPopupStage) popup.impl_getPeer();
 
-        assertEquals(60.0, peer.x, 1e-100);
-        assertEquals(70.0, peer.y, 1e-100);
-
-        contentRect.setX(-20);
-        contentRect.setY(-10);
         pulse();
+        assertEquals(280.0, peer.x, 1e-100);
+        assertEquals(260.0, peer.y, 1e-100);
 
-        assertEquals(30.0, peer.x, 1e-100);
-        assertEquals(40.0, peer.y, 1e-100);
+        popup.setAnchorLocation(PopupWindow.AnchorLocation.CONTENT_TOP_LEFT);
+        assertEquals(290.0, popup.getAnchorX(), 1e-100);
+        assertEquals(260.0, popup.getAnchorY(), 1e-100);
+
+        pulse();
+        assertEquals(280.0, peer.x, 1e-100);
+        assertEquals(260.0, peer.y, 1e-100);
+
+        popup.setAnchorX(200);
+        popup.setAnchorY(100);
+
+        pulse();
+        assertEquals(190.0, peer.x, 1e-100);
+        assertEquals(100.0, peer.y, 1e-100);
     }
 
     @Test
-    public void testContentAlignmentChange() {
+    public void testAnchorKeepsPositionOnContentChange() {
         final Popup popup = new Popup();
-        final Rectangle contentRect = new Rectangle(-20, -10, 100, 100);
+        final PopupRoot root = new PopupRoot();
 
-        popup.setAlignWithContentOrigin(false);
-        popup.getContent().add(contentRect);
-        popup.show(stage, 50, 50);
-        pulse();
+        root.setGeomBounds(0, 0, 100, 140);
+        root.setLayoutBounds(-10, 20, 120, 100);
+
+        popup.getScene().setRoot(root);
+
+        popup.setAnchorLocation(
+                PopupWindow.AnchorLocation.CONTENT_BOTTOM_RIGHT);
+        popup.show(stage, 400, 300);
+
         final StubPopupStage peer = (StubPopupStage) popup.impl_getPeer();
 
-        assertEquals(50.0, peer.x, 1e-100);
-        assertEquals(50.0, peer.y, 1e-100);
+        assertEquals(280.0, peer.x, 1e-100);
+        assertEquals(180.0, peer.y, 1e-100);
 
-        popup.setAlignWithContentOrigin(true);
+        root.setLayoutBounds(10, -10, 80, 160);
+
         pulse();
 
-        assertEquals(30.0, peer.x, 1e-100);
-        assertEquals(40.0, peer.y, 1e-100);
-    }
-
-
-    @Test
-    public void testLocalToScreenWithContentAlignment() {
-        final Popup popup = new Popup();
-        final Rectangle contentRect = new Rectangle(-30, -20, 100, 100);
-
-        popup.setAlignWithContentOrigin(true);
-        popup.getContent().add(contentRect);
-        popup.show(stage, 100, 200);
-
-        Point2D p = contentRect.localToScreen(new Point2D(0, 0));
-        assertEquals(100.0, p.getX(), 0.0001);
-        assertEquals(200.0, p.getY(), 0.0001);
-        Bounds b = contentRect.localToScreen(new BoundingBox(10, 10, 50, 50));
-        assertEquals(110.0, b.getMinX(), 0.0001);
-        assertEquals(210.0, b.getMinY(), 0.0001);
-        assertEquals(50.0, b.getWidth(), 0.0001);
-        assertEquals(50.0, b.getHeight(), 0.0001);
-    }
-
-    @Test
-    public void testScreenToLocalWithContentAlignment() {
-        final Popup popup = new Popup();
-        final Rectangle contentRect = new Rectangle(10, 20, 100, 100);
-
-        popup.setAlignWithContentOrigin(true);
-        popup.getContent().add(contentRect);
-        popup.show(stage, 100, 200);
-
-        assertEquals(new Point2D(60, 70),
-                     contentRect.screenToLocal(new Point2D(160, 270)));
-        assertEquals(new BoundingBox(0, 0, 50, 50),
-                     contentRect.screenToLocal(
-                                     new BoundingBox(100, 200, 50, 50)));
+        assertEquals(400.0, popup.getAnchorX(), 1e-100);
+        assertEquals(300.0, popup.getAnchorY(), 1e-100);
+        assertEquals(310.0, peer.x, 1e-100);
+        assertEquals(140.0, peer.y, 1e-100);
     }
 
     @Test

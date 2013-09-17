@@ -58,7 +58,6 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.*;
 import javafx.event.Event;
 import javafx.event.EventHandler;
-import javafx.event.EventType;
 import javafx.util.Builder;
 import javafx.util.BuilderFactory;
 import javafx.util.Callback;
@@ -82,8 +81,11 @@ import com.sun.javafx.fxml.expression.KeyPath;
 import java.net.MalformedURLException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Deque;
+import java.util.EnumMap;
 import java.util.Locale;
 import java.util.StringTokenizer;
+import javafx.beans.InvalidationListener;
 import sun.reflect.misc.ConstructorUtil;
 import sun.reflect.misc.FieldUtil;
 import sun.reflect.misc.MethodUtil;
@@ -501,23 +503,36 @@ public class FXMLLoader {
             }
         }
 
-        private <T> T getExpressionObjectOfType(String handlerName, Class<T> type) throws LoadException{
-            if (handlerName.startsWith(EXPRESSION_PREFIX)) {
-                handlerName = handlerName.substring(EXPRESSION_PREFIX.length());
+        private Object getExpressionObject(String handlerValue) throws LoadException{
+            if (handlerValue.startsWith(EXPRESSION_PREFIX)) {
+                handlerValue = handlerValue.substring(EXPRESSION_PREFIX.length());
 
-                if (handlerName.length() == 0) {
+                if (handlerValue.length() == 0) {
                     throw new LoadException("Missing expression reference.");
                 }
 
-                Object expression = Expression.get(namespace, KeyPath.parse(handlerName));
-                if (type.isInstance(expression)) {
-                    return (T) expression;
+                Object expression = Expression.get(namespace, KeyPath.parse(handlerValue));
+                if (expression == null) {
+                    throw new LoadException("Unable to resolve expression : $" + handlerValue);
                 }
+                return expression;
             }
             return null;
         }
 
-        private <T> MethodHandler<T> getControllerMethodHandle(String handlerName, Class<T> type) throws LoadException{
+        private <T> T getExpressionObjectOfType(String handlerValue, Class<T> type) throws LoadException{
+            Object expression = getExpressionObject(handlerValue);
+            if (expression != null) {
+                if (type.isInstance(expression)) {
+                    return (T) expression;
+                }
+                throw new LoadException("Error resolving \"" + handlerValue +"\" expression."
+                        + "Does not point to a " + type.getName());
+            }
+            return null;
+        }
+
+        private MethodHandler getControllerMethodHandle(String handlerName, SupportedType type) throws LoadException{
             if (handlerName.startsWith(CONTROLLER_METHOD_PREFIX)) {
                 handlerName = handlerName.substring(CONTROLLER_METHOD_PREFIX.length());
 
@@ -532,14 +547,14 @@ public class FXMLLoader {
 
                     Method method = getControllerMethods().get(type).get(handlerName);
                     if (method == null) {
-                        method = getControllerMethods().get(null).get(handlerName);
+                        method = getControllerMethods().get(SupportedType.PARAMETERLESS).get(handlerName);
                     }
 
                     if (method == null) {
                         return null;
                     }
 
-                    return new MethodHandler<>(controller, method);
+                    return new MethodHandler(controller, method);
                 }
 
             }
@@ -556,9 +571,11 @@ public class FXMLLoader {
                         processObservableMapHandler(handlerName);
                     } else if (value instanceof ObservableSet && attribute.name.equals(COLLECTION_HANDLER_NAME)) {
                         processObservableSetHandler(handlerName);
+                    } else if (attribute.name.endsWith(CHANGE_EVENT_HANDLER_SUFFIX)) {
+                        processPropertyHandler(attribute.name, handlerName);
                     } else {
                         EventHandler<? extends Event> eventHandler = null;
-                        MethodHandler handler = getControllerMethodHandle(handlerName, Event.class);
+                        MethodHandler handler = getControllerMethodHandle(handlerName, SupportedType.EVENT);
                         if (handler != null) {
                             eventHandler = new ControllerMethodEventHandler<>(handler);
                         }
@@ -577,85 +594,123 @@ public class FXMLLoader {
                         }
 
                         // Add the handler
-                        addEventHandler(attribute, eventHandler);
+                        getValueAdapter().put(attribute.name, eventHandler);
                     }
                 }
             }
         }
 
-        @SuppressWarnings("unchecked")
-        private void addEventHandler(Attribute attribute, EventHandler<? extends Event> eventHandler)
-            throws LoadException {
-            if (attribute.name.endsWith(CHANGE_EVENT_HANDLER_SUFFIX)) {
-                int i = EVENT_HANDLER_PREFIX.length();
-                int j = attribute.name.length() - CHANGE_EVENT_HANDLER_SUFFIX.length();
-
-                if (i != j) {
-                    String key = Character.toLowerCase(attribute.name.charAt(i))
-                        + attribute.name.substring(i + 1, j);
-
-                    ObservableValue<Object> propertyModel = getValueAdapter().getPropertyModel(key);
-                    if (propertyModel == null) {
-                        throw new LoadException(value.getClass().getName() + " does not define"
-                                + " a property model for \"" + key + "\".");
-                    }
-
-                    propertyModel.addListener(new PropertyChangeAdapter(value,
-                        (EventHandler<PropertyChangeEvent<?>>)eventHandler));
-                }
-            } else {
-                getValueAdapter().put(attribute.name, eventHandler);
-            }
-        }
-
-        private void processObservableListHandler(String handlerName) throws LoadException {
+        private void processObservableListHandler(String handlerValue) throws LoadException {
             ObservableList list = (ObservableList)value;
-            if (handlerName.startsWith(CONTROLLER_METHOD_PREFIX)) {
-                MethodHandler handler = getControllerMethodHandle(handlerName, ListChangeListener.Change.class);
+            if (handlerValue.startsWith(CONTROLLER_METHOD_PREFIX)) {
+                MethodHandler handler = getControllerMethodHandle(handlerValue, SupportedType.LIST_CHANGE_LISTENER);
                 if (handler != null) {
-                    list.addListener(new ObservableListChangeAdapter(list, handler));
+                    list.addListener(new ObservableListChangeAdapter(handler));
                 } else {
-                    throw new LoadException("Controller method \"" + handlerName + "\" not found.");
+                    throw new LoadException("Controller method \"" + handlerValue + "\" not found.");
                 }
-            } else if (handlerName.startsWith(EXPRESSION_PREFIX)) {
-                ListChangeListener listener = getExpressionObjectOfType(handlerName, ListChangeListener.class);
-                if (listener != null) {
-                    list.addListener(listener);
+            } else if (handlerValue.startsWith(EXPRESSION_PREFIX)) {
+                Object listener = getExpressionObject(handlerValue);
+                   if (listener instanceof ListChangeListener) {
+                    list.addListener((ListChangeListener) listener);
+                } else if (listener instanceof InvalidationListener) {
+                    list.addListener((InvalidationListener) listener);
+                } else {
+                    throw new LoadException("Error resolving \"" + handlerValue + "\" expression."
+                            + "Must be either ListChangeListener or InvalidationListener");
                 }
             }
         }
 
-        private void processObservableMapHandler(String handlerName) throws LoadException {
+        private void processObservableMapHandler(String handlerValue) throws LoadException {
             ObservableMap map = (ObservableMap)value;
-            if (handlerName.startsWith(CONTROLLER_METHOD_PREFIX)) {
-                MethodHandler handler = getControllerMethodHandle(handlerName, MapChangeListener.Change.class);
+            if (handlerValue.startsWith(CONTROLLER_METHOD_PREFIX)) {
+                MethodHandler handler = getControllerMethodHandle(handlerValue, SupportedType.MAP_CHANGE_LISTENER);
                 if (handler != null) {
-                    map.addListener(new ObservableMapChangeAdapter(map, handler));
+                    map.addListener(new ObservableMapChangeAdapter(handler));
                 } else {
-                    throw new LoadException("Controller method \"" + handlerName + "\" not found.");
+                    throw new LoadException("Controller method \"" + handlerValue + "\" not found.");
                 }
-            } else if (handlerName.startsWith(EXPRESSION_PREFIX)) {
-                MapChangeListener listener = getExpressionObjectOfType(handlerName, MapChangeListener.class);
-                if (listener != null) {
-                    map.addListener(listener);
+            } else if (handlerValue.startsWith(EXPRESSION_PREFIX)) {
+                Object listener = getExpressionObject(handlerValue);
+                if (listener instanceof MapChangeListener) {
+                    map.addListener((MapChangeListener) listener);
+                } else if (listener instanceof InvalidationListener) {
+                    map.addListener((InvalidationListener) listener);
+                } else {
+                    throw new LoadException("Error resolving \"" + handlerValue + "\" expression."
+                            + "Must be either MapChangeListener or InvalidationListener");
                 }
             }
         }
 
-        private void processObservableSetHandler(String handlerName) throws LoadException {
+        private void processObservableSetHandler(String handlerValue) throws LoadException {
             ObservableSet set = (ObservableSet)value;
-            if (handlerName.startsWith(CONTROLLER_METHOD_PREFIX)) {
-                MethodHandler handler = getControllerMethodHandle(handlerName, SetChangeListener.Change.class);
+            if (handlerValue.startsWith(CONTROLLER_METHOD_PREFIX)) {
+                MethodHandler handler = getControllerMethodHandle(handlerValue, SupportedType.SET_CHANGE_LISTENER);
                 if (handler != null) {
-                    set.addListener(new ObservableSetChangeAdapter(set, handler));
+                    set.addListener(new ObservableSetChangeAdapter(handler));
                 } else {
-                    throw new LoadException("Controller method \"" + handlerName + "\" not found.");
+                    throw new LoadException("Controller method \"" + handlerValue + "\" not found.");
                 }
-            } else if (handlerName.startsWith(EXPRESSION_PREFIX)) {
-                SetChangeListener listener = getExpressionObjectOfType(handlerName, SetChangeListener.class);
-                if (listener != null) {
-                    set.addListener(listener);
+            } else if (handlerValue.startsWith(EXPRESSION_PREFIX)) {
+                Object listener = getExpressionObject(handlerValue);
+                if (listener instanceof SetChangeListener) {
+                    set.addListener((SetChangeListener) listener);
+                } else if (listener instanceof InvalidationListener) {
+                    set.addListener((InvalidationListener) listener);
+                } else {
+                    throw new LoadException("Error resolving \"" + handlerValue + "\" expression."
+                            + "Must be either SetChangeListener or InvalidationListener");
                 }
+            }
+        }
+
+        private void processPropertyHandler(String attributeName, String handlerValue) throws LoadException {
+            int i = EVENT_HANDLER_PREFIX.length();
+            int j = attributeName.length() - CHANGE_EVENT_HANDLER_SUFFIX.length();
+
+            if (i != j) {
+                String key = Character.toLowerCase(attributeName.charAt(i))
+                        + attributeName.substring(i + 1, j);
+
+                ObservableValue<Object> propertyModel = getValueAdapter().getPropertyModel(key);
+                if (propertyModel == null) {
+                    throw new LoadException(value.getClass().getName() + " does not define"
+                            + " a property model for \"" + key + "\".");
+                }
+
+                if (handlerValue.startsWith(CONTROLLER_METHOD_PREFIX)) {
+                    MethodHandler handler = getControllerMethodHandle(handlerValue, SupportedType.PROPERTY_CHANGE_LISTENER);
+                    if (handler != null) {
+                        propertyModel.addListener(new PropertyChangeAdapter(handler));
+                    } else {
+                        // Note: this part is solely for purpose of 2.2 backward compatibility where an Event object
+                        // has been used instead of usual property change parameters
+                        MethodHandler evHandler = getControllerMethodHandle(handlerValue, SupportedType.EVENT);
+                        if (evHandler != null) {
+                            propertyModel.addListener(new ChangeListener<Object>() {
+                                @Override
+                                public void changed(ObservableValue<?> observable, Object oldValue, Object newValue) {
+                                    evHandler.invoke(new Event(value, null, Event.ANY));
+                                }
+                            });
+                        } else {
+                            throw new LoadException("Controller method \"" + handlerValue + "\" not found.");
+                        }
+                    }
+                } else if (handlerValue.startsWith(EXPRESSION_PREFIX)) {
+                    Object listener = getExpressionObject(handlerValue);
+                    if (listener instanceof ChangeListener) {
+                        propertyModel.addListener((ChangeListener) listener);
+                    } else if (listener instanceof InvalidationListener) {
+                        propertyModel.addListener((InvalidationListener) listener);
+                    } else {
+                        throw new LoadException("Error resolving \"" + handlerValue + "\" expression."
+                                + "Must be either ChangeListener or InvalidationListener");
+                    }
+                }
+
             }
         }
     }
@@ -1540,9 +1595,9 @@ public class FXMLLoader {
 
     // Event handler that delegates to a method defined by the controller object
     private static class ControllerMethodEventHandler<T extends Event> implements EventHandler<T> {
-        private final MethodHandler<T> handler;
+        private final MethodHandler handler;
 
-        public ControllerMethodEventHandler(MethodHandler<T> handler) {
+        public ControllerMethodEventHandler(MethodHandler handler) {
             this.handler = handler;
         }
 
@@ -1585,12 +1640,9 @@ public class FXMLLoader {
 
     // Observable list change listener
     private static class ObservableListChangeAdapter implements ListChangeListener {
-        private final ObservableList source;
-        private final MethodHandler<Change> handler;
+        private final MethodHandler handler;
 
-        public ObservableListChangeAdapter(ObservableList source,
-                                           MethodHandler<Change> handler) {
-            this.source = source;
+        public ObservableListChangeAdapter(MethodHandler handler) {
             this.handler = handler;
         }
 
@@ -1605,12 +1657,9 @@ public class FXMLLoader {
 
     // Observable map change listener
     private static class ObservableMapChangeAdapter implements MapChangeListener {
-        public final ObservableMap source;
-        public final MethodHandler<Change> handler;
+        public final MethodHandler handler;
 
-        public ObservableMapChangeAdapter(ObservableMap source,
-                                          MethodHandler<Change> handler) {
-            this.source = source;
+        public ObservableMapChangeAdapter(MethodHandler handler) {
             this.handler = handler;
         }
 
@@ -1624,12 +1673,9 @@ public class FXMLLoader {
 
     // Observable set change listener
     private static class ObservableSetChangeAdapter implements SetChangeListener {
-        public final ObservableSet source;
-        public final MethodHandler<Change> handler;
+        public final MethodHandler handler;
 
-        public ObservableSetChangeAdapter(ObservableSet source,
-                                          MethodHandler<Change> handler) {
-            this.source = source;
+        public ObservableSetChangeAdapter(MethodHandler handler) {
             this.handler = handler;
         }
 
@@ -1643,29 +1689,19 @@ public class FXMLLoader {
 
     // Property model change listener
     private static class PropertyChangeAdapter implements ChangeListener<Object> {
-        public final Object source;
-        public final EventHandler<PropertyChangeEvent<?>> handler;
+        public final MethodHandler handler;
 
-        public PropertyChangeAdapter(Object source, EventHandler<PropertyChangeEvent<?>> handler) {
-            if (source == null) {
-                throw new NullPointerException();
-            }
-
-            if (handler == null) {
-                throw new NullPointerException();
-            }
-
-            this.source = source;
+        public PropertyChangeAdapter(MethodHandler handler) {
             this.handler = handler;
         }
 
         @Override
         public void changed(ObservableValue<? extends Object> observable, Object oldValue, Object newValue) {
-            handler.handle(new PropertyChangeEvent<Object>(source, oldValue));
+            handler.invoke(observable, oldValue, newValue);
         }
     }
 
-    private static class MethodHandler<E> {
+    private static class MethodHandler {
         private final Object controller;
         private final Method method;
         private final boolean typed;
@@ -1673,13 +1709,13 @@ public class FXMLLoader {
         private MethodHandler(Object controller, Method method) {
             this.method = method;
             this.controller = controller;
-            this.typed = (method.getParameterTypes().length == 1);
+            this.typed = (method.getParameterTypes().length > 0);
         }
 
-        public void invoke(E event) {
+        public void invoke(Object... params) {
             try {
                 if (typed) {
-                    MethodUtil.invoke(method, controller, new Object[] { event });
+                    MethodUtil.invoke(method, controller, params);
                 } else {
                     MethodUtil.invoke(method, controller, new Object[] {});
                 }
@@ -1691,31 +1727,19 @@ public class FXMLLoader {
         }
     }
 
-    /**
-     * @since JavaFX 8.0
-     */
-    protected URL location;
-    /**
-     * @since JavaFX 8.0
-     */
-    protected ResourceBundle resources;
+    private URL location;
+    private ResourceBundle resources;
 
     private ObservableMap<String, Object> namespace = FXCollections.observableHashMap();
 
-    /**
-     * @since JavaFX 8.0
-     */
-    protected Object root = null;
-    /**
-     * @since JavaFX 8.0
-     */
-    protected Object controller = null;
+    private Object root = null;
+    private Object controller = null;
 
     private BuilderFactory builderFactory;
     private Callback<Class<?>, Object> controllerFactory;
     private Charset charset;
 
-    private LinkedList<FXMLLoader> loaders;
+    private final LinkedList<FXMLLoader> loaders;
 
     private ClassLoader classLoader = defaultClassLoader;
     private boolean staticLoad = false;
@@ -1730,11 +1754,11 @@ public class FXMLLoader {
 
     private boolean template = false;
 
-    private LinkedList<String> packages = new LinkedList<String>();
-    private HashMap<String, Class<?>> classes = new HashMap<String, Class<?>>();
+    private List<String> packages = new LinkedList<String>();
+    private Map<String, Class<?>> classes = new HashMap<String, Class<?>>();
 
-    private HashMap<String, Field> controllerFields = null;
-    private HashMap<Class, Map<String, Method>> controllerMethods = null;
+    private Map<String, Field> controllerFields = null;
+    private Map<SupportedType, Map<String, Method>> controllerMethods = null;
 
     private ScriptEngineManager scriptEngineManager = null;
 
@@ -1962,7 +1986,7 @@ public class FXMLLoader {
         setControllerFactory(controllerFactory);
         setCharset(charset);
 
-        this.loaders = loaders;
+        this.loaders = new LinkedList(loaders);
     }
 
     /**
@@ -2381,7 +2405,7 @@ public class FXMLLoader {
                 ((Initializable)controller).initialize(location, resources);
             } else {
                 // Inject controller fields
-                HashMap<String, Field> controllerFields = getControllerFields();
+                Map<String, Field> controllerFields = getControllerFields();
 
                 Field locationField = controllerFields.get(LOCATION_KEY);
                 if (locationField != null) {
@@ -2404,7 +2428,8 @@ public class FXMLLoader {
                 }
 
                 // Initialize the controller
-                Method initializeMethod = getControllerMethods().get(null).get(INITIALIZE_METHOD_NAME);
+                Method initializeMethod = getControllerMethods().get(SupportedType.PARAMETERLESS).
+                        get(INITIALIZE_METHOD_NAME);
 
                 if (initializeMethod != null) {
                     try {
@@ -2418,9 +2443,6 @@ public class FXMLLoader {
                 }
             }
         }
-
-        // Pop this loader off of the stack
-        loaders.pop();
 
         // Clear the parser
         xmlStreamReader = null;
@@ -2759,9 +2781,9 @@ public class FXMLLoader {
         return classLoader.loadClass(packageName + "." + className.replace('.', '$'));
     }
 
-    private HashMap<String, Field> getControllerFields() throws LoadException {
+    private Map<String, Field> getControllerFields() throws LoadException {
         if (controllerFields == null) {
-            controllerFields = new HashMap<String, Field>();
+            controllerFields = new HashMap<>();
 
             Class<?> controllerType = controller.getClass();
             Class<?> type = controllerType;
@@ -2797,25 +2819,79 @@ public class FXMLLoader {
         return controllerFields;
     }
 
-    private static final Class[] SUPPORTED_TYPES = { Event.class, ListChangeListener.Change.class,
-        MapChangeListener.Change.class, SetChangeListener.Change.class
-    };
+    private static enum SupportedType {
+        PARAMETERLESS {
 
-    private Class<?> toSupportedEventType(Class<?> type) {
-        for (Class c : SUPPORTED_TYPES) {
-            if (c.isAssignableFrom(type)) {
-                return c;
+            @Override
+            protected boolean methodIsOfType(Method m) {
+                return m.getParameterCount() == 0;
+            }
+
+        },
+        EVENT {
+
+            @Override
+            protected boolean methodIsOfType(Method m) {
+                return m.getParameterCount() == 1 &&
+                        Event.class.isAssignableFrom(m.getParameterTypes()[0]);
+            }
+
+        },
+        LIST_CHANGE_LISTENER {
+
+            @Override
+            protected boolean methodIsOfType(Method m) {
+                return m.getParameterCount() == 1 &&
+                        m.getParameterTypes()[0].equals(ListChangeListener.Change.class);
+            }
+
+        },
+        MAP_CHANGE_LISTENER {
+
+            @Override
+            protected boolean methodIsOfType(Method m) {
+                return m.getParameterCount() == 1 &&
+                        m.getParameterTypes()[0].equals(MapChangeListener.Change.class);
+            }
+
+        },
+        SET_CHANGE_LISTENER {
+
+            @Override
+            protected boolean methodIsOfType(Method m) {
+                return m.getParameterCount() == 1 &&
+                        m.getParameterTypes()[0].equals(SetChangeListener.Change.class);
+            }
+
+        },
+        PROPERTY_CHANGE_LISTENER {
+
+            @Override
+            protected boolean methodIsOfType(Method m) {
+                return m.getParameterCount() == 3 &&
+                        ObservableValue.class.isAssignableFrom(m.getParameterTypes()[0])
+                        && m.getParameterTypes()[1].equals(m.getParameterTypes()[2]);
+            }
+
+        };
+
+        protected abstract boolean methodIsOfType(Method m);
+    }
+
+    private SupportedType toSupportedType(Method m) {
+        for (SupportedType t : SupportedType.values()) {
+            if (t.methodIsOfType(m)) {
+                return t;
             }
         }
         return null;
     }
 
-    private HashMap<Class, Map<String, Method>> getControllerMethods() throws LoadException {
+    private Map<SupportedType, Map<String, Method>> getControllerMethods() throws LoadException {
         if (controllerMethods == null) {
-            controllerMethods = new HashMap<>();
-            controllerMethods.put(null, new HashMap<String,Method>());
-            for (Class c: SUPPORTED_TYPES) {
-                controllerMethods.put(c, new HashMap<String,Method>());
+            controllerMethods = new EnumMap<>(SupportedType.class);
+            for (SupportedType t: SupportedType.values()) {
+                controllerMethods.put(t, new HashMap<String, Method>());
             }
 
             Class<?> controllerType = controller.getClass();
@@ -2848,18 +2924,10 @@ public class FXMLLoader {
                         // c) it takes no arguments and a handler with this
                         //    name has not already been defined
                         String methodName = method.getName();
-                        Class<?>[] parameterTypes = method.getParameterTypes();
-                        Class convertedType;
+                        SupportedType convertedType;
 
-                        if (methodName.equals(INITIALIZE_METHOD_NAME)) {
-                            if (parameterTypes.length == 0) {
-                                controllerMethods.get(null).put(method.getName(), method);
-                            }
-                        } else if (parameterTypes.length == 1 &&
-                                (convertedType = toSupportedEventType(parameterTypes[0])) != null) {
+                        if ((convertedType = toSupportedType(method)) != null) {
                             controllerMethods.get(convertedType).put(methodName, method);
-                        } else if (parameterTypes.length == 0) {
-                            controllerMethods.get(null).put(methodName, method);
                         }
                     }
                 }

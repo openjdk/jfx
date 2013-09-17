@@ -42,16 +42,16 @@ public final class WindowHelper {
     private WindowHelper() {
     }
 
-    public static void setLocation(final Window window,
-                                   final double x,
-                                   final double y) {
-        windowAccessor.setLocation(window, x, y);
+    public static void notifyLocationChanged(final Window window,
+                                             final double x,
+                                             final double y) {
+        windowAccessor.notifyLocationChanged(window, x, y);
     }
 
-    public static void setSize(final Window window,
-                               final double width,
-                               final double height) {
-        windowAccessor.setSize(window, width, height);
+    public static void notifySizeChanged(final Window window,
+                                         final double width,
+                                         final double height) {
+        windowAccessor.notifySizeChanged(window, width, height);
     }
 
     static AccessControlContext getAccessControlContext(Window window) {
@@ -67,9 +67,9 @@ public final class WindowHelper {
     }
 
     public interface WindowAccessor {
-        void setLocation(Window window, double x, double y);
+        void notifyLocationChanged(Window window, double x, double y);
 
-        void setSize(Window window, double width, double height);
+        void notifySizeChanged(Window window, double width, double height);
 
         AccessControlContext getAccessControlContext(Window window);
     }

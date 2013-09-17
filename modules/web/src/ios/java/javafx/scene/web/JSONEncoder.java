@@ -115,13 +115,24 @@ class JSONEncoder {
         }
     }
 
-    private void encodeJavaObject(Object object, StringBuffer sb) {
+    //return true if we were able to find index into exportedJSObjects[] for 
+    //passed object; false otherwise
+    private boolean encodedJavaObject(Object object, StringBuffer sb) {
         String jsId = owner.getjsIdForJavaObject(object);
         if (jsId != null) {
             sb.append(owner.getJavaBridge()).append(".exportedJSObjects[").append(jsId).append("]"); //reuse object
-        } else {
-            ExportedJavaObject jsObj = owner.createExportedJavaObject(object);
-            sb.append(jsObj.getJSDecl()); //create new object in JS
+            return true;
+        }
+        return false;
+    }
+    
+    private void encodeJavaObject(Object object, StringBuffer sb) {
+        if (!encodedJavaObject(object, sb)) {
+            owner.exportObject("anyname",object);
+            if (!encodedJavaObject(object, sb)) { // bridge was not exported yet
+                ExportedJavaObject jsObj = owner.createExportedJavaObject(object);
+                sb.append(jsObj.getJSDecl()); //create new object in JS
+            }
         }
     }
 }

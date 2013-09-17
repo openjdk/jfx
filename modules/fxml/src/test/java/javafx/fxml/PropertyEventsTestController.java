@@ -25,27 +25,61 @@
 
 package javafx.fxml;
 
-import java.io.IOException;
-import org.junit.Test;
+import javafx.beans.value.ObservableValue;
+import javafx.event.Event;
 
-import static org.junit.Assert.*;
+import java.net.URL;
+import java.util.ResourceBundle;
 
-public class RT_18229 {
-    @Test
-    public void testControllerFactory() throws IOException {
-        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_18229.fxml"));
-        fxmlLoader.load();
+public class PropertyEventsTestController implements Initializable {
+    @FXML private Widget root;
+    @FXML private Widget child;
 
-        RT_18229Controller controller = (RT_18229Controller)fxmlLoader.getController();
-        assertEquals(controller.getRootName(), "abc");
-        assertEquals(controller.getChildName(), "def");
+    private String rootName = null;
+    private String childName = null;
 
-        final String rootName = "123";
-        controller.getRoot().setName(rootName);
-        assertEquals(controller.getRootName(), rootName);
+    @Override
+    public void initialize(URL location, ResourceBundle resources) {
+        updateRootName();
+        updateChildName();
+    }
 
-        final String childName = "456";
-        controller.getChild().setName(childName);
-        assertEquals(controller.getChildName(), childName);
+    public Widget getRoot() {
+        return root;
+    }
+
+    public String getRootName() {
+        return rootName;
+    }
+
+    public Widget getChild() {
+        return child;
+    }
+
+    public String getChildName() {
+        return childName;
+    }
+
+    @FXML
+    protected void handleRootNameChange() {
+        updateRootName();
+    }
+
+    @FXML
+    protected void handleChildNameChange() {
+        throw new RuntimeException();
+    }
+
+    @FXML
+    protected void handleChildNameChange(ObservableValue value, String oldV, String newV) {
+        updateChildName();
+    }
+
+    private void updateRootName() {
+        rootName = root.getName();
+    }
+
+    private void updateChildName() {
+        childName = child.getName();
     }
 }

@@ -204,7 +204,10 @@ void fbOmapSetNativeCursor(jlong nativeCursorPointer) {
     if (cursor.isVisible) {
         fbOmapCursorClose();
         fbOmapCreateCursor(cursorImage->buffer, cursorImage->width, cursorImage->height, cursorImage->bpp);
-    }
+        // reset the visibility - because closing the cursor also makes it 
+        // not visible
+        cursor.isVisible = 1;
+    } 
 }
 
 void fbOmapReleaseNativeCursor(jlong nativeCursorPointer) {

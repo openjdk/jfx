@@ -55,7 +55,7 @@ public class RT30650GUI extends Application {
     
     private final static int SIZE = 400;
     
-    private static int pulseCount = 5;
+    private static int pulseCount = 100;
     private static boolean passed;
         
     public static boolean test() {

@@ -657,11 +657,24 @@ public class UserDataDirectoryTest extends TestBase {
         assertSame(eventType, handler.errors.get(0).getEventType());
     }
 
-    private static File defaultDirectory() {
-        return new File(
-                com.sun.glass.ui.Application.GetApplication()
-                        .getDataDirectory(),
-                "webview");
+    private File defaultDirectory() {
+        Callable<String> callable = new Callable<String>() {
+            @Override public String call() {
+                return com.sun.glass.ui.Application.GetApplication()
+                        .getDataDirectory();
+            }
+        };
+        String appDataDir;
+        if (Platform.isFxApplicationThread()) {
+            try {
+                appDataDir = callable.call();
+            } catch (Exception ex) {
+                throw new AssertionError(ex);
+            }
+        } else {
+            appDataDir = submit(callable);
+        }
+        return new File(appDataDir, "webview");
     }
 
     private static void sleep(long millis) {

@@ -804,7 +804,12 @@ public class JFXPanel extends JComponent {
 
         @Override
         public void repaint() {
+            SwingUtilities.invokeLater(new Runnable() {
+                @Override
+                public void run() {
             JFXPanel.this.repaint();
+        }
+            });
         }
 
         @Override

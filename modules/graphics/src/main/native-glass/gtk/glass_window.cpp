@@ -48,6 +48,8 @@
 WindowContext * WindowContextBase::sm_grab_window = NULL;
 WindowContext * WindowContextBase::sm_mouse_drag_window = NULL;
 
+GdkAtom atom_net_wm_state = gdk_atom_intern_static_string("_NET_WM_STATE");
+
 GdkWindow* WindowContextBase::get_gdk_window(){
     return gdk_window;
 }
@@ -67,6 +69,55 @@ bool WindowContextBase::isEnabled() {
         return result;
     } else {
         return false;
+    }
+}
+
+void WindowContextBase::notify_state(jint glass_state) {
+    if (glass_state == com_sun_glass_events_WindowEvent_RESTORE) {
+        if (is_maximized) {
+            glass_state = com_sun_glass_events_WindowEvent_MAXIMIZE;
+        }
+
+        int w, h;
+        glass_gdk_window_get_size(gdk_window, &w, &h);
+        if (jview) {
+            mainEnv->CallVoidMethod(jview,
+                    jViewNotifyRepaint,
+                    0, 0, w, h);
+            CHECK_JNI_EXCEPTION(mainEnv);
+        }
+    }
+
+    if (jwindow) {
+       mainEnv->CallVoidMethod(jwindow,
+               jGtkWindowNotifyStateChanged,
+               glass_state);
+       CHECK_JNI_EXCEPTION(mainEnv);
+    }
+}
+
+void WindowContextBase::process_state(GdkEventWindowState* event) {
+    if (event->changed_mask & 
+            (GDK_WINDOW_STATE_ICONIFIED | GDK_WINDOW_STATE_MAXIMIZED)) {
+        
+        if (event->changed_mask & GDK_WINDOW_STATE_ICONIFIED) {
+            is_iconified = event->new_window_state & GDK_WINDOW_STATE_ICONIFIED;
+        } 
+        if (event->changed_mask & GDK_WINDOW_STATE_MAXIMIZED) {
+            is_maximized = event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED;
+        }
+        
+        jint stateChangeEvent;
+
+        if (is_iconified) {
+            stateChangeEvent = com_sun_glass_events_WindowEvent_MINIMIZE;
+        } else if (is_maximized) {
+            stateChangeEvent = com_sun_glass_events_WindowEvent_MAXIMIZE;
+        } else {
+            stateChangeEvent = com_sun_glass_events_WindowEvent_RESTORE;
+        }
+
+        notify_state(stateChangeEvent);
     }
 }
 
@@ -562,10 +613,17 @@ WindowContextBase::~WindowContextBase() {
 
 
 WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long _screen,
-        WindowFrameType _frame_type, WindowType type)
-: WindowContextBase(), screen(_screen), frame_type(_frame_type),
-        owner(_owner), geometry(), stale_config_notifications(), resizable(),
-        xshape(), frame_extents_initialized(), map_received(false)
+        WindowFrameType _frame_type, WindowType type) :
+            WindowContextBase(),
+            screen(_screen),
+            frame_type(_frame_type),
+            owner(_owner),
+            geometry(),
+            stale_config_notifications(),
+            resizable(),
+            xshape(),
+            frame_extents_initialized(),
+            map_received(false)
 {
     jwindow = mainEnv->NewGlobalRef(_jwindow);
 
@@ -753,8 +811,46 @@ static void geometry_set_window_y(WindowGeometry *windowGeometry, int value) {
     windowGeometry->refy = newValue;
 }
 
+void WindowContextTop::process_net_wm_property() {
+    // Workaround for https://bugs.launchpad.net/unity/+bug/998073
+
+    static GdkAtom atom_atom = gdk_atom_intern_static_string("ATOM");
+    static GdkAtom atom_net_wm_state_hidden = gdk_atom_intern_static_string("_NET_WM_STATE_HIDDEN");
+    
+    gint length;
+
+    GdkAtom* atoms = NULL;
+
+    if (gdk_property_get(gdk_window, atom_net_wm_state, atom_atom,
+            0, G_MAXLONG, FALSE, NULL, NULL, &length, (guchar**) &atoms)) {
+
+        gint i = 0;
+        bool is_hidden = false;
+        while (i < length) {
+            if (atom_net_wm_state_hidden == atoms[i]) {
+                is_hidden = true;
+                break;
+            }
+
+            i++;
+        }
+
+        g_free(atoms);
+
+        if (is_iconified != is_hidden) {
+            is_iconified = is_hidden;
+
+            notify_state((is_hidden) 
+                            ? com_sun_glass_events_WindowEvent_MINIMIZE 
+                            : com_sun_glass_events_WindowEvent_RESTORE);
+        }
+    }
+}
+
 void WindowContextTop::process_property_notify(GdkEventProperty* event) {
-    if (event->atom == get_net_frame_extents_atom() &&
+    if (event->atom == atom_net_wm_state && event->window == gdk_window) {
+        process_net_wm_property();
+    } else if (event->atom == get_net_frame_extents_atom() &&
             event->window == gdk_window) {
         int top, left, bottom, right;
         if (get_frame_extents_property(&top, &left, &bottom, &right)) {
@@ -855,12 +951,14 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
     }
     if (jwindow) {
         mainEnv->CallVoidMethod(jwindow, jWindowNotifyResize,
-                com_sun_glass_events_WindowEvent_RESIZE,
+                (is_maximized)
+                    ? com_sun_glass_events_WindowEvent_MAXIMIZE
+                    : com_sun_glass_events_WindowEvent_RESIZE,
                 geometry.current_width,
                 geometry.current_height);
         CHECK_JNI_EXCEPTION(mainEnv)
 
-            mainEnv->CallVoidMethod(jwindow, jWindowNotifyMove, x, y);
+        mainEnv->CallVoidMethod(jwindow, jWindowNotifyMove, x, y);
         CHECK_JNI_EXCEPTION(mainEnv)
     }
 
@@ -874,6 +972,11 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
             }
             screen = to_screen;
         }
+    }
+
+    if (resizable.request != REQUEST_NONE) {
+        set_window_resizable(resizable.request == REQUEST_RESIZABLE, true);
+        resizable.request = REQUEST_NONE;
     }
 }
 
@@ -919,7 +1022,9 @@ void WindowContextTop::set_window_resizable(bool res, bool grip) {
 }
 
 void WindowContextTop::set_resizable(bool res) {
-    if (map_received) {
+    gint w, h;
+    gtk_window_get_size(GTK_WINDOW(gtk_widget), &w, &h);
+    if (map_received || w > 1 || h > 1) {
         set_window_resizable(res, true);
     } else {
         //Since window is not ready yet set only request for change of resizable.
@@ -990,10 +1095,6 @@ void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int
 
 void WindowContextTop::process_map() {
     map_received = true;
-    if (resizable.request != REQUEST_NONE) {
-        set_window_resizable(resizable.request == REQUEST_RESIZABLE, true);
-        resizable.request = REQUEST_NONE;
-    }
 }
 
 void WindowContextTop::window_configure(XWindowChanges *windowChanges,
@@ -1082,38 +1183,6 @@ void WindowContextTop::window_configure(XWindowChanges *windowChanges,
             windowChanges);
 }
 
-void WindowContextTop::process_state(GdkEventWindowState *event) {
-    if (event->changed_mask & (GDK_WINDOW_STATE_ICONIFIED
-            | GDK_WINDOW_STATE_MAXIMIZED)) {
-        jint stateChangeEvent;
-
-        if (event->new_window_state & GDK_WINDOW_STATE_ICONIFIED) {
-            stateChangeEvent = com_sun_glass_events_WindowEvent_MINIMIZE;
-        } else if (event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED) {
-            stateChangeEvent = com_sun_glass_events_WindowEvent_MAXIMIZE;
-        } else {
-            stateChangeEvent = com_sun_glass_events_WindowEvent_RESTORE;
-
-            int w, h;
-            glass_gdk_window_get_size(gdk_window, &w, &h);
-            if (jview) {
-                mainEnv->CallVoidMethod(jview,
-                        jViewNotifyRepaint,
-                        0, 0, w, h);
-                CHECK_JNI_EXCEPTION(mainEnv);
-            }
-        }
-
-        if (jwindow) {
-            mainEnv->CallVoidMethod(jwindow,
-                    jGtkWindowNotifyStateChanged,
-                    stateChangeEvent);
-            CHECK_JNI_EXCEPTION(mainEnv);
-        }
-    }
-}
-
-
 void WindowContextTop::applyShapeMask(cairo_surface_t* cairo_surface, uint width, uint height)
 {
     if (frame_type != TRANSPARENT) {
@@ -1169,6 +1238,7 @@ void WindowContextTop::applyShapeMask(cairo_surface_t* cairo_surface, uint width
 }
 
 void WindowContextTop::set_minimized(bool minimize) {
+    is_iconified = minimize;
     if (minimize) {
         gtk_window_iconify(GTK_WINDOW(gtk_widget));
     } else {
@@ -1176,6 +1246,7 @@ void WindowContextTop::set_minimized(bool minimize) {
     }
 }
 void WindowContextTop::set_maximized(bool maximize) {
+    is_maximized = maximize;
     if (maximize) {
         gtk_window_maximize(GTK_WINDOW(gtk_widget));
     } else {
@@ -1301,7 +1372,10 @@ static gboolean plug_configure(GtkWidget *widget, GdkEvent *event, gpointer user
     return FALSE;
 }
 
-WindowContextPlug::WindowContextPlug(jobject _jwindow, void* _owner): WindowContextBase(), parent() {
+WindowContextPlug::WindowContextPlug(jobject _jwindow, void* _owner) :
+        WindowContextBase(),
+        parent() 
+{
     jwindow = mainEnv->NewGlobalRef(_jwindow);
 
     gtk_widget = gtk_plug_new((GdkNativeWindow)PTR_TO_JLONG(_owner));
@@ -1349,37 +1423,6 @@ void WindowContextPlug::process_gtk_configure(GdkEventConfigure* event) {
     if (!embedded_children.empty()) {
         WindowContextChild* child = embedded_children.back();
         child->process_configure(event);
-    }
-}
-
-void WindowContextPlug::process_state(GdkEventWindowState *event) {
-    if (event->changed_mask & (GDK_WINDOW_STATE_ICONIFIED
-            | GDK_WINDOW_STATE_MAXIMIZED)) {
-        jint stateChangeEvent;
-
-        if (event->new_window_state & GDK_WINDOW_STATE_ICONIFIED) {
-            stateChangeEvent = com_sun_glass_events_WindowEvent_MINIMIZE;
-        } else if (event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED) {
-            stateChangeEvent = com_sun_glass_events_WindowEvent_MAXIMIZE;
-        } else {
-            stateChangeEvent = com_sun_glass_events_WindowEvent_RESTORE;
-
-            int w, h;
-            glass_gdk_window_get_size(gdk_window, &w, &h);
-            if (jview) {
-                mainEnv->CallVoidMethod(jview,
-                        jViewNotifyRepaint,
-                        0, 0, w, h);
-                CHECK_JNI_EXCEPTION(mainEnv)
-            }
-        }
-
-        if (jwindow) {
-            mainEnv->CallVoidMethod(jwindow,
-                    jGtkWindowNotifyStateChanged,
-                    stateChangeEvent);
-            CHECK_JNI_EXCEPTION(mainEnv);
-        }
     }
 }
 
@@ -1485,8 +1528,12 @@ static gboolean child_focus_callback(GtkWidget *widget, GdkEvent *event, gpointe
 WindowContextChild::WindowContextChild(jobject _jwindow,
                                        void* _owner,
                                        GtkWidget *parent_widget,
-                                       WindowContextPlug *parent_ctx)
-        : WindowContextBase(), parent(), full_screen_window(), view() {
+                                       WindowContextPlug *parent_ctx) :
+        WindowContextBase(),
+        parent(),
+        full_screen_window(),
+        view()
+{
     jwindow = mainEnv->NewGlobalRef(_jwindow);
     gtk_widget = gtk_drawing_area_new();
     parent = parent_ctx;
@@ -1547,37 +1594,6 @@ void WindowContextChild::process_configure(GdkEventConfigure* event) {
                 event->width,
                 event->height);
         CHECK_JNI_EXCEPTION(mainEnv)
-    }
-}
-
-void WindowContextChild::process_state(GdkEventWindowState *event) {
-    if (event->changed_mask & (GDK_WINDOW_STATE_ICONIFIED
-            | GDK_WINDOW_STATE_MAXIMIZED)) {
-        jint stateChangeEvent;
-
-        if (event->new_window_state & GDK_WINDOW_STATE_ICONIFIED) {
-            stateChangeEvent = com_sun_glass_events_WindowEvent_MINIMIZE;
-        } else if (event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED) {
-            stateChangeEvent = com_sun_glass_events_WindowEvent_MAXIMIZE;
-        } else {
-            stateChangeEvent = com_sun_glass_events_WindowEvent_RESTORE;
-
-            int w, h;
-            glass_gdk_window_get_size(gdk_window, &w, &h);
-            if (jview) {
-                mainEnv->CallVoidMethod(jview,
-                        jViewNotifyRepaint,
-                        0, 0, w, h);
-            }
-            CHECK_JNI_EXCEPTION(mainEnv);
-        }
-
-        if (jwindow) {
-            mainEnv->CallVoidMethod(jwindow,
-                    jGtkWindowNotifyStateChanged,
-                    stateChangeEvent);
-            CHECK_JNI_EXCEPTION(mainEnv);
-        }
     }
 }
 

@@ -606,8 +606,8 @@ public class BorderPane extends Pane {
     private double getAreaWidth(Node child, double height, boolean minimum) {
         if (child != null && child.isManaged()) {
             Insets margin = getNodeMargin(child);
-            return minimum ? computeChildMinAreaWidth(child, -1, margin, height):
-                                   computeChildPrefAreaWidth(child, -1, margin, height);
+            return minimum ? computeChildMinAreaWidth(child, -1, margin, height, false):
+                                   computeChildPrefAreaWidth(child, -1, margin, height, false);
         }
         return 0;
     }

@@ -82,6 +82,8 @@ public final class GestureSupport {
     private double totalScale = 1.0;
     private double totalExpansion = Double.NaN;
     private double totalRotation = 0.0;
+    private double multiplierX = 1.0;
+    private double multiplierY = 1.0;
 
     private boolean zoomWithExpansion;
 
@@ -138,7 +140,8 @@ public final class GestureSupport {
         view.notifyScrollGestureEvent(GestureEvent.GESTURE_FINISHED, modifiers,
                                       isDirect, isInertia, touchCount, x, y,
                                       xAbs, yAbs, 0, 0,
-                                      totalScrollX, totalScrollY);
+                                      totalScrollX, totalScrollY,
+                                      multiplierX, multiplierY);
     }
 
     public void handleRotationEnd(View view, int modifiers, boolean isDirect,
@@ -236,7 +239,11 @@ public final class GestureSupport {
     public void handleTotalScrolling(View view, int modifiers, boolean isDirect,
                                      boolean isInertia, int touchCount, int x,
                                      int y, int xAbs, int yAbs,
-                                     double dx, double dy) {
+                                     double dx, double dy,
+                                     double multiplierX, double multiplierY) {
+        this.multiplierX = multiplierX;
+        this.multiplierY = multiplierY;
+
         double baseScrollX = totalScrollX;
         double baseScrollY = totalScrollY;
         if (scrolling.doesGestureStart(isInertia)) {
@@ -256,7 +263,8 @@ public final class GestureSupport {
         view.notifyScrollGestureEvent(eventID, modifiers, isDirect, isInertia,
                                       touchCount, x, y, xAbs, yAbs,
                                       dx - baseScrollX,
-                                      dy - baseScrollY, dx, dy);
+                                      dy - baseScrollY, dx, dy,
+                                      multiplierX, multiplierY);
     }
 
     public void handleDeltaZooming(View view, int modifiers, boolean isDirect,
@@ -310,7 +318,11 @@ public final class GestureSupport {
     public void handleDeltaScrolling(View view, int modifiers, boolean isDirect,
                                      boolean isInertia, int touchCount, int x,
                                      int y, int xAbs, int yAbs,
-                                     double dx, double dy) {
+                                     double dx, double dy,
+                                     double multiplierX, double multiplierY) {
+        this.multiplierX = multiplierX;
+        this.multiplierY = multiplierY;
+
         double baseScrollX = totalScrollX;
         double baseScrollY = totalScrollY;
         if (scrolling.doesGestureStart(isInertia)) {
@@ -320,11 +332,13 @@ public final class GestureSupport {
 
         totalScrollX = baseScrollX + dx;
         totalScrollY = baseScrollY + dy;
+
         final int eventID = setScrolling(isInertia);
 
         view.notifyScrollGestureEvent(eventID, modifiers, isDirect, isInertia,
                                       touchCount, x, y, xAbs, yAbs, dx, dy,
-                                      totalScrollX, totalScrollY);
+                                      totalScrollX, totalScrollY,
+                                      multiplierX, multiplierY);
     }
 
     public void handleSwipe(View view, int modifiers, boolean isDirect,
@@ -349,10 +363,11 @@ public final class GestureSupport {
                                                 boolean isInertia,
                                                 int touchCount, int x, int y,
                                                 int xAbs, int yAbs, double dx,
-                                                double dy) {
+                                                double dy, double multiplierX,
+                                                double multiplierY) {
         view.notifyScrollGestureEvent(GestureEvent.GESTURE_PERFORMED, modifiers,
                                       isDirect, isInertia, touchCount, x, y,
-                                      xAbs, yAbs, dx, dy, dx, dy);
+                                      xAbs, yAbs, dx, dy, dx, dy, multiplierX, multiplierY);
     }
 
     public TouchInputSupport.TouchCountListener createTouchCountListener() {

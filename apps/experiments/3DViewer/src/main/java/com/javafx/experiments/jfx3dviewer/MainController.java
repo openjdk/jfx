@@ -180,7 +180,7 @@ public class MainController implements Initializable {
         sessionManager.bind(loopBtn.selectedProperty(), "loop");
 
         String url = sessionManager.getProperties().getProperty(Jfx3dViewerApp.FILE_URL_PROPERTY);
-        if (url == null) url = ContentModel.class.getResource("drop-here.obj").toExternalForm();
+        if (url == null) url = ContentModel.class.getResource("drop-here-large-yUp.obj").toExternalForm();
         load(url);
 
         // do initial status update

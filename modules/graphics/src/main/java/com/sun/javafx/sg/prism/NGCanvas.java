@@ -674,6 +674,7 @@ public class NGCanvas extends NGNode {
                     }
                     initClip();
                     renderClip(clippath);
+                    clip.tex.unlock();
                     clipStack.addLast(clippath);
                     break;
                 }

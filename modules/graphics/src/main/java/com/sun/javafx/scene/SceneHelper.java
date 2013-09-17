@@ -26,6 +26,7 @@
 package com.sun.javafx.scene;
 
 import javafx.scene.Camera;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 
 /**
@@ -54,10 +55,8 @@ public final class SceneHelper {
         return sceneAccessor.getEffectiveCamera(scene);
     }
 
-    public static void setSceneDelta(final Scene scene,
-                                     final double deltaX,
-                                     final double deltaY) {
-        sceneAccessor.setSceneDelta(scene, deltaX, deltaY);
+    public static Scene createPopupScene(final Parent root) {
+        return sceneAccessor.createPopupScene(root);
     }
 
     public static void setSceneAccessor(final SceneAccessor newAccessor) {
@@ -75,7 +74,7 @@ public final class SceneHelper {
 
         Camera getEffectiveCamera(Scene scene);
 
-        void setSceneDelta(Scene scene, double deltaX, double deltaY);
+        Scene createPopupScene(Parent root);
     }
 
     private static void forceInit(final Class<?> classToInit) {

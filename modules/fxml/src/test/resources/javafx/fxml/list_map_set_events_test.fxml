@@ -26,7 +26,7 @@ questions.
 
 <?import javafx.fxml.*?>
 
-<Widget fx:id="root" fx:controller="javafx.fxml.RT_17714Controller"
+<Widget fx:id="root" fx:controller="javafx.fxml.ListMapSetEventsTestController"
     xmlns:fx="http://javafx.com/fxml">
     <children onChange="#handleChildListChange">
         <Widget name="Widget 1"/>

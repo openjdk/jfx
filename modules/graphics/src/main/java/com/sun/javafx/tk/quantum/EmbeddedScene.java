@@ -54,6 +54,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     private PaintRenderJob          paintRenderJob;
 
     volatile IntBuffer textureBits;
+    volatile int bitsLineStride;
 
     int width;
     int height;
@@ -116,8 +117,9 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     }
 
     // Called by EmbeddedPainter on the render thread under renderLock
-    void uploadPixels(IntBuffer pixels) {
+    void uploadPixels(IntBuffer pixels, int stride) {
         textureBits = pixels;
+        bitsLineStride = stride;
         if (host != null) {
             host.repaint();
         }
@@ -176,9 +178,23 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
         try {
             if (textureBits == null) return false;
             dest.rewind();
-            textureBits.rewind();
+            textureBits.rewind();            
             if (dest.capacity() != textureBits.capacity()) {
-                return false;
+                // Calculate the intersection of the dest & src images.
+                int w = Math.min(width, bitsLineStride);
+                int h = Math.min(height, textureBits.capacity() / bitsLineStride);
+
+                // Copy the intersection to the dest.
+                // The backed array of the textureBits may not be available,
+                // so not relying on it.
+                int[] linebuf = new int[w];
+                for (int i = 0; i < h; i++) {
+                    textureBits.position(i * bitsLineStride);
+                    textureBits.get(linebuf, 0, w);
+                    dest.position(i * width);
+                    dest.put(linebuf);
+                }
+                return true;
             }
             dest.put(textureBits);
             return true;

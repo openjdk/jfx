@@ -58,6 +58,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.Function;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.css.Styleable;
@@ -66,7 +67,6 @@ import static javafx.scene.layout.Priority.ALWAYS;
 import static javafx.scene.layout.Priority.SOMETIMES;
 import static javafx.scene.layout.Region.USE_COMPUTED_SIZE;
 import static javafx.scene.layout.Region.boundedSize;
-import static javafx.scene.layout.Region.getMaxAreaBaselineOffset;
 import javafx.util.Callback;
 
 
@@ -402,9 +402,9 @@ public class GridPane extends Pane {
         return (Insets)getConstraint(child, MARGIN_CONSTRAINT);
     }
 
-    private double getBaselineForChild(Node child) {
+    private double getBaselineComplementForChild(Node child) {
         if (isNodePositionedByBaseline(child)) {
-            return rowBaseline[getNodeRowIndex(child)];
+            return rowMinBaselineComplement[getNodeRowIndex(child)];
         }
         return -1;
     }
@@ -1048,7 +1048,10 @@ public class GridPane extends Pane {
     private CompositeSize rowMinHeight;
     private CompositeSize rowPrefHeight;
     private CompositeSize  rowMaxHeight;
-    private double[] rowBaseline;
+    private List<Node>[] rowBaseline;
+    private double[] rowMinBaselineComplement;
+    private double[] rowPrefBaselineComplement;
+    private double[] rowMaxBaselineComplement;
     private Priority[] rowGrow;
 
     private double[] columnPercentWidth;
@@ -1103,25 +1106,34 @@ public class GridPane extends Pane {
             columnPercentTotal = 0;
             columnGrow = createPriorityArray(numColumns, Priority.NEVER);
             rowGrow = createPriorityArray(numRows, Priority.NEVER);
-            rowBaseline = createDoubleArray(numRows, -1);
-            List<Node> baselineNodes = new ArrayList<>(numColumns);
-            for (int i = 0, sz = Math.min(numRows, rowConstraints.size()); i < sz; ++i) {
-                final RowConstraints rc = rowConstraints.get(i);
-                double percentHeight = rc.getPercentHeight();
-                Priority vGrow = rc.getVgrow();
-                if (percentHeight >= 0)
-                    rowPercentHeight[i] = percentHeight;
-                if (vGrow != null)
-                    rowGrow[i] = vGrow;
+            rowMinBaselineComplement = createDoubleArray(numRows, -1);
+            rowPrefBaselineComplement = createDoubleArray(numRows, -1);
+            rowMaxBaselineComplement = createDoubleArray(numRows, -1);
+            rowBaseline = new List[numRows];
+            for (int i = 0, sz = numRows; i < sz; ++i) {
+                if (i < rowConstraints.size()) {
+                    final RowConstraints rc = rowConstraints.get(i);
+                    double percentHeight = rc.getPercentHeight();
+                    Priority vGrow = rc.getVgrow();
+                    if (percentHeight >= 0) {
+                        rowPercentHeight[i] = percentHeight;
+                    }
+                    if (vGrow != null) {
+                        rowGrow[i] = vGrow;
+                    }
+                }
 
+                List<Node> baselineNodes = new ArrayList<>(numColumns);
                 for (int j = 0, size = managed.size(); j < size; j++) {
                     Node n = managed.get(j);
                     if (getNodeRowIndex(n) == i && isNodePositionedByBaseline(n)) {
                         baselineNodes.add(n);
                     }
                 }
-                rowBaseline[i] = getMaxAreaBaselineOffset(baselineNodes, marginAccessor);
-                baselineNodes.clear();
+                rowMinBaselineComplement[i] = getMinBaselineComplement(baselineNodes);
+                rowPrefBaselineComplement[i] = getPrefBaselineComplement(baselineNodes);
+                rowMaxBaselineComplement[i] = getMaxBaselineComplement(baselineNodes);
+                rowBaseline[i] = baselineNodes;
 
             }
             for (int i = 0, sz = Math.min(numColumns, columnConstraints.size()); i < sz; ++i) {
@@ -1351,7 +1363,9 @@ public class GridPane extends Pane {
                 Node child = managed.get(i);
                 int start = getNodeRowIndex(child);
                 int end = getNodeRowEndConvertRemaining(child);
-                double childMaxAreaHeight = computeChildMaxAreaHeight(child, -1, getMargin(child), -1);
+                double childMaxAreaHeight = computeChildMaxAreaHeight(child,
+                        isNodePositionedByBaseline(child) ? rowMaxBaselineComplement[start] : -1,
+                        getMargin(child), -1);
                 if (start == end && !rowMaxHeight.isPreset(start)) {
                     rowMaxHeight.setMaxSize(start, childMaxAreaHeight);
                 } else if (start != end){
@@ -1397,7 +1411,7 @@ public class GridPane extends Pane {
             Node child = managed.get(i);
             int start = getNodeRowIndex(child);
             int end = getNodeRowEndConvertRemaining(child);
-            double childPrefAreaHeight = computeChildPrefAreaHeight(child, getBaselineForChild(child), getMargin(child),
+            double childPrefAreaHeight = computeChildPrefAreaHeight(child, isNodePositionedByBaseline(child) ? rowPrefBaselineComplement[start] : -1, getMargin(child),
                     widths == null ? -1 : getTotalWidthOfNodeColumns(child, widths));
             if (start == end && !result.isPreset(start)) {
                 double min = getRowMinHeight(start);
@@ -1440,7 +1454,7 @@ public class GridPane extends Pane {
             Node child = managed.get(i);
             int start = getNodeRowIndex(child);
             int end = getNodeRowEndConvertRemaining(child);
-            double childMinAreaHeight = computeChildMinAreaHeight(child, getBaselineForChild(child), getMargin(child),
+            double childMinAreaHeight = computeChildMinAreaHeight(child, isNodePositionedByBaseline(child) ? rowMinBaselineComplement[start] : -1, getMargin(child),
                              widths == null ? -1 : getTotalWidthOfNodeColumns(child, widths));
             if (start == end && !result.isPreset(start)) {
                 result.setMaxSize(start, childMinAreaHeight);
@@ -1492,10 +1506,10 @@ public class GridPane extends Pane {
                 int end = getNodeColumnEndConvertRemaining(child);
                 if (start == end && !columnMaxWidth.isPreset(start)) {
                     columnMaxWidth.setMaxSize(start, computeChildMaxAreaWidth(child,
-                            -1, getMargin(child), -1));
+                            -1, getMargin(child), -1, false));
                 } else if (start != end){
                     columnMaxWidth.setMaxMultiSize(start, end + 1, computeChildMaxAreaWidth(child,
-                            -1, getMargin(child), -1));
+                            -1, getMargin(child), -1, false));
                 }
             }
         }
@@ -1541,12 +1555,13 @@ public class GridPane extends Pane {
                 double min = getColumnMinWidth(start);
                 double max = getColumnMaxWidth(start);
                 result.setMaxSize(start, boundedSize(min < 0 ? 0 : min, computeChildPrefAreaWidth(child,
-                        getBaselineForChild(child), getMargin(child),
-                        heights == null ? -1 : getTotalHeightOfNodeRows(child, heights)), max < 0 ? Double.MAX_VALUE : max));
+                        getBaselineComplementForChild(child), getMargin(child),
+                        heights == null ? -1 : getTotalHeightOfNodeRows(child, heights), false),
+                        max < 0 ? Double.MAX_VALUE : max));
             } else if (start != end) {
-                result.setMaxMultiSize(start, end + 1, computeChildPrefAreaWidth(child, getBaselineForChild(child),
+                result.setMaxMultiSize(start, end + 1, computeChildPrefAreaWidth(child, getBaselineComplementForChild(child),
                         getMargin(child),
-                        heights == null ? -1 : getTotalHeightOfNodeRows(child, heights)));
+                        heights == null ? -1 : getTotalHeightOfNodeRows(child, heights), false));
             }
         }
         return result;
@@ -1583,13 +1598,13 @@ public class GridPane extends Pane {
             int start = getNodeColumnIndex(child);
             int end = getNodeColumnEndConvertRemaining(child);
             if (start == end && !result.isPreset(start)) {
-                result.setMaxSize(start, computeChildMinAreaWidth(child, getBaselineForChild(child),
+                result.setMaxSize(start, computeChildMinAreaWidth(child, getBaselineComplementForChild(child),
                         getMargin(child),
-                        heights == null ? -1 : getTotalHeightOfNodeRows(child, heights)));
+                        heights == null ? -1 : getTotalHeightOfNodeRows(child, heights),false));
             } else if (start != end){
-                result.setMaxMultiSize(start, end + 1, computeChildMinAreaWidth(child, getBaselineForChild(child),
+                result.setMaxMultiSize(start, end + 1, computeChildMinAreaWidth(child, getBaselineComplementForChild(child),
                         getMargin(child),
-                        heights == null ? -1 : getTotalHeightOfNodeRows(child, heights)));
+                        heights == null ? -1 : getTotalHeightOfNodeRows(child, heights), false));
             }
         }
         return result;
@@ -1635,7 +1650,7 @@ public class GridPane extends Pane {
         // If metricsDirty is set true during a layout pass the next call to computeGridMetrics()
         // will clear all the cell bounds resulting in out of date info until the
         // next layout pass.
-        if (performingLayout) {
+        if (performingLayout || metricsDirty) {
             return;
         }
         metricsDirty = true;
@@ -1644,6 +1659,7 @@ public class GridPane extends Pane {
         rowMinHeight = rowPrefHeight = rowMaxHeight = null;
         columnGrow = null;
         columnMinWidth = columnPrefWidth = columnMaxWidth = null;
+        rowMinBaselineComplement = rowPrefBaselineComplement = rowMaxBaselineComplement = null;
         super.requestLayout();
     }
 
@@ -1687,6 +1703,9 @@ public class GridPane extends Pane {
         final double x = left + computeXOffset(contentWidth, columnTotal, getAlignmentInternal().getHpos());
         final double y = top + computeYOffset(contentHeight, rowTotal, getAlignmentInternal().getVpos());
         final List<Node> managed = getManagedChildren();
+
+        double[] baselineOffsets = createDoubleArray(numRows, -1);
+
         for (int i = 0, size = managed.size(); i < size; i++) {
             Node child = managed.get(i);
             int rowIndex = getNodeRowIndex(child);
@@ -1734,10 +1753,49 @@ public class GridPane extends Pane {
                 fillHeight = shouldRowFillHeight(rowIndex);
             }
 
+            double baselineOffset = 0;
+            if (valign == VPos.BASELINE) {
+                if (baselineOffsets[rowIndex] == -1) {
+                    baselineOffsets[rowIndex] = getAreaBaselineOffset(rowBaseline[rowIndex],
+                            marginAccessor,
+                            new Function<Integer, Double>() {
+
+                                @Override
+                                public Double apply(Integer t) {
+                                    Node n = rowBaseline[rowIndex].get(t);
+                                    int c = getNodeColumnIndex(n);
+                                    int cs = getNodeColumnSpan(n);
+                                    if (cs == REMAINING) {
+                                        cs = widths.getLength() - c;
+                                    }
+                                    double w = widths.getSize(c);
+                                    for (int j = 2; j <= cs; j++) {
+                                        w += widths.getSize(c + j - 1) + snaphgap;
+                                    }
+                                    return w;
+                                }
+                            },
+                            areaH,
+                            new Function<Integer, Boolean>() {
+
+                                @Override
+                                public Boolean apply(Integer t) {
+                                    Boolean b = isFillHeight(child);
+                                    if (b != null) {
+                                        return b;
+                                    }
+                                    return shouldRowFillHeight(getNodeRowIndex(child));
+                                }
+                            }, rowMinBaselineComplement[rowIndex]);
+                }
+                baselineOffset = baselineOffsets[rowIndex];
+            }
+
             Insets margin = getMargin(child);
-            layoutInArea(child, areaX, areaY, areaW, areaH, rowBaseline[rowIndex],
+            layoutInArea(child, areaX, areaY, areaW, areaH,
+                    baselineOffset,
                     margin,
-                    fillWidth, fillHeight && valign != VPos.BASELINE,
+                    fillWidth, fillHeight,
                     halign, valign);
         }
         layoutGridLines(widths, heights, x, y, rowTotal, columnTotal);

@@ -65,7 +65,6 @@ jmethodID jViewNotifyResize = NULL;
 jmethodID jViewNotifyKey = NULL;
 jmethodID jViewNotifyMouse = NULL;
 jmethodID jViewNotifyMenu = NULL;
-jmethodID jViewNotifyScroll = NULL;
 jmethodID jViewNotifyInputMethod = NULL;
 jmethodID jViewNotifyInputMethodMac = NULL;
 jmethodID jViewNotifyInputMethodCandidatePosRequest = NULL;

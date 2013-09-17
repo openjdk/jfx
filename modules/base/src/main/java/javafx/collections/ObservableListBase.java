@@ -124,7 +124,7 @@ public abstract class ObservableListBase<E> extends AbstractList<E>  implements 
      * @param to the end index (exclusive) of the range where the new items reside
      * @param removed the list of items that were removed
      */
-    protected final void nextReplace(int from, int to, ArrayList<? extends E> removed) {
+    protected final void nextReplace(int from, int to, List<? extends E> removed) {
         changeBuilder.nextReplace(from, to, removed);
     }
 

@@ -33,7 +33,7 @@ package javafx.scene;
  */
 public enum CacheHint {
    /**
-    * No additional hint.  The system will determine the best use of the bitmap
+    * No additional hint. The system will determine the best use of the bitmap
     * cache.
     */
     DEFAULT,
@@ -41,14 +41,14 @@ public enum CacheHint {
    /**
     * A hint to tell the bitmap caching mechanism that this node is animating,
     * and should be painted from the bitmap cache whenever possible in order to
-    * maintain smooth animation.  The trade-off is that this may result in
+    * maintain smooth animation. The trade-off is that this may result in
     * decreased visual quality.
     */
     SPEED,
 
    /**
     * A hint to tell the bitmap caching mechanism that this node should appear
-    * on screen at the highest visual quality.  The cached bitmap will only be
+    * on screen at the highest visual quality. The cached bitmap will only be
     * used when it will not degrade the node's appearance on screen.
     * <p>
     * The trade-off is that animations may cause subtle variations in the way
@@ -70,7 +70,7 @@ public enum CacheHint {
 
    /**
     * A hint to tell the bitmap caching mechanism that if the node is rotated,
-    * it is acceptable to paint it by rotating the the cached bitmap (rather
+    * it is acceptable to paint it by rotating the cached bitmap (rather
     * than re-rendering the node).
     */
     ROTATE,

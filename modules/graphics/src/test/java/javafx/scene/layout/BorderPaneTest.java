@@ -333,7 +333,7 @@ public class BorderPaneTest {
         assertEquals(240 /* l + r + c*/, borderpane.prefHeight(-1), 1e-10);
         assertEquals(110, borderpane.minWidth(-1), 1e-100); /* min center + 2x pref width (l, r) */
         assertEquals(50, borderpane.minHeight(-1), 1e-10);
-        assertEquals(90, borderpane.minWidth(240), 1e-100);
+        assertEquals(110, borderpane.minWidth(240), 1e-100);
         assertEquals(221, borderpane.minHeight(300), 1e-10);
 
         borderpane.resize(300, 240);

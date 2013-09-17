@@ -152,6 +152,9 @@ final class UploadingPainter extends ViewPainter implements Runnable {
         } catch (Throwable th) {
             th.printStackTrace(System.err);
         } finally {
+            if (rttexture != null && rttexture.isLocked()) {
+                rttexture.unlock();
+            }            
             if (valid) {
                 Disposer.cleanUp();
             }

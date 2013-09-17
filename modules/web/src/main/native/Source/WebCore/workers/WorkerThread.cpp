@@ -149,6 +149,13 @@ void WorkerThread::workerThreadStart(void* thread)
 
 void WorkerThread::workerThread()
 {
+#if PLATFORM(JAVA)
+    {
+        void* env;
+        jvm->AttachCurrentThreadAsDaemon(&env, 0);
+    }
+#endif
+
     {
         MutexLocker lock(m_threadCreationMutex);
         m_workerContext = createWorkerContext(m_startupData->m_scriptURL, m_startupData->m_userAgent, m_startupData->m_groupSettings.release(), m_startupData->m_contentSecurityPolicy, m_startupData->m_contentSecurityPolicyType, m_startupData->m_topOrigin.release());
@@ -159,13 +166,6 @@ void WorkerThread::workerThread()
            m_workerContext->script()->forbidExecution();
         }
     }
-
-#if PLATFORM(JAVA)
-    {
-        void* env;
-        jvm->AttachCurrentThreadAsDaemon(&env, 0);
-    }
-#endif
 
     WorkerScriptController* script = m_workerContext->script();
 #if ENABLE(INSPECTOR)

@@ -283,6 +283,8 @@ public class PresentableState {
                 // when null, most likely because of "In Browswer"
                 screenHeight = screen.getHeight();
                 screenScale = screen.getScale();
+            } else {
+                screenScale = 1.f;
             }
         } else {
             //TODO - should other variables be cleared?

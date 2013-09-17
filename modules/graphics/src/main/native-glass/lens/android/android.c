@@ -68,11 +68,11 @@ static void (*_notifyWindowEvent_resize)(
         int height);
 
 static void (*_notifyTouchEvent)(
-        int state,
-        int id,
-        int sendAlsoButtonEvent,
-        int xabs,
-        int yabs);
+        int  state,
+        long id,
+        int  sendAlsoButtonEvent,
+        int  xabs,
+        int  yabs);
 
 static void (*_notifyMotionEvent)(
         int mousePosX,
@@ -226,9 +226,9 @@ JNIEXPORT void JNICALL Java_com_oracle_dalvik_FXActivity_00024InternalSurfaceVie
         return;
     }
     if (fxstate == com_sun_glass_events_TouchEvent_TOUCH_MOVED) {
-        (*_notifyMotionEvent)(absx, absy, 1, 0);
+        (*_notifyMotionEvent)(absx, absy, 1, 1);
     } else {
-        (*_notifyTouchEvent)(fxstate, 0, 1, absx, absy);
+        (*_notifyTouchEvent)(fxstate, 1, 1, absx, absy);
     }
 }
 

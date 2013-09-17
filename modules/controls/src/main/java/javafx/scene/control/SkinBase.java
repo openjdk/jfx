@@ -347,10 +347,14 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
         for (int i = 0; i < size; ++i) {
             Node child = children.get(i);
             if (child.isManaged()) {
-                return child.getLayoutBounds().getMinY() + child.getLayoutY() + child.getBaselineOffset();
+                double offset = child.getBaselineOffset();
+                if (offset == Node.BASELINE_OFFSET_SAME_AS_HEIGHT) {
+                    continue;
+                }
+                return child.getLayoutBounds().getMinY() + child.getLayoutY() + offset;
             }
         }
-        return control.getLayoutBounds().getHeight();
+        return Node.BASELINE_OFFSET_SAME_AS_HEIGHT;
     }
 
     

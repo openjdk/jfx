@@ -384,9 +384,9 @@ public class VBox extends Pane {
         if (height != -1 && getContentBias() != null) {
             double prefHeights[][] = getAreaHeights(managed, -1, false);
             adjustAreaHeights(managed, prefHeights, height, -1);
-            contentWidth = computeMaxMinAreaWidth(managed, marginAccessor, prefHeights[0], getAlignmentInternal().getHpos());
+            contentWidth = computeMaxMinAreaWidth(managed, marginAccessor, prefHeights[0], false);
         } else {
-            contentWidth = computeMaxMinAreaWidth(managed, marginAccessor, getAlignmentInternal().getHpos());
+            contentWidth = computeMaxMinAreaWidth(managed, marginAccessor);
         }
         return snapSpace(insets.getLeft()) + contentWidth + snapSpace(insets.getRight());
     }
@@ -405,9 +405,9 @@ public class VBox extends Pane {
         if (height != -1 && getContentBias() != null) {
             double prefHeights[][] = getAreaHeights(managed, -1, false);
             adjustAreaHeights(managed, prefHeights, height, -1);
-            contentWidth = computeMaxPrefAreaWidth(managed, marginAccessor, prefHeights[0], getAlignmentInternal().getHpos());
+            contentWidth = computeMaxPrefAreaWidth(managed, marginAccessor, prefHeights[0], false);
         } else {
-            contentWidth = computeMaxPrefAreaWidth(managed, marginAccessor, getAlignmentInternal().getHpos());
+            contentWidth = computeMaxPrefAreaWidth(managed, marginAccessor);
         }
         return snapSpace(insets.getLeft()) + contentWidth + snapSpace(insets.getRight());
     }

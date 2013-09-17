@@ -33,19 +33,30 @@
 #include "androidLens.h"
 #include "androidInput.h"
 
-#define ATTACH_JNI_THREAD()  \
-    JNIEnv *env;                                                        \
-    JavaVM *vm = glass_application_GetVM();                             \
-    if (!vm) return;                                                    \
-    (*vm)->AttachCurrentThreadAsDaemon(vm, (JNIEnv **) &env, NULL);     
+#ifdef DALVIK_VM
+    #define ATTACH_JNI_THREAD()
+    #define DETACH_JNI_THREAD()
+    JNIEnv *env;
+#else
+    #define ATTACH_JNI_THREAD()  \
+        JNIEnv *env;                                                        \
+        JavaVM *vm = glass_application_GetVM();                             \
+        if (!vm) return;                                                    \
+        (*vm)->AttachCurrentThreadAsDaemon(vm, (JNIEnv **) &env, NULL);     
 
-#define DETACH_JNI_THREAD()  \
-    (*vm)->DetachCurrentThread(vm);
+    #define DETACH_JNI_THREAD()  \
+        (*vm)->DetachCurrentThread(vm);
+#endif
 
-jboolean lens_input_initialize(JNIEnv *env) {
+jboolean lens_input_initialize(JNIEnv *_env) {    
     uint32_t flags = 0;
+#ifdef DALVIK_VM
+    if (!env) {
+        env = _env;
+    } 
+#endif    
     flags |= 1 << com_sun_glass_ui_lens_LensApplication_DEVICE_MULTITOUCH;
-    glass_application_notifyDeviceEvent(env, flags, 1);
+    glass_application_notifyDeviceEvent(_env, flags, 1);
     return JNI_TRUE;
 }
 
@@ -69,17 +80,18 @@ void notifyWindowEvent_resize(
 }
 
 void notifyTouchEvent(
-        int state,
-        int id,
-        int sendAlsoButtonEvent,
-        int xabs,
-        int yabs) {
+        int  state,
+        int  id,
+        int  sendAlsoButtonEvent,
+        int  xabs,
+        int  yabs) {
     
    ATTACH_JNI_THREAD();
+   jlong jlid = id;
    lens_wm_notifyMultiTouchEvent(env,
            1,
            &state,
-           &id,
+           &jlid,
            &xabs,
            &yabs);
                    

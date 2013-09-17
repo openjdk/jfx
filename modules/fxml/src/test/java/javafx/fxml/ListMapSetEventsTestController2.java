@@ -22,33 +22,42 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package javafx.fxml;
 
-package com.sun.javafx.fxml;
+import javafx.collections.ListChangeListener;
+import javafx.collections.MapChangeListener;
+import javafx.collections.SetChangeListener;
 
-import javafx.event.Event;
-import javafx.event.EventType;
+import java.net.URL;
+import java.util.ResourceBundle;
 
-/**
- * Property change event.
- */
-public class PropertyChangeEvent<V> extends Event {
-    private static final long serialVersionUID = 0;
+public class ListMapSetEventsTestController2 implements Initializable {
+    @FXML private Widget root;
 
-    private V previousValue;
+    boolean listNoParamCalled = false;
+    boolean setNoParamCalled = false;
+    boolean mapNoParamCalled = false;
 
-    public static final EventType<PropertyChangeEvent<?>> PROPERTY_CHANGE =
-        new EventType<PropertyChangeEvent<?>>(EventType.ROOT, PropertyChangeEvent.class.getName() + "_PROPERTY_CHANGE");
 
-    public PropertyChangeEvent(Object source, V previousValue) {
-        super(source, null, PROPERTY_CHANGE);
-
-        this.previousValue = previousValue;
+    @Override
+    public void initialize(URL location, ResourceBundle resources) {
     }
 
-    /**
-     * Returns the previous value of the property.
-     */
-    public V getPreviousValue() {
-        return previousValue;
+    @FXML
+    @SuppressWarnings("unchecked")
+    protected void handleChildListChange() {
+        listNoParamCalled = true;
+    }
+
+    @FXML
+    @SuppressWarnings("unchecked")
+    protected void handlePropertiesChange() {
+        mapNoParamCalled = true;
+    }
+
+    @FXML
+    @SuppressWarnings("unchecked")
+    protected void handleSetChange() {
+        setNoParamCalled = true;
     }
 }
