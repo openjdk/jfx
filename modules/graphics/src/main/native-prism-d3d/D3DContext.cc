@@ -825,6 +825,7 @@ D3DContext::SetRenderTarget(IDirect3DSurface9 *pSurface,
     HRESULT res;
     D3DSURFACE_DESC descNew;
     IDirect3DSurface9 *pCurrentTarget;
+    bool renderTargetChanged = false;
 
     TraceLn1(NWT_TRACE_INFO,
                 "D3DContext::SetRenderTarget: pSurface=0x%x",
@@ -837,6 +838,7 @@ D3DContext::SetRenderTarget(IDirect3DSurface9 *pSurface,
 
     if (SUCCEEDED(res = pd3dDevice->GetRenderTarget(0, &pCurrentTarget))) {
         if (pCurrentTarget != pSurface) {
+            renderTargetChanged = true;
 #if defined PERF_COUNTERS
             getStats().numRenderTargetSwitch++;
 #endif
@@ -849,8 +851,8 @@ D3DContext::SetRenderTarget(IDirect3DSurface9 *pSurface,
             }
 
             currentSurface = pSurface;
-            SAFE_RELEASE(pCurrentTarget);
         }
+        SAFE_RELEASE(pCurrentTarget);
 
         IDirect3DSurface9 *pCurrentDepth;
         res = pd3dDevice->GetDepthStencilSurface(&pCurrentDepth);
@@ -886,7 +888,7 @@ D3DContext::SetRenderTarget(IDirect3DSurface9 *pSurface,
                             "D3DContext::SetRenderTarget: error clearing depth buffer");
                 }
             }
-        } else if (pCurrentTarget == pSurface) {
+        } else if (!renderTargetChanged) {
             return res; // Render target has not changed
         }
         pd3dDevice->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, msaa);
