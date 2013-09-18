@@ -407,10 +407,10 @@ public class JFXPanel extends JComponent {
         if (scenePeer == null || !isFxEnabled()) {
             return;
         }
-
+        
         char[] chars = (e.getKeyChar() == KeyEvent.CHAR_UNDEFINED)
                        ? new char[] {}
-                       : new char[] { e.getKeyChar() };
+                       : new char[] { SwingEvents.keyCharToEmbedKeyChar(e.getKeyChar()) };
 
         scenePeer.keyEvent(
                 SwingEvents.keyIDToEmbedKeyType(e.getID()),

@@ -35,7 +35,7 @@ import javafx.event.EventType;
 import javafx.scene.input.ScrollEvent;
 
 /**
- * An utility class to translate cursor types between embedded
+ * A utility class to translate event types and data between embedded
  * application and Swing.
  */
 class SwingEvents {
@@ -122,6 +122,11 @@ class SwingEvents {
             embedModifiers |= AbstractEvents.MODIFIER_META;
         }
         return embedModifiers;
+    }
+    
+    static char keyCharToEmbedKeyChar(char ch) {
+        // Convert Swing LF character to Fx CR character.
+        return ch == '\n' ? '\r' : ch;
     }
 
     // FX -> Swing conversion methods
