@@ -208,12 +208,4 @@ do {                                                                            
         if (jEnv == NULL) fprintf(stderr, "Java has been detached already, but someone is still trying to use it at %s:%s:%d\n", __FUNCTION__, __FILE__, __LINE__); \
     JNIEnv *env = jEnv;
         
-
-#define GLASS_PERFORM_WITH_ARG(obj, sel, arg, wait) \
-    if ((wait) == YES && [NSThread isMainThread] == YES) { \
-        [(obj) sel: (arg)]; \
-    } else { \
-        [(obj) performSelectorOnMainThread: @selector(sel:) withObject:(arg) waitUntilDone:(wait)]; \
-    }
-
 #endif
