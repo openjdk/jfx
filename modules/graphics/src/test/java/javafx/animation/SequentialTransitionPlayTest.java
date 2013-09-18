@@ -45,6 +45,8 @@ public class SequentialTransitionPlayTest {
     SequentialTransition st;
     Transition child1X;
     Transition child1Y;
+    Transition childByX;
+    Transition childByX2;
 
     @Before
     public void setUp() {
@@ -71,6 +73,34 @@ public class SequentialTransitionPlayTest {
             protected void interpolate(double d) {
                 yProperty.set(Math.round(d * 10000));
             }
+        };
+        childByX = createByXChild();
+        childByX2 = createByXChild();
+    }
+
+    private Transition createByXChild() {
+        return new Transition() {
+            {
+                setCycleDuration(Duration.seconds(1));
+                setInterpolator(Interpolator.LINEAR);
+            }
+
+            long lastX;
+
+            @Override
+            protected void interpolate(double frac) {
+                xProperty.set(Math.round(lastX + frac * 1000));
+            }
+
+            @Override
+            void impl_sync(boolean forceSync) {
+                super.impl_sync(forceSync);
+                if (forceSync) {
+                    lastX = xProperty.get();
+                }
+            }
+
+
         };
     }
 
@@ -323,7 +353,7 @@ public class SequentialTransitionPlayTest {
         assertEquals(Status.RUNNING, st.getStatus());
         assertEquals(Status.RUNNING, child1X.getStatus());
         assertEquals(Status.STOPPED, child1Y.getStatus());
-        assertEquals(10000  - Math.round(TickCalculation.toMillis(100)), xProperty.get());
+        assertEquals(10000 - Math.round(TickCalculation.toMillis(100)), xProperty.get());
         assertEquals(0, yProperty.get());
 
         st.pause();
@@ -898,4 +928,51 @@ public class SequentialTransitionPlayTest {
         assertEquals(0, yProperty.get());
 
     }
+    
+    @Test
+    public void testPlayFromStartSynchronization() {
+        st.getChildren().addAll(child1Y, childByX);
+
+        st.play();
+
+        assertEquals(0, yProperty.get());
+        assertEquals(0, xProperty.get());
+
+        st.jumpTo(Duration.seconds(11));
+        amt.pulse();
+
+        st.play();
+        assertEquals(0, yProperty.get());
+        assertEquals(1000, xProperty.get());
+
+        st.jumpTo(Duration.seconds(11));
+        amt.pulse();
+
+
+        assertEquals(10000, yProperty.get());
+        assertEquals(2000, xProperty.get());
+
+    }
+    
+    @Test
+    public void testCycleSynchronization() {
+        st.getChildren().addAll(childByX, childByX2);
+
+        st.play();
+
+        assertEquals(0, xProperty.get());
+
+        st.jumpTo(Duration.seconds(11));
+        amt.pulse();
+
+        st.play();
+        assertEquals(2000, xProperty.get());
+
+        st.jumpTo(Duration.seconds(11));
+        amt.pulse();
+
+        assertEquals(4000, xProperty.get());
+
+    }
+
 }
