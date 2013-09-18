@@ -1054,7 +1054,9 @@ is being used to size a border should also be in pixels.
  * ScrollPane                                                                  *
  *                                                                             *
  ******************************************************************************/
-
+.scroll-pane > .viewport {
+    -fx-background-color: -fx-background;
+}
 .scroll-pane > .scroll-bar:horizontal {
     -fx-background-insets: 0 1 1 1, 1;
     -fx-padding: 0 1 0 1;
