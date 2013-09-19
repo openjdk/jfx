@@ -556,7 +556,10 @@ HRESULT D3DContext::setDeviceParametersFor3D() {
         SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_LIGHTING, TRUE)) &&
         // Set texture unit 0 to its default texture addressing mode for Prism
         SUCCEEDED(res = pd3dDevice->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP)) &&
-        SUCCEEDED(res = pd3dDevice->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP));
+        SUCCEEDED(res = pd3dDevice->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP)) &&
+        // Set texture filter to bilinear for 3D rendering
+        SUCCEEDED(res = pd3dDevice->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR)) &&
+        SUCCEEDED(res = pd3dDevice->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR));
     }
     return res;
 }
@@ -603,15 +606,6 @@ HRESULT D3DContext::InitDevice(IDirect3DDevice9 *pd3dDevice)
 
     // set clipping to true inorder support near and far clipping
     pd3dDevice->SetRenderState(D3DRS_CLIPPING,  TRUE);
-
-    // set the default texture addressing mode
-    pd3dDevice->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-    pd3dDevice->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-
-    // REMIND: check supported filters with
-    // IDirect3D9::CheckDeviceFormat with D3DUSAGE_QUERY_FILTER
-    pd3dDevice->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_POINT);
-    pd3dDevice->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_POINT);
 
     pd3dDevice->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
     pd3dDevice->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
