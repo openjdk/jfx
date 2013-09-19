@@ -41,9 +41,9 @@ import javafx.scene.control.ScrollBar;
  * Controller class for settings panel
  */
 public class NavigationController implements Initializable {
-    public FourWayNavControl eyeNav;
+//    public FourWayNavControl eyeNav;
     public ScrollBar zoomBar;
-    public FourWayNavControl camNav;
+//    public FourWayNavControl camNav;
     private ContentModel contentModel = Jfx3dViewerApp.getContentModel();
 
     @Override public void initialize(URL location, ResourceBundle resources) {
@@ -52,41 +52,41 @@ public class NavigationController implements Initializable {
         zoomBar.setValue(contentModel.getCameraPosition().getZ());
         zoomBar.setVisibleAmount(5);
         contentModel.getCameraPosition().zProperty().bindBidirectional(zoomBar.valueProperty());
-        eyeNav.setListener(new FourWayNavControl.FourWayListener() {
-            @Override public void navigateStep(Side direction, double amount) {
-                switch (direction) {
-                    case TOP:
-                        contentModel.getCameraLookXRotate().setAngle(contentModel.getCameraLookXRotate().getAngle()+amount);
-                        break;
-                    case BOTTOM:
-                        contentModel.getCameraLookXRotate().setAngle(contentModel.getCameraLookXRotate().getAngle()-amount);
-                        break;
-                    case LEFT:
-                        contentModel.getCameraLookZRotate().setAngle(contentModel.getCameraLookZRotate().getAngle()-amount);
-                        break;
-                    case RIGHT:
-                        contentModel.getCameraLookZRotate().setAngle(contentModel.getCameraLookZRotate().getAngle()+amount);
-                        break;
-                }
-            }
-        });
-        camNav.setListener(new FourWayNavControl.FourWayListener() {
-            @Override public void navigateStep(Side direction, double amount) {
-                switch (direction) {
-                    case TOP:
-                        contentModel.getCameraXRotate().setAngle(contentModel.getCameraXRotate().getAngle()-amount);
-                        break;
-                    case BOTTOM:
-                        contentModel.getCameraXRotate().setAngle(contentModel.getCameraXRotate().getAngle()+amount);
-                        break;
-                    case LEFT:
-                        contentModel.getCameraYRotate().setAngle(contentModel.getCameraYRotate().getAngle()+amount);
-                        break;
-                    case RIGHT:
-                        contentModel.getCameraYRotate().setAngle(contentModel.getCameraYRotate().getAngle()-amount);
-                        break;
-                }
-            }
-        });
+//        eyeNav.setListener(new FourWayNavControl.FourWayListener() {
+//            @Override public void navigateStep(Side direction, double amount) {
+//                switch (direction) {
+//                    case TOP:
+//                        contentModel.getCameraLookXRotate().setAngle(contentModel.getCameraLookXRotate().getAngle()+amount);
+//                        break;
+//                    case BOTTOM:
+//                        contentModel.getCameraLookXRotate().setAngle(contentModel.getCameraLookXRotate().getAngle()-amount);
+//                        break;
+//                    case LEFT:
+//                        contentModel.getCameraLookZRotate().setAngle(contentModel.getCameraLookZRotate().getAngle()-amount);
+//                        break;
+//                    case RIGHT:
+//                        contentModel.getCameraLookZRotate().setAngle(contentModel.getCameraLookZRotate().getAngle()+amount);
+//                        break;
+//                }
+//            }
+//        });
+//        camNav.setListener(new FourWayNavControl.FourWayListener() {
+//            @Override public void navigateStep(Side direction, double amount) {
+//                switch (direction) {
+//                    case TOP:
+//                        contentModel.getCameraXRotate().setAngle(contentModel.getCameraXRotate().getAngle()-amount);
+//                        break;
+//                    case BOTTOM:
+//                        contentModel.getCameraXRotate().setAngle(contentModel.getCameraXRotate().getAngle()+amount);
+//                        break;
+//                    case LEFT:
+//                        contentModel.getCameraYRotate().setAngle(contentModel.getCameraYRotate().getAngle()+amount);
+//                        break;
+//                    case RIGHT:
+//                        contentModel.getCameraYRotate().setAngle(contentModel.getCameraYRotate().getAngle()-amount);
+//                        break;
+//                }
+//            }
+//        });
     }
 }

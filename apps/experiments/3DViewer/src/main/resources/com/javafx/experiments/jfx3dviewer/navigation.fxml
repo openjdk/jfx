@@ -44,8 +44,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 <VBox id="controller" alignment="CENTER" spacing="10.0" xmlns:fx="http://javafx.com/fxml" fx:controller="com.javafx.experiments.jfx3dviewer.NavigationController">
   <children>
-    <FourWayNavControl fx:id="eyeNav" />
-    <FourWayNavControl fx:id="camNav" />
+    <!--<FourWayNavControl fx:id="eyeNav" />-->
+    <!--<FourWayNavControl fx:id="camNav" />-->
     <ScrollBar fx:id="zoomBar" orientation="VERTICAL" rotate="180.0" />
   </children>
   <padding>

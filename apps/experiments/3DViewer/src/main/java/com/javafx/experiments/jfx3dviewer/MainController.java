@@ -110,7 +110,7 @@ public class MainController implements Initializable {
             // CREATE SETTINGS PANEL
             settingsPanel = FXMLLoader.load(MainController.class.getResource("settings.fxml"));
             // SETUP SPLIT PANE
-            splitPane.getItems().addAll(new SubSceneResizer(contentModel.getSubScene(),navigationPanel), settingsPanel);
+            splitPane.getItems().addAll(new SubSceneResizer(contentModel.subSceneProperty(),navigationPanel), settingsPanel);
             splitPane.getDividers().get(0).setPosition(1);
         } catch (IOException e) {
             e.printStackTrace();

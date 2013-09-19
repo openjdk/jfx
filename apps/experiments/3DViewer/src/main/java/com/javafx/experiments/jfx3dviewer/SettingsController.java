@@ -78,7 +78,7 @@ public class SettingsController implements Initializable {
     public CheckBox showAxisCheckBox;
     public CheckBox yUpCheckBox;
     public Slider fovSlider;
-    public CheckBox scaleToFitCheckBox;
+    public CheckBox msaaCheckBox;
     public ColorPicker light1ColorPicker;
     public CheckBox ambientEnableCheckbox;
     public CheckBox light1EnabledCheckBox;
@@ -130,7 +130,7 @@ public class SettingsController implements Initializable {
             }
         });
         // wire up settings in OPTIONS
-        contentModel.getAutoScalingGroup().enabledProperty().bind(scaleToFitCheckBox.selectedProperty());
+        contentModel.msaaProperty().bind(msaaCheckBox.selectedProperty());
         contentModel.showAxisProperty().bind(showAxisCheckBox.selectedProperty());
         contentModel.yUpProperty().bind(yUpCheckBox.selectedProperty());
         backgroundColorPicker.setValue((Color)contentModel.getSubScene().getFill());
@@ -369,7 +369,7 @@ public class SettingsController implements Initializable {
 
         sessionManager.bind(showAxisCheckBox.selectedProperty(), "showAxis");
         sessionManager.bind(yUpCheckBox.selectedProperty(), "yUp");
-        sessionManager.bind(scaleToFitCheckBox.selectedProperty(), "scaleToFit");
+        sessionManager.bind(msaaCheckBox.selectedProperty(), "msaa");
         sessionManager.bind(wireFrameCheckbox.selectedProperty(), "wireFrame");
         sessionManager.bind(backgroundColorPicker.valueProperty(), "backgroundColor");
         sessionManager.bind(fovSlider.valueProperty(), "fieldOfView");

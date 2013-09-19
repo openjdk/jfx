@@ -70,8 +70,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             <Label text="Y Up:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
             <CheckBox fx:id="showAxisCheckBox" mnemonicParsing="false" text="" GridPane.columnIndex="1" GridPane.rowIndex="0" />
             <CheckBox fx:id="yUpCheckBox" mnemonicParsing="false" selected="true" text="" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-            <Label text="Scale to Fit" GridPane.columnIndex="0" GridPane.rowIndex="2" />
-            <CheckBox id="yUpCheckBox" fx:id="scaleToFitCheckBox" mnemonicParsing="false" selected="false" text="" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+            <Label text="MSAA Antialiasing" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+            <CheckBox id="msaaCheckBox" fx:id="msaaCheckBox" mnemonicParsing="false" selected="true" text="" GridPane.columnIndex="1" GridPane.rowIndex="2" />
             <Label text="Background Color" GridPane.columnIndex="0" GridPane.rowIndex="3" />
             <ColorPicker fx:id="backgroundColorPicker" GridPane.columnIndex="1" GridPane.rowIndex="3" />
             <Label text="Wireframe" GridPane.columnIndex="0" GridPane.rowIndex="4" />
@@ -187,29 +187,29 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 <Label text="Lock to Camera" GridPane.columnIndex="0" GridPane.rowIndex="6" />
                 <CheckBox fx:id="light1followCameraCheckBox" mnemonicParsing="false" selected="true" text="" GridPane.columnIndex="1" GridPane.rowIndex="6" />
                 <Label text="X" GridPane.columnIndex="0" GridPane.rowIndex="7" />
-                <Slider fx:id="light1x" majorTickUnit="20.0" max="20.0" min="-20.0" minorTickCount="5" showTickLabels="true" showTickMarks="false" value="0.0" GridPane.columnIndex="1" GridPane.rowIndex="7" />
+                <Slider fx:id="light1x" majorTickUnit="20.0" max="100.0" min="-100.0" minorTickCount="5" showTickLabels="true" showTickMarks="false" value="0.0" GridPane.columnIndex="1" GridPane.rowIndex="7" />
                 <Label text="Y" GridPane.columnIndex="0" GridPane.rowIndex="8" />
-                <Slider fx:id="light1y" majorTickUnit="20.0" max="20.0" min="-20.0" minorTickCount="5" showTickLabels="true" showTickMarks="false" value="0.0" GridPane.columnIndex="1" GridPane.rowIndex="8" />
+                <Slider fx:id="light1y" majorTickUnit="20.0" max="100.0" min="-100.0" minorTickCount="5" showTickLabels="true" showTickMarks="false" value="0.0" GridPane.columnIndex="1" GridPane.rowIndex="8" />
                 <Label text="Z" GridPane.columnIndex="0" GridPane.rowIndex="9" />
-                <Slider fx:id="light1z" majorTickUnit="20.0" max="20.0" min="-20.0" minorTickCount="5" showTickLabels="true" showTickMarks="false" value="0.0" GridPane.columnIndex="1" GridPane.rowIndex="9" />
+                <Slider fx:id="light1z" majorTickUnit="20.0" max="100.0" min="-100.0" minorTickCount="5" showTickLabels="true" showTickMarks="false" value="0.0" GridPane.columnIndex="1" GridPane.rowIndex="9" />
                 <Label maxWidth="1.7976931348623157E308" styleClass="settings-header" text="Light 2" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.hgrow="ALWAYS" GridPane.rowIndex="10" />
                 <Label text="Enabled" GridPane.columnIndex="0" GridPane.rowIndex="11" />
                 <CheckBox fx:id="light2EnabledCheckBox" mnemonicParsing="false" text="" GridPane.columnIndex="1" GridPane.rowIndex="11" />
                 <Label text="X" GridPane.columnIndex="0" GridPane.rowIndex="13" />
-                <Slider fx:id="light2x" majorTickUnit="20.0" max="20.0" min="-20.0" minorTickCount="5" showTickLabels="true" showTickMarks="false" value="0.0" GridPane.columnIndex="1" GridPane.rowIndex="13" />
+                <Slider fx:id="light2x" majorTickUnit="20.0" max="100.0" min="-100.0" minorTickCount="5" showTickLabels="true" showTickMarks="false" value="0.0" GridPane.columnIndex="1" GridPane.rowIndex="13" />
                 <Label text="Y" GridPane.columnIndex="0" GridPane.rowIndex="14" />
-                <Slider fx:id="light2y" majorTickUnit="20.0" max="20.0" min="-20.0" minorTickCount="5" showTickLabels="true" showTickMarks="false" value="0.0" GridPane.columnIndex="1" GridPane.rowIndex="14" />
+                <Slider fx:id="light2y" majorTickUnit="20.0" max="100.0" min="-100.0" minorTickCount="5" showTickLabels="true" showTickMarks="false" value="0.0" GridPane.columnIndex="1" GridPane.rowIndex="14" />
                 <Label text="Z" GridPane.columnIndex="0" GridPane.rowIndex="15" />
-                <Slider fx:id="light2z" majorTickUnit="20.0" max="20.0" min="-20.0" minorTickCount="5" showTickLabels="true" showTickMarks="false" value="0.0" GridPane.columnIndex="1" GridPane.rowIndex="15" />
+                <Slider fx:id="light2z" majorTickUnit="20.0" max="100.0" min="-100.0" minorTickCount="5" showTickLabels="true" showTickMarks="false" value="0.0" GridPane.columnIndex="1" GridPane.rowIndex="15" />
                 <Label maxWidth="1.7976931348623157E308" styleClass="settings-header" text="Light 3" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.hgrow="ALWAYS" GridPane.rowIndex="16" />
                 <Label text="Enabled" GridPane.columnIndex="0" GridPane.rowIndex="17" />
                 <CheckBox fx:id="light3EnabledCheckBox" mnemonicParsing="false" text="" GridPane.columnIndex="1" GridPane.rowIndex="17" />
                 <Label text="Lock to Camera" GridPane.columnIndex="0" GridPane.rowIndex="19" />
-                <Slider fx:id="light3x" majorTickUnit="20.0" max="20.0" min="-20.0" minorTickCount="5" showTickLabels="true" showTickMarks="false" value="0.0" GridPane.columnIndex="1" GridPane.rowIndex="19" />
+                <Slider fx:id="light3x" majorTickUnit="20.0" max="100.0" min="-100.0" minorTickCount="5" showTickLabels="true" showTickMarks="false" value="0.0" GridPane.columnIndex="1" GridPane.rowIndex="19" />
                 <Label text="Y" GridPane.columnIndex="0" GridPane.rowIndex="20" />
-                <Slider fx:id="light3y" majorTickUnit="20.0" max="20.0" min="-20.0" minorTickCount="5" showTickLabels="true" showTickMarks="false" value="0.0" GridPane.columnIndex="1" GridPane.rowIndex="20" />
+                <Slider fx:id="light3y" majorTickUnit="20.0" max="100.0" min="-100.0" minorTickCount="5" showTickLabels="true" showTickMarks="false" value="0.0" GridPane.columnIndex="1" GridPane.rowIndex="20" />
                 <Label text="Z" GridPane.columnIndex="0" GridPane.rowIndex="21" />
-                <Slider fx:id="light3z" majorTickUnit="20.0" max="20.0" min="-20.0" minorTickCount="5" showTickLabels="true" showTickMarks="false" value="0.0" GridPane.columnIndex="1" GridPane.rowIndex="21" />
+                <Slider fx:id="light3z" majorTickUnit="20.0" max="100.0" min="-100.0" minorTickCount="5" showTickLabels="true" showTickMarks="false" value="0.0" GridPane.columnIndex="1" GridPane.rowIndex="21" />
                 <Label text="Color:" GridPane.columnIndex="0" GridPane.rowIndex="12" />
                 <ColorPicker fx:id="light2ColorPicker" GridPane.columnIndex="1" GridPane.rowIndex="12" />
                 <Label text="Color" GridPane.columnIndex="0" GridPane.rowIndex="18" />
