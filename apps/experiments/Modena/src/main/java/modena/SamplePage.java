@@ -43,44 +43,7 @@ import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
-import javafx.scene.control.Button;
-import javafx.scene.control.ButtonBuilder;
-import javafx.scene.control.CheckBox;
-import javafx.scene.control.CheckBoxBuilder;
-import javafx.scene.control.ChoiceBoxBuilder;
-import javafx.scene.control.ColorPicker;
-import javafx.scene.control.ColorPickerBuilder;
-import javafx.scene.control.ComboBoxBuilder;
-import javafx.scene.control.Hyperlink;
-import javafx.scene.control.Label;
-import javafx.scene.control.LabelBuilder;
-import javafx.scene.control.ListViewBuilder;
-import javafx.scene.control.MenuButtonBuilder;
-import javafx.scene.control.PasswordFieldBuilder;
-import javafx.scene.control.ProgressBarBuilder;
-import javafx.scene.control.ProgressIndicator;
-import javafx.scene.control.ProgressIndicatorBuilder;
-import javafx.scene.control.RadioButton;
-import javafx.scene.control.ScrollBar;
-import javafx.scene.control.ScrollBarBuilder;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.control.ScrollPaneBuilder;
-import javafx.scene.control.SeparatorBuilder;
-import javafx.scene.control.Slider;
-import javafx.scene.control.SliderBuilder;
-import javafx.scene.control.SplitMenuButtonBuilder;
-import javafx.scene.control.TableViewBuilder;
-import javafx.scene.control.TextAreaBuilder;
-import javafx.scene.control.TextField;
-import javafx.scene.control.TextFieldBuilder;
-import javafx.scene.control.TitledPaneBuilder;
-import javafx.scene.control.ToggleButton;
-import javafx.scene.control.ToggleButtonBuilder;
-import javafx.scene.control.ToggleGroup;
-import javafx.scene.control.Tooltip;
-import javafx.scene.control.TooltipBuilder;
-import javafx.scene.control.TreeTableView;
-import javafx.scene.control.TreeViewBuilder;
+import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.HBoxBuilder;
@@ -363,10 +326,18 @@ public class SamplePage extends GridPane {
                 );
         newSection(
                 "SplitMenuButton\nMore:",
-                withState(SplitMenuButtonBuilder.create().items(createMenuItems(20)).text("arrow hover").build(),"openvertically",".arrow-button", "hover"),
+                withState(SplitMenuButtonBuilder.create().items(createMenuItems(20)).text("arrow hover").build(), "openvertically", ".arrow-button", "hover"),
                 withState(SplitMenuButtonBuilder.create().items(createMenuItems(20)).text("showing").build(), "openvertically,showing"),
                 withState(SplitMenuButtonBuilder.create().items(createMenuItems(20)).text("focused").build(), "openvertically,focused"),
                 withState(SplitMenuButtonBuilder.create().items(createMenuItems(20)).text("disabled").build(), "openvertically,disabled")
+                );
+        newSection(
+                "DatePicker:",
+                new DatePicker(),
+                withState(new DatePicker(),"hover"),
+                withState(new DatePicker(), "showing"),
+                withState(new DatePicker(), "focused"),
+                withState(new DatePicker(), "disabled")
                 );
         newDetailedSection(
                 new String[]{"Slider (H):", "normal", "hover", "pressed", "disabled", "tickmarks"},
