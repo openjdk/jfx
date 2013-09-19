@@ -371,6 +371,13 @@ public class NGRegion extends NGGroup {
     private RegionImageCache getImageCache(final Graphics g) {
         final Screen screen = g.getAssociatedScreen();
         RegionImageCache cache = imageCacheMap.get(screen);
+        if (cache != null) {
+            RTTexture tex = cache.getBackingStore();
+            if (tex.isSurfaceLost()) {
+                imageCacheMap.remove(screen);
+                cache = null;
+            }
+        }
         if (cache == null) {
             cache = new RegionImageCache(g.getResourceFactory());
             imageCacheMap.put(screen, cache);

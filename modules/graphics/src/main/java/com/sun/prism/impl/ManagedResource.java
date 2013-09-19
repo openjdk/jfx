@@ -211,7 +211,7 @@ public abstract class ManagedResource<T> implements GraphicsResource {
         return pool;
     }
 
-    public final boolean isValid() {
+    public boolean isValid() {
         return resource != null;
     }
 
@@ -291,7 +291,7 @@ public abstract class ManagedResource<T> implements GraphicsResource {
         final ResourcePool pool;
         final long size;
         WeakLinkedList next;
-        
+
         WeakLinkedList() {
             this.theResourceRef = null;
             this.pool = null;

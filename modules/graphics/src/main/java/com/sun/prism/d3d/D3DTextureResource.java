@@ -40,4 +40,9 @@ class D3DTextureResource
             resource.dispose();
         }
     }
+
+    @Override
+    public boolean isValid() {
+        return resource != null && resource.getResource() != 0L;
+    }
 }
