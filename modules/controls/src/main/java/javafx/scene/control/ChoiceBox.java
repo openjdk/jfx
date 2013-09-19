@@ -195,7 +195,8 @@ public class ChoiceBox<T> extends Control {
                 final SingleSelectionModel<T> sm = getSelectionModel();
                 if (sm != null) {
                     if (newItems != null && newItems.isEmpty()) {
-                        sm.setSelectedIndex(-1);
+                        // RT-29433 - clear selection.
+                        sm.clearSelection();
                     } else if (sm.getSelectedIndex() == -1 && sm.getSelectedItem() != null) {
                         int newIndex = getItems().indexOf(sm.getSelectedItem());
                         if (newIndex != -1) {
