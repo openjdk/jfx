@@ -57,6 +57,7 @@ import com.javafx.experiments.shape3d.PolygonMeshView;
 import com.javafx.experiments.shape3d.SubdivisionMesh;
 import javafx.beans.property.ObjectProperty;
 import javafx.event.EventHandler;
+import javafx.util.Duration;
 
 /**
  * 3D Content Model for Viewer App. Contains the 3D scene and everything related to it: light, cameras etc.
@@ -171,6 +172,8 @@ public class ContentModel {
     private double mouseDeltaY;
 
     private final EventHandler<MouseEvent> mouseEventHandler = event -> {
+        // System.out.println("MouseEvent ...");
+
         double yFlip = 1.0;
         if (getYUp()) {
             yFlip = 1.0;
@@ -213,7 +216,7 @@ public class ContentModel {
 
             double flip = -1.0;
 
-            boolean alt = (true || event.isAltDown());
+            boolean alt = (true || event.isAltDown());  // For now, don't require ALT to be pressed
             if (alt && (event.isMiddleButtonDown() || (event.isPrimaryButtonDown() && event.isSecondaryButtonDown()))) {
                 cameraXform2.t.setX(cameraXform2.t.getX() + flip*mouseDeltaX*modifierFactor*modifier*0.3);  // -
                 cameraXform2.t.setY(cameraXform2.t.getY() + yFlip*mouseDeltaY*modifierFactor*modifier*0.3);  // -
@@ -252,6 +255,148 @@ public class ContentModel {
             z = Math.min(z,0);
             cameraPosition.setZ(z);
         }
+    };
+    private final EventHandler<KeyEvent> keyEventHandler = event -> {
+        /*
+        if (!Double.isNaN(event.getZoomFactor()) && event.getZoomFactor() > 0.8 && event.getZoomFactor() < 1.2) {
+            double z = cameraPosition.getZ()/event.getZoomFactor();
+            z = Math.max(z,-1000);
+            z = Math.min(z,0);
+            cameraPosition.setZ(z);
+        }
+        */
+        System.out.println("KeyEvent ...");
+        Timeline timeline = getTimeline();
+        Duration currentTime;
+        double CONTROL_MULTIPLIER = 0.1;
+        double SHIFT_MULTIPLIER = 0.1;
+        double ALT_MULTIPLIER = 0.5;
+        //System.out.println("--> handleKeyboard>handle");
+        
+        // event.getEventType();
+        
+        switch (event.getCode()) {
+            case F:
+                if (event.isControlDown()) {
+                    //onButtonSave();
+                }
+                break;
+            case O:
+                if (event.isControlDown()) {
+                    //onButtonLoad();
+                }
+                break;
+            case Z:
+                if (event.isShiftDown()) {
+                    cameraXform.ry.setAngle(0.0);
+                    cameraXform.rx.setAngle(0.0);
+                    camera.setTranslateZ(-300.0);
+                }   
+                cameraXform2.t.setX(0.0);
+                cameraXform2.t.setY(0.0);
+                break;
+            /*
+            case SPACE:
+                if (timelinePlaying) {
+                    timeline.pause();
+                    timelinePlaying = false;
+                }
+                else {
+                    timeline.play();
+                    timelinePlaying = true;
+                }
+                break;
+            */
+            case UP:
+                if (event.isControlDown() && event.isShiftDown()) {
+                    cameraXform2.t.setY(cameraXform2.t.getY() - 10.0*CONTROL_MULTIPLIER);  
+                }  
+                else if (event.isAltDown() && event.isShiftDown()) {
+                    cameraXform.rx.setAngle(cameraXform.rx.getAngle() - 10.0*ALT_MULTIPLIER);  
+                }
+                else if (event.isControlDown()) {
+                    cameraXform2.t.setY(cameraXform2.t.getY() - 1.0*CONTROL_MULTIPLIER);  
+                }
+                else if (event.isAltDown()) {
+                    cameraXform.rx.setAngle(cameraXform.rx.getAngle() - 2.0*ALT_MULTIPLIER);  
+                }
+                else if (event.isShiftDown()) {
+                    double z = camera.getTranslateZ();
+                    double newZ = z + 5.0*SHIFT_MULTIPLIER;
+                    camera.setTranslateZ(newZ);
+                }
+                break;
+            case DOWN:
+                if (event.isControlDown() && event.isShiftDown()) {
+                    cameraXform2.t.setY(cameraXform2.t.getY() + 10.0*CONTROL_MULTIPLIER);  
+                }  
+                else if (event.isAltDown() && event.isShiftDown()) {
+                    cameraXform.rx.setAngle(cameraXform.rx.getAngle() + 10.0*ALT_MULTIPLIER);  
+                }
+                else if (event.isControlDown()) {
+                    cameraXform2.t.setY(cameraXform2.t.getY() + 1.0*CONTROL_MULTIPLIER);  
+                }
+                else if (event.isAltDown()) {
+                    cameraXform.rx.setAngle(cameraXform.rx.getAngle() + 2.0*ALT_MULTIPLIER);  
+                }
+                else if (event.isShiftDown()) {
+                    double z = camera.getTranslateZ();
+                    double newZ = z - 5.0*SHIFT_MULTIPLIER;
+                    camera.setTranslateZ(newZ);
+                }
+                break;
+            case RIGHT:
+                if (event.isControlDown() && event.isShiftDown()) {
+                    cameraXform2.t.setX(cameraXform2.t.getX() + 10.0*CONTROL_MULTIPLIER);  
+                }  
+                else if (event.isAltDown() && event.isShiftDown()) {
+                    cameraXform.ry.setAngle(cameraXform.ry.getAngle() - 10.0*ALT_MULTIPLIER);  
+                }
+                else if (event.isControlDown()) {
+                    cameraXform2.t.setX(cameraXform2.t.getX() + 1.0*CONTROL_MULTIPLIER);  
+                }
+                else if (event.isShiftDown()) {
+                    currentTime = timeline.getCurrentTime();
+                    timeline.jumpTo(Frame.frame(Math.round(Frame.toFrame(currentTime)/10.0)*10 + 10));
+                    // timeline.jumpTo(Duration.seconds(currentTime.toSeconds() + ONE_FRAME));
+                }
+                else if (event.isAltDown()) {
+                    cameraXform.ry.setAngle(cameraXform.ry.getAngle() - 2.0*ALT_MULTIPLIER);  
+                }
+                else {
+                    currentTime = timeline.getCurrentTime();
+                    timeline.jumpTo(Frame.frame(Frame.toFrame(currentTime) + 1));
+                    // timeline.jumpTo(Duration.seconds(currentTime.toSeconds() + ONE_FRAME));
+                }
+                break;
+            case LEFT:
+                if (event.isControlDown() && event.isShiftDown()) {
+                    cameraXform2.t.setX(cameraXform2.t.getX() - 10.0*CONTROL_MULTIPLIER);  
+                }  
+                else if (event.isAltDown() && event.isShiftDown()) {
+                    cameraXform.ry.setAngle(cameraXform.ry.getAngle() + 10.0*ALT_MULTIPLIER);  // -
+                }
+                else if (event.isControlDown()) {
+                    cameraXform2.t.setX(cameraXform2.t.getX() - 1.0*CONTROL_MULTIPLIER);  
+                }
+                else if (event.isShiftDown()) {
+                    currentTime = timeline.getCurrentTime();
+                    timeline.jumpTo(Frame.frame(Math.round(Frame.toFrame(currentTime)/10.0)*10 - 10));
+                    // timeline.jumpTo(Duration.seconds(currentTime.toSeconds() - ONE_FRAME));
+                }
+                else if (event.isAltDown()) {
+                    cameraXform.ry.setAngle(cameraXform.ry.getAngle() + 2.0*ALT_MULTIPLIER);  // -
+                }
+                else {
+                    currentTime = timeline.getCurrentTime();
+                    timeline.jumpTo(Frame.frame(Frame.toFrame(currentTime) - 1));
+                    // timeline.jumpTo(Duration.seconds(currentTime.toSeconds() - ONE_FRAME));
+                }
+                break;
+        }
+        //System.out.println(cameraXform.getTranslateX() + ", " + cameraXform.getTranslateY() + ", " + cameraXform.getTranslateZ());
+
+
     };
 
     public ContentModel() {
@@ -296,6 +441,7 @@ public class ContentModel {
             oldSubScene.setRoot(new Region());
             oldSubScene.setCamera(null);
             oldSubScene.removeEventHandler(MouseEvent.ANY, mouseEventHandler);
+            oldSubScene.removeEventHandler(KeyEvent.ANY, keyEventHandler);
             oldSubScene.removeEventHandler(ScrollEvent.ANY, scrollEventHandler);
         }
 
@@ -305,6 +451,7 @@ public class ContentModel {
         subScene.setCamera(camera);
         // SCENE EVENT HANDLING FOR CAMERA NAV
         subScene.addEventHandler(MouseEvent.ANY, mouseEventHandler);
+        subScene.addEventHandler(KeyEvent.ANY, keyEventHandler);
         subScene.addEventHandler(ZoomEvent.ANY, zoomEventHandler);
         subScene.addEventHandler(ScrollEvent.ANY, scrollEventHandler);
     }
