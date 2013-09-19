@@ -214,7 +214,11 @@ public class ContentModel {
             double flip = -1.0;
 
             boolean alt = (true || event.isAltDown());
-            if (alt && event.isPrimaryButtonDown()) {
+            if (alt && (event.isMiddleButtonDown() || (event.isPrimaryButtonDown() && event.isSecondaryButtonDown()))) {
+                cameraXform2.t.setX(cameraXform2.t.getX() + flip*mouseDeltaX*modifierFactor*modifier*0.3);  // -
+                cameraXform2.t.setY(cameraXform2.t.getY() + yFlip*mouseDeltaY*modifierFactor*modifier*0.3);  // -
+            }
+            else if (alt && event.isPrimaryButtonDown()) {
                 cameraXform.ry.setAngle(cameraXform.ry.getAngle() - yFlip*mouseDeltaX*modifierFactor*modifier*2.0);  // +
                 cameraXform.rx.setAngle(cameraXform.rx.getAngle() + flip*mouseDeltaY*modifierFactor*modifier*2.0);  // -
             }
@@ -222,15 +226,12 @@ public class ContentModel {
                 double z = cameraPosition.getZ();
                 // double z = camera.getTranslateZ();
                 // double newZ = z + yFlip*flip*mouseDeltaX*modifierFactor*modifier;
-                double newZ = z - flip*mouseDeltaX*modifierFactor*modifier;
+                double newZ = z - flip*(mouseDeltaX+mouseDeltaY)*modifierFactor*modifier;
                 System.out.println("newZ = " + newZ);
                 cameraPosition.setZ(newZ);
                 // camera.setTranslateZ(newZ);
             }
-            else if (alt && event.isMiddleButtonDown()) {
-                cameraXform2.t.setX(cameraXform2.t.getX() + flip*mouseDeltaX*modifierFactor*modifier*0.3);  // -
-                cameraXform2.t.setY(cameraXform2.t.getY() + yFlip*mouseDeltaY*modifierFactor*modifier*0.3);  // -
-            }
+
         }
     };
     private final EventHandler<ScrollEvent> scrollEventHandler = event -> {
