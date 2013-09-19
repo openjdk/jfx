@@ -30,6 +30,10 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+
+import com.sun.glass.ui.Application;
+import com.sun.glass.ui.EventLoop;
 import com.sun.javafx.tk.FocusCause;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKStage;
@@ -54,6 +58,8 @@ abstract class GlassStage implements TKStage {
     private boolean important = true;
 
     private AccessControlContext accessCtrlCtx = null;
+
+    protected static final AtomicReference<GlassStage> activeFSWindow = new AtomicReference<>();
 
     protected GlassStage() {
         windows.add(this);
@@ -165,6 +171,11 @@ abstract class GlassStage implements TKStage {
 
     // Cmd+Q action
     static void requestClosingAllWindows() {
+        GlassStage fsWindow = activeFSWindow.get();
+        if (fsWindow != null) {
+            fsWindow.setFullScreen(false);
+        }
+
         for (final GlassStage window : windows.toArray(new GlassStage[windows.size()])) {
             // In case of child windows some of them could already be closed
             // so check if list still contains an object
