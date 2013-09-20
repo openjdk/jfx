@@ -57,6 +57,8 @@ import com.javafx.experiments.shape3d.PolygonMeshView;
 import com.javafx.experiments.shape3d.SubdivisionMesh;
 import javafx.beans.property.ObjectProperty;
 import javafx.event.EventHandler;
+import javafx.event.EventType;
+import javafx.scene.Scene;
 import javafx.util.Duration;
 
 /**
@@ -452,8 +454,21 @@ public class ContentModel {
         // SCENE EVENT HANDLING FOR CAMERA NAV
         subScene.addEventHandler(MouseEvent.ANY, mouseEventHandler);
         subScene.addEventHandler(KeyEvent.ANY, keyEventHandler);
+        // subScene.addEventFilter(KeyEvent.ANY, keyEventHandler);
         subScene.addEventHandler(ZoomEvent.ANY, zoomEventHandler);
         subScene.addEventHandler(ScrollEvent.ANY, scrollEventHandler);
+        
+        // Scene scene = subScene.getScene();
+        // scene.addEventFilter(KeyEvent.ANY, keyEventHandler);
+        
+        /*
+        subScene.sceneProperty().addListener(new ChangeListener() {
+            @Override
+            public void changed(ObservableValue ov, Object t, Object t1) {
+                System.out.println("hello world");
+            }
+        });
+        */
     }
 
     public boolean getAmbientLightEnabled() {
