@@ -83,7 +83,8 @@ public class Height2NormalApp  extends Application {
         this.stage = stage;
 
         // load test image
-        testImage = new Image(Height2NormalApp.class.getResource("javafx-heightmap.jpg").toExternalForm());
+        // testImage = new Image(Height2NormalApp.class.getResource("javafx-heightmap.jpg").toExternalForm());
+        testImage = new Image(Height2NormalApp.class.getResource("/com/javafx/experiments/jfx3dviewer/blue.jpg").toExternalForm());
         heightImage.set(testImage);
 
         // create toolbar
