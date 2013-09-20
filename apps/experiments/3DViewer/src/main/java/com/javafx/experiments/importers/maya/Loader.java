@@ -636,6 +636,13 @@ class Loader {
         mGroup.rpi.setY(-rpy.get());
         mGroup.rpi.setZ(-rpz.get());
 
+        MFloat sptx = (MFloat) n.getAttr("sptx");
+        MFloat spty = (MFloat) n.getAttr("spty");
+        MFloat sptz = (MFloat) n.getAttr("sptz");
+        mGroup.spt.setX(sptx.get());
+        mGroup.spt.setY(spty.get());
+        mGroup.spt.setZ(sptz.get());
+
         MFloat spx = (MFloat) n.getAttr("spx");
         MFloat spy = (MFloat) n.getAttr("spy");
         MFloat spz = (MFloat) n.getAttr("spz");

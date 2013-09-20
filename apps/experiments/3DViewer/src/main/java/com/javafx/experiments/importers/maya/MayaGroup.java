@@ -54,6 +54,7 @@ public class MayaGroup extends Group {
     Translate rpt = new Translate();  // rotate pivot translate
     Translate rp = new Translate();  // rotate pivot
     Translate rpi = new Translate();  // rotate pivot inverse
+    Translate spt = new Translate();  // scale pivot translate
     Translate sp = new Translate();  // scale pivot
     Translate spi = new Translate();  // scale pivot inverse
     // should bind rpi = -rp, but doesn't currently work afaict
@@ -95,6 +96,6 @@ public class MayaGroup extends Group {
     }
 
     private void initTransforms() {
-        getTransforms().setAll(t, rpt, rp, rz, ry, rx, rpi, sp, s, spi);
+        getTransforms().setAll(t, rpt, rp, rz, ry, rx, rpi, spt, sp, s, spi);
     }
 }
