@@ -108,10 +108,14 @@ public class DatePickerApp extends Application {
         VBox buttonVbox = new VBox(8);
         buttonVbox.setAlignment(Pos.CENTER);               
         // Use a Button to create a new Stage that gives us an environment to switch Locales
-        final ToggleButton button = new ToggleButton("Create a  new Stage for DatePicker");
-        button.setMaxWidth(240);
+        final ToggleButton button = new ToggleButton("Open a  new Stage for DatePicker");
+        button.setPrefWidth(290);
+        button.setMaxWidth(ToggleButton.USE_PREF_SIZE);
+        button.setMinWidth(ToggleButton.USE_PREF_SIZE);
         final ToggleButton closeButton = new ToggleButton("Close DatePicker Stage");
-        closeButton.setMaxWidth(240);
+        closeButton.setPrefWidth(290);
+        closeButton.setMaxWidth(ToggleButton.USE_PREF_SIZE);
+        closeButton.setMinWidth(ToggleButton.USE_PREF_SIZE);
         
         ToggleGroup group = new ToggleGroup();
         button.setToggleGroup(group);
@@ -121,7 +125,7 @@ public class DatePickerApp extends Application {
             @Override
             public void changed(ObservableValue<? extends Toggle> observable, Toggle oldValue, Toggle selectedToggle) {
                 if ((ToggleButton) selectedToggle != null) {
-                    if (((ToggleButton) selectedToggle).getText().equals("Create a  new Stage for DatePicker")) {
+                    if (((ToggleButton) selectedToggle).getText().equals("Open a  new Stage for DatePicker")) {
                         if (myStage == null) {
                             myStage = new Stage();
                             Group rootGroup = new Group();
