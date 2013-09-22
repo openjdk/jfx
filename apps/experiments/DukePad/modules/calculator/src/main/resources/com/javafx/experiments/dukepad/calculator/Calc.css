@@ -1,0 +1,29 @@
+.background {
+    -fx-background-color: -fx-background;
+    -fx-font-size: 50;
+    -fx-font-family: "Dosis SemiBold";
+}
+.button {
+    -fx-text-alignment: center;
+    -fx-alignment: center;
+    -fx-padding: 0;
+}
+.dark, #equals {
+    -fx-font-size: 65;
+    -fx-padding: -7 0 7 0;
+}
+.light {
+    -fx-base: #e4eaed;
+}
+.dark {
+    /*-fx-base: #838e95;*/
+    -fx-base: #3d4148;
+}
+.blue {
+    -fx-base: #237eb8;
+    -fx-padding: -4 0 4 0;
+}
+.orange {
+    -fx-base: #e35f15;
+    -fx-text-base-color: white;
+}

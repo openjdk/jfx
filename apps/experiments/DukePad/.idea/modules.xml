@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/modules/browser/browser.iml" filepath="$PROJECT_DIR$/modules/browser/browser.iml" group="Apps" />
+      <module fileurl="file://$PROJECT_DIR$/modules/calculator/calculator.iml" filepath="$PROJECT_DIR$/modules/calculator/calculator.iml" group="Apps" />
+      <module fileurl="file://$PROJECT_DIR$/modules/chess/chess.iml" filepath="$PROJECT_DIR$/modules/chess/chess.iml" group="Apps" />
+      <module fileurl="file://$PROJECT_DIR$/modules/clock/clock.iml" filepath="$PROJECT_DIR$/modules/clock/clock.iml" group="Apps" />
+      <module fileurl="file://$PROJECT_DIR$/modules/compass/compass.iml" filepath="$PROJECT_DIR$/modules/compass/compass.iml" group="Apps" />
+      <module fileurl="file://$PROJECT_DIR$/modules/core/core.iml" filepath="$PROJECT_DIR$/modules/core/core.iml" />
+      <module fileurl="file://$PROJECT_DIR$/modules/cubeGame/cubeGame.iml" filepath="$PROJECT_DIR$/modules/cubeGame/cubeGame.iml" group="Apps" />
+      <module fileurl="file://$PROJECT_DIR$/modules/lockScreen/lockScreen.iml" filepath="$PROJECT_DIR$/modules/lockScreen/lockScreen.iml" group="Apps" />
+      <module fileurl="file://$PROJECT_DIR$/modules/mediaPlayer/mediaPlayer.iml" filepath="$PROJECT_DIR$/modules/mediaPlayer/mediaPlayer.iml" group="Apps" />
+      <module fileurl="file://$PROJECT_DIR$/modules/networking/networking.iml" filepath="$PROJECT_DIR$/modules/networking/networking.iml" group="Apps" />
+      <module fileurl="file://$PROJECT_DIR$/modules/notes/notes.iml" filepath="$PROJECT_DIR$/modules/notes/notes.iml" group="Apps" />
+      <module fileurl="file://$PROJECT_DIR$/modules/settings/settings.iml" filepath="$PROJECT_DIR$/modules/settings/settings.iml" group="Apps" />
+      <module fileurl="file://$PROJECT_DIR$/starter/starter.iml" filepath="$PROJECT_DIR$/starter/starter.iml" />
+      <module fileurl="file://$PROJECT_DIR$/modules/weather/weather.iml" filepath="$PROJECT_DIR$/modules/weather/weather.iml" group="Apps" />
+    </modules>
+  </component>
+</project>
+

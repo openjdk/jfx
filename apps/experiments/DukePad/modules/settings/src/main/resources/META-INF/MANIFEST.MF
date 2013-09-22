@@ -1,0 +1,11 @@
+Manifest-Version: 1.0
+Bundle-Activator: com.javafx.experiments.dukepad.settings.SettingsApp
+Bundle-ManifestVersion: 2
+Bundle-Name: com.javafx.experiments.dukepad.settings
+Bundle-SymbolicName: com.javafx.experiments.dukepad.settings
+Bundle-Version: 1.0.0
+Export-Package: com.javafx.experiments.dukepad.settings;uses:="org.osgi.framework";version="1.0.0"
+Import-Package: org.osgi.framework,com.javafx.experiments.dukepad.core
+Include-Resource: ../testapp
+Private-Package: com.javafx.experiments.dukepad.settings;-split-package:=merge-first
+Require-Bundle: com.javafx.experiments.dukepad.core

@@ -1,0 +1,10 @@
+<component name="libraryTable">
+  <library name="org.eclipse.birt.runtime:org.eclipse.osgi:3.9.0.v20130529-1710" type="repository">
+    <properties maven-id="org.eclipse.birt.runtime:org.eclipse.osgi:3.9.0.v20130529-1710" />
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/org.eclipse.osgi-3.9.0.v20130529-1710.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

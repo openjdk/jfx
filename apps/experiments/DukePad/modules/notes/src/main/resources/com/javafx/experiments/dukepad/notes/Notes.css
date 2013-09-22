@@ -1,0 +1,13 @@
+.root {
+	-fx-background-color: #333333;    
+}
+.tool-bar {
+    -fx-alignment: baseline-left;
+    -fx-spacing: 100;
+}
+.page {
+    -fx-background-color: -fx-control-inner-background;
+}
+.text-input, .text-input:focused {
+    -fx-background-color: null;
+}

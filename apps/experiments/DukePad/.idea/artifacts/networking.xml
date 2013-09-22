@@ -1,0 +1,11 @@
+<component name="ArtifactManager">
+  <artifact type="jar" build-on-make="true" name="networking">
+    <output-path>$PROJECT_DIR$/build/artifacts/bundles</output-path>
+    <root id="archive" name="networking.jar">
+      <element id="module-output" name="networking" />
+      <element id="directory" name="META-INF">
+        <element id="file-copy" path="$PROJECT_DIR$/modules/networking/src/main/resources/META-INF/MANIFEST.MF" />
+      </element>
+    </root>
+  </artifact>
+</component>

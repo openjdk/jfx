@@ -1,0 +1,11 @@
+Manifest-Version: 1.0
+Bundle-Activator: com.javafx.experiments.dukepad.lockScreen.LockScreenApp
+Bundle-ManifestVersion: 2
+Bundle-Name: com.javafx.experiments.dukepad.lockScreen
+Bundle-SymbolicName: com.javafx.experiments.dukepad.lockScreen
+Bundle-Version: 1.0.0
+Export-Package: com.javafx.experiments.dukepad.lockScreen;uses:="javafx.scene,javafx.application,org.osgi.framework,javafx.stage";version="1.0.0"
+Include-Resource: ../lockScreen
+Import-Package: org.osgi.framework
+Private-Package: com.javafx.experiments.dukepad.lockScreen;-split-package:=merge-first
+Require-Bundle: com.javafx.experiments.dukepad.core
