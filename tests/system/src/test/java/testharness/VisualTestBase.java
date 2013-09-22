@@ -165,13 +165,24 @@ public abstract class VisualTestBase {
         return color;
     }
 
-    protected void assertColorEquals(Color expected, Color actual, double delta) {
-        assertEquals(expected.getRed(), actual.getRed(), delta);
-        assertEquals(expected.getGreen(), actual.getGreen(), delta);
-        assertEquals(expected.getBlue(), actual.getBlue(), delta);
-        assertEquals(expected.getOpacity(), actual.getOpacity(), delta);
+    private static String colorToString(Color c) {
+        int r = (int)(c.getRed() * 255.0);
+        int g = (int)(c.getGreen() * 255.0);
+        int b = (int)(c.getBlue() * 255.0);
+        int a = (int)(c.getOpacity() * 255.0);
+        return "rgba(" + r + "," + g + "," + b + "," + a + ")";
     }
 
+    protected void assertColorEquals(Color expected, Color actual, double delta) {
+        double deltaRed = Math.abs(expected.getRed() - actual.getRed());
+        double deltaGreen = Math.abs(expected.getGreen() - actual.getGreen());
+        double deltaBlue = Math.abs(expected.getBlue() - actual.getBlue());
+        double deltaOpacity = Math.abs(expected.getOpacity() - actual.getOpacity());
+        if (deltaRed > delta || deltaGreen > delta || deltaBlue > delta || deltaOpacity > delta) {
+            throw new AssertionFailedError("expected:" + colorToString(expected)
+                    + " but was:" + colorToString(actual));
+        }
+    }
     private AnimationTimer timer;
 
     private void frameWait(int n) {
@@ -211,9 +222,11 @@ public abstract class VisualTestBase {
     // Waits until the frame containing the current state of the scene has
     // been rendered
     protected void waitNextFrame() {
-        // May need to wait for the current frame in process and then the next frame
-        // However, we get intermittent failures with 2 so we will wait for 3 frames.
-        frameWait(3);
+        // This is a temporary workaround until RT-28683 is implemented
+        // Need to wait for the current frame in process and then the next frame
+        // However, we get many intermittent failures with 2 and a very few with
+        // 3, so we will wait for 5 frames.
+        frameWait(5);
     }
 
 }

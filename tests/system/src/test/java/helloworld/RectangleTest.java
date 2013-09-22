@@ -41,7 +41,7 @@ public class RectangleTest extends VisualTestBase {
     private Stage testStage;
     private Scene testScene;
 
-    private static final double TOLERANCE = 0.03;
+    private static final double TOLERANCE = 0.07;
 
     @Test(timeout=5000)
     public void testSceneDefaultFill() {
