@@ -325,51 +325,57 @@ public class UserDataDirectoryTest extends TestBase {
         assertHasLocalStorage(webEngine);
     }
 
-    @org.junit.Ignore
     @Test
-    public void testIOError() {
-        String osName = System.getProperty("os.name");
-        File dir = new File(osName.toLowerCase().contains("windows")
-                ? "C:\\Windows\\foo" : "/foo");
-        webEngine.setUserDataDirectory(dir);
-        load(webEngine, new File("src/test/resources/html/ipsum.html"));
-        assertSame(dir, webEngine.getUserDataDirectory());
-        assertHasNoLocalStorage(webEngine);
+    public void testIOError() throws IOException {
+        File f = new File("qux");
+        f.createNewFile();
+        try {
+            webEngine.setUserDataDirectory(f);
+            load(webEngine, new File("src/test/resources/html/ipsum.html"));
+            assertSame(f, webEngine.getUserDataDirectory());
+            assertHasNoLocalStorage(webEngine);
+        } finally {
+            f.delete();
+        }
     }
 
-    @org.junit.Ignore
     @Test
-    public void testIOErrorWithPassiveHandler() {
-        String osName = System.getProperty("os.name");
-        File dir = new File(osName.toLowerCase().contains("windows")
-                ? "C:\\Windows\\foo" : "/foo");
-        webEngine.setUserDataDirectory(dir);
-        ErrorHandler handler = new ErrorHandler();
-        webEngine.setOnError(handler);
-        load(webEngine, new File("src/test/resources/html/ipsum.html"));
-        assertSame(dir, webEngine.getUserDataDirectory());
-        assertHasNoLocalStorage(webEngine);
-        assertOccurred(USER_DATA_DIRECTORY_IO_ERROR, handler);
+    public void testIOErrorWithPassiveHandler() throws IOException {
+        File f = new File("qux");
+        f.createNewFile();
+        try {
+            webEngine.setUserDataDirectory(f);
+            ErrorHandler handler = new ErrorHandler();
+            webEngine.setOnError(handler);
+            load(webEngine, new File("src/test/resources/html/ipsum.html"));
+            assertSame(f, webEngine.getUserDataDirectory());
+            assertHasNoLocalStorage(webEngine);
+            assertOccurred(USER_DATA_DIRECTORY_IO_ERROR, handler);
+        } finally {
+            f.delete();
+        }
     }
 
-    @org.junit.Ignore
     @Test
-    public void testIOErrorWithRecoveringHandler() {
-        String osName = System.getProperty("os.name");
-        File dir = new File(osName.toLowerCase().contains("windows")
-                ? "C:\\Windows\\foo" : "/foo");
-        webEngine.setUserDataDirectory(dir);
-        EventHandler<WebErrorEvent> h = new EventHandler<WebErrorEvent>() {
-            @Override public void handle(WebErrorEvent event) {
-                webEngine.setUserDataDirectory(BAR);
-            }
-        };
-        webEngine.setOnError(h);
-        assertSame(dir, webEngine.getUserDataDirectory());
-        load(webEngine, new File("src/test/resources/html/ipsum.html"));
-        assertSame(BAR, webEngine.getUserDataDirectory());
-        assertLocked(BAR);
-        assertHasLocalStorage(webEngine);
+    public void testIOErrorWithRecoveringHandler() throws IOException {
+        File f = new File("qux");
+        f.createNewFile();
+        try {
+            webEngine.setUserDataDirectory(f);
+            EventHandler<WebErrorEvent> h = new EventHandler<WebErrorEvent>() {
+                @Override public void handle(WebErrorEvent event) {
+                    webEngine.setUserDataDirectory(BAR);
+                }
+            };
+            webEngine.setOnError(h);
+            assertSame(f, webEngine.getUserDataDirectory());
+            load(webEngine, new File("src/test/resources/html/ipsum.html"));
+            assertSame(BAR, webEngine.getUserDataDirectory());
+            assertLocked(BAR);
+            assertHasLocalStorage(webEngine);
+        } finally {
+            f.delete();
+        }
     }
 
     @Test
