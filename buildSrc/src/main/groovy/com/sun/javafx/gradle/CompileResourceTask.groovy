@@ -24,6 +24,8 @@
  */
 
 class CompileResourceTask extends NativeCompileTask {
+    String compiler;
+
     protected File outputFile(File sourceFile) {
         final String outFileName = sourceFile.getName().substring(0, sourceFile.getName().lastIndexOf("."));
         return new File("$output/${outFileName}.res");
@@ -31,7 +33,7 @@ class CompileResourceTask extends NativeCompileTask {
 
     protected void doCompile(File sourceFile, File outputFile){
         project.exec({
-            commandLine("$project.RC", "/nologo", "/fo$outputFile", "$sourceFile");
+            commandLine(compiler, "/nologo", "/Fo$outputFile", "$sourceFile");
             environment(project.WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
         });
     }
