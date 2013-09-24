@@ -409,6 +409,9 @@ is being used to size a border should also be in pixels.
     -fx-alignment: CENTER;
     -fx-content-display: LEFT;
 }
+.menu-button > .label {
+    -fx-alignment: CENTER_LEFT;
+}
 .button:hover,
 .toggle-button:hover,
 .radio-button:hover > .radio,
