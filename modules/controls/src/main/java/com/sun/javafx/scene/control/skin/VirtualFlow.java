@@ -2082,11 +2082,26 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 positionCell(cell, getCellPosition(cell) - delta);
             }
 
+            // Fix for RT-32908
+            T firstCell = cells.getFirst();
+            double layoutY = firstCell == null ? 0 : getCellPosition(firstCell);
+            for (int i = 0; i < cells.size(); i++) {
+                T cell = cells.get(i);
+                assert cell != null;
+                double actualLayoutY = getCellPosition(cell);
+                if (actualLayoutY != layoutY) {
+                    // we need to shift the cell to layoutY
+                    positionCell(cell, layoutY);
+                }
+
+                layoutY += getCellLength(cell);
+            }
+            // end of fix for RT-32908
+
             // Now throw away any cells that don't fit
             cull();
 
             // Add any necessary leading cells
-            T firstCell = cells.getFirst();
             if (firstCell != null) {
                 int firstIndex = getCellIndex(firstCell);
                 double prevIndexSize = getCellLength(firstIndex - 1);
