@@ -45,7 +45,6 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.layout.VBox;
-import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
@@ -54,7 +53,7 @@ import javafx.stage.Stage;
  * A sample that demonstrates the ObservableList interface, which extends the
  * java.util.List interface. Click the button to change an integer to a new
  * random number in a random position in the list. Once you add a listener,
- * the index of the changed number is displayed to the left of the list.
+ * the index of the changed number is displayed above the buttons.
  *
  * @sampleName ObservableList
  * @preview preview.png
