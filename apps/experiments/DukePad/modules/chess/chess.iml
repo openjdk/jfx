@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$/../../../Chess/ChessLibrary">
+      <sourceFolder url="file://$MODULE_DIR$/../../../Chess/ChessLibrary/src/main/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../../Chess/ChessLibrary/src/main/resources" isTestSource="false" />
+    </content>
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/src/main/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/main/resources" isTestSource="false" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module" module-name="core" />
+    <orderEntry type="library" name="org.glassfish:javax.json:1.0.1" level="project" />
+    <orderEntry type="library" name="org.glassfish.tyrus:tyrus-container-grizzly:1.0" level="project" />
+    <orderEntry type="library" name="org.glassfish.tyrus:tyrus-client:1.1" level="project" />
+    <orderEntry type="library" name="org.eclipse.birt.runtime:org.eclipse.equinox.common:3.6.200.v20130402-1505" level="project" />
+    <orderEntry type="library" name="org.eclipse.birt.runtime:org.eclipse.equinox.preferences:3.5.100.v20130422-1538" level="project" />
+    <orderEntry type="library" name="org.eclipse.birt.runtime:org.eclipse.osgi:3.9.0.v20130529-1710" level="project" />
+  </component>
+</module>
+

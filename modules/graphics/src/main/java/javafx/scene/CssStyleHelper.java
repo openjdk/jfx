@@ -1326,7 +1326,7 @@ final class CssStyleHelper {
             try {
 
                 ObjectProperty<StyleOrigin> whence = new SimpleObjectProperty<StyleOrigin>(style.getOrigin());
-                resolved = resolveLookups(styleable, cssValue, styleMap, states, whence, new HashSet<>(), styleList);
+                resolved = resolveLookups(styleable, cssValue, styleMap, states, whence, new HashSet<ParsedValue>(), styleList);
 
                 final String property = cssMetaData.getProperty();
 

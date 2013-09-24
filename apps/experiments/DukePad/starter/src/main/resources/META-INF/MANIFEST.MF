@@ -1,0 +1,4 @@
+Manifest-Version: 1.0
+Class-Path: lib/org.eclipse.osgi_3.9.0.v20130529-1710.jar
+Main-Class: com.javafx.experiments.dukepad.starter.StarterApplication
+

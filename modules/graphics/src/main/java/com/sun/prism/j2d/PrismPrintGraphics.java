@@ -26,18 +26,68 @@
 package com.sun.prism.j2d;
 
 import com.sun.javafx.geom.Rectangle;
+import com.sun.prism.Image;
 import com.sun.prism.PresentableState;
 import com.sun.prism.PrinterGraphics;
+import com.sun.prism.Texture;
+import com.sun.prism.Texture.Usage;
+import com.sun.prism.Texture.WrapMode;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 public final class PrismPrintGraphics
     extends J2DPrismGraphics
     implements PrinterGraphics {
 
+    static class PrintResourceFactory extends J2DResourceFactory {
+     
+        private static final Map<Image, Texture> clampTexCache =
+                new WeakHashMap<Image, Texture>();
+        private static final Map<Image, Texture> repeatTexCache =
+                new WeakHashMap<Image, Texture>();
+
+        PrintResourceFactory() {
+            super(null);
+        }
+
+        @Override
+        public Texture getCachedTexture(Image image, WrapMode wrapMode) {
+            /*
+             * The super-class has a static cache which does not allow
+             * for different pipelines. Need to create our own cache.
+             */
+            if (wrapMode == WrapMode.CLAMP_TO_EDGE) {
+                return getCachedImage(image, wrapMode, clampTexCache);
+            } else if (wrapMode == WrapMode.REPEAT) {
+                return getCachedImage(image, wrapMode, repeatTexCache);
+            } else { /* Someone added a new mode we don't yet cache. */
+                return createTexture(image, Usage.DEFAULT, wrapMode);
+            }
+        }
+
+        private Texture getCachedImage(Image image, WrapMode wrapMode,
+                                       Map<Image, Texture> map) {
+            Texture t = map.get(image);
+            if (t != null) {
+                t.lock();
+                if (t.isSurfaceLost()) { // should not happen for BufferedImage
+                    t = null;
+                    map.remove(image);
+                }
+            }
+            if (t == null) {
+                t = createTexture(image, Usage.DEFAULT, wrapMode);
+                map.put(image, t);
+            }
+            return t;
+        }
+    } 
+
     static class PagePresentable extends J2DPresentable {
         private int width;
         private int height;
 
-        static J2DResourceFactory factory = new J2DResourceFactory(null);
+        static J2DResourceFactory factory = new PrintResourceFactory();
 
         PagePresentable(int width, int height) {
             super(null, factory);

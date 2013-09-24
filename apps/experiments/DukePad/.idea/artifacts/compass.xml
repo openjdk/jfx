@@ -1,0 +1,11 @@
+<component name="ArtifactManager">
+  <artifact type="jar" build-on-make="true" name="compass">
+    <output-path>$PROJECT_DIR$/build/artifacts/apps</output-path>
+    <root id="archive" name="compass.jar">
+      <element id="module-output" name="compass" />
+      <element id="directory" name="META-INF">
+        <element id="file-copy" path="$PROJECT_DIR$/modules/compass/src/main/resources/META-INF/MANIFEST.MF" />
+      </element>
+    </root>
+  </artifact>
+</component>

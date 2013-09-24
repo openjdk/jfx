@@ -122,10 +122,10 @@ static inline void PostGlassKeyEvent(jint code, BOOL keyPressed)
     UInt32 mouseButtons;
 }
 
-- (void)mouseMove:(NSValue*)p;
-- (void)mousePress:(NSNumber*)buttons;
-- (void)mouseRelease:(NSNumber*)buttons;
-- (void)getMousePos:(NSMutableArray*)args;
+- (void)mouseMove:(NSPoint)p;
+- (void)mousePress:(UInt32)buttons;
+- (void)mouseRelease:(UInt32)buttons;
+- (CGPoint)getMousePosFlipped;
 @end
 
 @implementation GlassRobot
@@ -141,9 +141,9 @@ static inline void PostGlassKeyEvent(jint code, BOOL keyPressed)
 }
 
 
-- (void)mouseMove:(NSValue*)p
+- (void)mouseMove:(NSPoint)p
 {
-    CGPoint location = NSPointToCGPoint([p pointValue]);
+    CGPoint location = NSPointToCGPoint(p);
     UInt32 buttons = self->mouseButtons;
     CGEventType type=kCGEventMouseMoved;
     UInt32 index=0;
@@ -181,26 +181,18 @@ static inline void PostGlassKeyEvent(jint code, BOOL keyPressed)
     return where;
 }
 
-- (void)mousePress:(NSNumber*)buttons
+- (void)mousePress:(UInt32)buttons
 {
-    UInt32 newPressed = (UInt32)[buttons unsignedLongValue];
     //Add new pressed buttons
-    self->mouseButtons = self->mouseButtons | newPressed;
-    PostGlassMouseEvent([self getMousePosFlipped], newPressed, YES);
+    self->mouseButtons = self->mouseButtons | buttons;
+    PostGlassMouseEvent([self getMousePosFlipped], buttons, YES);
 }
 
-- (void)mouseRelease:(NSNumber*)buttons
+- (void)mouseRelease:(UInt32)buttons
 {
-    UInt32 newReleased = (UInt32)[buttons unsignedLongValue];
-    PostGlassMouseEvent([self getMousePosFlipped], newReleased, NO);
+    PostGlassMouseEvent([self getMousePosFlipped], buttons, NO);
     //reset buttons
-    self->mouseButtons = self->mouseButtons & (~newReleased);
-}
-
-- (void)getMousePos:(NSMutableArray*)args
-{
-    CGPoint where = [self getMousePosFlipped];
-    [args addObject: [NSValue valueWithPoint: *(NSPoint*)&where]];
+    self->mouseButtons = self->mouseButtons & (~buttons);
 }
 
 @end
@@ -275,13 +267,13 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacRobot__1keyRelease
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacRobot__1mouseMove
 (JNIEnv *env, jobject jrobot, jlong ptr, jint x, jint y)
 {
-        LOG("Java_com_sun_glass_ui_mac_MacRobot__1mouseMove");
+    LOG("Java_com_sun_glass_ui_mac_MacRobot__1mouseMove");
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER
     {
-        GLASS_PERFORM_WITH_ARG((GlassRobot*)jlong_to_ptr(ptr),
-                mouseMove, [NSValue valueWithPoint: NSMakePoint((float)x, (float)y)], NO);
+        GlassRobot * robot = (GlassRobot*)jlong_to_ptr(ptr);
+        [robot mouseMove:NSMakePoint((float)x, (float)y)];
     }
     GLASS_POOL_EXIT;
 }
@@ -294,19 +286,15 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacRobot__1mouseMove
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getMouseX
 (JNIEnv *env, jobject jrobot, jlong ptr)
 {
-        LOG("Java_com_sun_glass_ui_mac_MacRobot__1getMouseX");
+    LOG("Java_com_sun_glass_ui_mac_MacRobot__1getMouseX");
     
     jint x = 0;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER
     {
-        NSMutableArray * args = [NSMutableArray arrayWithCapacity: 0];
-
-        GLASS_PERFORM_WITH_ARG((GlassRobot*)jlong_to_ptr(ptr),
-                getMousePos, args, YES);
-
-        x = (jint)[(NSValue*)[args lastObject] pointValue].x;
+        GlassRobot * robot = (GlassRobot*)jlong_to_ptr(ptr);
+        x = (jint)[robot getMousePosFlipped].x;
     }
     GLASS_POOL_EXIT;
     
@@ -321,19 +309,15 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getMouseX
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getMouseY
 (JNIEnv *env, jobject jrobot, jlong ptr)
 {
-        LOG("Java_com_sun_glass_ui_mac_MacRobot__1getMouseY");
+    LOG("Java_com_sun_glass_ui_mac_MacRobot__1getMouseY");
     
     jint y = 0;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER
     {
-        NSMutableArray * args = [NSMutableArray arrayWithCapacity: 0];
-
-        GLASS_PERFORM_WITH_ARG((GlassRobot*)jlong_to_ptr(ptr),
-                getMousePos, args, YES);
-
-        y = (jint)[(NSValue*)[args lastObject] pointValue].y;
+        GlassRobot * robot = (GlassRobot*)jlong_to_ptr(ptr);
+        y = (jint)[robot getMousePosFlipped].y;
     }
     GLASS_POOL_EXIT;
     
@@ -353,8 +337,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacRobot__1mousePress
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER
     {
-        GLASS_PERFORM_WITH_ARG((GlassRobot*)jlong_to_ptr(ptr),
-                mousePress, [NSNumber numberWithInt: buttons], NO);
+        GlassRobot * robot = (GlassRobot*)jlong_to_ptr(ptr);
+        [robot mousePress:(UInt32)buttons];
     }
     GLASS_POOL_EXIT;
 }
@@ -372,8 +356,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacRobot__1mouseRelease
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER
     {
-        GLASS_PERFORM_WITH_ARG((GlassRobot*)jlong_to_ptr(ptr),
-                mouseRelease, [NSNumber numberWithInt: buttons], NO);
+        GlassRobot * robot = (GlassRobot*)jlong_to_ptr(ptr);
+        [robot mouseRelease:(UInt32)buttons];
     }
     GLASS_POOL_EXIT;
 }

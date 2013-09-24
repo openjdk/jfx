@@ -1,0 +1,129 @@
+/* Simple Styling for DukePad */
+
+/* Background for app root node */
+.app {
+    -fx-background-color: -fx-background;
+}
+/* Very Simple Tree Style Accordion */
+.accordion, .titled-pane, .titled-pane .content {
+    -fx-background-color: null;
+    -fx-border-color: null;
+}
+.titled-pane .content {
+    -fx-padding: 20px;
+    -fx-font-size: 18;
+    -fx-font-family: "Dosis SemiBold";
+}
+.titled-pane > .title {
+    -fx-background-color: null;
+    -fx-font-size: 30;
+    -fx-font-family: "Dosis ExtraLight";
+}
+/* Make Sliders Bigger */
+.slider {
+    -fx-font-size: 24;
+}
+/* Simple Scroll Indicator */
+.scroll-bar {
+    -fx-background-color: #CCCCCC, -fx-background;
+    -fx-background-insets: 0,2;
+    -fx-padding: 3;
+    -fx-background-radius: 9,7;
+
+}
+.scroll-bar > .thumb {
+    -fx-background-color: #CCCCCC;
+    -fx-background-radius: 4;
+}
+.scroll-bar > .increment-button,
+.scroll-bar > .decrement-button,
+.scroll-bar > .decrement-button > .decrement-arrow,
+.scroll-bar > .increment-button > .increment-arrow {
+    -fx-background-color: null;
+    -fx-shape: null;
+    -fx-effect: null;
+    -fx-padding: 0;
+}
+.scroll-bar:horizontal > .increment-button > .increment-arrow,
+.scroll-bar:horizontal > .decrement-button > .decrement-arrow {
+    -fx-padding: 6 0 6 0;
+}
+.scroll-bar:vertical > .increment-button > .increment-arrow,
+.scroll-bar:vertical > .decrement-button > .decrement-arrow {
+    -fx-padding: 0 6 0 6;
+}
+/* Slider Button Styled Checkbox */
+.check-box > .box > .mark {
+    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color !important;
+    -fx-background-insets: 1 0 -1 0, 0;
+    -fx-shape: "M0.288,2.742C0.48,2.195,0.756,1.716,1.115,1.308C1.476,0.9,1.918,0.58,2.442,0.348S3.555,0,4.212,0c0.664,0,1.256,0.116,1.776,0.348s0.96,0.552,1.32,0.96c0.36,0.408,0.636,0.886,0.828,1.434C8.328,3.29,8.424,3.885,8.424,4.524c0,0.624-0.096,1.206-0.288,1.746c-0.192,0.54-0.468,1.01-0.828,1.41c-0.36,0.4-0.8,0.714-1.32,0.942S4.876,8.964,4.212,8.964c-0.656,0-1.246-0.114-1.77-0.342S1.476,8.08,1.115,7.68c-0.36-0.4-0.636-0.87-0.828-1.41C0.095,5.73,0,5.148,0,4.524C0,3.885,0.095,3.29,0.288,2.742z M2.01,5.574c0.084,0.34,0.218,0.646,0.402,0.918c0.184,0.272,0.424,0.49,0.72,0.654s0.656,0.246,1.08,0.246c0.424,0,0.784-0.082,1.08-0.246s0.536-0.382,0.72-0.654S6.33,5.914,6.414,5.574c0.084-0.34,0.126-0.69,0.126-1.05c0-0.376-0.042-0.74-0.126-1.092S6.196,2.766,6.011,2.49c-0.184-0.276-0.424-0.496-0.72-0.66s-0.656-0.246-1.08-0.246c-0.424,0-0.784,0.082-1.08,0.246s-0.536,0.384-0.72,0.66C2.228,2.766,2.094,3.08,2.01,3.432S1.884,4.148,1.884,4.524C1.884,4.884,1.926,5.234,2.01,5.574z M11.58,0.204l3.576,5.748h0.024V0.204h1.764v8.568H15.06l-3.564-5.736h-0.024v5.736H9.708V0.204H11.58z M28.524,2.742c0.191-0.548,0.468-1.026,0.828-1.434c0.359-0.408,0.802-0.728,1.326-0.96C31.202,0.116,31.792,0,32.448,0c0.664,0,1.256,0.116,1.776,0.348c0.52,0.232,0.96,0.552,1.319,0.96c0.36,0.408,0.637,0.886,0.828,1.434c0.192,0.548,0.288,1.142,0.288,1.782c0,0.624-0.096,1.206-0.288,1.746c-0.191,0.54-0.468,1.01-0.828,1.41c-0.359,0.4-0.8,0.714-1.319,0.942c-0.521,0.228-1.112,0.342-1.776,0.342c-0.656,0-1.246-0.114-1.77-0.342c-0.524-0.228-0.967-0.542-1.326-0.942c-0.36-0.4-0.637-0.87-0.828-1.41c-0.192-0.54-0.288-1.122-0.288-1.746C28.236,3.885,28.332,3.29,28.524,2.742z M30.246,5.574c0.084,0.34,0.218,0.646,0.402,0.918c0.184,0.272,0.424,0.49,0.72,0.654s0.656,0.246,1.08,0.246s0.784-0.082,1.08-0.246s0.536-0.382,0.72-0.654c0.185-0.272,0.318-0.578,0.402-0.918c0.084-0.34,0.126-0.69,0.126-1.05c0-0.376-0.042-0.74-0.126-1.092s-0.218-0.666-0.402-0.942c-0.184-0.276-0.424-0.496-0.72-0.66s-0.656-0.246-1.08-0.246s-0.784,0.082-1.08,0.246s-0.536,0.384-0.72,0.66c-0.185,0.276-0.318,0.59-0.402,0.942S30.12,4.148,30.12,4.524C30.12,4.884,30.162,5.234,30.246,5.574zM43.968,0.204v1.584h-4.14v1.98h3.588v1.464h-3.588v3.54h-1.884V0.204H43.968z M51.083,0.204v1.584h-4.14v1.98h3.588v1.464h-3.588v3.54h-1.884V0.204H51.083z";
+    -fx-padding: 7 38 7 38;
+}
+.check-box > .box {
+    -fx-padding: 10px 10px 10px 14px;
+    -fx-background-color:
+        -fx-shadow-highlight-color,
+        -fx-outer-border,
+        -fx-inner-border,
+        -fx-body-color,
+        linear-gradient(to bottom, derive(-fx-outer-border, -20%), -fx-outer-border),
+        linear-gradient(to bottom, derive(-fx-color, -22%) 0%, derive(-fx-color, -13%) 20%, derive(-fx-color, -11%) 50%);
+    -fx-background-insets: 0 0 -1 0, 0, 1, 2, 0 0 0 50, 1 1 1 51;
+    -fx-background-radius: 3px, 3px, 2px, 1px, 0 2px 2px 0, 0 1 1 0;
+}
+.check-box:selected > .box {
+    -fx-background-color:
+        -fx-shadow-highlight-color,
+        -fx-outer-border,
+        -fx-inner-border,
+        -fx-body-color,
+        linear-gradient(to bottom, derive(-fx-outer-border, -20%), -fx-outer-border),
+        linear-gradient(to bottom, derive(-fx-default-button, -12%) 0%, derive(-fx-default-button, -3%) 20%, derive(-fx-default-button, -1%) 50%);
+
+    -fx-background-insets: 0 0 -1 0, 0, 1, 2, 0 52 0 0, 1 53 1 1;
+    -fx-background-radius: 3px, 3px, 2px, 1px, 2px 0 0 2px, 1 0 0 1;
+}
+.check-box:focused > .box {
+    -fx-background-color:
+        -fx-focus-color,
+        -fx-inner-border,
+        -fx-body-color,
+        linear-gradient(to bottom, derive(-fx-outer-border, -20%), -fx-outer-border),
+        linear-gradient(to bottom, derive(-fx-color, -22%) 0%, derive(-fx-color, -13%) 20%, derive(-fx-color, -11%) 50%);
+    -fx-background-insets: -0.2, 1, 2, 1 1 1 50, 1 1 1 51;
+    -fx-background-radius: 3px, 2px, 1px, 0 2px 2px 0, 0 1 1 0;
+}
+.check-box:focused:selected > .box {
+    -fx-background-color:
+        -fx-focus-color,
+        -fx-inner-border,
+        -fx-body-color,
+        linear-gradient(to bottom, derive(-fx-outer-border, -20%), -fx-outer-border),
+        linear-gradient(to bottom, derive(-fx-default-button, -12%) 0%, derive(-fx-default-button, -3%) 20%, derive(-fx-default-button, -1%) 50%);
+    -fx-background-insets: -0.2, 1, 2, 1 52 1 1, 1 53 1 1;
+    -fx-background-radius: 3px, 2px, 1px, 2px 0 0 2px, 1 0 0 1;
+}
+/* fullscreen toolbars */
+.fullscreen-toolbar {
+    -fx-font-size: 40;
+    -fx-base: #3a3a3a;
+}
+.fullscreen-toolbar > *:focused  {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+    -fx-background-insets: 0 0 -1 0, 0, 1, 2;
+    -fx-background-radius: 3px, 3px, 2px, 1px;
+}
+
+.fullscreen-toolbar > .left-pill:focused {
+    -fx-background-radius: 3 0 0 3, 3 0 0 3, 2 0 0 2, 1 0 0 1;
+    -fx-background-insets: 0 0 -1 0, 0, 1, 2;
+    -fx-padding: 0.333333em 0.666667em 0.333333em 0.75em; /* 4 8 4 9 */
+}
+.fullscreen-toolbar > .center-pill:focused {
+    -fx-background-radius: 0;
+    -fx-background-insets: 0 0 -1 0, 0 0 0 0, 1 1 1 0, 2 2 2 1 ;
+}
+.fullscreen-toolbar > .right-pill:focused {
+    -fx-background-radius: 0 3 3 0, 0 3 3 0, 0 2 2 0, 0 1 1 0;
+    -fx-background-insets: 0 0 -1 0, 0, 1 1 1 0, 2 2 2 1 ;
+}

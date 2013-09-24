@@ -43,7 +43,6 @@
     CGFloat                 parentWindowAlpha;
     
     GlassHostView           *fullscreenHost;
-    GlassFullscreenWindow   *fullscreenWindow;
     GlassBackgroundWindow   *backgroundWindow;
     // not nil when the FX mode is initiated with the OS X 10.7 widget
     NSWindow*               nativeFullScreenModeWindow;
@@ -56,6 +55,9 @@
     NSEvent                 *lastEvent;
     NSDragOperation         dragOperation;
     NSInteger               lastTrackingNumber;
+    
+@public
+    GlassFullscreenWindow   *fullscreenWindow;
 }
 
 - (id)initWithView:(NSView*)view withJview:(jobject)jview;

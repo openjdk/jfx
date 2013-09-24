@@ -153,7 +153,8 @@ class GlassViewEventHandler extends View.EventHandler {
                 switch (type) {
                     case com.sun.glass.events.KeyEvent.PRESS:
                         if (view.isInFullscreen() && stage != null) {
-                            if (stage.getSavedFullScreenExitKey().match(keyEvent)) {
+                            if (stage.getSavedFullScreenExitKey() != null
+                                && stage.getSavedFullScreenExitKey().match(keyEvent)) {
                                 stage.exitFullScreen();
                             }
                         }

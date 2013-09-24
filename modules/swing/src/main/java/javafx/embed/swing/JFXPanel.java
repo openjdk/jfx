@@ -34,6 +34,7 @@ import java.awt.Graphics2D;
 import java.awt.KeyboardFocusManager;
 import java.awt.Point;
 import java.awt.Window;
+import java.awt.Insets;
 import java.awt.event.AWTEventListener;
 import java.awt.event.ComponentEvent;
 import java.awt.event.FocusEvent;
@@ -406,10 +407,10 @@ public class JFXPanel extends JComponent {
         if (scenePeer == null || !isFxEnabled()) {
             return;
         }
-
+        
         char[] chars = (e.getKeyChar() == KeyEvent.CHAR_UNDEFINED)
                        ? new char[] {}
-                       : new char[] { e.getKeyChar() };
+                       : new char[] { SwingEvents.keyCharToEmbedKeyChar(e.getKeyChar()) };
 
         scenePeer.keyEvent(
                 SwingEvents.keyIDToEmbedKeyType(e.getID()),
@@ -476,6 +477,11 @@ public class JFXPanel extends JComponent {
         // what JavaFX embedded scenes/stages are ready to
         pWidth = Math.max(0, getWidth());
         pHeight = Math.max(0, getHeight());
+        if (getBorder() != null) {
+            Insets i = getBorder().getBorderInsets(this);
+            pWidth -= (i.left + i.right);
+            pHeight -= (i.top + i.bottom);
+        }        
         if (oldWidth != pWidth || oldHeight != pHeight) {
             resizePixels();
             sendResizeEventToFX();
@@ -614,6 +620,10 @@ public class JFXPanel extends JComponent {
                 Graphics2D g2d = (Graphics2D)gg;
                 AlphaComposite c = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, opacity);
                 g2d.setComposite(c);
+            }
+            if (getBorder() != null) {
+                Insets i = getBorder().getBorderInsets(this);
+                gg.translate(i.left, i.top);
             }
             gg.drawImage(pixelsIm, 0, 0, null);
         } catch (Throwable th) {

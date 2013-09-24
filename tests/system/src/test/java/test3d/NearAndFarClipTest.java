@@ -44,8 +44,8 @@ public class NearAndFarClipTest extends VisualTestBase {
     private Stage testStage;
     private Scene testScene;
 
-    private static final double TOLERANCE = 0.03;
-    private static final double OFFSET = 0.05;
+    private static final double TOLERANCE = 0.07;
+    private static final double OFFSET_PERCENT = 0.01; // 1 percent tolerance
 
     @Test(timeout=5000)
     public void testNearAndFarClips() {
@@ -63,15 +63,18 @@ public class NearAndFarClipTest extends VisualTestBase {
 
                 final double tanOfHalfFOV = Math.tan(Math.toRadians(FOV) / 2.0);
                 final double halfHeight = HEIGHT / 2;
-                final double focalLenght = halfHeight / tanOfHalfFOV;
-                final double eyePositionZ = -1.0 * focalLenght;
-                final double nearClipDistance = focalLenght * NEAR + eyePositionZ;
-                final double farClipDistance =  focalLenght * FAR + eyePositionZ;
-
-//                System.err.println("In scene coordinate: focalLenght = " + focalLenght
+                final double focalLength = halfHeight / tanOfHalfFOV;
+                final double eyePositionZ = -1.0 * focalLength;
+                final double nearClipDistance = focalLength * NEAR + eyePositionZ;
+                final double farClipDistance =  focalLength * FAR + eyePositionZ;
+                final double nearClipDistanceOffset = Math.abs(nearClipDistance * OFFSET_PERCENT);
+                final double farClipDistanceOffset = Math.abs(farClipDistance * OFFSET_PERCENT);
+        
+//                System.out.println("In scene coordinate: focalLength = " + focalLength
 //                        + ", nearClipDistance = " + nearClipDistance
-//                        + ", farClipDistance = " + farClipDistance);
-
+//                        + ", nearClipDistanceOffset = " + nearClipDistanceOffset
+//                        + ", farClipDistance = " + farClipDistance
+//                        + ", farClipDistanceOffset = " + farClipDistanceOffset);
 
                 Rectangle insideRect = new Rectangle(220, 220, Color.GREEN);
                 insideRect.setLayoutX(140);
@@ -80,22 +83,22 @@ public class NearAndFarClipTest extends VisualTestBase {
                 Rectangle insideNearClip = new Rectangle(16, 16, Color.BLUE);
                 insideNearClip.setLayoutX(242);
                 insideNearClip.setLayoutY(242);
-                insideNearClip.setTranslateZ(nearClipDistance + OFFSET);
+                insideNearClip.setTranslateZ(nearClipDistance + nearClipDistanceOffset);
 
                 Rectangle outsideNearClip = new Rectangle(16, 16, Color.YELLOW);
                 outsideNearClip.setLayoutX(242);
                 outsideNearClip.setLayoutY(242);
-                outsideNearClip.setTranslateZ(nearClipDistance - OFFSET);
+                outsideNearClip.setTranslateZ(nearClipDistance - nearClipDistanceOffset);
 
                 Rectangle insideFarClip = new Rectangle(3000, 3000, Color.RED);
                 insideFarClip.setTranslateX(-1250);
                 insideFarClip.setTranslateY(-1250);
-                insideFarClip.setTranslateZ(farClipDistance - OFFSET);
+                insideFarClip.setTranslateZ(farClipDistance - farClipDistanceOffset);
 
                 Rectangle outsideFarClip = new Rectangle(4000, 4000, Color.CYAN);
                 outsideFarClip.setTranslateX(-1750);
                 outsideFarClip.setTranslateY(-1750);
-                outsideFarClip.setTranslateZ(farClipDistance + OFFSET);
+                outsideFarClip.setTranslateZ(farClipDistance + farClipDistanceOffset);
 
                 Group root = new Group();
 

@@ -1,0 +1,13 @@
+Manifest-Version: 1.0
+Export-Package: com.javafx.experiments.dukepad.core;uses:="org.osgi.framework";version="1.0.0",com.javafx.experiments.dukepad;version="1.0.0"
+Private-Package: com.javafx.experiments.dukepad.core;com.javafx.experiments.dukepad;-split-package:=merge-first
+Bundle-Version: 1.0.0
+Bundle-Name: com.javafx.experiments.dukepad.core
+Bundle-Activator: com.javafx.experiments.dukepad.core.CoreActivator
+Bundle-ManifestVersion: 2
+Bundle-SymbolicName: com.javafx.experiments.dukepad.core
+Include-Resource: ../core
+Import-Package: org.osgi.framework
+Require-Bundle: com.javafx.experiments.dukepad.core, org.eclipse.equinox.preferences
+
+

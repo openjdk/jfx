@@ -80,8 +80,6 @@ class WindowStage extends GlassStage {
     // an input event handler.
     private boolean inEventHandler = false;
 
-    private static final AtomicReference<WindowStage> activeFSWindow = new AtomicReference<>();
-
     // An active window is visible && enabled && focusable.
     // The list is maintained in the z-order, so that the last element
     // represents the topmost window (or more accurately, the last
@@ -608,7 +606,7 @@ class WindowStage extends GlassStage {
             fullScreenFromUserEvent = true;
         }
 
-        WindowStage fsWindow = activeFSWindow.get();
+        GlassStage fsWindow = activeFSWindow.get();
         if (fullScreen && (fsWindow != null)) {
             fsWindow.setFullScreen(false);
         }
@@ -621,7 +619,12 @@ class WindowStage extends GlassStage {
 
     void fullscreenChanged(final boolean fs) {
         if (!fs) {
-            activeFSWindow.compareAndSet(this, null);
+            if (activeFSWindow.compareAndSet(this, null)) {
+                isInFullScreen = false;
+            }
+        } else {
+            isInFullScreen = true;
+            activeFSWindow.set(this);
         }
         AccessController.doPrivileged(new PrivilegedAction<Void>() {
             @Override

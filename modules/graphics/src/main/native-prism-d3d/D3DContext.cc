@@ -556,7 +556,10 @@ HRESULT D3DContext::setDeviceParametersFor3D() {
         SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_LIGHTING, TRUE)) &&
         // Set texture unit 0 to its default texture addressing mode for Prism
         SUCCEEDED(res = pd3dDevice->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP)) &&
-        SUCCEEDED(res = pd3dDevice->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP));
+        SUCCEEDED(res = pd3dDevice->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP)) &&
+        // Set texture filter to bilinear for 3D rendering
+        SUCCEEDED(res = pd3dDevice->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR)) &&
+        SUCCEEDED(res = pd3dDevice->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR));
     }
     return res;
 }
@@ -603,15 +606,6 @@ HRESULT D3DContext::InitDevice(IDirect3DDevice9 *pd3dDevice)
 
     // set clipping to true inorder support near and far clipping
     pd3dDevice->SetRenderState(D3DRS_CLIPPING,  TRUE);
-
-    // set the default texture addressing mode
-    pd3dDevice->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-    pd3dDevice->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-
-    // REMIND: check supported filters with
-    // IDirect3D9::CheckDeviceFormat with D3DUSAGE_QUERY_FILTER
-    pd3dDevice->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_POINT);
-    pd3dDevice->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_POINT);
 
     pd3dDevice->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
     pd3dDevice->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
@@ -825,6 +819,7 @@ D3DContext::SetRenderTarget(IDirect3DSurface9 *pSurface,
     HRESULT res;
     D3DSURFACE_DESC descNew;
     IDirect3DSurface9 *pCurrentTarget;
+    bool renderTargetChanged = false;
 
     TraceLn1(NWT_TRACE_INFO,
                 "D3DContext::SetRenderTarget: pSurface=0x%x",
@@ -837,6 +832,7 @@ D3DContext::SetRenderTarget(IDirect3DSurface9 *pSurface,
 
     if (SUCCEEDED(res = pd3dDevice->GetRenderTarget(0, &pCurrentTarget))) {
         if (pCurrentTarget != pSurface) {
+            renderTargetChanged = true;
 #if defined PERF_COUNTERS
             getStats().numRenderTargetSwitch++;
 #endif
@@ -849,8 +845,8 @@ D3DContext::SetRenderTarget(IDirect3DSurface9 *pSurface,
             }
 
             currentSurface = pSurface;
-            SAFE_RELEASE(pCurrentTarget);
         }
+        SAFE_RELEASE(pCurrentTarget);
 
         IDirect3DSurface9 *pCurrentDepth;
         res = pd3dDevice->GetDepthStencilSurface(&pCurrentDepth);
@@ -886,7 +882,7 @@ D3DContext::SetRenderTarget(IDirect3DSurface9 *pSurface,
                             "D3DContext::SetRenderTarget: error clearing depth buffer");
                 }
             }
-        } else if (pCurrentTarget == pSurface) {
+        } else if (!renderTargetChanged) {
             return res; // Render target has not changed
         }
         pd3dDevice->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, msaa);

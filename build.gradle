@@ -352,7 +352,7 @@ ext.IS_DOC_LINT = DOC_LINT != "none"
 
 // Specifies whether to use the "useDepend" option when compiling Java sources
 defineProperty("USE_DEPEND", "true")
-ext.USE_DEPEND = Boolean.parseBoolean(USE_DEPEND)
+ext.IS_USE_DEPEND = Boolean.parseBoolean(USE_DEPEND)
 
 // Specifies whether to generate code coverage statistics when running tests
 defineProperty("JCOV", "false")
@@ -772,9 +772,11 @@ void addNative(Project project, String name, List<String> includeTargets, boolea
             if (IS_WINDOWS && t.name == "win") {
                 def rcTask = project.task("rc$capitalName$capitalVariant", type: CompileResourceTask, dependsOn: javahTask, group: "Build") {
                     description = "Compiles native sources for $name"
-                    matches = ".*\\.rc|.*\\.cur"
-                    def rcOutput = file("$nativeRootDir/win")
+                    matches = ".*\\.rc"
+                    compiler = variantProperties.resourcesCompiler
+                    def rcOutput = variant == "" ? nativeDir : file("$nativeDir/$variant")
                     output(rcOutput)
+                    source(variantProperties.nativeSource)
                     cleanTask.delete rcOutput
                 }
                 linkTask.dependsOn rcTask;
@@ -1656,7 +1658,7 @@ allprojects {
         compile.options.fork = true
         compile.options.forkOptions.executable = JAVAC
         compile.options.warnings = IS_LINT
-        compile.options.useDepend = USE_DEPEND
+        compile.options.useDepend = IS_USE_DEPEND
         compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file", "-encoding", "UTF-8"]
 
         // Add in the -Xlint options

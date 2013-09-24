@@ -1,0 +1,11 @@
+<component name="ArtifactManager">
+  <artifact type="jar" build-on-make="true" name="notes">
+    <output-path>$PROJECT_DIR$/build/artifacts/apps</output-path>
+    <root id="archive" name="notes.jar">
+      <element id="module-output" name="notes" />
+      <element id="directory" name="META-INF">
+        <element id="file-copy" path="$PROJECT_DIR$/modules/notes/src/main/resources/META-INF/MANIFEST.MF" />
+      </element>
+    </root>
+  </artifact>
+</component>

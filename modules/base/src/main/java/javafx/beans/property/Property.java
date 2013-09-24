@@ -67,6 +67,11 @@ public interface Property<T> extends ReadOnlyProperty<T>, WritableValue<T> {
     /**
      * Create a bidirectional binding between this {@code Property} and another
      * one.
+     * Bidirectional bindings exists independently of unidirectional bindings. So it is possible to
+     * add unidirectional binding to a property with bidirectional binding and vice-versa. However, this practice is
+     * discouraged.
+     *
+     * It is possible to have multiple bidirectional bindings of one Property.
      * 
      * @param other
      *            the other {@code Property}
@@ -83,7 +88,14 @@ public interface Property<T> extends ReadOnlyProperty<T>, WritableValue<T> {
      * 
      * If no bidirectional binding between the properties exists, calling this
      * method has no effect.
-     * 
+     *
+     * It is possible to unbind by a call on the second property. This code will work:
+     *
+     * <blockquote><pre>
+     *     property1.bindBirectional(property2);
+     *     property2.unbindBidirectional(property1);
+     * </pre></blockquote>
+     *
      * @param other
      *            the other {@code Property}
      * @throws NullPointerException

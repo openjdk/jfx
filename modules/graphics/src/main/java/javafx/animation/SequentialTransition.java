@@ -715,12 +715,34 @@ public final class SequentialTransition extends Transition {
 
     private void jumpToEnd() {
         for (int i = 0 ; i < end; ++i) {
+            if (forceChildSync[i]) {
+                cachedChildren[i].impl_sync(true);
+                //NOTE: do not clean up forceChildSync[i] here. Another sync will be needed during the play
+                // The reason is we have 2 different use-cases for jumping (1)play from start, (2)play next cycle.
+                // and 2 different types of sub-transitions (A)"by" transitions that need to synchronize on
+                // the current state a move property by certain value and (B)"from-to" transitions that 
+                // move from one point to another on each play/cycle. We can't query if transition is A or B.
+                //
+                // Now for combination 1A we need to synchronize here, as the subsequent jump would move
+                // the property to the previous value. 1B doesn't need to sync here, but it's not unsafe to
+                // do it. As forceChildSync is set only in case (1) and not in case (2), the cycles are always equal.
+                // 
+                // Now the reason why we cannot clean forceChildSync[i] here is that while we need to sync here,
+                // there might be children of (A)-"by" type that operate on the same property, but fail to synchronize
+                // them when they start would mean they all would have the same value at the beginning.
+            }
             cachedChildren[i].impl_jumpTo(durations[i], durations[i], true);
+
         }
     }
 
     private void jumpToBefore() {
         for (int i = end - 1 ; i >= 0; --i) {
+            if (forceChildSync[i]) {
+                cachedChildren[i].impl_sync(true);
+                //NOTE: do not clean up forceChildSync[i] here. Another sync will be needed during the play
+                // See explanation in jumpToEnd
+            }
             cachedChildren[i].impl_jumpTo(0, durations[i], true);
         }
     }

@@ -879,21 +879,17 @@ public abstract class Animation {
      *                such as {@link SequentialTransition} or {@link ParallelTransition}
      */
     public void play() {
-        play(true);
-    }
-
-    private void play(boolean forceSync) {
         if (parent != null) {
             throw new IllegalStateException("Cannot start when embedded in another animation");
         }
         switch (getStatus()) {
             case STOPPED:
-                if (impl_startable(forceSync)) {
+                if (impl_startable(true)) {
                     final double rate = getRate();
                     if (lastPlayedFinished) {
                         jumpTo((rate < 0)? getTotalDuration() : Duration.ZERO);
                     }
-                    impl_start(forceSync);
+                    impl_start(true);
                     startReceiver(TickCalculation.fromDuration(getDelay()));
                     if (Math.abs(rate) < EPSILON) {
                         pauseReceiver();
@@ -942,7 +938,7 @@ public abstract class Animation {
         stop();
         setRate(Math.abs(getRate()));
         jumpTo(Duration.ZERO);
-        play(true);
+        play();
     }
 
     /**

@@ -42,16 +42,6 @@ final class LensWindow extends Window {
     private int windowHandle;
 
     private static int nextWindowId = 1;
-    private static final boolean restrictWindowToScreen;
-
-    static {
-        restrictWindowToScreen =
-        AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-            @Override public Boolean run() {
-                return Boolean.getBoolean("glass.restrictWindowToScreen");
-            }
-        });
-    }
 
     protected LensWindow(Window owner, Screen screen, int styleMask) {
         super(owner, screen, styleMask);
@@ -154,26 +144,6 @@ final class LensWindow extends Window {
         } else {
             //no explicit request to change height, get default
             height = getHeight();
-        }
-
-        if (restrictWindowToScreen) {
-            int screenWidth = this.getScreen().getWidth();
-            int screenHeight = this.getScreen().getHeight();
-
-            LensLogger.getLogger().fine("Restricting window size to screen" +
-                                        " Requested " + width + "X" + height +
-                                        " Screen size " + screenWidth + "X" +
-                                        screenHeight);
-
-            width = (width > screenWidth) ? screenWidth : width;
-            height = (height > screenHeight) ? screenHeight : height;
-            x = Math.max(x, 0);
-            y = Math.max(y, 0);
-            x = Math.min(screenWidth - width, x);
-            y = Math.min(screenHeight - height, y);
-
-            LensLogger.getLogger().fine("Setting bounds to "+ x + "," + y +
-                                        "+" + width + "x" + height);
         }
 
         setBoundsImpl(nativeWindowPointer, x, y, width, height,
