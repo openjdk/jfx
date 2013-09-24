@@ -245,6 +245,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         // prevent requestLayout requests from within scrollNode from percolating up
         viewRect.setManaged(false);
         viewRect.setCache(true);
+        viewRect.getStyleClass().add("viewport");
 
         clipRect = new Rectangle();
         viewRect.setClip(clipRect);

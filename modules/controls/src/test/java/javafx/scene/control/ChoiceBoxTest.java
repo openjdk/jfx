@@ -459,4 +459,15 @@ public class ChoiceBoxTest {
         assertEquals("Apple", ChoiceBoxSkinNodesRetriever.getChoiceBoxSelectedText(skin));
         
     }
+    
+    @Test public void checkSelectedItemAfterReplacingDataWithEmptyList() {
+        StackPane pane = new StackPane();
+        pane.getChildren().add(box);
+        box.getItems().addAll("Apple", "Orange", "Banana");
+        box.getSelectionModel().select("Orange");
+        startApp(pane);
+        box.getItems().clear();
+        // make sure the selected item is null
+        assertEquals(null, box.getSelectionModel().getSelectedItem());
+    }
 }

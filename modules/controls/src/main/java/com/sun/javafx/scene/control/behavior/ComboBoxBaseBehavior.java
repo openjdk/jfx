@@ -191,9 +191,10 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
     
     @Override public void mouseReleased(MouseEvent e) {
         super.mousePressed(e);
-        
+
+        boolean wasArmed = getControl().isArmed();
         disarm();
-        
+
         // The wasComboBoxButtonClickedForAutoHide boolean was added to resolve
         // RT-18151: namely, clicking on the comboBox button shouldn't hide, 
         // and then immediately show the popup, which was occuring because we 
@@ -203,7 +204,8 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
             hide();
         } else if (! wasComboBoxButtonClickedForAutoHide 
                 && getControl().contains(e.getX(), e.getY())
-                && e.getButton() == MouseButton.PRIMARY) {
+                && e.getButton() == MouseButton.PRIMARY
+                && wasArmed) {
             show();
         } else {
             wasComboBoxButtonClickedForAutoHide = false;
