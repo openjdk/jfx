@@ -226,8 +226,11 @@ public class J2DPrismGraphics
                     y2 = y + h * y2;
                 }
                 if (x1 == x2 && y1 == y1) {
-                    x1 -= .0001f;
-                    x2 += .0001f;
+                    // Hardware pipelines use an inverse transform of
+                    // all zeros to choose colors when the start and end
+                    // point are the same so that the first color is
+                    // always chosen...
+                    return colors[0];
                 }
                 java.awt.geom.Point2D p1 =
                     new java.awt.geom.Point2D.Float(x1, y1);
