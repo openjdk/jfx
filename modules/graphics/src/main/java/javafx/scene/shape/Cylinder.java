@@ -115,6 +115,7 @@ public class Cylinder extends Shape3D {
                     impl_markDirty(DirtyBits.MESH_GEOM);
                     manager.invalidateCylinderMesh(key);
                     key = 0;
+                    impl_geomChanged();
                 }
             };
         }
@@ -144,6 +145,7 @@ public class Cylinder extends Shape3D {
                     impl_markDirty(DirtyBits.MESH_GEOM);
                     manager.invalidateCylinderMesh(key);
                     key = 0;
+                    impl_geomChanged();
                 }
             };
         }

@@ -93,6 +93,7 @@ public class Box extends Shape3D {
                     impl_markDirty(DirtyBits.MESH_GEOM);
                     manager.invalidateBoxMesh(key);
                     key = 0;
+                    impl_geomChanged();
                 }
             };
         }
@@ -122,6 +123,7 @@ public class Box extends Shape3D {
                     impl_markDirty(DirtyBits.MESH_GEOM);
                     manager.invalidateBoxMesh(key);
                     key = 0;
+                    impl_geomChanged();
                 }
             };
         }
@@ -151,6 +153,7 @@ public class Box extends Shape3D {
                     impl_markDirty(DirtyBits.MESH_GEOM);
                     manager.invalidateBoxMesh(key);
                     key = 0;
+                    impl_geomChanged();
                 }
             };
         }
