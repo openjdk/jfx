@@ -666,7 +666,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosApplication__1initIDs
     
     mat_jWindowNotifyMove = (*env)->GetMethodID(env, mat_jWindowBaseClass, "notifyMove", "(II)V");
     mat_jWindowNotifyResize = (*env)->GetMethodID(env, mat_jWindowBaseClass, "notifyResize", "(III)V");
-    mat_jWindowNotifyMoveToAnotherScreen = (*env)->GetMethodID(env, mat_jWindowBaseClass, "notifyMoveToAnotherScreen", "(JJ)V");
+    mat_jWindowNotifyMoveToAnotherScreen = (*env)->GetMethodID(env, mat_jWindowBaseClass, "notifyMoveToAnotherScreen", "(Lcom/sun/glass/ui/Screen;)V");
     mat_jWindowNotifyClose = (*env)->GetMethodID(env, mat_jWindowBaseClass, "notifyClose", "()V");
     mat_jWindowNotifyFocus = (*env)->GetMethodID(env, mat_jWindowBaseClass, "notifyFocus", "(I)V");
     mat_jWindowNotifyDestroy = (*env)->GetMethodID(env, mat_jWindowBaseClass, "notifyDestroy", "()V");

@@ -617,7 +617,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1initIDs
     
     if (jWindowNotifyMoveToAnotherScreen == NULL)
     {
-        jWindowNotifyMoveToAnotherScreen = (*env)->GetMethodID(env, jWindowClass, "notifyMoveToAnotherScreen", "(JJ)V");
+        jWindowNotifyMoveToAnotherScreen = (*env)->GetMethodID(env, jWindowClass, "notifyMoveToAnotherScreen", "(Lcom/sun/glass/ui/Screen;)V");
     }
     
     if (jWindowNotifyClose == NULL)

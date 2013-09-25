@@ -380,8 +380,8 @@ public abstract class Window {
         this.screen = screen;
 
         if (this.eventHandler != null) {
-            //TODO: RT-31098
-            if (old != this.screen) {
+            if ((old == null && this.screen != null) ||
+                (old != null && !old.equals(this.screen))) {
                 this.eventHandler.handleScreenChangedEvent(this, System.nanoTime(), old, this.screen);
             }
         }
@@ -1169,8 +1169,8 @@ public abstract class Window {
         handleWindowEvent(System.nanoTime(), WindowEvent.MOVE);
     }
 
-    protected void notifyMoveToAnotherScreen(long fromScreenPtr, long toScreenPtr) {
-        setScreen(Screen.getScreenForPtr(toScreenPtr));
+    protected void notifyMoveToAnotherScreen(Screen newScreen) {
+        setScreen(newScreen);
     }
 
     /**

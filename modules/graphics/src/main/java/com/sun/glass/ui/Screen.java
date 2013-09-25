@@ -58,19 +58,6 @@ public final class Screen {
         return Application.GetApplication().staticScreen_getVideoRefreshPeriod();
     }
 
-    // Used by Window.notifyMoveToAnotherScreen
-    static Screen getScreenForPtr(long screenPtr) {
-        Application.checkEventThread();
-        for (Screen s : getScreens()) {
-            if (s != null && s.ptr == screenPtr) {
-                return s;
-            }
-        }
-
-        return null;
-    }
-
-
     /**
      * Could be called from any thread
      * @return the main screen
@@ -316,5 +303,43 @@ public final class Screen {
                 "    scale:"+getScale()+"\n"+
                 "    resolutionX:"+getResolutionX()+"\n"+
                 "    resolutionY:"+getResolutionY()+"\n";
+    }
+
+    @Override public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Screen screen = (Screen) o;
+        return ptr == screen.ptr
+                && depth == screen.depth
+                && x == screen.x
+                && y == screen.y
+                && width == screen.width
+                && height == screen.height
+                && visibleX == screen.visibleX
+                && visibleY == screen.visibleY
+                && visibleWidth == screen.visibleWidth
+                && visibleHeight == screen.visibleHeight
+                && resolutionX == screen.resolutionX
+                && resolutionY == screen.resolutionY
+                && Float.compare(screen.scale, scale) == 0;
+    }
+
+    @Override public int hashCode() {
+        int result = 17;
+        result = 31 * result + (int) (ptr ^ (ptr >>> 32));
+        result = 31 * result + depth;
+        result = 31 * result + x;
+        result = 31 * result + y;
+        result = 31 * result + width;
+        result = 31 * result + height;
+        result = 31 * result + visibleX;
+        result = 31 * result + visibleY;
+        result = 31 * result + visibleWidth;
+        result = 31 * result + visibleHeight;
+        result = 31 * result + resolutionX;
+        result = 31 * result + resolutionY;
+        result = 31 * result + (scale != +0.0f ? Float.floatToIntBits(scale) : 0);
+        return result;
     }
 }

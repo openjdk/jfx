@@ -101,7 +101,7 @@ jclass GetScreenCls(JNIEnv *env)
     return screenCls;
 }
 
-jobject CreateJavaMonitorWithSettings(JNIEnv *env, MonitorInfoStruct *mis)
+jobject GlassScreen::CreateJavaMonitor(JNIEnv *env, HMONITOR monitor)
 {
     jclass screenCls = GetScreenCls(env);
 
@@ -111,25 +111,29 @@ jobject CreateJavaMonitorWithSettings(JNIEnv *env, MonitorInfoStruct *mis)
     }
     
     if (CheckAndClearException(env)) return NULL;
+
+    MonitorInfoStruct mis;
+    memset(&mis, 0, sizeof(MonitorInfoStruct));
+    GetMonitorSettings(monitor, &mis);
     
     return env->NewObject(screenCls, javaIDs.Screen.init,
-                          mis->ptr,
+                          mis.ptr,
 
-                          mis->colorDepth,
-                          mis->rcMonitor.left,
-                          mis->rcMonitor.top,
-                          mis->rcMonitor.right - mis->rcMonitor.left,
-                          mis->rcMonitor.bottom - mis->rcMonitor.top,
+                          mis.colorDepth,
+                          mis.rcMonitor.left,
+                          mis.rcMonitor.top,
+                          mis.rcMonitor.right - mis.rcMonitor.left,
+                          mis.rcMonitor.bottom - mis.rcMonitor.top,
                           
-                          mis->rcWork.left,
-                          mis->rcWork.top,
-                          mis->rcWork.right - mis->rcWork.left,
-                          mis->rcWork.bottom - mis->rcWork.top,
+                          mis.rcWork.left,
+                          mis.rcWork.top,
+                          mis.rcWork.right - mis.rcWork.left,
+                          mis.rcWork.bottom - mis.rcWork.top,
                               
-                          mis->dpiX,
-                          mis->dpiY,
+                          mis.dpiX,
+                          mis.dpiY,
                           
-                          mis->scale);
+                          mis.scale);
 }
 
 void GlassScreen::HandleDisplayChange()
@@ -161,11 +165,8 @@ jobjectArray GlassScreen::CreateJavaScreens(JNIEnv *env)
     int arrayIndex = 1;
     for (int i = 0; i < numMonitors; i++) {
         if (g_hmpMonitors[i] != NULL) {
-            MonitorInfoStruct mis;
-            memset(&mis, 0, sizeof(MonitorInfoStruct));
-            GetMonitorSettings(g_hmpMonitors[i], &mis);
 
-            jobject jScreen = CreateJavaMonitorWithSettings(env, &mis);
+            jobject jScreen = CreateJavaMonitor(env, g_hmpMonitors[i]);
             const POINT ptZero = { 0, 0 };
 
             //The primary monitor should be set to the 0 index

@@ -48,7 +48,7 @@ CGFloat GetScreenScaleFactor(NSScreen *screen)
     }
 }
 
-static inline jobject createJavaScreen(JNIEnv *env, NSScreen* screen)
+jobject createJavaScreen(JNIEnv *env, NSScreen* screen)
 {
     jobject jscreen = NULL;
 

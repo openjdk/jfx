@@ -26,6 +26,7 @@
 #include "glass_general.h"
 #include "glass_gtkcompat.h"
 #include "glass_key.h"
+#include "glass_screen.h"
 
 #include <com_sun_glass_events_WindowEvent.h>
 #include <com_sun_glass_events_ViewEvent.h>
@@ -911,11 +912,6 @@ void WindowContextTop::process_property_notify(GdkEventProperty* event) {
     }
 }
 
-static glong getScreenPtrForLocation(gint x, gint y) { //TODO: refactor to GlassApplication.cpp ?
-    //Note: we are relying on the fact that javafx_screen_id == gdk_monitor_id
-    return gdk_screen_get_monitor_at_point(gdk_screen_get_default(), x, y);
-}
-
 void WindowContextTop::process_configure(GdkEventConfigure* event) {
 
     geometry.current_width = event->width + geometry.extents.left
@@ -967,7 +963,8 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
         if (to_screen != screen) {
             if (jwindow) {
                 //notify screen changed
-                mainEnv->CallVoidMethod(jwindow, jWindowNotifyMoveToAnotherScreen, screen, (jlong) to_screen);
+                jobject jScreen = createJavaScreen(mainEnv, to_screen);
+                mainEnv->CallVoidMethod(jwindow, jWindowNotifyMoveToAnotherScreen, jScreen);
                 CHECK_JNI_EXCEPTION(mainEnv)
             }
             screen = to_screen;

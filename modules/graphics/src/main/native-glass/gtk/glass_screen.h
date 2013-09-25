@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,19 +23,16 @@
  * questions.
  */
 
-#import <Cocoa/Cocoa.h>
-#import <ApplicationServices/ApplicationServices.h>
-#import <jni.h>
+#ifndef GLASS_SCREEN_H
+#define GLASS_SCREEN_H
 
-@interface NSScreen (FullscreenAdditions)
+#include <jni.h>
 
-- (CGDirectDisplayID)enterFullscreenAndHideCursor:(BOOL)hide;
-- (void)exitFullscreen:(CGDirectDisplayID)displayID;
+#include <gtk/gtk.h>
 
-@end
+jobject createJavaScreen(JNIEnv* env, gint monitor_idx);
+glong getScreenPtrForLocation(gint x, gint y);
+jobjectArray rebuild_screens(JNIEnv* env);
+void screen_settings_changed(GdkScreen* screen, gpointer user_data);
 
-void GlassScreenDidChangeScreenParameters(JNIEnv *env);
-
-CGFloat GetScreenScaleFactor(NSScreen *screen);
-jobjectArray createJavaScreens(JNIEnv* env);
-jobject createJavaScreen(JNIEnv *env, NSScreen* screen);
+#endif

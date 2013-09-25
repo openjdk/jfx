@@ -167,7 +167,7 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
     jWindowNotifyFocus = env->GetMethodID(clazz, "notifyFocus", "(I)V");
     jWindowNotifyFocusDisabled = env->GetMethodID(clazz, "notifyFocusDisabled", "()V");
     jWindowNotifyFocusUngrab = env->GetMethodID(clazz, "notifyFocusUngrab", "()V");
-    jWindowNotifyMoveToAnotherScreen = env->GetMethodID(clazz, "notifyMoveToAnotherScreen", "(JJ)V");
+    jWindowNotifyMoveToAnotherScreen = env->GetMethodID(clazz, "notifyMoveToAnotherScreen", "(Lcom/sun/glass/ui/Screen;)V");
     jWindowIsEnabled = env->GetMethodID(clazz, "isEnabled", "()Z");
     jWindowNotifyDelegatePtr = env->GetMethodID(clazz, "notifyDelegatePtr", "(J)V");
     jWindowPtr = env->GetFieldID(clazz, "ptr", "J");
