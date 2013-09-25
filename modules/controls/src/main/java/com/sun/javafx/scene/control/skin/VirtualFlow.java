@@ -1467,7 +1467,9 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 // only a single row and it is bigger than the viewport
                 lengthBar.setVisibleAmount(flowLength / sumCellLength);
             } else {
-                lengthBar.setVisibleAmount(numCellsVisibleOnScreen / (float) cellCount);
+                // Changed the calculation here due to RT-25059. This new approach
+                // ensures the thumb does not resize unexpectedly.
+                lengthBar.setVisibleAmount(cellCount / viewportLength);
             }
             
 
