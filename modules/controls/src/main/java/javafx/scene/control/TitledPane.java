@@ -57,7 +57,6 @@ import javafx.css.StyleableProperty;
  * <p>Example:</p>
  * <pre><code>
  *  TitledPane t1 = new TitledPane("T1", new Button("B1"));
- *  t1.setMode(TitledPaneMode.FADE);
  * </code></pre>
  *
  * @since JavaFX 2.0

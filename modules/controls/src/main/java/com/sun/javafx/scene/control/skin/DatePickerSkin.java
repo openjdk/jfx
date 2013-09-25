@@ -33,11 +33,14 @@ import java.time.chrono.HijrahChronology;
 import java.time.format.DateTimeParseException;
 
 import javafx.application.Platform;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.css.PseudoClass;
 // import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.TextField;
@@ -74,6 +77,25 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
                 }
             });
         }
+
+        // The "arrow" is actually a rectangular svg icon resembling a calendar.
+        // Round the size of the icon to whole integers to get sharp edges.
+        arrow.paddingProperty().addListener(new InvalidationListener() {
+            // This boolean protects against unwanted recursion.
+            private boolean rounding = false;
+            @Override public void invalidated(Observable observable) {
+                if (!rounding) {
+                    Insets padding = arrow.getPadding();
+                    Insets rounded = new Insets(Math.round(padding.getTop()), Math.round(padding.getRight()), 
+                                                Math.round(padding.getBottom()), Math.round(padding.getLeft()));
+                    if (!rounded.equals(padding)) {
+                        rounding = true;
+                        arrow.setPadding(rounded);
+                        rounding = false;
+                    }
+                }
+            }
+        });
 
         // Move fake focus in to the textfield.
         // Note: DatePicker uses TextField for both editable and non-editable modes

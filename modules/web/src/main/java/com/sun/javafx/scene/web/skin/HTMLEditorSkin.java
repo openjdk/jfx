@@ -696,7 +696,9 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
                         super.updateItem(item, empty);
                         if (item != null) {
                             setText(item);
-                            setFont(new Font((String)fontFamilyComboBox.getValue(), Double.valueOf(item.substring(0, item.indexOf(" ")))));
+                            // Remove trailing non-digits to get the size (don't assume there's a space).
+                            String size = item.replaceFirst("[^0-9.]*$", "");
+                            setFont(new Font((String)fontFamilyComboBox.getValue(), Double.valueOf(size)));
                         }
                     }
                 };

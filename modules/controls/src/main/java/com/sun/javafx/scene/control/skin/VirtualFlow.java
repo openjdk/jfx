@@ -1467,7 +1467,9 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 // only a single row and it is bigger than the viewport
                 lengthBar.setVisibleAmount(flowLength / sumCellLength);
             } else {
-                lengthBar.setVisibleAmount(numCellsVisibleOnScreen / (float) cellCount);
+                // Changed the calculation here due to RT-25059. This new approach
+                // ensures the thumb does not resize unexpectedly.
+                lengthBar.setVisibleAmount(cellCount / viewportLength);
             }
             
 
@@ -2082,11 +2084,23 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 positionCell(cell, getCellPosition(cell) - delta);
             }
 
-            // Now throw away any cells that don't fit
-            cull();
+            // Fix for RT-32908
+            T firstCell = cells.getFirst();
+            double layoutY = firstCell == null ? 0 : getCellPosition(firstCell);
+            for (int i = 0; i < cells.size(); i++) {
+                T cell = cells.get(i);
+                assert cell != null;
+                double actualLayoutY = getCellPosition(cell);
+                if (actualLayoutY != layoutY) {
+                    // we need to shift the cell to layoutY
+                    positionCell(cell, layoutY);
+                }
+
+                layoutY += getCellLength(cell);
+            }
+            // end of fix for RT-32908
 
             // Add any necessary leading cells
-            T firstCell = cells.getFirst();
             if (firstCell != null) {
                 int firstIndex = getCellIndex(firstCell);
                 double prevIndexSize = getCellLength(firstIndex - 1);
@@ -2129,6 +2143,9 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 }
             }
         }
+
+        // Now throw away any cells that don't fit
+        cull();
 
         // Finally, update the scroll bars
         updateScrollBarsAndCells();
