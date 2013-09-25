@@ -2100,9 +2100,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             }
             // end of fix for RT-32908
 
-            // Now throw away any cells that don't fit
-            cull();
-
             // Add any necessary leading cells
             if (firstCell != null) {
                 int firstIndex = getCellIndex(firstCell);
@@ -2146,6 +2143,9 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 }
             }
         }
+
+        // Now throw away any cells that don't fit
+        cull();
 
         // Finally, update the scroll bars
         updateScrollBarsAndCells();
