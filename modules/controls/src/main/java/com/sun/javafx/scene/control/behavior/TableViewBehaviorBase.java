@@ -643,6 +643,8 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
                 getSelectionModel().selectLeftCell();
             }
         });
+
+        onSelectLeftCell.run();
     }
 
     protected void alsoSelectRightCell() {
@@ -651,6 +653,8 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
                 getSelectionModel().selectRightCell();
             }
         });
+
+        onSelectRightCell.run();
     }
     
     protected void updateRowSelection(int delta) {
