@@ -44,7 +44,7 @@
           <content>
             <GridPane id="GridPane" hgap="10.0" style="" vgap="10.0">
               <children>
-                <RadioButton mnemonicParsing="false" text="RadioButton 1" GridPane.columnIndex="0" GridPane.rowIndex="0">
+                <RadioButton id="RadioButton1" mnemonicParsing="false" text="RadioButton 1" GridPane.columnIndex="0" GridPane.rowIndex="0">
                   <toggleGroup>
                     <ToggleGroup fx:id="toggle2" />
                   </toggleGroup>
