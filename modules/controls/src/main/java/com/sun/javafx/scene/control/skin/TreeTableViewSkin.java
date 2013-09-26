@@ -384,6 +384,7 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeItem<S>, Tree
         if (cell.getDisclosureNode() == null) {
             final StackPane disclosureNode = new StackPane();
             disclosureNode.getStyleClass().setAll("tree-disclosure-node");
+            disclosureNode.setMouseTransparent(true);
 
             final StackPane disclosureNodeArrow = new StackPane();
             disclosureNodeArrow.getStyleClass().setAll("arrow");

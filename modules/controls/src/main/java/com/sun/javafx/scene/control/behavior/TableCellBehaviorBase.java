@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
@@ -114,7 +115,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
     abstract TablePositionBase getFocusedCell();
     abstract boolean isTableRowSelected(); // tableCell.getTreeTableRow().isSelected()
     abstract TableColumnBase<S,T> getVisibleLeafColumn(int index);
-    
+
     /**
      * Returns the position of the given table column in the visible leaf columns
      * list of the underlying control.
@@ -202,6 +203,13 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
         if (fm == null) return;
         
         TablePositionBase focusedCell = getFocusedCell();
+
+        // if the user has clicked on the disclosure node, we do nothing other
+        // than expand/collapse the tree item (if applicable). We do not do editing!
+        boolean disclosureClicked = checkDisclosureNodeClick(e);
+        if (disclosureClicked) {
+            return;
+        }
         
         // if shift is down, and we don't already have the initial focus index
         // recorded, we record the focus index now so that subsequent shift+clicks
@@ -326,6 +334,11 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
                 edit(row, column);
             }
         }
+    }
+
+    protected boolean checkDisclosureNodeClick(MouseEvent e) {
+        // by default we don't care about disclosure nodes
+        return false;
     }
 
     private int getColumn() {

@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import javafx.scene.Node;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TablePositionBase;
 import javafx.scene.control.TableSelectionModel;
@@ -110,6 +111,20 @@ public class TreeTableCellBehavior<S,T> extends TableCellBehaviorBase<TreeItem<S
     /** @{@inheritDoc} */
     @Override void edit(int row, TableColumnBase tc) {
         getTableControl().edit(row, (TreeTableColumn)tc);
+    }
+
+    @Override protected boolean checkDisclosureNodeClick(MouseEvent e) {
+        final TreeItem<S> treeItem = getControl().getTreeTableRow().getTreeItem();
+        final Node disclosureNode = getControl().getTreeTableRow().getDisclosureNode();
+        if (disclosureNode != null) {
+            if (disclosureNode.getBoundsInParent().contains(e.getX(), e.getY())) {
+                if (treeItem != null) {
+                    treeItem.setExpanded(! treeItem.isExpanded());
+                }
+                return true;
+            }
+        }
+        return false;
     }
     
     @Override protected void simpleSelect(MouseEvent e) {

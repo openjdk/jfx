@@ -27,10 +27,7 @@ package javafx.scene.control;
 
 import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.TreeTableViewAnchorRetriever;
-import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
-import com.sun.javafx.scene.control.infrastructure.KeyModifier;
-import com.sun.javafx.scene.control.infrastructure.StageLoader;
-import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
+import com.sun.javafx.scene.control.infrastructure.*;
 import com.sun.javafx.scene.control.skin.TreeTableViewSkin;
 import com.sun.javafx.scene.control.test.Person;
 
@@ -44,6 +41,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Group;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 import javafx.scene.input.KeyCode;
@@ -483,5 +481,43 @@ public class TreeTableViewMouseInputTest {
         assertTrue("Selected indices: " + sm.getSelectedIndices(), sm.getSelectedIndices().contains(0));
         assertTrue("Selected items: " + sm.getSelectedItems(), sm.getSelectedItems().contains(root));
         assertEquals(6, sm.getSelectedItems().size());
+    }
+
+    @Ignore("Test doesn't work - mouse event not firing as expected")
+    @Test public void test_rt_33101() {
+        final int items = 8;
+        root.setValue("New Root");
+        root.getChildren().clear();
+        root.setExpanded(true);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+        tableView.setRoot(root);
+
+        new StageLoader(tableView);
+
+        tableView.setShowRoot(true);
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(0);
+
+        TreeTableRow rootRow = (TreeTableRow) VirtualFlowTestUtils.getCell(tableView, 0);
+        Node disclosureNode = rootRow.getDisclosureNode();
+
+        assertTrue(root.isExpanded());
+        assertEquals("New Root", rootRow.getTreeItem().getValue());
+        assertNotNull(disclosureNode);
+        assertTrue(disclosureNode.isVisible());
+        assertTrue(disclosureNode.getScene() != null);
+        assertEquals(9, tableView.getExpandedItemCount());
+
+        MouseEventFirer mouse = new MouseEventFirer(disclosureNode);
+        mouse.fireMousePressAndRelease();
+        assertFalse(root.isExpanded());
+        assertEquals(1, tableView.getExpandedItemCount());
+
+        mouse.fireMousePressAndRelease();
+        assertTrue(root.isExpanded());
+        assertEquals(9, tableView.getExpandedItemCount());
     }
 }
