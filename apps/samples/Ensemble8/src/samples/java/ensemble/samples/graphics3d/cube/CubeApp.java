@@ -36,39 +36,44 @@ import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.application.Application;
+import javafx.application.ConditionalFeature;
 import javafx.scene.Group;
 import javafx.scene.Parent;
+import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
+import javafx.scene.SubScene;
 import javafx.scene.paint.Color;
+import javafx.scene.transform.Translate;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
 /**
- * A sample that demonstrates an animated rotation of 3D cubes. When the
- * application runs in standalone mode, the scene must be constructed with the
- * depthBuffer argument set to true, and the root node must have depthTest set
- * to true.
+ * A sample that demonstrates an animated rotation of 3D cubes. 
  *
  * @sampleName 3D Cubes
  * @preview preview.png
- * @see javafx.scene.transform.Rotate
+ * @see javafx.scene.PerspectiveCamera
+ * @see javafx.scene.SubScene
  * @see javafx.scene.paint.Color
- * @see javafx.scene.shape.RectangleBuilder
+ * @see javafx.scene.transform.Rotate
+ * @see javafx.scene.transform.Translate
+ * @conditionalFeatures SCENE3D
  */
 public class CubeApp extends Application {
 
     private Timeline animation;
 
     public Parent createContent() {
-        Cube c = new Cube(50, Color.RED, 1);
+        Cube c = new Cube(1, Color.RED, 1);
         c.rx.setAngle(45);
         c.ry.setAngle(45);
-        Cube c2 = new Cube(50, Color.GREEN, 1);
-        c2.setTranslateX(100);
+        Cube c2 = new Cube(1, Color.GREEN, 1);
+        c2.setTranslateX(2);
         c2.rx.setAngle(45);
         c2.ry.setAngle(45);
-        Cube c3 = new Cube(50, Color.ORANGE, 1);
-        c3.setTranslateX(-100);
+
+        Cube c3 = new Cube(1, Color.ORANGE, 1);
+        c3.setTranslateX(-2);
         c3.rx.setAngle(45);
         c3.ry.setAngle(45);
 
@@ -84,8 +89,17 @@ public class CubeApp extends Application {
                 new KeyValue(c3.rz.angleProperty(), 360d)));
         animation.setCycleCount(Animation.INDEFINITE);
 
-        return new Group(c, c2, c3);
+        PerspectiveCamera camera = new PerspectiveCamera(true);
+        camera.getTransforms().add(new Translate(0, 0, -15));
 
+        Group root = new Group();
+        root.getChildren().addAll(c, c2, c3);
+        SubScene subScene = new SubScene(root, 300, 300);
+        subScene.setCamera(camera);
+        Group group = new Group();
+        group.getChildren().add(subScene);
+
+        return group;
     }
 
     public void play() {

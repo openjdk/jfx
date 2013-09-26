@@ -54,6 +54,7 @@ import javafx.stage.Stage;
  * @see javafx.scene.paint.Color
  * @see javafx.scene.transform.Rotate
  * @see javafx.scene.transform.Translate
+ * @conditionalFeatures SCENE3D
  */
 public class Simple3DBoxApp extends Application {
    
