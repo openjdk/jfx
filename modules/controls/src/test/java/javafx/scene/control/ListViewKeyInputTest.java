@@ -25,24 +25,28 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.tk.Toolkit;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.event.EventHandler;
 import javafx.scene.input.KeyCode;
 import java.util.List;
+import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.ListViewAnchorRetriever;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
+import com.sun.javafx.tk.Toolkit;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
-
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class ListViewKeyInputTest {
     private ListView<String> listView;
@@ -1417,7 +1421,7 @@ public class ListViewKeyInputTest {
 
         keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey());
         keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(), PlatformUtil.isMac() ? KeyModifier.CTRL : null);
         keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey());
         keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.SHIFT);
         Toolkit.getToolkit().firePulse();
@@ -1438,7 +1442,7 @@ public class ListViewKeyInputTest {
 
         keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey());
         keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(), PlatformUtil.isMac() ? KeyModifier.CTRL : null);
         keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey());
         keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         Toolkit.getToolkit().firePulse();
@@ -1497,7 +1501,7 @@ public class ListViewKeyInputTest {
 
         keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey());
         keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(), PlatformUtil.isMac() ? KeyModifier.CTRL : null);
         keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey());
         keyboard.doKeyPress(KeyCode.UP,  KeyModifier.SHIFT);
         Toolkit.getToolkit().firePulse();
@@ -1518,7 +1522,7 @@ public class ListViewKeyInputTest {
 
         keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey());
         keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(), PlatformUtil.isMac() ? KeyModifier.CTRL : null);
         keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey());
         keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         Toolkit.getToolkit().firePulse();
