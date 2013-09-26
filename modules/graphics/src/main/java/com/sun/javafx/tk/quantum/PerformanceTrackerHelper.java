@@ -54,7 +54,7 @@ abstract class PerformanceTrackerHelper {
                     @Override
                     public PerformanceTrackerHelper run() {
                         try {
-                            if (PrismSettings.perfLog) {
+                            if (PrismSettings.perfLog != null) {
                                 final PerformanceTrackerHelper trackerImpl =
                                         new PerformanceTrackerDefaultImpl();
 
