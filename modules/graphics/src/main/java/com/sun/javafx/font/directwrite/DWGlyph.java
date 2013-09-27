@@ -96,36 +96,44 @@ public class DWGlyph implements Glyph {
          */
         int textureType = OS.DWRITE_TEXTURE_CLEARTYPE_3x1;
         IDWriteGlyphRunAnalysis runAnalysis = createAnalysis(0, 0);
-        rect = runAnalysis.GetAlphaTextureBounds(textureType);
-        if ((rect.right - rect.left == 0) ||
-             (rect.bottom - rect.top == 0)) {
-            /* Check for both texture types due to some limitations with
-             * IDWriteGlyphRunAnalysis. See RT-31587.
-             */
-            rect = runAnalysis.GetAlphaTextureBounds(OS.DWRITE_TEXTURE_ALIASED_1x1);
+        if (runAnalysis != null) {
+            rect = runAnalysis.GetAlphaTextureBounds(textureType);
+            if (rect == null || rect.right - rect.left == 0 || rect.bottom - rect.top == 0) {
+                /* Check for both texture types due to some limitations with
+                 * IDWriteGlyphRunAnalysis. See RT-31587.
+                 */
+                rect = runAnalysis.GetAlphaTextureBounds(OS.DWRITE_TEXTURE_ALIASED_1x1);
+            }
+            runAnalysis.Release();
         }
-        runAnalysis.Release();
+        if (rect == null) {
+            rect = new RECT();
+        }
     }
 
     byte[] getLCDMask(float subPixelX, float subPixelY) {
-        int textureType = OS.DWRITE_TEXTURE_CLEARTYPE_3x1;
         IDWriteGlyphRunAnalysis runAnalysis = createAnalysis(subPixelX, subPixelY);
-        rect = runAnalysis.GetAlphaTextureBounds(textureType);
-        if ((rect.right - rect.left == 0) ||
-            (rect.bottom - rect.top == 0)) {
-            rect = runAnalysis.GetAlphaTextureBounds(OS.DWRITE_TEXTURE_ALIASED_1x1);
-            if ((rect.right - rect.left == 0) ||
-                (rect.bottom - rect.top == 0)) {
-                return new byte[0];
+        byte[] buffer = null;
+        if (runAnalysis != null) {
+            int textureType = OS.DWRITE_TEXTURE_CLEARTYPE_3x1;
+            rect = runAnalysis.GetAlphaTextureBounds(textureType);
+            if (rect != null && rect.right - rect.left != 0 && rect.bottom - rect.top != 0) {
+                buffer = runAnalysis.CreateAlphaTexture(textureType, rect);
             } else {
                 /* In some cases IDWriteGlyphRunAnalysis is unable to produce
                  * LCD masks. But as long as the size can determined D2D can be
                  * used to do the rendering. */
-                return getD2DMask(subPixelX, subPixelY, true);
+                rect = runAnalysis.GetAlphaTextureBounds(OS.DWRITE_TEXTURE_ALIASED_1x1);
+                if (rect != null && rect.right - rect.left != 0 && rect.bottom - rect.top != 0) {
+                    buffer = getD2DMask(subPixelX, subPixelY, true);
+                }
             }
+            runAnalysis.Release();
         }
-        byte[] buffer = runAnalysis.CreateAlphaTexture(textureType, rect);
-        runAnalysis.Release();
+        if (buffer == null) {
+            buffer = new byte[0];
+            rect = new RECT();
+        }
         return buffer;
     }
 
