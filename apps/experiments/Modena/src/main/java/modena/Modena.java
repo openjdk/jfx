@@ -107,16 +107,18 @@ public class Modena extends Application {
         try {
             // these are not supported ways to find the platform themes and may 
             // change release to release. Just used here for testing.
-            File caspianCssFile = new File("../../../javafx-ui-controls/src/com/sun/javafx/scene/control/skin/caspian/caspian.css");
+            File caspianCssFile = new File("../../../modules/controls/src/main/resources/com/sun/javafx/scene/control/skin/caspian/caspian.css");
             if (!caspianCssFile.exists()) {
-                caspianCssFile = new File("rt/javafx-ui-controls/src/com/sun/javafx/scene/control/skin/caspian/caspian.css");
+                caspianCssFile = new File("modules/controls/src/main/resources/com/sun/javafx/scene/control/skin/caspian/caspian.css");
             }
             CASPIAN_STYLESHEET_URL = caspianCssFile.exists() ? 
                     caspianCssFile.toURI().toURL().toExternalForm() :
                     com.sun.javafx.scene.control.skin.ButtonSkin.class.getResource("caspian/caspian.css").toExternalForm();
-            File modenaCssFile = new File("../../../javafx-ui-controls/src/com/sun/javafx/scene/control/skin/modena/modena.css");
+            File modenaCssFile = new File("../../../modules/controls/src/main/resources/com/sun/javafx/scene/control/skin/modena/modena.css");
             if (!modenaCssFile.exists()) {
-                modenaCssFile = new File("rt/javafx-ui-controls/src/com/sun/javafx/scene/control/skin/modena/modena.css");
+                modenaCssFile = new File("rt/modules/controls/src/main/resources/com/sun/javafx/scene/control/skin/modena/modena.css");
+                System.out.println("modenaCssFile = " + modenaCssFile);
+                System.out.println("modenaCssFile = " + modenaCssFile.getAbsolutePath());
             }
             MODENA_STYLESHEET_URL = modenaCssFile.exists() ? 
                     modenaCssFile.toURI().toURL().toExternalForm() : 
