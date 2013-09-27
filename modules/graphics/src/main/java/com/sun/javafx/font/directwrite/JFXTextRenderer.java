@@ -68,7 +68,7 @@ class JFXTextRenderer extends IUnknown {
         return OS.JFXTextRendererGetGlyphOffsets(ptr, offsets, start);
     }
 
-    int GetClusterMap(int[] clusterMap, int start) {
+    int GetClusterMap(short[] clusterMap, int start) {
         return OS.JFXTextRendererGetClusterMap(ptr, clusterMap, start);
     }
 }

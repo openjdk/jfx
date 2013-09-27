@@ -225,7 +225,7 @@ class OS {
     static final native int JFXTextRendererGetGlyphIndices(long ptr, int[] glyphs, int start, int slot);
     static final native int JFXTextRendererGetGlyphAdvances(long ptr, float[] advances, int start);
     static final native int JFXTextRendererGetGlyphOffsets(long ptr, float[] offsets, int start);
-    static final native int JFXTextRendererGetClusterMap(long ptr, int[] clusterMap, int start);
+    static final native int JFXTextRendererGetClusterMap(long ptr, short[] clusterMap, int start);
 
     //IDWriteFontFace
     static final native int GetType(long ptr);

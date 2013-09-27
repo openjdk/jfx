@@ -25,6 +25,8 @@
 
 package com.sun.javafx.font.directwrite;
 
+import java.util.Arrays;
+
 import com.sun.javafx.font.CompositeFontResource;
 import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
@@ -144,15 +146,6 @@ public class DWGlyphLayout extends GlyphLayout {
                                     analysis, null, features, featuresRangeLengths,
                                     featuresCount, advances, offsets);
 
-        /* Adjust glyph indices */
-        int[] indices = new int[length];
-        i = 0; j = rtl ? length - 1 : 0;
-        while (i < length) {
-            indices[i] = clusterMap[j];
-            i++;
-            j+=step;
-        }
-
         /* Adjust glyphs positions */
         float[] pos = new float[glyphCount * 2 + 2];
         i = 0; j = rtl ? glyphCount - 1 : 0;
@@ -168,7 +161,39 @@ public class DWGlyphLayout extends GlyphLayout {
         pos[i++] = 0;
 
         analyzer.Release();
+        int[] indices = getIndices(clusterMap, glyphCount, rtl);
         run.shape(glyphCount, iglyphs, pos, indices);
+    }
+
+    private int[] getIndices(short[] clusterMap, int glyphCount, boolean rtl) {
+        /* The cluster map array produced by DirectWrite is character offset
+         * to glyph index mapping. TextRun internally requires a glyph index
+         * to character offset map table. */
+        int[] indices = new int[glyphCount];
+        Arrays.fill(indices, -1);
+        for (int i = 0; i < clusterMap.length; i++) {
+            /* keep character offset for the first glyph in the cluster */
+            if (indices[clusterMap[i]] == -1) {
+                indices[clusterMap[i]] = i;
+            }
+        }
+        if (indices.length > 0) {
+            if (indices[0] == -1) indices[0] = 0;
+            /* use the character offset of the preceding element */
+            for (int i = 1; i < indices.length; i++) {
+                if (indices[i] == -1) indices[i] = indices[i - 1];
+            }
+        }
+
+        if (rtl) {
+            /* Flip the array for RTL */
+            for (int i = 0; i < indices.length / 2; i++) {
+                int tmp = indices[i];
+                indices[i] = indices[indices.length - i - 1];
+                indices[indices.length - i - 1] = tmp;
+            }
+        }
+        return indices;
     }
 
     private String getName(IDWriteLocalizedStrings localizedStrings) {
@@ -314,7 +339,7 @@ public class DWGlyphLayout extends GlyphLayout {
         int[] glyphs = new int[glyphCount];
         float[] advances = new float[glyphCount];
         float[] offsets = new float[glyphCount * 2];
-        int[] clusterMap = new int[length];
+        short[] clusterMap = new short[length];
         int glyphStart = 0;
         int textStart = 0;
         while (renderer.Next()) {
@@ -358,13 +383,8 @@ public class DWGlyphLayout extends GlyphLayout {
                 glyphs[i] = glyphs[glyphCount - i - 1];
                 glyphs[glyphCount - i - 1] = tmp;
             }
-            /* Adjust glyph indices */
-            for (i = 0; i < length / 2; i++) {
-                int tmp = clusterMap[i];
-                clusterMap[i] = clusterMap[length - i - 1];
-                clusterMap[length - i - 1] = tmp;
-            }
         }
-        run.shape(glyphCount, glyphs, pos, clusterMap);
+        int[] indices = getIndices(clusterMap, glyphCount, rtl);
+        run.shape(glyphCount, glyphs, pos, indices);
     }
 }
