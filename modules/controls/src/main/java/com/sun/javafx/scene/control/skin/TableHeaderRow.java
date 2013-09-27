@@ -316,8 +316,9 @@ public class TableHeaderRow extends StackPane {
         header.resizeRelocate(x, snappedTopInset(), headerWidth, prefHeight);
         
         // position the filler region
-        double border = filler.getBoundsInLocal().getWidth() - filler.getLayoutBounds().getWidth();
-        double fillerWidth = tableWidth - headerWidth + border;
+        final Control control = tableSkin.getSkinnable();
+        final double controlInsets = control.snappedLeftInset() + control.snappedRightInset();
+        double fillerWidth = tableWidth - headerWidth + filler.getInsets().getLeft() - controlInsets;
         fillerWidth -= tableSkin.tableMenuButtonVisibleProperty().get() ? cornerWidth : 0;
         filler.setVisible(fillerWidth > 0);
         if (fillerWidth > 0) {
