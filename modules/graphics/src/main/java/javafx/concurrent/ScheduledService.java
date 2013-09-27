@@ -25,8 +25,6 @@
 
 package javafx.concurrent;
 
-import java.util.Timer;
-import java.util.TimerTask;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
@@ -39,6 +37,8 @@ import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.util.Callback;
 import javafx.util.Duration;
+import java.util.Timer;
+import java.util.TimerTask;
 
 /**
  * <p>The ScheduledService is a {@link Service} which will automatically restart

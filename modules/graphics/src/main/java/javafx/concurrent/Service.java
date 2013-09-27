@@ -25,14 +25,6 @@
 
 package javafx.concurrent;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Executor;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -53,9 +45,21 @@ import javafx.event.EventDispatchChain;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Executor;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import sun.util.logging.PlatformLogger;
-
-import static javafx.concurrent.WorkerStateEvent.*;
+import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_CANCELLED;
+import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_FAILED;
+import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_READY;
+import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_RUNNING;
+import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SCHEDULED;
+import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
 
 /**
  * <p>

@@ -25,13 +25,32 @@
 
 package javafx.concurrent;
 
+import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyStringProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
+import javafx.event.Event;
+import javafx.event.EventDispatchChain;
+import javafx.event.EventHandler;
+import javafx.event.EventTarget;
+import javafx.event.EventType;
 import java.util.concurrent.Callable;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicReference;
-import javafx.application.Platform;
-import javafx.beans.property.*;
-import javafx.event.*;
-import static javafx.concurrent.WorkerStateEvent.*;
+import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_CANCELLED;
+import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_FAILED;
+import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_RUNNING;
+import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SCHEDULED;
+import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
 
 /**
  * <p>
@@ -964,7 +983,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
             // If this method was called on the FX application thread, then we can
             // just update the state directly and this will make sure that after
             // the cancel method was called, the state will be set correctly
-            // (otherwise it would be indeterminate. However if the cancel method was
+            // (otherwise it would be indeterminate). However if the cancel method was
             // called off the FX app thread, then we must use runLater, and the
             // state flag will not be readable immediately after this call. However,
             // that would be the case anyway since these properties are not thread-safe.

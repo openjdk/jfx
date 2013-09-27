@@ -25,19 +25,21 @@
 
 package javafx.concurrent;
 
-import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.concurrent.mocks.MythicalEvent;
 import javafx.concurrent.mocks.SimpleTask;
 import javafx.event.EventHandler;
+import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.After;
 import org.junit.Test;
-import org.junit.Ignore;
-
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests various rules regarding the lifecycle of a Service.
@@ -100,7 +102,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     protected final class ManualTask extends AbstractTask {
         private AtomicBoolean finish = new AtomicBoolean(false);
-        private AtomicReference<Exception> exception = new AtomicReference<Exception>();
+        private AtomicReference<Exception> exception = new AtomicReference<>();
         private boolean failToCancel = false;
 
         @Override protected String call() throws Exception {
@@ -136,8 +138,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
         @Override
         public boolean cancel(boolean mayInterruptIfRunning) {
+            boolean result = failToCancel ? false : super.cancel(mayInterruptIfRunning);
             finish.set(true);
-            return failToCancel ? false : super.cancel(mayInterruptIfRunning);
+            return result;
         }
     }
 
@@ -319,7 +322,6 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertSame(Worker.State.SCHEDULED, service.stateProperty().get());
     }
 
-    @Ignore("RT-30173")
     @Test public void callingCancelInRunningStateResultsInCancelledState() {
         service.start();
         executor.executeScheduled();
@@ -1294,7 +1296,6 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertNull(service.onCancelledProperty().get());
     }
 
-    @Ignore("RT-30173")
     @Test public void onCancelledFilterCalledBefore_onCancelled() {
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean filterCalledFirst = new AtomicBoolean(false);
@@ -1317,7 +1318,6 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(filterCalledFirst.get());
     }
 
-    @Ignore("RT-30173")
     @Test public void cancelledCalledAfterHandler() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         service.setOnCancelled(new EventHandler<WorkerStateEvent>() {
@@ -1334,7 +1334,6 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(handlerCalled.get() && factory.getCurrentTask().cancelledSemaphore.getQueueLength() == 0);
     }
 
-    @Ignore("RT-30173")
     @Test public void cancelledCalledAfterHandlerEvenIfConsumed() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         service.setOnCancelled(new EventHandler<WorkerStateEvent>() {
@@ -1352,7 +1351,6 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(handlerCalled.get() && factory.getCurrentTask().cancelledSemaphore.getQueueLength() == 0);
     }
 
-    @Ignore("RT-30173")
     @Test public void onCancelledHandlerCalled() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         service.addEventHandler(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
@@ -1369,7 +1367,6 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(handlerCalled.get());
     }
 
-    @Ignore("RT-30173")
     @Test public void removed_onCancelledHandlerNotCalled() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         final AtomicBoolean sanity = new AtomicBoolean(false);
@@ -1394,7 +1391,6 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertFalse(handlerCalled.get());
     }
 
-    @Ignore("RT-30173")
     @Test public void removed_onCancelledFilterNotCalled() {
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean sanity = new AtomicBoolean(false);
