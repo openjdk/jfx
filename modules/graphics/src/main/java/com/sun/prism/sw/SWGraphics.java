@@ -783,9 +783,12 @@ final class SWGraphics implements ReadbackGraphics {
                 }
             }
         } else {
-            glyphTx.setTransform(tx);
-            glyphTx.deriveWithTranslation(x + gl.getPosX(idx), y + gl.getPosY(idx));
-            this.paintShapePaintAlreadySet(g.getShape(), null, glyphTx);
+            Shape shape = g.getShape();
+            if (shape != null) {
+                glyphTx.setTransform(tx);
+                glyphTx.deriveWithTranslation(x + gl.getPosX(idx), y + gl.getPosY(idx));
+                this.paintShapePaintAlreadySet(shape, null, glyphTx);
+            }
         }
     }
 

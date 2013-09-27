@@ -183,10 +183,12 @@ public abstract class PrismFontStrike<T extends PrismFontFile> implements FontSt
         for (int i = 0; i < gl.getGlyphCount(); i++) {
             int glyphCode = gl.getGlyphCode(i);
             if (glyphCode != CharToGlyphMapper.INVISIBLE_GLYPH_ID) {
-                t.setTransform(transform);
                 Shape gp = createGlyphOutline(glyphCode);
-                t.translate(gl.getPosX(i), gl.getPosY(i));
-                p.append(gp.getPathIterator(t), false);
+                if (gp != null) {
+                    t.setTransform(transform);
+                    t.translate(gl.getPosX(i), gl.getPosY(i));
+                    p.append(gp.getPathIterator(t), false);
+                }
             }
         }
     }

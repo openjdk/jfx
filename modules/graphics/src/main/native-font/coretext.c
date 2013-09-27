@@ -104,50 +104,6 @@ jobject newCGAffineTransform(JNIEnv *env, CGAffineTransform *lpStruct)
     return lpObject;
 }
 
-typedef struct CFRange_FID_CACHE {
-    int cached;
-    jclass clazz;
-    jfieldID location, length;
-    jmethodID init;
-} CFRange_FID_CACHE;
-
-CFRange_FID_CACHE CFRangeFc;
-
-void cacheCFRangeFields(JNIEnv *env)
-{
-    if (CFRangeFc.cached) return;
-    jclass tmpClass = (*env)->FindClass(env, "com/sun/javafx/font/coretext/CFRange");
-    CFRangeFc.clazz =  (jclass)(*env)->NewGlobalRef(env, tmpClass);
-    CFRangeFc.location = (*env)->GetFieldID(env, CFRangeFc.clazz, "location", "J");
-    CFRangeFc.length = (*env)->GetFieldID(env, CFRangeFc.clazz, "length", "J");
-    CFRangeFc.init = (*env)->GetMethodID(env, CFRangeFc.clazz, "<init>", "()V");
-    CFRangeFc.cached = 1;
-}
-
-CFRange *getCFRangeFields(JNIEnv *env, jobject lpObject, CFRange *lpStruct)
-{
-    if (!CFRangeFc.cached) cacheCFRangeFields(env);
-    lpStruct->location = (*env)->GetLongField(env, lpObject, CFRangeFc.location);
-    lpStruct->length = (*env)->GetLongField(env, lpObject, CFRangeFc.length);
-    return lpStruct;
-}
-
-void setCFRangeFields(JNIEnv *env, jobject lpObject, CFRange *lpStruct)
-{
-    if (!CFRangeFc.cached) cacheCFRangeFields(env);
-    (*env)->SetLongField(env, lpObject, CFRangeFc.location, (jlong)lpStruct->location);
-    (*env)->SetLongField(env, lpObject, CFRangeFc.length, (jlong)lpStruct->length);
-}
-
-jobject newCFRange(JNIEnv *env, CFRange *lpStruct)
-{
-    jobject lpObject = NULL;
-    if (!CFRangeFc.cached) cacheCFRangeFields(env);
-    lpObject = (*env)->NewObject(env, CFRangeFc.clazz, CFRangeFc.init);
-    if (lpObject && lpStruct) setCFRangeFields(env, lpObject, lpStruct);
-    return lpObject;
-}
-
 typedef struct CGPoint_FID_CACHE {
     int cached;
     jclass clazz;
@@ -525,12 +481,6 @@ JNIEXPORT jlong JNICALL OS_NATIVE(CTRunGetGlyphCount)
     return (jlong)CTRunGetGlyphCount((CTRunRef)arg0);
 }
 
-JNIEXPORT jint JNICALL OS_NATIVE(CTRunGetStatus)
-    (JNIEnv *env, jclass that, jlong arg0)
-{
-    return (jint)CTRunGetStatus((CTRunRef)arg0);
-}
-
 JNIEXPORT jlong JNICALL OS_NATIVE(CTRunGetAttributes)
     (JNIEnv *env, jclass that, jlong arg0)
 {
@@ -619,20 +569,11 @@ JNIEXPORT jint JNICALL OS_NATIVE(CTRunGetStringIndices)
     return i;
 }
 
-JNIEXPORT jobject JNICALL OS_NATIVE(CTRunGetStringRange)
-    (JNIEnv *env, jclass that, jlong arg0)
-{
-    CTRunRef run = (CTRunRef)arg0;
-    CFRange result = CTRunGetStringRange(run);
-    return newCFRange(env, &result);
-}
-
 JNIEXPORT jstring JNICALL OS_NATIVE(CTFontCopyAttributeDisplayName)
     (JNIEnv *env, jclass that, jlong arg0)
 {
     CFStringRef stringRef = CTFontCopyAttribute((CTFontRef)arg0, kCTFontDisplayNameAttribute);
-
-    /* Copied from MacFontFinder#createJavaString */
+    if (stringRef == NULL) return NULL;
     CFIndex length = CFStringGetLength(stringRef);
     UniChar buffer[length];
     CFStringGetCharacters(stringRef, CFRangeMake(0, length), buffer);
@@ -640,36 +581,7 @@ JNIEXPORT jstring JNICALL OS_NATIVE(CTFontCopyAttributeDisplayName)
     return (*env)->NewString(env, (jchar *)buffer, length);
 }
 
-JNIEXPORT jstring JNICALL OS_NATIVE(CTFontCopyDisplayName)
-    (JNIEnv *env, jclass that, jlong arg0)
-{
-    CFStringRef stringRef = CTFontCopyDisplayName((CTFontRef)arg0);
-
-    /* Copied from MacFontFinder#createJavaString */
-    CFIndex length = CFStringGetLength(stringRef);
-    UniChar buffer[length];
-    CFStringGetCharacters(stringRef, CFRangeMake(0, length), buffer);
-    CFRelease(stringRef);
-    return (*env)->NewString(env, (jchar *)buffer, length);
-}
-
-JNIEXPORT jbyteArray JNICALL OS_NATIVE(CGBitmapContextGetData__J)
-    (JNIEnv *env, jclass that, jlong arg0)
-{
-    jbyteArray result = NULL;
-    CGContextRef context = (CGContextRef)arg0;
-    void* data = CGBitmapContextGetData(context);
-    if (data) {
-        size_t size = CGBitmapContextGetBytesPerRow(context) * CGBitmapContextGetHeight(context);
-        result = (*env)->NewByteArray(env, size);
-        if (result) {
-            (*env)->SetByteArrayRegion(env, result, 0, size, data);
-        }
-    }
-    return result;
-}
-
-JNIEXPORT jbyteArray JNICALL OS_NATIVE(CGBitmapContextGetData__JIII)
+JNIEXPORT jbyteArray JNICALL OS_NATIVE(CGBitmapContextGetData)
     (JNIEnv *env, jclass that, jlong arg0, jint dstWidth, jint dstHeight, jint bpp)
 {
     jbyteArray result = NULL;
@@ -679,7 +591,9 @@ JNIEXPORT jbyteArray JNICALL OS_NATIVE(CGBitmapContextGetData__JIII)
     if (srcData) {
         /* Use one byte per pixel for grayscale */
         size_t srcWidth = CGBitmapContextGetWidth(context);
+        if (srcWidth < dstWidth) return NULL;
         size_t srcHeight =  CGBitmapContextGetHeight(context);
+        if (srcHeight < dstHeight) return NULL;
         size_t srcBytesPerRow = CGBitmapContextGetBytesPerRow(context);
         size_t srcStep = CGBitmapContextGetBitsPerPixel(context) / 8;
         int srcOffset = (srcHeight - dstHeight) * srcBytesPerRow;
@@ -695,7 +609,7 @@ JNIEXPORT jbyteArray JNICALL OS_NATIVE(CGBitmapContextGetData__JIII)
         for (y = 0; y < dstHeight; y++) {
             for (x = 0, sx = 0; x < dstWidth; x++, dstOffset += dstStep, sx += srcStep) {
                 if (dstStep == 1) {
-                    /* BGRA or Gray to Gray*/
+                    /* BGRA or Gray to Gray */
                     data[dstOffset] = 0xFF - srcData[srcOffset + sx];
                 } else {
                     /* BGRA to RGB */
@@ -715,20 +629,6 @@ JNIEXPORT jbyteArray JNICALL OS_NATIVE(CGBitmapContextGetData__JIII)
     return result;
 }
 
-JNIEXPORT void JNICALL OS_NATIVE(CGPointApplyAffineTransform)
-    (JNIEnv *env, jclass that, jobject arg0, jobject arg1)
-{
-    CGPoint _arg0, *lparg0=NULL;
-    CGAffineTransform _arg1, *lparg1=NULL;
-    if (arg0) if ((lparg0 = getCGPointFields(env, arg0, &_arg0)) == NULL) goto fail;
-    if (arg1) if ((lparg1 = getCGAffineTransformFields(env, arg1, &_arg1)) == NULL) goto fail;
-    _arg0 = CGPointApplyAffineTransform(*lparg0, *lparg1);
-fail:
-    /* In Only */
-//    if (arg1 && lparg1) setCGAffineTransformFields(env, arg1, lparg1);
-    if (arg0 && lparg0) setCGPointFields(env, arg0, lparg0);
-}
-
 JNIEXPORT void JNICALL OS_NATIVE(CGRectApplyAffineTransform)
     (JNIEnv *env, jclass that, jobject arg0, jobject arg1)
 {
@@ -744,28 +644,12 @@ fail:
 }
 
 JNIEXPORT void JNICALL OS_NATIVE(CTFontDrawGlyphs)
-    (JNIEnv *env, jclass that, jlong arg0, jshort arg1, jdouble arg2, jdouble arg3, jlong arg4, jlong arg5)
+    (JNIEnv *env, jclass that, jlong arg0, jshort arg1, jdouble arg2, jdouble arg3, jlong contextRef)
 {
     /* Custom: only takes one glyph at the time */
     CGGlyph glyphs[] = {arg1};
     CGPoint pos[] = {CGPointMake(arg2, arg3)};
-    CTFontDrawGlyphs((CTFontRef)arg0, glyphs, pos, 1, (CGContextRef)arg5);
-}
-
-JNIEXPORT jobject JNICALL OS_NATIVE(CTFontGetBoundingRectsForGlyphs)
-    (JNIEnv *env, jclass that, jlong arg1, jint arg2, jshort arg3, jobject arg4, jlong arg5)
-{
-    /* Custom: only takes one glyph at the time */
-    jobject rc = NULL;
-    CGRect result;
-    CGGlyph glyphs[] = {arg3};
-    CGRect _arg4, *lparg4=NULL;
-    if (arg4) if ((lparg4 = getCGRectFields(env, arg4, &_arg4)) == NULL) goto fail;
-    result = CTFontGetBoundingRectsForGlyphs((CTFontRef)arg1, (CTFontOrientation)arg2, glyphs, lparg4, 1);
-    rc = newCGRect(env, &result);
-fail:
-    if (arg4 && lparg4) setCGRectFields(env, arg4, &_arg4);
-    return rc;
+    CTFontDrawGlyphs((CTFontRef)arg0, glyphs, pos, 1, (CGContextRef)contextRef);
 }
 
 JNIEXPORT jboolean JNICALL OS_NATIVE(CTFontGetBoundingRectForGlyphUsingTables)
@@ -831,7 +715,7 @@ JNIEXPORT jboolean JNICALL OS_NATIVE(CTFontGetBoundingRectForGlyphUsingTables)
 }
 
 JNIEXPORT jdouble JNICALL OS_NATIVE(CTFontGetAdvancesForGlyphs)
-    (JNIEnv *env, jclass that, jlong arg0, jint arg1, jshort arg2, jobject arg3, jlong arg4)
+    (JNIEnv *env, jclass that, jlong arg0, jint arg1, jshort arg2, jobject arg3)
 {
     /* Custom: only takes one glyph at the time */
     jdouble rc = 0;
@@ -849,21 +733,6 @@ JNIEXPORT jobject JNICALL OS_NATIVE(CGPathGetPathBoundingBox)
 {
     CGRect result = CGPathGetPathBoundingBox((CGPathRef)arg0);
     return newCGRect(env, &result);
-}
-
-JNIEXPORT jobject JNICALL OS_NATIVE(CGAffineTransformInvert)
-    (JNIEnv *env, jclass that, jobject arg0)
-{
-    jobject rc = NULL;
-    CGAffineTransform result;
-    CGAffineTransform _arg0, *lparg0=NULL;
-    if (arg0) if ((lparg0 = getCGAffineTransformFields(env, arg0, &_arg0)) == NULL) goto fail;
-    result = CGAffineTransformInvert(*lparg0);
-    rc = newCGAffineTransform(env, &result);
-fail:
-    /* In Only */
-//    if (arg0 && lparg0) setCGAffineTransformFields(env, arg0, lparg0);
-    return rc;
 }
 
 /***********************************************/

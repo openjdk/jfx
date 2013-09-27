@@ -68,8 +68,15 @@ class CTFontStrike extends PrismFontStrike<CTFontFile> {
             }
         }
         long psNameRef = OS.CFStringCreate(fontResource.getPSName());
-        fontRef = OS.CTFontCreateWithName(psNameRef, size, matrix);
-        OS.CFRelease(psNameRef);
+        if (psNameRef != 0) {
+            fontRef = OS.CTFontCreateWithName(psNameRef, size, matrix);
+            OS.CFRelease(psNameRef);
+        }
+        if (fontRef == 0) {
+            if (PrismFontFactory.debugFonts) {
+                System.err.println("Failed to create CTFont for " + this);
+            }
+        }
 
         /* CoreText uses different precision for subpixel text according
          * to the font size. By observation, font sizes smaller than 12
