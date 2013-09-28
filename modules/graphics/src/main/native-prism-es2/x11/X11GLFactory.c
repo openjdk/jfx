@@ -102,6 +102,39 @@ void printAndReleaseResources(Display *display, GLXFBConfig *fbConfigList,
     }
 }
 
+jboolean queryGLX13(Display *display) {
+
+    int major, minor;
+    int errorBase, eventBase;
+
+    if (!glXQueryExtension(display, &errorBase, &eventBase)) {
+        fprintf(stderr, "ES2 Prism: Error - GLX extension is not supported\n");
+        fprintf(stderr, "    GLX version 1.3 or higher is required\n");
+        return JNI_FALSE;
+    }
+
+    /* Query the GLX version number */
+    if (!glXQueryVersion(display, &major, &minor)) {
+        fprintf(stderr, "ES2 Prism: Error - Unable to query GLX version\n");
+        fprintf(stderr, "    GLX version 1.3 or higher is required\n");
+        return JNI_FALSE;
+    }
+
+    /*
+        fprintf(stderr, "Checking GLX version : %d.%d\n", major, minor);
+     */
+
+    /* Check for GLX 1.3 and higher */
+    if (!(major == 1 && minor >= 3)) {
+        fprintf(stderr, "ES2 Prism: Error - reported GLX version = %d.%d\n", major, minor);
+        fprintf(stderr, "    GLX version 1.3 or higher is required\n");
+
+        return JNI_FALSE;
+    }
+
+    return JNI_TRUE;
+}
+
 /*
  * Class:     com_sun_prism_es2_X11GLFactory
  * Method:    nInitialize
@@ -148,6 +181,10 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLFactory_nInitialize
     }
 
     screen = DefaultScreen(display);
+    
+    if (!queryGLX13(display)) {
+        return 0;
+    }
 
     fbConfigList = glXChooseFBConfig(display, screen, glxAttrs, &numFBConfigs);
 
