@@ -80,7 +80,6 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
         super(titledPane, new TitledPaneBehavior(titledPane));
 
         clipRect = new Rectangle();
-        getSkinnable().setClip(clipRect);
 
         transitionStartValue = 0;
         titleRegion = new TitleRegion();
@@ -98,6 +97,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
                 getChildren().setAll(contentRegion);
             }
         };
+        contentContainer.setClip(clipRect);
 
         if (titledPane.isExpanded()) {
             setTransition(1.0f);
@@ -148,7 +148,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
         } else if ("WIDTH".equals(property)) {
             clipRect.setWidth(getSkinnable().getWidth());
         } else if ("HEIGHT".equals(property)) {
-            clipRect.setHeight(getSkinnable().getHeight());
+            clipRect.setHeight(contentContainer.getHeight());
         } else if ("GRAPHIC_TEXT_GAP".equals(property)) {
             titleRegion.requestLayout();            
         }
@@ -224,6 +224,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
 
         y += snapSize(headerHeight);
         contentContainer.resize(w, contentHeight);
+        clipRect.setHeight(contentHeight);
         positionInArea(contentContainer, x, y,
             w, contentHeight, /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
     }
