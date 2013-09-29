@@ -5,5 +5,5 @@
 
 [$shift ][z|iexcl ][x|iquest ][c|;|permil|ccedil|copy|cent ][v|:|reg ][b|=|tm ][n|+|ntilde ][m|'|micro ][-|_ ][$backspace ]
 
-[$hide  ][$SymbolABC ][www.|http://  ][.|, ][.com|.org|.net  ][/|\\ ][$enter   ]
+[$hide ][$SymbolABC  ][www.|http://  ][.|,  ][.com|.org|.net  ][/|\\  ][$enter  ]
 
