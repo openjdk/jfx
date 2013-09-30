@@ -41,6 +41,7 @@
 #define RGB_888   3
 #define RGB_565   4
 
+#define TOUCH_ACTION_STILL         -1
 #define TOUCH_ACTION_DOWN           0
 #define TOUCH_ACTION_UP             1
 #define TOUCH_ACTION_MOVE           2
@@ -79,6 +80,13 @@ static void (*_notifyMotionEvent)(
         int mousePosY,
         int isTouch,
         int touchId);
+
+static void (*_notifyMultiTouchEvent) (
+        int count,
+        int *states,
+        int *ids,
+        int *xs,
+        int *ys);
 
 static void (*_notifyButtonEvent)(
         int pressed,
@@ -164,6 +172,7 @@ void init_functions(JNIEnv *env) {
     }
     _notifyWindowEvent_resize = GET_SYMBOL(env, libglass, "notifyWindowEvent_resize");
     _notifyTouchEvent = GET_SYMBOL(env, libglass, "notifyTouchEvent");
+    _notifyMultiTouchEvent = GET_SYMBOL(env, libglass, "notifyMultiTouchEvent");
     _notifyMotionEvent = GET_SYMBOL(env, libglass, "notifyMotionEvent");
     _notifyButtonEvent = GET_SYMBOL(env, libglass, "notifyButtonEvent");
     _notifyKeyEvent = GET_SYMBOL(env, libglass, "notifyKeyEvent");
@@ -213,32 +222,11 @@ JNIEXPORT void JNICALL Java_com_oracle_dalvik_FXActivity__1surfaceRedrawNeeded
 
 /*
  * Class:     com_oracle_dalvik_FXActivity_InternalSurfaceView
- * Method:    onTouchEventNative
- * Signature: (III)V
- */
-JNIEXPORT void JNICALL Java_com_oracle_dalvik_FXActivity_00024InternalSurfaceView_onTouchEventNative
-(JNIEnv *ignore, jobject view, jint action, jint absx, jint absy) {
-    LOGV(TAG, "Touch event: [%s, x: %i, y: %i]\n", describe_touch_action(action), absx, absy);
-
-    int fxstate = to_jfx_touch_action(action);
-    if (!fxstate) {
-        LOGE(TAG, "Can't handle this state yet. Ignoring. (Probably multitouch)");
-        return;
-    }
-    if (fxstate == com_sun_glass_events_TouchEvent_TOUCH_MOVED) {
-        (*_notifyMotionEvent)(absx, absy, 1, 1);
-    } else {
-        (*_notifyTouchEvent)(fxstate, 1, 1, absx, absy);
-    }
-}
-
-/*
- * Class:     com_oracle_dalvik_FXActivity_InternalSurfaceView
  * Method:    onKeyEventNative
  * Signature: (II)V
  */
 JNIEXPORT void JNICALL Java_com_oracle_dalvik_FXActivity_00024InternalSurfaceView_onKeyEventNative
-(JNIEnv *ignore, jobject view, jint action, jint keyCode) {
+(JNIEnv *ignore, jobject view, jint action, jint keyCode, jstring characters) {
     
     LOGV(TAG, "Key event: [action: %s, keyCode: %i]\n", describe_key_action(action), keyCode);
     int event_type = to_jfx_key_action(action);
@@ -247,6 +235,34 @@ JNIEXPORT void JNICALL Java_com_oracle_dalvik_FXActivity_00024InternalSurfaceVie
     if (linux_keycode > 0) {        
         (*_notifyKeyEvent)(event_type, linux_keycode, 0);
     }
+}
+
+JNIEXPORT void JNICALL Java_com_oracle_dalvik_FXActivity_00024InternalSurfaceView_onMultiTouchEventNative
+  (JNIEnv *env, jobject jview, jint jpcount, jintArray jactions, jintArray jids,
+        jintArray jtouchXs, jintArray jtouchYs) {
+    if (!jpcount) {
+        LOGE(TAG, "MultiTouchEvent with pointer count = 0 is illegal!");
+        return;
+    }
+    int actions_len, ids_len, touchXs_len, touchYs_len;
+    int *actions = getIntArray(env, &actions_len, jactions);    
+    int *ids = getIntArray(env, &ids_len, jids);
+    int *touchXs = getIntArray(env, &touchXs_len, jtouchXs);
+    int *touchYs = getIntArray(env, &touchYs_len, jtouchYs);
+    for(int i=0;i<jpcount;i++) {
+        actions[i] = to_jfx_touch_action(actions[i]);
+    }
+    (*_notifyMultiTouchEvent)(jpcount, actions, ids, touchXs, touchYs);
+    
+    (*env)->ReleaseIntArrayElements(env, jactions, actions, 0);
+    (*env)->ReleaseIntArrayElements(env, jids, ids, 0);
+    (*env)->ReleaseIntArrayElements(env, jtouchXs, touchXs, 0);
+    (*env)->ReleaseIntArrayElements(env, jtouchYs, touchYs, 0);
+}
+
+int *getIntArray(JNIEnv *env, int *len, jintArray arr) {
+    *len = (*env)->GetArrayLength(env, arr);
+    return (*env)->GetIntArrayElements(env, arr, 0);
 }
 
 ANativeWindow *ANDROID_getNativeWindow() {
@@ -310,13 +326,17 @@ char *describe_surface_format(int f, char *buf) {
 int to_jfx_touch_action(int state) {
     switch (state) {
         case TOUCH_ACTION_DOWN:
+        case TOUCH_ACTION_POINTER_DOWN:    
             return com_sun_glass_events_TouchEvent_TOUCH_PRESSED;
         case TOUCH_ACTION_UP:
+        case TOUCH_ACTION_POINTER_UP:    
             return com_sun_glass_events_TouchEvent_TOUCH_RELEASED;
         case TOUCH_ACTION_MOVE:
             return com_sun_glass_events_TouchEvent_TOUCH_MOVED;
         case TOUCH_ACTION_CANCEL:
-            return com_sun_glass_events_TouchEvent_TOUCH_RELEASED;
+            return com_sun_glass_events_TouchEvent_TOUCH_RELEASED;                    
+        case TOUCH_ACTION_STILL:
+            return com_sun_glass_events_TouchEvent_TOUCH_STILL;
         default:
             return 0;
     }
@@ -360,9 +380,10 @@ char *describe_touch_action(int state) {
             return "TOUCH_ACTION_POINTER_DOWN";
         case TOUCH_ACTION_POINTER_UP:
             return "TOUCH_ACTION_POINTER_UP";
+        case TOUCH_ACTION_STILL:
+            return "TOUCH_ACTION_STILL";
         default:
             return "TOUCH_ACTION_UNKNOWN";
-
     }
 }
 
