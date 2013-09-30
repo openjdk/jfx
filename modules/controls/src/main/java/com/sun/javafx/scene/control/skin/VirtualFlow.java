@@ -1890,15 +1890,19 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         return cell.isEmpty() ? null : cell;
     }
 
+    // Returns last visible cell whose bounds are entirely within the viewport
     public T getLastVisibleCellWithinViewPort() {
         if (cells.isEmpty() || getViewportLength() <= 0) return null;
 
         T cell;
+        final double max = isVertical() ? getHeight() : getWidth();
         for (int i = cells.size() - 1; i >= 0; i--) {
             cell = cells.get(i);
             if (cell.isEmpty()) continue;
 
-            if (cell.getLayoutY() < getHeight()) {
+            final double cellStart = getCellPosition(cell);
+            final double cellEnd = cellStart + getCellLength(cell);
+            if (cellEnd <= max) {
                 return cell;
             }
         }
@@ -1906,18 +1910,17 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         return null;
     }
 
+    // Returns first visible cell whose bounds are entirely within the viewport
     public T getFirstVisibleCellWithinViewPort() {
         if (cells.isEmpty() || getViewportLength() <= 0) return null;
 
-        final boolean isVertical = isVertical();
         T cell;
         for (int i = 0; i < cells.size(); i++) {
             cell = cells.get(i);
             if (cell.isEmpty()) continue;
 
-            if (isVertical && cell.getLayoutY() + cell.getHeight() > 0) {
-                return cell;
-            } else if (! isVertical && cell.getLayoutX() + cell.getWidth() > 0) {
+            final double cellStart = getCellPosition(cell);
+            if (cellStart >= 0) {
                 return cell;
             }
         }
