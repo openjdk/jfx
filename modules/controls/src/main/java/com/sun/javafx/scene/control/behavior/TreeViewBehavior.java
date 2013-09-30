@@ -755,6 +755,8 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
 
         sm.selectRange(newFocusIndex, startIndex + 1);
         fm.focus(newFocusIndex);
+
+        onSelectPreviousRow.run();
     }
     
     private void discontinuousSelectNextRow() {
@@ -773,6 +775,8 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
 
         sm.selectRange(startIndex, newFocusIndex + 1);
         fm.focus(newFocusIndex);
+
+        onSelectNextRow.run();
     }
     
     private void discontinuousSelectPageUp() {
