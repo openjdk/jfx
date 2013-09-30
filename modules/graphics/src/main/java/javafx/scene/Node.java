@@ -721,6 +721,11 @@ public abstract class Node implements EventTarget, Styleable {
                         // See the comments there, also.
                         //
                         impl_reapplyCSS();
+                    } else {
+                        // RT-31168: reset CssFlag to clean so css will be reapplied if the node is added back later.
+                        // If flag is REAPPLY, then impl_reapplyCSS() will just return and the call to
+                        // notifyParentsOfInvalidatedCSS() will be skipped thus leaving the node un-styled.
+                        cssFlag = CssFlags.CLEAN;
                     }
                     updateTreeVisible();
                     oldParent = newParent;
