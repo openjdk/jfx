@@ -95,6 +95,11 @@ public class WorkerStateEvent extends Event {
         super(worker, worker instanceof EventTarget ? (EventTarget) worker : null, eventType);
     }
 
+    /**
+     * The Worker on which the Event initially occurred.
+     *
+     * @return The Worker on which the Event initially occurred.
+     */
     @Override public Worker getSource() {
         return (Worker) super.getSource();
     }
