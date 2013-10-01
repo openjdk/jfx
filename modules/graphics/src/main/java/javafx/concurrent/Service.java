@@ -510,9 +510,10 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
         // notifications whenever the state of the Service has changed.
         state.addListener(new ChangeListener<State>() {
             @Override public void changed(ObservableValue<? extends State> observableValue,
-                                          State oldState, State newState) {
-                // Invoke the event handlers, and then call the protected methods.
-                switch (state.get()) {
+                                          State old, State value) {
+
+                // Invoke the appropriate event handler
+                switch (value) {
                     case CANCELLED:
                         fireEvent(new WorkerStateEvent(Service.this, WORKER_STATE_CANCELLED));
                         cancelled();
@@ -543,7 +544,11 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
         });
     }
 
-    @Override public final boolean cancel() {
+    /**
+     * Cancels any currently running Task, if any. The state will be set to CANCELLED.
+     * @return returns true if the cancel was successful
+     */
+    @Override public boolean cancel() {
         checkThread();
         if (task == null) {
             if (state.get() == State.CANCELLED || state.get() == State.SUCCEEDED) {
@@ -579,7 +584,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
             // we really can just let the old task run and create a new
             // task and the Service will be none the wiser.
             state.unbind();
-            state.setValue(State.CANCELLED);
+            state.set(State.CANCELLED);
         }
 
         // Reset
@@ -653,6 +658,20 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
 
         // Start the task
         executeTask(task);
+    }
+
+    /**
+     * This is used by ScheduledService to cancel a Service that is in the READY state. The problem is
+     * that a ScheduledService will iterate from SUCCEEDED to READY, and then call start() to transition
+     * from READY to SCHEDULED and kick off a new iteration. However, if from the SUCCEEDED event handler
+     * a developer calls "cancel" to stop a ScheduledService, we have a problem, since the Service
+     * specification does not allow to transition from a terminal state (SUCCEEDED) to another terminal
+     * state (CANCELLED), but this is clearly what we need to do. So what this method will do is allow
+     * us to transition from the READY state to the CANCELLED state, by transitioning through SCHEDULED
+     */
+    void cancelFromReadyState() {
+        state.set(State.SCHEDULED);
+        state.set(State.CANCELLED);
     }
 
     /**

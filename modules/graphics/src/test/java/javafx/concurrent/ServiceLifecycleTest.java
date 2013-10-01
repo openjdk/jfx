@@ -32,6 +32,7 @@ import javafx.concurrent.mocks.SimpleTask;
 import javafx.event.EventHandler;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.After;
 import org.junit.Test;
@@ -639,7 +640,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     }
 
     /************************************************************************
-     * Proper Completion of a task                              *
+     * Proper Completion of a task                                          *
      ***********************************************************************/
 
     @Test(expected = IllegalStateException.class)
@@ -773,9 +774,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     }
 
     /***************************************************************************
-     *
-     * Tests for onReady
-     *
+     *                                                                         *
+     * Tests for onReady                                                       *
+     *                                                                         *
      **************************************************************************/
 
     @Test public void onReadyPropertyNameShouldMatchMethodName() {
@@ -880,10 +881,31 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertFalse(filterCalled.get());
     }
 
+    @Test public void cancelCalledFromOnReady() {
+        final AtomicInteger cancelNotificationCount = new AtomicInteger();
+        service.start();
+        executor.executeScheduled();
+        task.complete();
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_READY, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                service.cancel();
+            }
+        });
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent event) {
+                cancelNotificationCount.incrementAndGet();
+            }
+        });
+
+        service.reset();
+        assertEquals(Worker.State.CANCELLED, service.getState());
+        assertEquals(1, cancelNotificationCount.get());
+    }
+
     /***************************************************************************
-     *
-     * Tests for onScheduled
-     *
+     *                                                                         *
+     * Tests for onScheduled                                                   *
+     *                                                                         *
      **************************************************************************/
 
     @Test public void onScheduledPropertyNameShouldMatchMethodName() {
@@ -1010,10 +1032,29 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertFalse(filterCalled.get());
     }
 
+    @Test public void cancelCalledFromOnScheduled() {
+        final AtomicInteger cancelNotificationCount = new AtomicInteger();
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_SCHEDULED, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                service.cancel();
+            }
+        });
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent event) {
+                cancelNotificationCount.incrementAndGet();
+            }
+        });
+
+        service.start();
+        executor.executeScheduled();
+        assertEquals(Worker.State.CANCELLED, service.getState());
+        assertEquals(1, cancelNotificationCount.get());
+    }
+
     /***************************************************************************
-     *
-     * Tests for onRunning
-     *
+     *                                                                         *
+     * Tests for onRunning                                                     *
+     *                                                                         *
      **************************************************************************/
 
     @Test public void onRunningPropertyNameShouldMatchMethodName() {
@@ -1140,10 +1181,29 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertFalse(filterCalled.get());
     }
 
+    @Test public void cancelCalledFromOnRunning() {
+        final AtomicInteger cancelNotificationCount = new AtomicInteger();
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_RUNNING, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                service.cancel();
+            }
+        });
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent event) {
+                cancelNotificationCount.incrementAndGet();
+            }
+        });
+
+        service.start();
+        executor.executeScheduled();
+        assertEquals(Worker.State.CANCELLED, service.getState());
+        assertEquals(1, cancelNotificationCount.get());
+    }
+
     /***************************************************************************
-     *
-     * Tests for onSucceeded
-     *
+     *                                                                         *
+     * Tests for onSucceeded                                                   *
+     *                                                                         *
      **************************************************************************/
 
     @Test public void onSucceededPropertyNameShouldMatchMethodName() {
@@ -1273,14 +1333,32 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         service.start();
         executor.executeScheduled();
         task.complete();
-        assertTrue(sanity.get());
-        assertFalse(filterCalled.get());
+    }
+
+    @Test public void cancelCalledFromOnSucceeded() {
+        final AtomicInteger cancelNotificationCount = new AtomicInteger();
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_SUCCEEDED, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                service.cancel();
+            }
+        });
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent event) {
+                cancelNotificationCount.incrementAndGet();
+            }
+        });
+
+        service.start();
+        executor.executeScheduled();
+        task.complete();
+        assertEquals(Worker.State.SUCCEEDED, service.getState());
+        assertEquals(0, cancelNotificationCount.get());
     }
 
     /***************************************************************************
-     *
-     * Tests for onCancelled
-     *
+     *                                                                         *
+     * Tests for onCancelled                                                   *
+     *                                                                         *
      **************************************************************************/
 
     @Test public void onCancelledPropertyNameShouldMatchMethodName() {
@@ -1414,10 +1492,50 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertFalse(filterCalled.get());
     }
 
+    @Test public void cancelCalledFromOnCancelled() {
+        final AtomicInteger cancelNotificationCount = new AtomicInteger();
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                service.cancel();
+            }
+        });
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent event) {
+                cancelNotificationCount.incrementAndGet();
+            }
+        });
+
+        service.start();
+        executor.executeScheduled();
+        task.cancel();
+        assertEquals(Worker.State.CANCELLED, service.getState());
+        assertEquals(1, cancelNotificationCount.get());
+    }
+
+    @Test public void cancelCalledFromOnFailed() {
+        final AtomicInteger cancelNotificationCount = new AtomicInteger();
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_FAILED, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                service.cancel();
+            }
+        });
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent event) {
+                cancelNotificationCount.incrementAndGet();
+            }
+        });
+
+        service.start();
+        executor.executeScheduled();
+        task.fail(new Exception("Quit"));
+        assertEquals(Worker.State.FAILED, service.getState());
+        assertEquals(0, cancelNotificationCount.get());
+    }
+
     /***************************************************************************
-     *
-     * Tests for onFailed
-     *
+     *                                                                         *
+     * Tests for onFailed                                                      *
+     *                                                                         *
      **************************************************************************/
 
     @Test public void onFailedPropertyNameShouldMatchMethodName() {

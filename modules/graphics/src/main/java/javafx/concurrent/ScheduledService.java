@@ -333,6 +333,13 @@ public abstract class ScheduledService<V> extends Service<V> {
      */
     private TimerTask delayTask = null;
 
+    /**
+     * This is set to false when the "cancel" method is called, and reset to true on "reset".
+     * We need this so that any time the developer calls 'cancel', even when from within one
+     * of the event handlers, it will cause us to transition to the cancelled state.
+     */
+    private boolean stop = false;
+
     // This method is invoked by Service to actually execute the task. In the normal implementation
     // in Service, this method will simply delegate to the Executor. In ScheduledService, however,
     // we instead will delay the correct amount of time before we finally invoke executeTaskNow,
@@ -357,7 +364,7 @@ public abstract class ScheduledService<V> extends Service<V> {
                 // If the delay is zero or null, then just start immediately
                 executeTaskNow(task);
             } else {
-                schedule(createTimerTask(task), d);
+                schedule(delayTask = createTimerTask(task), d);
             }
         } else {
             // We are executing as a result of an iteration, not a fresh start.
@@ -369,7 +376,7 @@ public abstract class ScheduledService<V> extends Service<V> {
             if (runPeriod < cumulative) {
                 // Pause and then execute
                 assert delayTask == null;
-                schedule(createTimerTask(task), (long) (cumulative - runPeriod));
+                schedule(delayTask = createTimerTask(task), (long) (cumulative - runPeriod));
             } else {
                 // Execute immediately
                 executeTaskNow(task);
@@ -388,25 +395,19 @@ public abstract class ScheduledService<V> extends Service<V> {
         // Reset the cumulative time
         Duration d = getPeriod();
         setCumulativePeriod(d);
+        // Have to save this off, since it will be reset here in a second
+        final boolean wasCancelled = stop;
         // Call the super implementation of reset, which will not cause us
         // to think this is a new fresh start.
-        ScheduledService.this.superReset();
+        superReset();
         assert freshStart == false;
-        // Fire it up!
-        ScheduledService.this.start();
-    }
-
-    /**
-     * @inheritDoc
-     *
-     * Implementation Note: Subclasses which override this method must call this super implementation.
-     */
-    @Override protected void cancelled() {
-        super.cancelled();
-        // Stop the delayTask if it exists
-        if (delayTask != null) {
-            delayTask.cancel();
-            delayTask = null;
+        // If it was cancelled then we will progress from READY to SCHEDULED to CANCELLED so that
+        // the lifecycle changes are predictable according to the Service specification.
+        if (wasCancelled) {
+            cancelFromReadyState();
+        } else {
+            // Fire it up!
+            start();
         }
     }
 
@@ -429,9 +430,9 @@ public abstract class ScheduledService<V> extends Service<V> {
                 setCumulativePeriod(d);
             }
 
-            ScheduledService.this.superReset();
+            superReset();
             assert freshStart == false;
-            ScheduledService.this.start();
+            start();
         } else {
             // We've maxed out, so do nothing and things will just stop.
         }
@@ -444,11 +445,29 @@ public abstract class ScheduledService<V> extends Service<V> {
      */
     @Override public void reset() {
         super.reset();
+        stop = false;
         setCumulativePeriod(getPeriod());
         lastValue.set(null);
         setCurrentFailureCount(0);
         lastRunTime = 0L;
         freshStart = true;
+    }
+
+    /**
+     * Cancels any currently running task and stops this scheduled service, such that
+     * no additional iterations will occur.
+     *
+     * @return whether any running task was cancelled, false if no task was cancelled.
+     *         In any case, the ScheduledService will stop iterating.
+     */
+    @Override public boolean cancel() {
+        boolean ret = super.cancel();
+        stop = true;
+        if (delayTask != null) {
+            delayTask.cancel();
+            delayTask = null;
+        }
+        return ret;
     }
 
     /**
