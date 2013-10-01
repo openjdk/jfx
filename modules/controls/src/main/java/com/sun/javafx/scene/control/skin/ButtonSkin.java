@@ -121,19 +121,24 @@ public class ButtonSkin extends LabeledSkinBase<Button, ButtonBehavior<Button>> 
             KeyCode acceleratorCode = KeyCode.ENTER;
             defaultAcceleratorKeyCodeCombination = new KeyCodeCombination(acceleratorCode);
 
+            Runnable oldDefault = scene.getAccelerators().get(defaultAcceleratorKeyCodeCombination);
             if (!value) {
-                /*
-                ** first check of there's a default button already
-                */
-                Runnable oldDefault = scene.getAccelerators().get(defaultAcceleratorKeyCodeCombination);
-                if (!defaultButtonRunnable.equals(oldDefault)) {
-                    /*
-                    ** is it us?
-                    */
+                /**
+                 * first check of there's a default button already
+                 */
+                if (defaultButtonRunnable.equals(oldDefault)) {
+                    /**
+                     * is it us?
+                     */
                     scene.getAccelerators().remove(defaultAcceleratorKeyCodeCombination);
                 }
             }
-            scene.getAccelerators().put(defaultAcceleratorKeyCodeCombination, defaultButtonRunnable);
+            else {
+                if (!defaultButtonRunnable.equals(oldDefault)) {
+                    scene.getAccelerators().remove(defaultAcceleratorKeyCodeCombination);
+                    scene.getAccelerators().put(defaultAcceleratorKeyCodeCombination, defaultButtonRunnable);
+                }
+            }
         }
     }
 
@@ -145,19 +150,24 @@ public class ButtonSkin extends LabeledSkinBase<Button, ButtonBehavior<Button>> 
             KeyCode acceleratorCode = KeyCode.ESCAPE;
             cancelAcceleratorKeyCodeCombination = new KeyCodeCombination(acceleratorCode);
         
+            Runnable oldCancel = scene.getAccelerators().get(cancelAcceleratorKeyCodeCombination);
             if (!value) {
-                /*
-                ** first check of there's a cancel button already
-                */
-                Runnable oldCancel = scene.getAccelerators().get(cancelAcceleratorKeyCodeCombination);
-                if (!cancelButtonRunnable.equals(oldCancel)) {
-                    /*
-                    ** is it us?
-                    */
+                /**
+                 * first check of there's a cancel button already
+                 */
+                if (cancelButtonRunnable.equals(oldCancel)) {
+                    /**
+                     * is it us?
+                     */
                     scene.getAccelerators().remove(cancelAcceleratorKeyCodeCombination);
                 }
-            }        
-            scene.getAccelerators().put(cancelAcceleratorKeyCodeCombination, cancelButtonRunnable);
+            }
+            else {
+                if (!cancelButtonRunnable.equals(oldCancel)) {
+                    scene.getAccelerators().remove(cancelAcceleratorKeyCodeCombination);
+                    scene.getAccelerators().put(cancelAcceleratorKeyCodeCombination, cancelButtonRunnable);
+                }
+            }
         }
     }
 }
