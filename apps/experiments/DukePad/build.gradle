@@ -1,0 +1,179 @@
+defaultTasks "artifacts"
+
+subprojects {
+    apply plugin: 'java'
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        compile files(
+            "${rootProject.file('equinox/plugins/org.eclipse.equinox.common_3.6.200.v20130402-1505.jar')}",
+            "${rootProject.file('equinox/plugins/org.eclipse.osgi_3.9.0.v20130529-1710.jar')}",
+            "${rootProject.file('equinox/plugins/org.eclipse.equinox.preferences_3.5.100.v20130422-1538.jar')}",
+        )
+        //compile group: 'org.ecilpse', name: 'equinox.preferences', version: '3.5.100.v20130422-1538'
+    }
+
+    jar {
+        manifest {
+            from "src/main/resources/META-INF/MANIFEST.MF"
+        }
+    }
+}
+
+project(":browser") {
+    dependencies {
+        compile project(":core")
+    }
+}
+
+project(":chess") {
+    dependencies {
+        compile project(":core")
+        compile group: "org.glassfish", name: "javax.json", version: "1.0.1"
+        compile group: "org.glassfish.tyrus", name: "tyrus-client", version: "1.0"
+        compile group: "org.glassfish.tyrus", name: "tyrus-container-grizzly", version: "1.0"
+        compile group: "javax", name: "javaee-web-api", version: "7.0"
+        testCompile group: "junit", name: "junit", version: "4.10"
+        testCompile group: "org.hamcrest", name: "hamcrest-core", version: "1.1"
+        compile group: "org.glassfish", name: "javax.json", version: "1.0.1"
+    }
+
+    sourceSets {
+        main {
+            java {
+                srcDir "${rootProject.file('../Chess/ChessLibrary/src/main/java')}"
+            }
+            resources {
+                srcDir "${rootProject.file('../Chess/ChessLibrary/src/main/resources')}"
+            }
+        }
+    }
+
+    sourceCompatibility = 1.8;
+    targetCompatibility = 1.8;
+}
+
+project(":calculator") {
+    dependencies {
+        compile project(":core")
+    }
+}
+
+project(":clock") {
+    dependencies {
+        compile project(":core")
+    }
+}
+
+project(":compass") {
+    dependencies {
+        compile project(":core")
+        compile group: "com.pi4j", name:"pi4j-core", version:"0.0.5"
+    }
+}
+
+project(":cubeGame") {
+    dependencies {
+        compile project(":core")
+    }
+}
+
+project(":lockScreen") {
+    dependencies {
+        compile project(":core")
+    }
+}
+
+project(":mediaPlayer") {
+    dependencies {
+        compile project(":core")
+    }
+}
+
+project(":notes") {
+    dependencies {
+        compile project(":core")
+    }
+}
+
+project(":settings") {
+    dependencies {
+        compile project(":core")
+    }
+}
+
+project(":weather") {
+    dependencies {
+        compile project(":core")
+    }
+}
+
+subprojects {
+    task libs(type: Sync) {
+        from configurations.compile
+        into "${rootProject.file('lib')}"
+    }
+}
+
+task artifacts(dependsOn: [subprojects.jar, subprojects.libs]) << {
+    mkdir "build/artifacts/apps"
+    mkdir "build/artifacts/lib"
+    mkdir "build/artifacts/bundles"
+
+    copy {
+        from "modules/browser/build/libs/browser.jar"
+        from "modules/calculator/build/libs/calculator.jar"
+        from "modules/chess/build/libs/chess.jar"
+        from "modules/clock/build/libs/clock.jar"
+        from "modules/compass/build/libs/compass.jar"
+        from "modules/cubeGame/build/libs/cubeGame.jar"
+        from "modules/lockScreen/build/libs/lockScreen.jar"
+        from "modules/mediaPlayer/build/libs/mediaPlayer.jar"
+        from "modules/notes/build/libs/notes.jar"
+        from "modules/settings/build/libs/settings.jar"
+        from "modules/weather/build/libs/weather.jar"
+        into "build/artifacts/apps"
+    }
+
+    copy {
+        from "lib/"
+        into "build/artifacts/bundles"
+//        include "core.jar",
+//                "javax.json-1.0.1.jar",
+//                "javax.websocket-api-1.0.jar",
+//                "org.eclipse.equinox.common_3.6.200.v20130402-1505.jar",
+//                "org.eclipse.equinox.preferences_3.5.100.v20130422-1538.jar",
+//                "tyrus-client-1.0.jar",
+//                "tyrus-container-grizzly-1.0.jar",
+//                "tyrus-core-1.0.jar",
+//                "tyrus-spi-1.0.jar",
+//                "tyrus-websocket-core-1.0.jar"
+        exclude "org.eclipse.osgi_3.9.0.v20130529-1710.jar"
+    }
+
+    copy {
+        from "modules/core/build/libs/core.jar"
+        from "equinox/plugins/org.eclipse.equinox.preferences_3.5.100.v20130422-1538.jar"
+        from "equinox/plugins/org.eclipse.equinox.common_3.6.200.v20130402-1505.jar"
+        into "build/artifacts/bundles"
+    }
+
+    copy {
+        from "starter/build/libs/starter.jar"
+        into "build/artifacts"
+        rename { "dukepad.jar" }
+    }
+
+    copy {
+        from "equinox/plugins/org.eclipse.osgi_3.9.0.v20130529-1710.jar"
+        into "build/artifacts/lib"
+    }
+}
+
+task run(dependsOn: "artifacts", type: JavaExec) {
+    main = "com.javafx.experiments.dukepad.starter.StarterApplication"
+    classpath = files("build/artifacts/lib/org.eclipse.osgi_3.9.0.v20130529-1710.jar", "build/artifacts/dukepad.jar")
+    workingDir "build/artifacts"
+}

@@ -28,6 +28,7 @@
 
 class GlassScreen {
 public:
+    static jobject CreateJavaMonitor(JNIEnv *env, HMONITOR monitor);
     static void HandleDisplayChange();
     static jobjectArray CreateJavaScreens(JNIEnv* env);
 };

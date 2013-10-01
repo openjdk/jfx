@@ -40,26 +40,36 @@ class CTGlyphLayout extends GlyphLayout {
         /* Use CoreText to analize the run */
         long alloc = OS.kCFAllocatorDefault();
         long textRef = OS.CFStringCreateWithCharacters(alloc, chars, start, length);
-        long attributes = OS.CFDictionaryCreateMutable(alloc, 4,
-                              OS.kCFTypeDictionaryKeyCallBacks(),
-                              OS.kCFTypeDictionaryValueCallBacks());
-        OS.CFDictionaryAddValue(attributes, OS.kCTFontAttributeName(), fontRef);
-        /* Note that by default CoreText will apply kerning depending on the font*/
-        long attString = OS.CFAttributedStringCreate(alloc, textRef, attributes);
-        long lineRef = OS.CTLineCreateWithAttributedString(attString);
-        OS.CFRelease(attributes);
-        OS.CFRelease(attString);
-        OS.CFRelease(textRef);
+        long lineRef = 0;
+        if (textRef != 0) {
+            long attributes = OS.CFDictionaryCreateMutable(alloc, 4,
+                                  OS.kCFTypeDictionaryKeyCallBacks(),
+                                  OS.kCFTypeDictionaryValueCallBacks());
+            if (attributes != 0) {
+                OS.CFDictionaryAddValue(attributes, OS.kCTFontAttributeName(), fontRef);
+                /* Note that by default CoreText will apply kerning depending on the font*/
+                long attString = OS.CFAttributedStringCreate(alloc, textRef, attributes);
+                if (attString != 0) {
+                    lineRef = OS.CTLineCreateWithAttributedString(attString);
+                    OS.CFRelease(attString);
+                }
+                OS.CFRelease(attributes);
+            }
+            OS.CFRelease(textRef);
+        }
         return lineRef;
     }
 
     private int getFontSlot(long runRef, CompositeFontResource fr, String name) {
         long runAttrs = OS.CTRunGetAttributes(runRef);
+        if (runAttrs == 0) return -1;
         long actualFont = OS.CFDictionaryGetValue(runAttrs, OS.kCTFontAttributeName());
+        if (actualFont == 0) return -1;
 
         /* Use the display name from the kCTFontDisplayNameAttribute attribute
          * instead of CTFontCopyDisplayName() to avoid localized names*/
         String fontName = OS.CTFontCopyAttributeDisplayName(actualFont);
+        if (fontName == null) return -1;
         int slot = 0;
         if (!fontName.equalsIgnoreCase(name)) {
             if (fr == null) return -1;
@@ -81,32 +91,37 @@ class CTGlyphLayout extends GlyphLayout {
         float size = strike.getSize();
         String fontName = strike.getFontResource().getFullName();
         long fontRef = ((CTFontStrike)strike).getFontRef();
+        if (fontRef == 0) return;
         long lineRef = createCTLine(fontRef, text, run.getStart(), run.getLength());
+        if (lineRef == 0) return;
         long runs = OS.CTLineGetGlyphRuns(lineRef);
-        int glyphCount = (int)OS.CTLineGetGlyphCount(lineRef);
-        int[] glyphs = new int[glyphCount];
-        float[] positions = new float[glyphCount * 2 + 2];
-        int[] indices = new int[glyphCount];
-        long runCount = OS.CFArrayGetCount(runs);
-        int glyphStart = 0, posStart = 0, indicesStart = 0;
-        for (int i = 0; i < runCount; i++) {
-            long runRef = OS.CFArrayGetValueAtIndex(runs, i);
-            int slot = getFontSlot(runRef, composite, fontName) ;
-            if (slot != -1) {
-                glyphStart += OS.CTRunGetGlyphs(runRef, slot << 24, glyphStart, glyphs);
-            } else {
-                glyphStart += OS.CTRunGetGlyphCount(runRef);
+        if (runs != 0) {
+            int glyphCount = (int)OS.CTLineGetGlyphCount(lineRef);
+            int[] glyphs = new int[glyphCount];
+            float[] positions = new float[glyphCount * 2 + 2];
+            int[] indices = new int[glyphCount];
+            long runCount = OS.CFArrayGetCount(runs);
+            int glyphStart = 0, posStart = 0, indicesStart = 0;
+            for (int i = 0; i < runCount; i++) {
+                long runRef = OS.CFArrayGetValueAtIndex(runs, i);
+                if (runRef == 0) continue;
+                int slot = getFontSlot(runRef, composite, fontName) ;
+                if (slot != -1) {
+                    glyphStart += OS.CTRunGetGlyphs(runRef, slot << 24, glyphStart, glyphs);
+                } else {
+                    glyphStart += OS.CTRunGetGlyphCount(runRef);
+                }
+                if (size > 0) {
+                    posStart += OS.CTRunGetPositions(runRef, posStart, positions);
+                }
+                indicesStart += OS.CTRunGetStringIndices(runRef, indicesStart, indices);
+
             }
             if (size > 0) {
-                posStart += OS.CTRunGetPositions(runRef, posStart, positions);
+                positions[posStart] = (float)OS.CTLineGetTypographicBounds(lineRef);
             }
-            indicesStart += OS.CTRunGetStringIndices(runRef, indicesStart, indices);
-
+            run.shape(glyphCount, glyphs, positions, indices);
         }
-        if (size > 0) {
-            positions[posStart] = (float)OS.CTLineGetTypographicBounds(lineRef);
-        }
-        run.shape(glyphCount, glyphs, positions, indices);
         OS.CFRelease(lineRef);
     }
 }

@@ -90,6 +90,8 @@ char *describe_surface_format(int, char *);
 
 int32_t translate_to_linux_keycode(int32_t);
 
+int *getIntArray(JNIEnv *,int *, jintArray);
+
 ANativeWindow *ANDROID_getNativeWindow();
 
 void ANDROID_showIME();

@@ -105,6 +105,26 @@ void notifyTouchEvent(
    DETACH_JNI_THREAD();
 }
 
+void notifyMultiTouchEvent(
+        int count,
+        int *states,
+        int *ids,
+        int *xs,
+        int *ys) {
+    
+    ATTACH_JNI_THREAD();
+    jlong jids[count];
+    
+    for(int i=0;i<count;i++) jids[i] = ids[i];
+    lens_wm_notifyMultiTouchEvent(env,
+           count,
+           states,
+           jids,
+           xs,
+           ys);
+    DETACH_JNI_THREAD();
+}
+
 void notifyMotionEvent(
         int mousePosX,
         int mousePosY,

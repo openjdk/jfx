@@ -32,6 +32,7 @@
 
 #import "GlassMacros.h"
 #import "GlassWindow+Java.h"
+#import "GlassScreen.h"
 
 static NSWindow *s_grabWindow = nil;
 
@@ -56,7 +57,7 @@ static NSWindow *s_grabWindow = nil;
         self->currentScreen = newScreen;
         
         GET_MAIN_JENV;
-        (*env)->CallVoidMethod(env, jWindow, jWindowNotifyMoveToAnotherScreen, ptr_to_jlong(self->currentScreen), ptr_to_jlong(newScreen));
+        (*env)->CallVoidMethod(env, jWindow, jWindowNotifyMoveToAnotherScreen, createJavaScreen(env, newScreen));
     }
 }
 

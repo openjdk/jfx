@@ -48,19 +48,27 @@ class CTFontFile extends PrismFontFile {
     public static boolean registerFont(String fontfile) {
         if (fontfile == null) return false;
         long alloc = OS.kCFAllocatorDefault();
+        boolean result = false;
         long fileRef = OS.CFStringCreate(fontfile);
-        long urlRef = OS.CFURLCreateWithFileSystemPath(alloc, fileRef, OS.kCFURLPOSIXPathStyle, false);
-        int scope = OS.kCTFontManagerScopeProcess;
-        boolean result = OS.CTFontManagerRegisterFontsForURL(urlRef, scope, 0);
-        OS.CFRelease(fileRef);
-        OS.CFRelease(urlRef);
+        if (fileRef != 0) {
+            int pathStyle = OS.kCFURLPOSIXPathStyle;
+            long urlRef = OS.CFURLCreateWithFileSystemPath(alloc, fileRef, pathStyle, false);
+            if (urlRef != 0) {
+                int scope = OS.kCTFontManagerScopeProcess;
+                result = OS.CTFontManagerRegisterFontsForURL(urlRef, scope, 0);
+                OS.CFRelease(urlRef);
+            }
+            OS.CFRelease(fileRef);
+        }
         return result;
     }
 
     CGRect getBBox(int gc, float size) {
         CTFontStrike strike = (CTFontStrike)getStrike(size, BaseTransform.IDENTITY_TRANSFORM);
         long fontRef = strike.getFontRef();
+        if (fontRef == 0) return null;
         long pathRef = OS.CTFontCreatePathForGlyph(fontRef, (short)gc, tx);
+        if (pathRef == 0) return null;
         CGRect rect = OS.CGPathGetPathBoundingBox(pathRef);
         OS.CGPathRelease(pathRef);
         return rect;
@@ -69,7 +77,9 @@ class CTFontFile extends PrismFontFile {
     Path2D getGlyphOutline(int gc, float size) {
         CTFontStrike strike = (CTFontStrike)getStrike(size, BaseTransform.IDENTITY_TRANSFORM);
         long fontRef = strike.getFontRef();
+        if (fontRef == 0) return null;
         long pathRef = OS.CTFontCreatePathForGlyph(fontRef, (short)gc, tx);
+        if (pathRef == 0) return null;
         Path2D path = OS.CGPathApply(pathRef);
         OS.CGPathRelease(pathRef);
         return path;
@@ -80,6 +90,10 @@ class CTFontFile extends PrismFontFile {
         CTFontStrike strike = (CTFontStrike)getStrike(size,
                                                       BaseTransform.IDENTITY_TRANSFORM);
 
+        long fontRef = strike.getFontRef();
+        if (fontRef == 0) return null;
+        int[] bb = new int[4];
+
         /* For some reason CTFontGetBoundingRectsForGlyphs has poor performance.
          * The fix is to use the 'loca' and the 'glyf' tables to determine
          * the glyph bounding box (same as T2K). This implementation
@@ -87,8 +101,6 @@ class CTFontFile extends PrismFontFile {
          * In case it fails, or the font doesn't have a glyph table
          * (CFF fonts), then the bounds of the glyph outline is used instead.
          */
-        long fontRef = strike.getFontRef();
-        int[] bb = new int[4];
         if (!isCFF()) {
             short format = getIndexToLocFormat();
             if (OS.CTFontGetBoundingRectForGlyphUsingTables(fontRef, (short)gc, format, bb)) {
@@ -97,6 +109,7 @@ class CTFontFile extends PrismFontFile {
         }
         /* Note: not using tx here as the bounds need to be y up */
         long pathRef = OS.CTFontCreatePathForGlyph(fontRef, (short)gc, null);
+        if (pathRef == 0) return null;
         CGRect rect = OS.CGPathGetPathBoundingBox(pathRef);
         OS.CGPathRelease(pathRef);
         float scale = getUnitsPerEm() / size;
@@ -108,8 +121,8 @@ class CTFontFile extends PrismFontFile {
     }
 
     @Override
-    protected PrismFontStrike createStrike(float size, BaseTransform transform,
-                                           int aaMode, FontStrikeDesc desc) {
+    protected PrismFontStrike<CTFontFile> createStrike(float size,
+            BaseTransform transform, int aaMode, FontStrikeDesc desc) {
         return new CTFontStrike(this, size, transform, aaMode, desc);
     }
 

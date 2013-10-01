@@ -1,0 +1,16 @@
+include "starter", "browser", "calculator", "chess", "clock", "compass", "core", "cubeGame", "lockScreen", "mediaPlayer", "notes", "settings", "weather"
+
+project(":starter").projectDir = file("starter")
+project(":browser").projectDir = file("modules/browser")
+project(":calculator").projectDir = file("modules/calculator")
+project(":chess").projectDir = file("modules/chess")
+project(":clock").projectDir = file("modules/clock")
+project(":compass").projectDir = file("modules/compass")
+project(":core").projectDir = file("modules/core")
+project(":cubeGame").projectDir = file("modules/cubeGame")
+project(":lockScreen").projectDir = file("modules/lockScreen")
+project(":mediaPlayer").projectDir = file("modules/mediaPlayer")
+project(":notes").projectDir = file("modules/notes")
+project(":settings").projectDir = file("modules/settings")
+project(":weather").projectDir = file("modules/weather")
+

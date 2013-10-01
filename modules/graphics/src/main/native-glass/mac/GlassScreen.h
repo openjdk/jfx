@@ -38,3 +38,4 @@ void GlassScreenDidChangeScreenParameters(JNIEnv *env);
 
 CGFloat GetScreenScaleFactor(NSScreen *screen);
 jobjectArray createJavaScreens(JNIEnv* env);
+jobject createJavaScreen(JNIEnv *env, NSScreen* screen);

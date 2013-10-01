@@ -123,8 +123,8 @@ import sun.awt.SunToolkit;
  */
 public class JFXPanel extends JComponent {
 
+    private static AtomicInteger instanceCount = new AtomicInteger(0);
     private static PlatformImpl.FinishListener finishListener;
-    private static boolean firstPanelShown = false;
 
     private HostContainer hostContainer;
 
@@ -160,28 +160,32 @@ public class JFXPanel extends JComponent {
 
     private boolean isCapturingMouse = false;
 
-    // Initialize FX runtime when the JFXPanel instance is constructed
-    private synchronized static void initFx() {
-        if (finishListener != null) {
+    private synchronized void registerFinishListener() {
+        if (instanceCount.getAndIncrement() > 0) {
             // Already registered
             return;
         }
         // Need to install a finish listener to catch calls to Platform.exit
         finishListener = new PlatformImpl.FinishListener() {
             @Override public void idle(boolean implicitExit) {
-                if (!firstPanelShown) {
-                    return;
-                }
-                PlatformImpl.removeListener(finishListener);
-                finishListener = null;
-                if (implicitExit) {
-                    Platform.exit();
-                }
             }
             @Override public void exitCalled() {
             }
         };
         PlatformImpl.addListener(finishListener);
+    }
+
+    private synchronized void deregisterFinishListener() {
+        if (instanceCount.decrementAndGet() > 0) {
+            // Other JFXPanels still alive
+            return;
+        }
+        PlatformImpl.removeListener(finishListener);
+        finishListener = null;
+    }
+
+    // Initialize FX runtime when the JFXPanel instance is constructed
+    private synchronized static void initFx() {
         // Note that calling PlatformImpl.startup more than once is OK
         PlatformImpl.startup(new Runnable() {
             @Override public void run() {
@@ -280,7 +284,6 @@ public class JFXPanel extends JComponent {
             stage.setScene(newScene);
             if (!stage.isShowing()) {
                 stage.show();
-                firstPanelShown = true;
             }
         }
     }
@@ -692,8 +695,8 @@ public class JFXPanel extends JComponent {
     public void addNotify() {
         super.addNotify();
 
+        registerFinishListener();
         dnd.addNotify();
-
         AccessController.doPrivileged(new PrivilegedAction<Void>() {
             public Void run() {
                 JFXPanel.this.getToolkit().addAWTEventListener(ungrabListener,
@@ -701,15 +704,12 @@ public class JFXPanel extends JComponent {
                 return null;
             }
         });
-
         updateComponentSize(); // see RT-23603
-
         SwingFXUtils.runOnFxThread(new Runnable() {
             @Override
             public void run() {
                 if ((stage != null) && !stage.isShowing()) {
                     stage.show();
-                    firstPanelShown = true;
                     sendMoveEventToFX();
                 }
             }
@@ -748,6 +748,8 @@ public class JFXPanel extends JComponent {
 
         /* see CR 4867453 */
         getInputContext().removeNotify(this);
+
+        deregisterFinishListener();
     }
 
     private class HostContainer implements HostInterface {

@@ -52,6 +52,7 @@ import javafx.util.Duration;
  * @see javafx.scene.transform.Rotate
  * @see javafx.scene.paint.Color
  * @see javafx.scene.shape.RectangleBuilder
+ * @conditionalFeatures SCENE3D
  */
 public class CubeSystemApp extends Application {
 

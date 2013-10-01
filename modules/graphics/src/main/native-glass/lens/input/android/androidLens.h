@@ -48,6 +48,13 @@ extern "C" {
         int  xabs,
         int  yabs);
 
+    void notifyMultiTouchEvent(
+        int count,
+        int *states,
+        int *ids,
+        int *xs,
+        int *ys);
+    
     void notifyMotionEvent(
         int mousePosX,
         int mousePosY,

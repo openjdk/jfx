@@ -489,7 +489,7 @@ public class GridPaneTest {
         gridpane.layout();
 
         assertEquals(0, child0_0.getLayoutX(), 1e-100);
-        assertEquals(200, child0_0.getLayoutY(), 1e-100); // The gridPane is resized to height 100, to cover preferred height
+        assertEquals(200, child0_0.getLayoutY(), 1e-100);
         assertEquals(300, child0_0.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(100, child0_0.getLayoutBounds().getHeight(), 1e-100);
     }
@@ -2800,5 +2800,38 @@ public class GridPaneTest {
         assertEquals(0, child1.getLayoutY(), 1e-100);
         assertEquals(100, child2.getLayoutY(), 1e-100);
         assertEquals(75, child_double_12.getLayoutY(), 1e-100);
+    }
+
+    @Test
+    public void testGridMaxSize() {
+        MockResizable child1 = new MockResizable(0,0,100,100, 100,100);
+        MockResizable child2 = new MockResizable(0,0,100,100, 150,150);
+
+        gridpane.add(child1, 0, 0);
+        gridpane.add(child2, 0, 1);
+
+        RowConstraints rc = new RowConstraints();
+        rc.setVgrow(Priority.ALWAYS);
+
+        gridpane.getRowConstraints().addAll(rc, rc);
+
+        ColumnConstraints cc = new ColumnConstraints();
+        cc.setHgrow(Priority.ALWAYS);
+        cc.setHalignment(HPos.CENTER);
+
+        gridpane.getColumnConstraints().addAll(cc);
+
+        gridpane.resize(200, 300);
+        gridpane.layout();
+
+        assertEquals(25, child1.getLayoutY(), 1e-100); // (300 (height) / 2 (2 rows) - 100 (node height)) / 2
+        assertEquals(50, child1.getLayoutX(), 1e-100); // (200 (width) - 100 (node width)) / 2
+        assertEquals(100, child1.getHeight(), 1e-100);
+        assertEquals(100, child1.getWidth(), 1e-100);
+
+        assertEquals(150, child2.getLayoutY(), 1e-100); // 150 (2nd row!) + 0
+        assertEquals(25, child2.getLayoutX(), 1e-100);
+        assertEquals(150, child2.getHeight(), 1e-100);
+        assertEquals(150, child2.getWidth(), 1e-100);
     }
 }

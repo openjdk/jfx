@@ -84,8 +84,8 @@ public class PickRay {
             eye.set(halfViewWidth, halfViewHeight, -distanceZ);
         }
 
-        pickRay.nearClip = nearClip * (direction.length() / distanceZ);
-        pickRay.farClip = farClip * (direction.length() / distanceZ);
+        pickRay.nearClip = nearClip * (direction.length() / (fixedEye ? distanceZ : 1.0));
+        pickRay.farClip = farClip * (direction.length() / (fixedEye ? distanceZ : 1.0));
 
         pickRay.transform(cameraTransform);
 

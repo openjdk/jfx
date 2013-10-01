@@ -164,7 +164,7 @@ public class PrismTextLayout implements TextLayout {
 
     public boolean setWrapWidth(float newWidth) {
         float oldWidth = this.wrapWidth;
-        this.wrapWidth = newWidth;
+        this.wrapWidth = Math.max(0, newWidth);
 
         boolean needsLayout = true;
         if (lines != null && oldWidth != 0 && newWidth != 0) {
@@ -1181,7 +1181,7 @@ public class PrismTextLayout implements TextLayout {
             }
 
             computeSideBearings(line);
-            
+
             /* Set run location */
             float runX = lineX;
             TextRun[] lineRuns = line.getRuns();
@@ -1192,7 +1192,7 @@ public class PrismTextLayout implements TextLayout {
                 runX += run.getWidth();
             }
             if (i + 1 < lines.length) {
-                lineY = Math.max(lineY, lineY + bounds.getHeight() + spacing);                
+                lineY = Math.max(lineY, lineY + bounds.getHeight() + spacing);
             } else {
                 lineY += (bounds.getHeight() - line.getLeading());
             }
@@ -1211,7 +1211,7 @@ public class PrismTextLayout implements TextLayout {
         if (strike == null) {
             return null;
         }
-        
+
         boolean underline = (type & TYPE_UNDERLINE) != 0;
         boolean hasUnderline = (flags & FLAGS_CACHED_UNDERLINE) != 0;
         boolean strikethrough = (type & TYPE_STRIKETHROUGH) != 0;
@@ -1221,7 +1221,7 @@ public class PrismTextLayout implements TextLayout {
             /* Return last cached value */
             return visualBounds;
         }
-        
+
         flags &= ~(FLAGS_CACHED_STRIKETHROUGH | FLAGS_CACHED_UNDERLINE);
         if (underline) flags |= FLAGS_CACHED_UNDERLINE;
         if (strikethrough) flags |= FLAGS_CACHED_STRIKETHROUGH;
@@ -1283,7 +1283,7 @@ public class PrismTextLayout implements TextLayout {
                 }
             }
         }
-        
+
         if (xMin < xMax && yMin < yMax) {
             visualBounds.setBounds(xMin, yMin, xMax, yMax);
         }

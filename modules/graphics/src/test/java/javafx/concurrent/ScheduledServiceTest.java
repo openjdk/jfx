@@ -25,15 +25,16 @@
 
 package javafx.concurrent;
 
-import java.util.TimerTask;
-import java.util.concurrent.atomic.AtomicInteger;
 import javafx.concurrent.mocks.EpicFailTask;
 import javafx.concurrent.mocks.SimpleTask;
 import javafx.util.Callback;
 import javafx.util.Duration;
+import java.util.TimerTask;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Test;
-
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests for the ScheduledService.
@@ -74,8 +75,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
      * executed, will add to the wall clock time.
      */
     private long wallClock;
-
-
 
     @Override protected TestServiceFactory setupServiceFactory() {
         return new TestServiceFactory() {

@@ -60,6 +60,7 @@ import javafx.util.Duration;
  * @see javafx.scene.PerspectiveCamera
  * @see javafx.scene.shape.RectangleBuilder
  * @see javafx.scene.SubScene
+ * @conditionalFeatures SCENE3D
  */
 public class XylophoneApp extends Application {
 

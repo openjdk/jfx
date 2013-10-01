@@ -364,15 +364,23 @@ public class PlatformImpl {
     public static void removeListener(FinishListener l) {
         finishListeners.remove(l);
         listenersRegistered.set(!finishListeners.isEmpty());
+        if (!listenersRegistered.get()) {
+            checkIdle();
+        }
     }
 
     private static void notifyFinishListeners(boolean exitCalled) {
-        for (FinishListener l : finishListeners) {
-            if (exitCalled) {
-                l.exitCalled();
-            } else {
-                l.idle(implicitExit);
+        // Notify listeners if any are registered, else exit directly
+        if (listenersRegistered.get()) {
+            for (FinishListener l : finishListeners) {
+                if (exitCalled) {
+                    l.exitCalled();
+                } else {
+                    l.idle(implicitExit);
+                }
             }
+        } else if (implicitExit || platformExit.get()) {
+            tkExit();
         }
     }
 
@@ -450,16 +458,8 @@ public class PlatformImpl {
     }
 
     public static void exit() {
-//        System.err.println("PlatformImpl.exit");
         platformExit.set(true);
-
-        // Notify listeners if any are registered, else exit directly
-        if (listenersRegistered.get()) {
-            notifyFinishListeners(true);
-        } else {
-//            System.err.println("Platform.exit: calling doExit directly (no listeners)");
-            tkExit();
-        }
+        notifyFinishListeners(true);
     }
 
     private static Boolean checkForClass(String classname) {

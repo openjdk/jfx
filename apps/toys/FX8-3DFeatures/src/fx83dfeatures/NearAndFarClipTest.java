@@ -25,9 +25,11 @@
 package fx83dfeatures;
 
 import javafx.application.Application;
+import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
@@ -52,7 +54,7 @@ public class NearAndFarClipTest extends Application {
         final double farClipDistance = focalLength * FAR + eyePositionZ;
         final double nearClipDistanceOffset = Math.abs(nearClipDistance * OFFSET_PERCENT);
         final double farClipDistanceOffset = Math.abs(farClipDistance * OFFSET_PERCENT);
-        
+
         System.out.println("In scene coordinate: focalLength = " + focalLength
                 + ", nearClipDistance = " + nearClipDistance
                 + ", nearClipDistanceOffset = " + nearClipDistanceOffset
@@ -62,26 +64,31 @@ public class NearAndFarClipTest extends Application {
         Rectangle insideRect = new Rectangle(220, 220, Color.GREEN);
         insideRect.setLayoutX(140);
         insideRect.setLayoutY(140);
+        insideRect.setId("Green");
 
         Rectangle insideNearClip = new Rectangle(16, 16, Color.BLUE);
         insideNearClip.setLayoutX(242);
         insideNearClip.setLayoutY(242);
         insideNearClip.setTranslateZ(nearClipDistance + nearClipDistanceOffset);
+        insideNearClip.setId("Blue");
 
         Rectangle outsideNearClip = new Rectangle(16, 16, Color.YELLOW);
         outsideNearClip.setLayoutX(242);
         outsideNearClip.setLayoutY(242);
         outsideNearClip.setTranslateZ(nearClipDistance - nearClipDistanceOffset);
+        outsideNearClip.setId("Yellow");
 
         Rectangle insideFarClip = new Rectangle(3000, 3000, Color.RED);
         insideFarClip.setTranslateX(-1250);
         insideFarClip.setTranslateY(-1250);
         insideFarClip.setTranslateZ(farClipDistance - farClipDistanceOffset);
+        insideFarClip.setId("Red");
 
         Rectangle outsideFarClip = new Rectangle(4000, 4000, Color.CYAN);
         outsideFarClip.setTranslateX(-1750);
         outsideFarClip.setTranslateY(-1750);
         outsideFarClip.setTranslateZ(farClipDistance + farClipDistanceOffset);
+        outsideFarClip.setId("Cyan");
 
         Group root = new Group();
 
@@ -90,6 +97,13 @@ public class NearAndFarClipTest extends Application {
 
         // Intentionally set depth buffer to false to reduce test complexity
         Scene scene = new Scene(root, WIDTH, HEIGHT, false);
+        scene.setOnMousePressed(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent event) {
+                System.out.println("Clicked: " + event.getTarget());
+            }
+        });
+
+
         PerspectiveCamera camera = new PerspectiveCamera();
         camera.setFieldOfView(FOV);
         camera.setNearClip(NEAR);
@@ -99,7 +113,7 @@ public class NearAndFarClipTest extends Application {
     }
 
     @Override public void start(Stage stage) {
-        Scene scene = createClipPlanes(stage); 
+        Scene scene = createClipPlanes(stage);
         scene.setFill(Color.GRAY);
         stage.setScene(scene);
         stage.sizeToScene();

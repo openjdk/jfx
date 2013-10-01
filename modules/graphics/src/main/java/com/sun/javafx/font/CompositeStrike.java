@@ -197,11 +197,13 @@ public class CompositeStrike implements FontStrike {
         for (int i = 0; i < gl.getGlyphCount(); i++) {
             int glyphCode = gl.getGlyphCode(i);
             if (glyphCode != CharToGlyphMapper.INVISIBLE_GLYPH_ID) {
-                t.setTransform(transform);
                 Glyph glyph = getGlyph(glyphCode);
                 Shape gp = glyph.getShape();
-                t.translate(gl.getPosX(i), gl.getPosY(i));
-                p.append(gp.getPathIterator(t), false);
+                if (gp != null) {
+                    t.setTransform(transform);
+                    t.translate(gl.getPosX(i), gl.getPosY(i));
+                    p.append(gp.getPathIterator(t), false);
+                }
             }
         }
     }

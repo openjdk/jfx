@@ -181,11 +181,48 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
         public InternalSurfaceView(Context context) {
             super(context);
             setFocusableInTouchMode(true);
-        }
+        }        
 
+        private static final int ACTION_POINTER_STILL = -1;
+        
         @Override
-        public boolean dispatchTouchEvent(MotionEvent event) {
-            onTouchEventNative(event.getAction(), (int) event.getX(), (int) event.getY());
+        public boolean dispatchTouchEvent(MotionEvent event) {      
+            int action = event.getAction();
+            int actionCode = action & MotionEvent.ACTION_MASK;
+            int pcount = event.getPointerCount();
+            int[] actions = new int[pcount];
+            int[] ids = new int[pcount];
+            int[] touchXs = new int[pcount];
+            int[] touchYs = new int[pcount];
+
+            if (pcount > 1) {                      
+                //multitouch
+                if (actionCode == MotionEvent.ACTION_POINTER_DOWN ||
+                    actionCode == MotionEvent.ACTION_POINTER_UP) {
+
+                    int pointerIndex = event.getActionIndex();
+                    for (int i = 0;i <pcount; i++) {
+                        actions[i] = pointerIndex == i ? actionCode : ACTION_POINTER_STILL;
+                        ids[i] = event.getPointerId(i);
+                        touchXs[i] = (int)event.getX(i);
+                        touchYs[i] = (int)event.getY(i);                        
+                    }                    
+                } else if (actionCode == MotionEvent.ACTION_MOVE) {
+                    for (int i = 0;i <pcount; i++) {
+                        touchXs[i] = (int)event.getX(i);
+                        touchYs[i] = (int)event.getY(i);                    
+                        actions[i] = MotionEvent.ACTION_MOVE;
+                        ids[i] = event.getPointerId(i);                        
+                    }                    
+                }                 
+            } else {
+                //single touch
+                actions[0] = actionCode;
+                ids[0] = event.getPointerId(0);
+                touchXs[0] = (int)event.getX();
+                touchYs[0] = (int)event.getY();                
+            }                 
+            onMultiTouchEventNative(pcount, actions, ids, touchXs, touchYs);
             return true;
         }
 
@@ -194,8 +231,10 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
             onKeyEventNative(event.getAction(), event.getKeyCode(), event.getCharacters());
             return true;
         }
-
-        private native void onTouchEventNative(int action, int absx, int absy);
+        
+        private native void onMultiTouchEventNative(int count, int[] actions, 
+                int[] ids, int[] touchXs, int[] touchYs);
+        
 
         private native void onKeyEventNative(int action, int keycode, String characters);
 

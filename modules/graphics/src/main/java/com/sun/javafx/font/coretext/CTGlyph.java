@@ -64,6 +64,7 @@ class CTGlyph implements Glyph {
     @Override public RectBounds getBBox() {
         /* IN T2k this is the bounds of the glyph path see GeneralPath.cpp */
         CGRect rect = strike.getBBox(glyphCode);
+        if (rect == null) return new RectBounds();
         return new RectBounds((float)rect.origin.x,
                               (float)rect.origin.y,
                               (float)(rect.origin.x + rect.size.width),
@@ -76,9 +77,10 @@ class CTGlyph implements Glyph {
         if (strike.getSize() == 0) return;
 
         long fontRef = strike.getFontRef();
+        if (fontRef == 0) return;
         int orientation = OS.kCTFontOrientationDefault;
         CGSize size = new CGSize();
-        OS.CTFontGetAdvancesForGlyphs(fontRef, orientation, (short)glyphCode, size, 1);
+        OS.CTFontGetAdvancesForGlyphs(fontRef, orientation, (short)glyphCode, size);
         xAdvance = size.width;
         yAdvance = -size.height;   /*Inverted coordinates system */
 
@@ -153,6 +155,7 @@ class CTGlyph implements Glyph {
         boolean cache = CACHE_CONTEXT & BITMAP_WIDTH >= w & BITMAP_HEIGHT >= h;
         long context = cache ? getCachedContext(lcdContext) :
                                createContext(lcdContext, w, h);
+        if (context == 0) return new byte[0];
 
         /* Fill background with white */
         OS.CGContextSetRGBFillColor(context, 1, 1, 1, 1);
@@ -175,7 +178,7 @@ class CTGlyph implements Glyph {
 
         /* Draw the text with black */
         OS.CGContextSetRGBFillColor(context, 0, 0, 0, 1);
-        OS.CTFontDrawGlyphs(fontRef, (short)glyphCode, -drawX, -drawY, 1, context);
+        OS.CTFontDrawGlyphs(fontRef, (short)glyphCode, -drawX, -drawY, context);
 
         if (matrix != null) {
             OS.CGContextTranslateCTM(context, x, y);

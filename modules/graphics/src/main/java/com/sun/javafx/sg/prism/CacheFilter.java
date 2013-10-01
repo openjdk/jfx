@@ -211,7 +211,7 @@ public class CacheFilter {
         if (cachedImageData == null) {
             return true;
         }
-        
+
         if (lastXDelta != 0 || lastYDelta != 0) {
             if (Math.abs(lastXDelta) >= cacheBounds.width || Math.abs(lastYDelta) >= cacheBounds.height ||
                     Math.rint(lastXDelta) != lastXDelta || Math.rint(lastYDelta) != lastYDelta) {
@@ -228,7 +228,7 @@ public class CacheFilter {
                 }
             }
         }
-        
+
         // TODO: is == sufficient for floating point comparison here? (RT-23963)
         if (cachedXform.getMxx() == renderXform.getMxx() &&
             cachedXform.getMyy() == renderXform.getMyy() &&
@@ -329,7 +329,7 @@ public class CacheFilter {
             cachedImageData = null;
         }
     }
-    
+
     void invalidateByTranslation(double translateXDelta, double translateYDelta) {
         if (cachedImageData == null) {
             return;
@@ -505,17 +505,8 @@ public class CacheFilter {
         BaseTransform xform = g.getTransformNoClone();
         FilterContext fctx = PrFilterContext.getInstance(g.getAssociatedScreen()); // getFilterContext
 
-        // Note: xform should not be modified, for the sake of Prism
-        double mxx = xform.getMxx();
-        double myx = xform.getMyx();
-        double mxy = xform.getMxy();
-        double myy = xform.getMyy();
-        double mxt = xform.getMxt();
-        double myt = xform.getMyt();
-
         double[] xformInfo = unmatrix(xform);
         boolean isUnsupported = unsupported(xformInfo);
-
 
         lastXDelta = lastXDelta * xformInfo[0];
         lastYDelta = lastYDelta * xformInfo[1];
@@ -539,11 +530,31 @@ public class CacheFilter {
                 }
                 invalidate();
             }
-            // Update the cachedXform to the current xform (ignoring translate).
-            cachedXform.setTransform(mxx, myx, mxy, myy, 0.0, 0.0);
-            cachedScaleX = xformInfo[0];
-            cachedScaleY = xformInfo[1];
-            cachedRotate = xformInfo[2];
+            if (scaleHint) {
+                // do not cache the image at a small scale factor when
+                // scaleHint is set as it leads to poor rendering results
+                // when image is scaled up.
+                cachedScaleX = Math.max(NGNode.highestPixelScale, xformInfo[0]);
+                cachedScaleY = Math.max(NGNode.highestPixelScale, xformInfo[1]);
+                cachedRotate = 0;
+                cachedXform.setTransform(cachedScaleX, 0.0,
+                                         0.0, cachedScaleX,
+                                         0.0, 0.0);
+                updateScreenXform(xformInfo);
+            } else {
+                cachedScaleX = xformInfo[0];
+                cachedScaleY = xformInfo[1];
+                cachedRotate = xformInfo[2];
+
+                // Update the cachedXform to the current xform (ignoring translate).
+                cachedXform.setTransform(xform.getMxx(), xform.getMyx(),
+                                         xform.getMxy(), xform.getMyy(),
+                                         0.0, 0.0);
+
+                // screenXform is always identity in this case, as we've just
+                // rendered into the cache using the render xform.
+                screenXform.setTransform(BaseTransform.IDENTITY_TRANSFORM);
+            }
 
             cacheBounds = impl_getCacheBounds(cacheBounds, cachedXform);
             cachedImageData = impl_createImageData(fctx, cacheBounds);
@@ -558,9 +569,6 @@ public class CacheFilter {
             cachedX = cachedBounds.x;
             cachedY = cachedBounds.y;
 
-            // screenXform is always identity in this case, as we've just
-            // rendered into the cache using the render xform.
-            screenXform.setTransform(BaseTransform.IDENTITY_TRANSFORM);
         } else {
             if (scrollCacheState == ScrollCacheState.ENABLED &&
                     (lastXDelta != 0 || lastYDelta != 0) ) {
@@ -590,6 +598,8 @@ public class CacheFilter {
             if (PulseLogger.PULSE_LOGGING_ENABLED) PulseLogger.PULSE_LOGGER.renderIncrementCounter("CacheFilter not used");
             impl_renderNodeToScreen(g);
         } else {
+            double mxt = xform.getMxt();
+            double myt = xform.getMyt();
             impl_renderCacheToScreen(g, implImage, mxt, myt);
             implImage.unlock();
         }

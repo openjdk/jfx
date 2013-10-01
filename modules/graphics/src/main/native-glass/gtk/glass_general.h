@@ -144,7 +144,7 @@ private:
     extern jmethodID jWindowNotifyFocus; // com.sun.glass.ui.Window#notifyFocus (I)V
     extern jmethodID jWindowNotifyFocusDisabled; // com.sun.glass.ui.Window#notifyFocusDisabled ()V
     extern jmethodID jWindowNotifyFocusUngrab; // com.sun.glass.ui.Window#notifyFocusUngrab ()V
-    extern jmethodID jWindowNotifyMoveToAnotherScreen; // com.sun.glass.ui.Window#notifyMoveToAnotherScreen (JJ)V
+    extern jmethodID jWindowNotifyMoveToAnotherScreen; // com.sun.glass.ui.Window#notifyMoveToAnotherScreen (Lcom/sun/glass/ui/Screen;)V
     extern jmethodID jWindowNotifyDelegatePtr; //com.sun.glass.ui.Window#notifyDelegatePtr (J)V
     extern jmethodID jWindowIsEnabled; // com.sun.glass.ui.Window#isEnabled ()Z
     extern jfieldID jWindowPtr; // com.sun.glass.ui.Window#ptr

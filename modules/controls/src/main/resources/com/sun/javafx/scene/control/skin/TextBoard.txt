@@ -5,4 +5,4 @@
 
 [$shift ][z|/|iexcl ][x|\\|iquest ][c|;|permil|ccedil|copy|cent ][v|:|reg ][b|=|tm ][n|+|ntilde ][m|-|micro ]['|" ][$backspace ]
 
-[$hide ][$SymbolABC  ][$space       ][,|! ][.|? ][$enter  ]
+[$hide][$SymbolABC ][$space         ][,|! ][.|? ][$enter  ]

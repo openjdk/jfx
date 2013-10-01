@@ -23,9 +23,16 @@
  * questions.
  */
 
-package com.sun.javafx.font.coretext;
+#ifndef GLASS_SCREEN_H
+#define GLASS_SCREEN_H
 
-class CFRange {
-    long location;
-    long length;
-}
+#include <jni.h>
+
+#include <gtk/gtk.h>
+
+jobject createJavaScreen(JNIEnv* env, gint monitor_idx);
+glong getScreenPtrForLocation(gint x, gint y);
+jobjectArray rebuild_screens(JNIEnv* env);
+void screen_settings_changed(GdkScreen* screen, gpointer user_data);
+
+#endif

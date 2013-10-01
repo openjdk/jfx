@@ -83,7 +83,7 @@ public final class PrismSettings {
     public static final boolean disableEffects;
     public static final int glyphCacheWidth;
     public static final int glyphCacheHeight;
-    public static final boolean perfLog;
+    public static final String perfLog;
     public static final boolean perfLogExitFlush;
     public static final boolean perfLogFirstPaintFlush;
     public static final boolean perfLogFirstPaintExit;
@@ -343,7 +343,7 @@ public final class PrismSettings {
          * Performance Logger flags
          * Enable the performance logger, print on exit, print on first paint etc.
          */
-        perfLog = getBoolean(systemProperties, "sun.perflog", false, true);
+        perfLog = systemProperties.getProperty("sun.perflog");
         perfLogExitFlush = getBoolean(systemProperties, "sun.perflog.fx.exitflush", false, true);
         perfLogFirstPaintFlush = getBoolean(systemProperties, "sun.perflog.fx.firstpaintflush", false, true);
         perfLogFirstPaintExit = getBoolean(systemProperties, "sun.perflog.fx.firstpaintexit", false, true);

@@ -25,12 +25,10 @@
 
 package com.sun.javafx;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.geometry.VPos;
@@ -41,9 +39,8 @@ import javafx.scene.paint.Stop;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.Window;
-
+import java.util.List;
 import com.sun.javafx.stage.StageHelper;
-import javafx.geometry.NodeOrientation;
 
 /**
  * Some basic utilities which need to be in java (for shifting operations or
@@ -99,24 +96,6 @@ public class Utils {
 
     /**
      * Simple utility function which clamps the given value to be strictly
-     * above the min value.
-     */
-    public static int clampMin(int value, int min) {
-        if (value < min) return min;
-        return value;
-    }
-
-    /**
-     * Simple utility function which clamps the given value to be strictly
-     * under the max value.
-     */
-    public static float clampMax(float value, float max) {
-        if (value > max) return max;
-        return value;
-    }
-
-    /**
-     * Simple utility function which clamps the given value to be strictly
      * under the max value.
      */
     public static int clampMax(int value, int max) {
@@ -141,17 +120,6 @@ public class Utils {
      * String-related utilities                                                *
      *                                                                         *
      **************************************************************************/
-
-    /**
-     * Simple helper function which works on both desktop and mobile for
-     * stripping newlines. The problem we encountered when attempting this in
-     * FX was that there is no character literal in FX and no way that I could
-     * see to efficiently create characters representing newline and so forth.
-     */
-    public static String stripNewlines(String s) {
-        if (s == null) return null;
-        return s.replace('\n', ' ');
-    }
 
     /**
      * Helper to remove leading and trailing quotes from a string.
@@ -460,44 +428,11 @@ public class Utils {
         return Color.color(colors[0], colors[1], colors[2], color.getOpacity());
     }
 
-    public static <E extends Node> List<E> getManaged(List<E>nodes) {
-        List<E> managed = new ArrayList<E>();
-        for (E e : nodes) {
-            if (e != null && e.isManaged()) {
-                managed.add(e);
-            }
-        }
-        return managed;
-    }
-
     /** helper function for calculating the sum of a series of numbers */
     public static double sum(double[] values) {
-   	double sum = 0;
-    	for (double v : values) sum = sum+v;
-    	return sum / values.length;
-}
-
-    /**
-     * Returns a Point2D that represents an x,y location that should safely position
-     * the given node relative to the given parent node.
-     *
-     * If reposition is set to be false, then the node will be positioned with no
-     * regard to it's position being offscreen. Conversely, setting reposition to be
-     * true will result in the point being shifted such that the entire node is onscreen.
-     *
-     * How this works is largely based on the provided hpos and vpos parameters, with
-     * the repositioned node trying not to overlap the parent unless absolutely necessary.
-     */
-    public static Point2D pointRelativeTo(Node parent, Node node, HPos hpos, VPos vpos, boolean reposition) {
-        final double nodeWidth = node.getLayoutBounds().getWidth();
-        final double nodeHeight = node.getLayoutBounds().getHeight();
-        return pointRelativeTo(parent, nodeWidth, nodeHeight, hpos, vpos, 0, 0, reposition);
-    }
-
-    public static Point2D pointRelativeTo(Node parent, double anchorWidth, double anchorHeight,
-             HPos hpos, VPos vpos, boolean reposition)
-    {
-        return pointRelativeTo(parent, anchorWidth, anchorHeight, hpos, vpos, 0, 0, reposition);
+        double sum = 0;
+        for (double v : values) sum = sum+v;
+        return sum / values.length;
     }
 
     public static Point2D pointRelativeTo(Node parent, Node node, HPos hpos,
@@ -543,55 +478,6 @@ public class Utils {
         } else {
             return new Point2D(layoutX, layoutY);
         }
-    }
-
-    /**
-     * Returns a Point2D that represents an x,y location that should safely position
-     * the given node relative to the given parent node.
-     *
-     * The provided x and y values are offsets from the parent node. This allows for
-     * the node to be positioned relative to the parent using exact coordinates.
-     *
-     * If reposition is set to be false, then the node will be positioned with no
-     * regard to it's position being offscreen. Conversely, setting reposition to be
-     * true will result in the point being shifted such that the entire node is onscreen.
-     */
-    public static Point2D pointRelativeTo(Node parent, Node node, double x, double y, boolean reposition) {
-        final Bounds bounds = parent.localToScreen(parent.getBoundsInLocal());
-        final double layoutX = x + bounds.getMinX();
-        final double layoutY = y + bounds.getMinY();
-
-        if (reposition) {
-            return pointRelativeTo(parent, node, layoutX, layoutY, null, null);
-        } else {
-            return new Point2D(layoutX, layoutY);
-        }
-    }
-
-    /**
-     * Returns a Point2D that represents an x,y location that should safely position
-     * the given node relative to the given parent node.
-     *
-     * <b>Note</b>: Unlike other functions provided in this class, the provided x
-     * and y values are <b>not</b> offsets from the parent node - they are relative
-     * to the screen. This reduces the utility of this function, and in many cases
-     * you're better off using the more specific functions provided.
-     *
-     * How this works is largely based on the provided hpos and vpos parameters, with
-     * the repositioned node trying not to overlap the parent unless absolutely necessary.
-     *
-     * This function implicitly has the reposition argument set to true, which means
-     * that the returned Point2D be such that the node will be fully on screen.
-     *
-     * Don't use the BASELINE vpos, it doesn't make sense and would produce wrong result.
-     */
-    public static Point2D pointRelativeTo(Node parent, Node node, double screenX,
-            double screenY, HPos hpos, VPos vpos)
-    {
-        final double nodeWidth = node.getLayoutBounds().getWidth();
-        final double nodeHeight = node.getLayoutBounds().getHeight();
-
-        return pointRelativeTo(parent, nodeWidth, nodeHeight, screenX, screenY, hpos, vpos);
     }
 
     /**
@@ -669,19 +555,6 @@ public class Utils {
         }
 
         return new Point2D(finalScreenX, finalScreenY);
-    }
-
-    /**
-     * Returns a Point2D that represents an x,y location that should safely position
-     * a node on screen assuming its width and height values are equal to the arguments given
-     * to this function.
-     *
-     * In this situation, the provided screenX and screenY values are in screen coordinates, so
-     * the reposition value is implicitly set to true. This means that after calling
-     * this function you'll have a Point2D object representing new screen coordinates.
-     */
-    public static Point2D pointRelativeTo(Window parent, double width, double height, double screenX, double screenY) {
-        return pointRelativeTo(parent, width, height, screenX, screenY, null, null);
     }
 
     /**
@@ -832,15 +705,6 @@ public class Utils {
         }
 
         return false;
-    }
-
-    /*
-     * Returns true if the primary Screen has VGA dimensions, in landscape or portrait mode.
-     */
-    public static boolean isVGAScreen() {
-        Rectangle2D bounds = Screen.getPrimary().getBounds();
-        return ((bounds.getWidth() == 640 && bounds.getHeight() == 480) ||
-                (bounds.getWidth() == 480 && bounds.getHeight() == 640));
     }
 
     /*

@@ -35,6 +35,7 @@
 #include "Pixels.h"
 #include "AccessibleRoot.h"
 #include "GlassCursor.h"
+#include "GlassScreen.h"
 
 #include "com_sun_glass_events_WindowEvent.h"
 #include "com_sun_glass_ui_Window.h"
@@ -565,7 +566,7 @@ void GlassWindow::HandleWindowPosChangedEvent()
     HMONITOR fromMonitor = GetMonitor();
     if (toMonitor != fromMonitor) {
         env->CallVoidMethod(m_grefThis, midNotifyMoveToAnotherScreen,
-                            ptr_to_jlong(fromMonitor), ptr_to_jlong(toMonitor));
+                            GlassScreen::CreateJavaMonitor(env, toMonitor));
         CheckAndClearException(env);
         SetMonitor(toMonitor);
     }
@@ -989,7 +990,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1initIDs
     javaIDs.Window.notifyFocusUngrab = env->GetMethodID(cls, "notifyFocusUngrab", "()V");
     ASSERT(javaIDs.Window.notifyFocusUngrab);
 
-    midNotifyMoveToAnotherScreen = env->GetMethodID(cls, "notifyMoveToAnotherScreen", "(JJ)V");
+    midNotifyMoveToAnotherScreen = env->GetMethodID(cls, "notifyMoveToAnotherScreen", "(Lcom/sun/glass/ui/Screen;)V");
     ASSERT(midNotifyMoveToAnotherScreen);
 
 
