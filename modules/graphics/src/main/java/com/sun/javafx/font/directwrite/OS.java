@@ -196,13 +196,6 @@ class OS {
         return ptr != 0 ? new JFXTextAnalysisSink(ptr) : null;
     }
 
-    static final JFXTextAnalysisSink NewJFXTextAnalysisSink(String text,
-                                                            String locale,
-                                                            int direction) {
-        char[] buffer = text.toCharArray();
-        return NewJFXTextAnalysisSink(buffer, 0, buffer.length, locale, direction);
-    }
-
     private static final native long _NewJFXTextRenderer();
     static final JFXTextRenderer NewJFXTextRenderer() {
         long ptr = _NewJFXTextRenderer();
@@ -228,10 +221,8 @@ class OS {
     static final native int JFXTextRendererGetClusterMap(long ptr, short[] clusterMap, int start);
 
     //IDWriteFontFace
-    static final native int GetType(long ptr);
     static final native DWRITE_GLYPH_METRICS GetDesignGlyphMetrics(long ptr, short glyphIndex, boolean isSideways);
     static final native Path2D GetGlyphRunOutline(long ptr, float emSize, short glyphIndex, boolean isSideways);
-    static final native short[] GetGlyphIndices(long ptr, int[] codePoints, int codePointCount);
 
     //IDWriteFont
     static final native long CreateFontFace(long ptr);
@@ -251,8 +242,6 @@ class OS {
     static final native int Analyze(long ptr, boolean[] isSupportedFontType, int[] fontFileType, int[] fontFaceType, int[] numberOfFaces);
 
     //IDWriteLocalizedStrings
-    static final native char[] GetLocaleName(long ptr, int index, int size);
-    static final native int GetLocaleNameLength(long ptr, int index);
     static final native char[] GetString(long ptr, int index, int size);
     static final native int GetStringLength(long ptr, int index);
     static final native int FindLocaleName(long ptr, char[] locale);
@@ -300,7 +289,6 @@ class OS {
     static final native long CreateFontFileReference(long ptr, char[] filePath);
     static final native long CreateFontFace(long ptr,
                                             int fontFaceType,
-                                            int numberOfFiles,  //native only supports 1
                                             long fontFiles,
                                             int faceIndex,
                                             int fontFaceSimulationFlags);
@@ -375,5 +363,4 @@ class OS {
     static final native void SetTransform(long ptr, D2D1_MATRIX_3X2_F transform);
     static final native void DrawGlyphRun(long ptr, D2D1_POINT_2F baselineOrigin, DWRITE_GLYPH_RUN glyphRun, long foregroundBrush, int measuringMode);
     static final native long CreateSolidColorBrush(long ptr, D2D1_COLOR_F color);
-    static final native void DrawLine(long ptr, D2D1_POINT_2F point0,  D2D1_POINT_2F point1, long brush, float strokeWidth, long strokeStyle);
 }

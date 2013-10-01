@@ -58,6 +58,7 @@ class DWFontFile extends PrismFontFile {
     private IDWriteFontFace createEmbeddedFontFace() {
         IDWriteFactory factory = DWFactory.getDWriteFactory();
         IDWriteFontFile fontFile = factory.CreateFontFileReference(getFileName());
+        if (fontFile == null) return null;
         boolean[] isSupportedFontType = new boolean[1];
         int[] fontFileType = new int[1];
         int[] fontFaceType = new int[1];
@@ -67,7 +68,7 @@ class DWFontFile extends PrismFontFile {
         if (hr == OS.S_OK && isSupportedFontType[0]) {
             int faceIndex = getFontIndex();
             int simulation = OS.DWRITE_FONT_SIMULATIONS_NONE;
-            face = factory.CreateFontFace(fontFaceType[0], 1, fontFile, faceIndex, simulation);
+            face = factory.CreateFontFace(fontFaceType[0], fontFile, faceIndex, simulation);
         }
         fontFile.Release();
         return face;
@@ -92,16 +93,17 @@ class DWFontFile extends PrismFontFile {
         }
 
         IDWriteFontFamily family = collection.GetFontFamily(index);
+        if (family == null) return null;
         int weight = isBold() ? OS.DWRITE_FONT_WEIGHT_BOLD :
                                 OS.DWRITE_FONT_WEIGHT_NORMAL;
         int stretch = OS.DWRITE_FONT_STRETCH_NORMAL;
         int style = isItalic() ? OS.DWRITE_FONT_STYLE_ITALIC :
                                  OS.DWRITE_FONT_STYLE_NORMAL;
         IDWriteFont font = family.GetFirstMatchingFont(weight, stretch, style);
-        IDWriteFontFace face = font.CreateFontFace();
-
-        font.Release();
         family.Release();
+        if (font == null) return null;
+        IDWriteFontFace face = font.CreateFontFace();
+        font.Release();
         return face;
     }
 
@@ -125,6 +127,7 @@ class DWFontFile extends PrismFontFile {
     @Override protected int[] createGlyphBoundingBox(int gc) {
         if (fontFace == null) return null;
         DWRITE_GLYPH_METRICS metrics = fontFace.GetDesignGlyphMetrics((short)gc, false);
+        if (metrics == null) return null;
         int[] bb = new int[4];
         bb[0] = metrics.leftSideBearing;
         bb[1] = metrics.verticalOriginY - metrics.advanceHeight + metrics.bottomSideBearing;
@@ -134,8 +137,8 @@ class DWFontFile extends PrismFontFile {
     }
 
     @Override
-    protected PrismFontStrike createStrike(float size, BaseTransform transform,
-                                           int aaMode, FontStrikeDesc desc) {
+    protected PrismFontStrike<DWFontFile> createStrike(float size, BaseTransform transform,
+                                                       int aaMode, FontStrikeDesc desc) {
         return new DWFontStrike(this, size, transform, aaMode, desc);
     }
 }

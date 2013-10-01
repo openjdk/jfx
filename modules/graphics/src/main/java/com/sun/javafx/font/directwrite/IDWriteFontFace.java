@@ -32,14 +32,6 @@ class IDWriteFontFace extends IUnknown {
         super(ptr);
     }
 
-    int GetType() {
-        return OS.GetType(ptr);
-    }
-
-    short[] GetGlyphIndices(int[] codePoints, int codePointCount) {
-        return OS.GetGlyphIndices(ptr, codePoints, codePointCount);
-    }
-
     /* Based on GetDesignGlyphMetrics but only handles a single codePoint,
      * as opposite of taking in an array and returing an array.
      * - performance and simplicity based on JavaFX needs */

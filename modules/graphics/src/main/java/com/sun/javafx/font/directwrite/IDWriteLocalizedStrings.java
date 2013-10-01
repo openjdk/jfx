@@ -34,15 +34,6 @@ class IDWriteLocalizedStrings extends IUnknown {
         return OS.FindLocaleName(ptr, (locale+'\0').toCharArray());
     }
 
-    int GetLocaleNameLength(int index) {
-        return OS.GetLocaleNameLength(ptr, index);
-    }
-
-    String GetLocaleName(int index, int size) {
-        char[] buffer = OS.GetLocaleName(ptr, index, size + 1);//length must include space for null-terminator
-        return buffer != null ? new String(buffer, 0, size) : null;
-    }
-
     int GetStringLength(int index) {
         return OS.GetStringLength(ptr, index);
     }

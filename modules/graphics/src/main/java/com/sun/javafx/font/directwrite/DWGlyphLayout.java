@@ -44,24 +44,33 @@ public class DWGlyphLayout extends GlyphLayout {
     @Override
     protected TextRun addTextRun(PrismTextLayout layout, char[] chars, int start,
                                  int length, PGFont font, TextSpan span, byte level) {
-        TextRun textRun = null;
-        int dir = (level & 1) != 0 ? OS.DWRITE_READING_DIRECTION_RIGHT_TO_LEFT :
-                                     OS.DWRITE_READING_DIRECTION_LEFT_TO_RIGHT;
-        JFXTextAnalysisSink sink = OS.NewJFXTextAnalysisSink(chars, start, length, LOCALE, dir);
-        sink.AddRef();
 
         IDWriteFactory factory = DWFactory.getDWriteFactory();
         IDWriteTextAnalyzer analyzer = factory.CreateTextAnalyzer();
-        analyzer.AnalyzeScript(sink, 0, length, sink);
+        if (analyzer == null) {
+            return new TextRun(start, length, level, false, 0, span, 0, false);
+        }
 
-        while (sink.Next()) {
-            int runStart = sink.GetStart();
-            int runLength = sink.GetLength();
-            DWRITE_SCRIPT_ANALYSIS analysis = sink.GetAnalysis();
-            textRun = new TextRun(start + runStart, runLength, level, true,
-                                  analysis.script, span,
-                                  analysis.shapes, false);
-            layout.addTextRun(textRun) ;
+        int dir = (level & 1) != 0 ? OS.DWRITE_READING_DIRECTION_RIGHT_TO_LEFT :
+                                     OS.DWRITE_READING_DIRECTION_LEFT_TO_RIGHT;
+        JFXTextAnalysisSink sink = OS.NewJFXTextAnalysisSink(chars, start, length, LOCALE, dir);
+        if (sink == null) {
+            return new TextRun(start, length, level, false, 0, span, 0, false);
+        }
+        sink.AddRef();
+
+        TextRun textRun = null;
+        int hr = analyzer.AnalyzeScript(sink, 0, length, sink);
+        if (hr == OS.S_OK) {
+            while (sink.Next()) {
+                int runStart = sink.GetStart();
+                int runLength = sink.GetLength();
+                DWRITE_SCRIPT_ANALYSIS analysis = sink.GetAnalysis();
+                textRun = new TextRun(start + runStart, runLength, level, true,
+                                      analysis.script, span,
+                                      analysis.shapes, false);
+                layout.addTextRun(textRun);
+            }
         }
 
         analyzer.Release();
@@ -70,6 +79,19 @@ public class DWGlyphLayout extends GlyphLayout {
     }
 
     public void layout(TextRun run, PGFont font, FontStrike strike, char[] text) {
+
+        FontResource fr = font.getFontResource();
+        boolean composite = fr instanceof CompositeFontResource;
+        if (composite) {
+            fr = ((CompositeFontResource)fr).getSlotResource(0);
+        }
+        IDWriteFontFace face = ((DWFontFile)fr).getFontFace();
+        if (face == null) return;
+
+        IDWriteFactory factory = DWFactory.getDWriteFactory();
+        IDWriteTextAnalyzer analyzer = factory.CreateTextAnalyzer();
+        if (analyzer == null) return;
+
         /* ignore typographic feature for now */
         long[] features = null;
         int[] featuresRangeLengths = null;
@@ -84,14 +106,6 @@ public class DWGlyphLayout extends GlyphLayout {
         int[] retGlyphcount = new int[1];
         boolean rtl = !run.isLeftToRight();
 
-        IDWriteFactory factory = DWFactory.getDWriteFactory();
-        IDWriteTextAnalyzer analyzer = factory.CreateTextAnalyzer();
-        FontResource fr = font.getFontResource();
-        boolean composite = fr instanceof CompositeFontResource;
-        if (composite) {
-            fr = ((CompositeFontResource)fr).getSlotResource(0);
-        }
-        IDWriteFontFace face = ((DWFontFile)fr).getFontFace();
         DWRITE_SCRIPT_ANALYSIS analysis = new DWRITE_SCRIPT_ANALYSIS();
         analysis.script = (short)run.getScript();
         analysis.shapes = run.getSlot();
@@ -145,10 +159,18 @@ public class DWGlyphLayout extends GlyphLayout {
                                     glyphProps, glyphCount, face, size, false, rtl,
                                     analysis, null, features, featuresRangeLengths,
                                     featuresCount, advances, offsets);
+        analyzer.Release();
 
-        /* Adjust glyphs positions */
+        float[] pos = getPositions(advances, offsets, glyphCount, rtl);
+        int[] indices = getIndices(clusterMap, glyphCount, rtl);
+        run.shape(glyphCount, iglyphs, pos, indices);
+    }
+
+    private float[] getPositions(float[] advances, float[] offsets, int glyphCount, boolean rtl) {
         float[] pos = new float[glyphCount * 2 + 2];
-        i = 0; j = rtl ? glyphCount - 1 : 0;
+        int i = 0;
+        int j = rtl ? glyphCount - 1 : 0;
+        int step = rtl ? -1 : 1;
         float x = 0;
         while (i < pos.length - 2) {
             int g = j << 1;
@@ -159,10 +181,7 @@ public class DWGlyphLayout extends GlyphLayout {
         }
         pos[i++] = x;
         pos[i++] = 0;
-
-        analyzer.Release();
-        int[] indices = getIndices(clusterMap, glyphCount, rtl);
-        run.shape(glyphCount, iglyphs, pos, indices);
+        return pos;
     }
 
     private int[] getIndices(short[] clusterMap, int glyphCount, boolean rtl) {
@@ -233,12 +252,14 @@ public class DWGlyphLayout extends GlyphLayout {
 
     private int getFontSlot(IDWriteFontFace face, CompositeFontResource composite,
                             String primaryFont) {
+        if (face == null) return -1;
         IDWriteFontCollection collection = DWFactory.getFontCollection();
         PrismFontFactory prismFactory = PrismFontFactory.getFontFactory();
 
 
         /* Collecting information about the font */
         IDWriteFont font = collection.GetFontFromFontFace(face);
+        if (font == null) return -1;
         IDWriteFontFamily fallbackFamily = font.GetFontFamily();
         String family = getName(fallbackFamily.GetFamilyNames());
         fallbackFamily.Release();
@@ -327,64 +348,59 @@ public class DWGlyphLayout extends GlyphLayout {
                                                             stretch,
                                                             fontsize,
                                                             LOCALE);
+        if (format == null) return;
 
         int start = run.getStart();
         int length = run.getLength();
         IDWriteTextLayout layout = factory.CreateTextLayout(text, start, length, format, 100000, 100000);
-        JFXTextRenderer renderer = OS.NewJFXTextRenderer();
-        renderer.AddRef();
-        layout.Draw(0, renderer, 0, 0);
+        if (layout != null) {
+            JFXTextRenderer renderer = OS.NewJFXTextRenderer();
+            if (renderer != null) {
+                renderer.AddRef();
 
-        int glyphCount = renderer.GetTotalGlyphCount();
-        int[] glyphs = new int[glyphCount];
-        float[] advances = new float[glyphCount];
-        float[] offsets = new float[glyphCount * 2];
-        short[] clusterMap = new short[length];
-        int glyphStart = 0;
-        int textStart = 0;
-        while (renderer.Next()) {
-            IDWriteFontFace fallback = renderer.GetFontFace();
-            int slot = getFontSlot(fallback, composite, fullName);
-            if (slot >= 0) {
-                renderer.GetGlyphIndices(glyphs, glyphStart, slot << 24);
-                renderer.GetGlyphOffsets(offsets, glyphStart * 2);
+                /* Use renderer to produce glyph information */
+                layout.Draw(0, renderer, 0, 0);
+
+                /* Read data from renderer */
+                int glyphCount = renderer.GetTotalGlyphCount();
+                int[] glyphs = new int[glyphCount];
+                float[] advances = new float[glyphCount];
+                float[] offsets = new float[glyphCount * 2];
+                short[] clusterMap = new short[length];
+                int glyphStart = 0;
+                int textStart = 0;
+                while (renderer.Next()) {
+                    IDWriteFontFace fallback = renderer.GetFontFace();
+                    int slot = getFontSlot(fallback, composite, fullName);
+                    if (slot >= 0) {
+                        renderer.GetGlyphIndices(glyphs, glyphStart, slot << 24);
+                        renderer.GetGlyphOffsets(offsets, glyphStart * 2);
+                    }
+                    if (size > 0) {
+                        /* Keep advances to zero if font size is zero */
+                        renderer.GetGlyphAdvances(advances, glyphStart);
+                    }
+                    renderer.GetClusterMap(clusterMap, textStart);
+                    glyphStart += renderer.GetGlyphCount();
+                    textStart += renderer.GetLength();
+                }
+                renderer.Release();
+
+                /* Converting data to be used by the JavaFX run */
+                boolean rtl = !run.isLeftToRight();
+                if (rtl) {
+                    for (int i = 0; i < glyphCount / 2; i++) {
+                        int tmp = glyphs[i];
+                        glyphs[i] = glyphs[glyphCount - i - 1];
+                        glyphs[glyphCount - i - 1] = tmp;
+                    }
+                }
+                float[] pos = getPositions(advances, offsets, glyphCount, rtl);
+                int[] indices = getIndices(clusterMap, glyphCount, rtl);
+                run.shape(glyphCount, glyphs, pos, indices);
             }
-            if (size > 0) {
-                /* Keep advances to zero if font size is zero */
-                renderer.GetGlyphAdvances(advances, glyphStart);
-            }
-            renderer.GetClusterMap(clusterMap, textStart);
-            glyphStart += renderer.GetGlyphCount();
-            textStart += renderer.GetLength();
+            layout.Release();
         }
-        renderer.Release();
-        layout.Release();
         format.Release();
-
-        /* Adjust glyphs positions */
-        float[] pos = new float[glyphCount * 2 + 2];
-        boolean rtl = !run.isLeftToRight();
-        int i = 0, j = rtl ? glyphCount - 1 : 0;
-        int step = rtl ? -1 : 1;
-        float x = 0;
-        while (i < pos.length - 2) {
-            int g = j << 1;
-            pos[i++] = (rtl ? -offsets[g] : offsets[g]) + x;
-            pos[i++] = -offsets[g + 1];
-            x += advances[j];
-            j+=step;
-        }
-        pos[i++] = x;
-        pos[i++] = 0;
-        if (rtl) {
-            /* Adjust glyphs */
-            for (i = 0; i < glyphCount / 2; i++) {
-                int tmp = glyphs[i];
-                glyphs[i] = glyphs[glyphCount - i - 1];
-                glyphs[glyphCount - i - 1] = tmp;
-            }
-        }
-        int[] indices = getIndices(clusterMap, glyphCount, rtl);
-        run.shape(glyphCount, glyphs, pos, indices);
     }
 }
