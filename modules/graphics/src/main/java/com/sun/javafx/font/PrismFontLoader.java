@@ -49,7 +49,8 @@ public class PrismFontLoader extends FontLoader {
         Properties map = new Properties();
         // locate the META-INF directory and search for a fonts.mf
         // located there
-        URL u = PrismFontLoader.class.getResource("/META-INF/fonts.mf");
+        ClassLoader loader = Thread.currentThread().getContextClassLoader();
+        URL u = loader.getResource("META-INF/fonts.mf");
         if (u == null) return map;
 
         // read in the contents of the file
@@ -66,17 +67,16 @@ public class PrismFontLoader extends FontLoader {
             Properties map = loadEmbeddedFontDefinitions();
             Enumeration<?> names = map.keys();
             FontFactory fontFactory = getFontFactoryFromPipeline();
+            ClassLoader loader = Thread.currentThread().getContextClassLoader();
             while (names.hasMoreElements()) {
                 String n = (String)names.nextElement();
                 String p = map.getProperty(n);
-                try (InputStream in = this.getClass().getResourceAsStream(p)) {
-                    fontFactory.loadEmbeddedFont(n, in, 0, true);
-                } catch (Exception e) {
-/*
-                    java.lang.System.err.println
-                           ("WARNING: Attempted to find and load font "
-                            "'{n}' using path '{p}' but failed");
-*/
+                if (p.startsWith("/")) {
+                    p = p.substring(1);
+                    try (InputStream in = loader.getResourceAsStream(p)) {
+                        fontFactory.loadEmbeddedFont(n, in, 0, true);
+                    } catch (Exception e) {
+                    }
                 }
             }
             embeddedFontsLoaded = true;
