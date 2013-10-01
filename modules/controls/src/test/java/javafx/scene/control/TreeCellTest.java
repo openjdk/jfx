@@ -690,6 +690,15 @@ public class TreeCellTest {
     // When the tree cell's index is changed while it is editing, then what?
 
 
+
+    @Test public void test_rt_33106() {
+        cell.updateTreeView(tree);
+        tree.setRoot(null);
+        cell.updateIndex(1);
+    }
+
+
+
     private final class SelectionModelMock extends MultipleSelectionModelBase<TreeItem<String>> {
         @Override protected int getItemCount() {
             return root.getChildren().size() + 1;

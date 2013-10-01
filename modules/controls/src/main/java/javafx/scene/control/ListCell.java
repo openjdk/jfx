@@ -423,12 +423,13 @@ public class ListCell<T> extends IndexedCell<T> {
 
     private boolean firstRun = true;
     private void updateItem() {
-        ListView<T> lv = getListView();
-        List<T> items = lv == null ? null : lv.getItems();
-        int index = getIndex();
+        final ListView<T> lv = getListView();
+        final List<T> items = lv == null ? null : lv.getItems();
+        final int index = getIndex();
+        final int itemCount = items == null ? -1 : items.size();
         
         // Compute whether the index for this cell is for a real item
-        boolean valid = items != null && index >=0 && index < items.size();
+        boolean valid = items != null && index >=0 && index < itemCount;
 
         final T oldValue = getItem();
         final boolean isEmpty = isEmpty();

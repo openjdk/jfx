@@ -540,7 +540,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
         final TableView tableView = getTableView();
         final List<T> items = tableView == null ? FXCollections.<T>emptyObservableList() : tableView.getItems();
         final TableColumn tableColumn = getTableColumn();
-        final int itemCount = items.size();
+        final int itemCount = items == null ? -1 : items.size();
         final int index = getIndex();
         final boolean isEmpty = isEmpty();
         final T oldValue = getItem();

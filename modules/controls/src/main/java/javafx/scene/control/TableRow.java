@@ -247,10 +247,11 @@ public class TableRow<T> extends IndexedCell<T> {
         TableView<T> tv = getTableView();
         if (tv == null || tv.getItems() == null) return;
         
-        List<T> items = tv.getItems();
+        final List<T> items = tv.getItems();
+        final int itemCount = items == null ? -1 : items.size();
 
         // Compute whether the index for this cell is for a real item
-        boolean valid = newIndex >= 0 && newIndex < items.size();
+        boolean valid = newIndex >= 0 && newIndex < itemCount;
 
         final T oldValue = getItem();
         final boolean isEmpty = isEmpty();

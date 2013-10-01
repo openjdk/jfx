@@ -184,4 +184,10 @@ public class TableCellTest {
                                             // the item is the same, so we don't
                                             // update the cell item.
     }
+
+    @Test public void test_rt_33106() {
+        cell.updateTableView(table);
+        table.setItems(null);
+        cell.updateIndex(1);
+    }
 }
