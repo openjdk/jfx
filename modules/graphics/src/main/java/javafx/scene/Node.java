@@ -337,11 +337,14 @@ import sun.util.logging.PlatformLogger.Level;
  * clip, or any transforms. For resizable classes (Regions and Controls)
  * layoutBounds will always map to {@code 0,0 width x height}.
  *
- * <p> The image shows a node with transformation (rotation by 20 degrees)
- * and its bounds. The red rectangle represents {@code boundsInParent} in the
- * coordinate space of the Node's parent. The green rectangle represents {@code boundsInLocal}
- * in coordinate space of the Node. </p>
- * <p> <img src="doc-files/bounds-complex.png"/> </p>
+ * <p> The image shows a node without any transformation and its {@code boundsInLocal}:
+ * <p> <img src="doc-files/boundsLocal.png"/> </p>
+ * If we rotate the image by 20 degrees we get following result:
+ * <p> <img src="doc-files/boundsParent.png"/> </p>
+ * The red rectangle represents {@code boundsInParent} in the
+ * coordinate space of the Node's parent. The {@code boundsInLocal} stays the same
+ * as in the first image, the green rectangle in this image represents {@code boundsInLocal}
+ * in the coordinate space of the Node. </p>
  *
  * <p> The images show a filled and stroked rectangle and their bounds. The
  * first rectangle {@code [x:10.0 y:10.0 width:100.0 height:100.0 strokeWidth:0]}
