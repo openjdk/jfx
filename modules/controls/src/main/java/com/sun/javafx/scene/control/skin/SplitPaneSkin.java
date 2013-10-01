@@ -97,13 +97,27 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
         getSkinnable().getItems().addListener(new ListChangeListener<Node>() {
             @Override public void onChanged(Change<? extends Node> c) {
                 while (c.next()) {
-                    for (Node n : c.getRemoved()) {
-                        removeContent(n);
-                    }
+                    if (c.wasPermutated() || c.wasUpdated()) {
+                        /**
+                         * the contents were either moved, or updated.
+                         * rebuild the contents to re-sync
+                         */
+                        getChildren().clear();
+                        contentRegions.clear();
+                        int index = 0;
+                        for (Node n : c.getList()) {
+                            addContent(index++, n);
+                        }
 
-                    int index = c.getFrom();
-                    for (Node n : c.getAddedSubList()) {
-                        addContent(index++, n);
+                    } else {
+                        for (Node n : c.getRemoved()) {
+                            removeContent(n);
+                        }
+
+                        int index = c.getFrom();
+                        for (Node n : c.getAddedSubList()) {
+                            addContent(index++, n);
+                        }
                     }
                 }
                 // TODO there may be a more efficient way than rebuilding all the dividers
