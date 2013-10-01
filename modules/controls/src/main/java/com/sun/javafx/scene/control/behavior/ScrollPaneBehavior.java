@@ -43,6 +43,8 @@ import static javafx.scene.input.KeyCode.PAGE_UP;
 import static javafx.scene.input.KeyCode.RIGHT;
 import static javafx.scene.input.KeyCode.SPACE;
 import static javafx.scene.input.KeyCode.UP;
+import static javafx.scene.input.KeyCode.HOME;
+import static javafx.scene.input.KeyCode.END;
 
 
 /**
@@ -95,6 +97,15 @@ public class ScrollPaneBehavior extends BehaviorBase<ScrollPane> {
     void verticalPageDecrement() {
         ((ScrollPaneSkin)getControl().getSkin()).vsbPageDecrement();
     }
+    void verticalHome() {
+        ((ScrollPane)getControl()).setHvalue(((ScrollPane)getControl()).getHmin());
+        ((ScrollPane)getControl()).setVvalue(((ScrollPane)getControl()).getVmin());
+    }
+    void verticalEnd() {
+        ((ScrollPane)getControl()).setHvalue(((ScrollPane)getControl()).getHmax());
+        ((ScrollPane)getControl()).setVvalue(((ScrollPane)getControl()).getVmax());
+    }
+
 
     public void contentDragged(double deltaX, double deltaY) {
         // negative when dragged to the right/bottom
@@ -123,15 +134,18 @@ public class ScrollPaneBehavior extends BehaviorBase<ScrollPane> {
         // TODO XXX DEBUGGING ONLY
         SCROLL_PANE_BINDINGS.add(new KeyBinding(F4, "TraverseDebug").alt().ctrl().shift());
 
-        SCROLL_PANE_BINDINGS.add(new ScrollViewKeyBinding(LEFT, "HorizontalUnitDecrement"));
-        SCROLL_PANE_BINDINGS.add(new ScrollViewKeyBinding(RIGHT, "HorizontalUnitIncrement"));
+        SCROLL_PANE_BINDINGS.add(new KeyBinding(LEFT, "HorizontalUnitDecrement"));
+        SCROLL_PANE_BINDINGS.add(new KeyBinding(RIGHT, "HorizontalUnitIncrement"));
 
-        SCROLL_PANE_BINDINGS.add(new ScrollViewKeyBinding(UP, "VerticalUnitDecrement"));
-        SCROLL_PANE_BINDINGS.add(new ScrollViewKeyBinding(DOWN, "VerticalUnitIncrement"));
+        SCROLL_PANE_BINDINGS.add(new KeyBinding(UP, "VerticalUnitDecrement"));
+        SCROLL_PANE_BINDINGS.add(new KeyBinding(DOWN, "VerticalUnitIncrement"));
 
-        SCROLL_PANE_BINDINGS.add(new ScrollViewKeyBinding(PAGE_UP, "VerticalPageDecrement"));
-        SCROLL_PANE_BINDINGS.add(new ScrollViewKeyBinding(PAGE_DOWN, "VerticalPageIncrement"));
+        SCROLL_PANE_BINDINGS.add(new KeyBinding(PAGE_UP, "VerticalPageDecrement"));
+        SCROLL_PANE_BINDINGS.add(new KeyBinding(PAGE_DOWN, "VerticalPageIncrement"));
         SCROLL_PANE_BINDINGS.add(new KeyBinding(SPACE, "VerticalPageIncrement"));
+
+        SCROLL_PANE_BINDINGS.add(new KeyBinding(HOME, "VerticalHome"));
+        SCROLL_PANE_BINDINGS.add(new KeyBinding(END, "VerticalEnd"));
     }
 
     protected /*final*/ String matchActionForEvent(KeyEvent e) {
@@ -158,6 +172,8 @@ public class ScrollPaneBehavior extends BehaviorBase<ScrollPane> {
         else if ("VerticalUnitIncrement".equals(name)) verticalUnitIncrement();
         else if ("VerticalPageDecrement".equals(name)) verticalPageDecrement();
         else if ("VerticalPageIncrement".equals(name)) verticalPageIncrement();
+        else if ("VerticalHome".equals(name)) verticalHome();
+        else if ("VerticalEnd".equals(name)) verticalEnd();
         else super.callAction(name);
     }
 
@@ -174,21 +190,5 @@ public class ScrollPaneBehavior extends BehaviorBase<ScrollPane> {
     @Override public void mousePressed(MouseEvent e) {
         super.mousePressed(e);
         getControl().requestFocus();
-    }
-
-    /**
-     * Class to handle key bindings based upon the orientation of the control.
-     */
-    public static class ScrollViewKeyBinding extends OrientedKeyBinding {
-        public ScrollViewKeyBinding(KeyCode code, String action) {
-            super(code, action);
-        }
-
-        public ScrollViewKeyBinding(KeyCode code, EventType<KeyEvent> type, String action) {
-            super(code, type, action);
-        }
-        public @Override boolean getVertical(Control control) {
-            return true;
-        }
     }
 }
