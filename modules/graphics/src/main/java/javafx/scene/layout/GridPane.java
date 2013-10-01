@@ -2293,14 +2293,14 @@ public class GridPane extends Pane {
         return "Grid hgap="+getHgap()+", vgap="+getVgap()+", alignment="+getAlignment();
     }
 
-    private CompositeSize createCompositeRows(double init) {
+    private CompositeSize createCompositeRows(double initSize) {
         return new CompositeSize(getNumberOfRows(), rowPercentHeight, rowPercentTotal,
-                snapSpace(getVgap()), init);
+                snapSpace(getVgap()), initSize);
     }
 
-    private CompositeSize createCompositeColumns(double init) {
+    private CompositeSize createCompositeColumns(double initSize) {
         return new CompositeSize(getNumberOfColumns(), columnPercentWidth, columnPercentTotal,
-                snapSpace(getHgap()), init);
+                snapSpace(getHgap()), initSize);
     }
 
     private int getNodeRowEndConvertRemaining(Node child) {
@@ -2473,9 +2473,9 @@ public class GridPane extends Pane {
         private final double totalFixedPercent;
         private final double gap;
 
-        public CompositeSize(int capacity, double fixedPercent[], double totalFixedPercent, double gap, double init) {
+        public CompositeSize(int capacity, double fixedPercent[], double totalFixedPercent, double gap, double initSize) {
             singleSizes = new double[capacity];
-            Arrays.fill(singleSizes, init);
+            Arrays.fill(singleSizes, initSize);
 
             this.fixedPercent = fixedPercent;
             this.totalFixedPercent = totalFixedPercent;
