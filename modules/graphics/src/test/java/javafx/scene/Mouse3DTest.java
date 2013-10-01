@@ -112,11 +112,14 @@ public class Mouse3DTest {
         scene(group(), cam, true);
         cam.impl_updatePeer();
         PickRay pickRay = cam.computePickRay(100, 200, null);
-        assertEquals(0.0, pickRay.getNearClip(), 0.01);
-        assertTrue(Double.isInfinite(pickRay.getFarClip()));
-        //TODO: replace the conditions by the following:
-//        assertEquals(104.39, pickRay.getNearClip(), 0.01);
-//        assertEquals(208.78, pickRay.getFarClip(), 0.01);
+
+        double xd = PERSPECTIVE_CAMERA_X - 100;
+        double yd = PERSPECTIVE_CAMERA_Y - 200;
+        double pd = Math.sqrt(xd * xd + yd * yd);
+        double len = Math.sqrt(PERSPECTIVE_CAMERA_Z * PERSPECTIVE_CAMERA_Z + pd * pd);
+
+        assertEquals(len * 100, pickRay.getNearClip(), 0.01);
+        assertEquals(len * 200, pickRay.getFarClip(), 0.01);
     }
 
     @Test
@@ -2077,6 +2080,56 @@ public class Mouse3DTest {
                 21, NOFACE, null);
     }
 
+    @Test
+    public void shouldIgnoreRectangleCloserThanNearClip() {
+
+        Camera cam = new PerspectiveCamera();
+        cam.setNearClip(0.2);
+        double nearClip = PERSPECTIVE_CAMERA_Z * 0.8;
+
+        Rectangle r1 = rect().handleMove(me);
+        r1.setTranslateX(PERSPECTIVE_CAMERA_X - 50);
+        r1.setTranslateY(PERSPECTIVE_CAMERA_Y - 50);
+        r1.setTranslateZ(nearClip - 0.1);
+        Rectangle r2 = rect().handleMove(sme);
+        r2.setTranslateX(PERSPECTIVE_CAMERA_X - 50);
+        r2.setTranslateY(PERSPECTIVE_CAMERA_Y - 50);
+        r2.setTranslateZ(nearClip + 0.1);
+
+        Scene s = scene(group(r1, r2), cam, true);
+
+        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(
+                MouseEvent.MOUSE_MOVED, 540, 440));
+
+        assertNull(me.event);
+        assertNotNull(sme.event);
+    }
+
+    @Test
+    public void shouldIgnoreRectangleFartherThanFarClip() {
+
+        Camera cam = new PerspectiveCamera();
+        cam.setNearClip(0.1);
+        cam.setFarClip(0.3);
+        double far = PERSPECTIVE_CAMERA_Z * 0.7;
+
+        Rectangle r = rect().handleMove(me);
+        r.setTranslateX(PERSPECTIVE_CAMERA_X - 50);
+        r.setTranslateY(PERSPECTIVE_CAMERA_Y - 50);
+        r.setTranslateZ(far - 0.1);
+
+        Scene s = scene(group(r), cam, true);
+
+        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(
+                MouseEvent.MOUSE_MOVED, 540, 440));
+        assertNotNull(me.event);
+
+        me.clear();
+        r.setTranslateZ(far + 0.1);
+        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(
+                MouseEvent.MOUSE_MOVED, 540, 440));
+        assertNull(me.event);
+    }
 
     /*****************  Scenegraph-generated events ********************/
 
@@ -2353,6 +2406,8 @@ public class Mouse3DTest {
         PerspectiveCamera cam = new PerspectiveCamera(fixedEye);
         // this field of view makes camera Z position to be -1000
         cam.setFieldOfView(43.60281897);
+        // this makes the near clip to be also at -1000
+        cam.setNearClip(0.0);
         return cam;
     }
 

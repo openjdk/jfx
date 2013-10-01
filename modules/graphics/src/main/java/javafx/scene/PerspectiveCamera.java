@@ -212,9 +212,7 @@ public class PerspectiveCamera extends Camera {
                 getViewWidth(), getViewHeight(),
                 getFieldOfView(), isVerticalFieldOfView(),
                 getCameraTransform(),
-                //TODO: use actual clips always after rendering uses them
-                fixedEyeAtCameraZero ? getNearClip() : 0.0,
-                fixedEyeAtCameraZero ? getFarClip() : Double.POSITIVE_INFINITY,
+                getNearClip(), getFarClip(),
                 pickRay);
     }
 

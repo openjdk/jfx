@@ -4874,7 +4874,7 @@ public abstract class Node implements EventTarget, Styleable {
         final double minDistance = pickRay.getNearClip();
         final double maxDistance = pickRay.getFarClip();
         if (tmin < minDistance) {
-            if (tmax >= minDistance && tmax <= maxDistance) {
+            if (tmax >= minDistance) {
                 // we are inside bounds
                 return 0.0;
             } else {
