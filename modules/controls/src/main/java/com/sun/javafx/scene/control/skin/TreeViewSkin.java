@@ -383,8 +383,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
     }
 
     /**
-     * Function used to scroll the container down by one 'page', although
-     * if this is a horizontal container, then the scrolling will be to the right.
+     * Function used to scroll the container down by one 'page'.
      */
     public int onScrollPageDown(int anchor) {
         TreeCell<T> lastVisibleCell = flow.getLastVisibleCellWithinViewPort();
@@ -415,8 +414,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
     }
 
     /**
-     * Function used to scroll the container up by one 'page', although
-     * if this is a horizontal container, then the scrolling will be to the left.
+     * Function used to scroll the container up by one 'page'.
      */
     public int onScrollPageUp(int anchor) {
         TreeCell<T> firstVisibleCell = flow.getFirstVisibleCellWithinViewPort();

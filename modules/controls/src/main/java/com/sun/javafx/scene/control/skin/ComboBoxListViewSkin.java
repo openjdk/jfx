@@ -334,7 +334,13 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         
         super.layoutChildren(x,y,w,h);
     }
-    
+
+    // Added to allow subclasses to prevent the popup from hiding when the
+    // ListView is clicked on (e.g when the list cells have checkboxes).
+    protected boolean isHideOnClickEnabled() {
+        return true;
+    }
+
     
     
     /***************************************************************************
@@ -609,7 +615,9 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                     }
                 }
                 
-                comboBox.hide();
+                if (isHideOnClickEnabled()) {
+                    comboBox.hide();
+                }
             }
         });
 

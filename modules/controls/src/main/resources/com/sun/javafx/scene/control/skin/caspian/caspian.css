@@ -3129,13 +3129,15 @@
     /*-fx-padding: 0; *//* 6 8 6 8 */
 }
 
-.combo-box-base:hover > .arrow-button {
+.combo-box-base:hover > .arrow-button,
+.date-picker:hover > .arrow-button {
     -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
 }
 
-.combo-box-base:showing > .arrow-button {
+.combo-box-base:showing > .arrow-button,
+.date-picker:showing > .arrow-button {
     -fx-color: -fx-pressed-base;
 } 
 
@@ -3164,7 +3166,8 @@ all inherit from Menu Control's popup-menu. --- */
 /*--- The editable ComboBox TextBox inherits its properties from the TextBox Control.
 Only the properties with values that are different from the TextBox are specified here. ---*/
 
-.combo-box-base:editable > .text-field {
+.combo-box-base:editable > .text-field,
+.date-picker > .text-field {
     -fx-padding: 0.166667em 0.416667em 0.25em 0.416667em; /* 2 5 3 5 */
     /*-fx-padding: 0px;*/
     /*-fx-background-color: yellow;*/
@@ -3172,7 +3175,8 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-background-insets: 0 0 -1 0, 0, 1 0 1 1;
 }
 
-.combo-box-base:editable:contains-focus {
+.combo-box-base:editable:contains-focus,
+.date-picker:contains-focus {
     -fx-background-color: -fx-focus-color, -fx-outer-border, -fx-control-inner-background;
     -fx-background-radius: 5.4, 3, 2;
     -fx-background-insets: -1.4, 0, 1;
@@ -3533,32 +3537,6 @@ Only the properties with values that are different from the TextBox are specifie
  *                                                                             *
  ******************************************************************************/
 
-/* Merge the following rules with ComboBox rules whenever possible */
-/* Note that DatePicker uses same style for editable and non-editable text */
-/* This style is for non-editable ComboBox and does not apply to DatePicker
- * .date-picker > .date-picker-display-node {
- *    -fx-padding: 0.25em 0 0.166667em 0.583333em;
- * }
- * .date-picker > .arrow-button {
- *    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
- *    -fx-background-insets: 0, 1, 2;
- *    -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
- *    -fx-padding: 0 0.583em 0 0.667em;
- * }
- */
-/** END **/
-
-/* Merge the following rules with Editable ComboBox rules */
-/* Note that DatePicker uses same style for editable and non-editable text */
-.date-picker:hover > .arrow-button {
-    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
-    -fx-background-insets: 0, 1, 2;
-    -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
-}
-.date-picker:showing > .arrow-button {
-    -fx-color: -fx-pressed-base;
-}
-/* When the following rule is enabled and the CSS style is switched to Caspian, HelloDatePicker */
 .date-picker > .arrow-button > .arrow {
     -fx-shape: "M0,0v9h9V0H0z M2,8H1V7h1V8z M2,6H1V5h1V6z M2,4H1V3h1V4z M4,8H3V7h1V8z M4,6H3V5h1V6z M4,4H3V3h1V4z M6,8H5V7h1V8z M6,6H5 V5h1V6z M6,4H5V3h1V4z M8,8H7V7h1V8z M8,6H7V5h1V6z M8,4H7V3h1V4z";
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
@@ -3566,32 +3544,22 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-padding: 0.416667em 0.416667em 0.333333em 0.333333em; /*5 5 4 4 */
     -fx-scale-shape: true;
 }
-.date-picker > .text-field {
-    -fx-padding: 0.166667em 0.416667em 0.25em 0.416667em; /* 2 5 3 5 */
-    -fx-background-radius: 4 0 0 4, 3 0 0 3, 2 0 0 2;
-    -fx-background-insets: 0 0 -1 0, 0, 1 0 1 1;
-}
-.date-picker:contains-focus {
-    -fx-background-color: -fx-focus-color, -fx-outer-border, -fx-control-inner-background;
-    -fx-background-radius: 5.4, 3, 2;
-    -fx-background-insets: -1.4, 0, 1;
-}
-/** END **/
 
 .date-picker-popup {
     -fx-background-color: -fx-box-border, -fx-control-inner-background;
     -fx-background-insets: 0, 1;
-    -fx-background-radius: 0 6 6 6, 0 5 5 5;
-    -fx-padding: 0.083333em; /* 1 1 1 1 */
+    /*-fx-background-radius: 0 6 6 6, 0 5 5 5;*/
+    -fx-background-radius: 0;
+    -fx-padding: 0;
     -fx-alignment: CENTER; /* VBox */
-    -fx-spacing: 1; /* VBox */
+    -fx-spacing: 0; /* VBox */
     -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.6) , 8, 0.0 , 0 , 0 );
 }
 .date-picker-popup > .month-year-pane {
     -fx-padding: 0.5em; /* 6 6 6 6 */
     -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
     -fx-background-insets: 0, 1, 2;
-    -fx-background-radius: 0 6 0 0, 0 5 0 0, 0 4 0 0;
+    -fx-background-radius: 0;
 }
 .date-picker-popup > * > .spinner {
     -fx-spacing: 0.25em;
@@ -3619,14 +3587,14 @@ Only the properties with values that are different from the TextBox are specifie
 .date-picker-popup > * > .spinner > .button > .right-arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
-    -fx-padding: 0.5em 0.333333em 0.0em 0.0em; /* 6 4 0 0 */
+    -fx-padding: 0.5em 0.333333em 0 0; /* 6 4 0 0 */
     -fx-shape: "M 4 0 L 0 -3 L 0 3 z";
     -fx-scale-shape: true;
 }
 .date-picker-popup > * > .spinner > .button > .left-arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
-    -fx-padding: 0.5em 0.333333em 0.0em 0.0em; /* 6 4 0 0 */
+    -fx-padding: 0.5em 0.333333em 0 0; /* 6 4 0 0 */
     -fx-shape: "M 0 0 L 4 -3 L 4 3 z";
     -fx-scale-shape: true;
 }
@@ -3640,7 +3608,8 @@ Only the properties with values that are different from the TextBox are specifie
 }
 .date-picker-popup > .calendar-grid {
     -fx-background-color: derive(-fx-base, 6.8%);
-    -fx-background-insets: 0;
+    -fx-background-insets: 1;
+    -fx-padding: 1;
 }
 .date-picker-popup > * > .date-cell {
     -fx-background-color: transparent;
@@ -3649,13 +3618,18 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-alignment: BASELINE_CENTER;
     -fx-opacity: 1.0;
 }
-.date-picker-popup > * > .cell:disabled > * {
-    /* This is set on the cell's children so the border is not affected. */
-    -fx-opacity: 0.4;
+.date-cell:disabled > * {
+    -fx-opacity: -fx-disabled-opacity;
+}
+.date-picker-popup > * > .day-name-cell,
+.date-picker-popup > * > .week-number-cell {
+    -fx-font-size: 0.916667em;
 }
 .date-picker-popup > * > .week-number-cell {
-    -fx-padding: 0.333333em 0.583333em 0.333333em 0.583333em; /* 4 7 4 7 */
-    -fx-border-color: -fx-control-inner-background;
+    /* Add one pixel to the top padding to
+     * compensate for the smaller font size. */
+    -fx-padding: 0.416667em 0.583333em 0.333333em 0.583333em; /* 5 7 4 7 */
+    -fx-border-color: -fx-background;
     -fx-border-width: 1px;
     -fx-background: -fx-control-inner-background;
     -fx-background-color: -fx-background;
@@ -3720,7 +3694,7 @@ Only the properties with values that are different from the TextBox are specifie
 }
 .date-picker-popup > * > .previous-month.today,
 .date-picker-popup > * > .next-month.today {
-    -fx-background: derive(-fx-control-inner-background,-5%), derive(-fx-base, -10%), derive(-fx-control-inner-background,-5%);
+    -fx-background-color: derive(-fx-control-inner-background,-5%), derive(-fx-base, -10%), derive(-fx-control-inner-background,-5%);
 }
 .date-picker-popup > * > .previous-month.today:hover,
 .date-picker-popup > * > .next-month.today:hover {
@@ -3960,7 +3934,7 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-padding: 0 0 -0.083333em 0;
 }
 /* Note: The Separator is constructed of a 1-pixel shape
-whose borders are styled.  Only the right border is specified
+whose borders are styled.  Only the right border is specified
 with a color; the other three borders are transparent.*/
 
 /* Note: This first section of CSS (below) specifies the Separator’s color.

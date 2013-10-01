@@ -45,6 +45,7 @@ import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.Mnemonic;
 import javafx.scene.shape.Line;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
@@ -106,6 +107,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         }
     };
 
+    private Rectangle textClip;
     private double wrapWidth;
     private double wrapHeight;
 
@@ -1166,5 +1168,38 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             }
             graphic.relocate(snapPosition(graphicX), snapPosition(graphicY));
         }
-    }   
+
+        /**
+         * check if the label text overflows it's bounds.
+         * If there's an overflow, and no text clip then
+         * we'll clip it. 
+         * If there is no overflow, and the label text has a
+         * clip, then remove it.
+         */
+        if ((text != null) && 
+            ((text.getLayoutBounds().getHeight() > wrapHeight) ||
+             (text.getLayoutBounds().getWidth() > wrapWidth))) {
+
+            if (textClip == null) {
+                textClip = new Rectangle();
+            }
+
+            textClip.setX(text.getLayoutBounds().getMinX());
+            textClip.setY(text.getLayoutBounds().getMinY());
+            textClip.setWidth(wrapWidth);
+            textClip.setHeight(wrapHeight);
+            if (text.getClip() == null) {
+                text.setClip(textClip);
+            }
+        }
+        else {
+            /**
+             * content fits inside bounds, no need
+             * for a clip
+             */
+            if (text.getClip() != null) {
+                text.setClip(null);
+            }
+        }
+    }
 }
