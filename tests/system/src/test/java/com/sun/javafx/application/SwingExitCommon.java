@@ -57,7 +57,7 @@ public class SwingExitCommon {
     private static final CountDownLatch initialized = new CountDownLatch(1);
 
     // Value of the implicit exit flag for the given test
-    private static boolean implicitExit;
+    private static volatile boolean implicitExit;
 
     private JFrame frame;
     private JFXPanel fxPanel;
@@ -91,7 +91,7 @@ public class SwingExitCommon {
         });
 
         // show frame
-        frame.setLocation(0, 0);
+        frame.setLocationRelativeTo(null);
         frame.pack();
         frame.setVisible(true);
 

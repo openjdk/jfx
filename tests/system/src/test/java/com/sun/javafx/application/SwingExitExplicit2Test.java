@@ -33,8 +33,7 @@ import org.junit.Test;
  */
 public class SwingExitExplicit2Test extends SwingExitCommon {
 
-    // TODO: Re-enable this test when RT-21404 is fixed
-    @Ignore @Test
+    @Test
     public void testExplicitExitReEnable() {
         doTestExplicitExitReEnable();
     }
