@@ -1091,6 +1091,11 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
     protected void discontinuousSelectPreviousRow() {
         TableSelectionModel sm = getSelectionModel();
         if (sm == null) return;
+
+        if (sm.getSelectionMode() != SelectionMode.MULTIPLE) {
+            selectPreviousRow();
+            return;
+        }
         
         TableFocusModel fm = getFocusModel();
         if (fm == null) return;
@@ -1119,12 +1124,19 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
     protected void discontinuousSelectNextRow() {
         TableSelectionModel sm = getSelectionModel();
         if (sm == null) return;
-        
+
+        if (sm.getSelectionMode() != SelectionMode.MULTIPLE) {
+            selectNextRow();
+            return;
+        }
+
         TableFocusModel fm = getFocusModel();
         if (fm == null) return;
 
         int focusIndex = fm.getFocusedIndex();
         final int newFocusIndex = focusIndex + 1;
+        if (newFocusIndex >= getItemCount()) return;
+
         int startIndex = focusIndex;
         final TableColumnBase col = sm.isCellSelectionEnabled() ? getFocusedCell().getTableColumn() : null;
         if (isShiftDown) {

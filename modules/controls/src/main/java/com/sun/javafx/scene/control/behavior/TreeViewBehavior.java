@@ -740,6 +740,11 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     private void discontinuousSelectPreviousRow() {
         MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
         if (sm == null) return;
+
+        if (sm.getSelectionMode() != SelectionMode.MULTIPLE) {
+            selectPreviousRow();
+            return;
+        }
         
         FocusModel<TreeItem<T>> fm = getControl().getFocusModel();
         if (fm == null) return;
@@ -762,12 +767,19 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     private void discontinuousSelectNextRow() {
         MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
         if (sm == null) return;
+
+        if (sm.getSelectionMode() != SelectionMode.MULTIPLE) {
+            selectNextRow();
+            return;
+        }
         
         FocusModel<TreeItem<T>> fm = getControl().getFocusModel();
         if (fm == null) return;
 
         int focusIndex = fm.getFocusedIndex();
         final int newFocusIndex = focusIndex + 1;
+        if (newFocusIndex >= getControl().getExpandedItemCount()) return;
+
         int startIndex = focusIndex;
         if (isShiftDown) {
             startIndex = getAnchor() == -1 ? focusIndex : getAnchor();
