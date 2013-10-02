@@ -3308,12 +3308,11 @@ Only the properties with values that are different from the TextBox are specifie
 } 
 
 .color-palette > .separator > .line {
-    -fx-background-color: -fx-pressed-base;
-/*    -fx-background-color: white;*/
-    -fx-padding: 6 0 0 0;
-    -fx-background-insets: 4 -10 0 -10,5 -10 0 -10;
+    -fx-border-color: -fx-text-box-border transparent transparent transparent,
+        -fx-shadow-highlight-color transparent transparent transparent;
+    -fx-border-insets: 0, 1 0 0 0;
     -fx-border-style: none;
-    -fx-border-color: null;
+    -fx-padding: 0;
 }
 
 
