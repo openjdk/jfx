@@ -59,6 +59,12 @@ public class BackgroundPosition {
     // As per the CSS 3 Spec (3.6), 0% 0% is the default
 
     /**
+     * A BackgroundPosition which will center a BackgroundImage.
+     */
+    public static final BackgroundPosition CENTER = new BackgroundPosition(
+            Side.LEFT, .5, true, Side.TOP, .5, true);
+
+    /**
      * The side along the horizontal axis to which the BackgroundImage is
      * anchored. This will only be LEFT or RIGHT and never null.
      */
