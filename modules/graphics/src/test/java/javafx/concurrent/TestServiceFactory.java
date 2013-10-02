@@ -45,6 +45,7 @@ public abstract class TestServiceFactory {
             @Override protected Task<String> createTask() {
                 currentTask = createTestTask();
                 currentTask.test = test;
+                currentTask.appThread = appThread;
                 return currentTask;
             }
 
@@ -56,7 +57,7 @@ public abstract class TestServiceFactory {
                 if (test != null) {
                     test.eventQueue.add(r);
                 } else {
-                    super.runLater(r);
+                    r.run();
                 }
             }
         };

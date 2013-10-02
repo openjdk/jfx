@@ -30,7 +30,7 @@ package javafx.geometry;
  * other scene graph object. One interesting characteristic of a Bounds object
  * is that it may have a negative width, height, or depth. A negative value
  * for any of these indicates that the Bounds are "empty".
- * 
+ *
  * @since JavaFX 2.0
  */
 public abstract class Bounds {

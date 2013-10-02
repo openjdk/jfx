@@ -69,7 +69,11 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  *     and is designed to relieve the application developer from the burden
  *     of manging multithreaded code that interacts with the user interface. As
  *     such, all of the methods and state on the Service are intended to be
- *     invoked exclusively from the JavaFX Application thread.
+ *     invoked exclusively from the JavaFX Application thread. The only exception
+ *     to this, is when initially configuring a Service, which may safely be done
+ *     from any thread, and initially starting a Service, which may also safely
+ *     be done from any thread. However, once the Service has been initialized and
+ *     started, it may only thereafter be used from the FX thread.
  * </p>
  * <p>
  *     Service implements {@link Worker}. As such, you can observe the state of
@@ -197,15 +201,15 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
         EXECUTOR.allowCoreThreadTimeOut(true);
     }
 
-    private final ObjectProperty<State> state = new SimpleObjectProperty<State>(this, "state", State.READY);
+    private final ObjectProperty<State> state = new SimpleObjectProperty<>(this, "state", State.READY);
     @Override public final State getState() { checkThread(); return state.get(); }
     @Override public final ReadOnlyObjectProperty<State> stateProperty() { checkThread(); return state; }
 
-    private final ObjectProperty<V> value = new SimpleObjectProperty<V>(this, "value");
+    private final ObjectProperty<V> value = new SimpleObjectProperty<>(this, "value");
     @Override public final V getValue() { checkThread(); return value.get(); }
     @Override public final ReadOnlyObjectProperty<V> valueProperty() { checkThread(); return value; }
 
-    private final ObjectProperty<Throwable> exception = new SimpleObjectProperty<Throwable>(this, "exception");
+    private final ObjectProperty<Throwable> exception = new SimpleObjectProperty<>(this, "exception");
     @Override public final Throwable getException() { checkThread(); return exception.get(); }
     @Override public final ReadOnlyObjectProperty<Throwable> exceptionProperty() { checkThread(); return exception; }
 
@@ -226,22 +230,22 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
     @Override public final ReadOnlyBooleanProperty runningProperty() { checkThread(); return running; }
 
     private final StringProperty message = new SimpleStringProperty(this, "message", "");
-    @Override public final String getMessage() { return message.get(); }
-    @Override public final ReadOnlyStringProperty messageProperty() { return message; }
+    @Override public final String getMessage() { checkThread(); return message.get(); }
+    @Override public final ReadOnlyStringProperty messageProperty() { checkThread(); return message; }
 
     private final StringProperty title = new SimpleStringProperty(this, "title", "");
-    @Override public final String getTitle() { return title.get(); }
-    @Override public final ReadOnlyStringProperty titleProperty() { return title; }
+    @Override public final String getTitle() { checkThread(); return title.get(); }
+    @Override public final ReadOnlyStringProperty titleProperty() { checkThread(); return title; }
 
     /**
      * The executor to use for running this Service. If no executor is specified, then
      * a new daemon thread will be created and used for running the Service using some
      * default executor.
      */
-    private final ObjectProperty<Executor> executor = new SimpleObjectProperty<Executor>(this, "executor");
+    private final ObjectProperty<Executor> executor = new SimpleObjectProperty<>(this, "executor");
     public final void setExecutor(Executor value) { checkThread(); executor.set(value); }
     public final Executor getExecutor() { checkThread(); return executor.get(); }
-    public final ObjectProperty<Executor> executorProperty() { return executor; }
+    public final ObjectProperty<Executor> executorProperty() { checkThread(); return executor; }
 
     /**
      * The onReady event handler is called whenever the Task state transitions
@@ -251,6 +255,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * @since JavaFX 2.1
      */
     public final ObjectProperty<EventHandler<WorkerStateEvent>> onReadyProperty() {
+        checkThread();
         return getEventHelper().onReadyProperty();
     }
 
@@ -262,6 +267,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * @since JavaFX 2.1
      */
     public final EventHandler<WorkerStateEvent> getOnReady() {
+        checkThread();
         return eventHelper == null ? null : eventHelper.getOnReady();
     }
 
@@ -273,6 +279,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * @since JavaFX 2.1
      */
     public final void setOnReady(EventHandler<WorkerStateEvent> value) {
+        checkThread();
         getEventHelper().setOnReady(value);
     }
 
@@ -293,6 +300,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * @since JavaFX 2.1
      */
     public final ObjectProperty<EventHandler<WorkerStateEvent>> onScheduledProperty() {
+        checkThread();
         return getEventHelper().onScheduledProperty();
     }
 
@@ -304,6 +312,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * @since JavaFX 2.1
      */
     public final EventHandler<WorkerStateEvent> getOnScheduled() {
+        checkThread();
         return eventHelper == null ? null : eventHelper.getOnScheduled();
     }
 
@@ -315,6 +324,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * @since JavaFX 2.1
      */
     public final void setOnScheduled(EventHandler<WorkerStateEvent> value) {
+        checkThread();
         getEventHelper().setOnScheduled(value);
     }
 
@@ -335,6 +345,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * @since JavaFX 2.1
      */
     public final ObjectProperty<EventHandler<WorkerStateEvent>> onRunningProperty() {
+        checkThread();
         return getEventHelper().onRunningProperty();
     }
 
@@ -346,6 +357,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * @since JavaFX 2.1
      */
     public final EventHandler<WorkerStateEvent> getOnRunning() {
+        checkThread();
         return eventHelper == null ? null : eventHelper.getOnRunning();
     }
 
@@ -357,6 +369,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * @since JavaFX 2.1
      */
     public final void setOnRunning(EventHandler<WorkerStateEvent> value) {
+        checkThread();
         getEventHelper().setOnRunning(value);
     }
 
@@ -377,6 +390,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * @since JavaFX 2.1
      */
     public final ObjectProperty<EventHandler<WorkerStateEvent>> onSucceededProperty() {
+        checkThread();
         return getEventHelper().onSucceededProperty();
     }
 
@@ -388,6 +402,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * @since JavaFX 2.1
      */
     public final EventHandler<WorkerStateEvent> getOnSucceeded() {
+        checkThread();
         return eventHelper == null ? null : eventHelper.getOnSucceeded();
     }
 
@@ -399,6 +414,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * @since JavaFX 2.1
      */
     public final void setOnSucceeded(EventHandler<WorkerStateEvent> value) {
+        checkThread();
         getEventHelper().setOnSucceeded(value);
     }
 
@@ -419,6 +435,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * @since JavaFX 2.1
      */
     public final ObjectProperty<EventHandler<WorkerStateEvent>> onCancelledProperty() {
+        checkThread();
         return getEventHelper().onCancelledProperty();
     }
 
@@ -430,6 +447,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * @since JavaFX 2.1
      */
     public final EventHandler<WorkerStateEvent> getOnCancelled() {
+        checkThread();
         return eventHelper == null ? null : eventHelper.getOnCancelled();
     }
 
@@ -441,6 +459,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * @since JavaFX 2.1
      */
     public final void setOnCancelled(EventHandler<WorkerStateEvent> value) {
+        checkThread();
         getEventHelper().setOnCancelled(value);
     }
 
@@ -461,6 +480,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * @since JavaFX 2.1
      */
     public final ObjectProperty<EventHandler<WorkerStateEvent>> onFailedProperty() {
+        checkThread();
         return getEventHelper().onFailedProperty();
     }
 
@@ -472,6 +492,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * @since JavaFX 2.1
      */
     public final EventHandler<WorkerStateEvent> getOnFailed() {
+        checkThread();
         return eventHelper == null ? null : eventHelper.getOnFailed();
     }
 
@@ -483,6 +504,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * @since JavaFX 2.1
      */
     public final void setOnFailed(EventHandler<WorkerStateEvent> value) {
+        checkThread();
         getEventHelper().setOnFailed(value);
     }
 
@@ -501,6 +523,13 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * can cancel the currently running task.
      */
     private Task<V> task;
+
+    /**
+     * This boolean is set to true once the Service has been initially started. You can initialize
+     * the Service from any thread, and you can initially start it from any thread. But any
+     * subsequent usage of the service's methods must occur on the FX application thread.
+     */
+    private volatile boolean startedOnce = false;
 
     /**
      * Create a new Service.
@@ -653,11 +682,27 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
         message.bind(task.messageProperty());
         title.bind(task.titleProperty());
 
-        // Advance the task to the "SCHEDULED" state
-        task.setState(State.SCHEDULED);
+        // Record that start has been called once, so we don't allow it to be called again from
+        // any thread other than the fx thread
+        startedOnce = true;
 
-        // Start the task
-        executeTask(task);
+        if (!isFxApplicationThread()) {
+            runLater(new Runnable() {
+                @Override public void run() {
+                    // Advance the task to the "SCHEDULED" state
+                    task.setState(State.SCHEDULED);
+
+                    // Start the task
+                    executeTask(task);
+                }
+            });
+        } else {
+            // Advance the task to the "SCHEDULED" state
+            task.setState(State.SCHEDULED);
+
+            // Start the task
+            executeTask(task);
+        }
     }
 
     /**
@@ -727,6 +772,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
     public final <T extends Event> void addEventHandler(
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler) {
+        checkThread();
         getEventHelper().addEventHandler(eventType, eventHandler);
     }
 
@@ -745,6 +791,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
     public final <T extends Event> void removeEventHandler(
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler) {
+        checkThread();
         getEventHelper().removeEventHandler(eventType, eventHandler);
     }
 
@@ -761,6 +808,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
     public final <T extends Event> void addEventFilter(
             final EventType<T> eventType,
             final EventHandler<? super T> eventFilter) {
+        checkThread();
         getEventHelper().addEventFilter(eventType, eventFilter);
     }
 
@@ -779,6 +827,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
     public final <T extends Event> void removeEventFilter(
             final EventType<T> eventType,
             final EventHandler<? super T> eventFilter) {
+        checkThread();
         getEventHelper().removeEventFilter(eventType, eventFilter);
     }
 
@@ -797,6 +846,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
     protected final <T extends Event> void setEventHandler(
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler) {
+        checkThread();
         getEventHelper().setEventHandler(eventType, eventHandler);
     }
 
@@ -819,6 +869,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
 
     @Override
     public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
+        checkThread();
         return getEventHelper().buildEventDispatchChain(tail);
     }
 
@@ -865,7 +916,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
     protected abstract Task<V> createTask();
 
     void checkThread() {
-        if (!isFxApplicationThread()) {
+        if (startedOnce && !isFxApplicationThread()) {
             throw new IllegalStateException("Service must only be used from the FX Application Thread");
         }
     }

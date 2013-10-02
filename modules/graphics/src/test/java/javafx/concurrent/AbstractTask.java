@@ -52,6 +52,7 @@ public abstract class AbstractTask extends Task<String> {
     public final Semaphore cancelledSemaphore = new Semaphore(0);
     public final Semaphore failedSemaphore = new Semaphore(0);
 
+    Thread appThread;
     ServiceTestBase test;
     
     // Simulates scheduling the concurrent for execution
@@ -61,7 +62,7 @@ public abstract class AbstractTask extends Task<String> {
 
     // For most tests, we want to pretend that we are on the FX app thread, always.
     @Override boolean isFxApplicationThread() {
-        return true;
+        return appThread == null || Thread.currentThread() == appThread;
     }
 
     // For most tests, we want to just run this stuff immediately
