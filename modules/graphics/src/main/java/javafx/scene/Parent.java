@@ -1216,9 +1216,28 @@ public abstract class Parent extends Node {
         // Let the super implementation handle CSS for this node
         super.impl_processCSS();
 
+        // avoid the following call to children.toArray if there are no children
+        if (children.isEmpty()) return;
+
+        //
+        // RT-33103
+        //
+        // It is possible for a child to be removed from children in the middle of
+        // the following loop. Iterating over the children may result in an IndexOutOfBoundsException.
+        // So a copy is made and the copy is iterated over.
+        //
+        // Note that we don't want the fail-fast feature of an iterator, not to mention the general iterator overhead.
+        //
+        final Node[] childArray = children.toArray(new Node[children.size()]);
+
         // For each child, process CSS
-        for (int i=0, max=children.size(); i<max; i++) {
-            final Node child = children.get(i);
+        for (int i=0; i<childArray.length; i++) {
+
+            final Node child = childArray[i];
+
+            //  If a child no longer has this as its parent, then it is skipped.
+            final Parent childParent = child.getParent();
+            if (childParent == null || childParent != this) continue;
 
             // If the parent styles are being updated, recalculated or
             // reapplied, then make sure the children get the same treatment.
