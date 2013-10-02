@@ -2323,7 +2323,7 @@ public class TreeTableViewKeyInputTest {
         assertTrue(debug(), fm.isFocused(13));
     }
     
-    @Ignore @Test public void test_rt29930() {
+    @Test public void test_rt29930() {
         sm.setCellSelectionEnabled(false);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         
@@ -2335,7 +2335,7 @@ public class TreeTableViewKeyInputTest {
         assertEquals(2, fm.getFocusedIndex());
         assertEquals(0, getAnchor().getRow());
         
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey()); // set new anchor point
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(), PlatformUtil.isMac() ? KeyModifier.CTRL : null); // set new anchor point
         assertTrue(isSelected(0,1));
         assertEquals(2, fm.getFocusedIndex());
         assertEquals(2, getAnchor().getRow());

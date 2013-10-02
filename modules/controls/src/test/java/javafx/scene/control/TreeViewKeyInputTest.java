@@ -1274,7 +1274,7 @@ public class TreeViewKeyInputTest {
         assertEquals(root, treeView.getFocusModel().getFocusedItem());
     }
     
-    @Ignore @Test public void test_rt29930() {
+    @Test public void test_rt29930() {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         
         sm.clearAndSelect(0);
@@ -1284,7 +1284,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isSelected(0,1,2));
         assertEquals(2, fm.getFocusedIndex());
         assertEquals(0, getAnchor());
-        
+
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
                 (Utils.isMac()  ? KeyModifier.CTRL : null)); // set new anchor point
         assertTrue(isSelected(0,1));

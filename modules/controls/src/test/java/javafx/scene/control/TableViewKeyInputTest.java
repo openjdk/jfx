@@ -1801,7 +1801,7 @@ public class TableViewKeyInputTest {
         assertTrue(isSelected(5,6,7,8,9));
     }
     
-    @Ignore @Test public void test_rt29930() {
+    @Test public void test_rt29930() {
         sm.setCellSelectionEnabled(false);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         
@@ -1815,7 +1815,7 @@ public class TableViewKeyInputTest {
         assertEquals(2, fm.getFocusedIndex());
         assertEquals(0, getAnchor().getRow());
         
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey()); // set new anchor point
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(), PlatformUtil.isMac() ? KeyModifier.CTRL : null); // set new anchor point
         assertTrue(isSelected(0,1));
         assertEquals(2, sm.getSelectedIndices().size());
         assertEquals(2, sm.getSelectedCells().size());

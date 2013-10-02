@@ -1073,7 +1073,7 @@ public class ListViewKeyInputTest {
         assertEquals("Apple", listView.getFocusModel().getFocusedItem());
     }
     
-    @Ignore @Test public void test_rt29930() {
+    @Test public void test_rt29930() {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         
         sm.clearAndSelect(0);
@@ -1084,7 +1084,7 @@ public class ListViewKeyInputTest {
         assertEquals(2, fm.getFocusedIndex());
         assertEquals(0, getAnchor());
         
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey()); // set new anchor point
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(), PlatformUtil.isMac() ? KeyModifier.CTRL : null); // set new anchor point
         assertTrue(isSelected(0,1));
         assertEquals(2, fm.getFocusedIndex());
         assertEquals(2, getAnchor());
