@@ -25,18 +25,19 @@
 
 package javafx.scene;
 
+import javafx.collections.ObservableList;
+import javafx.geometry.BoundingBox;
+import javafx.geometry.Bounds;
+import javafx.scene.shape.Rectangle;
 import java.util.HashSet;
 import java.util.Set;
+import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import javafx.collections.ObservableList;
-import javafx.scene.shape.Rectangle;
-
-import org.junit.Test;
 
 /**
  * Tests various aspects of Group.
@@ -104,7 +105,7 @@ public class GroupTest {
     // Utility function to check the internal consistency of a group node
     // and its SG counterpart.
     void checkSGConsistency(Group g) {
-// TODO disable this because it depends on TestGroup
+    // TODO disable this because it depends on TestGroup
 //        var sgGroup: TestGroup = g.impl_getPGNode() as TestGroup;
 //        var sgChildren: java.util.List = sgGroup.getChildren();
 //        assertNotNull(sgChildren);
@@ -451,6 +452,58 @@ public class GroupTest {
 
         // TODO
         // ...
+    }
+
+    /**
+     * If the layout bounds has a NaN, it shouldn't leak out through node.prefWidth
+     */
+    @Test public void Node_prefWidth_BasedOnLayoutBounds_CleansUpAfterBadBounds() {
+        Group node = new Group() {
+            @Override protected Bounds impl_computeLayoutBounds() {
+                return new BoundingBox(0, 0, Double.NaN, 50);
+            }
+        };
+        assertEquals(0, node.prefWidth(-1), 0);
+        assertEquals(0, node.prefWidth(5), 0);
+    }
+
+    /**
+     * If the layout bounds has a negative value, it shouldn't leak out through node.prefWidth
+     */
+    @Test public void Node_prefWidth_BasedOnLayoutBounds_CleansUpAfterBadBounds2() {
+        Group node = new Group() {
+            @Override protected Bounds impl_computeLayoutBounds() {
+                return new BoundingBox(0, 0, -10, 50);
+            }
+        };
+        assertEquals(0, node.prefWidth(-1), 0);
+        assertEquals(0, node.prefWidth(5), 0);
+    }
+
+    /**
+     * If the layout bounds has a NaN, it shouldn't leak out through node.prefHeight
+     */
+    @Test public void Node_prefHeight_BasedOnLayoutBounds_CleansUpAfterBadBounds() {
+        Group node = new Group() {
+            @Override protected Bounds impl_computeLayoutBounds() {
+                return new BoundingBox(0, 0, 50, Double.NaN);
+            }
+        };
+        assertEquals(0, node.prefHeight(-1), 0);
+        assertEquals(0, node.prefHeight(5), 0);
+    }
+
+    /**
+     * If the layout bounds has a negative value, it shouldn't leak out through node.prefHeight
+     */
+    @Test public void Node_prefHeight_BasedOnLayoutBounds_CleansUpAfterBadBounds2() {
+        Group node = new Group() {
+            @Override protected Bounds impl_computeLayoutBounds() {
+                return new BoundingBox(0, 0, 50, -10);
+            }
+        };
+        assertEquals(0, node.prefHeight(-1), 0);
+        assertEquals(0, node.prefHeight(5), 0);
     }
 
     @Test

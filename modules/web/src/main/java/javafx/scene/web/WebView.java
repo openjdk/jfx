@@ -3,6 +3,43 @@
  */
 package javafx.scene.web;
 
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.beans.property.ReadOnlyDoubleWrapper;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.collections.ObservableList;
+import javafx.css.CssMetaData;
+import javafx.css.Styleable;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableProperty;
+import javafx.event.EventHandler;
+import javafx.event.EventType;
+import javafx.geometry.NodeOrientation;
+import javafx.geometry.Point2D;
+import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.input.DataFormat;
+import javafx.scene.input.DragEvent;
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.InputMethodEvent;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.input.ScrollEvent;
+import javafx.scene.input.TransferMode;
+import javafx.scene.text.FontSmoothingType;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
@@ -18,23 +55,11 @@ import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.webkit.InputMethodClientImpl;
 import com.sun.javafx.webkit.KeyCodeMap;
 import com.sun.webkit.WebPage;
-import com.sun.webkit.event.*;
-import javafx.beans.property.*;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.collections.ObservableList;
-import javafx.css.*;
-import javafx.event.EventHandler;
-import javafx.event.EventType;
-import javafx.geometry.NodeOrientation;
-import javafx.geometry.Point2D;
-import javafx.scene.Node;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
-import javafx.scene.input.*;
-import javafx.scene.text.FontSmoothingType;
-
-import java.util.*;
+import com.sun.webkit.event.WCFocusEvent;
+import com.sun.webkit.event.WCInputMethodEvent;
+import com.sun.webkit.event.WCKeyEvent;
+import com.sun.webkit.event.WCMouseEvent;
+import com.sun.webkit.event.WCMouseWheelEvent;
 
 /**
  * {@code WebView} is a {@link javafx.scene.Node} that manages a
@@ -271,7 +296,8 @@ final public class WebView extends Parent {
      * @return the minimum width that this node should be resized to during layout
      */
     @Override public final double minWidth(double height) {
-        return getMinWidth();
+        final double result = getMinWidth();
+        return Double.isNaN(result) || result < 0 ? 0 : result;
     }
 
     /**
@@ -280,7 +306,8 @@ final public class WebView extends Parent {
      * @return the minimum height that this node should be resized to during layout
      */
     @Override public final double minHeight(double width) {
-        return getMinHeight();
+        final double result = getMinHeight();
+        return Double.isNaN(result) || result < 0 ? 0 : result;
     }
 
 
@@ -290,7 +317,8 @@ final public class WebView extends Parent {
      * @return the preferred width that this node should be resized to during layout
      */
     @Override public final double prefWidth(double height) {
-        return getPrefWidth();
+        final double result = getPrefWidth();
+        return Double.isNaN(result) || result < 0 ? 0 : result;
     }
 
     /**
@@ -299,7 +327,8 @@ final public class WebView extends Parent {
      * @return the preferred height that this node should be resized to during layout
      */
     @Override public final double prefHeight(double width) {
-        return getPrefHeight();
+        final double result = getPrefHeight();
+        return Double.isNaN(result) || result < 0 ? 0 : result;
     }
     /**
      * Called during layout to determine the maximum width for this node.
@@ -307,7 +336,8 @@ final public class WebView extends Parent {
      * @return the maximum width that this node should be resized to during layout
      */
     @Override public final double maxWidth(double height) {
-        return getMaxWidth();
+        final double result = getMaxWidth();
+        return Double.isNaN(result) || result < 0 ? 0 : result;
     }
 
     /**
@@ -316,7 +346,8 @@ final public class WebView extends Parent {
      * @return the maximum height that this node should be resized to during layout
      */
     @Override public final double maxHeight(double width) {
-        return getMaxHeight();
+        final double result = getMaxHeight();
+        return Double.isNaN(result) || result < 0 ? 0 : result;
     }
 
     /**

@@ -900,11 +900,13 @@ public abstract class Parent extends Node {
         if (height == -1) {
             if (prefWidthCache == -1) {
                 prefWidthCache = computePrefWidth(-1);
+                if (Double.isNaN(prefWidthCache) || prefWidthCache < 0) prefWidthCache = 0;
                 sizeCacheClear = false;
             }
             return prefWidthCache;
         } else {
-            return computePrefWidth(height);
+            double result = computePrefWidth(height);
+            return Double.isNaN(result) || result < 0 ? 0 : result;
         }
     }
 
@@ -912,11 +914,13 @@ public abstract class Parent extends Node {
         if (width == -1) {
             if (prefHeightCache == -1) {
                 prefHeightCache = computePrefHeight(-1);
+                if (Double.isNaN(prefHeightCache) || prefHeightCache < 0) prefHeightCache = 0;
                 sizeCacheClear = false;
             }
             return prefHeightCache;
         } else {
-            return computePrefHeight(width);
+            double result = computePrefHeight(width);
+            return Double.isNaN(result) || result < 0 ? 0 : result;
         }
     }
 
@@ -924,11 +928,13 @@ public abstract class Parent extends Node {
         if (height == -1) {
             if (minWidthCache == -1) {
                 minWidthCache = computeMinWidth(-1);
+                if (Double.isNaN(minWidthCache) || minWidthCache < 0) minWidthCache = 0;
                 sizeCacheClear = false;
             }
             return minWidthCache;
         } else {
-            return computeMinWidth(height);
+            double result = computeMinWidth(height);
+            return Double.isNaN(result) || result < 0 ? 0 : result;
         }
     }
 
@@ -936,11 +942,13 @@ public abstract class Parent extends Node {
         if (width == -1) {
             if (minHeightCache == -1) {
                 minHeightCache = computeMinHeight(-1);
+                if (Double.isNaN(minHeightCache) || minHeightCache < 0) minHeightCache = 0;
                 sizeCacheClear = false;
             }
             return minHeightCache;
         } else {
-            return computeMinHeight(width);
+            double result = computeMinHeight(width);
+            return Double.isNaN(result) || result < 0 ? 0 : result;
         }
     }
 
