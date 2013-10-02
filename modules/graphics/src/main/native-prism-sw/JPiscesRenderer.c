@@ -378,7 +378,7 @@ toPiscesCoords(unsigned int ff) {
 }
 
 static void
-fillRect(JNIEnv *env, jobject this, Renderer* rdr, jint alphaOffset,
+fillRect(JNIEnv *env, jobject this, Renderer* rdr,
     jint x, jint y, jint w, jint h,
     jint lEdge, jint rEdge, jint tEdge, jint bEdge)
 {
@@ -472,7 +472,6 @@ fillRect(JNIEnv *env, jobject this, Renderer* rdr, jint alphaOffset,
         rdr->_currY = y_from;
 
         rdr->_alphaWidth = x_to - x_from + 1;
-        rdr->_alphaOffset = alphaOffset;
 
         rdr->_currImageOffset = y_from * surface->width;
         rdr->_imageScanlineStride = surface->width;
@@ -561,7 +560,7 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_fillRect
 {
     Renderer* rdr;
     rdr = (Renderer*)JLongToPointer((*env)->GetLongField(env, this, fieldIds[RENDERER_NATIVE_PTR]));
-    fillRect(env, this, rdr, 0, x, y, w, h,
+    fillRect(env, this, rdr, x, y, w, h,
         IMAGE_FRAC_EDGE_KEEP, IMAGE_FRAC_EDGE_KEEP,
         IMAGE_FRAC_EDGE_KEEP, IMAGE_FRAC_EDGE_KEEP);
 }
@@ -610,7 +609,6 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_emitAndClearAlphaRowIm
                 rdr->alphaMap = alphaMap;
                 rdr->_rowAAInt = alphaRow;
                 rdr->_alphaWidth = x_to - x_from + 1;
-                rdr->_alphaOffset = 0;
 
                 rdr->_currImageOffset = y * surface->width;
                 rdr->_imageScanlineStride = surface->width;
@@ -661,17 +659,13 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_drawImageImpl
     data = (jint*)(*env)->GetPrimitiveArrayCritical(env, dataArray, NULL);
     if (data != NULL) {
         Transform6 textureTransform;
-        jint bboxX2 = bboxX >> 16;
-        jint bboxY2 = bboxY >> 16;
-        jint minX = MAX(bboxX2, rdr->_clip_bbMinX);
-        jint minY = MAX(bboxY2, rdr->_clip_bbMinY);
 
         transform_get6(&textureTransform, env, jTransform);
         renderer_setTexture(rdr, imageMode, data + offset, width, height, stride,
             repeat, JNI_TRUE, &textureTransform, JNI_FALSE, hasAlpha,
             interpolateMinX, interpolateMinY, interpolateMaxX, interpolateMaxY);
 
-        fillRect(env, this, rdr, (minY - bboxY2) * width + minX - bboxX2,
+        fillRect(env, this, rdr,
             bboxX, bboxY, bboxW, bboxH,
             lEdge, rEdge, tEdge, bEdge);
 

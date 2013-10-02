@@ -445,7 +445,6 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
     switch (rdr->_texture_transformType) {
     case TEXTURE_TRANSFORM_IDENTITY:
         {
-        jint txtOffset = rdr->_alphaOffset;
         jint txtOffsetRepeat = 0;
         jint txtRowNumRepeat = 0;
 
@@ -473,7 +472,7 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
                 }
             } else {
                 memcpy(paint + paintStride * j, 
-                     txtData + txtOffset + rdr->_texture_stride * (firstRowNum + j),
+                     txtData + rdr->_texture_stride * (firstRowNum + j),
                      sizeof(jint) * paintStride);
             }
         }
