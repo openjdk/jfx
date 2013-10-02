@@ -27,6 +27,7 @@ package javafx.scene.control.cell;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.util.Callback;
@@ -340,5 +341,33 @@ public class ComboBoxListCellTest {
         cell.cancelEdit();
         assertFalse(cell.isEditing());
         assertNull(cell.getGraphic());
+    }
+
+    @Test public void test_rt_29320() {
+        ListView listView = new ListView();
+        listView.setEditable(true);
+        ComboBoxListCell<Object> cell = new ComboBoxListCell<>();
+        cell.updateListView(listView);
+        cell.updateItem("TEST", false);
+        cell.setEditable(true);
+
+        cell.startEdit();
+        ComboBox cb = (ComboBox) cell.getGraphic();
+
+        // initially the choiceBox converter should equal the cell converter
+        assertNotNull(cell.getConverter());
+        assertNotNull(cb.getConverter());
+        assertEquals(cell.getConverter(), cb.getConverter());
+
+        // and if the cell changes the choicebox should follow
+        cell.setConverter(null);
+        assertNull(cb.getConverter());
+
+        StringConverter<Object> customConverter = new StringConverter<Object>() {
+            @Override public String toString(Object object) { return null; }
+            @Override public Object fromString(String string) { return null; }
+        };
+        cell.setConverter(customConverter);
+        assertEquals(customConverter, cb.getConverter());
     }
 }

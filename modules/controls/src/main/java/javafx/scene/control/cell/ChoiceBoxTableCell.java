@@ -299,7 +299,7 @@ public class ChoiceBoxTableCell<S,T> extends TableCell<S,T> {
         }
         
         if (choiceBox == null) {
-            choiceBox = createChoiceBox(this, items);
+            choiceBox = createChoiceBox(this, items, converterProperty());
         }
         
         choiceBox.getSelectionModel().select(getItem());
