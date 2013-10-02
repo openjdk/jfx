@@ -41,7 +41,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
-import javafx.scene.layout.VBoxBuilder;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
@@ -73,13 +72,11 @@ public class ColorPickerApp extends Application {
             }
         });
 
-        VBox outerVBox = VBoxBuilder.create()
-                .alignment(Pos.CENTER)
-                .spacing(20)
-                .maxWidth(VBox.USE_PREF_SIZE)
-                .maxHeight(VBox.USE_PREF_SIZE)
-                .children(coloredText, coloredButton, colorPicker)
-                .build();
+        VBox outerVBox = new VBox(coloredText, coloredButton, colorPicker);
+        outerVBox.setAlignment(Pos.CENTER);
+        outerVBox.setSpacing(20);
+        outerVBox.setMaxSize(VBox.USE_PREF_SIZE, VBox.USE_PREF_SIZE);
+        
         return outerVBox;
     }
 
