@@ -1112,7 +1112,7 @@
 
 .slider > .axis {
     -fx-tick-mark-stroke: ladder(-fx-background, derive(-fx-background,30%) 40%, derive(-fx-background,-30%) 41%);
-    -fx-tick-label-font: 0.833333em System; 
+    -fx-tick-label-font-size: 0.833333em; 
     -fx-tick-label-fill: -fx-text-background-color;
 }
 
@@ -2827,7 +2827,7 @@
 
 /* ====== AXIS ============================================================================ */
 .axis {
-    -fx-tick-label-font: 0.833333em System; /* 10 pix */
+    -fx-tick-label-font-size: 0.833333em;  /* 10 pix */ 
     -fx-tick-label-fill: -fx-text-background-color;
 }
 .axis:top {
