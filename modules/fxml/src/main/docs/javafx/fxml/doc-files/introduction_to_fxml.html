@@ -242,6 +242,10 @@ public interface BuilderFactory {
 
 <p><span class="code">&lt;fx:include&gt;</span> also supports attributes for specifying the name of the resource bundle that should be used to localize the included content, as well as the character set used to encode the source file. Resource resolution is discussed in a later section.</p>
 
+<pre class="code">
+&lt;fx:include source="<span class="variable">filename</span>" resources="<span class="variable">resource_file</span>" charset="utf-8"/&gt;
+</pre>
+
 <h4><a name="constant_elements">&lt;fx:constant&gt;</a></h4>
 <p><assert id="constant" group="instance_declarations">The <span class="code">&lt;fx:constant&gt;</span> element creates a reference to a class constant.</assert> For example, the following markup sets the value of the "minWidth" property of a<span class="code">Button</span> instance to the value of the <span class="code">NEGATIVE_INFINITY</span> constant defined by the <span class="code">java.lang.Double</span> class:</p>
 
@@ -766,7 +770,7 @@ attribute must be used.</p>
 &lt;?import javafx.scene.layout.*?&gt;
 
 &lt;VBox xmlns:fx="http://javafx.com/fxml"&gt;
-    &lt;fx:script source="example.js"/&gt;
+    &lt;fx:script source="example.js" charset="cp1252"/&gt;
 
     &lt;children&gt;
         &lt;Button text="Click Me!" onAction="handleButtonAction(event);"/&gt;
