@@ -2388,13 +2388,13 @@ public class FXMLLoader {
      * The loaded object hierarchy.
      * @since JavaFX 2.1
      */
-    public Object load() throws IOException {
+    public <T> T load() throws IOException {
         if (location == null) {
             throw new IllegalStateException("Location is not set.");
         }
 
         InputStream inputStream = null;
-        Object value;
+        T value;
         try {
             inputStream = location.openStream();
             value = load(inputStream);
@@ -2423,7 +2423,7 @@ public class FXMLLoader {
      * The loaded object hierarchy.
      */
     @SuppressWarnings("dep-ann")
-    public Object load(InputStream inputStream) throws IOException {
+    public <T> T load(InputStream inputStream) throws IOException {
         if (inputStream == null) {
             throw new NullPointerException("inputStream is null.");
         }
@@ -2564,7 +2564,7 @@ public class FXMLLoader {
         // Clear the parser
         xmlStreamReader = null;
 
-        return root;
+        return (T)root;
     }
 
     private void clearImports() {
