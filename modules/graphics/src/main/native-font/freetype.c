@@ -378,7 +378,7 @@ static int JFX_Outline_MoveToFunc(const FT_Vector*   to,
 }
 
 static int JFX_Outline_LineToFunc(const FT_Vector*   to,
-                                  void* user)
+                                  void*              user)
 {
     PathData *info =  checkSize(user, 1);
     info->pointTypes[info->numTypes++] = 1;

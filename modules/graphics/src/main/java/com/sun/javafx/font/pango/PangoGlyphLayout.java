@@ -115,36 +115,40 @@ class PangoGlyphLayout extends GlyphLayout {
             OS.pango_attr_list_insert(attrList, attr);
         }
         long runs = OS.pango_itemize(context, out, 0, out.position(), attrList, 0);
-        int runsCount = OS.g_list_length(runs);
-        int runStart = start;
-        for (int i = 0; i < runsCount; i++) {
-            long pangoItem = OS.g_list_nth_data(runs, i);
-            PangoGlyphString glyphString = OS.pango_shape(out, pangoItem);
-            OS.pango_item_free(pangoItem);
-            int slot = composite ? getSlot(font, glyphString) : 0;
-            int glyphCount = glyphString.num_glyphs;
-            int[] glyphs = new int[glyphCount];
-            float[] pos = new float[glyphCount*2+2];
-            PangoGlyphInfo info = null;
-            int k = 2;
-            int width = 0;
-            for (int j = 0; j < glyphCount; j++) {
-                info = glyphString.glyphs[j];
-                if (slot != -1) {
-                    glyphs[j] = (slot << 24) | info.glyph;
-                }
-                if (size != 0) width += info.width;
-                pos[k] = ((float)width) / OS.PANGO_SCALE;
-                k += 2;
-            }
+        if (runs != 0) {
+            int runsCount = OS.g_list_length(runs);
+            int runStart = start;
+            for (int i = 0; i < runsCount; i++) {
+                long pangoItem = OS.g_list_nth_data(runs, i);
+                PangoGlyphString glyphString = OS.pango_shape(out, pangoItem);
+                OS.pango_item_free(pangoItem);
+                if (glyphString != null) {
+                    int slot = composite ? getSlot(font, glyphString) : 0;
+                    int glyphCount = glyphString.num_glyphs;
+                    int[] glyphs = new int[glyphCount];
+                    float[] pos = new float[glyphCount*2+2];
+                    PangoGlyphInfo info = null;
+                    int k = 2;
+                    int width = 0;
+                    for (int j = 0; j < glyphCount; j++) {
+                        info = glyphString.glyphs[j];
+                        if (slot != -1) {
+                            glyphs[j] = (slot << 24) | info.glyph;
+                        }
+                        if (size != 0) width += info.width;
+                        pos[k] = ((float)width) / OS.PANGO_SCALE;
+                        k += 2;
+                    }
 
-            int runLength = glyphString.num_chars;
-            textRun = new TextRun(runStart, runLength, level, true, 0, span, 0, false);
-            textRun.shape(glyphCount, glyphs, pos, glyphString.log_clusters);
-            layout.addTextRun(textRun);
-            runStart += runLength;
+                    int runLength = glyphString.num_chars;
+                    textRun = new TextRun(runStart, runLength, level, true, 0, span, 0, false);
+                    textRun.shape(glyphCount, glyphs, pos, glyphString.log_clusters);
+                    layout.addTextRun(textRun);
+                    runStart += runLength;
+                }
+            }
+            OS.g_list_free(runs);
         }
-        OS.g_list_free(runs);
         /* pango_attr_list_unref() also frees the attributes it contains */
         OS.pango_attr_list_unref(attrList);
         OS.pango_font_description_free(desc);

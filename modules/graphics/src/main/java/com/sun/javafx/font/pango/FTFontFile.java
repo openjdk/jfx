@@ -97,13 +97,15 @@ class FTFontFile extends PrismFontFile {
     protected synchronized int[] createGlyphBoundingBox(int gc) {
         int flags = OS.FT_LOAD_NO_SCALE;
         OS.FT_Load_Glyph(face, gc, flags);
-        FT_GlyphSlotRec glyphRec = OS.getGlyphSlot(face);
-        FT_Glyph_Metrics gm = glyphRec.metrics;
         int[] bbox = new int[4];
-        bbox[0] = (int)gm.horiBearingX;
-        bbox[1] = (int)(gm.horiBearingY - gm.height);
-        bbox[2] = (int)(gm.horiBearingX + gm.width);
-        bbox[3] = (int)gm.horiBearingY;
+        FT_GlyphSlotRec glyphRec = OS.getGlyphSlot(face);
+        if (glyphRec != null && glyphRec.metrics != null) {
+            FT_Glyph_Metrics gm = glyphRec.metrics;
+            bbox[0] = (int)gm.horiBearingX;
+            bbox[1] = (int)(gm.horiBearingY - gm.height);
+            bbox[2] = (int)(gm.horiBearingX + gm.width);
+            bbox[3] = (int)gm.horiBearingY;
+        }
         return bbox;
     }
 
@@ -153,14 +155,16 @@ class FTFontFile extends PrismFontFile {
         }
 
         FT_GlyphSlotRec glyphRec = OS.getGlyphSlot(face);
+        if (glyphRec == null) return;
         FT_Bitmap bitmap = glyphRec.bitmap;
+        if (bitmap == null) return;
         int width = bitmap.width;
         int height = bitmap.rows;
         int pitch = bitmap.pitch;
         byte[] buffer;
         if (width != 0 && height != 0) {
             buffer = OS.getBitmapData(face);
-            if (pitch != width) {
+            if (buffer != null && pitch != width) {
                 /* Common for LCD glyphs */
                 byte[] newBuffer = new byte[width * height];
                 int src = 0, dst = 0;

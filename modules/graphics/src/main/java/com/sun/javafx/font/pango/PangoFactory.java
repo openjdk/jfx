@@ -74,7 +74,7 @@ public class PangoFactory extends PrismFontFactory {
 
     @Override
     public GlyphLayout createGlyphLayout() {
-        /* Implementing a HarfbuzzGlyphLayout would needed in order to support
+        /* Implementing a HarfbuzzGlyphLayout is needed to support
          * font features and non-hinted glyph advances.  */
         return new PangoGlyphLayout();
     }

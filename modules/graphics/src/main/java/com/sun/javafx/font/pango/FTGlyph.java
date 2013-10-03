@@ -103,13 +103,13 @@ class FTGlyph implements Glyph {
     public int getWidth() {
         init();
         /* Note: In Freetype the width is byte based */
-        return bitmap.width;
+        return bitmap != null ? bitmap.width : 0;
     }
 
     @Override
     public int getHeight() {
         init();
-        return bitmap.rows;
+        return bitmap != null ? bitmap.rows : 0;
     }
 
     @Override
@@ -121,7 +121,7 @@ class FTGlyph implements Glyph {
     @Override
     public int getOriginY() {
         init();
-        return -bitmap_top; /*Inverted coordinates system */
+        return -bitmap_top; /* Inverted coordinates system */
     }
 
     @Override
