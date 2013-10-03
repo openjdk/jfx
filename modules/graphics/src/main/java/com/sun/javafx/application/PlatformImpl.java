@@ -387,6 +387,21 @@ public class PlatformImpl {
     // Check for idle, meaning the last top-level window has been closed and
     // there are no pending Runnables waiting to be run.
     private static void checkIdle() {
+        // If we aren't initialized yet, then this method is a no-op.
+        if (!initialized.get()) {
+            return;
+        }
+
+        if (!isFxApplicationThread()) {
+            // Add a dummy runnable to the runLater queue, which will then call
+            // checkIdle() on the FX application thread.
+            runLater(new Runnable() {
+                @Override public void run() {
+                }
+            });
+            return;
+        }
+
         boolean doNotify = false;
 
         synchronized (PlatformImpl.class) {

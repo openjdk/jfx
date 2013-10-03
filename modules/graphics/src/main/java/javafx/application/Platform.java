@@ -78,6 +78,8 @@ public final class Platform {
      * If this method is called from the Preloader or the Application init
      * method, then the Application stop method may not be called.
      *
+     * <p>This method may be called from any thread.</p>
+     *
      * <p>Note: if the application is embedded in a browser, then this method
      * may have no effect.
      */
@@ -96,6 +98,8 @@ public final class Platform {
      * application calls {@link #exit}.
      * The default value is true.
      *
+     * <p>This method may be called from any thread.</p>
+     *
      * @param implicitExit a flag indicating whether or not to implicitly exit
      * when the last window is closed.
      * @since JavaFX 2.2
@@ -106,6 +110,8 @@ public final class Platform {
 
     /**
      * Gets the value of the implicitExit attribute.
+     *
+     * <p>This method may be called from any thread.</p>
      *
      * @return the implicitExit attribute
      * @since JavaFX 2.2

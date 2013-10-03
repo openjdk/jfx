@@ -162,6 +162,12 @@ public class StubToolkit extends Toolkit {
     }
 
     @Override
+    public boolean isFxUserThread() {
+        // Always on the FX app thread
+        return true;
+    }
+
+    @Override
     public void defer(Runnable runnable) {
         runnable.run();
     }
