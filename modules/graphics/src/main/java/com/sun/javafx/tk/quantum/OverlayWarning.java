@@ -45,16 +45,6 @@ import java.util.Locale;
 import java.util.ResourceBundle;
 
 public class OverlayWarning {
-    
-    private static final Locale LOCALE = Locale.getDefault();
-    
-    private static final ResourceBundle RESOURCES =
-        ResourceBundle.getBundle(OverlayWarning.class.getPackage().getName() +
-                                 ".QuantumMessagesBundle", LOCALE);
-    
-    public static String localize(String msg) {
-        return RESOURCES.getString(msg);
-    }
 
     private static final float  PAD      = 40f;
     private static final float  RECTW    = 600f;
@@ -128,9 +118,7 @@ public class OverlayWarning {
    }
     
     protected void warn(String msg) {
-        text.setText(msg == null
-                ? localize("OverlayWarningESC")
-                : msg);
+        text.setText(msg);
         // needed to force the text to update...
         text.impl_updatePeer();
         

@@ -1132,19 +1132,16 @@ public class Stage extends Window {
             new SimpleObjectProperty<KeyCombination>(this, "fullScreenExitCombination", null);
 
     /**
-     * Specifies what KeyCombination will allow the user to exit full screen
+     * Specifies the KeyCombination that will allow the user to exit full screen
      * mode. A value of KeyCombination.NO_MATCH will not match any KeyEvent and
-     * will make it so the user is not able to escape from Full Screen mode. In 
-     * addition, using NO_MATCH will disable the Full Screen Exit Hint.
-     * A value of null means that the default platform specific key combination
+     * will make it so the user is not able to escape from Full Screen mode.
+     * A value of null indicates that the default platform specific key combination
      * should be used. 
      * <p>
      * An internal copy of this value is made when entering FullScreen mode and will be 
      * used to trigger the exit from the mode. If an application does not have
      * the proper permissions, this setting will be ignored.
      * </p>
-     * The default string displayed is controlled using the {@code fullScreenExitKeyProperty}
-     * and should be changed to match the {@code KeyCombination} used.
      * @param keyCombination the key combination to exit on
      * @since JavaFX 8.0 
      */
@@ -1177,9 +1174,12 @@ public class Stage extends Window {
      * Specifies the text to show when a user enters full screen mode, usually
      * used to indicate the way a user should go about exiting out of full
      * screen mode. A value of null will result in the default per-locale
-     * message being displayed. If set to the empty string, then no message will
-     * be displayed. If an application does not have the proper permissions, 
-     * this setting will be ignored.
+     * message being displayed. 
+     * If set to the empty string, then no message will be displayed. 
+     * <p>
+     * If an application does not have the proper permissions, this setting 
+     * will be ignored.
+     * </p>
      * @param value the string to be displayed.
      * @since JavaFX 8.0 
      */

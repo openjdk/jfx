@@ -57,6 +57,8 @@ import com.sun.prism.Image;
 import com.sun.prism.PixelFormat;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.accessible.providers.AccessibleStageProvider;
+import java.util.Locale;
+import java.util.ResourceBundle;
 
 class WindowStage extends GlassStage {
 
@@ -95,6 +97,13 @@ class WindowStage extends GlassStage {
     static GlassAppletWindow getAppletWindow() {
         return appletWindow;
     }
+
+    private static final Locale LOCALE = Locale.getDefault();
+    
+    private static final ResourceBundle RESOURCES =
+        ResourceBundle.getBundle(WindowStage.class.getPackage().getName() +
+                                 ".QuantumMessagesBundle", LOCALE);
+
 
     public WindowStage(javafx.stage.Window peerWindow, final StageStyle stageStyle, Modality modality, TKStage owner) {
         this.style = stageStyle;
@@ -559,15 +568,23 @@ class WindowStage extends GlassStage {
                                 ? defaultFullScreenExitKeycombo
                                 : key;
 
-                        // if the hint is "" dont show
-                        if (exitMessage != null &&
-                                (exitMessage.equals(""))) {
+                        if (
+                            // the hint is "" 
+                            "".equals(exitMessage) ||
+                            // if the key is NO_MATCH 
+                            (savedFullScreenExitKey.equals(KeyCombination.NO_MATCH))
+                                ) {
                             showWarning = false;
                         }
 
-                        // if the key is NO_MATCH dont show
-                        if (savedFullScreenExitKey.equals(KeyCombination.NO_MATCH)) {
-                            showWarning = false;
+                        // the hint is not set, use the key for the message
+                        if (showWarning && exitMessage == null) {
+                            if (key == null) {
+                                exitMessage = RESOURCES.getString("OverlayWarningESC");
+                            } else {
+                                String f = RESOURCES.getString("OverlayWarningKey");
+                                exitMessage = f.format(f, savedFullScreenExitKey.toString()); 
+                            }
                         }
                         
                         if (showWarning && warning == null) {
