@@ -1790,6 +1790,14 @@ public abstract class NGNode {
     }
 
     /**
+     * This method exists only for the sake of testing.
+     * @return value of opaqueRegionInvalid
+     */
+    final boolean isOpaqueRegionInvalid() {
+        return opaqueRegionInvalid;
+    }
+
+    /**
      * Gets the opaque region for this node, if there is one, or returns null.
      * @return The opaque region for this node, or null.
      */

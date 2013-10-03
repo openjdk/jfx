@@ -314,31 +314,6 @@ public class NGRegion extends NGGroup {
     }
 
     /**
-     * Visits each of the background fills and takes their raddi into account to determine the insets.
-     * The backgroundInsets variable is cleared whenever the fills change, or whenever the size of the
-     * region has changed (because if the size of the region changed and a radius is percentage based
-     * then we need to recompute the insets).
-     */
-    private void updateBackgroundInsets() {
-        float top=0, right=0, bottom=0, left=0;
-        final List<BackgroundFill> fills = background.getFills();
-        for (int i=0, max=fills.size(); i<max; i++) {
-            // We need to now inspect the paint to determine whether we can use a cache for this background.
-            // If a shape is being used, we don't care about gradients (we cache 'em both), but for a rectangle
-            // fill we omit these (so we can do 3-patch scaling). An ImagePattern is deadly to either
-            // (well, only deadly to a shape if it turns out to be a writable image).
-            final BackgroundFill fill = fills.get(i);
-            final Insets insets = fill.getInsets();
-            final CornerRadii radii = normalize(fill.getRadii());
-            top = (float) Math.max(top, insets.getTop() + Math.max(radii.getTopLeftVerticalRadius(), radii.getTopRightVerticalRadius()));
-            right = (float) Math.max(right, insets.getRight() + Math.max(radii.getTopRightHorizontalRadius(), radii.getBottomRightHorizontalRadius()));
-            bottom = (float) Math.max(bottom, insets.getBottom() + Math.max(radii.getBottomRightVerticalRadius(), radii.getBottomLeftVerticalRadius()));
-            left = (float) Math.max(left, insets.getLeft() + Math.max(radii.getTopLeftHorizontalRadius(), radii.getBottomLeftHorizontalRadius()));
-        }
-        backgroundInsets = new Insets(roundUp(top), roundUp(right), roundUp(bottom), roundUp(left));
-    }
-
-    /**
      * Called by the Region whenever it knows that the opaque insets have changed. The
      * Region <strong>must</strong> make sure that these opaque insets include the opaque
      * inset information from the Border and Background as well, the NGRegion will not
@@ -482,697 +457,120 @@ public class NGRegion extends NGGroup {
         // this region. If the shape is null, then the "shape" of the region is just a
         // rectangle (or rounded rectangle, depending on the Background).
         if (shape != null) {
-            if (!background.isEmpty()) {
-                final Insets outsets = background.getOutsets();
-                final Shape outsetShape = resizeShape((float) -outsets.getTop(), (float) -outsets.getRight(),
-                                                      (float) -outsets.getBottom(), (float) -outsets.getLeft());
-                final RectBounds outsetShapeBounds = outsetShape.getBounds();
-                final int textureWidth = Math.round(outsetShapeBounds.getWidth()),
-                          textureHeight = Math.round(outsetShapeBounds.getHeight());
-
-                // See if we have a cached representation for this region background already. In UI controls,
-                // the arrow in a scroll bar button or the dot in a radio button or the tick in a check box are
-                // all examples of cases where we'd like to reuse a cached image for performance reasons rather
-                // than re-drawing everything each time.
-
-                RTTexture cached = null;
-                Rectangle rect = null;
-                // RT-25013: We need to make sure that we do not use a cached image in the case of a
-                // scaled region, or things won't look right (they'll looked scaled instead of vector-resized).
-                if (cacheMode != 0 && g.getTransformNoClone().isTranslateOrIdentity()) {
-                    RegionImageCache imageCache = getImageCache(g);
-                    if (imageCache.isImageCachable(textureWidth, textureHeight)) {
-                        final Integer key = getCacheKey(textureWidth, textureHeight);
-                        rect = TEMP_RECT;
-                        rect.setBounds(0, 0, textureWidth, textureHeight);
-                        boolean render = imageCache.getImageLocation(key, rect, background, shape, g);
-                        if (!rect.isEmpty()) {
-                            // An empty rect indicates a failure occurred in the imageCache
-                            cached = imageCache.getBackingStore();
-                        }
-                        if (cached != null && render) {
-                            Graphics cachedGraphics = cached.createGraphics();
-
-                            // Have to move the origin such that when rendering to x=0, we actually end up rendering
-                            // at x=bounds.getMinX(). Otherwise anything rendered to the left of the origin would be lost
-                            cachedGraphics.translate(rect.x - outsetShapeBounds.getMinX(),
-                                                     rect.y - outsetShapeBounds.getMinY());
-                            renderBackgroundShape(cachedGraphics);
-                            if (PulseLogger.PULSE_LOGGING_ENABLED) {
-                                PulseLogger.PULSE_LOGGER.renderIncrementCounter("Rendering region shape image to cache");
-                            }
-                        }
-                    }
-                }
-
-                // cached might not be null if either there was a cached image, or we just created one.
-                // In either case, we need to now render from the cached texture to the graphics
-                if (cached != null) {
-                    // We just draw exactly what it was we have cached
-                    final float dstX1 = outsetShapeBounds.getMinX();
-                    final float dstY1 = outsetShapeBounds.getMinY();
-                    final float dstX2 = outsetShapeBounds.getMaxX();
-                    final float dstY2 = outsetShapeBounds.getMaxY();
-
-                    final float srcX1 = rect.x;
-                    final float srcY1 = rect.y;
-                    final float srcX2 = srcX1 + textureWidth;
-                    final float srcY2 = srcY1 + textureHeight;
-
-                    g.drawTexture(cached, dstX1, dstY1, dstX2, dstY2, srcX1, srcY1, srcX2, srcY2);
-                    if (PulseLogger.PULSE_LOGGING_ENABLED) {
-                        PulseLogger.PULSE_LOGGER.renderIncrementCounter("Cached region shape image used");
-                    }
-                } else {
-                    // no cache, rendering backgrounds directly to graphics
-                    renderBackgroundShape(g);
-                }
-            }
-
-            if (!border.isEmpty()) {
-                // We only deal with stroke borders, we never deal with ImageBorders when
-                // painting a shape on a Region. This is primarily because we don't know
-                // how to handle a 9-patch image on a random shape.
-                final List<BorderStroke> strokes = border.getStrokes();
-                for (int i = 0, max = strokes.size(); i < max; i++) {
-                    // Get the BorderStroke. When stroking a shape, we only honor the
-                    // topStroke, topStyle, widths.top, and insets.
-                    final BorderStroke stroke = strokes.get(i);
-                    // We're stroking a path, so there is no point trying to figure out the length.
-                    // Instead, we just pass -1, telling setBorderStyle to just do a simple stroke
-                    setBorderStyle(g, stroke, -1);
-                    final Insets insets = stroke.getInsets();
-                    g.draw(resizeShape((float) insets.getTop(), (float) insets.getRight(),
-                                       (float) insets.getBottom(), (float) insets.getLeft()));
-                }
-            }
+            renderAsShape(g);
         } else if (width > 0 && height > 0) {
-            if (!background.isEmpty()) {
-                // cacheWidth is the width of the region used within the cached image. For example,
-                // perhaps normally the width of a region is 200px. But instead I will render the
-                // region as though it is 20px wide into the cached image. 20px in this case is
-                // the cache width. Although it may draw into more pixels than this (for example,
-                // drawing the focus rectangle extends beyond the width of the region).
-                // left + right background insets give us the left / right slice locations, plus 1 pixel for the center.
-                // Round the whole thing up to be a whole number.
-                if (backgroundInsets == null) updateBackgroundInsets();
-                final double leftInset = backgroundInsets.getLeft() + 1;
-                final double rightInset = backgroundInsets.getRight() + 1;
-                final double topInset = backgroundInsets.getTop() + 1;
-                final double bottomInset = backgroundInsets.getBottom() + 1;
-
-                // If the insets are too large, then we want to use the width of the region instead of the
-                // computed cacheWidth. RadioButton enters this case
-                int cacheWidth = roundUp(width);
-                if ((cacheMode & CACHE_SLICE_H) != 0) {
-                    cacheWidth = Math.min(cacheWidth, (int) (leftInset + rightInset));
-                }
-                int cacheHeight = roundUp(height);
-                if ((cacheMode & CACHE_SLICE_V) != 0) {
-                    cacheHeight = Math.min(cacheHeight, (int) (topInset + bottomInset));
-                }
-
-                final Insets outsets = background.getOutsets();
-                final int outsetsLeft = roundUp(outsets.getLeft());
-                final int outsetsTop = roundUp(outsets.getTop());
-                final int outsetsRight = roundUp(outsets.getRight());
-                final int outsetsBottom = roundUp(outsets.getRight());
-
-                // The textureWidth / textureHeight is the width/height of the actual image. This needs to be rounded
-                // up to the next whole pixel value.
-                final int textureWidth = outsetsLeft + cacheWidth + outsetsRight;
-                final int textureHeight = outsetsTop + cacheHeight + outsetsBottom;
-
-                // See if we have a cached representation for this region background already.
-                // RT-25013: We need to make sure that we do not use a cached image in the case of a
-                // scaled region, or things won't look right (they'll looked scaled instead of vector-resized).
-                // RT-25049: Need to only use the cache for pixel aligned regions or the result
-                // will not look the same as though drawn by vector
-                final boolean cache =
-                        background.getFills().size() > 1 && // Not worth the overhead otherwise
-                        cacheMode != 0 &&
-                        g.getTransformNoClone().isTranslateOrIdentity();
-                RTTexture cached = null;
-                Rectangle rect = null;
-                if (cache) {
-                    RegionImageCache imageCache = getImageCache(g);
-                    if (imageCache.isImageCachable(textureWidth, textureHeight)) {
-                        final Integer key = getCacheKey(textureWidth, textureHeight);
-                        rect = TEMP_RECT;
-                        rect.setBounds(0, 0, textureWidth, textureHeight);
-                        boolean render = imageCache.getImageLocation(key, rect, background, shape, g);
-                        if (!rect.isEmpty()) {
-                            // An empty rect indicates a failure occurred in the imageCache
-                            cached = imageCache.getBackingStore();
-                        }
-                        if (cached != null && render) {
-                            Graphics cacheGraphics = cached.createGraphics();
-
-                            // Have to move the origin such that when rendering to x=0, we actually end up rendering
-                            // at x=outsets.getLeft(). Otherwise anything rendered to the left of the origin would be lost
-                            // Round up to the nearest pixel
-                            cacheGraphics.translate(rect.x + outsetsLeft, rect.y + outsetsTop);
-
-                            //rendering backgrounds to the cache
-                            renderBackgrounds(cacheGraphics, cacheWidth, cacheHeight);
-
-                            if (PulseLogger.PULSE_LOGGING_ENABLED) {
-                                PulseLogger.PULSE_LOGGER.renderIncrementCounter("Rendering region background image to cache");
-                            }
-                        }
-                    }
-                }
-
-                // cached might not be null if either there was a cached image, or we just created one.
-                // In either case, we need to now render from the cached texture to the graphics
-                if (cached != null) {
-                    final float dstWidth = outsetsLeft + width + outsetsRight;
-                    final float dstHeight = outsetsTop + height + outsetsBottom;
-                    final boolean sameWidth = rect.width == dstWidth;
-                    final boolean sameHeight = rect.height == dstHeight;
-                    final float dstX1 = -outsetsLeft;
-                    final float dstY1 = -outsetsTop;
-                    final float dstX2 = width + outsetsRight;
-                    final float dstY2 = height + outsetsBottom;
-                    final float srcX1 = rect.x;
-                    final float srcY1 = rect.y;
-                    final float srcX2 = srcX1 + textureWidth;
-                    final float srcY2 = srcY1 + textureHeight;
-
-                    // If total destination width is < the source width, then we need to start
-                    // shrinking the left and right sides to accommodate. Likewise in the other dimension.
-                    double adjustedLeftInset = leftInset;
-                    double adjustedRightInset = rightInset;
-                    double adjustedTopInset = topInset;
-                    double adjustedBottomInset = bottomInset;
-                    if (leftInset + rightInset > width) {
-                        double fraction = width / (leftInset + rightInset);
-                        adjustedLeftInset *= fraction;
-                        adjustedRightInset *= fraction;
-                    }
-                    if (topInset + bottomInset > height) {
-                        double fraction = height / (topInset + bottomInset);
-                        adjustedTopInset *= fraction;
-                        adjustedBottomInset *= fraction;
-                    }
-
-                    if (sameWidth && sameHeight) {
-                        g.drawTexture(cached, dstX1, dstY1, dstX2, dstY2, srcX1, srcY1, srcX2, srcY2);
-                    } else if (sameHeight) {
-                        // We do 3-patch rendering fixed height
-                        final float left = (float) (adjustedLeftInset + outsetsLeft);
-                        final float right = (float) (adjustedRightInset + outsetsRight);
-
-                        final float dstLeftX = dstX1 + left;
-                        final float dstRightX = dstX2 - right;
-                        final float srcLeftX = srcX1 + left;
-                        final float srcRightX = srcX2 - right;
-
-                        g.drawTexture3SliceH(cached,
-                                             dstX1, dstY1, dstX2, dstY2,
-                                             srcX1, srcY1, srcX2, srcY2,
-                                             dstLeftX, dstRightX, srcLeftX, srcRightX);
-                    } else if (sameWidth) {
-                        // We do 3-patch rendering fixed width
-                        final float top = (float) (adjustedTopInset + outsetsTop);
-                        final float bottom = (float) (adjustedBottomInset + outsetsBottom);
-
-                        final float dstTopY = dstY1 + top;
-                        final float dstBottomY = dstY2 - bottom;
-                        final float srcTopY = srcY1 + top;
-                        final float srcBottomY = srcY2 - bottom;
-
-                        g.drawTexture3SliceV(cached,
-                                             dstX1, dstY1, dstX2, dstY2,
-                                             srcX1, srcY1, srcX2, srcY2,
-                                             dstTopY, dstBottomY, srcTopY, srcBottomY);
-                    } else {
-                        // We do 9-patch rendering
-                        final float left = (float) (adjustedLeftInset + outsetsLeft);
-                        final float top = (float) (adjustedTopInset + outsetsTop);
-                        final float right = (float) (adjustedRightInset + outsetsRight);
-                        final float bottom = (float) (adjustedBottomInset + outsetsBottom);
-
-                        final float dstLeftX = dstX1 + left;
-                        final float dstRightX = dstX2 - right;
-                        final float srcLeftX = srcX1 + left;
-                        final float srcRightX = srcX2 - right;
-                        final float dstTopY = dstY1 + top;
-                        final float dstBottomY = dstY2 - bottom;
-                        final float srcTopY = srcY1 + top;
-                        final float srcBottomY = srcY2 - bottom;
-
-                        g.drawTexture9Slice(cached,
-                                            dstX1, dstY1, dstX2, dstY2,
-                                            srcX1, srcY1, srcX2, srcY2,
-                                            dstLeftX, dstTopY, dstRightX, dstBottomY,
-                                            srcLeftX, srcTopY, srcRightX, srcBottomY);
-                    }
-                    if (PulseLogger.PULSE_LOGGING_ENABLED) {
-                        PulseLogger.PULSE_LOGGER.renderIncrementCounter("Cached region background image used");
-                    }
-                } else {
-                    // no cache, rendering backgrounds directly to graphics
-                    renderBackgrounds(g, width, height);
-                }
-
-
-                final List<BackgroundImage> images = background.getImages();
-                for (int i = 0, max = images.size(); i < max; i++) {
-                    final BackgroundImage image = images.get(i);
-                    Image img = (Image) image.getImage().impl_getPlatformImage();
-                    final int imgUnscaledWidth = (int)image.getImage().getWidth();
-                    final int imgUnscaledHeight = (int)image.getImage().getHeight();
-                    final int imgWidth = img.getWidth();
-                    final int imgHeight = img.getHeight();
-                    // TODO need to write tests which demonstrate this works when the image hasn't loaded yet. (RT-26978)
-                    // This doesn't work today. An NPE will occur, and then when the image does finally load,
-                    // we don't cause another pulse to occur so it doesn't ever get drawn.
-                    // TODO need to write tests where we use a writable image and draw to it a lot. (RT-26978)
-                    if (img != null && imgWidth != 0 && imgHeight != 0) {
-                        final BackgroundSize size = image.getSize();
-                        if (size.isCover()) {
-                            // When "cover" is true, we can ignore most properties on the BackgroundSize and
-                            // BackgroundRepeat and BackgroundPosition. Because the image will be stretched to
-                            // fill the entire space, there is no need to know the repeat or position or
-                            // size width / height.
-                            final float scale = Math.max(width / imgWidth,height / imgHeight);
-                            final Texture texture =
-                                g.getResourceFactory().getCachedTexture(img, Texture.WrapMode.CLAMP_TO_EDGE);
-                            g.drawTexture(texture,
-                                    0, 0, width, height,
-                                    0, 0, width/scale, height/scale
-                            );
-                            texture.unlock();
-                        } else {
-                            // Other than "cover", all other modes need to pay attention to the repeat,
-                            // size, and position in order to determine how to render. This next block
-                            // of code is responsible for determining the width and height of the area
-                            // that we are going to fill. The size might be percentage based, in which
-                            // case we need to multiply by the width or height.
-                            final double w = size.isWidthAsPercentage() ? size.getWidth() * width : size.getWidth();
-                            final double h = size.isHeightAsPercentage() ? size.getHeight() * height : size.getHeight();
-
-                            // Now figure out the width and height of each tile to be drawn. The actual image
-                            // dimensions may be one thing, but we need to figure out what the size of the image
-                            // in the destination is going to be.
-                            final double tileWidth, tileHeight;
-                            if (size.isContain()) {
-                                // In the case of "contain", we compute the destination size based on the largest
-                                // possible scale such that the aspect ratio is maintained, yet one side of the
-                                // region is completely filled.
-                                final float scaleX = width / imgUnscaledWidth;
-                                final float scaleY = height / imgUnscaledHeight;
-                                final float scale = Math.min(scaleX, scaleY);
-                                tileWidth = Math.ceil(scale * imgUnscaledWidth);
-                                tileHeight = Math.ceil(scale * imgUnscaledHeight);
-                            } else if (size.getWidth() >= 0 && size.getHeight() >= 0) {
-                                // The width and height have been expressly defined. Note that AUTO is -1,
-                                // and all other negative values are disallowed, so by checking >= 0, we
-                                // are essentially saying "if neither is AUTO"
-                                tileWidth = w;
-                                tileHeight = h;
-                            } else if (w >= 0) {
-                                // In this case, the width is specified, but the height is AUTO
-                                tileWidth = w;
-                                final double scale = tileWidth / imgUnscaledWidth;
-                                tileHeight = imgUnscaledHeight * scale;
-                            } else if (h >= 0) {
-                                // Here the height is specified and the width is AUTO
-                                tileHeight = h;
-                                final double scale = tileHeight / imgUnscaledHeight;
-                                tileWidth = imgUnscaledWidth * scale;
-                            } else {
-                                // Both are auto.
-                                tileWidth = imgUnscaledWidth;
-                                tileHeight = imgUnscaledHeight;
-                            }
-
-                            // Now figure out where we are going to place the images within the region.
-                            // For example, the developer can ask for 20px or 20%, and we need to first
-                            // determine where to place the image. This starts by figuring out the pixel
-                            // based value for the position.
-                            final BackgroundPosition pos = image.getPosition();
-                            final double tileX, tileY;
-
-                            if (pos.getHorizontalSide() == Side.LEFT) {
-                                final double position = pos.getHorizontalPosition();
-                                if (pos.isHorizontalAsPercentage()) {
-                                    tileX = (position * width) - (position * tileWidth);
-                                } else {
-                                    tileX = position;
-                                }
-                            } else {
-                                if (pos.isHorizontalAsPercentage()) {
-                                    final double position = 1 - pos.getHorizontalPosition();
-                                    tileX = (position * width) - (position * tileWidth);
-                                } else {
-                                    tileX = width - tileWidth- pos.getHorizontalPosition();
-                                }
-                            }
-
-                            if (pos.getVerticalSide() == Side.TOP) {
-                                final double position = pos.getVerticalPosition();
-                                if (pos.isVerticalAsPercentage()) {
-                                    tileY = (position * height) - (position * tileHeight);
-                                } else {
-                                    tileY = position;
-                                }
-                            } else {
-                                if (pos.isVerticalAsPercentage()) {
-                                    final double position = 1 - pos.getVerticalPosition();
-                                    tileY = (position * height) - (position * tileHeight);
-                                } else {
-                                    tileY = height - tileHeight - pos.getVerticalPosition();
-                                }
-                            }
-
-                            // Now that we have acquired or computed all the data, we'll let paintTiles
-                            // do the actual rendering operation.
-                            paintTiles(g, img, image.getRepeatX(), image.getRepeatY(),
-                                       pos.getHorizontalSide(), pos.getVerticalSide(),
-                                       0, 0, width, height, // the region area to fill with the image
-                                       0, 0, imgWidth, imgHeight, // The entire image is used
-                                       (float) tileX, (float) tileY, (float) tileWidth, (float) tileHeight);
-                        }
-                    }
-                }
-            }
-
-            if (!border.isEmpty()) {
-                final List<BorderStroke> strokes = border.getStrokes();
-                for (int i = 0, max = strokes.size(); i < max; i++) {
-                    final BorderStroke stroke = strokes.get(i);
-                    final BorderWidths widths = stroke.getWidths();
-                    final CornerRadii radii = normalize(stroke.getRadii());
-                    final Insets insets = stroke.getInsets();
-
-                    final javafx.scene.paint.Paint topStroke = stroke.getTopStroke();
-                    final javafx.scene.paint.Paint rightStroke = stroke.getRightStroke();
-                    final javafx.scene.paint.Paint bottomStroke = stroke.getBottomStroke();
-                    final javafx.scene.paint.Paint leftStroke = stroke.getLeftStroke();
-
-                    final float topInset = (float) insets.getTop();
-                    final float rightInset = (float) insets.getRight();
-                    final float bottomInset = (float) insets.getBottom();
-                    final float leftInset = (float) insets.getLeft();
-
-                    final float topWidth = (float) (widths.isTopAsPercentage() ? height * widths.getTop() : widths.getTop());
-                    final float rightWidth = (float) (widths.isRightAsPercentage() ? width * widths.getRight() : widths.getRight());
-                    final float bottomWidth = (float) (widths.isBottomAsPercentage() ? height * widths.getBottom() : widths.getBottom());
-                    final float leftWidth = (float) (widths.isLeftAsPercentage() ? width * widths.getLeft() : widths.getLeft());
-
-                    final BorderStrokeStyle topStyle = stroke.getTopStyle();
-                    final BorderStrokeStyle rightStyle = stroke.getRightStyle();
-                    final BorderStrokeStyle bottomStyle = stroke.getBottomStyle();
-                    final BorderStrokeStyle leftStyle = stroke.getLeftStyle();
-
-                    final StrokeType topType = topStyle.getType();
-                    final StrokeType rightType = rightStyle.getType();
-                    final StrokeType bottomType = bottomStyle.getType();
-                    final StrokeType leftType = leftStyle.getType();
-
-                    // The Prism Graphics logic always strokes on the line, it doesn't know about
-                    // INSIDE or OUTSIDE or how to handle those. The only way to deal with those is
-                    // to compensate for them here. So we will adjust the bounds that we are going
-                    // to stroke to take into account the insets (obviously), and also where we
-                    // want the stroked line to appear (inside, or outside, or centered).
-                    final float t = topInset +
-                            (topType == StrokeType.OUTSIDE ? -topWidth / 2 :
-                             topType == StrokeType.INSIDE ? topWidth / 2 : 0);
-                    final float l = leftInset +
-                            (leftType == StrokeType.OUTSIDE ? -leftWidth / 2 :
-                             leftType == StrokeType.INSIDE ? leftWidth / 2 : 0);
-                    final float b = bottomInset +
-                            (bottomType == StrokeType.OUTSIDE ? -bottomWidth / 2 :
-                             bottomType == StrokeType.INSIDE ? bottomWidth / 2 : 0);
-                    final float r = rightInset +
-                            (rightType == StrokeType.OUTSIDE ? -rightWidth / 2 :
-                             rightType == StrokeType.INSIDE ? rightWidth / 2 : 0);
-
-                    // If the radii are uniform, then reading any one value is sufficient to
-                    // know what the radius is for all values
-                    final float radius = (float) radii.getTopLeftHorizontalRadius();
-                    if (stroke.isStrokeUniform()) {
-                        // If the stroke is uniform, then that means that the style, width, and stroke of
-                        // all four sides is the same.
-                        float w = width - l - r;
-                        float h = height - t - b;
-                        // The length of each side of the path we're going to stroke
-                        final double di = 2 * radii.getTopLeftHorizontalRadius();
-                        final double circle = di*Math.PI;
-                        final double totalLineLength =
-                                circle +
-                                2 * (width - di) +
-                                2 * (height - di);
-
-                        if (w >= 0 && h >= 0) {
-                            setBorderStyle(g, stroke, totalLineLength);
-                            if (radii.isUniform() && radius == 0) {
-                                // We're just drawing a squared stroke on all four sides of the same style
-                                // and width and color, so a simple drawRect call is all that is needed.
-                                g.drawRect(l, t, w, h);
-                            } else if (radii.isUniform()) {
-                                // The radii are uniform, but are not squared up, so we have to
-                                // draw a rounded rectangle.
-                                float ar = radius + radius;
-                                if (ar > w) ar = w;
-                                if (ar > h) ar = h;
-                                g.drawRoundRect(l, t, w, h, ar, ar);
-                            } else {
-                                // We do not have uniform radii, so we need to create a path that represents
-                                // the stroke and then draw that.
-                                g.draw(createPath(width, height, t, l, b, r, radii));
-                            }
-                        }
-                    } else if (radii.isUniform() && radius == 0) {
-                        // The length of each side of the path we're going to stroke
-                        final double totalLineLength = 2 * width + 2 * height;
-
-                        // We have different styles, or widths, or strokes on one or more sides, and
-                        // therefore we have to draw each side independently. However, the corner radii
-                        // are all 0, so we don't have to go to the trouble of constructing some complicated
-                        // path to represent the border, we just draw each line independently.
-                        // Note that in each of these checks, if the stroke is identity equal to the TRANSPARENT
-                        // Color or the style is identity equal to BorderStrokeStyle.NONE, then we skip that
-                        // side. It is possible however to have a Color as the stroke which is effectively
-                        // TRANSPARENT and a style that is effectively NONE, but we are not checking for those
-                        // cases and will in those cases be doing more work than necessary.
-                        // TODO make sure CSS uses TRANSPARENT and NONE when possible (RT-26943)
-                        if (!(topStroke instanceof Color && ((Color)topStroke).getOpacity() == 0f) && topStyle != BorderStrokeStyle.NONE) {
-                            g.setPaint(getPlatformPaint(topStroke));
-                            if (BorderStrokeStyle.SOLID == topStyle) {
-                                g.fillRect(leftInset, topInset, width - leftInset - rightInset, topWidth);
-                            } else {
-                                g.setStroke(createStroke(topStyle, topWidth, totalLineLength));
-                                g.drawLine(l, t, width - r, t);
-                            }
-                        }
-
-                        if (!(rightStroke instanceof Color && ((Color)rightStroke).getOpacity() == 0f) && rightStyle != BorderStrokeStyle.NONE) {
-                            g.setPaint(getPlatformPaint(rightStroke));
-                            if (BorderStrokeStyle.SOLID == rightStyle) {
-                                g.fillRect(width - rightInset - rightWidth, topInset,
-                                           rightWidth, height - topInset - bottomInset);
-                            } else {
-                                g.setStroke(createStroke(rightStyle, rightWidth, totalLineLength));
-                                g.drawLine(width - r, topInset, width - r, height - bottomInset);
-                            }
-                        }
-
-                        if (!(bottomStroke instanceof Color && ((Color)bottomStroke).getOpacity() == 0f) && bottomStyle != BorderStrokeStyle.NONE) {
-                            g.setPaint(getPlatformPaint(bottomStroke));
-                            if (BorderStrokeStyle.SOLID == bottomStyle) {
-                                g.fillRect(leftInset, height - bottomInset - bottomWidth,
-                                        width - leftInset - rightInset, bottomWidth);
-                            } else {
-                                g.setStroke(createStroke(bottomStyle, bottomWidth, totalLineLength));
-                                g.drawLine(l, height - b, width - r, height - b);
-                            }
-                        }
-
-                        if (!(leftStroke instanceof Color && ((Color)leftStroke).getOpacity() == 0f) && leftStyle != BorderStrokeStyle.NONE) {
-                            g.setPaint(getPlatformPaint(leftStroke));
-                            if (BorderStrokeStyle.SOLID == leftStyle) {
-                                g.fillRect(leftInset, topInset, leftWidth, height - topInset - bottomInset);
-                            } else {
-                                g.setStroke(createStroke(leftStyle, leftWidth, totalLineLength));
-                                g.drawLine(l, topInset, l, height - bottomInset);
-                            }
-                        }
-                    } else {
-                        // In this case, we have different styles and/or strokes and/or widths on one or
-                        // more sides, and either the radii are not uniform, or they are uniform but greater
-                        // than 0. In this case we have to take a much slower rendering path by turning this
-                        // stroke into a path (or in the current implementation, an array of paths).
-                        Shape[] paths = createPaths(t, l, b, r, radii);
-                        // TODO This is incorrect for an ellipse (RT-26942)
-                        final double totalLineLength =
-                                // TOP
-                                (width - radii.getTopLeftHorizontalRadius() - radii.getTopRightHorizontalRadius()) +
-                                (Math.PI * radii.getTopLeftHorizontalRadius() / 4) +
-                                (Math.PI * radii.getTopRightHorizontalRadius() / 4) +
-                                // RIGHT
-                                (height - radii.getTopRightVerticalRadius() - radii.getBottomRightVerticalRadius()) +
-                                (Math.PI * radii.getTopRightVerticalRadius() / 4) +
-                                (Math.PI * radii.getBottomRightVerticalRadius() / 4) +
-                                // BOTTOM
-                                (width - radii.getBottomLeftHorizontalRadius() - radii.getBottomRightHorizontalRadius()) +
-                                (Math.PI * radii.getBottomLeftHorizontalRadius() / 4) +
-                                (Math.PI * radii.getBottomRightHorizontalRadius() / 4) +
-                                // LEFT
-                                (height - radii.getTopLeftVerticalRadius() - radii.getBottomLeftVerticalRadius()) +
-                                (Math.PI * radii.getTopLeftVerticalRadius() / 4) +
-                                (Math.PI * radii.getBottomLeftVerticalRadius() / 4);
-
-                        if (topStyle != BorderStrokeStyle.NONE) {
-                            g.setStroke(createStroke(topStyle, topWidth, totalLineLength));
-                            g.setPaint(getPlatformPaint(topStroke));
-                            g.draw(paths[0]);
-                        }
-                        if (rightStyle != BorderStrokeStyle.NONE) {
-                            g.setStroke(createStroke(rightStyle, rightWidth, totalLineLength));
-                            g.setPaint(getPlatformPaint(rightStroke));
-                            g.draw(paths[1]);
-                        }
-                        if (bottomStyle != BorderStrokeStyle.NONE) {
-                            g.setStroke(createStroke(bottomStyle, bottomWidth, totalLineLength));
-                            g.setPaint(getPlatformPaint(bottomStroke));
-                            g.draw(paths[2]);
-                        }
-                        if (leftStyle != BorderStrokeStyle.NONE) {
-                            g.setStroke(createStroke(leftStyle, leftWidth, totalLineLength));
-                            g.setPaint(getPlatformPaint(leftStroke));
-                            g.draw(paths[3]);
-                        }
-                    }
-                }
-
-                final List<BorderImage> images = border.getImages();
-                for (int i = 0, max = images.size(); i < max; i++) {
-                    final BorderImage ib = images.get(i);
-                    final Image img = (Image) ib.getImage().impl_getPlatformImage();
-                    final int imgWidth = img.getWidth();
-                    final int imgHeight = img.getHeight();
-                    if (img != null) {
-                        final BorderWidths widths = ib.getWidths();
-                        final Insets insets = ib.getInsets();
-                        final BorderWidths slices = ib.getSlices();
-
-                        // we will get gaps if we don't round to pixel boundaries
-                        final int topInset = (int) Math.round(insets.getTop());
-                        final int rightInset = (int) Math.round(insets.getRight());
-                        final int bottomInset = (int) Math.round(insets.getBottom());
-                        final int leftInset = (int) Math.round(insets.getLeft());
-
-                        final int topWidth = (int) Math.round(
-                                widths.isTopAsPercentage() ? height * widths.getTop() : widths.getTop());
-                        final int rightWidth = (int) Math.round(
-                                widths.isRightAsPercentage() ? width * widths.getRight() : widths.getRight());
-                        final int bottomWidth = (int) Math.round(
-                                widths.isBottomAsPercentage() ? height * widths.getBottom() : widths.getBottom());
-                        final int leftWidth = (int) Math.round(
-                                widths.isLeftAsPercentage() ? width * widths.getLeft() : widths.getLeft());
-
-                        final int topSlice = (int) Math.round((
-                                slices.isTopAsPercentage() ? height * slices.getTop() : slices.getTop()) * img.getPixelScale());
-                        final int rightSlice = (int) Math.round((
-                                slices.isRightAsPercentage() ? width * slices.getRight() : slices.getRight()) * img.getPixelScale());
-                        final int bottomSlice = (int) Math.round((
-                                slices.isBottomAsPercentage() ? height * slices.getBottom() : slices.getBottom()) * img.getPixelScale());
-                        final int leftSlice = (int) Math.round((
-                                slices.isLeftAsPercentage() ? width * slices.getLeft() : slices.getLeft()) * img.getPixelScale());
-
-                        // handle case where region is too small to fit in borders
-                        if ((leftInset + leftWidth + rightInset + rightWidth) > width
-                                || (topInset + topWidth + bottomInset + bottomWidth) > height) {
-                            continue;
-                        }
-
-                        // calculate some things we can share
-                        final int centerMinX = leftInset + leftWidth;
-                        final int centerMinY = topInset + topWidth;
-                        final int centerW = Math.round(width) - rightInset - rightWidth - centerMinX;
-                        final int centerH = Math.round(height) - bottomInset - bottomWidth - centerMinY;
-                        final int centerMaxX = centerW + centerMinX;
-                        final int centerMaxY = centerH + centerMinY;
-                        final int centerSliceWidth = imgWidth - leftSlice - rightSlice;
-                        final int centerSliceHeight = imgHeight - topSlice - bottomSlice;
-                        // paint top left corner
-                        paintTiles(g, img, BorderRepeat.STRETCH, BorderRepeat.STRETCH, Side.LEFT, Side.TOP,
-                                   leftInset, topInset, leftWidth, topWidth, // target bounds
-                                   0, 0, leftSlice, topSlice, // src image bounds
-                                   0, 0, leftWidth, topWidth); // tile bounds
-                        // paint top slice
-                        float tileWidth = (ib.getRepeatX() == BorderRepeat.STRETCH) ?
-                                centerW : (topSlice > 0 ? (centerSliceWidth * topWidth) / topSlice : 0);
-                        float tileHeight = topWidth;
-                        paintTiles(
-                                g, img, ib.getRepeatX(), BorderRepeat.STRETCH, Side.LEFT, Side.TOP,
-                                centerMinX, topInset, centerW, topWidth,
-                                leftSlice, 0, centerSliceWidth, topSlice,
-                                (centerW - tileWidth) / 2, 0, tileWidth, tileHeight);
-                        // paint top right corner
-                        paintTiles(g, img, BorderRepeat.STRETCH, BorderRepeat.STRETCH, Side.LEFT, Side.TOP,
-                                   centerMaxX, topInset, rightWidth, topWidth,
-                                   (imgWidth - rightSlice), 0, rightSlice, topSlice,
-                                   0, 0, rightWidth, topWidth);
-                        // paint left slice
-                        tileWidth = leftWidth;
-                        tileHeight = (ib.getRepeatY() == BorderRepeat.STRETCH) ?
-                                centerH : (leftSlice > 0 ? (leftWidth * centerSliceHeight) / leftSlice : 0);
-                        paintTiles(g, img, BorderRepeat.STRETCH, ib.getRepeatY(), Side.LEFT, Side.TOP,
-                                   leftInset, centerMinY, leftWidth, centerH,
-                                   0, topSlice, leftSlice, centerSliceHeight,
-                                   0, (centerH - tileHeight) / 2, tileWidth, tileHeight);
-                        // paint right slice
-                        tileWidth = rightWidth;
-                        tileHeight = (ib.getRepeatY() == BorderRepeat.STRETCH) ?
-                                centerH : (rightSlice > 0 ? (rightWidth * centerSliceHeight) / rightSlice : 0);
-                        paintTiles(g, img, BorderRepeat.STRETCH, ib.getRepeatY(), Side.LEFT, Side.TOP,
-                                   centerMaxX, centerMinY, rightWidth, centerH,
-                                   imgWidth - rightSlice, topSlice, rightSlice, centerSliceHeight,
-                                   0, (centerH - tileHeight) / 2, tileWidth, tileHeight);
-                        // paint bottom left corner
-                        paintTiles(g, img, BorderRepeat.STRETCH, BorderRepeat.STRETCH, Side.LEFT, Side.TOP,
-                                   leftInset, centerMaxY, leftWidth, bottomWidth,
-                                   0, imgHeight - bottomSlice, leftSlice, bottomSlice,
-                                   0, 0, leftWidth, bottomWidth);
-                        // paint bottom slice
-                        tileWidth = (ib.getRepeatX() == BorderRepeat.STRETCH) ?
-                                centerW : (bottomSlice > 0 ? (centerSliceWidth * bottomWidth) / bottomSlice : 0);
-                        tileHeight = bottomWidth;
-                        paintTiles(g, img, ib.getRepeatX(), BorderRepeat.STRETCH, Side.LEFT, Side.TOP,
-                                   centerMinX, centerMaxY, centerW, bottomWidth,
-                                   leftSlice, imgHeight - bottomSlice, centerSliceWidth, bottomSlice,
-                                   (centerW - tileWidth) / 2, 0, tileWidth, tileHeight);
-                        // paint bottom right corner
-                        paintTiles(g, img, BorderRepeat.STRETCH, BorderRepeat.STRETCH, Side.LEFT, Side.TOP,
-                                   centerMaxX, centerMaxY, rightWidth, bottomWidth,
-                                   imgWidth - rightSlice, imgHeight - bottomSlice, rightSlice, bottomSlice,
-                                   0, 0, rightWidth, bottomWidth);
-                        // paint the center slice
-                        if (ib.isFilled()) {
-                            // we will get gaps if we don't round to pixel boundaries
-                            final int areaX = leftInset + leftWidth;
-                            final int areaY = topInset + topWidth;
-                            final int areaW = Math.round(width) - rightInset - rightWidth - areaX;
-                            final int areaH = Math.round(height) - bottomInset - bottomWidth - areaY;
-                            // handle no repeat as stretch
-                            final float imgW = (ib.getRepeatX() == BorderRepeat.STRETCH) ? centerW : centerSliceWidth;
-                            final float imgH = (ib.getRepeatY() == BorderRepeat.STRETCH) ? centerH : centerSliceHeight;
-                            paintTiles(g, img, ib.getRepeatX(), ib.getRepeatY(), Side.LEFT, Side.TOP,
-                                       areaX, areaY, areaW, areaH,
-                                       leftSlice, topSlice, centerSliceWidth, centerSliceHeight,
-                                       0, 0, imgW, imgH);
-                        }
-                    }
-                }
-            }
+            renderAsRectangle(g);
         }
 
         // Paint the children
         super.renderContent(g);
+    }
+
+    /**************************************************************************
+     *                                                                        *
+     * Drawing a region background and borders when the Region has been       *
+     * specified to have a shape. This is typically used to render some       *
+     * portions of a UI Control, such as the tick on a CheckBox, the dot on a *
+     * RadioButton, or the disclosure node arrow on a TreeView. In these      *
+     * cases, the overall region size is typically very small and can         *
+     * therefore easily be cached.                                            *
+     *                                                                        *
+     *************************************************************************/
+
+    private void renderAsShape(Graphics g) {
+        if (!background.isEmpty()) {
+            // Note: resizeShape is not cheap. This should be refactored so that we only invoke
+            // it if we absolutely have to. Specifically, if the background, shape, and size of the region
+            // has not changed since the last time we rendered we could skip all this and render
+            // directly out of a cache.
+            final Insets outsets = background.getOutsets();
+            final Shape outsetShape = resizeShape((float) -outsets.getTop(), (float) -outsets.getRight(),
+                                                  (float) -outsets.getBottom(), (float) -outsets.getLeft());
+            final RectBounds outsetShapeBounds = outsetShape.getBounds();
+            final int textureWidth = Math.round(outsetShapeBounds.getWidth()),
+                      textureHeight = Math.round(outsetShapeBounds.getHeight());
+
+            // See if we have a cached representation for this region background already. In UI controls,
+            // the arrow in a scroll bar button or the dot in a radio button or the tick in a check box are
+            // all examples of cases where we'd like to reuse a cached image for performance reasons rather
+            // than re-drawing everything each time.
+
+            RTTexture cached = null;
+            Rectangle rect = null;
+            // RT-25013: We need to make sure that we do not use a cached image in the case of a
+            // scaled region, or things won't look right (they'll looked scaled instead of vector-resized).
+            if (cacheMode != 0 && g.getTransformNoClone().isTranslateOrIdentity()) {
+                final RegionImageCache imageCache = getImageCache(g);
+                if (imageCache.isImageCachable(textureWidth, textureHeight)) {
+                    final Integer key = getCacheKey(textureWidth, textureHeight);
+                    rect = TEMP_RECT;
+                    rect.setBounds(0, 0, textureWidth, textureHeight);
+                    boolean render = imageCache.getImageLocation(key, rect, background, shape, g);
+                    if (!rect.isEmpty()) {
+                        // An empty rect indicates a failure occurred in the imageCache
+                        cached = imageCache.getBackingStore();
+                    }
+                    if (cached != null && render) {
+                        Graphics cachedGraphics = cached.createGraphics();
+
+                        // Have to move the origin such that when rendering to x=0, we actually end up rendering
+                        // at x=bounds.getMinX(). Otherwise anything rendered to the left of the origin would be lost
+                        cachedGraphics.translate(rect.x - outsetShapeBounds.getMinX(),
+                                                 rect.y - outsetShapeBounds.getMinY());
+                        renderBackgroundShape(cachedGraphics);
+                        if (PulseLogger.PULSE_LOGGING_ENABLED) {
+                            PulseLogger.PULSE_LOGGER.renderIncrementCounter("Rendering region shape image to cache");
+                        }
+                    }
+                }
+            }
+
+            // "cached" might not be null if either there was a cached image, or we just created one.
+            // In either case, we need to now render from the cached texture to the graphics
+            if (cached != null) {
+                // We just draw exactly what it was we have cached
+                final float dstX1 = outsetShapeBounds.getMinX();
+                final float dstY1 = outsetShapeBounds.getMinY();
+                final float dstX2 = outsetShapeBounds.getMaxX();
+                final float dstY2 = outsetShapeBounds.getMaxY();
+
+                final float srcX1 = rect.x;
+                final float srcY1 = rect.y;
+                final float srcX2 = srcX1 + textureWidth;
+                final float srcY2 = srcY1 + textureHeight;
+
+                g.drawTexture(cached, dstX1, dstY1, dstX2, dstY2, srcX1, srcY1, srcX2, srcY2);
+                if (PulseLogger.PULSE_LOGGING_ENABLED) {
+                    PulseLogger.PULSE_LOGGER.renderIncrementCounter("Cached region shape image used");
+                }
+            } else {
+                // no cache, rendering backgrounds directly to graphics
+                renderBackgroundShape(g);
+            }
+        }
+
+        // Note that if you use borders, you're going to pay a premium in performance.
+        // I don't think this is strictly necessary (since we won't stretch a cached
+        // region shape anyway), so really this code should some how be combined
+        // with the caching code that happened above for backgrounds.
+        if (!border.isEmpty()) {
+            // We only deal with stroke borders, we never deal with ImageBorders when
+            // painting a shape on a Region. This is primarily because we don't know
+            // how to handle a 9-patch image on a random shape. We'll have to implement
+            // this at some point, but today is not that day.
+            final List<BorderStroke> strokes = border.getStrokes();
+            for (int i = 0, max = strokes.size(); i < max; i++) {
+                // Get the BorderStroke. When stroking a shape, we only honor the
+                // topStroke, topStyle, widths.top, and insets.
+                final BorderStroke stroke = strokes.get(i);
+                // We're stroking a path, so there is no point trying to figure out the length.
+                // Instead, we just pass -1, telling setBorderStyle to just do a simple stroke
+                setBorderStyle(g, stroke, -1);
+                final Insets insets = stroke.getInsets();
+                g.draw(resizeShape((float) insets.getTop(), (float) insets.getRight(),
+                                   (float) insets.getBottom(), (float) insets.getLeft()));
+            }
+        }
     }
 
     private void renderBackgroundShape(Graphics g) {
@@ -1180,6 +578,7 @@ public class NGRegion extends NGGroup {
             PulseLogger.PULSE_LOGGER.renderIncrementCounter("NGRegion renderBackgroundShape slow path");
             PulseLogger.PULSE_LOGGER.renderMessage("Slow shape path for " + getName());
         }
+
         // We first need to draw each background fill. We don't pay any attention
         // to the radii of the BackgroundFill, but we do honor the insets and
         // the fill paint itself.
@@ -1197,6 +596,7 @@ public class NGRegion extends NGGroup {
             g.fill(resizeShape((float) insets.getTop(), (float) insets.getRight(),
                                (float) insets.getBottom(), (float) insets.getLeft()));
         }
+
         // We now need to draw each background image. Only the "cover" property
         // of BackgroundImage, and the "image" property itself, have any impact
         // on how the image is applied to a Shape.
@@ -1227,7 +627,331 @@ public class NGRegion extends NGGroup {
         }
     }
 
-    private void renderBackgrounds(Graphics g, float width, float height) {
+    /**************************************************************************
+     *                                                                        *
+     * Drawing a region background and borders when the Region has no defined *
+     * shape, and is therefore treated as a rounded rectangle. This is the    *
+     * most common code path for UI Controls.                                 *
+     *                                                                        *
+     *************************************************************************/
+
+    private void renderAsRectangle(Graphics g) {
+        if (!background.isEmpty()) {
+            renderBackgroundRectangle(g);
+        }
+
+        if (!border.isEmpty()) {
+            renderBorderRectangle(g);
+        }
+    }
+
+    private void renderBackgroundRectangle(Graphics g) {
+        // TODO a big chunk of this only makes sense to do if there actually are background fills,
+        // and we should guard against that.
+
+        // cacheWidth is the width of the region used within the cached image. For example,
+        // perhaps normally the width of a region is 200px. But instead I will render the
+        // region as though it is 20px wide into the cached image. 20px in this case is
+        // the cache width. Although it may draw into more pixels than this (for example,
+        // drawing the focus rectangle extends beyond the width of the region).
+        // left + right background insets give us the left / right slice locations, plus 1 pixel for the center.
+        // Round the whole thing up to be a whole number.
+        if (backgroundInsets == null) updateBackgroundInsets();
+        final double leftInset = backgroundInsets.getLeft() + 1;
+        final double rightInset = backgroundInsets.getRight() + 1;
+        final double topInset = backgroundInsets.getTop() + 1;
+        final double bottomInset = backgroundInsets.getBottom() + 1;
+
+        // If the insets are too large, then we want to use the width of the region instead of the
+        // computed cacheWidth. RadioButton, for example, enters this case
+        int cacheWidth = roundUp(width);
+        if ((cacheMode & CACHE_SLICE_H) != 0) {
+            cacheWidth = Math.min(cacheWidth, (int) (leftInset + rightInset));
+        }
+        int cacheHeight = roundUp(height);
+        if ((cacheMode & CACHE_SLICE_V) != 0) {
+            cacheHeight = Math.min(cacheHeight, (int) (topInset + bottomInset));
+        }
+
+        final Insets outsets = background.getOutsets();
+        final int outsetsTop = roundUp(outsets.getTop());
+        final int outsetsRight = roundUp(outsets.getRight());
+        final int outsetsBottom = roundUp(outsets.getBottom());
+        final int outsetsLeft = roundUp(outsets.getLeft());
+
+        // The textureWidth / textureHeight is the width/height of the actual image. This needs to be rounded
+        // up to the next whole pixel value.
+        final int textureWidth = outsetsLeft + cacheWidth + outsetsRight;
+        final int textureHeight = outsetsTop + cacheHeight + outsetsBottom;
+
+        // See if we have a cached representation for this region background already.
+        // RT-25013: We need to make sure that we do not use a cached image in the case of a
+        // scaled region, or things won't look right (they'll looked scaled instead of vector-resized).
+        // RT-25049: Need to only use the cache for pixel aligned regions or the result
+        // will not look the same as though drawn by vector
+        final boolean cache =
+                background.getFills().size() > 1 && // Not worth the overhead otherwise
+                cacheMode != 0 &&
+                g.getTransformNoClone().isTranslateOrIdentity();
+        RTTexture cached = null;
+        Rectangle rect = null;
+        if (cache) {
+            RegionImageCache imageCache = getImageCache(g);
+            if (imageCache.isImageCachable(textureWidth, textureHeight)) {
+                final Integer key = getCacheKey(textureWidth, textureHeight);
+                rect = TEMP_RECT;
+                rect.setBounds(0, 0, textureWidth, textureHeight);
+                boolean render = imageCache.getImageLocation(key, rect, background, shape, g);
+                if (!rect.isEmpty()) {
+                    // An empty rect indicates a failure occurred in the imageCache
+                    cached = imageCache.getBackingStore();
+                }
+                if (cached != null && render) {
+                    Graphics cacheGraphics = cached.createGraphics();
+
+                    // Have to move the origin such that when rendering to x=0, we actually end up rendering
+                    // at x=outsets.getLeft(). Otherwise anything rendered to the left of the origin would be lost
+                    // Round up to the nearest pixel
+                    cacheGraphics.translate(rect.x + outsetsLeft, rect.y + outsetsTop);
+
+                    // Rendering backgrounds to the cache
+                    renderBackgroundRectanglesDirectly(cacheGraphics, cacheWidth, cacheHeight);
+
+                    if (PulseLogger.PULSE_LOGGING_ENABLED) {
+                        PulseLogger.PULSE_LOGGER.renderIncrementCounter("Rendering region background image to cache");
+                    }
+                }
+            }
+        }
+
+        // "cached" might not be null if either there was a cached image, or we just created one.
+        // In either case, we need to now render from the cached texture to the graphics
+        if (cached != null) {
+            renderBackgroundRectangleFromCache(
+                    g, cached, rect, textureWidth, textureHeight,
+                    topInset, rightInset, bottomInset, leftInset,
+                    outsetsTop, outsetsRight, outsetsBottom, outsetsLeft);
+        } else {
+            // no cache, rendering backgrounds directly to graphics
+            renderBackgroundRectanglesDirectly(g, width, height);
+        }
+
+        final List<BackgroundImage> images = background.getImages();
+        for (int i = 0, max = images.size(); i < max; i++) {
+            final BackgroundImage image = images.get(i);
+            Image img = (Image) image.getImage().impl_getPlatformImage();
+            final int imgUnscaledWidth = (int)image.getImage().getWidth();
+            final int imgUnscaledHeight = (int)image.getImage().getHeight();
+            final int imgWidth = img.getWidth();
+            final int imgHeight = img.getHeight();
+            // TODO need to write tests which demonstrate this works when the image hasn't loaded yet. (RT-26978)
+            // This doesn't work today. An NPE will occur, and then when the image does finally load,
+            // we don't cause another pulse to occur so it doesn't ever get drawn.
+            // TODO need to write tests where we use a writable image and draw to it a lot. (RT-26978)
+            if (img != null && imgWidth != 0 && imgHeight != 0) {
+                final BackgroundSize size = image.getSize();
+                if (size.isCover()) {
+                    // When "cover" is true, we can ignore most properties on the BackgroundSize and
+                    // BackgroundRepeat and BackgroundPosition. Because the image will be stretched to
+                    // fill the entire space, there is no need to know the repeat or position or
+                    // size width / height.
+                    final float scale = Math.max(width / imgWidth,height / imgHeight);
+                    final Texture texture =
+                        g.getResourceFactory().getCachedTexture(img, Texture.WrapMode.CLAMP_TO_EDGE);
+                    g.drawTexture(texture,
+                            0, 0, width, height,
+                            0, 0, width/scale, height/scale
+                    );
+                    texture.unlock();
+                } else {
+                    // Other than "cover", all other modes need to pay attention to the repeat,
+                    // size, and position in order to determine how to render. This next block
+                    // of code is responsible for determining the width and height of the area
+                    // that we are going to fill. The size might be percentage based, in which
+                    // case we need to multiply by the width or height.
+                    final double w = size.isWidthAsPercentage() ? size.getWidth() * width : size.getWidth();
+                    final double h = size.isHeightAsPercentage() ? size.getHeight() * height : size.getHeight();
+
+                    // Now figure out the width and height of each tile to be drawn. The actual image
+                    // dimensions may be one thing, but we need to figure out what the size of the image
+                    // in the destination is going to be.
+                    final double tileWidth, tileHeight;
+                    if (size.isContain()) {
+                        // In the case of "contain", we compute the destination size based on the largest
+                        // possible scale such that the aspect ratio is maintained, yet one side of the
+                        // region is completely filled.
+                        final float scaleX = width / imgUnscaledWidth;
+                        final float scaleY = height / imgUnscaledHeight;
+                        final float scale = Math.min(scaleX, scaleY);
+                        tileWidth = Math.ceil(scale * imgUnscaledWidth);
+                        tileHeight = Math.ceil(scale * imgUnscaledHeight);
+                    } else if (size.getWidth() >= 0 && size.getHeight() >= 0) {
+                        // The width and height have been expressly defined. Note that AUTO is -1,
+                        // and all other negative values are disallowed, so by checking >= 0, we
+                        // are essentially saying "if neither is AUTO"
+                        tileWidth = w;
+                        tileHeight = h;
+                    } else if (w >= 0) {
+                        // In this case, the width is specified, but the height is AUTO
+                        tileWidth = w;
+                        final double scale = tileWidth / imgUnscaledWidth;
+                        tileHeight = imgUnscaledHeight * scale;
+                    } else if (h >= 0) {
+                        // Here the height is specified and the width is AUTO
+                        tileHeight = h;
+                        final double scale = tileHeight / imgUnscaledHeight;
+                        tileWidth = imgUnscaledWidth * scale;
+                    } else {
+                        // Both are auto.
+                        tileWidth = imgUnscaledWidth;
+                        tileHeight = imgUnscaledHeight;
+                    }
+
+                    // Now figure out where we are going to place the images within the region.
+                    // For example, the developer can ask for 20px or 20%, and we need to first
+                    // determine where to place the image. This starts by figuring out the pixel
+                    // based value for the position.
+                    final BackgroundPosition pos = image.getPosition();
+                    final double tileX, tileY;
+
+                    if (pos.getHorizontalSide() == Side.LEFT) {
+                        final double position = pos.getHorizontalPosition();
+                        if (pos.isHorizontalAsPercentage()) {
+                            tileX = (position * width) - (position * tileWidth);
+                        } else {
+                            tileX = position;
+                        }
+                    } else {
+                        if (pos.isHorizontalAsPercentage()) {
+                            final double position = 1 - pos.getHorizontalPosition();
+                            tileX = (position * width) - (position * tileWidth);
+                        } else {
+                            tileX = width - tileWidth- pos.getHorizontalPosition();
+                        }
+                    }
+
+                    if (pos.getVerticalSide() == Side.TOP) {
+                        final double position = pos.getVerticalPosition();
+                        if (pos.isVerticalAsPercentage()) {
+                            tileY = (position * height) - (position * tileHeight);
+                        } else {
+                            tileY = position;
+                        }
+                    } else {
+                        if (pos.isVerticalAsPercentage()) {
+                            final double position = 1 - pos.getVerticalPosition();
+                            tileY = (position * height) - (position * tileHeight);
+                        } else {
+                            tileY = height - tileHeight - pos.getVerticalPosition();
+                        }
+                    }
+
+                    // Now that we have acquired or computed all the data, we'll let paintTiles
+                    // do the actual rendering operation.
+                    paintTiles(g, img, image.getRepeatX(), image.getRepeatY(),
+                               pos.getHorizontalSide(), pos.getVerticalSide(),
+                               0, 0, width, height, // the region area to fill with the image
+                               0, 0, imgWidth, imgHeight, // The entire image is used
+                               (float) tileX, (float) tileY, (float) tileWidth, (float) tileHeight);
+                }
+            }
+        }
+    }
+
+    private void renderBackgroundRectangleFromCache(
+            Graphics g, RTTexture cached, Rectangle rect, int textureWidth, int textureHeight,
+            double topInset, double rightInset, double bottomInset, double leftInset,
+            int outsetsTop, int outsetsRight, int outsetsBottom, int outsetsLeft) {
+
+        final float dstWidth = outsetsLeft + width + outsetsRight;
+        final float dstHeight = outsetsTop + height + outsetsBottom;
+        final boolean sameWidth = rect.width == dstWidth;
+        final boolean sameHeight = rect.height == dstHeight;
+        final float dstX1 = -outsetsLeft;
+        final float dstY1 = -outsetsTop;
+        final float dstX2 = width + outsetsRight;
+        final float dstY2 = height + outsetsBottom;
+        final float srcX1 = rect.x;
+        final float srcY1 = rect.y;
+        final float srcX2 = srcX1 + textureWidth;
+        final float srcY2 = srcY1 + textureHeight;
+
+        // If total destination width is < the source width, then we need to start
+        // shrinking the left and right sides to accommodate. Likewise in the other dimension.
+        double adjustedLeftInset = leftInset;
+        double adjustedRightInset = rightInset;
+        double adjustedTopInset = topInset;
+        double adjustedBottomInset = bottomInset;
+        if (leftInset + rightInset > width) {
+            double fraction = width / (leftInset + rightInset);
+            adjustedLeftInset *= fraction;
+            adjustedRightInset *= fraction;
+        }
+        if (topInset + bottomInset > height) {
+            double fraction = height / (topInset + bottomInset);
+            adjustedTopInset *= fraction;
+            adjustedBottomInset *= fraction;
+        }
+
+        if (sameWidth && sameHeight) {
+            g.drawTexture(cached, dstX1, dstY1, dstX2, dstY2, srcX1, srcY1, srcX2, srcY2);
+        } else if (sameHeight) {
+            // We do 3-patch rendering fixed height
+            final float left = (float) (adjustedLeftInset + outsetsLeft);
+            final float right = (float) (adjustedRightInset + outsetsRight);
+
+            final float dstLeftX = dstX1 + left;
+            final float dstRightX = dstX2 - right;
+            final float srcLeftX = srcX1 + left;
+            final float srcRightX = srcX2 - right;
+
+            g.drawTexture3SliceH(cached,
+                                 dstX1, dstY1, dstX2, dstY2,
+                                 srcX1, srcY1, srcX2, srcY2,
+                                 dstLeftX, dstRightX, srcLeftX, srcRightX);
+        } else if (sameWidth) {
+            // We do 3-patch rendering fixed width
+            final float top = (float) (adjustedTopInset + outsetsTop);
+            final float bottom = (float) (adjustedBottomInset + outsetsBottom);
+
+            final float dstTopY = dstY1 + top;
+            final float dstBottomY = dstY2 - bottom;
+            final float srcTopY = srcY1 + top;
+            final float srcBottomY = srcY2 - bottom;
+
+            g.drawTexture3SliceV(cached,
+                                 dstX1, dstY1, dstX2, dstY2,
+                                 srcX1, srcY1, srcX2, srcY2,
+                                 dstTopY, dstBottomY, srcTopY, srcBottomY);
+        } else {
+            // We do 9-patch rendering
+            final float left = (float) (adjustedLeftInset + outsetsLeft);
+            final float top = (float) (adjustedTopInset + outsetsTop);
+            final float right = (float) (adjustedRightInset + outsetsRight);
+            final float bottom = (float) (adjustedBottomInset + outsetsBottom);
+
+            final float dstLeftX = dstX1 + left;
+            final float dstRightX = dstX2 - right;
+            final float srcLeftX = srcX1 + left;
+            final float srcRightX = srcX2 - right;
+            final float dstTopY = dstY1 + top;
+            final float dstBottomY = dstY2 - bottom;
+            final float srcTopY = srcY1 + top;
+            final float srcBottomY = srcY2 - bottom;
+
+            g.drawTexture9Slice(cached,
+                                dstX1, dstY1, dstX2, dstY2,
+                                srcX1, srcY1, srcX2, srcY2,
+                                dstLeftX, dstTopY, dstRightX, dstBottomY,
+                                srcLeftX, srcTopY, srcRightX, srcBottomY);
+        }
+
+        if (PulseLogger.PULSE_LOGGING_ENABLED) {
+            PulseLogger.PULSE_LOGGER.renderIncrementCounter("Cached region background image used");
+        }
+    }
+
+    private void renderBackgroundRectanglesDirectly(Graphics g, float width, float height) {
         final List<BackgroundFill> fills = background.getFills();
         for (int i = 0, max = fills.size(); i < max; i++) {
             final BackgroundFill fill = fills.get(i);
@@ -1286,6 +1010,342 @@ public class NGRegion extends NGGroup {
                 }
             }
         }
+    }
+
+    private void renderBorderRectangle(Graphics g) {
+        final List<BorderStroke> strokes = border.getStrokes();
+        for (int i = 0, max = strokes.size(); i < max; i++) {
+            final BorderStroke stroke = strokes.get(i);
+            final BorderWidths widths = stroke.getWidths();
+            final CornerRadii radii = normalize(stroke.getRadii());
+            final Insets insets = stroke.getInsets();
+
+            final javafx.scene.paint.Paint topStroke = stroke.getTopStroke();
+            final javafx.scene.paint.Paint rightStroke = stroke.getRightStroke();
+            final javafx.scene.paint.Paint bottomStroke = stroke.getBottomStroke();
+            final javafx.scene.paint.Paint leftStroke = stroke.getLeftStroke();
+
+            final float topInset = (float) insets.getTop();
+            final float rightInset = (float) insets.getRight();
+            final float bottomInset = (float) insets.getBottom();
+            final float leftInset = (float) insets.getLeft();
+
+            final float topWidth = (float) (widths.isTopAsPercentage() ? height * widths.getTop() : widths.getTop());
+            final float rightWidth = (float) (widths.isRightAsPercentage() ? width * widths.getRight() : widths.getRight());
+            final float bottomWidth = (float) (widths.isBottomAsPercentage() ? height * widths.getBottom() : widths.getBottom());
+            final float leftWidth = (float) (widths.isLeftAsPercentage() ? width * widths.getLeft() : widths.getLeft());
+
+            final BorderStrokeStyle topStyle = stroke.getTopStyle();
+            final BorderStrokeStyle rightStyle = stroke.getRightStyle();
+            final BorderStrokeStyle bottomStyle = stroke.getBottomStyle();
+            final BorderStrokeStyle leftStyle = stroke.getLeftStyle();
+
+            final StrokeType topType = topStyle.getType();
+            final StrokeType rightType = rightStyle.getType();
+            final StrokeType bottomType = bottomStyle.getType();
+            final StrokeType leftType = leftStyle.getType();
+
+            // The Prism Graphics logic always strokes on the line, it doesn't know about
+            // INSIDE or OUTSIDE or how to handle those. The only way to deal with those is
+            // to compensate for them here. So we will adjust the bounds that we are going
+            // to stroke to take into account the insets (obviously), and also where we
+            // want the stroked line to appear (inside, or outside, or centered).
+            final float t = topInset +
+                    (topType == StrokeType.OUTSIDE ? -topWidth / 2 :
+                     topType == StrokeType.INSIDE ? topWidth / 2 : 0);
+            final float l = leftInset +
+                    (leftType == StrokeType.OUTSIDE ? -leftWidth / 2 :
+                     leftType == StrokeType.INSIDE ? leftWidth / 2 : 0);
+            final float b = bottomInset +
+                    (bottomType == StrokeType.OUTSIDE ? -bottomWidth / 2 :
+                     bottomType == StrokeType.INSIDE ? bottomWidth / 2 : 0);
+            final float r = rightInset +
+                    (rightType == StrokeType.OUTSIDE ? -rightWidth / 2 :
+                     rightType == StrokeType.INSIDE ? rightWidth / 2 : 0);
+
+            // If the radii are uniform, then reading any one value is sufficient to
+            // know what the radius is for all values
+            final float radius = (float) radii.getTopLeftHorizontalRadius();
+            if (stroke.isStrokeUniform()) {
+                // If the stroke is uniform, then that means that the style, width, and stroke of
+                // all four sides is the same.
+                float w = width - l - r;
+                float h = height - t - b;
+                // The length of each side of the path we're going to stroke
+                final double di = 2 * radii.getTopLeftHorizontalRadius();
+                final double circle = di*Math.PI;
+                final double totalLineLength =
+                        circle +
+                        2 * (width - di) +
+                        2 * (height - di);
+
+                if (w >= 0 && h >= 0) {
+                    setBorderStyle(g, stroke, totalLineLength);
+                    if (radii.isUniform() && radius == 0) {
+                        // We're just drawing a squared stroke on all four sides of the same style
+                        // and width and color, so a simple drawRect call is all that is needed.
+                        g.drawRect(l, t, w, h);
+                    } else if (radii.isUniform()) {
+                        // The radii are uniform, but are not squared up, so we have to
+                        // draw a rounded rectangle.
+                        float ar = radius + radius;
+                        if (ar > w) ar = w;
+                        if (ar > h) ar = h;
+                        g.drawRoundRect(l, t, w, h, ar, ar);
+                    } else {
+                        // We do not have uniform radii, so we need to create a path that represents
+                        // the stroke and then draw that.
+                        g.draw(createPath(width, height, t, l, b, r, radii));
+                    }
+                }
+            } else if (radii.isUniform() && radius == 0) {
+                // The length of each side of the path we're going to stroke
+                final double totalLineLength = 2 * width + 2 * height;
+
+                // We have different styles, or widths, or strokes on one or more sides, and
+                // therefore we have to draw each side independently. However, the corner radii
+                // are all 0, so we don't have to go to the trouble of constructing some complicated
+                // path to represent the border, we just draw each line independently.
+                // Note that in each of these checks, if the stroke is identity equal to the TRANSPARENT
+                // Color or the style is identity equal to BorderStrokeStyle.NONE, then we skip that
+                // side. It is possible however to have a Color as the stroke which is effectively
+                // TRANSPARENT and a style that is effectively NONE, but we are not checking for those
+                // cases and will in those cases be doing more work than necessary.
+                // TODO make sure CSS uses TRANSPARENT and NONE when possible (RT-26943)
+                if (!(topStroke instanceof Color && ((Color)topStroke).getOpacity() == 0f) && topStyle != BorderStrokeStyle.NONE) {
+                    g.setPaint(getPlatformPaint(topStroke));
+                    if (BorderStrokeStyle.SOLID == topStyle) {
+                        g.fillRect(leftInset, topInset, width - leftInset - rightInset, topWidth);
+                    } else {
+                        g.setStroke(createStroke(topStyle, topWidth, totalLineLength));
+                        g.drawLine(l, t, width - r, t);
+                    }
+                }
+
+                if (!(rightStroke instanceof Color && ((Color)rightStroke).getOpacity() == 0f) && rightStyle != BorderStrokeStyle.NONE) {
+                    g.setPaint(getPlatformPaint(rightStroke));
+                    if (BorderStrokeStyle.SOLID == rightStyle) {
+                        g.fillRect(width - rightInset - rightWidth, topInset,
+                                   rightWidth, height - topInset - bottomInset);
+                    } else {
+                        g.setStroke(createStroke(rightStyle, rightWidth, totalLineLength));
+                        g.drawLine(width - r, topInset, width - r, height - bottomInset);
+                    }
+                }
+
+                if (!(bottomStroke instanceof Color && ((Color)bottomStroke).getOpacity() == 0f) && bottomStyle != BorderStrokeStyle.NONE) {
+                    g.setPaint(getPlatformPaint(bottomStroke));
+                    if (BorderStrokeStyle.SOLID == bottomStyle) {
+                        g.fillRect(leftInset, height - bottomInset - bottomWidth,
+                                width - leftInset - rightInset, bottomWidth);
+                    } else {
+                        g.setStroke(createStroke(bottomStyle, bottomWidth, totalLineLength));
+                        g.drawLine(l, height - b, width - r, height - b);
+                    }
+                }
+
+                if (!(leftStroke instanceof Color && ((Color)leftStroke).getOpacity() == 0f) && leftStyle != BorderStrokeStyle.NONE) {
+                    g.setPaint(getPlatformPaint(leftStroke));
+                    if (BorderStrokeStyle.SOLID == leftStyle) {
+                        g.fillRect(leftInset, topInset, leftWidth, height - topInset - bottomInset);
+                    } else {
+                        g.setStroke(createStroke(leftStyle, leftWidth, totalLineLength));
+                        g.drawLine(l, topInset, l, height - bottomInset);
+                    }
+                }
+            } else {
+                // In this case, we have different styles and/or strokes and/or widths on one or
+                // more sides, and either the radii are not uniform, or they are uniform but greater
+                // than 0. In this case we have to take a much slower rendering path by turning this
+                // stroke into a path (or in the current implementation, an array of paths).
+                Shape[] paths = createPaths(t, l, b, r, radii);
+                // TODO This is incorrect for an ellipse (RT-26942)
+                final double totalLineLength =
+                        // TOP
+                        (width - radii.getTopLeftHorizontalRadius() - radii.getTopRightHorizontalRadius()) +
+                        (Math.PI * radii.getTopLeftHorizontalRadius() / 4) +
+                        (Math.PI * radii.getTopRightHorizontalRadius() / 4) +
+                        // RIGHT
+                        (height - radii.getTopRightVerticalRadius() - radii.getBottomRightVerticalRadius()) +
+                        (Math.PI * radii.getTopRightVerticalRadius() / 4) +
+                        (Math.PI * radii.getBottomRightVerticalRadius() / 4) +
+                        // BOTTOM
+                        (width - radii.getBottomLeftHorizontalRadius() - radii.getBottomRightHorizontalRadius()) +
+                        (Math.PI * radii.getBottomLeftHorizontalRadius() / 4) +
+                        (Math.PI * radii.getBottomRightHorizontalRadius() / 4) +
+                        // LEFT
+                        (height - radii.getTopLeftVerticalRadius() - radii.getBottomLeftVerticalRadius()) +
+                        (Math.PI * radii.getTopLeftVerticalRadius() / 4) +
+                        (Math.PI * radii.getBottomLeftVerticalRadius() / 4);
+
+                if (topStyle != BorderStrokeStyle.NONE) {
+                    g.setStroke(createStroke(topStyle, topWidth, totalLineLength));
+                    g.setPaint(getPlatformPaint(topStroke));
+                    g.draw(paths[0]);
+                }
+                if (rightStyle != BorderStrokeStyle.NONE) {
+                    g.setStroke(createStroke(rightStyle, rightWidth, totalLineLength));
+                    g.setPaint(getPlatformPaint(rightStroke));
+                    g.draw(paths[1]);
+                }
+                if (bottomStyle != BorderStrokeStyle.NONE) {
+                    g.setStroke(createStroke(bottomStyle, bottomWidth, totalLineLength));
+                    g.setPaint(getPlatformPaint(bottomStroke));
+                    g.draw(paths[2]);
+                }
+                if (leftStyle != BorderStrokeStyle.NONE) {
+                    g.setStroke(createStroke(leftStyle, leftWidth, totalLineLength));
+                    g.setPaint(getPlatformPaint(leftStroke));
+                    g.draw(paths[3]);
+                }
+            }
+        }
+
+        final List<BorderImage> images = border.getImages();
+        for (int i = 0, max = images.size(); i < max; i++) {
+            final BorderImage ib = images.get(i);
+            final Image img = (Image) ib.getImage().impl_getPlatformImage();
+            final int imgWidth = img.getWidth();
+            final int imgHeight = img.getHeight();
+            if (img != null) {
+                final BorderWidths widths = ib.getWidths();
+                final Insets insets = ib.getInsets();
+                final BorderWidths slices = ib.getSlices();
+
+                // we will get gaps if we don't round to pixel boundaries
+                final int topInset = (int) Math.round(insets.getTop());
+                final int rightInset = (int) Math.round(insets.getRight());
+                final int bottomInset = (int) Math.round(insets.getBottom());
+                final int leftInset = (int) Math.round(insets.getLeft());
+
+                final int topWidth = (int) Math.round(
+                        widths.isTopAsPercentage() ? height * widths.getTop() : widths.getTop());
+                final int rightWidth = (int) Math.round(
+                        widths.isRightAsPercentage() ? width * widths.getRight() : widths.getRight());
+                final int bottomWidth = (int) Math.round(
+                        widths.isBottomAsPercentage() ? height * widths.getBottom() : widths.getBottom());
+                final int leftWidth = (int) Math.round(
+                        widths.isLeftAsPercentage() ? width * widths.getLeft() : widths.getLeft());
+
+                final int topSlice = (int) Math.round((
+                        slices.isTopAsPercentage() ? height * slices.getTop() : slices.getTop()) * img.getPixelScale());
+                final int rightSlice = (int) Math.round((
+                        slices.isRightAsPercentage() ? width * slices.getRight() : slices.getRight()) * img.getPixelScale());
+                final int bottomSlice = (int) Math.round((
+                        slices.isBottomAsPercentage() ? height * slices.getBottom() : slices.getBottom()) * img.getPixelScale());
+                final int leftSlice = (int) Math.round((
+                        slices.isLeftAsPercentage() ? width * slices.getLeft() : slices.getLeft()) * img.getPixelScale());
+
+                // handle case where region is too small to fit in borders
+                if ((leftInset + leftWidth + rightInset + rightWidth) > width
+                        || (topInset + topWidth + bottomInset + bottomWidth) > height) {
+                    continue;
+                }
+
+                // calculate some things we can share
+                final int centerMinX = leftInset + leftWidth;
+                final int centerMinY = topInset + topWidth;
+                final int centerW = Math.round(width) - rightInset - rightWidth - centerMinX;
+                final int centerH = Math.round(height) - bottomInset - bottomWidth - centerMinY;
+                final int centerMaxX = centerW + centerMinX;
+                final int centerMaxY = centerH + centerMinY;
+                final int centerSliceWidth = imgWidth - leftSlice - rightSlice;
+                final int centerSliceHeight = imgHeight - topSlice - bottomSlice;
+                // paint top left corner
+                paintTiles(g, img, BorderRepeat.STRETCH, BorderRepeat.STRETCH, Side.LEFT, Side.TOP,
+                           leftInset, topInset, leftWidth, topWidth, // target bounds
+                           0, 0, leftSlice, topSlice, // src image bounds
+                           0, 0, leftWidth, topWidth); // tile bounds
+                // paint top slice
+                float tileWidth = (ib.getRepeatX() == BorderRepeat.STRETCH) ?
+                        centerW : (topSlice > 0 ? (centerSliceWidth * topWidth) / topSlice : 0);
+                float tileHeight = topWidth;
+                paintTiles(
+                        g, img, ib.getRepeatX(), BorderRepeat.STRETCH, Side.LEFT, Side.TOP,
+                        centerMinX, topInset, centerW, topWidth,
+                        leftSlice, 0, centerSliceWidth, topSlice,
+                        (centerW - tileWidth) / 2, 0, tileWidth, tileHeight);
+                // paint top right corner
+                paintTiles(g, img, BorderRepeat.STRETCH, BorderRepeat.STRETCH, Side.LEFT, Side.TOP,
+                           centerMaxX, topInset, rightWidth, topWidth,
+                           (imgWidth - rightSlice), 0, rightSlice, topSlice,
+                           0, 0, rightWidth, topWidth);
+                // paint left slice
+                tileWidth = leftWidth;
+                tileHeight = (ib.getRepeatY() == BorderRepeat.STRETCH) ?
+                        centerH : (leftSlice > 0 ? (leftWidth * centerSliceHeight) / leftSlice : 0);
+                paintTiles(g, img, BorderRepeat.STRETCH, ib.getRepeatY(), Side.LEFT, Side.TOP,
+                           leftInset, centerMinY, leftWidth, centerH,
+                           0, topSlice, leftSlice, centerSliceHeight,
+                           0, (centerH - tileHeight) / 2, tileWidth, tileHeight);
+                // paint right slice
+                tileWidth = rightWidth;
+                tileHeight = (ib.getRepeatY() == BorderRepeat.STRETCH) ?
+                        centerH : (rightSlice > 0 ? (rightWidth * centerSliceHeight) / rightSlice : 0);
+                paintTiles(g, img, BorderRepeat.STRETCH, ib.getRepeatY(), Side.LEFT, Side.TOP,
+                           centerMaxX, centerMinY, rightWidth, centerH,
+                           imgWidth - rightSlice, topSlice, rightSlice, centerSliceHeight,
+                           0, (centerH - tileHeight) / 2, tileWidth, tileHeight);
+                // paint bottom left corner
+                paintTiles(g, img, BorderRepeat.STRETCH, BorderRepeat.STRETCH, Side.LEFT, Side.TOP,
+                           leftInset, centerMaxY, leftWidth, bottomWidth,
+                           0, imgHeight - bottomSlice, leftSlice, bottomSlice,
+                           0, 0, leftWidth, bottomWidth);
+                // paint bottom slice
+                tileWidth = (ib.getRepeatX() == BorderRepeat.STRETCH) ?
+                        centerW : (bottomSlice > 0 ? (centerSliceWidth * bottomWidth) / bottomSlice : 0);
+                tileHeight = bottomWidth;
+                paintTiles(g, img, ib.getRepeatX(), BorderRepeat.STRETCH, Side.LEFT, Side.TOP,
+                           centerMinX, centerMaxY, centerW, bottomWidth,
+                           leftSlice, imgHeight - bottomSlice, centerSliceWidth, bottomSlice,
+                           (centerW - tileWidth) / 2, 0, tileWidth, tileHeight);
+                // paint bottom right corner
+                paintTiles(g, img, BorderRepeat.STRETCH, BorderRepeat.STRETCH, Side.LEFT, Side.TOP,
+                           centerMaxX, centerMaxY, rightWidth, bottomWidth,
+                           imgWidth - rightSlice, imgHeight - bottomSlice, rightSlice, bottomSlice,
+                           0, 0, rightWidth, bottomWidth);
+                // paint the center slice
+                if (ib.isFilled()) {
+                    // we will get gaps if we don't round to pixel boundaries
+                    final int areaX = leftInset + leftWidth;
+                    final int areaY = topInset + topWidth;
+                    final int areaW = Math.round(width) - rightInset - rightWidth - areaX;
+                    final int areaH = Math.round(height) - bottomInset - bottomWidth - areaY;
+                    // handle no repeat as stretch
+                    final float imgW = (ib.getRepeatX() == BorderRepeat.STRETCH) ? centerW : centerSliceWidth;
+                    final float imgH = (ib.getRepeatY() == BorderRepeat.STRETCH) ? centerH : centerSliceHeight;
+                    paintTiles(g, img, ib.getRepeatX(), ib.getRepeatY(), Side.LEFT, Side.TOP,
+                               areaX, areaY, areaW, areaH,
+                               leftSlice, topSlice, centerSliceWidth, centerSliceHeight,
+                               0, 0, imgW, imgH);
+                }
+            }
+        }
+    }
+
+    /**
+     * Visits each of the background fills and takes their raddi into account to determine the insets.
+     * The backgroundInsets variable is cleared whenever the fills change, or whenever the size of the
+     * region has changed (because if the size of the region changed and a radius is percentage based
+     * then we need to recompute the insets).
+     */
+    private void updateBackgroundInsets() {
+        float top=0, right=0, bottom=0, left=0;
+        final List<BackgroundFill> fills = background.getFills();
+        for (int i=0, max=fills.size(); i<max; i++) {
+            // We need to now inspect the paint to determine whether we can use a cache for this background.
+            // If a shape is being used, we don't care about gradients (we cache 'em both), but for a rectangle
+            // fill we omit these (so we can do 3-patch scaling). An ImagePattern is deadly to either
+            // (well, only deadly to a shape if it turns out to be a writable image).
+            final BackgroundFill fill = fills.get(i);
+            final Insets insets = fill.getInsets();
+            final CornerRadii radii = normalize(fill.getRadii());
+            top = (float) Math.max(top, insets.getTop() + Math.max(radii.getTopLeftVerticalRadius(), radii.getTopRightVerticalRadius()));
+            right = (float) Math.max(right, insets.getRight() + Math.max(radii.getTopRightHorizontalRadius(), radii.getBottomRightHorizontalRadius()));
+            bottom = (float) Math.max(bottom, insets.getBottom() + Math.max(radii.getBottomRightVerticalRadius(), radii.getBottomLeftVerticalRadius()));
+            left = (float) Math.max(left, insets.getLeft() + Math.max(radii.getTopLeftHorizontalRadius(), radii.getBottomLeftHorizontalRadius()));
+        }
+        backgroundInsets = new Insets(roundUp(top), roundUp(right), roundUp(bottom), roundUp(left));
     }
 
     private int roundUp(double d) {
@@ -1489,7 +1549,10 @@ public class NGRegion extends NGGroup {
         }
     }
 
-    /** Creates a rounded rectangle path with our width and height, different corner radii, offset with given offsets */
+    /**
+     * Creates a rounded rectangle path with our width and height, different corner radii,
+     * offset with given offsets
+     */
     private Path2D createPath(float width, float height, float t, float l, float bo, float ro, CornerRadii radii) {
         float r = width - ro;
         float b = height - bo;
