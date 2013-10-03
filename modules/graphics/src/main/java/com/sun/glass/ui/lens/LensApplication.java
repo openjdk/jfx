@@ -842,6 +842,10 @@ final class LensApplication extends Application {
     }
 
     private Object _runLoop() {
+        if (!_initialize()) {
+            LensLogger.getLogger().severe("Display failed initialization");
+            throw new RuntimeException("Display failed initialization");
+        }
         final RunLoopControl control = new RunLoopControl();
 
         //push this new instance on the stack
@@ -921,12 +925,6 @@ final class LensApplication extends Application {
 
     @Override
     protected void runLoop(Runnable launchable) {
-
-        if (!_initialize()) {
-            LensLogger.getLogger().severe("Display failed initialization");
-            throw new RuntimeException("Display failed initialization");
-        }
-
         _invokeLater(launchable);
         Thread toolkitThread = new Thread(
         new Runnable() {
