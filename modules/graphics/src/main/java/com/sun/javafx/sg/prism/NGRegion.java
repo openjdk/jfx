@@ -269,6 +269,13 @@ public class NGRegion extends NGGroup {
      * @param b    Background, of type javafx.scene.layout.Background. Can be null.
      */
     public void updateBackground(Background b) {
+        // NOTE: We don't explicitly invalidate the opaque region in this method, because the
+        // Region will always call setOpaqueInsets whenever the background is changed, and
+        // setOpaqueInsets always invalidates the opaque region. So we don't have to do it
+        // again here. This wasn't immediately obvious and it might be better to combine
+        // the updateBackground and setOpaqueInsets methods into one call, so that we
+        // can more easily ensure that the opaque region is updated correctly.
+
         // Make sure that the background instance we store on this NGRegion is never null
         final Background old = background;
         background = b == null ? Background.EMPTY : b;

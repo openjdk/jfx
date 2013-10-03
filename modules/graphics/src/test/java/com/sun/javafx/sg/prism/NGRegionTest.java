@@ -28,8 +28,8 @@ package com.sun.javafx.sg.prism;
 import javafx.geometry.Insets;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
+import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
-import org.junit.Ignore;
 import org.junit.Test;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -61,43 +61,57 @@ public class NGRegionTest {
         assertTrue(r.isOpaqueRegionInvalid());
     }
 
-    @Ignore ("This test fails because of a bug that needs to be filed")
+    // Note: These tests are using a Region and doing a sync because it was found that
+    // doing the check directly on the updateBackground method itself gave incorrect
+    // results, but doing so via Region's sync worked correctly (because every time a
+    // background is changed on the Region, setOpaqueInsets is called which invalidates
+    // the opaque region).
+
     @Test public void updateBackgroundWithSameSizeButTransparentFillInvalidatesOpaqueInsets() {
-        NGRegion r = new NGRegion();
-        r.updateBackground(new Background(new BackgroundFill(Color.RED, null, null)));
-        r.getOpaqueRegion(); // Forces to validate the opaque region
-        assertFalse(r.isOpaqueRegionInvalid()); // sanity check
-        r.updateBackground(new Background(new BackgroundFill(Color.TRANSPARENT, null, null)));
-        assertTrue(r.isOpaqueRegionInvalid());
+        Region r = new Region();
+        NGRegion peer = r.impl_getPeer();
+        r.setBackground(new Background(new BackgroundFill(Color.RED, null, null)));
+        r.impl_updatePeer();
+        peer.getOpaqueRegion(); // Forces to validate the opaque region
+        assertFalse(peer.isOpaqueRegionInvalid()); // sanity check
+        r.setBackground(new Background(new BackgroundFill(Color.TRANSPARENT, null, null)));
+        r.impl_updatePeer();
+        assertTrue(peer.isOpaqueRegionInvalid());
     }
 
-    @Ignore ("A real bug here. First because it was RED and is now TRANSPARENT, and second because " +
-            "we have insets now, which should have impacted rendering and affected the opaque insets, right?")
     @Test public void updateBackgroundWithDifferentSizeBackgroundInvalidatesOpaqueInsets() {
-        NGRegion r = new NGRegion();
-        r.updateBackground(new Background(new BackgroundFill(Color.RED, null, null)));
-        r.getOpaqueRegion(); // Forces to validate the opaque region
-        assertFalse(r.isOpaqueRegionInvalid()); // sanity check
-        r.updateBackground(new Background(new BackgroundFill(Color.TRANSPARENT, null, new Insets(10))));
-        assertTrue(r.isOpaqueRegionInvalid());
+        Region r = new Region();
+        NGRegion peer = r.impl_getPeer();
+        r.setBackground(new Background(new BackgroundFill(Color.RED, null, null)));
+        r.impl_updatePeer();
+        peer.getOpaqueRegion(); // Forces to validate the opaque region
+        assertFalse(peer.isOpaqueRegionInvalid()); // sanity check
+        r.setBackground(new Background(new BackgroundFill(Color.TRANSPARENT, null, new Insets(10))));
+        r.impl_updatePeer();
+        assertTrue(peer.isOpaqueRegionInvalid());
     }
 
-    @Ignore ("A real bug here. We have insets now, which should have impacted rendering and affected the opaque insets, right?")
     @Test public void updateBackgroundWithDifferentSizeBackgroundInvalidatesOpaqueInsets2() {
-        NGRegion r = new NGRegion();
-        r.updateBackground(new Background(new BackgroundFill(Color.RED, null, null)));
-        r.getOpaqueRegion(); // Forces to validate the opaque region
-        assertFalse(r.isOpaqueRegionInvalid()); // sanity check
-        r.updateBackground(new Background(new BackgroundFill(Color.RED, null, new Insets(10))));
-        assertTrue(r.isOpaqueRegionInvalid());
+        Region r = new Region();
+        NGRegion peer = r.impl_getPeer();
+        r.setBackground(new Background(new BackgroundFill(Color.RED, null, null)));
+        r.impl_updatePeer();
+        peer.getOpaqueRegion(); // Forces to validate the opaque region
+        assertFalse(peer.isOpaqueRegionInvalid()); // sanity check
+        r.setBackground(new Background(new BackgroundFill(Color.RED, null, new Insets(10))));
+        r.impl_updatePeer();
+        assertTrue(peer.isOpaqueRegionInvalid());
     }
 
     @Test public void updateBackgroundWithDifferentSizeBackgroundInvalidatesOpaqueInsets3() {
-        NGRegion r = new NGRegion();
-        r.updateBackground(new Background(new BackgroundFill(Color.RED, null, null)));
-        r.getOpaqueRegion(); // Forces to validate the opaque region
-        assertFalse(r.isOpaqueRegionInvalid()); // sanity check
-        r.updateBackground(new Background(new BackgroundFill(Color.RED, null, new Insets(-10))));
-        assertTrue(r.isOpaqueRegionInvalid());
+        Region r = new Region();
+        NGRegion peer = r.impl_getPeer();
+        r.setBackground(new Background(new BackgroundFill(Color.RED, null, null)));
+        r.impl_updatePeer();
+        peer.getOpaqueRegion(); // Forces to validate the opaque region
+        assertFalse(peer.isOpaqueRegionInvalid()); // sanity check
+        r.setBackground(new Background(new BackgroundFill(Color.RED, null, new Insets(-10))));
+        r.impl_updatePeer();
+        assertTrue(peer.isOpaqueRegionInvalid());
     }
 }
