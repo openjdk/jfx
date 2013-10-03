@@ -75,7 +75,7 @@ public class PhongMaterial extends Material {
     }
 
     /**
-     * Specifies the diffuse color of this Material.
+     * The diffuse color of this {@code PhongMaterial}.
      *
      * @defaultValue Color.WHITE
      */
@@ -104,7 +104,7 @@ public class PhongMaterial extends Material {
     }
     
     /**
-     * Specifies the specular color of this Material.
+     * The specular color of this {@code PhongMaterial}.
      *
      * @defaultValue null
      */
@@ -133,7 +133,7 @@ public class PhongMaterial extends Material {
     }
 
     /**
-     * Defines the specular power of this Material.
+     * The specular power of this {@code PhongMaterial}.
      *
      * @defaultValue 1.0
      */
@@ -182,7 +182,7 @@ public class PhongMaterial extends Material {
     };
 
     /**
-     * The diffuse map of this {@code PhongMaterial).
+     * The diffuse map of this {@code PhongMaterial}.
      *
      * @defaultValue null
      */
@@ -231,7 +231,7 @@ public class PhongMaterial extends Material {
     }
 
     /**
-     * The specular map of this {@code PhongMaterial).
+     * The specular map of this {@code PhongMaterial}.
      *
      * @defaultValue null
      */
@@ -281,7 +281,8 @@ public class PhongMaterial extends Material {
     }
 
     /**
-     * The bump map of this {@code PhongMaterial).
+     * The bump map of this {@code PhongMaterial}, which is a normal map stored
+     * as a RGB {@link Image}.
      *
      * @defaultValue null
      */
@@ -331,7 +332,7 @@ public class PhongMaterial extends Material {
     }
 
     /**
-     * The self illumination map of this {@code PhongMaterial).
+     * The self illumination map of this {@code PhongMaterial}.
      *
      * @defaultValue null
      */
