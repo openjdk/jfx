@@ -248,7 +248,9 @@ class ExportedJavaObject {
         }
 
         try {
-            return getJSBridge().encode(resObj);
+            StringBuilder sb = new StringBuilder(1024);
+            getJSBridge().encode(resObj, sb);
+            return sb.toString();
         } catch (Exception ex) {
             throw new CallException("Result encoding error", ex);
         }
