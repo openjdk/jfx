@@ -1292,7 +1292,7 @@ JNIEXPORT jint JNICALL OS_NATIVE(JFXTextRendererGetGlyphOffsets)
 }
 
 JNIEXPORT jint JNICALL OS_NATIVE(JFXTextRendererGetClusterMap)
-(JNIEnv *env, jclass that, jlong arg0, jshortArray arg1, jint start) {
+(JNIEnv *env, jclass that, jlong arg0, jshortArray arg1, jint start, jint glyphStart) {
     if (!arg1) return 0;
     jshort* data = env->GetShortArrayElements(arg1, NULL);
     if (!data) return 0;
@@ -1309,7 +1309,7 @@ JNIEXPORT jint JNICALL OS_NATIVE(JFXTextRendererGetClusterMap)
      * by DirectWrite has it relative to the DWRITE_GLYPH_RUN.
      */
     for (i = 0; i < copiedCount; i++) {
-        data[i + start] = map[i] + (jshort)start;
+        data[i + start] = map[i] + (jshort)glyphStart;
     }
     env->ReleaseShortArrayElements(arg1, data, NULL);
     return copiedCount;

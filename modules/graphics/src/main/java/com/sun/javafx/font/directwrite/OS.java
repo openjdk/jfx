@@ -218,7 +218,7 @@ class OS {
     static final native int JFXTextRendererGetGlyphIndices(long ptr, int[] glyphs, int start, int slot);
     static final native int JFXTextRendererGetGlyphAdvances(long ptr, float[] advances, int start);
     static final native int JFXTextRendererGetGlyphOffsets(long ptr, float[] offsets, int start);
-    static final native int JFXTextRendererGetClusterMap(long ptr, short[] clusterMap, int start);
+    static final native int JFXTextRendererGetClusterMap(long ptr, short[] clusterMap, int textStart, int glyphStart);
 
     //IDWriteFontFace
     static final native DWRITE_GLYPH_METRICS GetDesignGlyphMetrics(long ptr, short glyphIndex, boolean isSideways);

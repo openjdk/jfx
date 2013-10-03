@@ -380,7 +380,7 @@ public class DWGlyphLayout extends GlyphLayout {
                         /* Keep advances to zero if font size is zero */
                         renderer.GetGlyphAdvances(advances, glyphStart);
                     }
-                    renderer.GetClusterMap(clusterMap, textStart);
+                    renderer.GetClusterMap(clusterMap, textStart, glyphStart);
                     glyphStart += renderer.GetGlyphCount();
                     textStart += renderer.GetLength();
                 }
