@@ -1119,6 +1119,8 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
             }
             fm.focus(newFocusIndex, col);
         }
+
+        if (onFocusPreviousRow != null) onFocusPreviousRow.run();
     }
     
     protected void discontinuousSelectNextRow() {
@@ -1152,6 +1154,8 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
             }
             fm.focus(newFocusIndex, col);
         }
+
+        if (onFocusNextRow != null) onFocusNextRow.run();
     }
     
     protected void discontinuousSelectPreviousColumn() {

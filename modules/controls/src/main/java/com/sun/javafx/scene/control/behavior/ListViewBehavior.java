@@ -769,6 +769,8 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
 
         sm.selectRange(newFocusIndex, startIndex + 1);
         fm.focus(newFocusIndex);
+
+        if (onFocusPreviousRow != null) onFocusPreviousRow.run();
     }
     
     private void discontinuousSelectNextRow() {
@@ -794,6 +796,8 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
 
         sm.selectRange(startIndex, newFocusIndex + 1);
         fm.focus(newFocusIndex);
+
+        if (onFocusNextRow != null) onFocusNextRow.run();
     }
     
     private void discontinuousSelectPageUp() {
