@@ -552,7 +552,24 @@ myText = This is the text!
 
 <p>As the user types in the text input, the label's text content will be automatically updated.</p>
 
-<p>Only simple expressions that resolve to property values or page variables are currently supported. Support for more complex expressions involving boolean or other operators may be added in the future.</p>
+<p>More complex expression are also supported. A list of supported constants and operators follows:</p>
+
+<table>
+ <tr><td>"string"<br />'string'</td><td>A string constant</td></tr>
+ <tr><td>true<br />false</td><td>A boolean constant</td></tr>
+ <tr><td>null</td><td>A constant representing the null value</td></tr>
+ <tr><td>50.0<br />3e5<br />42</td><td>A numerical constant</td></tr>
+ <tr><td>- <br/>(unary operator)</td><td>Unary minus operator, applied on a number</td>
+ <tr><td>! <br/>(unary operator)</td><td>Unary negation of a boolean</td></tr>
+ <tr><td>+ - <br />
+ 			* /
+ 			%</td> <td>Numerical binary operators</td></tr>
+ <tr><td>&& ||</td><td>Boolean binary operators</td></tr>
+ <tr><td>&gt; &gt;= <br />
+ 		   &lt; &lt;= <br />
+ 		   == !=</td>
+ 		   <td>Binary operators of comparison.<br/> Both arguments must be of type Comparable</td></tr>
+</table>
 
 <h3><a name="static_property_attributes">Static Properties</a></h3>
 <p><assert id="static_property_attributes" group="attributes">Attributes representing static properties are handled similarly to static property elements and use a similar syntax.</assert> For example, the earlier <span class="code">GridPane</span> markup shown earlier to demonstrate static property elements could be rewritten as follows:</p>

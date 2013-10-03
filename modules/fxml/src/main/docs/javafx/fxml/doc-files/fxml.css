@@ -67,6 +67,24 @@ pre.code {
     padding:12;
 }
 
+table {
+	font-size: 10pt;
+	font-family: Courier New;
+	background: #eeeeee;
+	border: #ccc 1px solid;
+	margin: 12px;
+}
+
+table td {
+	padding: 3px;
+	border-top: 1px solid #e0e0e0;
+	border-bottom: 1px solid #e0e0e0;
+	border-left: 1px solid #e0e0e0;
+	border-right: 1px solid #e0e0e0;
+   background: #dddddd;
+
+}
+
 span.variable {
     font-style: italic;
 }
