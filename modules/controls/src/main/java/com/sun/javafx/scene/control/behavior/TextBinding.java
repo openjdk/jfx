@@ -29,6 +29,8 @@ import java.util.Locale;
 import java.util.StringTokenizer;
 
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.KeyCombination;
 
 /**
  * <p>
@@ -104,19 +106,35 @@ public class TextBinding {
     }
 
     /**
-     * The mnemonic or {@link KeyCode#UNDEFINED} if there is no mnemonic.
+     * The mnemonic or {@code null} if there is no mnemonic.
      */
-    private KeyCode mnemonic = KeyCode.UNDEFINED;
+    private String mnemonic = null;
+    private KeyCombination mnemonicKeyCombination = null;
 
     /**
-     * Returns the mnemonic or {@link KeyCode#UNDEFINED} if there is no
+     * Returns the mnemonic or {@code null} if there is no
      * mnemonic.
      * 
-     * @return the mnemonic or {@link KeyCode#UNDEFINED} if there is no
+     * @return the mnemonic or {@code null} if there is no
      *         mnemonic
      */
-    public KeyCode getMnemonic() {
+    public String getMnemonic() {
         return mnemonic;
+    }
+
+
+    /**
+     * Returns the mnemonic KeyCombination or {@code null} if there is no
+     * mnemonic.
+     * 
+     * @return the mnemonic KeyCombination or {@code null} if there is no
+     *         mnemonic
+     */
+    public KeyCombination getMnemonicKeyCombination() {
+        if (mnemonic != null && mnemonicKeyCombination == null) {
+            mnemonicKeyCombination = new MnemonicKeyCombination(mnemonic);
+        }
+        return mnemonicKeyCombination;
     }
 
     /**
@@ -281,8 +299,7 @@ public class TextBinding {
                 temp.delete(index, index + 1); // delete the extra MNEMONIC_SYMBOL
             } else if (temp.charAt(index + 1) != '('
                        || index == temp.length() - 2) {
-                String mnemonicChar = temp.substring(index + 1, index + 2);
-                mnemonic = KeyCode.getKeyCode(mnemonicChar.toUpperCase());
+                mnemonic = temp.substring(index + 1, index + 2);
                 if (mnemonic != null) {
                     mnemonicIndex = index;
                 }
@@ -291,16 +308,14 @@ public class TextBinding {
             } else {
                 int endIndex = temp.indexOf(")", index + 3);
                 if (endIndex == -1) { // "(" is actually the mnemonic
-                    String mnemonicChar = temp.substring(index + 1, index + 2);
-                    mnemonic = KeyCode.getKeyCode(mnemonicChar.toUpperCase());
+                    mnemonic = temp.substring(index + 1, index + 2);
                     if (mnemonic != null) {
                         mnemonicIndex = index;
                     }
                     temp.delete(index, index + 1);
                     break;
                 } else if (endIndex == index + 3) {
-                    String mnemonicChar = temp.substring(index + 2, index + 3);
-                    mnemonic = KeyCode.getKeyCode(mnemonicChar.toUpperCase());
+                    mnemonic = temp.substring(index + 2, index + 3);
                     extendedMnemonicText = temp.substring(index + 1, index + 4);
                     temp.delete(index, endIndex + 3);
                     break;
@@ -391,5 +406,108 @@ public class TextBinding {
             + ", extendedMnemonicText=" + getExtendedMnemonicText()
             + ", accelerator=" + getAccelerator() + ", acceleratorText="
             + getAcceleratorText() + "]";
+    }
+
+    /**
+     * A modified version of KeyCharacterCombination, which matches
+     * on the text property of a KeyEvent instead of on the KeyCode.
+     */
+    public static class MnemonicKeyCombination extends KeyCombination {
+        private String character = "";
+
+        /**
+         * Constructs a {@code MnemonicKeyCombination} for the specified main key
+         * character.
+         *
+         * @param character the main key character
+         */
+        public MnemonicKeyCombination(String character) {
+            super(com.sun.javafx.PlatformUtil.isMac()
+                                  ? KeyCombination.META_DOWN
+                                  : KeyCombination.ALT_DOWN);
+            this.character = character;
+        }
+
+        /** 
+         * Gets the key character associated with this key combination. 
+         * @return The key character associated with this key combination
+         */
+        public final String getCharacter() {
+            return character;
+        }
+
+        /**
+         * Tests whether this key combination matches the key combination in the
+         * given {@code KeyEvent}.
+         *
+         * @param event the key event
+         * @return {@code true} if the key combinations match, {@code false}
+         *      otherwise
+         */
+        @Override public boolean match(final KeyEvent event) {
+            String text = event.getText();
+            return (text != null
+                    && !text.isEmpty()
+                    && text.equalsIgnoreCase(getCharacter())
+                    && super.match(event));
+        }
+
+        /**
+         * Returns a string representation of this {@code MnemonicKeyCombination}.
+         * <p>
+         * The string representation consists of sections separated by plus
+         * characters. Each section specifies either a modifier key or the main key.
+         * <p>
+         * A modifier key section contains the {@code KeyCode} name of a modifier
+         * key. It can be prefixed with the {@code Ignored} keyword. A non-prefixed
+         * modifier key implies its {@code PRESSED} value while the prefixed version
+         * implies the {@code IGNORED} value. If some modifier key is not specified
+         * in the string at all, it means it has the default {@code RELEASED} value.
+         * <p>
+         * The main key section contains the main key character enclosed in single
+         * quotes and is the last section in the returned string.
+         *
+         * @return the string representation of this {@code MnemonicKeyCombination}
+         */
+        @Override public String getName() {
+            StringBuilder sb = new StringBuilder();
+
+            sb.append(super.getName());
+            if (sb.length() > 0) {
+                sb.append("+");
+            }
+
+            return sb.append('\'').append(character.replace("'", "\\'"))
+                    .append('\'').toString();
+        }
+
+        /**
+         * Tests whether this {@code MnemonicKeyCombination} equals to the
+         * specified object.
+         *
+         * @param obj the object to compare to
+         * @return {@code true} if the objects are equal, {@code false} otherwise
+         */
+        @Override public boolean equals(final Object obj) {
+            if (this == obj) {
+                return true;
+            }
+
+            if (!(obj instanceof MnemonicKeyCombination)) {
+                return false;
+            }
+
+            return (this.character.equals(((MnemonicKeyCombination)obj).getCharacter())
+                    && super.equals(obj));
+        }
+
+        /**
+         * Returns a hash code value for this {@code MnemonicKeyCombination}.
+         *
+         * @return the hash code value
+         */
+        @Override public int hashCode() {
+            return 23 * super.hashCode() + character.hashCode();
+        }
     }
 }
