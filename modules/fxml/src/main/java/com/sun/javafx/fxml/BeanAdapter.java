@@ -33,13 +33,7 @@ import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.AbstractMap;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import java.lang.reflect.*;
 
@@ -58,10 +52,38 @@ import sun.reflect.misc.ReflectUtil;
 public class BeanAdapter extends AbstractMap<String, Object> {
     private final Object bean;
 
-    private static ClassLoader contextClassLoader;
+    private static final ClassLoader contextClassLoader;
+
+    private static class MethodCache {
+        private final Map<String, List<Method>> methods;
+        private final MethodCache nextClassCache;
+
+        private MethodCache(Map<String, List<Method>> methods, MethodCache nextClassCache) {
+            this.methods = methods;
+            this.nextClassCache = nextClassCache;
+        }
+
+        private Method getMethod(String name, Class<?>... parameterTypes) {
+            List<Method> namedMethods = methods.get(name);
+            if (namedMethods != null) {
+                for (int i = 0; i < namedMethods.size(); i++) {
+                    Method namedMethod = namedMethods.get(i);
+                    if (namedMethod.getName().equals(name)
+                            && Arrays.equals(namedMethod.getParameterTypes(), parameterTypes)) {
+                        return namedMethod;
+                    }
+                }
+            }
+
+            return nextClassCache != null ? nextClassCache.getMethod(name, parameterTypes) : null;
+        }
+
+    }
     
-    private static HashMap<Class<?>, HashMap<String, LinkedList<Method>>> globalMethodCache =
-        new HashMap<Class<?>, HashMap<String, LinkedList<Method>>>();
+    private static final HashMap<Class<?>, MethodCache> globalMethodCache =
+        new HashMap<>();
+
+    private final MethodCache localCache;
 
     public static final String GET_PREFIX = "get";
     public static final String IS_PREFIX = "is";
@@ -86,37 +108,42 @@ public class BeanAdapter extends AbstractMap<String, Object> {
     public BeanAdapter(Object bean) {
         this.bean = bean;
 
-        Class<?> type = bean.getClass();
-
-        while (type != Object.class && !globalMethodCache.containsKey(type)) {
-            globalMethodCache.put(type, getClassMethodCache(type));
-            type = type.getSuperclass();
-        }
+        localCache = getClassMethodCache(bean.getClass());
     }
 
-    private static HashMap<String, LinkedList<Method>> getClassMethodCache(Class<?> type) {
-        HashMap<String, LinkedList<Method>> classMethodCache = new HashMap<String, LinkedList<Method>>();
-
-        ReflectUtil.checkPackageAccess(type);
-        Method[] declaredMethods = type.getDeclaredMethods();
-        for (int i = 0; i < declaredMethods.length; i++) {
-            Method method = declaredMethods[i];
-            int modifiers = method.getModifiers();
-
-            if (Modifier.isPublic(modifiers) && !Modifier.isStatic(modifiers)) {
-                String name = method.getName();
-                LinkedList<Method> namedMethods = classMethodCache.get(name);
-
-                if (namedMethods == null) {
-                    namedMethods = new LinkedList<Method>();
-                    classMethodCache.put(name, namedMethods);
-                }
-
-                namedMethods.add(method);
-            }
+    private static MethodCache getClassMethodCache(Class<?> type) {
+        if (type == Object.class) {
+            return null;
         }
+        MethodCache classMethodCache;
+        synchronized (globalMethodCache) {
+            if ((classMethodCache = globalMethodCache.get(type)) != null) {
+                return classMethodCache;
+            }
+            Map<String, List<Method>> classMethods = new HashMap<>();
 
-        return classMethodCache;
+            ReflectUtil.checkPackageAccess(type);
+            Method[] declaredMethods = type.getDeclaredMethods();
+            for (int i = 0; i < declaredMethods.length; i++) {
+                Method method = declaredMethods[i];
+                int modifiers = method.getModifiers();
+
+                if (Modifier.isPublic(modifiers) && !Modifier.isStatic(modifiers)) {
+                    String name = method.getName();
+                    List<Method> namedMethods = classMethods.get(name);
+
+                    if (namedMethods == null) {
+                        namedMethods = new ArrayList<>();
+                        classMethods.put(name, namedMethods);
+                    }
+
+                    namedMethods.add(method);
+                }
+            }
+            MethodCache cache = new MethodCache(classMethods, getClassMethodCache(type.getSuperclass()));
+            globalMethodCache.put(type, cache);
+            return cache;
+        }
     }
 
     /**
@@ -129,39 +156,11 @@ public class BeanAdapter extends AbstractMap<String, Object> {
         return bean;
     }
 
-    private Method getMethod(String name, Class<?>... parameterTypes) {
-        Class<?> type = bean.getClass();
-
-        Method method = null;
-        while (type != Object.class) {
-            HashMap<String, LinkedList<Method>> classMethodCache = globalMethodCache.get(type);
-
-            LinkedList<Method> namedMethods = classMethodCache.get(name);
-            if (namedMethods != null) {
-                for (Method namedMethod : namedMethods) {
-                    if (namedMethod.getName().equals(name)
-                        && Arrays.equals(namedMethod.getParameterTypes(), parameterTypes)) {
-                        method = namedMethod;
-                        break;
-                    }
-                }
-            }
-
-            if (method != null) {
-                break;
-            }
-
-            type = type.getSuperclass();
-        }
-
-        return method;
-    }
-
     private Method getGetterMethod(String key) {
-        Method getterMethod = getMethod(getMethodName(GET_PREFIX, key));
+        Method getterMethod = localCache.getMethod(getMethodName(GET_PREFIX, key));
 
         if (getterMethod == null) {
-            getterMethod = getMethod(getMethodName(IS_PREFIX, key));
+            getterMethod = localCache.getMethod(getMethodName(IS_PREFIX, key));
         }
 
         return getterMethod;
@@ -174,7 +173,7 @@ public class BeanAdapter extends AbstractMap<String, Object> {
             throw new UnsupportedOperationException("Cannot determine type for property.");
         }
 
-        return getMethod(getMethodName(SET_PREFIX, key), type);
+        return localCache.getMethod(getMethodName(SET_PREFIX, key), type);
     }
 
     private static String getMethodName(String prefix, String key) {
@@ -201,7 +200,7 @@ public class BeanAdapter extends AbstractMap<String, Object> {
     }
 
     private Object get(String key) {
-        Method getterMethod = key.endsWith(PROPERTY_SUFFIX) ? getMethod(key) : getGetterMethod(key);
+        Method getterMethod = key.endsWith(PROPERTY_SUFFIX) ? localCache.getMethod(key) : getGetterMethod(key);
 
         Object value;
         if (getterMethod != null) {
@@ -673,7 +672,7 @@ public class BeanAdapter extends AbstractMap<String, Object> {
     /**
      * Determines the type of a map value.
      *
-     * @param listType
+     * @param mapType
      */
     public static Class<?> getMapValueType(Type mapType) {
         Type valueType = getGenericMapValueType(mapType);
