@@ -652,7 +652,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * Creates a new Task.
      */
     public Task() {
-        this(new TaskCallable<>());
+        this(new TaskCallable<V>());
     }
 
     /**
