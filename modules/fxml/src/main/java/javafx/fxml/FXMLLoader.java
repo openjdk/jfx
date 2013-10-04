@@ -1755,8 +1755,6 @@ public class FXMLLoader {
 
     private ScriptEngine scriptEngine = null;
 
-    private boolean template = false;
-
     private List<String> packages = new LinkedList<String>();
     private Map<String, Class<?>> classes = new HashMap<String, Class<?>>();
 
@@ -2222,28 +2220,6 @@ public class FXMLLoader {
     }
 
     /**
-     * Returns the template flag.
-     * @since JavaFX 8.0
-     */
-    public boolean isTemplate() {
-        return template;
-    }
-
-    /**
-     * Sets the template flag. Setting this value to <tt>true</tt> can improve
-     * performance when using a single loader instance to reload the same FXML
-     * document multiple times. See the documentation for the {@link #load()}
-     * method for more information.
-     *
-     * @param template
-     * The template flag.
-     * @since JavaFX 8.0
-     */
-    public void setTemplate(boolean template) {
-        this.template = template;
-    }
-
-    /**
      * Returns the builder factory used by this loader.
      */
     public BuilderFactory getBuilderFactory() {
@@ -2308,7 +2284,7 @@ public class FXMLLoader {
 
     /**
      * Sets the classloader used by this serializer and clears any existing
-     * imports (see {@link #setTemplate(boolean)}).
+     * imports
      *
      * @param classLoader
      * @since JavaFX 2.1
@@ -2428,11 +2404,7 @@ public class FXMLLoader {
             throw new NullPointerException("inputStream is null.");
         }
 
-        if (template) {
-            setRoot(null);
-        } else {
-            clearImports();
-        }
+        clearImports();
 
         // Initialize the namespace
         namespace.put(LOCATION_KEY, location);
