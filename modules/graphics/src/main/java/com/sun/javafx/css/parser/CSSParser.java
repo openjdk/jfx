@@ -25,21 +25,8 @@
 
 package com.sun.javafx.css.parser;
 
-import java.io.BufferedReader;
-import java.io.CharArrayReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import javafx.css.ParsedValue;
+import javafx.css.Styleable;
 import javafx.geometry.Insets;
 import javafx.scene.effect.BlurType;
 import javafx.scene.effect.Effect;
@@ -58,13 +45,28 @@ import javafx.scene.shape.StrokeType;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
+import java.io.BufferedReader;
+import java.io.CharArrayReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.text.MessageFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import com.sun.javafx.Utils;
 import com.sun.javafx.css.Combinator;
 import com.sun.javafx.css.CompoundSelector;
 import com.sun.javafx.css.CssError;
 import com.sun.javafx.css.Declaration;
 import com.sun.javafx.css.FontFace;
-import javafx.css.ParsedValue;
 import com.sun.javafx.css.ParsedValueImpl;
 import com.sun.javafx.css.Rule;
 import com.sun.javafx.css.Selector;
@@ -72,7 +74,6 @@ import com.sun.javafx.css.SimpleSelector;
 import com.sun.javafx.css.Size;
 import com.sun.javafx.css.SizeUnits;
 import com.sun.javafx.css.StyleManager;
-import javafx.css.Styleable;
 import com.sun.javafx.css.Stylesheet;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EffectConverter;
@@ -84,8 +85,6 @@ import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.css.converters.SizeConverter.SequenceConverter;
 import com.sun.javafx.css.converters.StringConverter;
 import com.sun.javafx.css.converters.URLConverter;
-import sun.util.logging.PlatformLogger;
-import sun.util.logging.PlatformLogger.Level;
 import com.sun.javafx.scene.layout.region.BackgroundPositionConverter;
 import com.sun.javafx.scene.layout.region.BackgroundSizeConverter;
 import com.sun.javafx.scene.layout.region.BorderImageSliceConverter;
@@ -103,7 +102,8 @@ import com.sun.javafx.scene.layout.region.RepeatStruct;
 import com.sun.javafx.scene.layout.region.RepeatStructConverter;
 import com.sun.javafx.scene.layout.region.SliceSequenceConverter;
 import com.sun.javafx.scene.layout.region.StrokeBorderPaintConverter;
-import java.net.MalformedURLException;
+import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
 
 final public class CSSParser {
 
@@ -132,7 +132,7 @@ final public class CSSParser {
     // the Styleable from the node with an in-line style. This will be null
     // unless the source of the styles is a Node's styleProperty. In this case,
     // the stylesheetString will also be set.
-    private Styleable  sourceOfInlineStyle;
+    private Styleable sourceOfInlineStyle;
 
     // source is a file
     private void setInputSource(String url, String str) {
@@ -2172,9 +2172,10 @@ final public class CSSParser {
 
         // first term in the chain is the function name...
         final String fn = (root.token != null) ? root.token.getText() : null;
-        // NOTE: We should put this in an assertion, so as not to do this work ordinarily, because only a
-        // bug in the parser can cause this.
-        assert !"image-pattern".regionMatches(true, 0, fn, 0, 13) : "Expected \'image-pattern\'";
+        if (!"image-pattern".regionMatches(true, 0, fn, 0, 13)) {
+            final String msg = "Expected \'image-pattern\'";
+            error(root, msg);
+        }
 
         Term arg;
         if ((arg = root.firstArg) == null ||
@@ -2249,9 +2250,10 @@ final public class CSSParser {
     private ParsedValueImpl<ParsedValue[], Paint> parseRepeatingImagePattern(final Term root) throws ParseException {
         // first term in the chain is the function name...
         final String fn = (root.token != null) ? root.token.getText() : null;
-        // NOTE: We should put this in an assertion, so as not to do this work ordinarily, because only a
-        // bug in the parser can cause this.
-        assert !"repeating-image-pattern".regionMatches(true, 0, fn, 0, 23) : "Expected \'repeating-image-pattern\'";
+        if (!"repeating-image-pattern".regionMatches(true, 0, fn, 0, 23)) {
+            final String msg = "Expected \'repeating-image-pattern\'";
+            error(root, msg);
+        }
 
         Term arg;
         if ((arg = root.firstArg) == null ||
