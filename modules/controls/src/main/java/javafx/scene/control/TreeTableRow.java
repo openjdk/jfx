@@ -401,14 +401,14 @@ public class TreeTableRow<T> extends IndexedCell<T> {
             // likely that events will be fired where the item is null, even
             // though calling cell.getTreeItem().getValue() returns the value
             // as expected
-            if ((newTreeItem != null && ! newTreeItem.equals(oldTreeItem)) ||
-                    oldTreeItem != null && ! oldTreeItem.equals(newTreeItem)) {
-                updateTreeItem(newTreeItem);
-                updateItem(newValue, false);
-            } else if(isEmpty && newValue == null) {
-                updateTreeItem(newTreeItem);
-                updateItem(newValue, false);
-            }
+
+            // There used to be conditional code here to prevent updateItem from
+            // being called when the value didn't change, but that led us to
+            // issues such as RT-33108, where the value didn't change but the item
+            // we needed to be listening to did. Without calling updateItem we
+            // were breaking things, so once again the conditionals are gone.
+            updateTreeItem(newTreeItem);
+            updateItem(newValue, false);
         } else {
             // RT-30484 We need to allow a first run to be special-cased to allow
             // for the updateItem method to be called at least once to allow for
