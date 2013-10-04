@@ -501,10 +501,10 @@ public class PieChart extends Chart {
 
         labelLinePath.getElements().clear();
          // calculate combined bounds of all labels & pie radius
-        double minX = 0.0d;
-        double minY = 0.0d;
-        double maxX = 0.0d;
-        double maxY = 0.0d;
+        double minX = Double.MAX_VALUE;
+        double minY = Double.MAX_VALUE;
+        double maxX = Double.MIN_VALUE;
+        double maxY = Double.MIN_VALUE;
         double[] labelsX = null;
         double[] labelsY = null;
         double[] labelAngles = null;

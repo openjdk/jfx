@@ -557,8 +557,7 @@ public class Region extends Parent {
                     // We have determined that the outsets of these two different background
                     // objects is different, and therefore the bounds have changed.
                     impl_geomChanged();
-                    // RT-30663
-                    // insets.fireValueChanged();
+                    insets.fireValueChanged();
                 }
                 // No matter what, the fill has changed, so we have to update it
                 impl_markDirty(DirtyBits.SHAPE_FILL);

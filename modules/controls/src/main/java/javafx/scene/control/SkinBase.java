@@ -203,8 +203,8 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @return A double representing the minimum width of this Skin.
      */
     protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
-        double minX = 0;
-        double maxX = 0;
+        double minX = Double.MAX_VALUE;
+        double maxX = Double.MIN_VALUE;
         for (int i = 0; i < children.size(); i++) {
             Node node = children.get(i);
             if (node.isManaged()) {
@@ -230,8 +230,8 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @return A double representing the minimum height of this Skin.
      */
     protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        double minY = 0;
-        double maxY = 0;
+        double minY = Double.MAX_VALUE;
+        double maxY = Double.MIN_VALUE;
         for (int i = 0; i < children.size(); i++) {
             Node node = children.get(i);
             if (node.isManaged()) {
@@ -319,8 +319,8 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @return the calculated preferred height
      */
     protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        double minY = 0;
-        double maxY = 0;
+        double minY = Double.MAX_VALUE;
+        double maxY = Double.MIN_VALUE;
         for (int i = 0; i < children.size(); i++) {
             Node node = children.get(i);
             if (node.isManaged()) {
