@@ -27,6 +27,8 @@ package com.sun.javafx.scene.control.behavior;
 
 import javafx.event.EventType;
 import javafx.geometry.NodeOrientation;
+import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.control.Control;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.input.KeyCode;
@@ -34,6 +36,7 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
+import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.control.skin.ScrollPaneSkin;
 import static javafx.scene.input.KeyCode.DOWN;
 import static javafx.scene.input.KeyCode.F4;
@@ -45,6 +48,7 @@ import static javafx.scene.input.KeyCode.SPACE;
 import static javafx.scene.input.KeyCode.UP;
 import static javafx.scene.input.KeyCode.HOME;
 import static javafx.scene.input.KeyCode.END;
+import static javafx.scene.input.KeyCode.TAB;
 
 
 /**
@@ -125,6 +129,18 @@ public class ScrollPaneBehavior extends BehaviorBase<ScrollPane> {
      *                                                                         *
      **************************************************************************/
 
+    static final String TRAVERSE_DEBUG = "TraverseDebug";
+    static final String HORIZONTAL_UNITDECREMENT = "HorizontalUnitDecrement";
+    static final String HORIZONTAL_UNITINCREMENT = "HorizontalUnitIncrement";
+    static final String VERTICAL_UNITDECREMENT = "VerticalUnitDecrement";
+    static final String VERTICAL_UNITINCREMENT = "VerticalUnitIncrement";
+    static final String VERTICAL_PAGEDECREMENT = "VerticalPageDecrement";
+    static final String VERTICAL_PAGEINCREMENT = "VerticalPageIncrement";
+    static final String VERTICAL_HOME = "VerticalHome";
+    static final String VERTICAL_END = "VerticalEnd";
+    static final String TRAVERSE_NEXT = "TraverseNext";
+    static final String TRAVERSE_PREVIOUS = "TraversePrevious";
+
     /**
      * We manually handle focus traversal keys due to the ScrollPane binding
      * the left/right/up/down keys specially.
@@ -132,20 +148,24 @@ public class ScrollPaneBehavior extends BehaviorBase<ScrollPane> {
     protected static final List<KeyBinding> SCROLL_PANE_BINDINGS = new ArrayList<>();
     static {
         // TODO XXX DEBUGGING ONLY
-        SCROLL_PANE_BINDINGS.add(new KeyBinding(F4, "TraverseDebug").alt().ctrl().shift());
+        SCROLL_PANE_BINDINGS.add(new KeyBinding(F4, TRAVERSE_DEBUG).alt().ctrl().shift());
 
-        SCROLL_PANE_BINDINGS.add(new KeyBinding(LEFT, "HorizontalUnitDecrement"));
-        SCROLL_PANE_BINDINGS.add(new KeyBinding(RIGHT, "HorizontalUnitIncrement"));
+        SCROLL_PANE_BINDINGS.add(new KeyBinding(LEFT, HORIZONTAL_UNITDECREMENT));
+        SCROLL_PANE_BINDINGS.add(new KeyBinding(RIGHT, HORIZONTAL_UNITINCREMENT));
 
-        SCROLL_PANE_BINDINGS.add(new KeyBinding(UP, "VerticalUnitDecrement"));
-        SCROLL_PANE_BINDINGS.add(new KeyBinding(DOWN, "VerticalUnitIncrement"));
+        SCROLL_PANE_BINDINGS.add(new KeyBinding(UP, VERTICAL_UNITDECREMENT));
+        SCROLL_PANE_BINDINGS.add(new KeyBinding(DOWN, VERTICAL_UNITINCREMENT));
 
-        SCROLL_PANE_BINDINGS.add(new KeyBinding(PAGE_UP, "VerticalPageDecrement"));
-        SCROLL_PANE_BINDINGS.add(new KeyBinding(PAGE_DOWN, "VerticalPageIncrement"));
-        SCROLL_PANE_BINDINGS.add(new KeyBinding(SPACE, "VerticalPageIncrement"));
+        SCROLL_PANE_BINDINGS.add(new KeyBinding(PAGE_UP, VERTICAL_PAGEDECREMENT));
+        SCROLL_PANE_BINDINGS.add(new KeyBinding(PAGE_DOWN, VERTICAL_PAGEINCREMENT));
+        SCROLL_PANE_BINDINGS.add(new KeyBinding(SPACE, VERTICAL_PAGEINCREMENT));
 
-        SCROLL_PANE_BINDINGS.add(new KeyBinding(HOME, "VerticalHome"));
-        SCROLL_PANE_BINDINGS.add(new KeyBinding(END, "VerticalEnd"));
+        SCROLL_PANE_BINDINGS.add(new KeyBinding(HOME, VERTICAL_HOME));
+        SCROLL_PANE_BINDINGS.add(new KeyBinding(END, VERTICAL_END));
+
+        SCROLL_PANE_BINDINGS.add(new KeyBinding(TAB, TRAVERSE_NEXT));
+        SCROLL_PANE_BINDINGS.add(new KeyBinding(TAB, TRAVERSE_PREVIOUS).shift());
+
     }
 
     protected /*final*/ String matchActionForEvent(KeyEvent e) {
@@ -166,16 +186,129 @@ public class ScrollPaneBehavior extends BehaviorBase<ScrollPane> {
     }
 
     @Override protected void callAction(String name) {
-        if ("HorizontalUnitDecrement".equals(name)) horizontalUnitDecrement();
-        else if ("HorizontalUnitIncrement".equals(name)) horizontalUnitIncrement();
-        else if ("VerticalUnitDecrement".equals(name)) verticalUnitDecrement();
-        else if ("VerticalUnitIncrement".equals(name)) verticalUnitIncrement();
-        else if ("VerticalPageDecrement".equals(name)) verticalPageDecrement();
-        else if ("VerticalPageIncrement".equals(name)) verticalPageIncrement();
-        else if ("VerticalHome".equals(name)) verticalHome();
-        else if ("VerticalEnd".equals(name)) verticalEnd();
-        else super.callAction(name);
+        switch (name) {
+        case HORIZONTAL_UNITDECREMENT:
+            horizontalUnitDecrement();
+            break;
+        case HORIZONTAL_UNITINCREMENT:
+            horizontalUnitIncrement();
+            break;
+        case VERTICAL_UNITDECREMENT:
+            verticalUnitDecrement();
+            break;
+        case VERTICAL_UNITINCREMENT:
+            verticalUnitIncrement();
+            break;
+        case VERTICAL_PAGEDECREMENT:
+            verticalPageDecrement();
+            break;
+        case VERTICAL_PAGEINCREMENT:
+            verticalPageIncrement();
+            break;
+        case VERTICAL_HOME:
+            verticalHome();
+            break;
+        case VERTICAL_END:
+            verticalEnd();
+            break;
+        case TRAVERSE_NEXT:
+            // Are there any focusable node in the TitlePane content
+            if (getControl().getImpl_traversalEngine().registeredNodes.isEmpty()) {
+                super.callAction(name);
+            }
+            else {
+                /**
+                 *if we have the focus owner then traverse from it, otherwise
+                 * request focus in the top-left
+                 */
+                List<Node> children = getControl().getChildrenUnmodifiable();
+                Node focusNode = getControl().getScene().getFocusOwner();
+                if (focusNode != null && (isChildFocused(focusNode, children) == true)) {
+                    focusNode.impl_traverse(Direction.NEXT);
+                }
+                else {
+                    focusFirstChild(children);
+                }
+            }
+            break;
+
+        case TRAVERSE_PREVIOUS:
+            // Are there any focusable node in the TitlePane content
+            if (getControl().getImpl_traversalEngine().registeredNodes.isEmpty()) {
+                super.callAction(name);
+            }
+            else {
+                /**
+                 * if we have the focus owner then traverse from it, otherwise
+                 * request focus in the top-left
+                 */
+                List<Node> children = getControl().getChildrenUnmodifiable();
+                Node focusNode = getControl().getScene().getFocusOwner();
+
+                if (focusNode != null && (isChildFocused(focusNode, children) == true)) {
+                    focusNode.impl_traverse(Direction.PREVIOUS);
+                }
+                else {
+                    super.callAction(name);
+                }
+            }
+            break;
+        default :
+         super.callAction(name);
+            break;
+        }
     }
+
+    public static boolean isChildFocused(Node focusedNode, List<Node> children) {
+        boolean answer = false;
+        for(int i = 0; i < children.size(); i++) {
+            if (children.get(i) == focusedNode) {
+                answer = true;
+                break;
+            }
+            if (children.get(i) instanceof Parent) {
+                if (isChildFocused(focusedNode, ((Parent)children.get(i)).getChildrenUnmodifiable())) {
+                    return true;
+                }
+            }
+        }
+        return answer;
+    }
+
+    public static boolean focusFirstChild(List<Node> children) {
+        for(int i = 0; i < children.size(); i++) {
+            Node n = children.get(i);
+            if (n.isFocusTraversable() && n.impl_isTreeVisible() && !n.isDisabled()) {
+                n.requestFocus();
+                return true;
+            }
+            else if (n instanceof Parent) {
+                if (focusFirstChild(((Parent)n).getChildrenUnmodifiable())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public static boolean focusLastChild(List<Node> children) {
+        for(int i = children.size()-1 ; i > -1; i--) {
+            Node n = children.get(i);
+            if (n.isFocusTraversable() && n.impl_isTreeVisible() && !n.isDisabled()) {
+                n.requestFocus();
+                return true;
+            }
+            else if (n instanceof Parent) {
+                if (focusFirstChild(((Parent)n).getChildrenUnmodifiable())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+
+
 
     /***************************************************************************
      *                                                                         *
