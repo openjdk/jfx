@@ -121,6 +121,7 @@ import com.sun.javafx.runtime.SystemProperties;
 import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.SceneEventDispatcher;
 import com.sun.javafx.scene.SceneHelper;
+import com.sun.javafx.scene.input.DragboardHelper;
 import com.sun.javafx.scene.input.InputEventUtils;
 import com.sun.javafx.scene.input.KeyCodeMap;
 import com.sun.javafx.scene.input.PickResultChooser;
@@ -1236,7 +1237,7 @@ public class Scene implements EventTarget {
     private static List<Runnable> snapshotRunnableListB;
     private static List<Runnable> snapshotRunnableList;
 
-    static void addSnapshotRunnable(Runnable r) {
+    static void addSnapshotRunnable(final Runnable runnable) {
         Toolkit.getToolkit().checkFxUserThread();
 
         if (snapshotPulseListener == null) {
@@ -1270,7 +1271,18 @@ public class Scene implements EventTarget {
             // had layout and CSS processing, and have been synced
             Toolkit.getToolkit().addPostSceneTkPulseListener(snapshotPulseListener);
         }
-        snapshotRunnableList.add(r);
+
+        final AccessControlContext acc = AccessController.getContext();
+        snapshotRunnableList.add(new Runnable() {
+            @Override public void run() {
+                AccessController.doPrivileged(new PrivilegedAction<Void>() {
+                    @Override public Void run() {
+                        runnable.run();
+                        return null;
+                    }
+                }, acc);
+            }
+        });
         Toolkit.getToolkit().requestNextPulse();
     }
 
@@ -2767,7 +2779,17 @@ public class Scene implements EventTarget {
                 DragEvent dragEvent =
                         new DragEvent(DragEvent.ANY, dndGesture.dragboard, x, y, screenX, screenY,
                                 transferMode, null, null, pick(x, y));
-                TransferMode tm = dndGesture.processTargetDrop(dragEvent);
+                // Data dropped to the app can be accessed without restriction
+                DragboardHelper.setDataAccessRestriction(dndGesture.dragboard, false);
+
+                TransferMode tm;
+                try {
+                    tm = dndGesture.processTargetDrop(dragEvent);
+                } finally {
+                    DragboardHelper.setDataAccessRestriction(
+                            dndGesture.dragboard, true);
+                }
+                
                 if (dndGesture.source == null) {
                     dndGesture.dragboard = null;
                     dndGesture = null;
@@ -2900,7 +2922,15 @@ public class Scene implements EventTarget {
                                 mouseEvent.getSource(), target,
                                 MouseEvent.DRAG_DETECTED);
 
-                        fireEvent(target, detectedEvent);
+                        try {
+                            fireEvent(target, detectedEvent);
+                        } finally {
+                            // Putting data to dragboard finished, restrict access to them
+                            if (dragboard != null) {
+                                DragboardHelper.setDataAccessRestriction(
+                                        dragboard, true);
+                            }
+                        }
                     }
 
                     dragDetectedProcessed();
@@ -2928,7 +2958,15 @@ public class Scene implements EventTarget {
             processingDragDetected();
 
             final EventTarget target = de.getPickResult().getIntersectedNode();
-            fireEvent(target != null ? target : Scene.this, me);
+            try {
+                fireEvent(target != null ? target : Scene.this, me);
+            } finally {
+                // Putting data to dragboard finished, restrict access to them
+                if (dragboard != null) {
+                    DragboardHelper.setDataAccessRestriction(
+                            dragboard, true);
+                }
+            }
 
             dragDetectedProcessed();
 
@@ -3129,6 +3167,10 @@ public class Scene implements EventTarget {
             } else if (dragboard == null) {
                 dragboard = createDragboard(null, true);
             }
+
+            // The app can see what it puts to dragboard without restriction
+            DragboardHelper.setDataAccessRestriction(dragboard, false);
+
             this.source = source;
             potentialTarget = source;
             sourceTransferModes = t;
@@ -3177,7 +3219,15 @@ public class Scene implements EventTarget {
                 DragEvent dragEvent =
                         new DragEvent(DragEvent.ANY, dndGesture.dragboard, x, y, screenX, screenY,
                         transferMode, null, null, null);
-                dndGesture.processDropEnd(dragEvent);
+
+                // DRAG_DONE event is delivered to gesture source, it can access
+                // its own data without restriction
+                DragboardHelper.setDataAccessRestriction(dndGesture.dragboard, false);
+                try {
+                    dndGesture.processDropEnd(dragEvent);
+                } finally {
+                    DragboardHelper.setDataAccessRestriction(dndGesture.dragboard, true);
+                }
                 dndGesture = null;
             }
         }
