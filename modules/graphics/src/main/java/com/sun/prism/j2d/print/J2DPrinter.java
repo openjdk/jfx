@@ -62,7 +62,6 @@ import javafx.print.Printer;
 import javafx.print.Printer.MarginType;
 import javafx.print.Collation;
 import javafx.print.Paper;
-import javafx.print.Paper.Units;
 import javafx.print.PaperSource;
 import javafx.print.PageRange;
 import javafx.print.PrintColor;
@@ -75,6 +74,7 @@ import javafx.print.PrintSides;
 
 import com.sun.javafx.print.PrintHelper;
 import com.sun.javafx.print.PrinterImpl;
+import com.sun.javafx.print.Units;
 
 
 public class J2DPrinter implements PrinterImpl {

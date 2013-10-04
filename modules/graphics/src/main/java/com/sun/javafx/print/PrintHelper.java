@@ -27,7 +27,6 @@ package com.sun.javafx.print;
 
 import javafx.print.JobSettings;
 import javafx.print.Paper;
-import javafx.print.Paper.Units;
 import javafx.print.PaperSource;
 import javafx.print.PrintResolution;
 import javafx.print.Printer;

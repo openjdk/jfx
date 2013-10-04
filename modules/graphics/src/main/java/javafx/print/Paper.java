@@ -25,7 +25,8 @@
 
 package javafx.print;
 
-import static javafx.print.Paper.Units.*;
+import com.sun.javafx.print.Units;
+import static com.sun.javafx.print.Units.*;
 
 /**
  * A class which encapsulates the size of paper media as used by printers.
@@ -41,25 +42,6 @@ import static javafx.print.Paper.Units.*;
  */
 
 public final class Paper {
-
-    /**
-     * An enumeration used to specify the Units used for Paper measurement
-     * @since JavaFX 8.0
-     */
-    public static enum Units {
-        /**
-         * Specify Paper size in millimetres.
-         */
-        MM,
-        /**
-         * Specify Paper size in inches.
-         */
-        INCH,
-        /**
-         * Specify Paper size in points (1/72 of an inch).
-         */
-        POINT
-    }
 
     private String name;
     private double width, height;
