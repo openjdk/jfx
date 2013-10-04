@@ -317,6 +317,7 @@ public final class GraphicsContext {
         for (int i = 0; i < nPoints; i++) {
             if (pos >= polybuf.length) {
                 flushPolyBuf(buf, polybuf, pos, polycmd);
+                pos = 0;
                 polycmd = NGCanvas.LINETO;
             }
             polybuf[pos++] = (float) xPoints[i];
