@@ -140,7 +140,11 @@ static jobject createJavaScreen(JNIEnv* env, GdkScreen* screen, gint monitor_idx
 
 jobject createJavaScreen(JNIEnv* env, gint monitor_idx) {
     GdkScreen *default_gdk_screen = gdk_screen_get_default();
-    return createJavaScreen(env, default_gdk_screen, monitor_idx);
+    try {
+        return createJavaScreen(env, default_gdk_screen, monitor_idx);
+    } catch (jni_exception&) {
+        return NULL;
+    }
 }
 
 jobjectArray rebuild_screens(JNIEnv* env) {

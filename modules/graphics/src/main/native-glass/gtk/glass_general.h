@@ -45,14 +45,16 @@ struct jni_exception: public std::exception {
             jmessage = (jstring)mainEnv->CallObjectMethod(throwable,
                     mainEnv->GetMethodID(mainEnv->FindClass("java/lang/Throwable"),
                     "getMessage", "()Ljava/lang/String;"));
-            message = mainEnv->GetStringUTFChars(jmessage, NULL);
+            message = jmessage == NULL ? "" : mainEnv->GetStringUTFChars(jmessage, NULL);
     }
     const char *what() const throw()
     {
         return message;
     }
     ~jni_exception() throw(){
-        mainEnv->ReleaseStringUTFChars(jmessage, message);
+        if (jmessage && message) {
+            mainEnv->ReleaseStringUTFChars(jmessage, message);
+        }
     }
 private:
     jthrowable throwable;
