@@ -203,8 +203,11 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @return A double representing the minimum width of this Skin.
      */
     protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
-        double minX = Double.MAX_VALUE;
-        double maxX = Double.MIN_VALUE;
+
+        if (children.isEmpty()) return leftInset + rightInset;
+
+        double minX = Double.MAX_VALUE; // init to max so that child's min comes out of first call to Math.min below
+        double maxX = Double.MIN_VALUE; // init to min so that child's max comes out of first call to Math.max below
         for (int i = 0; i < children.size(); i++) {
             Node node = children.get(i);
             if (node.isManaged()) {
@@ -230,8 +233,11 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @return A double representing the minimum height of this Skin.
      */
     protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        double minY = Double.MAX_VALUE;
-        double maxY = Double.MIN_VALUE;
+
+        if (children.isEmpty()) return topInset + bottomInset;
+
+        double minY = Double.MAX_VALUE; // init to max so that child's min comes out of first call to Math.min below
+        double maxY = Double.MIN_VALUE; // init to min so that child's max comes out of first call to Math.max below
         for (int i = 0; i < children.size(); i++) {
             Node node = children.get(i);
             if (node.isManaged()) {
@@ -291,8 +297,11 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @return the calculated preferred width
      */
     protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
-        double minX = 0;
-        double maxX = 0;
+
+        if (children.isEmpty()) return 0d;
+
+        double minX = Double.MAX_VALUE; // init to max so that child's min comes out of first call to Math.min below
+        double maxX = Double.MIN_VALUE; // init to min so that child's max comes out of first call to Math.max below
         for (int i = 0; i < children.size(); i++) {
             Node node = children.get(i);
             if (node.isManaged()) {
@@ -319,8 +328,11 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @return the calculated preferred height
      */
     protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        double minY = Double.MAX_VALUE;
-        double maxY = Double.MIN_VALUE;
+
+        if (children.isEmpty()) return 0d;
+
+        double minY = Double.MAX_VALUE; // init to max so that child's min comes out of first call to Math.min below
+        double maxY = Double.MIN_VALUE; // init to min so that child's max comes out of first call to Math.max below
         for (int i = 0; i < children.size(); i++) {
             Node node = children.get(i);
             if (node.isManaged()) {
