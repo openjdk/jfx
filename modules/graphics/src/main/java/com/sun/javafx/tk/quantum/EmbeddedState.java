@@ -77,10 +77,7 @@ final class EmbeddedState extends SceneState {
      */
     public void update() {
         super.update();
-        EmbeddedScene escene = (EmbeddedScene) scene;
         if (scene != null) {
-            viewWidth = escene.width;
-            viewHeight = escene.height;
             // These variables and others from the super class need be kept up to date to
             // minimize rendering.  For now, claim that the embedded scene is always visible
             // and not minimized so that rendering can occur

@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Pixels;
+import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.prism.PresentableState;
 
 /**
@@ -93,6 +94,14 @@ class SceneState extends PresentableState {
         // for the updated state.
         view = scene.getPlatformView();
         super.update();
+        NGCamera camera = scene.getCamera();
+        //Use the camera width and height so that we are consistent
+        //with what was used to calculate the Projection Matrix at
+        //sync time.
+        if (camera != null) {
+            viewWidth = (int)camera.getViewWidth();
+            viewHeight = (int)camera.getViewHeight();
+        }
     }
     
     /**
