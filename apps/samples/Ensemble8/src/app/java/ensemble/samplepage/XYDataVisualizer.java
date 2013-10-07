@@ -57,8 +57,8 @@ import javafx.scene.chart.CategoryAxis;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart.Data;
 import javafx.scene.chart.XYChart.Series;
-import javafx.scene.control.ContextMenuBuilder;
-import javafx.scene.control.MenuItemBuilder;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableColumn.CellDataFeatures;
@@ -228,106 +228,104 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
                     }
                 }
             }
-        });    
-        
-        setContextMenu(ContextMenuBuilder.create()
-                .items(
-                    MenuItemBuilder.create()
-                        .text("Insert data item")
-                        .disable(!isEditable())
-                        .onAction(new EventHandler<ActionEvent>() {
+        });
 
-                            @Override
-                            public void handle(ActionEvent t) {
-                                TreeItem<XYChartItem<X, Y>> selectedItem = getSelectionModel().getSelectedItem();
-                                if (selectedItem == null || selectedItem.getParent() == null) {
-                                    return;
-                                }
-                                Object value = selectedItem.getValue().getValue();
-                                Object parentValue = selectedItem.getParent().getValue().getValue();
-                                if (value instanceof Series) {
-                                    Series series = (Series) value;
-                                    insertItem(series.getData());
-                                } else if (parentValue instanceof Series) {
-                                    Series series = (Series) parentValue;
-                                    insertItem(series.getData().indexOf(value), series.getData());
-                                }
-                            }
-                        })
-                        .build(),
-                    MenuItemBuilder.create()
-                        .text("Insert Series")
-                        .disable(!isEditable())
-                        .onAction(new EventHandler<ActionEvent>() {
-                            
+        MenuItem insertDataItemMenuItem = new MenuItem("Insert data item");
+        insertDataItemMenuItem.setDisable(!isEditable());
+        insertDataItemMenuItem.setOnAction(new EventHandler<ActionEvent>() {
 
-                            @Override
-                            public void handle(ActionEvent t) {
-                                TreeItem<XYChartItem<X, Y>> selectedItem = getSelectionModel().getSelectedItem();
-                                if (selectedItem == null) {
-                                    return;
-                                }
-                                Object value = selectedItem.getValue().getValue();
-                                if (value instanceof ObservableList) {
-                                    ObservableList parentList = (ObservableList) value;
-                                    insertSeries(parentList.size(), parentList);
-                                } else {
-                                    Object parentValue = selectedItem.getParent().getValue().getValue();
-                                    if (parentValue instanceof ObservableList) {
-                                        ObservableList parentList = (ObservableList) parentValue;
+            @Override
+            public void handle(ActionEvent t) {
+                TreeItem<XYChartItem<X, Y>> selectedItem = getSelectionModel().getSelectedItem();
+                if (selectedItem == null || selectedItem.getParent() == null) {
+                    return;
+                }
+                Object value = selectedItem.getValue().getValue();
+                Object parentValue = selectedItem.getParent().getValue().getValue();
+                if (value instanceof Series) {
+                    Series series = (Series) value;
+                    insertItem(series.getData());
+                } else if (parentValue instanceof Series) {
+                    Series series = (Series) parentValue;
+                    insertItem(series.getData().indexOf(value), series.getData());
+                }
+            }
+        });
 
-                                        insertSeries(parentList.indexOf(value), parentList);
-                                    }
-                                }
-                            }
-                        })
-                        .build(),
-                    MenuItemBuilder.create()
-                        .text("Delete item")
-                        .disable(!isEditable())
-                        .onAction(new EventHandler<ActionEvent>() {
+        MenuItem insertSeriesMenuitem = new MenuItem("Insert Series");
+        insertSeriesMenuitem.setDisable(!isEditable());
+        insertSeriesMenuitem.setOnAction(new EventHandler<ActionEvent>() {
 
-                            @Override
-                            public void handle(ActionEvent t) {
-                                TreeItem<XYChartItem<X, Y>> selectedItem = getSelectionModel().getSelectedItem();
-                                if (selectedItem == null) {
-                                    return;
-                                }
-                                Object value = selectedItem.getValue().getValue();
-                                Object parentValue = selectedItem.getParent().getValue().getValue();
-                                if (parentValue instanceof ObservableList) {
-                                    ((ObservableList) parentValue).remove(value);
-                                } else if (parentValue instanceof Series) {
-                                    ((Series) parentValue).getData().remove(value);
-                                }
-                            }
-                        })
-                        .build(),
-                    MenuItemBuilder.create()
-                        .text("Remove all data")
-                        .disable(!isEditable())
-                        .onAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent t) {
+                TreeItem<XYChartItem<X, Y>> selectedItem = getSelectionModel().getSelectedItem();
+                if (selectedItem == null) {
+                    return;
+                }
+                Object value = selectedItem.getValue().getValue();
+                if (value instanceof ObservableList) {
+                    ObservableList parentList = (ObservableList) value;
+                    insertSeries(parentList.size(), parentList);
+                } else {
+                    Object parentValue = selectedItem.getParent().getValue().getValue();
+                    if (parentValue instanceof ObservableList) {
+                        ObservableList parentList = (ObservableList) parentValue;
 
-                            @Override
-                            public void handle(ActionEvent t) {
-                                chart.getData().clear();
+                        insertSeries(parentList.indexOf(value), parentList);
+                    }
+                }
+            }
+        });
+
+        MenuItem deleteItemMenuItem = new MenuItem("Delete item");
+        deleteItemMenuItem.setDisable(!isEditable());
+        deleteItemMenuItem.setOnAction(new EventHandler<ActionEvent>() {
+
+            @Override
+            public void handle(ActionEvent t) {
+                TreeItem<XYChartItem<X, Y>> selectedItem = getSelectionModel().getSelectedItem();
+                if (selectedItem == null) {
+                    return;
+                }
+                Object value = selectedItem.getValue().getValue();
+                Object parentValue = selectedItem.getParent().getValue().getValue();
+                if (parentValue instanceof ObservableList) {
+                    ((ObservableList) parentValue).remove(value);
+                } else if (parentValue instanceof Series) {
+                    ((Series) parentValue).getData().remove(value);
+                }
+            }
+        });
+
+        MenuItem removeAllDataMenuItem = new MenuItem("Remove all data");
+        removeAllDataMenuItem.setDisable(!isEditable());
+        removeAllDataMenuItem.setOnAction(new EventHandler<ActionEvent>() {
+
+            @Override
+            public void handle(ActionEvent t) {
+                chart.getData().clear();
 //                                chart.setData(null);
-                            }
-                        })
-                        .build(),
-                    MenuItemBuilder.create()
-                        .text("Set new data")
-                        .disable(!isEditable())
-                        .onAction(new EventHandler<ActionEvent>() {
+            }
+        });
 
-                            @Override
-                            public void handle(ActionEvent t) {
-                                chart.setData(generateData());
-                            }
-                        })
-                        .build()
-                )
-                .build());
+        MenuItem setNewDataMenuItem = new MenuItem("Set new data");
+        setNewDataMenuItem.setDisable(!isEditable());
+        setNewDataMenuItem.setOnAction(new EventHandler<ActionEvent>() {
+
+            @Override
+            public void handle(ActionEvent t) {
+                chart.setData(generateData());
+            }
+        });
+
+        ContextMenu contextMenu = new ContextMenu(
+                insertDataItemMenuItem,
+                insertSeriesMenuitem,
+                deleteItemMenuItem,
+                removeAllDataMenuItem,
+                setNewDataMenuItem);
+
+        setContextMenu(contextMenu);
     }
     
     private ObservableList generateData() {
