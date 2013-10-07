@@ -101,7 +101,7 @@ public class BuildSamplesList {
             fout.println("    private static final HashMap<String,SampleInfo[]> DOCS_URL_TO_SAMPLE = new HashMap<String,SampleInfo[]>("+DOCS_TO_SAMPLE_MAP.size()+");");
             fout.println("    static {");
             for (Map.Entry<String,Set<String>> entry: DOCS_TO_SAMPLE_MAP.entrySet()) {
-                fout.println("        DOCS_URL_TO_SAMPLE.put(\""+entry.getKey()+"\","+variableNameArrayToCode("SampleInfo",entry.getValue())+");");
+                fout.println("        DOCS_URL_TO_SAMPLE.put(\""+entry.getKey().replace('$', '.')+"\","+variableNameArrayToCode("SampleInfo",entry.getValue())+");");
             }
             fout.println("    }");
             fout.println("    public static SampleInfo[] getSamplesForDoc(String docUrl) {");

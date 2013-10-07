@@ -227,7 +227,7 @@ public class Samples{
         DOCS_URL_TO_SAMPLE.put("javafx.scene.control.SelectionModel",new SampleInfo[]{SAMPLE_54,SAMPLE_52,SAMPLE_53,});
         DOCS_URL_TO_SAMPLE.put("javafx.scene.control.ColorPicker",new SampleInfo[]{SAMPLE_37,});
         DOCS_URL_TO_SAMPLE.put("javafx.scene.layout.FlowPane",new SampleInfo[]{SAMPLE_106,});
-        DOCS_URL_TO_SAMPLE.put("javafx.animation.Animation$Status",new SampleInfo[]{SAMPLE_68,});
+        DOCS_URL_TO_SAMPLE.put("javafx.animation.Animation.Status",new SampleInfo[]{SAMPLE_68,});
         DOCS_URL_TO_SAMPLE.put("java.util.logging.Logger",new SampleInfo[]{SAMPLE_67,});
         DOCS_URL_TO_SAMPLE.put("javafx.collections.ListChangeListener",new SampleInfo[]{SAMPLE_103,});
         DOCS_URL_TO_SAMPLE.put("javafx.scene.chart.ScatterChart",new SampleInfo[]{SAMPLE_30,SAMPLE_31,});
