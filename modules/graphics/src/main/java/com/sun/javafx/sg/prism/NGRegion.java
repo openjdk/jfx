@@ -1877,6 +1877,7 @@ public class NGRegion extends NGGroup {
                         float sy1 = dstY < regionY ? srcY + srcH * (-tileY / tileHeight) : srcY;
                         float sx2 = dstX2 > regionX2 ? srcX2 - srcW * ((dstX2 - regionX2) / tileWidth) : srcX2;
                         float sy2 = dstY2 > regionY2 ? srcY2 - srcH * ((dstY2 - regionY2) / tileHeight) : srcY2;
+//                        System.out.println("g.drawTexture(texture, " + dx1 + ", " + dy1 + ", " + dx2 + ", " + dy2 + ", " + sx1 + ", " + sy1 + ", " + sx2 + ", " + sy2 + ")");
                         g.drawTexture(texture, dx1, dy1, dx2, dy2, sx1, sy1, sx2, sy2);
                     }
                     dstX += xIncrement;

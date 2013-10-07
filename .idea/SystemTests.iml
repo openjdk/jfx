@@ -4,6 +4,7 @@
     <exclude-output />
     <content url="file://$MODULE_DIR$/tests/system">
       <sourceFolder url="file://$MODULE_DIR$/tests/system/src/test/java" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/tests/system/src/test/resources" isTestSource="true" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="base" />

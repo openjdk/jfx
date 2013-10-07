@@ -24,25 +24,26 @@
  */
 package testharness;
 
-import com.sun.glass.ui.Robot;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import com.sun.glass.ui.Robot;
 import junit.framework.AssertionFailedError;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import util.Util;
-
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static util.Util.TIMEOUT;
 
 /**
@@ -183,6 +184,18 @@ public abstract class VisualTestBase {
                     + " but was:" + colorToString(actual));
         }
     }
+
+    protected void assertColorDoesNotEqual(Color notExpected, Color actual, double delta) {
+        double deltaRed = Math.abs(notExpected.getRed() - actual.getRed());
+        double deltaGreen = Math.abs(notExpected.getGreen() - actual.getGreen());
+        double deltaBlue = Math.abs(notExpected.getBlue() - actual.getBlue());
+        double deltaOpacity = Math.abs(notExpected.getOpacity() - actual.getOpacity());
+        if (deltaRed < delta && deltaGreen < delta && deltaBlue < delta && deltaOpacity < delta) {
+            throw new AssertionFailedError("not expected:" + colorToString(notExpected)
+                    + " but was:" + colorToString(actual));
+        }
+    }
+
     private AnimationTimer timer;
 
     private void frameWait(int n) {
