@@ -63,6 +63,8 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
+import javafx.geometry.BoundingBox;
+import javafx.geometry.Bounds;
 import static javafx.scene.layout.Priority.ALWAYS;
 import static javafx.scene.layout.Priority.SOMETIMES;
 import static javafx.scene.layout.Region.USE_COMPUTED_SIZE;
@@ -2635,6 +2637,109 @@ public class GridPane extends Pane {
             return singleSizes;
         }
 
+    }
+
+    /**
+     * Copied from GridPaneDesignInfo for SceneBuilder.
+     *
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated // SB-dependency: RT-33381 has been filed to track this
+    public final int impl_getRowCount() {
+        int nRows = this.getRowConstraints().size();
+        for (int i = 0; i < this.getChildren().size(); i++) {
+            Node child = this.getChildren().get(i);
+            if (child.isManaged()) {
+                int rowIndex = GridPane.getNodeRowIndex(child);
+                int rowEnd = GridPane.getNodeRowEnd(child);
+                nRows = Math.max(nRows, (rowEnd != GridPane.REMAINING? rowEnd : rowIndex) + 1);
+            }
+        }
+        return nRows;
+    }
+
+    /**
+     * Copied from GridPaneDesignInfo for SceneBuilder.
+     *
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated // SB-dependency: RT-33381 has been filed to track this
+    public final int impl_getColumnCount() {
+        int nColumns = this.getColumnConstraints().size();
+        for (int i = 0; i < this.getChildren().size(); i++) {
+            Node child = this.getChildren().get(i);
+            if (child.isManaged()) {
+                int columnIndex = GridPane.getNodeColumnIndex(child);
+                int columnEnd = GridPane.getNodeColumnEnd(child);
+                nColumns = Math.max(nColumns, (columnEnd != GridPane.REMAINING? columnEnd : columnIndex) + 1);
+            }
+        }
+        return nColumns;
+    }
+
+    /**
+     * Copied from GridPaneDesignInfo for SceneBuilder.
+     *
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated // SB-dependency: RT-33381 has been filed to track this
+    public final Bounds impl_getCellBounds(int columnIndex, int rowIndex) {
+        final double snaphgap = this.snapSpace(this.getHgap());
+        final double snapvgap = this.snapSpace(this.getVgap());
+        final double top = this.snapSpace(this.getInsets().getTop());
+        final double right = this.snapSpace(this.getInsets().getRight());
+        final double bottom = this.snapSpace(this.getInsets().getBottom());
+        final double left = this.snapSpace(this.getInsets().getLeft());
+        final double gridPaneHeight = this.snapSize(this.getHeight()) - (top + bottom);
+        final double gridPaneWidth = this.snapSize(this.getWidth()) - (left + right);
+
+        // Compute grid. Result contains two double arrays, first for columns, second for rows
+        double[] columnWidths;
+        double[] rowHeights;
+
+        double[][] grid = this.getGrid();
+        if (grid == null) {
+            rowHeights = new double[] {0};
+            rowIndex = 0;
+            columnWidths = new double[] {0};
+            columnIndex = 0;
+        } else {
+            columnWidths = grid[0];
+            rowHeights = grid[1];
+        }
+
+        // Compute the total row height
+        double rowTotal = 0;
+        for (int i = 0; i < rowHeights.length; i++) {
+            rowTotal += rowHeights[i];
+        }
+        rowTotal += ((rowHeights.length - 1) * snapvgap);
+
+        // Adjust for alignment
+        double minY = top + Region.computeYOffset(gridPaneHeight, rowTotal, this.getAlignment().getVpos());
+        double height = rowHeights[rowIndex];
+        for (int j = 0; j < rowIndex; j++) {
+            minY += rowHeights[j] + snapvgap;
+        }
+
+        // Compute the total column width
+        double columnTotal = 0;
+        for (int i = 0; i < columnWidths.length; i++) {
+            columnTotal += columnWidths[i];
+        }
+        columnTotal += ((columnWidths.length - 1) * snaphgap);
+
+        // Adjust for alignment
+        double minX = left + Region.computeXOffset(gridPaneWidth, columnTotal, this.getAlignment().getHpos());
+        double width = columnWidths[columnIndex];
+        for (int j = 0; j < columnIndex; j++) {
+            minX += columnWidths[j] + snaphgap;
+        }
+
+        return new BoundingBox(minX, minY, width, height);
     }
 
 }
