@@ -43,6 +43,7 @@ import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 
 final class GtkApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
 
@@ -62,8 +63,19 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
     private final InvokeLaterDispatcher invokeLaterDispatcher;
 
     GtkApplication() {
-        invokeLaterDispatcher = new InvokeLaterDispatcher(this);
-        invokeLaterDispatcher.start();
+        boolean isEventThread = AccessController
+                .doPrivileged(new PrivilegedAction<Boolean>() {
+                    public Boolean run() {
+                        // Embedded in SWT, with shared event thread
+                        return Boolean.getBoolean("javafx.embed.isEventThread");
+                    }
+                });
+        if (!isEventThread) {
+            invokeLaterDispatcher = new InvokeLaterDispatcher(this);
+            invokeLaterDispatcher.start();
+        } else {
+            invokeLaterDispatcher = null;
+        }
     }
 
     private void initDisplay() {
@@ -164,8 +176,23 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
     private native void _runLoop(Runnable launchable, boolean noErrorTrap);
 
     @Override
-    protected void _invokeAndWait(Runnable runnable) {
-        invokeLaterDispatcher.invokeAndWait(runnable);
+    protected void _invokeAndWait(final Runnable runnable) {
+        if (invokeLaterDispatcher != null) {
+            invokeLaterDispatcher.invokeAndWait(runnable);
+        } else {
+            CountDownLatch latch = new CountDownLatch(1);
+            submitForLaterInvocation(new Runnable() {
+                public void run() {
+                    if (runnable != null) runnable.run();
+                    latch.countDown();
+                }
+            });
+            try {
+                latch.await();
+            } catch (InterruptedException e) {
+                //FAIL SILENTLY
+            }
+        }
     }
 
     private native void _submitForLaterInvocation(Runnable r);
@@ -175,7 +202,11 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
     }
 
     @Override protected void _invokeLater(Runnable runnable) {
-        invokeLaterDispatcher.invokeLater(runnable);
+        if (invokeLaterDispatcher != null) {
+            invokeLaterDispatcher.invokeLater(runnable);
+        } else {
+            submitForLaterInvocation(runnable);
+        }
     }
 
     private Object eventLoopExitEnterPassValue;
@@ -186,20 +217,26 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
 
     @Override
     protected Object _enterNestedEventLoop() {
-        invokeLaterDispatcher.notifyEnteringNestedEventLoop();
+        if (invokeLaterDispatcher != null) {
+            invokeLaterDispatcher.notifyEnteringNestedEventLoop();
+        }
         try {
             enterNestedEventLoopImpl();
             final Object retValue = eventLoopExitEnterPassValue;
             eventLoopExitEnterPassValue = null;
             return retValue;
         } finally {
-            invokeLaterDispatcher.notifyLeftNestedEventLoop();
+            if (invokeLaterDispatcher != null) {
+                invokeLaterDispatcher.notifyLeftNestedEventLoop();
+            }
         }
     }
 
     @Override
     protected void _leaveNestedEventLoop(Object retValue) {
-        invokeLaterDispatcher.notifyLeavingNestedEventLoop();
+        if (invokeLaterDispatcher != null) {
+            invokeLaterDispatcher.notifyLeavingNestedEventLoop();
+        }
         eventLoopExitEnterPassValue = retValue;
         leaveNestedEventLoopImpl();
     }

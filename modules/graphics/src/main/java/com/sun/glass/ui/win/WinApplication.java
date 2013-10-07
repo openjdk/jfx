@@ -62,8 +62,19 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     private final InvokeLaterDispatcher invokeLaterDispatcher;
     WinApplication() {
-        invokeLaterDispatcher = new InvokeLaterDispatcher(this);
-        invokeLaterDispatcher.start();
+        boolean isEventThread = AccessController
+                .doPrivileged(new PrivilegedAction<Boolean>() {
+                    public Boolean run() {
+                        // Embedded in SWT, with shared event thread
+                        return Boolean.getBoolean("javafx.embed.isEventThread");
+                    }
+                });
+        if (!isEventThread) {
+            invokeLaterDispatcher = new InvokeLaterDispatcher(this);
+            invokeLaterDispatcher.start();
+        } else {
+            invokeLaterDispatcher = null;
+        }
     }
 
     private static boolean verbose;
@@ -124,16 +135,22 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     native private void _leaveNestedEventLoopImpl(Object retValue);
 
     @Override protected Object _enterNestedEventLoop() {
-        invokeLaterDispatcher.notifyEnteringNestedEventLoop();
+        if (invokeLaterDispatcher != null) {
+            invokeLaterDispatcher.notifyEnteringNestedEventLoop();
+        }
         try {
             return _enterNestedEventLoopImpl();
         } finally {
-            invokeLaterDispatcher.notifyLeftNestedEventLoop();
+            if (invokeLaterDispatcher != null) {
+                invokeLaterDispatcher.notifyLeftNestedEventLoop();
+            }
         }
     }
 
     @Override protected void _leaveNestedEventLoop(Object retValue) {
-        invokeLaterDispatcher.notifyLeavingNestedEventLoop();
+        if (invokeLaterDispatcher != null) {
+            invokeLaterDispatcher.notifyLeavingNestedEventLoop();
+        }
         _leaveNestedEventLoopImpl(retValue);
     }
 
@@ -208,12 +225,16 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     @Override protected FileChooserResult staticCommonDialogs_showFileChooser(Window owner, String folder, String filename, String title, int type,
                                              boolean multipleMode, ExtensionFilter[] extensionFilters, int defaultFilterIndex) {
-        invokeLaterDispatcher.notifyEnteringNestedEventLoop();
+        if (invokeLaterDispatcher != null) {
+            invokeLaterDispatcher.notifyEnteringNestedEventLoop();
+        }
         return WinCommonDialogs.showFileChooser_impl(owner, folder, filename, title, type, multipleMode, extensionFilters, defaultFilterIndex);
     }
 
     @Override protected File staticCommonDialogs_showFolderChooser(Window owner, String folder, String title) {
-        invokeLaterDispatcher.notifyEnteringNestedEventLoop();
+        if (invokeLaterDispatcher != null) {
+            invokeLaterDispatcher.notifyEnteringNestedEventLoop();
+        }
         return WinCommonDialogs.showFolderChooser_impl(owner, folder, title);
     }
 
@@ -238,7 +259,11 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     }
 
     @Override protected void _invokeLater(Runnable runnable) {
-        invokeLaterDispatcher.invokeLater(runnable);
+        if (invokeLaterDispatcher != null) {
+            invokeLaterDispatcher.invokeLater(runnable);
+        } else {
+            submitForLaterInvocation(runnable);
+        }
     }
 
     @Override
