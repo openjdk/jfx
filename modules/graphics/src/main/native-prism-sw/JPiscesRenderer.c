@@ -110,7 +110,7 @@ Java_com_sun_pisces_PiscesRenderer_setClipImpl(JNIEnv* env, jobject objectHandle
 }
 
 JNIEXPORT void JNICALL
-Java_com_sun_pisces_PiscesRenderer_setColor(JNIEnv* env, jobject objectHandle,
+Java_com_sun_pisces_PiscesRenderer_setColorImpl(JNIEnv* env, jobject objectHandle,
         jint red, jint green, jint blue, jint alpha) {
     Renderer* rdr;
     rdr = (Renderer*)JLongToPointer(
@@ -126,7 +126,7 @@ Java_com_sun_pisces_PiscesRenderer_setColor(JNIEnv* env, jobject objectHandle,
 }
 
 JNIEXPORT void JNICALL
-Java_com_sun_pisces_PiscesRenderer_setCompositeRule(JNIEnv* env,
+Java_com_sun_pisces_PiscesRenderer_setCompositeRuleImpl(JNIEnv* env,
     jobject objectHandle,
     jint compositeRule)
 {
@@ -143,7 +143,7 @@ Java_com_sun_pisces_PiscesRenderer_setCompositeRule(JNIEnv* env,
     }
 }
 
-JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_clearRect(JNIEnv* env, jobject objectHandle,
+JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_clearRectImpl(JNIEnv* env, jobject objectHandle,
         jint x, jint y, jint w, jint h) {
     Renderer* rdr;
     Surface* surface;
@@ -555,7 +555,7 @@ fillRect(JNIEnv *env, jobject this, Renderer* rdr,
  * x, y, w, h are already transformed (is surface coordinates)
  * and rectangle is in an up-right position ie. no rotate or shear
  */
-JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_fillRect
+JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_fillRectImpl
   (JNIEnv *env, jobject this, jint x, jint y, jint w, jint h) 
 {
     Renderer* rdr;
@@ -710,7 +710,7 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_fillAlphaMaskImpl
  * Method:    setLCDGammaCorrection
  * Signature: (F)V
  */
-JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_setLCDGammaCorrection
+JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_setLCDGammaCorrectionImpl
 (JNIEnv *env, jobject this, jfloat gamma)
 {
     initGammaArrays(gamma);

@@ -98,7 +98,21 @@ public final class PiscesRenderer {
      * @param blue a value between 0 and 255.
      * @param alpha a value between 0 and 255.
      */
-    public native void setColor(int red, int green, int blue, int alpha);
+    public void setColor(int red, int green, int blue, int alpha) {
+        checkColorRange(red, "RED");
+        checkColorRange(green, "GREEN");
+        checkColorRange(blue, "BLUE");
+        checkColorRange(alpha, "ALPHA");
+        this.setColorImpl(red, green, blue, alpha);
+    }
+
+    private native void setColorImpl(int red, int green, int blue, int alpha);
+
+    private void checkColorRange(int v, String componentName) {
+        if (v < 0 || v > 255) {
+            throw new IllegalArgumentException(componentName + " color component is out of range");
+        }
+    }
 
     /**
      * Sets the current paint color.  An alpha value of 255 is used. Calling <code>setColor</code> also switches 
@@ -119,7 +133,17 @@ public final class PiscesRenderer {
      * is not changed. 
      * @param compositeRule one of <code>RendererBase.COMPOSITE_*</code> constants.
      */
-    public native void setCompositeRule(int compositeRule);
+    public void setCompositeRule(int compositeRule) {
+        if (compositeRule != RendererBase.COMPOSITE_CLEAR &&
+            compositeRule != RendererBase.COMPOSITE_SRC &&
+            compositeRule != RendererBase.COMPOSITE_SRC_OVER)
+        {
+            throw new IllegalArgumentException("Invalid value for Composite-Rule");
+        }
+        this.setCompositeRuleImpl(compositeRule);
+    }
+
+    private native void setCompositeRuleImpl(int compositeRule);
 
     private native void setLinearGradientImpl(int x0, int y0, int x1, int y1,
                                               int[] colors,
@@ -304,9 +328,29 @@ public final class PiscesRenderer {
     /**
      * Clears rectangle (x, y, x + w, y + h). Clear sets all pixels to transparent black (0x00000000 ARGB).
      */
-    public native void clearRect(int x, int y, int w, int h);
+    public void clearRect(int x, int y, int w, int h) {
+        final int x1 = Math.max(x, 0);
+        final int y1 = Math.max(y, 0);
+        final int x2 = Math.min(x + w, surface.getWidth());
+        final int y2 = Math.min(y + h, surface.getHeight());
+        this.clearRectImpl(x1, y1, x2 - x1, y2 - y1);
+    }
 
-    public native void fillRect(int x, int y, int w, int h);
+    private native void clearRectImpl(int x, int y, int w, int h);
+
+    public void fillRect(int x, int y, int w, int h) {
+        final int x1 = Math.max(x, 0);
+        final int y1 = Math.max(y, 0);
+        final int x2 = Math.min(x + w, surface.getWidth() << 16);
+        final int y2 = Math.min(y + h, surface.getHeight() << 16);
+        final int w2 = x2 - x1;
+        final int h2 = y2 - y1;
+        if (w2 > 0 && h2 > 0) {
+            this.fillRectImpl(x1, y1, w2, h2);
+        }
+    }
+
+    private native void fillRectImpl(int x, int y, int w, int h);
 
     public void emitAndClearAlphaRow(byte[] alphaMap, int[] alphaDeltas, int pix_y, int pix_x_from, int pix_x_to,
         int rowNum)
@@ -330,7 +374,14 @@ public final class PiscesRenderer {
 
     private native void fillAlphaMaskImpl(byte[] mask, int x, int y, int width, int height, int offset, int stride);
 
-    public native void setLCDGammaCorrection(float gamma);
+    public void setLCDGammaCorrection(float gamma) {
+        if (gamma <= 0) {
+            throw new IllegalArgumentException("Gamma must be greater than zero");
+        }
+        this.setLCDGammaCorrectionImpl(gamma);
+    }
+
+    private native void setLCDGammaCorrectionImpl(float gamma);
 
     public void fillLCDAlphaMask(byte[] mask, int x, int y, int width, int height, int offset, int stride)
     {
