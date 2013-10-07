@@ -251,7 +251,7 @@ void glass_application_request_native_event_loop(JNIEnv *env,
     GLASS_LOG_FINE("Created native event thread");
 }
 
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensApplication_startNativeEventLoop
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensApplication_nativeEventLoop
 (JNIEnv *env, jobject len, jobject lensApplication,
  jlong callbackFuncPtr, jlong nativeHandle) {
 
