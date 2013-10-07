@@ -72,6 +72,7 @@ import javafx.util.StringConverter;
 public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
     
     XYChart<X, Y> chart;
+    private Class<?> clzX;
     double minY, maxY;
 
     public XYDataVisualizer(final XYChart<X, Y> chart) {
@@ -128,22 +129,37 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
 
             @Override
             public TreeTableCell<XYChartItem<X, Y>, X> call(TreeTableColumn<XYChartItem<X, Y>, X> p) {
-                return new TextFieldTreeTableCell<>(new StringConverter<X>() {
+                return new TextFieldTreeTableCell<XYChartItem<X, Y>, X>() {
+                    {
+                        setConverter(new StringConverter<X>() {
+                            @Override
+                            public String toString(X t) {
+                                return t == null ? null : t.toString();
+                            }
 
-                    @Override
-                    public String toString(X t) {
-                        return t == null ? null : t.toString();
+                            @Override
+                            public X fromString(String string) {
+                                if (string == null) {
+                                    return null;
+                                }
+                                try {
+                                    if (clzX.isAssignableFrom(String.class)) {
+                                        return (X) string;
+                                    } else if (clzX.isAssignableFrom(Double.class)) {
+                                        return (X) new Double(string);
+                                    } else if (clzX.isAssignableFrom(Integer.class)) {
+                                        return (X) new Integer(string);
+                                    }
+                                } catch (NumberFormatException ex) {
+                                    new IllegalArgumentException("Failed to parse " + string + " to type " + clzX, ex).printStackTrace(System.err);
+                                    return getItem();
+                                }
+                                new IllegalStateException("This valueX type is not supported: " + clzX).printStackTrace(System.err);
+                                return getItem();
+                            }
+                        });
                     }
-
-                    @Override
-                    public X fromString(String string) {
-                        if (string == null) {
-                            return null;
-                        }
-                        X x = (X) new Double(string);
-                        return x;
-                    }
-                });
+                };
             }
         });
         xValueColumn.setEditable(true);
@@ -429,6 +445,10 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
         boolean editable = true;
         for (Series<X, Y> series : chart.getData()) {
             for (XYChart.Data<X, Y> data : series.getData()) {
+                X x = data.getXValue();
+                if (x != null) {
+                    clzX = x.getClass();
+                }
                 Y y = data.getYValue();
                 if (y != null) {
                     if (chart.getYAxis() instanceof NumberAxis) {
