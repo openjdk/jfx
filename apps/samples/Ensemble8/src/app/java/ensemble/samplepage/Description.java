@@ -78,7 +78,7 @@ public class Description extends VBox {
             relatedDocumentsList.getChildren().add(link);
         }
         for (final String classpath : sampleInfo.apiClasspaths) {
-            Hyperlink link = new Hyperlink(classpath);
+            Hyperlink link = new Hyperlink(classpath.replace('$', '.'));
             link.setOnAction(new EventHandler<ActionEvent>() {
                 @Override
                 public void handle(ActionEvent t) {
