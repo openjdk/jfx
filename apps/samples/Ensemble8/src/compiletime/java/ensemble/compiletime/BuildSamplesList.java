@@ -76,7 +76,7 @@ public class BuildSamplesList {
         // write
         PrintWriter fout = null;
         try {
-            fout = new PrintWriter(new FileWriter(samplesSourceFile));
+            fout = new PrintWriter(samplesSourceFile, "UTF-8");
             fout.println("package ensemble.generated;");
             fout.println("import ensemble.*;");
             fout.println("import ensemble.playground.PlaygroundProperty;");
@@ -298,7 +298,7 @@ public class BuildSamplesList {
         try {
             // load src into String
             in = new FileInputStream(file);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(in, "UTF-8"));
             String line;
             while((line = reader.readLine()) != null) {
                 builder.append(line);
