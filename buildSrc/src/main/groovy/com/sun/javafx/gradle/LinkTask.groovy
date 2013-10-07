@@ -46,7 +46,7 @@ class LinkTask extends DefaultTask {
             } else {
                 args("-o", "$lib");
             }
-            if (project.IS_DEBUG && !project.IS_WINDOWS) args("-g");
+            if (project.IS_DEBUG_NATIVE && !project.IS_WINDOWS) args("-g");
             if (linkParams != null) args(linkParams);
             if (project.IS_WINDOWS){
                 final String libPath = lib.toString();

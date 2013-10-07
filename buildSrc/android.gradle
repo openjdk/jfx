@@ -360,7 +360,7 @@ def ccOptFlags = ["-fpic", "-ffunction-sections", "-funwind-tables","-fstack-pro
 def ccWarnFlags = ["-Wa,--noexecstack", "-Wno-psabi"]
 def ccArchFlags = ["-mthumb", "-msoft-float", "-D__ARM_ARCH_5__", "-D__ARM_ARCH_5T__", "-D__ARM_ARCH_5E__",
                    "-D__ARM_ARCH_5TE__", "-march=armv5te" , "-mtune=xscale"]
-def ccDebugFlags = [IS_DEBUG ? "-DDEBUG" : "-DNDEBUG"]
+def ccDebugFlags = [IS_DEBUG_NATIVE ? "-DDEBUG" : "-DNDEBUG"]
 def ccDefaultIncludeFlags = ["-I$ndk/platforms/$ndk_target/arch-arm/usr/include"]
 
 def linkFlags = ["--sysroot=$sysroot",

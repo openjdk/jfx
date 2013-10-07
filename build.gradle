@@ -337,9 +337,10 @@ if (hasProperty("FULL_TEST")) {
 }
 ext.IS_FULL_TEST = isFullTest;
 
-// Specify the build configuration (Release or Debug)
-defineProperty("CONF", "Release")
-ext.IS_DEBUG = CONF == "Debug"
+// Specify the build configuration (Release, Debug, or DebugNative)
+defineProperty("CONF", "Debug")
+ext.IS_DEBUG_JAVA = CONF == "Debug" || CONF == "DebugNative"
+ext.IS_DEBUG_NATIVE = CONF == "DebugNative"
 
 // Defines the compiler warning levels to use. If empty, then no warnings are generated. If
 // not empty, then the expected syntax is as a space or comma separated list of names, such
@@ -1654,7 +1655,7 @@ allprojects {
         // TODO need to file issue with Gradle
         compile.options.useAnt = true
         compile.options.debug = true // we always generate debugging info in the class files
-        compile.options.debugOptions.debugLevel = IS_DEBUG ? "source,lines,vars" : "source,lines"
+        compile.options.debugOptions.debugLevel = IS_DEBUG_JAVA ? "source,lines,vars" : "source,lines"
         compile.options.fork = true
         compile.options.forkOptions.executable = JAVAC
         compile.options.warnings = IS_LINT
