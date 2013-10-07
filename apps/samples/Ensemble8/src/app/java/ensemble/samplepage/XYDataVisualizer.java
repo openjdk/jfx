@@ -101,7 +101,11 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
 
             @Override
             public ObservableValue<String> call(CellDataFeatures<XYChartItem<X, Y>, String> p) {
-                return p.getValue().getValue().nameProperty();
+                if (p.getValue() != null) {
+                    return p.getValue().getValue().nameProperty();
+                } else {
+                    return null;
+                }
             }
         });
         nameColumn.setEditable(true);
@@ -113,7 +117,11 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
 
             @Override
             public ObservableValue<X> call(CellDataFeatures<XYChartItem<X, Y>, X> p) {
-                return p.getValue().getValue().xValueProperty();
+                if (p.getValue() != null) {
+                    return p.getValue().getValue().xValueProperty();
+                } else {
+                    return null;
+                }
             }
         });
         xValueColumn.setCellFactory(new Callback<TreeTableColumn<XYChartItem<X, Y>, X>, TreeTableCell<XYChartItem<X, Y>, X>>() {
@@ -147,7 +155,11 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
 
             @Override
             public ObservableValue<Y> call(CellDataFeatures<XYChartItem<X, Y>, Y> p) {
-                return p.getValue().getValue().yValueProperty();
+                if (p.getValue() != null) {
+                    return p.getValue().getValue().yValueProperty();
+                } else {
+                    return null;
+                }
             }
         });
         yValueColumn.setCellFactory(new Callback<TreeTableColumn<XYChartItem<X, Y>, Y>, TreeTableCell<XYChartItem<X, Y>, Y>>() {
@@ -176,17 +188,20 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
         yValueColumn.setSortable(false);
         yValueColumn.setMinWidth(50);
         
-        Class<XYChartItem<X, Y>> clz = (Class<XYChartItem<X, Y>>) root.getClass();
         TreeTableColumn<XYChartItem<X, Y>, Object> extraValueColumn = new TreeTableColumn<>("Extra Value");
         extraValueColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<XYChartItem<X, Y>, Object>, ObservableValue<Object>>() {
             @Override
             public ObservableValue<Object> call(CellDataFeatures<XYChartItem<X, Y>, Object> p) {
-                return p.getValue().getValue().extraValueProperty();
+                if (p.getValue() != null) {
+                    return p.getValue().getValue().extraValueProperty();
+                } else {
+                    return null;
+                }
             }
         });
         extraValueColumn.setMinWidth(100);
         extraValueColumn.setSortable(false);
-
+        
         getColumns().setAll(nameColumn, xValueColumn, yValueColumn, extraValueColumn);
         
         setOnContextMenuRequested(new EventHandler<ContextMenuEvent>() {
