@@ -242,6 +242,11 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     }
 
     @Override
+    protected boolean _supportsInputMethods() {
+        return true;
+    }
+
+    @Override
     protected boolean _supportsTransparentWindows() {
         return true;
     }

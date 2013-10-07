@@ -1077,7 +1077,7 @@ public final class QuantumToolkit extends Toolkit {
             case SHAPE_CLIP:
                 return true;
             case INPUT_METHOD:
-                return false;     // TODO: RT-28495, implement input method query
+                return Application.GetApplication().supportsInputMethods();
             case TRANSPARENT_WINDOW:
                 return Application.GetApplication().supportsTransparentWindows();
             case UNIFIED_WINDOW:

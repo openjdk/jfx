@@ -304,6 +304,11 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
     protected native int staticView_getMultiClickMaxY();
 
     @Override
+    protected boolean _supportsInputMethods() {
+        return true;
+    }
+
+    @Override
     protected native boolean _supportsTransparentWindows();
 
     @Override protected boolean _supportsUnifiedWindows() {
