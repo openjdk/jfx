@@ -330,6 +330,10 @@ if (hasProperty("BUILD_JAVADOC")) {
 }
 ext.BUILD_JAVADOC = buildJavadoc;
 
+// Specifies whether to build the javafx-src bundle
+defineProperty("BUILD_SRC_ZIP", "false")
+ext.IS_BUILD_SRC_ZIP = Boolean.parseBoolean(BUILD_SRC_ZIP)
+
 // Specifies whether to run full tests (true) or smoke tests (false)
 def isFullTest = false;
 if (hasProperty("FULL_TEST")) {
@@ -1814,6 +1818,34 @@ task zips() {
     }
 }
 
+task copySources(type: Copy) {
+    enabled = IS_BUILD_SRC_ZIP
+    def projectsToCopy = [
+            project(":base"), project(":graphics"), project(":controls"),
+            project(":swing"), project(":swt"), project(":fxml"),
+            project(":builders"), project(":web")]
+    from(projectsToCopy.collect({
+        ["${it.projectDir}/src/main/java"]
+    }))
+    include "**/*.java"
+    into "${buildDir}/javafx-src"
+}
+
+task zipSources(type: Zip) {
+    enabled = IS_BUILD_SRC_ZIP
+    dependsOn(copySources)
+    archiveName = "javafx-src.zip"
+    destinationDir = file("$buildDir")
+    includeEmptyDirs = false
+    from "${buildDir}/javafx-src"
+}
+
+task src {
+    enabled = IS_BUILD_SRC_ZIP
+    description = "Created the javafx-src.zip bundle"
+    dependsOn(zipSources)
+}
+
 task all() {
     dependsOn(sdk,publicExports,apps,perf,zips)
 }
@@ -1946,6 +1978,14 @@ compileTargets { t ->
                 }
             }
 
+            // Copy over the javafx-src bundle
+            if (IS_BUILD_SRC_ZIP) {
+                copy {
+                    from "build/javafx-src.zip"
+                    into "build/${t.name}-sdk"
+                }
+            }
+
             // Copy over the fxpackager and rename as ant-javafx.jar
             copy {
                 from "modules/fxpackager/build/libs"
@@ -1968,6 +2008,7 @@ compileTargets { t ->
         }
         dependsOn(jfxrtTask)
         dependsOn(javadoc)
+        dependsOn(src)
     }
 
     def generateSymbols = targetProperties.containsKey('generateSymbols') ? targetProperties.generateSymbols : false
