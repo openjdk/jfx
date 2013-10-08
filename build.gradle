@@ -974,8 +974,6 @@ allprojects {
         testLogging.exceptionFormat = "full";
         scanForTestClasses = false;
         include("**/*Test.*");
-        exclude("**/DepthTest.*");
-        exclude("**/*Abstract*.*");
         if (BUILD_CLOSED && DO_JCOV) {
             addJCov(project, test)
         }
@@ -1288,7 +1286,6 @@ project(":graphics") {
         testLogging.exceptionFormat = "full"
         scanForTestClasses = false
         include "**/*Test.*"
-        exclude "**/*Abstract*.*"
         if (BUILD_CLOSED && DO_JCOV) {
             addJCov(project, test)
         }

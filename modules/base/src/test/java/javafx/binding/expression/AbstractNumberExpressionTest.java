@@ -53,6 +53,7 @@ import javafx.binding.DependencyUtils;
 import javafx.collections.FXCollections;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 @SuppressWarnings("WebTest")
@@ -447,6 +448,7 @@ public class AbstractNumberExpressionTest {
         assertEquals("42", s.get());
     }
 
+    @Ignore("RT-33413")
     @Test
     public void testAsString_Format() {
         final Locale defaultLocale = Locale.getDefault();
@@ -471,6 +473,7 @@ public class AbstractNumberExpressionTest {
         }
     }
 
+    @Ignore("RT-33413")
     @Test
     public void testAsString_LocaleFormat() {
         // checking German default
