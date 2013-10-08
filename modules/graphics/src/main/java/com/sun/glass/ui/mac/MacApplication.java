@@ -57,8 +57,19 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     private final InvokeLaterDispatcher invokeLaterDispatcher;
 
     MacApplication() {
-        invokeLaterDispatcher = new InvokeLaterDispatcher(this);
-        invokeLaterDispatcher.start();
+        boolean isEventThread = AccessController
+                .doPrivileged(new PrivilegedAction<Boolean>() {
+                    public Boolean run() {
+                        // Embedded in SWT, with shared event thread
+                        return Boolean.getBoolean("javafx.embed.isEventThread");
+                    }
+                });
+        if (!isEventThread) {
+            invokeLaterDispatcher = new InvokeLaterDispatcher(this);
+            invokeLaterDispatcher.start();
+        } else {
+            invokeLaterDispatcher = null;
+        }
     }
 
     private Menu appleMenu;
@@ -95,17 +106,23 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     native private Object _enterNestedEventLoopImpl();
     @Override protected Object _enterNestedEventLoop() {
-        invokeLaterDispatcher.notifyEnteringNestedEventLoop();
+        if (invokeLaterDispatcher != null) {
+            invokeLaterDispatcher.notifyEnteringNestedEventLoop();
+        }
         try {
             return _enterNestedEventLoopImpl();
         } finally {
-            invokeLaterDispatcher.notifyLeftNestedEventLoop();
+            if (invokeLaterDispatcher != null) {
+                invokeLaterDispatcher.notifyLeftNestedEventLoop();
+            }
         }
     }
 
     native private void _leaveNestedEventLoopImpl(Object retValue);
     @Override protected void _leaveNestedEventLoop(Object retValue) {
-        invokeLaterDispatcher.notifyLeavingNestedEventLoop();
+        if (invokeLaterDispatcher != null) {
+            invokeLaterDispatcher.notifyLeavingNestedEventLoop();
+        }
         _leaveNestedEventLoopImpl(retValue);
     }
 
@@ -273,7 +290,16 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     }
 
     @Override protected void _invokeLater(Runnable runnable) {
-        invokeLaterDispatcher.invokeLater(runnable);
+        if (invokeLaterDispatcher != null) {
+            invokeLaterDispatcher.invokeLater(runnable);
+        } else {
+            submitForLaterInvocation(runnable);
+        }
+    }
+
+    @Override
+    protected boolean _supportsInputMethods() {
+        return true;
     }
 
     @Override

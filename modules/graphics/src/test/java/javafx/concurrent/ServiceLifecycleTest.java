@@ -29,9 +29,13 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.concurrent.mocks.MythicalEvent;
 import javafx.concurrent.mocks.SimpleTask;
+import javafx.event.Event;
 import javafx.event.EventHandler;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.After;
 import org.junit.Test;
@@ -383,7 +387,8 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     @Test public void workDonePropertyNotification() {
         final AtomicBoolean passed = new AtomicBoolean(false);
         service.workDoneProperty().addListener(new ChangeListener<Number>() {
-            @Override public void changed(ObservableValue<? extends Number> o,
+            @Override
+            public void changed(ObservableValue<? extends Number> o,
                                 Number oldValue, Number newValue) {
                 passed.set(newValue.doubleValue() == 10);
             }
@@ -412,7 +417,8 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     @Test public void totalWorkPropertyNotification() {
         final AtomicBoolean passed = new AtomicBoolean(false);
         service.totalWorkProperty().addListener(new ChangeListener<Number>() {
-            @Override public void changed(ObservableValue<? extends Number> o,
+            @Override
+            public void changed(ObservableValue<? extends Number> o,
                                 Number oldValue, Number newValue) {
                 passed.set(newValue.doubleValue() == 20);
             }
@@ -639,7 +645,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     }
 
     /************************************************************************
-     * Proper Completion of a task                              *
+     * Proper Completion of a task                                          *
      ***********************************************************************/
 
     @Test(expected = IllegalStateException.class)
@@ -773,9 +779,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     }
 
     /***************************************************************************
-     *
-     * Tests for onReady
-     *
+     *                                                                         *
+     * Tests for onReady                                                       *
+     *                                                                         *
      **************************************************************************/
 
     @Test public void onReadyPropertyNameShouldMatchMethodName() {
@@ -820,7 +826,8 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         executor.executeScheduled();
         task.complete();
         service.addEventHandler(WorkerStateEvent.WORKER_STATE_READY, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
+            @Override
+            public void handle(WorkerStateEvent workerStateEvent) {
                 handlerCalled.set(true);
             }
         });
@@ -870,7 +877,8 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_READY, filter);
         service.removeEventFilter(WorkerStateEvent.WORKER_STATE_READY, filter);
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_READY, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
+            @Override
+            public void handle(WorkerStateEvent workerStateEvent) {
                 sanity.set(true);
             }
         });
@@ -880,10 +888,31 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertFalse(filterCalled.get());
     }
 
+    @Test public void cancelCalledFromOnReady() {
+        final AtomicInteger cancelNotificationCount = new AtomicInteger();
+        service.start();
+        executor.executeScheduled();
+        task.complete();
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_READY, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                service.cancel();
+            }
+        });
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent event) {
+                cancelNotificationCount.incrementAndGet();
+            }
+        });
+
+        service.reset();
+        assertEquals(Worker.State.CANCELLED, service.getState());
+        assertEquals(1, cancelNotificationCount.get());
+    }
+
     /***************************************************************************
-     *
-     * Tests for onScheduled
-     *
+     *                                                                         *
+     * Tests for onScheduled                                                   *
+     *                                                                         *
      **************************************************************************/
 
     @Test public void onScheduledPropertyNameShouldMatchMethodName() {
@@ -908,7 +937,8 @@ public class ServiceLifecycleTest extends ServiceTestBase {
             }
         });
         service.setOnScheduled(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
+            @Override
+            public void handle(WorkerStateEvent workerStateEvent) {
                 filterCalledFirst.set(filterCalled.get());
             }
         });
@@ -923,7 +953,8 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     @Test public void scheduledCalledAfterHandler() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         service.setOnScheduled(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
+            @Override
+            public void handle(WorkerStateEvent workerStateEvent) {
                 handlerCalled.set(true);
             }
         });
@@ -999,7 +1030,8 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_SCHEDULED, filter);
         service.removeEventFilter(WorkerStateEvent.WORKER_STATE_SCHEDULED, filter);
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_SCHEDULED, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
+            @Override
+            public void handle(WorkerStateEvent workerStateEvent) {
                 sanity.set(true);
             }
         });
@@ -1010,10 +1042,29 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertFalse(filterCalled.get());
     }
 
+    @Test public void cancelCalledFromOnScheduled() {
+        final AtomicInteger cancelNotificationCount = new AtomicInteger();
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_SCHEDULED, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                service.cancel();
+            }
+        });
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent event) {
+                cancelNotificationCount.incrementAndGet();
+            }
+        });
+
+        service.start();
+        executor.executeScheduled();
+        assertEquals(Worker.State.CANCELLED, service.getState());
+        assertEquals(1, cancelNotificationCount.get());
+    }
+
     /***************************************************************************
-     *
-     * Tests for onRunning
-     *
+     *                                                                         *
+     * Tests for onRunning                                                     *
+     *                                                                         *
      **************************************************************************/
 
     @Test public void onRunningPropertyNameShouldMatchMethodName() {
@@ -1038,7 +1089,8 @@ public class ServiceLifecycleTest extends ServiceTestBase {
             }
         });
         service.setOnRunning(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
+            @Override
+            public void handle(WorkerStateEvent workerStateEvent) {
                 filterCalledFirst.set(filterCalled.get());
             }
         });
@@ -1068,7 +1120,8 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     @Test public void runningCalledAfterHandlerEvenIfConsumed() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         service.setOnRunning(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
+            @Override
+            public void handle(WorkerStateEvent workerStateEvent) {
                 handlerCalled.set(true);
                 workerStateEvent.consume();
             }
@@ -1129,7 +1182,8 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_RUNNING, filter);
         service.removeEventFilter(WorkerStateEvent.WORKER_STATE_RUNNING, filter);
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_RUNNING, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
+            @Override
+            public void handle(WorkerStateEvent workerStateEvent) {
                 sanity.set(true);
             }
         });
@@ -1140,10 +1194,29 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertFalse(filterCalled.get());
     }
 
+    @Test public void cancelCalledFromOnRunning() {
+        final AtomicInteger cancelNotificationCount = new AtomicInteger();
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_RUNNING, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                service.cancel();
+            }
+        });
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent event) {
+                cancelNotificationCount.incrementAndGet();
+            }
+        });
+
+        service.start();
+        executor.executeScheduled();
+        assertEquals(Worker.State.CANCELLED, service.getState());
+        assertEquals(1, cancelNotificationCount.get());
+    }
+
     /***************************************************************************
-     *
-     * Tests for onSucceeded
-     *
+     *                                                                         *
+     * Tests for onSucceeded                                                   *
+     *                                                                         *
      **************************************************************************/
 
     @Test public void onSucceededPropertyNameShouldMatchMethodName() {
@@ -1265,7 +1338,8 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_SUCCEEDED, filter);
         service.removeEventFilter(WorkerStateEvent.WORKER_STATE_SUCCEEDED, filter);
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_SUCCEEDED, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
+            @Override
+            public void handle(WorkerStateEvent workerStateEvent) {
                 sanity.set(true);
             }
         });
@@ -1273,14 +1347,32 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         service.start();
         executor.executeScheduled();
         task.complete();
-        assertTrue(sanity.get());
-        assertFalse(filterCalled.get());
+    }
+
+    @Test public void cancelCalledFromOnSucceeded() {
+        final AtomicInteger cancelNotificationCount = new AtomicInteger();
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_SUCCEEDED, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                service.cancel();
+            }
+        });
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent event) {
+                cancelNotificationCount.incrementAndGet();
+            }
+        });
+
+        service.start();
+        executor.executeScheduled();
+        task.complete();
+        assertEquals(Worker.State.SUCCEEDED, service.getState());
+        assertEquals(0, cancelNotificationCount.get());
     }
 
     /***************************************************************************
-     *
-     * Tests for onCancelled
-     *
+     *                                                                         *
+     * Tests for onCancelled                                                   *
+     *                                                                         *
      **************************************************************************/
 
     @Test public void onCancelledPropertyNameShouldMatchMethodName() {
@@ -1321,7 +1413,8 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     @Test public void cancelledCalledAfterHandler() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         service.setOnCancelled(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
+            @Override
+            public void handle(WorkerStateEvent workerStateEvent) {
                 handlerCalled.set(true);
             }
         });
@@ -1402,7 +1495,8 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, filter);
         service.removeEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, filter);
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
+            @Override
+            public void handle(WorkerStateEvent workerStateEvent) {
                 sanity.set(true);
             }
         });
@@ -1414,10 +1508,50 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertFalse(filterCalled.get());
     }
 
+    @Test public void cancelCalledFromOnCancelled() {
+        final AtomicInteger cancelNotificationCount = new AtomicInteger();
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                service.cancel();
+            }
+        });
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent event) {
+                cancelNotificationCount.incrementAndGet();
+            }
+        });
+
+        service.start();
+        executor.executeScheduled();
+        task.cancel();
+        assertEquals(Worker.State.CANCELLED, service.getState());
+        assertEquals(1, cancelNotificationCount.get());
+    }
+
+    @Test public void cancelCalledFromOnFailed() {
+        final AtomicInteger cancelNotificationCount = new AtomicInteger();
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_FAILED, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent workerStateEvent) {
+                service.cancel();
+            }
+        });
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent event) {
+                cancelNotificationCount.incrementAndGet();
+            }
+        });
+
+        service.start();
+        executor.executeScheduled();
+        task.fail(new Exception("Quit"));
+        assertEquals(Worker.State.FAILED, service.getState());
+        assertEquals(0, cancelNotificationCount.get());
+    }
+
     /***************************************************************************
-     *
-     * Tests for onFailed
-     *
+     *                                                                         *
+     * Tests for onFailed                                                      *
+     *                                                                         *
      **************************************************************************/
 
     @Test public void onFailedPropertyNameShouldMatchMethodName() {
@@ -1474,7 +1608,8 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     @Test public void failedCalledAfterHandlerEvenIfConsumed() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         service.setOnFailed(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
+            @Override
+            public void handle(WorkerStateEvent workerStateEvent) {
                 handlerCalled.set(true);
             }
         });
@@ -1538,7 +1673,8 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_FAILED, filter);
         service.removeEventFilter(WorkerStateEvent.WORKER_STATE_FAILED, filter);
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_FAILED, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
+            @Override
+            public void handle(WorkerStateEvent workerStateEvent) {
                 sanity.set(true);
             }
         });
@@ -1551,10 +1687,662 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     }
 
     /***************************************************************************
-     *
-     * A mythical subclass should be able to set an event handler and
-     * have events fired on the Service work.
-     *
+     *                                                                         *
+     * Tests that invoking methods from the wrong thread leads to errors, and  *
+     * that regardless of which thread starts the Service, all notification    *
+     * (events, etc) happen on the FX thread only.                             *
+     *                                                                         *
+     **************************************************************************/
+
+    @Test public void canCreateServiceOnRandomThread() {
+        RandomThread random = new RandomThread(new Runnable() {
+            @Override public void run() {
+                DoNothingService s = null;
+                try {
+                    s = new DoNothingService();
+                } finally {
+                    if (s != null) s.shutdown();
+                }
+            }
+        });
+        random.test();
+    }
+
+    @Test public void canGetReferencesToPropertiesOnRandomThread() {
+        RandomThread random = new RandomThread(new Runnable() {
+            @Override public void run() {
+                DoNothingService s = null;
+                try {
+                    s = new DoNothingService();
+                    s.exceptionProperty();
+                    s.executorProperty();
+                    s.messageProperty();
+                    s.progressProperty();
+                    s.onCancelledProperty();
+                    s.onFailedProperty();
+                    s.onReadyProperty();
+                    s.onRunningProperty();
+                    s.onScheduledProperty();
+                    s.onSucceededProperty();
+                    s.runningProperty();
+                    s.stateProperty();
+                    s.titleProperty();
+                    s.totalWorkProperty();
+                    s.valueProperty();
+                    s.workDoneProperty();
+                } finally {
+                    if (s != null) s.shutdown();
+                }
+            }
+        });
+        random.test();
+    }
+
+    @Test public void canInvokeGettersOnRandomThread() {
+        RandomThread random = new RandomThread(new Runnable() {
+            @Override public void run() {
+                DoNothingService s = null;
+                try {
+                    s = new DoNothingService();
+                    s.getException();
+                    s.getExecutor();
+                    s.getMessage();
+                    s.getProgress();
+                    s.getOnCancelled();
+                    s.getOnFailed();
+                    s.getOnReady();
+                    s.getOnRunning();
+                    s.getOnScheduled();
+                    s.getOnSucceeded();
+                    s.isRunning();
+                    s.getState();
+                    s.getTitle();
+                    s.getTotalWork();
+                    s.getValue();
+                    s.getWorkDone();
+                } finally {
+                    if (s != null) s.shutdown();
+                }
+            }
+        });
+        random.test();
+    }
+
+    @Test public void canInvokeSettersOnRandomThread() {
+        RandomThread random = new RandomThread(new Runnable() {
+            @Override public void run() {
+                DoNothingService s = null;
+                try {
+                    s = new DoNothingService();
+                    s.setEventHandler(WorkerStateEvent.ANY, new EventHandler() {
+                        @Override
+                        public void handle(Event event) {
+                        }
+                    });
+                    s.setOnCancelled(new EventHandler<WorkerStateEvent>() {
+                        @Override
+                        public void handle(WorkerStateEvent event) {
+                        }
+                    });
+                    s.setOnFailed(new EventHandler<WorkerStateEvent>() {
+                        @Override
+                        public void handle(WorkerStateEvent event) {
+                        }
+                    });
+                    s.setOnReady(new EventHandler<WorkerStateEvent>() {
+                        @Override
+                        public void handle(WorkerStateEvent event) {
+                        }
+                    });
+                    s.setOnRunning(new EventHandler<WorkerStateEvent>() {
+                        @Override
+                        public void handle(WorkerStateEvent event) {
+                        }
+                    });
+                    s.setOnScheduled(new EventHandler<WorkerStateEvent>() {
+                        @Override
+                        public void handle(WorkerStateEvent event) {
+                        }
+                    });
+                    s.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
+                        @Override
+                        public void handle(WorkerStateEvent event) {
+                        }
+                    });
+                } finally {
+                    if (s != null) s.shutdown();
+                }
+            }
+        });
+        random.test();
+    }
+
+    @Test public void canInvokeStartOnRandomThread() {
+        RandomThread random = new RandomThread(new Runnable() {
+            @Override public void run() {
+                DoNothingService s = null;
+                try {
+                    s = new DoNothingService();
+                    s.start();
+                } finally {
+                    if (s != null) s.shutdown();
+                }
+            }
+        });
+        random.test();
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokeRestartOnRandomThreadAfterStart() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.restart();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokeCancelOnRandomThreadAfterStart() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.cancel();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokeSettersOnRandomThreadAfterStart_1() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.setEventHandler(WorkerStateEvent.ANY, new EventHandler() {
+                    @Override public void handle(Event event) { }
+                });
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokeSettersOnRandomThreadAfterStart_2() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.setOnCancelled(new EventHandler<WorkerStateEvent>() {
+                    @Override public void handle(WorkerStateEvent event) { }
+                });
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokeSettersOnRandomThreadAfterStart_3() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.setOnFailed(new EventHandler<WorkerStateEvent>() {
+                    @Override public void handle(WorkerStateEvent event) { }
+                });
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokeSettersOnRandomThreadAfterStart_4() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.setOnReady(new EventHandler<WorkerStateEvent>() {
+                    @Override public void handle(WorkerStateEvent event) { }
+                });
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokeSettersOnRandomThreadAfterStart_5() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.setOnRunning(new EventHandler<WorkerStateEvent>() {
+                    @Override public void handle(WorkerStateEvent event) { }
+                });
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokeSettersOnRandomThreadAfterStart_6() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.setOnScheduled(new EventHandler<WorkerStateEvent>() {
+                    @Override public void handle(WorkerStateEvent event) { }
+                });
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokeSettersOnRandomThreadAfterStart_7() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
+                    @Override public void handle(WorkerStateEvent event) { }
+                });
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokeGettersOnRandomThreadAfterStart_1() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.getException();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokeGettersOnRandomThreadAfterStart_2() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.getExecutor();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokeGettersOnRandomThreadAfterStart_3() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.getMessage();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokeGettersOnRandomThreadAfterStart_4() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.getProgress();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokeGettersOnRandomThreadAfterStart_5() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.getOnCancelled();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokeGettersOnRandomThreadAfterStart_6() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.getOnFailed();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokeGettersOnRandomThreadAfterStart_7() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.getOnReady();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokeGettersOnRandomThreadAfterStart_8() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.getOnRunning();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokeGettersOnRandomThreadAfterStart_9() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.getOnScheduled();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokeGettersOnRandomThreadAfterStart_10() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.getOnSucceeded();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokeGettersOnRandomThreadAfterStart_11() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.isRunning();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokeGettersOnRandomThreadAfterStart_12() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.getState();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokeGettersOnRandomThreadAfterStart_13() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.getTitle();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokeGettersOnRandomThreadAfterStart_14() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.getTotalWork();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokeGettersOnRandomThreadAfterStart_15() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.getValue();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokeGettersOnRandomThreadAfterStart_16() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.getValue();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokePropertyGettersOnRandomThreadAfterStart_1() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.exceptionProperty();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokePropertyGettersOnRandomThreadAfterStart_2() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.executorProperty();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokePropertyGettersOnRandomThreadAfterStart_3() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.messageProperty();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokePropertyGettersOnRandomThreadAfterStart_4() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.progressProperty();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokePropertyGettersOnRandomThreadAfterStart_5() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.onCancelledProperty();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokePropertyGettersOnRandomThreadAfterStart_6() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.onFailedProperty();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokePropertyGettersOnRandomThreadAfterStart_7() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.onReadyProperty();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokePropertyGettersOnRandomThreadAfterStart_8() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.onRunningProperty();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokePropertyGettersOnRandomThreadAfterStart_9() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.onScheduledProperty();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokePropertyGettersOnRandomThreadAfterStart_10() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.onSucceededProperty();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokePropertyGettersOnRandomThreadAfterStart_11() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.runningProperty();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokePropertyGettersOnRandomThreadAfterStart_12() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.stateProperty();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokePropertyGettersOnRandomThreadAfterStart_13() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.titleProperty();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokePropertyGettersOnRandomThreadAfterStart_14() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.totalWorkProperty();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokePropertyGettersOnRandomThreadAfterStart_15() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.valueProperty();
+            }
+        });
+    }
+
+    @Test (expected = IllegalStateException.class)
+    public void cannotInvokePropertyGettersOnRandomThreadAfterStart_16() throws Throwable {
+        assertThrowsException(new ServiceTestExecution() {
+            @Override public void test(DoNothingService s) {
+                s.workDoneProperty();
+            }
+        });
+    }
+
+    private void assertThrowsException(final ServiceTestExecution c) throws Throwable {
+        RandomThread random = new RandomThread(new Runnable() {
+            @Override public void run() {
+                DoNothingService s = null;
+                try {
+                    s = new DoNothingService();
+                    s.start();
+                    c.test(s);
+                } finally {
+                    if (s != null) s.shutdown();
+                }
+            }
+        });
+
+        try {
+            random.test();
+        } catch (AssertionError er) {
+            throw er.getCause();
+        }
+    }
+
+    private interface ServiceTestExecution {
+        public void test(DoNothingService s);
+    }
+
+    /**
+     * Specialized thread used for checking access to various methods from a "random thread" other
+     * than the FX thread. This class has built into it all the supported needed for handling
+     * exceptions and so forth, such that assertion errors are raised if an exception occurs
+     * on the thread, and also handles blocking until the thread body concludes.
+     */
+    private static final class RandomThread extends Thread {
+        private final CountDownLatch testCompleted = new CountDownLatch(1);
+        private Throwable error;
+
+        public RandomThread(Runnable target) {
+            super(target);
+        }
+
+        @Override public void run() {
+            try {
+                super.run();
+            } catch (Throwable th) {
+                error = th;
+            } finally {
+                testCompleted.countDown();
+            }
+        }
+
+        public void test() throws AssertionError {
+            start();
+            try {
+                testCompleted.await();
+            } catch (InterruptedException e) {
+                throw new AssertionError("Test did not complete normally");
+            }
+            if (error != null) {
+                throw new AssertionError(error);
+            }
+        }
+    }
+
+    /**
+     * A service which does absolutely nothing and isn't hardwired to believe that
+     * the test thread is the FX thread (unlike the other services in these tests)
+     */
+    private static final class DoNothingService extends Service {
+        private Thread pretendFXThread;
+        private ConcurrentLinkedQueue<Runnable> eventQueue = new ConcurrentLinkedQueue<>();
+        private volatile boolean shutdown = false;
+
+        public DoNothingService() {
+            setExecutor(new Executor() {
+                @Override public void execute(Runnable command) {
+                    Thread backgroundThread = new Thread(command);
+                    backgroundThread.start();
+                }
+            });
+        }
+
+        void shutdown() {
+            shutdown = true;
+        }
+
+        @Override protected Task createTask() {
+            return new Task() {
+                @Override protected Object call() throws Exception {
+                    return null;
+                }
+
+                @Override boolean isFxApplicationThread() {
+                    return Thread.currentThread() == pretendFXThread;
+                }
+
+                @Override
+                void runLater(Runnable r) {
+                    DoNothingService.this.runLater(r);
+                }
+            };
+        }
+
+        @Override void runLater(Runnable r) {
+            eventQueue.add(r);
+            if (pretendFXThread == null) {
+                pretendFXThread = new Thread() {
+                    @Override public void run() {
+                        while (!shutdown) {
+                            Runnable event = eventQueue.poll();
+                            if (event != null) {
+                                event.run();
+                            }
+                        }
+                    }
+                };
+                pretendFXThread.start();
+            }
+        }
+
+        @Override boolean isFxApplicationThread() {
+            return Thread.currentThread() == pretendFXThread;
+        }
+    }
+
+    /***************************************************************************
+     *                                                                         *
+     * A mythical subclass should be able to set an event handler and          *
+     * have events fired on the Service work.                                  *
+     *                                                                         *
      **************************************************************************/
 
     @Test public void eventFiredOnSubclassWorks() {
@@ -1590,5 +2378,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         }
 
         @Override void checkThread() { }
+
+        @Override void runLater(Runnable r) {
+            r.run();
+        }
     }
 }

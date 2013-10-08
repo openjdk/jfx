@@ -316,7 +316,7 @@ public class ComboBoxListCell<T> extends ListCell<T> {
         }
         
         if (comboBox == null) {
-            comboBox = createComboBox(this, items, getConverter());
+            comboBox = createComboBox(this, items, converterProperty());
             comboBox.editableProperty().bind(comboBoxEditableProperty());
         }
         

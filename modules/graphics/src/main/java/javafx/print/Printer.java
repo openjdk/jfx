@@ -35,6 +35,7 @@ import static javafx.print.PageOrientation.*;
 
 import com.sun.javafx.tk.PrintPipeline;
 import com.sun.javafx.print.PrinterImpl;
+import com.sun.javafx.print.Units;
 
 /**
  * A Printer instance represents the destination for a print job.
@@ -404,7 +405,7 @@ public final class Printer {
             public Paper createPaper(String paperName,
                                      double paperWidth,
                                      double paperHeight,
-                                     Paper.Units units) {
+                                     Units units) {
                 return new Paper(paperName, paperWidth, paperHeight, units);
             }
 

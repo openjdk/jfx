@@ -42,7 +42,6 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.Tab;
-import javafx.scene.control.TabBuilder;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.Tooltip;
@@ -60,7 +59,6 @@ import javafx.stage.Stage;
  * @preview preview.png
  * @see javafx.scene.control.Tab
  * @see javafx.scene.control.TabPane
- * @see javafx.scene.control.TabBuilder
  */
 public class TabPaneApp extends Application {
 
@@ -238,9 +236,10 @@ public class TabPaneApp extends Application {
         });
         // Add tab and switch to it
         final Button newTabButton = new Button("Switch to New Tab");
-        newTabButton.setOnAction(new EventHandler<ActionEvent>() {           
+        newTabButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent e) {
-                Tab t = TabBuilder.create().text("Testing").content(new Button("Howdy")).build();
+                Tab t = new Tab("Testing");
+                t.setContent(new Button("Howdy"));
                 tabPane.getTabs().add(t);
                 tabPane.getSelectionModel().select(t);
             }
@@ -248,9 +247,10 @@ public class TabPaneApp extends Application {
         vbox.getChildren().add(newTabButton);
         // Add tab
         final Button addTabButton = new Button("Add Tab");
-        addTabButton.setOnAction(new EventHandler<ActionEvent>() {           
+        addTabButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent e) {
-                Tab t = TabBuilder.create().text("New Tab").content(new Region()).build();
+                Tab t = new Tab("New Tab");
+                t.setContent(new Region());
                 tabPane.getTabs().add(t);
             }
         });

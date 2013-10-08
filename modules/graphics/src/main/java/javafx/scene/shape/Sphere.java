@@ -414,7 +414,7 @@ public class Sphere extends Shape3D {
             fIndex += 6;
         }
 
-        TriangleMesh m = new TriangleMesh();
+        TriangleMesh m = new TriangleMesh(true);
         m.getPoints().setAll(points);
         m.getTexCoords().setAll(tPoints);
         m.getFaces().setAll(faces);

@@ -39,7 +39,7 @@ public class DWGlyph implements Glyph {
     private float pixelXAdvance, pixelYAdvance;
     private RECT rect;
     private boolean drawShapes;
-    byte[] pixelData;
+    private byte[] pixelData;
 
     private static final boolean CACHE_TARGET = true;
     private static IWICBitmap cachedBitmap;
@@ -58,13 +58,13 @@ public class DWGlyph implements Glyph {
 
         IDWriteFontFace face = strike.getFontFace();
         run = new DWRITE_GLYPH_RUN();
-        run.fontFace = face.ptr;
+        run.fontFace = face != null ? face.ptr : 0;
         run.fontEmSize = strike.getSize();
         run.glyphIndices = (short)glyphCode;
         run.glyphAdvances = 0;
         run.advanceOffset = 0;
         run.ascenderOffset = 0;
-        run.bidiLevel = 0; //should not matter as it draws just one glyph
+        run.bidiLevel = 0;
         run.isSideways = false;
 
         /* Note: glyphs can be created on the JFX thread to create shapes
@@ -77,15 +77,18 @@ public class DWGlyph implements Glyph {
         if (metrics != null) return;
         //TODO could the metrics cached in DWFontFile be used ?
         IDWriteFontFace face = strike.getFontFace();
+        if (face == null) return;
         metrics = face.GetDesignGlyphMetrics(run.glyphIndices, false);
-        float upem = strike.getUpem();
-        pixelXAdvance = metrics.advanceWidth * strike.getSize() / upem;
-        pixelYAdvance = 0;
-        if (strike.matrix != null) {
-            Point2D pt = new Point2D(pixelXAdvance, pixelYAdvance);
-            strike.getTransform().transform(pt, pt);
-            pixelXAdvance = pt.x;
-            pixelYAdvance = pt.y;
+        if (metrics != null) {
+            float upem = strike.getUpem();
+            pixelXAdvance = metrics.advanceWidth * strike.getSize() / upem;
+            pixelYAdvance = 0;
+            if (strike.matrix != null) {
+                Point2D pt = new Point2D(pixelXAdvance, pixelYAdvance);
+                strike.getTransform().transform(pt, pt);
+                pixelXAdvance = pt.x;
+                pixelYAdvance = pt.y;
+            }
         }
     }
 
@@ -139,7 +142,7 @@ public class DWGlyph implements Glyph {
 
     byte[] getD2DMask(float subPixelX, float subPixelY, boolean lcd) {
         checkBounds();
-        if (getWidth() == 0 || getHeight() == 0) {
+        if (getWidth() == 0 || getHeight() == 0 || run.fontFace == 0) {
             return new byte[0];
         }
 
@@ -161,6 +164,9 @@ public class DWGlyph implements Glyph {
         } else {
             bitmap = createBitmap(w, h);
             target = createRenderingTarget(bitmap);
+        }
+        if (bitmap == null || target == null) {
+            return new byte[0];
         }
 
         DWRITE_MATRIX matrix = strike.matrix;
@@ -201,38 +207,42 @@ public class DWGlyph implements Glyph {
             return null;
         }
 
+        byte[] result = null;
         IWICBitmapLock lock = bitmap.Lock(0, 0, w, h, OS.WICBitmapLockRead);
-        //TODO instead of copying the entire buffer to java it would be faster to
-        //blit in native code.
-        byte[] buffer = lock.GetDataPointer();
-        int stride = lock.GetStride();
-        byte[] result;
-        int i = 0, j = 0;
-        byte one = (byte)0xFF;
-        if (lcd) {
-            result = new byte[w*h*3];
-            for (int y = 0; y < h; y++) {
-                int row = j;
-                for (int x = 0; x < w; x++) {
-                    result[i++] = (byte)(one - buffer[row++]);
-                    result[i++] = (byte)(one - buffer[row++]);
-                    result[i++] = (byte)(one - buffer[row++]);
-                    row++;
+        if (lock != null) {
+            byte[] buffer = lock.GetDataPointer();
+            // TODO instead of copying the entire buffer to java it would
+            // be faster to blit in native code.
+            if (buffer != null) {
+                int stride = lock.GetStride();
+                int i = 0, j = 0;
+                byte one = (byte)0xFF;
+                if (lcd) {
+                    result = new byte[w*h*3];
+                    for (int y = 0; y < h; y++) {
+                        int row = j;
+                        for (int x = 0; x < w; x++) {
+                            result[i++] = (byte)(one - buffer[row++]);
+                            result[i++] = (byte)(one - buffer[row++]);
+                            result[i++] = (byte)(one - buffer[row++]);
+                            row++;
+                        }
+                        j += stride;
+                    }
+                } else {
+                    result = new byte[w*h];
+                    for (int y = 0; y < h; y++) {
+                        int row = j;
+                        for (int x = 0; x < w; x++) {
+                            result[i++] = (byte)(one - buffer[row]);
+                            row += 4;
+                        }
+                        j += stride;
+                    }
                 }
-                j += stride;
             }
-        } else {
-            result = new byte[w*h];
-            for (int y = 0; y < h; y++) {
-                int row = j;
-                for (int x = 0; x < w; x++) {
-                    result[i++] = (byte)(one - buffer[row]);
-                    row += 4;
-                }
-                j += stride;
-            }
+            lock.Release();
         }
-        lock.Release();
 
         if (!cache) {
             bitmap.Release();
@@ -242,6 +252,7 @@ public class DWGlyph implements Glyph {
     }
 
     IDWriteGlyphRunAnalysis createAnalysis(float x, float y) {
+        if (run.fontFace == 0) return null;
         IDWriteFactory factory = DWFactory.getDWriteFactory();
         int renderingMode = OS.DWRITE_RENDERING_MODE_NATURAL;
         int measuringMode = OS.DWRITE_MEASURING_MODE_NATURAL;
@@ -296,6 +307,7 @@ public class DWGlyph implements Glyph {
     @Override
     public float getAdvance() {
         checkMetrics();
+        if (metrics == null) return 0;
         float upem = strike.getUpem();
         return metrics.advanceWidth * strike.getSize() / upem;
     }

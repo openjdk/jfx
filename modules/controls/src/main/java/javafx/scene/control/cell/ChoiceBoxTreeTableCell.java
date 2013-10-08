@@ -299,7 +299,7 @@ public class ChoiceBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
         }
         
         if (choiceBox == null) {
-            choiceBox = createChoiceBox(this, items);
+            choiceBox = createChoiceBox(this, items, converterProperty());
         }
         
         choiceBox.getSelectionModel().select(getItem());

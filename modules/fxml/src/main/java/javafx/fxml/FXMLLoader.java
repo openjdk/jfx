@@ -1755,8 +1755,6 @@ public class FXMLLoader {
 
     private ScriptEngine scriptEngine = null;
 
-    private boolean template = false;
-
     private List<String> packages = new LinkedList<String>();
     private Map<String, Class<?>> classes = new HashMap<String, Class<?>>();
 
@@ -1769,108 +1767,219 @@ public class FXMLLoader {
 
     private static final Pattern extraneousWhitespacePattern = Pattern.compile("\\s+");
 
+    /**
+     * The character set used when character set is not explicitly specified
+     */
     public static final String DEFAULT_CHARSET_NAME = "UTF-8";
 
+    /**
+     * The tag name of language processing instruction
+     */
     public static final String LANGUAGE_PROCESSING_INSTRUCTION = "language";
+    /**
+     * The tag name of import processing instruction
+     */
     public static final String IMPORT_PROCESSING_INSTRUCTION = "import";
 
+    /**
+     * Prefix of 'fx' namespace
+     */
     public static final String FX_NAMESPACE_PREFIX = "fx";
+    /**
+     * The name of fx:controller attribute of a root
+     */
     public static final String FX_CONTROLLER_ATTRIBUTE = "controller";
+    /**
+     * The name of fx:id attribute
+     */
     public static final String FX_ID_ATTRIBUTE = "id";
+    /**
+     * The name of fx:value attribute
+     */
     public static final String FX_VALUE_ATTRIBUTE = "value";
     /**
+     * The tag name of 'fx:constant'
      * @since JavaFX 2.2
      */
     public static final String FX_CONSTANT_ATTRIBUTE = "constant";
+    /**
+     * The name of 'fx:factory' attribute
+     */
     public static final String FX_FACTORY_ATTRIBUTE = "factory";
 
+    /**
+     * The tag name of &lt;fx:include&gt;
+     */
     public static final String INCLUDE_TAG = "include";
+    /**
+     * &lt;fx:include&gt; 'source' attribute
+     */
     public static final String INCLUDE_SOURCE_ATTRIBUTE = "source";
+    /**
+     * &lt;fx:include&gt; 'resources' attribute
+     */
     public static final String INCLUDE_RESOURCES_ATTRIBUTE = "resources";
+    /**
+     * &lt;fx:include&gt; 'charset' attribute
+     */
     public static final String INCLUDE_CHARSET_ATTRIBUTE = "charset";
 
+    /**
+     * The tag name of &lt;fx:script&gt;
+     */
     public static final String SCRIPT_TAG = "script";
+    /**
+     * &lt;fx:script&gt; 'source' attribute
+     */
     public static final String SCRIPT_SOURCE_ATTRIBUTE = "source";
+    /**
+     * &lt;fx:script&gt; 'charset' attribute
+     */
     public static final String SCRIPT_CHARSET_ATTRIBUTE = "charset";
 
+    /**
+     * The tag name of &lt;fx:define&gt;
+     */
     public static final String DEFINE_TAG = "define";
 
+    /**
+     * The tag name of &lt;fx:reference&gt;
+     */
     public static final String REFERENCE_TAG = "reference";
+    /**
+     * &ltfx:reference&gt 'source' attribute
+     */
     public static final String REFERENCE_SOURCE_ATTRIBUTE = "source";
 
     /**
+     * The tag name of &lt;fx:root&gt;
      * @since JavaFX 2.2
      */
     public static final String ROOT_TAG = "root";
     /**
+     * &lt;fx:root&gt; 'type' attribute
      * @since JavaFX 2.2
      */
     public static final String ROOT_TYPE_ATTRIBUTE = "type";
 
+    /**
+     * The tag name of &lt;fx:copy&gt;
+     */
     public static final String COPY_TAG = "copy";
+    /**
+     * &lt;fx:copy&gt; 'source' attribute
+     */
     public static final String COPY_SOURCE_ATTRIBUTE = "source";
 
+    /**
+     * The prefix of event handler attributes
+     */
     public static final String EVENT_HANDLER_PREFIX = "on";
+    /**
+     * The name of the Event object in event handler scripts
+     */
     public static final String EVENT_KEY = "event";
+    /**
+     * Suffix for property change/invalidation handlers
+     */
     public static final String CHANGE_EVENT_HANDLER_SUFFIX = "Change";
     private static final String COLLECTION_HANDLER_NAME = EVENT_HANDLER_PREFIX + CHANGE_EVENT_HANDLER_SUFFIX;
 
+    /**
+     * Value that represents 'null'
+     */
     public static final String NULL_KEYWORD = "null";
 
     /**
+     * Escape prefix for escaping special characters inside attribute values.
+     * Serves as an escape for {@link #ESCAPE_PREFIX}, {@link #RELATIVE_PATH_PREFIX},
+     * {@link #RESOURCE_KEY_PREFIX, {@link #EXPRESSION_PREFIX}, {@link #BI_DIRECTIONAL_BINDING_PREFIX}
      * @since JavaFX 2.1
      */
     public static final String ESCAPE_PREFIX = "\\";
+    /**
+     * Prefix for relative location resultion
+     */
     public static final String RELATIVE_PATH_PREFIX = "@";
+    /**
+     * Prefix for resource resolution
+     */
     public static final String RESOURCE_KEY_PREFIX = "%";
+    /**
+     * Prefix for (variable) expression resolution
+     */
     public static final String EXPRESSION_PREFIX = "$";
+    /**
+     * Prefix for binding expression resolution
+     */
     public static final String BINDING_EXPRESSION_PREFIX = "${";
+    /**
+     * Suffix for binding expression resolution
+     */
     public static final String BINDING_EXPRESSION_SUFFIX = "}";
 
     /**
+     * Prefix for bidirectional-binding expression resolution
      * @since JavaFX 2.1
      */
     public static final String BI_DIRECTIONAL_BINDING_PREFIX = "#{";
     /**
+     * Suffix for bidirectional-binding expression resolution
      * @since JavaFX 2.1
      */
     public static final String BI_DIRECTIONAL_BINDING_SUFFIX = "}";
 
     /**
+     * Delimiter for arrays as values
      * @since JavaFX 2.1
      */
     public static final String ARRAY_COMPONENT_DELIMITER = ",";
 
     /**
+     * A key for location URL in namespace map
+     * @see #getNamespace()
      * @since JavaFX 2.2
      */
     public static final String LOCATION_KEY = "location";
     /**
+     * A key for ResourceBundle in namespace map
+     * @see #getNamespace()
      * @since JavaFX 2.2
      */
     public static final String RESOURCES_KEY = "resources";
 
+    /**
+     * Prefix for controller method resolution
+     */
     public static final String CONTROLLER_METHOD_PREFIX = "#";
     /**
+     * A key for controller in namespace map
+     * @see #getNamespace()
      * @since JavaFX 2.1
      */
     public static final String CONTROLLER_KEYWORD = "controller";
     /**
+     * A suffix for controllers of included fxml files.
+     * The full key is stored in namespace map.
+     * @see #getNamespace()
      * @since JavaFX 2.2
      */
     public static final String CONTROLLER_SUFFIX = "Controller";
 
     /**
+     * The name of initialize method
      * @since JavaFX 2.2
      */
     public static final String INITIALIZE_METHOD_NAME = "initialize";
 
     /**
+     * Contains the current javafx version
      * @since JavaFX 8.0
      */
     public static final String JAVAFX_VERSION;
 
     /**
+     * Contains the current fx namepsace version
      * @since JavaFX 8.0
      */
     public static final String FX_NAMESPACE_VERSION = "1";
@@ -2111,28 +2220,6 @@ public class FXMLLoader {
     }
 
     /**
-     * Returns the template flag.
-     * @since JavaFX 8.0
-     */
-    public boolean isTemplate() {
-        return template;
-    }
-
-    /**
-     * Sets the template flag. Setting this value to <tt>true</tt> can improve
-     * performance when using a single loader instance to reload the same FXML
-     * document multiple times. See the documentation for the {@link #load()}
-     * method for more information.
-     *
-     * @param template
-     * The template flag.
-     * @since JavaFX 8.0
-     */
-    public void setTemplate(boolean template) {
-        this.template = template;
-    }
-
-    /**
      * Returns the builder factory used by this loader.
      */
     public BuilderFactory getBuilderFactory() {
@@ -2197,7 +2284,7 @@ public class FXMLLoader {
 
     /**
      * Sets the classloader used by this serializer and clears any existing
-     * imports (see {@link #setTemplate(boolean)}).
+     * imports
      *
      * @param classLoader
      * @since JavaFX 2.1
@@ -2277,13 +2364,13 @@ public class FXMLLoader {
      * The loaded object hierarchy.
      * @since JavaFX 2.1
      */
-    public Object load() throws IOException {
+    public <T> T load() throws IOException {
         if (location == null) {
             throw new IllegalStateException("Location is not set.");
         }
 
         InputStream inputStream = null;
-        Object value;
+        T value;
         try {
             inputStream = location.openStream();
             value = load(inputStream);
@@ -2312,16 +2399,12 @@ public class FXMLLoader {
      * The loaded object hierarchy.
      */
     @SuppressWarnings("dep-ann")
-    public Object load(InputStream inputStream) throws IOException {
+    public <T> T load(InputStream inputStream) throws IOException {
         if (inputStream == null) {
             throw new NullPointerException("inputStream is null.");
         }
 
-        if (template) {
-            setRoot(null);
-        } else {
-            clearImports();
-        }
+        clearImports();
 
         // Initialize the namespace
         namespace.put(LOCATION_KEY, location);
@@ -2453,7 +2536,7 @@ public class FXMLLoader {
         // Clear the parser
         xmlStreamReader = null;
 
-        return root;
+        return (T)root;
     }
 
     private void clearImports() {

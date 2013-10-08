@@ -80,7 +80,7 @@ public class NGImageView extends NGNode {
         renderable = false;
         coordsOK = true;
 
-        if (reqviewport == null) {
+        if (reqviewport == null || image == null) {
             renderable = image != null;
             return;
         }

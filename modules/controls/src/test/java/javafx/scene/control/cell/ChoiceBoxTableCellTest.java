@@ -27,6 +27,7 @@ package javafx.scene.control.cell;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -416,5 +417,36 @@ public class ChoiceBoxTableCellTest {
         tableView.edit(-1, null);
         assertFalse(cell.isEditing());
         assertNull(cell.getGraphic());
+    }
+
+    @Test public void test_rt_29320() {
+        TableColumn tc = new TableColumn();
+        TableView tableView = new TableView(FXCollections.observableArrayList("TEST"));
+        tableView.getColumns().add(tc);
+        tableView.setEditable(true);
+        ChoiceBoxTableCell<Object,Object> cell = new ChoiceBoxTableCell<>();
+        cell.updateTableView(tableView);
+        cell.updateIndex(0);
+        cell.updateTableColumn(tc);
+        cell.setEditable(true);
+
+        tableView.edit(0, tc);
+        ChoiceBox cb = (ChoiceBox) cell.getGraphic();
+
+        // initially the choiceBox converter should equal the cell converter
+        assertNotNull(cell.getConverter());
+        assertNotNull(cb.getConverter());
+        assertEquals(cell.getConverter(), cb.getConverter());
+
+        // and if the cell changes the choicebox should follow
+        cell.setConverter(null);
+        assertNull(cb.getConverter());
+
+        StringConverter<Object> customConverter = new StringConverter<Object>() {
+            @Override public String toString(Object object) { return null; }
+            @Override public Object fromString(String string) { return null; }
+        };
+        cell.setConverter(customConverter);
+        assertEquals(customConverter, cb.getConverter());
     }
 }

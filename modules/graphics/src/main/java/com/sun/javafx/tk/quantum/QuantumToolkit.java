@@ -178,7 +178,7 @@ public final class QuantumToolkit extends Toolkit {
             AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
                 @Override public Boolean run() {
                     boolean isSWT = "swt".equals(System.getProperty("glass.platform"));
-                    String result = PlatformUtil.isMac() && !isSWT ? "true" : "false";
+                    String result = (PlatformUtil.isMac() || PlatformUtil.isWindows()) && !isSWT ? "true" : "false";
                     return "true".equals(System.getProperty("javafx.live.resize", result));
                 }
             });
@@ -1077,7 +1077,7 @@ public final class QuantumToolkit extends Toolkit {
             case SHAPE_CLIP:
                 return true;
             case INPUT_METHOD:
-                return false;     // TODO: RT-28495, implement input method query
+                return Application.GetApplication().supportsInputMethods();
             case TRANSPARENT_WINDOW:
                 return Application.GetApplication().supportsTransparentWindows();
             case UNIFIED_WINDOW:

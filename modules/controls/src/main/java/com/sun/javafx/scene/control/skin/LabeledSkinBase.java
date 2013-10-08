@@ -40,8 +40,6 @@ import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.OverrunStyle;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.Mnemonic;
 import javafx.scene.shape.Line;
@@ -262,12 +260,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
     */
     protected void mnemonicTargetChanged() {
         if (containsMnemonic == true) {
-            KeyCodeCombination mnemonicKeyCombo =
-                new KeyCodeCombination(
-                                       mnemonicCode,
-                                       com.sun.javafx.PlatformUtil.isMac()
-                                       ? KeyCombination.META_DOWN
-                                       : KeyCombination.ALT_DOWN);
+            KeyCombination mnemonicKeyCombo = mnemonicCode;
 
             /*
             ** was there previously a labelFor
@@ -326,13 +319,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             ** left on the scene
             */
             if (mnemonicScene != null) {
-                KeyCodeCombination mnemonicKeyCombo =
-                    new KeyCodeCombination(
-                                           mnemonicCode,
-                                           com.sun.javafx.PlatformUtil.isMac()
-                                           ? KeyCombination.META_DOWN
-                                           : KeyCombination.ALT_DOWN);
-
+                KeyCombination mnemonicKeyCombo = mnemonicCode;
                 Mnemonic myMnemonic = new Mnemonic(labeledNode, mnemonicKeyCombo);
                 mnemonicScene.removeMnemonic(myMnemonic);
                 mnemonicScene = null;
@@ -344,13 +331,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             ** add any mnemonics etc to the scene.
             */
             if (containsMnemonic == true) {
-                KeyCodeCombination mnemonicKeyCombo =
-                    new KeyCodeCombination(
-                                           mnemonicCode,
-                                           com.sun.javafx.PlatformUtil.isMac()
-                                           ? KeyCombination.META_DOWN
-                                           : KeyCombination.ALT_DOWN);
-
+                KeyCombination mnemonicKeyCombo = mnemonicCode;
                 if (labeledNode != null) {
                     Mnemonic myMnemonic = new Mnemonic(labeledNode, mnemonicKeyCombo);
                     mnemonicScene = labeledNode.getScene();
@@ -421,14 +402,10 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                 ** are we no longer a mnemonic, or have we changed code?
                 */
                 if (mnemonicScene != null) {
-                    if (mnemonicIndex == -1 || (bindings != null && bindings.getMnemonic() != mnemonicCode)) {
-                        KeyCodeCombination mnemonicKeyCombo =
-                            new KeyCodeCombination(
-                                                   mnemonicCode,
-                                                   com.sun.javafx.PlatformUtil.isMac()
-                                                   ? KeyCombination.META_DOWN
-                                                   : KeyCombination.ALT_DOWN);
-                        
+                    if (mnemonicIndex == -1 ||
+                        (bindings != null && !bindings.getMnemonicKeyCombination().equals(mnemonicCode))) {
+
+                        KeyCombination mnemonicKeyCombo = mnemonicCode;
                         Mnemonic myMnemonic = new Mnemonic(labeledNode, mnemonicKeyCombo);
                         mnemonicScene.removeMnemonic(myMnemonic);
                         mnemonicScene = null;
@@ -442,13 +419,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                 ** disabled on a previously valid mnemonic
                 */
                 if (mnemonicScene != null && labeledNode != null) {
-                    KeyCodeCombination mnemonicKeyCombo =
-                        new KeyCodeCombination(
-                                               mnemonicCode,
-                                               com.sun.javafx.PlatformUtil.isMac()
-                                               ? KeyCombination.META_DOWN
-                                               : KeyCombination.ALT_DOWN);
-
+                    KeyCombination mnemonicKeyCombo = mnemonicCode;
                     Mnemonic myMnemonic = new Mnemonic(labeledNode, mnemonicKeyCombo);
                     mnemonicScene.removeMnemonic(myMnemonic);
                     mnemonicScene = null;
@@ -461,15 +432,9 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             if (s != null && s.length() > 0) {
                 if (mnemonicIndex >= 0 && containsMnemonic == false) {
                     containsMnemonic = true;
-                    mnemonicCode = bindings.getMnemonic();
+                    mnemonicCode = bindings.getMnemonicKeyCombination();
 
-                    KeyCodeCombination mnemonicKeyCombo =
-                            new KeyCodeCombination(
-                                    mnemonicCode,
-                                    com.sun.javafx.PlatformUtil.isMac()
-                                            ? KeyCombination.META_DOWN
-                                            : KeyCombination.ALT_DOWN);
-
+                    KeyCombination mnemonicKeyCombo = mnemonicCode;
                     if (labeledNode != null) {
                         Mnemonic myMnemonic = new Mnemonic(labeledNode, mnemonicKeyCombo);
                         mnemonicScene = labeledNode.getScene();
@@ -911,7 +876,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
 
     private boolean containsMnemonic = false;
     private Scene mnemonicScene = null;
-    private KeyCode mnemonicCode;
+    private KeyCombination mnemonicCode;
     // needs to be an object, as MenuItem isn't a node
     private Node labeledNode = null;
 

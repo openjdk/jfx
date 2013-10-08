@@ -156,4 +156,13 @@ public class BackgroundPositionTest {
         BackgroundPosition pos = new BackgroundPosition(Side.LEFT, 0, true, Side.TOP, 0, true);
         assertEquals(BackgroundPosition.DEFAULT.hashCode(), pos.hashCode());
     }
+
+    @Test public void CENTER() {
+        assertEquals(Side.LEFT, BackgroundPosition.CENTER.getHorizontalSide());
+        assertEquals(.5, BackgroundPosition.CENTER.getHorizontalPosition(), 0);
+        assertTrue(BackgroundPosition.CENTER.isHorizontalAsPercentage());
+        assertEquals(Side.TOP, BackgroundPosition.CENTER.getVerticalSide());
+        assertEquals(.5, BackgroundPosition.CENTER.getVerticalPosition(), 0);
+        assertTrue(BackgroundPosition.CENTER.isVerticalAsPercentage());
+    }
 }

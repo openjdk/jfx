@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,11 +23,23 @@
  * questions.
  */
 
-package com.sun.prism.tkal;
+package com.sun.javafx.print;
 
-public interface Window {
-    public long getWindowHandle();
-    public int getWidth();
-    public int getHeight();
-    public Object getWrappedWindow(); // FIXME: Is this necessary?
+/**
+ * An enumeration used to specify the Units used for Paper measurement
+ * @since JavaFX 8.0
+ */
+public enum Units {
+    /**
+     * Specify Paper size in millimetres.
+     */
+    MM,
+    /**
+     * Specify Paper size in inches.
+     */
+    INCH,
+    /**
+     * Specify Paper size in points (1/72 of an inch).
+     */
+    POINT
 }

@@ -300,3 +300,66 @@ gpointer glass_try_malloc0_n(gsize m, gsize n) {
 gpointer glass_try_malloc_n(gsize m, gsize n) {
     return glass_try_malloc_n(m, n, FALSE);
 }
+
+gsize get_files_count(gchar **uris) {
+    if (!uris) {
+        return 0;
+    }
+
+    guint size = g_strv_length(uris);
+    guint files_cnt = 0;
+
+    for (guint i = 0; i < size; ++i) {
+        if (g_str_has_prefix(uris[i], FILE_PREFIX)) {
+            files_cnt++;
+        }
+    }
+    return files_cnt;
+}
+
+// Note: passed uris will be freed by this function
+jobject uris_to_java(JNIEnv *env, gchar **uris, gboolean files) {
+    if (uris == NULL) {
+        return NULL;
+    }
+
+    jobject result = NULL;
+
+    guint size = g_strv_length(uris);
+    guint files_cnt = get_files_count(uris);
+
+    if (files) {
+        if (files_cnt) {
+            result = env->NewObjectArray(files_cnt, jStringCls, NULL);
+
+            for (gsize i = 0; i < size; ++i) {
+                if (g_str_has_prefix(uris[i], FILE_PREFIX)) {
+                    gchar* path = g_filename_from_uri(uris[i], NULL, NULL);
+                    jstring str = env->NewStringUTF(path);
+                    env->SetObjectArrayElement((jobjectArray) result, i, str);
+                    g_free(path);
+                }
+            }
+        }
+    } else if (size - files_cnt) {
+        GString* str = g_string_new(NULL); //http://www.ietf.org/rfc/rfc2483.txt
+
+        for (guint i = 0; i < size; ++i) {
+            if (!g_str_has_prefix(uris[i], FILE_PREFIX)
+                    && !g_str_has_prefix(uris[i], URI_LIST_COMMENT_PREFIX)) {
+                g_string_append(str, uris[i]);
+                g_string_append(str, URI_LIST_LINE_BREAK);
+            }
+        }
+
+        if (str->len > 2) {
+            g_string_erase(str, str->len - 2, 2);
+        }
+
+        result = env->NewStringUTF(str->str);
+
+        g_string_free(str, TRUE);
+    }
+    g_strfreev(uris);
+    return result;
+}

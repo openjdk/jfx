@@ -540,7 +540,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
         final TableView tableView = getTableView();
         final List<T> items = tableView == null ? FXCollections.<T>emptyObservableList() : tableView.getItems();
         final TableColumn tableColumn = getTableColumn();
-        final int itemCount = items.size();
+        final int itemCount = items == null ? -1 : items.size();
         final int index = getIndex();
         final boolean isEmpty = isEmpty();
         final T oldValue = getItem();
@@ -575,12 +575,12 @@ public class TableCell<S,T> extends IndexedCell<T> {
             currentObservableValue = tableColumn.getCellObservableValue(index);
             final T newValue = currentObservableValue == null ? null : currentObservableValue.getValue();
 
-            if ((newValue != null && ! newValue.equals(oldValue)) ||
-                    oldValue != null && ! oldValue.equals(newValue)) {
-                updateItem(newValue, false);
-            } else if(isEmpty && newValue == null) {
-                updateItem(newValue, false);
-            }
+            // There used to be conditional code here to prevent updateItem from
+            // being called when the value didn't change, but that led us to
+            // issues such as RT-33108, where the value didn't change but the item
+            // we needed to be listening to did. Without calling updateItem we
+            // were breaking things, so once again the conditionals are gone.
+            updateItem(newValue, false);
         }
         
         if (currentObservableValue == null) {

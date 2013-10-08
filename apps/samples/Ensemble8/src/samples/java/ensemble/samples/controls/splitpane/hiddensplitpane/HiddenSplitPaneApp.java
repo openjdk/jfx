@@ -35,8 +35,7 @@ import javafx.application.Application;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.SplitPane;
-import javafx.scene.control.SplitPaneBuilder;
-import javafx.scene.layout.RegionBuilder;
+import javafx.scene.layout.Region;
 import javafx.stage.Stage;
 
 /**
@@ -50,10 +49,17 @@ public class HiddenSplitPaneApp extends Application {
 
     public Parent createContent() {
         String hidingSplitPaneCss = HiddenSplitPaneApp.class.getResource("HiddenSplitPane.css").toExternalForm();
-        final SplitPane splitPane = SplitPaneBuilder.create().id("hiddenSplitter").items(
-                RegionBuilder.create().styleClass("rounded").build(),
-                RegionBuilder.create().styleClass("rounded").build(),
-                RegionBuilder.create().styleClass("rounded").build()).dividerPositions(new double[]{0.33, 0.66}).build();
+
+        final SplitPane splitPane = new SplitPane();
+        splitPane.setId("hiddenSplitter");
+        Region region1 = new Region();
+        region1.getStyleClass().add("rounded");
+        Region region2 = new Region();
+        region2.getStyleClass().add("rounded");
+        Region region3 = new Region();
+        region3.getStyleClass().add("rounded");
+        splitPane.getItems().addAll(region1, region2, region3);
+        splitPane.setDividerPositions(0.33, 0.66);
         splitPane.getStylesheets().add(hidingSplitPaneCss);
 
         return splitPane;

@@ -842,6 +842,10 @@ final class LensApplication extends Application {
     }
 
     private Object _runLoop() {
+        if (!_initialize()) {
+            LensLogger.getLogger().severe("Display failed initialization");
+            throw new RuntimeException("Display failed initialization");
+        }
         final RunLoopControl control = new RunLoopControl();
 
         //push this new instance on the stack
@@ -921,12 +925,6 @@ final class LensApplication extends Application {
 
     @Override
     protected void runLoop(Runnable launchable) {
-
-        if (!_initialize()) {
-            LensLogger.getLogger().severe("Display failed initialization");
-            throw new RuntimeException("Display failed initialization");
-        }
-
         _invokeLater(launchable);
         Thread toolkitThread = new Thread(
         new Runnable() {
@@ -943,9 +941,9 @@ final class LensApplication extends Application {
 
     // Call into the native impl to start up any native device input queues
     // needed. Native will upcall to createNativeEventThread to start any threads.
-    private native void startNativeEventLoop(final LensApplication lensApp,
-                                             long nativeEventHandler,
-                                             long nativeWindow);
+    private native void nativeEventLoop(final LensApplication lensApp,
+                                        long nativeEventHandler,
+                                        long nativeWindow);
 
     // Note: this Native event thread is designed to listen for events
     // from native sources. For example, it may poll some native input devices.
@@ -960,8 +958,8 @@ final class LensApplication extends Application {
             @Override
             public void run() {
                 registerEventLoop();
-                lensApplication.startNativeEventLoop(lensApplication,
-                                                     nativeEventHandler, data);
+                lensApplication.nativeEventLoop(lensApplication,
+                                                nativeEventHandler, data);
 
                 //when the native function return
                 //event loop has exited

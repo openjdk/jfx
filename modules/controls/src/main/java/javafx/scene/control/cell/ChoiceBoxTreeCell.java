@@ -300,7 +300,7 @@ public class ChoiceBoxTreeCell<T> extends DefaultTreeCell<T> {
         }
 
         if (choiceBox == null) {
-            choiceBox = createChoiceBox(this, items);
+            choiceBox = createChoiceBox(this, items, converterProperty());
         }
         if (hbox == null) {
             hbox = new HBox(CellUtils.TREE_VIEW_HBOX_GRAPHIC_PADDING);

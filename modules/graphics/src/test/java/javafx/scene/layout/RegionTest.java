@@ -29,10 +29,9 @@ import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.VPos;
-import javafx.scene.shape.Rectangle;
 import org.junit.Test;
-
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 /**
  *
@@ -109,6 +108,20 @@ public class RegionTest {
         assertEquals(10, region.minWidth(-1), 1e-100);
     }
 
+    @Test public void testMinWidthNaNTreatedAsZero() {
+        Region region = new Region();
+        region.setMinWidth(Double.NaN);
+        assertEquals(0, region.minWidth(-1), 0);
+        assertEquals(0, region.minWidth(5), 0);
+    }
+
+    @Test public void testMinWidthNegativeTreatedAsZero() {
+        Region region = new Region();
+        region.setMinWidth(-10);
+        assertEquals(0, region.minWidth(-1), 0);
+        assertEquals(0, region.minWidth(5), 0);
+    }
+
     @Test public void testMinHeightOverride() {
         Region region = new MockRegion(10,20, 100,200, 500,600);
         assertEquals(20, region.minHeight(-1), 1e-100);
@@ -123,6 +136,20 @@ public class RegionTest {
         region.setMinHeight(Region.USE_COMPUTED_SIZE); // reset
         assertEquals(Region.USE_COMPUTED_SIZE, region.getMinHeight(), 1e-100);
         assertEquals(20, region.minHeight(-1), 1e-100);
+    }
+
+    @Test public void testMinHeightNaNTreatedAsZero() {
+        Region region = new Region();
+        region.setMinHeight(Double.NaN);
+        assertEquals(0, region.minHeight(-1), 0);
+        assertEquals(0, region.minHeight(5), 0);
+    }
+
+    @Test public void testMinHeightNegativeTreatedAsZero() {
+        Region region = new Region();
+        region.setMinHeight(-10);
+        assertEquals(0, region.minHeight(-1), 0);
+        assertEquals(0, region.minHeight(5), 0);
     }
 
     @Test public void testMinWidthOverrideSetToPref() {
@@ -157,6 +184,20 @@ public class RegionTest {
         assertEquals(100, region.prefWidth(-1), 1e-100);
     }
 
+    @Test public void testPrefWidthNaNTreatedAsZero() {
+        Region region = new Region();
+        region.setPrefWidth(Double.NaN);
+        assertEquals(0, region.prefWidth(-1), 0);
+        assertEquals(0, region.prefWidth(5), 0);
+    }
+
+    @Test public void testPrefWidthNegativeTreatedAsZero() {
+        Region region = new Region();
+        region.setPrefWidth(-10);
+        assertEquals(0, region.prefWidth(-1), 0);
+        assertEquals(0, region.prefWidth(5), 0);
+    }
+
     @Test public void testPrefHeightOverride() {
         Region region = new MockRegion(10,20, 100,200, 500,600);
         assertEquals(200, region.prefHeight(-1), 1e-100);
@@ -171,6 +212,20 @@ public class RegionTest {
         region.setPrefHeight(Region.USE_COMPUTED_SIZE); // reset
         assertEquals(Region.USE_COMPUTED_SIZE, region.getPrefHeight(), 1e-100);
         assertEquals(200, region.prefHeight(-1), 1e-100);
+    }
+
+    @Test public void testPrefHeightNaNTreatedAsZero() {
+        Region region = new Region();
+        region.setPrefHeight(Double.NaN);
+        assertEquals(0, region.prefHeight(-1), 0);
+        assertEquals(0, region.prefHeight(5), 0);
+    }
+
+    @Test public void testPrefHeightNegativeTreatedAsZero() {
+        Region region = new Region();
+        region.setPrefHeight(-10);
+        assertEquals(0, region.prefHeight(-1), 0);
+        assertEquals(0, region.prefHeight(5), 0);
     }
 
     @Test public void testMaxWidthOverride() {
@@ -189,6 +244,20 @@ public class RegionTest {
         assertEquals(500, region.maxWidth(-1), 1e-100);
     }
 
+    @Test public void testMaxWidthNaNTreatedAsZero() {
+        Region region = new Region();
+        region.setMaxWidth(Double.NaN);
+        assertEquals(0, region.maxWidth(-1), 0);
+        assertEquals(0, region.maxWidth(5), 0);
+    }
+
+    @Test public void testMaxWidthNegativeTreatedAsZero() {
+        Region region = new Region();
+        region.setMaxWidth(-10);
+        assertEquals(0, region.maxWidth(-1), 0);
+        assertEquals(0, region.maxWidth(5), 0);
+    }
+
     @Test public void testMaxHeightOverride() {
         Region region = new MockRegion(10,20, 100,200, 500,600);
         assertEquals(600, region.maxHeight(-1), 1e-100);
@@ -203,6 +272,20 @@ public class RegionTest {
         region.setMaxHeight(Region.USE_COMPUTED_SIZE); // reset
         assertEquals(Region.USE_COMPUTED_SIZE, region.getMaxHeight(), 0);
         assertEquals(600, region.maxHeight(-1), 1e-100);
+    }
+
+    @Test public void testMaxHeightNaNTreatedAsZero() {
+        Region region = new Region();
+        region.setMaxHeight(Double.NaN);
+        assertEquals(0, region.maxHeight(-1), 0);
+        assertEquals(0, region.maxHeight(5), 0);
+    }
+
+    @Test public void testMaxHeightNegativeTreatedAsZero() {
+        Region region = new Region();
+        region.setMaxHeight(-10);
+        assertEquals(0, region.maxHeight(-1), 0);
+        assertEquals(0, region.maxHeight(5), 0);
     }
 
     @Test public void testMaxWidthOverrideSetToPref() {

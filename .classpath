@@ -1,8 +1,5 @@
 <classpath>
   <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-  <classpathentry kind="src" path="tests/manual/RegionTests/src/main/java"/>
-  <classpathentry kind="src" path="tests/manual/RegionTests/src/main/resources"/>
-
   <classpathentry kind="src" exported="true" path="/web"/>
   <classpathentry kind="src" exported="true" path="/fxml"/>
   <classpathentry kind="src" exported="true" path="/fxpackager"/>

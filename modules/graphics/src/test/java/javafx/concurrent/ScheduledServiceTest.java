@@ -27,12 +27,15 @@ package javafx.concurrent;
 
 import javafx.concurrent.mocks.EpicFailTask;
 import javafx.concurrent.mocks.SimpleTask;
+import javafx.event.EventHandler;
 import javafx.util.Callback;
 import javafx.util.Duration;
 import java.util.TimerTask;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -803,6 +806,44 @@ public class ScheduledServiceTest extends ServiceTestBase {
         assertEquals("Sentinel", s.getLastValue());
         s.reset();
         assertNull(s.getLastValue());
+    }
+
+    @Test public void callingCancelFromOnSucceededEventHandlerShouldStopScheduledService() {
+        AtomicBoolean onReadyCalled = new AtomicBoolean();
+        AtomicBoolean onScheduledCalled = new AtomicBoolean();
+        AtomicBoolean onCancelledCalled = new AtomicBoolean();
+        s.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent event) {
+                s.cancel();
+                // Reset these so that they only get set to true if called
+                // after the cancel step
+                onReadyCalled.set(false);
+                onScheduledCalled.set(false);
+                onCancelledCalled.set(false);
+            }
+        });
+        s.setOnReady(new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent event) {
+                onReadyCalled.set(true);
+            }
+        });
+        s.setOnScheduled(new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent event) {
+                onScheduledCalled.set(true);
+            }
+        });
+        s.setOnCancelled(new EventHandler<WorkerStateEvent>() {
+            @Override public void handle(WorkerStateEvent event) {
+                onCancelledCalled.set(true);
+            }
+        });
+
+        s.start();
+        assertFalse(s.isRunning());
+        assertEquals(Worker.State.CANCELLED, s.getState());
+        assertTrue(onReadyCalled.get());
+        assertTrue(onScheduledCalled.get());
+        assertTrue(onCancelledCalled.get());
     }
 
     /**

@@ -39,10 +39,8 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonBuilder;
 import javafx.scene.control.Label;
 import javafx.scene.control.Pagination;
-import javafx.scene.control.PaginationBuilder;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;
@@ -73,21 +71,25 @@ public class PaginationApp extends Application {
         images[5] = new Image(PaginationApp.class.getResource("/ensemble/samples/shared-resources/Animal6.jpg").toExternalForm(), false);
         images[6] = new Image(PaginationApp.class.getResource("/ensemble/samples/shared-resources/Animal7.jpg").toExternalForm(), false);
 
-        pagination = PaginationBuilder.create().pageCount(7).pageFactory(new Callback<Integer, Node>() {
-            @Override public Node call(Integer pageIndex) {
+        pagination = new Pagination(7);
+        pagination.setPageFactory(new Callback<Integer, Node>() {
+            @Override
+            public Node call(Integer pageIndex) {
                 return createAnimalPage(pageIndex);
             }
-        }).build();
+        });
         //Style can be numeric page indicators or bullet indicators
-        Button styleButton = ButtonBuilder.create().text("Toggle pagination style").onAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent me) {
+        Button styleButton = new Button("Toggle pagination style");
+        styleButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent me) {
                 if (!pagination.getStyleClass().contains(Pagination.STYLE_CLASS_BULLET)) {
                     pagination.getStyleClass().add(Pagination.STYLE_CLASS_BULLET);
                 } else {
                     pagination.getStyleClass().remove(Pagination.STYLE_CLASS_BULLET);
                 }
             }
-        }).build();
+        });
 
         outerBox.getChildren().addAll(pagination, styleButton);
         return outerBox;

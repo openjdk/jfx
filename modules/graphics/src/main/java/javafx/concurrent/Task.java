@@ -99,7 +99,11 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  *     that every change to its public properties, as well as change notifications
  *     for state, errors, and for event handlers, all occur on the main JavaFX application
  *     thread. Accessing these properties from a background thread (including the
- *     {@link #call()} method) will result in runtime exceptions being raised.
+ *     {@link #call()} method) will result in runtime exceptions being raised. The only exception
+ *     to this, is when initially configuring a Task, which may safely be done
+ *     from any thread. However, once the Task has been initialized and
+ *     started, it may only thereafter be used from the FX thread (except for those methods clearly
+ *     marked as being appropriate for the subclass to invoke from the background thread).
  * </p>
  * <p>
  *     It is <strong>strongly encouraged</strong> that all Tasks be initialized with
@@ -639,6 +643,12 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     private AtomicReference<V> valueUpdate = new AtomicReference<>();
 
     /**
+     * This is used so we have a thread-safe way to ask whether the task was
+     * started in the checkThread() method.
+     */
+    private volatile boolean started = false;
+
+    /**
      * Creates a new Task.
      */
     public Task() {
@@ -675,7 +685,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      */
     protected abstract V call() throws Exception;
 
-    private ObjectProperty<State> state = new SimpleObjectProperty<State>(this, "state", State.READY);
+    private ObjectProperty<State> state = new SimpleObjectProperty<>(this, "state", State.READY);
     final void setState(State value) { // package access for the Service
         checkThread();
         final State s = getState();
@@ -725,6 +735,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * @since JavaFX 2.1
      */
     public final ObjectProperty<EventHandler<WorkerStateEvent>> onScheduledProperty() {
+        checkThread();
         return getEventHelper().onScheduledProperty();
     }
 
@@ -736,6 +747,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * @since JavaFX 2.1
      */
     public final EventHandler<WorkerStateEvent> getOnScheduled() {
+        checkThread();
         return eventHelper == null ? null : eventHelper.getOnScheduled();
     }
 
@@ -747,6 +759,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * @since JavaFX 2.1
      */
     public final void setOnScheduled(EventHandler<WorkerStateEvent> value) {
+        checkThread();
         getEventHelper().setOnScheduled(value);
     }
 
@@ -768,6 +781,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * @since JavaFX 2.1
      */
     public final ObjectProperty<EventHandler<WorkerStateEvent>> onRunningProperty() {
+        checkThread();
         return getEventHelper().onRunningProperty();
     }
 
@@ -779,6 +793,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * @since JavaFX 2.1
      */
     public final EventHandler<WorkerStateEvent> getOnRunning() {
+        checkThread();
         return eventHelper == null ? null : eventHelper.getOnRunning();
     }
 
@@ -790,6 +805,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * @since JavaFX 2.1
      */
     public final void setOnRunning(EventHandler<WorkerStateEvent> value) {
+        checkThread();
         getEventHelper().setOnRunning(value);
     }
 
@@ -811,6 +827,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * @since JavaFX 2.1
      */
     public final ObjectProperty<EventHandler<WorkerStateEvent>> onSucceededProperty() {
+        checkThread();
         return getEventHelper().onSucceededProperty();
     }
 
@@ -822,6 +839,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * @since JavaFX 2.1
      */
     public final EventHandler<WorkerStateEvent> getOnSucceeded() {
+        checkThread();
         return eventHelper == null ? null : eventHelper.getOnSucceeded();
     }
 
@@ -833,6 +851,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * @since JavaFX 2.1
      */
     public final void setOnSucceeded(EventHandler<WorkerStateEvent> value) {
+        checkThread();
         getEventHelper().setOnSucceeded(value);
     }
 
@@ -854,6 +873,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * @since JavaFX 2.1
      */
     public final ObjectProperty<EventHandler<WorkerStateEvent>> onCancelledProperty() {
+        checkThread();
         return getEventHelper().onCancelledProperty();
     }
 
@@ -865,6 +885,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * @since JavaFX 2.1
      */
     public final EventHandler<WorkerStateEvent> getOnCancelled() {
+        checkThread();
         return eventHelper == null ? null : eventHelper.getOnCancelled();
     }
 
@@ -876,6 +897,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * @since JavaFX 2.1
      */
     public final void setOnCancelled(EventHandler<WorkerStateEvent> value) {
+        checkThread();
         getEventHelper().setOnCancelled(value);
     }
 
@@ -897,6 +919,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * @since JavaFX 2.1
      */
     public final ObjectProperty<EventHandler<WorkerStateEvent>> onFailedProperty() {
+        checkThread();
         return getEventHelper().onFailedProperty();
     }
 
@@ -908,6 +931,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * @since JavaFX 2.1
      */
     public final EventHandler<WorkerStateEvent> getOnFailed() {
+        checkThread();
         return eventHelper == null ? null : eventHelper.getOnFailed();
     }
 
@@ -919,6 +943,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * @since JavaFX 2.1
      */
     public final void setOnFailed(EventHandler<WorkerStateEvent> value) {
+        checkThread();
         getEventHelper().setOnFailed(value);
     }
 
@@ -932,12 +957,12 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      */
     protected void failed() { }
 
-    private final ObjectProperty<V> value = new SimpleObjectProperty<V>(this, "value");
+    private final ObjectProperty<V> value = new SimpleObjectProperty<>(this, "value");
     private void setValue(V v) { checkThread(); value.set(v); }
     @Override public final V getValue() { checkThread(); return value.get(); }
     @Override public final ReadOnlyObjectProperty<V> valueProperty() { checkThread(); return value; }
 
-    private final ObjectProperty<Throwable> exception = new SimpleObjectProperty<Throwable>(this, "exception");
+    private final ObjectProperty<Throwable> exception = new SimpleObjectProperty<>(this, "exception");
     private void _setException(Throwable value) { checkThread(); exception.set(value); }
     @Override public final Throwable getException() { checkThread(); return exception.get(); }
     @Override public final ReadOnlyObjectProperty<Throwable> exceptionProperty() { checkThread(); return exception; }
@@ -963,12 +988,12 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     @Override public final ReadOnlyBooleanProperty runningProperty() { checkThread(); return running; }
 
     private final StringProperty message = new SimpleStringProperty(this, "message", "");
-    @Override public final String getMessage() { return message.get(); }
-    @Override public final ReadOnlyStringProperty messageProperty() { return message; }
+    @Override public final String getMessage() { checkThread(); return message.get(); }
+    @Override public final ReadOnlyStringProperty messageProperty() { checkThread(); return message; }
 
     private final StringProperty title = new SimpleStringProperty(this, "title", "");
-    @Override public final String getTitle() { return title.get(); }
-    @Override public final ReadOnlyStringProperty titleProperty() { return title; }
+    @Override public final String getTitle() { checkThread(); return title.get(); }
+    @Override public final ReadOnlyStringProperty titleProperty() { checkThread(); return title; }
 
     @Override public final boolean cancel() {
         return cancel(true);
@@ -1189,9 +1214,8 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     /*
      * IMPLEMENTATION
      */
-
     private void checkThread() {
-        if (!isFxApplicationThread()) {
+        if (started && !isFxApplicationThread()) {
             throw new IllegalStateException("Task must only be used from the FX Application Thread");
         }
     }
@@ -1238,6 +1262,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     public final <T extends Event> void addEventHandler(
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler) {
+        checkThread();
         getEventHelper().addEventHandler(eventType, eventHandler);
     }
 
@@ -1256,6 +1281,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     public final <T extends Event> void removeEventHandler(
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler) {
+        checkThread();
         getEventHelper().removeEventHandler(eventType, eventHandler);
     }
 
@@ -1272,6 +1298,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     public final <T extends Event> void addEventFilter(
             final EventType<T> eventType,
             final EventHandler<? super T> eventFilter) {
+        checkThread();
         getEventHelper().addEventFilter(eventType, eventFilter);
     }
 
@@ -1290,6 +1317,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     public final <T extends Event> void removeEventFilter(
             final EventType<T> eventType,
             final EventHandler<? super T> eventFilter) {
+        checkThread();
         getEventHelper().removeEventFilter(eventType, eventFilter);
     }
 
@@ -1308,6 +1336,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     protected final <T extends Event> void setEventHandler(
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler) {
+        checkThread();
         getEventHelper().setEventHandler(eventType, eventHandler);
     }
 
@@ -1330,6 +1359,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
 
     @Override
     public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
+        checkThread();
         return getEventHelper().buildEventDispatchChain(tail);
     }
 
@@ -1384,6 +1414,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
             // in the SCHEDULED state and setting it again here has no negative
             // effect. But we must ensure that SCHEDULED is visited before RUNNING
             // in all cases so that developer code can be consistent.
+            task.started = true;
             task.runLater(new Runnable() {
                 @Override public void run() {
                     task.setState(State.SCHEDULED);

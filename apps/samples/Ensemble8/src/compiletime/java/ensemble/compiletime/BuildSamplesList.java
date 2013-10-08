@@ -76,7 +76,7 @@ public class BuildSamplesList {
         // write
         PrintWriter fout = null;
         try {
-            fout = new PrintWriter(new FileWriter(samplesSourceFile));
+            fout = new PrintWriter(samplesSourceFile, "UTF-8");
             fout.println("package ensemble.generated;");
             fout.println("import ensemble.*;");
             fout.println("import ensemble.playground.PlaygroundProperty;");
@@ -101,7 +101,7 @@ public class BuildSamplesList {
             fout.println("    private static final HashMap<String,SampleInfo[]> DOCS_URL_TO_SAMPLE = new HashMap<String,SampleInfo[]>("+DOCS_TO_SAMPLE_MAP.size()+");");
             fout.println("    static {");
             for (Map.Entry<String,Set<String>> entry: DOCS_TO_SAMPLE_MAP.entrySet()) {
-                fout.println("        DOCS_URL_TO_SAMPLE.put(\""+entry.getKey()+"\","+variableNameArrayToCode("SampleInfo",entry.getValue())+");");
+                fout.println("        DOCS_URL_TO_SAMPLE.put(\""+entry.getKey().replace('$', '.')+"\","+variableNameArrayToCode("SampleInfo",entry.getValue())+");");
             }
             fout.println("    }");
             fout.println("    public static SampleInfo[] getSamplesForDoc(String docUrl) {");
@@ -298,7 +298,7 @@ public class BuildSamplesList {
         try {
             // load src into String
             in = new FileInputStream(file);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(in, "UTF-8"));
             String line;
             while((line = reader.readLine()) != null) {
                 builder.append(line);

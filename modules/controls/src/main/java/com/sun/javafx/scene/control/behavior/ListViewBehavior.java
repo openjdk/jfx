@@ -749,6 +749,11 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     private void discontinuousSelectPreviousRow() {
         MultipleSelectionModel<T> sm = getControl().getSelectionModel();
         if (sm == null) return;
+
+        if (sm.getSelectionMode() != SelectionMode.MULTIPLE) {
+            selectPreviousRow();
+            return;
+        }
         
         FocusModel<T> fm = getControl().getFocusModel();
         if (fm == null) return;
@@ -764,17 +769,26 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
 
         sm.selectRange(newFocusIndex, startIndex + 1);
         fm.focus(newFocusIndex);
+
+        if (onFocusPreviousRow != null) onFocusPreviousRow.run();
     }
     
     private void discontinuousSelectNextRow() {
         MultipleSelectionModel<T> sm = getControl().getSelectionModel();
         if (sm == null) return;
+
+        if (sm.getSelectionMode() != SelectionMode.MULTIPLE) {
+            selectNextRow();
+            return;
+        }
         
         FocusModel<T> fm = getControl().getFocusModel();
         if (fm == null) return;
 
         int focusIndex = fm.getFocusedIndex();
         final int newFocusIndex = focusIndex + 1;
+        if (newFocusIndex >= getRowCount()) return;
+
         int startIndex = focusIndex;
         if (isShiftDown) {
             startIndex = getAnchor() == -1 ? focusIndex : getAnchor();
@@ -782,6 +796,8 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
 
         sm.selectRange(startIndex, newFocusIndex + 1);
         fm.focus(newFocusIndex);
+
+        if (onFocusNextRow != null) onFocusNextRow.run();
     }
     
     private void discontinuousSelectPageUp() {

@@ -35,9 +35,9 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.scene.input.Mnemonic;
 import javafx.collections.ObservableList;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
+
+import com.sun.javafx.scene.control.behavior.TextBinding.MnemonicKeyCombination;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -83,8 +83,7 @@ public class ButtonSkinTest {
         
             stage.show();
         
-            KeyCodeCombination mnemonicKeyCombo =
-                new KeyCodeCombination(KeyCode.M,KeyCombination.ALT_DOWN);
+            KeyCombination mnemonicKeyCombo = new MnemonicKeyCombination("M");
 
             ObservableList<Mnemonic> mnemonicsList = scene.getMnemonics().get(mnemonicKeyCombo);
             if (mnemonicsList != null) {
@@ -114,8 +113,7 @@ public class ButtonSkinTest {
         
             stage.show();
         
-            KeyCodeCombination mnemonicKeyCombo =
-                new KeyCodeCombination(KeyCode.A,KeyCombination.ALT_DOWN);
+            KeyCombination mnemonicKeyCombo = new MnemonicKeyCombination("A");
 
             ObservableList<Mnemonic> mnemonicsList = scene.getMnemonics().get(mnemonicKeyCombo);
             if (mnemonicsList != null) {

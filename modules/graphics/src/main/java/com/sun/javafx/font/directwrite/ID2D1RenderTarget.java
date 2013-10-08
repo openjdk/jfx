@@ -58,8 +58,4 @@ class ID2D1RenderTarget extends IUnknown {
         long result = OS.CreateSolidColorBrush(ptr, color);
         return result != 0 ? new ID2D1Brush(result) : null;
     }
-
-    void DrawLine(D2D1_POINT_2F point0, D2D1_POINT_2F point1, ID2D1Brush brush, float strokeWidth, IUnknown strokeStyle) {
-        OS.DrawLine(ptr, point0, point1, brush.ptr, strokeWidth, strokeStyle != null ? strokeStyle.ptr : 0);
-    }
 }

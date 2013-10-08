@@ -46,6 +46,12 @@
 
 #BUILD_JAVADOC = true
 
+# The building of the javafx-src bundle takes time. By default we disable the
+# building of javafx-src so as to speed up the time in incremental builds.
+# Uncomment this flag in order to build javafx-src.zip
+
+#BUILD_SRC_ZIP = true
+
 # Specifies whether to do a full test run or a "smoke test" run. By default we
 # do a smoke test run which excludes all tests that show a window or play media.
 # Certain long running tests might also be excluded when this is not set.
@@ -113,9 +119,9 @@
 #JDK_DOCS = file:///Library/Java/JavaVirtualMachines/jdk1.8.0/Content/Home/docs/api
 #JDK_DOCS = relative/path/to/docs/api
 
-# Specify the build configuration (Release or Debug). The default setting is Release.
+# Specify the build configuration: Release, Debug, or DebugNative. The default setting is Debug.
 
-#CONF = Debug
+#CONF = Release
 
 # Enables the use of the "use depend" feature. This speeds up incremental builds, but at the
 # cost of accuracy. Under normal circumstances, if you modify a single source file in the

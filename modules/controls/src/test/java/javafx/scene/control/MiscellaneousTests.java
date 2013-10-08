@@ -5,12 +5,14 @@ import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.Toolkit;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.layout.HBox;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import org.junit.Test;
 
 import static junit.framework.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 
 /**
  * Created with IntelliJ IDEA.
@@ -65,6 +67,26 @@ public class MiscellaneousTests {
 
         // Should no longer be null
         assertNotNull(button.getBackground());
+
+    }
+
+    @Test public void test_RT_33103() {
+
+        HBox box = new HBox();
+
+        TextField field = new TextField();
+        Label badLabel = new Label("Field:", field);
+
+        box.getChildren().addAll(badLabel, field);
+
+        Scene scene = new Scene(box);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+
+        ((StubToolkit)Toolkit.getToolkit()).fireTestPulse();
+
+        assertSame(badLabel, field.getParent());
 
     }
 }

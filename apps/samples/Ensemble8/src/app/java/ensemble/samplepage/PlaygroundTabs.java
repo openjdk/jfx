@@ -56,24 +56,18 @@ import javafx.scene.Node;
 import javafx.scene.chart.PieChart;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.CheckBox;
-import javafx.scene.control.CheckBoxBuilder;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
-import javafx.scene.control.LabelBuilder;
 import javafx.scene.control.OverrunStyle;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.control.ScrollPaneBuilder;
 import javafx.scene.control.Separator;
 import javafx.scene.control.Slider;
-import javafx.scene.control.SliderBuilder;
-import javafx.scene.control.TabBuilder;
+import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TextField;
-import javafx.scene.control.TextFieldBuilder;
 import javafx.scene.layout.GridPane;
-import javafx.scene.layout.GridPaneBuilder;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -90,7 +84,10 @@ class PlaygroundTabs extends TabPane {
 
     PlaygroundTabs(final SamplePage samplePage) {
         this.samplePage = samplePage;
-        GridPane grid = GridPaneBuilder.create().hgap(SamplePage.INDENT).vgap(SamplePage.INDENT).padding(new Insets(SamplePage.INDENT)).build();
+        GridPane grid = new GridPane();
+        grid.setHgap(SamplePage.INDENT);
+        grid.setVgap(SamplePage.INDENT);
+        grid.setPadding(new Insets(SamplePage.INDENT));
         int rowIndex = 0;
         for (PlaygroundProperty prop : samplePage.sample.playgroundProperties) {
             try {
@@ -131,17 +128,13 @@ class PlaygroundTabs extends TabPane {
                     }
                 }
                 if (object instanceof XYChart && prop.propertyName.equals("data")) {
-                    getTabs().add(
-                            TabBuilder.create()
-                                .text("Data")
-                                .content(new XYDataVisualizer((XYChart) object))
-                                .build());
+                    Tab tab = new Tab("Data");
+                    tab.setContent(new XYDataVisualizer((XYChart) object));
+                    getTabs().add(tab);
                 } else if (object instanceof PieChart && prop.propertyName.equals("data")) {
-                    getTabs().add(
-                            TabBuilder.create()
-                                .text("Data")
-                                .content(new PieChartDataVisualizer((PieChart) object))
-                                .build());
+                    Tab tab = new Tab("Data");
+                    tab.setContent(new PieChartDataVisualizer((PieChart) object));
+                    getTabs().add(tab);
                 } else {
                     PropertyController controller = newPropertyController(prop, object, property);
                     if (controller != null) {
@@ -162,15 +155,11 @@ class PlaygroundTabs extends TabPane {
             }
         }
         getStyleClass().add("floating");
-        ScrollPane scrollPane = ScrollPaneBuilder.create()
-                .content(grid)
-                .build();
+        ScrollPane scrollPane = new ScrollPane(grid);
         scrollPane.getStyleClass().clear();
-        getTabs().add(
-                TabBuilder.create()
-                    .text("Properties")
-                    .content(scrollPane)
-                    .build());
+        Tab tab = new Tab("Properties");
+        tab.setContent(scrollPane);
+        getTabs().add(tab);
         setMinSize(100, 100);
     }
 
@@ -228,7 +217,11 @@ class PlaygroundTabs extends TabPane {
 
         public Region getLabel() {
             if (label == null) {
-                label = LabelBuilder.create().text(name).alignment(Pos.BASELINE_RIGHT).labelFor(getController()).textOverrun(OverrunStyle.ELLIPSIS).maxWidth(200).build();
+                label = new Label(name);
+                label.setAlignment(Pos.BASELINE_RIGHT);
+                label.setLabelFor(getController());
+                label.setTextOverrun(OverrunStyle.ELLIPSIS);
+                label.setMaxWidth(200);
             }
             return label;
         }
@@ -268,7 +261,7 @@ class PlaygroundTabs extends TabPane {
     private class DoublePropertyController extends PropertyController {
         public DoublePropertyController(PlaygroundProperty playgroundProperty, Object object, Property<Number> prop) {
             super(playgroundProperty);
-            Slider slider = SliderBuilder.create().build();
+            Slider slider = new Slider();
             slider.setMin(getProperty(playgroundProperty, "min", 0));
             slider.setMax(getProperty(playgroundProperty, "max", 100));
             double step = getProperty(playgroundProperty, "step", 0);
@@ -306,7 +299,7 @@ class PlaygroundTabs extends TabPane {
     private class IntegerPropertyController extends PropertyController {
         public IntegerPropertyController(PlaygroundProperty playgroundProperty, Object object, Property<Number> prop) {
             super(playgroundProperty);
-            Slider slider = SliderBuilder.create().build();
+            Slider slider = new Slider();
             slider.setMin(getProperty(playgroundProperty, "min", 0));
             slider.setMax(getProperty(playgroundProperty, "max", 100));
             slider.setSnapToTicks(true);
@@ -340,7 +333,7 @@ class PlaygroundTabs extends TabPane {
     private class BooleanPropertyController extends PropertyController {
         public BooleanPropertyController(PlaygroundProperty playgroundProperty, Object object, Property<Boolean> prop) {
             super(playgroundProperty);
-            CheckBox checkbox = CheckBoxBuilder.create().build();
+            CheckBox checkbox = new CheckBox();
             checkbox.selectedProperty().bindBidirectional(prop);
             setController(checkbox);
         }
@@ -350,7 +343,7 @@ class PlaygroundTabs extends TabPane {
         
         public StringPropertyController(PlaygroundProperty playgroundProperty, Object object, Property<String> prop) {
             super(playgroundProperty);
-            TextField textField = TextFieldBuilder.create().build();
+            TextField textField = new TextField();
             textField.textProperty().bindBidirectional(prop);
             setController(textField);
         }

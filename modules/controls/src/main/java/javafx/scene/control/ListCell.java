@@ -423,12 +423,13 @@ public class ListCell<T> extends IndexedCell<T> {
 
     private boolean firstRun = true;
     private void updateItem() {
-        ListView<T> lv = getListView();
-        List<T> items = lv == null ? null : lv.getItems();
-        int index = getIndex();
+        final ListView<T> lv = getListView();
+        final List<T> items = lv == null ? null : lv.getItems();
+        final int index = getIndex();
+        final int itemCount = items == null ? -1 : items.size();
         
         // Compute whether the index for this cell is for a real item
-        boolean valid = items != null && index >=0 && index < items.size();
+        boolean valid = items != null && index >=0 && index < itemCount;
 
         final T oldValue = getItem();
         final boolean isEmpty = isEmpty();
@@ -437,12 +438,12 @@ public class ListCell<T> extends IndexedCell<T> {
         if (valid) {
             final T newValue = items.get(index);
 
-            if ((newValue != null && ! newValue.equals(oldValue)) ||
-                    oldValue != null && ! oldValue.equals(newValue)) {
-                updateItem(newValue, false);
-            } else if(isEmpty && newValue == null) {
-                updateItem(newValue, false);
-            }
+            // There used to be conditional code here to prevent updateItem from
+            // being called when the value didn't change, but that led us to
+            // issues such as RT-33108, where the value didn't change but the item
+            // we needed to be listening to did. Without calling updateItem we
+            // were breaking things, so once again the conditionals are gone.
+            updateItem(newValue, false);
         } else {
             // RT-30484 We need to allow a first run to be special-cased to allow
             // for the updateItem method to be called at least once to allow for

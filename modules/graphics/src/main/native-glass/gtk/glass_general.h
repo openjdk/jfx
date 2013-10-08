@@ -36,6 +36,10 @@
 #define JLONG_TO_PTR(value) ((void*)(intptr_t)(value))
 #define PTR_TO_JLONG(value) ((jlong)(intptr_t)(value))
 
+#define FILE_PREFIX "file://"
+#define URI_LIST_COMMENT_PREFIX "#"
+#define URI_LIST_LINE_BREAK "\r\n" 
+
 extern JNIEnv* mainEnv; // Use only with main loop thread!!!
 
 #include <exception>
@@ -45,14 +49,16 @@ struct jni_exception: public std::exception {
             jmessage = (jstring)mainEnv->CallObjectMethod(throwable,
                     mainEnv->GetMethodID(mainEnv->FindClass("java/lang/Throwable"),
                     "getMessage", "()Ljava/lang/String;"));
-            message = mainEnv->GetStringUTFChars(jmessage, NULL);
+            message = jmessage == NULL ? "" : mainEnv->GetStringUTFChars(jmessage, NULL);
     }
     const char *what() const throw()
     {
         return message;
     }
     ~jni_exception() throw(){
-        mainEnv->ReleaseStringUTFChars(jmessage, message);
+        if (jmessage && message) {
+            mainEnv->ReleaseStringUTFChars(jmessage, message);
+        }
     }
 private:
     jthrowable throwable;
@@ -220,6 +226,10 @@ private:
     guint8* convert_BGRA_to_RGBA(const int* pixels, int stride, int height);
 
     gboolean check_and_clear_exception(JNIEnv *env);
+
+    gsize get_files_count(gchar **uris);
+
+    jobject uris_to_java(JNIEnv *env, gchar **uris, gboolean files);
 
 #endif        /* GLASS_GENERAL_H */
 

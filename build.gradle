@@ -330,6 +330,10 @@ if (hasProperty("BUILD_JAVADOC")) {
 }
 ext.BUILD_JAVADOC = buildJavadoc;
 
+// Specifies whether to build the javafx-src bundle
+defineProperty("BUILD_SRC_ZIP", "false")
+ext.IS_BUILD_SRC_ZIP = Boolean.parseBoolean(BUILD_SRC_ZIP)
+
 // Specifies whether to run full tests (true) or smoke tests (false)
 def isFullTest = false;
 if (hasProperty("FULL_TEST")) {
@@ -337,9 +341,10 @@ if (hasProperty("FULL_TEST")) {
 }
 ext.IS_FULL_TEST = isFullTest;
 
-// Specify the build configuration (Release or Debug)
-defineProperty("CONF", "Release")
-ext.IS_DEBUG = CONF == "Debug"
+// Specify the build configuration (Release, Debug, or DebugNative)
+defineProperty("CONF", "Debug")
+ext.IS_DEBUG_JAVA = CONF == "Debug" || CONF == "DebugNative"
+ext.IS_DEBUG_NATIVE = CONF == "DebugNative"
 
 // Defines the compiler warning levels to use. If empty, then no warnings are generated. If
 // not empty, then the expected syntax is as a space or comma separated list of names, such
@@ -973,8 +978,6 @@ allprojects {
         testLogging.exceptionFormat = "full";
         scanForTestClasses = false;
         include("**/*Test.*");
-        exclude("**/DepthTest.*");
-        exclude("**/*Abstract*.*");
         if (BUILD_CLOSED && DO_JCOV) {
             addJCov(project, test)
         }
@@ -1287,7 +1290,6 @@ project(":graphics") {
         testLogging.exceptionFormat = "full"
         scanForTestClasses = false
         include "**/*Test.*"
-        exclude "**/*Abstract*.*"
         if (BUILD_CLOSED && DO_JCOV) {
             addJCov(project, test)
         }
@@ -1654,7 +1656,7 @@ allprojects {
         // TODO need to file issue with Gradle
         compile.options.useAnt = true
         compile.options.debug = true // we always generate debugging info in the class files
-        compile.options.debugOptions.debugLevel = IS_DEBUG ? "source,lines,vars" : "source,lines"
+        compile.options.debugOptions.debugLevel = IS_DEBUG_JAVA ? "source,lines,vars" : "source,lines"
         compile.options.fork = true
         compile.options.forkOptions.executable = JAVAC
         compile.options.warnings = IS_LINT
@@ -1816,6 +1818,34 @@ task zips() {
     }
 }
 
+task copySources(type: Copy) {
+    enabled = IS_BUILD_SRC_ZIP
+    def projectsToCopy = [
+            project(":base"), project(":graphics"), project(":controls"),
+            project(":swing"), project(":swt"), project(":fxml"),
+            project(":builders"), project(":web")]
+    from(projectsToCopy.collect({
+        ["${it.projectDir}/src/main/java"]
+    }))
+    include "**/*.java"
+    into "${buildDir}/javafx-src"
+}
+
+task zipSources(type: Zip) {
+    enabled = IS_BUILD_SRC_ZIP
+    dependsOn(copySources)
+    archiveName = "javafx-src.zip"
+    destinationDir = file("$buildDir")
+    includeEmptyDirs = false
+    from "${buildDir}/javafx-src"
+}
+
+task src {
+    enabled = IS_BUILD_SRC_ZIP
+    description = "Created the javafx-src.zip bundle"
+    dependsOn(zipSources)
+}
+
 task all() {
     dependsOn(sdk,publicExports,apps,perf,zips)
 }
@@ -1948,6 +1978,14 @@ compileTargets { t ->
                 }
             }
 
+            // Copy over the javafx-src bundle
+            if (IS_BUILD_SRC_ZIP) {
+                copy {
+                    from "build/javafx-src.zip"
+                    into "build/${t.name}-sdk"
+                }
+            }
+
             // Copy over the fxpackager and rename as ant-javafx.jar
             copy {
                 from "modules/fxpackager/build/libs"
@@ -1970,6 +2008,7 @@ compileTargets { t ->
         }
         dependsOn(jfxrtTask)
         dependsOn(javadoc)
+        dependsOn(src)
     }
 
     def generateSymbols = targetProperties.containsKey('generateSymbols') ? targetProperties.generateSymbols : false

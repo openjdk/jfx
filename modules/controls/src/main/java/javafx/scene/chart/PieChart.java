@@ -90,6 +90,7 @@ public class PieChart extends Chart {
     private int defaultColorIndex = 0;
     private static final double LABEL_TICK_GAP = 6;
     private static final double LABEL_BALL_RADIUS = 2;
+    private static int uniqueId = 0;
     private double centerX;
     private double centerY;
     private double pieRadius;
@@ -145,7 +146,7 @@ public class PieChart extends Chart {
             }
             for(int i=c.getFrom(); i<c.getTo(); i++) {
                 Data item = getData().get(i);
-                dataItemAdded(i, item);
+                dataItemAdded(item);
             }
             // update legend if any data has changed
             if (isLegendVisible() && (c.getRemoved().size() > 0 || c.getFrom() < c.getTo())) updateLegend();
@@ -336,6 +337,10 @@ public class PieChart extends Chart {
 
     // -------------- METHODS --------------------------------------------------
 
+    private int getUniqueId() {
+        return uniqueId++;
+    }
+    
     private void dataNameChanged(Data item) {
         item.textNode.setText(item.getName());
         requestChartLayout();
@@ -356,7 +361,7 @@ public class PieChart extends Chart {
         }
     }
 
-    private Node createArcRegion(int itemIndex, Data item) {
+    private Node createArcRegion(Data item) {
         Node arcRegion = item.getNode();
         // check if symbol has already been created
         if (arcRegion == null) {
@@ -365,26 +370,26 @@ public class PieChart extends Chart {
             item.setNode(arcRegion);
         }
         // Note: not sure if we want to add or check, ie be more careful and efficient here
-        arcRegion.getStyleClass().setAll("chart-pie", "data" + itemIndex, item.defaultColorStyleString);
+        arcRegion.getStyleClass().setAll("chart-pie", "data" + getUniqueId(), item.defaultColorStyleString);
         if (item.getPieValue() < 0) {
             arcRegion.getStyleClass().add("negative");
         }
         return arcRegion;
     }
 
-    private Text createPieLabel(int itemIndex, Data item) {
+    private Text createPieLabel(Data item) {
         Text text = item.textNode;
         text.setText(item.getName());
         return text;
     }
 
-    private void dataItemAdded(int itemIndex, final Data item) {
+    private void dataItemAdded(final Data item) {
         // set default color styleClass
         item.defaultColorStyleString = "default-color"+(defaultColorIndex % 8);
         defaultColorIndex ++;
         // create shape
-        Node shape = createArcRegion(itemIndex, item);
-        final Text text = createPieLabel(itemIndex, item);
+        Node shape = createArcRegion(item);
+        final Text text = createPieLabel(item);
         item.getChart().getChartChildren().add(shape);
         if (shouldAnimate()) {
             // if the same data item is being removed, first stop the remove animation,
@@ -496,10 +501,6 @@ public class PieChart extends Chart {
 
         labelLinePath.getElements().clear();
          // calculate combined bounds of all labels & pie radius
-        double minX = 0.0d;
-        double minY = 0.0d;
-        double maxX = 0.0d;
-        double maxY = 0.0d;
         double[] labelsX = null;
         double[] labelsY = null;
         double[] labelAngles = null;
@@ -507,6 +508,12 @@ public class PieChart extends Chart {
         ArrayList<LabelLayoutInfo> fullPie = null;
         boolean shouldShowLabels = getLabelsVisible();
         if(getLabelsVisible()) {
+
+            double minX = begin != null ? Double.MAX_VALUE : 0d;
+            double minY = begin != null ? Double.MAX_VALUE : 0d;
+            double maxX = begin != null ? Double.MIN_VALUE : 0d;
+            double maxY = begin != null ? Double.MIN_VALUE : 0d;
+
             labelsX = new double[getDataSize()];
             labelsY = new double[getDataSize()];
             labelAngles = new double[getDataSize()];
@@ -780,29 +787,47 @@ public class PieChart extends Chart {
             this.size = size;
         }
     }
+
     /**
      * PieChart Data Item, represents one slice in the PieChart
+     *
      * @since JavaFX 2.0
      */
     public final static class Data {
 
         private Text textNode = new Text();
-        /** Next pointer for the next data item : so we can do animation on data delete. */
+        /**
+         * Next pointer for the next data item : so we can do animation on data delete.
+         */
         private Data next = null;
         private String defaultColorStyleString;
 
         // -------------- PUBLIC PROPERTIES ------------------------------------
 
-        /** The chart which this data belongs to. */
+        /**
+         * The chart which this data belongs to.
+         */
         private ReadOnlyObjectWrapper<PieChart> chart = new ReadOnlyObjectWrapper<PieChart>(this, "chart");
-        public final PieChart getChart() { return chart.getValue(); }
-        private void setChart(PieChart value) { chart.setValue(value); }
-        public final ReadOnlyObjectProperty<PieChart> chartProperty() { return chart.getReadOnlyProperty(); }
 
-        /** The name of the pie slice */
-        private StringProperty name = new StringPropertyBase()  {
-            @Override protected void invalidated() {
-                if(getChart()!=null) getChart().dataNameChanged(Data.this);
+        public final PieChart getChart() {
+            return chart.getValue();
+        }
+
+        private void setChart(PieChart value) {
+            chart.setValue(value);
+        }
+
+        public final ReadOnlyObjectProperty<PieChart> chartProperty() {
+            return chart.getReadOnlyProperty();
+        }
+
+        /**
+         * The name of the pie slice
+         */
+        private StringProperty name = new StringPropertyBase() {
+            @Override
+            protected void invalidated() {
+                if (getChart() != null) getChart().dataNameChanged(Data.this);
             }
 
             @Override
@@ -815,14 +840,26 @@ public class PieChart extends Chart {
                 return "name";
             }
         };
-        public final void setName(java.lang.String value) { name.setValue(value); }
-        public final java.lang.String getName() { return name.getValue(); }
-        public final StringProperty nameProperty() { return name; }
 
-        /** The value of the pie slice */
+        public final void setName(java.lang.String value) {
+            name.setValue(value);
+        }
+
+        public final java.lang.String getName() {
+            return name.getValue();
+        }
+
+        public final StringProperty nameProperty() {
+            return name;
+        }
+
+        /**
+         * The value of the pie slice
+         */
         private DoubleProperty pieValue = new DoublePropertyBase() {
-            @Override protected void invalidated() {
-                if(getChart() !=null) getChart().dataPieValueChanged(Data.this);
+            @Override
+            protected void invalidated() {
+                if (getChart() != null) getChart().dataPieValueChanged(Data.this);
             }
 
             @Override
@@ -835,39 +872,77 @@ public class PieChart extends Chart {
                 return "pieValue";
             }
         };
-        public final double getPieValue() { return pieValue.getValue(); }
-        public final void setPieValue(double value) { pieValue.setValue(value); }
-        public final DoubleProperty pieValueProperty() { return pieValue; }
+
+        public final double getPieValue() {
+            return pieValue.getValue();
+        }
+
+        public final void setPieValue(double value) {
+            pieValue.setValue(value);
+        }
+
+        public final DoubleProperty pieValueProperty() {
+            return pieValue;
+        }
 
         /**
          * The current pie value, used during animation. This will be the last data value, new data value or
          * anywhere in between
          */
         private DoubleProperty currentPieValue = new SimpleDoubleProperty(this, "currentPieValue");
-        private double getCurrentPieValue() { return currentPieValue.getValue(); }
-        private void setCurrentPieValue(double value) { currentPieValue.setValue(value); }
-        private DoubleProperty currentPieValueProperty() { return currentPieValue; }
 
-        /** Multiplier that is used to animate the radius of the pie slice */
+        private double getCurrentPieValue() {
+            return currentPieValue.getValue();
+        }
+
+        private void setCurrentPieValue(double value) {
+            currentPieValue.setValue(value);
+        }
+
+        private DoubleProperty currentPieValueProperty() {
+            return currentPieValue;
+        }
+
+        /**
+         * Multiplier that is used to animate the radius of the pie slice
+         */
         private DoubleProperty radiusMultiplier = new SimpleDoubleProperty(this, "radiusMultiplier");
-        private double getRadiusMultiplier() { return radiusMultiplier.getValue(); }
-        private void setRadiusMultiplier(double value) { radiusMultiplier.setValue(value); }
-        private DoubleProperty radiusMultiplierProperty() { return radiusMultiplier; }
+
+        private double getRadiusMultiplier() {
+            return radiusMultiplier.getValue();
+        }
+
+        private void setRadiusMultiplier(double value) {
+            radiusMultiplier.setValue(value);
+        }
+
+        private DoubleProperty radiusMultiplierProperty() {
+            return radiusMultiplier;
+        }
 
         /**
          * Readonly access to the node that represents the pie slice. You can use this to add mouse event listeners etc.
          */
         private ObjectProperty<Node> node = new SimpleObjectProperty<Node>(this, "node");
-        public Node getNode() { return node.getValue(); }
-        private void setNode(Node value) { node.setValue(value); }
-        private ObjectProperty<Node> nodeProperty() { return node; }
+
+        public Node getNode() {
+            return node.getValue();
+        }
+
+        private void setNode(Node value) {
+            node.setValue(value);
+        }
+
+        private ObjectProperty<Node> nodeProperty() {
+            return node;
+        }
 
         // -------------- CONSTRUCTOR -------------------------------------------------
 
         /**
          * Constructs a PieChart.Data object with the given name and value.
          *
-         * @param name name for Pie
+         * @param name  name for Pie
          * @param value pie value
          */
         public Data(java.lang.String name, double value) {
@@ -880,10 +955,12 @@ public class PieChart extends Chart {
 
         /**
          * Returns a string representation of this {@code Data} object.
+         *
          * @return a string representation of this {@code Data} object.
          */
-        @Override public java.lang.String toString() {
-            return "Data["+getName()+","+getPieValue()+"]";
+        @Override
+        public java.lang.String toString() {
+            return "Data[" + getName() + "," + getPieValue() + "]";
         }
     }
 

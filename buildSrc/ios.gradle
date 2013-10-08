@@ -111,7 +111,7 @@ def ccFlags = [
     "-miphoneos-version-min=6.0", "-fmessage-length=0", "-std=c99", "-fno-common",
     "-Wall", "-fno-strict-aliasing", "-fwrapv", "-fpascal-strings", "-fobjc-abi-version=2", "-fobjc-legacy-dispatch",
     "-I$JDK_HOME/include", "-I$JDK_HOME/include/darwin", "-c",
-    IS_DEBUG ? ["-O0", "-DDEBUG", "-g"] : ["-O3", "-DNDEBUG"]].flatten()
+    IS_DEBUG_NATIVE ? ["-O0", "-DDEBUG", "-g"] : ["-O3", "-DNDEBUG"]].flatten()
 
 def compiler = "clang"
 def linker = "libtool"

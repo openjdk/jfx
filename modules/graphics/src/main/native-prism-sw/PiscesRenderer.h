@@ -298,7 +298,6 @@ typedef struct _Renderer {
 
     jint _rowNum;
     jint _alphaWidth;
-    jint _alphaOffset;
     jint _minTouched;
     jint _maxTouched;
     jint _currX, _currY;

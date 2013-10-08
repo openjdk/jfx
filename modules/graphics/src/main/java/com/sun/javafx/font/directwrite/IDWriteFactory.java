@@ -98,12 +98,11 @@ class IDWriteFactory extends IUnknown {
     }
 
     IDWriteFontFace CreateFontFace(int fontFaceType,
-                                   int numberOfFiles,  //native only supports 1
                                    IDWriteFontFile fontFiles,
                                    int faceIndex,
                                    int fontFaceSimulationFlags) {
 
-        long result = OS.CreateFontFace(ptr, fontFaceType, numberOfFiles, fontFiles.ptr, faceIndex, fontFaceSimulationFlags);
+        long result = OS.CreateFontFace(ptr, fontFaceType, fontFiles.ptr, faceIndex, fontFaceSimulationFlags);
         return result != 0 ? new IDWriteFontFace(result) : null;
     }
 }

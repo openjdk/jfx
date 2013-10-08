@@ -46,8 +46,6 @@ import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.OverrunStyle;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.Mnemonic;
 import javafx.scene.text.Font;
@@ -644,16 +642,7 @@ public class Utils {
                     TextBinding bindings = new TextBinding(menuitem.getText());
                     int mnemonicIndex = bindings.getMnemonicIndex() ;
                     if (mnemonicIndex >= 0) {
-
-                        KeyCode mnemonicCode = bindings.getMnemonic();
-                    
-                        KeyCodeCombination mnemonicKeyCombo =
-                                new KeyCodeCombination(
-                                        mnemonicCode,
-                                        com.sun.javafx.PlatformUtil.isMac()
-                                                ? KeyCombination.META_DOWN
-                                                : KeyCombination.ALT_DOWN);
-
+                        KeyCombination mnemonicKeyCombo = bindings.getMnemonicKeyCombination();
                         Mnemonic myMnemonic = new Mnemonic(cmContent.getLabelAt(i), mnemonicKeyCombo);
                         scene.addMnemonic(myMnemonic);
                         cmContent.getLabelAt(i).impl_setShowMnemonics(initialState);
@@ -682,15 +671,7 @@ public class Utils {
                     TextBinding bindings = new TextBinding(menuitem.getText());
                     int mnemonicIndex = bindings.getMnemonicIndex() ;
                     if (mnemonicIndex >= 0) {
-
-                        KeyCode mnemonicCode = bindings.getMnemonic();
-                    
-                        KeyCodeCombination mnemonicKeyCombo =
-                                new KeyCodeCombination(
-                                        mnemonicCode,
-                                        com.sun.javafx.PlatformUtil.isMac()
-                                                ? KeyCombination.META_DOWN
-                                                : KeyCombination.ALT_DOWN);
+                        KeyCombination mnemonicKeyCombo = bindings.getMnemonicKeyCombination();
 
                         ObservableList<Mnemonic> mnemonicsList = scene.getMnemonics().get(mnemonicKeyCombo);
                         if (mnemonicsList != null) {

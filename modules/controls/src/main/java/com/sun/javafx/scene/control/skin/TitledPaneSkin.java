@@ -534,7 +534,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
         }
     }
 
-    class Content extends StackPane implements TraverseListener {
+    class Content extends StackPane {
         private Node content;
         private TraversalEngine engine;
         private Direction direction;
@@ -548,7 +548,6 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
                     super.trav(owner, dir);
                 }
             };
-            engine.addTraverseListener(this);
             setImpl_traversalEngine(engine);
         }
 
@@ -563,21 +562,6 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
 
         public final Node getContent() {
             return content;
-        }
-
-        @Override public void onTraverse(Node node, Bounds bounds) {
-            int index = engine.registeredNodes.indexOf(node);
-
-            if (index == -1 && direction.equals(Direction.PREVIOUS)) {
-                getSkinnable().requestFocus();
-            }
-            if (index == -1 && direction.equals(Direction.NEXT)) {
-                // If the parent is an accordion we want to focus to go outside of the
-                // accordion and to the next focusable control.
-                if (isInsideAccordion()) {
-                    new TraversalEngine(getSkinnable(), false).trav(getSkinnable().getParent(), Direction.NEXT);
-                }
-            }
         }
     }
 }

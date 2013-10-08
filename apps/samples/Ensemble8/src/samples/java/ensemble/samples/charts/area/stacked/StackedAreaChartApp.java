@@ -39,7 +39,6 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.chart.StackedAreaChart;
 import javafx.scene.chart.NumberAxis;
-import javafx.scene.chart.NumberAxisBuilder;
 import javafx.stage.Stage;
 
 
@@ -115,16 +114,8 @@ public class StackedAreaChartApp extends Application {
     private NumberAxis yAxis;
 
     public Parent createContent() {
-        xAxis = NumberAxisBuilder.create()
-                .label("X Values")
-                .lowerBound(1.0d)
-                .upperBound(9.0d)
-                .tickUnit(2.0d).build();
-        yAxis = NumberAxisBuilder.create()
-                .label("Y Values")
-                .lowerBound(0.0d)
-                .upperBound(30.0d)
-                .tickUnit(2.0d).build();
+        xAxis = new NumberAxis("X Values", 1.0d, 9.0d, 2.0d);
+        yAxis = new NumberAxis("Y Values", 0.0d, 30.0d, 2.0d);
                 
         ObservableList<StackedAreaChart.Series> areaChartData = FXCollections.observableArrayList(
                 new StackedAreaChart.Series("Series 1",FXCollections.observableArrayList(

@@ -570,8 +570,17 @@ jobject newD2D1_MATRIX_3X2_F(JNIEnv *env, D2D1_MATRIX_3X2_F *lpStruct)
 JNIEXPORT jlong JNICALL OS_NATIVE(_1WICCreateImagingFactory)
     (JNIEnv *env, jclass that)
 {
-    HRESULT hr = E_FAIL;
-    CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+    /* This routine initialize COM in order to create an WICImagingFactory.
+     * It runs on the prism thread and expects no other codes in this thread
+     * to interface with COM.
+     * Note: This method is called by DWFactory a single time.
+     */
+    HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+
+    /* This means COM has been initialize with a different concurrency model.
+     * This should never happen. */
+    if (hr == RPC_E_CHANGED_MODE) return NULL;
+
     IWICImagingFactory* result = NULL;
     hr = CoCreateInstance(
             CLSID_WICImagingFactory,
@@ -579,7 +588,9 @@ JNIEXPORT jlong JNICALL OS_NATIVE(_1WICCreateImagingFactory)
             CLSCTX_INPROC_SERVER,
             IID_PPV_ARGS(&result)
             );
-    CoUninitialize();   /* NOT COOL BUT SEEMS TO WORK */
+
+    /* Unload COM as no other COM objects will be create directly */
+    CoUninitialize();
     return SUCCEEDED(hr) ? (jlong)result : NULL;
 }
 
@@ -860,14 +871,17 @@ BOOL JFXTextAnalysisSink::Next() {
 }
 
 UINT32 JFXTextAnalysisSink::GetStart() {
+    if (((UINT32)position_) >= runs_.size()) return 0;
     return runs_[position_].start;
 }
 
 UINT32 JFXTextAnalysisSink::GetLength() {
+    if (((UINT32)position_) >= runs_.size()) return 0;
     return runs_[position_].length;
 }
 
 DWRITE_SCRIPT_ANALYSIS* JFXTextAnalysisSink::GetAnalysis() {
+    if (((UINT32)position_) >= runs_.size()) return NULL;
     return &runs_[position_].analysis;
 }
 
@@ -1136,14 +1150,17 @@ BOOL JFXTextRenderer::Next() {
 }
 
 UINT32 JFXTextRenderer::GetStart() {
+    if (((UINT32)position_) >= runs_.size()) return 0;
     return runs_[position_].glyphRunDescription.textPosition;
 }
 
 UINT32 JFXTextRenderer::GetLength() {
+    if (((UINT32)position_) >= runs_.size()) return 0;
     return runs_[position_].glyphRunDescription.stringLength;
 }
 
 UINT32 JFXTextRenderer::GetGlyphCount() {
+    if (((UINT32)position_) >= runs_.size()) return 0;
     return runs_[position_].glyphRun.glyphCount;
 }
 
@@ -1152,22 +1169,27 @@ UINT32 JFXTextRenderer::GetTotalGlyphCount() {
 }
 
 IDWriteFontFace* JFXTextRenderer::GetFontFace() {
+    if (((UINT32)position_) >= runs_.size()) return NULL;
     return runs_[position_].glyphRun.fontFace;
 }
 
 const FLOAT* JFXTextRenderer::GetGlyphAdvances() {
+    if (((UINT32)position_) >= runs_.size()) return NULL;
     return runs_[position_].glyphRun.glyphAdvances;
 }
 
 const DWRITE_GLYPH_OFFSET* JFXTextRenderer::GetGlyphOffsets() {
+    if (((UINT32)position_) >= runs_.size()) return NULL;
     return runs_[position_].glyphRun.glyphOffsets;
 }
 
 const UINT16* JFXTextRenderer::GetGlyphIndices() {
+    if (((UINT32)position_) >= runs_.size()) return NULL;
     return runs_[position_].glyphRun.glyphIndices;
 }
 
 const UINT16* JFXTextRenderer::GetClusterMap() {
+    if (((UINT32)position_) >= runs_.size()) return NULL;
     return runs_[position_].glyphRunDescription.clusterMap;
 }
 
@@ -1270,7 +1292,7 @@ JNIEXPORT jint JNICALL OS_NATIVE(JFXTextRendererGetGlyphOffsets)
 }
 
 JNIEXPORT jint JNICALL OS_NATIVE(JFXTextRendererGetClusterMap)
-(JNIEnv *env, jclass that, jlong arg0, jshortArray arg1, jint start) {
+(JNIEnv *env, jclass that, jlong arg0, jshortArray arg1, jint start, jint glyphStart) {
     if (!arg1) return 0;
     jshort* data = env->GetShortArrayElements(arg1, NULL);
     if (!data) return 0;
@@ -1287,7 +1309,7 @@ JNIEXPORT jint JNICALL OS_NATIVE(JFXTextRendererGetClusterMap)
      * by DirectWrite has it relative to the DWRITE_GLYPH_RUN.
      */
     for (i = 0; i < copiedCount; i++) {
-        data[i + start] = map[i] + (jshort)start;
+        data[i + start] = map[i] + (jshort)glyphStart;
     }
     env->ReleaseShortArrayElements(arg1, data, NULL);
     return copiedCount;
@@ -1417,7 +1439,6 @@ IFACEMETHODIMP_(void) JFXGeometrySink::EndFigure (D2D1_FIGURE_END figureEnd) {
 }
 
 IFACEMETHODIMP JFXGeometrySink::Close () {
-    /* should close the sink and check figure beging == figure end but this impl expects the user to be good */
     return S_OK;
 }
 
@@ -1451,8 +1472,6 @@ IFACEMETHODIMP JFXGeometrySink::QueryInterface(IID const& riid, void** ppvObject
 }
 
 /* IDWriteFontFace */
-jclass path2DClass = NULL;
-jmethodID path2DCtr = NULL;
 JNIEXPORT jobject JNICALL OS_NATIVE(GetGlyphRunOutline)
     (JNIEnv *env, jclass that, jlong arg0, jfloat arg1, jshort arg2, jboolean arg3)
 {
@@ -1461,16 +1480,19 @@ JNIEXPORT jobject JNICALL OS_NATIVE(GetGlyphRunOutline)
     const UINT32  glyphCount = 1;
     const UINT16 glyphIndices[glyphCount] = {arg2};
     JFXGeometrySink* sink = new (std::nothrow) JFXGeometrySink();
+    if (sink == NULL) return NULL;
 
     hr = ((IDWriteFontFace *)arg0)->GetGlyphRunOutline(arg1, glyphIndices, NULL, NULL, glyphCount, arg3, FALSE, sink);
 
-    if (SUCCEEDED(hr)) {
-        if (path2DClass == NULL) {
-            jclass tmpClass = env->FindClass("com/sun/javafx/geom/Path2D");
-            path2DClass = (jclass)env->NewGlobalRef(tmpClass);
-            path2DCtr = env->GetMethodID(path2DClass, "<init>", "(I[BI[FI)V");
-        }
+    static jclass path2DClass = NULL;
+    static jmethodID path2DCtr = NULL;
+    if (path2DClass == NULL) {
+        jclass tmpClass = env->FindClass("com/sun/javafx/geom/Path2D");
+        path2DClass = (jclass)env->NewGlobalRef(tmpClass);
+        path2DCtr = env->GetMethodID(path2DClass, "<init>", "(I[BI[FI)V");
+    }
 
+    if (SUCCEEDED(hr)) {
         jbyteArray types = env->NewByteArray(sink->numTypes());
         jfloatArray coords = env->NewFloatArray(sink->numCoords());
         if (types && coords) {
@@ -1486,12 +1508,6 @@ JNIEXPORT jobject JNICALL OS_NATIVE(GetGlyphRunOutline)
     return result;
 }
 
-JNIEXPORT jint JNICALL OS_NATIVE(GetType)
-    (JNIEnv *env, jclass that, jlong arg0)
-{
-    return ((IDWriteFontFace *)arg0)->GetType();
-}
-
 JNIEXPORT jobject JNICALL OS_NATIVE(GetDesignGlyphMetrics)
     (JNIEnv *env, jclass that, jlong arg0, jshort arg1, jboolean arg2)
 {
@@ -1505,27 +1521,6 @@ JNIEXPORT jobject JNICALL OS_NATIVE(GetDesignGlyphMetrics)
     if (SUCCEEDED(hr)) {
         result = newDWRITE_GLYPH_METRICS(env, &glyphMetrics[0]);
     }
-    return result;
-}
-
-JNIEXPORT jshortArray JNICALL OS_NATIVE(GetGlyphIndices)
-    (JNIEnv *env, jclass that, jlong arg0, jintArray arg1, jint arg2)
-{
-    HRESULT hr = E_FAIL;
-    jint *lparg1 = NULL;
-    jshortArray result = NULL;
-    UINT16* buffer = new (std::nothrow) UINT16 [arg2];
-    if (arg1) if ((lparg1 = env->GetIntArrayElements(arg1, NULL)) == NULL) goto fail;
-    hr = ((IDWriteFontFace *)arg0)->GetGlyphIndices((const UINT32 *) lparg1, arg2, buffer);
-fail:
-    if (arg1 && lparg1) env->ReleaseIntArrayElements(arg1, lparg1, 0);
-    if (SUCCEEDED(hr)) {
-        result = env->NewShortArray(arg2);
-        if (result) {
-            env->SetShortArrayRegion(result, 0, arg2, (const short*)buffer);
-        }
-    }
-    delete [] buffer;
     return result;
 }
 
@@ -1575,14 +1570,14 @@ fail:
     return SUCCEEDED(hr) ? (jlong)result : NULL;
 }
 
-JNIEXPORT jlong JNICALL OS_NATIVE(CreateFontFace__JIIJII)
-    (JNIEnv *env, jclass that, jlong arg0, jint arg1, jint arg2, jlong arg3, jint arg4, jint arg5)
+JNIEXPORT jlong JNICALL OS_NATIVE(CreateFontFace__JIJII)
+    (JNIEnv *env, jclass that, jlong arg0, jint arg1, jlong arg3, jint arg4, jint arg5)
 {
     IDWriteFontFace* result = NULL;
-    if (arg2 != 1) return NULL;
-    IDWriteFontFile* fontFileArray[] = {(IDWriteFontFile*)arg3};
+    const UINT32  numberOfFiles = 1;
+    IDWriteFontFile* fontFileArray[numberOfFiles] = {(IDWriteFontFile*)arg3};
     HRESULT hr = ((IDWriteFactory *)arg0)->CreateFontFace((DWRITE_FONT_FACE_TYPE)arg1,
-                                                          (UINT32)arg2,
+                                                          numberOfFiles,
                                                           fontFileArray,
                                                           (UINT32)arg4,
                                                           (DWRITE_FONT_SIMULATIONS)arg5,
@@ -1592,17 +1587,19 @@ JNIEXPORT jlong JNICALL OS_NATIVE(CreateFontFace__JIIJII)
 }
 
 JNIEXPORT jlong JNICALL OS_NATIVE(CreateTextLayout)
-    (JNIEnv *env, jclass that, jlong arg0, jcharArray arg1, jint arg2, jint arg3, jlong arg4,
+    (JNIEnv *env, jclass that, jlong arg0, jcharArray arg1, jint start, jint count, jlong arg4,
     jfloat arg5, jfloat arg6)
 {
     HRESULT hr = E_FAIL;
     IDWriteTextLayout* result = NULL;
     jchar *lparg1 = NULL;
     if (arg1) if ((lparg1 = env->GetCharArrayElements(arg1, NULL)) == NULL) goto fail;
-    const WCHAR * text = (const WCHAR *)(lparg1 + arg2);
+    if (start + count > env->GetArrayLength(arg1)) goto fail;
+
+    const WCHAR * text = (const WCHAR *)(lparg1 + start);
 
     hr = ((IDWriteFactory *)arg0)->CreateTextLayout(text,
-                                                    (UINT32)arg3,
+                                                    (UINT32)count,
                                                     (IDWriteTextFormat *)arg4,
                                                     (FLOAT)arg5,
                                                     (FLOAT)arg6,
@@ -1773,30 +1770,6 @@ JNIEXPORT jlong JNICALL OS_NATIVE(GetFont)
 }
 
 /* IDWriteLocalizedStrings */
-JNIEXPORT jcharArray JNICALL OS_NATIVE(GetLocaleName)
-    (JNIEnv *env, jclass that, jlong arg0, jint arg1, jint arg2)
-{
-    jcharArray result = NULL;
-    WCHAR* buffer = new (std::nothrow) WCHAR[arg2];
-    HRESULT hr = ((IDWriteLocalizedStrings *)arg0)->GetLocaleName(arg1, buffer, arg2);
-    if (SUCCEEDED(hr)) {
-        result = env->NewCharArray(arg2);
-        if (result) {
-            env->SetCharArrayRegion(result, 0, arg2, (const jchar*)buffer);
-        }
-    }
-    delete [] buffer;
-    return result;
-}
-
-JNIEXPORT jint JNICALL OS_NATIVE(GetLocaleNameLength)
-    (JNIEnv *env, jclass that, jlong arg0, jint arg1)
-{
-    UINT32 result = 0;
-    HRESULT hr = ((IDWriteLocalizedStrings *)arg0)->GetLocaleNameLength(arg1, &result);
-    return SUCCEEDED(hr) ? result : 0;
-}
-
 JNIEXPORT jcharArray JNICALL OS_NATIVE(GetString)
     (JNIEnv *env, jclass that, jlong arg0, jint arg1, jint arg2)
 {
@@ -1829,7 +1802,7 @@ JNIEXPORT jint JNICALL OS_NATIVE(FindLocaleName)
     UINT32 result = 0;
     BOOL exists = FALSE;
     if (arg1) if ((lparg1 = env->GetCharArrayElements(arg1, NULL)) == NULL) goto fail;
-    hr = ((IDWriteLocalizedStrings *)arg0)->FindLocaleName((const WCHAR *) lparg1,&result, &exists);
+    hr = ((IDWriteLocalizedStrings *)arg0)->FindLocaleName((const WCHAR *) lparg1, &result, &exists);
 fail:
     if (arg1 && lparg1) env->ReleaseCharArrayElements(arg1, lparg1, 0);
     return SUCCEEDED(hr) && exists ? result : -1;
@@ -1876,7 +1849,7 @@ JNIEXPORT jint JNICALL OS_NATIVE(FindFamilyName)
     BOOL exists = FALSE;
     if (arg1) if ((lparg1 = env->GetCharArrayElements(arg1, NULL)) == NULL) goto fail;
     hr = ((IDWriteFontCollection *)arg0)->FindFamilyName((const WCHAR *) lparg1, &result, &exists);
-    fail:
+fail:
     if (arg1 && lparg1) env->ReleaseCharArrayElements(arg1, lparg1, 0);
     return SUCCEEDED(hr) && exists ? result : -1;
 }
@@ -1984,7 +1957,7 @@ JNIEXPORT jint JNICALL OS_NATIVE(GetGlyphs)
                                                   (DWRITE_SHAPING_GLYPH_PROPERTIES *)lparg16,
                                                   (UINT32 *)lparg17);
 
-    fail:
+fail:
     if (arg1 && lparg1) env->ReleaseCharArrayElements(arg1, lparg1, 0);
     if (arg7 && lparg7) env->ReleaseCharArrayElements(arg7, lparg7, 0);
     if (arg9 && lparg9) env->ReleaseLongArrayElements(arg9, lparg9, 0);
@@ -2126,7 +2099,7 @@ JNIEXPORT jbyteArray JNICALL OS_NATIVE(GetDataPointer)
 JNIEXPORT jint JNICALL OS_NATIVE(GetStride)
     (JNIEnv *env, jclass that, jlong arg0)
 {
-    UINT result;
+    UINT result = 0;
     HRESULT hr = ((IWICBitmapLock *)arg0)->GetStride(&result);
     return SUCCEEDED(hr) ? result : NULL;
 }
@@ -2208,16 +2181,6 @@ JNIEXPORT jlong JNICALL OS_NATIVE(CreateSolidColorBrush)
     hr = ((ID2D1RenderTarget *)arg0)->CreateSolidColorBrush(_arg1, &result);
 fail:
     return SUCCEEDED(hr) ? (jlong)result : NULL;
-}
-
-JNIEXPORT void JNICALL OS_NATIVE(DrawLine)
-    (JNIEnv *env, jclass that, jlong arg0, jobject arg1, jobject arg2, jlong arg3, jfloat arg4, jlong arg5)
-{
-    D2D1_POINT_2F _arg1, *lparg1=NULL;
-    D2D1_POINT_2F _arg2, *lparg2=NULL;
-    if (arg1) if ((lparg1 = getD2D1_POINT_2FFields(env, arg1, &_arg1)) == NULL) return;
-    if (arg2) if ((lparg2 = getD2D1_POINT_2FFields(env, arg2, &_arg2)) == NULL) return;
-    ((ID2D1RenderTarget *)arg0)->DrawLine(_arg1, _arg2, (ID2D1Brush *)arg3, arg4, (ID2D1StrokeStyle *)arg5);
 }
 
 #endif /* WIN32 */

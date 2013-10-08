@@ -331,7 +331,7 @@ public class ComboBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
         }
         
         if (comboBox == null) {
-            comboBox = createComboBox(this, items, getConverter());
+            comboBox = createComboBox(this, items, converterProperty());
             comboBox.editableProperty().bind(comboBoxEditableProperty());
         }
         

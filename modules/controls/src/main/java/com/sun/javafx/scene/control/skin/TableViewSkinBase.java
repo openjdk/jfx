@@ -296,7 +296,9 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
             // using 'needCellsReconfigured' here rather than 'needCellsRebuilt'
             // as otherwise performance suffers massively (RT-27831)
             needCellsReconfigured = true;
-            getSkinnable().requestLayout();
+            if (getSkinnable() != null) {
+                getSkinnable().requestLayout();
+            }
         }
     };
     

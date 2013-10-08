@@ -98,7 +98,7 @@ public abstract class Application {
         AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
             public Boolean run() {
                 final String str =
-                        System.getProperty("glass.disableThreadChecks", "true");
+                        System.getProperty("glass.disableThreadChecks", "false");
                 return "true".equalsIgnoreCase(str);
             }
         });
@@ -647,8 +647,17 @@ public abstract class Application {
     protected abstract int staticView_getMultiClickMaxX();
     protected abstract int staticView_getMultiClickMaxY();
 
+    protected boolean _supportsInputMethods() {
+        // Overridden in subclasses
+        return false;
+    }
+    public final boolean supportsInputMethods() {
+        checkEventThread();
+        return _supportsInputMethods();
+    }
+
     protected abstract boolean _supportsTransparentWindows();
-    public boolean supportsTransparentWindows() {
+    public final boolean supportsTransparentWindows() {
         checkEventThread();
         return _supportsTransparentWindows();
     }
@@ -674,16 +683,16 @@ public abstract class Application {
     }
 
     protected abstract boolean _supportsUnifiedWindows();
-    public boolean supportsUnifiedWindows() {
+    public final boolean supportsUnifiedWindows() {
         checkEventThread();
         return _supportsUnifiedWindows();
     }
 
     protected boolean _supportsSystemMenu() {
-        //Only Mac supports system menu
+        // Overridden in subclasses
         return false;
     }
-    public boolean supportsSystemMenu() {
+    public final boolean supportsSystemMenu() {
         checkEventThread();
         return _supportsSystemMenu();
     }

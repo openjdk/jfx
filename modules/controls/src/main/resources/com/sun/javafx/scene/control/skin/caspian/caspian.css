@@ -1112,7 +1112,7 @@
 
 .slider > .axis {
     -fx-tick-mark-stroke: ladder(-fx-background, derive(-fx-background,30%) 40%, derive(-fx-background,-30%) 41%);
-    -fx-tick-label-font: 0.833333em System; 
+    -fx-tick-label-font-size: 0.833333em; 
     -fx-tick-label-fill: -fx-text-background-color;
 }
 
@@ -2827,7 +2827,7 @@
 
 /* ====== AXIS ============================================================================ */
 .axis {
-    -fx-tick-label-font: 0.833333em System; /* 10 pix */
+    -fx-tick-label-font-size: 0.833333em;  /* 10 pix */ 
     -fx-tick-label-fill: -fx-text-background-color;
 }
 .axis:top {
@@ -3308,12 +3308,11 @@ Only the properties with values that are different from the TextBox are specifie
 } 
 
 .color-palette > .separator > .line {
-    -fx-background-color: -fx-pressed-base;
-/*    -fx-background-color: white;*/
-    -fx-padding: 6 0 0 0;
-    -fx-background-insets: 4 -10 0 -10,5 -10 0 -10;
+    -fx-border-color: -fx-text-box-border transparent transparent transparent,
+        -fx-shadow-highlight-color transparent transparent transparent;
+    -fx-border-insets: 0, 1 0 0 0;
     -fx-border-style: none;
-    -fx-border-color: null;
+    -fx-padding: 0;
 }
 
 

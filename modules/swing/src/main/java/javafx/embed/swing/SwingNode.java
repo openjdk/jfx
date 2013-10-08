@@ -25,14 +25,6 @@
 
 package javafx.embed.swing;
 
-import com.sun.javafx.geom.BaseBounds;
-import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
-import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.sg.prism.NGExternalNode;
-import com.sun.javafx.sg.prism.NGNode;
-import com.sun.javafx.stage.FocusUngrabEvent;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
@@ -41,24 +33,39 @@ import javafx.event.EventHandler;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.input.*;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.ScrollEvent;
 import javafx.stage.Window;
-import sun.awt.UngrabEvent;
-import sun.swing.JLightweightFrame;
-import sun.swing.LightweightContent;
-
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.*;
+import javax.swing.JComponent;
+import java.awt.AWTEvent;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.EventQueue;
+import java.awt.Toolkit;
 import java.awt.event.InputEvent;
+import java.awt.event.MouseWheelEvent;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowFocusListener;
 import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
+import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.jmx.MXNodeAlgorithm;
+import com.sun.javafx.jmx.MXNodeAlgorithmContext;
+import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.sg.prism.NGExternalNode;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.stage.FocusUngrabEvent;
+import sun.awt.UngrabEvent;
+import sun.swing.JLightweightFrame;
+import sun.swing.LightweightContent;
 
 /**
  * This class is used to embed a Swing content into a JavaFX application.
@@ -163,7 +170,7 @@ public class SwingNode extends Node {
         });
     }
 
-   /**
+    /**
      * Returns the {@code JComponent} instance attached to this {@code SwingNode}.
      * <p>
      * The method can be called either on the JavaFX Application thread or the Event Dispatch thread.

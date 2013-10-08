@@ -25,6 +25,7 @@
 
 package javafx.scene.control.cell;
 
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
@@ -149,10 +150,12 @@ class CellUtils {
     };
     
     static <T> ChoiceBox<T> createChoiceBox(
-            final Cell<T> cell, 
-            final ObservableList<T> items) {
+            final Cell<T> cell,
+            final ObservableList<T> items,
+            final ObjectProperty<StringConverter<T>> converter) {
         ChoiceBox<T> choiceBox = new ChoiceBox<T>(items);
         choiceBox.setMaxWidth(Double.MAX_VALUE);
+        choiceBox.converterProperty().bind(converter);
         choiceBox.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<T>() {
             @Override
             public void changed(ObservableValue<? extends T> ov, T oldValue, T newValue) {
@@ -291,9 +294,11 @@ class CellUtils {
         }
     };
     
-    static <T> ComboBox<T> createComboBox(final Cell<T> cell, final ObservableList<T> items, final StringConverter<T> converter) {
+    static <T> ComboBox<T> createComboBox(final Cell<T> cell,
+                                          final ObservableList<T> items,
+                                          final ObjectProperty<StringConverter<T>> converter) {
         ComboBox<T> comboBox = new ComboBox<T>(items);
-        comboBox.setConverter(converter);
+        comboBox.converterProperty().bind(converter);
         comboBox.setMaxWidth(Double.MAX_VALUE);
         comboBox.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<T>() {
             @Override public void changed(ObservableValue<? extends T> ov, T oldValue, T newValue) {

@@ -51,7 +51,6 @@ import com.sun.pisces.RendererBase;
 import com.sun.pisces.Transform6;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.CompositeMode;
-import com.sun.prism.Image;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.RTTexture;
 import com.sun.prism.ReadbackGraphics;
@@ -59,28 +58,19 @@ import com.sun.prism.RenderTarget;
 import com.sun.prism.Texture;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.paint.Color;
-import com.sun.prism.paint.Gradient;
 import com.sun.prism.paint.ImagePattern;
-import com.sun.prism.paint.LinearGradient;
 import com.sun.prism.paint.Paint;
-import com.sun.prism.paint.RadialGradient;
-import com.sun.prism.paint.Stop;
 
 final class SWGraphics implements ReadbackGraphics {
-
-    private static final int TO_PISCES = 65536;
 
     private final PiscesRenderer pr;
     private final SWContext context;
     private final SWRTTexture target;
+    private final SWPaint swPaint;
 
     private final BaseTransform tx = new Affine2D();
-    private final BaseTransform paintTx = new Affine2D();
-
-    private final Transform6 piscesTx = new Transform6();
 
     private CompositeMode compositeMode = CompositeMode.SRC_OVER;
-    private float compositeAlpha = 1.0f;
 
     private Rectangle clip;
     private final Rectangle finalClip = new Rectangle();
@@ -112,6 +102,7 @@ final class SWGraphics implements ReadbackGraphics {
         this.target = target;
         this.context = context;
         this.pr = pr;
+        this.swPaint = new SWPaint(target.getResourceFactory(), pr);
 
         this.setClipRect(null);
     }
@@ -129,15 +120,6 @@ final class SWGraphics implements ReadbackGraphics {
     }
 
     public void sync() {
-    }
-
-    private static void convertToPiscesTransform(BaseTransform prismTx, Transform6 piscesTx) {
-        piscesTx.m00 = (int) (TO_PISCES * prismTx.getMxx());
-        piscesTx.m10 = (int) (TO_PISCES * prismTx.getMyx());
-        piscesTx.m01 = (int) (TO_PISCES * prismTx.getMxy());
-        piscesTx.m11 = (int) (TO_PISCES * prismTx.getMyy());
-        piscesTx.m02 = (int) (TO_PISCES * prismTx.getMxt());
-        piscesTx.m12 = (int) (TO_PISCES * prismTx.getMyt());
     }
 
     public BaseTransform getTransformNoClone() {
@@ -274,14 +256,14 @@ final class SWGraphics implements ReadbackGraphics {
     }
 
     public float getExtraAlpha() {
-        return compositeAlpha;
+        return swPaint.getCompositeAlpha();
     }
 
     public void setExtraAlpha(float extraAlpha) {
         if (PrismSettings.debug) {
             System.out.println("PR.setCompositeAlpha, value: " + extraAlpha);
         }
-        this.compositeAlpha = extraAlpha;
+        swPaint.setCompositeAlpha(extraAlpha);
     }
 
     public Paint getPaint() {
@@ -292,155 +274,7 @@ final class SWGraphics implements ReadbackGraphics {
         this.paint = paint;
     }
 
-    private void setColor(Color c, float compositeAlpha) {
-        if (PrismSettings.debug) {
-            System.out.println("PR.setColor: " + c);
-        }
-        this.pr.setColor((int)(c.getRed() * 255),
-                (int)(255 * c.getGreen()),
-                (int)(255 * c.getBlue()),
-                (int)(255 * c.getAlpha() * compositeAlpha));
-    }
 
-    private void setPaintBeforeDraw(float x, float y, float width, float height) {
-        this.setPaintBeforeDraw(this.paint, x, y, width, height);
-    }
-
-    private void setPaintBeforeDraw(Paint p, float x, float y, float width, float height) {
-        switch (p.getType()) {
-            case COLOR:
-                this.setColor((Color)p, this.compositeAlpha);
-                break;
-            case LINEAR_GRADIENT:
-                final LinearGradient lg = (LinearGradient)p;
-                if (PrismSettings.debug) {
-                    System.out.println("PR.setLinearGradient: " + lg.getX1() + ", " + lg.getY1() + ", " + lg.getX2() + ", " + lg.getY2());
-                }
-
-                paintTx.setTransform(tx);
-                convertToPiscesTransform(paintTx, piscesTx);
-
-                float x1 = lg.getX1();
-                float y1 = lg.getY1();
-                float x2 = lg.getX2();
-                float y2 = lg.getY2();
-                if (lg.isProportional()) {
-                    x1 = x + width * x1;
-                    y1 = y + height * y1;
-                    x2 = x + width * x2;
-                    y2 = y + height * y2;
-                }
-                this.pr.setLinearGradient((int)(TO_PISCES * x1), (int)(TO_PISCES * y1), (int)(TO_PISCES * x2), (int)(TO_PISCES * y2),
-                    getFractions(lg), getARGB(lg, this.compositeAlpha), getPiscesGradientCycleMethod(lg.getSpreadMethod()), piscesTx);
-                break;
-            case RADIAL_GRADIENT:
-                final RadialGradient rg = (RadialGradient)p;
-                if (PrismSettings.debug) {
-                    System.out.println("PR.setRadialGradient: " + rg.getCenterX() + ", " + rg.getCenterY() + ", " + rg.getFocusAngle() + ", " + rg.getFocusDistance() + ", " + rg.getRadius());
-                }
-
-                paintTx.setTransform(tx);
-
-                float cx = rg.getCenterX();
-                float cy = rg.getCenterY();
-                float r = rg.getRadius();
-                if (rg.isProportional()) {
-                    float dim = Math.min(width, height);
-                    float bcx = x + width * 0.5f;
-                    float bcy = y + height * 0.5f;
-                    cx = bcx + (cx - 0.5f) * dim;
-                    cy = bcy + (cy - 0.5f) * dim;
-                    r *= dim;
-                    if (width != height && width != 0.0 && height != 0.0) {
-                        paintTx.deriveWithTranslation(bcx, bcy);
-                        paintTx.deriveWithConcatenation(width / dim, 0, 0, height / dim, 0, 0);
-                        paintTx.deriveWithTranslation(-bcx, -bcy);
-                    }
-                }
-                convertToPiscesTransform(paintTx, piscesTx);
-
-                final float fx = (float)(cx + rg.getFocusDistance() * r * Math.cos(Math.toRadians(rg.getFocusAngle())));
-                final float fy = (float)(cy + rg.getFocusDistance() * r * Math.sin(Math.toRadians(rg.getFocusAngle())));
-
-                this.pr.setRadialGradient((int) (TO_PISCES * cx), (int) (TO_PISCES * cy), (int) (TO_PISCES * fx), (int) (TO_PISCES * fy), (int) (TO_PISCES * r),
-                        getFractions(rg), getARGB(rg, this.compositeAlpha), getPiscesGradientCycleMethod(rg.getSpreadMethod()), piscesTx);
-                break;
-            case IMAGE_PATTERN:
-                final ImagePattern ip = (ImagePattern)p;
-                final Image image = ip.getImage();
-                if (PrismSettings.debug) {
-                    System.out.println("PR.setTexturePaint: " + image);
-                    System.out.println("imagePattern: x: " + ip.getX() + ", y: " + ip.getY() +
-                            ", w: " + ip.getWidth() + ", h: " + ip.getHeight() + ", proportional: " + ip.isProportional());
-                }
-
-                paintTx.setTransform(tx);
-                if (ip.isProportional()) {
-                    paintTx.deriveWithConcatenation(width / image.getWidth() * ip.getWidth(), 0,
-                            0, height / image.getHeight() * ip.getHeight(),
-                            x + width * ip.getX(), y + height * ip.getY());
-                } else {
-                    paintTx.deriveWithConcatenation(ip.getWidth() / image.getWidth(), 0,
-                            0, ip.getHeight() / image.getHeight(),
-                            x + ip.getX(), y + ip.getY());
-                }
-                convertToPiscesTransform(paintTx, piscesTx);
-                if (ip.getImage().getPixelFormat() == PixelFormat.BYTE_ALPHA) {
-                    throw new UnsupportedOperationException("Alpha image is not supported as an image pattern.");
-                } else {
-                    SWArgbPreTexture tex = (SWArgbPreTexture)getResourceFactory().createTexture(ip.getImage(),
-                                                Texture.Usage.DEFAULT,
-                                                Texture.WrapMode.REPEAT);
-                    if (this.compositeAlpha < 1.0f) {
-                        tex.applyCompositeAlpha(this.compositeAlpha);
-                    }
-                    this.pr.setTexture(RendererBase.TYPE_INT_ARGB_PRE, tex.getDataNoClone(),
-                            tex.getPhysicalWidth(), tex.getPhysicalHeight(),
-                            piscesTx,
-                            tex.getWrapMode() == Texture.WrapMode.REPEAT,
-                            tex.hasAlpha());
-                }
-                break;
-            default:
-                throw new IllegalArgumentException("Unknown paint type: " + p.getType());
-        }
-    }
-
-    private static int[] getARGB(Gradient grd, float compositeAlpha) {
-        final int nstops = grd.getNumStops();
-        final int argb[] = new int[nstops];
-        for (int i = 0; i < nstops; i++) {
-            final Stop stop = grd.getStops().get(i);
-            final Color stopColor = stop.getColor();
-            argb[i] = ((((int)(255 * stopColor.getAlpha() * compositeAlpha)) & 0xFF) << 24) +
-                      ((((int)(255 * stopColor.getRed())) & 0xFF) << 16) +
-                      ((((int)(255 * stopColor.getGreen())) & 0xFF) << 8) +
-                      (((int)(255 * stopColor.getBlue())) & 0xFF);
-        }
-        return argb;
-    }
-
-    private static int[] getFractions(Gradient grd) {
-        final int nstops = grd.getNumStops();
-        final int fractions[] = new int[nstops];
-        for (int i = 0; i < nstops; i++) {
-            final Stop stop = grd.getStops().get(i);
-            fractions[i] = (int)(TO_PISCES * stop.getOffset());
-        }
-        return fractions;
-    }
-
-    private static int getPiscesGradientCycleMethod(final int prismCycleMethod) {
-        switch (prismCycleMethod) {
-            case Gradient.PAD:
-                return GradientColorMap.CYCLE_NONE;
-            case Gradient.REFLECT:
-                return GradientColorMap.CYCLE_REFLECT;
-            case Gradient.REPEAT:
-                return GradientColorMap.CYCLE_REPEAT;
-        }
-        return GradientColorMap.CYCLE_NONE;
-    }
 
     public BasicStroke getStroke() {
         return stroke;
@@ -504,7 +338,7 @@ final class SWGraphics implements ReadbackGraphics {
         if (PrismSettings.debug) {
             System.out.println("+ PR.clear: " + color);
         }
-        this.setColor(color, 1f);
+        this.swPaint.setColor(color, 1f);
         pr.clearRect(0, 0, target.getPhysicalWidth(), target.getPhysicalHeight());
         getRenderTarget().setOpaque(color.isOpaque());
     }
@@ -553,14 +387,49 @@ final class SWGraphics implements ReadbackGraphics {
                 System.out.println("Clip: " + finalClip);
                 System.out.println("Composite rule: " + compositeMode);
             }
-            this.setPaintFromShape(null, tx, x, y, width, height);
 
             final Point2D p1 = new Point2D(x, y);
             final Point2D p2 = new Point2D(x + width, y + height);
             tx.transform(p1, p1);
             tx.transform(p2, p2);
-            this.pr.fillRect((int)(Math.min(p1.x, p2.x) * TO_PISCES), (int)(Math.min(p1.y, p2.y) * TO_PISCES),
-                    (int)(Math.abs(p2.x - p1.x) * TO_PISCES), (int)(Math.abs(p2.y - p1.y) * TO_PISCES));
+
+            if (this.paint.getType() == Paint.Type.IMAGE_PATTERN) {
+                // we can call pr.drawImage(...) directly
+                final ImagePattern ip = (ImagePattern)this.paint;
+                if (ip.getImage().getPixelFormat() == PixelFormat.BYTE_ALPHA) {
+                    throw new UnsupportedOperationException("Alpha image is not supported as an image pattern.");
+                } else {
+                    final Transform6 piscesTx = swPaint.computeSetTexturePaintTransform(this.paint, this.tx, this.nodeBounds, x, y, width, height);
+                    final SWArgbPreTexture tex = (SWArgbPreTexture)getResourceFactory().createTexture(ip.getImage(),
+                            Texture.Usage.DEFAULT,
+                            Texture.WrapMode.REPEAT);
+
+                    final float compositeAlpha = swPaint.getCompositeAlpha();
+                    final int imageMode;
+                    if (compositeAlpha == 1f) {
+                        imageMode = RendererBase.IMAGE_MODE_NORMAL;
+                    } else {
+                        imageMode = RendererBase.IMAGE_MODE_MULTIPLY;
+                        this.pr.setColor(255, 255, 255, (int)(255 * compositeAlpha));
+                    }
+
+                    this.pr.drawImage(RendererBase.TYPE_INT_ARGB_PRE, imageMode,
+                            tex.getDataNoClone(), tex.getPhysicalWidth(), tex.getPhysicalHeight(),
+                            tex.getOffset(), tex.getStride(),
+                            piscesTx,
+                            tex.getWrapMode() == Texture.WrapMode.REPEAT,
+                            (int)(Math.min(p1.x, p2.x) * SWUtils.TO_PISCES), (int)(Math.min(p1.y, p2.y) * SWUtils.TO_PISCES),
+                            (int)(Math.abs(p2.x - p1.x) * SWUtils.TO_PISCES), (int)(Math.abs(p2.y - p1.y) * SWUtils.TO_PISCES),
+                            RendererBase.IMAGE_FRAC_EDGE_KEEP, RendererBase.IMAGE_FRAC_EDGE_KEEP,
+                            RendererBase.IMAGE_FRAC_EDGE_KEEP, RendererBase.IMAGE_FRAC_EDGE_KEEP,
+                            0, 0, tex.getPhysicalWidth()-1, tex.getPhysicalHeight()-1,
+                            tex.hasAlpha());
+                }
+            } else {
+                swPaint.setPaintFromShape(this.paint, this.tx, null, this.nodeBounds, x, y, width, height);
+                this.pr.fillRect((int)(Math.min(p1.x, p2.x) * SWUtils.TO_PISCES), (int)(Math.min(p1.y, p2.y) * SWUtils.TO_PISCES),
+                        (int)(Math.abs(p2.x - p1.x) * SWUtils.TO_PISCES), (int)(Math.abs(p2.y - p1.y) * SWUtils.TO_PISCES));
+            }
         } else {
             this.fillRoundRect(x, y, width, height, 0, 0);
         }
@@ -595,7 +464,7 @@ final class SWGraphics implements ReadbackGraphics {
             }
             return;
         }
-        this.setPaintFromShape(shape, tr, 0,0,0,0);
+        swPaint.setPaintFromShape(this.paint, this.tx, shape, this.nodeBounds, 0,0,0,0);
         this.paintShapePaintAlreadySet(shape, st, tr);
     }
 
@@ -618,32 +487,6 @@ final class SWGraphics implements ReadbackGraphics {
             System.out.println("Composite rule: " + compositeMode);
         }
         context.renderShape(this.pr, shape, st, tr, this.finalClip);
-    }
-
-    private void setPaintFromShape(Shape shape, BaseTransform tr, float localX, float localY, float localWidth, float localHeight) {
-        final float x, y, w, h;
-        if (paint.isProportional()) {
-            if (nodeBounds != null) {
-                x = nodeBounds.getMinX();
-                y = nodeBounds.getMinY();
-                w = nodeBounds.getWidth();
-                h = nodeBounds.getHeight();
-            } else if (shape != null) {
-                final RectBounds bounds = shape.getBounds();
-                x = bounds.getMinX();
-                y = bounds.getMinY();
-                w = bounds.getWidth();
-                h = bounds.getHeight();
-            } else {
-                x = localX;
-                y = localY;
-                w = localWidth;
-                h = localHeight;
-            }
-        } else {
-            x = y = w = h = 0;
-        }
-        this.setPaintBeforeDraw(x, y, w, h);
     }
 
     private void paintRoundRect(float x, float y, float width, float height, float arcw, float arch, BasicStroke st) {
@@ -745,7 +588,7 @@ final class SWGraphics implements ReadbackGraphics {
         }
 
         if (selectColor == null) {
-            this.setPaintBeforeDraw(this.paint, bx, by, bw, bh);
+            swPaint.setPaintBeforeDraw(this.paint, this.tx, bx, by, bw, bh);
             for (int i = 0; i < gl.getGlyphCount(); i++) {
                 this.drawGlyph(strike, gl, i, glyphTx, drawAsMasks, x, y);
             }
@@ -753,7 +596,7 @@ final class SWGraphics implements ReadbackGraphics {
             for (int i = 0; i < gl.getGlyphCount(); i++) {
                 final int offset = gl.getCharOffset(i);
                 final boolean selected = selectStart <= offset && offset < selectEnd;
-                this.setPaintBeforeDraw(selected ? selectColor : this.paint, bx, by, bw, bh);
+                swPaint.setPaintBeforeDraw(selected ? selectColor : this.paint, this.tx, bx, by, bw, bh);
                 this.drawGlyph(strike, gl, i, glyphTx, drawAsMasks, x, y);
             }
         }
@@ -829,6 +672,7 @@ final class SWGraphics implements ReadbackGraphics {
                              float sx1, float sy1, float sx2, float sy2,
                              int lEdge, int rEdge, int tEdge, int bEdge) {
         final int imageMode;
+        final float compositeAlpha = swPaint.getCompositeAlpha();
         if (compositeAlpha == 1f) {
             imageMode = RendererBase.IMAGE_MODE_NORMAL;
         } else {
@@ -862,30 +706,8 @@ final class SWGraphics implements ReadbackGraphics {
         final RectBounds dstBBox = new RectBounds();
         tx.transform(srcBBox, dstBBox);
 
-        paintTx.setTransform(tx);
-
-        final float[] scale_correction = new float[2];
-        computeScaleAndPixelCorrection(scale_correction, dx1, dx2, sx1, sx2);
-        final float scaleX = scale_correction[0];
-        final float x_pixel_correction = scale_correction[1];
-
-        computeScaleAndPixelCorrection(scale_correction, dy1, dy2, sy1, sy2);
-        final float scaleY = scale_correction[0];
-        final float y_pixel_correction = scale_correction[1];
-
-        if (scaleX == 1 && scaleY == 1) {
-            paintTx.deriveWithTranslation(-Math.min(sx1, sx2) + Math.min(dx1, dx2),
-                    -Math.min(sy1, sy2) + Math.min(dy1, dy2));
-        } else {
-            paintTx.deriveWithTranslation(Math.min(dx1, dx2), Math.min(dy1, dy2));
-            paintTx.deriveWithTranslation((scaleX >= 0) ? 0 : Math.abs(dx2 - dx1),
-                    (scaleY >= 0) ? 0 : Math.abs(dy2 - dy1));
-            paintTx.deriveWithConcatenation(scaleX, 0, 0, scaleY, 0, 0);
-            paintTx.deriveWithTranslation(-Math.min(sx1, sx2) + x_pixel_correction,
-                                          -Math.min(sy1, sy2) + y_pixel_correction);
-        }
-
-        convertToPiscesTransform(paintTx, piscesTx);
+        final Transform6 piscesTx = swPaint.computeDrawTexturePaintTransform(this.tx,
+                dx1, dy1, dx2, dy2, sx1, sy1, sx2, sy2);
 
         if (PrismSettings.debug) {
             System.out.println("tx: " + tx);
@@ -907,8 +729,8 @@ final class SWGraphics implements ReadbackGraphics {
                 swTex.getOffset(), swTex.getStride(),
                 piscesTx,
                 tex.getWrapMode() == Texture.WrapMode.REPEAT,
-                (int)(TO_PISCES * dstBBox.getMinX()), (int)(TO_PISCES * dstBBox.getMinY()),
-                (int)(TO_PISCES * dstBBox.getWidth()), (int)(TO_PISCES * dstBBox.getHeight()),
+                (int)(SWUtils.TO_PISCES * dstBBox.getMinX()), (int)(SWUtils.TO_PISCES * dstBBox.getMinY()),
+                (int)(SWUtils.TO_PISCES * dstBBox.getWidth()), (int)(SWUtils.TO_PISCES * dstBBox.getHeight()),
                 lEdge, rEdge, tEdge, bEdge,
                 interpolateMinX, interpolateMinY, interpolateMaxX, interpolateMaxY,
                 swTex.hasAlpha());
@@ -990,26 +812,6 @@ final class SWGraphics implements ReadbackGraphics {
                 RendererBase.IMAGE_FRAC_EDGE_TRIM, RendererBase.IMAGE_FRAC_EDGE_KEEP);
     }
 
-    private void computeScaleAndPixelCorrection(float[] target, float dv1, float dv2, float sv1, float sv2) {
-        final float dv_diff = dv2 - dv1;
-        float scale = dv_diff / (sv2 - sv1);
-        float pixel_correction = 0;
-        if (Math.abs(scale) > 2*Math.abs(dv_diff)) {
-            // scaling "single" pixel
-            // we need to "2*" since there is half-pixel shift for
-            // the purpose of interpolation in the native
-            scale = 2 * Math.signum(scale) * Math.abs(dv_diff);
-            if ((int)sv2 != (int)sv1) {
-                // scaling parts of two neighboring pixels
-                final float sx_min = Math.min(sv1, sv2);
-                final float pixel_reminder = (float)(Math.ceil(sx_min)) - sx_min;
-                pixel_correction = pixel_reminder / (2*(sv2 - sv1));
-            }
-        }
-        target[0] = scale;
-        target[1] = pixel_correction;
-    }
-
     public void drawTextureVO(Texture tex,
                               float topopacity, float botopacity,
                               float dx1, float dy1, float dx2, float dy2,
@@ -1022,8 +824,8 @@ final class SWGraphics implements ReadbackGraphics {
         final int[] argb = { 0xffffff | (((int)(topopacity * 255)) << 24),
                              0xffffff | (((int)(botopacity * 255)) << 24) };
         final Transform6 t6 = new Transform6();
-        convertToPiscesTransform(this.tx, t6);
-        this.pr.setLinearGradient(0, (int)(TO_PISCES * dy1), 0, (int)(TO_PISCES * dy2), fractions, argb,
+        SWUtils.convertToPiscesTransform(this.tx, t6);
+        this.pr.setLinearGradient(0, (int)(SWUtils.TO_PISCES * dy1), 0, (int)(SWUtils.TO_PISCES * dy2), fractions, argb,
                                   GradientColorMap.CYCLE_NONE, t6);
         this.drawTexture(tex, RendererBase.IMAGE_MODE_MULTIPLY, dx1, dy1, dx2, dy2, sx1, sy1, sx2, sy2,
                 RendererBase.IMAGE_FRAC_EDGE_KEEP, RendererBase.IMAGE_FRAC_EDGE_KEEP,

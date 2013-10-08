@@ -27,6 +27,7 @@ package javafx.scene.control.cell;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
@@ -345,5 +346,34 @@ public class ChoiceBoxTreeCellTest {
         cell.cancelEdit();
         assertFalse(cell.isEditing());
         assertNull(cell.getGraphic());
+    }
+
+    @Test public void test_rt_29320() {
+        TreeItem root = new TreeItem("Root");
+        TreeView treeView = new TreeView(root);
+        treeView.setEditable(true);
+        ChoiceBoxTreeCell<Object> cell = new ChoiceBoxTreeCell<>();
+        cell.updateTreeView(treeView);
+        cell.updateIndex(0);
+        cell.setEditable(true);
+
+        cell.startEdit();
+        ChoiceBox cb = (ChoiceBox) cell.getGraphic();
+
+        // initially the choiceBox converter should equal the cell converter
+        assertNotNull(cell.getConverter());
+        assertNotNull(cb.getConverter());
+        assertEquals(cell.getConverter(), cb.getConverter());
+
+        // and if the cell changes the choicebox should follow
+        cell.setConverter(null);
+        assertNull(cb.getConverter());
+
+        StringConverter<Object> customConverter = new StringConverter<Object>() {
+            @Override public String toString(Object object) { return null; }
+            @Override public Object fromString(String string) { return null; }
+        };
+        cell.setConverter(customConverter);
+        assertEquals(customConverter, cb.getConverter());
     }
 }

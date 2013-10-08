@@ -900,11 +900,13 @@ public abstract class Parent extends Node {
         if (height == -1) {
             if (prefWidthCache == -1) {
                 prefWidthCache = computePrefWidth(-1);
+                if (Double.isNaN(prefWidthCache) || prefWidthCache < 0) prefWidthCache = 0;
                 sizeCacheClear = false;
             }
             return prefWidthCache;
         } else {
-            return computePrefWidth(height);
+            double result = computePrefWidth(height);
+            return Double.isNaN(result) || result < 0 ? 0 : result;
         }
     }
 
@@ -912,11 +914,13 @@ public abstract class Parent extends Node {
         if (width == -1) {
             if (prefHeightCache == -1) {
                 prefHeightCache = computePrefHeight(-1);
+                if (Double.isNaN(prefHeightCache) || prefHeightCache < 0) prefHeightCache = 0;
                 sizeCacheClear = false;
             }
             return prefHeightCache;
         } else {
-            return computePrefHeight(width);
+            double result = computePrefHeight(width);
+            return Double.isNaN(result) || result < 0 ? 0 : result;
         }
     }
 
@@ -924,11 +928,13 @@ public abstract class Parent extends Node {
         if (height == -1) {
             if (minWidthCache == -1) {
                 minWidthCache = computeMinWidth(-1);
+                if (Double.isNaN(minWidthCache) || minWidthCache < 0) minWidthCache = 0;
                 sizeCacheClear = false;
             }
             return minWidthCache;
         } else {
-            return computeMinWidth(height);
+            double result = computeMinWidth(height);
+            return Double.isNaN(result) || result < 0 ? 0 : result;
         }
     }
 
@@ -936,11 +942,13 @@ public abstract class Parent extends Node {
         if (width == -1) {
             if (minHeightCache == -1) {
                 minHeightCache = computeMinHeight(-1);
+                if (Double.isNaN(minHeightCache) || minHeightCache < 0) minHeightCache = 0;
                 sizeCacheClear = false;
             }
             return minHeightCache;
         } else {
-            return computeMinHeight(width);
+            double result = computeMinHeight(width);
+            return Double.isNaN(result) || result < 0 ? 0 : result;
         }
     }
 
@@ -1216,9 +1224,28 @@ public abstract class Parent extends Node {
         // Let the super implementation handle CSS for this node
         super.impl_processCSS();
 
+        // avoid the following call to children.toArray if there are no children
+        if (children.isEmpty()) return;
+
+        //
+        // RT-33103
+        //
+        // It is possible for a child to be removed from children in the middle of
+        // the following loop. Iterating over the children may result in an IndexOutOfBoundsException.
+        // So a copy is made and the copy is iterated over.
+        //
+        // Note that we don't want the fail-fast feature of an iterator, not to mention the general iterator overhead.
+        //
+        final Node[] childArray = children.toArray(new Node[children.size()]);
+
         // For each child, process CSS
-        for (int i=0, max=children.size(); i<max; i++) {
-            final Node child = children.get(i);
+        for (int i=0; i<childArray.length; i++) {
+
+            final Node child = childArray[i];
+
+            //  If a child no longer has this as its parent, then it is skipped.
+            final Parent childParent = child.getParent();
+            if (childParent == null || childParent != this) continue;
 
             // If the parent styles are being updated, recalculated or
             // reapplied, then make sure the children get the same treatment.

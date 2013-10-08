@@ -2618,8 +2618,8 @@ public abstract class Node implements EventTarget, Styleable {
      * @see #getContentBias()
      *
      * @param height the height that should be used if minimum width depends on it
-     * @return the minimum width that the node should be resized to during layout
-     *
+     * @return the minimum width that the node should be resized to during layout.
+     *         The result will never be NaN, nor will it ever be negative.
      */
     public double minWidth(double height) {
         return prefWidth(height);
@@ -2649,12 +2649,11 @@ public abstract class Node implements EventTarget, Styleable {
      *
      * @param width the width that should be used if minimum height depends on it
      * @return the minimum height that the node should be resized to during layout
-     *
+     *         The result will never be NaN, nor will it ever be negative.
      */
     public double minHeight(double width) {
         return prefHeight(width);
     }
-
 
     /**
      * Returns the node's preferred width for use in layout calculations.
@@ -2679,9 +2678,11 @@ public abstract class Node implements EventTarget, Styleable {
      *
      * @param height the height that should be used if preferred width depends on it
      * @return the preferred width that the node should be resized to during layout
+     *         The result will never be NaN, nor will it ever be negative.
      */
     public double prefWidth(double height) {
-        return getLayoutBounds().getWidth();
+        final double result = getLayoutBounds().getWidth();
+        return Double.isNaN(result) || result < 0 ? 0 : result;
     }
 
     /**
@@ -2706,9 +2707,11 @@ public abstract class Node implements EventTarget, Styleable {
      *
      * @param width the width that should be used if preferred height depends on it
      * @return the preferred height that the node should be resized to during layout
+     *         The result will never be NaN, nor will it ever be negative.
      */
     public double prefHeight(double width) {
-        return getLayoutBounds().getHeight();
+        final double result = getLayoutBounds().getHeight();
+        return Double.isNaN(result) || result < 0 ? 0 : result;
     }
 
     /**
@@ -2737,7 +2740,7 @@ public abstract class Node implements EventTarget, Styleable {
      *
      * @param height the height that should be used if maximum width depends on it
      * @return the maximum width that the node should be resized to during layout
-     *
+     *         The result will never be NaN, nor will it ever be negative.
      */
     public double maxWidth(double height) {
         return prefWidth(height);
@@ -2769,7 +2772,7 @@ public abstract class Node implements EventTarget, Styleable {
      *
      * @param width the width that should be used if maximum height depends on it
      * @return the maximum height that the node should be resized to during layout
-     *
+     *         The result will never be NaN, nor will it ever be negative.
      */
     public double maxHeight(double width) {
         return prefHeight(width);

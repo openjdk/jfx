@@ -1801,7 +1801,7 @@ public class TableViewKeyInputTest {
         assertTrue(isSelected(5,6,7,8,9));
     }
     
-    @Ignore @Test public void test_rt29930() {
+    @Test public void test_rt29930() {
         sm.setCellSelectionEnabled(false);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         
@@ -1815,7 +1815,7 @@ public class TableViewKeyInputTest {
         assertEquals(2, fm.getFocusedIndex());
         assertEquals(0, getAnchor().getRow());
         
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey()); // set new anchor point
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(), PlatformUtil.isMac() ? KeyModifier.CTRL : null); // set new anchor point
         assertTrue(isSelected(0,1));
         assertEquals(2, sm.getSelectedIndices().size());
         assertEquals(2, sm.getSelectedCells().size());
@@ -2313,5 +2313,129 @@ public class TableViewKeyInputTest {
         Toolkit.getToolkit().firePulse();
         assertTrue(isSelected(7,5,4,3));
         assertEquals(4, sm.getSelectedItems().size());
+    }
+
+    @Test public void test_rt33301_multipleSelection_down() {
+        final int items = 5;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        final TableFocusModel fm = tableView.getFocusModel();
+        final TableSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(false);
+        sm.clearAndSelect(2);
+
+        keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // row 3
+        keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // row 4
+        Toolkit.getToolkit().firePulse();
+        assertTrue(isNotSelected(0,1));
+        assertTrue(isSelected(2,3,4));
+        assertEquals(3, sm.getSelectedItems().size());
+        assertTrue(fm.isFocused(4));
+
+        keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // should stay at row 4
+        keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // should stay at row 4
+        keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // should stay at row 4
+        Toolkit.getToolkit().firePulse();
+        assertTrue(isNotSelected(0,1));
+        assertTrue(isSelected(2,3,4));
+        assertEquals(3, sm.getSelectedItems().size());
+        assertTrue("Focus index incorrectly at: " + fm.getFocusedIndex(), fm.isFocused(4));
+    }
+
+    @Test public void test_rt33301_multipleSelection_up() {
+        final int items = 5;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        final TableFocusModel fm = tableView.getFocusModel();
+        final TableSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(false);
+        sm.clearAndSelect(2);
+
+        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // row 1
+        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // row 0
+        Toolkit.getToolkit().firePulse();
+        assertTrue(isNotSelected(3,4));
+        assertTrue(isSelected(0,1,2));
+        assertEquals(3, sm.getSelectedItems().size());
+        assertTrue(fm.isFocused(0));
+
+        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // should stay at row 0
+        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // should stay at row 0
+        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // should stay at row 0
+        Toolkit.getToolkit().firePulse();
+        assertTrue(isNotSelected(3,4));
+        assertTrue(isSelected(0,1,2));
+        assertEquals(3, sm.getSelectedItems().size());
+        assertTrue(fm.isFocused(0));
+    }
+
+    @Test public void test_rt33301_singleSelection_down() {
+        final int items = 5;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        final TableFocusModel fm = tableView.getFocusModel();
+        final TableSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.SINGLE);
+        sm.setCellSelectionEnabled(false);
+        sm.clearAndSelect(2);
+
+        keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // row 3
+        keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // row 4
+        Toolkit.getToolkit().firePulse();
+        assertTrue(isNotSelected(0,1,2,3));
+        assertTrue(isSelected(4));
+        assertEquals(1, sm.getSelectedItems().size());
+        assertTrue(fm.isFocused(4));
+
+        keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // should stay at row 4
+        keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // should stay at row 4
+        keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // should stay at row 4
+        Toolkit.getToolkit().firePulse();
+        assertTrue(isNotSelected(0,1,2,3));
+        assertTrue(isSelected(4));
+        assertEquals(1, sm.getSelectedItems().size());
+        assertTrue(fm.isFocused(4));
+    }
+
+    @Test public void test_rt33301_singleSelection_up() {
+        final int items = 5;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        final TableFocusModel fm = tableView.getFocusModel();
+        final TableSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.SINGLE);
+        sm.setCellSelectionEnabled(false);
+        sm.clearAndSelect(2);
+
+        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // row 1
+        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // row 0
+        Toolkit.getToolkit().firePulse();
+        assertTrue(isNotSelected(1,2,3,4));
+        assertTrue(isSelected(0));
+        assertEquals(1, sm.getSelectedItems().size());
+        assertTrue(fm.isFocused(0));
+
+        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // should stay at row 0
+        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // should stay at row 0
+        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // should stay at row 0
+        Toolkit.getToolkit().firePulse();
+        assertTrue(isNotSelected(1,2,3,4));
+        assertTrue(isSelected(0));
+        assertEquals(1, sm.getSelectedItems().size());
+        assertTrue(fm.isFocused(0));
     }
 }

@@ -107,7 +107,7 @@ public class SamplePage extends Region implements Page {
     }
     
     String apiClassToUrl(String classname) {
-        String urlEnd = classname.replaceAll("\\.", "/");
+        String urlEnd = classname.replace('.', '/').replace('$', '.');
         if (classname.startsWith("javafx")) {
             return "http://download.java.net/jdk8/jfxdocs/"+urlEnd+".html";
         } else {

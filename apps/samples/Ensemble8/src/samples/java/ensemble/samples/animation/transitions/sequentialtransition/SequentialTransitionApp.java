@@ -32,16 +32,11 @@
 package ensemble.samples.animation.transitions.sequentialtransition;
 
 import javafx.animation.FadeTransition;
-import javafx.animation.FadeTransitionBuilder;
 import javafx.animation.RotateTransition;
-import javafx.animation.RotateTransitionBuilder;
 import javafx.animation.ScaleTransition;
-import javafx.animation.ScaleTransitionBuilder;
 import javafx.animation.SequentialTransition;
-import javafx.animation.SequentialTransitionBuilder;
 import javafx.animation.Timeline;
 import javafx.animation.TranslateTransition;
-import javafx.animation.TranslateTransitionBuilder;
 import javafx.application.Application;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -87,45 +82,34 @@ public class SequentialTransitionApp extends Application {
         rect.setTranslateY(50);
         root.getChildren().add(rect);
         // create 4 transitions
-        FadeTransition fadeTransition =
-                FadeTransitionBuilder.create()
-                .duration(Duration.seconds(1))
-                .fromValue(1)
-                .toValue(0.3)
-                .cycleCount(2)
-                .autoReverse(true)
-                .build();
-        TranslateTransition translateTransition =
-                TranslateTransitionBuilder.create()
-                .duration(Duration.seconds(2))
-                .fromX(50)
-                .toX(220)
-                .cycleCount(2)
-                .autoReverse(true)
-                .build();       
-        RotateTransition rotateTransition = 
-                RotateTransitionBuilder.create()
-                .duration(Duration.seconds(2))
-                .byAngle(180)
-                .cycleCount(4)
-                .autoReverse(true)
-                .build();
-        ScaleTransition scaleTransition =
-                ScaleTransitionBuilder.create()
-                .duration(Duration.seconds(2))
-                .toX(2)
-                .toY(2)
-                .cycleCount(2)
-                .autoReverse(true)
-                .build();
+        FadeTransition fadeTransition = new FadeTransition(Duration.seconds(1));
+        fadeTransition.setFromValue(1);
+        fadeTransition.setToValue(0.3);
+        fadeTransition.setCycleCount(2);
+        fadeTransition.setAutoReverse(true);
+        
+        TranslateTransition translateTransition = new TranslateTransition(Duration.seconds(2));
+        translateTransition.setFromX(50);
+        translateTransition.setToX(220);
+        translateTransition.setCycleCount(2);
+        translateTransition.setAutoReverse(true);
+        
+        RotateTransition rotateTransition = new RotateTransition(Duration.seconds(2));
+        rotateTransition.setByAngle(180);
+        rotateTransition.setCycleCount(4);
+        rotateTransition.setAutoReverse(true);
+               
+        ScaleTransition scaleTransition = new ScaleTransition(Duration.seconds(2));
+        scaleTransition.setToX(2);
+        scaleTransition.setToY(2);
+        scaleTransition.setCycleCount(2);
+        scaleTransition.setAutoReverse(true);
         // create sequential transition to do 4 transitions one after another       
-        sequentialTransition = SequentialTransitionBuilder.create()
-                .node(rect)
-                .children(fadeTransition, translateTransition, rotateTransition,
-                           scaleTransition)
-                .cycleCount(Timeline.INDEFINITE)
-                .autoReverse(true)
-                .build();
+        sequentialTransition = new SequentialTransition(rect, 
+                fadeTransition, translateTransition, rotateTransition, scaleTransition);
+        sequentialTransition.setCycleCount(Timeline.INDEFINITE);
+        sequentialTransition.setAutoReverse(true);
+        
         return root;
     }
 

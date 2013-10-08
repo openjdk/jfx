@@ -45,6 +45,7 @@ import javafx.scene.input.PickResult;
 import javafx.scene.transform.Affine;
 import javafx.scene.transform.NonInvertibleTransformException;
 import javafx.scene.transform.Rotate;
+import sun.util.logging.PlatformLogger;
 
 /**
  * Defines a 3D geometric object contains separate arrays of points, 
@@ -95,9 +96,6 @@ public class TriangleMesh extends Mesh {
     public static final int NUM_COMPONENTS_PER_TEXCOORD = 2;
     public static final int NUM_COMPONENTS_PER_FACE = 6;
 
-    // TODO: 3D - Need to validate the size and range of these arrays.
-    // A warning will be recorded to the logger and the mesh will have an empty
-    // bounds if the validation failed. (RT-30451)
     // The values in faces must be within range and the length of points,
     // texCoords and faces must be divisible by 3, 2 and 6 respectively.
     private final ObservableFloatArray points = FXCollections.observableFloatArray();
@@ -109,7 +107,9 @@ public class TriangleMesh extends Mesh {
     private final Listener texCoordsSyncer = new Listener(texCoords);
     private final Listener facesSyncer = new Listener(faces);
     private final Listener faceSmoothingGroupsSyncer = new Listener(faceSmoothingGroups);
-
+    private final boolean isPredefinedShape;
+    private boolean isValidDirty = true;
+    private boolean isPointsValid, isTexCoordsValid, isFacesValid, isFaceSmoothingGroupValid;
     private int refCount = 1;
 
     private BaseBounds cachedBounds;
@@ -118,8 +118,23 @@ public class TriangleMesh extends Mesh {
      * Creates a new instance of {@code TriangleMesh} class.
      */
     public TriangleMesh() {
+        this(false);
     }
 
+    TriangleMesh(boolean isPredefinedShape) {
+        this.isPredefinedShape = isPredefinedShape;
+        if (isPredefinedShape) {
+            isPointsValid = true;
+            isTexCoordsValid = true;
+            isFacesValid = true;
+            isFaceSmoothingGroupValid = true;
+        } else {
+            isPointsValid = false;
+            isTexCoordsValid = false;
+            isFacesValid = false;
+            isFaceSmoothingGroupValid = false;
+        }
+    }
     /**
      * Gets the {@code ObservableFloatArray} of points of this {@code TriangleMesh}.
      *
@@ -224,6 +239,100 @@ public class TriangleMesh extends Mesh {
         return impl_getPGTriangleMesh();
     }
 
+    private boolean validatePoints() {
+        if (points.size() == 0) { // Valid but meaningless for picking or rendering.
+            return false;
+        }
+        
+        if ((points.size() % NUM_COMPONENTS_PER_POINT) != 0) {
+            String logname = TriangleMesh.class.getName();
+            PlatformLogger.getLogger(logname).warning("points.length has "
+                    + "to be divisible by NUM_COMPONENTS_PER_POINT. It is to"
+                    + " store multiple x, y, and z coordinates of this mesh");
+            return false;
+        }
+        return true;
+    }
+
+    private boolean validateTexCoords() {
+        if (texCoords.size() == 0) { // Valid but meaningless for picking or rendering.
+            return false;
+        }
+
+        if ((texCoords.size() % NUM_COMPONENTS_PER_TEXCOORD) != 0) {
+            String logname = TriangleMesh.class.getName();
+            PlatformLogger.getLogger(logname).warning("texCoords.length "
+                    + "has to be divisible by NUM_COMPONENTS_PER_TEXCOORD."
+                    + " It is to store multiple u and v texture coordinates"
+                    + " of this mesh");
+            return false;
+        }
+        return true;
+    }
+
+    private boolean validateFaces() {
+        if (faces.size() == 0) { // Valid but meaningless for picking or rendering.
+            return false;
+        }
+        
+        String logname = TriangleMesh.class.getName();
+        if ((faces.size() % NUM_COMPONENTS_PER_FACE) != 0) {
+            PlatformLogger.getLogger(logname).warning("faces.length has "
+                    + "to be divisible by NUM_COMPONENTS_PER_FACE.");
+            return false;
+        }
+
+        int nVerts = points.size() / NUM_COMPONENTS_PER_POINT;
+        int nTVerts = texCoords.size() / NUM_COMPONENTS_PER_TEXCOORD;
+        for (int i = 0; i < faces.size(); i++) {
+            if (i % 2 == 0 && (faces.get(i) >= nVerts || faces.get(i) < 0)
+                    || (i % 2 != 0 && (faces.get(i) >= nTVerts || faces.get(i) < 0))) {
+                PlatformLogger.getLogger(logname).warning("The values in the "
+                        + "faces array must be within the range of the number "
+                        + "of vertices in the points array (0 to points.length / 3 - 1) "
+                        + "for the point indices and within the range of the "
+                        + "number of the vertices in the texCoords array (0 to "
+                        + "texCoords.length / 2 - 1) for the texture coordinate indices.");
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean validateFaceSmoothingGroups() {
+        if (faceSmoothingGroups.size() != 0
+                && faceSmoothingGroups.size() != (faces.size() / NUM_COMPONENTS_PER_FACE)) {
+            String logname = TriangleMesh.class.getName();
+            PlatformLogger.getLogger(logname).warning("faceSmoothingGroups.length"
+                    + " has to equal to number of faces.");
+            return false;
+        }
+        return true;
+    }
+
+    private boolean validate() {
+        if (isPredefinedShape) {
+            return true;
+        }
+        
+        if (isValidDirty) {
+            if (pointsSyncer.dirtyInFull) {
+                isPointsValid = validatePoints();
+            }
+            if (texCoordsSyncer.dirtyInFull) {
+                isTexCoordsValid = validateTexCoords();
+            }
+            if (facesSyncer.dirty || pointsSyncer.dirtyInFull || texCoordsSyncer.dirtyInFull) {
+                isFacesValid = (isPointsValid && isTexCoordsValid) ? validateFaces() : false;
+            }
+            if (faceSmoothingGroupsSyncer.dirtyInFull || facesSyncer.dirtyInFull) {
+                isFaceSmoothingGroupValid = validateFaceSmoothingGroups();
+            }
+            isValidDirty = false;
+        }
+        return isPointsValid && isTexCoordsValid && isFaceSmoothingGroupValid && isFacesValid;
+    }
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -235,19 +344,19 @@ public class TriangleMesh extends Mesh {
             return;
         }
 
+        validate();
         final NGTriangleMesh pgTriMesh = impl_getPGTriangleMesh();
-        // sync points 
         if (pointsSyncer.dirty) {
-            pgTriMesh.syncPoints(pointsSyncer);
+            pgTriMesh.syncPoints(isPointsValid ? pointsSyncer : null);
         }
         if (texCoordsSyncer.dirty) {
-            pgTriMesh.syncTexCoords(texCoordsSyncer);
+            pgTriMesh.syncTexCoords(isTexCoordsValid ? texCoordsSyncer : null);
         }
         if (facesSyncer.dirty) {
-            pgTriMesh.syncFaces(facesSyncer);
+            pgTriMesh.syncFaces(isFacesValid ? facesSyncer : null);
         }
         if (faceSmoothingGroupsSyncer.dirty) {
-            pgTriMesh.syncFaceSmoothingGroups(faceSmoothingGroupsSyncer);
+            pgTriMesh.syncFaceSmoothingGroups(isFaceSmoothingGroupValid ? faceSmoothingGroupsSyncer : null);
         }
         setDirty(false);
     }
@@ -256,10 +365,11 @@ public class TriangleMesh extends Mesh {
     BaseBounds computeBounds(BaseBounds bounds) {
         if (isDirty() || cachedBounds == null) {
             cachedBounds = new BoxBounds();
-
-            final double len = points.size();
-            for (int i = 0; i < len; i += NUM_COMPONENTS_PER_POINT) {
-                cachedBounds.add(points.get(i), points.get(i + 1), points.get(i + 2));
+            if (validate()) {
+                final double len = points.size();
+                for (int i = 0; i < len; i += NUM_COMPONENTS_PER_POINT) {
+                    cachedBounds.add(points.get(i), points.get(i + 1), points.get(i + 2));
+                }
             }
         }
         return bounds.deriveWithNewBounds(cachedBounds);
@@ -532,19 +642,20 @@ public class TriangleMesh extends Mesh {
             Node candidate, CullFace cullFace, boolean reportFace) {
 
         boolean found = false;
-        final int size = faces.size();
+        if (validate()) {
+            final int size = faces.size();
 
-        final Vec3d o = pickRay.getOriginNoClone();
+            final Vec3d o = pickRay.getOriginNoClone();
 
-        final Vec3d d = pickRay.getDirectionNoClone();
+            final Vec3d d = pickRay.getDirectionNoClone();
 
-        for (int i = 0; i < size; i += NUM_COMPONENTS_PER_FACE) {
-            if (computeIntersectsFace(pickRay, o, d, i, cullFace, candidate, 
-                    reportFace, pickResult)) {
-                found = true;
+            for (int i = 0; i < size; i += NUM_COMPONENTS_PER_FACE) {
+                if (computeIntersectsFace(pickRay, o, d, i, cullFace, candidate,
+                        reportFace, pickResult)) {
+                    found = true;
+                }
             }
         }
-
         return found;
     }
 
@@ -597,6 +708,7 @@ public class TriangleMesh extends Mesh {
             } else {
                 addDirtyRange(from, to - from);
             }
+            isValidDirty = true;
         }
 
         /**

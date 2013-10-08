@@ -77,7 +77,7 @@ static void init_target_atoms()
     TARGET_MIME_TEXT_PLAIN_ATOM = gdk_atom_intern_static_string("text/plain");
     TARGET_COMPOUND_TEXT_ATOM = gdk_atom_intern_static_string("COMPOUND_TEXT");
     TARGET_STRING_ATOM = gdk_atom_intern_static_string("STRING");
-    
+
     TARGET_MIME_URI_LIST_ATOM = gdk_atom_intern_static_string("text/uri-list");
     
     TARGET_MIME_PNG_ATOM = gdk_atom_intern_static_string("image/png");
@@ -122,6 +122,16 @@ static void dnd_set_performed_action(jint performed_action);
 static jint dnd_get_performed_action();
 
 /************************* TARGET *********************************************/
+struct selection_data_ctx {
+    gboolean received;
+    guchar *data;
+    GdkAtom type;
+    gint format;
+    gint length;
+};
+
+static gboolean dnd_target_receive_data(JNIEnv *env, GdkAtom target, selection_data_ctx *selection_ctx);
+
 static struct {
     GdkDragContext *ctx;
     gboolean just_entered;
@@ -234,26 +244,38 @@ jobjectArray dnd_target_get_mimes(JNIEnv *env)
     if (!enter_ctx.mimes) {
         GList* targets = GLASS_GDK_DRAG_CONTEXT_LIST_TARGETS(enter_ctx.ctx);
         jobject set = env->NewObject(jHashSetCls, jHashSetInit, NULL);
-        
+
         while (targets) {
             GdkAtom target = GDK_POINTER_TO_ATOM(targets->data);
             gchar *name = gdk_atom_name(target);
-            
+
             if (target_is_text(target)) {
                 env->CallBooleanMethod(set, jSetAdd, env->NewStringUTF("text/plain"), NULL);
             }
-            
-            if (target_is_uri(target)) {
-                //TODO may not contain files
-                env->CallBooleanMethod(set, jSetAdd, env->NewStringUTF("application/x-java-file-list"), NULL);
-            }
-            
+
             if (target_is_image(target)) {
                 env->CallBooleanMethod(set, jSetAdd, env->NewStringUTF("application/x-java-rawimage"), NULL);
             }
-            
-            env->CallBooleanMethod(set, jSetAdd, env->NewStringUTF(name), NULL);
-            
+
+            if (target_is_uri(target)) {
+                selection_data_ctx ctx;
+                if (dnd_target_receive_data(env, TARGET_MIME_URI_LIST_ATOM, &ctx)) {
+                    gchar** uris = g_uri_list_extract_uris((gchar *) ctx.data);
+                    guint size = g_strv_length(uris);
+                    guint files_cnt = get_files_count(uris);
+                    if (files_cnt) {
+                        env->CallBooleanMethod(set, jSetAdd, env->NewStringUTF("application/x-java-file-list"), NULL);
+                    }
+                    if (size - files_cnt) {
+                        env->CallBooleanMethod(set, jSetAdd, env->NewStringUTF("text/uri-list"), NULL);
+                    }
+                    g_strfreev(uris);
+                }
+                g_free(ctx.data);
+            } else {
+                env->CallBooleanMethod(set, jSetAdd, env->NewStringUTF(name), NULL);
+            }
+
             g_free(name);
             targets = targets->next;
         }
@@ -272,14 +294,6 @@ jint dnd_target_get_supported_actions(JNIEnv *env)
     }
     return translate_gdk_action_to_glass(GLASS_GDK_DRAG_CONTEXT_GET_ACTIONS(enter_ctx.ctx));
 }
-
-struct selection_data_ctx{
-    gboolean received;
-    guchar *data;
-    GdkAtom type;
-    gint format;
-    gint length;
-} ;
 
 static void wait_for_selection_data_hook(GdkEvent * event, void * data)
 {
@@ -328,9 +342,11 @@ static jobject dnd_target_get_string(JNIEnv *env)
     
     if (dnd_target_receive_data(env, TARGET_UTF8_STRING_ATOM, &ctx)) {
         result = env->NewStringUTF((char *)ctx.data);
+        g_free(ctx.data);
     }
     if (!result && dnd_target_receive_data(env, TARGET_MIME_TEXT_PLAIN_ATOM, &ctx)) {
         result = env->NewStringUTF((char *)ctx.data);
+        g_free(ctx.data);
     }
     // TODO find out how to convert from compound text
     // if (!result && dnd_target_receive_data(env, TARGET_COMPOUND_TEXT_ATOM, &ctx)) {
@@ -342,39 +358,22 @@ static jobject dnd_target_get_string(JNIEnv *env)
             result = env->NewStringUTF(str);
             g_free(str);
         }
+        g_free(ctx.data);
     }
-    g_free(ctx.data);
     return result;
 }
 
-static jobject dnd_target_get_list(JNIEnv *env)
+static jobject dnd_target_get_list(JNIEnv *env, gboolean files)
 {
-    gchar **strv, *path;
-    gchar *file_path = NULL;
-    jsize len, i;
-    jobjectArray result = NULL;
-    jstring str;
+    jobject result = NULL;
     selection_data_ctx ctx;
 
     if (dnd_target_receive_data(env, TARGET_MIME_URI_LIST_ATOM, &ctx)) {
-        strv = g_uri_list_extract_uris((gchar *)ctx.data);
-        len = g_strv_length(strv);
-        result = (jobjectArray)env->NewObjectArray(len, jStringCls, NULL);
-
-        for (i = 0; i < len; ++i) {
-            path = strv[i];
-            if (g_str_has_prefix(path, "file://")) {
-                file_path = g_filename_from_uri(path, NULL, NULL);
-            }
-            str = env->NewStringUTF(file_path ? file_path : path);
-            env->SetObjectArrayElement(result, i, str);
-            g_free(file_path);
-            file_path = NULL;
-        }
-        g_strfreev(strv);
+        result = uris_to_java(env, g_uri_list_extract_uris((gchar *)ctx.data), files);
+        g_free(ctx.data);
     }
-    g_free(ctx.data);
-    return (jobject)result;
+    
+    return result;
 }
 
 static jobject dnd_target_get_image(JNIEnv *env)
@@ -463,10 +462,12 @@ jobject dnd_target_get_data(JNIEnv *env, jstring mime)
 
     if (g_strcmp0(cmime, "text/plain") == 0) {
         ret = dnd_target_get_string(env);
+    } else if (g_strcmp0(cmime, "text/uri-list") == 0) {
+        ret = dnd_target_get_list(env, FALSE);
     } else if (g_str_has_prefix(cmime, "text/")) {
         ret = dnd_target_get_raw(env, gdk_atom_intern(cmime, FALSE), TRUE);
     } else if (g_strcmp0(cmime, "application/x-java-file-list") == 0) {
-        ret = dnd_target_get_list(env);
+        ret = dnd_target_get_list(env, TRUE);
     } else if (g_strcmp0(cmime, "application/x-java-rawimage") == 0 ) {
         ret = dnd_target_get_image(env);
     } else {
@@ -660,63 +661,51 @@ static gboolean dnd_source_set_image(GdkWindow *requestor, GdkAtom property, Gdk
     return result;
 }
 
-#define FILE_PREFIX "file://"
-#define FILE_PREFIX_N 7
-
-static void dnd_source_set_uri_file_list(GdkWindow *requestor, GdkAtom property, jobjectArray array)
-{
-    jsize ndata = mainEnv->GetArrayLength(array);
-    jsize i;
-    jsize string_size;
-    jstring string;
-    gchar *data, *data_ptr;
-    gint data_size = 0;
-    for (i = 0; i < ndata; ++i) {
-        string = (jstring)mainEnv->GetObjectArrayElement(array, i);
-        data_size += mainEnv->GetStringUTFLength(string) + FILE_PREFIX_N + 2;
-    }
-    
-    data_ptr = data = new gchar[data_size];
-    
-    for (i = 0; i < ndata; ++i) {
-        string = (jstring)mainEnv->GetObjectArrayElement(array, i);
-        string_size = mainEnv->GetStringUTFLength(string);
-        
-        g_strlcpy(data_ptr, FILE_PREFIX, FILE_PREFIX_N + 1);
-        mainEnv->GetStringUTFRegion(string, 0, string_size, data_ptr + FILE_PREFIX_N);
-        *(data_ptr += FILE_PREFIX_N + string_size) = '\r';
-        *(++data_ptr) = '\n';
-        ++data_ptr;
-    }
-    if (ndata > 0) {
-        *(data_ptr - 2) = 0;
-        --data_size;
-    }
-    
-    gdk_property_change(requestor, property, GDK_SELECTION_TYPE_STRING,
-                8, GDK_PROP_MODE_REPLACE, (guchar *) data, data_size);
-    
-    delete[] data;
-    
-}
-
 static gboolean dnd_source_set_uri_list(GdkWindow *requestor, GdkAtom property)
 {
-    jobject data;
-    gboolean is_data_set = FALSE;
-    if (data = dnd_source_get_data("text/uri-list")) {
-        const char *cstring = mainEnv->GetStringUTFChars((jstring)data, NULL);
-        gdk_property_change(requestor, property, GDK_SELECTION_TYPE_STRING,
-                8, GDK_PROP_MODE_REPLACE, (guchar *) cstring, strlen(cstring));
-        
-        mainEnv->ReleaseStringUTFChars((jstring)data, cstring);
-        is_data_set = TRUE;
-    } else if (data = dnd_source_get_data("application/x-java-file-list")) {
-        dnd_source_set_uri_file_list(requestor, property, (jobjectArray)data);
-        is_data_set = TRUE;
+    const gchar* url = NULL;
+    jstring jurl = NULL;
+
+    jobjectArray files_array = NULL;
+    gsize files_cnt = 0;
+
+    if (jurl = (jstring) dnd_source_get_data("text/uri-list")) {
+        url = mainEnv->GetStringUTFChars(jurl, NULL);
     }
 
-    return is_data_set;
+    if (files_array = (jobjectArray) dnd_source_get_data("application/x-java-file-list")) {
+        files_cnt = mainEnv->GetArrayLength(files_array);
+    }
+    if (!url && !files_cnt) {
+        return FALSE;
+    }
+
+    GString* res = g_string_new (NULL); //http://www.ietf.org/rfc/rfc2483.txt 
+
+    if (files_cnt > 0) {
+        for (gsize i = 0; i < files_cnt; ++i) {
+            jstring string = (jstring) mainEnv->GetObjectArrayElement(files_array, i);
+            const gchar* file = mainEnv->GetStringUTFChars(string, NULL);
+            gchar* uri = g_filename_to_uri(file, NULL, NULL);
+
+            g_string_append(res, uri);
+            g_string_append(res, URI_LIST_LINE_BREAK);
+
+            g_free(uri);
+            mainEnv->ReleaseStringUTFChars(string, file);
+        }
+    }
+    if (url) {
+        g_string_append(res, url);
+        g_string_append(res, URI_LIST_LINE_BREAK);
+        mainEnv->ReleaseStringUTFChars(jurl, url);
+    }
+
+    gdk_property_change(requestor, property, GDK_SELECTION_TYPE_STRING,
+            8, GDK_PROP_MODE_REPLACE, (guchar *) res->str, res->len);
+
+    g_string_free(res, TRUE);
+    return TRUE;
 }
 
 static gboolean dnd_source_set_raw(GdkWindow *requestor, GdkAtom property, GdkAtom target)

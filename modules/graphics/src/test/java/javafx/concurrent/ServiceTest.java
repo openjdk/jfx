@@ -25,15 +25,19 @@
 
 package javafx.concurrent;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.concurrent.mocks.SimpleTask;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 /**
  */
@@ -49,6 +53,9 @@ public class ServiceTest {
             }
 
             @Override void checkThread() { }
+            @Override void runLater(Runnable r) {
+                r.run();
+            }
         };
     }
 
@@ -171,6 +178,7 @@ public class ServiceTest {
         for (int i=0; i<32; i++) {
             Service<Void> s = new Service<Void>() {
                 @Override void checkThread() { }
+                @Override void runLater(Runnable r) { r.run(); }
 
                 @Override protected Task<Void> createTask() {
                     return new Task<Void>() {

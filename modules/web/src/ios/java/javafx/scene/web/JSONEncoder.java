@@ -36,15 +36,10 @@ class JSONEncoder {
         this.owner = owner;
     }
     
-    public String encode(Object object) {
-        StringBuffer sb = new StringBuffer();
-        encode(sb, object);
-        return sb.toString();
-    }
     
     private static char[] hexChars = "0123456789abcdef".toCharArray();
     
-    private static void encodeString(StringBuffer sb, String s) {
+    private static void encodeString(StringBuilder sb, String s) {
         sb.append('"');
         for (int i=0; i<s.length(); i++) {
             char ch = s.charAt(i);
@@ -90,7 +85,7 @@ class JSONEncoder {
         sb.append('"');
     }
     
-    private void encode(StringBuffer sb, Object object) {
+    public void encode(StringBuilder sb, Object object) {
         if (object == null) {
             sb.append("null");
         } else if (object instanceof String || object instanceof Character) {
@@ -117,7 +112,7 @@ class JSONEncoder {
 
     //return true if we were able to find index into exportedJSObjects[] for 
     //passed object; false otherwise
-    private boolean encodedJavaObject(Object object, StringBuffer sb) {
+    private boolean encodedJavaObject(Object object, StringBuilder sb) {
         String jsId = owner.getjsIdForJavaObject(object);
         if (jsId != null) {
             sb.append(owner.getJavaBridge()).append(".exportedJSObjects[").append(jsId).append("]"); //reuse object
@@ -126,7 +121,7 @@ class JSONEncoder {
         return false;
     }
     
-    private void encodeJavaObject(Object object, StringBuffer sb) {
+    private void encodeJavaObject(Object object, StringBuilder sb) {
         if (!encodedJavaObject(object, sb)) {
             owner.exportObject("anyname",object);
             if (!encodedJavaObject(object, sb)) { // bridge was not exported yet

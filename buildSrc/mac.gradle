@@ -89,7 +89,7 @@ def ccFlags = [
         "-I$JDK_HOME/include",
         "-I$JDK_HOME/include/darwin",
         commonParams,
-        IS_DEBUG ? "-DDEBUG" : ["-O3", "-DNDEBUG"]].flatten()
+        IS_DEBUG_NATIVE ? "-DDEBUG" : ["-O3", "-DNDEBUG"]].flatten()
 
 def compiler = COMPILE_PARFAIT ? "parfait-gcc" : "gcc";
 def cc_compiler = COMPILE_PARFAIT ? "parfait-cc" : "cc";
@@ -154,7 +154,7 @@ MAC.launcher.ccFlags = [
         "-mmacosx-version-min=$MACOSX_MIN_VERSION",
         "-arch", "x86_64",
         "-framework", "Cocoa",
-        IS_DEBUG ? ["-DDEBUG", "-O0"] : ["-O3", "-DNDEBUG"]].flatten()
+        IS_DEBUG_NATIVE ? ["-DDEBUG", "-O0"] : ["-O3", "-DNDEBUG"]].flatten()
 MAC.launcher.linker = linker
 MAC.launcher.linkFlags = ["-ldl"]
 

@@ -54,17 +54,20 @@ public class NGTriangleMesh {
             mesh = rf.createMesh();
             meshDirty = true;
         }
-        validate();
         return mesh;        
     }
 
-    void validate() {
+    boolean validate() {
+        if (points == null || texCoords == null || faces == null || faceSmoothingGroups == null) {
+            return false;
+        }
         if (meshDirty) {
             if (!mesh.buildGeometry(points, texCoords, faces, faceSmoothingGroups)) {
                 throw new RuntimeException("NGTriangleMesh: buildGeometry failed");
             }
             meshDirty = false;
         }
+        return true;
     }
 
     // Note: This method is intentionally made package scope for security
@@ -101,22 +104,22 @@ public class NGTriangleMesh {
 
     public void syncPoints(FloatArraySyncer array) {
         meshDirty = true;
-        points = array.syncTo(points);
+        points = array != null ? array.syncTo(points) : null;
     }
     
     public void syncTexCoords(FloatArraySyncer array) {
         meshDirty = true;
-        texCoords = array.syncTo(texCoords);
+        texCoords = array != null ? array.syncTo(texCoords) : null;
     }
 
     public void syncFaces(IntegerArraySyncer array) {
         meshDirty = true;
-        faces = array.syncTo(faces);    
+        faces = array != null ? array.syncTo(faces) : null;
     }
 
     public void syncFaceSmoothingGroups(IntegerArraySyncer array) {
         meshDirty = true;
-        faceSmoothingGroups = array.syncTo(faceSmoothingGroups);
+        faceSmoothingGroups = array != null ? array.syncTo(faceSmoothingGroups) : null;
     }
 
     // NOTE: This method is used for unit test purpose only.

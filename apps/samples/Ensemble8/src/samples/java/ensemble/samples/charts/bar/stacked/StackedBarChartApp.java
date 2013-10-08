@@ -38,9 +38,7 @@ import javafx.collections.ObservableList;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.chart.CategoryAxis;
-import javafx.scene.chart.CategoryAxisBuilder;
 import javafx.scene.chart.NumberAxis;
-import javafx.scene.chart.NumberAxisBuilder;
 import javafx.scene.chart.StackedBarChart;
 import javafx.stage.Stage;
 
@@ -114,14 +112,9 @@ public class StackedBarChartApp extends Application {
 
     public Parent createContent() {
         String[] years = {"2007", "2008", "2009"};
-        xAxis = CategoryAxisBuilder.create()
-                .categories(observableArrayList(years))
-                .build();
-        yAxis = NumberAxisBuilder.create()
-                .label("Units Sold")
-                .lowerBound(0.0d)
-                .upperBound(10000.0d)
-                .tickUnit(1000.0d).build();
+        xAxis = new CategoryAxis(observableArrayList(years));
+        yAxis = new NumberAxis("Units Sold", 0.0d, 10000.0d, 1000.0d);
+        
         ObservableList<StackedBarChart.Series> barChartData = 
                 observableArrayList(
                     new StackedBarChart.Series("Region 1", 

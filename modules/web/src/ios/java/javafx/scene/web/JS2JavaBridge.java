@@ -107,13 +107,14 @@ class JS2JavaBridge {
         if (exportedObjectsByJSIds.containsValue(jsObj)) {
             return;
         }
-        StringBuilder sb = new StringBuilder(getJavaBridge());
+        StringBuilder sb;
+        sb = new StringBuilder(1024).append(getJavaBridge());
         String script = sb.append("['").append(jsName).append("'] = ").append(jsObj.getJSDecl()).toString();
         log(script);
         log("populateObject>>executeScript");
         webEngine.executeScriptDirect(script);
-        
-        sb = new StringBuilder( getJavaBridge()).append(".exportJSObject(").append(
+        sb.delete(0, sb.length());
+        sb = sb.append(getJavaBridge()).append(".exportJSObject(").append(
              getJavaBridge()).append("['").append(jsName).append("'])");
         
         Long jsId = (Long) webEngine.executeScript(sb.toString());
@@ -137,12 +138,9 @@ class JS2JavaBridge {
     }
     
     void encode(Object arg, StringBuilder script) {
-        script.append(encoder.encode(arg));
+        encoder.encode(script, arg);
     }
 
-    String encode(Object arg) {
-        return encoder.encode(arg);
-    }
     
     String getjsIdForJavaObject(Object object) {
         
@@ -229,7 +227,8 @@ class JS2JavaBridge {
                 String result = jsObj.call(methodId, args);
                 if (!"0".equals(callbackID)) {
                     String script;
-                    script = new StringBuilder(getJavaBridge()).append(".callBack(").append(callbackID).append(", true").append(
+                    StringBuilder sb = new StringBuilder(1024);
+                    script = sb.append(getJavaBridge()).append(".callBack(").append(callbackID).append(", true").append(
                          (result == null ? "" : ", " + result)).append(")").toString();
                     if (_log) {
                         log("result callback script (success): >" + script + "<");
@@ -243,9 +242,10 @@ class JS2JavaBridge {
                 log(ex);
                 // report failure
                 if (!"".equals(callbackID)) {
-                    String errStr = encoder.encode(ex.getMessage());
-                    String script = new StringBuilder(getJavaBridge()).append(".callBack(").
-                            append(callbackID).append(", false, ").append(errStr).append(")").toString();
+                    StringBuilder sb = new StringBuilder(1024).append(getJavaBridge()).append(".callBack(").
+                            append(callbackID).append(", false, ");
+                    encoder.encode(sb,ex.getMessage());
+                    String script = sb.append(")").toString();
                     log("result callback script (failure): >" + script + "<");
                     log(">>executeScript");
                     webEngine.executeScriptDirect(script);

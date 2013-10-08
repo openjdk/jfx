@@ -203,14 +203,22 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @return A double representing the minimum width of this Skin.
      */
     protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
+
         double minX = 0;
         double maxX = 0;
+        boolean firstManagedChild = true;
         for (int i = 0; i < children.size(); i++) {
             Node node = children.get(i);
             if (node.isManaged()) {
                 final double x = node.getLayoutBounds().getMinX() + node.getLayoutX();
-                minX = Math.min(minX, x);
-                maxX = Math.max(maxX, x + node.minWidth(-1));
+                if (!firstManagedChild) {  // branch prediction favors most often used condition
+                    minX = Math.min(minX, x);
+                    maxX = Math.max(maxX, x + node.minWidth(-1));
+                } else {
+                    minX = x;
+                    maxX = x + node.minWidth(-1);
+                    firstManagedChild = false;
+                }
             }
         }
         double minWidth = maxX - minX;
@@ -230,14 +238,22 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @return A double representing the minimum height of this Skin.
      */
     protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+
         double minY = 0;
         double maxY = 0;
+        boolean firstManagedChild = true;
         for (int i = 0; i < children.size(); i++) {
             Node node = children.get(i);
             if (node.isManaged()) {
                 final double y = node.getLayoutBounds().getMinY() + node.getLayoutY();
-                minY = Math.min(minY, y);
-                maxY = Math.max(maxY, y + node.minHeight(-1));
+                if (!firstManagedChild) {  // branch prediction favors most often used condition
+                    minY = Math.min(minY, y);
+                    maxY = Math.max(maxY, y + node.minHeight(-1));
+                } else {
+                    minY = y;
+                    maxY = y + node.minHeight(-1);
+                    firstManagedChild = false;
+                }
             }
         }
         double minHeight = maxY - minY;
@@ -291,14 +307,22 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @return the calculated preferred width
      */
     protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
+
         double minX = 0;
         double maxX = 0;
+        boolean firstManagedChild = true;
         for (int i = 0; i < children.size(); i++) {
             Node node = children.get(i);
             if (node.isManaged()) {
                 final double x = node.getLayoutBounds().getMinX() + node.getLayoutX();
-                minX = Math.min(minX, x);
-                maxX = Math.max(maxX, x + node.prefWidth(-1));
+                if (!firstManagedChild) {  // branch prediction favors most often used condition
+                    minX = Math.min(minX, x);
+                    maxX = Math.max(maxX, x + node.prefWidth(-1));
+                } else {
+                    minX = x;
+                    maxX = x + node.prefWidth(-1);
+                    firstManagedChild = false;
+                }
             }
         }
         return maxX - minX;
@@ -319,14 +343,22 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @return the calculated preferred height
      */
     protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+
         double minY = 0;
         double maxY = 0;
+        boolean firstManagedChild = true;
         for (int i = 0; i < children.size(); i++) {
             Node node = children.get(i);
             if (node.isManaged()) {
                 final double y = node.getLayoutBounds().getMinY() + node.getLayoutY();
-                minY = Math.min(minY, y);
-                maxY = Math.max(maxY, y + node.prefHeight(-1));
+                if (!firstManagedChild) {  // branch prediction favors most often used condition
+                    minY = Math.min(minY, y);
+                    maxY = Math.max(maxY, y + node.prefHeight(-1));
+                } else {
+                    minY = y;
+                    maxY = y + node.prefHeight(-1);
+                    firstManagedChild = false;
+                }
             }
         }
         return maxY - minY;

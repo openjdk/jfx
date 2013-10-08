@@ -36,6 +36,7 @@ import javafx.stage.Stage;
 import com.sun.javafx.pgstub.StubScene;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.tk.Toolkit;
+import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import org.junit.After;
@@ -136,6 +137,11 @@ public class SceneTest {
      *                          Scene Content Tests                            *
      *                                                                         *
      **************************************************************************/
+    @Test
+    public void isOnFxAppThread() {
+        assertTrue(Platform.isFxApplicationThread());
+    }
+
     @Test(expected=NullPointerException.class)
     public void testNullRoot() {
         Scene scene = new Scene(null);

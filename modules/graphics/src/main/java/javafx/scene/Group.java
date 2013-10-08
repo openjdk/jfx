@@ -25,12 +25,12 @@
 
 package javafx.scene;
 
-import java.util.Collection;
 import javafx.beans.DefaultProperty;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.collections.ObservableList;
 import javafx.geometry.Bounds;
+import java.util.Collection;
 
 
 
@@ -176,7 +176,8 @@ public  class Group extends Parent {
         if (isAutoSizeChildren()) {
             layout();
         }
-        return getLayoutBounds().getWidth();
+        final double result = getLayoutBounds().getWidth();
+        return Double.isNaN(result) || result < 0 ? 0 : result;
     }
 
     /**
@@ -195,7 +196,8 @@ public  class Group extends Parent {
         if (isAutoSizeChildren()) {
             layout();
         }
-        return getLayoutBounds().getHeight();
+        final double result = getLayoutBounds().getHeight();
+        return Double.isNaN(result) || result < 0 ? 0 : result;
     }
 
 
