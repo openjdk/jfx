@@ -83,11 +83,9 @@ public abstract class NGShape3D extends NGNode {
             setCullFace(cullFace);
         }
 
-        if (meshView == null) {
+        if (meshView == null || !mesh.validate()) {
             return;
         }
-
-        mesh.validate();
 
         Material mtl =  material.createMaterial(rf);
         if (materialDirty) {

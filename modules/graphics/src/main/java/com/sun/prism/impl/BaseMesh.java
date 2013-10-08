@@ -78,7 +78,7 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
         this.pos = pos;
         this.uv = uv;
         this.faces = faces;
-        this.smoothing = smoothing != null && smoothing.length >= nFaces ? smoothing : null;
+        this.smoothing = smoothing.length == nFaces ? smoothing : null;
 
         MeshTempState instance = MeshTempState.getInstance();
         // big pool for all possible vertices
@@ -326,28 +326,14 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
         if ((face == null) || (face.length < FACE_MEMBERS_SIZE)) {
             face = new int[FACE_MEMBERS_SIZE];
         }
-        if (faces[index] < nVerts
-                && faces[index + 2] < nVerts
-                && faces[index + 4] < nVerts
-                && faces[index + 1] < nTVerts
-                && faces[index + 3] < nTVerts
-                && faces[index + 5] < nTVerts) {
-            // Note: Order matter, [0, 5] == FaceMembers' points and texcoords
-            for (int i = 0; i < 6; i++) {
-                face[i] = faces[index + i];
-            }
-            // Note: Order matter, 6 == FaceMembers.SMOOTHING_GROUP.ordinal()
-            // There is a total of 32 smoothing groups.
-            // Assign to 1st smoothing group if smoothing is null.
-            face[6] = smoothing != null ? smoothing[fIdx] : 1;
-        } else {
-            // Note: Order matter, [0, 5] == FaceMembers' points and texcoords
-            for (int i = 0; i < 6; i++) {
-                face[i] = 0;
-            }
-            // Note: Order matter, 6 == FaceMembers.SMOOTHING_GROUP.ordinal()
-            face[6] = 1;
+        // Note: Order matter, [0, 5] == FaceMembers' points and texcoords
+        for (int i = 0; i < 6; i++) {
+            face[i] = faces[index + i];
         }
+        // Note: Order matter, 6 == FaceMembers.SMOOTHING_GROUP.ordinal()
+        // There is a total of 32 smoothing groups.
+        // Assign to 1st smoothing group if smoothing is null.
+        face[6] = smoothing != null ? smoothing[fIdx] : 1;
         return face;
     }
 }
