@@ -1097,6 +1097,11 @@ public final class QuantumToolkit extends Toolkit {
         }
     }
 
+    @Override
+    public boolean isAntiAliasingSupported() {
+        return  GraphicsPipeline.getPipeline().isAntiAliasingSupported();
+    }
+
     static TransferMode clipboardActionToTransferMode(final int action) {
         switch (action) {
             case Clipboard.ACTION_NONE:

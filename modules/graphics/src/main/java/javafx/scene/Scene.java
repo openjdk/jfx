@@ -194,7 +194,7 @@ public class Scene implements EventTarget {
     private double heightSetByUser = -1.0;
     private boolean sizeInitialized = false;
     private final boolean depthBuffer;
-    private final boolean antiAliasing;
+    private final SceneAntialiasing antiAliasing;
 
     private int dirtyBits;
 
@@ -219,7 +219,7 @@ public class Scene implements EventTarget {
      * @throws NullPointerException if root is null
      */
     public Scene(Parent root) {
-        this(root, -1, -1, Color.WHITE, false, false);
+        this(root, -1, -1, Color.WHITE, false, SceneAntialiasing.DISABLED);
     }
 
 //Public constructor initializing public-init properties
@@ -250,7 +250,7 @@ public class Scene implements EventTarget {
      * @throws NullPointerException if root is null
      */
     public Scene(Parent root, double width, double height) {
-        this(root, width, height, Color.WHITE, false, false);
+        this(root, width, height, Color.WHITE, false, SceneAntialiasing.DISABLED);
     }
 
     /**
@@ -264,7 +264,7 @@ public class Scene implements EventTarget {
      * @throws NullPointerException if root is null
      */
     public Scene(Parent root, @Default("javafx.scene.paint.Color.WHITE") Paint fill) {
-        this(root, -1, -1, fill, false, false);
+        this(root, -1, -1, fill, false, SceneAntialiasing.DISABLED);
     }
 
     /**
@@ -281,7 +281,7 @@ public class Scene implements EventTarget {
      */
     public Scene(Parent root, double width, double height,
             @Default("javafx.scene.paint.Color.WHITE") Paint fill) {
-        this(root, width, height, fill, false, false);
+        this(root, width, height, fill, false, SceneAntialiasing.DISABLED);
     }
 
     /**
@@ -305,7 +305,7 @@ public class Scene implements EventTarget {
      * @see javafx.scene.Node#setDepthTest(DepthTest)
      */
     public Scene(Parent root, @Default("-1") double width, @Default("-1") double height, boolean depthBuffer) {
-        this(root, width, height, Color.WHITE, depthBuffer, false);
+        this(root, width, height, Color.WHITE, depthBuffer, SceneAntialiasing.DISABLED);
     }
 
     /**
@@ -317,10 +317,11 @@ public class Scene implements EventTarget {
      * @param width The width of the scene
      * @param height The height of the scene
      * @param depthBuffer The depth buffer flag
-     * @param antiAliasing The scene anti-aliasing flag
+     * @param antiAliasing The scene anti-aliasing attribute. A value of
+     * {@code null} is treated as DISABLED.
      * <p>
-     * The depthBuffer and antiAliasing flags are conditional feature and the default
-     * value for both are false. See
+     * The depthBuffer and antiAliasing are conditional features. With the
+     * respective default values of: false and {@code SceneAntialiasing.DISABLED}. See
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
      * for more information.
      *
@@ -332,11 +333,12 @@ public class Scene implements EventTarget {
      * @since JavaFX 8.0
      */
     public Scene(Parent root, @Default("-1") double width, @Default("-1") double height,
-            boolean depthBuffer, boolean antiAliasing) {
-
+            boolean depthBuffer,
+            @Default("javafx.scene.SceneAntialiasing.DISABLED") SceneAntialiasing antiAliasing) {
         this(root, width, height, Color.WHITE, depthBuffer, antiAliasing);
 
-        if (antiAliasing && !com.sun.prism.GraphicsPipeline.getPipeline().isAntiAliasingSupported())
+        if (antiAliasing != null && antiAliasing != SceneAntialiasing.DISABLED &&
+                !Toolkit.getToolkit().isAntiAliasingSupported())
         {
             String logname = Scene.class.getName();
             PlatformLogger.getLogger(logname).warning("System can't support "
@@ -346,14 +348,15 @@ public class Scene implements EventTarget {
 
     private Scene(Parent root, double width, double height,
             @Default("javafx.scene.paint.Color.WHITE") Paint fill,
-            boolean depthBuffer, boolean antiAliasing) {
+            boolean depthBuffer, SceneAntialiasing antiAliasing) {
         this.depthBuffer = depthBuffer;
         this.antiAliasing = antiAliasing;
         if (root == null) {
             throw new NullPointerException("Root cannot be null");
         }
 
-        if ((depthBuffer || antiAliasing) && !Platform.isSupported(ConditionalFeature.SCENE3D)) {
+        if ((depthBuffer || (antiAliasing != null && antiAliasing != SceneAntialiasing.DISABLED))
+                && !Platform.isSupported(ConditionalFeature.SCENE3D)) {
             String logname = Scene.class.getName();
             PlatformLogger.getLogger(logname).warning("System can't support "
                     + "ConditionalFeature.SCENE3D");
@@ -598,16 +601,23 @@ public class Scene implements EventTarget {
     }
 
     /**
-     * Return true if this {@code Scene} is anti-aliased otherwise false.
+     * Return the defined {@code SceneAntialiasing} for this {@code Scene}.
+     * <p>
+     * Note: this is a conditional feature. See
+     * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
+     * and {@link javafx.scene.SceneAntialiasing SceneAntialiasing}
+     * for more information.
      * @since JavaFX 8.0
      */
-    public final boolean isAntiAliasing() {
+    public final SceneAntialiasing getAntiAliasing() {
         return antiAliasing;
     }
 
-    private boolean isAntiAliasingInternal() {
-        return antiAliasing && com.sun.prism.GraphicsPipeline.getPipeline().isAntiAliasingSupported() &&
-                Platform.isSupported(ConditionalFeature.SCENE3D);
+    private boolean getAntiAliasingInternal() {
+        return (antiAliasing != null &&
+                Toolkit.getToolkit().isAntiAliasingSupported() &&
+                Platform.isSupported(ConditionalFeature.SCENE3D)) ?
+                antiAliasing != SceneAntialiasing.DISABLED : false;
     }
 
     /**
@@ -695,7 +705,7 @@ public class Scene implements EventTarget {
         impl_setAllowPGAccess(true);
 
         Toolkit tk = Toolkit.getToolkit();
-        impl_peer = windowPeer.createTKScene(isDepthBufferInternal(), isAntiAliasingInternal(), acc);
+        impl_peer = windowPeer.createTKScene(isDepthBufferInternal(), getAntiAliasingInternal(), acc);
         PerformanceTracker.logEvent("Scene.initPeer TKScene created");
         impl_peer.setTKSceneListener(new ScenePeerListener());
         impl_peer.setTKScenePaintListener(new ScenePeerPaintListener());
