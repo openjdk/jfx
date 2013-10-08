@@ -46,6 +46,7 @@ import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.shape.StrokeType;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.WeakHashMap;
 
@@ -1033,7 +1034,8 @@ public class NGRegion extends NGGroup {
     }
 
     private void renderBorderRectangle(Graphics g) {
-        final List<BorderStroke> strokes = border.getStrokes();
+        final List<BorderImage> images = border.getImages();
+        final List<BorderStroke> strokes = images.isEmpty() ? border.getStrokes() : Collections.emptyList();
         for (int i = 0, max = strokes.size(); i < max; i++) {
             final BorderStroke stroke = strokes.get(i);
             final BorderWidths widths = stroke.getWidths();
@@ -1221,7 +1223,6 @@ public class NGRegion extends NGGroup {
             }
         }
 
-        final List<BorderImage> images = border.getImages();
         for (int i = 0, max = images.size(); i < max; i++) {
             final BorderImage ib = images.get(i);
             final Image prismImage = (Image) ib.getImage().impl_getPlatformImage();
