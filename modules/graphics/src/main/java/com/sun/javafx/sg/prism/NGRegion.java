@@ -215,6 +215,8 @@ public class NGRegion extends NGGroup {
         this.scaleShape = scaleShape;
         this.centerShape = positionShape;
         this.cacheShape = cacheShape;
+        // Technically I don't think this is needed because whenever the shape changes, setOpaqueInsets
+        // is also called, so this will get invalidated twice.
         invalidateOpaqueRegion();
         cacheKey = null;
     }

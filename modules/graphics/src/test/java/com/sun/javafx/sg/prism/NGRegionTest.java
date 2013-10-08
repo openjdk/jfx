@@ -30,6 +30,10 @@ import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.ClosePath;
+import javafx.scene.shape.LineTo;
+import javafx.scene.shape.MoveTo;
+import javafx.scene.shape.Path;
 import org.junit.Test;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -50,6 +54,25 @@ public class NGRegionTest {
         r.getOpaqueRegion(); // Forces to validate the opaque region
         assertFalse(r.isOpaqueRegionInvalid()); // sanity check
         r.updateShape(null, true, false, false); // Actual values don't matter
+        assertTrue(r.isOpaqueRegionInvalid());
+    }
+
+    // RT-13820: We change the shape internally and call this same method, so it
+    // needs to invalidate the opaque region.
+    @Test public void updateShapeToSameInstanceInvalidatesOpaqueRegion() {
+        LineTo lineTo;
+        Path p = new Path(
+                new MoveTo(10, 20),
+                lineTo = new LineTo(100, 100),
+                new ClosePath()
+        );
+
+        NGRegion r = new NGRegion();
+        r.updateShape(p, true, true, true);
+        r.getOpaqueRegion(); // Forces to validate the opaque region
+        assertFalse(r.isOpaqueRegionInvalid()); // sanity check
+        lineTo.setX(200);
+        r.updateShape(p, true, true, true);
         assertTrue(r.isOpaqueRegionInvalid());
     }
 
