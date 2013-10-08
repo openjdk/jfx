@@ -26,12 +26,14 @@
 package javafx.scene.layout;
 
 import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectPropertyBase;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.ObservableList;
 import javafx.css.CssMetaData;
@@ -48,6 +50,7 @@ import javafx.geometry.Orientation;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.image.Image;
 import javafx.scene.shape.Shape;
 import javafx.util.Callback;
 import java.util.ArrayList;
@@ -69,6 +72,7 @@ import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGRegion;
+import com.sun.javafx.tk.Toolkit;
 import sun.util.logging.PlatformLogger;
 import sun.util.logging.PlatformLogger.Level;
 
@@ -422,6 +426,30 @@ public class Region extends Parent {
      **************************************************************************/
 
     /**
+     * At the time that a Background or Border is set on a Region, we inspect any
+     * BackgroundImage or BorderImage objects, to see if the Image backing them
+     * is background loading and not yet complete, or is animated. In such cases
+     * we attach the imageChangeListener to them, so that when the image finishes,
+     * the Region will be redrawn. If the particular image object is not animating
+     * (but was just background loading), then we also remove the listener.
+     * We also are sure to remove this listener from any old BackgroundImage or
+     * BorderImage images in the background and border property invalidation code.
+     */
+    private InvalidationListener imageChangeListener = new InvalidationListener() {
+        @Override public void invalidated(Observable observable) {
+            final ReadOnlyObjectPropertyBase imageProperty = (ReadOnlyObjectPropertyBase) observable;
+            final Image image = (Image) imageProperty.getBean();
+            final Toolkit.ImageAccessor acc = Toolkit.getImageAccessor();
+            if (image.getProgress() == 1 && !acc.isAnimation(image)) {
+                // We can go ahead and remove the listener since loading is done.
+                removeImageListener(image);
+            }
+            // Cause the region to repaint
+            impl_markDirty(DirtyBits.NODE_CONTENTS);
+        }
+    };
+
+    /**
      * Creates a new Region with an empty Background and and empty Border. The
      * Region defaults to having pickOnBounds set to true, meaning that any pick
      * (mouse picking or touch picking etc) that occurs within the bounds in local
@@ -559,6 +587,29 @@ public class Region extends Parent {
                     impl_geomChanged();
                     insets.fireValueChanged();
                 }
+
+                // If the Background is made up of any BackgroundImage objects, then we must
+                // inspect the images of those BackgroundImage objects to see if they are still
+                // being loaded in the background or if they are animated. If so, then we need
+                // to attach a listener, so that when the image finishes loading or changes,
+                // we can repaint the region.
+                if (b != null) {
+                    for (BackgroundImage i : b.getImages()) {
+                        final Image image = i.image;
+                        final Toolkit.ImageAccessor acc = Toolkit.getImageAccessor();
+                        if (acc.isAnimation(image) || image.getProgress() < 1) {
+                            addImageListener(image);
+                        }
+                    }
+                }
+
+                // And we must remove this listener from any old images
+                if (old != null) {
+                    for (BackgroundImage i : old.getImages()) {
+                        removeImageListener(i.image);
+                    }
+                }
+
                 // No matter what, the fill has changed, so we have to update it
                 impl_markDirty(DirtyBits.SHAPE_FILL);
                 old = b;
@@ -592,6 +643,29 @@ public class Region extends Parent {
                     impl_geomChanged();
                     insets.fireValueChanged();
                 }
+
+                // If the Border is made up of any BorderImage objects, then we must
+                // inspect the images of those BorderImage objects to see if they are still
+                // being loaded in the background or if they are animated. If so, then we need
+                // to attach a listener, so that when the image finishes loading or changes,
+                // we can repaint the region.
+                if (b != null) {
+                    for (BorderImage i : b.getImages()) {
+                        final Image image = i.image;
+                        final Toolkit.ImageAccessor acc = Toolkit.getImageAccessor();
+                        if (acc.isAnimation(image) || image.getProgress() < 1) {
+                            addImageListener(image);
+                        }
+                    }
+                }
+
+                // And we must remove this listener from any old images
+                if (old != null) {
+                    for (BorderImage i : old.getImages()) {
+                        removeImageListener(i.image);
+                    }
+                }
+
                 // No matter what, the fill has changed, so we have to update it
                 impl_markDirty(DirtyBits.SHAPE_STROKE);
                 old = b;
@@ -601,6 +675,28 @@ public class Region extends Parent {
     public final void setBorder(Border value) { border.set(value); }
     public final Border getBorder() { return border.get(); }
     public final ObjectProperty<Border> borderProperty() { return border; }
+
+    /**
+     * Adds the imageChangeListener to this image. This method was broken out and made
+     * package private for testing purposes.
+     *
+     * @param image a non-null image
+     */
+    void addImageListener(Image image) {
+        final Toolkit.ImageAccessor acc = Toolkit.getImageAccessor();
+        acc.getImageProperty(image).addListener(imageChangeListener);
+    }
+
+    /**
+     * Removes the imageChangeListener from this image. This method was broken out and made
+     * package private for testing purposes.
+     *
+     * @param image a non-null image
+     */
+    void removeImageListener(Image image) {
+        final Toolkit.ImageAccessor acc = Toolkit.getImageAccessor();
+        acc.getImageProperty(image).removeListener(imageChangeListener);
+    }
 
     /**
      * Defines the area of the region within which completely opaque pixels
@@ -2287,6 +2383,12 @@ public class Region extends Parent {
         final Background bg = getBackground();
         if (backgroundChanged) {
             pg.updateBackground(bg);
+        }
+
+        // This will be true if an image that makes up the background or border of this
+        // region has changed, such that we need to redraw the region.
+        if (impl_isDirty(DirtyBits.NODE_CONTENTS)) {
+            pg.imagesUpdated();
         }
 
         if (impl_isDirty(DirtyBits.SHAPE_STROKE)) {
