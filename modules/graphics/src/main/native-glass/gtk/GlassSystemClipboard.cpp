@@ -36,7 +36,6 @@ static GdkAtom MIME_TEXT_URI_LIST_TARGET;
 
 static GdkAtom MIME_JAVA_IMAGE;
 
-static GdkAtom FILES_TARGET;
 static GdkAtom MIME_FILES_TARGET;
 
 static void init_atoms()
@@ -50,7 +49,6 @@ static void init_atoms()
 
         MIME_JAVA_IMAGE = gdk_atom_intern_static_string("application/x-java-rawimage");
 
-        FILES_TARGET = gdk_atom_intern_static_string("FILE_NAME");
         MIME_FILES_TARGET = gdk_atom_intern_static_string("application/x-java-file-list");
         initialized = 1;
     }
@@ -58,6 +56,8 @@ static void init_atoms()
 
 
 static GtkClipboard* clipboard = NULL;
+static gboolean is_clipboard_owner = FALSE;
+static gboolean is_clipboard_updated_by_glass = FALSE;
 
 static GtkClipboard *get_clipboard() {
     if (clipboard == NULL) {
@@ -73,15 +73,13 @@ static void add_target_from_jstring(JNIEnv *env, GtkTargetList *list, jstring st
         gtk_target_list_add_text_targets(list, 0);
     } else if (g_strcmp0(gstring, "application/x-java-rawimage") == 0) {
         gtk_target_list_add_image_targets(list, 0, TRUE);
-        return;
     } else if (g_strcmp0(gstring, "application/x-java-file-list") == 0) {
         gtk_target_list_add(list, MIME_TEXT_URI_LIST_TARGET, 0, 0);
-        return; // do not add application/x-java-file-list
+    } else {
+        gtk_target_list_add(list, gdk_atom_intern(gstring, FALSE), 0, 0);
     }
 
-    gtk_target_list_add(list, gdk_atom_intern(gstring, FALSE), 0, 0);
     env->ReleaseStringUTFChars(string, gstring);
-
 }
 
 static void data_to_targets(JNIEnv *env, jobject data, GtkTargetEntry **targets, gint *ntargets)
@@ -138,47 +136,74 @@ static void set_bytebuffer_data(GtkSelectionData *selection_data, GdkAtom target
     mainEnv->ReleaseByteArrayElements(byteArray, raw, JNI_ABORT);
 }
 
-#define FILE_PREFIX "file://"
-#define FILE_PREFIX_N 7
+static void set_uri_data(GtkSelectionData *selection_data, jobject data) {
+    const gchar* url = NULL;
+    jstring jurl = NULL;
 
-static void set_file_uri_data(GtkSelectionData *selection_data, jobjectArray data)
-{
-    jsize ndata = mainEnv->GetArrayLength(data);
-    jsize i;
-    jsize string_size;
-    jstring string;
+    jobjectArray files_array = NULL;
+    gsize files_cnt = 0;
+    
+    jstring typeString;
 
-    gchar **uris = (gchar**) glass_try_malloc0_n(ndata + 1, sizeof(gchar*));
+    typeString = mainEnv->NewStringUTF("text/uri-list");
+    if (mainEnv->CallBooleanMethod(data, jMapContainsKey, typeString, NULL)) {
+        jurl = (jstring) mainEnv->CallObjectMethod(data, jMapGet, typeString, NULL);
+        CHECK_JNI_EXCEPTION(mainEnv);
+        url = mainEnv->GetStringUTFChars(jurl, NULL);
+    }
+    
+    typeString = mainEnv->NewStringUTF("application/x-java-file-list");
+    if (mainEnv->CallBooleanMethod(data, jMapContainsKey, typeString, NULL)) {
+        files_array = (jobjectArray) mainEnv->CallObjectMethod(data, jMapGet, typeString, NULL);
+        CHECK_JNI_EXCEPTION(mainEnv);
+        if (files_array) {
+            files_cnt = mainEnv->GetArrayLength(files_array);
+        }
+    }
+
+    if (!url && !files_cnt) {
+        return;
+    }
+
+    gsize uri_cnt = files_cnt + (url ? 1 : 0);
+
+    gchar **uris = 
+            (gchar**) glass_try_malloc0_n(uri_cnt + 1, // uris must be a NULL-terminated array of strings
+                                            sizeof(gchar*));
     if (!uris) {
+        if (url) {
+            mainEnv->ReleaseStringUTFChars(jurl, url);
+        }
         glass_throw_oom(mainEnv, "Failed to allocate uri data");
         return;
     }
-    
-    for (i = 0; i < ndata; ++i) {
-        string = (jstring) mainEnv->GetObjectArrayElement(data, i);
-        string_size = mainEnv->GetStringUTFLength(string);
 
-        uris[i] = (gchar*) g_try_malloc0(string_size + FILE_PREFIX_N + 1);
-        if (!uris[i]) {
-            glass_throw_oom(mainEnv, "Failed to allocate uri data");
-            for (int k = 0; k < i; k++) {
-                g_free(uris[k]);
-            }
-            g_free(uris);
-            return;
+    gsize i = 0;
+    if (files_cnt > 0) {
+        for (; i < files_cnt; ++i) {
+            jstring string = (jstring) mainEnv->GetObjectArrayElement(files_array, i);
+            const gchar* file = mainEnv->GetStringUTFChars(string, NULL);
+            uris[i] = g_filename_to_uri(file, NULL, NULL);
+            mainEnv->ReleaseStringUTFChars(string, file);
         }
-
-        g_strlcpy(uris[i], FILE_PREFIX, FILE_PREFIX_N + 1);
-        mainEnv->GetStringUTFRegion(string, 0, string_size, (char*) uris[i] + FILE_PREFIX_N);
     }
 
+    if (url) {
+        uris[i] = (gchar*) url;
+    }
+    //http://www.ietf.org/rfc/rfc2483.txt
     gtk_selection_data_set_uris(selection_data, uris);
 
-    for (i = 0; i < ndata; ++i) {
-        g_free(uris[i]);
+    for (i = 0; i < uri_cnt; ++i) {
+        if (uris[i] != url) {
+            g_free(uris[i]);
+        }
+    }
+
+    if (url) {
+        mainEnv->ReleaseStringUTFChars(jurl, url);
     }
     g_free(uris);
-
 }
 
 static void set_image_data(GtkSelectionData *selection_data, jobject pixels)
@@ -212,19 +237,7 @@ static void set_data(GdkAtom target, GtkSelectionData *selection_data, jobject d
             set_image_data(selection_data, result);
         }
     } else if (target == MIME_TEXT_URI_LIST_TARGET) {
-        typeString = mainEnv->NewStringUTF(name);
-        if (mainEnv->CallBooleanMethod(data, jMapContainsKey, typeString, NULL)) {
-            result = mainEnv->CallObjectMethod(data, jMapGet, typeString, NULL);
-            if (!EXCEPTION_OCCURED(mainEnv) && result != NULL) {
-                set_jstring_data(selection_data, target, (jstring)result);
-            }
-        } else {
-            typeString = mainEnv->NewStringUTF("application/x-java-file-list");
-            result = mainEnv->CallObjectMethod(data, jMapGet, typeString, NULL);
-            if (!EXCEPTION_OCCURED(mainEnv) && result != NULL) {
-                set_file_uri_data(selection_data, (jobjectArray) result);
-            }
-        }
+        set_uri_data(selection_data, data);
     } else {
         typeString = mainEnv->NewStringUTF(name);
         result = mainEnv->CallObjectMethod(data, jMapGet, typeString, NULL);
@@ -268,32 +281,9 @@ static jobject get_data_text(JNIEnv *env)
     return jdata;
 }
 
-static jobject get_data_file_list(JNIEnv *env)
+static jobject get_data_uri_list(JNIEnv *env, gboolean files)
 {
-    jobjectArray result = NULL;
-    guint i,size;
-    jstring str;
-    gchar *path;
-    gchar **uris;
-
-    uris = gtk_clipboard_wait_for_uris(get_clipboard());
-    if (uris == NULL) {
-        return NULL;
-    }
-    size = g_strv_length(uris);
-    result = env->NewObjectArray(size, jStringCls, NULL);
-
-    for (i = 0; i < size; ++i) {
-        path = uris[i];
-        if (g_str_has_prefix(path, "file://")) {
-            path += 7;
-        }
-        str = env->NewStringUTF(path);
-        env->SetObjectArrayElement(result, i, str);
-    }
-
-    g_strfreev(uris);
-    return result;
+    return uris_to_java(env, gtk_clipboard_wait_for_uris(get_clipboard()), files);
 }
 
 static jobject get_data_image(JNIEnv* env) {
@@ -362,6 +352,8 @@ static gulong owner_change_handler_id = 0;
 
 static void clipboard_owner_changed_callback(GtkClipboard *clipboard, GdkEventOwnerChange *event, jobject obj)
 {
+    is_clipboard_owner = is_clipboard_updated_by_glass;
+    is_clipboard_updated_by_glass = FALSE;
     mainEnv->CallVoidMethod(obj, jClipboardContentChanged);
     CHECK_JNI_EXCEPTION(mainEnv)
 }
@@ -408,10 +400,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkSystemClipboard_dispose
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkSystemClipboard_isOwner
   (JNIEnv *env, jobject obj)
 {
-    return JNI_FALSE; //There's no straightforward way how to check for this in GTK.
-                      // Returning false is safe however, as it just affects the case when the same application,
-                      // that has clipboard selection, checks for clipboard content. When this is false,
-                      // we have to use native X11 calls in this case.
+    return is_clipboard_owner ? JNI_TRUE : JNI_FALSE;
 }
 
 /*
@@ -438,6 +427,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkSystemClipboard_pushToSystem
         GtkTargetEntry dummy_targets = {(gchar*) "MIME_DUMMY_TARGET", 0, 0};
         gtk_clipboard_set_with_data(get_clipboard(), &dummy_targets, 0, set_data_func, clear_data_func, data);
     }
+
+    is_clipboard_updated_by_glass = TRUE;
 }
 
 /*
@@ -465,10 +456,12 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkSystemClipboard_popFromSy
     init_atoms();
     if (g_strcmp0(cmime, "text/plain") == 0) {
         result = get_data_text(env);
+    } else if (g_strcmp0(cmime, "text/uri-list") == 0) {
+        result = get_data_uri_list(env, FALSE);
     } else if (g_str_has_prefix(cmime, "text/")) {
         result = get_data_raw(env, cmime, TRUE);
     } else if (g_strcmp0(cmime, "application/x-java-file-list") == 0) {
-        result = get_data_file_list(env);
+        result = get_data_uri_list(env, TRUE);
     } else if (g_strcmp0(cmime, "application/x-java-rawimage") == 0 ) {
         result = get_data_image(env);
     } else {
@@ -513,7 +506,7 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_gtk_GtkSystemClipboard_mime
 
     gtk_clipboard_wait_for_targets(get_clipboard(), &targets, &ntargets);
 
-    convertible = (GdkAtom*) glass_try_malloc_n(ntargets * 2, sizeof(GdkAtom)); //theoretically, the number can double
+    convertible = (GdkAtom*) glass_try_malloc0_n(ntargets * 2, sizeof(GdkAtom)); //theoretically, the number can double
     if (!convertible) {
         if (ntargets > 0) {
             glass_throw_oom(env, "Failed to allocate mimes");
@@ -523,24 +516,45 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_gtk_GtkSystemClipboard_mime
     }
 
     convertible_ptr = convertible;
+
+    bool uri_list_added = false;
+    bool text_added = false;
+    bool image_added = false;
+
     for (i = 0; i < ntargets; ++i) {
         //handle text targets
         //if (targets[i] == TEXT_TARGET || targets[i] == STRING_TARGET || targets[i] == UTF8_STRING_TARGET) {
-        if (gtk_targets_include_text(targets + i, 1)) {
+
+        if (gtk_targets_include_text(targets + i, 1) && !text_added) {
             *(convertible_ptr++) = MIME_TEXT_PLAIN_TARGET;
-        } else if (gtk_targets_include_image(targets + i, 1, TRUE)) {
+            text_added = true;
+        } else if (gtk_targets_include_image(targets + i, 1, TRUE) && !image_added) {
             *(convertible_ptr++) = MIME_JAVA_IMAGE;
+            image_added = true;
         }
-        //TODO text/x-moz-url ?
+        //TODO text/x-moz-url ? RT-17802
 
-        //XXX: URI targets are not necessary file targets, can we add the type anyway?
         if (targets[i] == MIME_TEXT_URI_LIST_TARGET) {
-            *(convertible_ptr++) = MIME_FILES_TARGET;
-        }
+            if (uri_list_added) {
+                continue;
+            }
 
-        name = gdk_atom_name(targets[i]);
-        *(convertible_ptr++) = targets[i];
-        g_free(name);
+            gchar** uris = gtk_clipboard_wait_for_uris(get_clipboard());
+            if (uris) {
+                guint size = g_strv_length(uris);
+                guint files_cnt = get_files_count(uris);
+                if (files_cnt) {
+                    *(convertible_ptr++) = MIME_FILES_TARGET;
+                }
+                if (size - files_cnt) {
+                    *(convertible_ptr++) = MIME_TEXT_URI_LIST_TARGET;
+                }
+                g_strfreev(uris);
+            }
+            uri_list_added = true;
+        } else {
+            *(convertible_ptr++) = targets[i];
+        }
     }
 
     result = env->NewObjectArray(convertible_ptr - convertible, jStringCls, NULL);
