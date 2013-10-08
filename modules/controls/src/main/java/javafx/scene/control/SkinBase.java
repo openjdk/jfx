@@ -204,16 +204,21 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      */
     protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
 
-        if (children.isEmpty()) return leftInset + rightInset;
-
-        double minX = Double.MAX_VALUE; // init to max so that child's min comes out of first call to Math.min below
-        double maxX = Double.MIN_VALUE; // init to min so that child's max comes out of first call to Math.max below
+        double minX = 0;
+        double maxX = 0;
+        boolean firstManagedChild = true;
         for (int i = 0; i < children.size(); i++) {
             Node node = children.get(i);
             if (node.isManaged()) {
                 final double x = node.getLayoutBounds().getMinX() + node.getLayoutX();
-                minX = Math.min(minX, x);
-                maxX = Math.max(maxX, x + node.minWidth(-1));
+                if (!firstManagedChild) {  // branch prediction favors most often used condition
+                    minX = Math.min(minX, x);
+                    maxX = Math.max(maxX, x + node.minWidth(-1));
+                } else {
+                    minX = x;
+                    maxX = x + node.minWidth(-1);
+                    firstManagedChild = false;
+                }
             }
         }
         double minWidth = maxX - minX;
@@ -234,16 +239,21 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      */
     protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
 
-        if (children.isEmpty()) return topInset + bottomInset;
-
-        double minY = Double.MAX_VALUE; // init to max so that child's min comes out of first call to Math.min below
-        double maxY = Double.MIN_VALUE; // init to min so that child's max comes out of first call to Math.max below
+        double minY = 0;
+        double maxY = 0;
+        boolean firstManagedChild = true;
         for (int i = 0; i < children.size(); i++) {
             Node node = children.get(i);
             if (node.isManaged()) {
                 final double y = node.getLayoutBounds().getMinY() + node.getLayoutY();
-                minY = Math.min(minY, y);
-                maxY = Math.max(maxY, y + node.minHeight(-1));
+                if (!firstManagedChild) {  // branch prediction favors most often used condition
+                    minY = Math.min(minY, y);
+                    maxY = Math.max(maxY, y + node.minHeight(-1));
+                } else {
+                    minY = y;
+                    maxY = y + node.minHeight(-1);
+                    firstManagedChild = false;
+                }
             }
         }
         double minHeight = maxY - minY;
@@ -298,16 +308,21 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      */
     protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
 
-        if (children.isEmpty()) return 0d;
-
-        double minX = Double.MAX_VALUE; // init to max so that child's min comes out of first call to Math.min below
-        double maxX = Double.MIN_VALUE; // init to min so that child's max comes out of first call to Math.max below
+        double minX = 0;
+        double maxX = 0;
+        boolean firstManagedChild = true;
         for (int i = 0; i < children.size(); i++) {
             Node node = children.get(i);
             if (node.isManaged()) {
                 final double x = node.getLayoutBounds().getMinX() + node.getLayoutX();
-                minX = Math.min(minX, x);
-                maxX = Math.max(maxX, x + node.prefWidth(-1));
+                if (!firstManagedChild) {  // branch prediction favors most often used condition
+                    minX = Math.min(minX, x);
+                    maxX = Math.max(maxX, x + node.prefWidth(-1));
+                } else {
+                    minX = x;
+                    maxX = x + node.prefWidth(-1);
+                    firstManagedChild = false;
+                }
             }
         }
         return maxX - minX;
@@ -329,16 +344,21 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      */
     protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
 
-        if (children.isEmpty()) return 0d;
-
-        double minY = Double.MAX_VALUE; // init to max so that child's min comes out of first call to Math.min below
-        double maxY = Double.MIN_VALUE; // init to min so that child's max comes out of first call to Math.max below
+        double minY = 0;
+        double maxY = 0;
+        boolean firstManagedChild = true;
         for (int i = 0; i < children.size(); i++) {
             Node node = children.get(i);
             if (node.isManaged()) {
                 final double y = node.getLayoutBounds().getMinY() + node.getLayoutY();
-                minY = Math.min(minY, y);
-                maxY = Math.max(maxY, y + node.prefHeight(-1));
+                if (!firstManagedChild) {  // branch prediction favors most often used condition
+                    minY = Math.min(minY, y);
+                    maxY = Math.max(maxY, y + node.prefHeight(-1));
+                } else {
+                    minY = y;
+                    maxY = y + node.prefHeight(-1);
+                    firstManagedChild = false;
+                }
             }
         }
         return maxY - minY;
