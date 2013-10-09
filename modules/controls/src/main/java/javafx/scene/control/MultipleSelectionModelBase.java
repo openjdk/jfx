@@ -73,35 +73,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         
         selectedIndices = new BitSet();
 
-        selectedIndicesSeq = new ReadOnlyUnbackedObservableList<Integer>() {
-            @Override public Integer get(int index) {
-                if (index < 0 || index >= getItemCount()) return -1;
-
-                for (int pos = 0, val = selectedIndices.nextSetBit(0);
-                    val >= 0 || pos == index;
-                    pos++, val = selectedIndices.nextSetBit(val+1)) {
-                        if (pos == index) return val;
-                }
-
-                return -1;
-            }
-
-            @Override public int size() {
-                return selectedIndices.cardinality();
-            }
-
-            @Override public boolean contains(Object o) {
-                if (o instanceof Number) {
-                    Number n = (Number) o;
-                    int index = n.intValue();
-
-                    return index >= 0 && index < selectedIndices.length() &&
-                            selectedIndices.get(index);
-                }
-
-                return false;
-            }
-        };
+        selectedIndicesSeq = createListFromBitSet(selectedIndices);
         
         final MappingChange.Map<Integer,T> map = new MappingChange.Map<Integer,T>() {
             @Override public T map(Integer f) {
@@ -167,10 +139,6 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
     @Override public ObservableList<Integer> getSelectedIndices() {
         return selectedIndicesSeq;
     }
-//    private void setSelectedIndices(BitSet rows) {
-//        this.selectedIndices.clear();
-//        this.selectedIndices.or(rows);
-//    }
 
     private final ReadOnlyUnbackedObservableList<T> selectedItemsSeq;
     @Override public ObservableList<T> getSelectedItems() {
@@ -315,11 +283,25 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         // reporting that they were empty.
         // makeAtomic toggle added to resolve RT-32618
         makeAtomic = true;
+
+        // firstly we make a copy of the selection, so that we can send out
+        // the correct details in the selection change event
+        BitSet selectedIndicesCopy = new BitSet();
+        selectedIndicesCopy.or(selectedIndices);
+        List<Integer> previousSelectedIndices = createListFromBitSet(selectedIndicesCopy);
+
+        // then clear the current selection
         clearSelection();
+
+        // and select the new row
+        select(row);
         makeAtomic = false;
 
-        // and select
-        select(row);
+        // fire off a single add/remove/replace notification (rather than
+        // individual remove and add notifications) - see RT-33324
+        int changeIndex = selectedIndicesSeq.indexOf(row);
+        selectedIndicesSeq.callObservers(new NonIterableChange.GenericAddRemoveChange<>(
+                changeIndex, changeIndex+1, previousSelectedIndices, selectedIndicesSeq));
     }
 
     @Override public void select(int row) {
@@ -346,9 +328,11 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
         setSelectedIndex(row);
         focus(row);
-        
-        int changeIndex = selectedIndicesSeq.indexOf(row);
-        selectedIndicesSeq.callObservers(new NonIterableChange.SimpleAddChange<Integer>(changeIndex, changeIndex+1, selectedIndicesSeq));
+
+        if (! makeAtomic) {
+            int changeIndex = selectedIndicesSeq.indexOf(row);
+            selectedIndicesSeq.callObservers(new NonIterableChange.SimpleAddChange<Integer>(changeIndex, changeIndex+1, selectedIndicesSeq));
+        }
         
         if (fireUpdatedItemEvent) {
             setSelectedItem(newItem);
@@ -624,10 +608,12 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             };
 
             quietClearSelection();
-            
-            selectedIndicesSeq.callObservers(
-                    new NonIterableChange.GenericAddRemoveChange<Integer>(0, 0, 
-                    removed, selectedIndicesSeq));
+
+            if (! makeAtomic) {
+                selectedIndicesSeq.callObservers(
+                        new NonIterableChange.GenericAddRemoveChange<Integer>(0, 0,
+                        removed, selectedIndicesSeq));
+            }
         }
     }
 
@@ -674,6 +660,44 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             select(focusIndex + 1);
         }
     }
-    
-    
+
+
+
+    /***********************************************************************
+     *                                                                     *
+     * Private implementation                                              *
+     *                                                                     *
+     **********************************************************************/
+
+    private ReadOnlyUnbackedObservableList<Integer> createListFromBitSet(final BitSet bitset) {
+        return new ReadOnlyUnbackedObservableList<Integer>() {
+            @Override public Integer get(int index) {
+                if (index < 0 || index >= getItemCount()) return -1;
+
+                for (int pos = 0, val = bitset.nextSetBit(0);
+                     val >= 0 || pos == index;
+                     pos++, val = bitset.nextSetBit(val+1)) {
+                    if (pos == index) return val;
+                }
+
+                return -1;
+            }
+
+            @Override public int size() {
+                return bitset.cardinality();
+            }
+
+            @Override public boolean contains(Object o) {
+                if (o instanceof Number) {
+                    Number n = (Number) o;
+                    int index = n.intValue();
+
+                    return index >= 0 && index < bitset.length() &&
+                            bitset.get(index);
+                }
+
+                return false;
+            }
+        };
+    }
 }

@@ -160,6 +160,7 @@ public class MultipleSelectionModelImplTest {
     @Before public void setUp() {
         try {
             // reset the data model
+            data = FXCollections.<String>observableArrayList();
             data.setAll(defaultData);
 
             // we create a new SelectionModel per test to ensure it is always back
@@ -919,5 +920,80 @@ public class MultipleSelectionModelImplTest {
         model.clearAndSelect(1);
         assertEquals(2, rt32618_count);
         assertEquals(ROW_2_VALUE, getValue(model.getSelectedItem()));
+    }
+
+    @Test public void test_rt33324_selectedIndices() {
+        // pre-select item 0
+        model.select(0);
+
+        // install listener
+        model.getSelectedIndices().addListener(new ListChangeListener<Integer>() {
+            @Override public void onChanged(ListChangeListener.Change<? extends Integer> change) {
+                while (change.next()) {
+                    assertTrue(change.wasRemoved());
+                    assertTrue(change.wasAdded());
+                    assertTrue(change.wasReplaced());
+
+                    assertFalse(change.wasPermutated());
+                }
+            }
+        });
+
+        // change selection to index 1. This should result in a change event
+        // being fired where wasAdded() is true, wasRemoved() is true, but most
+        // importantly, wasReplaced() is true
+        model.clearAndSelect(1);
+    }
+
+    @Test public void test_rt33324_selectedItems() {
+        // pre-select item 0
+        model.select(0);
+
+        // install listener
+        model.getSelectedItems().addListener(new ListChangeListener() {
+            @Override public void onChanged(ListChangeListener.Change change) {
+                while (change.next()) {
+                    assertTrue(change.wasRemoved());
+                    assertTrue(change.wasAdded());
+                    assertTrue(change.wasReplaced());
+
+                    assertFalse(change.wasPermutated());
+                }
+            }
+        });
+
+        // change selection to index 1. This should result in a change event
+        // being fired where wasAdded() is true, wasRemoved() is true, but most
+        // importantly, wasReplaced() is true
+        model.clearAndSelect(1);
+    }
+
+    @Test public void test_rt33324_selectedCells() {
+        if (! (msModel() instanceof TableViewSelectionModel)) {
+            return;
+        }
+
+        TableViewSelectionModel tableSM = (TableViewSelectionModel) msModel();
+
+        // pre-select item 0
+        tableSM.select(0);
+
+        // install listener
+        tableSM.getSelectedCells().addListener(new ListChangeListener() {
+            @Override public void onChanged(ListChangeListener.Change change) {
+                while (change.next()) {
+                    assertTrue(change.wasRemoved());
+                    assertTrue(change.wasAdded());
+                    assertTrue(change.wasReplaced());
+
+                    assertFalse(change.wasPermutated());
+                }
+            }
+        });
+
+        // change selection to index 1. This should result in a change event
+        // being fired where wasAdded() is true, wasRemoved() is true, but most
+        // importantly, wasReplaced() is true
+        tableSM.clearAndSelect(1);
     }
 }
