@@ -25,6 +25,7 @@
 package javafx.scene.layout;
 
 import javafx.scene.paint.Color;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -428,7 +429,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionBottomLeftCorner(green, Color.RED);
 
         checkRegionCornersAndBoundariesOfBackgroundFill(blue, Color.GREEN);
-        checkRegionCornersAndBoundariesOfBackgroundFill(image, Color.BLUE);
+//        checkRegionCornersAndBoundariesOfBackgroundFill(image, Color.BLUE);
     }
 
     @Test(timeout=5000)
@@ -463,7 +464,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionBottomLeftCorner(green, Color.RED);
 
         checkRegionCornersAndBoundariesOfBackgroundFill(image, Color.GREEN);
-        checkRegionCornersAndBoundariesOfBackgroundFill(blue, Color.BLUE, null);
+//        checkRegionCornersAndBoundariesOfBackgroundFill(blue, Color.BLUE, null);
     }
 
     @Test(timeout=5000)
@@ -594,6 +595,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionBottomLeftCorner(yellow, Color.YELLOW, SCENE_FILL, 0, .2);
     }
 
+    @Ignore("RT-33446")
     @Test(timeout=5000)
     public void testHalfPixelTopInset() {
         setStyle(
@@ -623,6 +625,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionBottomLeftCorner(yellow, Color.YELLOW, SCENE_FILL, 0, .2);
     }
 
+    @Ignore("RT-33446")
     @Test(timeout=5000)
     public void testHalfPixelRightInset() {
         setStyle(
@@ -652,6 +655,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionBottomLeftCorner(yellow, Color.YELLOW, SCENE_FILL, 0, .2);
     }
 
+    @Ignore("RT-33446")
     @Test(timeout=5000)
     public void testHalfPixelBottomInset() {
         setStyle(
@@ -681,6 +685,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionBottomLeftCorner(yellow, blended, SCENE_FILL, 0, .2);
     }
 
+    @Ignore("RT-33446")
     @Test(timeout=5000)
     public void testHalfPixelLeftInset() {
         setStyle(
@@ -710,6 +715,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionBottomLeftCorner(yellow, blended, SCENE_FILL, 0, .2);
     }
 
+    @Ignore("RT-33446")
     @Test(timeout=5000)
     public void testHalfPixelTopLeftInset() {
         setStyle(
