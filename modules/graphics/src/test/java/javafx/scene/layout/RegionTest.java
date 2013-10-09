@@ -32,8 +32,14 @@ import javafx.geometry.VPos;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageForTesting;
 import javafx.scene.image.WritableImage;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.ClosePath;
+import javafx.scene.shape.LineTo;
+import javafx.scene.shape.MoveTo;
+import javafx.scene.shape.Path;
 import java.util.concurrent.atomic.AtomicBoolean;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.sg.prism.NGRegion;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -1137,7 +1143,7 @@ public class RegionTest {
         assertFalse(r.listenerAdded.get());
     }
 
-    @Test public void tstAnimatedBorderImageCausesRepaintWhenAnimationChanges() {
+    @Test public void testAnimatedBorderImageCausesRepaintWhenAnimationChanges() {
         final WritableImage image = new WritableImage(10, 10);
         ImageRegion r = new ImageRegion();
         final Border border = new Border(new BorderImage(image, null, null, null, false, null, null));
@@ -1169,4 +1175,33 @@ public class RegionTest {
             super.impl_clearDirty(DirtyBits.NODE_CONTENTS);
         }
     };
+
+    // Test for RT-13820
+    @Test public void changingShapeElementsShouldResultInRender() {
+        Region r = new Region();
+        r.setPrefWidth(640);
+        r.setPrefHeight(480);
+        LineTo lineTo;
+        Path p = new Path(
+                new MoveTo(0, 0),
+                lineTo = new LineTo(100, 0),
+                new LineTo(50, 100),
+                new ClosePath()
+        );
+        r.setBackground(new Background(new BackgroundFill(Color.BLUE, null, null)));
+        r.setCenterShape(true);
+        r.setScaleShape(true);
+        r.setShape(p);
+        r.impl_syncPeer();
+
+        NGRegion peer = r.impl_getPeer();
+        assertFalse(peer.isClean());
+        peer.clearDirtyTree();
+        assertTrue(peer.isClean());
+
+        lineTo.setX(200);
+        p.impl_syncPeer();
+        r.impl_syncPeer();
+        assertFalse(peer.isClean());
+    }
 }

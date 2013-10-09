@@ -136,6 +136,7 @@ public class NGRegion extends NGGroup {
      * on the render thread.
      */
     private Shape shape;
+    private NGShape ngShape;
 
     /**
      * Whether we should scale the shape to match the bounds of the region. Only applies
@@ -211,7 +212,8 @@ public class NGRegion extends NGGroup {
      * @param positionShape whether to center the shape
      */
     public void updateShape(Object shape, boolean scaleShape, boolean positionShape, boolean cacheShape) {
-        this.shape = shape == null ? null : ((NGShape) ((javafx.scene.shape.Shape)shape).impl_getPeer()).getShape();
+        this.ngShape = shape == null ? null : ((javafx.scene.shape.Shape)shape).impl_getPeer();
+        this.shape = shape == null ? null : ngShape.getShape();
         this.scaleShape = scaleShape;
         this.centerShape = positionShape;
         this.cacheShape = cacheShape;
@@ -219,6 +221,7 @@ public class NGRegion extends NGGroup {
         // is also called, so this will get invalidated twice.
         invalidateOpaqueRegion();
         cacheKey = null;
+        visualsChanged();
     }
 
     /**
@@ -353,6 +356,17 @@ public class NGRegion extends NGGroup {
         opaqueBottom = bottom;
         opaqueLeft = left;
         invalidateOpaqueRegion();
+    }
+
+    /**
+     * When cleaning the dirty tree, we also have to keep in mind
+     * the NGShape used by the NGRegion
+     */
+    @Override public void clearDirtyTree() {
+        super.clearDirtyTree();
+        if (ngShape != null) {
+            ngShape.clearDirtyTree();
+        }
     }
 
     /**************************************************************************
