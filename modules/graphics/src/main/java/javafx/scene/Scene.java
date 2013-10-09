@@ -2350,6 +2350,10 @@ public class Scene implements EventTarget {
                     }
 
                 }
+
+                if (Scene.this.getRoot().cssFlag != CssFlags.CLEAN) {
+                    Scene.this.getRoot().impl_markDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS);
+                }
             }
 
             // required for image cursor created from animated image
