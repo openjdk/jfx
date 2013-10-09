@@ -105,7 +105,6 @@ typedef struct _LensInputMouseState {
     int                     y;
     int                     rel[REL_MAX + 1];
     int                     abs[ABS_MAX + 1];
-    int                     prevabs[ABS_MAX + 1];
 
     /* multitouch points */
     int                     nextTouchID; // ID used for the next new touch point
@@ -643,12 +642,6 @@ static LensResult lens_input_mouseStateAllocateAndInit(LensInputDevice *device) 
     }
 
     state = (LensInputMouseState *) device->state;
-    if (IS_BITSET(caps->eventMask, EV_ABS)) {
-        int i;
-        for (i = 0; i <= ABS_MAX; i++) {
-            state->prevabs[i] = ABS_UNSET;
-        }
-    }
 
     state->pressedX = 0;
     state->pressedY = 0;
@@ -1244,7 +1237,6 @@ static void lens_input_pointerEvents_handleAbsMotion(LensInputDevice *device,
     }
     GLASS_LOG_FINER("Pointer absolute axis 0x%02x is now %i, pointer at %i,%i",
                     axis, mouseState->abs[axis], newMousePosX, newMousePosY);
-    mouseState->prevabs[axis] = mouseState->abs[axis];
 }
 
 /**
