@@ -25,6 +25,8 @@
 package com.sun.javafx.scene.control.infrastructure;
 
 import static org.junit.Assert.assertNotNull;
+
+import com.sun.javafx.scene.control.skin.*;
 import javafx.geometry.Orientation;
 import javafx.scene.Group;
 import javafx.scene.Node;
@@ -33,12 +35,8 @@ import javafx.scene.control.*;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 import java.util.List;
-import com.sun.javafx.scene.control.skin.ComboBoxListViewSkin;
-import com.sun.javafx.scene.control.skin.LabeledText;
-import com.sun.javafx.scene.control.skin.VirtualFlow;
-import com.sun.javafx.scene.control.skin.VirtualScrollBar;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+
+import static org.junit.Assert.*;
 
 public class VirtualFlowTestUtils {
 
@@ -306,6 +304,23 @@ public class VirtualFlowTestUtils {
         assertEquals(getVirtualFlow(control).getCellCount(), expected);
     }
 
+    public static void assertTableHeaderColumnExists(final Control control, final TableColumnBase column, boolean expected) {
+        TableHeaderRow headerRow = getTableHeaderRow(control);
+
+        NestedTableColumnHeader rootHeader = headerRow.getRootHeader();
+        boolean match = false;
+        for (TableColumnHeader header : rootHeader.getColumnHeaders()) {
+            match = column.equals(header.getTableColumn());
+            if (match) break;
+        }
+
+        if (expected) {
+            assertTrue(match);
+        } else {
+            assertFalse(match);
+        }
+    }
+
     public static VirtualFlow<?> getVirtualFlow(Control control) {
         Group group = new Group();
         Scene scene = new Scene(group);
@@ -335,6 +350,19 @@ public class VirtualFlowTestUtils {
 
     public static VirtualScrollBar getVirtualFlowHorizontalScrollbar(final Control control) {
         return getVirtualFlowScrollbar(control, Orientation.HORIZONTAL);
+    }
+
+    public static TableHeaderRow getTableHeaderRow(final Control control) {
+        TableViewSkinBase<?,?,?,?,?,?> skin = (TableViewSkinBase) control.getSkin();
+        TableHeaderRow headerRow = null;
+        for (Node n : skin.getChildren()) {
+            if (n instanceof TableHeaderRow) {
+                headerRow = (TableHeaderRow) n;
+                break;
+            }
+        }
+
+        return headerRow;
     }
 
     private static VirtualScrollBar getVirtualFlowScrollbar(final Control control, Orientation orientation) {

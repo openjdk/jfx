@@ -282,7 +282,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             
             for (int i = 0; i < getColumns().size(); i++) {
                 TableColumnBase<?,?> column = getColumns().get(i);
-                if (column == null) continue;
+                if (column == null || ! column.isVisible()) continue;
                 newHeaders.add(createColumnHeader(column));
             }
             

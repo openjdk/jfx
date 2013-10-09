@@ -34,6 +34,7 @@ import java.util.*;
 
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
+import com.sun.javafx.scene.control.skin.*;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectWrapper;
@@ -44,6 +45,7 @@ import javafx.collections.ObservableList;
 import javafx.collections.transformation.SortedList;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.scene.Node;
 import javafx.scene.control.cell.*;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
@@ -58,7 +60,6 @@ import org.junit.Test;
 
 import com.sun.javafx.scene.control.TableColumnComparatorBase.TableColumnComparator;
 import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
-import com.sun.javafx.scene.control.skin.VirtualScrollBar;
 import com.sun.javafx.scene.control.test.Person;
 import com.sun.javafx.scene.control.test.RT_22463_Person;
 
@@ -1874,5 +1875,63 @@ public class TableViewTest {
         // now start an edit and count the start edit events - it should be just 1
         table.edit(0, first);
         assertEquals(1, rt_29849_start_count);
+    }
+
+    @Test public void test_rt_32708_removeFromColumnsList() {
+        TableView<Person> table = new TableView<>();
+        table.setEditable(true);
+        table.setItems(FXCollections.observableArrayList(
+                new Person("John", "Smith", "jacob.smith@example.com")
+        ));
+
+        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        first.setCellValueFactory(new PropertyValueFactory("firstName"));
+        TableColumn<Person,String> last = new TableColumn<Person,String>("last");
+        first.setCellValueFactory(new PropertyValueFactory("lastName"));
+        TableColumn<Person,String> email = new TableColumn<Person,String>("email");
+        first.setCellValueFactory(new PropertyValueFactory("email"));
+        table.getColumns().addAll(first, last, email);
+
+        // load the table so the default cells are created
+        new StageLoader(table);
+
+        // test pre-conditions - last column should be visible
+        VirtualFlowTestUtils.assertTableHeaderColumnExists(table, last, true);
+
+        // remove last column from tableview
+        table.getColumns().remove(last);
+        Toolkit.getToolkit().firePulse();
+
+        // test post conditions - last column should not be visible
+        VirtualFlowTestUtils.assertTableHeaderColumnExists(table, last, false);
+    }
+
+    @Test public void test_rt_32708_toggleVisible() {
+        TableView<Person> table = new TableView<>();
+        table.setEditable(true);
+        table.setItems(FXCollections.observableArrayList(
+                new Person("John", "Smith", "jacob.smith@example.com")
+        ));
+
+        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        first.setCellValueFactory(new PropertyValueFactory("firstName"));
+        TableColumn<Person,String> last = new TableColumn<Person,String>("last");
+        first.setCellValueFactory(new PropertyValueFactory("lastName"));
+        TableColumn<Person,String> email = new TableColumn<Person,String>("email");
+        first.setCellValueFactory(new PropertyValueFactory("email"));
+        table.getColumns().addAll(first, last, email);
+
+        // load the table so the default cells are created
+        new StageLoader(table);
+
+        // test pre-conditions - last column should be visible
+        VirtualFlowTestUtils.assertTableHeaderColumnExists(table, last, true);
+
+        // hide the last column from tableview
+        last.setVisible(false);
+        Toolkit.getToolkit().firePulse();
+
+        // test post conditions - last column should not be visible
+        VirtualFlowTestUtils.assertTableHeaderColumnExists(table, last, false);
     }
 }
