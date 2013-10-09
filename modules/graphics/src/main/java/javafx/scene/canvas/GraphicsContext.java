@@ -730,11 +730,14 @@ public final class GraphicsContext {
     }
 
     /**
-     * Sets the current stroke line cap. 
+     * Sets the current stroke line cap. A {@code null} value will be ignored and the 
+     * current value will remain unchanged.
      * 
      * @param cap {@code StrokeLineCap} with a value of Butt, Round, or Square.
+     * 
      */
     public void setLineCap(StrokeLineCap cap) {
+        if (cap == null) return;
         if (curState.linecap != cap) {
             byte v;
             switch (cap) {
@@ -758,11 +761,13 @@ public final class GraphicsContext {
     }
 
     /**
-     * Sets the current stroke line join.
+     * Sets the current stroke line join. A {@code null} value will be ignored and 
+     * the current value will remain unchanged.
      * 
      * @param join {@code StrokeLineJoin} with a value of Miter, Bevel, or Round.
      */
     public void setLineJoin(StrokeLineJoin join) {
+        if (join == null) return;
         if (curState.linejoin != join) {
             byte v;
             switch (join) {
@@ -836,6 +841,7 @@ public final class GraphicsContext {
 
     /**
      * Defines horizontal text alignment, relative to the text {@code x} origin.
+     * A {@code null} value will be ignored and the current value will remain unchanged.
      * <p>
      * Let horizontal bounds represent the logical width of a single line of
      * text. Where each line of text has a separate horizontal bounds.
@@ -856,6 +862,7 @@ public final class GraphicsContext {
      * @param align {@code TextAlignment} with values of Left, Center, Right.
      */
     public void setTextAlign(TextAlignment align) {
+        if (align == null) return;
         if (curState.textalign != align) {
             byte a;
             switch (align) {
@@ -881,11 +888,13 @@ public final class GraphicsContext {
     }
 
     /**
-     * Sets the current Text Baseline.
+     * Sets the current Text Baseline. A null value will be ignored and the 
+     * current value will remain unchanged.
      * 
      * @param baseline {@code VPos} with values of Top, Center, Baseline, or Bottom
      */
     public void setTextBaseline(VPos baseline) {
+        if (baseline == null) return;
         if (curState.textbaseline != baseline) {
             byte b;
             switch (baseline) {
@@ -1476,7 +1485,8 @@ public final class GraphicsContext {
     }
 
     /**
-     * Fills an arc using the current fill paint.
+     * Fills an arc using the current fill paint. A {@code null} ArcType or 
+     * non positive width or height will cause the render command to be ignored.
      * 
      * @param x the X coordinate of the arc.
      * @param y the Y coordinate of the arc.
@@ -1489,14 +1499,15 @@ public final class GraphicsContext {
     public void fillArc(double x, double y, double w, double h,
                         double startAngle, double arcExtent, ArcType closure)
     {
-        if (w != 0 && h != 0) {
+        if (w != 0 && h != 0 && closure != null) {
             writeArcType(closure);
             writeOp6(x, y, w, h, startAngle, arcExtent, NGCanvas.FILL_ARC);
         }
     }
 
     /**
-     * Strokes an Arc using the current stroke paint.
+     * Strokes an Arc using the current stroke paint. A {@code null} ArcType or 
+     * non positive width or height will cause the render command to be ignored.
      * 
      * @param x the X coordinate of the arc.
      * @param y the Y coordinate of the arc.
@@ -1509,7 +1520,7 @@ public final class GraphicsContext {
     public void strokeArc(double x, double y, double w, double h,
                         double startAngle, double arcExtent, ArcType closure)
     {
-        if (w != 0 && h != 0) {
+        if (w != 0 && h != 0 && closure != null) {
             writeArcType(closure);
             writeOp6(x, y, w, h, startAngle, arcExtent, NGCanvas.STROKE_ARC);
         }
