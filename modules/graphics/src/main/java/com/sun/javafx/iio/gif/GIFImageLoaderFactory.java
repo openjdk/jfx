@@ -35,14 +35,6 @@ import java.security.PrivilegedAction;
 
 public class GIFImageLoaderFactory implements ImageLoaderFactory {
 
-    static private final String selectorPropertyName = "prism.useOldGIF";
-    static private boolean useOldGIF =
-        AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-            public Boolean run() {
-                return Boolean.valueOf(Boolean.getBoolean(selectorPropertyName));
-            }
-        });
-
     private static final GIFImageLoaderFactory theInstance =
             new GIFImageLoaderFactory();
 
@@ -57,6 +49,6 @@ public class GIFImageLoaderFactory implements ImageLoaderFactory {
     }
 
     public ImageLoader createImageLoader(InputStream input) throws IOException {
-        return useOldGIF ? new GIFImageLoader(input) : new GIFImageLoader2(input);
+        return new GIFImageLoader2(input);
     }
 }
