@@ -25,7 +25,7 @@
  
 #include "input/LensInput.h"
 
-#if defined(OMAP3)
+#if defined(OMAP3) || defined(IMX6_PLATFORM)
 
 #include <fcntl.h>
 #include <stdlib.h>
@@ -108,7 +108,7 @@ void glass_cursor_terminate(void) {
     fbCursorClose();
 }
 
-#else /* !defined(OMAP3) */
+#else /* #if defined(OMAP3) || defined(IMX6_PLATFORM) */
 
 void fbCursorInitialize(int screenWidth, int screenHeight) { }
 void fbCursorSetPosition(int x, int y) { }

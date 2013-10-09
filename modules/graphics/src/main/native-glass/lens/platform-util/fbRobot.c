@@ -29,6 +29,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <linux/fb.h>
 
 #include "utilInternal.h"
 #include "platformUtil.h"
