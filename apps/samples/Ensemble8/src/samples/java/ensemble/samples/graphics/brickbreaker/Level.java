@@ -54,6 +54,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.util.Duration;
 import ensemble.samples.graphics.brickbreaker.BrickBreakerApp.MainFrame;
+import javafx.animation.AnimationTimer;
 
 public class Level extends Parent {
 
@@ -92,7 +93,7 @@ public class Level extends Parent {
     private Text livesCaption;
     private ImageView message;
     private Timeline startingTimeline;
-    private Timeline timeline;
+    private AnimationTimer animationTimer;
     private Group infoPanel;
 
     public Level(int levelNumber) {
@@ -135,15 +136,14 @@ public class Level extends Parent {
     private void initTimeline() {
         mainFrame.setLifeCount(3);
         mainFrame.setScore(0);
-        timeline = new Timeline();
-        timeline.setCycleCount(Timeline.INDEFINITE);
-        KeyFrame kf = new KeyFrame(Config.ANIMATION_TIME, new EventHandler<ActionEvent>() {
-            public void handle(ActionEvent event) {
+        animationTimer = new AnimationTimer() {
+            @Override public void handle(long now) {
+                final double speedFactor = Config.ANIMATION_TIME_SCALE;
                 // Process fadeBricks
                 Iterator<Brick> brickIterator = fadeBricks.iterator();
                 while (brickIterator.hasNext()) {
                     Brick brick = brickIterator.next();
-                    brick.setOpacity(brick.getOpacity() - 0.1);
+                    brick.setOpacity(brick.getOpacity() - 0.1 * speedFactor);
                     if (brick.getOpacity() <= 0) {
                         brick.setVisible(false);
                         brickIterator.remove();
@@ -162,7 +162,7 @@ public class Level extends Parent {
                         bonusIterator.remove();
                         group.getChildren().remove(bonus);
                     } else {
-                        bonus.setTranslateY(bonus.getTranslateY() + Config.BONUS_SPEED);
+                        bonus.setTranslateY(bonus.getTranslateY() + Config.BONUS_SPEED * speedFactor);
                         if (bonus.getTranslateX() + bonus.getWidth() > bat.getTranslateX() &&
                                 bonus.getTranslateX() < bat.getTranslateX() + bat.getWidth() &&
                                 bonus.getTranslateY() + bonus.getHeight() > bat.getTranslateY() &&
@@ -320,13 +320,12 @@ public class Level extends Parent {
                     lostLife();
                 }
             }
-        });
-        timeline.getKeyFrames().add(kf);
+        };
     }
 
     public void start() {
         startingTimeline.play();
-        timeline.play();
+        animationTimer.start();
         group.getChildren().get(0).requestFocus();
         updateScore(0);
         updateLives();
@@ -334,7 +333,7 @@ public class Level extends Parent {
 
     public void stop() {
         startingTimeline.stop();
-        timeline.stop();
+        animationTimer.stop();
     }
 
     private void initLevel() {
