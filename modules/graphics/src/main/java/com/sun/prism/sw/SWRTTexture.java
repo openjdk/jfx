@@ -32,6 +32,7 @@ import com.sun.pisces.PiscesRenderer;
 import com.sun.pisces.RendererBase;
 import com.sun.prism.Graphics;
 import com.sun.prism.RTTexture;
+import com.sun.prism.impl.PrismSettings;
 
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
@@ -57,7 +58,11 @@ class SWRTTexture extends SWArgbPreTexture implements RTTexture {
 
     @Override
     public int[] getPixels() {
-        return getDataNoClone();
+        if (contentWidth == physicalWidth) {
+            return getDataNoClone();
+        } else {
+            return null;
+        }
     }
 
     @Override
@@ -72,31 +77,34 @@ class SWRTTexture extends SWArgbPreTexture implements RTTexture {
     
     @Override
     public boolean readPixels(Buffer pixels) {
-        final int pixbuf[] = getPixels();
+        if (PrismSettings.debug) {
+            System.out.println("+ SWRTT.readPixels: this: " + this);
+        }
 
+        final int pixbuf[] = getDataNoClone();
         pixels.clear();
         // REMIND: This assumes that the caller wants BGRA PRE data...?
         if (pixels instanceof IntBuffer) {
-            ((IntBuffer)pixels).put(pixbuf);
+            final IntBuffer iPixels = (IntBuffer)pixels;
+            for (int i = 0; i < contentHeight; i++) {
+                iPixels.put(pixbuf, i*physicalWidth, contentWidth);
+            }
         } else if (pixels instanceof ByteBuffer) {
             final ByteBuffer bPixels = (ByteBuffer)pixels;
-            final int length = getContentWidth() * getContentHeight();
-            for (int i = 0; i < length; i++) {
-                final int argb = pixbuf[i];
-                final byte a = (byte) (argb >> 24);
-                final byte r = (byte) (argb >> 16);
-                final byte g = (byte) (argb >>  8);
-                final byte b = (byte) (argb      );
-                bPixels.put(b).put(g).put(r).put(a);
+            for (int i = 0; i < contentHeight; i++) {
+                for (int j = 0; j < contentWidth; j++) {
+                    final int argb = pixbuf[i*physicalWidth + j];
+                    final byte a = (byte) (argb >> 24);
+                    final byte r = (byte) (argb >> 16);
+                    final byte g = (byte) (argb >>  8);
+                    final byte b = (byte) (argb      );
+                    bPixels.put(b).put(g).put(r).put(a);
+                }
             }
         } else {
             return false;
         }
         return true;
-    }
-
-    @Override public boolean isSurfaceLost() {
-        return false;
     }
 
     public Screen getAssociatedScreen() {
@@ -116,20 +124,6 @@ class SWRTTexture extends SWArgbPreTexture implements RTTexture {
 
     public void setOpaque(boolean opaque) {
         this.isOpaque = opaque;
-    }
-
-    public int getPhysicalWidth() {
-        // If the surface has not yet been created (typically that means
-        // createGraphics() has not yet been called), we will plan to
-        // create it at the content size initially.
-        return (getSurface() == null) ? getContentWidth() : getSurface().getWidth();
-    }
-
-    public int getPhysicalHeight() {
-        // If the surface has not yet been created (typically that means
-        // createGraphics() has not yet been called), we will plan to
-        // create it at the content size initially.
-        return (getSurface() == null) ? getContentHeight() : getSurface().getHeight();
     }
 
     Rectangle getDimensions() { return dimensions; }

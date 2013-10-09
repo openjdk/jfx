@@ -47,7 +47,7 @@ import com.sun.prism.paint.Stop;
 
 final class SWPaint {
 
-    private final SWResourceFactory factory;
+    private final SWContext context;
     private final PiscesRenderer pr;
 
     private final BaseTransform paintTx = new Affine2D();
@@ -56,8 +56,8 @@ final class SWPaint {
     private float compositeAlpha = 1.0f;
     private float px, py, pw, ph;
 
-    SWPaint(SWResourceFactory factory, PiscesRenderer pr) {
-        this.factory = factory;
+    SWPaint(SWContext context, PiscesRenderer pr) {
+        this.context = context;
         this.pr = pr;
     }
 
@@ -175,18 +175,18 @@ final class SWPaint {
                 break;
             case IMAGE_PATTERN:
                 final ImagePattern ip = (ImagePattern)p;
-                this.computeImagePatternTransform(ip, tx, x, y, width, height);
                 if (ip.getImage().getPixelFormat() == PixelFormat.BYTE_ALPHA) {
                     throw new UnsupportedOperationException("Alpha image is not supported as an image pattern.");
                 } else {
-                    SWArgbPreTexture tex = (SWArgbPreTexture)factory.createTexture(ip.getImage(),
-                            Texture.Usage.DEFAULT,
-                            Texture.WrapMode.REPEAT);
+                    this.computeImagePatternTransform(ip, tx, x, y, width, height);
+                    final SWArgbPreTexture tex = context.validateImagePaintTexture(ip.getImage().getWidth(), ip.getImage().getHeight());
+                    tex.update(ip.getImage());
                     if (this.compositeAlpha < 1.0f) {
                         tex.applyCompositeAlpha(this.compositeAlpha);
                     }
+
                     this.pr.setTexture(RendererBase.TYPE_INT_ARGB_PRE, tex.getDataNoClone(),
-                            tex.getPhysicalWidth(), tex.getPhysicalHeight(),
+                            tex.getContentWidth(), tex.getContentHeight(), tex.getPhysicalWidth(),
                             piscesTx,
                             tex.getWrapMode() == Texture.WrapMode.REPEAT,
                             tex.hasAlpha());
