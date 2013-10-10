@@ -63,6 +63,7 @@ public class JavaFXImageBuilder extends AbstractMap<String, Object> implements B
             } else if ( "smooth".equals(key)) {
                 smooth =  Boolean.parseBoolean(str);
             } else if ( "backgroundLoading".equals(key)) {
+                backgroundLoading = Boolean.parseBoolean(str);
             } else {
                 throw new IllegalArgumentException("Unknown Image property: " + key);
             }
