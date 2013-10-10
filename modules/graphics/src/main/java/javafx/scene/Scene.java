@@ -42,6 +42,7 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.WritableValue;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
@@ -552,7 +553,7 @@ public class Scene implements EventTarget {
             // The cssFlag is set to clean in either Node.processCSS or
             // Node.impl_processCSS(boolean)
             sceneRoot.impl_clearDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS);
-            sceneRoot.processCSS();
+            sceneRoot.processCSS(null);
         }
     }
 

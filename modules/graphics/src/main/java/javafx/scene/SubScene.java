@@ -31,6 +31,7 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.value.WritableValue;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point3D;
 import javafx.scene.input.PickResult;
@@ -537,25 +538,25 @@ public class SubScene extends Node {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated @Override
-    protected void impl_processCSS() {
+    protected void impl_processCSS(WritableValue<Boolean> cacheHint) {
         // Nothing to do...
         if (cssFlag == CssFlags.CLEAN) { return; }
 
         if (getRoot().cssFlag == CssFlags.CLEAN) {
             getRoot().cssFlag = cssFlag;
         }
-        super.impl_processCSS();
-        getRoot().processCSS();
+        super.impl_processCSS(cacheHint);
+        getRoot().processCSS(cacheHint);
     }
 
     @Override
-    void processCSS() {
+    void processCSS(WritableValue<Boolean> cacheHint) {
         Parent root = getRoot();
         if (root.impl_isDirty(DirtyBits.NODE_CSS)) {
             root.impl_clearDirty(DirtyBits.NODE_CSS);
             if (cssFlag == CssFlags.CLEAN) { cssFlag = CssFlags.UPDATE; }
         }
-        super.processCSS();
+        super.processCSS(cacheHint);
     }
 
     @Override void updateBounds() {
