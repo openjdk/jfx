@@ -40,13 +40,13 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
      *                                                                        *
      *************************************************************************/
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void basicFill() {
         setStyle("-fx-background-color: red;");
         checkRegionCornersAndBoundariesForFills();
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void translucentFill() {
         setStyle("-fx-background-color: rgba(255, 0, 0, .2);");
         // multiply through the alpha
@@ -54,7 +54,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
                 region.getBackground().getFills().get(0), Color.rgb(255, 204, 204), SCENE_FILL);
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void basicFill_Insets1() {
         setStyle(
                 "-fx-background-color: red;" +
@@ -62,7 +62,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionCornersAndBoundariesForFills();
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void basicFill_Insets2() {
         setStyle(
                 "-fx-background-color: red;" +
@@ -70,7 +70,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionCornersAndBoundariesForFills();
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void basicFill_Insets3() {
         setStyle(
                 "-fx-background-color: red;" +
@@ -78,7 +78,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionCornersAndBoundariesForFills();
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void basicFill_Insets4() {
         setStyle(
                 "-fx-background-color: red;" +
@@ -86,7 +86,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionCornersAndBoundariesForFills();
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void basicFill_NegativeInsets1() {
         setStyle(
                 "-fx-background-color: red;" +
@@ -94,7 +94,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionCornersAndBoundariesForFills();
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void basicFill_NegativeInsets2() {
         setStyle(
                 "-fx-background-color: red;" +
@@ -102,7 +102,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionCornersAndBoundariesForFills();
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void basicFill_NegativeInsets3() {
         setStyle(
                 "-fx-background-color: red;" +
@@ -110,7 +110,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionCornersAndBoundariesForFills();
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void basicFill_NegativeInsets4() {
         setStyle(
                 "-fx-background-color: red;" +
@@ -118,7 +118,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionCornersAndBoundariesForFills();
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void basicFill_MixedInsets() {
         setStyle(
                 "-fx-background-color: red;" +
@@ -126,7 +126,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionCornersAndBoundariesForFills();
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void basicFill_Radius1() {
         setStyle(
                 "-fx-background-color: red;" +
@@ -134,7 +134,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionCornersAndBoundariesForFills();
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void basicFill_Radius2() {
         setStyle(
                 "-fx-background-color: red;" +
@@ -142,7 +142,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionCornersAndBoundariesForFills();
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void basicFill_Radius3() {
         setStyle(
                 "-fx-background-color: red;" +
@@ -150,7 +150,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionCornersAndBoundariesForFills();
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void basicFill_Radius4() {
         setStyle(
                 "-fx-background-color: red;" +
@@ -172,7 +172,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
 //                "-fx-background-radius: 10 20 30 40 50 60 70 80");
 //    }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void basicFill_RadiusAndInsets() {
         setStyle(
                 "-fx-background-color: red;" +
@@ -182,7 +182,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
     }
 
     // NOTE: A negative radius from CSS is treated as 0.
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void basicFill_NegativeRadius1() {
         setStyle(
                 "-fx-background-color: red;" +
@@ -191,7 +191,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
     }
 
     // NOTE: A negative radius from CSS is treated as 0.
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void basicFill_NegativeRadius2() {
         setStyle(
                 "-fx-background-color: red;" +
@@ -200,7 +200,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
     }
 
     // NOTE: A negative radius from CSS is treated as 0.
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void basicFill_NegativeRadius3() {
         setStyle(
                 "-fx-background-color: red;" +
@@ -209,7 +209,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
     }
 
     // NOTE: A negative radius from CSS is treated as 0.
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void basicFill_NegativeRadius4() {
         setStyle(
                 "-fx-background-color: red;" +
@@ -227,13 +227,13 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
     // I actually could predict the color under a point, rather than just asserting it isn't
     // the Scene's fill.
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void imageFill() {
         setStyle("-fx-background-color: repeating-image-pattern('javafx/scene/layout/test20x20.png');");
         checkRegionCornersAndBoundariesForFills();
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void imageFill_MixedInsets() {
         setStyle(
                 "-fx-background-color: repeating-image-pattern('javafx/scene/layout/test20x20.png');" +
@@ -241,7 +241,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionCornersAndBoundariesForFills();
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void imageFill_Radius4() {
         setStyle(
                 "-fx-background-color: repeating-image-pattern('javafx/scene/layout/test20x20.png');" +
@@ -249,7 +249,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionCornersAndBoundariesForFills();
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void imageFill_MissingImage() {
         setStyle(
                 "-fx-background-color: repeating-image-pattern('javafx/scene/layout/missing.png');" +
@@ -257,43 +257,43 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         assertColorEquals(SCENE_FILL, WIDTH / 2, HEIGHT / 2, TOLERANCE);
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void imageFill_Stretched() {
         setStyle("-fx-background-color: image-pattern('javafx/scene/layout/test20x20.png');");
         checkRegionCornersAndBoundariesForFills();
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void imageFill_Stretched2() {
         setStyle("-fx-background-color: image-pattern('javafx/scene/layout/test20x20.png', 0, 0, 1, 1);");
         checkRegionCornersAndBoundariesForFills();
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void imageFill_Stretched3() {
         setStyle("-fx-background-color: image-pattern('javafx/scene/layout/test20x20.png', 0, 0, 1, 1, true);");
         checkRegionCornersAndBoundariesForFills();
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void imageFill_Tiled() {
         setStyle("-fx-background-color: image-pattern('javafx/scene/layout/test20x20.png', 0, 0, 40, 40, false);");
         checkRegionCornersAndBoundariesForFills();
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void linearFill() {
         setStyle("-fx-background-color: linear-gradient(to bottom, red 0%, blue 100%);");
         checkRegionCornersAndBoundariesForFills();
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void linearFill2() {
         setStyle("-fx-background-color: linear-gradient(to right, red 0%, blue 100%);");
         checkRegionCornersAndBoundariesForFills();
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void linearFill_MixedInsets() {
         setStyle(
                 "-fx-background-color: linear-gradient(to bottom, red 0%, blue 100%);" +
@@ -301,7 +301,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionCornersAndBoundariesForFills();
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void linearFill_Radius4() {
         setStyle(
                 "-fx-background-color: linear-gradient(to bottom, red 0%, blue 100%);" +
@@ -317,7 +317,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
      *                                                                        *
      *************************************************************************/
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void testScenario1() {
         setStyle(
                 "-fx-background-color: red;" +
@@ -327,7 +327,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionCornersAndBoundariesForFills();
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void testScenario2() {
         setStyle(
                 "-fx-background-color: red, green, blue, grey;" +
@@ -362,7 +362,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionCornersAndBoundariesOfBackgroundFill(grey, Color.BLUE);
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void testScenario3() {
         setStyle(
                 "-fx-background-color: red, green, blue, grey;" +
@@ -397,7 +397,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionCornersAndBoundariesOfBackgroundFill(grey, Color.BLUE);
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void testScenario4() {
         setStyle(
                 "-fx-background-color: red, green, blue, repeating-image-pattern('javafx/scene/layout/test20x20.png');" +
@@ -432,7 +432,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
 //        checkRegionCornersAndBoundariesOfBackgroundFill(image, Color.BLUE);
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void testScenario5() {
         setStyle(
                 "-fx-background-color: red, green, repeating-image-pattern('javafx/scene/layout/test20x20.png'), blue;" +
@@ -467,7 +467,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
 //        checkRegionCornersAndBoundariesOfBackgroundFill(blue, Color.BLUE, null);
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void testExample1() {
         setStyle(
                 "-fx-background-color: red, green, blue;" +
@@ -483,7 +483,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
      *                                                                        *
      *************************************************************************/
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void testOnePixelTopInset() {
         setStyle(
                 "-fx-background-color: red, yellow;" +
@@ -511,7 +511,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionBottomLeftCorner(yellow, Color.YELLOW, SCENE_FILL, 0, .2);
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void testOnePixelRightInset() {
         setStyle(
                 "-fx-background-color: red, yellow;" +
@@ -539,7 +539,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionBottomLeftCorner(yellow, Color.YELLOW, SCENE_FILL, 0, .2);
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void testOnePixelBottomInset() {
         setStyle(
                 "-fx-background-color: red, yellow;" +
@@ -567,7 +567,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionBottomLeftCorner(yellow, Color.YELLOW, SCENE_FILL, 0, .2);
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void testOnePixelLeftInset() {
         setStyle(
                 "-fx-background-color: red, yellow;" +
@@ -596,7 +596,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
     }
 
     @Ignore("RT-33446")
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void testHalfPixelTopInset() {
         setStyle(
                 "-fx-background-color: red, yellow;" +
@@ -626,7 +626,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
     }
 
     @Ignore("RT-33446")
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void testHalfPixelRightInset() {
         setStyle(
                 "-fx-background-color: red, yellow;" +
@@ -656,7 +656,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
     }
 
     @Ignore("RT-33446")
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void testHalfPixelBottomInset() {
         setStyle(
                 "-fx-background-color: red, yellow;" +
@@ -686,7 +686,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
     }
 
     @Ignore("RT-33446")
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void testHalfPixelLeftInset() {
         setStyle(
                 "-fx-background-color: red, yellow;" +
@@ -716,7 +716,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
     }
 
     @Ignore("RT-33446")
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void testHalfPixelTopLeftInset() {
         setStyle(
                 "-fx-background-color: red, yellow;" +
@@ -749,7 +749,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionBottomLeftCorner(yellow, blended, SCENE_FILL, 0, .2);
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void testNoInsets() {
         setStyle(
                 "-fx-background-color: red, yellow;" +
@@ -761,7 +761,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionCornersAndBoundariesOfBackgroundFill(yellow, SCENE_FILL);
     }
 
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void testYellowOnRed() {
         setStyle(
                 "-fx-background-color: red, yellow;" +

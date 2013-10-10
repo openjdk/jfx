@@ -32,7 +32,7 @@ public class RegionBorderImageUITest extends RegionUITestBase {
     @Test public void dummy() {
 
     }
-//    @Test(timeout=5000)
+//    @Test(timeout=20000)
 //    public void test() {
 //        setStyle(
 //                "-fx-border-image-source: url('javafx/scene/layout/border.png');" +
@@ -43,7 +43,7 @@ public class RegionBorderImageUITest extends RegionUITestBase {
 //        System.out.println("WHAT");
 //    }
 //
-//    @Test(timeout=5000)
+//    @Test(timeout=20000)
 //    public void test2() {
 //        setStyle(
 //                "-fx-border-image-source: url('javafx/scene/layout/border.png');" +
@@ -54,7 +54,7 @@ public class RegionBorderImageUITest extends RegionUITestBase {
 //        System.out.println("WHAT");
 //    }
 //
-//    @Test(timeout=5000)
+//    @Test(timeout=20000)
 //    public void test3() {
 //        setStyle(
 //                "-fx-border-image-source: url('javafx/scene/layout/border-uneven.png');" +
@@ -65,7 +65,7 @@ public class RegionBorderImageUITest extends RegionUITestBase {
 //        System.out.println("WHAT");
 //    }
 //
-    @Test(timeout=5000)
+    @Test(timeout=20000)
     public void test4() {
         setStyle(
                 "-fx-border-image-source: url('javafx/scene/layout/border-stretch.png');" +
@@ -76,7 +76,7 @@ public class RegionBorderImageUITest extends RegionUITestBase {
         System.out.println("WHAT");
     }
 
-//    @Test(timeout=5000)
+//    @Test(timeout=20000)
 //    public void differentSliceAndWidths() {
 //        setStyle(
 //                "-fx-border-image-source: url('javafx/scene/layout/border.png');" +
@@ -86,7 +86,7 @@ public class RegionBorderImageUITest extends RegionUITestBase {
 //                "-fx-border-image-width: 10 15 20 25;");
 //    }
 //
-//    @Test(timeout=5000)
+//    @Test(timeout=20000)
 //    public void repeatX() {
 //        setStyle("-fx-border-image-source: url('javafx/scene/layout/border.png');" +
 //                        "-fx-border-image-repeat: repeat-x;" +
@@ -94,7 +94,7 @@ public class RegionBorderImageUITest extends RegionUITestBase {
 //                        "-fx-border-image-width: 28;");
 //    }
 //
-//    @Test(timeout=5000)
+//    @Test(timeout=20000)
 //    public void repeatY() {
 //        setStyle("-fx-border-image-source: url('javafx/scene/layout/border.png');" +
 //                        "-fx-border-image-repeat: repeat-y;" +
@@ -102,7 +102,7 @@ public class RegionBorderImageUITest extends RegionUITestBase {
 //                        "-fx-border-image-width: 28;");
 //    }
 //
-//    @Test(timeout=5000)
+//    @Test(timeout=20000)
 //    public void testWider() {
 //        setStyle(
 //                "-fx-border-image-source: url('javafx/scene/layout/border.png');" +
@@ -111,7 +111,7 @@ public class RegionBorderImageUITest extends RegionUITestBase {
 //                "-fx-border-image-repeat: round;");
 //    }
 //
-//    @Test(timeout=5000)
+//    @Test(timeout=20000)
 //    public void testWider2() {
 //        setStyle(
 //                "-fx-border-image-source: url('javafx/scene/layout/border.png');" +
@@ -120,7 +120,7 @@ public class RegionBorderImageUITest extends RegionUITestBase {
 //                "-fx-border-image-repeat: repeat;");
 //    }
 //
-//    @Test(timeout=5000)
+//    @Test(timeout=20000)
 //    public void testWider3() {
 //        setStyle(
 //                "-fx-border-image-source: url('javafx/scene/layout/border.png');" +
@@ -129,7 +129,7 @@ public class RegionBorderImageUITest extends RegionUITestBase {
 //                "-fx-border-image-repeat: space;");
 //    }
 //
-//    @Test(timeout=5000)
+//    @Test(timeout=20000)
 //    public void testWider4() {
 //        setStyle(
 //                "-fx-border-image-source: url('javafx/scene/layout/border.png');" +
@@ -138,7 +138,7 @@ public class RegionBorderImageUITest extends RegionUITestBase {
 //                "-fx-border-image-repeat: stretch;");
 //    }
 //
-//    @Test(timeout=5000)
+//    @Test(timeout=20000)
 //    public void repeatXWider() {
 //        setStyle("-fx-border-image-source: url('javafx/scene/layout/border.png');" +
 //                        "-fx-border-image-repeat: repeat-x;" +
@@ -146,7 +146,7 @@ public class RegionBorderImageUITest extends RegionUITestBase {
 //                        "-fx-border-image-width: 40;");
 //    }
 //
-//    @Test(timeout=5000)
+//    @Test(timeout=20000)
 //    public void repeatYWider() {
 //        setStyle("-fx-border-image-source: url('javafx/scene/layout/border.png');" +
 //                        "-fx-border-image-repeat: repeat-y;" +
@@ -154,7 +154,7 @@ public class RegionBorderImageUITest extends RegionUITestBase {
 //                        "-fx-border-image-width: 40;");
 //    }
 
-//    @Test(timeout=5000)
+//    @Test(timeout=20000)
 //    public void withInsets() {
 //        setStyle(
 //                "-fx-border-image-source: url('javafx/scene/layout/popover-no-arrow-empty.png');" +
@@ -162,7 +162,7 @@ public class RegionBorderImageUITest extends RegionUITestBase {
 //                "-fx-border-image-width: 78 50 60 50;");
 //    }
 //
-//    @Test(timeout=5000)
+//    @Test(timeout=20000)
 //    public void withInsets2() {
 //        setStyle(
 //                "-fx-border-image-source: url('javafx/scene/layout/popover-no-arrow-empty.png');" +
@@ -171,7 +171,7 @@ public class RegionBorderImageUITest extends RegionUITestBase {
 //                "-fx-border-image-insets: -27 -37 -47 -37;");
 //    }
 //
-//    @Test(timeout=5000)
+//    @Test(timeout=20000)
 //    public void button() {
 //        setStyle(
 //                "-fx-border-image-source: url('javafx/scene/layout/BlackButton.png');" +
