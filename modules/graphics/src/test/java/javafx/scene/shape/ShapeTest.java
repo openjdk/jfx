@@ -25,6 +25,7 @@
 
 package javafx.scene.shape;
 
+import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGShape;
 import javafx.beans.value.WritableValue;
@@ -201,6 +202,42 @@ public class ShapeTest {
         List<Double> actual = shape.getStrokeDashArray();
         assertEquals(expected, actual);        
         
+    }
+
+    boolean listenerCalled = false;
+    // make sure shapeChangeListener doesn't hold reference to runnable.
+    @Test public void testShapeChangeListenerLeakTest() {
+
+        Shape shape = new StubShape();
+
+        Runnable listener = new Runnable() {
+            public void run() {
+                listenerCalled = true;
+            }
+        };
+
+        shape.impl_setShapeChangeListener(listener);
+
+        // sync peer to clear out dirty bits
+        shape.impl_syncPeer();
+
+        // should trigger listener
+        shape.setFill(Color.GREEN);
+
+        assert(listenerCalled);
+
+        listener = null;
+        System.gc();
+
+        // sync peer to clear out dirty bits
+        shape.impl_syncPeer();
+
+        // this flag should remain false (listener should not be called)
+        listenerCalled = false;
+
+        shape.setFill(Color.RED);
+
+        assert(!listenerCalled);
     }
 
     public class StubShape extends Shape {
