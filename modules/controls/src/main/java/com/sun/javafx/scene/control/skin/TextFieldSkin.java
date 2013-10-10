@@ -175,6 +175,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         getChildren().add(textGroup);
         if (SHOW_HANDLES) {
             handleGroup = new Group();
+            handleGroup.setManaged(false);
             handleGroup.getChildren().addAll(caretHandle, selectionHandle1, selectionHandle2);
             getChildren().add(handleGroup);
         }
@@ -764,7 +765,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         }
 
         if (SHOW_HANDLES) {
-            handleGroup.setLayoutX(x);
+            handleGroup.setLayoutX(x + textTranslateX.get());
             handleGroup.setLayoutY(y);
 
             // Resize handles for caret and anchor.
