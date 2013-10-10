@@ -35,6 +35,7 @@ import com.sun.javafx.image.impl.ByteBgraPre;
 import com.sun.javafx.sg.prism.GrowableDataBuffer;
 import com.sun.javafx.sg.prism.NGCanvas;
 import com.sun.javafx.tk.Toolkit;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.VPos;
 import javafx.scene.effect.Blend;
 import javafx.scene.effect.BlendMode;
@@ -371,6 +372,7 @@ public final class GraphicsContext {
         buf.putFloat((float) x);
         buf.putFloat((float) y);
         buf.putFloat((float) maxWidth);
+        buf.putBoolean(theCanvas.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT);
         buf.putObject(text);
     }
 

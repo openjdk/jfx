@@ -168,7 +168,7 @@ public class NGCanvas extends NGNode {
             g = null;
             input = null;
         }
-       
+
         public boolean validate(Graphics resg, int tw, int th) {
             int cw, ch;
             boolean create;
@@ -237,7 +237,7 @@ public class NGCanvas extends NGNode {
             }
             return false;
         }
-        
+
         private void save(Graphics g, int tw, int th) {
             if (tex.isVolatile()) {
                 if (savedPixelData == null) {
@@ -273,7 +273,7 @@ public class NGCanvas extends NGNode {
             tex.readPixels(pixels);
             validPixels = true;
         }
-        
+
         private void restore(Graphics g, int tw, int th) {
             if (validPixels) {
                 Image img = Image.fromIntArgbPreData(pixels, tw, th);
@@ -483,17 +483,17 @@ public class NGCanvas extends NGNode {
     }
 
     private static void shapebounds(Shape shape, RectBounds bounds,
-                                    BaseTransform transform) 
+                                    BaseTransform transform)
     {
         TEMP_COORDS[0] = TEMP_COORDS[1] = Float.POSITIVE_INFINITY;
         TEMP_COORDS[2] = TEMP_COORDS[3] = Float.NEGATIVE_INFINITY;
         Shape.accumulate(TEMP_COORDS, shape, transform);
-        bounds.setBounds(TEMP_COORDS[0], TEMP_COORDS[1], 
+        bounds.setBounds(TEMP_COORDS[0], TEMP_COORDS[1],
                          TEMP_COORDS[2], TEMP_COORDS[3]);
     }
 
-    private static void strokebounds(BasicStroke stroke, Shape shape, 
-                                     RectBounds bounds, BaseTransform transform) 
+    private static void strokebounds(BasicStroke stroke, Shape shape,
+                                     RectBounds bounds, BaseTransform transform)
     {
         TEMP_COORDS[0] = TEMP_COORDS[1] = Float.POSITIVE_INFINITY;
         TEMP_COORDS[2] = TEMP_COORDS[3] = Float.NEGATIVE_INFINITY;
@@ -504,7 +504,7 @@ public class NGCanvas extends NGNode {
 
     @Override
     protected void renderContent(Graphics g) {
-        initCanvas(g);        
+        initCanvas(g);
         if (cv.tex != null) {
             if (thebuf != null) {
                 thebuf.switchToRead();
@@ -930,7 +930,7 @@ public class NGCanvas extends NGNode {
      * Calculate bounds and/or render one single rendering operation.
      * All of the data for the rendering operation should be consumed
      * so that the buffer is left at the next token in the stream.
-     * 
+     *
      * @param token the stream token for the rendering op
      * @param buf the GrowableDataBuffer to get rendering info from
      * @param gr  the Graphics to render to, if not null
@@ -1061,7 +1061,7 @@ public class NGCanvas extends NGNode {
                 TEMP_ARC.setArc(x, y, w, h, as, ae, arctype);
                 if (token == FILL_ARC) {
                     if (bounds != null) {
-                        shapebounds(TEMP_ARC, bounds, transform);                       
+                        shapebounds(TEMP_ARC, bounds, transform);
                     }
                     if (gr != null) {
                         setupFill(gr);
@@ -1125,10 +1125,14 @@ public class NGCanvas extends NGNode {
                 float x = buf.getFloat();
                 float y = buf.getFloat();
                 float maxWidth = buf.getFloat();
+                boolean rtl = buf.getBoolean();
                 String string = (String) buf.getObject();
+                int dir = rtl ? PrismTextLayout.DIRECTION_RTL :
+                                PrismTextLayout.DIRECTION_LTR;
 
                 textLayout.setContent(string, pgfont);
                 textLayout.setAlignment(align);
+                textLayout.setDirection(dir);
                 float xAlign = 0, yAlign = 0;
                 BaseBounds layoutBounds = textLayout.getBounds();
                 float layoutWidth = layoutBounds.getWidth();
@@ -1164,10 +1168,21 @@ public class NGCanvas extends NGNode {
                 if (gr != null) {
                     if (maxWidth > 0.0 && layoutWidth > maxWidth) {
                         float sx = maxWidth / layoutWidth;
-                        gr.translate(x - xAlign * sx, y - yAlign);
-                        gr.scale(sx, 1);
+                        if (rtl) {
+                            x += maxWidth;
+                            gr.translate(x - xAlign * sx, y - yAlign);
+                            gr.scale(-sx, 1);
+                        } else {
+                            gr.translate(x - xAlign * sx, y - yAlign);
+                            gr.scale(sx, 1);
+                        }
                         ngtext.setLayoutLocation(0, 0);
                     } else {
+                        if (rtl) {
+                            x = -(x + layoutWidth);
+                            xAlign = -xAlign;
+                            gr.scale(-1, 1);
+                        }
                         ngtext.setLayoutLocation(xAlign - x, yAlign - y);
                     }
                     if (token == FILL_TEXT) {
@@ -1394,7 +1409,7 @@ public class NGCanvas extends NGNode {
         public boolean reducesOpaquePixels() {
             return false;
         }
-        
+
         @Override
         public DirtyRegionContainer getDirtyRegions(Effect defaultInput, DirtyRegionPool regionPool) {
             return null; // Never called
