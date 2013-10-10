@@ -1,26 +1,21 @@
 package javafx.scene.control;
 
 import com.sun.javafx.pgstub.StubToolkit;
-import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.Toolkit;
+import javafx.geometry.Bounds;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.layout.HBox;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.text.Font;
 import javafx.stage.Stage;
+import junit.framework.Assert;
 import org.junit.Test;
 
 import static junit.framework.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 
-/**
- * Created with IntelliJ IDEA.
- * User: dgrieve
- * Date: 9/30/13
- * Time: 2:22 PM
- * To change this template use File | Settings | File Templates.
- */
 public class MiscellaneousTests {
 
     @Test
@@ -89,4 +84,49 @@ public class MiscellaneousTests {
         assertSame(badLabel, field.getParent());
 
     }
+
+    @Test public void test_RT_33080() {
+
+        // Rough approximation of sample code from the bug and steps to reproduce
+
+        final HBox root = new HBox(10);
+
+        final RadioButton rb1 = new RadioButton("RB1");
+        final RadioButton rb2 = new RadioButton("RB2");
+
+        root.getChildren().addAll(rb1, rb2);
+
+        Scene scene = new Scene(root);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+
+        ((StubToolkit)Toolkit.getToolkit()).fireTestPulse();
+
+        // click on rb1
+        rb1.setSelected(true);
+
+        // pulse
+        ((StubToolkit)Toolkit.getToolkit()).fireTestPulse();
+
+        // change font
+        rb1.setFont(new Font("system", 22));
+        rb2.setFont(new Font("system", 22));
+
+        // pulse
+        ((StubToolkit) Toolkit.getToolkit()).fireTestPulse();
+
+        // click on rb1 again
+        rb1.setSelected(false);
+
+        // pulse
+        ((StubToolkit) Toolkit.getToolkit()).fireTestPulse();
+
+        // At this point, if the bug is present, the width and height of the buttons will be different.
+        Bounds b1 = rb1.getLayoutBounds();
+        Bounds b2 = rb2.getLayoutBounds();
+
+        Assert.assertEquals(rb1.getWidth(), rb2.getWidth(), 0.00001);
+    }
+
 }
