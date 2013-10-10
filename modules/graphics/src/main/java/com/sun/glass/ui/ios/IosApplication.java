@@ -48,22 +48,14 @@ public final class IosApplication extends Application {
         });
         _initIDs();
     }
-
-    private Thread dispatchThread;
     
     /**
      * @inheritDoc
      */
     @Override
     protected void runLoop(final Runnable launchable) {
-        dispatchThread = new Thread(new Runnable(){
-            @Override
-            public void run() {
-                ClassLoader ccl = IosApplication.class.getClassLoader(); 
-                _runLoop(launchable, ccl);
-            }
-        }, "NativeRunloopThread");
-        dispatchThread.start();
+        ClassLoader ccl = IosApplication.class.getClassLoader(); 
+        _runLoop(launchable, ccl);
     }
     private native void _runLoop(Runnable launchable, ClassLoader contextClassLoader);
 
@@ -72,13 +64,13 @@ public final class IosApplication extends Application {
      */
     @Override
     protected void finishTerminating() {
-        if (dispatchThread != null) {
-            try {
-                dispatchThread.join();
-            } catch (InterruptedException e) { }
-            dispatchThread = null;
-        }
+        setEventThread(null);
         super.finishTerminating();
+    }
+    
+    // Called from the native code
+    private void setEventThread() {
+        setEventThread(Thread.currentThread());
     }
 
     /**
