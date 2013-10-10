@@ -53,7 +53,7 @@ public interface EmbeddedSceneInterface {
      */
     public void mouseEvent(int type, int button,
                            boolean primaryBtnDown, boolean middleBtnDown, boolean secondaryBtnDown,
-                           int clickCount, int x, int y, int xAbs, int yAbs,
+                           int x, int y, int xAbs, int yAbs,
                            boolean shift, boolean ctrl, boolean alt, boolean meta,
                            int wheelRotation, boolean popupTrigger);
     /*
@@ -67,8 +67,8 @@ public interface EmbeddedSceneInterface {
     public void menuEvent(int x, int y, int xAbs, int yAbs, boolean isKeyboardTrigger);
     
     public boolean traverseOut(Direction dir);
-    
+
     public void setDragStartListener(EmbeddedSceneDragStartListenerInterface l);
-    
+
     public EmbeddedSceneDropTargetInterface createDropTarget();
 }

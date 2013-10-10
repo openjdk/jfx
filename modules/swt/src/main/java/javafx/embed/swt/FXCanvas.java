@@ -508,6 +508,9 @@ public class FXCanvas extends Canvas {
                 middleBtnDown &= me.button != 2;
                 secondaryBtnDown &= me.button != 3;
                 break;
+            case AbstractEvents.MOUSEEVENT_CLICKED:
+                // Don't send click events to FX, as they are generated in Scene
+                return;
             default:
                 break;
         }
@@ -515,7 +518,6 @@ public class FXCanvas extends Canvas {
                 embedMouseType,
                 SWTEvents.mouseButtonToEmbedMouseButton(me.button, me.stateMask),
                 primaryBtnDown, middleBtnDown, secondaryBtnDown,
-                me.count,
                 me.x, me.y,
                 los.x, los.y,
                 shift, control, alt, meta,

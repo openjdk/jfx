@@ -338,7 +338,7 @@ final class SWTView extends View {
                 //TODO - compute trigger, don't hard code
                 boolean isPopupTrigger = false;
                 Point point = canvas.toDisplay(event.x, event.y);
-                eventHandler.handleMouseEvent(this, time, type, button, event.x, event.y, point.x, point.y, event.count, modifiers, isPopupTrigger, false);
+                eventHandler.handleMouseEvent(this, time, type, button, event.x, event.y, point.x, point.y, modifiers, isPopupTrigger, false);
             }
         }
     }
