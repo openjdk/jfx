@@ -94,14 +94,31 @@ public abstract class ManagedResource<T> implements GraphicsResource {
         }
     }
 
-    public static boolean anyLockedResources() {
-        for (WeakLinkedList cur = resourceHead.next; cur != null; cur = cur.next) {
+    public static void freeDisposalRequestedAndCheckResources() {
+        boolean anyLockedResources = false;
+        WeakLinkedList prev = resourceHead;
+        WeakLinkedList cur = prev.next;
+        while (cur != null) {
             ManagedResource mr = cur.getResource();
-            if (mr != null && mr.isValid() && !mr.isPermanent() && mr.isLocked()) {
-                return true;
+            if (mr != null && mr.disposalRequested) {
+                mr.free();
+                mr.resource = null;
+                mr.disposalRequested = false;
+                cur.pool.recordFree(cur.size);
+                cur = cur.next;
+                prev.next = cur;
+            } else {
+                if (mr != null && mr.isValid() && !mr.isPermanent() && mr.isLocked()) {
+                    anyLockedResources = true;
+                }
+                prev = cur;
+                cur = cur.next;
             }
         }
-        return false;
+
+        if (PrismSettings.poolStats || anyLockedResources) {    
+            ManagedResource.printSummary();
+        }
     }
 
     public static void printSummary() {
@@ -168,6 +185,7 @@ public abstract class ManagedResource<T> implements GraphicsResource {
     private int employcount;
     ArrayList<Throwable> lockedFrom;
     private boolean permanent;
+    private boolean disposalRequested = false;
 
     protected ManagedResource(T resource, ResourcePool<T> pool) {
         this.resource = resource;
@@ -212,7 +230,7 @@ public abstract class ManagedResource<T> implements GraphicsResource {
     }
 
     public boolean isValid() {
-        return resource != null;
+        return resource != null && !disposalRequested;
     }
 
     public final boolean isLocked() {
@@ -246,10 +264,14 @@ public abstract class ManagedResource<T> implements GraphicsResource {
 
     @Override
     public final void dispose() {
-        if (resource != null) {
-            free();
-            resource = null;
-            unlink();
+        if (pool.isManagerThread()) {
+            if (resource != null) {
+                free();
+                resource = null;
+                unlink();
+            }
+        } else {
+            disposalRequested = true;
         }
     }
 

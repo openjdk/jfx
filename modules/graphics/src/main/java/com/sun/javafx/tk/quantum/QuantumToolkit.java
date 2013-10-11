@@ -128,6 +128,7 @@ import com.sun.scenario.effect.impl.prism.PrFilterContext;
 import com.sun.scenario.effect.impl.prism.PrImage;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
+import com.sun.prism.impl.ManagedResource;
 
 public final class QuantumToolkit extends Toolkit {
 
@@ -1375,7 +1376,8 @@ public final class QuantumToolkit extends Toolkit {
                 } catch (Throwable t) {
                     t.printStackTrace(System.err);
                 } finally {
-                    Disposer.cleanUp();
+                    Disposer.cleanUp();            
+                    ManagedResource.freeDisposalRequestedAndCheckResources();
                 }
             }
         });
