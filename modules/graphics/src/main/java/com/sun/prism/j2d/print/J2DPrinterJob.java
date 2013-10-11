@@ -956,13 +956,18 @@ public class J2DPrinterJob implements PrinterJobImpl {
             return Printable.PAGE_EXISTS;
         }
 
-
         private void printNode(Node node, Graphics g, int w, int h) {
-
             PrismPrintGraphics ppg =
-                new PrismPrintGraphics((Graphics2D)g, w, h);
+                    new PrismPrintGraphics((Graphics2D) g, w, h);
             NGNode pgNode = node.impl_getPeer();
-            pgNode.render(ppg);
+            try {
+                pgNode.render(ppg);
+            } catch (Throwable t) {
+                if (com.sun.prism.impl.PrismSettings.debug) {
+                    System.err.println("printNode caught exception.");
+                    t.printStackTrace();
+                }
+            }
         }
 
         public Printable getPrintable(int pageIndex) {
