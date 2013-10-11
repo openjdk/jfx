@@ -2237,6 +2237,14 @@
               Backgrounds and Borders Module Level 3: Backgrounds</a>)</td>
         </tr>
         <tr>
+            <td class="propertyname">-fx-region-background</td>
+            <td class="value">javafx.scene.layout.Background</td>
+            <td class="default">null</td>
+            <td>This cannot be set directly from CSS but is created from the property values of
+                -fx-background-color, -fx-background-image, -fx-background-insets, -fx-background-position,
+                -fx-background-radius, -fx-background-repeat, -fx-background-size</td>
+        </tr>
+        <tr>
           <td class="propertyname">-fx-background-color</td>
           <td class="value"><a href="#typepaint" class="typelink">&lt;paint&gt;</a>
             [ , <a href="#typepaint" class="typelink">&lt;paint&gt;</a> ]*</td>
@@ -2349,8 +2357,21 @@
         <tr>
           <td colspan="4" class="propertyname"><em>STROKED BORDERS</em> (see <a
               href="http://www.w3.org/TR/css3-background/#borders"
-              target="_blank">CSS
-              Backgrounds and Borders Module Level 3: Borders</a>)</td>
+              target="_blank">CSS Backgrounds and Borders Module Level 3: Borders</a>)
+            <div><em>BORDER IMAGES</em> (see <a href="http://www.w3.org/TR/css3-background/#border-images"
+                                                                                target="_blank">CSS
+                Backgrounds and Borders Module Level 3: Border Images</a>)</div>
+          </td>
+        </tr>
+
+        <tr>
+            <td class="propertyname">-fx-region-border</td>
+            <td class="value">javafx.scene.layout.Border</td>
+            <td class="default">null</td>
+            <td>This cannot be set directly from CSS but is created from the property values of
+                -fx-border-color, -fx-border-insets, -fx-border-radius,  -fx-border-style, -fx-border-width,
+                -fx-border-image-insets, -fx-border-image-repeat, -fx-border-image-slice, -fx-border-image-source,
+                -fx-border-image-width</td>
         </tr>
         <tr>
           <td class="propertyname">-fx-border-color</td>
@@ -2472,11 +2493,6 @@
               series of widths applies to the corresponding item in the series
               of border colors. </p>
           </td>
-        </tr>
-        <tr>
-          <td colspan="4" class="propertyname"><em>BORDER IMAGES</em> (see <a href="http://www.w3.org/TR/css3-background/#border-images"
-              target="_blank">CSS
-              Backgrounds and Borders Module Level 3: Border Images</a>)</td>
         </tr>
         <tr>
           <td class="propertyname">-fx-border-image-source</td>
