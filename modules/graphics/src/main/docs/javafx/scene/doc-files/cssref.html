@@ -1755,7 +1755,8 @@
           <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
           <td class="default">false</td>
           <td class="range">&nbsp;</td>
-          <td>&nbsp;</td>
+          <td>The default value for controls is true, although there are some exceptions.
+          See <a href="#controls">Controls</a> for details.</td>
         </tr>
         <tr>
           <td class="propertyname">-fx-opacity</td>
@@ -3194,7 +3195,7 @@
         </tr>
       </tbody>
     </table>
-    <p>In JavaFX 2.0 the default skins for all controls support styling from
+    <p>Since JavaFX 2.0, the default skins for all controls support styling from
       CSS. This is accomplished by building the skins from layout objects called
       Regions. Most of the style properties for a control are provided by the
       Region objects that comprise the control's skin. Each Region object of the
@@ -3203,6 +3204,10 @@
       addition to those provided by its Regions. Finally, controls may also
       define pseudo-classes such as "vertical" and "horizontal" in addition to
       those defined by Node.</p>
+    <p>With the following exceptions, controls are focus traversable. This means that <a href="#control">Control</a> sets the initial value
+        of the focusTraversable property true; whereas in <a href="#node">Node</a>, the initial value of the focusTraversable property
+        is false. The following controls are not focus traversable by default: Accordion, Cell, Label, MenuBar,
+        ProgressBar, ProgressIndicator, ScrollBar, ScrollPane, Separator, SplitPane, ToolBar.</p>
     <h4><a name="accordion" id="accordion">Accordion</a></h4>
     <p class="styleclass">Style class: accordion</p>
     <p>The Accordion control has all the properties and pseudo-classes of <a href="#control">Control</a></p>
@@ -3478,6 +3483,14 @@
           <td class="value"><a href="#typestring" class="typelink">&lt;string&gt;</a></td>
           <td>null</td>
           <td>The class name of the Control's Skin.</td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-focus-traversable</td>
+            <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
+            <td class="default">true</td>
+            <td>Control sets the default value of the focusTraversable property to true. The default value
+                of the focusTraversable property for the following controls is false: Accordion, Cell, Label, MenuBar,
+                ProgressBar, ProgressIndicator, ScrollBar, ScrollPane, Separator, SplitPane, ToolBar.</td>
         </tr>
       </tbody>
     </table>
