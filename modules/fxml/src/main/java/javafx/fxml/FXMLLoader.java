@@ -2594,6 +2594,7 @@ public class FXMLLoader {
      * @deprecated
      * @since JavaFX 2.1
      */
+    // SB-dependency: RT-21475 has been filed to track this
     public ParseTraceElement[] getParseTrace() {
         ParseTraceElement[] parseTrace = new ParseTraceElement[loaders.size()];
 
