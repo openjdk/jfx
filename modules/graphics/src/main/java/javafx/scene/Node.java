@@ -4470,6 +4470,9 @@ public abstract class Node implements EventTarget, Styleable {
                     // handle scene mirroring in this branch
                     // (must be the last transformation)
                     mirroringCenter = sceneValue.getWidth() / 2;
+                    if (mirroringCenter == 0.0) {
+                        mirroringCenter = impl_getPivotX();
+                    }
 
                     localToParentTx = localToParentTx.deriveWithTranslation(
                             mirroringCenter, 0.0);

@@ -60,7 +60,7 @@ public class StubStage implements TKStage {
             StubScene s = (StubScene) scene;
             s.stage = this;
             notificationSender.setScene(s);
-            if (width != -1 && height != -1)
+            if (visible && width != -1 && height != -1)
                 s.getListener().changedSize(width, height);
         }
     }

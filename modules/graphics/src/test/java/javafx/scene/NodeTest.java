@@ -31,6 +31,7 @@ import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.Translate2D;
+import com.sun.javafx.pgstub.StubStage;
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.input.PickResultChooser;
@@ -1614,6 +1615,16 @@ public class NodeTest {
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
 
         assertSame(t, ((MockNGRect) node.impl_getPeer()).t);
+    }
+
+    @Test
+    public void rtlSceneSizeShouldBeComputedCorrectly() {
+        Scene scene = new Scene(new Group(new Rectangle(100, 100)));
+        scene.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+        assertEquals(100.0, scene.getWidth(), 0.00001);
     }
 
     private Node createTestRect() {
