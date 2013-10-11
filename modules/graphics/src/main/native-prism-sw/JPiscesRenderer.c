@@ -408,6 +408,9 @@ fillRect(JNIEnv *env, jobject this, Renderer* rdr,
     y_to = y + h;
     y_to = (bfrac) ? y_to >> 16 : (y_to >> 16) - 1;
 
+    rdr->_rectX = x_from;
+    rdr->_rectY = y_from;
+
     switch (lEdge) {
     case IMAGE_FRAC_EDGE_PAD:
         lfrac = 0;
