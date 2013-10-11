@@ -335,10 +335,7 @@ public class PolygonMeshView extends Parent {
                 final int numOfFacesBefore = pmesh.faces.length;
                 final int numOfFacesAfter = pmesh.getNumEdgesInFaces() - 2*numOfFacesBefore;
                 int [] facesArray = new int [numOfFacesAfter * NUM_COMPONENTS_PER_FACE];
-                // I think the following number is too large for smoothingGroupsArray size: pmesh.getNumEdgesInFaces()
-                int [] smoothingGroupsArray = new int [pmesh.getNumEdgesInFaces()];
-                // In order to compensate, I will only set the faceSmoothingGroups up to facesInd
-                System.out.println("smoothingGroupsArray.length = " + smoothingGroupsArray.length);
+                int [] smoothingGroupsArray = new int [numOfFacesAfter];
                 int facesInd = 0;
                 for(int f = 0; f < pmesh.faces.length; f++) {
                     int[] face = pmesh.faces[f];
@@ -364,9 +361,7 @@ public class PolygonMeshView extends Parent {
                     }
                 }
                 triangleMesh.getFaces().setAll(facesArray);
-                // triangleMesh.getFaceSmoothingGroups().setAll(smoothingGroupsArray);
-                triangleMesh.getFaceSmoothingGroups().setAll(smoothingGroupsArray, 0, facesInd);
-                System.out.println("triangleMesh.getFaceSmoothingGroups().size() = " + triangleMesh.getFaceSmoothingGroups().size());
+                triangleMesh.getFaceSmoothingGroups().setAll(smoothingGroupsArray);
             }
             if (texCoordsDirty) {
                 texCoordsDirty = false;
