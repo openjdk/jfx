@@ -359,7 +359,6 @@ public abstract class TableRowSkinBase<T,
                             fadeIn(disclosureNode);
                             disclosureNode.resize(disclosureWidth, ph);
 
-                            positionInArea();
                             disclosureNode.relocate(x + leftMargin,
                                     centreContent ? (h / 2.0 - ph / 2.0) :
                                             (y + tableCell.getPadding().getTop()));
