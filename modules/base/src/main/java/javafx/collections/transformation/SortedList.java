@@ -28,8 +28,12 @@ package javafx.collections.transformation;
 import com.sun.javafx.collections.NonIterableChange.SimplePermutationChange;
 import com.sun.javafx.collections.SortHelper;
 import com.sun.javafx.collections.SourceAdapterChange;
+
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.List;
+
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.collections.ListChangeListener.Change;
@@ -336,6 +340,16 @@ public final class SortedList<E> extends TransformationList<E, E>{
 
     }
 
+    private void setAllToMapping(List<? extends E> list, int to) {
+        size = to;
+        ensureSize(size);
+        for (int i = 0; i < to; ++i) {
+            sorted[i] = new Element<>(list.get(i), i);
+        }
+        Arrays.sort(sorted, 0, size, elementComparator);
+        nextAdd(0, size);
+    }
+
     private void removeFromMapping(int idx, E e) {
         int pos = findPosition(idx, e);
         System.arraycopy(sorted, pos + 1, sorted, pos, size - pos - 1);
@@ -343,6 +357,15 @@ public final class SortedList<E> extends TransformationList<E, E>{
         sorted[size] = null;
         updateIndices(idx + 1, - 1);
         nextRemove(pos, e);
+    }
+
+    private void removeAllFromMapping() {
+        List<E> removed = new ArrayList(this);
+        for (int i = 0; i < size; ++i) {
+            sorted[i] = null;
+        }
+        size = 0;
+        nextRemove(0, removed);
     }
 
     private void update(Change<? extends E> c) {
@@ -354,11 +377,20 @@ public final class SortedList<E> extends TransformationList<E, E>{
     }
 
     private void addRemove(Change<? extends E> c) {
-        for (int i = 0, sz = c.getRemovedSize(); i < sz; ++i) {
-            removeFromMapping(c.getFrom(), c.getRemoved().get(i));
+        if (c.getFrom() == 0 && c.getRemovedSize() == size) {
+            removeAllFromMapping();
+        } else {
+            for (int i = 0, sz = c.getRemovedSize(); i < sz; ++i) {
+                removeFromMapping(c.getFrom(), c.getRemoved().get(i));
+            }
         }
-        for (int i = c.getFrom(), to = c.getTo(); i < to; ++i) {
-            insertToMapping(c.getList().get(i), i);
+        if (size == 0) {
+            setAllToMapping(c.getList(), c.getTo()); // This is basically equivalent to getAddedSubList
+                                                     // as size is 0, only valid "from" is also 0
+        } else {
+            for (int i = c.getFrom(), to = c.getTo(); i < to; ++i) {
+                insertToMapping(c.getList().get(i), i);
+            }
         }
     }
 
