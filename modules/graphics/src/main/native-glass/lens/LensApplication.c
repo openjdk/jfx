@@ -45,8 +45,6 @@ static jclass jApplicationClass;
 //Application class is a singleton, therefore there is no problem to cache it
 static jobject pApplication = NULL;
 
-//LensWindow
-jclass jLensWindowClass;
 //LensApplication
 jclass jLensApplicationClass;
 static jmethodID jLensApplication_createNativeEventThread;
@@ -109,15 +107,6 @@ static void initIDs(JNIEnv *env) {
     jScreenClass =
         (*env)->NewGlobalRef(env, (*env)->FindClass(env, "com/sun/glass/ui/Screen"));
     CHECK_AND_RET_VOID(env);
-
-    //Aplication.java
-    CHECK_AND_RET_VOID(env);
-
-    //LensWindow
-    jLensWindowClass = (*env)->NewGlobalRef(env,
-                                            (*env)->FindClass(env, "com/sun/glass/ui/lens/LensWindow"));
-    CHECK_AND_RET_VOID(env);
-
 
     //LensApplication
     jLensApplicationClass = (*env)->NewGlobalRef(env,
