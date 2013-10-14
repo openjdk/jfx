@@ -106,7 +106,6 @@ public class TreeViewKeyInputTest {
         treeView.setRoot(root);
         sm = treeView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
-        sm.clearAndSelect(0);
         fm = treeView.getFocusModel();
 
         // set up keyboard event firer
@@ -175,9 +174,8 @@ public class TreeViewKeyInputTest {
      **************************************************************************/    
     
     @Test public void testInitialState() {
-        assertTrue(sm.isSelected(0));
-        assertEquals(1, sm.getSelectedIndices().size());
-        assertEquals(1, sm.getSelectedItems().size());
+        assertTrue(sm.getSelectedIndices().isEmpty());
+        assertTrue(sm.getSelectedItems().isEmpty());
     }
     
     /***************************************************************************
@@ -202,7 +200,9 @@ public class TreeViewKeyInputTest {
     @Test public void testUpArrowDoesNotChangeSelectionWhenAt0Index() {
         sm.clearAndSelect(0);
         keyboard.doUpArrowPress();
-        testInitialState();
+        assertTrue(sm.isSelected(0));
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(1, sm.getSelectedItems().size());
     }
     
     @Test public void testUpArrowChangesSelection() {
@@ -213,12 +213,16 @@ public class TreeViewKeyInputTest {
     }
     
     @Test public void testLeftArrowDoesNotChangeState() {
+        sm.clearAndSelect(0);
         keyboard.doLeftArrowPress();
-        testInitialState();
+        assertTrue(sm.isSelected(0));
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(1, sm.getSelectedItems().size());
     }
     
     // test 19
     @Test public void testCtrlDownMovesFocusButLeavesSelectionAlone() {
+        sm.clearAndSelect(0);
         assertTrue(fm.isFocused(0));
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
         assertTrue(fm.isFocused(1));
@@ -228,6 +232,7 @@ public class TreeViewKeyInputTest {
     
     // test 20
     @Test public void testCtrlUpDoesNotMoveFocus() {
+        sm.clearAndSelect(0);
         assertTrue(fm.isFocused(0));
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
         assertTrue(fm.isFocused(0));
@@ -236,6 +241,7 @@ public class TreeViewKeyInputTest {
     
     // test 21
     @Test public void testCtrlLeftDoesNotMoveFocus() {
+        sm.clearAndSelect(0);
         assertTrue(fm.isFocused(0));
         keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
         assertTrue(fm.isFocused(0));
@@ -244,6 +250,7 @@ public class TreeViewKeyInputTest {
     
     // test 22
     @Test public void testCtrlRightDoesNotMoveFocus() {
+        sm.clearAndSelect(0);
         assertTrue(fm.isFocused(0));
         keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
         assertTrue(fm.isFocused(0));

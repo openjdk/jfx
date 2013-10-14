@@ -84,8 +84,6 @@ public class TableViewKeyInputTest {
         col4 = new TableColumn<String, String>("col4");
         tableView.getColumns().setAll(col0, col1, col2, col3, col4);
         
-        sm.clearAndSelect(0);
-        
         keyboard = new KeyEventFirer(tableView);
         
         stageLoader = new StageLoader(tableView);
@@ -159,9 +157,9 @@ public class TableViewKeyInputTest {
      **************************************************************************/    
     
     @Test public void testInitialState() {
-        assertTrue(sm.isSelected(0));
-        assertEquals(1, sm.getSelectedIndices().size());
-        assertEquals(1, sm.getSelectedItems().size());
+        assertTrue(sm.getSelectedCells().isEmpty());
+        assertTrue(sm.getSelectedIndices().isEmpty());
+        assertTrue(sm.getSelectedItems().isEmpty());
     }
     
     
@@ -187,7 +185,10 @@ public class TableViewKeyInputTest {
     @Test public void testUpArrowDoesNotChangeSelectionWhenAt0Index() {
         sm.clearAndSelect(0);
         keyboard.doUpArrowPress();
-        testInitialState();
+
+        assertTrue(sm.isSelected(0));
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(1, sm.getSelectedItems().size());
     }
     
     @Test public void testUpArrowChangesSelection() {
@@ -218,6 +219,7 @@ public class TableViewKeyInputTest {
     
     // test 20
     @Test public void testCtrlUpDoesNotMoveFocus() {
+        sm.clearAndSelect(0);
         assertTrue(fm.isFocused(0));
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
         assertTrue(fm.isFocused(0));
@@ -226,6 +228,7 @@ public class TableViewKeyInputTest {
     
     // test 21
     @Test public void testCtrlLeftDoesNotMoveFocus() {
+        sm.clearAndSelect(0);
         assertTrue(fm.isFocused(0));
         keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
         assertTrue(fm.isFocused(0));
@@ -234,6 +237,7 @@ public class TableViewKeyInputTest {
     
     // test 22
     @Test public void testCtrlRightDoesNotMoveFocus() {
+        sm.clearAndSelect(0);
         assertTrue(fm.isFocused(0));
         keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
         assertTrue(fm.isFocused(0));

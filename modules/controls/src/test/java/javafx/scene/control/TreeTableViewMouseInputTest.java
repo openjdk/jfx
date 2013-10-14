@@ -39,6 +39,7 @@ import com.sun.javafx.tk.Toolkit;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.scene.Group;
 import javafx.scene.Node;
@@ -134,8 +135,6 @@ public class TreeTableViewMouseInputTest {
         
         tableView.setRoot(root);
         tableView.getColumns().setAll(col0, col1, col2, col3, col4);
-        
-        sm.clearAndSelect(0);
         
         stageLoader = new StageLoader(tableView);
         stageLoader.getStage().show();
@@ -519,5 +518,37 @@ public class TreeTableViewMouseInputTest {
         mouse.fireMousePressAndRelease();
         assertTrue(root.isExpanded());
         assertEquals(9, tableView.getExpandedItemCount());
+    }
+
+    private int rt_30626_count = 0;
+    @Test public void test_rt_30626() {
+        final int items = 8;
+        root.getChildren().clear();
+        root.setExpanded(true);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+        tableView.setRoot(root);
+
+        tableView.setShowRoot(true);
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(0);
+
+        tableView.getSelectionModel().getSelectedItems().addListener(new ListChangeListener() {
+            @Override public void onChanged(Change c) {
+                while (c.next()) {
+                    System.out.println(c);
+                    rt_30626_count++;
+                }
+            }
+        });
+
+        assertEquals(0, rt_30626_count);
+        VirtualFlowTestUtils.clickOnRow(tableView, 1);
+        assertEquals(1, rt_30626_count);
+
+        VirtualFlowTestUtils.clickOnRow(tableView, 1);
+        assertEquals(1, rt_30626_count);
     }
 }

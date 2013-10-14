@@ -2204,6 +2204,13 @@ public class TreeTableView<S> extends Control {
         }
 
         @Override public void clearAndSelect(int row, TableColumnBase<TreeItem<S>,?> column) {
+            // RT-33558 if this method has been called with a given row/column
+            // intersection, and that row/column intersection is the only
+            // selection currently, then this method becomes a no-op.
+            if (getSelectedCells().size() == 1 && isSelected(row, column)) {
+                return;
+            }
+
             // RT-32411: We used to call quietClearSelection() here, but this
             // resulted in the selectedItems and selectedIndices lists never
             // reporting that they were empty.

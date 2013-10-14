@@ -33,6 +33,7 @@ import java.util.List;
 
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.ListChangeListener;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -267,5 +268,34 @@ public class ListViewMouseInputTest {
         assertEquals(0, sm.getSelectedIndex());
         assertEquals(0, fm.getFocusedIndex());
         assertEquals(1, sm.getSelectedItems().size());
+    }
+
+    private int rt_30626_count = 0;
+    @Test public void test_rt_30626() {
+        final int items = 8;
+        listView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        final MultipleSelectionModel sm = listView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(0);
+
+        listView.getSelectionModel().getSelectedItems().addListener(new ListChangeListener() {
+            @Override public void onChanged(Change c) {
+                while (c.next()) {
+                    System.out.println(c);
+                    rt_30626_count++;
+                }
+            }
+        });
+
+        assertEquals(0, rt_30626_count);
+        VirtualFlowTestUtils.clickOnRow(listView, 1);
+        assertEquals(1, rt_30626_count);
+
+        VirtualFlowTestUtils.clickOnRow(listView, 1);
+        assertEquals(1, rt_30626_count);
     }
 }

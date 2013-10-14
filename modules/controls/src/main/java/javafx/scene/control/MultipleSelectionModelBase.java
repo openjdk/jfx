@@ -278,6 +278,12 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
     }
 
     @Override public void clearAndSelect(int row) {
+        // RT-33558 if this method has been called with a given row, and that
+        // row is the only selected row currently, then this method becomes a no-op.
+        if (getSelectedIndices().size() == 1 && isSelected(row)) {
+            return;
+        }
+
         // RT-32411 We used to call quietClearSelection() here, but this
         // resulted in the selectedItems and selectedIndices lists never
         // reporting that they were empty.

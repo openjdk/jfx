@@ -34,6 +34,7 @@ import java.util.List;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.ListChangeListener;
 import javafx.scene.layout.StackPane;
 import org.junit.After;
 import org.junit.Before;
@@ -381,5 +382,34 @@ public class TableViewMouseInputTest {
         assertEquals(0, sm.getSelectedIndex());
         assertEquals(0, fm.getFocusedIndex());
         assertEquals(1, sm.getSelectedItems().size());
+    }
+
+    private int rt_30626_count = 0;
+    @Test public void test_rt_30626() {
+        final int items = 8;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(0);
+
+        tableView.getSelectionModel().getSelectedItems().addListener(new ListChangeListener() {
+            @Override public void onChanged(Change c) {
+                while (c.next()) {
+                    System.out.println(c);
+                    rt_30626_count++;
+                }
+            }
+        });
+
+        assertEquals(0, rt_30626_count);
+        VirtualFlowTestUtils.clickOnRow(tableView, 1);
+        assertEquals(1, rt_30626_count);
+
+        VirtualFlowTestUtils.clickOnRow(tableView, 1);
+        assertEquals(1, rt_30626_count);
     }
 }
