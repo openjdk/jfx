@@ -31,7 +31,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class RT_17646Test {
-    @Test(expected=UnsupportedOperationException.class)
+    @Test(expected=LoadException.class)
     public void testBidirectionalBinding() throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_17646.fxml"));
 
