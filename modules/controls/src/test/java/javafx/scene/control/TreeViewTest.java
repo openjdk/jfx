@@ -45,6 +45,8 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.SimpleObjectProperty;
@@ -52,6 +54,7 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -1192,5 +1195,28 @@ public class TreeViewTest {
         assertEquals(1, rt_29650_start_count);
         assertEquals(1, rt_29650_commit_count);
         assertEquals(0, rt_29650_cancel_count);
+    }
+
+    private int rt_33559_count = 0;
+    @Test public void test_rt_33559() {
+        installChildren();
+
+        treeView.setShowRoot(true);
+        final MultipleSelectionModel sm = treeView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(0);
+
+        treeView.getSelectionModel().getSelectedItems().addListener(new ListChangeListener() {
+            @Override public void onChanged(Change c) {
+                while (c.next()) {
+                    System.out.println(c);
+                    rt_33559_count++;
+                }
+            }
+        });
+
+        assertEquals(0, rt_33559_count);
+        root.setExpanded(true);
+        assertEquals(0, rt_33559_count);
     }
 }

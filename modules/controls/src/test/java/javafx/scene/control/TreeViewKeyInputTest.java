@@ -27,6 +27,7 @@ package javafx.scene.control;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.collections.ListChangeListener;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.input.KeyCode;
@@ -1848,5 +1849,31 @@ public class TreeViewKeyInputTest {
         assertTrue(isSelected(0));
         assertEquals(1, sm.getSelectedItems().size());
         assertTrue(fm.isFocused(0));
+    }
+
+    private int rt_33559_count = 0;
+    @Test public void test_rt33559() {
+        final int items = 4;
+        root.getChildren().clear();
+        root.setExpanded(false);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        final MultipleSelectionModel sm = treeView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.SINGLE);
+        sm.clearAndSelect(0);
+
+        treeView.getSelectionModel().getSelectedItems().addListener(new ListChangeListener() {
+            @Override public void onChanged(Change c) {
+                while (c.next()) {
+                    rt_33559_count++;
+                }
+            }
+        });
+
+        assertEquals(0, rt_33559_count);
+        keyboard.doKeyPress(KeyCode.RIGHT); // expand root
+        assertEquals(0, rt_33559_count);
     }
 }

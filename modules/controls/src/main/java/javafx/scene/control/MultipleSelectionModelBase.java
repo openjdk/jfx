@@ -221,6 +221,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         
         int[] perm = new int[selectedIndicesSize];
         int idx = 0;
+        boolean hasPermutated = false;
         
         if (shift > 0) {
             for (int i = selectedIndicesSize - 1; i >= position && i >= 0; i--) {
@@ -235,6 +236,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
                 if (selected) {
                     perm[idx++] = i + 1;
+                    hasPermutated = true;
                 }
             }
             selectedIndices.clear(position);
@@ -253,6 +255,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
                 if (selected) {
                     perm[idx++] = i;
+                    hasPermutated = true;
                 }
             }
         }
@@ -268,13 +271,15 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             // removed due to RT-27185
             // focus(newFocus);
         }
-         
-        selectedIndicesSeq.callObservers(
+
+        if (hasPermutated) {
+            selectedIndicesSeq.callObservers(
                 new NonIterableChange.SimplePermutationChange<Integer>(
                         0, 
                         selectedIndicesCardinality, 
                         perm, 
                         selectedIndicesSeq));
+        }
     }
 
     @Override public void clearAndSelect(int row) {

@@ -386,7 +386,6 @@ public class TreeViewMouseInputTest {
         treeView.getSelectionModel().getSelectedItems().addListener(new ListChangeListener() {
             @Override public void onChanged(Change c) {
                 while (c.next()) {
-                    System.out.println(c);
                     rt_30626_count++;
                 }
             }
