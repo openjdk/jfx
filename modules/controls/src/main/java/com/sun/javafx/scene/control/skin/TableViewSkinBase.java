@@ -454,7 +454,9 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
             // if the last visible cell is selected, we want to shift that cell up
             // to be the top-most cell, or at least as far to the top as we can go.
             flow.showAsFirst(lastVisibleCell);
-            lastVisibleCell = flow.getLastVisibleCellWithinViewPort();
+
+            I newLastVisibleCell = flow.getLastVisibleCellWithinViewPort();
+            lastVisibleCell = newLastVisibleCell == null ? lastVisibleCell : newLastVisibleCell;
         } 
 
         int newSelectionIndex = lastVisibleCell.getIndex();
@@ -482,8 +484,10 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
             // if the first visible cell is selected, we want to shift that cell down
             // to be the bottom-most cell, or at least as far to the bottom as we can go.
             flow.showAsLast(firstVisibleCell);
-            firstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
-        } 
+
+            I newFirstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
+            firstVisibleCell = newFirstVisibleCell == null ? firstVisibleCell : newFirstVisibleCell;
+        }
 
         int newSelectionIndex = firstVisibleCell.getIndex();
         flow.show(newSelectionIndex);
