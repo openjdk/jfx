@@ -999,6 +999,10 @@ public class Scene implements EventTarget {
         setNeedsRepaint();
     }
 
+    void markCursorDirty() {
+        markDirty(DirtyBits.CURSOR_DIRTY);
+    }
+
     /**
      * Defines the background fill of this {@code Scene}. Both a {@code null}
      * value meaning paint no background and a {@link javafx.scene.paint.Paint}
@@ -1414,7 +1418,22 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<Cursor> cursorProperty() {
         if (cursor == null) {
-            cursor = new SimpleObjectProperty<Cursor>(this, "cursor");
+            cursor = new ObjectPropertyBase<Cursor>() {
+                         @Override
+                         protected void invalidated() {
+                             markCursorDirty();
+                         }
+
+                         @Override
+                         public Object getBean() {
+                             return Scene.this;
+                         }
+
+                         @Override
+                         public String getName() {
+                             return "cursor";
+                         }
+                     };
         }
         return cursor;
     }
@@ -2112,7 +2131,8 @@ public class Scene implements EventTarget {
         FILL_DIRTY,
         ROOT_DIRTY,
         CAMERA_DIRTY,
-        LIGHTS_DIRTY;
+        LIGHTS_DIRTY,
+        CURSOR_DIRTY;
 
         private int mask;
 

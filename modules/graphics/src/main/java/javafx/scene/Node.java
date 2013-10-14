@@ -6353,6 +6353,14 @@ public abstract class Node implements EventTarget, Styleable {
                 cursor = new StyleableObjectProperty<Cursor>(DEFAULT_CURSOR) {
 
                     @Override
+                    protected void invalidated() {
+                        final Scene sceneValue = getScene();
+                        if (sceneValue != null) {
+                            sceneValue.markCursorDirty();
+                        }
+                    }
+
+                    @Override
                     public CssMetaData getCssMetaData() {
                         return StyleableProperties.CURSOR;
                     }
