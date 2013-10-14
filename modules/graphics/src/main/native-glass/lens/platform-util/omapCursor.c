@@ -34,6 +34,7 @@
 #include <unistd.h>
 #include <linux/fb.h>
 #include <sys/ioctl.h>
+#include <sys/types.h>
 
 #if defined(OMAP3)
 
@@ -42,12 +43,19 @@
 typedef struct {
     int fd;
     struct omapfb_plane_info plane;
+    int x;
+    int y;
     int width;
     int height;
     int screenWidth;
     int screenHeight;
     jlong currentCursor;
     jboolean isVisible;
+    // When the cursor is at the extreme right or bottom of the screen, it
+    // needs to be shifted to show in the correct location. OMAP doesn't let us
+    // position the framebuffer so that it is only partically visible.
+    int xShift;
+    int yShift;
 } FBCursor;
 
 typedef struct {
@@ -58,7 +66,16 @@ typedef struct {
 } FBCursorImage;
 
 
-FBCursor cursor = { .fd = -1, .width = 0, .height = 0, .currentCursor = 0, .isVisible = 0};
+FBCursor cursor = { .fd = -1, .x = 0, .y = 0,
+                    .width = 0, .height = 0,
+                    .currentCursor = 0, .isVisible = 0,
+                    .xShift = 0, .yShift = 0 };
+
+/* Writes an image into the cursor framebuffer with the given x and y offsets. */
+static void fbOmapWriteCursor(int fd, jbyte *cursorImage, int bpp);
+
+/* Updates values of xShift and yShift based on the cursor location */
+static void fbOmapAdjustShift();
 
 void fbOmapCursorClose() {
     if (cursor.fd >= 0) {
@@ -127,10 +144,70 @@ void fbOmapCreateCursor(jbyte *cursorImage, int width, int height, int bpp) {
         return;
     }
 
+    fbOmapAdjustShift();
+    fbOmapWriteCursor(cursor.fd, cursorImage, bpp);
+}
+
+static void fbOmapWriteCursor(int fd, jbyte *cursorImage, int bpp) {
+    int i, j, k;
+    char buffer[256];
     int cursorSize = cursor.width * cursor.height * bpp;
-    if (write(cursor.fd, cursorImage, cursorSize) < cursorSize) {
-        GLASS_LOG_SEVERE("Cannot write cursor plane");
+    int xShift = cursor.xShift;
+    int yShift = cursor.yShift;
+    GLASS_LOG_FINEST("Cursor shift = (%i, %i) at (%i, %i)\n",
+                     xShift, yShift, cursor.x, cursor.y);
+    if (xShift == 0 && yShift == 0) {
+        GLASS_LOG_FINEST("write(cursor.fd, .. %i)", cursorSize);
+        if (write(cursor.fd, cursorImage, cursorSize) < cursorSize) {
+            GLASS_LOG_SEVERE("Cannot write cursor plane");
+        }
         return;
+    }
+    for (i = 0; i < yShift; i++) {
+        for (j = 0; j < cursor.width * bpp; j += sizeof(buffer)) {
+            size_t n = cursor.width * bpp - j;
+            if (n > sizeof(buffer)) {
+                n = sizeof(buffer);
+            }
+            for (k = 0; k < n; k += bpp) {
+                // 171 == 0xAB of the color key.
+                buffer[k] = 171;
+                buffer[k + 1] = 171;
+                buffer[k + 2] = 171;
+                buffer[k + 3] = 171;
+            }
+            GLASS_LOG_FINEST("write(cursor.fd, .. %u)", n);
+            if (write(cursor.fd, buffer, n) < n) {
+                GLASS_LOG_SEVERE("Cannot write cursor plane");
+                return;
+            }
+        }
+    }
+    for (i = 0; i < cursor.height - yShift; i++) {
+        for (j = 0; j < xShift * bpp; j += sizeof(buffer)) {
+            size_t n = xShift * bpp;
+            if (n > sizeof(buffer)) {
+                n = sizeof(buffer);
+            }
+            for (k = 0; k < n; k += bpp) {
+                // 171 == 0xAB of the color key.
+                buffer[k] = 171;
+                buffer[k + 1] = 171;
+                buffer[k + 2] = 171;
+                buffer[k + 3] = 171;
+            }
+            GLASS_LOG_FINEST("write(cursor.fd, .. %u)", n);
+            if (write(cursor.fd, buffer, n) < n) {
+                GLASS_LOG_SEVERE("Cannot write cursor plane");
+                return;
+            }
+        }
+        size_t n = (cursor.width - xShift) * bpp;
+        GLASS_LOG_FINEST("write(cursor.fd, .. %u)", n);
+        if (write(cursor.fd, cursorImage + i * cursor.width * bpp, n) < n) {
+            GLASS_LOG_SEVERE("Cannot write cursor plane");
+            return;
+        }
     }
 }
 
@@ -169,19 +246,48 @@ void fbOmapCursorInitialize(int screenWidth, int screenHeight) {
     cursor.screenHeight = screenHeight;
 }
 
-void fbOmapCursorSetPosition(int x, int y) {
+void fbOmapAdjustShift() {
+    if (cursor.x > cursor.screenWidth - cursor.width) {
+        cursor.xShift = cursor.width + cursor.x - cursor.screenWidth;
+    } else {
+        cursor.xShift = 0;
+    }
+    if (cursor.y > cursor.screenHeight - cursor.height) {
+        cursor.yShift = cursor.height + cursor.y - cursor.screenHeight;
+    } else {
+        cursor.yShift = 0;
+    }
+}
 
+void fbOmapCursorSetPosition(int x, int y) {
+    int xShift = cursor.xShift;
+    int yShift = cursor.yShift;
     if (x < 0) {
         x = 0;
     }
     if (y < 0) {
         y = 0;
     }
-    if (x > cursor.screenWidth - cursor.width) {
-        x = cursor.screenWidth - cursor.width;
+    if (x > cursor.screenWidth - 1) {
+        x = cursor.screenWidth - 1;
     }
-    if (y > cursor.screenHeight - cursor.height) {
-        y = cursor.screenHeight - cursor.height;
+    if (y > cursor.screenHeight - 1) {
+        y = cursor.screenHeight - 1;
+    }
+    cursor.x = x;
+    cursor.y = y;
+    fbOmapAdjustShift();
+    x -= cursor.xShift;
+    y -= cursor.yShift;
+    if (xShift != cursor.xShift || yShift != cursor.yShift) {
+        GLASS_LOG_FINEST("Calling lseek to rewind cursor fd");
+        if (lseek(cursor.fd, 0, SEEK_SET) == -1) {
+            GLASS_LOG_SEVERE("Cannot rewrite cursor image");
+        } else {
+            FBCursorImage *fbCursorImage = (FBCursorImage *)
+                jlong_to_ptr(cursor.currentCursor);
+            fbOmapWriteCursor(cursor.fd, fbCursorImage->buffer, fbCursorImage->bpp);
+        }
     }
     cursor.plane.enabled = 1;
     cursor.plane.pos_x = x;

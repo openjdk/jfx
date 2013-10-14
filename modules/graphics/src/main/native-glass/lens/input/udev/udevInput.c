@@ -1253,16 +1253,16 @@ static void lens_input_pointerEvents_handleRelMotion(LensInputDevice *device,
     switch (axis) {
         case REL_X:
             newMousePosX = mousePosX + pointerEvent->value;
-            if (newMousePosX > screenWidth) {
-                newMousePosX = screenWidth;
+            if (newMousePosX >= screenWidth) {
+                newMousePosX = screenWidth - 1;
             } else if (newMousePosX < 0) {
                 newMousePosX = 0;
             }
             break;
         case REL_Y:
             newMousePosY = mousePosY + pointerEvent->value;
-            if (newMousePosY > screenHeight) {
-                newMousePosY = screenHeight;
+            if (newMousePosY >= screenHeight) {
+                newMousePosY = screenHeight - 1;
             } else if (newMousePosY < 0) {
                 newMousePosY = 0;
             }
