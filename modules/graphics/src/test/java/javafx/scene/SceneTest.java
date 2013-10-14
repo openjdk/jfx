@@ -781,7 +781,7 @@ public class SceneTest {
     }
 
     @Test
-    public void testSceneMouseChangePropagatesToScenePeer() {
+    public void testSceneCursorChangePropagatesToScenePeer() {
         final StubToolkit toolkit = (StubToolkit) Toolkit.getToolkit();
         final MouseEventGenerator generator = new MouseEventGenerator();
 
@@ -801,7 +801,7 @@ public class SceneTest {
     }
 
     @Test
-    public void testNodeMouseChangePropagatesToScenePeer() {
+    public void testNodeCursorChangePropagatesToScenePeer() {
         final StubToolkit toolkit = (StubToolkit) Toolkit.getToolkit();
         final MouseEventGenerator generator = new MouseEventGenerator();
 
