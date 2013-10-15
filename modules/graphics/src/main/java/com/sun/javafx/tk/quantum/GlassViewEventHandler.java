@@ -203,8 +203,6 @@ class GlassViewEventHandler extends View.EventHandler {
                 return javafx.scene.input.MouseEvent.MOUSE_PRESSED;
             case com.sun.glass.events.MouseEvent.UP:
                 return javafx.scene.input.MouseEvent.MOUSE_RELEASED;
-            case com.sun.glass.events.MouseEvent.CLICK:
-                return javafx.scene.input.MouseEvent.MOUSE_CLICKED;
             case com.sun.glass.events.MouseEvent.ENTER:
                 return javafx.scene.input.MouseEvent.MOUSE_ENTERED;
             case com.sun.glass.events.MouseEvent.EXIT:
@@ -238,9 +236,6 @@ class GlassViewEventHandler extends View.EventHandler {
         }
     }
 
-    // Used to determine whether a synthetic CLICK is generated or not on UP event
-    private boolean dragPerformed = false;
-
     // Used to determine whether a DRAG operation has been initiated on this window
     private int mouseButtonPressedMask = 0;
 
@@ -251,7 +246,6 @@ class GlassViewEventHandler extends View.EventHandler {
         int type;
         int button;
         int x, y, xAbs, yAbs;
-        int clickCount;
         int modifiers;
         boolean isPopupTrigger;
         boolean isSynthesized;
@@ -288,18 +282,15 @@ class GlassViewEventHandler extends View.EventHandler {
                     }
                     mouseButtonPressedMask &= ~buttonMask;
                     break;
-                case MouseEvent.DRAG:
-                    // Disable generating of a CLICK
-                    dragPerformed = true;
-                    break;
                 case MouseEvent.DOWN:
-                    // Prepare to generate a CLICK
-                    dragPerformed = false;
                     mouseButtonPressedMask |= buttonMask;
                     break;
                 case MouseEvent.ENTER:
                 case MouseEvent.EXIT:
                     break;
+                case MouseEvent.CLICK:
+                    // Don't send click events to FX, as they are generated in Scene
+                    return null;
                 default:
                     if (QuantumToolkit.verbose) {
                         System.out.println("handleMouseEvent: unhandled type: " + type);
@@ -321,18 +312,9 @@ class GlassViewEventHandler extends View.EventHandler {
                     boolean secondaryButtonDown = (modifiers & KeyEvent.MODIFIER_BUTTON_SECONDARY) != 0;
 
                     scene.sceneListener.mouseEvent(mouseEventType(type), x, y, xAbs, yAbs,
-                            mouseEventButton(button), clickCount, isPopupTrigger, isSynthesized,
+                            mouseEventButton(button), isPopupTrigger, isSynthesized,
                             shiftDown, controlDown, altDown, metaDown,
                             primaryButtonDown, middleButtonDown, secondaryButtonDown);
-
-                    if (type == MouseEvent.UP && !dragPerformed) {
-                        // synthesize click
-                        scene.sceneListener.mouseEvent(javafx.scene.input.MouseEvent.MOUSE_CLICKED,
-                                x, y, xAbs, yAbs,
-                                mouseEventButton(button), clickCount, isPopupTrigger, isSynthesized,
-                                shiftDown, controlDown, altDown, metaDown,
-                                primaryButtonDown, middleButtonDown, secondaryButtonDown);
-                    }
                 }
             } finally {
                 if (stage != null) {
@@ -346,8 +328,7 @@ class GlassViewEventHandler extends View.EventHandler {
     @Override
     public void handleMouseEvent(View view, long time, int type, int button,
                                  int x, int y, int xAbs, int yAbs,
-                                 int clickCount, int modifiers,
-                                 boolean isPopupTrigger, boolean isSynthesized)
+                                 int modifiers, boolean isPopupTrigger, boolean isSynthesized)
     {
         mouseNotification.view = view;
         mouseNotification.time = time;
@@ -357,7 +338,6 @@ class GlassViewEventHandler extends View.EventHandler {
         mouseNotification.y = y;
         mouseNotification.xAbs = xAbs;
         mouseNotification.yAbs = yAbs;
-        mouseNotification.clickCount = clickCount;
         mouseNotification.modifiers = modifiers;
         mouseNotification.isPopupTrigger = isPopupTrigger;
         mouseNotification.isSynthesized = isSynthesized;

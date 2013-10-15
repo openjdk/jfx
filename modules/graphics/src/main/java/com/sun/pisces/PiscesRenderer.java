@@ -280,26 +280,14 @@ public final class PiscesRenderer {
                               gradientTransform == null ? new Transform6(1 << 16, 0, 0, 1 << 16, 0, 0) : gradientTransform);
     }
 
-    public void setTexture(int imageType, int data[], int width, int height,
+    public void setTexture(int imageType, int data[], int width, int height, int stride,
         Transform6 textureTransform, boolean repeat, boolean hasAlpha)
     {
-        if (width < 0) {
-            throw new IllegalArgumentException("WIDTH must be positive");
-        }
-        if (height < 0) {
-            throw new IllegalArgumentException("HEIGHT must be positive");
-        }
-        final int nbits = 32-Integer.numberOfLeadingZeros(width) + 32-Integer.numberOfLeadingZeros(height);
-        if (nbits > 31) {
-            throw new IllegalArgumentException("WIDTH * HEIGHT is too large");
-        }
-        if ((width * height) > data.length) {
-            throw new IllegalArgumentException("WIDTH * HEIGHT exceeds length of data");
-        }
-        this.setTextureImpl(imageType, data, width, height, textureTransform, repeat, hasAlpha);
+        this.inputImageCheck(width, height, 0, stride, data.length);
+        this.setTextureImpl(imageType, data, width, height, stride, textureTransform, repeat, hasAlpha);
     }
 
-    private native void setTextureImpl(int imageType, int data[], int width, int height,
+    private native void setTextureImpl(int imageType, int data[], int width, int height, int stride,
         Transform6 textureTransform, boolean repeat, boolean hasAlpha);
 
     /**

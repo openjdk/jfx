@@ -306,6 +306,9 @@ typedef struct _Renderer {
     jbyte* alphaMap;
     jint* _rowAAInt;
 
+    // used for fillRect call - contains original rectangle's X,Y values
+    jint _rectX, _rectY;
+
     // Mask
     jboolean _mask_free;
 

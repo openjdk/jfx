@@ -36,11 +36,11 @@ import javafx.animation.Timeline;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
-import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
+import javafx.util.Duration;
 
 public class Splash extends Parent {
 
@@ -67,7 +67,7 @@ public class Splash extends Parent {
     private void initTimeline() {
         timeline = new Timeline();
         timeline.setCycleCount(Timeline.INDEFINITE);
-        KeyFrame kf = new KeyFrame(Config.ANIMATION_TIME, new EventHandler<ActionEvent>() {
+        KeyFrame kf = new KeyFrame(Duration.millis(40), new EventHandler<ActionEvent>() {
             public void handle(ActionEvent event) {
                 if (state == STATE_SHOW_TITLE) {
                     stateArg++;

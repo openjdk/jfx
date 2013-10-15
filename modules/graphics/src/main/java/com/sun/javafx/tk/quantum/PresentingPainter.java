@@ -122,11 +122,9 @@ final class PresentingPainter extends ViewPainter {
 
             ViewScene viewScene = (ViewScene)sceneState.getScene();
             viewScene.setPainting(false);
-            if (PrismSettings.poolStats ||
-                ManagedResource.anyLockedResources())
-            {
-                ManagedResource.printSummary();
-            }
+
+            ManagedResource.freeDisposalRequestedAndCheckResources();
+
             renderLock.unlock();
             if (PulseLogger.PULSE_LOGGING_ENABLED) {
                 PulseLogger.PULSE_LOGGER.renderMessage(System.currentTimeMillis(), System.currentTimeMillis(), "Finished Presenting Painter");

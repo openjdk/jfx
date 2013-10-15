@@ -55,7 +55,7 @@ public final class StubImageLoader implements ImageLoader {
 
         frames = new PlatformImage[imageInfo.getFrameCount()];
         for (int i = 0; i < frames.length; ++i) {
-            frames[i] = new StubPlatformImage(this, i);
+            frames[i] = source instanceof PlatformImage ? (PlatformImage) source : new StubPlatformImage(this, i);
         }
     }
 

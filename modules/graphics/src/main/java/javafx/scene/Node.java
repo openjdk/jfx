@@ -47,6 +47,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
 import javafx.beans.value.ChangeListener;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
@@ -1723,7 +1724,7 @@ public abstract class Node implements EventTarget, Styleable {
             // TODO: is this the right thing to do?
             // this.impl_clearDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS);
 
-            this.processCSS();
+            this.processCSS(null);
         }
     }
 
@@ -4469,6 +4470,9 @@ public abstract class Node implements EventTarget, Styleable {
                     // handle scene mirroring in this branch
                     // (must be the last transformation)
                     mirroringCenter = sceneValue.getWidth() / 2;
+                    if (mirroringCenter == 0.0) {
+                        mirroringCenter = impl_getPivotX();
+                    }
 
                     localToParentTx = localToParentTx.deriveWithTranslation(
                             mirroringCenter, 0.0);
@@ -6347,6 +6351,14 @@ public abstract class Node implements EventTarget, Styleable {
         public final ObjectProperty<Cursor> cursorProperty() {
             if (cursor == null) {
                 cursor = new StyleableObjectProperty<Cursor>(DEFAULT_CURSOR) {
+
+                    @Override
+                    protected void invalidated() {
+                        final Scene sceneValue = getScene();
+                        if (sceneValue != null) {
+                            sceneValue.markCursorDirty();
+                        }
+                    }
 
                     @Override
                     public CssMetaData getCssMetaData() {
@@ -8618,13 +8630,13 @@ public abstract class Node implements EventTarget, Styleable {
         // apply the CSS immediately and not add it to the scene's queue
         // for deferred action.
         if (getParent() != null && getParent().performingLayout) {
-            impl_processCSS();
+            impl_processCSS(null);
         } else if (getScene() != null) {
             notifyParentsOfInvalidatedCSS();
         }
     }
 
-    void processCSS() {
+    void processCSS(final WritableValue<Boolean> cacheHint) {
         switch (cssFlag) {
             case CLEAN:
                 break;
@@ -8636,7 +8648,7 @@ public abstract class Node implements EventTarget, Styleable {
                 me.cssFlag = CssFlags.CLEAN;
                 List<Node> children = me.getChildren();
                 for (int i=0, max=children.size(); i<max; i++) {
-                    children.get(i).processCSS();
+                    children.get(i).processCSS(cacheHint);
                 }
                 break;
             }
@@ -8645,7 +8657,7 @@ public abstract class Node implements EventTarget, Styleable {
             case REAPPLY:
             case UPDATE:
             default:
-                impl_processCSS();
+                impl_processCSS(cacheHint);
         }
     }
 
@@ -8690,19 +8702,23 @@ public abstract class Node implements EventTarget, Styleable {
             }
             _parent = _parent.getParent();
         }
-        topMost.processCSS();
+        topMost.processCSS(new SimpleBooleanProperty(false));
     }
 
     /**
-     * If invoked, will update / reapply styles from here on down. If reapply
-     * is false, then we will only update from here on down, otherwise we will
-     * do a full reapply.
+     * If invoked, will update / reapply styles from here on down. This method should not be called directly. If
+     * overridden, the overriding method must at some point call {@code super.impl_processCSS()} to ensure that
+     * this Node's CSS state is properly updated.
+     *
+     * Note that the WritableValue&lt;Boolean&gt; here has a different meaning than that of the {@link #impl_processCSS(boolean)}
+     * method. Passing a true value here does not force CSS to be reapplied. Rather, this flag is passed along
+     * to the CSS engine to decide whether or not a portion of cache should be invalidated when CSS is being reapplied.
      *
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated // SB-dependency: RT-21206 has been filed to track this
-    protected void impl_processCSS() {
+    protected void impl_processCSS(final WritableValue<Boolean> cacheHint) {
 
         // Nothing to do...
         if (cssFlag == CssFlags.CLEAN) return;
@@ -8734,12 +8750,12 @@ public abstract class Node implements EventTarget, Styleable {
             }
             // TODO: danger of infinite loop here!
             if (_topmostParent != null) {
-                _topmostParent.impl_processCSS();
+                _topmostParent.impl_processCSS(cacheHint);
                 return;
             }
 
             // Match new styles if my own indicates I need to reapply
-            styleHelper = CssStyleHelper.createStyleHelper(this);
+            styleHelper = CssStyleHelper.createStyleHelper(this, cacheHint);
 
 //        } else if (cssFlag == CssFlags.RECALCULATE) {
 //

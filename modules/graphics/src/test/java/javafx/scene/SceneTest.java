@@ -34,17 +34,21 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Scale;
 import javafx.stage.Stage;
 import com.sun.javafx.pgstub.StubScene;
+import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.sg.prism.NGCamera;
+import com.sun.javafx.test.MouseEventGenerator;
 import com.sun.javafx.tk.Toolkit;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.scene.input.MouseEvent;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -774,5 +778,46 @@ public class SceneTest {
 
         Scene scene = new Scene(root, 600, 450);
         // if there is no exception, the test passed
+    }
+
+    @Test
+    public void testSceneCursorChangePropagatesToScenePeer() {
+        final StubToolkit toolkit = (StubToolkit) Toolkit.getToolkit();
+        final MouseEventGenerator generator = new MouseEventGenerator();
+
+        final Scene scene = new Scene(new Group(), 300, 200);
+        stage.setScene(scene);
+        scene.impl_processMouseEvent(
+                generator.generateMouseEvent(MouseEvent.MOUSE_ENTERED,
+                                             100, 100));
+        toolkit.firePulse();
+
+        scene.setCursor(Cursor.TEXT);
+        assertTrue(toolkit.isPulseRequested());
+        toolkit.firePulse();
+
+        assertSame(Cursor.TEXT.getCurrentFrame(),
+                   ((StubScene) scene.impl_getPeer()).getCursor());
+    }
+
+    @Test
+    public void testNodeCursorChangePropagatesToScenePeer() {
+        final StubToolkit toolkit = (StubToolkit) Toolkit.getToolkit();
+        final MouseEventGenerator generator = new MouseEventGenerator();
+
+        final Parent root = new Group(new Rectangle(300, 200));
+        final Scene scene = new Scene(root, 300, 200);
+        stage.setScene(scene);
+        scene.impl_processMouseEvent(
+                generator.generateMouseEvent(MouseEvent.MOUSE_ENTERED,
+                                             100, 100));
+        toolkit.firePulse();
+
+        root.setCursor(Cursor.TEXT);
+        assertTrue(toolkit.isPulseRequested());
+        toolkit.firePulse();
+
+        assertSame(Cursor.TEXT.getCurrentFrame(),
+                   ((StubScene) scene.impl_getPeer()).getCursor());
     }
 }

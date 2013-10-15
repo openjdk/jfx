@@ -521,9 +521,11 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
         for (Content c: contentRegions) {
 //            System.out.println("LAYOUT " + c.getId() + " PANELS X " + c.getX() + " Y " + c.getY() + " W " + (horizontal ? c.getArea() : width) + " H " + (horizontal ? height : c.getArea()));
             if (horizontal) {
+                c.setClipSize(c.getArea(), height);
                 layoutInArea(c, c.getX() + paddingX, c.getY() + paddingY, c.getArea(), height,
                     0/*baseline*/,HPos.CENTER, VPos.CENTER);
             } else {
+                c.setClipSize(width, c.getArea());
                 layoutInArea(c, c.getX() + paddingX, c.getY() + paddingY, width, c.getArea(),
                     0/*baseline*/,HPos.CENTER, VPos.CENTER);
             }
@@ -1159,14 +1161,9 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
             }
         }
 
-        @Override protected void setWidth(double value) {
-            super.setWidth(value);
-            clipRect.setWidth(value);
-        }
-
-        @Override protected void setHeight(double value) {
-            super.setHeight(value);
-            clipRect.setHeight(value);
+        protected void setClipSize(double w, double h) {
+            clipRect.setWidth(w);
+            clipRect.setHeight(h);
         }
 
         @Override protected double computeMaxWidth(double height) {

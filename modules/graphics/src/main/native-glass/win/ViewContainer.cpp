@@ -466,10 +466,13 @@ BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
                             ::GetDesktopWindow(), pt,
                             CWP_SKIPDISABLED | CWP_SKIPINVISIBLE);
 
-                    if (hwndUnderCursor && hwndUnderCursor != hwnd &&
-                            BaseWnd::FromHandle(hwndUnderCursor))
+                    if (hwndUnderCursor && hwndUnderCursor != hwnd)
                     {
-                        return (BOOL)::SendMessage(hwndUnderCursor, msg, wParam, lParam);
+                        DWORD hWndUnderCursorProcess;
+                        ::GetWindowThreadProcessId(hwndUnderCursor, &hWndUnderCursorProcess);
+                        if (::GetCurrentProcessId() == hWndUnderCursorProcess) {
+                            return (BOOL)::SendMessage(hwndUnderCursor, msg, wParam, lParam);
+                        }
                     }
 
                     // if there's none, proceed as usual

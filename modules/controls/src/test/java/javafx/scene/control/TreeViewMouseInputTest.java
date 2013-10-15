@@ -34,6 +34,7 @@ import java.util.List;
 
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.ListChangeListener;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
@@ -122,7 +123,6 @@ public class TreeViewMouseInputTest {
         treeView.setRoot(root);
         sm = treeView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
-        sm.clearAndSelect(0);
         fm = treeView.getFocusModel();
 
         // set up keyboard event firer
@@ -366,5 +366,36 @@ public class TreeViewMouseInputTest {
         assertTrue("Selected indices: " + sm.getSelectedIndices(), sm.getSelectedIndices().contains(0));
         assertTrue("Selected items: " + sm.getSelectedItems(), sm.getSelectedItems().contains(root));
         assertEquals(6, sm.getSelectedItems().size());
+    }
+
+    private int rt_30626_count = 0;
+    @Test public void test_rt_30626() {
+        final int items = 8;
+        root.getChildren().clear();
+        root.setExpanded(true);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+        treeView.setRoot(root);
+
+        treeView.setShowRoot(true);
+        final MultipleSelectionModel sm = treeView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.clearAndSelect(0);
+
+        treeView.getSelectionModel().getSelectedItems().addListener(new ListChangeListener() {
+            @Override public void onChanged(Change c) {
+                while (c.next()) {
+                    rt_30626_count++;
+                }
+            }
+        });
+
+        assertEquals(0, rt_30626_count);
+        VirtualFlowTestUtils.clickOnRow(treeView, 1);
+        assertEquals(1, rt_30626_count);
+
+        VirtualFlowTestUtils.clickOnRow(treeView, 1);
+        assertEquals(1, rt_30626_count);
     }
 }

@@ -55,6 +55,12 @@ package com.sun.prism.impl;
  * @see ManagedResource
  */
 public interface ResourcePool<T> {
+
+    /**
+     * True if Thread.currentThread() is a thread that created this ResourcePool
+     */
+    public boolean isManagerThread();
+
     /**
      * The amount of a resource currently being used to hold any kind of
      * resource, whether managed or not.

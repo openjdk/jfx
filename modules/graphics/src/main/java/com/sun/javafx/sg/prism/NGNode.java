@@ -2332,7 +2332,10 @@ public abstract class NGNode {
         // We will punt on 3D completely for caching.
         // The first check is for any of its children contains a 3D Transform.
         // The second check is for any of its parents and itself has a 3D Transform
-        if (isContentBounds2D() && g.getTransformNoClone().is2D()) {
+        // The third check is for the printing case, which doesn't use cached
+        // bitmaps for the screen and for which there is no cacheFilter.
+        if (isContentBounds2D() && g.getTransformNoClone().is2D() &&
+                !(g instanceof com.sun.prism.PrinterGraphics)) {
             getCacheFilter().render(g);
         } else {
             renderContent(g);

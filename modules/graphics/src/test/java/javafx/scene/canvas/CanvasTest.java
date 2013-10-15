@@ -320,20 +320,36 @@ public class CanvasTest {
         assertEquals(gc.getMiterLimit(), 3, 0.00001);
     }
 
-    @Test (expected=NullPointerException.class) 
-    public void testGCState_LineNull() throws Exception {
+    @Test
+    public void testGCState_LineCapNull() throws Exception {
         Canvas node = new Canvas();
         GraphicsContext gc = node.getGraphicsContext2D();
-        
-        gc.setLineCap(null);     
+
+        gc.setLineCap(StrokeLineCap.BUTT);
+        gc.setLineCap(null);
+        assertEquals(gc.getLineCap(), StrokeLineCap.BUTT);
+        gc.setLineCap(StrokeLineCap.ROUND);
+        gc.setLineCap(null);
+        assertEquals(gc.getLineCap(), StrokeLineCap.ROUND);
+        gc.setLineCap(StrokeLineCap.SQUARE);
+        gc.setLineCap(null);
+        assertEquals(gc.getLineCap(), StrokeLineCap.SQUARE);
     }
 
-    @Test (expected=NullPointerException.class) 
-    public void testGCState_LineNull2() throws Exception {
+    @Test
+    public void testGCState_LineJoinNull() throws Exception {
         Canvas node = new Canvas();
         GraphicsContext gc = node.getGraphicsContext2D();
-        
-        gc.setLineJoin(null);      
+
+        gc.setLineJoin(StrokeLineJoin.BEVEL);
+        gc.setLineJoin(null);
+        assertEquals(gc.getLineJoin(), StrokeLineJoin.BEVEL);
+        gc.setLineJoin(StrokeLineJoin.MITER);
+        gc.setLineJoin(null);
+        assertEquals(gc.getLineJoin(), StrokeLineJoin.MITER);
+        gc.setLineJoin(StrokeLineJoin.ROUND);
+        gc.setLineJoin(null);
+        assertEquals(gc.getLineJoin(), StrokeLineJoin.ROUND);
     }
 
     @Test public void testGCState_BlendMode() throws Exception {

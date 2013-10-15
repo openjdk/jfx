@@ -28,7 +28,9 @@ package javafx.scene;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
@@ -1206,7 +1208,7 @@ public abstract class Parent extends Node {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override protected void impl_processCSS() {
+    @Override protected void impl_processCSS(final WritableValue<Boolean> cacheHint) {
 
         // Nothing to do...
         if (cssFlag == CssFlags.CLEAN) return;
@@ -1214,15 +1216,25 @@ public abstract class Parent extends Node {
         // RT-29254 - If DIRTY_BRANCH, pass control to Node#processCSS. This avoids calling impl_processCSS on
         // this node and all of its children when css doesn't need updated, recalculated, or reapplied.
         if (cssFlag == CssFlags.DIRTY_BRANCH) {
-            super.processCSS();
+            super.processCSS(cacheHint);
             return;
         }
         // remember the flag we started with since super.impl_processCSS
         // resets it to CLEAN and we need it for setting children.
         CssFlags flag = cssFlag;
 
+        //
+        // RT-33080
+        // If CSS is being reapplied, then we want to pass along a hint to CssStyleHelper to tell it whether
+        // or not the fontSizeCache should be cleared when the cache is reused. We initialize this to false
+        // and let CssStyleHelper set the value to true. The value is only passed along and should never
+        // be modified by anything other than CssStyleHelper.
+        //
+        final WritableValue<Boolean> hintForCssStyleHelper =
+                (cssFlag == CssFlags.REAPPLY && cacheHint == null) ? new SimpleBooleanProperty(false) : cacheHint;
+
         // Let the super implementation handle CSS for this node
-        super.impl_processCSS();
+        super.impl_processCSS(hintForCssStyleHelper);
 
         // avoid the following call to children.toArray if there are no children
         if (children.isEmpty()) return;
@@ -1253,7 +1265,7 @@ public abstract class Parent extends Node {
             if(flag.compareTo(child.cssFlag) > 0) {
                 child.cssFlag = flag;
             }
-            child.impl_processCSS();
+            child.impl_processCSS(hintForCssStyleHelper);
         }
     }
 

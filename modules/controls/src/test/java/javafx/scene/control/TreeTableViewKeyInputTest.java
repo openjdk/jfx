@@ -29,6 +29,7 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.ListChangeListener;
 import javafx.event.EventHandler;
 import javafx.scene.input.KeyCode;
 import javafx.util.Callback;
@@ -125,8 +126,6 @@ public class TreeTableViewKeyInputTest {
         col4 = new TreeTableColumn<String, String>("col4");
         tableView.getColumns().setAll(col0, col1, col2, col3, col4);
         
-        sm.clearAndSelect(0);
-        
         keyboard = new KeyEventFirer(tableView);
         
         stageLoader = new StageLoader(tableView);
@@ -219,9 +218,9 @@ public class TreeTableViewKeyInputTest {
      **************************************************************************/    
     
     @Test public void testInitialState() {
-        assertTrue(sm.isSelected(0));
-        assertEquals(1, sm.getSelectedIndices().size());
-        assertEquals(1, sm.getSelectedItems().size());
+        assertTrue(sm.getSelectedCells().isEmpty());
+        assertTrue(sm.getSelectedIndices().isEmpty());
+        assertTrue(sm.getSelectedItems().isEmpty());
     }
     
     
@@ -247,7 +246,10 @@ public class TreeTableViewKeyInputTest {
     @Test public void testUpArrowDoesNotChangeSelectionWhenAt0Index() {
         sm.clearAndSelect(0);
         keyboard.doUpArrowPress();
-        testInitialState();
+        assertTrue(sm.isSelected(0));
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(1, sm.getSelectedItems().size());
     }
     
     @Test public void testUpArrowChangesSelection() {
@@ -278,6 +280,7 @@ public class TreeTableViewKeyInputTest {
     
     // test 20
     @Test public void testCtrlUpDoesNotMoveFocus() {
+        sm.clearAndSelect(0);
         assertTrue(fm.isFocused(0));
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
         assertTrue(fm.isFocused(0));
@@ -286,6 +289,7 @@ public class TreeTableViewKeyInputTest {
     
     // test 21
     @Test public void testCtrlLeftDoesNotMoveFocus() {
+        sm.clearAndSelect(0);
         assertTrue(fm.isFocused(0));
         keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
         assertTrue(fm.isFocused(0));
@@ -294,6 +298,7 @@ public class TreeTableViewKeyInputTest {
     
     // test 22
     @Test public void testCtrlRightDoesNotMoveFocus() {
+        sm.clearAndSelect(0);
         assertTrue(fm.isFocused(0));
         keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
         assertTrue(fm.isFocused(0));
@@ -1705,6 +1710,7 @@ public class TreeTableViewKeyInputTest {
     
     // test 19
     @Test public void testCtrlDownMovesFocusButLeavesSelectionAlone() {
+        sm.clearAndSelect(0);
         assertTrue(fm.isFocused(0));
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
         assertTrue(fm.isFocused(1));
@@ -2912,5 +2918,52 @@ public class TreeTableViewKeyInputTest {
         assertTrue(isSelected(0));
         assertEquals(1, sm.getSelectedItems().size());
         assertTrue(fm.isFocused(0));
+    }
+
+    private int rt_33559_count = 0;
+    @Test public void test_rt33559() {
+        final int items = 4;
+        root.getChildren().clear();
+        root.setExpanded(false);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.SINGLE);
+        sm.clearAndSelect(0);
+
+        tableView.getSelectionModel().getSelectedItems().addListener(new ListChangeListener() {
+            @Override public void onChanged(Change c) {
+                while (c.next()) {
+                    rt_33559_count++;
+                }
+            }
+        });
+
+        assertEquals(0, rt_33559_count);
+        keyboard.doKeyPress(KeyCode.RIGHT); // expand root
+        assertEquals(0, rt_33559_count);
+    }
+
+    @Test public void test_rt20915() {
+        final FocusModel fm = tableView.getFocusModel();
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        sm.clearAndSelect(0);
+
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
+        Toolkit.getToolkit().firePulse();
+        assertTrue(isNotSelected(1,2,3));
+        assertTrue(isSelected(0));
+        assertEquals(1, sm.getSelectedItems().size());
+        assertTrue(fm.isFocused(3));
+
+        keyboard.doKeyPress(KeyCode.SPACE,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertTrue(isSelected(0,1,2,3));
+        assertEquals(4, sm.getSelectedItems().size());
+        assertTrue(fm.isFocused(3));
     }
 }

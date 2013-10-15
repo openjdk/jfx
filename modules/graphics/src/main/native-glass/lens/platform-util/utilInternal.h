@@ -23,7 +23,7 @@
  * questions.
  */
 
-#ifdef OMAP3 
+#if defined(OMAP3) || defined(IMX6_PLATFORM) 
 # ifndef USE_FB_ROBOT
     #define USE_FB_ROBOT
 # endif

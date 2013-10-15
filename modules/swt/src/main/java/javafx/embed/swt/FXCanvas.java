@@ -82,8 +82,10 @@ import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
-
+import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.PaletteData;
@@ -149,6 +151,21 @@ public class FXCanvas extends Canvas {
     
     private IntBuffer pixelsBuf = null;
     
+    // This filter runs when any widget is moved
+    Listener moveFilter = new Listener() {
+        public void handleEvent(Event event) {
+            // If a parent has moved, send a move event to FX
+            Control control = FXCanvas.this;
+            while (control != null) {
+                if (control == event.widget) {
+                    sendMoveEventToFX();
+                    break;
+                }
+                control = control.getParent();
+            };
+        }
+    };
+    
     private DropTarget dropTarget;
     
     static Transfer [] StandardTransfers = new Transfer [] {
@@ -190,6 +207,8 @@ public class FXCanvas extends Canvas {
         initFx();
         hostContainer = new HostContainer();
         registerEventListeners();
+        Display display = parent.getDisplay();
+        display.addFilter(SWT.Move, moveFilter);
     }
 
     private static void initFx() {
@@ -317,6 +336,8 @@ public class FXCanvas extends Canvas {
         addDisposeListener(new DisposeListener() {
             @Override
             public void widgetDisposed(DisposeEvent de) {
+                Display display = getDisplay();
+                display.removeFilter(SWT.Move, moveFilter);
                 FXCanvas.this.widgetDisposed(de);
             }
         });
@@ -508,6 +529,9 @@ public class FXCanvas extends Canvas {
                 middleBtnDown &= me.button != 2;
                 secondaryBtnDown &= me.button != 3;
                 break;
+            case AbstractEvents.MOUSEEVENT_CLICKED:
+                // Don't send click events to FX, as they are generated in Scene
+                return;
             default:
                 break;
         }
@@ -515,7 +539,6 @@ public class FXCanvas extends Canvas {
                 embedMouseType,
                 SWTEvents.mouseButtonToEmbedMouseButton(me.button, me.stateMask),
                 primaryBtnDown, middleBtnDown, secondaryBtnDown,
-                me.count,
                 me.x, me.y,
                 los.x, los.y,
                 shift, control, alt, meta,
@@ -901,7 +924,6 @@ public class FXCanvas extends Canvas {
                         try {
                             if (isDisposed()) return;
                             FXCanvas.this.redraw();
-                            FXCanvas.this.sendMoveEventToFX();
                         } finally {
                             synchronized (lock) {
                                 queued = false;

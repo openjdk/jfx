@@ -323,10 +323,10 @@ public class TriangleMesh extends Mesh {
                 isTexCoordsValid = validateTexCoords();
             }
             if (facesSyncer.dirty || pointsSyncer.dirtyInFull || texCoordsSyncer.dirtyInFull) {
-                isFacesValid = (isPointsValid && isTexCoordsValid) ? validateFaces() : false;
+                isFacesValid = isPointsValid && isTexCoordsValid && validateFaces();
             }
             if (faceSmoothingGroupsSyncer.dirtyInFull || facesSyncer.dirtyInFull) {
-                isFaceSmoothingGroupValid = validateFaceSmoothingGroups();
+                isFaceSmoothingGroupValid = isFacesValid && validateFaceSmoothingGroups();
             }
             isValidDirty = false;
         }
@@ -344,19 +344,17 @@ public class TriangleMesh extends Mesh {
             return;
         }
 
-        validate();
         final NGTriangleMesh pgTriMesh = impl_getPGTriangleMesh();
-        if (pointsSyncer.dirty) {
-            pgTriMesh.syncPoints(isPointsValid ? pointsSyncer : null);
-        }
-        if (texCoordsSyncer.dirty) {
-            pgTriMesh.syncTexCoords(isTexCoordsValid ? texCoordsSyncer : null);
-        }
-        if (facesSyncer.dirty) {
-            pgTriMesh.syncFaces(isFacesValid ? facesSyncer : null);
-        }
-        if (faceSmoothingGroupsSyncer.dirty) {
-            pgTriMesh.syncFaceSmoothingGroups(isFaceSmoothingGroupValid ? faceSmoothingGroupsSyncer : null);
+        if (validate()) {
+            pgTriMesh.syncPoints(pointsSyncer);
+            pgTriMesh.syncTexCoords(texCoordsSyncer);
+            pgTriMesh.syncFaces(facesSyncer);
+            pgTriMesh.syncFaceSmoothingGroups(faceSmoothingGroupsSyncer);
+        } else {
+            pgTriMesh.syncPoints(null);
+            pgTriMesh.syncTexCoords(null);
+            pgTriMesh.syncFaces(null);
+            pgTriMesh.syncFaceSmoothingGroups(null);
         }
         setDirty(false);
     }

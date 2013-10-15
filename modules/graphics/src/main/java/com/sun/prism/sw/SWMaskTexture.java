@@ -68,14 +68,14 @@ public class SWMaskTexture extends SWTexture {
             throw new IllegalArgumentException("SWMaskTexture supports BYTE_ALPHA format only.");
         }
         this.checkAllocation(srcw, srch);
-        this.width = srcw;
-        this.height = srch;
+        this.physicalWidth = srcw;
+        this.physicalHeight = srch;
         this.allocate();
 
         ByteBuffer bb = (ByteBuffer)buffer;
         for (int i = 0; i < srch; i++) {
             bb.position((srcy + i)*srcscan + srcx);
-            bb.get(this.data, i*this.width, srcw);
+            bb.get(this.data, i*this.physicalWidth, srcw);
         }
     }
 
@@ -94,20 +94,10 @@ public class SWMaskTexture extends SWTexture {
     }
 
     void allocateBuffer() {
-        this.data = new byte[width * height];
+        this.data = new byte[physicalWidth * physicalHeight];
     }
 
     Texture createSharedLockedTexture(WrapMode altMode) {
         return new SWMaskTexture(this, altMode);
-    }
-
-    @Override
-    public int getMaxContentWidth() {
-        return getContentWidth();
-    }
-
-    @Override
-    public int getMaxContentHeight() {
-        return getContentHeight();
     }
 }

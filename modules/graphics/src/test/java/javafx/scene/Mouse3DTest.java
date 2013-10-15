@@ -2348,7 +2348,7 @@ public class Mouse3DTest {
         Scene scene = new Scene(root, 800, 800, false);
 
         Group subRoot = new Group();
-        SubScene sub = new SubScene(subRoot, 700, 700, true, false);
+        SubScene sub = new SubScene(subRoot, 700, 700, true, null);
         root.getChildren().add(sub);
 
         PerspectiveCamera cam = new PerspectiveCamera(true);

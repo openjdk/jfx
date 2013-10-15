@@ -39,6 +39,7 @@ import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
+import javafx.scene.SceneAntialiasing;
 import javafx.scene.Parent;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
@@ -263,7 +264,7 @@ public class XylophoneApp extends Application {
 
         PerspectiveCamera camera = new PerspectiveCamera();
 
-        SubScene subScene = new SubScene(sceneRoot, 460, 240, true, true); 
+        SubScene subScene = new SubScene(sceneRoot, 460, 240, true, SceneAntialiasing.BALANCED); 
         subScene.setCamera(camera);
         
         sceneRoot.translateXProperty().bind(subScene.widthProperty().divide(2.2));

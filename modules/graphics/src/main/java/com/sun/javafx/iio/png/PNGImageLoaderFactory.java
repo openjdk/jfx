@@ -33,15 +33,6 @@ import java.io.InputStream;
 import java.security.*;
 
 public class PNGImageLoaderFactory implements ImageLoaderFactory {
-
-    static private final String selectorPropertyName = "prism.useOldPNG";
-    static private boolean useOldPngLoader =
-        AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-            public Boolean run() {
-                return Boolean.valueOf(Boolean.getBoolean(selectorPropertyName));
-            }
-        });
-
     private static final PNGImageLoaderFactory theInstance =
             new PNGImageLoaderFactory();
 
@@ -56,7 +47,7 @@ public class PNGImageLoaderFactory implements ImageLoaderFactory {
     }
 
     public ImageLoader createImageLoader(InputStream input) throws IOException {
-        return useOldPngLoader ? new PNGImageLoader(input) : new PNGImageLoader2(input);
+        return new PNGImageLoader2(input);
     }
 
 }

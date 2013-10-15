@@ -70,7 +70,6 @@ public class ListViewKeyInputTest {
         stageLoader.getStage().show();
 
         listView.getItems().setAll("1", "2", "3", "4", "5", "6", "7", "8", "9", "10");
-        sm.clearAndSelect(0);
     }
     
     @After public void tearDown() {
@@ -127,9 +126,8 @@ public class ListViewKeyInputTest {
      **************************************************************************/    
     
     @Test public void testInitialState() {
-        assertTrue(sm.isSelected(0));
-        assertEquals(1, sm.getSelectedIndices().size());
-        assertEquals(1, sm.getSelectedItems().size());
+        assertTrue(sm.getSelectedIndices().isEmpty());
+        assertTrue(sm.getSelectedItems().isEmpty());
     }
     
     /***************************************************************************
@@ -154,7 +152,9 @@ public class ListViewKeyInputTest {
     @Test public void testUpArrowDoesNotChangeSelectionWhenAt0Index() {
         sm.clearAndSelect(0);
         keyboard.doUpArrowPress();
-        testInitialState();
+        assertTrue(sm.isSelected(0));
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(1, sm.getSelectedItems().size());
     }
     
     @Test public void testUpArrowChangesSelection() {
@@ -176,6 +176,7 @@ public class ListViewKeyInputTest {
     
     // test 19
     @Test public void testCtrlDownMovesFocusButLeavesSelectionAlone() {
+        sm.clearAndSelect(0);
         assertTrue(fm.isFocused(0));
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
         assertTrue(fm.isFocused(1));
@@ -185,6 +186,7 @@ public class ListViewKeyInputTest {
     
     // test 20
     @Test public void testCtrlUpDoesNotMoveFocus() {
+        sm.clearAndSelect(0);
         assertTrue(fm.isFocused(0));
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
         assertTrue(fm.isFocused(0));
@@ -193,6 +195,7 @@ public class ListViewKeyInputTest {
     
     // test 21
     @Test public void testCtrlLeftDoesNotMoveFocus() {
+        sm.clearAndSelect(0);
         assertTrue(fm.isFocused(0));
         keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
         assertTrue(fm.isFocused(0));
@@ -201,6 +204,7 @@ public class ListViewKeyInputTest {
     
     // test 22
     @Test public void testCtrlRightDoesNotMoveFocus() {
+        sm.clearAndSelect(0);
         assertTrue(fm.isFocused(0));
         keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
         assertTrue(fm.isFocused(0));
@@ -1648,5 +1652,28 @@ public class ListViewKeyInputTest {
         assertTrue(isSelected(0));
         assertEquals(1, sm.getSelectedItems().size());
         assertTrue(fm.isFocused(0));
+    }
+
+    @Test public void test_rt20915() {
+        final FocusModel fm = listView.getFocusModel();
+        final MultipleSelectionModel sm = listView.getSelectionModel();
+
+        sm.clearAndSelect(0);
+        assertEquals(0, getAnchor());
+
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
+        Toolkit.getToolkit().firePulse();
+        assertTrue(isNotSelected(1,2,3));
+        assertTrue(isSelected(0));
+        assertEquals(1, sm.getSelectedItems().size());
+        assertTrue(fm.isFocused(3));
+
+        keyboard.doKeyPress(KeyCode.SPACE,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertTrue(isSelected(0,1,2,3));
+        assertEquals(4, sm.getSelectedItems().size());
+        assertTrue(fm.isFocused(3));
     }
 }

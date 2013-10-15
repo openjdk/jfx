@@ -357,10 +357,12 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         double catSpace = categoryAxis.getCategorySpacing();
         // calculate bar spacing
         final double avilableBarSpace = catSpace - (getCategoryGap() + getBarGap());
-        final double barWidth = (avilableBarSpace / getSeriesSize()) - getBarGap();
+        double barWidth = (avilableBarSpace / getSeriesSize()) - getBarGap();
         final double barOffset = -((catSpace - getCategoryGap()) / 2);
         final double zeroPos = (valueAxis.getLowerBound() > 0) ? 
                 valueAxis.getDisplayPosition(valueAxis.getLowerBound()) : valueAxis.getZeroPosition();
+        // RT-24813 : if the data in a series gets too large, barWidth can get negative.
+        if (barWidth <= 0) barWidth = 1;
         // update bar positions and sizes
         int catIndex = 0;
         for (String category : categoryAxis.getCategories()) {

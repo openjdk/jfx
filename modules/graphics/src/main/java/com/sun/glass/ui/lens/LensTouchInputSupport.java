@@ -41,7 +41,6 @@ import java.security.PrivilegedAction;
 final class LensTouchInputSupport {
 
     private static final int touchTapRadius;
-    private static final int touchReleasePendingTimeout;
 
     static {
         touchTapRadius = AccessController.doPrivileged(
@@ -49,14 +48,6 @@ final class LensTouchInputSupport {
             @Override
             public Integer run() {
                 return Integer.getInteger("lens.touchTapRadius", 20);
-            }
-        });
-
-        touchReleasePendingTimeout = AccessController.doPrivileged(
-        new PrivilegedAction<Integer>() {
-            @Override
-            public Integer run() {
-                return Integer.getInteger("lens.touchReleasePendingTimeout", 50);
             }
         });
     }

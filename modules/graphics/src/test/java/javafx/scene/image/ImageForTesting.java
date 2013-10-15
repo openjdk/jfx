@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,30 +23,22 @@
  * questions.
  */
 
-package com.sun.javafx.iio.gif;
+package javafx.scene.image;
 
-class GIFStreamMetadata {
-    // package scope
-//    static final String
-//        nativeMetadataFormatName = "javax_imageio_gif_stream_1.0";
+/**
+ * This class is used by RegionTest to be able to manually specify the progress of an Image.
+ * There is no doubt a better way to do this.
+ */
+public class ImageForTesting extends Image {
+    public ImageForTesting(String url, boolean background) {
+        super(url, background);
+    }
 
-    static final String[] versionStrings = { "87a", "89a" };
+    public void updateProgress(double value) {
+        setProgress(value);
+    }
 
-    String version; // 87a or 89a
-    int logicalScreenWidth;
-    int logicalScreenHeight;
-    int colorResolution; // 1 to 8
-    int pixelAspectRatio;
-
-    int backgroundColorIndex; // Valid if globalColorTable != null
-    boolean sortFlag; // Valid if globalColorTable != null
-
-    static final String[] colorTableSizes = {
-        "2", "4", "8", "16", "32", "64", "128", "256"
-    };
-
-    // Set global color table flag in header to 0 if null, 1 otherwise
-    byte[] globalColorTable = null;
-
-    GIFStreamMetadata() {}
+    public void updateVisuals() {
+        super.pixelsDirty();
+    }
 }

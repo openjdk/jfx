@@ -445,16 +445,10 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
     switch (rdr->_texture_transformType) {
     case TEXTURE_TRANSFORM_IDENTITY:
         {
-        jint txtOffsetRepeat = 0;
-        jint txtRowNumRepeat = 0;
-
         if (rdr->_texture_repeat) {
-            txtOffsetRepeat = rdr->_currX % txtWidth;
-            txtRowNumRepeat = rdr->_currY % txtHeight;
-        }
-
-        for (j = 0; j < height; j++) {
-            if (rdr->_texture_repeat) {
+            jint txtOffsetRepeat = rdr->_currX % txtWidth;
+            jint txtRowNumRepeat = rdr->_currY % txtHeight;
+            for (j = 0; j < height; j++) {
                 jint *tStart = txtData + rdr->_texture_stride * txtRowNumRepeat;
                 jint *t = tStart + txtOffsetRepeat;
                 jint *tEnd = tStart + txtWidth;
@@ -470,9 +464,14 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
                 if (txtRowNumRepeat == txtHeight) {
                     txtRowNumRepeat = 0;
                 }
-            } else {
-                memcpy(paint + paintStride * j, 
-                     txtData + rdr->_texture_stride * (firstRowNum + j),
+            }
+        } else {
+            jint minX = MAX(rdr->_rectX, rdr->_clip_bbMinX);
+            jint minY = MAX(rdr->_rectY, rdr->_clip_bbMinY);
+            jint clipOffset = (minY - rdr->_rectY) * rdr->_texture_stride + minX - rdr->_rectX;
+            for (j = 0; j < height; j++) {
+                memcpy(paint + paintStride * j,
+                     txtData + clipOffset + rdr->_texture_stride * (firstRowNum + j),
                      sizeof(jint) * paintStride);
             }
         }

@@ -81,14 +81,23 @@ public abstract class Window {
         return Collections.unmodifiableList(Window.visibleWindows);
     }
 
-    // used by Lens Native
-    static private synchronized void add(Window window) {
-        Window.visibleWindows.add(window);
+    static public List<Window> getWindowsClone() {
+        Application.checkEventThread();
+        return (List<Window>)visibleWindows.clone();
     }
 
     // used by Lens Native
-    static private synchronized void remove(Window window) {
-        Window.visibleWindows.remove(window);
+    static protected void add(Window window) {
+        visibleWindows.add(window);
+    }
+
+    static protected void addFirst(Window window) {
+        visibleWindows.addFirst(window);
+    }
+
+    // used by Lens Native
+    static protected void remove(Window window) {
+        visibleWindows.remove(window);
     }
 
     // window style mask
@@ -325,6 +334,14 @@ public abstract class Window {
     public long getNativeHandle() {
         Application.checkEventThread();
         return this.delegatePtr != 0L ? this.delegatePtr : this.ptr;
+    }
+
+    /** 
+     * return the "raw' pointer needed by subclasses to pass to native routines
+     * @return the native pointer.
+     */
+    protected long getRawHandle() {
+        return ptr;
     }
 
     public Window getOwner() {
@@ -1033,30 +1050,7 @@ public abstract class Window {
     public void toFront() {
         Application.checkEventThread();
         checkNotClosed();
-        toFrontImpl(this, null);
-    }
-
-    private void toFrontImpl(Window w, List<Window> list) {
-        // for z-order stacking, pop the window
-        // and push it on the end (closest Z)
-        visibleWindows.remove(w);
-        visibleWindows.add(w);
-        _toFront(w.ptr);
-        raiseOurOwnedWindows(w, list);
-    }
-
-    private void raiseOurOwnedWindows(Window window, List<Window> list) {
-        // owned windows should be maintained in front of the owner.
-        if (list == null) {
-            // get a single copy of the window list
-            // copy is needed to avoid concurence issues with the iterator
-            list = (List<Window>) Window.visibleWindows.clone();
-        }
-        for(Window w: list) {
-            if (window.equals(w.getOwner())) {
-                toFrontImpl(w, list);
-            }
-        }
+        _toFront(ptr);
     }
 
     protected abstract void _toBack(long ptr);
@@ -1069,10 +1063,6 @@ public abstract class Window {
     public void toBack() {
         Application.checkEventThread();
         checkNotClosed();
-        // for z-order stacking, pop the window
-        // and push it on the head (farthest Z)
-        visibleWindows.remove(this);
-        visibleWindows.addFirst(this);
         _toBack(this.ptr);
     }
 

@@ -34,6 +34,7 @@ public abstract class BaseResourcePool<T> implements ResourcePool<T> {
     long managedSize;
     final long maxSize;
     final ResourcePool sharedParent;
+    private final Thread managerThread;
 
     protected BaseResourcePool() {
         this(null, Long.MAX_VALUE);
@@ -52,6 +53,12 @@ public abstract class BaseResourcePool<T> implements ResourcePool<T> {
         this.maxSize = ((parent == null)
                         ? max
                         : Math.min(parent.max(), max));
+        managerThread = Thread.currentThread();
+    }
+
+    @Override
+    public boolean isManagerThread() {
+        return Thread.currentThread() == managerThread;
     }
 
     @Override

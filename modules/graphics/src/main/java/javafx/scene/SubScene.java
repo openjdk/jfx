@@ -31,6 +31,7 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.value.WritableValue;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point3D;
 import javafx.scene.input.PickResult;
@@ -76,7 +77,7 @@ public class SubScene extends Node {
      * @throws NullPointerException if root is null
      */
     public SubScene(Parent root, double width, double height) {
-        this(root, width, height, false, false);
+        this(root, width, height, false, SceneAntialiasing.DISABLED);
     }
 
     /**
@@ -88,11 +89,12 @@ public class SubScene extends Node {
      * @param width The width of the scene
      * @param height The height of the scene
      * @param depthBuffer The depth buffer flag
-     * @param antiAliasing The sub-scene anti-aliasing flag
+     * @param antiAliasing The sub-scene anti-aliasing attribute. A value of
+     * {@code null} is treated as DISABLED.
      * <p>
-     * The depthBuffer and antiAliasing flags are conditional feature and the default
-     * value for both are false. See
-     * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
+     * The depthBuffer and antiAliasing flags are conditional features. With the
+     * respective default values of: false and {@code SceneAntialiasing.DISABLED}.
+     * See {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
      * for more information.
      *
      * @throws IllegalStateException if this constructor is called on a thread
@@ -102,21 +104,21 @@ public class SubScene extends Node {
      * @see javafx.scene.Node#setDepthTest(DepthTest)
      */
     public SubScene(Parent root, double width, double height,
-            boolean depthBuffer, boolean antiAliasing)
+            boolean depthBuffer, SceneAntialiasing antiAliasing)
     {
         this.depthBuffer = depthBuffer;
         this.antiAliasing = antiAliasing;
+        boolean isAntiAliasing = !(antiAliasing == null || antiAliasing == SceneAntialiasing.DISABLED);
         setRoot(root);
         setWidth(width);
         setHeight(height);
 
-        if ((depthBuffer || antiAliasing) && !is3DSupported) {
+        if ((depthBuffer || isAntiAliasing) && !is3DSupported) {
             String logname = SubScene.class.getName();
             PlatformLogger.getLogger(logname).warning("System can't support "
                     + "ConditionalFeature.SCENE3D");
         }
-        if (antiAliasing && !com.sun.prism.GraphicsPipeline.
-                getPipeline().isAntiAliasingSupported()) {
+        if (isAntiAliasing && !Toolkit.getToolkit().isAntiAliasingSupported()) {
             String logname = SubScene.class.getName();
             PlatformLogger.getLogger(logname).warning("System can't support "
                     + "antiAliasing");
@@ -126,12 +128,18 @@ public class SubScene extends Node {
     private static boolean is3DSupported =
             Platform.isSupported(ConditionalFeature.SCENE3D);
 
-    private final boolean antiAliasing;
+    private final SceneAntialiasing antiAliasing;
 
     /**
-     * Return true if this {@code SubScene} is anti-aliased otherwise false.
+     * Return the defined {@code SceneAntialiasing} for this {@code SubScene}.
+     * <p>
+     * Note: this is a conditional feature. See
+     * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
+     * and {@link javafx.scene.SceneAntialiasing SceneAntialiasing}
+     * for more information.
+     * @since JavaFX 8.0
      */
-    public final boolean isAntiAliasing() {
+    public final SceneAntialiasing getAntiAliasing() {
         return antiAliasing;
     }
 
@@ -530,25 +538,25 @@ public class SubScene extends Node {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated @Override
-    protected void impl_processCSS() {
+    protected void impl_processCSS(WritableValue<Boolean> cacheHint) {
         // Nothing to do...
         if (cssFlag == CssFlags.CLEAN) { return; }
 
         if (getRoot().cssFlag == CssFlags.CLEAN) {
             getRoot().cssFlag = cssFlag;
         }
-        super.impl_processCSS();
-        getRoot().processCSS();
+        super.impl_processCSS(cacheHint);
+        getRoot().processCSS(cacheHint);
     }
 
     @Override
-    void processCSS() {
+    void processCSS(WritableValue<Boolean> cacheHint) {
         Parent root = getRoot();
         if (root.impl_isDirty(DirtyBits.NODE_CSS)) {
             root.impl_clearDirty(DirtyBits.NODE_CSS);
             if (cssFlag == CssFlags.CLEAN) { cssFlag = CssFlags.UPDATE; }
         }
-        super.processCSS();
+        super.processCSS(cacheHint);
     }
 
     @Override void updateBounds() {
@@ -565,8 +573,8 @@ public class SubScene extends Node {
         if (!is3DSupported) {
             return new NGSubScene(false, false);
         }
-        return new NGSubScene(depthBuffer, antiAliasing &&
-                com.sun.prism.GraphicsPipeline.getPipeline().isAntiAliasingSupported());
+        boolean aa = !(antiAliasing == null || antiAliasing == SceneAntialiasing.DISABLED);
+        return new NGSubScene(depthBuffer, aa && Toolkit.getToolkit().isAntiAliasingSupported());
     }
 
     /**

@@ -134,9 +134,7 @@ void notifyMotionEvent(
    ATTACH_JNI_THREAD();
    lens_wm_notifyMotionEvent(env,
            mousePosX,
-           mousePosY,
-           isTouch,
-           touchId);
+           mousePosY);
    DETACH_JNI_THREAD();
 }
 

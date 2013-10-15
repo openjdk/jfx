@@ -62,6 +62,8 @@ import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGShape;
 import com.sun.javafx.tk.Toolkit;
+import java.lang.ref.Reference;
+import java.lang.ref.WeakReference;
 
 
 /**
@@ -920,14 +922,15 @@ public abstract class Shape extends Node {
     @Deprecated
     @Override
     protected void impl_markDirty(DirtyBits dirtyBits) {
-        if (shapeChangeListener != null && impl_isDirtyEmpty()) {
-            shapeChangeListener.run();
+        final Runnable listener = shapeChangeListener != null ? shapeChangeListener.get() : null;
+        if (listener != null && impl_isDirtyEmpty()) {
+            listener.run();
         }
 
         super.impl_markDirty(dirtyBits);
     }
 
-    private Runnable shapeChangeListener;
+    private Reference<Runnable> shapeChangeListener;
 
     /**
      * @treatAsPrivate implementation detail
@@ -935,7 +938,8 @@ public abstract class Shape extends Node {
      */
     @Deprecated
     public void impl_setShapeChangeListener(Runnable listener) {
-        shapeChangeListener = listener;
+        if (shapeChangeListener != null) shapeChangeListener.clear();
+        shapeChangeListener = listener != null ? new WeakReference(listener) : null;
     }
 
     /**

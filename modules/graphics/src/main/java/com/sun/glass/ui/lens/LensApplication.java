@@ -52,6 +52,7 @@ import com.sun.glass.ui.Timer;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
 import sun.util.logging.PlatformLogger.Level;
+import java.util.Arrays;
 
 final class LensApplication extends Application {
 
@@ -572,7 +573,10 @@ final class LensApplication extends Application {
         @Override
         public String toString() {
             return "LensMultiTouchEvent[view=" + view
-                    + ",points=" + ids.length
+                    + ", ids " + Arrays.toString(ids)
+                    + ", states " + Arrays.toString(states)
+                    + ", xs " + Arrays.toString(xs)
+                    + ", ys " + Arrays.toString(ys)
                     + "]";
         }
     }
@@ -1713,17 +1717,16 @@ final class LensApplication extends Application {
                                         String title, int type,
                                         boolean multipleMode,
                                         ExtensionFilter[] extensionFilters, int defaultFilterIndex) {
-        //TODO: support FileChooserResult
-        return new FileChooserResult(LensCommonDialogs.showFileChooser_impl(folder, title, type,
-                                                      multipleMode,
-                                                      extensionFilters, defaultFilterIndex), null);
+        // FileChooser APIs should return null when they cannot show a dialog
+        return null;
     }
 
     @Override
     protected File staticCommonDialogs_showFolderChooser(Window owner,
             String folder,
             String title) {
-        return LensCommonDialogs.showFolderChooser_impl();
+        // FileChooser APIs should return null when they cannot show a dialog
+        return null;
     }
 
     @Override protected long staticView_getMultiClickTime() {

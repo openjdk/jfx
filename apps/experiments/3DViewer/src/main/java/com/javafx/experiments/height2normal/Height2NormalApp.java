@@ -186,7 +186,7 @@ public class Height2NormalApp  extends Application {
         private AutoScalingGroup autoScalingGroup = new AutoScalingGroup(2);
 
         public SubScene create() {
-            SubScene scene = new SubScene(root3D,512,512,true,false);
+            SubScene scene = new SubScene(root3D,512,512,true,null);
             scene.setFill(Color.ALICEBLUE);
 
             // CAMERA

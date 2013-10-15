@@ -53,13 +53,6 @@ FB_PLATFORM_DECLARE jlong (*fbPlatformCreateNativeCursor)(JNIEnv *env, jint x, j
 FB_PLATFORM_DECLARE void (*fbPlatformReleaseNativeCursor)(jlong nativeCursorPointer);
 FB_PLATFORM_DECLARE void (*fbPlatformSetVisible)(jboolean isVisible);
 FB_PLATFORM_DECLARE jboolean fbPlatformCursorTranslucency;
-FB_PLATFORM_DECLARE void (*fbPlatformSetNativeCursor)(jlong nativeCursorPointer);
-FB_PLATFORM_DECLARE jlong (*fbPlatformCreateNativeCursor)(JNIEnv *env, jint x, jint y,  jbyte *srcArray, jint width, jint height);
-FB_PLATFORM_DECLARE void (*fbPlatformReleaseNativeCursor)(jlong nativeCursorPointer);
-FB_PLATFORM_DECLARE void (*fbPlatformSetVisible)(jboolean isVisible);
-FB_PLATFORM_DECLARE jboolean fbPlatformCursorTranslucency;
-FB_PLATFORM_DECLARE void (*fbPlatformSetNativeCursor)(jlong nativeCursorPointer);
-FB_PLATFORM_DECLARE void (*fbPlatformSetNativeCursor)(jlong nativeCursorPointer);
 
 // Robot Specific Entries
 FB_PLATFORM_DECLARE jboolean (*fbRobotScreenCapture)(jint x, jint y, jint width, jint height, jint *pixels);

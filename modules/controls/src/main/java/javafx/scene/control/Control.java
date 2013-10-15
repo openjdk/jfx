@@ -35,6 +35,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
+import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
@@ -852,7 +853,7 @@ public abstract class Control extends Region implements Skinnable {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override protected void impl_processCSS() {
+    @Override protected void impl_processCSS(WritableValue<Boolean> cacheHint) {
 
         // don't muck with this if block without first reading the comments in skin property's set method!
         if (skinClassNameProperty().get() == null) {
@@ -863,14 +864,14 @@ public abstract class Control extends Region implements Skinnable {
             }
         }
 
-        super.impl_processCSS();
+        super.impl_processCSS(cacheHint);
 
         if (getSkin() == null) {
             // try to create default skin
             final Skin<?> defaultSkin = createDefaultSkin();
             if (defaultSkin != null) {
                 skinProperty().set(defaultSkin);
-                super.impl_processCSS();
+                super.impl_processCSS(cacheHint);
             } else {
                 final String msg = "The -fx-skin property has not been defined in CSS for " + this +
                                    " and createDefaultSkin() returned null.";

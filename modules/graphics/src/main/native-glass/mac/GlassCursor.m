@@ -76,7 +76,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacCursor__1initIDs
 {
     if (jSizeInit == NULL)
     {
-        jSizeInit = (*env)->GetMethodID(env, (*env)->FindClass(env, "com/sun/glass/ui/Size"), "<init>", "(II)V");
+        jSizeInit = (*env)->GetMethodID(env, [GlassHelper ClassForName:"com.sun.glass.ui.Size" withEnv:env], "<init>", "(II)V");
     }
 }
 
@@ -284,7 +284,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCursor__1getBestSize
         
         [image release];
         
-        jsize = (*env)->NewObject(env, (*env)->FindClass(env, "com/sun/glass/ui/Size"), jSizeInit, widthBest, heightBest);
+        jsize = (*env)->NewObject(env, [GlassHelper ClassForName:"com.sun.glass.ui.Size" withEnv:env], jSizeInit, widthBest, heightBest);
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);

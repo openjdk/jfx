@@ -59,7 +59,7 @@ void eglfbX11ContainerEventLoop(JNIEnv *env) {
             case MotionNotify:
                 GLASS_LOG_FINEST("Pointer moved to (%i,%i)",
                                  e.xmotion.x, e.xmotion.y);
-                lens_wm_notifyMotionEvent(env, e.xmotion.x, e.xmotion.y, 0, 0);
+                lens_wm_notifyMotionEvent(env, e.xmotion.x, e.xmotion.y);
                 break;
             default:
                 GLASS_LOG_FINEST("XNextEvent returned event of type %i",

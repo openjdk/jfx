@@ -72,12 +72,20 @@ public class Person {
         lastName.set(fName);
     }
 
+    public StringProperty lastNameProperty() {
+        return lastName;
+    }
+
     public String getEmail() {
         return email.get();
     }
 
     public void setEmail(String fName) {
         email.set(fName);
+    }
+
+    public StringProperty emailProperty() {
+        return email;
     }
     
     public final int getAge() {return age.get();}

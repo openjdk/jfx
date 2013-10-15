@@ -173,7 +173,15 @@ public class Image {
     private ReadOnlyDoubleWrapper progress;
 
 
-    private void setProgress(double value) {
+    /**
+     * This is package private *only* for the sake of testing. We need a way to feed fake progress
+     * values. It would be better if Image were refactored to be testable (for example, by allowing
+     * the test code to provide its own implementation of background loading), but this is a simpler
+     * and safer change for now.
+     *
+     * @param value should be 0-1.
+     */
+    final void setProgress(double value) {
         progressPropertyImpl().set(value);
     }
 

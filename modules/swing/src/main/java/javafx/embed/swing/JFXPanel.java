@@ -221,7 +221,6 @@ public class JFXPanel extends JComponent {
         setFocusTraversalKeysEnabled(false);
 
         this.dnd = new SwingDnD(this, new SwingDnD.JFXPanelFacade() {
-
             @Override
             public EmbeddedSceneInterface getScene() {
                 return isFxEnabled() ? scenePeer : null;
@@ -342,12 +341,14 @@ public class JFXPanel extends JComponent {
                 return;
             }
             isCapturingMouse = primaryBtnDown || middleBtnDown || secondaryBtnDown;
+        } else if (e.getID() == MouseEvent.MOUSE_CLICKED) {
+            // Don't send click events to FX, as they are generated in Scene
+            return;
         }
         scenePeer.mouseEvent(
                 SwingEvents.mouseIDToEmbedMouseType(e.getID()),
                 SwingEvents.mouseButtonToEmbedMouseButton(e.getButton(), extModifiers),
                 primaryBtnDown, middleBtnDown, secondaryBtnDown,
-                e.getClickCount(),
                 e.getX(), e.getY(), e.getXOnScreen(), e.getYOnScreen(),
                 (extModifiers & MouseEvent.SHIFT_DOWN_MASK) != 0,
                 (extModifiers & MouseEvent.CTRL_DOWN_MASK) != 0,

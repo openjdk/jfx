@@ -46,6 +46,7 @@ import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.shape.StrokeType;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.WeakHashMap;
 
@@ -135,6 +136,7 @@ public class NGRegion extends NGGroup {
      * on the render thread.
      */
     private Shape shape;
+    private NGShape ngShape;
 
     /**
      * Whether we should scale the shape to match the bounds of the region. Only applies
@@ -210,12 +212,16 @@ public class NGRegion extends NGGroup {
      * @param positionShape whether to center the shape
      */
     public void updateShape(Object shape, boolean scaleShape, boolean positionShape, boolean cacheShape) {
-        this.shape = shape == null ? null : ((NGShape) ((javafx.scene.shape.Shape)shape).impl_getPeer()).getShape();
+        this.ngShape = shape == null ? null : ((javafx.scene.shape.Shape)shape).impl_getPeer();
+        this.shape = shape == null ? null : ngShape.getShape();
         this.scaleShape = scaleShape;
         this.centerShape = positionShape;
         this.cacheShape = cacheShape;
+        // Technically I don't think this is needed because whenever the shape changes, setOpaqueInsets
+        // is also called, so this will get invalidated twice.
         invalidateOpaqueRegion();
         cacheKey = null;
+        visualsChanged();
     }
 
     /**
@@ -237,6 +243,15 @@ public class NGRegion extends NGGroup {
         if (background != null && background.isFillPercentageBased()) {
             backgroundInsets = null;
         }
+    }
+
+    /**
+     * Called by Region whenever an image that was being loaded in the background has
+     * finished loading. Nothing changes in terms of metrics or sizes or caches, but
+     * we do need to repaint everything.
+     */
+    public void imagesUpdated() {
+        visualsChanged();
     }
 
     /**
@@ -341,6 +356,17 @@ public class NGRegion extends NGGroup {
         opaqueBottom = bottom;
         opaqueLeft = left;
         invalidateOpaqueRegion();
+    }
+
+    /**
+     * When cleaning the dirty tree, we also have to keep in mind
+     * the NGShape used by the NGRegion
+     */
+    @Override public void clearDirtyTree() {
+        super.clearDirtyTree();
+        if (ngShape != null) {
+            ngShape.clearDirtyTree();
+        }
     }
 
     /**************************************************************************
@@ -746,16 +772,20 @@ public class NGRegion extends NGGroup {
         final List<BackgroundImage> images = background.getImages();
         for (int i = 0, max = images.size(); i < max; i++) {
             final BackgroundImage image = images.get(i);
-            Image img = (Image) image.getImage().impl_getPlatformImage();
+            Image prismImage = (Image) image.getImage().impl_getPlatformImage();
+            if (prismImage == null) {
+                // The prismImage might be null if the Image has not completed loading.
+                // In that case, we simply must skip rendering of that layer this
+                // time around.
+                continue;
+            }
+
             final int imgUnscaledWidth = (int)image.getImage().getWidth();
             final int imgUnscaledHeight = (int)image.getImage().getHeight();
-            final int imgWidth = img.getWidth();
-            final int imgHeight = img.getHeight();
-            // TODO need to write tests which demonstrate this works when the image hasn't loaded yet. (RT-26978)
-            // This doesn't work today. An NPE will occur, and then when the image does finally load,
-            // we don't cause another pulse to occur so it doesn't ever get drawn.
+            final int imgWidth = prismImage.getWidth();
+            final int imgHeight = prismImage.getHeight();
             // TODO need to write tests where we use a writable image and draw to it a lot. (RT-26978)
-            if (img != null && imgWidth != 0 && imgHeight != 0) {
+            if (imgWidth != 0 && imgHeight != 0) {
                 final BackgroundSize size = image.getSize();
                 if (size.isCover()) {
                     // When "cover" is true, we can ignore most properties on the BackgroundSize and
@@ -764,7 +794,7 @@ public class NGRegion extends NGGroup {
                     // size width / height.
                     final float scale = Math.max(width / imgWidth,height / imgHeight);
                     final Texture texture =
-                        g.getResourceFactory().getCachedTexture(img, Texture.WrapMode.CLAMP_TO_EDGE);
+                        g.getResourceFactory().getCachedTexture(prismImage, Texture.WrapMode.CLAMP_TO_EDGE);
                     g.drawTexture(texture,
                             0, 0, width, height,
                             0, 0, width/scale, height/scale
@@ -855,7 +885,7 @@ public class NGRegion extends NGGroup {
 
                     // Now that we have acquired or computed all the data, we'll let paintTiles
                     // do the actual rendering operation.
-                    paintTiles(g, img, image.getRepeatX(), image.getRepeatY(),
+                    paintTiles(g, prismImage, image.getRepeatX(), image.getRepeatY(),
                                pos.getHorizontalSide(), pos.getVerticalSide(),
                                0, 0, width, height, // the region area to fill with the image
                                0, 0, imgWidth, imgHeight, // The entire image is used
@@ -981,7 +1011,7 @@ public class NGRegion extends NGGroup {
                 // This is a workaround for RT-28435 so we use path rasterizer for small radius's We are
                 // keeping old rendering. We do not apply workaround when using Caspian or Embedded
                 if (radii.isUniform() &&
-                        !(!PlatformImpl.isCaspian() && !PlatformUtil.isEmbedded() && radii.getTopLeftHorizontalRadius() > 0 && radii.getTopLeftHorizontalRadius() <= 4)) {
+                        !(!PlatformImpl.isCaspian() && !(PlatformUtil.isEmbedded() || PlatformUtil.isIOS()) && radii.getTopLeftHorizontalRadius() > 0 && radii.getTopLeftHorizontalRadius() <= 4)) {
                     // If the radii is uniform then we know every corner matches, so we can do some
                     // faster rendering paths.
                     float tlhr = (float) radii.getTopLeftHorizontalRadius();
@@ -1020,7 +1050,8 @@ public class NGRegion extends NGGroup {
     }
 
     private void renderBorderRectangle(Graphics g) {
-        final List<BorderStroke> strokes = border.getStrokes();
+        final List<BorderImage> images = border.getImages();
+        final List<BorderStroke> strokes = images.isEmpty() ? border.getStrokes() : Collections.emptyList();
         for (int i = 0, max = strokes.size(); i < max; i++) {
             final BorderStroke stroke = strokes.get(i);
             final BorderWidths widths = stroke.getWidths();
@@ -1208,124 +1239,127 @@ public class NGRegion extends NGGroup {
             }
         }
 
-        final List<BorderImage> images = border.getImages();
         for (int i = 0, max = images.size(); i < max; i++) {
             final BorderImage ib = images.get(i);
-            final Image img = (Image) ib.getImage().impl_getPlatformImage();
-            final int imgWidth = img.getWidth();
-            final int imgHeight = img.getHeight();
-            if (img != null) {
-                final BorderWidths widths = ib.getWidths();
-                final Insets insets = ib.getInsets();
-                final BorderWidths slices = ib.getSlices();
+            final Image prismImage = (Image) ib.getImage().impl_getPlatformImage();
+            if (prismImage == null) {
+                // The prismImage might be null if the Image has not completed loading.
+                // In that case, we simply must skip rendering of that layer this
+                // time around.
+                continue;
+            }
+            final int imgWidth = prismImage.getWidth();
+            final int imgHeight = prismImage.getHeight();
+            final BorderWidths widths = ib.getWidths();
+            final Insets insets = ib.getInsets();
+            final BorderWidths slices = ib.getSlices();
 
+            // we will get gaps if we don't round to pixel boundaries
+            final int topInset = (int) Math.round(insets.getTop());
+            final int rightInset = (int) Math.round(insets.getRight());
+            final int bottomInset = (int) Math.round(insets.getBottom());
+            final int leftInset = (int) Math.round(insets.getLeft());
+
+            final int topWidth = (int) Math.round(
+                    widths.isTopAsPercentage() ? height * widths.getTop() : widths.getTop());
+            final int rightWidth = (int) Math.round(
+                    widths.isRightAsPercentage() ? width * widths.getRight() : widths.getRight());
+            final int bottomWidth = (int) Math.round(
+                    widths.isBottomAsPercentage() ? height * widths.getBottom() : widths.getBottom());
+            final int leftWidth = (int) Math.round(
+                    widths.isLeftAsPercentage() ? width * widths.getLeft() : widths.getLeft());
+
+            final int topSlice = (int) Math.round((
+                    slices.isTopAsPercentage() ? height * slices.getTop() : slices.getTop()) * prismImage.getPixelScale());
+            final int rightSlice = (int) Math.round((
+                    slices.isRightAsPercentage() ? width * slices.getRight() : slices.getRight()) * prismImage.getPixelScale());
+            final int bottomSlice = (int) Math.round((
+                    slices.isBottomAsPercentage() ? height * slices.getBottom() : slices.getBottom()) * prismImage.getPixelScale());
+            final int leftSlice = (int) Math.round((
+                    slices.isLeftAsPercentage() ? width * slices.getLeft() : slices.getLeft()) * prismImage.getPixelScale());
+
+            // handle case where region is too small to fit in borders
+            if ((leftInset + leftWidth + rightInset + rightWidth) > width
+                    || (topInset + topWidth + bottomInset + bottomWidth) > height) {
+                continue;
+            }
+
+            // calculate some things we can share
+            final int centerMinX = leftInset + leftWidth;
+            final int centerMinY = topInset + topWidth;
+            final int centerW = Math.round(width) - rightInset - rightWidth - centerMinX;
+            final int centerH = Math.round(height) - bottomInset - bottomWidth - centerMinY;
+            final int centerMaxX = centerW + centerMinX;
+            final int centerMaxY = centerH + centerMinY;
+            final int centerSliceWidth = imgWidth - leftSlice - rightSlice;
+            final int centerSliceHeight = imgHeight - topSlice - bottomSlice;
+            // paint top left corner
+            paintTiles(g, prismImage, BorderRepeat.STRETCH, BorderRepeat.STRETCH, Side.LEFT, Side.TOP,
+                       leftInset, topInset, leftWidth, topWidth, // target bounds
+                       0, 0, leftSlice, topSlice, // src image bounds
+                       0, 0, leftWidth, topWidth); // tile bounds
+            // paint top slice
+            float tileWidth = (ib.getRepeatX() == BorderRepeat.STRETCH) ?
+                    centerW : (topSlice > 0 ? (centerSliceWidth * topWidth) / topSlice : 0);
+            float tileHeight = topWidth;
+            paintTiles(
+                    g, prismImage, ib.getRepeatX(), BorderRepeat.STRETCH, Side.LEFT, Side.TOP,
+                    centerMinX, topInset, centerW, topWidth,
+                    leftSlice, 0, centerSliceWidth, topSlice,
+                    (centerW - tileWidth) / 2, 0, tileWidth, tileHeight);
+            // paint top right corner
+            paintTiles(g, prismImage, BorderRepeat.STRETCH, BorderRepeat.STRETCH, Side.LEFT, Side.TOP,
+                       centerMaxX, topInset, rightWidth, topWidth,
+                       (imgWidth - rightSlice), 0, rightSlice, topSlice,
+                       0, 0, rightWidth, topWidth);
+            // paint left slice
+            tileWidth = leftWidth;
+            tileHeight = (ib.getRepeatY() == BorderRepeat.STRETCH) ?
+                    centerH : (leftSlice > 0 ? (leftWidth * centerSliceHeight) / leftSlice : 0);
+            paintTiles(g, prismImage, BorderRepeat.STRETCH, ib.getRepeatY(), Side.LEFT, Side.TOP,
+                       leftInset, centerMinY, leftWidth, centerH,
+                       0, topSlice, leftSlice, centerSliceHeight,
+                       0, (centerH - tileHeight) / 2, tileWidth, tileHeight);
+            // paint right slice
+            tileWidth = rightWidth;
+            tileHeight = (ib.getRepeatY() == BorderRepeat.STRETCH) ?
+                    centerH : (rightSlice > 0 ? (rightWidth * centerSliceHeight) / rightSlice : 0);
+            paintTiles(g, prismImage, BorderRepeat.STRETCH, ib.getRepeatY(), Side.LEFT, Side.TOP,
+                       centerMaxX, centerMinY, rightWidth, centerH,
+                       imgWidth - rightSlice, topSlice, rightSlice, centerSliceHeight,
+                       0, (centerH - tileHeight) / 2, tileWidth, tileHeight);
+            // paint bottom left corner
+            paintTiles(g, prismImage, BorderRepeat.STRETCH, BorderRepeat.STRETCH, Side.LEFT, Side.TOP,
+                       leftInset, centerMaxY, leftWidth, bottomWidth,
+                       0, imgHeight - bottomSlice, leftSlice, bottomSlice,
+                       0, 0, leftWidth, bottomWidth);
+            // paint bottom slice
+            tileWidth = (ib.getRepeatX() == BorderRepeat.STRETCH) ?
+                    centerW : (bottomSlice > 0 ? (centerSliceWidth * bottomWidth) / bottomSlice : 0);
+            tileHeight = bottomWidth;
+            paintTiles(g, prismImage, ib.getRepeatX(), BorderRepeat.STRETCH, Side.LEFT, Side.TOP,
+                       centerMinX, centerMaxY, centerW, bottomWidth,
+                       leftSlice, imgHeight - bottomSlice, centerSliceWidth, bottomSlice,
+                       (centerW - tileWidth) / 2, 0, tileWidth, tileHeight);
+            // paint bottom right corner
+            paintTiles(g, prismImage, BorderRepeat.STRETCH, BorderRepeat.STRETCH, Side.LEFT, Side.TOP,
+                       centerMaxX, centerMaxY, rightWidth, bottomWidth,
+                       imgWidth - rightSlice, imgHeight - bottomSlice, rightSlice, bottomSlice,
+                       0, 0, rightWidth, bottomWidth);
+            // paint the center slice
+            if (ib.isFilled()) {
                 // we will get gaps if we don't round to pixel boundaries
-                final int topInset = (int) Math.round(insets.getTop());
-                final int rightInset = (int) Math.round(insets.getRight());
-                final int bottomInset = (int) Math.round(insets.getBottom());
-                final int leftInset = (int) Math.round(insets.getLeft());
-
-                final int topWidth = (int) Math.round(
-                        widths.isTopAsPercentage() ? height * widths.getTop() : widths.getTop());
-                final int rightWidth = (int) Math.round(
-                        widths.isRightAsPercentage() ? width * widths.getRight() : widths.getRight());
-                final int bottomWidth = (int) Math.round(
-                        widths.isBottomAsPercentage() ? height * widths.getBottom() : widths.getBottom());
-                final int leftWidth = (int) Math.round(
-                        widths.isLeftAsPercentage() ? width * widths.getLeft() : widths.getLeft());
-
-                final int topSlice = (int) Math.round((
-                        slices.isTopAsPercentage() ? height * slices.getTop() : slices.getTop()) * img.getPixelScale());
-                final int rightSlice = (int) Math.round((
-                        slices.isRightAsPercentage() ? width * slices.getRight() : slices.getRight()) * img.getPixelScale());
-                final int bottomSlice = (int) Math.round((
-                        slices.isBottomAsPercentage() ? height * slices.getBottom() : slices.getBottom()) * img.getPixelScale());
-                final int leftSlice = (int) Math.round((
-                        slices.isLeftAsPercentage() ? width * slices.getLeft() : slices.getLeft()) * img.getPixelScale());
-
-                // handle case where region is too small to fit in borders
-                if ((leftInset + leftWidth + rightInset + rightWidth) > width
-                        || (topInset + topWidth + bottomInset + bottomWidth) > height) {
-                    continue;
-                }
-
-                // calculate some things we can share
-                final int centerMinX = leftInset + leftWidth;
-                final int centerMinY = topInset + topWidth;
-                final int centerW = Math.round(width) - rightInset - rightWidth - centerMinX;
-                final int centerH = Math.round(height) - bottomInset - bottomWidth - centerMinY;
-                final int centerMaxX = centerW + centerMinX;
-                final int centerMaxY = centerH + centerMinY;
-                final int centerSliceWidth = imgWidth - leftSlice - rightSlice;
-                final int centerSliceHeight = imgHeight - topSlice - bottomSlice;
-                // paint top left corner
-                paintTiles(g, img, BorderRepeat.STRETCH, BorderRepeat.STRETCH, Side.LEFT, Side.TOP,
-                           leftInset, topInset, leftWidth, topWidth, // target bounds
-                           0, 0, leftSlice, topSlice, // src image bounds
-                           0, 0, leftWidth, topWidth); // tile bounds
-                // paint top slice
-                float tileWidth = (ib.getRepeatX() == BorderRepeat.STRETCH) ?
-                        centerW : (topSlice > 0 ? (centerSliceWidth * topWidth) / topSlice : 0);
-                float tileHeight = topWidth;
-                paintTiles(
-                        g, img, ib.getRepeatX(), BorderRepeat.STRETCH, Side.LEFT, Side.TOP,
-                        centerMinX, topInset, centerW, topWidth,
-                        leftSlice, 0, centerSliceWidth, topSlice,
-                        (centerW - tileWidth) / 2, 0, tileWidth, tileHeight);
-                // paint top right corner
-                paintTiles(g, img, BorderRepeat.STRETCH, BorderRepeat.STRETCH, Side.LEFT, Side.TOP,
-                           centerMaxX, topInset, rightWidth, topWidth,
-                           (imgWidth - rightSlice), 0, rightSlice, topSlice,
-                           0, 0, rightWidth, topWidth);
-                // paint left slice
-                tileWidth = leftWidth;
-                tileHeight = (ib.getRepeatY() == BorderRepeat.STRETCH) ?
-                        centerH : (leftSlice > 0 ? (leftWidth * centerSliceHeight) / leftSlice : 0);
-                paintTiles(g, img, BorderRepeat.STRETCH, ib.getRepeatY(), Side.LEFT, Side.TOP,
-                           leftInset, centerMinY, leftWidth, centerH,
-                           0, topSlice, leftSlice, centerSliceHeight,
-                           0, (centerH - tileHeight) / 2, tileWidth, tileHeight);
-                // paint right slice
-                tileWidth = rightWidth;
-                tileHeight = (ib.getRepeatY() == BorderRepeat.STRETCH) ?
-                        centerH : (rightSlice > 0 ? (rightWidth * centerSliceHeight) / rightSlice : 0);
-                paintTiles(g, img, BorderRepeat.STRETCH, ib.getRepeatY(), Side.LEFT, Side.TOP,
-                           centerMaxX, centerMinY, rightWidth, centerH,
-                           imgWidth - rightSlice, topSlice, rightSlice, centerSliceHeight,
-                           0, (centerH - tileHeight) / 2, tileWidth, tileHeight);
-                // paint bottom left corner
-                paintTiles(g, img, BorderRepeat.STRETCH, BorderRepeat.STRETCH, Side.LEFT, Side.TOP,
-                           leftInset, centerMaxY, leftWidth, bottomWidth,
-                           0, imgHeight - bottomSlice, leftSlice, bottomSlice,
-                           0, 0, leftWidth, bottomWidth);
-                // paint bottom slice
-                tileWidth = (ib.getRepeatX() == BorderRepeat.STRETCH) ?
-                        centerW : (bottomSlice > 0 ? (centerSliceWidth * bottomWidth) / bottomSlice : 0);
-                tileHeight = bottomWidth;
-                paintTiles(g, img, ib.getRepeatX(), BorderRepeat.STRETCH, Side.LEFT, Side.TOP,
-                           centerMinX, centerMaxY, centerW, bottomWidth,
-                           leftSlice, imgHeight - bottomSlice, centerSliceWidth, bottomSlice,
-                           (centerW - tileWidth) / 2, 0, tileWidth, tileHeight);
-                // paint bottom right corner
-                paintTiles(g, img, BorderRepeat.STRETCH, BorderRepeat.STRETCH, Side.LEFT, Side.TOP,
-                           centerMaxX, centerMaxY, rightWidth, bottomWidth,
-                           imgWidth - rightSlice, imgHeight - bottomSlice, rightSlice, bottomSlice,
-                           0, 0, rightWidth, bottomWidth);
-                // paint the center slice
-                if (ib.isFilled()) {
-                    // we will get gaps if we don't round to pixel boundaries
-                    final int areaX = leftInset + leftWidth;
-                    final int areaY = topInset + topWidth;
-                    final int areaW = Math.round(width) - rightInset - rightWidth - areaX;
-                    final int areaH = Math.round(height) - bottomInset - bottomWidth - areaY;
-                    // handle no repeat as stretch
-                    final float imgW = (ib.getRepeatX() == BorderRepeat.STRETCH) ? centerW : centerSliceWidth;
-                    final float imgH = (ib.getRepeatY() == BorderRepeat.STRETCH) ? centerH : centerSliceHeight;
-                    paintTiles(g, img, ib.getRepeatX(), ib.getRepeatY(), Side.LEFT, Side.TOP,
-                               areaX, areaY, areaW, areaH,
-                               leftSlice, topSlice, centerSliceWidth, centerSliceHeight,
-                               0, 0, imgW, imgH);
-                }
+                final int areaX = leftInset + leftWidth;
+                final int areaY = topInset + topWidth;
+                final int areaW = Math.round(width) - rightInset - rightWidth - areaX;
+                final int areaH = Math.round(height) - bottomInset - bottomWidth - areaY;
+                // handle no repeat as stretch
+                final float imgW = (ib.getRepeatX() == BorderRepeat.STRETCH) ? centerW : centerSliceWidth;
+                final float imgH = (ib.getRepeatY() == BorderRepeat.STRETCH) ? centerH : centerSliceHeight;
+                paintTiles(g, prismImage, ib.getRepeatX(), ib.getRepeatY(), Side.LEFT, Side.TOP,
+                           areaX, areaY, areaW, areaH,
+                           leftSlice, topSlice, centerSliceWidth, centerSliceHeight,
+                           0, 0, imgW, imgH);
             }
         }
     }

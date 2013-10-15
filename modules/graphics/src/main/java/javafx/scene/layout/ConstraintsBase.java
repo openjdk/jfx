@@ -53,11 +53,11 @@ public abstract class ConstraintsBase {
      ConstraintsBase() {
      }
 
-     void add(Node node) {
+     void add(Parent node) {
          impl_nodes.add(node);
      }
 
-    void remove(Node node) {
+    void remove(Parent node) {
         impl_nodes.remove(node);
     }
 
@@ -65,12 +65,10 @@ public abstract class ConstraintsBase {
       * Calls requestLayout on layout parent associated with this constraint object.
       */
      protected void requestLayout() {
-        Iterator<Node> nodeIter = impl_nodes.iterator();
+        Iterator<Parent> nodeIter = impl_nodes.iterator();
+
         while (nodeIter.hasNext()) {
-            Parent p = nodeIter.next().getParent();
-            if (p != null) {
-                p.requestLayout();
-            }
+            nodeIter.next().requestLayout();
         }
     }
 }

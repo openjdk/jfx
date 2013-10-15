@@ -27,8 +27,11 @@ package javafx.css;
 
 import java.util.List;
 
+import javafx.beans.property.Property;
+import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableSet;
+import javafx.scene.text.Font;
 
 /** 
  * Styleable comprises the minimal interface required for an object to be 
@@ -81,7 +84,6 @@ public interface Styleable {
      * an unmodifiable list.
      *
      */
-     
     List<CssMetaData<? extends Styleable, ?>> getCssMetaData(); 
             
     /** 
@@ -93,5 +95,5 @@ public interface Styleable {
      * Return the pseudo-class state of this Styleable. CSS assumes this set is read-only.
      */
     ObservableSet<PseudoClass> getPseudoClassStates();
-     
+
 }

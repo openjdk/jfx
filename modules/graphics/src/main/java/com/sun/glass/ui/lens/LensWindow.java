@@ -25,8 +25,6 @@
 
 package com.sun.glass.ui.lens;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import com.sun.glass.events.WindowEvent;
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Cursor;
@@ -34,14 +32,9 @@ import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
+import java.util.List;
 
 final class LensWindow extends Window {
-
-    private boolean visible;
-    private boolean resizeable = false;
-    private int windowHandle;
-
-    private static int nextWindowId = 1;
 
     protected LensWindow(Window owner, Screen screen, int styleMask) {
         super(owner, screen, styleMask);
@@ -52,6 +45,34 @@ final class LensWindow extends Window {
 
     }
 
+    @Override
+    protected void _toFront(long ptr) {
+        List<Window> list = getWindowsClone();
+        raiseOwnedWindows(list);
+    }
+
+    @Override
+    protected void _toBack(long ptr) {
+        // for z-order stacking, pop the window
+        // and push it on the head (farthest Z)
+        remove(this);
+        addFirst(this);
+        _toBackImpl(ptr);
+    }
+
+    private void raiseOwnedWindows(List<Window> list) {
+        // raise ourselves to the top of Z-order
+        // by popping the window and push it on the end (closest Z)
+        remove(this);
+        add(this);
+        _toFrontImpl(getRawHandle());
+        // owned windows should be maintained in front of the owner.
+        for (Window w : list) {
+            if (this.equals(w.getOwner())) {
+                ((LensWindow)w).raiseOwnedWindows(list);
+            }
+        }
+    }
 
     /**
      *
@@ -262,11 +283,9 @@ final class LensWindow extends Window {
     @Override
     native protected void _setIcon(long ptr, Pixels pixels);
 
-    @Override
-    native protected void _toFront(long ptr);
+    native private void _toFrontImpl(long ptr);
 
-    @Override
-    native protected void _toBack(long ptr);
+    native private void _toBackImpl(long ptr);
 
     @Override
     native protected boolean _grabFocus(long ptr);

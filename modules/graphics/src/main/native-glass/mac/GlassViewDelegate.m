@@ -1020,14 +1020,14 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     LOG("GlassViewDelegate enterFullscreenWithAnimate:%d withKeepRatio:%d withHideCursor:%d", animate, keepRatio, hideCursor);
     
     NSScreen *screen = [[self->nsView window] screen];
+
+    NSRect frameInWindowScreenCoords = [self->nsView bounds];
+    frameInWindowScreenCoords = [self->parentWindow convertRectToScreen:frameInWindowScreenCoords];
+    NSPoint pointInPrimaryScreenCoords = frameInWindowScreenCoords.origin;
     
-    NSRect frame = [self->nsView bounds];
-    NSPoint pointInWindowCoordinates = [self->nsView convertPoint:frame.origin toView:nil];
-    // ensure that view's bounds is in unflipped coordinates
-    pointInWindowCoordinates.y -= frame.size.height;
-    NSPoint pointInScreenCoords = [self->parentWindow convertBaseToScreen:pointInWindowCoordinates];
-    frame.origin = pointInScreenCoords;
-    //NSLog(@"pointInScreenCoords: %.2f,%.2f", pointInScreenCoords.x, pointInScreenCoords.y);
+    // Convert to local screen
+    frameInWindowScreenCoords.origin.x -= screen.frame.origin.x;
+    frameInWindowScreenCoords.origin.y -= screen.frame.origin.y;
     
     @try
     {
@@ -1039,7 +1039,10 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
         [self->fullscreenHost setAutoresizesSubviews:YES];
         
         // 2.
-        self->fullscreenWindow = [[GlassFullscreenWindow alloc] initWithContentRect:frame withHostView:self->fullscreenHost withView:self->nsView withScreen:screen withPoint:pointInScreenCoords];
+        self->fullscreenWindow = [[GlassFullscreenWindow alloc] initWithContentRect:frameInWindowScreenCoords
+                                                                       withHostView:self->fullscreenHost
+                                                                           withView:self->nsView withScreen:screen
+                                                                          withPoint:pointInPrimaryScreenCoords];
         
         // 3.
         self->backgroundWindow = [[GlassBackgroundWindow alloc] initWithWindow:self->fullscreenWindow];
@@ -1081,19 +1084,19 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
         NSRect fullscreenFrame = [screen frame];
         if (keepRatio == YES)
         {
-            CGFloat ratioWidth = (frame.size.width/screenFrame.size.width);
-            CGFloat ratioHeight = (frame.size.height/screenFrame.size.height);
+            CGFloat ratioWidth = (frameInWindowScreenCoords.size.width/screenFrame.size.width);
+            CGFloat ratioHeight = (frameInWindowScreenCoords.size.height/screenFrame.size.height);
             if (ratioWidth > ratioHeight)
             {
-                CGFloat ratio = (frame.size.width/frame.size.height);
+                CGFloat ratio = (frameInWindowScreenCoords.size.width/frameInWindowScreenCoords.size.height);
                 fullscreenFrame.size.height = fullscreenFrame.size.width / ratio;
-                fullscreenFrame.origin.y = (screenFrame.size.height - fullscreenFrame.size.height) / 2.0f;
+                fullscreenFrame.origin.y += (screenFrame.size.height - fullscreenFrame.size.height) / 2.0f;
             }
             else
             {
-                CGFloat ratio = (frame.size.height/frame.size.width);
+                CGFloat ratio = (frameInWindowScreenCoords.size.height/frameInWindowScreenCoords.size.width);
                 fullscreenFrame.size.width = fullscreenFrame.size.height / ratio;
-                fullscreenFrame.origin.x = (screenFrame.size.width - fullscreenFrame.size.width) / 2.0f;
+                fullscreenFrame.origin.x += (screenFrame.size.width - fullscreenFrame.size.width) / 2.0f;
             }
         }
         

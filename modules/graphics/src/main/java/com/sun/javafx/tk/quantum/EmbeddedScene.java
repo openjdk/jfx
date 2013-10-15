@@ -27,7 +27,6 @@ package com.sun.javafx.tk.quantum;
 
 import javafx.application.Platform;
 import javafx.event.EventType;
-import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import java.nio.IntBuffer;
@@ -206,7 +205,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     @Override
     public void mouseEvent(final int type, final int button,
                            final boolean primaryBtnDown, final boolean middleBtnDown, final boolean secondaryBtnDown,
-                           final int clickCount, final int x, final int y, final int xAbs, final int yAbs,
+                           final int x, final int y, final int xAbs, final int yAbs,
                            final boolean shift, final boolean ctrl, final boolean alt, final boolean meta,
                            final int wheelRotation, final boolean popupTrigger)
     {
@@ -219,6 +218,8 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
                         if (sceneListener == null) {
                             return null;
                         }
+                        // Click events are generated in Scene, so we don't expect them here
+                        assert type != AbstractEvents.MOUSEEVENT_CLICKED;
                         if (type == AbstractEvents.MOUSEEVENT_WHEEL) {
                             sceneListener.scrollEvent(ScrollEvent.SCROLL, 0, -wheelRotation, 0, 0, 40.0, 40.0,
                                     0, 0, 0, 0, 0,
@@ -226,7 +227,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
                         } else {
                             EventType<MouseEvent> eventType = AbstractEvents.mouseIDToFXEventID(type);
                             sceneListener.mouseEvent(eventType, x, y, xAbs, yAbs,
-                                    AbstractEvents.mouseButtonToFXMouseButton(button), clickCount,
+                                    AbstractEvents.mouseButtonToFXMouseButton(button),
                                     popupTrigger, false, // do we know if it's synthesized? RT-20142
                                     shift, ctrl, alt, meta,
                                     primaryBtnDown, middleBtnDown, secondaryBtnDown);

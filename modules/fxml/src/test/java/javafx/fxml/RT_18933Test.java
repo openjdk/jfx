@@ -29,7 +29,7 @@ import java.io.IOException;
 import org.junit.Test;
 
 public class RT_18933Test {
-    @Test(expected=IllegalArgumentException.class)
+    @Test(expected=LoadException.class)
     public void testDefaultListProperty() throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_18933.fxml"));
         fxmlLoader.load();
