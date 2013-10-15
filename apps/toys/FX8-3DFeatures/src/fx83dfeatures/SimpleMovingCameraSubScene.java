@@ -66,7 +66,7 @@ public class SimpleMovingCameraSubScene extends Application {
 
         Group root = new Group(ssSphere);
 
-        SubScene subScene = new SubScene(root, 400, 200, true, true);
+        SubScene subScene = new SubScene(root, 400, 200, true, SceneAntialiasing.BALANCED);
         subScene.setCamera(subSceneCamera);
         subScene.setFill(Color.BLACK);
         return subScene;
