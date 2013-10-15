@@ -56,125 +56,75 @@
     -fx-scale-shape: true;
 }
 
+
 /*******************************************************************************
  *                                                                             *
  * ScrollBar                                                                   *
  *                                                                             *
  ******************************************************************************/
 
-.scroll-bar {
-    -fx-opacity: 100%;
-}
 .scroll-bar:horizontal,
-.scroll-bar:horizontal:focused {
-    -fx-background-insets: 1 0 -1 0, 0, 1;
-    -fx-background-color: transparent;
-}
-
+.scroll-bar:horizontal:focused,
 .scroll-bar:vertical,
 .scroll-bar:vertical:focused {
-    -fx-background-insets: 0 -1 0 1, 0, 1;
     -fx-background-color: transparent;
 }
-
-.scroll-bar:horizontal > .track-background {
-    -fx-background-radius: 1.0em;
-    -fx-opacity: 10%;
-    -fx-background-color: #000000;
-}
-.scroll-bar:vertical > .track-background {
-    -fx-background-radius: 1.0em;
-    -fx-opacity: 10%;
-    -fx-background-color: #000000;
-}
-.scroll-bar:horizontal .thumb {
-    -fx-opacity: 75%;
-    -fx-background-color: #a0a0a0;
-}
-.scroll-bar:vertical .thumb {
-    -fx-opacity: 75%;
-    -fx-background-color: #a0a0a0;
-}
-.scroll-bar .track {
-    -fx-background-color: transparent;
-}
-.scroll-bar .track-background {
-    -fx-background-color: transparent;
-}
-
 .scroll-bar:horizontal > .track {
-    -xfx-background-color: transparent;
-    -fx-opacity: 10%;
-    -fx-background-color: #000000;
+   -fx-opacity: 50%;
+   -fx-background-color: linear-gradient(to bottom, derive(-fx-base,-3%), derive(-fx-base,5%) 50%, derive(-fx-base,-3%));
+   -fx-background-insets: 0;
 }
 .scroll-bar:vertical > .track {
-    -fx-opacity: 10%;
-    -fx-background-color: #000000;
+   -fx-opacity: 50%;
+   -fx-background-color: linear-gradient(to right, derive(-fx-base,-3%), derive(-fx-base,5%) 50%, derive(-fx-base,-3%));
+   -fx-background-insets: 0;
 }
-.scroll-bar:horizontal > .track-background {
-    -fx-opacity: 10%;
-    -fx-background-color: #000000;
+.scroll-bar > .thumb {
+   -fx-background-color: derive(-fx-outer-border,-30%), -fx-body-color;
+   -fx-background-radius: 2, 1;
 }
-
+.scroll-bar:vertical > .thumb {
+   -fx-background-color: derive(-fx-outer-border,-30%), -fx-body-color-to-right;
+}
 
 
 /*******************************************************************************
  *                                                                             *
- * ScrollPane                                                                   *
+ * ListView, TreeView, TableView, TreeTableView, ScrollPane, TextArea		   *
  *                                                                             *
  ******************************************************************************/
-
-.scroll-pane .corner {
-    -fx-background-color: transparent;
+.list-view > .virtual-flow > .corner,
+.tree-view > .virtual-flow > .corner,
+.table-view > .virtual-flow > .corner,
+.tree-table-view > .virtual-flow > .corner,
+.scroll-pane > .corner {
+	-fx-opacity: 50%;
+    -fx-background-color: derive(-fx-base,5%);
 }
-
-.scroll-pane > .scroll-bar {
-    -fx-opacity: 100%;
+.list-view > .virtual-flow > .corner,
+.tree-view > .virtual-flow > .corner,
+.table-view > .virtual-flow > .corner,
+.tree-table-view > .virtual-flow > .corner{
+    -fx-background-insets: 0;
 }
-.scroll-pane > .scroll-bar:horizontal {
-    -fx-background-insets: 1 0 -1 0, 0, 1;
-    -fx-background-color: transparent;
+.text-area > .scroll-pane > .corner {
+    -fx-background-radius: 0;
 }
 .scroll-pane > .scroll-bar:vertical {
-    -fx-background-insets: 0 -1 0 1, 0, 1;
-    -fx-background-color: transparent;
+    -fx-padding: 1 1 1 0;
 }
-
-.scroll-pane > .scroll-bar:horizontal > .track-background {
-    -fx-background-radius: 1.0em;
-    -fx-opacity: 10%;
-    -fx-background-color: #000000;
+.scroll-pane > .scroll-bar:horizontal {
+    -fx-padding: 0 1 1 1;
 }
-.scroll-pane > .scroll-bar:vertical > .track-background {
-    -fx-background-radius: 1.0em;
-    -fx-opacity: 10%;
-    -fx-background-color: #000000;
-}
-
-.scroll-pane > .scroll-bar:horizontal .thumb {
-    -fx-opacity: 75%;
-    -fx-background-color: #a0a0a0;
-}
-
-.scroll-pane > .scroll-bar:vertical .thumb {
-    -fx-opacity: 75%;
-    -fx-background-color: #a0a0a0;
-}
-.scroll-pane > .scroll-bar .track {
-    -fx-background-color: transparent;
-}
-.scroll-pane > .scroll-bar .track-background {
-    -fx-background-color: transparent;
-}
-
-.scroll-pane > .scroll-bar:horizontal > .track {
-    -xfx-background-color: transparent;
-    -fx-opacity: 10%;
-    -fx-background-color: #000000;
-}
-.scroll-pane > .scroll-bar:vertical > .track {
-    -fx-opacity: 10%;
-    -fx-background-color: #000000;
+.list-view > .virtual-flow > .scroll-bar:vertical,
+.tree-view > .virtual-flow > .scroll-bar:vertical,
+.table-view > .virtual-flow > .scroll-bar:vertical,
+.tree-table-view > .virtual-flow > .scroll-bar:vertical,
+.list-view > .virtual-flow > .scroll-bar:horizontal,
+.tree-view > .virtual-flow > .scroll-bar:horizontal,
+.table-view > .virtual-flow > .scroll-bar:horizontal,
+.tree-table-view > .virtual-flow > .scroll-bar:horizontal {
+    -fx-padding: 0;
 }
 
 
@@ -188,11 +138,6 @@
 .text-field {
     -fx-padding: 6 5 6 5; /* Adding 3px to top and bottom for handles */
 }
-
-.text-area .content {
-    -fx-padding: 9 5 9 5; /* Adding 6px to top and bottom for handles */
-}
-
 
 .caret-handle {
     -fx-background-color: transparent,
@@ -313,26 +258,6 @@
 }
 
 
-.list-view:focused:external-focus {
-    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
-}
-.list-view:focused:external-focus > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected {
-    -fx-background-color: gray;
-}
-.list-view:focused:internal-focus {
-    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
-}
-
-
-.table-view:focused:external-focus {
-    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
-}
-.table-view:focused:external-focus > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:selected {
-    -fx-background-color: gray;
-}
-.table-view:focused:internal-focus {
-    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
-}
 
 
 .combo-box:focused:external-focus {

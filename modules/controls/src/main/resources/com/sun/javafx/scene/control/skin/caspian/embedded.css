@@ -56,127 +56,68 @@
     -fx-scale-shape: true;
 }
 
+
 /*******************************************************************************
  *                                                                             *
  * ScrollBar                                                                   *
  *                                                                             *
  ******************************************************************************/
-
-.scroll-bar {
-    -fx-opacity: 100%;
-}
 .scroll-bar:horizontal,
-.scroll-bar:horizontal:focused {
-    -fx-background-insets: 1 0 -1 0, 0, 1;
-    -fx-background-color: transparent;
-}
-
+.scroll-bar:horizontal:focused,
 .scroll-bar:vertical,
-.scroll-bar:vertical:focused {
-    -fx-background-insets: 0 -1 0 1, 0, 1;
-    -fx-background-color: transparent;
-}
-
-.scroll-bar:horizontal > .track-background {
-    -fx-background-radius: 1.0em;
-    -fx-opacity: 10%;
-    -fx-background-color: #000000;
-}
+.scroll-bar:vertical:focused,
+.scroll-bar:horizontal > .track-background,
 .scroll-bar:vertical > .track-background {
-    -fx-background-radius: 1.0em;
-    -fx-opacity: 10%;
-    -fx-background-color: #000000;
-}
-.scroll-bar:horizontal .thumb {
-    -fx-opacity: 75%;
-    -fx-background-color: #a0a0a0;
-}
-.scroll-bar:vertical .thumb {
-    -fx-opacity: 75%;
-    -fx-background-color: #a0a0a0;
-}
-.scroll-bar .track {
     -fx-background-color: transparent;
 }
-.scroll-bar .track-background {
-    -fx-background-color: transparent;
+.scroll-bar:horizontal > .thumb {
+   -fx-background-color: -fx-box-border, linear-gradient(to bottom, derive(-fx-color,95%), derive(-fx-color,10%));
+   -fx-background-radius: 4, 3;
 }
 
+.scroll-bar:vertical > .thumb {
+   -fx-background-color: -fx-box-border, linear-gradient(to right, derive(-fx-color,95%), derive(-fx-color,10%));
+	-fx-background-radius: 4, 3;
+}
 .scroll-bar:horizontal > .track {
-    -xfx-background-color: transparent;
-    -fx-opacity: 10%;
-    -fx-background-color: #000000;
+   -fx-opacity: 50%;
+   -fx-background-color: linear-gradient(to bottom, derive(-fx-color,-15%), derive(-fx-color,2.2%) 20%, derive(-fx-color,60%));
+   -fx-background-insets: 0;
+   -fx-background-radius: 4;
 }
 .scroll-bar:vertical > .track {
-    -fx-opacity: 10%;
-    -fx-background-color: #000000;
+   -fx-opacity: 50%;
+   -fx-background-color: linear-gradient(to right, derive(-fx-color,-15%), derive(-fx-color,2.2%) 20%, derive(-fx-color,60%));
+   -fx-background-insets: 0;
+   -fx-background-radius: 4;
 }
-.scroll-bar:horizontal > .track-background {
-    -fx-opacity: 10%;
-    -fx-background-color: #000000;
-}
-
-
 
 /*******************************************************************************
  *                                                                             *
- * ScrollPane                                                                   *
+ * ListView, TreeView, TableView, TreeTableView, ScrollPane                    *
  *                                                                             *
  ******************************************************************************/
-
-.scroll-pane .corner {
+.list-view > .virtual-flow > .corner,
+.tree-view > .virtual-flow > .corner,
+.table-view > .virtual-flow > .corner,
+.tree-table-view > .virtual-flow > .corner,
+.scroll-pane > .corner {
     -fx-background-color: transparent;
 }
-
-.scroll-pane > .scroll-bar {
-    -fx-opacity: 100%;
-}
-.scroll-pane > .scroll-bar:horizontal {
-    -fx-background-insets: 1 0 -1 0, 0, 1;
-    -fx-background-color: transparent;
-}
+.scroll-pane > .scroll-bar:horizontal,
 .scroll-pane > .scroll-bar:vertical {
-    -fx-background-insets: 0 -1 0 1, 0, 1;
-    -fx-background-color: transparent;
+    -fx-padding: 2;
 }
-
-.scroll-pane > .scroll-bar:horizontal > .track-background {
-    -fx-background-radius: 1.0em;
-    -fx-opacity: 10%;
-    -fx-background-color: #000000;
+.list-view > .virtual-flow > .scroll-bar:horizontal,
+.tree-view > .virtual-flow > .scroll-bar:horizontal,
+.table-view > .virtual-flow > .scroll-bar:horizontal,
+.tree-table-view > .virtual-flow > .scroll-bar:horizontal,
+.list-view > .virtual-flow > .scroll-bar:vertical,
+.tree-view > .virtual-flow > .scroll-bar:vertical,
+.table-view > .virtual-flow > .scroll-bar:vertical,
+.tree-table-view > .virtual-flow > .scroll-bar:vertical {
+	-fx-padding: 1;
 }
-.scroll-pane > .scroll-bar:vertical > .track-background {
-    -fx-background-radius: 1.0em;
-    -fx-opacity: 10%;
-    -fx-background-color: #000000;
-}
-
-.scroll-pane > .scroll-bar:horizontal .thumb {
-    -fx-opacity: 75%;
-    -fx-background-color: #a0a0a0;
-}
-
-.scroll-pane > .scroll-bar:vertical .thumb {
-    -fx-opacity: 75%;
-    -fx-background-color: #a0a0a0;
-}
-.scroll-pane > .scroll-bar .track {
-    -fx-background-color: transparent;
-}
-.scroll-pane > .scroll-bar .track-background {
-    -fx-background-color: transparent;
-}
-
-.scroll-pane > .scroll-bar:horizontal > .track {
-    -xfx-background-color: transparent;
-    -fx-opacity: 10%;
-    -fx-background-color: #000000;
-}
-.scroll-pane > .scroll-bar:vertical > .track {
-    -fx-opacity: 10%;
-    -fx-background-color: #000000;
-}
-
 
 
 /*******************************************************************************
@@ -312,27 +253,6 @@
     -fx-prompt-text-fill: transparent;
 }
 
-
-.list-view:focused:external-focus {
-    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
-}
-.list-view:focused:external-focus > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected {
-    -fx-background-color: gray;
-}
-.list-view:focused:internal-focus {
-    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
-}
-
-
-.table-view:focused:external-focus {
-    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
-}
-.table-view:focused:external-focus > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:selected {
-    -fx-background-color: gray;
-}
-.table-view:focused:internal-focus {
-    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
-}
 
 
 .combo-box:focused:external-focus {
