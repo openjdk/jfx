@@ -65,6 +65,7 @@ import com.sun.javafx.scene.traversal.TraverseListener;
 import com.sun.javafx.stage.StageHelper;
 import com.sun.javafx.tk.Toolkit;
 import static com.sun.javafx.scene.traversal.Direction.DOWN;
+import javafx.stage.Window;
 
 
 /**
@@ -168,6 +169,8 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
 
     private WeakEventHandler<KeyEvent> weakSceneKeyEventHandler;
     private WeakEventHandler<MouseEvent> weakSceneMouseEventHandler;
+    private WeakChangeListener<Boolean> weakWindowFocusListener;
+    private WeakChangeListener<Window> weakWindowSceneListener;
     private EventHandler<KeyEvent> keyEventHandler;
     private EventHandler<MouseEvent> mouseEventHandler;
     private ChangeListener<Boolean> menuBarFocusedPropertyListener;
@@ -289,16 +292,27 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         weakSceneMouseEventHandler = new WeakEventHandler<MouseEvent>(mouseEventHandler);
         control.getScene().addEventFilter(MouseEvent.MOUSE_CLICKED, weakSceneMouseEventHandler);
         
-        // When the parent window looses focus - menu selection should be cleared
-        control.getScene().getWindow().focusedProperty().addListener(new WeakChangeListener<Boolean>(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-              if (!t1) {
+        weakWindowFocusListener = new WeakChangeListener<Boolean>(new ChangeListener<Boolean>() {
+            @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
+                if (!t1) {
                   unSelectMenus();
-              }
+                }
             }
-        }));
-        
+        });
+        // When the parent window looses focus - menu selection should be cleared
+        if (control.getScene().getWindow() != null) {
+            control.getScene().getWindow().focusedProperty().addListener(weakWindowFocusListener);
+        } else {
+            ChangeListener<Window> sceneWindowListener = new ChangeListener<Window>() {
+                @Override public void changed(ObservableValue<? extends Window> observable, Window oldValue, Window newValue) {
+                    if (oldValue != null) oldValue.focusedProperty().removeListener(weakWindowFocusListener);
+                    if (newValue != null) newValue.focusedProperty().addListener(weakWindowFocusListener);
+                }
+            };
+            weakWindowSceneListener = new WeakChangeListener<Window>(sceneWindowListener);
+            control.getScene().windowProperty().addListener(weakWindowSceneListener);
+        }
+       
         rebuildUI();
         control.getMenus().addListener(new ListChangeListener<Menu>() {
             @Override public void onChanged(Change<? extends Menu> c) {
