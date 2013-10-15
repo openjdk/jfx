@@ -27,6 +27,7 @@
 #include "glass_gtkcompat.h"
 #include "glass_key.h"
 #include "glass_screen.h"
+#include "glass_dnd.h"
 
 #include <com_sun_glass_events_WindowEvent.h>
 #include <com_sun_glass_events_ViewEvent.h>
@@ -581,12 +582,14 @@ void WindowContextBase::ungrab_focus() {
 }
 
 void WindowContextBase::set_cursor(GdkCursor* cursor) {
-    if (WindowContextBase::sm_mouse_drag_window) {
-        glass_gdk_mouse_devices_grab_with_cursor(
-                WindowContextBase::sm_mouse_drag_window->get_gdk_window(), cursor, FALSE);
-    } else if (WindowContextBase::sm_grab_window) {
-        glass_gdk_mouse_devices_grab_with_cursor(
-                WindowContextBase::sm_grab_window->get_gdk_window(), cursor);
+    if (!is_in_drag()) {
+        if (WindowContextBase::sm_mouse_drag_window) {
+            glass_gdk_mouse_devices_grab_with_cursor(
+                    WindowContextBase::sm_mouse_drag_window->get_gdk_window(), cursor, FALSE);
+        } else if (WindowContextBase::sm_grab_window) {
+            glass_gdk_mouse_devices_grab_with_cursor(
+                    WindowContextBase::sm_grab_window->get_gdk_window(), cursor);
+        }
     }
     gdk_window_set_cursor(gdk_window, cursor);
 }
