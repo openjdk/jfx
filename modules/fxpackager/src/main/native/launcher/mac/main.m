@@ -49,6 +49,7 @@ typedef long jint;
 #define JVM_USER_OPTIONS_KEY "JVMUserOptions"
 #define JVM_CLASSPATH_KEY "JVMAppClasspath"
 #define JVM_PREFERENCES_ID "JVMPreferencesID"
+#define JVM_LAUNCHER_DEBUG_OPTIONS_KEY "JVMLauncherDebugOptions"
 
 #define LIBJLI_DYLIB "/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/Home/lib/jli/libjli.dylib"
 
@@ -67,6 +68,7 @@ typedef int (JNICALL *JLI_Launch_t)(int argc, char ** argv,
 int launch(int appArgc, char *appArgv[]);
 
 NSArray *getJVMOptions(NSDictionary *infoDictionary, NSString *mainBundlePath);
+void logCommandLine(NSString *tag, int argc, char* argv[]);
 
 int main(int argc, char *argv[]) {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
@@ -96,6 +98,8 @@ int launch(int appArgc, char *appArgv[]) {
 
     // Get the main bundle's info dictionary
     NSDictionary *infoDictionary = [mainBundle infoDictionary];
+
+    logCommandLine(@"launch", appArgc, appArgv);
 
     // Locate the JLI_Launch() function
     NSString *runtime = [infoDictionary objectForKey:@JVM_RUNTIME_KEY];
@@ -167,7 +171,7 @@ int launch(int appArgc, char *appArgv[]) {
     //
     // On Mac OS X we spawn a new thread that actually starts the JVM. This
     // new thread simply re-runs main(argc, argv). Therefore we do not want
-    // to add new args if we are still in the original main thread ot we
+    // to add new args if we are still in the original main thread so we
     // will treat them as command line args provided by the user ...
     // Only propagate original set of args first time
     int mainThread = (pthread_main_np() == 1);
@@ -199,6 +203,7 @@ int launch(int appArgc, char *appArgv[]) {
         //command line arguments override plist
         if (appArgc > 1) {
             for (int j=1; j<appArgc; j++) {
+                //PSN already filtered out on second time through
                 argv[i++] = strdup(appArgv[j]);
             }
         } else {
@@ -207,12 +212,21 @@ int launch(int appArgc, char *appArgv[]) {
             }
         }
     } else {
-        for (int j=1; j<appArgc; j++) {
-            argv[i++] = strdup(appArgv[j]);
+        for (int j=1; j < appArgc; j++) {
+            //Mac adds a ProcessSerialNumber to args when launched from .app
+            //filter out the psn since they it's not expected in the app
+            if (strncmp("-psn_", appArgv[j], 5) != 0) {
+                argv[i++] = strdup(appArgv[j]);
+            }
+            else {
+                argc--;
+            }
         }
     }
 
     argv[i] = NULL;
+
+    logCommandLine(@"jli_LaunchFxnPtr", argc, argv);
 
     // Invoke JLI_Launch()
     return jli_LaunchFxnPtr(argc, argv,
@@ -227,6 +241,33 @@ int launch(int appArgc, char *appArgv[]) {
             FALSE,
             0);
 }
+
+//Call every time before to get debug options
+NSSet *getDebugOptions() {
+    static NSSet *debugOptions;
+    if (debugOptions == nil) {
+        NSBundle *mainBundle = [NSBundle mainBundle];
+        // Get the main bundle's info dictionary
+        NSDictionary *infoDictionary = [mainBundle infoDictionary];
+        NSArray *options = [infoDictionary objectForKey:@JVM_LAUNCHER_DEBUG_OPTIONS_KEY];
+        if (options == nil) {
+            options = [NSArray array];
+        }
+        debugOptions = [NSSet setWithArray: options];
+    }
+    return debugOptions;
+}
+
+//Print command line args
+void logCommandLine(NSString *tag, int argc, char* argv[]) {
+    if ([getDebugOptions() containsObject:@"log.args"]) {
+        for(int i=0;i<argc;i++) {
+            NSLog(@"%@ (%i, %s)", tag, i, argv[i]);
+        }
+    }
+}
+
+
 
 /**
 * This gets the JVMOptions, both the internal developer only options and set of options the developer
