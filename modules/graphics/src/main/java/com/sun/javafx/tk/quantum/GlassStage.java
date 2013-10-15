@@ -40,7 +40,13 @@ import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.TKStageListener;
 import com.sun.javafx.tk.Toolkit;
 
+import sun.misc.JavaSecurityAccess;
+import sun.misc.SharedSecrets;
+
 abstract class GlassStage implements TKStage {
+
+    private static final JavaSecurityAccess javaSecurityAccess =
+            SharedSecrets.getJavaSecurityAccess();
 
     // A list of all GlassStage objects regardless of visibility.
     private static final List<GlassStage> windows = new ArrayList<>();
@@ -107,7 +113,16 @@ abstract class GlassStage implements TKStage {
         if (accessCtrlCtx != null) {
             throw new RuntimeException("Stage security context has been already set!");
         }
-        accessCtrlCtx = ctx;
+        AccessControlContext acc = AccessController.getContext();
+        // JDK doesn't provide public APIs to get ACC intersection,
+        // so using this ugly workaround
+        accessCtrlCtx = javaSecurityAccess.doIntersectionPrivilege(
+            new PrivilegedAction<AccessControlContext>() {
+                @Override
+                public AccessControlContext run() {
+                    return AccessController.getContext();
+                }
+            }, acc, ctx);
     }
 
     @Override public void requestFocus() {
