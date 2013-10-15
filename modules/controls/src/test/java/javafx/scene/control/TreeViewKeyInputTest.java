@@ -1876,4 +1876,27 @@ public class TreeViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.RIGHT); // expand root
         assertEquals(0, rt_33559_count);
     }
+
+    @Test public void test_rt20915() {
+        final FocusModel fm = treeView.getFocusModel();
+        final MultipleSelectionModel sm = treeView.getSelectionModel();
+
+        sm.clearAndSelect(0);
+        assertEquals(0, getAnchor());
+
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
+        Toolkit.getToolkit().firePulse();
+        assertTrue(isNotSelected(1,2,3));
+        assertTrue(isSelected(0));
+        assertEquals(1, sm.getSelectedItems().size());
+        assertTrue(fm.isFocused(3));
+
+        keyboard.doKeyPress(KeyCode.SPACE,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertTrue(isSelected(0,1,2,3));
+        assertEquals(4, sm.getSelectedItems().size());
+        assertTrue(fm.isFocused(3));
+    }
 }

@@ -74,6 +74,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "SelectAllPageDown").shift());
         
         TREE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "SelectAllToFocus").shift());
+        TREE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "SelectAllToFocus").shortcut().shift());
         
         TREE_VIEW_BINDINGS.add(new KeyBinding(HOME, "FocusFirstRow").shortcut());
         TREE_VIEW_BINDINGS.add(new KeyBinding(END, "FocusLastRow").shortcut());
