@@ -35,8 +35,10 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import com.sun.javafx.scene.CssFlags;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableMap;
 import javafx.css.CssMetaData;
@@ -86,7 +88,7 @@ final class CssStyleHelper {
     /**
      * Creates a new StyleHelper.
      */
-    static CssStyleHelper createStyleHelper(final Node node) {
+    static CssStyleHelper createStyleHelper(final Node node, WritableValue<Boolean> clearCacheOnReuse) {
 
         // need to know how far we are to root in order to init arrays.
         // TODO: should we hang onto depth to avoid this nonsense later?
@@ -117,6 +119,21 @@ final class CssStyleHelper {
         //
         if ( canReuseStyleHelper(node, styleMap) ) {
 
+            //
+            // RT-33080
+            //
+            // If we're reusing a style helper, clear the fontSizeCache in case either this node or some parent
+            // node has changed font from a user calling setFont.
+            //
+            // It may be the case that the node's font has changed from a call to setFont, which will
+            // trigger a REAPPLY. If the REAPPLY comes because of a change in font, then the fontSizeCache
+            // needs to be invalidated (cleared) so that new values will be looked up for all transition states.
+            //
+            if (node.styleHelper.cacheContainer != null &&
+                    (isTrue(clearCacheOnReuse) || isUserSetFont(node, node.styleHelper.cacheContainer.fontProp))) {
+                setTrue(clearCacheOnReuse);
+                node.styleHelper.cacheContainer.fontSizeCache.clear();
+            }
             return node.styleHelper;
 
         }
@@ -191,6 +208,28 @@ final class CssStyleHelper {
         }
 
         return helper;
+    }
+
+    //
+    // return true if the fontStyleableProperty's origin is USER
+    //
+    private static boolean isUserSetFont(Styleable node, CssMetaData<Styleable, Font> fontCssMetaData) {
+        StyleableProperty<Font> fontStyleableProperty = fontCssMetaData != null ? fontCssMetaData.getStyleableProperty(node) : null;
+        return fontStyleableProperty != null && fontStyleableProperty.getStyleOrigin() == StyleOrigin.USER;
+    }
+
+    //
+    // return the value of the property
+    //
+    private static boolean isTrue(WritableValue<Boolean> booleanProperty) {
+        return booleanProperty != null && booleanProperty.getValue();
+    }
+
+    //
+    // set the value of the property to true
+    //
+    private static void setTrue(WritableValue<Boolean> booleanProperty) {
+        if (booleanProperty != null) booleanProperty.setValue(true);
     }
 
     //

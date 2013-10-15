@@ -42,6 +42,7 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.WritableValue;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
@@ -194,7 +195,7 @@ public class Scene implements EventTarget {
     private double heightSetByUser = -1.0;
     private boolean sizeInitialized = false;
     private final boolean depthBuffer;
-    private final boolean antiAliasing;
+    private final SceneAntialiasing antiAliasing;
 
     private int dirtyBits;
 
@@ -219,7 +220,7 @@ public class Scene implements EventTarget {
      * @throws NullPointerException if root is null
      */
     public Scene(Parent root) {
-        this(root, -1, -1, Color.WHITE, false, false);
+        this(root, -1, -1, Color.WHITE, false, SceneAntialiasing.DISABLED);
     }
 
 //Public constructor initializing public-init properties
@@ -250,7 +251,7 @@ public class Scene implements EventTarget {
      * @throws NullPointerException if root is null
      */
     public Scene(Parent root, double width, double height) {
-        this(root, width, height, Color.WHITE, false, false);
+        this(root, width, height, Color.WHITE, false, SceneAntialiasing.DISABLED);
     }
 
     /**
@@ -264,7 +265,7 @@ public class Scene implements EventTarget {
      * @throws NullPointerException if root is null
      */
     public Scene(Parent root, @Default("javafx.scene.paint.Color.WHITE") Paint fill) {
-        this(root, -1, -1, fill, false, false);
+        this(root, -1, -1, fill, false, SceneAntialiasing.DISABLED);
     }
 
     /**
@@ -281,7 +282,7 @@ public class Scene implements EventTarget {
      */
     public Scene(Parent root, double width, double height,
             @Default("javafx.scene.paint.Color.WHITE") Paint fill) {
-        this(root, width, height, fill, false, false);
+        this(root, width, height, fill, false, SceneAntialiasing.DISABLED);
     }
 
     /**
@@ -305,7 +306,7 @@ public class Scene implements EventTarget {
      * @see javafx.scene.Node#setDepthTest(DepthTest)
      */
     public Scene(Parent root, @Default("-1") double width, @Default("-1") double height, boolean depthBuffer) {
-        this(root, width, height, Color.WHITE, depthBuffer, false);
+        this(root, width, height, Color.WHITE, depthBuffer, SceneAntialiasing.DISABLED);
     }
 
     /**
@@ -317,10 +318,11 @@ public class Scene implements EventTarget {
      * @param width The width of the scene
      * @param height The height of the scene
      * @param depthBuffer The depth buffer flag
-     * @param antiAliasing The scene anti-aliasing flag
+     * @param antiAliasing The scene anti-aliasing attribute. A value of
+     * {@code null} is treated as DISABLED.
      * <p>
-     * The depthBuffer and antiAliasing flags are conditional feature and the default
-     * value for both are false. See
+     * The depthBuffer and antiAliasing are conditional features. With the
+     * respective default values of: false and {@code SceneAntialiasing.DISABLED}. See
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
      * for more information.
      *
@@ -332,11 +334,12 @@ public class Scene implements EventTarget {
      * @since JavaFX 8.0
      */
     public Scene(Parent root, @Default("-1") double width, @Default("-1") double height,
-            boolean depthBuffer, boolean antiAliasing) {
-
+            boolean depthBuffer,
+            @Default("javafx.scene.SceneAntialiasing.DISABLED") SceneAntialiasing antiAliasing) {
         this(root, width, height, Color.WHITE, depthBuffer, antiAliasing);
 
-        if (antiAliasing && !com.sun.prism.GraphicsPipeline.getPipeline().isAntiAliasingSupported())
+        if (antiAliasing != null && antiAliasing != SceneAntialiasing.DISABLED &&
+                !Toolkit.getToolkit().isAntiAliasingSupported())
         {
             String logname = Scene.class.getName();
             PlatformLogger.getLogger(logname).warning("System can't support "
@@ -346,14 +349,15 @@ public class Scene implements EventTarget {
 
     private Scene(Parent root, double width, double height,
             @Default("javafx.scene.paint.Color.WHITE") Paint fill,
-            boolean depthBuffer, boolean antiAliasing) {
+            boolean depthBuffer, SceneAntialiasing antiAliasing) {
         this.depthBuffer = depthBuffer;
         this.antiAliasing = antiAliasing;
         if (root == null) {
             throw new NullPointerException("Root cannot be null");
         }
 
-        if ((depthBuffer || antiAliasing) && !Platform.isSupported(ConditionalFeature.SCENE3D)) {
+        if ((depthBuffer || (antiAliasing != null && antiAliasing != SceneAntialiasing.DISABLED))
+                && !Platform.isSupported(ConditionalFeature.SCENE3D)) {
             String logname = Scene.class.getName();
             PlatformLogger.getLogger(logname).warning("System can't support "
                     + "ConditionalFeature.SCENE3D");
@@ -549,7 +553,7 @@ public class Scene implements EventTarget {
             // The cssFlag is set to clean in either Node.processCSS or
             // Node.impl_processCSS(boolean)
             sceneRoot.impl_clearDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS);
-            sceneRoot.processCSS();
+            sceneRoot.processCSS(null);
         }
     }
 
@@ -598,16 +602,23 @@ public class Scene implements EventTarget {
     }
 
     /**
-     * Return true if this {@code Scene} is anti-aliased otherwise false.
+     * Return the defined {@code SceneAntialiasing} for this {@code Scene}.
+     * <p>
+     * Note: this is a conditional feature. See
+     * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
+     * and {@link javafx.scene.SceneAntialiasing SceneAntialiasing}
+     * for more information.
      * @since JavaFX 8.0
      */
-    public final boolean isAntiAliasing() {
+    public final SceneAntialiasing getAntiAliasing() {
         return antiAliasing;
     }
 
-    private boolean isAntiAliasingInternal() {
-        return antiAliasing && com.sun.prism.GraphicsPipeline.getPipeline().isAntiAliasingSupported() &&
-                Platform.isSupported(ConditionalFeature.SCENE3D);
+    private boolean getAntiAliasingInternal() {
+        return (antiAliasing != null &&
+                Toolkit.getToolkit().isAntiAliasingSupported() &&
+                Platform.isSupported(ConditionalFeature.SCENE3D)) ?
+                antiAliasing != SceneAntialiasing.DISABLED : false;
     }
 
     /**
@@ -695,7 +706,7 @@ public class Scene implements EventTarget {
         impl_setAllowPGAccess(true);
 
         Toolkit tk = Toolkit.getToolkit();
-        impl_peer = windowPeer.createTKScene(isDepthBufferInternal(), isAntiAliasingInternal(), acc);
+        impl_peer = windowPeer.createTKScene(isDepthBufferInternal(), getAntiAliasingInternal(), acc);
         PerformanceTracker.logEvent("Scene.initPeer TKScene created");
         impl_peer.setTKSceneListener(new ScenePeerListener());
         impl_peer.setTKScenePaintListener(new ScenePeerPaintListener());
@@ -986,6 +997,10 @@ public class Scene implements EventTarget {
     void markCameraDirty() {
         markDirty(DirtyBits.CAMERA_DIRTY);
         setNeedsRepaint();
+    }
+
+    void markCursorDirty() {
+        markDirty(DirtyBits.CURSOR_DIRTY);
     }
 
     /**
@@ -1403,7 +1418,22 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<Cursor> cursorProperty() {
         if (cursor == null) {
-            cursor = new SimpleObjectProperty<Cursor>(this, "cursor");
+            cursor = new ObjectPropertyBase<Cursor>() {
+                         @Override
+                         protected void invalidated() {
+                             markCursorDirty();
+                         }
+
+                         @Override
+                         public Object getBean() {
+                             return Scene.this;
+                         }
+
+                         @Override
+                         public String getName() {
+                             return "cursor";
+                         }
+                     };
         }
         return cursor;
     }
@@ -1618,12 +1648,7 @@ public class Scene implements EventTarget {
     // SB-dependency: RT-22747 has been filed to track this
     @Deprecated
     public void impl_processMouseEvent(MouseEvent e) {
-        if (e.getEventType() == MouseEvent.MOUSE_CLICKED) {
-            // Ignore click generated by platform, we are generating
-            // smarter clicks here by ClickGenerator
-            return;
-        }
-        mouseHandler.process(e);
+        mouseHandler.process(e, false);
     }
 
     private void processMenuEvent(double x2, double y2, double xAbs, double yAbs, boolean isKeyboardTrigger) {
@@ -2106,7 +2131,8 @@ public class Scene implements EventTarget {
         FILL_DIRTY,
         ROOT_DIRTY,
         CAMERA_DIRTY,
-        LIGHTS_DIRTY;
+        LIGHTS_DIRTY,
+        CURSOR_DIRTY;
 
         private int mask;
 
@@ -2340,6 +2366,10 @@ public class Scene implements EventTarget {
                     }
 
                 }
+
+                if (Scene.this.getRoot().cssFlag != CssFlags.CLEAN) {
+                    Scene.this.getRoot().impl_markDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS);
+                }
             }
 
             // required for image cursor created from animated image
@@ -2391,11 +2421,12 @@ public class Scene implements EventTarget {
 
         @Override
         public void mouseEvent(EventType<MouseEvent> type, double x, double y, double screenX, double screenY,
-                               MouseButton button, int clickCount, boolean popupTrigger, boolean synthesized,
+                               MouseButton button, boolean popupTrigger, boolean synthesized,
                                boolean shiftDown, boolean controlDown, boolean altDown, boolean metaDown,
                                boolean primaryDown, boolean middleDown, boolean secondaryDown)
         {
-            MouseEvent mouseEvent = new MouseEvent(type, x, y, screenX, screenY, button, clickCount,
+            MouseEvent mouseEvent = new MouseEvent(type, x, y, screenX, screenY, button,
+                    0, // click count will be adjusted by clickGenerator later anyway
                     shiftDown, controlDown, altDown, metaDown,
                     primaryDown, middleDown, secondaryDown, synthesized, popupTrigger, false, null);
             impl_processMouseEvent(mouseEvent);
@@ -3385,10 +3416,6 @@ public class Scene implements EventTarget {
                 //Shouldn't run user code directly. User can call stage.showAndWait() and block the pulse.
                 Platform.runLater(pickProcess);
             }
-        }
-
-        private void process(MouseEvent e) {
-            process(e, false);
         }
 
         private void clearPDREventTargets() {

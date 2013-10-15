@@ -36,6 +36,7 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
 import javafx.geometry.HPos;
+import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
@@ -317,8 +318,6 @@ public abstract class TableRowSkinBase<T,
             TableColumnBase<T, ?> tableColumn = getTableColumnBase(tableCell);
 
             width = snapSize(tableCell.prefWidth(-1)) - snapSize(horizontalPadding);
-            height = Math.max(controlHeight, tableCell.prefHeight(-1));
-            height = snapSize(height) - snapSize(verticalPadding);
 
             boolean isVisible = true;
             if (fixedCellSizeEnabled) {
@@ -332,6 +331,11 @@ public abstract class TableRowSkinBase<T,
                 // to concern ourselves with the possibility that the height
                 // may be variable and / or dynamic.
                 isVisible = isColumnPartiallyOrFullyVisible(tableColumn);
+
+                height = fixedCellSize;
+            } else {
+                height = Math.max(controlHeight, tableCell.prefHeight(-1));
+                height = snapSize(height) - snapSize(verticalPadding);
             }
 
             if (isVisible) {
@@ -339,7 +343,11 @@ public abstract class TableRowSkinBase<T,
                     getChildren().add(tableCell);
                 }
 
-
+                // Added for RT-32700. It is possible that changing the state of
+                // the cell alignment may break custom cells...but for now there
+                // are no known issues.
+                final boolean centreContent = h <= 24.0;
+                tableCell.setAlignment(centreContent ? Pos.CENTER_LEFT : Pos.TOP_LEFT);
 
                 ///////////////////////////////////////////
                 // further indentation code starts here
@@ -353,9 +361,10 @@ public abstract class TableRowSkinBase<T,
                         } else {
                             fadeIn(disclosureNode);
                             disclosureNode.resize(disclosureWidth, ph);
-                            positionInArea(disclosureNode, x + leftMargin, y,
-                                    disclosureWidth, h, /*baseline ignored*/0,
-                                    HPos.CENTER, VPos.CENTER);
+
+                            disclosureNode.relocate(x + leftMargin,
+                                    centreContent ? (h / 2.0 - ph / 2.0) :
+                                            (y + tableCell.getPadding().getTop()));
                             disclosureNode.toFront();
                         }
                     }
@@ -367,14 +376,17 @@ public abstract class TableRowSkinBase<T,
 
                     if (graphic != null) {
                         graphicWidth = graphic.prefWidth(-1) + 3;
+                        double ph = graphic.prefHeight(graphicWidth);
 
                         if (width < disclosureWidth + leftMargin + graphicWidth) {
                             fadeOut(graphic);
                         } else {
                             fadeIn(graphic);
-                            positionInArea(graphic, x + leftMargin + disclosureWidth, y,
-                                        graphicWidth, h, /*baseline ignored*/0,
-                                        HPos.CENTER, VPos.CENTER);
+
+                            graphic.relocate(x + leftMargin + disclosureWidth,
+                                    centreContent ? (h / 2.0 - ph / 2.0) :
+                                            (y + tableCell.getPadding().getTop()));
+
                             graphic.toFront();
                         }
                     }

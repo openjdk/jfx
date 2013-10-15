@@ -282,7 +282,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             
             for (int i = 0; i < getColumns().size(); i++) {
                 TableColumnBase<?,?> column = getColumns().get(i);
-                if (column == null) continue;
+                if (column == null || ! column.isVisible()) continue;
                 newHeaders.add(createColumnHeader(column));
             }
             
@@ -499,10 +499,6 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         if (updateColumns) {
             updateTableColumnHeaders();
             updateColumns = false;
-
-            // Added to resolve RT-32559, where reordering columns resulted in
-            // their disappearance
-            impl_processCSS(false);
         }
     }
 

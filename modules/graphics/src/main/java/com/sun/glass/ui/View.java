@@ -46,9 +46,7 @@ public abstract class View {
         }
         public void handleMouseEvent(View view, long time, int type, int button,
                                      int x, int y, int xAbs, int yAbs,
-                                     int clickCount, int modifiers,
-                                     boolean isPopupTrigger,
-                                     boolean isSynthesized)
+                                     int modifiers, boolean isPopupTrigger, boolean isSynthesized)
         {
         }
 
@@ -518,12 +516,12 @@ public abstract class View {
     }
 
     private void handleMouseEvent(long time, int type, int button, int x, int y,
-                                  int xAbs, int yAbs, int clickCount,
+                                  int xAbs, int yAbs,
                                   int modifiers, boolean isPopupTrigger,
                                   boolean isSynthesized) {
         if (eventHandler != null) {
             eventHandler.handleMouseEvent(this, time, type, button, x, y, xAbs,
-                                          yAbs, clickCount, modifiers,
+                                          yAbs, modifiers,
                                           isPopupTrigger, isSynthesized);
         }
     }
@@ -888,7 +886,7 @@ public abstract class View {
             lastClickedTime = now;
         }
 
-        handleMouseEvent(now, type, button, x, y, xAbs, yAbs, clickCount,
+        handleMouseEvent(now, type, button, x, y, xAbs, yAbs,
                          modifiers, isPopupTrigger, isSynthesized);
 
         if (type == MouseEvent.DRAG) {

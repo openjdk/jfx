@@ -291,7 +291,7 @@ static void rfbHandlePointerEvent(int buttonMask, int x, int y, rfbClientPtr cl)
     if (x != cd->oldX || y != cd->oldY) {
         cd->oldX = x;
         cd->oldY = y;
-        lens_wm_notifyMotionEvent(genv, x, y, 0, 0);
+        lens_wm_notifyMotionEvent(genv, x, y);
     }
 
     if (buttonMask != cd->oldButton) {

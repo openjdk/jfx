@@ -68,7 +68,11 @@ static  DISPMANX_UPDATE_HANDLE_T(*wr_vc_dispmanx_update_start)(int32_t priority)
 static  int (*wr_vc_dispmanx_update_submit_sync)(DISPMANX_UPDATE_HANDLE_T update);
 #endif /* USE_DISPMAN */
 
+//Vivante specials
+static EGLNativeDisplayType (*wr_fbGetDisplayByIndex)(int DisplayIndex);
+static EGLNativeWindowType (*wr_fbCreateWindow)(EGLNativeDisplayType Display, int X, int Y, int Width, int Height);
 int useDispman = 0;
+int useVivanteFB = 0;
 
 #define DEBUG
 #ifdef DEBUG
@@ -160,6 +164,20 @@ static int load_bcm_symbols(void *lib) {
 #endif /* USE_DISPMAN */
 }
 
+static int load_vivante_symbols(void *lib) {
+    int error = 0;
+    if (!(wr_fbGetDisplayByIndex = GET_SYMBOL(lib, "fbGetDisplayByIndex"))) {
+        error++;
+    }
+    if (!(wr_fbCreateWindow = GET_SYMBOL(lib, "fbCreateWindow"))) {
+        error++;
+    }
+    if (error != 0) {
+        fprintf(stderr, "failed to load all Vivante symbols %d\n", error);
+        return 1;
+    }
+    return error;
+}
 static int done_loading_symbols = 0;
 
 /***************************** UTILITY ********************************/
@@ -194,6 +212,9 @@ int load_wrapped_gles_symbols() {
     if (libbcm) {
         useDispman = 1;
         error += load_bcm_symbols(libbcm);
+    } else if (dlopen("libVIVANTE.so", RTLD_LAZY)) {
+        useVivanteFB = 1;
+        error += load_vivante_symbols(libegl);
     }
 
     error += load_egl_symbols(libegl);
@@ -212,6 +233,8 @@ EGLNativeDisplayType getNativeDisplayType() {
     if (!cached) {
         if (useDispman) {
             cachedNativeDisplayType = EGL_DEFAULT_DISPLAY;
+        } else if (useVivanteFB)  {
+            cachedNativeDisplayType = wr_fbGetDisplayByIndex(0);
         } else {
             cachedNativeDisplayType = (EGLNativeDisplayType)NULL;
         }
@@ -294,8 +317,9 @@ EGLNativeWindowType getNativeWindowType() {
 
             cachedWindowType = (NativeWindowType)dispmanWindow;
 #endif /* USE_DISPMAN */
+        } else if (useVivanteFB)  {
+            cachedWindowType = (*wr_fbCreateWindow)(getNativeDisplayType(), 0, 0, 0, 0);
         } else {
-            printf("Using good old NULL\n");
             cachedWindowType = NULL;      // hence the EGL NULL
         }
         cached ++;

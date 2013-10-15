@@ -49,7 +49,7 @@ static volatile jobject glassClassLoader = NULL;
     static jclass classCls = NULL;
     if (classCls == NULL)
     {
-        classCls = (*env)->FindClass(env, "java/lang/Class");
+        classCls = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "java/lang/Class"));
     }
     if (classCls == NULL)
     {
@@ -77,6 +77,7 @@ static volatile jobject glassClassLoader = NULL;
 
     jclass foundClass = (*env)->CallStaticObjectMethod(env, classCls,
         forNameMID,classNameStr, JNI_TRUE, glassClassLoader);
+    (*env)->DeleteLocalRef(env, classNameStr);
 
     return foundClass;
 }
@@ -87,7 +88,7 @@ static volatile jobject glassClassLoader = NULL;
     if (_ApplicationClass == NULL)
     {
         GET_MAIN_JENV;
-        _ApplicationClass = [GlassHelper ClassForName:"com.sun.glass.ui.Application" withEnv:env];
+        _ApplicationClass = (*env)->NewGlobalRef(env, [GlassHelper ClassForName:"com.sun.glass.ui.Application" withEnv:env]);
         GLASS_CHECK_EXCEPTION(env);
     }
     if (_ApplicationClass == NULL)

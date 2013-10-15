@@ -42,7 +42,7 @@ abstract class SWTexture implements Texture {
     }
 
     boolean allocated = false;
-    int width, height, contentWidth, contentHeight;
+    int physicalWidth, physicalHeight, contentWidth, contentHeight;
     private SWResourceFactory factory;
     private int lastImageSerial;
     private final WrapMode wrapMode;
@@ -50,8 +50,8 @@ abstract class SWTexture implements Texture {
     SWTexture(SWResourceFactory factory, WrapMode wrapMode, int w, int h) {
         this.factory = factory;
         this.wrapMode = wrapMode;
-        width = w;
-        height = h;
+        physicalWidth = w;
+        physicalHeight = h;
         contentWidth = w;
         contentHeight = h;
         lock();
@@ -59,8 +59,8 @@ abstract class SWTexture implements Texture {
 
     SWTexture(SWTexture sharedTex, WrapMode altMode) {
         this.allocated = sharedTex.allocated;
-        this.width = sharedTex.width;
-        this.height = sharedTex.height;
+        this.physicalWidth = sharedTex.physicalWidth;
+        this.physicalHeight = sharedTex.physicalHeight;
         this.contentWidth = sharedTex.contentWidth;
         this.contentHeight = sharedTex.contentHeight;
         this.factory = sharedTex.factory;
@@ -72,10 +72,6 @@ abstract class SWTexture implements Texture {
 
     SWResourceFactory getResourceFactory() {
         return this.factory;
-    }
-
-    int getStride() {
-        return width;
     }
 
     int getOffset() {
@@ -133,12 +129,12 @@ abstract class SWTexture implements Texture {
 
     @Override
     public int getPhysicalWidth() {
-        return width;
+        return physicalWidth;
     }
 
     @Override
     public int getPhysicalHeight() {
-        return height;
+        return physicalHeight;
     }
 
     @Override
@@ -158,7 +154,7 @@ abstract class SWTexture implements Texture {
 
     @Override
     public void setContentWidth(int contentWidth) {
-        if (contentWidth > width) {
+        if (contentWidth > physicalWidth) {
             throw new IllegalArgumentException("contentWidth cannot exceed physicalWidth");
         }
         this.contentWidth = contentWidth;
@@ -171,10 +167,20 @@ abstract class SWTexture implements Texture {
 
     @Override
     public void setContentHeight(int contentHeight) {
-        if (contentHeight > height) {
+        if (contentHeight > physicalHeight) {
             throw new IllegalArgumentException("contentHeight cannot exceed physicalHeight");
         }
         this.contentHeight = contentHeight;
+    }
+
+    @Override
+    public int getMaxContentWidth() {
+        return getPhysicalWidth();
+    }
+
+    @Override
+    public int getMaxContentHeight() {
+        return getPhysicalHeight();
     }
 
     public int getLastImageSerial() {
@@ -251,7 +257,7 @@ abstract class SWTexture implements Texture {
             return;
         }
         if (PrismSettings.debug) {
-            System.out.println("PCS Texture allocating buffer: " + this + ", " + width + "x" + height);
+            System.out.println("PCS Texture allocating buffer: " + this + ", " + physicalWidth + "x" + physicalHeight);
         }
         this.allocateBuffer();
         allocated = true;

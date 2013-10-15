@@ -1101,6 +1101,7 @@ void lens_wm_notifyMultiTouchEvent(JNIEnv *env,
     for (i = 0; i < count && allReleased; i++) {
         if (states[i] != com_sun_glass_events_TouchEvent_TOUCH_RELEASED) {
             allReleased = JNI_FALSE;
+            break;
         }
     }
     if (allReleased) {
@@ -1126,7 +1127,7 @@ void lens_wm_notifyMultiTouchEvent(JNIEnv *env,
 }
 
 
-void lens_wm_notifyMotionEvent(JNIEnv *env, int mousePosX, int mousePosY, int isTouch, int touchId) {
+void lens_wm_notifyMotionEvent(JNIEnv *env, int mousePosX, int mousePosY) {
 
     int relX, relY;
     int reportMove = 0;
@@ -1230,40 +1231,26 @@ void lens_wm_notifyMotionEvent(JNIEnv *env, int mousePosX, int mousePosY, int is
         relX = _mousePosX - _dragGrabbingWindow->currentBounds.x;
         relY = _mousePosY - _dragGrabbingWindow->currentBounds.y;
 
-        if (isTouch) {
-            glass_application_notifyTouchEvent(env,
-                                               _dragGrabbingWindow,
-                                               com_sun_glass_events_TouchEvent_TOUCH_MOVED,
-                                               touchId , relX, relY, _mousePosX, _mousePosY);
-        } else {
-            GLASS_LOG_FINEST("MouseEvent_MOVE on window %i[%p]",
-                           (_dragGrabbingWindow)?_dragGrabbingWindow->id:-1,
-                           _dragGrabbingWindow);
-            glass_application_notifyMouseEvent(env,
-                                               _dragGrabbingWindow,
-                                               com_sun_glass_events_MouseEvent_MOVE,
-                                               relX, relY, _mousePosX, _mousePosY,
-                                               com_sun_glass_events_MouseEvent_BUTTON_NONE);
-        }
+        GLASS_LOG_FINEST("MouseEvent_MOVE on window %i[%p]",
+                       (_dragGrabbingWindow)?_dragGrabbingWindow->id:-1,
+                       _dragGrabbingWindow);
+        glass_application_notifyMouseEvent(env,
+                                           _dragGrabbingWindow,
+                                           com_sun_glass_events_MouseEvent_MOVE,
+                                           relX, relY, _mousePosX, _mousePosY,
+                                           com_sun_glass_events_MouseEvent_BUTTON_NONE);
 
 
     } else if (!_onDraggingAction && window != NULL) {
 
-        if (isTouch) {
-            glass_application_notifyTouchEvent(env,
-                                               window,
-                                               com_sun_glass_events_TouchEvent_TOUCH_MOVED,
-                                               touchId , relX, relY, _mousePosX, _mousePosY);
-        } else {
-            GLASS_LOG_FINEST("MouseEvent_MOVE on window %i[%p]",
-                           (window)?window->id:-1,
-                           window);
-            glass_application_notifyMouseEvent(env,
-                                               window,
-                                               com_sun_glass_events_MouseEvent_MOVE,
-                                               relX, relY, _mousePosX, _mousePosY,
-                                               com_sun_glass_events_MouseEvent_BUTTON_NONE);
-        }
+        GLASS_LOG_FINEST("MouseEvent_MOVE on window %i[%p]",
+                       (window)?window->id:-1,
+                       window);
+        glass_application_notifyMouseEvent(env,
+                                           window,
+                                           com_sun_glass_events_MouseEvent_MOVE,
+                                           relX, relY, _mousePosX, _mousePosY,
+                                           com_sun_glass_events_MouseEvent_BUTTON_NONE);
 
     }
 

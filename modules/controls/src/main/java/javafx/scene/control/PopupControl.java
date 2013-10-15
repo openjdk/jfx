@@ -36,6 +36,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
@@ -1206,8 +1207,8 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
          * @deprecated This is an internal API that is not intended for use and will be removed in the next version
          */
         @Deprecated
-        @Override protected void impl_processCSS() {
-            super.impl_processCSS();
+        @Override protected void impl_processCSS(WritableValue<Boolean> cacheHint) {
+            super.impl_processCSS(cacheHint);
 
             if (getSkin() == null) {
                 // try to create default skin
@@ -1215,7 +1216,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
                 if (defaultSkin != null) {
                     skinProperty().set(defaultSkin);
                     // we have to reapply css again so that the newly set skin gets css applied as well.
-                    super.impl_processCSS();
+                    super.impl_processCSS(cacheHint);
                 } else {
                     final String msg = "The -fx-skin property has not been defined in CSS for " + this +
                             " and createDefaultSkin() returned null.";

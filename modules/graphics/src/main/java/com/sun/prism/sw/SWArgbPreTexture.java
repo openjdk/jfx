@@ -41,29 +41,23 @@ import com.sun.prism.impl.PrismSettings;
 class SWArgbPreTexture extends SWTexture {
 
     private int data[];
-    private int stride, offset;
+    private int offset;
     private boolean hasAlpha = true;
 
     SWArgbPreTexture(SWResourceFactory factory, WrapMode wrapMode, int w, int h) {
         super(factory, wrapMode, w, h);
-        stride = w;
         offset = 0;
     }
 
     SWArgbPreTexture(SWArgbPreTexture sharedTex, WrapMode altMode) {
         super(sharedTex, altMode);
         this.data = sharedTex.data;
-        this.stride = sharedTex.stride;
         this.offset = sharedTex.offset;
         this.hasAlpha = sharedTex.hasAlpha;
     }
 
     int[] getDataNoClone() {
         return data;
-    }
-
-    int getStride() {
-        return stride;
     }
 
     int getOffset() {
@@ -120,7 +114,7 @@ class SWArgbPreTexture extends SWTexture {
         PixelConverter converter = PixelUtils.getConverter(getter, IntArgbPre.setter);
         buffer.position(0);
         converter.convert(buffer, (srcy * srcscan) + srcx, srcscan,
-                          IntBuffer.wrap(this.data), (dsty * width) + dstx, width, srcw, srch);
+                          IntBuffer.wrap(this.data), (dsty * physicalWidth) + dstx, physicalWidth, srcw, srch);
     }
 
     @Override
@@ -137,16 +131,21 @@ class SWArgbPreTexture extends SWTexture {
             frame = f;
         }
 
-        this.offset = frame.offsetForPlane(0) / 4;
-        this.stride = frame.strideForPlane(0) / 4;
+        final int off = frame.offsetForPlane(0) / 4;
+        final int stride = frame.strideForPlane(0) / 4;
 
         IntBuffer ib = frame.getBuffer().asIntBuffer();
         if (ib.hasArray()) {
             this.allocated = false;
+            this.offset = off;
+            this.physicalWidth = stride;
             this.data = ib.array();
         } else {
             this.allocate();
-            ib.get(this.data);
+            for (int i = 0; i < contentHeight; i++) {
+                ib.position(offset + i*stride);
+                ib.get(this.data, i*physicalWidth, contentWidth);
+            }
         }
 
         frame.releaseFrame();
@@ -159,10 +158,10 @@ class SWArgbPreTexture extends SWTexture {
         if (srch < 0) {
             throw new IllegalArgumentException("srch must be >=0");
         }
-        if (srcw > this.width) {
+        if (srcw > this.physicalWidth) {
             throw new IllegalArgumentException("srcw exceeds WIDTH");
         }
-        if (srch > this.height) {
+        if (srch > this.physicalHeight) {
             throw new IllegalArgumentException("srch exceeds HEIGHT");
         }
     }
@@ -181,23 +180,10 @@ class SWArgbPreTexture extends SWTexture {
     }
 
     void allocateBuffer() {
-        if (stride < width) {
-            throw new IllegalArgumentException("STRIDE must be equal or greater than WIDTH");
-        }
-        this.data = new int[stride * height];
+        this.data = new int[physicalWidth * physicalHeight];
     }
 
     Texture createSharedLockedTexture(WrapMode altMode) {
         return new SWArgbPreTexture(this, altMode);
-    }
-
-    @Override
-    public int getMaxContentWidth() {
-        return getContentWidth();
-    }
-
-    @Override
-    public int getMaxContentHeight() {
-        return getContentHeight();
     }
 }

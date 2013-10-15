@@ -447,7 +447,10 @@ public class ContentModel {
             oldSubScene.removeEventHandler(ScrollEvent.ANY, scrollEventHandler);
         }
 
-        SubScene subScene = new SubScene(root3D,400,400,true,msaa.get());
+        javafx.scene.SceneAntialiasing aaVal = msaa.get() ?
+                javafx.scene.SceneAntialiasing.BALANCED :
+                javafx.scene.SceneAntialiasing.DISABLED;
+        SubScene subScene = new SubScene(root3D,400,400,true,aaVal);
         this.subScene.set(subScene);
         subScene.setFill(Color.ALICEBLUE);
         subScene.setCamera(camera);

@@ -50,12 +50,16 @@ static jboolean try_dispman() {
 static jboolean try_dispman() { return JNI_FALSE; }
 #endif // USE_DISPMAN
 
-#ifdef OMAP3
-extern void select_omap_cursor();
 
+
+#if defined(OMAP3) || defined(IMX6_PLATFORM)
 extern jboolean fbFBRobotScreen(jint x, jint y,
                                     jint width, jint height,
                                     jint *pixels); 
+#endif
+
+#ifdef OMAP3
+extern void select_omap_cursor();
 
 static jboolean try_omap3() { 
     select_omap_cursor();
@@ -78,9 +82,27 @@ static jboolean try_x11_container() { return JNI_TRUE; }
 static jboolean try_x11_container() { return JNI_FALSE; }
 #endif
 
+
+#ifdef IMX6_PLATFORM
+extern jboolean check_imx6_cursor();
+static jboolean try_imx6() { 
+    fbRobotScreenCapture = fbFBRobotScreen;
+    return check_imx6_cursor();
+}
+#else
+static jboolean try_imx6() { return JNI_FALSE; }
+#endif
+
+
 void platform_initialize() {
     if(try_dispman()) {
        return;
+    }
+
+    //Since the try_omap3() assumes the Beagle is present, 
+    //we will try the imx6 first.
+    if(try_imx6()) {
+        return;
     }
 
     if(try_omap3()) {

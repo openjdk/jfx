@@ -335,7 +335,7 @@ public class PolygonMeshView extends Parent {
                 final int numOfFacesBefore = pmesh.faces.length;
                 final int numOfFacesAfter = pmesh.getNumEdgesInFaces() - 2*numOfFacesBefore;
                 int [] facesArray = new int [numOfFacesAfter * NUM_COMPONENTS_PER_FACE];
-                int [] smoothingGroupsArray = new int [pmesh.getNumEdgesInFaces()];
+                int [] smoothingGroupsArray = new int [numOfFacesAfter];
                 int facesInd = 0;
                 for(int f = 0; f < pmesh.faces.length; f++) {
                     int[] face = pmesh.faces[f];

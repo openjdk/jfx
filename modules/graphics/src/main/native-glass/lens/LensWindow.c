@@ -644,10 +644,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensWindow__1setIcon
 
 /*
  * Class:     com_sun_glass_ui_lens_LensWindow
- * Method:    _toFront
+ * Method:    _toFrontImpl
  * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensWindow__1toFront
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensWindow__1toFrontImpl
 (JNIEnv *env, jobject _this, jlong nativeWindowPtr) {
 
     NativeWindow window = (NativeWindow)jlong_to_ptr(nativeWindowPtr);
@@ -663,10 +663,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensWindow__1toFront
 
 /*
  * Class:     com_sun_glass_ui_lens_LensWindow
- * Method:    _toBack
+ * Method:    _toBackImpl
  * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensWindow__1toBack
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensWindow__1toBackImpl
 (JNIEnv *env, jobject jWindow, jlong nativeWindowPtr) {
 
     NativeWindow window = (NativeWindow)jlong_to_ptr(nativeWindowPtr);

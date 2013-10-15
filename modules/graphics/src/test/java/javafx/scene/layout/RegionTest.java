@@ -29,8 +29,21 @@ import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.VPos;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageForTesting;
+import javafx.scene.image.WritableImage;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.ClosePath;
+import javafx.scene.shape.LineTo;
+import javafx.scene.shape.MoveTo;
+import javafx.scene.shape.Path;
+import java.util.concurrent.atomic.AtomicBoolean;
+import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.sg.prism.NGRegion;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 /**
@@ -915,6 +928,7 @@ public class RegionTest {
         assertEquals(12, pane.computeChildMinAreaWidth(c3, 0, new Insets(1), 50, false), 1e-100);
 
     }
+
     @Test public void testChildMinAreaHeight() {
         Pane pane = new Pane();
 
@@ -932,6 +946,7 @@ public class RegionTest {
         assertEquals(12, pane.computeChildMinAreaHeight(c3, -1, new Insets(1), -1), 1e-100);
         assertEquals(12, pane.computeChildMinAreaHeight(c3, -1, new Insets(1), 50), 1e-100);
     }
+
     @Test public void testChildMaxAreaWidth() {
         Pane pane = new Pane();
 
@@ -949,6 +964,7 @@ public class RegionTest {
         assertEquals(1002, pane.computeChildMaxAreaWidth(c3, -1, new Insets(1), -1, false), 1e-100);
         assertEquals(1002, pane.computeChildMaxAreaWidth(c3, -1, new Insets(1), 50, false), 1e-100);
     }
+
     @Test public void testChildMaxAreaHeight() {
         Pane pane = new Pane();
 
@@ -965,5 +981,227 @@ public class RegionTest {
         assertEquals(10002, pane.computeChildMaxAreaHeight(c2, -1, new Insets(1), 50), 1e-100);
         assertEquals(1002, pane.computeChildMaxAreaHeight(c3, -1, new Insets(1), -1), 1e-100);
         assertEquals(1002, pane.computeChildMaxAreaHeight(c3, -1, new Insets(1), 50), 1e-100);
+    }
+
+    /**************************************************************************
+     *                                                                        *
+     *    Test that images which are background loaded, or images which can   *
+     *    change (such as WritableImage or animated gif) will cause a         *
+     *    listener to be installed. Also that a non-animating background      *
+     *    loaded image will have the listener removed when the image          *
+     *    finishes loading, and that all listeners are removed from images    *
+     *    which have been removed from the Region. Also that any animating    *
+     *    or background loaded image will cause a repaint to happen when the  *
+     *    underlying platform image changes.                                  *
+     *                                                                        *
+     *************************************************************************/
+
+    @Test public void testBackgroundLoadedBackgroundImageHasListenerInstalled() {
+        final ImageForTesting image = new ImageForTesting("http://something.png", true);
+        assertTrue(image.getProgress() < 1);
+
+        ImageRegion r = new ImageRegion();
+        final Background background = new Background(new BackgroundImage(image, null, null, null, null));
+        r.setBackground(background);
+
+        assertTrue(r.listenerAdded.get());
+    }
+
+    @Test public void testBackgroundLoadedBackgroundImageStillLoadingButRemovedFromRegionHasListenerRemoved() {
+        final ImageForTesting image = new ImageForTesting("http://something.png", true);
+        assertTrue(image.getProgress() < 1);
+
+        ImageRegion r = new ImageRegion();
+        final Background background = new Background(new BackgroundImage(image, null, null, null, null));
+        r.setBackground(background);
+        r.setBackground(null);
+
+        assertFalse(r.listenerAdded.get());
+    }
+
+    @Test public void testBackgroundLoadedBackgroundImageWhichFinishesLoadingHasListenerRemoved() {
+        final ImageForTesting image = new ImageForTesting("http://something.png", true);
+        assertTrue(image.getProgress() < 1);
+
+        ImageRegion r = new ImageRegion();
+        final Background background = new Background(new BackgroundImage(image, null, null, null, null));
+        r.setBackground(background);
+        image.updateProgress(1);
+        image.updateVisuals();
+
+        assertFalse(r.listenerAdded.get());
+    }
+
+    @Test public void testBackgroundLoadedBackgroundImageWhichFinishesLoadingCausesRepaint() {
+        final ImageForTesting image = new ImageForTesting("http://something.png", true);
+        assertTrue(image.getProgress() < 1);
+
+        ImageRegion r = new ImageRegion();
+        final Background background = new Background(new BackgroundImage(image, null, null, null, null));
+        r.setBackground(background);
+        r.clearDirty();
+        assertFalse(r.willBeRepainted());
+        image.updateProgress(1);
+        image.updateVisuals();
+
+        assertTrue(r.willBeRepainted());
+    }
+
+    @Test public void testBackgroundLoadedBorderImageHasListenerInstalled() {
+        final ImageForTesting image = new ImageForTesting("http://something.png", true);
+        assertTrue(image.getProgress() < 1);
+
+        ImageRegion r = new ImageRegion();
+        final Border border = new Border(new BorderImage(image, null, null, null, false, null, null));
+        r.setBorder(border);
+
+        assertTrue(r.listenerAdded.get());
+    }
+
+    @Test public void testBackgroundLoadedBorderImageStillLoadingButRemovedFromRegionHasListenerRemoved() {
+        final ImageForTesting image = new ImageForTesting("http://something.png", true);
+        assertTrue(image.getProgress() < 1);
+
+        ImageRegion r = new ImageRegion();
+        final Border border = new Border(new BorderImage(image, null, null, null, false, null, null));
+        r.setBorder(border);
+        r.setBorder(null);
+
+        assertFalse(r.listenerAdded.get());
+    }
+
+    @Test public void testBackgroundLoadedBorderImageWhichFinishesLoadingHasListenerRemoved() {
+        final ImageForTesting image = new ImageForTesting("http://something.png", true);
+        assertTrue(image.getProgress() < 1);
+
+        ImageRegion r = new ImageRegion();
+        final Border border = new Border(new BorderImage(image, null, null, null, false, null, null));
+        r.setBorder(border);
+        image.updateProgress(1);
+        image.updateVisuals();
+
+        assertFalse(r.listenerAdded.get());
+    }
+
+    @Test public void testBackgroundLoadedBorderImageWhichFinishesLoadingCausesRepaint() {
+        final ImageForTesting image = new ImageForTesting("http://something.png", true);
+        assertTrue(image.getProgress() < 1);
+
+        ImageRegion r = new ImageRegion();
+        final Border border = new Border(new BorderImage(image, null, null, null, false, null, null));
+        r.setBorder(border);
+        r.clearDirty();
+        assertFalse(r.willBeRepainted());
+        image.updateProgress(1);
+        image.updateVisuals();
+
+        assertTrue(r.willBeRepainted());
+    }
+
+    @Test public void testAnimatedBackgroundImageHasListenerInstalled() {
+        final WritableImage image = new WritableImage(10, 10);
+        ImageRegion r = new ImageRegion();
+        final Background background = new Background(new BackgroundImage(image, null, null, null, null));
+        r.setBackground(background);
+        assertTrue(r.listenerAdded.get());
+    }
+
+    @Test public void testAnimatedBackgroundImageRemovedFromRegionHasListenerRemoved() {
+        final WritableImage image = new WritableImage(10, 10);
+        ImageRegion r = new ImageRegion();
+        final Background background = new Background(new BackgroundImage(image, null, null, null, null));
+        r.setBackground(background);
+        r.setBackground(null);
+        assertFalse(r.listenerAdded.get());
+    }
+
+    @Test public void testAnimatedBackgroundImageCausesRepaintWhenAnimationChanges() {
+        final WritableImage image = new WritableImage(10, 10);
+        ImageRegion r = new ImageRegion();
+        final Background background = new Background(new BackgroundImage(image, null, null, null, null));
+        r.setBackground(background);
+        r.clearDirty();
+        assertFalse(r.willBeRepainted());
+        image.getPixelWriter().setArgb(0, 0, 100);
+        assertTrue(r.willBeRepainted());
+    }
+
+    @Test public void testAnimatedBorderImageHasListenerInstalled() {
+        final WritableImage image = new WritableImage(10, 10);
+        ImageRegion r = new ImageRegion();
+        final Border border = new Border(new BorderImage(image, null, null, null, false, null, null));
+        r.setBorder(border);
+        assertTrue(r.listenerAdded.get());
+    }
+
+    @Test public void testAnimatedBorderImageRemovedFromRegionHasListenerRemoved() {
+        final WritableImage image = new WritableImage(10, 10);
+        ImageRegion r = new ImageRegion();
+        final Border border = new Border(new BorderImage(image, null, null, null, false, null, null));
+        r.setBorder(border);
+        r.setBorder(null);
+        assertFalse(r.listenerAdded.get());
+    }
+
+    @Test public void testAnimatedBorderImageCausesRepaintWhenAnimationChanges() {
+        final WritableImage image = new WritableImage(10, 10);
+        ImageRegion r = new ImageRegion();
+        final Border border = new Border(new BorderImage(image, null, null, null, false, null, null));
+        r.setBorder(border);
+        r.clearDirty();
+        assertFalse(r.willBeRepainted());
+        image.getPixelWriter().setArgb(0, 0, 100);
+        assertTrue(r.willBeRepainted());
+    }
+
+    static final class ImageRegion extends Region {
+        AtomicBoolean listenerAdded = new AtomicBoolean(false);
+
+        @Override void addImageListener(Image image) {
+            super.addImageListener(image);
+            listenerAdded.set(true);
+        }
+
+        @Override void removeImageListener(Image image) {
+            super.removeImageListener(image);
+            listenerAdded.set(false);
+        }
+
+        public boolean willBeRepainted() {
+            return impl_isDirty(DirtyBits.NODE_CONTENTS);
+        }
+
+        public void clearDirty() {
+            super.impl_clearDirty(DirtyBits.NODE_CONTENTS);
+        }
+    };
+
+    // Test for RT-13820
+    @Test public void changingShapeElementsShouldResultInRender() {
+        Region r = new Region();
+        r.setPrefWidth(640);
+        r.setPrefHeight(480);
+        LineTo lineTo;
+        Path p = new Path(
+                new MoveTo(0, 0),
+                lineTo = new LineTo(100, 0),
+                new LineTo(50, 100),
+                new ClosePath()
+        );
+        r.setBackground(new Background(new BackgroundFill(Color.BLUE, null, null)));
+        r.setCenterShape(true);
+        r.setScaleShape(true);
+        r.setShape(p);
+        r.impl_syncPeer();
+
+        NGRegion peer = r.impl_getPeer();
+        assertFalse(peer.isClean());
+        peer.clearDirtyTree();
+        assertTrue(peer.isClean());
+
+        lineTo.setX(200);
+        p.impl_syncPeer();
+        r.impl_syncPeer();
+        assertFalse(peer.isClean());
     }
 }

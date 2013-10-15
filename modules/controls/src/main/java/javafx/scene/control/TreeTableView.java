@@ -1958,6 +1958,18 @@ public class TreeTableView<S> extends Control {
     // package for testing
     static class TreeTableViewArrayListSelectionModel<S> extends TreeTableViewSelectionModel<S> {
 
+        private final MappingChange.Map<TreeTablePosition<S,?>,TreeItem<S>> cellToItemsMap = new MappingChange.Map<TreeTablePosition<S,?>, TreeItem<S>>() {
+            @Override public TreeItem<S> map(TreeTablePosition<S,?> f) {
+                return getModelItem(f.getRow());
+            }
+        };
+
+        private final MappingChange.Map<TreeTablePosition<S,?>,Integer> cellToIndicesMap = new MappingChange.Map<TreeTablePosition<S,?>, Integer>() {
+            @Override public Integer map(TreeTablePosition<S,?> f) {
+                return f.getRow();
+            }
+        };
+
         /***********************************************************************
          *                                                                     *
          * Constructors                                                        *
@@ -1971,115 +1983,11 @@ public class TreeTableView<S> extends Control {
             this.treeTableView.rootProperty().addListener(weakRootPropertyListener);
             updateTreeEventListener(null, treeTableView.getRoot());
             
-            final MappingChange.Map<TreeTablePosition<S,?>,TreeItem<S>> cellToItemsMap = new MappingChange.Map<TreeTablePosition<S,?>, TreeItem<S>>() {
-                @Override public TreeItem<S> map(TreeTablePosition<S,?> f) {
-                    return getModelItem(f.getRow());
-                }
-            };
-            
-            final MappingChange.Map<TreeTablePosition<S,?>,Integer> cellToIndicesMap = new MappingChange.Map<TreeTablePosition<S,?>, Integer>() {
-                @Override public Integer map(TreeTablePosition<S,?> f) {
-                    return f.getRow();
-                }
-            };
-            
             selectedCells = FXCollections.<TreeTablePosition<S,?>>observableArrayList();
             selectedCells.addListener(new ListChangeListener<TreeTablePosition<S,?>>() {
                 @Override
                 public void onChanged(final ListChangeListener.Change<? extends TreeTablePosition<S,?>> c) {
-                    // RT-29313: because selectedIndices and selectedItems represent
-                    // row-based selection, we need to update the
-                    // selectedIndicesBitSet when the selectedCells changes to 
-                    // ensure that selectedIndices and selectedItems return only
-                    // the correct values (and only once). The issue identified
-                    // by RT-29313 is that the size and contents of selectedIndices
-                    // and selectedItems can not simply defer to the
-                    // selectedCells as selectedCells may be representing 
-                    // multiple cells from one row (e.g. selectedCells of 
-                    // [(0,1), (1,1), (1,2), (1,3)] should result in 
-                    // selectedIndices of [0,1], not [0,1,1,1]).
-                    // An inefficient solution would rebuild the selectedIndicesBitSet
-                    // every time the change happens, but we can do better than
-                    // that. Inefficient solution:
-                    //
-                    // selectedIndicesBitSet.clear();
-                    // for (int i = 0; i < selectedCells.size(); i++) {
-                    //     final TreeTablePosition<S,?> tp = selectedCells.get(i);
-                    //     final int row = tp.getRow();
-                    //     selectedIndicesBitSet.set(row);
-                    // }
-                    // 
-                    // A more efficient solution:
-                    final List<Integer> newlySelectedRows = new ArrayList<Integer>();
-                    final List<Integer> newlyUnselectedRows = new ArrayList<Integer>();
-                    
-                    while (c.next()) {
-                        if (c.wasRemoved()) {
-                            List<? extends TreeTablePosition<S,?>> removed = c.getRemoved();
-                            for (int i = 0; i < removed.size(); i++) {
-                                final TreeTablePosition<S,?> tp = removed.get(i);
-                                final int row = tp.getRow();
-                                
-                                if (selectedIndices.get(row)) {
-                                    selectedIndices.clear(row);
-                                    newlyUnselectedRows.add(row);
-                                }
-                            }
-                        }
-                        if (c.wasAdded()) {
-                            List<? extends TreeTablePosition<S,?>> added = c.getAddedSubList();
-                            for (int i = 0; i < added.size(); i++) {
-                                final TreeTablePosition<S,?> tp = added.get(i);
-                                final int row = tp.getRow();
-                                
-                                if (! selectedIndices.get(row)) {
-                                    selectedIndices.set(row);
-                                    newlySelectedRows.add(row);
-                                }
-                            }
-                        }
-                    }
-                    c.reset();
-                    
-                    // when the selectedCells observableArrayList changes, we manually call
-                    // the observers of the selectedItems, selectedIndices and
-                    // selectedCells lists.
-                    
-                    // create an on-demand list of the removed objects contained in the
-                    // given rows
-                    selectedItems.callObservers(new MappingChange<TreeTablePosition<S,?>, TreeItem<S>>(c, cellToItemsMap, selectedItems));
-                    c.reset();
-
-                    // Fix for RT-31577 - the selectedItems list was going to
-                    // empty, but the selectedItem property was staying non-null.
-                    // There is a unit test for this, so if a more elegant solution
-                    // can be found in the future and this code removed, the unit
-                    // test will fail if it isn't fixed elsewhere.
-                    // makeAtomic toggle added to resolve RT-32618
-                    if (!makeAtomic && selectedItems.isEmpty() && getSelectedItem() != null) {
-                        setSelectedItem(null);
-                    }
-
-                    final ReadOnlyUnbackedObservableList<Integer> selectedIndicesSeq = 
-                            (ReadOnlyUnbackedObservableList<Integer>)getSelectedIndices();
-                    
-                    if (! newlySelectedRows.isEmpty() && newlyUnselectedRows.isEmpty()) {
-                        // need to come up with ranges based on the actualSelectedRows, and
-                        // then fire the appropriate number of changes. We also need to
-                        // translate from a desired row to select to where that row is 
-                        // represented in the selectedIndices list. For example,
-                        // we may have requested to select row 5, and the selectedIndices
-                        // list may therefore have the following: [1,4,5], meaning row 5
-                        // is in position 2 of the selectedIndices list
-                        Change<Integer> change = createRangeChange(selectedIndicesSeq, newlySelectedRows);
-                        selectedIndicesSeq.callObservers(change);
-                    } else {
-                        selectedIndicesSeq.callObservers(new MappingChange<TreeTablePosition<S,?>, Integer>(c, cellToIndicesMap, selectedIndicesSeq));
-                        c.reset();
-                    }
-
-                    selectedCellsSeq.callObservers(new MappingChange<TreeTablePosition<S,?>, TreeTablePosition<S,?>>(c, MappingChange.NOOP_MAP, selectedCellsSeq));
-                    c.reset();
+                    handleSelectedCellsListChangeEvent(c);
                 }
             });
 
@@ -2296,16 +2204,36 @@ public class TreeTableView<S> extends Control {
         }
 
         @Override public void clearAndSelect(int row, TableColumnBase<TreeItem<S>,?> column) {
+            // RT-33558 if this method has been called with a given row/column
+            // intersection, and that row/column intersection is the only
+            // selection currently, then this method becomes a no-op.
+            if (getSelectedCells().size() == 1 && isSelected(row, column)) {
+                return;
+            }
+
             // RT-32411: We used to call quietClearSelection() here, but this
             // resulted in the selectedItems and selectedIndices lists never
             // reporting that they were empty.
             // makeAtomic toggle added to resolve RT-32618
             makeAtomic = true;
+
+            // firstly we make a copy of the selection, so that we can send out
+            // the correct details in the selection change event
+            List<TreeTablePosition<S,?>> previousSelection = new ArrayList<>(selectedCells);
+
+            // then clear the current selection
             clearSelection();
+
+            // and select the new row
+            select(row, column);
             makeAtomic = false;
 
-            // and select
-            select(row, column);
+            // fire off a single add/remove/replace notification (rather than
+            // individual remove and add notifications) - see RT-33324
+            int changeIndex = selectedCellsSeq.indexOf(new TreeTablePosition<>(getTreeTableView(), row, (TreeTableColumn<S,?>)column));
+            ListChangeListener.Change change = new NonIterableChange.GenericAddRemoveChange<>(
+                    changeIndex, changeIndex+1, previousSelection, selectedCellsSeq);
+            handleSelectedCellsListChangeEvent(change);
         }
 
         @Override public void select(int row) {
@@ -2722,6 +2650,106 @@ public class TreeTableView<S> extends Control {
 
         private int getRowCount() {
             return treeTableView.getExpandedItemCount();
+        }
+
+        private void handleSelectedCellsListChangeEvent(ListChangeListener.Change<? extends TreeTablePosition<S,?>> c) {
+            // RT-29313: because selectedIndices and selectedItems represent
+            // row-based selection, we need to update the
+            // selectedIndicesBitSet when the selectedCells changes to
+            // ensure that selectedIndices and selectedItems return only
+            // the correct values (and only once). The issue identified
+            // by RT-29313 is that the size and contents of selectedIndices
+            // and selectedItems can not simply defer to the
+            // selectedCells as selectedCells may be representing
+            // multiple cells from one row (e.g. selectedCells of
+            // [(0,1), (1,1), (1,2), (1,3)] should result in
+            // selectedIndices of [0,1], not [0,1,1,1]).
+            // An inefficient solution would rebuild the selectedIndicesBitSet
+            // every time the change happens, but we can do better than
+            // that. Inefficient solution:
+            //
+            // selectedIndicesBitSet.clear();
+            // for (int i = 0; i < selectedCells.size(); i++) {
+            //     final TreeTablePosition<S,?> tp = selectedCells.get(i);
+            //     final int row = tp.getRow();
+            //     selectedIndicesBitSet.set(row);
+            // }
+            //
+            // A more efficient solution:
+            final List<Integer> newlySelectedRows = new ArrayList<Integer>();
+            final List<Integer> newlyUnselectedRows = new ArrayList<Integer>();
+
+            while (c.next()) {
+                if (c.wasRemoved()) {
+                    List<? extends TreeTablePosition<S,?>> removed = c.getRemoved();
+                    for (int i = 0; i < removed.size(); i++) {
+                        final TreeTablePosition<S,?> tp = removed.get(i);
+                        final int row = tp.getRow();
+
+                        if (selectedIndices.get(row)) {
+                            selectedIndices.clear(row);
+                            newlyUnselectedRows.add(row);
+                        }
+                    }
+                }
+                if (c.wasAdded()) {
+                    List<? extends TreeTablePosition<S,?>> added = c.getAddedSubList();
+                    for (int i = 0; i < added.size(); i++) {
+                        final TreeTablePosition<S,?> tp = added.get(i);
+                        final int row = tp.getRow();
+
+                        if (! selectedIndices.get(row)) {
+                            selectedIndices.set(row);
+                            newlySelectedRows.add(row);
+                        }
+                    }
+                }
+            }
+            c.reset();
+
+            if (makeAtomic) {
+                return;
+            }
+
+            // when the selectedCells observableArrayList changes, we manually call
+            // the observers of the selectedItems, selectedIndices and
+            // selectedCells lists.
+
+            // create an on-demand list of the removed objects contained in the
+            // given rows
+            selectedItems.callObservers(new MappingChange<TreeTablePosition<S,?>, TreeItem<S>>(c, cellToItemsMap, selectedItems));
+            c.reset();
+
+            // Fix for RT-31577 - the selectedItems list was going to
+            // empty, but the selectedItem property was staying non-null.
+            // There is a unit test for this, so if a more elegant solution
+            // can be found in the future and this code removed, the unit
+            // test will fail if it isn't fixed elsewhere.
+            // makeAtomic toggle added to resolve RT-32618
+            if (selectedItems.isEmpty() && getSelectedItem() != null) {
+                setSelectedItem(null);
+            }
+
+            final ReadOnlyUnbackedObservableList<Integer> selectedIndicesSeq =
+                    (ReadOnlyUnbackedObservableList<Integer>)getSelectedIndices();
+
+            if (! newlySelectedRows.isEmpty() && newlyUnselectedRows.isEmpty()) {
+                // need to come up with ranges based on the actualSelectedRows, and
+                // then fire the appropriate number of changes. We also need to
+                // translate from a desired row to select to where that row is
+                // represented in the selectedIndices list. For example,
+                // we may have requested to select row 5, and the selectedIndices
+                // list may therefore have the following: [1,4,5], meaning row 5
+                // is in position 2 of the selectedIndices list
+                ListChangeListener.Change<Integer> change = createRangeChange(selectedIndicesSeq, newlySelectedRows);
+                selectedIndicesSeq.callObservers(change);
+            } else {
+                selectedIndicesSeq.callObservers(new MappingChange<TreeTablePosition<S,?>, Integer>(c, cellToIndicesMap, selectedIndicesSeq));
+                c.reset();
+            }
+
+            selectedCellsSeq.callObservers(new MappingChange<TreeTablePosition<S,?>, TreeTablePosition<S,?>>(c, MappingChange.NOOP_MAP, selectedCellsSeq));
+            c.reset();
         }
     }
     

@@ -1782,7 +1782,7 @@ public class MouseTest {
             innerRect1.setTranslateX(100);
             innerRect1.setTranslateY(10);
             subScene1 = new SubScene(new Group(innerRect1), 200, 100,
-                    subDepthBuffer, false);
+                    subDepthBuffer, null);
             subScene1.setTranslateX(10);
             parent1 = new Group(subScene1);
             parent1.setTranslateX(10);

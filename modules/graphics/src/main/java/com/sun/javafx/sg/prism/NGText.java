@@ -326,21 +326,29 @@ public class NGText extends NGShape {
             if ((op & DECORATION) != 0) {
                 Metrics metrics = strike.getMetrics();
                 if (underline) {
-                    float offset = metrics.getUnderLineOffset();
+                    float offset = y + metrics.getUnderLineOffset();
                     float thickness = metrics.getUnderLineThickness();
                     if ((op & SHAPE_FILL) != 0) {
-                        g.fillRect(x, y + offset, run.getWidth(), thickness);
+                        if (thickness <= 1f && g.getTransformNoClone().isTranslateOrIdentity()) {
+                            float myt = (float)g.getTransformNoClone().getMyt();
+                            offset = Math.round(offset + myt) - myt;
+                        }
+                        g.fillRect(x, offset, run.getWidth(), thickness);
                     } else {
-                        g.drawRect(x, y + offset, run.getWidth(), thickness);
+                        g.drawRect(x, offset, run.getWidth(), thickness);
                     }
                 }
                 if (strikethrough) {
-                    float offset = metrics.getStrikethroughOffset();
+                    float offset = y + metrics.getStrikethroughOffset();
                     float thickness = metrics.getStrikethroughThickness();
                     if ((op & SHAPE_FILL) != 0) {
-                        g.fillRect(x, y + offset, run.getWidth(), thickness);
+                        if (thickness <= 1f && g.getTransformNoClone().isTranslateOrIdentity()) {
+                            float myt = (float)g.getTransformNoClone().getMyt();
+                            offset = Math.round(offset + myt)  - myt;
+                        }
+                        g.fillRect(x, offset, run.getWidth(), thickness);
                     } else {
-                        g.drawRect(x, y + offset, run.getWidth(), thickness);
+                        g.drawRect(x, offset, run.getWidth(), thickness);
                     }
                 }
             }

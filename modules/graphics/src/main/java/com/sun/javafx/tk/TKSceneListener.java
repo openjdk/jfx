@@ -55,7 +55,7 @@ public interface TKSceneListener {
      * Pass a mouse event to the scene to handle
      */
     public void mouseEvent(EventType<MouseEvent> type, double x, double y, double screenX, double screenY,
-                           MouseButton button, int clickCount, boolean popupTrigger, boolean synthesized,
+                           MouseButton button, boolean popupTrigger, boolean synthesized,
                            boolean shiftDown, boolean controlDown, boolean altDown, boolean metaDown,
                            boolean primaryDown, boolean middleDown, boolean secondaryDown);
 

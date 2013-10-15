@@ -244,7 +244,8 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_setRadialGradientImpl(
  * Signature: (I[IIILcom/sun/pisces/Transform6;Z)V
  */
 JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_setTextureImpl
-  (JNIEnv *env, jobject this, jint imageType, jintArray dataArray, jint width, jint height,
+  (JNIEnv *env, jobject this, jint imageType, jintArray dataArray,
+      jint width, jint height, jint stride,
       jobject jTransform, jboolean repeat, jboolean hasAlpha)
 {
     Renderer* rdr;
@@ -259,7 +260,14 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_setTextureImpl
     if (data != NULL) {
         jint *alloc_data = my_malloc(jint, width * height);
         if (alloc_data != NULL) {
-            memcpy(alloc_data, data, sizeof(jint) * width * height);
+            if (stride == width) {
+                memcpy(alloc_data, data, sizeof(jint) * width * height);
+            } else {
+                jint i;
+                for (i = 0; i < height; i++) {
+                    memcpy(alloc_data + (i*width), data + (i*stride), sizeof(jint) * width);
+                }
+            }
             renderer_setTexture(rdr, IMAGE_MODE_NORMAL,
                 alloc_data, width, height, width, repeat, JNI_TRUE,
                 &textureTransform, JNI_TRUE, hasAlpha,
@@ -399,6 +407,9 @@ fillRect(JNIEnv *env, jobject this, Renderer* rdr,
     y_from = y >> 16;
     y_to = y + h;
     y_to = (bfrac) ? y_to >> 16 : (y_to >> 16) - 1;
+
+    rdr->_rectX = x_from;
+    rdr->_rectY = y_from;
 
     switch (lEdge) {
     case IMAGE_FRAC_EDGE_PAD:

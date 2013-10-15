@@ -1755,7 +1755,8 @@
           <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
           <td class="default">false</td>
           <td class="range">&nbsp;</td>
-          <td>&nbsp;</td>
+          <td>The default value for controls is true, although there are some exceptions.
+          See <a href="#controls">Controls</a> for details.</td>
         </tr>
         <tr>
           <td class="propertyname">-fx-opacity</td>
@@ -2009,7 +2010,7 @@
         <tr>
           <td class="propertyname">-fx-column-halignment</td>
           <td class="value">[ left | center | right ]</td>
-          <td class="default">center</td>
+          <td class="default">left</td>
           <td>&nbsp;</td>
         </tr>
         <tr>
@@ -2237,10 +2238,18 @@
               Backgrounds and Borders Module Level 3: Backgrounds</a>)</td>
         </tr>
         <tr>
+            <td class="propertyname">-fx-region-background</td>
+            <td class="value">javafx.scene.layout.Background</td>
+            <td class="default">null</td>
+            <td>This cannot be set directly from CSS but is created from the property values of
+                -fx-background-color, -fx-background-image, -fx-background-insets, -fx-background-position,
+                -fx-background-radius, -fx-background-repeat, -fx-background-size</td>
+        </tr>
+        <tr>
           <td class="propertyname">-fx-background-color</td>
           <td class="value"><a href="#typepaint" class="typelink">&lt;paint&gt;</a>
             [ , <a href="#typepaint" class="typelink">&lt;paint&gt;</a> ]*</td>
-          <td class="default">null</td>
+          <td class="default">transparent</td>
           <td>A series of paint values separated by commas.</td>
         </tr>
         <tr>
@@ -2255,7 +2264,7 @@
             <a href="#typesize" class="typelink">&lt;size&gt;</a> <a href="#typesize"
               class="typelink">&lt;size&gt;</a>
             <a href="#typesize" class="typelink">&lt;size&gt;</a>] ]*</td>
-          <td class="default">null</td>
+          <td class="default">0 0 0 0</td>
           <td>
             <p>A series of size values or sets of four size values, separated by
               commas. A single size value means all insets are the same.
@@ -2277,7 +2286,7 @@
             <a href="#typesize" class="typelink">&lt;size&gt;</a> <a href="#typesize"
               class="typelink">&lt;size&gt;</a>
             <a href="#typesize" class="typelink">&lt;size&gt;</a>] ]*</td>
-          <td class="default">null</td>
+          <td class="default">0 0 0 0</td>
           <td>
             <p>A series of radius values or sets of four radius values,
               separated by commas. A single radius value means the radius of all
@@ -2315,7 +2324,7 @@
               ]<br>
               ] </p>
           </td>
-          <td class="default">null</td>
+          <td class="default">0% 0%</td>
           <td>
             <p>A series of &lt;bg-position&gt; values separated by commas. Each
               bg-position item in the series applies to the corresponding image
@@ -2327,7 +2336,7 @@
           <td class="value">&lt;repeat-style&gt; [ , &lt;repeat-style&gt; ]*<br>
             <strong>where</strong> &lt;repeat-style&gt; = repeat-x | repeat-y |
             [repeat | space | round | stretch | no-repeat]{1,2}</td>
-          <td class="default">null</td>
+          <td class="default">repeat repeat</td>
           <td>
             <p>A series of &lt;repeat-style&gt; values separated by commas. Each
               repeat-style item in the series applies to the corresponding image
@@ -2339,7 +2348,7 @@
           <td class="value">&lt;bg-size&gt; [ , &lt;bg-size&gt; ]*<br>
             &lt;bg-size&gt; = [ <a href="#typesize" class="typelink">&lt;size&gt;</a>
             | auto ]{1,2} | cover | contain | stretch</td>
-          <td class="default">null</td>
+          <td class="default">auto auto</td>
           <td>
             <p>A series of &lt;bg-size&gt; values separated by commas. Each
               bg-size item in the series applies to the corresponding image in
@@ -2349,8 +2358,21 @@
         <tr>
           <td colspan="4" class="propertyname"><em>STROKED BORDERS</em> (see <a
               href="http://www.w3.org/TR/css3-background/#borders"
-              target="_blank">CSS
-              Backgrounds and Borders Module Level 3: Borders</a>)</td>
+              target="_blank">CSS Backgrounds and Borders Module Level 3: Borders</a>)
+            <div><em>BORDER IMAGES</em> (see <a href="http://www.w3.org/TR/css3-background/#border-images"
+                                                                                target="_blank">CSS
+                Backgrounds and Borders Module Level 3: Border Images</a>)</div>
+          </td>
+        </tr>
+
+        <tr>
+            <td class="propertyname">-fx-region-border</td>
+            <td class="value">javafx.scene.layout.Border</td>
+            <td class="default">null</td>
+            <td>This cannot be set directly from CSS but is created from the property values of
+                -fx-border-color, -fx-border-insets, -fx-border-radius,  -fx-border-style, -fx-border-width,
+                -fx-border-image-insets, -fx-border-image-repeat, -fx-border-image-slice, -fx-border-image-source,
+                -fx-border-image-width</td>
         </tr>
         <tr>
           <td class="propertyname">-fx-border-color</td>
@@ -2474,11 +2496,6 @@
           </td>
         </tr>
         <tr>
-          <td colspan="4" class="propertyname"><em>BORDER IMAGES</em> (see <a href="http://www.w3.org/TR/css3-background/#border-images"
-              target="_blank">CSS
-              Backgrounds and Borders Module Level 3: Border Images</a>)</td>
-        </tr>
-        <tr>
           <td class="propertyname">-fx-border-image-source</td>
           <td class="value"><a href="#typeuri" class="typelink">&lt;uri&gt;</a>
             [ , <a href="#typeuri" class="typelink">&lt;uri&gt;</a> ]*</td>
@@ -2499,7 +2516,7 @@
             <a href="#typesize" class="typelink">&lt;size&gt;</a> <a href="#typesize"
               class="typelink">&lt;size&gt;</a>
             <a href="#typesize" class="typelink">&lt;size&gt;</a>] ]*</td>
-          <td class="default">null</td>
+          <td class="default">0 0 0 0</td>
           <td>
             <p>A series of inset or sets of four inset values, separated by
               commas. For each item in the series, a single inset value means
@@ -2515,7 +2532,7 @@
           <td class="value">&lt;repeat-style&gt; [ , &lt;repeat-style&gt; ]*<br>
             <strong>where</strong> &lt;repeat-style&gt; = repeat-x | repeat-y |
             [repeat | space | round | no-repeat]{1,2}</td>
-          <td class="default">null</td>
+          <td class="default">repeat repeat</td>
           <td>
             <p>A series of repeat-style values, separated by commas. Each item
               in the series applies to the corresponding image in the series of
@@ -2539,7 +2556,7 @@
                 class="typelink">&lt;size&gt;</a>
               <a href="#typesize" class="typelink">&lt;size&gt;</a> ] fill? ]*</p>
           </td>
-          <td class="default">null</td>
+          <td class="default">100%</td>
           <td>
             <p>A series of image slice values or sets of four values, separated
               by commas. Each item in the series applies to the corresponding
@@ -2567,7 +2584,7 @@
             <a href="#typesize" class="typelink">&lt;size&gt;</a> <a href="#typesize"
               class="typelink">&lt;size&gt;</a>
             <a href="#typesize" class="typelink">&lt;size&gt;</a>] ]*</td>
-          <td class="default">null</td>
+          <td class="default">0 0 0 0</td>
           <td>
             <p>A series of width or sets of four width values, separated by
               commas. For each item in the series, a single width value means
@@ -2592,7 +2609,7 @@
             <a href="#typesize" class="typelink">&lt;size&gt;</a> <a href="#typesize"
               class="typelink">&lt;size&gt;</a>
           </td>
-          <td class="default">null</td>
+          <td class="default">0 0 0 0</td>
           <td>
             <p>A sets of four padding values, separated by commas. For each item
               in the series, a single padding value means that all padding are
@@ -2877,8 +2894,8 @@
           <td class="propertyname">-fx-stroke-dash-array</td>
           <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a>[
             <a href="#typesize" class="typelink">&lt;size&gt;</a>]+</td>
-          <td>null</td>
-          <td>&nbsp;</td>
+          <td>see comment</td>
+          <td>The initial value is that of an empty array, effectively a solid line.
         </tr>
         <tr>
           <td class="propertyname">-fx-stroke-dash-offset</td>
@@ -2933,12 +2950,62 @@
       and <a href="#node">Node</a>.</p>
     <h4><a name="line" id="line">Line</a></h4>
 <p class="styleclass">Style class: empty by default</p>
-    <p>The Line node has all the properties of <a href="#shape">Shape</a> and <a
-        href="#node">Node</a>.</p>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+        <thead>
+        <tr>
+            <th class="propertyname">CSS Property</th>
+            <th class="value">Values</th>
+            <th>Default</th>
+            <th>Comments</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td class="propertyname">-fx-fill</td>
+            <td class="value"><a href="#typepaint" class="typelink">&lt;paint&gt;</a></td>
+            <td>null</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-stroke</td>
+            <td class="value"><a href="#typepaint" class="typelink">&lt;paint&gt;</a></td>
+            <td>black</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td colspan="4" class="parents">Also has all properties of <a href="#node">Shape</a></td>
+        </tr>
+        </tbody>
+    </table>
     <h4><a name="path" id="path">Path</a></h4>
 <p class="styleclass">Style class: empty by default</p>
-    <p>The Path node has all the properties of <a href="#shape">Shape</a> and <a
-        href="#node">Node</a>.</p>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+        <thead>
+        <tr>
+            <th class="propertyname">CSS Property</th>
+            <th class="value">Values</th>
+            <th>Default</th>
+            <th>Comments</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td class="propertyname">-fx-fill</td>
+            <td class="value"><a href="#typepaint" class="typelink">&lt;paint&gt;</a></td>
+            <td>null</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-stroke</td>
+            <td class="value"><a href="#typepaint" class="typelink">&lt;paint&gt;</a></td>
+            <td>black</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td colspan="4" class="parents">Also has all properties of <a href="#node">Shape</a></td>
+        </tr>
+        </tbody>
+    </table>
     <h4><a name="polygon" id="polygon">Polygon</a></h4>
 <p class="styleclass">Style class: empty by default</p>
     <p>The Polygon node has all the properties of <a href="#shape">Shape</a>
@@ -3128,7 +3195,7 @@
         </tr>
       </tbody>
     </table>
-    <p>In JavaFX 2.0 the default skins for all controls support styling from
+    <p>Since JavaFX 2.0, the default skins for all controls support styling from
       CSS. This is accomplished by building the skins from layout objects called
       Regions. Most of the style properties for a control are provided by the
       Region objects that comprise the control's skin. Each Region object of the
@@ -3137,6 +3204,10 @@
       addition to those provided by its Regions. Finally, controls may also
       define pseudo-classes such as "vertical" and "horizontal" in addition to
       those defined by Node.</p>
+    <p>With the following exceptions, controls are focus traversable. This means that <a href="#control">Control</a> sets the initial value
+        of the focusTraversable property true; whereas in <a href="#node">Node</a>, the initial value of the focusTraversable property
+        is false. The following controls are not focus traversable by default: Accordion, Cell, Label, MenuBar,
+        ProgressBar, ProgressIndicator, ScrollBar, ScrollPane, Separator, SplitPane, ToolBar.</p>
     <h4><a name="accordion" id="accordion">Accordion</a></h4>
     <p class="styleclass">Style class: accordion</p>
     <p>The Accordion control has all the properties and pseudo-classes of <a href="#control">Control</a></p>
@@ -3413,11 +3484,40 @@
           <td>null</td>
           <td>The class name of the Control's Skin.</td>
         </tr>
+        <tr>
+            <td class="propertyname">-fx-focus-traversable</td>
+            <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
+            <td class="default">true</td>
+            <td>Control sets the default value of the focusTraversable property to true. The default value
+                of the focusTraversable property for the following controls is false: Accordion, Cell, Label, MenuBar,
+                ProgressBar, ProgressIndicator, ScrollBar, ScrollPane, Separator, SplitPane, ToolBar.</td>
+        </tr>
       </tbody>
     </table>
     <h4><a name="hyperlink" id="hyperlink">Hyperlink</a></h4>
     <p class="styleclass">Style class: hyperlink</p>
     <p>The Hyperlink control has all the properties of <a href="#buttonbase">ButtonBase</a>.</p>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+        <thead>
+        <tr>
+            <th class="propertyname">CSS Property</th>
+            <th class="value">Values</th>
+            <th>Default</th>
+            <th>Comments</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td class="propertyname">-fx-cursor</td>
+            <td class="value">[ null | crosshair | default | hand | move |
+                e-resize | h-resize | ne-resize | nw-resize | n-resize | se-resize |
+                sw-resize | s-resize | w-resize | v-resize | text | wait ] | <a href="#typeurl"
+                                                                                class="typelink">&lt;url&gt;</a></td>
+            <td class="default">hand</td>
+            <td>inherits </td>
+        </tr>
+        </tbody>
+    </table>
     <h4>Pseudo-classes</h4>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -3512,8 +3612,8 @@
         <tr>
           <td class="propertyname">-fx-font</td>
           <td class="value"><a href="#typefont" class="typelink">&lt;font&gt;</a></td>
-          <td>&nbsp;</td>
-          <td>inherits</td>
+          <td>platform dependent</td>
+          <td>inherits<br>The initial value is that of Font.getDefault()</td>
         </tr>
         <tr>
           <td class="propertyname">-fx-underline</td>
@@ -3586,7 +3686,7 @@
         <tr>
           <td class="propertyname">-fx-orientation</td>
           <td class="value">[ horizontal | vertical ]</td>
-          <td class="default">horizontal</td>
+          <td class="default">vertical</td>
           <td>&nbsp;</td>
         </tr>
       </tbody>
@@ -5317,13 +5417,13 @@
         <tr>
           <td class="propertyname">-fx-tick-label-fill</td>
           <td class="value"><a href="#typepaint" class="typelink">&lt;paint&gt;</a></td>
-          <td>8 system</td>
+          <td>black</td>
           <td>&nbsp;</td>
         </tr>
         <tr>
           <td class="propertyname">-fx-tick-label-gap</td>
           <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a></td>
-          <td>8 system</td>
+          <td>3</td>
           <td>&nbsp;</td>
         </tr>
         <tr>

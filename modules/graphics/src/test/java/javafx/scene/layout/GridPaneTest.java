@@ -1117,6 +1117,16 @@ public class GridPaneTest {
         assertEquals(row2, gridpane.getRowConstraints().get(1));
     }
 
+    @Test public void testConstraintsForceLayout() {
+        ColumnConstraints cc = new ColumnConstraints();
+        cc.setPrefWidth(100);
+        gridpane.getColumnConstraints().addAll(cc);
+
+        assertEquals(100, gridpane.prefWidth(-1), 0);
+        cc.setPrefWidth(200);
+        assertEquals(200, gridpane.prefWidth(-1), 0);
+    }
+
     @Test public void testFixedWidthColumns() {
         MockResizable child1 = new MockResizable(50,50, 200,200, 300,300);
         MockResizable child2 = new MockResizable(100,100, 300,300, 500,500);

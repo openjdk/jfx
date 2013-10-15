@@ -102,7 +102,7 @@ final class SWGraphics implements ReadbackGraphics {
         this.target = target;
         this.context = context;
         this.pr = pr;
-        this.swPaint = new SWPaint(target.getResourceFactory(), pr);
+        this.swPaint = new SWPaint(context, pr);
 
         this.setClipRect(null);
     }
@@ -400,9 +400,8 @@ final class SWGraphics implements ReadbackGraphics {
                     throw new UnsupportedOperationException("Alpha image is not supported as an image pattern.");
                 } else {
                     final Transform6 piscesTx = swPaint.computeSetTexturePaintTransform(this.paint, this.tx, this.nodeBounds, x, y, width, height);
-                    final SWArgbPreTexture tex = (SWArgbPreTexture)getResourceFactory().createTexture(ip.getImage(),
-                            Texture.Usage.DEFAULT,
-                            Texture.WrapMode.REPEAT);
+                    final SWArgbPreTexture tex = context.validateImagePaintTexture(ip.getImage().getWidth(), ip.getImage().getHeight());
+                    tex.update(ip.getImage());
 
                     final float compositeAlpha = swPaint.getCompositeAlpha();
                     final int imageMode;
@@ -414,15 +413,15 @@ final class SWGraphics implements ReadbackGraphics {
                     }
 
                     this.pr.drawImage(RendererBase.TYPE_INT_ARGB_PRE, imageMode,
-                            tex.getDataNoClone(), tex.getPhysicalWidth(), tex.getPhysicalHeight(),
-                            tex.getOffset(), tex.getStride(),
+                            tex.getDataNoClone(), tex.getContentWidth(), tex.getContentHeight(),
+                            tex.getOffset(), tex.getPhysicalWidth(),
                             piscesTx,
                             tex.getWrapMode() == Texture.WrapMode.REPEAT,
                             (int)(Math.min(p1.x, p2.x) * SWUtils.TO_PISCES), (int)(Math.min(p1.y, p2.y) * SWUtils.TO_PISCES),
                             (int)(Math.abs(p2.x - p1.x) * SWUtils.TO_PISCES), (int)(Math.abs(p2.y - p1.y) * SWUtils.TO_PISCES),
                             RendererBase.IMAGE_FRAC_EDGE_KEEP, RendererBase.IMAGE_FRAC_EDGE_KEEP,
                             RendererBase.IMAGE_FRAC_EDGE_KEEP, RendererBase.IMAGE_FRAC_EDGE_KEEP,
-                            0, 0, tex.getPhysicalWidth()-1, tex.getPhysicalHeight()-1,
+                            0, 0, tex.getContentWidth()-1, tex.getContentHeight()-1,
                             tex.hasAlpha());
                 }
             } else {
@@ -688,7 +687,8 @@ final class SWGraphics implements ReadbackGraphics {
                             int lEdge, int rEdge, int tEdge, int bEdge) {
         if (PrismSettings.debug) {
             System.out.println("+ drawTexture: " + tex + ", imageMode: " + imageMode +
-                    ", tex.w: " + tex.getPhysicalWidth() + ", tex.h: " + tex.getPhysicalHeight());
+                    ", tex.w: " + tex.getPhysicalWidth() + ", tex.h: " + tex.getPhysicalHeight() +
+                    ", tex.cw: " + tex.getContentWidth() + ", tex.ch: " + tex.getContentHeight());
             System.out.println("target: " + target + " t.w: " + target.getPhysicalWidth() + ", t.h: " + target.getPhysicalHeight() +
                     ", t.dims: " + target.getDimensions());
             System.out.println("GR: " + this);
@@ -725,8 +725,8 @@ final class SWGraphics implements ReadbackGraphics {
                 SWUtils.fastCeil(Math.max(sy1, sy2)) - 1);
 
         this.pr.drawImage(RendererBase.TYPE_INT_ARGB_PRE, imageMode,
-                data, tex.getPhysicalWidth(), tex.getPhysicalHeight(),
-                swTex.getOffset(), swTex.getStride(),
+                data, tex.getContentWidth(), tex.getContentHeight(),
+                swTex.getOffset(), tex.getPhysicalWidth(),
                 piscesTx,
                 tex.getWrapMode() == Texture.WrapMode.REPEAT,
                 (int)(SWUtils.TO_PISCES * dstBBox.getMinX()), (int)(SWUtils.TO_PISCES * dstBBox.getMinY()),
@@ -879,7 +879,7 @@ final class SWGraphics implements ReadbackGraphics {
             tx.deriveWithTranslation(dx1, dy1);
             tx.deriveWithConcatenation(dx2 - dx1, 0, 0, dy2 - dy2, 0, 0);
             tx.deriveWithConcatenation(tmpTx);
-            this.drawTexture(tex, 0, 0, 1, 1, 0, 0, tex.getPhysicalWidth(), tex.getPhysicalHeight());
+            this.drawTexture(tex, 0, 0, 1, 1, 0, 0, tex.getContentWidth(), tex.getContentHeight());
         } catch (NoninvertibleTransformException e) { }
 
         tx.restoreTransform(_mxx, _myx, _mxy, _myy, _mxt, _myt);
@@ -890,15 +890,20 @@ final class SWGraphics implements ReadbackGraphics {
     }
 
     public RTTexture readBack(Rectangle view) {
-        context.validateRBBuffer(Math.max(0, view.width), Math.max(0, view.height));
-        RTTexture rbb = context.getReadBackBuffer();
+        if (PrismSettings.debug) {
+            System.out.println("+ readBack, rect: " + view + ", target.dims: " + target.getDimensions());
+        }
 
-        if (view.width <= 0 || view.height <= 0) {
+        final int w = Math.max(1, view.width);
+        final int h = Math.max(1, view.height);
+        final SWRTTexture rbb = context.validateRBBuffer(w, h);
+
+        if (view.isEmpty()) {
             return rbb;
         }
 
-        int pixels[] = rbb.getPixels();
-        this.target.getSurface().getRGB(pixels, 0, rbb.getPhysicalWidth(), view.x, view.y, view.width, view.height);
+        final int pixels[] = rbb.getDataNoClone();
+        this.target.getSurface().getRGB(pixels, 0, rbb.getPhysicalWidth(), view.x, view.y, w, h);
         return rbb;
     }
 

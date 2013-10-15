@@ -588,7 +588,9 @@ public class StubToolkit extends Toolkit {
 
     @Override
     public PlatformImage createPlatformImage(int w, int h) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        PlatformImage image = new StubWritablePlatformImage(w, h);
+        imageLoaderFactory.registerImage(image, new StubPlatformImageInfo(w, h));
+        return image;
     }
 
     @Override

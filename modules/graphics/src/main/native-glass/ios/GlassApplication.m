@@ -510,6 +510,26 @@ jclass classForName(JNIEnv *env, char *className)
                 NSLog(@"ERROR: can't set the context classloader");
             }
             GLASS_CHECK_EXCEPTION(jEnv);
+            
+            // Load IosApplication class using the glass classloader
+            jclass cls = [GlassHelper ClassForName:"com.sun.glass.ui.ios.IosApplication" withEnv:jEnv];
+            if (!cls)
+            {
+                NSLog(@"ERROR: can't find the IosApplication class");
+            }
+            else
+            {
+                jmethodID setEventThreadMID = (*jEnv)->GetMethodID(jEnv, cls, "setEventThread", "()V");
+                if (!setEventThreadMID)
+                {
+                    NSLog(@"ERROR: can't get IosApplication.setEventThread() method ID");
+                }
+                else
+                {
+                    (*jEnv)->CallVoidMethod(jEnv, glassApp->jApplication, setEventThreadMID);
+                }
+            }
+            GLASS_CHECK_EXCEPTION(jEnv);
 
             //Set self as UIApplicationDelegate so we can pass life cycle notifications from iOS
             //to JavaFX

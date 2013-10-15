@@ -81,6 +81,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         LIST_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "SelectAllPageDown").shift());
         
         LIST_VIEW_BINDINGS.add(new KeyBinding(SPACE, "SelectAllToFocus").shift());
+        LIST_VIEW_BINDINGS.add(new KeyBinding(SPACE, "SelectAllToFocus").shortcut().shift());
         
         LIST_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "ScrollUp"));
         LIST_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "ScrollDown"));
@@ -216,7 +217,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         // changes what happens when certain key combinations are pressed.
         isShiftDown = e.getEventType() == KeyEvent.KEY_PRESSED && e.isShiftDown();
         isShortcutDown = e.getEventType() == KeyEvent.KEY_PRESSED && e.isShortcutDown();
-        
+
         super.callActionForEvent(e);
     }
 

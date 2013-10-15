@@ -68,7 +68,7 @@ public class SimpleViewerApp extends Application {
 
     @Override public void start(Stage stage) throws Exception {
         List<String> args = getParameters().getRaw();
-        final Scene scene = new Scene(root3D,1920,1080,true,false);
+        final Scene scene = new Scene(root3D,1920,1080,true);
         scene.setFill(Color.TRANSPARENT);
         stage.initStyle(StageStyle.TRANSPARENT);
 

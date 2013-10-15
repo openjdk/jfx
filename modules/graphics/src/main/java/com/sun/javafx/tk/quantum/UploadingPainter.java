@@ -160,11 +160,9 @@ final class UploadingPainter extends ViewPainter implements Runnable {
             }
 
             sceneState.getScene().setPainting(false);
-            if (PrismSettings.poolStats ||
-                ManagedResource.anyLockedResources())
-            {
-                ManagedResource.printSummary();
-            }
+
+            ManagedResource.freeDisposalRequestedAndCheckResources();
+
             renderLock.unlock();
         }
     }
