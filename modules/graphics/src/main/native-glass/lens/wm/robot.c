@@ -114,7 +114,7 @@ jboolean glass_robot_postMouseEvent(JNIEnv *env,
 
             GLASS_LOG_FINER("Posting mouse event: Move");
             lens_wm_setPointerPosition(x, y);
-            lens_wm_notifyMotionEvent(env, x, y, 0,0);
+            lens_wm_notifyMotionEvent(env, x, y);
             result = JNI_TRUE;
             break;
         case com_sun_glass_events_MouseEvent_DRAG:

@@ -52,6 +52,7 @@ import com.sun.glass.ui.Timer;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
 import sun.util.logging.PlatformLogger.Level;
+import java.util.Arrays;
 
 final class LensApplication extends Application {
 
@@ -572,7 +573,10 @@ final class LensApplication extends Application {
         @Override
         public String toString() {
             return "LensMultiTouchEvent[view=" + view
-                    + ",points=" + ids.length
+                    + ", ids " + Arrays.toString(ids)
+                    + ", states " + Arrays.toString(states)
+                    + ", xs " + Arrays.toString(xs)
+                    + ", ys " + Arrays.toString(ys)
                     + "]";
         }
     }

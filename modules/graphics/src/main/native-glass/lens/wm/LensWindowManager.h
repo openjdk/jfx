@@ -137,9 +137,7 @@ void lens_wm_notifyMultiTouchEvent(JNIEnv *env,
  */
 void lens_wm_notifyMotionEvent(JNIEnv *env,
                                           int mousePosX, 
-                                          int mousePosY,
-                                          int isTouch,
-                                          int touchId);
+                                          int mousePosY);
 
 /**
  * Release any wm state related to the window
