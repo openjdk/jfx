@@ -318,8 +318,6 @@ public abstract class TableRowSkinBase<T,
             TableColumnBase<T, ?> tableColumn = getTableColumnBase(tableCell);
 
             width = snapSize(tableCell.prefWidth(-1)) - snapSize(horizontalPadding);
-            height = Math.max(controlHeight, tableCell.prefHeight(-1));
-            height = snapSize(height) - snapSize(verticalPadding);
 
             boolean isVisible = true;
             if (fixedCellSizeEnabled) {
@@ -333,6 +331,11 @@ public abstract class TableRowSkinBase<T,
                 // to concern ourselves with the possibility that the height
                 // may be variable and / or dynamic.
                 isVisible = isColumnPartiallyOrFullyVisible(tableColumn);
+
+                height = fixedCellSize;
+            } else {
+                height = Math.max(controlHeight, tableCell.prefHeight(-1));
+                height = snapSize(height) - snapSize(verticalPadding);
             }
 
             if (isVisible) {
