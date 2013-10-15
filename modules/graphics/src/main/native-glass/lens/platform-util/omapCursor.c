@@ -149,22 +149,22 @@ void fbOmapCreateCursor(jbyte *cursorImage, int width, int height, int bpp) {
 }
 
 static void fbOmapWriteCursor(int fd, jbyte *cursorImage, int bpp) {
-    int i, j, k;
+    unsigned i, j, k;
     char buffer[256];
-    int cursorSize = cursor.width * cursor.height * bpp;
-    int xShift = cursor.xShift;
-    int yShift = cursor.yShift;
+    size_t cursorSize = cursor.width * cursor.height * bpp;
+    unsigned xShift = (unsigned) cursor.xShift;
+    unsigned yShift = (unsigned) cursor.yShift;
     GLASS_LOG_FINEST("Cursor shift = (%i, %i) at (%i, %i)\n",
                      xShift, yShift, cursor.x, cursor.y);
     if (xShift == 0 && yShift == 0) {
         GLASS_LOG_FINEST("write(cursor.fd, .. %i)", cursorSize);
-        if (write(cursor.fd, cursorImage, cursorSize) < cursorSize) {
+        if (write(cursor.fd, cursorImage, cursorSize) < (int) cursorSize) {
             GLASS_LOG_SEVERE("Cannot write cursor plane");
         }
         return;
     }
     for (i = 0; i < yShift; i++) {
-        for (j = 0; j < cursor.width * bpp; j += sizeof(buffer)) {
+        for (j = 0; j < (unsigned) cursor.width * bpp; j += sizeof(buffer)) {
             size_t n = cursor.width * bpp - j;
             if (n > sizeof(buffer)) {
                 n = sizeof(buffer);
@@ -177,7 +177,7 @@ static void fbOmapWriteCursor(int fd, jbyte *cursorImage, int bpp) {
                 buffer[k + 3] = 171;
             }
             GLASS_LOG_FINEST("write(cursor.fd, .. %u)", n);
-            if (write(cursor.fd, buffer, n) < n) {
+            if (write(cursor.fd, buffer, n) < (int) n) {
                 GLASS_LOG_SEVERE("Cannot write cursor plane");
                 return;
             }
@@ -197,14 +197,14 @@ static void fbOmapWriteCursor(int fd, jbyte *cursorImage, int bpp) {
                 buffer[k + 3] = 171;
             }
             GLASS_LOG_FINEST("write(cursor.fd, .. %u)", n);
-            if (write(cursor.fd, buffer, n) < n) {
+            if (write(cursor.fd, buffer, n) < (int) n) {
                 GLASS_LOG_SEVERE("Cannot write cursor plane");
                 return;
             }
         }
         size_t n = (cursor.width - xShift) * bpp;
         GLASS_LOG_FINEST("write(cursor.fd, .. %u)", n);
-        if (write(cursor.fd, cursorImage + i * cursor.width * bpp, n) < n) {
+        if (write(cursor.fd, cursorImage + i * cursor.width * bpp, n) < (int) n) {
             GLASS_LOG_SEVERE("Cannot write cursor plane");
             return;
         }
