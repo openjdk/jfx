@@ -48,7 +48,9 @@
 #include <GL/gl.h>
 #include <GL/glext.h>
 
+#ifndef __USE_GNU
 #define __USE_GNU
+#endif
 #include <dlfcn.h>
 
 #define jlong_to_ptr(value) ((void*)((long)value))
