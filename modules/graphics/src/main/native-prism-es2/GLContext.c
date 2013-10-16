@@ -993,6 +993,10 @@ jboolean doReadPixels(JNIEnv *env, jlong nativeCtxInfo, jint length, jobject buf
     GLvoid *ptr = NULL;
 
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
+    if (ctxInfo == NULL) {
+        fprintf(stderr, "doReadPixels: ctxInfo is NULL\n");
+        return JNI_FALSE;
+    }
 
     // sanity check, do we have enough memory
     // length, width and height are non-negative

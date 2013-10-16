@@ -97,7 +97,7 @@ public class TriangleMeshValidationTest extends VisualTestBase {
             public void run() {
                 testStage = getStage();
                 testStage.setTitle("TriangleMesh Validation Test");
-                
+
                 // Intentionally set depth buffer to false to reduce test complexity
                 testScene = new Scene(buildScene(), 800, 800, true);
                 testScene.setFill(bgColor);
@@ -338,6 +338,12 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         waitFirstFrame();
         runAndWait(new Runnable() {
             @Override public void run() {
+                if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
+                    System.out.println("*************************************************************");
+                    System.out.println("*      Platform isn't SCENE3D capable, skipping 3D test.    *");
+                    System.out.println("*************************************************************");
+                    return;
+                }
                 // Rendering nothing because faces is invalid.
                 // Should receive warning from validateFaces
                 Color color = getColor(testScene, WIDTH / 3, WIDTH / 3);
@@ -383,6 +389,12 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         waitFirstFrame();
         runAndWait(new Runnable() {
             @Override public void run() {
+                if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
+                    System.out.println("*************************************************************");
+                    System.out.println("*      Platform isn't SCENE3D capable, skipping 3D test.    *");
+                    System.out.println("*************************************************************");
+                    return;
+                }
                 // Rendering nothing because faces is invalid.
                 // Should receive warning from validateFaces
                 Color color = getColor(testScene, WIDTH / 3, WIDTH / 3);
@@ -429,6 +441,12 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         waitFirstFrame();
         runAndWait(new Runnable() {
             @Override public void run() {
+                if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
+                    System.out.println("*************************************************************");
+                    System.out.println("*      Platform isn't SCENE3D capable, skipping 3D test.    *");
+                    System.out.println("*************************************************************");
+                    return;
+                }
                 // Rendering nothing because faceSmoothingGroups is invalid.
                 // Should receive warning from validateFacesSmoothingGroups
                 Color color = getColor(testScene, WIDTH / 4, WIDTH / 4);
@@ -440,9 +458,16 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         waitFirstFrame();
         runAndWait(new Runnable() {
             @Override public void run() {
+                if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
+                    System.out.println("*************************************************************");
+                    System.out.println("*      Platform isn't SCENE3D capable, skipping 3D test.    *");
+                    System.out.println("*************************************************************");
+                    return;
+                }
                 // Rendering a triangle
                 Color color = getColor(testScene, WIDTH / 4, WIDTH / 4);
                 assertColorEquals(Color.RED, color, TOLERANCE);
+                assertColorDoesNotEqual(bgColor, color, TOLERANCE);
             }
         });
     }
@@ -483,6 +508,12 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         waitFirstFrame();
         runAndWait(new Runnable() {
             @Override public void run() {
+                if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
+                    System.out.println("*************************************************************");
+                    System.out.println("*      Platform isn't SCENE3D capable, skipping 3D test.    *");
+                    System.out.println("*************************************************************");
+                    return;
+                }
                 // Empty Sm should not affect rendering
                 Color color = getColor(testScene, WIDTH / 3, WIDTH / 3);
                 assertColorEquals(Color.RED, color, TOLERANCE);
@@ -543,6 +574,12 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         waitFirstFrame();
         runAndWait(new Runnable() {
             @Override public void run() {
+                if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
+                    System.out.println("*************************************************************");
+                    System.out.println("*      Platform isn't SCENE3D capable, skipping 3D test.    *");
+                    System.out.println("*************************************************************");
+                    return;
+                }
                 Color color = getColor(testScene, WIDTH / 5, WIDTH / 5);
                 assertColorEquals(Color.RED, color, TOLERANCE);
             }
