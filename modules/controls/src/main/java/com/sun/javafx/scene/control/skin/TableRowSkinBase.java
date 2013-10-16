@@ -484,6 +484,12 @@ public abstract class TableRowSkinBase<T,
             updateCell(cell, skinnable);
             cell.updateIndex(skinnableIndex);
             cells.add(cell);
+            if (resetChildren) {
+                // RT-31084:When resetting children, we are already in the layout pass (with expection of one call during the init)
+                // Since we are manipulating with cells here and cannot wait for the next pulse to process CSS for the new situation,
+                // the CSS must be processed here
+                cell.impl_processCSS(false);
+            }
         }
 
         // update children of each row
