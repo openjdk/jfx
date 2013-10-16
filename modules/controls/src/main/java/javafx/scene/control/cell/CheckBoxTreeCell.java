@@ -413,7 +413,7 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
      * Public API                                                              *
      *                                                                         *
      **************************************************************************/
-    
+
     /** {@inheritDoc} */
     @Override public void updateItem(T item, boolean empty) {
         super.updateItem(item, empty);
@@ -461,5 +461,11 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
                 }
             }
         }
+    }
+
+    @Override void updateDisplay(T item, boolean empty) {
+        // no-op
+        // This was done to resolve RT-33603, but will impact the ability for
+        // TreeItem.graphic to change dynamically.
     }
 }
