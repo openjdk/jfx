@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project name="pisces" default="jar" basedir=".">
-    <description>Builds, tests, and runs the OpenJFX pisces project.</description>
-
-    <import file="build-common.xml"/>
-</project>

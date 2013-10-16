@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project name="javafx-beans-dt" default="jar" basedir=".">
-  <description>Builds, tests, and runs the project javafx-beans-dt.</description>
-
-  <import file="../build-defs.xml"/>
-  <target name="debug-test-file" depends="jar">
-      <debug-selected-file-in-test/>
-  </target>
-</project>

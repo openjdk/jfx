@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project name="decora-es2" default="jar" basedir=".">
-  <description>Builds, tests, and runs the project decora-es2.</description>
-
-  <import file="build-common.xml"/>
-
-</project>
