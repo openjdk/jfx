@@ -45,9 +45,6 @@ import javafx.application.ConditionalFeature;
 import com.sun.javafx.tk.TKListener;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
-import javafx.application.Platform;
-import javafx.scene.Scene;
-
 import java.security.AccessController;
 import java.security.AllPermission;
 import java.security.PrivilegedAction;
@@ -607,7 +604,6 @@ public class PlatformImpl {
                     new PrivilegedAction() {
                         @Override public Object run() {
                             StyleManager.getInstance().setDefaultUserAgentStylesheet("com/sun/javafx/scene/control/skin/modena/modena.css");
-
                             if (isSupported(ConditionalFeature.INPUT_TOUCH)) {
                                 StyleManager.getInstance().addUserAgentStylesheet(
                                         "com/sun/javafx/scene/control/skin/modena/touch.css");
@@ -646,26 +642,6 @@ public class PlatformImpl {
             }
         } else {
             StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheetUrl);
-        }
-    }
-
-    public static void addNoTransparencyStylesheetToScene(final Scene scene) {
-        if (PlatformImpl.isCaspian()) {
-            AccessController.doPrivileged(new PrivilegedAction() {
-                @Override public Object run() {
-                    StyleManager.getInstance().addUserAgentStylesheet(scene,
-                            "com/sun/javafx/scene/control/skin/caspian/caspian-no-transparency.css");
-                    return null;
-                }
-            });
-        } else if (PlatformImpl.isModena()) {
-            AccessController.doPrivileged(new PrivilegedAction() {
-                @Override public Object run() {
-                    StyleManager.getInstance().addUserAgentStylesheet(scene,
-                            "com/sun/javafx/scene/control/skin/modena/modena-no-transparency.css");
-                    return null;
-                }
-            });
         }
     }
 

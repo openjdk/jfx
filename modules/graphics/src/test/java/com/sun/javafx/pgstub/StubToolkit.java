@@ -351,8 +351,6 @@ public class StubToolkit extends Toolkit {
     @Override public boolean isSupported(ConditionalFeature feature) {
         if (feature == ConditionalFeature.SCENE3D) {
             return true;
-        } else if (feature == ConditionalFeature.TRANSPARENT_WINDOW) {
-            return true;
         }
         return false;
     }

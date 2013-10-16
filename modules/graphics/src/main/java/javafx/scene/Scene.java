@@ -25,11 +25,9 @@
 
 package javafx.scene;
 
-import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.tk.TKClipboard;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
-import javafx.application.Application;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.DefaultProperty;
@@ -367,11 +365,6 @@ public class Scene implements EventTarget {
         setRoot(root);
         init(width, height);
         setFill(fill);
-
-        final boolean isTransparentWindowsSupported = Platform.isSupported(ConditionalFeature.TRANSPARENT_WINDOW);
-        if (! isTransparentWindowsSupported) {
-            PlatformImpl.addNoTransparencyStylesheetToScene(this);
-        }
     }
 
     static {
