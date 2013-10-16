@@ -532,7 +532,7 @@ public class FXMLLoader {
             return null;
         }
 
-        private MethodHandler getControllerMethodHandle(String handlerName, SupportedType type) throws LoadException{
+        private MethodHandler getControllerMethodHandle(String handlerName, SupportedType... types) throws LoadException {
             if (handlerName.startsWith(CONTROLLER_METHOD_PREFIX)) {
                 handlerName = handlerName.substring(CONTROLLER_METHOD_PREFIX.length());
 
@@ -545,16 +545,19 @@ public class FXMLLoader {
                         throw constructLoadException("No controller specified.");
                     }
 
-                    Method method = getControllerMethods().get(type).get(handlerName);
-                    if (method == null) {
-                        method = getControllerMethods().get(SupportedType.PARAMETERLESS).get(handlerName);
+                    for (SupportedType t : types) {
+                        Method method = getControllerMethods().get(t).get(handlerName);
+                        if (method != null) {
+                            return new MethodHandler(controller, method, t);
+                        }
+                    }
+                    Method method = getControllerMethods().get(SupportedType.PARAMETERLESS).get(handlerName);
+                    if (method != null) {
+                        return new MethodHandler(controller, method, SupportedType.PARAMETERLESS);
                     }
 
-                    if (method == null) {
-                        return null;
-                    }
+                    return null;
 
-                    return new MethodHandler(controller, method);
                 }
 
             }
@@ -681,23 +684,22 @@ public class FXMLLoader {
                 }
 
                 if (handlerValue.startsWith(CONTROLLER_METHOD_PREFIX)) {
-                    MethodHandler handler = getControllerMethodHandle(handlerValue, SupportedType.PROPERTY_CHANGE_LISTENER);
+                    MethodHandler handler = getControllerMethodHandle(handlerValue, SupportedType.PROPERTY_CHANGE_LISTENER, SupportedType.EVENT);
                     if (handler != null) {
-                        propertyModel.addListener(new PropertyChangeAdapter(handler));
-                    } else {
-                        // Note: this part is solely for purpose of 2.2 backward compatibility where an Event object
-                        // has been used instead of usual property change parameters
-                        MethodHandler evHandler = getControllerMethodHandle(handlerValue, SupportedType.EVENT);
-                        if (evHandler != null) {
+                        if (handler.type == SupportedType.EVENT) {
+                            // Note: this part is solely for purpose of 2.2 backward compatibility where an Event object
+                            // has been used instead of usual property change parameters
                             propertyModel.addListener(new ChangeListener<Object>() {
                                 @Override
                                 public void changed(ObservableValue<?> observable, Object oldValue, Object newValue) {
-                                    evHandler.invoke(new Event(value, null, Event.ANY));
+                                    handler.invoke(new Event(value, null, Event.ANY));
                                 }
                             });
                         } else {
-                            throw constructLoadException("Controller method \"" + handlerValue + "\" not found.");
+                            propertyModel.addListener(new PropertyChangeAdapter(handler));
                         }
+                    } else {
+                    throw constructLoadException("Controller method \"" + handlerValue + "\" not found.");
                     }
                 } else if (handlerValue.startsWith(EXPRESSION_PREFIX)) {
                     Object listener = getExpressionObject(handlerValue);
@@ -1470,17 +1472,22 @@ public class FXMLLoader {
                 }
 
                 String extension = source.substring(i + 1);
-                ScriptEngine scriptEngine;
-                ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
-                try {
-                    Thread.currentThread().setContextClassLoader(classLoader);
-                    ScriptEngineManager scriptEngineManager = getScriptEngineManager();
-                    scriptEngine = scriptEngineManager.getEngineByExtension(extension);
-                } finally {
-                    Thread.currentThread().setContextClassLoader(oldLoader);
+                ScriptEngine engine;
+                if (scriptEngine != null && scriptEngine.getFactory().getExtensions().contains(extension)) {
+                    // If we have a page language and it's engine supports the extension, use the same engine
+                    engine = scriptEngine;
+                } else {
+                    ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
+                    try {
+                        Thread.currentThread().setContextClassLoader(classLoader);
+                        ScriptEngineManager scriptEngineManager = getScriptEngineManager();
+                        engine = scriptEngineManager.getEngineByExtension(extension);
+                    } finally {
+                        Thread.currentThread().setContextClassLoader(oldLoader);
+                    }
                 }
 
-                if (scriptEngine == null) {
+                if (engine == null) {
                     throw constructLoadException("Unable to locate scripting engine for"
                         + " extension " + extension + ".");
                 }
@@ -1500,7 +1507,7 @@ public class FXMLLoader {
                     InputStreamReader scriptReader = null;
                     try {
                         scriptReader = new InputStreamReader(location.openStream(), charset);
-                        scriptEngine.eval(scriptReader);
+                        engine.eval(scriptReader);
                     } catch(ScriptException exception) {
                         exception.printStackTrace();
                     } finally {
@@ -1707,17 +1714,17 @@ public class FXMLLoader {
     private static class MethodHandler {
         private final Object controller;
         private final Method method;
-        private final boolean typed;
+        private final SupportedType type;
 
-        private MethodHandler(Object controller, Method method) {
+        private MethodHandler(Object controller, Method method, SupportedType type) {
             this.method = method;
             this.controller = controller;
-            this.typed = (method.getParameterTypes().length > 0);
+            this.type = type;
         }
 
         public void invoke(Object... params) {
             try {
-                if (typed) {
+                if (type != SupportedType.PARAMETERLESS) {
                     MethodUtil.invoke(method, controller, params);
                 } else {
                     MethodUtil.invoke(method, controller, new Object[] {});

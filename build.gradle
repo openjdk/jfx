@@ -1394,6 +1394,7 @@ project(":fxml") {
         // tracker and this attempts to fire up the toolkit and this looks for native libraries and fails,
         // we have to use the stub toolkit for now.
         jvmArgs "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit"
+        classpath += files("$JAVA_HOME/jre/lib/ext/nashorn.jar")
     }
 }
 

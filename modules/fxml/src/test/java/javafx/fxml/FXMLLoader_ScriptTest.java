@@ -1,5 +1,6 @@
+package javafx.fxml;
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,24 +24,24 @@
  * questions.
  */
 
-package javafx.fxml;
-
 import com.sun.javafx.fxml.LoadListener;
-import java.io.IOException;
+import org.junit.Ignore;
 import org.junit.Test;
+
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.*;
 
-public class RT_18046Test {
-    private String scriptValue = null;
-
+public class FXMLLoader_ScriptTest {
     @Test
     @SuppressWarnings("deprecation")
     public void testStaticScriptLoad() throws IOException {
-        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_18046.fxml"));
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("static_script_load.fxml"));
         fxmlLoader.setStaticLoad(true);
+        AtomicBoolean scriptCalled = new AtomicBoolean();
+        AtomicBoolean scriptEndCalled = new AtomicBoolean();
         fxmlLoader.setLoadListener(new LoadListener() {
-            private boolean script = false;
 
             @Override
             public void readImportProcessingInstruction(String target) {
@@ -88,7 +89,7 @@ public class RT_18046Test {
 
             @Override
             public void beginScriptElement() {
-                script = true;
+                assertFalse(scriptCalled.getAndSet(true));
             }
 
             @Override
@@ -113,15 +114,41 @@ public class RT_18046Test {
 
             @Override
             public void endElement(Object value) {
-                if (script) {
-                    scriptValue = value.toString();
+                if (value instanceof String && ((String)value).contains("doSomething")) {
+                    assertTrue(scriptCalled.get());
+                    assertFalse(scriptEndCalled.getAndSet(true));
                 }
-
-                script = false;
             }
         });
 
         fxmlLoader.load();
-        assertNotNull(scriptValue);
+        assertTrue(scriptCalled.get());
+        assertTrue(scriptEndCalled.get());
+    }
+
+    @Test
+    public void testScriptHandler() throws IOException {
+
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("script_handler.fxml"));
+        loader.load();
+
+        Widget w = (Widget) loader.getNamespace().get("w");
+        assertNotNull(w);
+        loader.getNamespace().put("actionDone", new AtomicBoolean(false));
+        w.fire();
+        assertTrue(((AtomicBoolean) loader.getNamespace().get("actionDone")).get());
+    }
+
+    @Test
+    public void testExternalScriptHandler() throws IOException {
+
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("script_handler_external.fxml"));
+        loader.load();
+
+        Widget w = (Widget) loader.getNamespace().get("w");
+        assertNotNull(w);
+        loader.getNamespace().put("actionDone", new AtomicBoolean(false));
+        w.fire();
+        assertTrue(((AtomicBoolean)loader.getNamespace().get("actionDone")).get());
     }
 }

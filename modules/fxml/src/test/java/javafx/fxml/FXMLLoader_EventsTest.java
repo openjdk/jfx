@@ -37,7 +37,7 @@ import static org.junit.Assert.*;
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-public class FXMLLoader_events {
+public class FXMLLoader_EventsTest {
     @Test
     public void testListEvents() throws Exception {
         FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("list_map_set_events_test.fxml"));
@@ -212,8 +212,8 @@ public class FXMLLoader_events {
     @Test
     public void testEvents() throws  IOException{
         FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("events_test.fxml"));
+        Widget button = fxmlLoader.load();
         EventsTestController controller = fxmlLoader.getController();
-        Button button = (Button) fxmlLoader.load();
         assertFalse(controller.called);
         button.fire();
         assertTrue(controller.called);
