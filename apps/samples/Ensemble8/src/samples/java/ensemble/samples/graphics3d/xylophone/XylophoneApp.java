@@ -59,7 +59,6 @@ import javafx.util.Duration;
  * @see javafx.scene.transform.Rotate
  * @see javafx.scene.paint.Color
  * @see javafx.scene.PerspectiveCamera
- * @see javafx.scene.shape.RectangleBuilder
  * @see javafx.scene.SubScene
  * @conditionalFeatures SCENE3D
  */
