@@ -1342,11 +1342,13 @@ project(":controls") {
     // TODO also not sure there is any benefit to having css files in the jfxrt.jar at all
     processResources << {
         ["$buildDir/resources/main/com/sun/javafx/scene/control/skin/caspian/caspian.css",
+        "$buildDir/resources/main/com/sun/javafx/scene/control/skin/caspian/caspian-no-transparency.css",
         "$buildDir/resources/main/com/sun/javafx/scene/control/skin/caspian/embedded-qvga.css",
         "$buildDir/resources/main/com/sun/javafx/scene/control/skin/caspian/embedded.css",
         "$buildDir/resources/main/com/sun/javafx/scene/control/skin/caspian/fxvk.css",
         "$buildDir/resources/main/com/sun/javafx/scene/control/skin/caspian/highcontrast.css",
         "$buildDir/resources/main/com/sun/javafx/scene/control/skin/modena/modena.css",
+        "$buildDir/resources/main/com/sun/javafx/scene/control/skin/modena/modena-no-transparency.css",
         "$buildDir/resources/main/com/sun/javafx/scene/control/skin/modena/touch.css"].each { css ->
             javaexec {
                 executable = JAVA
