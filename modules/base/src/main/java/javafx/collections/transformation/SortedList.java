@@ -344,7 +344,7 @@ public final class SortedList<E> extends TransformationList<E, E>{
         size = to;
         ensureSize(size);
         for (int i = 0; i < to; ++i) {
-            sorted[i] = new Element<>(list.get(i), i);
+            sorted[i] = new Element<E>(list.get(i), i);
         }
         Arrays.sort(sorted, 0, size, elementComparator);
         nextAdd(0, size);
