@@ -190,6 +190,7 @@ public abstract class AbstractMasterTimer {
                     receivers[i] = null;
                 } else {
                     System.arraycopy(receivers, i + 1, receivers, i, receiversLength - i - 1);
+                    receivers[receiversLength - 1] = null;
                 }
                 --receiversLength;
                 break;
@@ -223,6 +224,7 @@ public abstract class AbstractMasterTimer {
                     animationTimers[i] = null;
                 } else {
                     System.arraycopy(animationTimers, i + 1, animationTimers, i, animationTimersLength - i - 1);
+                    animationTimers[animationTimersLength - 1] = null;
                 }
                 --animationTimersLength;
                 break;
