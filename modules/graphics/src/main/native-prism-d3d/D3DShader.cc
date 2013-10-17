@@ -118,6 +118,15 @@ Java_com_sun_prism_d3d_D3DShader_setConstantsI
              reg, off, count);
 
     jint *buf = (jint *)env->GetDirectBufferAddress(ibuf);
+    
+    //in bytes
+    jlong capacity = env->GetDirectBufferCapacity(ibuf);
+    
+    if (off < 0 || count < 1 || off + count > capacity / sizeof(jint)) {
+        RlsTraceLn(NWT_TRACE_ERROR, "  Array out of bounds access.");
+        return E_FAIL;
+    }
+    
     if (buf == NULL) {
         RlsTraceLn(NWT_TRACE_ERROR,
                    "D3DShader_setConstantsI: Could not get direct buffer address");
@@ -146,6 +155,15 @@ Java_com_sun_prism_d3d_D3DShader_setConstantsF
     TraceLn3(NWT_TRACE_INFO, "D3DShader_setConstantsF (reg=%d, off=%d, count=%d)", reg, off, count);
 
     jfloat *buf = (jfloat *)env->GetDirectBufferAddress(fbuf);
+    
+    //in bytes
+    jlong capacity = env->GetDirectBufferCapacity(fbuf);    
+    
+    if (off < 0 || count < 1 || off + count > capacity / sizeof(jfloat)) {
+        RlsTraceLn(NWT_TRACE_ERROR, "  Array out of bounds access.");
+        return E_FAIL;
+    }
+    
     if (buf == NULL) {
         RlsTraceLn(NWT_TRACE_ERROR, "  Could not get direct buffer address");
         return E_FAIL;
