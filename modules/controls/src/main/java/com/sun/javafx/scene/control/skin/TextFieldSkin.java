@@ -45,6 +45,7 @@ import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.control.IndexRange;
+import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
@@ -105,7 +106,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
     /**
      * Function to translate the text control's "dot" into the caret
      * position in the Text node.  This is possibly only meaningful for
-     * the PasswordBoxSkin where the echoChar could be more than one
+     * the PasswordField where the echoChar could be more than one
      * character.
      */
     protected int translateCaretPosition(int cp) { return cp; }
@@ -117,6 +118,9 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
     protected ObservableDoubleValue textRight;
 
     private double pressX, pressY; // For dragging handles on embedded
+
+    // For use with PasswordField
+    public static final char BULLET = '\u2022';
 
     /**
      * Create a new TextFieldSkin.
@@ -797,5 +801,19 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
                             Math.max(0, p.getY() - textNode.getLayoutY() - snappedTopInset()));
         }
         return p;
+    }
+
+    @Override protected String maskText(String txt) {
+        if (getSkinnable() instanceof PasswordField) {
+            int n = txt.length();
+            StringBuilder passwordBuilder = new StringBuilder(n);
+            for (int i = 0; i < n; i++) {
+                passwordBuilder.append(BULLET);
+            }
+
+            return passwordBuilder.toString();
+        } else {
+            return txt;
+        }
     }
 }

@@ -389,8 +389,8 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             }
         });
     }
-    
-    // For PasswordFieldSkin
+
+    // For use with PasswordField in TextFieldSkin
     protected String maskText(String txt) {
         return txt;
     }
