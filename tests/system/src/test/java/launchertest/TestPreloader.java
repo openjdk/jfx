@@ -27,6 +27,7 @@ package launchertest;
 
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.application.Preloader;
 import javafx.stage.Stage;
 
 import static launchertest.Constants.*;
@@ -34,58 +35,63 @@ import static launchertest.Constants.*;
 /**
  * Test application with no main method. This is launched by MainLauncherTest.
  */
-public class TestApp extends Application {
+public class TestPreloader extends Preloader {
 
-    private static volatile boolean mainCalled = false;
-    private static volatile boolean initCalled = false;
-    private static volatile boolean startCalled = false;
+    public TestPreloader() {
+        System.err.println("preloader constructor: thread = " + Thread.currentThread());
+
+        if (!Platform.isFxApplicationThread()) {
+            System.err.println("ERROR: preloader constructor called from wrong thread: "
+                    + Thread.currentThread());
+            System.exit(ERROR_PRELOADER_CONSTRUCTOR_WRONG_THREAD);
+        }
+    }
 
     @Override public void init() {
-        if (!mainCalled) {
-            System.err.println("ERROR: main method not called before init");
-            System.exit(ERROR_INIT_BEFORE_MAIN);
+        System.err.println("preloader init: thread = " + Thread.currentThread());
+
+        if (Platform.isFxApplicationThread()) {
+            System.err.println("ERROR: preloader init called from wrong thread: "
+                    + Thread.currentThread());
+            System.exit(ERROR_PRELOADER_INIT_WRONG_THREAD);
         }
-        initCalled = true;
     }
 
     @Override public void start(Stage stage) throws Exception {
-        if (!mainCalled) {
-            System.err.println("ERROR: main method not called before start");
-            System.exit(ERROR_START_BEFORE_MAIN);
+        System.err.println("preloader start: thread = " + Thread.currentThread());
+
+        if (!Platform.isFxApplicationThread()) {
+            System.err.println("ERROR: preloader start called from wrong thread: "
+                    + Thread.currentThread());
+            System.exit(ERROR_PRELOADER_START_WRONG_THREAD);
         }
-        if (!initCalled) {
-            System.err.println("ERROR: init method not called before start");
-            System.exit(ERROR_START_BEFORE_INIT);
-        }
-        startCalled = true;
+
         Platform.runLater(new Runnable() {
             @Override public void run() {
-                Platform.exit();
+                // No-op
             }
         });
     }
 
     @Override public void stop() {
-        if (!mainCalled) {
-            System.err.println("ERROR: main method not called before stop");
-            System.exit(ERROR_STOP_BEFORE_MAIN);
-        }
-        if (!initCalled) {
-            System.err.println("ERROR: init method not called before stop");
-            System.exit(ERROR_STOP_BEFORE_INIT);
-        }
-        if (!startCalled) {
-            System.err.println("ERROR: start method not called before stop");
-            System.exit(ERROR_STOP_BEFORE_START);
-        }
-    }
+        System.err.println("preloader stop: thread = " + Thread.currentThread());
 
-    public static void main(String[] args) {
-        mainCalled = true;
-        Application.launch(args);
+        if (!Platform.isFxApplicationThread()) {
+            System.err.println("ERROR: preloader stop called from wrong thread: "
+                    + Thread.currentThread());
+            System.exit(ERROR_PRELOADER_STOP_WRONG_THREAD);
+        }
     }
 
     static {
+        System.err.println("preloader class init: thread = " + Thread.currentThread());
+
+        if (!Platform.isFxApplicationThread()) {
+            System.err.println("ERROR: preloader class init wrong thread: " + Thread.currentThread());
+            Thread.dumpStack();
+            System.exit(ERROR_PRELOADER_CLASS_INIT_WRONG_THREAD);
+        }
+
         try {
             Platform.runLater(new Runnable() {
                 @Override public void run() {

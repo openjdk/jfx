@@ -34,30 +34,37 @@ import static launchertest.Constants.*;
 /**
  * Test application with no main method. This is launched by MainLauncherTest.
  */
-public class TestApp extends Application {
+public class TestAppThreadCheck extends Application {
 
-    private static volatile boolean mainCalled = false;
-    private static volatile boolean initCalled = false;
-    private static volatile boolean startCalled = false;
+    public TestAppThreadCheck() {
+        System.err.println("constructor: thread = " + Thread.currentThread());
+
+        if (!Platform.isFxApplicationThread()) {
+            System.err.println("ERROR: constructor called from wrong thread: "
+                    + Thread.currentThread());
+            System.exit(ERROR_CONSTRUCTOR_WRONG_THREAD);
+        }
+    }
 
     @Override public void init() {
-        if (!mainCalled) {
-            System.err.println("ERROR: main method not called before init");
-            System.exit(ERROR_INIT_BEFORE_MAIN);
+        System.err.println("init: thread = " + Thread.currentThread());
+
+        if (Platform.isFxApplicationThread()) {
+            System.err.println("ERROR: init called from wrong thread: "
+                    + Thread.currentThread());
+            System.exit(ERROR_INIT_WRONG_THREAD);
         }
-        initCalled = true;
     }
 
     @Override public void start(Stage stage) throws Exception {
-        if (!mainCalled) {
-            System.err.println("ERROR: main method not called before start");
-            System.exit(ERROR_START_BEFORE_MAIN);
+        System.err.println("start: thread = " + Thread.currentThread());
+
+        if (!Platform.isFxApplicationThread()) {
+            System.err.println("ERROR: start called from wrong thread: "
+                    + Thread.currentThread());
+            System.exit(ERROR_START_WRONG_THREAD);
         }
-        if (!initCalled) {
-            System.err.println("ERROR: init method not called before start");
-            System.exit(ERROR_START_BEFORE_INIT);
-        }
-        startCalled = true;
+
         Platform.runLater(new Runnable() {
             @Override public void run() {
                 Platform.exit();
@@ -66,26 +73,37 @@ public class TestApp extends Application {
     }
 
     @Override public void stop() {
-        if (!mainCalled) {
-            System.err.println("ERROR: main method not called before stop");
-            System.exit(ERROR_STOP_BEFORE_MAIN);
+        System.err.println("stop: thread = " + Thread.currentThread());
+
+        if (!Platform.isFxApplicationThread()) {
+            System.err.println("ERROR: stop called from wrong thread: "
+                    + Thread.currentThread());
+            System.exit(ERROR_STOP_WRONG_THREAD);
         }
-        if (!initCalled) {
-            System.err.println("ERROR: init method not called before stop");
-            System.exit(ERROR_STOP_BEFORE_INIT);
-        }
-        if (!startCalled) {
-            System.err.println("ERROR: start method not called before stop");
-            System.exit(ERROR_STOP_BEFORE_START);
-        }
+
+        System.exit(ERROR_NONE);
     }
 
     public static void main(String[] args) {
-        mainCalled = true;
+        System.err.println("main: thread = " + Thread.currentThread());
+
+        if (Platform.isFxApplicationThread()) {
+            System.err.println("ERROR: main called from wrong thread: "
+                    + Thread.currentThread());
+            System.exit(ERROR_MAIN_WRONG_THREAD);
+        }
+
         Application.launch(args);
     }
 
     static {
+        System.err.println("class init: thread = " + Thread.currentThread());
+
+        if (!Platform.isFxApplicationThread()) {
+            System.err.println("ERROR: class init wrong thread: " + Thread.currentThread());
+            System.exit(ERROR_CLASS_INIT_WRONG_THREAD);
+        }
+
         try {
             Platform.runLater(new Runnable() {
                 @Override public void run() {
