@@ -34,15 +34,13 @@ package ensemble.samples.media.alphamediaplayer;
 import javafx.animation.ParallelTransition;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.DepthTest;
 import javafx.scene.Group;
-import javafx.scene.control.ButtonBuilder;
+import javafx.scene.control.Button;
 import javafx.scene.effect.BoxBlur;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.HBoxBuilder;
 import javafx.scene.layout.Pane;
 import javafx.scene.media.MediaPlayer;
 import javafx.scene.media.MediaView;
@@ -81,13 +79,6 @@ public class PlanetaryPlayerPane extends BorderPane {
         mvPane.setId("media-pane");
         mvPane.getChildren().add(mediaViewerGroup);
         setCenter(mvPane);
-
-        mediaBottomBar = HBoxBuilder.create()
-                .padding(new Insets(5, 10, 5, 10))
-                .alignment(Pos.CENTER)
-                .opacity(1.0)
-                .build();
-        BorderPane.setAlignment(mediaBottomBar, Pos.CENTER);
 
         mp1.setOnPlaying(new Runnable() {
             @Override public void run() {
@@ -160,39 +151,35 @@ public class PlanetaryPlayerPane extends BorderPane {
                 mp2.seek(Duration.seconds(currentTime.toSeconds() + 0.1));
             }
         };
+        
+        mediaBottomBar = new HBox();
+        mediaBottomBar.setId("bottom");
+        mediaBottomBar.setSpacing(0);
+        mediaBottomBar.setAlignment(Pos.CENTER);
+        BorderPane.setAlignment(mediaBottomBar, Pos.CENTER);
 
-        mediaBottomBar = HBoxBuilder.create()
-                .id("bottom")
-                .spacing(0)
-                .alignment(Pos.CENTER)
-                .children(
-                ButtonBuilder.create()
-                .id("back-button")
-                .text("Back")
-                .onAction(backAction)
-                .build(),
-                ButtonBuilder.create()
-                .id("stop-button")
-                .text("Stop")
-                .onAction(stopAction)
-                .build(),
-                ButtonBuilder.create()
-                .id("play-button")
-                .text("Play")
-                .onAction(playAction)
-                .build(),
-                ButtonBuilder.create()
-                .id("pause-button")
-                .text("Pause")
-                .onAction(pauseAction)
-                .build(),
-                ButtonBuilder.create()
-                .id("forward-button")
-                .text("Forward")
-                .onAction(forwardAction)
-                .build())
-                .build();
+        Button backButton = new Button();
+        backButton.setId("back-button");
+        backButton.setText("Back");
+        backButton.setOnAction(backAction);
 
+        Button stopButton = new Button("Stop");
+        stopButton.setId("stop-button");
+        stopButton.setOnAction(stopAction);
+
+        Button playButton = new Button("Play");
+        playButton.setId("play-button");
+        playButton.setOnAction(playAction);
+
+        Button pauseButton = new Button("Pause");
+        pauseButton.setId("pause-button");
+        pauseButton.setOnAction(pauseAction);
+
+        Button forwardButton = new Button("Forward");
+        forwardButton.setId("forward-button");
+        forwardButton.setOnAction(forwardAction);
+
+        mediaBottomBar.getChildren().addAll(backButton, stopButton, playButton, pauseButton, forwardButton);
         setBottom(mediaBottomBar);
     }
 

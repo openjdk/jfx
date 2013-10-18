@@ -31,10 +31,9 @@
  */
 package ensemble.samples.media.overlaymediaplayer;
 
-import javafx.animation.FadeTransitionBuilder;
+import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
 import javafx.animation.ParallelTransition;
-import javafx.animation.ParallelTransitionBuilder;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -44,16 +43,13 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.control.ButtonBuilder;
+import javafx.scene.control.Button;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
-import javafx.scene.control.LabelBuilder;
 import javafx.scene.control.Slider;
-import javafx.scene.control.SliderBuilder;
 import javafx.scene.control.ToolBar;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.HBoxBuilder;
 import javafx.scene.layout.Region;
 import javafx.scene.media.MediaPlayer;
 import javafx.scene.media.MediaView;
@@ -114,42 +110,29 @@ public class PlayerPane extends Region {
 
             mediaView = new MediaView(mp);
 
-            mediaTopBar = HBoxBuilder.create()
-                    .padding(new Insets(5, 10, 5, 10))
-                    .alignment(Pos.CENTER)
-                    .opacity(1.0)
-                    .build();
-            
-            mediaBottomBar = HBoxBuilder.create()
-                    .padding(new Insets(5, 10, 5, 10))
-                    .alignment(Pos.CENTER)
-                    .opacity(1.0)
-                    .build();
-                        
+            mediaTopBar = new HBox();
+            mediaTopBar.setPadding(new Insets(5, 10, 5, 10));
+            mediaTopBar.setAlignment(Pos.CENTER);
+            mediaTopBar.setOpacity(1.0);
+
             topBar.setStyle("-fx-background-color: rgb(0,0,0.0,0.0);");
             bottomBar.setStyle("-fx-background-color: rgb(0,0,0.0,0.0);");
-            
+
             setOnMouseEntered(new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent t) {
+                @Override
+                public void handle(MouseEvent t) {
                     if (transition != null) {
                         transition.stop();
                     }
-                    transition = ParallelTransitionBuilder.create()
-                        .children(
-                            FadeTransitionBuilder.create()
-                                .node(topBar)
-                                .toValue(1.0)
-                                .duration(Duration.millis(200))
-                                .interpolator(Interpolator.EASE_OUT)
-                                .build(),
-                            FadeTransitionBuilder.create()
-                                .node(bottomBar)
-                                .toValue(1.0)
-                                .duration(Duration.millis(200))
-                                .interpolator(Interpolator.EASE_OUT)
-                                .build()
-                        )
-                        .build();
+                    FadeTransition fadeTransition1 = new FadeTransition(Duration.millis(200), topBar);
+                    fadeTransition1.setToValue(1.0);
+                    fadeTransition1.setInterpolator(Interpolator.EASE_OUT);
+
+                    FadeTransition fadeTransition2 = new FadeTransition(Duration.millis(200), bottomBar);
+                    fadeTransition2.setToValue(1.0);
+                    fadeTransition2.setInterpolator(Interpolator.EASE_OUT);
+
+                    transition = new ParallelTransition(fadeTransition1, fadeTransition2);
                     transition.play();
                 }
             });
@@ -157,23 +140,15 @@ public class PlayerPane extends Region {
                 @Override public void handle(MouseEvent t) {
                     if (transition != null) {
                         transition.stop();
-                    }
-                    transition = ParallelTransitionBuilder.create()
-                        .children(
-                            FadeTransitionBuilder.create()
-                                .node(topBar)
-                                .toValue(0.0)
-                                .duration(Duration.millis(800))
-                                .interpolator(Interpolator.EASE_OUT)
-                                .build(),
-                            FadeTransitionBuilder.create()
-                                .node(bottomBar)
-                                .toValue(0.0)
-                                .duration(Duration.millis(800))
-                                .interpolator(Interpolator.EASE_OUT)
-                                .build()
-                        )
-                        .build();
+                    }                                                 
+                    FadeTransition fadeTransitionTop = new FadeTransition(Duration.millis(800), topBar);
+                    fadeTransitionTop.setToValue(0.0);
+                    fadeTransitionTop.setInterpolator(Interpolator.EASE_OUT);
+ 
+                    FadeTransition fadeTransitionBottom = new FadeTransition(Duration.millis(800), bottomBar);
+                    fadeTransitionBottom.setToValue(0.0);
+                    fadeTransitionBottom.setInterpolator(Interpolator.EASE_OUT);
+                    transition = new ParallelTransition(fadeTransitionTop, fadeTransitionBottom);
                     transition.play();
                 }
             });
@@ -212,19 +187,17 @@ public class PlayerPane extends Region {
             mp.setCycleCount(repeat ? MediaPlayer.INDEFINITE : 1);
 
             // Time label
-            Label timeLabel = LabelBuilder.create()
-                    .text("Time")
-                    .minWidth(Control.USE_PREF_SIZE)
-                    .textFill(Color.WHITE)
-                    .build();
+            Label timeLabel = new Label("Time");
+            timeLabel.setMinWidth(Control.USE_PREF_SIZE);
+            timeLabel.setTextFill(Color.WHITE);
+
             mediaTopBar.getChildren().add(timeLabel);
-            
+
             // Time slider
-            timeSlider = SliderBuilder.create()
-                    .id("media-slider")
-                    .minWidth(200)
-                    .maxWidth(Double.MAX_VALUE)
-                    .build();
+            timeSlider = new Slider();
+            timeSlider.setId("media-slider");
+            timeSlider.setMinWidth(200);
+            timeSlider.setMaxWidth(Double.MAX_VALUE);
             timeSlider.valueProperty().addListener(new InvalidationListener() {
                 @Override
                 public void invalidated(Observable ov) {
@@ -241,28 +214,25 @@ public class PlayerPane extends Region {
             mediaTopBar.getChildren().add(timeSlider);
             
             // Play label
-            playTime = LabelBuilder.create()
-                    .prefWidth(75)
-                    .minWidth(75)
-                    .textFill(Color.WHITE)
-                    .build();
+            playTime = new Label();
+            playTime.setPrefWidth(75);
+            playTime.setMinWidth(75);
+            playTime.setTextFill(Color.WHITE);
             mediaTopBar.getChildren().add(playTime);
-            
+
             // Volume label
-            Label volumeLabel = LabelBuilder.create()
-                    .text("Vol")
-                    .textFill(Color.WHITE)
-                    .minWidth(Control.USE_PREF_SIZE)
-                    .build();
+            Label volumeLabel = new Label("Vol");
+            volumeLabel.setMinWidth(Control.USE_PREF_SIZE);
+            volumeLabel.setTextFill(Color.WHITE);
+
             mediaTopBar.getChildren().add(volumeLabel);
-            
+
             // Volume slider
-            volumeSlider = SliderBuilder.create()
-                    .id("media-slider")
-                    .prefWidth(120)
-                    .minWidth(30)
-                    .maxWidth(Region.USE_PREF_SIZE)
-                    .build();
+            volumeSlider = new Slider();
+            volumeSlider.setId("media-slider");
+            volumeSlider.setPrefWidth(120);
+            volumeSlider.setMinWidth(30);
+            volumeSlider.setMaxWidth(Region.USE_PREF_SIZE);
             volumeSlider.valueProperty().addListener(new InvalidationListener() {
                 @Override
                 public void invalidated(Observable ov) {
@@ -310,39 +280,33 @@ public class PlayerPane extends Region {
                 }
             };
 
-            mediaBottomBar = HBoxBuilder.create()
-                    .id("bottom")
-                    .spacing(0)
-                    .alignment(Pos.CENTER)
-                    .children(
-                        ButtonBuilder.create()
-                            .id("back-button")
-                            .text("Back")
-                            .onAction(backAction)
-                            .build(),
-                        ButtonBuilder.create()
-                            .id("stop-button")
-                            .text("Stop")
-                            .onAction(stopAction)
-                            .build(),
-                        ButtonBuilder.create()
-                            .id("play-button")
-                            .text("Play")
-                            .onAction(playAction)
-                            .build(),
-                        ButtonBuilder.create()
-                            .id("pause-button")
-                            .text("Pause")
-                            .onAction(pauseAction)
-                            .build(),
-                        ButtonBuilder.create()
-                            .id("forward-button")
-                            .text("Forward")
-                            .onAction(forwardAction)
-                            .build()
-                     )
-                    .build();
-                        
+            mediaBottomBar = new HBox();
+            mediaBottomBar.setId("bottom");
+            mediaBottomBar.setSpacing(0);
+            mediaBottomBar.setAlignment(Pos.CENTER);
+
+            Button backButton = new Button("Back");
+            backButton.setId("back-button");
+            backButton.setOnAction(backAction);
+ 
+            Button stopButton = new Button("Stop");
+            stopButton.setId("stop-button");
+            stopButton.setOnAction(stopAction);
+ 
+            Button playButton = new Button("Play");
+            playButton.setId("play-button");
+            playButton.setOnAction(playAction);
+
+            Button pauseButton = new Button("Pause");
+            pauseButton.setId("pause-button");
+            pauseButton.setOnAction(pauseAction);
+ 
+            Button forwardButton = new Button("Forward");
+            forwardButton.setId("forward-button");
+            forwardButton.setOnAction(forwardAction);
+
+            mediaBottomBar.getChildren().addAll(backButton, stopButton, playButton, pauseButton, forwardButton);
+
             topBar.getItems().add(mediaTopBar);
             bottomBar.getItems().add(mediaBottomBar);
             
