@@ -64,7 +64,7 @@ public class AudioAreaChartApp extends Application {
     private AudioSpectrumListener audioSpectrumListener;
     private static final String AUDIO_URI = System.getProperty("demo.audio.url", 
             "http://download.oracle.com/otndocs/javafx/JavaRap_Audio.mp4");
-    private static MediaPlayer audioMediaPlayer;
+    private MediaPlayer audioMediaPlayer;
     private static final boolean PLAY_AUDIO = Boolean.parseBoolean(
             System.getProperty("demo.play.audio", "true"));
 
@@ -129,7 +129,7 @@ public class AudioAreaChartApp extends Application {
         }
     }
 
-    private static MediaPlayer getAudioMediaPlayer() {
+    private MediaPlayer getAudioMediaPlayer() {
         if (audioMediaPlayer == null) {
             Media audioMedia = new Media(AUDIO_URI);
             audioMediaPlayer = new MediaPlayer(audioMedia);
