@@ -1,0 +1,89 @@
+#
+# BaseClasses Makefile
+#
+
+CPP = cl.exe
+LIB = lib.exe
+
+OBJBASE_DIR = $(BUILD_DIR)/obj/Microsoft/DirectShow/BaseClasses
+DEP_DIRS = $(BUILD_DIR) $(OBJBASE_DIR)
+
+SRCBASE_DIR = $(shell cygpath -u $(BASECLASSES_DIR))
+
+CPP_SOURCES =   amextra.cpp \
+                amfilter.cpp \
+                amvideo.cpp \
+                arithutil.cpp \
+                combase.cpp \
+                cprop.cpp \
+                ctlutil.cpp \
+                ddmm.cpp \
+                dllentry.cpp \
+                dllsetup.cpp \
+                mtype.cpp \
+                outputq.cpp \
+                perflog.cpp \
+                pstream.cpp \
+                pullpin.cpp \
+                refclock.cpp \
+                renbase.cpp \
+                schedule.cpp \
+                seekpt.cpp \
+                source.cpp \
+                strmctl.cpp \
+                sysclock.cpp \
+                transfrm.cpp \
+                transip.cpp \
+                videoctl.cpp \
+                vtrans.cpp \
+                winctrl.cpp \
+                winutil.cpp \
+                wxdebug.cpp \
+                wxlist.cpp \
+                wxutil.cpp
+
+COMPILER_FLAGS = -nologo -W3 -WX- -EHsc -GS -fp:precise -Gm- \
+                 -Zc:wchar_t -Zc:forScope- -Gd -wd"4430" -analyze- -errorReport:queue
+
+INCLUDES =  -I$(BASECLASSES_DIR)
+
+CFLAGS =   -DWIN32 \
+           -D_LIB \
+           -D_WIN32_DCOM \
+           -D_MBCS \
+           -DNODEFAULTLIB \
+	   $(INCLUDES) \
+           $(COMPILER_FLAGS)
+
+LIBFLAGS = -out:$(shell cygpath -ma $(TARGET)) -nologo
+
+ifeq ($(BUILD_TYPE), Release)
+    CFLAGS += -DNDEBUG -O1 -Oy -MD -Gy -GF
+else
+    CFLAGS += -D_DEBUG -Od -Oy- -RTC1 -MDd -Zi -Fd$(PDB)
+    LIBFLAGS +=  -libpath:strmiids.lib
+endif
+
+ifeq ($(ARCH), x32)
+    LIBFLAGS += -MACHINE:x86
+else
+    CFLAGS += -D_WIN64
+    LIBFLAGS += -MACHINE:x64
+endif
+
+OBJECTS = $(patsubst %.cpp,$(OBJBASE_DIR)/%.obj,$(CPP_SOURCES))
+
+.PHONY: default list
+
+default: $(TARGET)
+
+$(TARGET): $(OBJECTS) 
+	$(LIB) $(LIBFLAGS) $(foreach object,$(OBJECTS),$(shell cygpath -ma $(object)))
+
+$(OBJECTS): | $(DEP_DIRS)
+
+$(DEP_DIRS):
+	@mkdir -p $(DEP_DIRS)
+
+$(OBJBASE_DIR)/%.obj: $(SRCBASE_DIR)/%.cpp
+	$(CPP) $(CFLAGS) -TP -c -Fo$(shell cygpath -ma $@) $(shell cygpath -mas $<)

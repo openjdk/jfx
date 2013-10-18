@@ -1,0 +1,125 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\gstreamer\plugins\dshowwrapper\Allocator.cpp">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;ENABLE_PULL_MODE=1;HAVE_CONFIG_H=on2_codecs_config.h;ENABLE_SOURCE_SEEKING=1;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;G_DISABLE_DEPRECATED;G_DISABLE_ASSERT;G_DISABLE_CHECKS;_WINDLL;_MBCS;INITGUID;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\dshowwrapper\dshowwrapper.cpp">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;ENABLE_PULL_MODE=1;HAVE_CONFIG_H=on2_codecs_config.h;ENABLE_SOURCE_SEEKING=1;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;G_DISABLE_DEPRECATED;G_DISABLE_ASSERT;G_DISABLE_CHECKS;_WINDLL;_MBCS;INITGUID;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\dshowwrapper\Sink.cpp">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;ENABLE_PULL_MODE=1;HAVE_CONFIG_H=on2_codecs_config.h;ENABLE_SOURCE_SEEKING=1;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;G_DISABLE_DEPRECATED;G_DISABLE_ASSERT;G_DISABLE_CHECKS;_WINDLL;_MBCS;INITGUID;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\dshowwrapper\Src.cpp">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;ENABLE_PULL_MODE=1;HAVE_CONFIG_H=on2_codecs_config.h;ENABLE_SOURCE_SEEKING=1;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;G_DISABLE_DEPRECATED;G_DISABLE_ASSERT;G_DISABLE_CHECKS;_WINDLL;_MBCS;INITGUID;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\fxplugins.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;ENABLE_PULL_MODE=1;HAVE_CONFIG_H=on2_codecs_config.h;ENABLE_SOURCE_SEEKING=1;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;G_DISABLE_DEPRECATED;G_DISABLE_ASSERT;G_DISABLE_CHECKS;_WINDLL;_MBCS;INITGUID;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\javasource\javasource.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;ENABLE_PULL_MODE=1;HAVE_CONFIG_H=on2_codecs_config.h;ENABLE_SOURCE_SEEKING=1;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;G_DISABLE_DEPRECATED;G_DISABLE_ASSERT;G_DISABLE_CHECKS;_WINDLL;_MBCS;INITGUID;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\javasource\marshal.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;ENABLE_PULL_MODE=1;HAVE_CONFIG_H=on2_codecs_config.h;ENABLE_SOURCE_SEEKING=1;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;G_DISABLE_DEPRECATED;G_DISABLE_ASSERT;G_DISABLE_CHECKS;_WINDLL;_MBCS;INITGUID;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\progressbuffer\hlsprogressbuffer.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;ENABLE_PULL_MODE=1;HAVE_CONFIG_H=on2_codecs_config.h;ENABLE_SOURCE_SEEKING=1;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;G_DISABLE_DEPRECATED;G_DISABLE_ASSERT;G_DISABLE_CHECKS;_WINDLL;_MBCS;INITGUID;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\progressbuffer\progressbuffer.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;ENABLE_PULL_MODE=1;HAVE_CONFIG_H=on2_codecs_config.h;ENABLE_SOURCE_SEEKING=1;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;G_DISABLE_DEPRECATED;G_DISABLE_ASSERT;G_DISABLE_CHECKS;_WINDLL;_MBCS;INITGUID;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\progressbuffer\win32\filecache.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;ENABLE_PULL_MODE=1;HAVE_CONFIG_H=on2_codecs_config.h;ENABLE_SOURCE_SEEKING=1;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;G_DISABLE_DEPRECATED;G_DISABLE_ASSERT;G_DISABLE_CHECKS;_WINDLL;_MBCS;INITGUID;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\vp6\flvdemux.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;ENABLE_PULL_MODE=1;HAVE_CONFIG_H=on2_codecs_config.h;ENABLE_SOURCE_SEEKING=1;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;G_DISABLE_DEPRECATED;G_DISABLE_ASSERT;G_DISABLE_CHECKS;_WINDLL;_MBCS;INITGUID;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\vp6\flvmetadata.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;ENABLE_PULL_MODE=1;HAVE_CONFIG_H=on2_codecs_config.h;ENABLE_SOURCE_SEEKING=1;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;G_DISABLE_DEPRECATED;G_DISABLE_ASSERT;G_DISABLE_CHECKS;_WINDLL;_MBCS;INITGUID;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\vp6\flvparser.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;ENABLE_PULL_MODE=1;HAVE_CONFIG_H=on2_codecs_config.h;ENABLE_SOURCE_SEEKING=1;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;G_DISABLE_DEPRECATED;G_DISABLE_ASSERT;G_DISABLE_CHECKS;_WINDLL;_MBCS;INITGUID;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\vp6\fxmplugin.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;ENABLE_PULL_MODE=1;HAVE_CONFIG_H=on2_codecs_config.h;ENABLE_SOURCE_SEEKING=1;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;G_DISABLE_DEPRECATED;G_DISABLE_ASSERT;G_DISABLE_CHECKS;_WINDLL;_MBCS;INITGUID;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\vp6\vp6decoder.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;ENABLE_PULL_MODE=1;HAVE_CONFIG_H=on2_codecs_config.h;ENABLE_SOURCE_SEEKING=1;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;G_DISABLE_DEPRECATED;G_DISABLE_ASSERT;G_DISABLE_CHECKS;_WINDLL;_MBCS;INITGUID;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{87CF0F6E-87BD-4CB5-A6A1-841F81F17842}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>plugins</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;ENABLE_PULL_MODE=1;HAVE_CONFIG_H=on2_codecs_config.h;ENABLE_SOURCE_SEEKING=1;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;G_DISABLE_DEPRECATED;G_DISABLE_ASSERT;G_DISABLE_CHECKS;_WINDLL;_MBCS;INITGUID;ENABLE_ON2_DECODER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\gstreamer\3rd_party\glib\glib-2.28.8\;$(SolutionDir)\..\gstreamer\3rd_party\glib\glib-2.28.8\glib;$(SolutionDir)\..\gstreamer\3rd_party\glib\glib-2.28.8\gmodule;$(SolutionDir)\..\gstreamer\3rd_party\glib\glib-2.28.8\build\win32\vs100;$(SolutionDir)\..\gstreamer\gstreamer-lite\gstreamer;$(SolutionDir)\..\gstreamer\gstreamer-lite\gstreamer\libs;$(SolutionDir)\..\gstreamer\gstreamer-lite\gst-plugins-base;$(SolutionDir)\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs;$(SolutionDir)\..\gstreamer\plugins;C:\Program Files\Microsoft SDKs\Windows\v7.1\Samples\multimedia\directshow\baseclasses;$(SolutionDir)\..\gstreamer\plugins\dshowwrapper;$(SolutionDir)\..\gstreamer\plugins\javasource;$(SolutionDir)\..\gstreamer\plugins\progressbuffer;$(SolutionDir)\..\gstreamer\plugins\progressbuffer\win32;$(SolutionDir)\..\gstreamer\plugins\vp6;$(SolutionDir)\..\..\..\..\..\..\..\rt-closed\media\codecs\codec_vp6\include;$(SolutionDir)\..\..\..\..\..\..\..\rt-closed\media\codecs\codec_vp6\src;$(SolutionDir)\..\..\..\..\..\..\..\rt-closed\media\codecs\codec_vp6\config\win</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

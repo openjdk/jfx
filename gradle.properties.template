@@ -38,7 +38,7 @@
 # GStreamer, uncomment the appropriate lines below.
 
 #COMPILE_WEBKIT = true
-#COMPILE_GSTREAMER = true
+#COMPILE_MEDIA = true
 
 # The building of JavaDoc takes time. By default we disable the building of JavaDoc
 # so as to speed up the time in incremental builds. Uncomment this flag in order to

@@ -1,0 +1,159 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\jfxmedia\jni\com_sun_media_jfxmediaimpl_NativeVideoConverter.cpp" />
+    <ClCompile Include="..\..\jfxmedia\jni\com_sun_media_jfxmedia_logging_Logger.cpp" />
+    <ClCompile Include="..\..\jfxmedia\jni\JavaBandsHolder.cpp" />
+    <ClCompile Include="..\..\jfxmedia\jni\JavaInputStreamCallbacks.cpp" />
+    <ClCompile Include="..\..\jfxmedia\jni\JavaMediaWarningListener.cpp" />
+    <ClCompile Include="..\..\jfxmedia\jni\JavaPlayerEventDispatcher.cpp" />
+    <ClCompile Include="..\..\jfxmedia\jni\JniUtils.cpp" />
+    <ClCompile Include="..\..\jfxmedia\jni\Logger.cpp" />
+    <ClCompile Include="..\..\jfxmedia\jni\NativeVideoBuffer.cpp" />
+    <ClCompile Include="..\..\jfxmedia\Locator\Locator.cpp" />
+    <ClCompile Include="..\..\jfxmedia\Locator\LocatorStream.cpp" />
+    <ClCompile Include="..\..\jfxmedia\MediaManagement\Media.cpp" />
+    <ClCompile Include="..\..\jfxmedia\MediaManagement\MediaManager.cpp" />
+    <ClCompile Include="..\..\jfxmedia\PipelineManagement\AudioTrack.cpp" />
+    <ClCompile Include="..\..\jfxmedia\PipelineManagement\Pipeline.cpp" />
+    <ClCompile Include="..\..\jfxmedia\PipelineManagement\PipelineFactory.cpp" />
+    <ClCompile Include="..\..\jfxmedia\PipelineManagement\SubtitleTrack.cpp" />
+    <ClCompile Include="..\..\jfxmedia\PipelineManagement\Track.cpp" />
+    <ClCompile Include="..\..\jfxmedia\PipelineManagement\VideoFrame.cpp" />
+    <ClCompile Include="..\..\jfxmedia\PipelineManagement\VideoTrack.cpp" />
+    <ClCompile Include="..\..\jfxmedia\platform\gstreamer\GstAudioEqualizer.cpp" />
+    <ClCompile Include="..\..\jfxmedia\platform\gstreamer\GstAudioPlaybackPipeline.cpp" />
+    <ClCompile Include="..\..\jfxmedia\platform\gstreamer\GstAudioSpectrum.cpp" />
+    <ClCompile Include="..\..\jfxmedia\platform\gstreamer\GstAVPlaybackPipeline.cpp" />
+    <ClCompile Include="..\..\jfxmedia\platform\gstreamer\GstElementContainer.cpp" />
+    <ClCompile Include="..\..\jfxmedia\platform\gstreamer\GstEqualizerBand.cpp" />
+    <ClCompile Include="..\..\jfxmedia\platform\gstreamer\GstJniUtils.cpp" />
+    <ClCompile Include="..\..\jfxmedia\platform\gstreamer\GstMedia.cpp" />
+    <ClCompile Include="..\..\jfxmedia\platform\gstreamer\GstMediaManager.cpp" />
+    <ClCompile Include="..\..\jfxmedia\platform\gstreamer\GstMediaPlayer.cpp" />
+    <ClCompile Include="..\..\jfxmedia\platform\gstreamer\GstPipelineFactory.cpp" />
+    <ClCompile Include="..\..\jfxmedia\platform\gstreamer\GstPlatform.cpp" />
+    <ClCompile Include="..\..\jfxmedia\platform\gstreamer\GstVideoFrame.cpp" />
+    <ClCompile Include="..\..\jfxmedia\Utils\ColorConverter.c" />
+    <ClCompile Include="..\..\jfxmedia\Utils\LowLevelPerf.cpp" />
+    <ClCompile Include="..\..\jfxmedia\Utils\MediaWarningDispatcher.cpp" />
+    <ClCompile Include="..\..\jfxmedia\Utils\win32\WinCriticalSection.cpp" />
+    <ClCompile Include="..\..\jfxmedia\Utils\win32\WinDllMain.cpp" />
+    <ClCompile Include="..\..\jfxmedia\Utils\win32\WinThread.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\jfxmedia\jni\JavaBandsHolder.h" />
+    <ClInclude Include="..\..\jfxmedia\jni\JavaInputStreamCallbacks.h" />
+    <ClInclude Include="..\..\jfxmedia\jni\JavaMediaWarningListener.h" />
+    <ClInclude Include="..\..\jfxmedia\jni\JavaPlayerEventDispatcher.h" />
+    <ClInclude Include="..\..\jfxmedia\jni\JniUtils.h" />
+    <ClInclude Include="..\..\jfxmedia\jni\Logger.h" />
+    <ClInclude Include="..\..\jfxmedia\Locator\Locator.h" />
+    <ClInclude Include="..\..\jfxmedia\Locator\LocatorStream.h" />
+    <ClInclude Include="..\..\jfxmedia\MediaManagement\Media.h" />
+    <ClInclude Include="..\..\jfxmedia\MediaManagement\MediaManager.h" />
+    <ClInclude Include="..\..\jfxmedia\MediaManagement\MediaTypes.h" />
+    <ClInclude Include="..\..\jfxmedia\MediaManagement\MediaWarningListener.h" />
+    <ClInclude Include="..\..\jfxmedia\PipelineManagement\AudioEqualizer.h" />
+    <ClInclude Include="..\..\jfxmedia\PipelineManagement\AudioSpectrum.h" />
+    <ClInclude Include="..\..\jfxmedia\PipelineManagement\AudioTrack.h" />
+    <ClInclude Include="..\..\jfxmedia\PipelineManagement\Pipeline.h" />
+    <ClInclude Include="..\..\jfxmedia\PipelineManagement\PipelineFactory.h" />
+    <ClInclude Include="..\..\jfxmedia\PipelineManagement\PipelineOptions.h" />
+    <ClInclude Include="..\..\jfxmedia\PipelineManagement\PlayerEventDispatcher.h" />
+    <ClInclude Include="..\..\jfxmedia\PipelineManagement\SubtitleTrack.h" />
+    <ClInclude Include="..\..\jfxmedia\PipelineManagement\Track.h" />
+    <ClInclude Include="..\..\jfxmedia\PipelineManagement\VideoFrame.h" />
+    <ClInclude Include="..\..\jfxmedia\PipelineManagement\VideoTrack.h" />
+    <ClInclude Include="..\..\jfxmedia\platform\gstreamer\GstAudioEqualizer.h" />
+    <ClInclude Include="..\..\jfxmedia\platform\gstreamer\GstAudioPlaybackPipeline.h" />
+    <ClInclude Include="..\..\jfxmedia\platform\gstreamer\GstAudioSpectrum.h" />
+    <ClInclude Include="..\..\jfxmedia\platform\gstreamer\GstAVPlaybackPipeline.h" />
+    <ClInclude Include="..\..\jfxmedia\platform\gstreamer\GstElementContainer.h" />
+    <ClInclude Include="..\..\jfxmedia\platform\gstreamer\GstJniUtils.h" />
+    <ClInclude Include="..\..\jfxmedia\platform\gstreamer\GstMediaManager.h" />
+    <ClInclude Include="..\..\jfxmedia\platform\gstreamer\GstPipelineFactory.h" />
+    <ClInclude Include="..\..\jfxmedia\platform\gstreamer\GstVideoFrame.h" />
+    <ClInclude Include="..\..\jfxmedia\Utils\AutoLock.h" />
+    <ClInclude Include="..\..\jfxmedia\Utils\ColorConverter.h" />
+    <ClInclude Include="..\..\jfxmedia\Utils\LowLevelPerf.h" />
+    <ClInclude Include="..\..\jfxmedia\Utils\MediaWarningDispatcher.h" />
+    <ClInclude Include="..\..\jfxmedia\Utils\Singleton.h" />
+    <ClInclude Include="..\..\jfxmedia\Utils\Thread.h" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{41E7B612-A478-4FD5-9B2D-1B591FC6EE8A}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>jfxmedia</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\gstreamer\3rd_party\glib\glib-2.28.8\;$(SolutionDir)\..\gstreamer\3rd_party\glib\glib-2.28.8\glib;$(SolutionDir)\..\gstreamer\3rd_party\glib\glib-2.28.8\gmodule;$(SolutionDir)\..\gstreamer\3rd_party\glib\glib-2.28.8\build\win32\vs100;$(SolutionDir)\..\gstreamer\gstreamer-lite\gstreamer;$(SolutionDir)\..\gstreamer\gstreamer-lite\gstreamer\libs;$(SolutionDir)\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs;$(SolutionDir)\..\gstreamer\gstreamer-lite\gst-plugins-base\win32\common;$(SolutionDir)\..\jfxmedia\;$(SolutionDir)\..\jfxmedia\jni;$(SolutionDir)\..\..\..\..\build\generated-src\headers</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

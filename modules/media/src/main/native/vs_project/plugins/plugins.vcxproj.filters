@@ -1,0 +1,62 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="javasource">
+      <UniqueIdentifier>{bb6f275d-3492-4001-a1d8-bd300341db59}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="progressbuffer">
+      <UniqueIdentifier>{a2baa68b-83bd-4126-81a2-068ff08d9c98}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dshowwrapper">
+      <UniqueIdentifier>{56564e42-f8d2-4a48-8b90-8d65e262180a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vp6">
+      <UniqueIdentifier>{37cedb7f-c7ac-4904-931a-c9f1a3ada3ea}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\gstreamer\plugins\javasource\javasource.c">
+      <Filter>javasource</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\javasource\marshal.c">
+      <Filter>javasource</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\progressbuffer\hlsprogressbuffer.c">
+      <Filter>progressbuffer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\progressbuffer\progressbuffer.c">
+      <Filter>progressbuffer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\progressbuffer\win32\filecache.c">
+      <Filter>progressbuffer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\dshowwrapper\Allocator.cpp">
+      <Filter>dshowwrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\dshowwrapper\dshowwrapper.cpp">
+      <Filter>dshowwrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\dshowwrapper\Sink.cpp">
+      <Filter>dshowwrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\dshowwrapper\Src.cpp">
+      <Filter>dshowwrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\vp6\flvdemux.c">
+      <Filter>vp6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\vp6\flvmetadata.c">
+      <Filter>vp6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\vp6\flvparser.c">
+      <Filter>vp6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\vp6\fxmplugin.c">
+      <Filter>vp6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\vp6\vp6decoder.c">
+      <Filter>vp6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\fxplugins.c" />
+  </ItemGroup>
+</Project>

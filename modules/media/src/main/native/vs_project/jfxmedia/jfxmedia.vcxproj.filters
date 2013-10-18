@@ -1,0 +1,264 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="jni">
+      <UniqueIdentifier>{bcdecda8-a26a-4a1d-be09-bc58e4e986e9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="PipelineManagement">
+      <UniqueIdentifier>{9d6f20d1-492a-4b5e-b6d3-345e88d7617b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MediaManagement">
+      <UniqueIdentifier>{801a4b76-23fb-432f-852a-1bea79d6d272}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Locator">
+      <UniqueIdentifier>{41d1dfb9-50d2-4fb0-a931-5ac442208442}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utils">
+      <UniqueIdentifier>{fc2c5bf5-b746-4711-9d31-731a2c802614}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utils\win32">
+      <UniqueIdentifier>{ccb58d3c-1a1e-4b43-8a35-9b8d9ec12df3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="platform">
+      <UniqueIdentifier>{57da4f54-54ab-45b7-9efd-cafd73743755}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="platform\gstreamer">
+      <UniqueIdentifier>{5e63ff45-914f-496a-82e3-8e7787e9e217}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\jfxmedia\jni\com_sun_media_jfxmedia_logging_Logger.cpp">
+      <Filter>jni</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\jni\com_sun_media_jfxmediaimpl_NativeVideoConverter.cpp">
+      <Filter>jni</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\jni\JavaBandsHolder.cpp">
+      <Filter>jni</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\jni\JavaInputStreamCallbacks.cpp">
+      <Filter>jni</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\jni\JavaMediaWarningListener.cpp">
+      <Filter>jni</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\jni\JavaPlayerEventDispatcher.cpp">
+      <Filter>jni</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\jni\JniUtils.cpp">
+      <Filter>jni</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\jni\Logger.cpp">
+      <Filter>jni</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\jni\NativeVideoBuffer.cpp">
+      <Filter>jni</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\PipelineManagement\AudioTrack.cpp">
+      <Filter>PipelineManagement</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\PipelineManagement\Pipeline.cpp">
+      <Filter>PipelineManagement</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\PipelineManagement\PipelineFactory.cpp">
+      <Filter>PipelineManagement</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\PipelineManagement\SubtitleTrack.cpp">
+      <Filter>PipelineManagement</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\PipelineManagement\Track.cpp">
+      <Filter>PipelineManagement</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\PipelineManagement\VideoFrame.cpp">
+      <Filter>PipelineManagement</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\PipelineManagement\VideoTrack.cpp">
+      <Filter>PipelineManagement</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\MediaManagement\Media.cpp">
+      <Filter>MediaManagement</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\MediaManagement\MediaManager.cpp">
+      <Filter>MediaManagement</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\Locator\Locator.cpp">
+      <Filter>Locator</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\Locator\LocatorStream.cpp">
+      <Filter>Locator</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\Utils\ColorConverter.c">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\Utils\LowLevelPerf.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\Utils\MediaWarningDispatcher.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\Utils\win32\WinCriticalSection.cpp">
+      <Filter>Utils\win32</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\Utils\win32\WinDllMain.cpp">
+      <Filter>Utils\win32</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\Utils\win32\WinThread.cpp">
+      <Filter>Utils\win32</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\platform\gstreamer\GstAudioEqualizer.cpp">
+      <Filter>platform\gstreamer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\platform\gstreamer\GstAudioPlaybackPipeline.cpp">
+      <Filter>platform\gstreamer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\platform\gstreamer\GstAudioSpectrum.cpp">
+      <Filter>platform\gstreamer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\platform\gstreamer\GstAVPlaybackPipeline.cpp">
+      <Filter>platform\gstreamer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\platform\gstreamer\GstElementContainer.cpp">
+      <Filter>platform\gstreamer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\platform\gstreamer\GstEqualizerBand.cpp">
+      <Filter>platform\gstreamer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\platform\gstreamer\GstJniUtils.cpp">
+      <Filter>platform\gstreamer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\platform\gstreamer\GstMedia.cpp">
+      <Filter>platform\gstreamer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\platform\gstreamer\GstMediaManager.cpp">
+      <Filter>platform\gstreamer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\platform\gstreamer\GstMediaPlayer.cpp">
+      <Filter>platform\gstreamer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\platform\gstreamer\GstPipelineFactory.cpp">
+      <Filter>platform\gstreamer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\platform\gstreamer\GstPlatform.cpp">
+      <Filter>platform\gstreamer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\platform\gstreamer\GstVideoFrame.cpp">
+      <Filter>platform\gstreamer</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\jfxmedia\jni\JavaBandsHolder.h">
+      <Filter>jni</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\jni\JavaInputStreamCallbacks.h">
+      <Filter>jni</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\jni\JavaMediaWarningListener.h">
+      <Filter>jni</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\jni\JavaPlayerEventDispatcher.h">
+      <Filter>jni</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\jni\JniUtils.h">
+      <Filter>jni</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\jni\Logger.h">
+      <Filter>jni</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\PipelineManagement\AudioEqualizer.h">
+      <Filter>PipelineManagement</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\PipelineManagement\AudioSpectrum.h">
+      <Filter>PipelineManagement</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\PipelineManagement\AudioTrack.h">
+      <Filter>PipelineManagement</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\PipelineManagement\Pipeline.h">
+      <Filter>PipelineManagement</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\PipelineManagement\PipelineFactory.h">
+      <Filter>PipelineManagement</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\PipelineManagement\PipelineOptions.h">
+      <Filter>PipelineManagement</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\PipelineManagement\PlayerEventDispatcher.h">
+      <Filter>PipelineManagement</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\PipelineManagement\SubtitleTrack.h">
+      <Filter>PipelineManagement</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\PipelineManagement\Track.h">
+      <Filter>PipelineManagement</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\PipelineManagement\VideoFrame.h">
+      <Filter>PipelineManagement</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\PipelineManagement\VideoTrack.h">
+      <Filter>PipelineManagement</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\MediaManagement\Media.h">
+      <Filter>MediaManagement</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\MediaManagement\MediaManager.h">
+      <Filter>MediaManagement</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\MediaManagement\MediaTypes.h">
+      <Filter>MediaManagement</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\MediaManagement\MediaWarningListener.h">
+      <Filter>MediaManagement</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\Locator\Locator.h">
+      <Filter>Locator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\Locator\LocatorStream.h">
+      <Filter>Locator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\Utils\AutoLock.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\Utils\ColorConverter.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\Utils\LowLevelPerf.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\Utils\MediaWarningDispatcher.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\Utils\Singleton.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\Utils\Thread.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\platform\gstreamer\GstAudioEqualizer.h">
+      <Filter>platform\gstreamer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\platform\gstreamer\GstAudioPlaybackPipeline.h">
+      <Filter>platform\gstreamer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\platform\gstreamer\GstAudioSpectrum.h">
+      <Filter>platform\gstreamer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\platform\gstreamer\GstAVPlaybackPipeline.h">
+      <Filter>platform\gstreamer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\platform\gstreamer\GstElementContainer.h">
+      <Filter>platform\gstreamer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\platform\gstreamer\GstJniUtils.h">
+      <Filter>platform\gstreamer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\platform\gstreamer\GstMediaManager.h">
+      <Filter>platform\gstreamer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\platform\gstreamer\GstPipelineFactory.h">
+      <Filter>platform\gstreamer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\platform\gstreamer\GstVideoFrame.h">
+      <Filter>platform\gstreamer</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

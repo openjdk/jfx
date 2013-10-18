@@ -1,0 +1,171 @@
+#
+# glib Makefile
+#
+CC = cl.exe
+LIB = lib.exe
+
+OBJBASE_DIR = $(BUILD_DIR)/obj/$(GLIB_BASE_DIR)/glib
+SRCBASE_DIR = ../../../$(GLIB_BASE_DIR)
+
+DIRLIST = gnulib \
+          libcharset \
+          pcre \
+          .
+
+DEP_DIRS = $(BUILD_DIR) $(addprefix $(OBJBASE_DIR)/,$(DIRLIST))
+
+C_SOURCES = gnulib/asnprintf.c \
+			gnulib/printf.c \
+			gnulib/printf-args.c \
+			gnulib/printf-parse.c \
+			gnulib/vasnprintf.c \
+			libcharset/localcharset.c \
+			pcre/pcre_chartables.c \
+			pcre/pcre_compile.c \
+			pcre/pcre_config.c \
+			pcre/pcre_dfa_exec.c \
+			pcre/pcre_exec.c \
+			pcre/pcre_fullinfo.c \
+			pcre/pcre_get.c \
+			pcre/pcre_globals.c \
+			pcre/pcre_newline.c \
+			pcre/pcre_ord2utf8.c \
+			pcre/pcre_study.c \
+			pcre/pcre_tables.c \
+			pcre/pcre_try_flipped.c \
+			pcre/pcre_ucp_searchfuncs.c \
+			pcre/pcre_xclass.c \
+			garray.c \
+			gasyncqueue.c \
+			gatomic.c \
+			gbacktrace.c \
+			gbase64.c \
+			gbitlock.c \
+			gbookmarkfile.c \
+			gbuffer.c \
+			gcache.c \
+			gchecksum.c \
+			gcompletion.c \
+			gconvert.c \
+			gdataset.c \
+			gdate.c \
+			gdatetime.c \
+			gdir.c \
+			gerror.c \
+			gfileutils.c \
+			ghash.c \
+			ghook.c \
+			ghostutils.c \
+			giochannel.c \
+			giowin32.c \
+			gkeyfile.c \
+			glist.c \
+			gmain.c \
+			gmappedfile.c \
+			gmarkup.c \
+			gmem.c \
+			gmessages.c \
+			gnode.c \
+			goption.c \
+			gpattern.c \
+			gpoll.c \
+			gprimes.c \
+			gprintf.c \
+			gqsort.c \
+			gqueue.c \
+			grand.c \
+			gregex.c \
+			grel.c \
+			gscanner.c \
+			gsequence.c \
+			gshell.c \
+			gslice.c \
+			gslist.c \
+			gspawn-win32.c \
+			gstdio.c \
+			gstrfuncs.c \
+			gstring.c \
+			gtestutils.c \
+			gthread.c \
+			gthreadpool.c \
+			gtimer.c \
+			gtimezone.c \
+			gtree.c \
+			gunibreak.c \
+			gunicollate.c \
+			gunidecomp.c \
+			guniprop.c \
+			gurifuncs.c \
+			gutf8.c \
+			gutils.c \
+			gvariant.c \
+			gvariant-core.c \
+			gvariant-parser.c \
+			gvariant-serialiser.c \
+			gvarianttype.c \
+			gvarianttypeinfo.c \
+			gwin32.c
+
+COMPILER_FLAGS = -nologo -W3 -WX- -EHsc -GS -fp:precise -Gm- \
+                 -Zc:wchar_t -Zc:forScope -Gd -wd"4430" -analyze- -errorReport:queue \
+                 -wd"4005" -wd"4018" -wd"4028" -wd"4090" -wd"4113" -wd"4267" -wd"4715" \
+                 -wd"4146" -wd"4311" -wd"4312" -wd"4133" -wd"4146" -wd"4334" \
+                 -FI"msvc_recommended_pragmas.h" 
+
+INCLUDES = $(addprefix -I$(SRCBASE_DIR)/glib/,$(DIRLIST)) \
+           -I$(SRCBASE_DIR) \
+           -I$(SRCBASE_DIR)/build/win32/vs100
+
+CFLAGS =   -DWIN32 \
+           -D_WINDOWS \
+           -D_USRDLL \
+           -DGLIB_COMPILATION \
+           -DGSTREAMER_LITE \
+           -DHAVE_CONFIG_H \
+           -DG_LOG_DOMAIN=\"Glib\" \
+           -DG_DISABLE_DEPRECATED \
+           -DPCRE_STATIC \
+           -DLINK_SIZE=2 \
+           -DMAX_NAME_SIZE=32 \
+           -DMAX_NAME_COUNT=10000 \
+           -DNEWLINE=-1 \
+           -DPOSIX_MALLOC_THRESHOLD=10 \
+           -DMATCH_LIMIT=10000000 \
+           -DMATCH_LIMIT_RECURSION=10000000 \
+           -DHAVE_LONG_LONG \
+           -D_MBCS \
+           $(INCLUDES) \
+	   $(COMPILER_FLAGS)
+
+LIBFLAGS = -out:$(shell cygpath -ma $(TARGET)) -nologo
+
+ifeq ($(BUILD_TYPE), Release)
+    CFLAGS += -DNDEBUG -DG_DISABLE_ASSERT -DG_DISABLE_CHECKS -O1 -Oy -MD -Gy -GF
+else # debug
+    CFLAGS += -D_DEBUG -DG_ENABLE_DEBUG -Od -Oy- -RTC1 -MDd -Zi -Fd$(PDB)
+    LIBFLAGS +=  -libpath:strmiids.lib
+endif
+
+ifeq ($(ARCH), x32)
+    LIBFLAGS += -MACHINE:x86
+else
+    CFLAGS += -D_WIN64
+    LIBFLAGS += -MACHINE:x64
+endif
+
+OBJECTS = $(patsubst %.c,$(OBJBASE_DIR)/%.obj,$(C_SOURCES))
+
+.PHONY: default list
+
+default: $(TARGET)
+
+$(TARGET): $(OBJECTS)
+	$(LIB) $(LIBFLAGS) $(foreach object,$(OBJECTS),$(shell cygpath -ma $(object))) 
+
+$(OBJECTS): | $(DEP_DIRS)
+
+$(DEP_DIRS):
+	@mkdir -p $(DEP_DIRS)
+
+$(OBJBASE_DIR)/%.obj: $(SRCBASE_DIR)/glib/%.c
+	$(CC) $(CFLAGS) -TC -c -Fo$(shell cygpath -ma $@) $<

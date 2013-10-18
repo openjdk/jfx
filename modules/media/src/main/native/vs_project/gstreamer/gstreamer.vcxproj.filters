@@ -1,0 +1,562 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="gstreamer">
+      <UniqueIdentifier>{96b99498-f694-46ee-a9f7-43acad557735}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gstreamer\gst">
+      <UniqueIdentifier>{2b18cf7d-314d-4cfb-8864-0b4dc4a4e4b2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gstreamer\libs">
+      <UniqueIdentifier>{e5678bdf-4e9a-4294-966b-9ec2e9e3d469}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gstreamer\libs\gst">
+      <UniqueIdentifier>{73c420e5-75ec-41ea-ac8a-58d37fb11d46}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gstreamer\libs\gst\base">
+      <UniqueIdentifier>{e998d1b2-2c8b-42f3-b155-f8b6e0b2a4d6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gstreamer\libs\gst\controller">
+      <UniqueIdentifier>{bc958e7e-ebcd-4596-9eb7-894c6a9d602b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gst-plugins-base">
+      <UniqueIdentifier>{56aa4e17-bd65-4505-8976-f9355ad27b35}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gst-plugins-base\gst-libs">
+      <UniqueIdentifier>{0aa4ab7d-1d1e-4c2c-b151-63046053f07f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gst-plugins-base\gst-libs\gst">
+      <UniqueIdentifier>{3819d960-cfe3-4e7c-befb-4de98200752c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gst-plugins-base\gst-libs\gst\app">
+      <UniqueIdentifier>{5f48e2ff-564b-40df-a141-87bf1fa43546}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gst-plugins-base\gst-libs\gst\audio">
+      <UniqueIdentifier>{152eea1d-f1e9-4972-a500-e170cf68095d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gst-plugins-base\gst-libs\gst\fft">
+      <UniqueIdentifier>{e3b3603a-f2cb-422a-bedf-d64a4cd1fe1b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gst-plugins-base\gst-libs\gst\interfaces">
+      <UniqueIdentifier>{fbce7156-66c4-49b7-8f97-2a3641b15b64}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gst-plugins-base\gst-libs\gst\pbutils">
+      <UniqueIdentifier>{4c5dc392-181e-4e34-a92d-79478f3fb5f9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gst-plugins-base\gst-libs\gst\riff">
+      <UniqueIdentifier>{a30bd27e-9a9a-49ac-8322-7ca72d47cccd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gst-plugins-base\gst-libs\gst\tag">
+      <UniqueIdentifier>{0207cfa7-f9f6-42f1-8ede-e372c6d47be7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gst-plugins-bad">
+      <UniqueIdentifier>{9905b210-f0aa-4935-b6f8-39b8be254128}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gst-plugins-bad\gst">
+      <UniqueIdentifier>{4f25fc99-8a55-4290-b278-2bbfa1953fc0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gst-plugins-bad\gst\aiff">
+      <UniqueIdentifier>{b8d12a56-eea4-4cd8-8695-bb4bebc936ab}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gst-plugins-base\gst">
+      <UniqueIdentifier>{1c57406f-a691-440f-9a86-4c8297a9c4af}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gst-plugins-base\gst\app">
+      <UniqueIdentifier>{d3be80eb-042a-4eea-bc35-0b067e70a043}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gst-plugins-base\gst\audioconvert">
+      <UniqueIdentifier>{6b82b1b4-cb1f-4a99-ba79-d53abbc39c8f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gst-plugins-base\gst\typefind">
+      <UniqueIdentifier>{3b477937-6be9-4356-8092-dd4939de7943}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gst-plugins-good">
+      <UniqueIdentifier>{f03461fb-238e-4099-80a3-53de89465692}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gst-plugins-good\gst">
+      <UniqueIdentifier>{9155fa69-1ef4-4525-baba-7a28490bf939}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gst-plugins-good\gst\audioparsers">
+      <UniqueIdentifier>{e767365e-d0bc-4113-96cc-de630d40534c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gst-plugins-good\sys">
+      <UniqueIdentifier>{422935dd-5cad-4bff-94be-5c8191e56bcd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gst-plugins-good\sys\directsound">
+      <UniqueIdentifier>{553ee0ec-a058-410e-a57b-02ffa7a12534}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gst-plugins-good\gst\equalizer">
+      <UniqueIdentifier>{e01f3cfc-073f-43d4-9039-74c194e074a3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gst-plugins-good\gst\isomp4">
+      <UniqueIdentifier>{3d024713-6312-4014-a287-bd8ef46b4b53}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gst-plugins-good\gst\spectrum">
+      <UniqueIdentifier>{50937d4e-1cf1-4d9b-87a5-97384bdda02f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gst-plugins-good\gst\wavparse">
+      <UniqueIdentifier>{dad8d967-564c-4a86-b92d-09147d1565ea}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gstreamer\plugins">
+      <UniqueIdentifier>{55f7d695-7ec9-434f-a0cf-57108274c205}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gstreamer\plugins\elements">
+      <UniqueIdentifier>{20b535e5-039a-4e27-8e42-b8853f3ec194}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gstreamer\plugins\indexers">
+      <UniqueIdentifier>{98d0fd20-457a-4f01-9c4d-f0aecc61ae11}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="projects">
+      <UniqueIdentifier>{5559a4fb-2b79-4bce-a5b8-3452223fc985}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="projects\plugins">
+      <UniqueIdentifier>{e2244338-d282-4c36-b3aa-f2565f17726a}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gst.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstbin.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstbuffer.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstbus.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstcaps.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstchildproxy.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstclock.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstdatetime.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstdebugutils.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstelement.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstelementfactory.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstenumtypes.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gsterror.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstevent.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstfilter.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstformat.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstghostpad.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstindex.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstindexfactory.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstinfo.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstinterface.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstiterator.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstmarshal.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstmessage.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstminiobject.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstobject.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstpad.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstpadtemplate.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstparamspecs.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstparse.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstpipeline.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstplugin.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstpluginfeature.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstpluginloader.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstpoll.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstquark.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstquery.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstregistry.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstregistrybinary.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstregistrychunks.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstsegment.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gststructure.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstsystemclock.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gsttaglist.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gsttagsetter.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gsttask.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gsttaskpool.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gsttrace.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gsttypefind.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gsttypefindfactory.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gsturi.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstutils.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstvalue.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\libs\gst\base\gstadapter.c">
+      <Filter>gstreamer\libs\gst\base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\libs\gst\base\gstbaseparse.c">
+      <Filter>gstreamer\libs\gst\base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\libs\gst\base\gstbasesink.c">
+      <Filter>gstreamer\libs\gst\base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\libs\gst\base\gstbasesrc.c">
+      <Filter>gstreamer\libs\gst\base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\libs\gst\base\gstbasetransform.c">
+      <Filter>gstreamer\libs\gst\base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\libs\gst\base\gstbytereader.c">
+      <Filter>gstreamer\libs\gst\base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\libs\gst\base\gstcollectpads.c">
+      <Filter>gstreamer\libs\gst\base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\libs\gst\base\gstpushsrc.c">
+      <Filter>gstreamer\libs\gst\base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\libs\gst\base\gsttypefindhelper.c">
+      <Filter>gstreamer\libs\gst\base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\libs\gst\controller\gstcontroller.c">
+      <Filter>gstreamer\libs\gst\controller</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\libs\gst\controller\gstcontrolsource.c">
+      <Filter>gstreamer\libs\gst\controller</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\libs\gst\controller\gsthelper.c">
+      <Filter>gstreamer\libs\gst\controller</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\libs\gst\controller\gstinterpolation.c">
+      <Filter>gstreamer\libs\gst\controller</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\libs\gst\controller\lib.c">
+      <Filter>gstreamer\libs\gst\controller</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\app\gstappbuffer.c">
+      <Filter>gst-plugins-base\gst-libs\gst\app</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\app\gstappsink.c">
+      <Filter>gst-plugins-base\gst-libs\gst\app</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio.c">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio-enumtypes.c">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudioclock.c">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiofilter.c">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiosink.c">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiosrc.c">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstbaseaudiosink.c">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstbaseaudiosrc.c">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstringbuffer.c">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\mixerutils.c">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\multichannel.c">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\fft\gstfft.c">
+      <Filter>gst-plugins-base\gst-libs\gst\fft</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\fft\gstfftf32.c">
+      <Filter>gst-plugins-base\gst-libs\gst\fft</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\fft\gstfftf64.c">
+      <Filter>gst-plugins-base\gst-libs\gst\fft</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\fft\gstffts16.c">
+      <Filter>gst-plugins-base\gst-libs\gst\fft</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\fft\gstffts32.c">
+      <Filter>gst-plugins-base\gst-libs\gst\fft</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\fft\kiss_fft_f32.c">
+      <Filter>gst-plugins-base\gst-libs\gst\fft</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\fft\kiss_fft_f64.c">
+      <Filter>gst-plugins-base\gst-libs\gst\fft</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\fft\kiss_fft_s16.c">
+      <Filter>gst-plugins-base\gst-libs\gst\fft</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\fft\kiss_fft_s32.c">
+      <Filter>gst-plugins-base\gst-libs\gst\fft</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\fft\kiss_fftr_f32.c">
+      <Filter>gst-plugins-base\gst-libs\gst\fft</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\fft\kiss_fftr_f64.c">
+      <Filter>gst-plugins-base\gst-libs\gst\fft</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\fft\kiss_fftr_s16.c">
+      <Filter>gst-plugins-base\gst-libs\gst\fft</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\fft\kiss_fftr_s32.c">
+      <Filter>gst-plugins-base\gst-libs\gst\fft</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\interfaces\interfaces-enumtypes.c">
+      <Filter>gst-plugins-base\gst-libs\gst\interfaces</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\interfaces\interfaces-marshal.c">
+      <Filter>gst-plugins-base\gst-libs\gst\interfaces</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\interfaces\mixer.c">
+      <Filter>gst-plugins-base\gst-libs\gst\interfaces</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\interfaces\mixeroptions.c">
+      <Filter>gst-plugins-base\gst-libs\gst\interfaces</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\interfaces\mixertrack.c">
+      <Filter>gst-plugins-base\gst-libs\gst\interfaces</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\interfaces\navigation.c">
+      <Filter>gst-plugins-base\gst-libs\gst\interfaces</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\interfaces\propertyprobe.c">
+      <Filter>gst-plugins-base\gst-libs\gst\interfaces</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\interfaces\videoorientation.c">
+      <Filter>gst-plugins-base\gst-libs\gst\interfaces</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\pbutils\codec-utils.c">
+      <Filter>gst-plugins-base\gst-libs\gst\pbutils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\pbutils\descriptions.c">
+      <Filter>gst-plugins-base\gst-libs\gst\pbutils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\pbutils\missing-plugins.c">
+      <Filter>gst-plugins-base\gst-libs\gst\pbutils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\pbutils\pbutils.c">
+      <Filter>gst-plugins-base\gst-libs\gst\pbutils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\pbutils\pbutils-enumtypes.c">
+      <Filter>gst-plugins-base\gst-libs\gst\pbutils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\riff\riff.c">
+      <Filter>gst-plugins-base\gst-libs\gst\riff</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\riff\riff-media.c">
+      <Filter>gst-plugins-base\gst-libs\gst\riff</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\riff\riff-read.c">
+      <Filter>gst-plugins-base\gst-libs\gst\riff</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\tag\gstid3tag.c">
+      <Filter>gst-plugins-base\gst-libs\gst\tag</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\tag\gsttagdemux.c">
+      <Filter>gst-plugins-base\gst-libs\gst\tag</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\tag\lang.c">
+      <Filter>gst-plugins-base\gst-libs\gst\tag</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\tag\tags.c">
+      <Filter>gst-plugins-base\gst-libs\gst\tag</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-bad\gst\aiff\aiff.c">
+      <Filter>gst-plugins-bad\gst\aiff</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-bad\gst\aiff\aiffparse.c">
+      <Filter>gst-plugins-bad\gst\aiff</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst\app\gstapp.c">
+      <Filter>gst-plugins-base\gst\app</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst\audioconvert\audioconvert.c">
+      <Filter>gst-plugins-base\gst\audioconvert</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst\audioconvert\gstaudioconvert.c">
+      <Filter>gst-plugins-base\gst\audioconvert</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst\audioconvert\gstaudioconvertorc-dist.c">
+      <Filter>gst-plugins-base\gst\audioconvert</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst\audioconvert\gstaudioquantize.c">
+      <Filter>gst-plugins-base\gst\audioconvert</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst\audioconvert\gstchannelmix.c">
+      <Filter>gst-plugins-base\gst\audioconvert</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst\audioconvert\plugin.c">
+      <Filter>gst-plugins-base\gst\audioconvert</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst\typefind\gsttypefindfunctions.c">
+      <Filter>gst-plugins-base\gst\typefind</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\audioparsers\gstmpegaudioparse.c">
+      <Filter>gst-plugins-good\gst\audioparsers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\audioparsers\parsersplugin.c">
+      <Filter>gst-plugins-good\gst\audioparsers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\sys\directsound\gstdirectsoundplugin.c">
+      <Filter>gst-plugins-good\sys\directsound</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\sys\directsound\gstdirectsoundsink.c">
+      <Filter>gst-plugins-good\sys\directsound</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\equalizer\gstiirequalizer.c">
+      <Filter>gst-plugins-good\gst\equalizer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\equalizer\gstiirequalizernbands.c">
+      <Filter>gst-plugins-good\gst\equalizer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\isomp4-plugin.c">
+      <Filter>gst-plugins-good\gst\isomp4</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux.c">
+      <Filter>gst-plugins-good\gst\isomp4</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_dump.c">
+      <Filter>gst-plugins-good\gst\isomp4</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_lang.c">
+      <Filter>gst-plugins-good\gst\isomp4</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_types.c">
+      <Filter>gst-plugins-good\gst\isomp4</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\spectrum\gstspectrum.c">
+      <Filter>gst-plugins-good\gst\spectrum</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\wavparse\gstwavparse.c">
+      <Filter>gst-plugins-good\gst\wavparse</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\plugins\elements\gstcapsfilter.c">
+      <Filter>gstreamer\plugins\elements</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\plugins\elements\gstelements.c">
+      <Filter>gstreamer\plugins\elements</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\plugins\elements\gstfakesink.c">
+      <Filter>gstreamer\plugins\elements</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\plugins\elements\gstfakesrc.c">
+      <Filter>gstreamer\plugins\elements</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\plugins\elements\gstfilesink.c">
+      <Filter>gstreamer\plugins\elements</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\plugins\elements\gstfilesrc.c">
+      <Filter>gstreamer\plugins\elements</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\plugins\elements\gstidentity.c">
+      <Filter>gstreamer\plugins\elements</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\plugins\elements\gstqueue.c">
+      <Filter>gstreamer\plugins\elements</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\plugins\elements\gsttypefindelement.c">
+      <Filter>gstreamer\plugins\elements</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\plugins\indexers\gstindexers.c">
+      <Filter>gstreamer\plugins\indexers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\plugins\indexers\gstmemindex.c">
+      <Filter>gstreamer\plugins\indexers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\projects\plugins\gstplugins-lite.c">
+      <Filter>projects\plugins</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

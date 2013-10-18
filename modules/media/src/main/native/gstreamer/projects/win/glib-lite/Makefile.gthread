@@ -1,0 +1,67 @@
+#
+# gthread Makefile
+#
+CC = cl.exe
+LIB = lib.exe
+
+OBJBASE_DIR = $(BUILD_DIR)/obj/$(GLIB_BASE_DIR)/gthread
+SRCBASE_DIR = ../../../$(GLIB_BASE_DIR)
+
+DEP_DIRS = $(BUILD_DIR) $(OBJBASE_DIR)
+
+C_SOURCES = gthread-impl.c
+
+COMPILER_FLAGS = -nologo -W3 -WX- -EHsc -GS -fp:precise -Gm- \
+                 -Zc:wchar_t -Zc:forScope -Gd -wd"4430" -analyze- -errorReport:queue \
+                 -wd"4005" -wd"4018" -wd"4028" -wd"4090" -wd"4113" -wd"4267" -wd"4715" \
+                 -wd"4146" -wd"4311" -wd"4312" -wd"4133" -wd"4146" -wd"4334" \
+                 -FI"msvc_recommended_pragmas.h" 
+
+INCLUDES = -I$(SRCBASE_DIR) \
+           -I$(SRCBASE_DIR)/glib \
+           -I$(SRCBASE_DIR)/gthread \
+           -I$(SRCBASE_DIR)/build/win32/vs100
+
+CFLAGS =   -DWIN32 \
+           -D_WINDOWS \
+           -D_USRDLL \
+           -DGSTREAMER_LITE \
+           -DHAVE_CONFIG_H \
+           -DG_LOG_DOMAIN=\"GThread\" \
+           -DG_DISABLE_DEPRECATED \
+           -D_MBCS \
+	   $(INCLUDES) \
+           $(COMPILER_FLAGS)
+
+LIBFLAGS = -out:$(shell cygpath -ma $(TARGET)) -nologo
+
+ifeq ($(BUILD_TYPE), Release)
+    CFLAGS += -DNDEBUG -DG_DISABLE_ASSERT -DG_DISABLE_CHECKS -O1 -Oy -MD -Gy -GF
+else # debug
+    CFLAGS += -D_DEBUG -DG_ENABLE_DEBUG -Od -Oy- -RTC1 -MDd -Zi -Fd$(PDB)
+    LIBFLAGS +=  -libpath:strmiids.lib
+endif
+
+ifeq ($(ARCH), x32)
+    LIBFLAGS += -MACHINE:x86
+else
+    CFLAGS += -D_WIN64
+    LIBFLAGS += -MACHINE:x64
+endif
+
+OBJECTS = $(patsubst %.c,$(OBJBASE_DIR)/%.obj,$(C_SOURCES))
+
+.PHONY: default list
+
+default: $(TARGET)
+
+$(TARGET): $(OBJECTS) 
+	$(LIB) $(LIBFLAGS) $(foreach object,$(OBJECTS),$(shell cygpath -ma $(object))) 
+
+$(OBJECTS): | $(DEP_DIRS)
+
+$(DEP_DIRS):
+	mkdir -p $(DEP_DIRS)
+
+$(OBJBASE_DIR)/%.obj: $(SRCBASE_DIR)/gthread/%.c
+	$(CC) $(CFLAGS) -TC -c -Fo$(shell cygpath -ma $@) $<
