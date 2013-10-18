@@ -2565,7 +2565,7 @@ public class FXMLLoader {
         StringBuilder messageBuilder = new StringBuilder("\n");
 
         for (FXMLLoader loader : loaders) {
-            messageBuilder.append(loader.location.getPath());
+            messageBuilder.append(loader.location != null ? loader.location.getPath() : "unknown path");
 
             if (loader.current != null) {
                 messageBuilder.append(":");
