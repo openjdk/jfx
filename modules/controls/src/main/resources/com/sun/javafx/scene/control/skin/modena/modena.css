@@ -533,7 +533,7 @@ is being used to size a border should also be in pixels.
 .radio-button:selected > .radio > .dot,
 .check-box:selected > .box > .mark,
 .check-box:indeterminate  > .box > .mark {
-    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color !important;
+    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
 }
 
@@ -1490,7 +1490,7 @@ is being used to size a border should also be in pixels.
 .menu-bar > .container > .menu-button:hover > .label,
 .menu-bar > .container > .menu-button:focused > .label,
 .menu-bar > .container > .menu-button:showing  > .label {
-    -fx-text-fill: -fx-text-background-color !important;
+    -fx-text-fill: -fx-text-background-color;
 }
 .menu-bar:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
@@ -1765,12 +1765,12 @@ is being used to size a border should also be in pixels.
 }
 .combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected {
     -fx-background:  -fx-selection-bar-non-focused;
-    -fx-background-color:  -fx-background !important;
+    -fx-background-color:  -fx-background;
 }
 .combo-box-popup  > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:hover,
 .combo-box-popup  > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected:hover {
     -fx-background: -fx-accent;
-    -fx-background-color: -fx-selection-bar !important;
+    -fx-background-color: -fx-selection-bar;
 }
 .combo-box-popup > .list-view > .placeholder > .label {
     -fx-text-fill: derive(-fx-control-inner-background,-30%);
@@ -1879,23 +1879,24 @@ is being used to size a border should also be in pixels.
  ******************************************************************************/
 
 .color-picker > .arrow-button {
-    -fx-background-color: null !important;
+    -fx-background-color: null;
     -fx-padding: 0.5em 0.667em 0.5em 0; /*  6 8 6 0 */
 }
 .color-picker.split-button > .arrow-button  {
-    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color !important;
+    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
     -fx-background-insets: 1 1 1 0, 1, 2;
     -fx-background-radius: 0 3 3 0, 0 2 2 0, 0 1 1 0;
 }
 .color-picker.split-button:focused > .arrow-button {
     /*-fx-background-color: -fx-focus-color, -fx-inner-border, -fx-body-color !important;*/
     /*-fx-background-insets: 0, 1, 2;*/
-    -fx-background-color: -fx-focus-color, -fx-inner-border, -fx-body-color, -fx-faint-focus-color, -fx-body-color !important;
+    -fx-background-color: -fx-focus-color, -fx-inner-border, -fx-body-color, -fx-faint-focus-color, -fx-body-color;
     -fx-background-insets: 1 1 1 0, 1, 2, 1, 2.6;
     -fx-background-radius: 0 3 3 0, 0 2 2 0, 0 1 1 0, 0 1 1 0, 0 1 1 0;
 }
-.color-picker.split-button > .color-picker-label{
-    -fx-background-color: null !important;
+.color-picker.split-button > .color-picker-label,
+.color-picker.split-button:focused > .color-picker-label{
+    -fx-background-color: null;
 }
 .color-picker.split-button > .arrow-button {
     /*-fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color !important;*/
@@ -2250,8 +2251,8 @@ is being used to size a border should also be in pixels.
 .tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:focused,
 .table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell > .table-cell:focused,
 .tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell:focused {
-    -fx-background-color: -fx-background, -fx-cell-focus-inner-border, -fx-background !important;
-    -fx-background-insets: 0, 1, 2 !important;
+    -fx-background-color: -fx-background, -fx-cell-focus-inner-border, -fx-background;
+    -fx-background-insets: 0, 1, 2;
 }
 
 /*******************************************************************************
@@ -2461,7 +2462,7 @@ is being used to size a border should also be in pixels.
     -fx-background-insets: 0,1;
 }
 .check-box-table-cell > .check-box:selected > .box > .mark {
-    -fx-background-color: -fx-text-background-color !important;
+    -fx-background-color: -fx-text-background-color;
     -fx-background-insets: 0;
 }
 .table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled > .check-box-table-cell:selected > .check-box > .box,
