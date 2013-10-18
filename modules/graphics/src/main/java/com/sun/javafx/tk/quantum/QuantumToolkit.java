@@ -469,21 +469,17 @@ public final class QuantumToolkit extends Toolkit {
             if (!toolkitRunning.get()) {
                 return;
             }
-            try {
-                nextPulseRequested.set(false);
-                if (animationRunnable != null) {
-                    animationRunning.set(true);
-                    animationRunnable.run();
-                } else {
-                    animationRunning.set(false);
-                }
-                firePulse();
-                if (collect) collector.renderAll();
-                endPulseRunning();
-            } catch (Throwable th) {
-                th.printStackTrace(System.err);
+            nextPulseRequested.set(false);
+            if (animationRunnable != null) {
+                animationRunning.set(true);
+                animationRunnable.run();
+            } else {
+                animationRunning.set(false);
             }
+            firePulse();
+            if (collect) collector.renderAll();
         } finally {
+            endPulseRunning();
             if (PULSE_LOGGING_ENABLED) {
                 PULSE_LOGGER.pulseEnd();
             }

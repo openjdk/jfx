@@ -845,14 +845,21 @@ public class NGCanvas extends NGNode {
                 case STROKE_TEXT:
                 {
                     RenderBuf dest;
+                    boolean tempvalidated;
+                    boolean clipvalidated;
                     if (!clipStack.isEmpty()) {
                         initClip();
+                        clipvalidated = true;
                         temp.validate(cv.g, tw, th);
+                        tempvalidated = true;
                         dest = temp;
                     } else if (blendmode != Blend.Mode.SRC_OVER) {
+                        clipvalidated = false;
                         temp.validate(cv.g, tw, th);
+                        tempvalidated = true;
                         dest = temp;
                     } else {
+                        clipvalidated = tempvalidated = false;
                         dest = cv;
                     }
                     if (effect != null) {
@@ -905,10 +912,6 @@ public class NGCanvas extends NGNode {
                         }
                         blendAthruBintoC(temp, Mode.SRC_IN, clip,
                                          TEMP_RECTBOUNDS, compmode, dest);
-                        clip.tex.unlock();
-                        if (dest != temp) {
-                            temp.tex.unlock();
-                        }
                     }
                     if (blendmode != Blend.Mode.SRC_OVER) {
                         // We always use SRC mode here because the results of
@@ -917,6 +920,12 @@ public class NGCanvas extends NGNode {
                         // blending math.
                         blendAthruBintoC(temp, blendmode, cv,
                                          TEMP_RECTBOUNDS, CompositeMode.SRC, cv);
+                    }
+                    if (clipvalidated) {
+                        clip.tex.unlock();
+                    }
+                    if (tempvalidated) {
+                        temp.tex.unlock();
                     }
                     break;
                 }

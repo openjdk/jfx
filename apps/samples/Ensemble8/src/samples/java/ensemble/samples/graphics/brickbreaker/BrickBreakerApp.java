@@ -35,7 +35,6 @@ import javafx.application.Application;
 import javafx.scene.Parent;
 import javafx.scene.Group;
 import javafx.scene.Scene;
-import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
 /**
@@ -59,9 +58,9 @@ import javafx.stage.Stage;
 
 public class BrickBreakerApp extends Application {
 
-    private static MainFrame mainFrame;
+    private MainFrame mainFrame;
 
-    public static MainFrame getMainFrame() {
+    public MainFrame getMainFrame() {
         return mainFrame;
     }
     
@@ -169,13 +168,13 @@ public class BrickBreakerApp extends Application {
             if (state < 1 || state > LevelData.getLevelsCount()) {
                 root.getChildren().remove(level);
                 level = null;
-                splash = new Splash();
+                splash = new Splash(mainFrame);
                 root.getChildren().add(splash);
                 splash.start();
             } else {
                 root.getChildren().remove(splash);
                 splash = null;
-                level = new Level(state);
+                level = new Level(mainFrame, state);
                 root.getChildren().add(level);
                 level.start();
             }

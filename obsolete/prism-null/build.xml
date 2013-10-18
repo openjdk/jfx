@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project name="prism-null" default="jar" basedir=".">
-    <description>Builds, tests, and runs the OpenJFX prism-null project.</description>
-
-    <import file="../build-defs.xml"/>
-    <import file="build-common.xml"/>
-</project>

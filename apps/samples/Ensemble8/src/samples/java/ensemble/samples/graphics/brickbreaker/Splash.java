@@ -31,6 +31,7 @@
  */
 package ensemble.samples.graphics.brickbreaker;
 
+import ensemble.samples.graphics.brickbreaker.BrickBreakerApp.MainFrame;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.event.ActionEvent;
@@ -120,7 +121,7 @@ public class Splash extends Parent {
         timeline.stop();
     }
 
-    Splash() {
+    Splash(final MainFrame mainFrame) {
         state = STATE_SHOW_TITLE;
         stateArg = 0;
         initTimeline();
@@ -130,13 +131,13 @@ public class Splash extends Parent {
         background.setFitWidth(Config.SCREEN_WIDTH);
         background.setFitHeight(Config.SCREEN_HEIGHT);
         background.setOnMousePressed(new EventHandler<MouseEvent>() {
-            public void handle(MouseEvent me) {
-                BrickBreakerApp.getMainFrame().startGame();
+            @Override public void handle(MouseEvent me) {
+                mainFrame.startGame();
             }
         });
         background.setOnKeyPressed(new EventHandler<KeyEvent>() {
-            public void handle(KeyEvent ke) {
-                BrickBreakerApp.getMainFrame().startGame();
+            @Override public void handle(KeyEvent ke) {
+                mainFrame.startGame();
             }
         });
         brick = new ImageView();

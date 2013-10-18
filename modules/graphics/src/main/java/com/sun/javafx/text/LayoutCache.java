@@ -25,8 +25,16 @@
 
 package com.sun.javafx.text;
 
+import com.sun.javafx.font.PGFont;
+
 class LayoutCache {
-    public int[] glyphs;
-    public float[] advances;
-    public boolean valid;
+    int[] glyphs;
+    float[] advances;
+    boolean valid;
+    char[] text;
+    PGFont font;
+    TextRun[] runs;
+    int runCount;
+    TextLine[] lines;
+    float layoutWidth, layoutHeight;
 }

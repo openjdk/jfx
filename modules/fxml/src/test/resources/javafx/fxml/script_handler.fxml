@@ -23,9 +23,15 @@ Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
 or visit www.oracle.com if you need additional information or have any
 questions.
 -->
+<?import javafx.fxml.Widget?>
 
-<?import javafx.fxml.*?>
+<?language javascript?>
 
-
-<Widget fx:controller="javafx.fxml.EventsTestController"
-        xmlns:fx="http://javafx.com/fxml" id="widget" onAction="#handleWidgetAction"/>
+<Widget xmlns:fx="http://javafx.com/fxml">
+    <fx:script>
+        function action(event) {
+            actionDone.set(true);
+        }
+    </fx:script>
+    <Widget fx:id="w" onAction="action(event)"/>
+</Widget>

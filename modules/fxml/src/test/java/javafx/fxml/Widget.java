@@ -176,6 +176,10 @@ public class Widget {
         actionHandler = value;
     }
 
+    public final EventHandler<ActionEvent> getOnAction() {
+        return actionHandler;
+    }
+
     public final void fire() {
         actionHandler.handle(new ActionEvent());
     }

@@ -347,10 +347,10 @@ static EAGLContext * ctx = nil;
     
         CAEAGLLayer * layer = (CAEAGLLayer*) self.layer;
         
-        if (layer.bounds.size.width != width || layer.bounds.size.height != height) {
+        if ((layer.bounds.size.width * layer.contentsScale) != width ||
+            (layer.bounds.size.height * layer.contentsScale) != height) {
             GLASS_LOG("Resizing renderBufferStorage (original size == %d,%d) new size == %f,%f ",
                   width, height, layer.bounds.size.width, layer.bounds.size.height);
-            //[layer setContentsScale:1];//magnify 1024x768 buffer to occupy retina display 2048x1536
         
             [clientContext renderbufferStorage:GL_RENDERBUFFER fromDrawable: layer];
         }
