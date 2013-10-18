@@ -91,9 +91,9 @@ class PlaygroundTabs extends TabPane {
         int rowIndex = 0;
         for (PlaygroundProperty prop : samplePage.sample.playgroundProperties) {
             try {
-                Object object = samplePage.sample.getApp();
+                Object object = samplePage.sampleInfo.getApp();
                 if (prop.fieldName != null) {
-                    Field declaredField = samplePage.sample.getClz().getDeclaredField(prop.fieldName);
+                    Field declaredField = samplePage.sampleInfo.getClz().getDeclaredField(prop.fieldName);
                     declaredField.setAccessible(true);
                     object = declaredField.get(object);
                 }

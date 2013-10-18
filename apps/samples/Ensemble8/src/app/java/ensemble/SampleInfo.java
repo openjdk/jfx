@@ -163,24 +163,13 @@ public class SampleInfo {
         label.setMaxSize(216, 162);
         return label;
     }
-    
-    private Class clz;
-    private Object app;
 
-    public Class getClz() {
-        return clz;
-    }
-
-    public Object getApp() {
-        return app;
-    }
-    
-    public Parent buildSampleNode() {
+    public SampleRuntimeInfo buildSampleNode() {
         try {
             Method play = null;
             Method stop = null;
-            clz = Class.forName(appClass);
-            app = clz.newInstance();
+            Class clz = Class.forName(appClass);
+            final Object app = clz.newInstance();
             Parent root = (Parent) clz.getMethod("createContent").invoke(app);
             
             for (Method m : clz.getMethods()) {
@@ -211,17 +200,17 @@ public class SampleInfo {
                     }
                 }
             });
-            
-            return root;
+
+            return new SampleRuntimeInfo(root, app, clz);
         } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | NoSuchMethodException | SecurityException | IllegalArgumentException | InvocationTargetException ex) {
             Logger.getLogger(SamplePage.class.getName()).log(Level.SEVERE, null, ex);
         }
-        return new Pane();
+        return new SampleRuntimeInfo(new Pane(), new Object(), Object.class);
     }
     private static final Image SAMPLE_BACKGROUND = getImage(
             SampleInfo.class.getResource("images/sample-background.png").toExternalForm());
     private class LargePreviewRegion extends Region {
-        private final Node sampleNode = buildSampleNode();
+        private final Node sampleNode = buildSampleNode().getSampleNode();
         private final Label label = new Label();
         private final ImageView background = new ImageView(SAMPLE_BACKGROUND);
 
@@ -361,5 +350,29 @@ public class SampleInfo {
             imageCache.put(url, image);
         }
         return image;
+    }
+
+    public static class SampleRuntimeInfo {
+        private final Parent sampleNode;
+        private final Object app;
+        private final Class clz;
+
+        public SampleRuntimeInfo(Parent sampleNode, Object app, Class clz) {
+            this.sampleNode = sampleNode;
+            this.app = app;
+            this.clz = clz;
+        }
+
+        public Object getApp() {
+            return app;
+        }
+
+        public Class getClz() {
+            return clz;
+        }
+
+        public Parent getSampleNode() {
+            return sampleNode;
+        }
     }
 }
