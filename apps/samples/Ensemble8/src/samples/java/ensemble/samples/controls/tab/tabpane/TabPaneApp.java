@@ -107,6 +107,7 @@ public class TabPaneApp extends Application {
 
         for (TabPane.TabClosingPolicy policy : TabPane.TabClosingPolicy.values()) {
             final RadioButton radioButton = new RadioButton(policy.name());
+            radioButton.setMnemonicParsing(false);
             radioButton.setToggleGroup(closingPolicy);
             radioButton.setOnAction(new EventHandler<ActionEvent>() {                
                 @Override public void handle(ActionEvent event) {
