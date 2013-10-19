@@ -413,10 +413,25 @@ public class TriangleMeshTest {
         assertArrayEquals(instance.getPoints().toArray(null), expecteds, 1e-3f);
     }
 
+    /**
+     * Test the vertex format length (point, texcoord and face) of default TriangleMesh.
+     */
+    @Test
+    public void testVertexFormatOfDefaultTriangleMesh() {
+        TriangleMesh triMesh = new TriangleMesh();
+        // x, y, z
+        assertEquals(3, triMesh.getPointElementSize());
+        // u, v
+        assertEquals(2, triMesh.getTexCoordElementSize());
+        // 3 point indices and 3 texCoord indices per triangle
+        assertEquals(6, triMesh.getFaceElementSize());
+    }
+
     TriangleMesh buildTriangleMesh(int subDivX, int subDivY) {
-        final int pointSize = 3;
-        final int texCoordSize = 2;
-        final int faceSize = 6; // 3 point indices and 3 texCoord indices per triangle
+        TriangleMesh triangleMesh = new TriangleMesh();
+        final int pointSize = triangleMesh.getPointElementSize();
+        final int texCoordSize = triangleMesh.getTexCoordElementSize();
+        final int faceSize = triangleMesh.getFaceElementSize();
         int numDivX = subDivX + 1;
         int numVerts = (subDivY + 1) * numDivX;
         float points[] = new float[numVerts * pointSize];
@@ -424,7 +439,6 @@ public class TriangleMeshTest {
         int faceCount = subDivX * subDivY * 2;
         int faces[] = new int[faceCount * faceSize];
 
-        TriangleMesh triangleMesh = new TriangleMesh();
         triangleMesh.getPoints().setAll(points);
         triangleMesh.getTexCoords().setAll(texCoords);
         triangleMesh.getFaces().setAll(faces);

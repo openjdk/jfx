@@ -31,8 +31,6 @@
  */
 package com.javafx.experiments.shape3d.symbolic;
 
-import javafx.scene.shape.TriangleMesh;
-
 /**
  * A 3D geometric point array that has the x, y, z coordinates of every point
  * as a function of other variables.
@@ -40,10 +38,12 @@ import javafx.scene.shape.TriangleMesh;
 public abstract class SymbolicPointArray {
     final public float[] data;
     final public int numPoints;
+    // x, y, z as stated.
+    static final int NUM_COMPONENTS_PER_POINT = 3;
     
     protected SymbolicPointArray(float[] data) {
         this.data = data;
-        this.numPoints = data.length/TriangleMesh.NUM_COMPONENTS_PER_POINT;
+        this.numPoints = data.length / NUM_COMPONENTS_PER_POINT;
     }
     
     /**

@@ -33,7 +33,6 @@ package com.javafx.experiments.shape3d.symbolic;
 
 import java.util.Arrays;
 import com.javafx.experiments.shape3d.SubdivisionMesh;
-import javafx.scene.shape.TriangleMesh;
 
 public class SubdividedPointArray extends SymbolicPointArray {
     private final float[] controlPoints; // points of the previous subdivision level
@@ -47,7 +46,7 @@ public class SubdividedPointArray extends SymbolicPointArray {
     private int currPoint = 0;
     
     public SubdividedPointArray(SymbolicPointArray controlPointArray, int numPoints, SubdivisionMesh.BoundaryMode boundaryMode) {
-        super(new float[TriangleMesh.NUM_COMPONENTS_PER_POINT*numPoints]);
+        super(new float[NUM_COMPONENTS_PER_POINT * numPoints]);
         
         this.controlPoints = controlPointArray.data;
         this.controlInds = new int[numPoints][];

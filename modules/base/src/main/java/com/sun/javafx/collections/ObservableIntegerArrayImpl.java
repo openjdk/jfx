@@ -31,7 +31,7 @@ import javafx.collections.ObservableIntegerArray;
 /**
  * ObservableIntegerArray default implementation.
  */
-public final class ObservableIntegerArrayImpl extends ObservableArrayBase<ObservableIntegerArray> implements ObservableIntegerArray {
+public class ObservableIntegerArrayImpl extends ObservableArrayBase<ObservableIntegerArray> implements ObservableIntegerArray {
     
     private static final int[] INITIAL = new int[0];
     

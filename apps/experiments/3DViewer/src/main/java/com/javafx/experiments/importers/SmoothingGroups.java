@@ -41,7 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import com.sun.javafx.geom.Vec3f;
-import static javafx.scene.shape.TriangleMesh.*;
+import javafx.scene.shape.TriangleMesh;
 
 /** Util for converting Normals to Smoothing Groups */
 public class SmoothingGroups {
@@ -291,17 +291,19 @@ public class SmoothingGroups {
      * @param normals The array of normals
      * @return An array of smooth groups, where the length of the array is the number of faces
      */
-    public static int[] calcSmoothGroups(int[] flatFaces, int[] flatFaceNormals, float[] normals) {
-        int[][] faces = new int[flatFaces.length/NUM_COMPONENTS_PER_FACE][NUM_COMPONENTS_PER_FACE];
+    public static int[] calcSmoothGroups(TriangleMesh mesh, int[] flatFaces, int[] flatFaceNormals, float[] normals) {
+        int faceElementSize = mesh.getFaceElementSize();
+        int[][] faces = new int[flatFaces.length/faceElementSize][faceElementSize];
         for (int f = 0; f < faces.length; f++) {
-            for (int e = 0; e < NUM_COMPONENTS_PER_FACE; e++) {
-                faces[f][e] = flatFaces[f*NUM_COMPONENTS_PER_FACE + e];
+            for (int e = 0; e < faceElementSize; e++) {
+                faces[f][e] = flatFaces[f * faceElementSize + e];
             }
         }
-        int[][] faceNormals = new int[flatFaceNormals.length/NUM_COMPONENTS_PER_POINT][NUM_COMPONENTS_PER_POINT];
+        int pointElementSize = mesh.getPointElementSize();
+        int[][] faceNormals = new int[flatFaceNormals.length/pointElementSize][pointElementSize];
         for (int f = 0; f < faceNormals.length; f++) {
-            for (int e = 0; e < NUM_COMPONENTS_PER_POINT; e++) {
-                faceNormals[f][e] = flatFaceNormals[f*NUM_COMPONENTS_PER_POINT + e];
+            for (int e = 0; e < pointElementSize; e++) {
+                faceNormals[f][e] = flatFaceNormals[f * pointElementSize + e];
             }
         }
         SmoothingGroups smoothGroups = new SmoothingGroups(faces, faceNormals, normals);

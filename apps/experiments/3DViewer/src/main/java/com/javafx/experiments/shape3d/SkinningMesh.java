@@ -42,7 +42,6 @@ import javafx.collections.ObservableFloatArray;
 import javafx.geometry.Point3D;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.shape.TriangleMesh;
 import javafx.scene.transform.Affine;
 import javafx.scene.transform.MatrixType;
 import javafx.scene.transform.NonInvertibleTransformException;
@@ -83,7 +82,7 @@ public class SkinningMesh extends PolygonMesh {
         this.weights = weights;
 
         nJoints = joints.size();
-        nPoints = getPoints().size()/ TriangleMesh.NUM_COMPONENTS_PER_POINT;
+        nPoints = getPoints().size()/ getPointElementSize();
         
         // Create the jointIndexForest forest. Its structure is the same as 
         // jointForest, except that this forest have indices information and 

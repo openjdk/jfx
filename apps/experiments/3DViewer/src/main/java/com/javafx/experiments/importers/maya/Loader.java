@@ -1746,7 +1746,8 @@ class Loader {
             for (int i = 0; i < fff.length; i++) {
                 fff[i] = ff.get(i);
             }
-            
+
+            TriangleMesh mesh = new TriangleMesh();
             int[] smGroups;
             // we can only figure out faces' normal indices if the faces' normal indices have a one-to-one ordered correspondence with the normals
             if (nIndex == normals.getSize()) {
@@ -1754,13 +1755,12 @@ class Loader {
                 for (int i = 0; i < faceNormals.length; i++) {
                     faceNormals[i] = nn.get(i);
                 }
-                smGroups = SmoothingGroups.calcSmoothGroups(fff, faceNormals, normals.get());
+                smGroups = SmoothingGroups.calcSmoothGroups(mesh, fff, faceNormals, normals.get());
             } else {
                 smGroups = new int[fff.length];
                 Arrays.fill(smGroups, 1);
             }
             
-            TriangleMesh mesh = new TriangleMesh();
             mesh.getPoints().setAll(points);
             mesh.getTexCoords().setAll(texCoords);
             mesh.getFaces().setAll(fff);
