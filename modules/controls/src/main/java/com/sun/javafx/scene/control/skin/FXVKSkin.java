@@ -38,12 +38,17 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
+import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.control.TextInputControl;
+import javafx.scene.control.TextField;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.ComboBoxBase;
 import javafx.scene.Scene;
 import javafx.scene.input.InputEvent;
 import javafx.scene.input.KeyCode;
@@ -207,21 +212,63 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
     }
 
     private void adjustWindowPosition(final Node node) {
+        if ( !(node instanceof TextInputControl) ) {
+            return;
+        }
+
         // attached node y position in window coordinates
-        double inputControlYPos = node.localToScene(0.0, 0.0).getY() + node.getScene().getY();
+        double inputControlMinY = node.localToScene(0.0, 0.0).getY() + node.getScene().getY();
         double inputControlHeight = ((TextInputControl) node).getHeight();
+        double inputControlMaxY = inputControlMinY + inputControlHeight; 
+
         double screenHeight =
             com.sun.javafx.Utils.getScreen(node).getBounds().getHeight();
-        double VKWindowYPos = screenHeight - VK_HEIGHT;
+        double visibleAreaMaxY = screenHeight - VK_HEIGHT;
+
+        double inputLineCenterY = 0.0;
+        double inputLineBottomY = 0.0;
         double newWindowYPos = 0.0;
+        double screenTopOffset = 10.0;
 
-        Window w = node.getScene().getWindow();
-        // check if inputControl is hidden by VK in the original position
-        if (origWindowYPos + inputControlYPos + inputControlHeight > VKWindowYPos) {
-            newWindowYPos = VKWindowYPos / 2 - inputControlHeight / 2 - inputControlYPos;
+        if (node instanceof TextField) {
+            inputLineCenterY = inputControlMinY + inputControlHeight / 2;
+            inputLineBottomY = inputControlMaxY;
+            //check for combo box
+            Parent parent = attachedNode.getParent();
+            if (parent instanceof ComboBoxBase) {
+                //combo box
+                // position near screen top
+                newWindowYPos = Math.min(screenTopOffset - inputControlMinY, 0);
+            } else {
+                // position at center of visible screen area
+                newWindowYPos = Math.min(visibleAreaMaxY / 2 - inputLineCenterY, 0);
+            }
+        } else if (node instanceof TextArea) {
+            TextAreaSkin textAreaSkin = (TextAreaSkin)((TextArea)node).getSkin();
+            Bounds caretBounds = textAreaSkin.getCaretBounds();
+            double caretMinY = caretBounds.getMinY();
+            double caretMaxY = caretBounds.getMaxY();
+            inputLineCenterY = inputControlMinY + ( caretMinY + caretMaxY ) / 2;
+            inputLineBottomY = inputControlMinY + caretMaxY;
 
-            //Don't allow down shifts
+            if (inputControlHeight < visibleAreaMaxY) {
+                // position at center of visible screen area
+                newWindowYPos = visibleAreaMaxY / 2 - (inputControlMinY + inputControlHeight / 2);
+            } else {
+                // position the line containing the caret at center of visible screen area
+                newWindowYPos = visibleAreaMaxY / 2 - inputLineCenterY;
+            }
             newWindowYPos = Math.min(newWindowYPos, 0);
+
+        } else {
+            inputLineCenterY = inputControlMinY + inputControlHeight / 2;
+            inputLineBottomY = inputControlMaxY;
+            // position at center of visible screen area
+            newWindowYPos = Math.min(visibleAreaMaxY / 2 - inputLineCenterY, 0);
+        }
+       
+        Window w = node.getScene().getWindow();
+        if (origWindowYPos + inputLineBottomY > visibleAreaMaxY) {
             w.setY(newWindowYPos);
         } else {
             w.setY(origWindowYPos);
