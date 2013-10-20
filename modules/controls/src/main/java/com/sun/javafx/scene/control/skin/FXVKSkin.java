@@ -612,7 +612,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
             contentPrefWidth = altText.prefWidth(-1);
             contentPrefHeight = altText.prefHeight(-1);
             altText.resizeRelocate(
-                    (int) (left + ((width - contentPrefWidth) / 2) + .5 + width/2),
+                    (int) left + (width - contentPrefWidth) + .5,
                     (int) (top + ((height - contentPrefHeight) / 2) + .5 - height/2),
                     (int) contentPrefWidth,
                     (int) contentPrefHeight);
@@ -846,6 +846,14 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
                     }
                 }
             }
+            
+            boolean isMultiChar = false;
+            for (String s : secondaryList) {
+                if (s.length() > 1 ) {
+                    isMultiChar = true;
+                }
+            }
+            
             secondaryVK.chars = secondaryList.toArray(new String[secondaryList.size()]);
 
             if (secondaryVK.chars.length > 1) {
@@ -862,7 +870,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
                 int nKeysPerRow = (int)Math.ceil(nKeys / (double)nRows);
                 
                 final double w = snappedLeftInset() + snappedRightInset() +
-                                 nKeysPerRow * PREF_PORTRAIT_KEY_WIDTH + (nKeysPerRow - 1) * GAP;
+                                 nKeysPerRow * PREF_PORTRAIT_KEY_WIDTH * (isMultiChar ? 2 : 1) + (nKeysPerRow - 1) * GAP;
                 final double h = snappedTopInset() + snappedBottomInset() +
                                  nRows * PREF_KEY_HEIGHT + (nRows-1) * GAP;
 
