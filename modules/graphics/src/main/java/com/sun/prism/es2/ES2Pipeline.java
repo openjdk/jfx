@@ -43,6 +43,7 @@ public class ES2Pipeline extends GraphicsPipeline {
             pixelFormatAttributes = new GLPixelFormat.Attributes();
     static final boolean antiAliasingSupported;
     private static boolean es2Enabled;
+    private static boolean isEglfb = false;
 
     static {
         AccessController.doPrivileged(new PrivilegedAction<Void>() {
@@ -51,8 +52,10 @@ public class ES2Pipeline extends GraphicsPipeline {
                 String libName = "prism_es2";
 
                 String eglType = PlatformUtil.getEmbeddedType();
-                if ("eglfb".equals(eglType))
+                if ("eglfb".equals(eglType)) {
+                    isEglfb = true;
                     libName = "prism_es2_eglfb";
+                }
                 else if ("eglx11".equals(eglType))
                     libName = "prism_es2_eglx11";
 
@@ -180,6 +183,9 @@ public class ES2Pipeline extends GraphicsPipeline {
             throw new IllegalStateException(
                     "This operation is not permitted on the current thread ["
                     + Thread.currentThread().getName() + "]");
+        }
+        if (isEglfb) {
+            _default.dispose();
         }
         super.dispose();
     }

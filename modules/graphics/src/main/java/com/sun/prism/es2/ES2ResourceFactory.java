@@ -262,7 +262,7 @@ public class ES2ResourceFactory extends BaseShaderFactory {
     }
 
     public void dispose() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        context.clearContext();
     }
 
     public PhongMaterial createPhongMaterial() {
