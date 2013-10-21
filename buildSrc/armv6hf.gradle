@@ -140,7 +140,7 @@ def mediaCFlags = [extraCFlags,
     "-I$sdk/usr/include/gstreamer-0.10",
     "-I$sdk/usr/include/glib-2.0",
     "-I$sdk/usr/lib/arm-linux-gnueabihf/glib-2.0/include",
-    "-DENABLE.nativeSource=1", "-DENABLE_GST_FFMPEG=1"].flatten()
+    "-DENABLE_NATIVE_SOURCE=1", "-DENABLE_GST_FFMPEG=1"].flatten()
 def mediaLFlags = [extraLFlags, "-lgstreamer-0.10", "-lgstapp-0.10",
     "-lgstbase-0.10", "-lglib-2.0", "-lgobject-2.0", "-lgmodule-2.0", "-lgthread-2.0"].flatten()
 
@@ -452,3 +452,9 @@ ARMV6HF.webkit.objcopy  = file("$compilerHome/bin/arm-linux-gnueabihf-objcopy").
 ARMV6HF.webkit.strip    = file("$compilerHome/bin/arm-linux-gnueabihf-strip").getAbsolutePath()
 ARMV6HF.webkit.ccFlags  = extraCFlags.join(' ')
 ARMV6HF.webkit.linkFlags = extraLFlags.join(' ')
+
+ARMV6HF.media = [:]
+ARMV6HF.media.compiler = compiler
+ARMV6HF.media.linker = linker
+ARMV6HF.media.extra_cflags = mediaCFlags.join(' ')
+ARMV6HF.media.extra_ldflags = mediaLFlags.join(' ')

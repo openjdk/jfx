@@ -400,3 +400,8 @@ X86EGL.fontPango.ccFlags = ["-DJFXFONT_PLUS", ccFlags, pangoCCFlags].flatten()
 X86EGL.fontPango.linker = linker
 X86EGL.fontPango.linkFlags = [linkFlags, pangoLinkFlags].flatten()
 X86EGL.fontPango.lib = "javafx_font_pango"
+
+X86EGL.media =[:]
+X86EGL.media.compiler = compiler
+X86EGL.media.linker = linker
+X86EGL.media.lib = "ar"

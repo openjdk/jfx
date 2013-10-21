@@ -1,0 +1,14 @@
+# seek-data
+INT64:INT64
+
+# read-next-block
+INT:VOID
+
+# read-block
+INT:UINT64,UINT
+
+# copy-block
+VOID:POINTER,INT
+
+# get-property
+INT:INT,INT

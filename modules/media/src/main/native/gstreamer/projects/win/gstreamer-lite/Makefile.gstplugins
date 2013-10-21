@@ -1,0 +1,130 @@
+#
+# gstplugins Makefile
+#
+CC  = cl.exe
+LIB = lib.exe
+
+BASE_DIR = ../../..
+GSTREAMER_LITE = gstreamer-lite
+OBJBASE_DIR = $(BUILD_DIR)/obj/$(GSTREAMER_LITE)
+SRCBASE_DIR = $(BASE_DIR)/$(GSTREAMER_LITE)
+
+DIRLIST = gst-plugins-bad/gst/aiff/ \
+          gst-plugins-base/gst/app/ \
+          gst-plugins-base/gst/audioconvert/ \
+          gst-plugins-base/gst/typefind/ \
+          gst-plugins-good/gst/audioparsers/ \
+          gst-plugins-good/sys/directsound/ \
+          gst-plugins-good/gst/equalizer/ \
+          gst-plugins-good/gst/isomp4/ \
+          gst-plugins-good/gst/spectrum/ \
+          gst-plugins-good/gst/wavparse/ \
+          gstreamer/plugins/elements/ \
+          gstreamer/plugins/indexers/ \
+          projects/plugins/
+
+DEP_DIRS = $(BUILD_DIR) $(addprefix $(OBJBASE_DIR)/,$(DIRLIST))
+
+C_SOURCES = gst-plugins-bad/gst/aiff/aiff.c \
+			gst-plugins-bad/gst/aiff/aiffparse.c \
+			gst-plugins-base/gst/app/gstapp.c \
+			gst-plugins-base/gst/audioconvert/audioconvert.c \
+			gst-plugins-base/gst/audioconvert/gstaudioconvert.c \
+			gst-plugins-base/gst/audioconvert/gstaudioconvertorc-dist.c \
+			gst-plugins-base/gst/audioconvert/gstaudioquantize.c \
+			gst-plugins-base/gst/audioconvert/gstchannelmix.c \
+			gst-plugins-base/gst/audioconvert/plugin.c \
+			gst-plugins-base/gst/typefind/gsttypefindfunctions.c \
+			gst-plugins-good/gst/audioparsers/gstmpegaudioparse.c \
+			gst-plugins-good/gst/audioparsers/parsersplugin.c \
+			gst-plugins-good/sys/directsound/gstdirectsoundsink.c \
+			gst-plugins-good/sys/directsound/gstdirectsoundplugin.c \
+			gst-plugins-good/gst/equalizer/gstiirequalizer.c \
+			gst-plugins-good/gst/equalizer/gstiirequalizernbands.c \
+			gst-plugins-good/gst/isomp4/isomp4-plugin.c \
+			gst-plugins-good/gst/isomp4/qtdemux.c \
+			gst-plugins-good/gst/isomp4/qtdemux_dump.c \
+			gst-plugins-good/gst/isomp4/qtdemux_lang.c \
+			gst-plugins-good/gst/isomp4/qtdemux_types.c \
+			gst-plugins-good/gst/spectrum/gstspectrum.c \
+			gst-plugins-good/gst/wavparse/gstwavparse.c \
+			gstreamer/plugins/elements/gstcapsfilter.c \
+			gstreamer/plugins/elements/gstelements.c \
+			gstreamer/plugins/elements/gstfakesink.c \
+			gstreamer/plugins/elements/gstfakesrc.c \
+			gstreamer/plugins/elements/gstfilesink.c \
+			gstreamer/plugins/elements/gstfilesrc.c \
+			gstreamer/plugins/elements/gstidentity.c \
+			gstreamer/plugins/elements/gstqueue.c \
+			gstreamer/plugins/elements/gsttypefindelement.c \
+			gstreamer/plugins/indexers/gstindexers.c \
+			gstreamer/plugins/indexers/gstmemindex.c \
+			projects/plugins/gstplugins-lite.c
+
+COMPILER_FLAGS = -nologo -W3 -WX- -EHsc -GS -fp:precise -Gm- \
+                 -Zc:wchar_t -Zc:forScope -Gd -analyze- -errorReport:queue \
+                 -wd"4018" -wd"4244" -wd"4005" -wd"4018" -wd"4101" -wd"4146" -wd"4244" -wd"4996"
+
+INCLUDES = $(addprefix -I$(SRCBASE_DIR)/,$(DIRLIST)) \
+           -I$(BASE_DIR)/plugins/ \
+           -I$(SRCBASE_DIR)/projects/build/win32/common/ \
+           -I$(SRCBASE_DIR)/projects/plugins/ \
+           -I$(SRCBASE_DIR)/gstreamer/ \
+           -I$(SRCBASE_DIR)/gstreamer/libs/ \
+           -I$(SRCBASE_DIR)/gst-plugins-base/ \
+           -I$(SRCBASE_DIR)/gst-plugins-base/gst-libs/ \
+           -I$(SRCBASE_DIR)/gst-plugins-base/win32/common/ \
+           -I$(GLIB_DIR)/ \
+           -I$(GLIB_DIR)/glib/ \
+           -I$(GLIB_DIR)/gmodule/ \
+           -I$(GLIB_DIR)/build/win32/vs100/
+
+CFLAGS =   -DWIN32 \
+           -D_WINDOWS \
+           -DLIBGSTELEMENTS_EXPORTS \
+           -DHAVE_CONFIG_H \
+           -D_WIN32_DCOM \
+           -DCOBJMACROS \
+           -DGSTREAMER_LITE \
+           -DGST_REMOVE_DEPRECATED \
+           -DGST_DISABLE_GST_DEBUG \
+           -DGST_DISABLE_LOADSAVE \
+           -D_USE_MATH_DEFINES \
+           -D_USRDLL \
+           -D_WINDLL \
+           -D_MBCS \
+           $(INCLUDES) \
+           $(COMPILER_FLAGS)
+
+LIBFLAGS = -out:$(shell cygpath -ma $(TARGET)) -nologo
+
+ifeq ($(BUILD_TYPE), Release)
+    CFLAGS += -DNDEBUG -DG_DISABLE_DEPRECATED -DG_DISABLE_ASSERT -DG_DISABLE_CHECKS -O1 -Oy -MD -Gy -GF
+else # debug
+    CFLAGS += -D_DEBUG -Od -Oy- -RTC1 -MDd -Zi -Fd$(PDB)
+endif
+
+ifeq ($(ARCH), x32)
+    LIBFLAGS += -MACHINE:x86
+else
+    CFLAGS += -D_WIN64
+    LIBFLAGS += -MACHINE:x64
+endif
+
+OBJECTS = $(patsubst %.c,$(OBJBASE_DIR)/%.obj,$(C_SOURCES))
+
+.PHONY: default
+
+default: $(TARGET)
+
+$(TARGET): $(OBJECTS) 
+	$(LIB) $(LIBFLAGS) $(foreach object,$(OBJECTS),$(shell cygpath -ma $(object)))
+
+$(OBJECTS): | $(DEP_DIRS)
+
+$(DEP_DIRS):
+	@mkdir -p $(DEP_DIRS)
+
+$(OBJBASE_DIR)/%.obj: $(SRCBASE_DIR)/%.c
+	$(CC) $(CFLAGS) -TC -c -Fo$(shell cygpath -ma $@) $<
+

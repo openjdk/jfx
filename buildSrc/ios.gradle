@@ -379,3 +379,8 @@ project(":web") {
         }
     }
 }
+
+IOS.media =[:]
+IOS.media.compiler = compiler
+IOS.media.linker = linker
+IOS.media.lib = linker

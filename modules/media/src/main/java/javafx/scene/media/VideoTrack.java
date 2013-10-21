@@ -1,0 +1,74 @@
+/*
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+package javafx.scene.media;
+import java.util.Map;
+
+/**
+ * A {@link Track} that describes a video track. This will usually be the unique
+ * visual track in an audiovisual media resource.
+ * @since JavaFX 2.0
+ */
+public final class VideoTrack extends Track {
+    /**
+     * The width in pixels of the video contained in this video track.
+     */
+    private int width;
+
+    /**
+     * Retrieves the width of the track.
+     * @return the track width.
+     */
+    public final int getWidth() {
+        return width;
+    }
+
+    /**
+     * The height in pixels of the video contained in this video track.
+     */
+    private int height;
+
+    /**
+     * Retrieves the height of the track.
+     * @return the track height.
+     */
+    public final int getHeight() {
+        return height;
+    }
+
+    VideoTrack(long trackID, Map<String,Object> metadata) {
+        super(trackID, metadata);
+        
+        Object value = metadata.get("video width");
+        if (null != value && value instanceof Number) {
+            this.width = ((Number)value).intValue();
+        }
+        
+        value = metadata.get("video height");
+        if (null != value && value instanceof Number) {
+            this.height = ((Number)value).intValue();
+        }
+    }
+}

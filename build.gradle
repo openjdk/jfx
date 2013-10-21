@@ -119,7 +119,6 @@ String cygpath(String path) {
     return out.toString().trim();
 }
 
-
 void loadProperties(String sourceFileName) {
     def config = new Properties()
     def propFile = new File(sourceFileName)
@@ -298,13 +297,13 @@ if (BUILD_CLOSED) {
     apply from: supplementalPreBuildFile
 }
 
-// COMPILE_WEBKIT specifies whether to build all of webkit. COMPILE_GSTREAMER
-// specifies whether to build GStreamer. Both of these can be set by a
+// COMPILE_WEBKIT specifies whether to build all of webkit. COMPILE_MEDIA
+// specifies whether to build all of media. Both of these can be set by a
 // command line property
 defineProperty("COMPILE_WEBKIT", "false")
-defineProperty("COMPILE_GSTREAMER", "false")
+defineProperty("COMPILE_MEDIA", "false")
 if (COMPILE_WEBKIT instanceof String) ext.COMPILE_WEBKIT = Boolean.parseBoolean(COMPILE_WEBKIT)
-if (COMPILE_GSTREAMER instanceof String) ext.COMPILE_GSTREAMER = Boolean.parseBoolean(COMPILE_GSTREAMER)
+if (COMPILE_MEDIA instanceof String) ext.COMPILE_MEDIA = Boolean.parseBoolean(COMPILE_MEDIA)
 
 // COMPILE_PANGO specifies whether to build javafx-font-pango.
 defineProperty("COMPILE_PANGO", "false")
@@ -931,7 +930,7 @@ void addJCov(p, test) {
 allprojects {
     // We want to configure all projects as java projects and use the same compile settings
     // etc, except for the root project which we just want to ignore (and for now media)
-    if (project == rootProject || project.name == "media") return
+    if (project == rootProject) return
     // All of our projects are java projects
     apply plugin: "java"
     sourceCompatibility = 1.8
@@ -1070,7 +1069,7 @@ project(":graphics") {
         antlr3 group: "org.antlr", name: "antlr-runtime",  version: "3.1.3"
         antlr3 group: "org.antlr", name: "stringtemplate", version: "3.2"
     }
-    
+
     // Create a single "native" task which will depend on all the individual native tasks for graphics
     project.ext.nativeAllTask = task("native", group: "Build", description: "Compiles and Builds all native libraries for Graphics");
     project.ext.cleanNativeAllTask = task("cleanNative", group: "Build", description: "Clean all native libraries and objects for Graphics");
@@ -1400,14 +1399,13 @@ project(":fxml") {
 project(":builders") {
     sourceCompatibility = 1.7
 
-    if (!COMPILE_SWING)  sourceSets.main.java.exclude ("**/swing/**")
-    if (!COMPILE_SWT)    sourceSets.main.java.exclude ("**/swt/**")
+    if (!COMPILE_SWING) sourceSets.main.java.exclude ("**/swing/**")
+    if (!COMPILE_SWT)   sourceSets.main.java.exclude ("**/swt/**")
     if (!COMPILE_WEBKIT) sourceSets.main.java.exclude ("**/web/**")
-    if (!BUILD_CLOSED)   sourceSets.main.java.exclude ("**/media/**")
 
     dependencies {
         compile BUILD_SRC, project(":base"), project(":graphics"),
-                project(":controls"), project(":swt"), project(":swing"), project(":web")
+                project(":controls"), project(":swt"), project(":swing"), project(":media"), project(":web")
         testCompile project(":graphics").sourceSets.test.output
     }
     test {
@@ -1637,6 +1635,216 @@ project(":fxpackager") {
                 includeEmptyDirs = false
             }
         }
+    }
+}
+
+project(":media") {
+    configurations {
+        media
+    }
+
+    dependencies {
+        compile BUILD_SRC, project(":base"), project(":graphics")
+    }
+
+    sourceSets {
+        tools {
+            java.srcDir "src/tools/java"
+        }
+    }
+
+    compileToolsJava {
+        enabled = COMPILE_MEDIA
+        classpath = sourceSets.main.output;
+    }
+
+    project.ext.makeJobsFlag = IS_WINDOWS && IS_DEBUG_NATIVE ? "-j1" : "-j5";
+    project.ext.buildType = IS_DEBUG_NATIVE ? "Debug" : "Release";
+
+    def nativeSrcDir = file("${projectDir}/src/main/native")
+    def generatedHeadersDir = file("${buildDir}/generated-src/headers")
+    
+    task generateHeaders(dependsOn: compileJava) {
+        enabled = COMPILE_MEDIA
+        doLast {
+            def classpath = sourceSets.main.output;
+            mkdir generatedHeadersDir;
+
+            def classesList = ["com.sun.media.jfxmedia.logging.Logger",
+                             "com.sun.media.jfxmedia.track.AudioTrack",
+                             "com.sun.media.jfxmedia.control.VideoDataBuffer",
+                             "com.sun.media.jfxmedia.control.VideoFormat\$FormatTypes",
+                             "com.sun.media.jfxmediaimpl.NativeAudioClip",
+                             "com.sun.media.jfxmediaimpl.NativeMediaPlayer",
+                             "com.sun.media.jfxmediaimpl.NativeVideoBuffer",
+                             "com.sun.media.jfxmediaimpl.platform.gstreamer.GSTPlatform",
+                             "com.sun.media.jfxmediaimpl.platform.gstreamer.GSTMedia",
+                             "com.sun.media.jfxmediaimpl.platform.gstreamer.GSTMediaPlayer",
+                             "com.sun.media.jfxmediaimpl.platform.gstreamer.GSTAudioEqualizer",
+                             "com.sun.media.jfxmediaimpl.platform.gstreamer.GSTEqualizerBand",
+                             "com.sun.media.jfxmediaimpl.platform.gstreamer.GSTAudioSpectrum"]
+            if (IS_MAC) {
+                classesList.addAll( ["com.sun.media.jfxmediaimpl.platform.osx.OSXPlatform",
+                                     "com.sun.media.jfxmediaimpl.platform.osx.OSXMedia",
+                                     "com.sun.media.jfxmediaimpl.platform.osx.OSXMediaPlayer"] );
+            }
+            exec {
+                commandLine ("${JAVAH}", "-J-Djava.ext.dirs=", "-d", "${generatedHeadersDir}", "-classpath", "${classpath.asPath}");
+                args classesList;
+            }
+        }
+    }
+    
+    task generateMediaErrorHeader(dependsOn: [compileToolsJava, compileJava]) {
+        enabled = COMPILE_MEDIA
+        doLast {
+            def classpath = files(sourceSets.main.output, sourceSets.tools.output);
+            def sourcepath = sourceSets.main.java.srcDirs;
+            def headerpath = file("$generatedHeadersDir/jfxmedia_errors.h");
+            def srcRoot = (sourcepath.toArray())[0];
+
+            mkdir generatedHeadersDir;
+
+            exec {
+                commandLine("$JAVA", "-Djava.ext.dirs=", "-classpath", "${classpath.asPath}");
+                args("headergen.HeaderGen", "$headerpath", "$srcRoot");
+            }
+        }
+    }
+
+    task buildNativeTargets {
+        enabled = COMPILE_MEDIA
+    }
+    
+    compileTargets { t->        
+        def nativeOutputDir = file("${buildDir}/native/${t.name}")
+        def projectDir = t.name.startsWith("arm") ? "linux" : t.name
+        def mediaProperties = project.rootProject.ext[t.upper].media
+        
+        def buildNative = task("build${t.capital}Native", dependsOn: [generateHeaders, generateMediaErrorHeader]) {
+            enabled = COMPILE_MEDIA
+            doLast {
+                exec {
+                    commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/jfxmedia/projects/${projectDir}")
+                    args("JAVA_HOME=${JAVA_HOME}", "GENERATED_HEADERS_DIR=${generatedHeadersDir}",
+                         "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=jfxmedia")
+
+                    if (t.name == "win") {
+                        environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
+                        args(IS_64 ? "ARCH=x64" : "ARCH=x32")
+                    } else {
+                        args ("CC=${mediaProperties.compiler}", "LINK=${mediaProperties.linker}", "LIB=${mediaProperties.lib}")
+
+                        if (t.name.startsWith("arm"))
+                            args("EXTRA_CFLAGS=${mediaProperties.extra_cflags}", "EXTRA_LDFLAGS=${mediaProperties.extra_ldflags}")
+                        else
+                            args("HOST_COMPILE=1")
+                    }
+                }
+            }
+        }        
+        
+        if (!t.name.startsWith("arm")) {
+            // Building GStreamer
+            def buildGStreamer = task("build${t.capital}GStreamer") {
+                enabled = COMPILE_MEDIA
+                doLast {
+                    exec {
+                        commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/${projectDir}/gstreamer-lite")
+                        args("OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=gstreamer-lite")
+
+                        if (t.name == "win") {
+                            environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
+                            args(IS_64 ? "ARCH=x64" : "ARCH=x32")
+                        } else
+                            args ("CC=${mediaProperties.compiler}", "LINK=${mediaProperties.linker}", "LIB=${mediaProperties.lib}")
+                    }
+                }
+            }
+
+            def buildPlugins = task("build${t.capital}Plugins", dependsOn: buildGStreamer) {
+                enabled = COMPILE_MEDIA
+
+                if (!project.ext.properties.containsKey("ON2_SRCDIR"))
+                    project.ext.ON2_SRCDIR = "";
+
+                if (!project.ext.properties.containsKey("ON2_LIB"))
+                    project.ext.ON2_LIB = "";
+
+                doLast {
+                    exec {
+                        commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/${projectDir}/fxplugins")
+                        args("OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=fxplugins", 
+                             "ON2_SRCDIR=${project.ext.ON2_SRCDIR}", "ON2_LIB=${project.ext.ON2_LIB}")
+
+                        if (t.name == "win") {
+                            Map winEnv = new HashMap(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
+
+                            String sdkDir = System.getenv("BASECLASSES_SDK_DIR");
+                            if (sdkDir == null)
+                            {
+                                sdkDir = "C:/Program Files/Microsoft SDKs/Windows/v7.1" // Default value
+                                winEnv["BASECLASSES_SDK_DIR"] = sdkDir
+                            }
+                            environment(winEnv)
+
+                            args(IS_64 ? "ARCH=x64" : "ARCH=x32")
+                        } else
+                            args ("CC=${mediaProperties.compiler}", "LINK=${mediaProperties.linker}", "LIB=${mediaProperties.lib}")
+                    }
+                }
+            }
+            
+            buildNative.dependsOn buildPlugins
+
+            if (t.name == "linux") {
+                def buildAVPlugin = task( "buildAVPlugin", dependsOn: [buildPlugins]) {
+                    enabled = COMPILE_MEDIA
+
+                    if (!project.ext.properties.containsKey("LIBAV"))
+                        project.ext.LIBAV = "";
+
+                    doLast {
+                        // Building fxavcodec plugin (libav plugin)
+                        exec {
+                            commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/linux/avplugin")
+                            args("CC=${mediaProperties.compiler}", "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", 
+                                     "BASE_NAME=avplugin", "LIBAV_DIR=${project.ext.LIBAV}")
+                        }
+                    }
+                }
+                buildNative.dependsOn buildAVPlugin
+            }
+
+            if (t.name == "win" || t.name == "mac") {
+                def buildGlib = task("build${t.capital}Glib") {
+                    enabled = COMPILE_MEDIA
+                    doLast {
+                        exec {
+                            commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/${projectDir}/glib-lite")
+                            args("OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=glib-lite")
+
+                            if (t.name == "win") {
+                                environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
+                                args(IS_64 ? "ARCH=x64" : "ARCH=x32")
+                            } else
+                                args ("CC=${mediaProperties.compiler}", "LINK=${mediaProperties.linker}", "LIB=${mediaProperties.lib}")
+                        }
+                    }
+                }
+                buildGStreamer.dependsOn buildGlib
+            }
+        }
+        
+        buildNativeTargets.dependsOn buildNative
+    }
+ 
+    jar {
+        exclude("headergen/**")
+
+        dependsOn compileJava
+        if (COMPILE_MEDIA)
+            dependsOn buildNativeTargets
     }
 }
 
@@ -1880,9 +2088,17 @@ compileTargets { t ->
              "modules/graphics/build/classes/jsl-decora",
              "modules/graphics/build/resources/jsl-decora",
              "modules/graphics/build/classes/jsl-prism",
-             "modules/graphics/build/resources/jsl-prism");
+             "modules/graphics/build/resources/jsl-prism",
+             "modules/media/build/classes/main",
+             "modules/media/build/resources/main")
         if (COMPILE_SWING) from ("modules/swing/build/classes/main", "modules/swing/build/resources/main")
         if (COMPILE_SWT) from ("modules/swt/build/classes/main", "modules/swt/build/resources/main")
+
+        if (t.name != 'mac') 
+            exclude ("modules/media/build/classes/main/com/sun/media/jfxmediaimpl/platform/osx/**")
+        if (t.name != 'ios') 
+            exclude ("modules/media/build/classes/main/com/sun/media/jfxmediaimpl/platform/ios/**")
+
         if (t.name == 'android') {
             from ("modules/web/build/classes/android",
                   "modules/web/build/resources/android",
@@ -1946,6 +2162,22 @@ compileTargets { t ->
                         from ("$LIBRARY_STUB/${library('jfxwebkit')}")
                     }
                 }
+
+                if (COMPILE_MEDIA) {
+                    [ "fxplugins", "gstreamer-lite", "jfxmedia" ].each { name ->
+                        from ("modules/media/build/native/${t.name}/${CONF}/${library(name)}") }
+                    
+                    if (t.name == "linux") from ("modules/media/build/native/${t.name}/${CONF}/${library("avplugin")}")
+                    else from ("modules/media/build/native/${t.name}/${CONF}/${library("glib-lite")}")
+
+                } else {
+                    [ "fxplugins", "gstreamer-lite", "jfxmedia" ].each { name ->
+                        from ("$LIBRARY_STUB/${library(name)}") }                        
+
+                    if (t.name == "linux") from ("$LIBRARY_STUB/${library("avplugin")}")
+                    else from ("$LIBRARY_STUB/${library("glib-lite")}")
+                }
+                
                 def libDest = targetProperties.libDest
                 into ("build/${t.name}-sdk/rt/$libDest")
             }
@@ -2109,17 +2341,10 @@ project(":web") {
         webkit
     }
     dependencies {
-        compile project(":base"), project(":graphics"), project(":controls")
-        testCompile files("../../../artifacts/sdk/rt/lib/ext/jfxrt.jar")
+        compile project(":base"), project(":graphics"), project(":controls"), project(":media")
     }
     
     compileJava.enabled = COMPILE_WEBKIT
-    if (BUILD_CLOSED) {
-        compileJava.dependsOn compileMediaJava
-        compileJava.classpath += files(
-                "../media/build/classes/main",
-                "$jfxTopDir/media/jfxmedia/dist/jfxmedia.jar")
-    }
     
     task generateHeaders(dependsOn: compileJava) {
         doLast {

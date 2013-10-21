@@ -540,3 +540,8 @@ ANDROID.fontT2K.ccFlags = [ccFlags, "-fno-exceptions", "-fno-rtti", ccWarnFlags,
 ANDROID.fontT2K.linker = linker
 ANDROID.fontT2K.linkFlags = [linkFlags, "-lstdc++"].flatten()
 ANDROID.fontT2K.lib = "javafx_font_t2k"
+
+ANDROID.media = [:]
+ANDROID.media.compiler = compiler
+ANDROID.media.linker = linker
+ANDROID.media.lib = file("$compilerHome/bin/${toolchainArchs[0]}-ar").getAbsolutePath()

@@ -1,0 +1,524 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-bad\gst\aiff\aiff.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-bad\gst\aiff\aiffparse.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\app\gstappbuffer.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\app\gstappsink.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio-enumtypes.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudioclock.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiofilter.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiosink.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiosrc.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstbaseaudiosink.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstbaseaudiosrc.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstringbuffer.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\mixerutils.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\multichannel.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\fft\gstfft.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\fft\gstfftf32.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\fft\gstfftf64.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\fft\gstffts16.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\fft\gstffts32.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\fft\kiss_fftr_f32.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\fft\kiss_fftr_f64.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\fft\kiss_fftr_s16.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\fft\kiss_fftr_s32.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\fft\kiss_fft_f32.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\fft\kiss_fft_f64.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\fft\kiss_fft_s16.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\fft\kiss_fft_s32.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\interfaces\interfaces-enumtypes.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\interfaces\interfaces-marshal.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\interfaces\mixer.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\interfaces\mixeroptions.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\interfaces\mixertrack.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\interfaces\navigation.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\interfaces\propertyprobe.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\interfaces\videoorientation.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\pbutils\codec-utils.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\pbutils\descriptions.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\pbutils\missing-plugins.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\pbutils\pbutils-enumtypes.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\pbutils\pbutils.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\riff\riff-media.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\riff\riff-read.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\riff\riff.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\tag\gstid3tag.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\tag\gsttagdemux.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\tag\lang.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\tag\tags.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst\app\gstapp.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst\audioconvert\audioconvert.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst\audioconvert\gstaudioconvert.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst\audioconvert\gstaudioconvertorc-dist.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst\audioconvert\gstaudioquantize.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst\audioconvert\gstchannelmix.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst\audioconvert\plugin.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst\typefind\gsttypefindfunctions.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\audioparsers\gstmpegaudioparse.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\audioparsers\parsersplugin.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\equalizer\gstiirequalizer.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\equalizer\gstiirequalizernbands.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\isomp4-plugin.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_dump.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_lang.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_types.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\spectrum\gstspectrum.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\wavparse\gstwavparse.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\sys\directsound\gstdirectsoundplugin.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\sys\directsound\gstdirectsoundsink.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gst.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstbin.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstbuffer.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstbus.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstcaps.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstchildproxy.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstclock.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstdatetime.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstdebugutils.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstelement.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstelementfactory.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstenumtypes.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gsterror.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstevent.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstfilter.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstformat.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstghostpad.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstindex.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstindexfactory.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstinfo.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstinterface.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstiterator.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstmarshal.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstmessage.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstminiobject.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstobject.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstpad.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstpadtemplate.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstparamspecs.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstparse.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstpipeline.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstplugin.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstpluginfeature.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstpluginloader.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstpoll.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstquark.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstquery.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstregistry.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstregistrybinary.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstregistrychunks.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstsegment.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gststructure.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstsystemclock.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gsttaglist.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gsttagsetter.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gsttask.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gsttaskpool.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gsttrace.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gsttypefind.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gsttypefindfactory.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gsturi.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstutils.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstvalue.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\libs\gst\base\gstadapter.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\libs\gst\base\gstbaseparse.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\libs\gst\base\gstbasesink.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\libs\gst\base\gstbasesrc.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\libs\gst\base\gstbasetransform.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\libs\gst\base\gstbytereader.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\libs\gst\base\gstcollectpads.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\libs\gst\base\gstpushsrc.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\libs\gst\base\gsttypefindhelper.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\libs\gst\controller\gstcontroller.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\libs\gst\controller\gstcontrolsource.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\libs\gst\controller\gsthelper.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\libs\gst\controller\gstinterpolation.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\libs\gst\controller\lib.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\plugins\elements\gstcapsfilter.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\plugins\elements\gstelements.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\plugins\elements\gstfakesink.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\plugins\elements\gstfakesrc.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\plugins\elements\gstfilesink.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\plugins\elements\gstfilesrc.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\plugins\elements\gstidentity.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\plugins\elements\gstqueue.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\plugins\elements\gsttypefindelement.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\plugins\indexers\gstindexers.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\plugins\indexers\gstmemindex.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\projects\plugins\gstplugins-lite.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{FC533698-F232-42DC-980E-2171DFF660E3}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>gstreamer</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\gstreamer\gstreamer-lite\projects\plugins;$(SolutionDir)\..\gstreamer\gstreamer-lite\projects\build\win32\common;$(SolutionDir)\..\gstreamer\gstreamer-lite\gstreamer;$(SolutionDir)\..\gstreamer\gstreamer-lite\gstreamer\libs;$(SolutionDir)\..\gstreamer\gstreamer-lite\gst-plugins-base;$(SolutionDir)\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs;$(SolutionDir)\..\gstreamer\gstreamer-lite\gst-plugins-base\win32\common;$(SolutionDir)\..\gstreamer\3rd_party\glib\glib-2.28.8\;$(SolutionDir)\..\gstreamer\3rd_party\glib\glib-2.28.8\glib;$(SolutionDir)\..\gstreamer\3rd_party\glib\glib-2.28.8\gmodule;$(SolutionDir)\..\gstreamer\3rd_party\glib\glib-2.28.8\build\win32\vs100</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

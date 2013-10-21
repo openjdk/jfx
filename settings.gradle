@@ -23,7 +23,7 @@
  * questions.
  */
 
-include "base", "graphics", "controls", "swing", "swt", "fxml", "builders", "designTime", "fxpackager", "web", "systemTests"
+include "base", "graphics", "controls", "swing", "swt", "fxml", "builders", "designTime", "fxpackager", "web", "media", "systemTests"
 
 project(":base").projectDir = file("modules/base")
 project(":graphics").projectDir = file("modules/graphics")
@@ -35,6 +35,7 @@ project(":builders").projectDir = file("modules/builders")
 project(":designTime").projectDir = file("modules/designTime")
 project(":fxpackager").projectDir = file("modules/fxpackager")
 project(":web").projectDir = file("modules/web")
+project(":media").projectDir = file("modules/media")
 project(":systemTests").projectDir = file("tests/system")
 
 def closedDir = file("../rt-closed")
