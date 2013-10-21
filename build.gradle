@@ -2343,6 +2343,7 @@ project(":web") {
     }
     dependencies {
         compile project(":base"), project(":graphics"), project(":controls"), project(":media")
+        testCompile files("../../../artifacts/sdk/rt/lib/ext/jfxrt.jar")
     }
     
     compileJava.enabled = COMPILE_WEBKIT
