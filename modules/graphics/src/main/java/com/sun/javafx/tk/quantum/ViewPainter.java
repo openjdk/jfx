@@ -179,7 +179,6 @@ abstract class ViewPainter implements Runnable {
         final float pixelScale = presentable == null ? 1.0f : presentable.getPixelScaleFactor();
         // Initialize renderEverything based on various conditions that will cause us to render
         // the entire scene every time.
-        // TODO is calling isEntireSceneDirty on the GlassScene safe from this thread?
         boolean renderEverything = renderOverlay ||
                 sceneState.getScene().isEntireSceneDirty() ||
                 sceneState.getScene().getDepthBuffer() ||
@@ -239,7 +238,7 @@ abstract class ViewPainter implements Runnable {
             dirtyRegionContainer.reset();
             tx.setToIdentity();
             projTx.setIdentity();
-            adjustPerspective(sceneState.getScene().getCamera());
+            adjustPerspective(sceneState.getCamera());
             status = root.accumulateDirtyRegions(clip, dirtyRegionTemp,
                                                      dirtyRegionPool, dirtyRegionContainer,
                                                      tx, projTx);
@@ -455,11 +454,11 @@ abstract class ViewPainter implements Runnable {
             scene.clearEntireSceneDirty();
             g.setLights(scene.getLights());
             g.setDepthBuffer(scene.getDepthBuffer());
-            Color clearColor = scene.getClearColor();
+            Color clearColor = sceneState.getClearColor();
             if (clearColor != null) {
                 g.clear(clearColor);
             }
-            Paint curPaint = scene.getCurrentPaint();
+            Paint curPaint = sceneState.getCurrentPaint();
             if (curPaint != null) {
                 if (curPaint.getType() != com.sun.prism.paint.Paint.Type.COLOR) {
                     g.getRenderTarget().setOpaque(curPaint.isOpaque());
@@ -467,7 +466,7 @@ abstract class ViewPainter implements Runnable {
                 g.setPaint(curPaint);
                 g.fillQuad(0, 0, width, height);
             }
-            g.setCamera(scene.getCamera());
+            g.setCamera(sceneState.getCamera());
             g.setRenderRoot(renderRootPath);
             root.render(g);
         } finally {

@@ -59,9 +59,6 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     volatile IntBuffer textureBits;
     volatile int bitsLineStride;
 
-    int width;
-    int height;
-
     private final EmbeddedSceneDnD dndDelegate;
 
     public EmbeddedScene(HostInterface host, boolean depthBuffer, boolean antiAliasing) {
@@ -148,15 +145,6 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
 
     @Override
     public void setSize(final int width, final int height) {
-        ViewPainter.renderLock.lock();
-        try {
-            this.width = width;
-            this.height = height;
-            updateSceneState();
-        } finally {
-            ViewPainter.renderLock.unlock();
-        }
-
         Platform.runLater(new Runnable() {
             @Override
             public void run() {
@@ -171,8 +159,6 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
                 }, getAccessControlContext());
             }
         });
-
-        entireSceneNeedsRepaint();
     }
 
     @Override
