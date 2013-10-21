@@ -352,7 +352,10 @@ import sun.util.logging.PlatformLogger.Level;
  * has the following bounds bounds: {@code [x:10.0 y:10.0 width:100.0 height:100.0]}.
  *
  * The second rectangle {@code [x:10.0 y:10.0 width:100.0 height:100.0 strokeWidth:5]}
- * has the following bounds: {@code [x:5.0 y:5.0 width:110.0 height:110.0]}.
+ * has the following bounds: {@code [x:7.5 y:7.5 width:105 height:105]}
+ * (the stroke is centered by default, so only half of it is outside
+ * of the original bounds; it is also possible to create inside or outside
+ * stroke).
  *
  * Since neither of the rectangles has any transformation applied,
  * {@code boundsInParent} and {@code boundsInLocal} are the same. </p>
