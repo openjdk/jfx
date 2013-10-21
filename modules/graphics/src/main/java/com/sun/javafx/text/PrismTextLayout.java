@@ -90,7 +90,6 @@ public class PrismTextLayout implements TextLayout {
     private void reset() {
         layoutCache = null;
         runs = null;
-        cacheKey = null;
         flags &= ~ANALYSIS_MASK;
         relayout();
     }
@@ -128,6 +127,7 @@ public class PrismTextLayout implements TextLayout {
         this.font = null;
         this.strike = null;
         this.text = null;   /* Initialized in getText() */
+        this.cacheKey = null;
         return true;
     }
 
@@ -158,16 +158,7 @@ public class PrismTextLayout implements TextLayout {
         if ((flags & BOUNDS_MASK) == type) return false;
         flags &= ~BOUNDS_MASK;
         flags |= (type & BOUNDS_MASK);
-
-        relayout();
-        if (runs != null) {
-            for (int i = 0; i < runCount; i++) {
-                /* Use relayout() instead of reset() to preserve layout cache
-                 * but the run metrics need to be discarded in order to be
-                 * recompute in shape() */
-                runs[i].setMetrics(0, 0, 0);
-            }
-        }
+        reset();
         return true;
     }
 
@@ -673,12 +664,18 @@ public class PrismTextLayout implements TextLayout {
         return index;
     }
 
+    private boolean copyCache() {
+        int align = flags & ALIGN_MASK;
+        int boundsType = flags & BOUNDS_MASK;
+        /* Caching for boundsType == Center, bias towards  Modena */
+        return wrapWidth != 0 || align != ALIGN_LEFT || boundsType == 0 || isMirrored();
+    }
+
     private void initCache() {
         if (cacheKey != null) {
             if (layoutCache == null) {
                 LayoutCache cache = stringCache.get(cacheKey);
                 if (cache != null && cache.font.equals(font) && Arrays.equals(cache.text, text)) {
-                    /* The layout in the cache is always with wrapping off */
                     layoutCache = cache;
                     runs = cache.runs;
                     runCount = cache.runCount;
@@ -686,10 +683,9 @@ public class PrismTextLayout implements TextLayout {
                 }
             }
             if (layoutCache != null) {
-                int textAlignment = flags & ALIGN_MASK;
-                if (wrapWidth != 0 || textAlignment != ALIGN_LEFT) {
-                    /* If this instance needs wrapping or aligned different than
-                     * left then it needs to build its own lines. Thus, only use
+                if (copyCache()) {
+                    /* This instance has some property that requires it to
+                     * build its own lines (i.e. wrapping width). Thus, only use
                      * the runs from the cache (and it needs to make a copy
                      * before using it as they will be modified).
                      * Note: the copy of the elements in the array happens in
@@ -700,8 +696,6 @@ public class PrismTextLayout implements TextLayout {
                         System.arraycopy(layoutCache.runs, 0, runs, 0, runCount);
                     }
                 } else {
-                    /* If wrapping is off and it is left aligned
-                     * then the entire layout can be used  */
                     if (layoutCache.lines != null) {
                         runs = layoutCache.runs;
                         runCount = layoutCache.runCount;
@@ -1279,12 +1273,11 @@ public class PrismTextLayout implements TextLayout {
 
 
         if (layoutCache != null) {
-            if (cacheKey != null && !layoutCache.valid &&
-                wrapWidth == 0 && textAlignment == ALIGN_LEFT) {
+            if (cacheKey != null && !layoutCache.valid && !copyCache()) {
                 /* After layoutCache is added to the stringCache it can be
                  * accessed by multiple threads. All the data in it must
-                 * be immutable. Cache only when simple string was layout without
-                 * wrapping and left aligned. See initCache() for more details.
+                 * be immutable. See copyCache() for the cases where the entire
+                 * layout is immutable.
                  */
                 layoutCache.font = font;
                 layoutCache.text = text;
