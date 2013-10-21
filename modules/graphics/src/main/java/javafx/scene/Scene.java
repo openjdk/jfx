@@ -25,6 +25,7 @@
 
 package javafx.scene;
 
+import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
 import com.sun.javafx.tk.TKClipboard;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -3888,7 +3889,7 @@ public class Scene implements EventTarget {
 
     // Delegates requests from platform input method to the focused
     // node's one, if any.
-    class InputMethodRequestsDelegate implements InputMethodRequests {
+    class InputMethodRequestsDelegate implements ExtendedInputMethodRequests {
         @Override
         public Point2D getTextLocation(int offset) {
             InputMethodRequests requests = getClientRequests();
@@ -3924,6 +3925,33 @@ public class Scene implements EventTarget {
                 return requests.getSelectedText();
             }
             return null;
+        }
+
+        @Override
+        public int getInsertPositionOffset() {
+            InputMethodRequests requests = getClientRequests();
+            if (requests != null && requests instanceof ExtendedInputMethodRequests) {
+                return ((ExtendedInputMethodRequests)requests).getInsertPositionOffset();
+            }
+            return 0;
+        }
+
+        @Override
+        public String getCommittedText(int begin, int end) {
+            InputMethodRequests requests = getClientRequests();
+            if (requests != null && requests instanceof ExtendedInputMethodRequests) {
+                return ((ExtendedInputMethodRequests)requests).getCommittedText(begin, end);
+            }
+            return null;
+        }
+
+        @Override
+        public int getCommittedTextLength() {
+            InputMethodRequests requests = getClientRequests();
+            if (requests != null && requests instanceof ExtendedInputMethodRequests) {
+                return ((ExtendedInputMethodRequests)requests).getCommittedTextLength();
+            }
+            return 0;
         }
 
         private InputMethodRequests getClientRequests() {
