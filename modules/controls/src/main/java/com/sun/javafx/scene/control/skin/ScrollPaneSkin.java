@@ -133,7 +133,11 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         registerChangeListener(scrollpane.hbarPolicyProperty(), "HBAR_POLICY");
         registerChangeListener(scrollpane.vbarPolicyProperty(), "VBAR_POLICY");
         registerChangeListener(scrollpane.hvalueProperty(), "HVALUE");
+        registerChangeListener(scrollpane.hmaxProperty(), "HMAX");
+        registerChangeListener(scrollpane.hminProperty(), "HMIN");
         registerChangeListener(scrollpane.vvalueProperty(), "VVALUE");
+        registerChangeListener(scrollpane.vmaxProperty(), "VMAX");
+        registerChangeListener(scrollpane.vminProperty(), "VMIN");
         registerChangeListener(scrollpane.prefViewportWidthProperty(), "PREF_VIEWPORT_WIDTH");
         registerChangeListener(scrollpane.prefViewportHeightProperty(), "PREF_VIEWPORT_HEIGHT");
     }
@@ -620,8 +624,16 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             getSkinnable().requestLayout();
         } else if ("HVALUE".equals(p)) {
             hsb.setValue(getSkinnable().getHvalue());
+        } else if ("HMAX".equals(p)) {
+            hsb.setMax(getSkinnable().getHmax());
+        } else if ("HMIN".equals(p)) {
+            hsb.setMin(getSkinnable().getHmin());
         } else if ("VVALUE".equals(p)) {
             vsb.setValue(getSkinnable().getVvalue());
+        } else if ("VMAX".equals(p)) {
+            vsb.setMax(getSkinnable().getVmax());
+        } else if ("VMIN".equals(p)) {
+            vsb.setMin(getSkinnable().getVmin());
         } else if ("PREF_VIEWPORT_WIDTH".equals(p) || "PREF_VIEWPORT_HEIGHT".equals(p)) {
             // change affects pref size, so requestLayout on control
             getSkinnable().requestLayout();
