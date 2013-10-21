@@ -371,6 +371,11 @@ is being used to size a border should also be in pixels.
     -fx-background-color: -fx-background;
 }
 
+/* Make popups transparent */
+.root.popup {
+    -fx-background-color: transparent;
+}
+
 /*******************************************************************************
  *                                                                             *
  * Common Styles                                                               *
