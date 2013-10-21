@@ -51,7 +51,7 @@ import javafx.stage.Stage;
  * @playground dropShadow.radius (name="Drop Shadow Radius", min=0, max=20)
  * @playground dropShadow.offsetX (name="Drop Shadow Offset X", min=-10, max=10)
  * @playground dropShadow.offsetY (name="Drop Shadow Offset Y", min=-10, max=10)
- * @playground dropShadow.radius (name="Drop Shadow Spread", min=0, max=1)
+ * @playground dropShadow.spread (name="Drop Shadow Spread", min=0, max=1)
  * @playground dropShadow.color (name="Drop Shadow Color")
  * @see javafx.scene.effect.DropShadow
  * @see javafx.scene.effect.Effect
