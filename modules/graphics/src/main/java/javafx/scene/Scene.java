@@ -2020,18 +2020,28 @@ public class Scene implements EventTarget {
                             && value.getOnInputMethodTextChanged() != null);
                 }
             }
-            if (oldFocusOwner != null) {
-                ((Node.FocusedProperty) oldFocusOwner.focusedProperty()).notifyListeners();
+            // for the rest of the method we need to update the oldFocusOwner
+            // and use a local copy of it because the user handlers can cause
+            // recurrent calls of requestFocus
+            Node localOldOwner = oldFocusOwner;
+            oldFocusOwner = value;
+            if (localOldOwner != null) {
+                ((Node.FocusedProperty) localOldOwner.focusedProperty()).notifyListeners();
             }
             if (value != null) {
                 ((Node.FocusedProperty) value.focusedProperty()).notifyListeners();
             }
             PlatformLogger logger = Logging.getFocusLogger();
             if (logger.isLoggable(Level.FINE)) {
-                logger.fine("Changed focus from "
-                        + oldFocusOwner + " to " + value);
+                if (value == get()) {
+                    logger.fine("Changed focus from "
+                            + localOldOwner + " to " + value);
+                } else {
+                    logger.fine("Changing focus from "
+                            + localOldOwner + " to " + value
+                            + " canceled by nested requestFocus");
+                }
             }
-            oldFocusOwner = value;
         }
     };
 
