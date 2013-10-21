@@ -762,7 +762,7 @@ public class Main {
         }
 
         // Check for minimum JRE version
-        if (NoJavaFXFallback.isOldJRE()) {
+        if (isOldJRE()) {
             showFallback(true);
             return false;
         }
@@ -977,6 +977,47 @@ public class Main {
         }
 
         System.exit(1);
+    }
+
+    // Package-scope method used to check minimum JRE version
+    static boolean isOldJRE() {
+        return getJavaVersionAsFloat() < 160.18f; //< 6u18
+}
+
+    static float getJavaVersionAsFloat() {
+        String versionString = System.getProperty("java.version", "1.5.0");
+
+        StringBuffer sb = new StringBuffer();
+
+        int firstDot = versionString.indexOf(".");
+        sb.append(versionString.substring(0,firstDot));
+
+        int secondDot = versionString.indexOf(".", firstDot+1);
+        sb.append(versionString.substring(firstDot+1, secondDot));
+
+        int underscore = versionString.indexOf("_", secondDot+1);
+        if (underscore >= 0) {
+            int dash = versionString.indexOf("-", underscore+1);
+            if (dash < 0) {
+                dash = versionString.length();
+            }
+            sb.append(versionString.substring(secondDot+1, underscore)).
+                append(".").
+                append(versionString.substring(underscore+1, dash));
+        } else {
+            int dash = versionString.indexOf("-", secondDot+1);
+            if (dash < 0) {
+                dash = versionString.length();
+            }
+            sb.append(versionString.substring(secondDot+1, dash));
+        }
+
+        float version = 150.0f;
+        try {
+            version = Float.parseFloat(sb.toString());
+        } catch (NumberFormatException e) {}
+
+        return version;
     }
 
 }

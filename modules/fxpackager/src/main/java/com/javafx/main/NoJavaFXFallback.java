@@ -58,49 +58,9 @@ public class NoJavaFXFallback extends JApplet implements ActionListener {
         populate();
     }
 
-    // Package-scope method used to check minimum JRE version
-    static boolean isOldJRE() {
-        return getJavaVersionAsFloat() < 160.18f; //< 6u18
-    }
-
-    private static float getJavaVersionAsFloat() {
-        String versionString = System.getProperty("java.version", "1.5.0");
-
-        StringBuffer sb = new StringBuffer();
-
-        int firstDot = versionString.indexOf(".");
-        sb.append(versionString.substring(0,firstDot));
-
-        int secondDot = versionString.indexOf(".", firstDot+1);
-        sb.append(versionString.substring(firstDot+1, secondDot));
-
-        int underscore = versionString.indexOf("_", secondDot+1);
-        if (underscore >= 0) {
-            int dash = versionString.indexOf("-", underscore+1);
-            if (dash < 0) {
-                dash = versionString.length();
-            }
-            sb.append(versionString.substring(secondDot+1, underscore)).
-                append(".").
-                append(versionString.substring(underscore+1, dash));
-        } else {
-            int dash = versionString.indexOf("-", secondDot+1);
-            if (dash < 0) {
-                dash = versionString.length();
-            }
-            sb.append(versionString.substring(secondDot+1, dash));
-        }
-
-        float version = 150.0f;
-        try {
-            version = Float.parseFloat(sb.toString());
-        } catch (NumberFormatException e) {}
-
-        return version;
-    }
 
     private void test() {
-        oldJRE = isOldJRE();
+        oldJRE = Main.isOldJRE();
         try {
            // if run in browser then should be able to get JSObject
            Class jclass = Class.forName("netscape.javascript.JSObject");
@@ -137,8 +97,8 @@ public class NoJavaFXFallback extends JApplet implements ActionListener {
 
         pane.add(l, BorderLayout.CENTER);
 
-        if (getJavaVersionAsFloat() > 160f || //can use AWT APIs
-                (getJavaVersionAsFloat() > 150f && !doNotUseJNLPAPI)) { //do not have JNLP API in 1.4?
+        if (Main.getJavaVersionAsFloat() > 160f || //can use AWT APIs
+                (Main.getJavaVersionAsFloat() > 150f && !doNotUseJNLPAPI)) { //do not have JNLP API in 1.4?
             JButton installButton = new JButton("Install Now");
             installButton.addActionListener(this);
             pane.add(installButton, BorderLayout.SOUTH);
