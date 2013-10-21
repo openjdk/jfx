@@ -2164,16 +2164,16 @@ compileTargets { t ->
                     }
                 }
 
+                def mediaBuildType = project(":media").ext.buildType
                 if (COMPILE_MEDIA) {
                     [ "fxplugins", "gstreamer-lite", "jfxmedia" ].each { name ->
-                        from ("modules/media/build/native/${t.name}/${CONF}/${library(name)}") }
+                        from ("modules/media/build/native/${t.name}/${mediaBuildType}/${library(name)}") }
                     
-                    if (t.name == "linux") from ("modules/media/build/native/${t.name}/${CONF}/${library("avplugin")}")
-                    else from ("modules/media/build/native/${t.name}/${CONF}/${library("glib-lite")}")
-
+                    if (t.name == "linux") from ("modules/media/build/native/${t.name}/${mediaBuildType}/${library("avplugin")}")
+                    else from ("modules/media/build/native/${t.name}/${mediaBuildType}/${library("glib-lite")}")                        
                 } else {
                     [ "fxplugins", "gstreamer-lite", "jfxmedia" ].each { name ->
-                        from ("$LIBRARY_STUB/${library(name)}") }                        
+                        from ("$LIBRARY_STUB/${library(name)}") }
 
                     if (t.name == "linux") from ("$LIBRARY_STUB/${library("avplugin")}")
                     else from ("$LIBRARY_STUB/${library("glib-lite")}")
