@@ -16,11 +16,6 @@ namespace WebCore {
 
 void FontCache::platformInit()
 {
-    /*if (!FontPlatformData::init()) {
-        assert(0);
-        fprintf(stderr, "no fonts found exiting\n");
-        exit(-1);
-    }*/
 }
 
 PassRefPtr<SimpleFontData> FontCache::systemFallbackForCharacters(const FontDescription& fontDescription, const SimpleFontData*, bool, const UChar* characters, int length)
@@ -29,30 +24,9 @@ PassRefPtr<SimpleFontData> FontCache::systemFallbackForCharacters(const FontDesc
 }
 
 
-//const SimpleFontData* FontCache::getFontDataForCharacters(const Font& font, const UChar* characters, int length)
-//{
-//    /* utaTODO: choose the right subst here
-//    Look at WebCore\platform\graphics\wince\FontCacheWince.cpp
-//    */
-//    //SimpleFontData* fontData = 0;
-//    //fontData = new SimpleFontData(FontPlatformData(font.fontDescription(), font.family().family()));
-//    //return fontData;
-//    FontPlatformData fontData(font.fontDescription(), font.family().family());
-//    if (!fontData.nativeFontData()) {
-//        return 0; // requested font does not exist
-//    }
-//    return getCachedFontData(&fontData);
-//}
-
-//SimpleFontData* FontCache::getSimilarFontPlatformData(const Font& font)
-//{
-//    return 0;
-//}
-
 PassOwnPtr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomicString& family)
 {
-    PassRefPtr<RQRef> font = FontPlatformData::getJavaFont(fontDescription, family);
-    return !font ? nullptr : adoptPtr(new FontPlatformData(font, fontDescription.computedSize()));
+    return FontPlatformData::create(fontDescription, family);
 }
 
 void FontCache::getTraitsInFamily(AtomicString const&, WTF::Vector<unsigned int,0>&)

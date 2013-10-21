@@ -7,6 +7,8 @@ public abstract class WCFont extends Ref {
 
     public abstract Object getPlatformFont();
 
+    public abstract WCFont deriveFont(float size);
+    
     public abstract int getOffsetForPosition(String str, float x);
 
     public abstract int[] getGlyphCodes(char[] chars);

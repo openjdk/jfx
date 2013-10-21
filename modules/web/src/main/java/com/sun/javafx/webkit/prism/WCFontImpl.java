@@ -66,6 +66,15 @@ final class WCFontImpl extends WCFont {
         this.font = font;
     }
 
+    @Override public WCFont deriveFont(float size) {
+        FontFactory factory = GraphicsPipeline.getPipeline().getFontFactory();
+        return new WCFontImpl(
+                factory.deriveFont(font,
+                                   font.getFontResource().isBold(),
+                                   font.getFontResource().isItalic(),
+                                   size));
+    }
+    
     @Override public int getOffsetForPosition(String str, float x) {
         TextLayout layout = TextUtilities.createLayout(str, font);
         GlyphList[] runs = layout.getRuns();

@@ -14,23 +14,11 @@ namespace WebCore {
 
 class FontPlatformData {
 public:
-    static PassRefPtr<RQRef> getJavaFont(const FontDescription& fontDescription, const AtomicString& family);
-
     FontPlatformData() 
         {};
 
     FontPlatformData(float size, bool bold, bool italic)
         : m_jFont((size <= 1e-2) ? 0 : getJavaFont("Dialog", size, italic, bold))
-        , m_size(size)
-        {};
-
-    FontPlatformData(const FontDescription& fontDescription, const AtomicString& family)
-        : m_jFont(getJavaFont(fontDescription, family))
-        , m_size(fontDescription.computedSize())
-        {};
-
-    FontPlatformData(const FontDescription& fontDescription, float size)
-        : m_jFont(getJavaFont(fontDescription, fontDescription.firstFamily()))
         , m_size(size)
         {};
 
@@ -45,12 +33,14 @@ public:
 
     FontPlatformData(const FontPlatformData &other)
         : m_jFont(other.m_jFont)
+        , m_size(other.m_size)
         {};
 
-    void swap(FontPlatformData& other) { std::swap(m_jFont, other.m_jFont); }
-    FontOrientation orientation() const { return Horizontal; } // FIXME: Implement.
+    static PassOwnPtr<FontPlatformData> create(const FontDescription& fontDescription, const AtomicString& family);
+    PassOwnPtr<FontPlatformData> derive(float scaleFactor) const;
 
-    static bool init();
+    void swap(FontPlatformData& other) { std::swap(m_jFont, other.m_jFont); }
+
     unsigned hash() const;
     float size() const { return m_size; }
 
@@ -63,6 +53,7 @@ public:
     PassRefPtr<RQRef> nativeFontData() const { return m_jFont; } 
     static jint getJavaFontID(const JLObject &font);
 
+    FontOrientation orientation() const { return Horizontal; } // FIXME: Implement.
     void setOrientation(FontOrientation orientation) { }
 
 #ifndef NDEBUG
