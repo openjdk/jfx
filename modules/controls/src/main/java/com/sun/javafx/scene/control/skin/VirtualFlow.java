@@ -881,10 +881,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             lastWidth = -1;
             lastHeight = -1;
         }
+
+        boolean recreatedOrRebuilt = needsRebuildCells || needsRecreateCells || sizeChanged;
        
         needsRecreateCells = false;
         needsReconfigureCells = false;
         needsRebuildCells = false;
+        sizeChanged = false;
         
         if (needsCellsLayout) {
             for (int i = 0, max = cells.size(); i < max; i++) {
@@ -1047,7 +1050,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         }
 
         updateViewport();
-        updateScrollBarsAndCells();  
+        updateScrollBarsAndCells(recreatedOrRebuilt);
 
         // Get the index of the "current" cell
         int currentIndex = computeCurrentIndex();
@@ -1097,7 +1100,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         }
 
         updateViewport(); 
-        updateScrollBarsAndCells();
+        updateScrollBarsAndCells(false);
 
         lastWidth = getWidth();
         lastHeight = getHeight();
@@ -1339,6 +1342,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     @Override protected void setWidth(double value) {
         if (value != lastWidth) {
             super.setWidth(value);
+            sizeChanged = true;
             setNeedsLayout(true);
             requestLayout();
         }
@@ -1347,12 +1351,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     @Override protected void setHeight(double value) {
         if (value != lastHeight) {
             super.setHeight(value);
+            sizeChanged = true;
             setNeedsLayout(true);
             requestLayout();
         }
     }
 
-    private void updateScrollBarsAndCells() {
+    private void updateScrollBarsAndCells(boolean recreate) {
         // Assign the hbar and vbar to the breadthBar and lengthBar so as
         // to make some subsequent calculations easier.
         final boolean isVertical = isVertical();
@@ -1468,28 +1473,29 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         if (lengthBar.isVisible()) {
             // determine how many cells there are on screen so that the scrollbar
             // thumb can be appropriately sized
-            int numCellsVisibleOnScreen = 0;
-            for (int i = 0, max = cells.size(); i < max; i++) {
-                T cell = cells.get(i);
-                if (cell != null && ! cell.isEmpty()) {
-                    sumCellLength += (isVertical ? cell.getHeight() : cell.getWidth());
-                    if (sumCellLength > flowLength) {
-                        break;
-                    }
+            if (recreate) {
+                int numCellsVisibleOnScreen = 0;
+                for (int i = 0, max = cells.size(); i < max; i++) {
+                    T cell = cells.get(i);
+                    if (cell != null && ! cell.isEmpty()) {
+                        sumCellLength += (isVertical ? cell.getHeight() : cell.getWidth());
+                        if (sumCellLength > flowLength) {
+                            break;
+                        }
 
-                    numCellsVisibleOnScreen++;
+                        numCellsVisibleOnScreen++;
+                    }
+                }
+
+                lengthBar.setMax(1);
+                if (numCellsVisibleOnScreen == 0 && cellCount == 1) {
+                    // special case to help resolve RT-17701 and the case where we have
+                    // only a single row and it is bigger than the viewport
+                    lengthBar.setVisibleAmount(flowLength / sumCellLength);
+                } else {
+                    lengthBar.setVisibleAmount(numCellsVisibleOnScreen / (float) cellCount);
                 }
             }
-
-            lengthBar.setMax(1);
-            if (numCellsVisibleOnScreen == 0 && cellCount == 1) {
-                // special case to help resolve RT-17701 and the case where we have
-                // only a single row and it is bigger than the viewport
-                lengthBar.setVisibleAmount(flowLength / sumCellLength);
-            } else {
-                lengthBar.setVisibleAmount(numCellsVisibleOnScreen / (float) cellCount);
-            }
-            
 
             // Fix for RT-11873. If this isn't here, we can have a situation where
             // the scrollbar scrolls endlessly. This is possible when the cell
@@ -2169,7 +2175,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         cull();
 
         // Finally, update the scroll bars
-        updateScrollBarsAndCells();
+        updateScrollBarsAndCells(false);
         lastPosition = getPosition();
 
         // notify
@@ -2180,6 +2186,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     private boolean needsRecreateCells = false; // when cell factory changed
     private boolean needsRebuildCells = false; // when cell contents have changed
     private boolean needsCellsLayout = false;
+    private boolean sizeChanged = false;
     
     public void reconfigureCells() {
         needsReconfigureCells = true;
