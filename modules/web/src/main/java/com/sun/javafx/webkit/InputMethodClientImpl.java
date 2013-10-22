@@ -7,6 +7,7 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
 import javafx.geometry.Point2D;
 import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodHighlight;
@@ -20,7 +21,7 @@ import com.sun.webkit.event.WCInputMethodEvent;
 import com.sun.webkit.graphics.WCPoint;
 
 public final class InputMethodClientImpl
-    implements InputMethodClient, InputMethodRequests
+    implements InputMethodClient, ExtendedInputMethodRequests
 {
     private final WeakReference<WebView> wvRef;
     private final WebPage webPage;
@@ -110,5 +111,24 @@ public final class InputMethodClientImpl
 
     public String getSelectedText() {
         return webPage.getClientSelectedText();
+    }
+
+    @Override
+    public int getInsertPositionOffset() {
+        return webPage.getClientInsertPositionOffset();
+    }
+
+    @Override
+    public String getCommittedText(int begin, int end) {
+        try {
+            return webPage.getClientCommittedText().substring(begin, end);
+        } catch (StringIndexOutOfBoundsException e) {
+            throw new IllegalArgumentException(e);
+        }
+    }
+
+    @Override
+    public int getCommittedTextLength() {
+        return webPage.getClientCommittedTextLength();
     }
 }

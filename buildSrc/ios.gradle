@@ -380,7 +380,48 @@ project(":web") {
     }
 }
 
-IOS.media =[:]
-IOS.media.compiler = compiler
-IOS.media.linker = linker
-IOS.media.lib = linker
+IOS.media = [:]
+IOS.media.lib = "jfxmedia"
+IOS.media.javahSource = files("modules/media/build/classes/main")
+IOS.media.javahClasspath = files("modules/media/build/classes/main")
+IOS.media.javahInclude = ["javafx/scene/media/*"]
+IOS.media.variants = ["arm", "x86"];
+
+IOS.media.arm = [:]
+IOS.media.arm.nativeSource = [
+    file("modules/media/src/main/native/jfxmedia/platform/ios"),
+    file("modules/media/src/main/native/jfxmedia/platform/ios/jni")
+]
+IOS.media.arm.compiler = compiler
+IOS.media.arm.ccFlags = ["-x", "objective-c", ccFlags, "-arch", archArm, "-isysroot", sdkPath(iPhoneOS)].flatten()
+IOS.media.arm.linker = linker
+IOS.media.arm.linkFlags = ["-arch_only", archArm, "-syslibroot", sdkPath(iPhoneOS), linkFlags].flatten()
+IOS.media.arm.lib = "jfxmedia_${archArm}"
+
+IOS.media.x86 = [:]
+IOS.media.x86.nativeSource = [IOS.media.arm.nativeSource].flatten()
+IOS.media.x86.compiler = compiler
+IOS.media.x86.ccFlags = ["-x", "objective-c", ccFlags, "-arch", archX86, "-isysroot", sdkPath(iPhoneSim)].flatten()
+IOS.media.x86.linker = linker
+IOS.media.x86.linkFlags = ["-arch_only", archX86, "-syslibroot", sdkPath(iPhoneSim), linkFlags].flatten()
+IOS.media.x86.lib = "jfxmedia_${archX86}"
+
+project(":media") {
+    afterEvaluate {
+        addNative(project, "media")
+
+        sdkIos  {
+            doLast {
+                def props = project.ext["IOS"]
+                copy {
+                    if (props.useLipo) {
+                        from ("modules/media/build/libs/media/ios/${props.library(props.media.lib)}")
+                    } else {
+                        from ("modules/media/build/libs/media/ios")
+                    }
+                    into ("build/ios-sdk/rt/${props.libDest}")
+                }
+            }
+        }
+    }
+}

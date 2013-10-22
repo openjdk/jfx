@@ -96,7 +96,12 @@ class JSONDecoder {
         if (sNum.indexOf('.') >= 0 || sNum.indexOf('E') >= 0 || sNum.indexOf('e') >= 0) {
             return Double.valueOf(sNum);
         } else {
-            return Long.valueOf(sNum);
+            long val = Long.parseLong(sNum);
+            if ((val <= Integer.MAX_VALUE) && (Integer.MIN_VALUE <= val)) { 
+                return new Integer((int) val);
+            } else {
+                return new Double(val);
+            }
         }
     }
     

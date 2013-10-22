@@ -42,12 +42,9 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonBuilder;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
-import javafx.scene.control.LabelBuilder;
 import javafx.scene.control.Slider;
-import javafx.scene.control.SliderBuilder;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
@@ -136,9 +133,8 @@ public class MediaControl extends BorderPane {
         mediaBar.setAlignment(Pos.CENTER_LEFT);
         BorderPane.setAlignment(mediaBar, Pos.CENTER);
 
-        final Button playButton = ButtonBuilder.create()
-                .minWidth(Control.USE_PREF_SIZE)
-                .build();
+        final Button playButton = new Button();
+        playButton.setMinWidth(Control.USE_PREF_SIZE);
 
         playButton.setGraphic(imageViewPlay);
         playButton.setOnAction(new EventHandler<ActionEvent>() {
@@ -227,10 +223,10 @@ public class MediaControl extends BorderPane {
 
 
         // Time slider
-        timeSlider = SliderBuilder.create()
-                .minWidth(30)
-                .maxWidth(Double.MAX_VALUE)
-                .build();
+        timeSlider = new Slider();
+        timeSlider.setMinWidth(30);
+        timeSlider.setMaxWidth(Double.MAX_VALUE);
+        
         HBox.setHgrow(timeSlider, Priority.ALWAYS);
         timeSlider.valueProperty().addListener(new InvalidationListener() {
             @Override
@@ -248,20 +244,15 @@ public class MediaControl extends BorderPane {
         mediaBar.getChildren().add(timeSlider);
 
         // Play label
-        playTime = LabelBuilder.create()
-                //.prefWidth(130)
-                .minWidth(Control.USE_PREF_SIZE)
-                .build();
+        playTime = new Label();
+        playTime.setMinWidth(Control.USE_PREF_SIZE);
 
         mediaBar.getChildren().add(playTime);
 
 
         //Fullscreen button
-
-        Button buttonFullScreen = ButtonBuilder.create()
-                .text("Full Screen")
-                .minWidth(Control.USE_PREF_SIZE)
-                .build();
+        Button buttonFullScreen = new Button("Full Screen");
+        buttonFullScreen.setMinWidth(Control.USE_PREF_SIZE);
 
         buttonFullScreen.setOnAction(new EventHandler<ActionEvent>() {
             @Override
@@ -322,11 +313,10 @@ public class MediaControl extends BorderPane {
         mediaBar.getChildren().add(volumeLabel);
 
         // Volume slider
-        volumeSlider = SliderBuilder.create()
-                .prefWidth(70)
-                .minWidth(30)
-                .maxWidth(Region.USE_PREF_SIZE)
-                .build();
+        volumeSlider = new Slider();
+        volumeSlider.setPrefWidth(70);
+        volumeSlider.setMinWidth(30);
+        volumeSlider.setMaxWidth(Region.USE_PREF_SIZE);
         volumeSlider.valueProperty().addListener(new InvalidationListener() {
             @Override
             public void invalidated(Observable ov) {

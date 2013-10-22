@@ -71,7 +71,9 @@ abstract class GlassScene implements TKScene {
     private NGCamera camera;
     private Paint fillPaint;
 
-    private boolean entireSceneDirty = true;
+    // Write from FX thread, read from render thread
+    private volatile boolean entireSceneDirty = true;
+
     private boolean doPresent = true;
     private final AtomicBoolean painting = new AtomicBoolean(false);
 
@@ -196,10 +198,6 @@ abstract class GlassScene implements TKScene {
     public void setCamera(NGCamera camera) {
         this.camera = camera == null ? NGCamera.INSTANCE : camera;
         entireSceneNeedsRepaint();
-    }
-
-    Paint getFillPaint() {
-        return fillPaint;
     }
 
     @Override
@@ -334,7 +332,7 @@ abstract class GlassScene implements TKScene {
         return doPresent;
     }
 
-    protected final Color getClearColor() {
+    final Color getClearColor() {
         WindowStage windowStage = stage instanceof WindowStage ? (WindowStage)stage : null;
         if (windowStage != null && windowStage.getPlatformWindow().isTransparentWindow()) {
             return (Color.TRANSPARENT);
@@ -358,7 +356,7 @@ abstract class GlassScene implements TKScene {
         }
     }
 
-    protected final Paint getCurrentPaint() {
+    final Paint getCurrentPaint() {
         WindowStage windowStage = stage instanceof WindowStage ? (WindowStage)stage : null;
         if ((windowStage != null) && windowStage.getStyle() == StageStyle.TRANSPARENT) {
             return Color.TRANSPARENT.equals(fillPaint) ? null : fillPaint;

@@ -294,35 +294,6 @@ public class MouseEvent extends InputEvent {
         return e;
     }
 
-    //SB-dependency: RT-21224. Need to be sure that SB does use new API before removing this.
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public static MouseEvent impl_mouseEvent(double _x, double _y,
-          double _screenX, double _screenY,
-          MouseButton _button,
-          int _clickCount,
-          boolean _shiftDown,
-          boolean _controlDown,
-          boolean _altDown,
-          boolean _metaDown,
-          boolean _popupTrigger,
-          boolean _primaryButtonDown,
-          boolean _middleButtonDown,
-          boolean _secondaryButtonDown,
-          boolean _synthesized,
-          EventType<? extends MouseEvent> _eventType
-          ) {
-        return new MouseEvent(
-                _eventType, _x, _y, _screenX, _screenY,
-                _button, _clickCount,
-                _shiftDown, _controlDown, _altDown, _metaDown,
-                _primaryButtonDown, _middleButtonDown, _secondaryButtonDown, 
-                _synthesized, _popupTrigger, false, null);
-    }
-
     /**
      * Constructs new MouseEvent event with null source and target.
      * @param eventType The type of the event.

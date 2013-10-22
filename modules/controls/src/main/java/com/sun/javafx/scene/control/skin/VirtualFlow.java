@@ -63,6 +63,17 @@ import java.util.List;
  */
 public class VirtualFlow<T extends IndexedCell> extends Region {
 
+    /**
+     * Scroll events may request to scroll about a number of "lines". We first
+     * decide how big one "line" is - for fixed cell size it's clear,
+     * for variable cell size we settle on a single number so that the scrolling
+     * speed is consistent. Now if the line is so big that
+     * MIN_SCROLLING_LINES_PER_PAGE of them don't fit into one page, we make
+     * them smaller to prevent the scrolling step to be too big (perhaps
+     * even more than one page).
+     */
+    private static final int MIN_SCROLLING_LINES_PER_PAGE = 8;
+                    
     private boolean touchDetected = false;
     private boolean mouseDown = false;
 
@@ -538,17 +549,26 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                             virtualDelta = event.getTextDeltaY() * lastHeight;
                             break;
                         case LINES:
-                            /*
-                            ** if we've selected a cell, then use
-                            ** it's length for the scroll, otherwise
-                            ** use the length of the first visible cell
-                            */
-                            if (lastCellLength != -1) {
-                                virtualDelta = event.getTextDeltaY() * lastCellLength;
+                            double lineSize;
+                            if (fixedCellSizeEnabled) {
+                                lineSize = fixedCellSize;
+                            } else {
+                                // For the scrolling to be reasonably consistent
+                                // we set the lineSize to the average size
+                                // of all currently loaded lines.
+                                T lastCell = cells.getLast();
+                                lineSize =
+                                        (getCellPosition(lastCell)
+                                            + getCellLength(lastCell)
+                                            - getCellPosition(cells.getFirst()))
+                                        / cells.size();
                             }
-                            else if (getFirstVisibleCell() != null) {
-                                virtualDelta = event.getTextDeltaY() * getCellLength(getFirstVisibleCell());
+
+                            if (lastHeight / lineSize < MIN_SCROLLING_LINES_PER_PAGE) {
+                                lineSize = lastHeight / MIN_SCROLLING_LINES_PER_PAGE;
                             }
+
+                            virtualDelta = event.getTextDeltaY() * lineSize;
                             break;
                         case NONE:
                             virtualDelta = event.getDeltaY();
@@ -2593,7 +2613,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 }
             });
 
-            sbTouchKF2 = new KeyFrame(Duration.millis(500), new EventHandler<ActionEvent>() {
+            sbTouchKF2 = new KeyFrame(Duration.millis(1000), new EventHandler<ActionEvent>() {
                 @Override public void handle(ActionEvent event) {
                     if (touchDetected == false && mouseDown == false) {
                         tempVisibility = false;

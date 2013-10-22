@@ -82,11 +82,18 @@ import com.sun.javafx.css.StyleManager;
  * </p>
  *
  * <p>
- * The Application constructor and {@code init} method are called on
- * the launcher thread, not on the JavaFX Application Thread.
+ * The Java launcher loads and initializes the specified Application class
+ * on the JavaFX Application Thread. If there is no main method in the
+ * Application class, or if the main method calls Application.launch(), then
+ * an instance of the Application is then constructed on the JavaFX Application
+ * Thread.
+ * </p>
+ *
+ * <p>
+ * The {@code init} method is called on the launcher thread, not on the
+ * JavaFX Application Thread.
  * This means that an application must not construct a {@link Scene}
- * or a {@link Stage} in either the constructor or in the {@code init}
- * method.
+ * or a {@link Stage} in the {@code init} method.
  * An application may construct other JavaFX objects in the {@code init}
  * method.
  * </p>

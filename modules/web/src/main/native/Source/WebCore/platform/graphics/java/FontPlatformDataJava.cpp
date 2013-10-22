@@ -32,14 +32,32 @@ PassRefPtr<RQRef> FontPlatformData::getJavaFont(const String& family, float size
     return RQRef::create(wcFont);
 }
 
-PassRefPtr<RQRef> FontPlatformData::getJavaFont(const FontDescription& fontDescription, const AtomicString& family)
+PassOwnPtr<FontPlatformData> FontPlatformData::create(
+        const FontDescription& fontDescription, const AtomicString& family)
 {
     FontWeight weight = fontDescription.weight();
-    return getJavaFont(
-        family,
-        fontDescription.computedSize(),
-        fontDescription.italic(),
-        (FontWeightBold <= weight) && (weight <= FontWeight900));
+    PassRefPtr<RQRef> wcFont = getJavaFont(
+            family,
+            fontDescription.computedSize(),
+            fontDescription.italic(),
+            (FontWeightBold <= weight) && (weight <= FontWeight900));
+    return !wcFont ? nullptr : adoptPtr(new FontPlatformData(wcFont, fontDescription.computedSize()));
+}
+
+PassOwnPtr<FontPlatformData> FontPlatformData::derive(float scaleFactor) const
+{
+    ASSERT(m_jFont);
+    float size = m_size * scaleFactor;
+
+    JNIEnv* env = WebCore_GetJavaEnv();
+    static jmethodID createScaledMID = env->GetMethodID(
+        PG_GetFontClass(env), "deriveFont", "(F)Lcom/sun/webkit/graphics/WCFont;");
+    ASSERT(createScaledMID);
+
+    JLObject wcFont(env->CallObjectMethod(*m_jFont, createScaledMID, size));
+    CheckAndClearException(env);
+
+    return adoptPtr(new FontPlatformData(RQRef::create(wcFont), size));
 }
 
 jint FontPlatformData::getJavaFontID(const JLObject &font)
@@ -54,11 +72,6 @@ jint FontPlatformData::getJavaFontID(const JLObject &font)
     CheckAndClearException(env);
 
     return res;
-}
-
-bool FontPlatformData::init()
-{
-    return true;
 }
 
 bool FontPlatformData::operator==(const FontPlatformData& other) const
@@ -118,5 +131,5 @@ String FontPlatformData::description() const
     return "Java font";
 }
 #endif //NDEBUG
-}//end of workspace
 
+}

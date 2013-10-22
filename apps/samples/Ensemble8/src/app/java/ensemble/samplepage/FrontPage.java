@@ -54,7 +54,7 @@ class FrontPage extends Region {
     FrontPage(final SamplePage samplePage) {
         this.samplePage = samplePage;
         getStyleClass().add("sample-page-front");
-        sampleNode = samplePage.sample.buildSampleNode();
+        sampleNode = samplePage.sampleInfo.getSampleNode();
         sampleContainer = new SampleContainer(sampleNode);
         sampleContainer.getStyleClass().add("sample-page-sample-node");
         if (samplePage.sample.needsPlayground()) {

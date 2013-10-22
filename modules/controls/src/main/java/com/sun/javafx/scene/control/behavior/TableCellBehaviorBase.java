@@ -250,19 +250,15 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
                     // and then determine all row and columns which must be selected
                     int minRow = Math.min(anchor.getRow(), row);
                     int maxRow = Math.max(anchor.getRow(), row);
-                    int minColumn = Math.min(anchor.getColumn(), column);
-                    int maxColumn = Math.max(anchor.getColumn(), column);
+                    TableColumnBase<S,T> minColumn = anchor.getColumn() < column ? anchor.getTableColumn() : tableColumn;
+                    TableColumnBase<S,T> maxColumn = anchor.getColumn() >= column ? anchor.getTableColumn() : tableColumn;
 
                     if (sm.isCellSelectionEnabled()) {
                         // clear selection, but maintain the anchor
                         sm.clearSelection();
 
                         // and then perform the selection
-                        for (int _row = minRow; _row <= maxRow; _row++) {
-                            for (int _col = minColumn; _col <= maxColumn; _col++) {
-                                sm.select(_row, getVisibleLeafColumn(_col));
-                            }
-                        }
+                        sm.selectRange(minRow, minColumn, maxRow, maxColumn);
                     } else {
                         // To prevent RT-32119, we make a copy of the selected indices
                         // list first, so that we are not iterating and modifying it

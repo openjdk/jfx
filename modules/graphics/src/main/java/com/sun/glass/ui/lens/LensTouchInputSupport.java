@@ -40,14 +40,40 @@ import java.security.PrivilegedAction;
 
 final class LensTouchInputSupport {
 
+    /**
+     * This property define the size of the tap radius which can be seen as the
+     * 'finger size'. After the first tap, a touch point will be considered 
+     * STILL as long as the point coordinates are within the tap radius. When the 
+     * point coordinates move outside the tap radius the point will be considered
+     * as 'dragging' and all move events will be reported as long as they are 
+     * greater then the touchMoveSensitivity property 
+     * Property is used by Lens native input driver 
+     * 
+     */
     private static final int touchTapRadius;
+    /**
+     * This property determine the sensitivity of move events from touch. The 
+     * bigger the value the less sensitive is the touch screen. In practice move
+     * events with a delta smaller then the value of this property will be 
+     * filtered out.The value of the property is in pixels. 
+     * Property is used by Lens native input driver 
+     */    
+    private static final int touchMoveSensitivity;
 
     static {
         touchTapRadius = AccessController.doPrivileged(
         new PrivilegedAction<Integer>() {
             @Override
             public Integer run() {
-                return Integer.getInteger("lens.touchTapRadius", 20);
+                return Integer.getInteger("lens.input.touch.TapRadius", 20);
+            }
+        });
+
+        touchMoveSensitivity = AccessController.doPrivileged(
+        new PrivilegedAction<Integer>() {
+            @Override
+            public Integer run() {
+                return Integer.getInteger("lens.input.touch.MoveSensitivity", 3);
             }
         });
     }

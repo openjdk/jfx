@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project name="javafx-geom-common" default="jar" basedir=".">
-
-  <target name="jar" depends="init">
-    <build-project>
-    </build-project>
-  </target>
-
-</project>

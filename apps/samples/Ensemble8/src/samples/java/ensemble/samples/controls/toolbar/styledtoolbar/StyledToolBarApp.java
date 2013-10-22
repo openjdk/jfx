@@ -38,8 +38,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Slider;
 import javafx.scene.control.ToolBar;
-import javafx.scene.control.ToolBarBuilder;
-import javafx.scene.layout.VBoxBuilder;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 /**
@@ -54,10 +53,9 @@ import javafx.stage.Stage;
 public class StyledToolBarApp extends Application {
 
     private ToolBar createToolBar(String id) {
-        return ToolBarBuilder.create().id(id).items(
-                new Button("Button 1"),
-                new Button("Button 2"),
-                new Slider()).build();
+        ToolBar toolBar = new ToolBar(new Button("Button 1"), new Button("Button 2"), new Slider());
+        toolBar.setId(id);
+        return toolBar;
     }
 
     public Parent createContent() {
@@ -70,7 +68,9 @@ public class StyledToolBarApp extends Application {
 
         ToolBar blueToolbar = createToolBar("blue");
         blueToolbar.getStylesheets().add(styledToolBarCss);
-        return VBoxBuilder.create().spacing(10).padding(new Insets(10)).children(standardToolbar, darkToolbar, blueToolbar).build();
+        VBox vBox = new VBox(10, standardToolbar, darkToolbar, blueToolbar);
+        vBox.setPadding(new Insets(10));
+        return vBox;
     }
 
     @Override

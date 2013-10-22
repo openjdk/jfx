@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project name="prism-j2d" default="jar" basedir=".">
-    <description>Builds, tests, and runs the OpenJFX prism-j2d project.</description>
-
-    <import file="../build-defs.xml"/>
-    <import file="build-common.xml"/>
-</project>

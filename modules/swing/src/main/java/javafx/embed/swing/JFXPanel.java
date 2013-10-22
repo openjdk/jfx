@@ -40,9 +40,11 @@ import java.awt.event.ComponentEvent;
 import java.awt.event.FocusEvent;
 import java.awt.event.HierarchyEvent;
 import java.awt.event.InputEvent;
+import java.awt.event.InputMethodEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
+import java.awt.im.InputMethodRequests;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 import java.nio.IntBuffer;
@@ -215,7 +217,8 @@ public class JFXPanel extends JComponent {
                      InputEvent.MOUSE_EVENT_MASK |
                      InputEvent.MOUSE_MOTION_EVENT_MASK |
                      InputEvent.MOUSE_WHEEL_EVENT_MASK |
-                     InputEvent.KEY_EVENT_MASK);
+                     InputEvent.KEY_EVENT_MASK |
+                     InputEvent.INPUT_METHOD_EVENT_MASK);
 
         setFocusable(true);
         setFocusTraversalKeysEnabled(false);
@@ -594,6 +597,25 @@ public class JFXPanel extends JComponent {
         }
     }
 
+    @Override
+    protected void processInputMethodEvent(InputMethodEvent e) {
+        if (e.getID() == InputMethodEvent.INPUT_METHOD_TEXT_CHANGED) {
+            sendInputMethodEventToFX(e);
+        }
+        super.processInputMethodEvent(e);
+    }
+
+    private void sendInputMethodEventToFX(InputMethodEvent e) {
+        String t = InputMethodSupport.getTextForEvent(e);
+
+        scenePeer.inputMethodEvent(
+                javafx.scene.input.InputMethodEvent.INPUT_METHOD_TEXT_CHANGED,
+                InputMethodSupport.inputMethodEventComposed(t, e.getCommittedCharacterCount()),
+                t.substring(0, e.getCommittedCharacterCount()),
+                e.getCaret().getInsertionIndex());
+    }
+
+
     /**
      * Overrides the {@link javax.swing.JComponent#paintComponent(Graphics)}
      * method to paint the content of the JavaFX scene attached to this
@@ -715,6 +737,11 @@ public class JFXPanel extends JComponent {
                 }
             }
         });
+    }
+
+    @Override
+    public InputMethodRequests getInputMethodRequests() {
+        return new InputMethodSupport.InputMethodRequestsAdapter(scenePeer.getInputMethodRequests());
     }
 
     /**

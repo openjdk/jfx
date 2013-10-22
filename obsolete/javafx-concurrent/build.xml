@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project name="javafx-concurrent" default="jar" basedir=".">
-  <description>Builds, tests, and runs the project javafx-beans-dt.</description>
-
-  <import file="build-common.xml"/>
-</project>

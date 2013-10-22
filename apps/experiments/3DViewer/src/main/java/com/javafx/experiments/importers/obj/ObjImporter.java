@@ -383,7 +383,7 @@ public class ObjImporter {
         if (useNormals) {
             int[] newFaces = ((IntegerArrayList) faces.subList(facesStart, faces.size())).toIntArray();
             int[] newFaceNormals = ((IntegerArrayList) faceNormals.subList(facesNormalStart, faceNormals.size())).toIntArray();
-            int[] smGroups = SmoothingGroups.calcSmoothGroups(newFaces, newFaceNormals, newNormals.toFloatArray());
+            int[] smGroups = SmoothingGroups.calcSmoothGroups(mesh, newFaces, newFaceNormals, newNormals.toFloatArray());
             mesh.getFaceSmoothingGroups().setAll(smGroups);
         } else {
             mesh.getFaceSmoothingGroups().setAll(((IntegerArrayList) smoothingGroups.subList(smoothingGroupsStart, smoothingGroups.size())).toIntArray());
@@ -398,9 +398,9 @@ public class ObjImporter {
         materials.put(key, material);
 
         log(
-                "Added mesh '" + key + "' of " + mesh.getPoints().size() / TriangleMesh.NUM_COMPONENTS_PER_POINT + " vertexes, "
-                        + mesh.getTexCoords().size() / TriangleMesh.NUM_COMPONENTS_PER_TEXCOORD + " uvs, "
-                        + mesh.getFaces().size() / TriangleMesh.NUM_COMPONENTS_PER_FACE + " faces, "
+                "Added mesh '" + key + "' of " + mesh.getPoints().size() / mesh.getPointElementSize() + " vertexes, "
+                        + mesh.getTexCoords().size() / mesh.getTexCoordElementSize() + " uvs, "
+                        + mesh.getFaces().size() / mesh.getFaceElementSize() + " faces, "
                         + mesh.getFaceSmoothingGroups().size() + " smoothing groups.");
         log("material diffuse color = " + ((PhongMaterial) material).getDiffuseColor());
         log("material diffuse map = " + ((PhongMaterial) material).getDiffuseMap());

@@ -155,6 +155,7 @@ public class NGSubScene extends NGNode {
 
     @Override
     protected void renderContent(Graphics g) {
+        if (rtWidth <= 0.0 || rtHeight <= 0.0) { return; }
         if (rtt != null) {
             rtt.lock();
             if (rtt.isSurfaceLost()) {

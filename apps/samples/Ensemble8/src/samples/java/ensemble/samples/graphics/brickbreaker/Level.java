@@ -59,7 +59,7 @@ import javafx.animation.AnimationTimer;
 public class Level extends Parent {
 
     private static final double MOB_SCALING = 1.5f;
-    private static final MainFrame mainFrame = BrickBreakerApp.getMainFrame();
+    private final MainFrame mainFrame;
 
     private ArrayList<Brick> bricks;
     private int brickCount;
@@ -96,7 +96,8 @@ public class Level extends Parent {
     private AnimationTimer animationTimer;
     private Group infoPanel;
 
-    public Level(int levelNumber) {
+    public Level(MainFrame mainFrame, int levelNumber) {
+        this.mainFrame = mainFrame;
         group = new Group();
         getChildren().add(group);
         initContent(levelNumber);

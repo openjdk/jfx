@@ -84,7 +84,7 @@ public class FancyBox3D extends MeshView {
         mesh.getPoints().ensureCapacity(72);
         mesh.getTexCoords().ensureCapacity(32);
         mesh.getFaces().ensureCapacity(264);
-        mesh.getFaceSmoothingGroups().resize(264 / TriangleMesh.NUM_COMPONENTS_PER_FACE);
+        mesh.getFaceSmoothingGroups().resize(264 / mesh.getFaceElementSize());
         mesh.getTexCoords().addAll(
                 T2 + ONE_PIXEL, T2 + ONE_PIXEL,
                 T3 - ONE_PIXEL, T2 + ONE_PIXEL,
@@ -155,7 +155,7 @@ public class FancyBox3D extends MeshView {
     private int getPointIndex(Point3D point) {
         Integer index = pIndexes.get(point);
         if (index == null) {
-            index = mesh.getPoints().size() / TriangleMesh.NUM_COMPONENTS_PER_POINT;
+            index = mesh.getPoints().size() / mesh.getPointElementSize();
             mesh.getPoints().addAll((float) point.getX(), (float) point.getY(), (float) point.getZ());
             pIndexes.put(point, index);
         }
@@ -165,13 +165,13 @@ public class FancyBox3D extends MeshView {
     public void setFace(Face face, int x, int y, int px, int py) {
         int faceIndex = 0;
         if (face.ordinal() <= Face.BACK.ordinal()) {
-            faceIndex = face.ordinal() * 2 * TriangleMesh.NUM_COMPONENTS_PER_FACE;
+            faceIndex = face.ordinal() * 2 * mesh.getFaceElementSize();
         } else {
-            faceIndex = ((face.ordinal() - 2) / 6 * 10 + 4) * TriangleMesh.NUM_COMPONENTS_PER_FACE;
+            faceIndex = ((face.ordinal() - 2) / 6 * 10 + 4) * mesh.getFaceElementSize();
         }
         float leftX = T1 * x + ONE_PIXEL + (2 - py) * PART_SIZE;
         float topY = T1 * y + ONE_PIXEL + px * PART_SIZE;
-        int baseTC = mesh.getTexCoords().size() / TriangleMesh.NUM_COMPONENTS_PER_TEXCOORD;
+        int baseTC = mesh.getTexCoords().size() / mesh.getTexCoordElementSize();
         mesh.getTexCoords().addAll(
                 leftX + PART_SIZE, topY,
                 leftX, topY,

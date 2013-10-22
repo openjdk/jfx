@@ -72,23 +72,6 @@ final class LensApplication extends Application {
     private int[] deviceFlags = new int[DEVICE_MAX + 1];
 
     /**
-     * Used to filter out extra "noisy" touch events. The OS delivers us multiple touch events,
-     * which are essentially samples. To be very accurate, we would have to collect many samples
-     * and average them out. If we don't do so, when the user touches and holds, they will see
-     * many slightly different mouse drag events, which can cause, for example, the thing being
-     * dragged to jump around.
-     *
-     * When the first touch move point comes in, we assume it is accurate and assign it to previousTouchMoveScreenX
-     * and previousTouchMoveScreenY. All subsequent events will be measured from this point, such that if
-     * they are nearer these points than the hysteresis, then we drop them. If they are farther away
-     * than the hysteresis, then we assume they must be valid events, and we post them (and update the
-     * previousTouchMoveX and previousTouchMoveY accordingly).
-     *
-     * This should probably be configurable via a system property, as different quality touch screens
-     * may require some tweaking to this value.
-     */
-    private static final int TOUCH_HYSTERESIS = 3;
-    /**
      * Values of -1 mean that these variables are not set. We will reset them to -1 whenever we
      * get a non-touch move event.
      */
@@ -520,7 +503,8 @@ final class LensApplication extends Application {
             LensTouchInputSupport.postTouchEvent(view, state, id, x, y, absX, absY);
             if (state == TouchEvent.TOUCH_MOVED) {
                 view._notifyMouse(MouseEvent.DRAG, MouseEvent.BUTTON_NONE,
-                                  x, y, absX, absY, KeyEvent.MODIFIER_BUTTON_PRIMARY, false, true);
+                                  x, y, absX, absY, KeyEvent.MODIFIER_BUTTON_PRIMARY,
+                                  false, true);
             } 
 	    // else do nothing; other events are synthesized in native code
         }
@@ -565,7 +549,8 @@ final class LensApplication extends Application {
                     view, states, ids, xs, ys, dx, dy);
             if (states.length > 0 && states[0] == TouchEvent.TOUCH_MOVED) {
                 view._notifyMouse(MouseEvent.DRAG, MouseEvent.BUTTON_NONE,
-                    xs[0] + dx, ys[0] + dy, xs[0], ys[0], KeyEvent.MODIFIER_BUTTON_PRIMARY, false, true);
+                    xs[0] + dx, ys[0] + dy, xs[0], ys[0],
+                    KeyEvent.MODIFIER_BUTTON_PRIMARY, false, true);
             }
 	    // else do nothing; other events are synthesized in native code
         }
@@ -1432,7 +1417,9 @@ final class LensApplication extends Application {
                 Event lastEvent = eventList.getLast();
                 if (lastEvent instanceof LensTouchEvent) {
                     LensTouchEvent e = (LensTouchEvent) lastEvent;
-                    if (e.view == view && e.state == TouchEvent.TOUCH_MOVED && e.id == id) {
+                    if (e.view == view &&
+                        e.id == id && 
+                        (e.state == TouchEvent.TOUCH_MOVED || e.state == TouchEvent.TOUCH_STILL)) {
                         // Rewrite the coordinates of the scheduled event
                         // with the coordinates of this event.
                         e.x = x;
@@ -1464,23 +1451,11 @@ final class LensApplication extends Application {
         try {
             final boolean hadPreviousTouchMove = previousTouchMoveScreenX >= 0;
             if (state == TouchEvent.TOUCH_MOVED) {
-                if (!hadPreviousTouchMove ||
-                        Math.abs(absX - previousTouchMoveScreenX) > TOUCH_HYSTERESIS ||
-                        Math.abs(absY - previousTouchMoveScreenY) > TOUCH_HYSTERESIS) {
-                    previousTouchMoveX = x;
-                    previousTouchMoveY = y;
-                    previousTouchMoveScreenX = absX;
-                    previousTouchMoveScreenY = absY;
-                    postTouchMoveEvent(view, id, x, y, absX, absY);
-                }
+                postTouchMoveEvent(view, id, x, y, absX, absY);
             } else {
-                if (hadPreviousTouchMove) {
-                    postTouchMoveEvent(view, id, previousTouchMoveX, previousTouchMoveY, previousTouchMoveScreenX, previousTouchMoveScreenY);
-                    previousTouchMoveX = previousTouchMoveY = previousTouchMoveScreenX = previousTouchMoveScreenY = -1;
-                }
-                postEvent(new LensTouchEvent(view, state, id, x, y, absX, absY));
+                 postEvent(new LensTouchEvent(view, state, id, x, y, absX, absY));
             }
-
+                
             if (LensLogger.getLogger().isLoggable(Level.FINE)) {
                 LensLogger.getLogger().fine("Touch event "
                                             + state + " at "
@@ -1514,19 +1489,24 @@ final class LensApplication extends Application {
             }
             synchronized (eventList) {
                 // Try to match this multitouch event against a pending event
+                //This code assume that the order of touch points doesn't 
+                //change between events
                 boolean match = false;
                 if (!eventList.isEmpty()) {
                     Event lastEvent = eventList.getLast();
                     if (lastEvent instanceof LensMultiTouchEvent) {
                         LensMultiTouchEvent e = (LensMultiTouchEvent) lastEvent;
                         if (e.view == view
-                                && e.states.length == states.length
-                                && e.dx == dx && e.dy == dy) {
+                                && e.states.length == states.length) {
                             assert(states.length == ids.length);
                             assert(e.states.length == e.ids.length);
                             match = true;
                             for (int i = 0; i < states.length && match; i++) {
-                                if (e.states[i] != states[i]) {
+                                //check if event is motion related
+                                if ((e.states[i] != TouchEvent.TOUCH_MOVED &&
+                                     e.states[i] != TouchEvent.TOUCH_STILL) ||
+                                    (states[i] != TouchEvent.TOUCH_MOVED && 
+                                     states[i] != TouchEvent.TOUCH_STILL)) {
                                     match = false;
                                 }
                                 if (e.ids[i] != ids[i]) {

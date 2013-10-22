@@ -28,4 +28,4 @@ questions.
 
 
 <Widget fx:controller="javafx.fxml.EventsTestController"
-        xmlns:fx="http://javafx.com/fxml" id="widget" onAction="#handleButtonAction"/>
+        xmlns:fx="http://javafx.com/fxml" id="widget" onAction="#handleWidgetAction"/>

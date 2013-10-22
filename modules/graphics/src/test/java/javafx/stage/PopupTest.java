@@ -51,6 +51,7 @@ import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import javafx.geometry.Bounds;
 import javafx.scene.Parent;
+import junit.framework.Assert;
 import static org.junit.Assert.assertEquals;
 
 public class PopupTest {
@@ -650,6 +651,22 @@ public class PopupTest {
 
         popup.hide();
         assertFalse(peer.isFocusGrabbed());
+    }
+
+    @Test
+    public void testPopupRootStyle() {
+        final Popup popup = new Popup();
+
+        final Parent oldRoot = popup.getScene().getRoot();
+        Assert.assertTrue(oldRoot.getStyleClass().contains("popup"));
+
+        final Group newRoot = new Group(new Rectangle(0, 0, 200, 300));
+        popup.getScene().setRoot(newRoot);
+
+        Assert.assertTrue(newRoot.getStyleClass().contains("popup"));
+        Assert.assertFalse(oldRoot.getStyleClass().contains("popup"));
+
+        System.out.println(javafx.scene.shape.Sphere.class.getResource("Sphere.class"));
     }
 
     private static final class EventCounter implements EventHandler<Event> {

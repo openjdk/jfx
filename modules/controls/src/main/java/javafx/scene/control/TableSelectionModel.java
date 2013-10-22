@@ -82,6 +82,13 @@ public abstract class TableSelectionModel<T> extends MultipleSelectionModelBase<
     public abstract void selectBelowCell();
 
     /**
+     * Selects the cells in the range (minRow, minColumn) to (maxRow, maxColumn),
+     * inclusive.
+     */
+    public abstract void selectRange(int minRow, TableColumnBase<T,?> minColumn,
+                                     int maxRow, TableColumnBase<T,?> maxColumn);
+
+    /**
      * A boolean property used to represent whether the table is in
      * row or cell selection modes. By default a table is in row selection
      * mode which means that individual cells can not be selected. Setting

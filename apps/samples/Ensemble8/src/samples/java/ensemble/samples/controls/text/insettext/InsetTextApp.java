@@ -35,7 +35,6 @@ import javafx.application.Application;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
-import javafx.scene.control.LabelBuilder;
 import javafx.stage.Stage;
 
 /**
@@ -44,15 +43,15 @@ import javafx.stage.Stage;
  * @sampleName Inset Text
  * @preview preview.png
  * @see javafx.geometry.Insets
- * @see javafx.scene.control.LabelBuilder
  * @related /Controls/Text/Simple Label
  */
 public class InsetTextApp extends Application {
 
     String insetTextCss = InsetTextApp.class.getResource("InsetText.css").toExternalForm();
-    Label label = LabelBuilder.create().text("Label styled as a bar").id("label1").build();
-
+    Label label = new Label("Label styled as a bar");
+      
     public Parent createContent() {
+        label.setId("label1");
         label.getStylesheets().add(insetTextCss);
         return label;
     }

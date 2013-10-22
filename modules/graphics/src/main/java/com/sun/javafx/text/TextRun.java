@@ -531,10 +531,20 @@ public class TextRun implements GlyphList {
 
     public int getGlyphIndex(int charOffset) {
         if (charIndices == null) return charOffset;
-        for (int i=0;i<charIndices.length&&i<glyphCount;i++) {
+        for (int i = 0; i < charIndices.length && i < glyphCount; i++) {
             if (charIndices[i] == charOffset) {
                 return i;
             }
+        }
+        /* The charOffset does not have a glyph that maps back to it. This
+         * happens with cluster, specially on Windows where all glyphs in the
+         * cluster map back to the base character. The fix is to search for
+         * glyph index for previous character offset (which we expect is the
+         * base character for the cluster). */
+        if (isLeftToRight()) {
+            if (charOffset > 0) return getGlyphIndex(charOffset - 1);
+        } else {
+            if (charOffset + 1 < length) return getGlyphIndex(charOffset + 1);
         }
         return 0;
     }

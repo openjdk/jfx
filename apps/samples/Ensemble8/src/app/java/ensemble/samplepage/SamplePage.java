@@ -53,12 +53,14 @@ public class SamplePage extends Region implements Page {
     SampleInfo sample;
     PageBrowser pageBrowser;
     private final ReadOnlyStringProperty titleProperty;
-    
+    final SampleInfo.SampleRuntimeInfo sampleInfo;
+
     public SamplePage(SampleInfo sample, String url, final PageBrowser pageBrowser) {
         this.sample = sample;
         this.pageBrowser = pageBrowser;
         getStyleClass().add("sample-page");
         titleProperty = new ReadOnlyStringWrapper(sample.name);
+        sampleInfo = sample.buildSampleNode();
 
         if (EnsembleApp.IS_IPHONE) {
             IPhoneLayout iPhoneLayout = new IPhoneLayout(this);
@@ -89,7 +91,7 @@ public class SamplePage extends Region implements Page {
             }
         }
     }
-    
+
     @Override public ReadOnlyStringProperty titleProperty() {
         return titleProperty;
     }

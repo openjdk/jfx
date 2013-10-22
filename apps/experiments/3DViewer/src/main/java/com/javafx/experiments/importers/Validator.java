@@ -30,7 +30,6 @@ import javafx.scene.Parent;
 import javafx.scene.shape.Mesh;
 import javafx.scene.shape.MeshView;
 import javafx.scene.shape.TriangleMesh;
-import static javafx.scene.shape.TriangleMesh.*;
 
 /**
  * Mesh data validator
@@ -53,16 +52,16 @@ public class Validator {
             throw new AssertionError("Mesh is not TriangleMesh: " + mesh.getClass() + ", mesh = " + mesh);
         }
         TriangleMesh tMesh = (TriangleMesh) mesh;
-        int numPoints = tMesh.getPoints().size() / NUM_COMPONENTS_PER_POINT;
-        int numTexCoords = tMesh.getTexCoords().size() / NUM_COMPONENTS_PER_TEXCOORD;
-        int numFaces = tMesh.getFaces().size() / NUM_COMPONENTS_PER_FACE;
-        if (numPoints == 0 || numPoints * NUM_COMPONENTS_PER_POINT != tMesh.getPoints().size()) {
+        int numPoints = tMesh.getPoints().size() / tMesh.getPointElementSize();
+        int numTexCoords = tMesh.getTexCoords().size() / tMesh.getTexCoordElementSize();
+        int numFaces = tMesh.getFaces().size() / tMesh.getFaceElementSize();
+        if (numPoints == 0 || numPoints * tMesh.getPointElementSize() != tMesh.getPoints().size()) {
             throw new AssertionError("Points array size is not correct: " + tMesh.getPoints().size());
         }
-        if (numTexCoords == 0 || numTexCoords * NUM_COMPONENTS_PER_TEXCOORD != tMesh.getTexCoords().size()) {
+        if (numTexCoords == 0 || numTexCoords * tMesh.getTexCoordElementSize() != tMesh.getTexCoords().size()) {
             throw new AssertionError("TexCoords array size is not correct: " + tMesh.getPoints().size());
         }
-        if (numFaces == 0 || numFaces * NUM_COMPONENTS_PER_FACE != tMesh.getFaces().size()) {
+        if (numFaces == 0 || numFaces * tMesh.getFaceElementSize() != tMesh.getFaces().size()) {
             throw new AssertionError("Faces array size is not correct: " + tMesh.getPoints().size());
         }
         if (numFaces != tMesh.getFaceSmoothingGroups().size() && tMesh.getFaceSmoothingGroups().size() > 0) {

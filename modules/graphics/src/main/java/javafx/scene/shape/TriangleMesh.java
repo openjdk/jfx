@@ -25,6 +25,7 @@
 
 package javafx.scene.shape;
 
+import com.sun.javafx.scene.shape.ObservableFaceArrayImpl;
 import com.sun.javafx.collections.FloatArraySyncer;
 import com.sun.javafx.collections.IntegerArraySyncer;
 import com.sun.javafx.geom.BaseBounds;
@@ -92,15 +93,11 @@ import sun.util.logging.PlatformLogger;
  */
 public class TriangleMesh extends Mesh {
 
-    public static final int NUM_COMPONENTS_PER_POINT = 3;
-    public static final int NUM_COMPONENTS_PER_TEXCOORD = 2;
-    public static final int NUM_COMPONENTS_PER_FACE = 6;
-
     // The values in faces must be within range and the length of points,
     // texCoords and faces must be divisible by 3, 2 and 6 respectively.
     private final ObservableFloatArray points = FXCollections.observableFloatArray();
     private final ObservableFloatArray texCoords = FXCollections.observableFloatArray();
-    private final ObservableIntegerArray faces = FXCollections.observableIntegerArray();
+    private final ObservableFaceArray faces = new ObservableFaceArrayImpl();
     private final ObservableIntegerArray faceSmoothingGroups = FXCollections.observableIntegerArray();
     
     private final Listener pointsSyncer = new Listener(points);
@@ -113,6 +110,7 @@ public class TriangleMesh extends Mesh {
     private int refCount = 1;
 
     private BaseBounds cachedBounds;
+    private VertexFormat vertexFormat = new VertexFormat();
 
     /**
      * Creates a new instance of {@code TriangleMesh} class.
@@ -135,12 +133,41 @@ public class TriangleMesh extends Mesh {
             isFaceSmoothingGroupValid = false;
         }
     }
+
     /**
-     * Gets the {@code ObservableFloatArray} of points of this {@code TriangleMesh}.
+     * Returns the number of elements that represents a Point.
+     *
+     * @return number of elements
+     */
+    public final int getPointElementSize() {
+        return vertexFormat.getPointElementSize();
+    }
+
+    /**
+     * Returns the number of elements that represents a TexCoord.
+     *
+     * @return number of elements
+     */
+    public final int getTexCoordElementSize() {
+        return vertexFormat.getTexCoordElementSize();
+    }
+
+    /**
+     * Returns the number of elements that represents a Face.
+     *
+     * @return number of elements
+     */
+    public final int getFaceElementSize() {
+        return vertexFormat.getFaceElementSize();
+    }
+
+    /**
+     * Gets the {@code ObservableFloatArray} of points of this
+     * {@code TriangleMesh}.
      *
      * @return {@code ObservableFloatArray} of points where each point is
      * represented by 3 float values x, y and z, in that order.
-     */    
+     */
     public final ObservableFloatArray getPoints() {
         return points;
     }
@@ -157,17 +184,17 @@ public class TriangleMesh extends Mesh {
     }
  
     /**
-     * Gets the {@code ObservableIntegerArray} of faces, indices into the points 
+     * Gets the {@code ObservableFaceArray} of faces, indices into the points 
      * and texCoords arrays, of this  {@code TriangleMesh}
      *
-     * @return {@code ObservableIntegerArray} of faces where each face is
+     * @return {@code ObservableFaceArray} of faces where each face is
      * 6 integers p0, t0, p1, t1, p3, t3, where p0, p1 and p2 are indices of 
      * points in points {@code ObservableFloatArray} and t0, t1 and t2 are 
      * indices of texture coordinates in texCoords {@code ObservableFloatArray}.
      * Both indices are in terms of vertices (points or texCoords), not individual
      * floats.
      */    
-    public final ObservableIntegerArray getFaces() {
+    public final ObservableFaceArray getFaces() {
         return faces;
     }
 
@@ -244,10 +271,10 @@ public class TriangleMesh extends Mesh {
             return false;
         }
         
-        if ((points.size() % NUM_COMPONENTS_PER_POINT) != 0) {
+        if ((points.size() % vertexFormat.getPointElementSize()) != 0) {
             String logname = TriangleMesh.class.getName();
-            PlatformLogger.getLogger(logname).warning("points.length has "
-                    + "to be divisible by NUM_COMPONENTS_PER_POINT. It is to"
+            PlatformLogger.getLogger(logname).warning("points.size() has "
+                    + "to be divisible by getPointElementSize(). It is to"
                     + " store multiple x, y, and z coordinates of this mesh");
             return false;
         }
@@ -259,10 +286,10 @@ public class TriangleMesh extends Mesh {
             return false;
         }
 
-        if ((texCoords.size() % NUM_COMPONENTS_PER_TEXCOORD) != 0) {
+        if ((texCoords.size() % vertexFormat.getTexCoordElementSize()) != 0) {
             String logname = TriangleMesh.class.getName();
-            PlatformLogger.getLogger(logname).warning("texCoords.length "
-                    + "has to be divisible by NUM_COMPONENTS_PER_TEXCOORD."
+            PlatformLogger.getLogger(logname).warning("texCoords.size() "
+                    + "has to be divisible by getTexCoordElementSize()."
                     + " It is to store multiple u and v texture coordinates"
                     + " of this mesh");
             return false;
@@ -276,14 +303,14 @@ public class TriangleMesh extends Mesh {
         }
         
         String logname = TriangleMesh.class.getName();
-        if ((faces.size() % NUM_COMPONENTS_PER_FACE) != 0) {
-            PlatformLogger.getLogger(logname).warning("faces.length has "
-                    + "to be divisible by NUM_COMPONENTS_PER_FACE.");
+        if ((faces.size() % vertexFormat.getFaceElementSize()) != 0) {
+            PlatformLogger.getLogger(logname).warning("faces.size() has "
+                    + "to be divisible by getFaceElementSize().");
             return false;
         }
 
-        int nVerts = points.size() / NUM_COMPONENTS_PER_POINT;
-        int nTVerts = texCoords.size() / NUM_COMPONENTS_PER_TEXCOORD;
+        int nVerts = points.size() / vertexFormat.getPointElementSize();
+        int nTVerts = texCoords.size() / vertexFormat.getTexCoordElementSize();
         for (int i = 0; i < faces.size(); i++) {
             if (i % 2 == 0 && (faces.get(i) >= nVerts || faces.get(i) < 0)
                     || (i % 2 != 0 && (faces.get(i) >= nTVerts || faces.get(i) < 0))) {
@@ -301,9 +328,9 @@ public class TriangleMesh extends Mesh {
 
     private boolean validateFaceSmoothingGroups() {
         if (faceSmoothingGroups.size() != 0
-                && faceSmoothingGroups.size() != (faces.size() / NUM_COMPONENTS_PER_FACE)) {
+                && faceSmoothingGroups.size() != (faces.size() / vertexFormat.getFaceElementSize())) {
             String logname = TriangleMesh.class.getName();
-            PlatformLogger.getLogger(logname).warning("faceSmoothingGroups.length"
+            PlatformLogger.getLogger(logname).warning("faceSmoothingGroups.size()"
                     + " has to equal to number of faces.");
             return false;
         }
@@ -365,7 +392,7 @@ public class TriangleMesh extends Mesh {
             cachedBounds = new BoxBounds();
             if (validate()) {
                 final double len = points.size();
-                for (int i = 0; i < len; i += NUM_COMPONENTS_PER_POINT) {
+                for (int i = 0; i < len; i += vertexFormat.getPointElementSize()) {
                     cachedBounds.add(points.get(i), points.get(i + 1), points.get(i + 2));
                 }
             }
@@ -443,9 +470,10 @@ public class TriangleMesh extends Mesh {
         // so it is vital for performance to use only primitive variables
         // and do the computing manually.
 
-        final int v0Idx = faces.get(faceIndex) * NUM_COMPONENTS_PER_POINT;
-        final int v1Idx = faces.get(faceIndex + 2) * NUM_COMPONENTS_PER_POINT;
-        final int v2Idx = faces.get(faceIndex + 4) * NUM_COMPONENTS_PER_POINT;
+        int pointElementSize = vertexFormat.getPointElementSize();
+        final int v0Idx = faces.get(faceIndex) * pointElementSize;
+        final int v1Idx = faces.get(faceIndex + 2) * pointElementSize;
+        final int v2Idx = faces.get(faceIndex + 4) * pointElementSize;
 
         final float v0x = points.get(v0Idx);
         final float v0y = points.get(v0Idx + 1);
@@ -585,10 +613,10 @@ public class TriangleMesh extends Mesh {
             final Point2D flatPoint = new Point2D(rPoint.getX(), rPoint.getY());
 
             // Obtain the texture triangle
-
-            final int t0Idx = faces.get(faceIndex + 1) * NUM_COMPONENTS_PER_TEXCOORD;
-            final int t1Idx = faces.get(faceIndex + 3) * NUM_COMPONENTS_PER_TEXCOORD;
-            final int t2Idx = faces.get(faceIndex + 5) * NUM_COMPONENTS_PER_TEXCOORD;
+            int texCoordElementSize = vertexFormat.getTexCoordElementSize();
+            final int t0Idx = faces.get(faceIndex + 1) * texCoordElementSize;
+            final int t1Idx = faces.get(faceIndex + 3) * texCoordElementSize;
+            final int t2Idx = faces.get(faceIndex + 5) * texCoordElementSize;
 
             final Point2D u0 = new Point2D(texCoords.get(t0Idx), texCoords.get(t0Idx + 1));
             final Point2D u1 = new Point2D(texCoords.get(t1Idx), texCoords.get(t1Idx + 1));
@@ -621,7 +649,7 @@ public class TriangleMesh extends Mesh {
             }
 
             result.offer(candidate, t, 
-                    reportFace ? faceIndex / NUM_COMPONENTS_PER_FACE : PickResult.FACE_UNDEFINED,
+                    reportFace ? faceIndex / vertexFormat.getFaceElementSize() : PickResult.FACE_UNDEFINED,
                     point, txCoords);
             return true;
         }
@@ -647,7 +675,7 @@ public class TriangleMesh extends Mesh {
 
             final Vec3d d = pickRay.getDirectionNoClone();
 
-            for (int i = 0; i < size; i += NUM_COMPONENTS_PER_FACE) {
+            for (int i = 0; i < size; i += vertexFormat.getFaceElementSize()) {
                 if (computeIntersectsFace(pickRay, o, d, i, cullFace, candidate,
                         reportFace, pickResult)) {
                     found = true;

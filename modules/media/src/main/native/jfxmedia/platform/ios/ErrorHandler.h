@@ -26,7 +26,7 @@
 #ifndef _ERRORHANDLER_H_
 #define _ERRORHANDLER_H_
 
-
+#import <Foundation/Foundation.h>
 #import "jni.h"
 
 #include "com_sun_media_jfxmedia_logging_Logger.h"

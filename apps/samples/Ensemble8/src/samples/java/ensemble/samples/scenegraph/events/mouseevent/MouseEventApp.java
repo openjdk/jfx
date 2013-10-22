@@ -51,7 +51,6 @@ import javafx.scene.paint.RadialGradient;
 import javafx.scene.paint.Stop;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
-import javafx.scene.shape.RectangleBuilder;
 import javafx.stage.Stage;
 
 /**
@@ -76,7 +75,7 @@ public class MouseEventApp extends Application {
     private final static int BIG_CIRCLE_STARTX = 180;
     private final static int BIG_CIRCLE_STARTY = 50;
     //create a console for logging mouse events
-    final ListView<String> console = new ListView<String>();
+    final ListView<String> console = new ListView<>();
     //create a observableArrayList of logged events that will be listed in console
     final ObservableList<String> consoleObservableList = FXCollections.observableArrayList();
 
@@ -87,20 +86,17 @@ public class MouseEventApp extends Application {
         console.setPrefSize(CONSOLE_WIDTH, CONSOLE_HEIGHT);
     }
     //create a rectangle in which our circles can move
-    final Rectangle rectangle = RectangleBuilder.create()
-            .width(RECT_WIDTH).height(RECT_HEIGHT)
-            .fill(new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE, new Stop[]{
+    final Rectangle rectangle = new Rectangle(RECT_WIDTH, RECT_HEIGHT, new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE, new Stop[]{
                 new Stop(1, Color.rgb(156, 216, 255)),
                 new Stop(0, Color.rgb(156, 216, 255, 0.5))
-            }))
-            .stroke(Color.BLACK)
-            .build();
+            }));
     //variables for storing initial position before drag of circle
     private double initX;
     private double initY;
     private Point2D dragAnchor;
 
     public Parent createContent() {
+        rectangle.setStroke(Color.BLACK);
         // create circle with method listed below: paramethers: name of the circle, color of the circle, radius
         final Circle circleSmall = createCircle("Blue circle", Color.DODGERBLUE, 25);
         circleSmall.setTranslateX(SMALL_CIRCLE_STARTX);

@@ -32,9 +32,14 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.List;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
@@ -658,6 +663,48 @@ public class FocusTest {
         assertFalse(nodes.get(0).isFocused());
         assertEquals(nodes.get(0), scene.getFocusOwner());
         assertIsFocused(scene2, nodes.get(1));
+    }
+
+    @Test public void nestedFocusRequestsShouldResultInOneFocusedNode() {
+        final Node n1 = n();
+        final Node n2 = n();
+        scene.setRoot(new Group(n1, n2));
+
+        n1.focusedProperty().addListener(new ChangeListener<Boolean>() {
+            @Override
+            public void changed(ObservableValue<? extends Boolean> ov,
+                    Boolean lostFocus, Boolean getFocus) {
+                if (lostFocus) {
+                    n1.requestFocus();
+                }
+            }
+        });
+
+        n2.focusedProperty().addListener(new InvalidationListener() {
+            @Override
+            public void invalidated(Observable o) {
+                // n2 can be invalidated, but should not have focus
+                assertTrue(n1.isFocused());
+                assertFalse(n2.isFocused());
+            }
+        });
+
+        n2.focusedProperty().addListener(new ChangeListener<Boolean>() {
+            @Override
+            public void changed(ObservableValue<? extends Boolean> ov,
+                    Boolean lostFocus, Boolean getFocus) {
+                fail("n2 should never get focus");
+            }
+        });
+
+        stage.show();
+        n1.requestFocus();
+        assertTrue(n1.isFocused());
+        assertFalse(n2.isFocused());
+
+        n2.requestFocus();
+        assertTrue(n1.isFocused());
+        assertFalse(n2.isFocused());
     }
 
     // TODO: tests for moving nodes between scenes

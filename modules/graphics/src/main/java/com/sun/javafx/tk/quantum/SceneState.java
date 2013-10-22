@@ -31,6 +31,8 @@ import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Pixels;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.prism.PresentableState;
+import com.sun.prism.paint.Color;
+import com.sun.prism.paint.Paint;
 
 /**
  * SceneState is intended to provide for a shadow copy the View/Scene state
@@ -39,7 +41,11 @@ import com.sun.prism.PresentableState;
  */
 class SceneState extends PresentableState {
 
-    GlassScene scene;
+    final GlassScene scene;
+
+    private Color clearColor;
+    private Paint currentPaint;
+    private NGCamera camera;
 
     /**
      * Create the View State
@@ -93,8 +99,11 @@ class SceneState extends PresentableState {
         // created (it is null).  Update the view each time the we ask
         // for the updated state.
         view = scene.getPlatformView();
+        clearColor = scene.getClearColor();
+        currentPaint = scene.getCurrentPaint();
+
         super.update();
-        NGCamera camera = scene.getCamera();
+        camera = scene.getCamera();
         //Use the camera width and height so that we are consistent
         //with what was used to calculate the Projection Matrix at
         //sync time.
@@ -122,5 +131,17 @@ class SceneState extends PresentableState {
                 }
            }
         });
+    }
+
+    Color getClearColor() {
+        return clearColor;
+    }
+
+    Paint getCurrentPaint() {
+        return currentPaint;
+    }
+
+    NGCamera getCamera() {
+        return camera;
     }
 }

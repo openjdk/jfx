@@ -899,7 +899,7 @@ jboolean glass_screen_capture(jint x,
         } while (0);
 
     } else {
-        DEBUG_PRINTF("Failed to get dfb primary layer");
+        GLASS_LOG_SEVERE("Failed to get dfb primary layer");
     }
 
     return result;

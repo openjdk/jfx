@@ -31,6 +31,7 @@ import org.junit.Test;
 
 /**
  */
+@Ignore("RT-33741")
 public class RegionBackgroundImageUITest extends RegionUITestBase {
     /**************************************************************************
      *                                                                        *

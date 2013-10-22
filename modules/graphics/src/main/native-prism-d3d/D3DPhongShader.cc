@@ -119,6 +119,13 @@ int D3DPhongShader::getSpecularMode(bool isSpecularMap, bool isSpecularAlpha){
 HRESULT D3DPhongShader::setPixelShader(int numLights, int specularMode,
         int bumpMode, int selfIllumMode) {
 
+    if (numLights < 0 || numLights >= maxLights
+            || selfIllumMode < 0 || selfIllumMode >= SelfIlllumTotal
+            || bumpMode < 0 || bumpMode >= BumpTotal
+            || specularMode < 0 || specularMode >= SpecTotal) {
+        return D3DERR_INVALIDCALL;
+    }
+
     IDirect3DPixelShader9 *pshd = NULL;
     if (numLights == 0) {
         pshd = selfIllumMode ? pixelShader0 : pixelShader0_si;
