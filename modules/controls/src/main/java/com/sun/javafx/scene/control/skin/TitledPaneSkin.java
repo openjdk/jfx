@@ -265,18 +265,16 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
     }
 
     private void doAnimationTransition() {
-        Duration duration;
-
-        
         if (contentRegion.getContent() == null) {
             return;
         }
 
+        Duration duration;
         if (timeline != null && (timeline.getStatus() != Status.STOPPED)) {
             duration = timeline.getCurrentTime();
             timeline.stop();
         } else {
-                duration = TRANSITION_DURATION;
+            duration = TRANSITION_DURATION;
         }
 
         timeline = new Timeline();

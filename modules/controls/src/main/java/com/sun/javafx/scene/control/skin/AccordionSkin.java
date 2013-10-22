@@ -44,8 +44,15 @@ public class AccordionSkin extends BehaviorSkinBase<Accordion, AccordionBehavior
 
     private TitledPane firstTitledPane;
     private Rectangle clipRect;
-    private boolean relocateAllPanes = false;
-    private boolean resize = false;
+
+    // This is used when we definitely want to force a relayout, regardless of
+    // whether the height has also changed
+    private boolean forceRelayout = false;
+
+    // this is used to request a layout, assuming the height has also changed
+    private boolean relayout = false;
+
+    // we record the previous height to know if the current height is different
     private double previousHeight = 0;
 
     public AccordionSkin(final Accordion accordion) {
@@ -65,6 +72,9 @@ public class AccordionSkin extends BehaviorSkinBase<Accordion, AccordionBehavior
                     removeTitledPaneListeners(c.getRemoved());
                     initTitledPaneListeners(c.getAddedSubList());
                 }
+
+                // added to resolve RT-32787
+                forceRelayout = true;
             }
         });
 
@@ -91,6 +101,7 @@ public class AccordionSkin extends BehaviorSkinBase<Accordion, AccordionBehavior
             clipRect.setWidth(getSkinnable().getWidth());
         } else if ("HEIGHT".equals(property)) {
             clipRect.setHeight(getSkinnable().getHeight());
+            relayout = true;
         }
     }
 
@@ -128,30 +139,21 @@ public class AccordionSkin extends BehaviorSkinBase<Accordion, AccordionBehavior
 
     @Override protected void layoutChildren(final double x, double y,
             final double w, final double h) {
-
-        if (previousHeight != h) {
-            previousHeight = h;
-            resize = true;
-        } else {
-            resize = false;
-        }
-
-        // TODO need to replace spacing with margins.
-        double spacing = 0;
-        double collapsedPanesHeight = 0;
+        final boolean rebuild = forceRelayout || (relayout && previousHeight != h);
+        forceRelayout = false;
+        previousHeight = h;
 
         // Compute height of all the collapsed panes
-        for(Node n: getSkinnable().getPanes()) {
-            TitledPane tp = ((TitledPane)n);
+        double collapsedPanesHeight = 0;
+        for (TitledPane tp : getSkinnable().getPanes()) {
             if (!tp.equals(expandedPane)) {
                 // min height is the TitledPane's title bar height.
                 collapsedPanesHeight += snapSize(tp.minHeight(-1));
             }
         }
-        double maxTitledPaneHeight = h - collapsedPanesHeight;
+        final double maxTitledPaneHeight = h - collapsedPanesHeight;
 
-        for(Node n: getSkinnable().getPanes()) {
-            TitledPane tp = ((TitledPane)n);
+        for (TitledPane tp : getSkinnable().getPanes()) {
             Skin<?> skin = tp.getSkin();
             double ph;
             if (skin instanceof TitledPaneSkin) {
@@ -162,38 +164,37 @@ public class AccordionSkin extends BehaviorSkinBase<Accordion, AccordionBehavior
             }
             tp.resize(w, ph);
 
-            if (!resize && previousPane != null && expandedPane != null) {
-                // Current expanded pane is after the previous expanded pane..
-                if (getSkinnable().getPanes().indexOf(previousPane) < getSkinnable().getPanes().indexOf(expandedPane)) {
+            if (! rebuild && previousPane != null && expandedPane != null) {
+                List<TitledPane> panes = getSkinnable().getPanes();
+                final int previousPaneIndex = panes.indexOf(previousPane);
+                final int expandedPaneIndex = panes.indexOf(expandedPane);
+                final int currentPaneIndex  = panes.indexOf(tp);
+
+                if (previousPaneIndex < expandedPaneIndex) {
+                    // Current expanded pane is after the previous expanded pane..
                     // Only move the panes that are less than or equal to the current expanded.
-                    if (relocateAllPanes || getSkinnable().getPanes().indexOf(tp) <= getSkinnable().getPanes().indexOf(expandedPane)) {
+                    if (currentPaneIndex <= expandedPaneIndex) {
                         tp.relocate(x, y);
-                        y += ph + spacing;
+                        y += ph;
                     }
-                // Previous pane is after the current expanded pane.
-                } else if (getSkinnable().getPanes().indexOf(previousPane) > getSkinnable().getPanes().indexOf(expandedPane)) {
+                } else if (previousPaneIndex > expandedPaneIndex) {
+                    // Previous pane is after the current expanded pane.
                     // Only move the panes that are less than or equal to the previous expanded pane.
-                    if (relocateAllPanes || getSkinnable().getPanes().indexOf(tp) <= getSkinnable().getPanes().indexOf(previousPane)) {
+                    if (currentPaneIndex <= previousPaneIndex) {
                         tp.relocate(x, y);
-                        y += ph + spacing;
+                        y += ph;
                     }
-                // Previous and current expanded pane are the same.
                 } else {
+                    // Previous and current expanded pane are the same.
                     // Since we are expanding and collapsing the same pane we will need to relocate
                     // all the panes.
-                    relocateAllPanes = true;
                     tp.relocate(x, y);
-                    y += ph + spacing;
+                    y += ph;
                 }
             } else {
                 tp.relocate(x, y);
-                y += ph + spacing;
+                y += ph;
             }
-        }
-        // We have relocated all the pane turn relocateAllPanes off.
-        if (expandedPane != null &&
-                ((TitledPaneSkin)expandedPane.getSkin()).getTitledPaneHeightForAccordion() == maxTitledPaneHeight) {
-            relocateAllPanes = false;
         }
     }
 
@@ -226,21 +227,19 @@ public class AccordionSkin extends BehaviorSkinBase<Accordion, AccordionBehavior
         return new ChangeListener<Boolean>() {
             @Override public void changed(ObservableValue<? extends Boolean> observable, Boolean wasExpanded, Boolean expanded) {
                 previousPane = expandedPane;
+                final Accordion accordion = getSkinnable();
                 if (expanded) {
-                    if (getSkinnable().getExpandedPane() != null) {
-                        getSkinnable().getExpandedPane().setExpanded(false);
+                    if (accordion.getExpandedPane() != null) {
+                        accordion.getExpandedPane().setExpanded(false);
                     }
                     if (tp != null) {
-                        getSkinnable().setExpandedPane(tp);
+                        accordion.setExpandedPane(tp);
                     }
-                    expandedPane = getSkinnable().getExpandedPane();
+                    expandedPane = accordion.getExpandedPane();
                 } else {
-                    expandedPane = getSkinnable().getExpandedPane();
-                    getSkinnable().setExpandedPane(null);
+                    expandedPane = accordion.getExpandedPane();
+                    accordion.setExpandedPane(null);
                 }
-
-                // added to resolve RT-32787
-                previousHeight = 0;
             }
         };
     }
