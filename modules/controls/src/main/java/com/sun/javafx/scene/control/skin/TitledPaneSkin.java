@@ -215,10 +215,10 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             w, headerHeight, 0, HPos.LEFT, VPos.CENTER);
 
         // content
-        double contentHeight = h - headerHeight;
+        double contentHeight = (h - headerHeight) * getTransition();
         if (isInsideAccordion()) {
             if (prefHeightFromAccordion != 0) {
-                contentHeight = prefHeightFromAccordion - headerHeight;
+                contentHeight = (prefHeightFromAccordion - headerHeight) * getTransition();
             }
         }
 
