@@ -117,8 +117,8 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DVertexBuffer_nDrawIndexedQuads
 
     PrismSourceVertex *pSrcFloats = (PrismSourceVertex *)env->GetPrimitiveArrayCritical(fbuf, 0);
     BYTE *pSrcColors = (BYTE *)env->GetPrimitiveArrayCritical(bbuf, 0);
-    
-    HRESULT hr = (pSrcFloats && pSrcColors)
+
+    HRESULT hr = (pSrcFloats && pSrcColors && remainingVerts > 0)
         ? pCtx->drawIndexedQuads(pSrcFloats, pSrcColors, remainingVerts) : E_FAIL;
 
     if (pSrcColors) env->ReleasePrimitiveArrayCritical(bbuf, pSrcColors, JNI_ABORT);
@@ -143,7 +143,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DVertexBuffer_nDrawTriangleList
     PrismSourceVertex *pSrcFloats = (PrismSourceVertex *)env->GetPrimitiveArrayCritical(fbuf, 0);
     BYTE *pSrcColors = (BYTE *)env->GetPrimitiveArrayCritical(bbuf, 0);
 
-    HRESULT hr = (pSrcFloats && pSrcColors) ?
+    HRESULT hr = (pSrcFloats && pSrcColors && numTrinagles > 0) ?
         pCtx->drawTriangleList(pSrcFloats, pSrcColors, numTrinagles) : E_FAIL;
 
     if (pSrcColors) env->ReleasePrimitiveArrayCritical(bbuf, pSrcColors, JNI_ABORT);
@@ -199,7 +199,8 @@ void D3DContext::stretchRect(IDirect3DSurface9* pSrcSurface,
 }
 
 /*
- * Note: this method assumes that pSrcFloats and pSrcColors are not null
+ * Note: this method assumes that pSrcFloats and pSrcColors are not null and
+ * numVerts is a positive number
  */
 HRESULT D3DContext::drawIndexedQuads(PrismSourceVertex const *pSrcFloats, BYTE const *pSrcColors, int numVerts) {
 
@@ -261,7 +262,8 @@ HRESULT D3DContext::drawIndexedQuads(PrismSourceVertex const *pSrcFloats, BYTE c
 }
 
 /*
- * Note: this method assumes that pSrcFloats and pSrcColors are not null
+ * Note: this method assumes that pSrcFloats and pSrcColors are not null and
+ * numTriangles is a positive number
  */
 HRESULT D3DContext::drawTriangleList(struct PrismSourceVertex const *pSrcFloats, BYTE const *pSrcColors, int numTriangles) {
 

@@ -2064,7 +2064,13 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetMap
     if ((ctxInfo == NULL) || (pmInfo == NULL)) {
         return;
     }
-
+    
+    // Must within the range of DIFFUSE, SPECULAR, BUMP, SELFILLUMINATION
+    if ((mapType < 0) || (mapType > 3)) {
+        fprintf(stderr, "nSetMap: mapType is out of bounds\n");
+        return;
+    }
+    
     pmInfo->maps[mapType] = texID;
     pmInfo->isSpecularAlpha = isSpecularAlpha;
     pmInfo->isBumpAlpha = isBumpAlpha;
