@@ -221,7 +221,7 @@ X86EGL.glass.lib = "glass"
 
 X86EGL.glass.lensport = [:]
 X86EGL.glass.lensport.nativeSource = [
-    file("modules/graphics/src/main/native-glass/lens/platform-util") ]
+    file("modules/graphics/src/main/native-glass/lens/lensport") ]
 X86EGL.glass.lensport.compiler = compiler
 X86EGL.glass.lensport.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DISEGLFB",
     "-DLENSPORT", "-I", file("modules/graphics/src/main/native-glass/lens/") ].flatten()
@@ -242,7 +242,7 @@ X86EGL.glass.eglfb.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
     file("modules/graphics/src/main/native-glass/lens/input/udev"),
     file("modules/graphics/src/main/native-glass/lens/wm/screen/x11ContainerScreen.c"),
-    file("modules/graphics/src/main/native-glass/lens/platform-util") ]
+    file("modules/graphics/src/main/native-glass/lens/lensport") ]
     //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
 X86EGL.glass.eglfb.compiler = compiler
 X86EGL.glass.eglfb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX"].flatten()
@@ -257,7 +257,7 @@ X86EGL.glass.directfb.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
     file("modules/graphics/src/main/native-glass/lens/input/udev"),
     file("modules/graphics/src/main/native-glass/lens/wm/screen/dfbScreen.c"),
-    file("modules/graphics/src/main/native-glass/lens/platform-util") ]
+    file("modules/graphics/src/main/native-glass/lens/lensport") ]
     //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
 X86EGL.glass.directfb.compiler = compiler
 X86EGL.glass.directfb.ccFlags = ["-ffast-math", extraCFlags, "-I/usr/include/directfb", "-DLINUX"].flatten()
@@ -272,7 +272,7 @@ X86EGL.glass.fb.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
     file("modules/graphics/src/main/native-glass/lens/input/udev"),
     file("modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c"),
-    file("modules/graphics/src/main/native-glass/lens/platform-util") ]
+    file("modules/graphics/src/main/native-glass/lens/lensport") ]
     //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
 X86EGL.glass.fb.compiler = compiler
 X86EGL.glass.fb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX"].flatten()

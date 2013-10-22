@@ -262,7 +262,7 @@ ARMV6HF.glass.lib = "glass"
 
 ARMV6HF.glass.lensport = [:]
 ARMV6HF.glass.lensport.nativeSource = [
-    file("modules/graphics/src/main/native-glass/lens/platform-util") ]
+    file("modules/graphics/src/main/native-glass/lens/lensport") ]
 ARMV6HF.glass.lensport.compiler = compiler
 ARMV6HF.glass.lensport.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DISEGLFB",
     "-DLENSPORT", "-I", file("modules/graphics/src/main/native-glass/lens/") ].flatten()
@@ -283,9 +283,7 @@ ARMV6HF.glass.eglfb.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/wm"),
     file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
     file("modules/graphics/src/main/native-glass/lens/input/udev"),
-    file("modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c"),
-    file("modules/graphics/src/main/native-glass/lens/platform-util") ]
-    //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
+    file("modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c") ]
 ARMV6HF.glass.eglfb.compiler = compiler
 ARMV6HF.glass.eglfb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DISEGLFB"].flatten()
 ARMV6HF.glass.eglfb.linker = linker
@@ -298,9 +296,7 @@ ARMV6HF.glass.directfb.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/wm"),
     file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
     file("modules/graphics/src/main/native-glass/lens/input/udev"),
-    file("modules/graphics/src/main/native-glass/lens/wm/screen/dfbScreen.c"),
-    file("modules/graphics/src/main/native-glass/lens/platform-util") ]
-    //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
+    file("modules/graphics/src/main/native-glass/lens/wm/screen/dfbScreen.c") ]
 ARMV6HF.glass.directfb.compiler = compiler
 ARMV6HF.glass.directfb.ccFlags = ["-ffast-math", extraCFlags, "-I$sdk/usr/include/directfb", "-DLINUX"].flatten()
 ARMV6HF.glass.directfb.linker = linker
@@ -313,9 +309,7 @@ ARMV6HF.glass.fb.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/wm"),
     file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
     file("modules/graphics/src/main/native-glass/lens/input/udev"),
-    file("modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c"),
-    file("modules/graphics/src/main/native-glass/lens/platform-util") ]
-    //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
+    file("modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c") ]
 ARMV6HF.glass.fb.compiler = compiler
 ARMV6HF.glass.fb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX"].flatten()
 ARMV6HF.glass.fb.linker = linker
@@ -391,7 +385,7 @@ ARMV6HF.prismES2.eglfb.nativeSource = [
     file("modules/graphics/src/main/native-prism-es2/eglfb")
 ]
 ARMV6HF.prismES2.eglfb.compiler = compiler
-ARMV6HF.prismES2.eglfb.ccFlags = es2EglfbCFlags
+ARMV6HF.prismES2.eglfb.ccFlags = [ es2EglfbCFlags, "-I", ARMV6HF.glass.lensport.nativeSource ].flatten()
 ARMV6HF.prismES2.eglfb.linker = linker
 ARMV6HF.prismES2.eglfb.linkFlags = es2EglfbLFlags
 ARMV6HF.prismES2.eglfb.lib = "prism_es2_eglfb"

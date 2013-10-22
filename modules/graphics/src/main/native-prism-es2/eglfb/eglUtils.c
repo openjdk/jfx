@@ -92,7 +92,7 @@ EGLSurface getSharedWindowSurface(EGLDisplay dpy,
                                   EGLConfig cfg,
                                   void *nativeWindow) {
     if (sharedWindowSurface == NULL) {
-        EGLNativeWindowType window;
+        EGLNativeWindowType window = 0;
 #if EGL_X11_FB_CONTAINER
         window = (EGLNativeWindowType)nativeWindow;
 #else
@@ -200,8 +200,8 @@ ContextInfo *eglContextFromConfig(EGLDisplay *dpy, EGLConfig config) {
     const char *glVendor = (char *)glGetString(GL_VENDOR);
     const char *glRenderer = (char *)glGetString(GL_RENDERER);
     // Make a copy, at least one platform does not preserve the string beyond the call.
-    const char *glExtensions = strdup((char *)glGetString(GL_EXTENSIONS));
-    const char *eglExtensions = strdup((char *)eglQueryString(dpy, EGL_EXTENSIONS));
+    char *glExtensions = strdup((char *)glGetString(GL_EXTENSIONS));
+    char *eglExtensions = strdup((char *)eglQueryString(dpy, EGL_EXTENSIONS));
 
     /* find out the version, major and minor version number */
     char *tmpVersionStr = strdup(glVersion);
@@ -226,7 +226,7 @@ ContextInfo *eglContextFromConfig(EGLDisplay *dpy, EGLConfig config) {
     free(eglExtensions);
 
     // from the wrapped_egl.c
-    void *handle = libglesv2;
+    void *handle = getLibGLEShandle();
 
     /* set function pointers */
     ctxInfo->glActiveTexture = (PFNGLACTIVETEXTUREPROC)

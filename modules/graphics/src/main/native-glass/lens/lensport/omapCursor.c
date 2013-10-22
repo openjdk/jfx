@@ -23,11 +23,6 @@
  * questions.
  */
  
-#include "input/LensInput.h"
-
-#include "utilInternal.h"
-#include "platformUtil.h"
-
 #include <fcntl.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -35,6 +30,10 @@
 #include <linux/fb.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
+
+#include "lensPort.h"
+#include "lensPortInternal.h"
+#include "lensPortLogger.h"
 
 #if defined(OMAP3)
 
@@ -323,7 +322,7 @@ void fbOmapReleaseNativeCursor(jlong nativeCursorPointer) {
     }
 
     if (cursor.currentCursor == nativeCursorPointer) {
-        fbCursorClose();
+        fbOmapCursorClose();
         cursor.currentCursor = 0;
     }
 }
@@ -352,17 +351,20 @@ void fbOmapCursorTerminate(void) {
     fbOmapCursorClose();
 }
 
-void select_omap_cursor() {
-    fbPlatformSetNativeCursor = fbOmapSetNativeCursor;
-    fbPlatformCursorInitialize = fbOmapCursorInitialize;
-    fbPlatformCursorSetPosition = fbOmapCursorSetPosition;
-    fbPlatformCursorClose = fbOmapCursorClose;
-    fbPlatformCreateNativeCursor = fbOmapCreateNativeCursor;
-    fbPlatformReleaseNativeCursor = fbOmapReleaseNativeCursor;
-    fbPlatformSetVisible = fbOmapSetVisible;
-    fbPlatformCreateCursor = fbOmapCreateCursor;
+static char * platformName = "omap";
+
+jboolean select_omap_cursor(LensNativePort *lensPort) {
+    lensPort->platformName = platformName;
+    lensPort->setNativeCursor = fbOmapSetNativeCursor;
+    lensPort->cursorInitialize = fbOmapCursorInitialize;
+    lensPort->cursorSetPosition = fbOmapCursorSetPosition;
+    lensPort->cursorClose = fbOmapCursorClose;
+    lensPort->createNativeCursor = fbOmapCreateNativeCursor;
+    lensPort->releaseNativeCursor = fbOmapReleaseNativeCursor;
+    lensPort->setVisible = fbOmapSetVisible;
+    lensPort->createCursor = fbOmapCreateCursor;
+
+    return JNI_TRUE;
 }
 
-#else // !OMAP3
-void select_omap_cursor() { }
 #endif // OMAP3

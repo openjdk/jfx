@@ -36,16 +36,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "LensCommon.h"
-#include "LensLogger.h"
+#include "lensPort.h"
+#include "lensPortInternal.h"
+#include "lensPortLogger.h"
 
 #ifdef USE_DISPMAN
 #include "wrapped_bcm.h"
 
 #define FB_DEVICE "/dev/fb0"
-
-#include "utilInternal.h"
-#include "platformUtil.h"
 
 typedef struct {
     DISPMANX_ELEMENT_HANDLE_T element;
@@ -497,18 +495,26 @@ static jboolean fbDispmanRobotScreenCapture(jint x, jint y,
     return JNI_TRUE;
 }
 
-void select_dispman() {
-    fbPlatformSetNativeCursor = fbDispmanSetNativeCursor;
-    fbPlatformCursorInitialize = fbDispmanCursorInitialize;
-    fbPlatformCursorSetPosition = fbDispmanCursorSetPosition;
-    fbPlatformCursorClose = _fbDispmanCursorClose;
-    fbPlatformCreateNativeCursor = fbDispmanCreateNativeCursor;
-    fbPlatformReleaseNativeCursor = fbDispmanReleaseNativeCursor;
-    fbPlatformSetVisible = fbDispmanSetVisible;
-    fbRobotScreenCapture = fbDispmanRobotScreenCapture;
-    fbPlatformCursorTranslucency = JNI_TRUE;
+static char * platformName = "dispman";
+extern int load_bcm_symbols();
+
+jboolean select_dispman_cursor(LensNativePort *lensPort) {
+    if (!load_bcm_symbols()) {
+        return JNI_FALSE;
+    }
+
+    lensPort->platformName = platformName;
+    lensPort->setNativeCursor = fbDispmanSetNativeCursor;
+    lensPort->cursorInitialize = fbDispmanCursorInitialize;
+    lensPort->cursorSetPosition = fbDispmanCursorSetPosition;
+    lensPort->cursorClose = _fbDispmanCursorClose;
+    lensPort->createNativeCursor = fbDispmanCreateNativeCursor;
+    lensPort->releaseNativeCursor = fbDispmanReleaseNativeCursor;
+    lensPort->setVisible = fbDispmanSetVisible;
+    lensPort->robotScreenCapture = fbDispmanRobotScreenCapture;
+    lensPort->cursorTranslucency = JNI_TRUE;
+
+    return JNI_TRUE;
 }
 
-#else // !USE_DISPMAN
-void select_dispman() {}
 #endif //USE_DISPMAN

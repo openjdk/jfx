@@ -452,7 +452,7 @@ ANDROID.glass.eglfb.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/cursor/nullCursor"),
     file("modules/graphics/src/main/native-glass/lens/input/android"),
     file("modules/graphics/src/main/native-glass/lens/wm/screen/androidScreen.c"),
-    file("modules/graphics/src/main/native-glass/lens/platform-util")]
+    file("modules/graphics/src/main/native-glass/lens/lensport")]
 ANDROID.glass.eglfb.compiler = compiler
 ANDROID.glass.eglfb.linker = linker
 ANDROID.glass.eglfb.lib = "glass_lens_eglfb"

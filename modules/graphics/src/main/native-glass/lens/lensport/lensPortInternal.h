@@ -23,9 +23,31 @@
  * questions.
  */
 
-#if defined(OMAP3) || defined(IMX6_PLATFORM) 
-# ifndef USE_FB_ROBOT
-    #define USE_FB_ROBOT
-# endif
+#ifndef PLATFORM_INTERNAL_H
+#define PLATFORM_INTERNAL_H
+
+#ifndef FB_DEVICE
+#define FB_DEVICE "/dev/fb0"
 #endif
 
+#ifndef FB_CURSOR_DEVICE
+#define FB_CURSOR_DEVICE "/dev/fb1"
+#endif
+
+#define LENSFB_CURSOR_COLOR_KEY 0xABABABAB
+
+/**
+ * The bellow macros will convert pointers to long
+ * representation, which is how java is keeping native pointers,
+ * and vice versa.
+ * This code will work in both 32 and 64 bit systems
+ */
+#if defined (_LP64) || defined(_WIN64)
+#define jlong_to_ptr(a) ((void*)(a))
+#define ptr_to_jlong(a) ((jlong)(a))
+#else
+#define jlong_to_ptr(a) ((void*)(int)(a))
+#define ptr_to_jlong(a) ((jlong)(int)(a))
+#endif
+
+#endif // PLATFORM_INTERNAL_H

@@ -69,6 +69,7 @@ typedef enum {
 #define vc_dispmanx_element_change_source(update, element, src) (*wr_vc_dispmanx_element_change_source) (update, element, src )
 
 /* wrapped method declarations */
+
 WRAPPEDAPI int (*wr_vc_dispmanx_display_close)(DISPMANX_DISPLAY_HANDLE_T display);
 
 WRAPPEDAPI DISPMANX_DISPLAY_HANDLE_T (*wr_vc_dispmanx_display_open)
@@ -126,6 +127,8 @@ WRAPPEDAPI int (*wr_vc_dispmanx_element_change_source)
                 (DISPMANX_UPDATE_HANDLE_T update, 
                  DISPMANX_ELEMENT_HANDLE_T element,
                  DISPMANX_RESOURCE_HANDLE_T src);
+
+WRAPPEDAPI int (*wr_vc_dispmanx_display_get_info)(DISPMANX_DISPLAY_HANDLE_T display, DISPMANX_MODEINFO_T *pinfo);
 
 #endif // __WRAPPED_BCM__
 #endif // USE_DISPMAN

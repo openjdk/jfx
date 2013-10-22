@@ -37,8 +37,7 @@
 #include <string.h>
 #include <linux/fb.h>
 #include <sys/ioctl.h>
-
-#include "platform-util/platformUtil.h"
+#include <assert.h>
 
 static struct _NativeScreen fbScreen;
 
@@ -323,10 +322,8 @@ jboolean glass_screen_capture(jint x, jint y,
                                     jint width, jint height,
                                     jint *pixels) {
 
-    if (fbRobotScreenCapture) {
-       return (*fbRobotScreenCapture)(x, y, width, height, pixels);
-    }
-    return 0;
+    assert (lensPort.robotScreenCapture);
+    return (*lensPort.robotScreenCapture)(x, y, width, height, pixels);
 }
 
 LensResult lens_platform_windowMinimize(JNIEnv *env,

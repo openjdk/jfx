@@ -35,7 +35,6 @@
 #include <stdio.h>
 #include <pthread.h>
 
-#include "platform-util/platformUtil.h"
 
 static pthread_mutex_t renderMutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -83,7 +82,7 @@ jboolean lens_wm_initialize(JNIEnv *env) {
     jboolean result;
 
     GLASS_LOG_FINE("Init device");
-    platform_initialize();
+    
     result = glass_application_initialize(env);
     if (result) {
         GLASS_LOG_FINE("Init screen");

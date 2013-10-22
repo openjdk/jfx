@@ -93,7 +93,7 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_EGLFBGLContext_nMakeCurrent
     jboolean vSyncNeeded;
 
     if (!eglMakeCurrent(dInfo->egldisplay, dInfo->eglsurface, dInfo->eglsurface, ctxInfo->context)) {
-        fprintf(stderr, "Failed in eglMakeCurrent for %ld %ld %d\n", dInfo->eglsurface, ctxInfo->context, eglGetError());
+        fprintf(stderr, "Failed in eglMakeCurrent for %p %p %d\n", dInfo->eglsurface, ctxInfo->context, eglGetError());
     }
     vSyncNeeded = ctxInfo->vSyncRequested && dInfo->onScreen;
     if (vSyncNeeded == ctxInfo->state.vSyncEnabled) {

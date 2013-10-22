@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
- 
+
 #include "LensCommon.h"
 #include "wm/LensWindowManager.h"
 #include "com_sun_glass_ui_lens_LensApplication.h"
@@ -31,8 +31,14 @@
 #include "com_sun_glass_events_KeyEvent.h"
 #include "com_sun_glass_events_WindowEvent.h"
 
+#if ! ((defined(ANDROID_NDK) || defined(EGL_X11_FB_CONTAINER)))
+#ifndef __USE_GNU // required for dladdr() & Dl_info
+#define __USE_GNU
+#endif
+#include <dlfcn.h>
 #include <signal.h>
-
+#endif
+ 
 //********************************************************
 
 // JNI handles ******************************************
@@ -75,6 +81,8 @@ static void initIDs(JNIEnv *env);
 static int haveIDs = 0;
 static JavaVM *pGlassVm;
 static int trapCtrlC = 0;
+
+LensNativePort lensPort;
 
 jint JNI_OnLoad(JavaVM *vm, void *reserved) {
     JNIEnv *env;
@@ -188,6 +196,47 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensApplication__1initIDs
     initIDs(env);
 }
 
+static void load_porting_library() {
+#if ! ((defined(ANDROID_NDK) || defined(EGL_X11_FB_CONTAINER)))
+
+    jboolean (*lens_platform_init)(LensNativePort*) = 0;
+
+    Dl_info dlinfo;
+    if (dladdr(&lens_wm_initialize, &dlinfo)) {
+
+        size_t rslash = (size_t)rindex(dlinfo.dli_fname,'/');
+        if (rslash) {
+            char *b = (char *) alloca(strlen(dlinfo.dli_fname)+20);
+            rslash = rslash + 1 - (size_t)dlinfo.dli_fname;
+            strncpy(b, dlinfo.dli_fname,rslash);
+            strcpy(b + rslash, "liblens_porting.so");
+
+            void *dlhand = dlopen(b,RTLD_NOW); 
+            if (dlhand) {
+                lens_platform_init = dlsym(dlhand, "lens_platform_initialize");
+                if (!lens_platform_init) {
+                    fprintf(stderr,"lens_platform_initialize missing in liblens_porting.so\n");
+                    exit(-1);
+                }
+            } else {
+                fprintf(stderr,"LENS FAILED TO OPEN %s\n",b);
+                fprintf(stderr,"dlopen reports %s\n",dlerror());
+                exit(-1);
+            }
+        }
+    } else {
+        fprintf(stderr,"Did not get DLINFO\n");
+        exit(-1);
+    }
+
+    lensPort.version = NATIVE_LENS_PORT_VERSION;
+    (*lens_platform_init)(&lensPort);
+
+    // set the current logging information
+    lensPort.setLogger(&glass_logf, glass_log_level);
+#endif
+}
+
 /*
  * Class:     com_sun_glass_ui_lens_LensApplication
  * Method:    _initialize
@@ -195,6 +244,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensApplication__1initIDs
  */
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_lens_LensApplication__1initialize
 (JNIEnv *env, jclass jApplicationClass) {
+
+    load_porting_library();
 
     return lens_wm_initialize(env);
 }
