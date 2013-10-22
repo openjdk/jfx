@@ -171,9 +171,7 @@ static void process_dnd_target_drag_motion(WindowContext *ctx, GdkEventDND *even
             (jint)event->x_root, (jint)event->y_root,
             translate_gdk_action_to_glass(suggested)));
     CHECK_JNI_EXCEPTION(mainEnv)
-    if (result != suggested && result != GDK_ACTION_COPY) {
-        result = static_cast<GdkDragAction>(0);
-    }
+
     if (enter_ctx.just_entered) {
         enter_ctx.just_entered = FALSE;
     }
