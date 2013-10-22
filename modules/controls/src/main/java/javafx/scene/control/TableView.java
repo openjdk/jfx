@@ -26,15 +26,10 @@
 package javafx.scene.control;
 
 import java.lang.ref.WeakReference;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import com.sun.javafx.scene.control.Logging;
+import com.sun.javafx.scene.control.SelectedCellsMap;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -1690,6 +1685,18 @@ public class TableView<S> extends Control {
          */
         public abstract void clearSelection(int row, TableColumn<S, ?> column);
 
+        /** {@inheritDoc} */
+        @Override public void selectRange(int minRow, TableColumnBase<S,?> minColumn,
+                                          int maxRow, TableColumnBase<S,?> maxColumn) {
+            final int minColumnIndex = tableView.getVisibleLeafIndex((TableColumn<S,?>)minColumn);
+            final int maxColumnIndex = tableView.getVisibleLeafIndex((TableColumn<S,?>)maxColumn);
+            for (int _row = minRow; _row <= maxRow; _row++) {
+                for (int _col = minColumnIndex; _col <= maxColumnIndex; _col++) {
+                    select(_row, tableView.getVisibleLeafColumn(_col));
+                }
+            }
+        }
+
 
 
         /***********************************************************************
@@ -1792,19 +1799,18 @@ public class TableView<S> extends Control {
         public TableViewArrayListSelectionModel(final TableView<S> tableView) {
             super(tableView);
             this.tableView = tableView;
-//            this.selectedIndicesBitSet = new BitSet();
-            
+
             updateItemCount();
             
             cellSelectionEnabledProperty().addListener(new InvalidationListener() {
-                @Override public void invalidated(Observable o) {
+                @Override
+                public void invalidated(Observable o) {
                     isCellSelectionEnabled();
                     clearSelection();
                 }
             });
-            
-            selectedCells = FXCollections.<TablePosition<S,?>>observableArrayList();
-            selectedCells.addListener(new ListChangeListener<TablePosition<S,?>>() {
+
+            selectedCellsMap = new SelectedCellsMap<>(new ListChangeListener<TablePosition<S,?>>() {
                 @Override public void onChanged(final Change<? extends TablePosition<S,?>> c) {
                     handleSelectedCellsListChangeEvent(c);
                 }
@@ -1822,11 +1828,11 @@ public class TableView<S> extends Control {
             
             selectedCellsSeq = new ReadOnlyUnbackedObservableList<TablePosition<S,?>>() {
                 @Override public TablePosition<S,?> get(int i) {
-                    return selectedCells.get(i);
+                    return selectedCellsMap.get(i);
                 }
 
                 @Override public int size() {
-                    return selectedCells.size();
+                    return selectedCellsMap.size();
                 }
             };
 
@@ -1912,9 +1918,9 @@ public class TableView<S> extends Control {
          *                                                                     *
          **********************************************************************/
         
-        // the only 'proper' internal observableArrayList, selectedItems and selectedIndices
+        // the only 'proper' internal data structure, selectedItems and selectedIndices
         // are both 'read-only and unbacked'.
-        private final ObservableList<TablePosition<S,?>> selectedCells;
+        private final SelectedCellsMap<TablePosition<S,?>> selectedCellsMap;
 
         // used to represent the _row_ backing data for the selectedCells
         private final ReadOnlyUnbackedObservableList<S> selectedItems;
@@ -1928,6 +1934,7 @@ public class TableView<S> extends Control {
         @Override public ObservableList<TablePosition> getSelectedCells() {
             return (ObservableList<TablePosition>)(Object)selectedCellsSeq;
         }
+
 
 
         /***********************************************************************
@@ -1973,10 +1980,10 @@ public class TableView<S> extends Control {
                     if (position < 0) return;
                     if (shift == 0) return;
                     
-                    List<TablePosition<S,?>> newIndices = new ArrayList<TablePosition<S,?>>(selectedCells.size());
+                    List<TablePosition<S,?>> newIndices = new ArrayList<TablePosition<S,?>>(selectedCellsMap.size());
         
-                    for (int i = 0; i < selectedCells.size(); i++) {
-                        final TablePosition<S,?> old = selectedCells.get(i);
+                    for (int i = 0; i < selectedCellsMap.size(); i++) {
+                        final TablePosition<S,?> old = selectedCellsMap.get(i);
                         final int oldRow = old.getRow();
                         final int newRow = oldRow < position ? oldRow : oldRow + shift;
                         
@@ -2043,7 +2050,7 @@ public class TableView<S> extends Control {
 
                     // (6)
                     quietClearSelection();
-                    selectedCells.setAll(newIndices);
+                    selectedCellsMap.setAll(newIndices);
                     selectedCellsSeq.callObservers(new NonIterableChange.SimpleAddChange<>(0, newIndices.size(), selectedCellsSeq));
 
                     if (oldSelectedIndex >= 0 && oldSelectedIndex < itemCount) {
@@ -2081,7 +2088,7 @@ public class TableView<S> extends Control {
 
             // firstly we make a copy of the selection, so that we can send out
             // the correct details in the selection change event
-            List<TablePosition<S,?>> previousSelection = new ArrayList<>(selectedCells);
+            List<TablePosition<S,?>> previousSelection = new ArrayList<>(selectedCellsMap.getSelectedCells());
 
             // then clear the current selection
             clearSelection();
@@ -2121,9 +2128,7 @@ public class TableView<S> extends Control {
                 quietClearSelection();
             }
 
-            if (! selectedCells.contains(pos)) {
-                selectedCells.add(pos);
-            }
+            selectedCellsMap.add(pos);
 
             updateSelectedIndex(row);
             focus(row, column);
@@ -2188,7 +2193,7 @@ public class TableView<S> extends Control {
                     }
                 }
 
-                if (selectedCells.isEmpty()) {
+                if (selectedCellsMap.isEmpty()) {
                     if (row > 0 && row < rowCount) {
                         select(row);
                     }
@@ -2200,16 +2205,7 @@ public class TableView<S> extends Control {
                 if (row >= 0 && row < rowCount) {
                     TablePosition<S,Object> tp = new TablePosition<S,Object>(getTableView(), row, null);
                     
-                    // refer to the multi-line comment below for the justification for the following
-                    // code.
-                    boolean match = false;
-                    for (int j = 0; j < selectedCells.size(); j++) {
-                        TablePosition<S,?> selectedCell = selectedCells.get(j);
-                        if (selectedCell.getRow() == row) {
-                            match = true;
-                            break;
-                        }
-                    }
+                    boolean match = selectedCellsMap.isSelected(row, -1);
                     if (! match) {
                         positions.add(tp);
                         lastIndex = row;
@@ -2221,22 +2217,14 @@ public class TableView<S> extends Control {
                     if (index < 0 || index >= rowCount) continue;
                     lastIndex = index;
                     
-                    // we need to manually check all selected cells to see whether this index is already
-                    // selected. This is because selectIndices is inherently row-based, but there may
-                    // be a selected cell where the column is non-null. If we were to simply do a
-                    // selectedCells.contains(pos), then we would not find the match and duplicate the
-                    // row selection. This leads to bugs such as RT-29930.
-                    for (int j = 0; j < selectedCells.size(); j++) {
-                        TablePosition<S,?> selectedCell = selectedCells.get(j);
-                        if (selectedCell.getRow() == index) continue outer;
-                    }
+                    if (selectedCellsMap.isSelected(index, -1)) continue outer;
                     
                     // if we are here then we have successfully gotten through the for-loop above
                     TablePosition<S,Object> pos = new TablePosition<S,Object>(getTableView(), index, null);
                     positions.add(pos);
                 }
-                
-                selectedCells.addAll(positions);
+
+                selectedCellsMap.addAll(positions);
                 
                 if (lastIndex != -1) {
                     select(lastIndex);
@@ -2260,7 +2248,7 @@ public class TableView<S> extends Control {
                         indices.add(tp);
                     }
                 }
-                selectedCells.setAll(indices);
+                selectedCellsMap.setAll(indices);
                 
                 if (tp != null) {
                     select(tp.getRow(), tp.getTableColumn());
@@ -2271,7 +2259,7 @@ public class TableView<S> extends Control {
                 for (int i = 0; i < getItemCount(); i++) {
                     indices.add(new TablePosition<>(getTableView(), i, null));
                 }
-                selectedCells.setAll(indices);
+                selectedCellsMap.setAll(indices);
                 
                 int focusedIndex = getFocusedIndex();
                 if (focusedIndex == -1) {
@@ -2282,6 +2270,53 @@ public class TableView<S> extends Control {
                     focus(focusedIndex);
                 }
             }
+        }
+
+        @Override public void selectRange(int minRow, TableColumnBase<S,?> minColumn,
+                                          int maxRow, TableColumnBase<S,?> maxColumn) {
+            makeAtomic = true;
+
+            if (getSelectionMode() == SelectionMode.SINGLE) {
+                quietClearSelection();
+                select(maxRow, maxColumn);
+                return;
+            }
+
+            final int itemCount = getItemCount();
+            final boolean isCellSelectionEnabled = isCellSelectionEnabled();
+
+            final int minColumnIndex = tableView.getVisibleLeafIndex((TableColumn<S,?>)minColumn);
+            final int maxColumnIndex = tableView.getVisibleLeafIndex((TableColumn<S,?>)maxColumn);
+            final int _minColumnIndex = Math.min(minColumnIndex, maxColumnIndex);
+            final int _maxColumnIndex = Math.max(minColumnIndex, maxColumnIndex);
+
+            for (int _row = minRow; _row <= maxRow; _row++) {
+                for (int _col = _minColumnIndex; _col <= _maxColumnIndex; _col++) {
+                    // begin copy/paste of select(int, column) method (with some
+                    // slight modifications)
+                    if (_row < 0 || _row >= itemCount) continue;
+
+                    final TableColumn<S,?> column = tableView.getVisibleLeafColumn(_col);
+
+                    // if I'm in cell selection mode but the column is null, I don't want
+                    // to select the whole row instead...
+                    if (column == null && isCellSelectionEnabled) continue;
+
+                    TablePosition<S,?> pos = new TablePosition<>(tableView, _row, column);
+
+                    selectedCellsMap.add(pos);
+                    // end copy/paste
+                }
+            }
+            makeAtomic = false;
+
+            // fire off events
+            updateSelectedIndex(maxRow);
+            focus(maxRow, (TableColumn<S,?>)maxColumn);
+
+            final int startChangeIndex = selectedCellsMap.indexOf(new TablePosition(tableView, minRow, (TableColumn<S,?>)minColumn));
+            final int endChangeIndex = selectedCellsMap.indexOf(new TablePosition(tableView, maxRow, (TableColumn<S,?>)maxColumn));
+            handleSelectedCellsListChangeEvent(new NonIterableChange.SimpleAddChange<>(startChangeIndex, endChangeIndex + 1, selectedCellsSeq));
         }
 
         @Override public void clearSelection(int index) {
@@ -2296,7 +2331,7 @@ public class TableView<S> extends Control {
             
             for (TablePosition pos : getSelectedCells()) {
                 if ((! csMode && pos.getRow() == row) || (csMode && pos.equals(tp))) {
-                    selectedCells.remove(pos);
+                    selectedCellsMap.remove(pos);
 
                     // give focus to this cell index
                     focus(row);
@@ -2316,7 +2351,7 @@ public class TableView<S> extends Control {
         }
 
         private void quietClearSelection() {
-            selectedCells.clear();
+            selectedCellsMap.clear();
         }
 
         @Override public boolean isSelected(int index) {
@@ -2328,22 +2363,15 @@ public class TableView<S> extends Control {
             // When in cell selection mode, we currently do NOT support selecting
             // entire rows, so a isSelected(row, null) 
             // should always return false.
-            if (isCellSelectionEnabled() && (column == null)) return false;
-            
-            for (TablePosition tp : getSelectedCells()) {
-                boolean columnMatch = ! isCellSelectionEnabled() || 
-                        (column == null && tp.getTableColumn() == null) || 
-                        (column != null && column.equals(tp.getTableColumn()));
-                
-                if (tp.getRow() == row && columnMatch) {
-                    return true;
-                }
-            }
-            return false;
+            final boolean isCellSelectionEnabled = isCellSelectionEnabled();
+            if (isCellSelectionEnabled && column == null) return false;
+
+            int columnIndex = tableView.getVisibleLeafIndex(column);
+            return selectedCellsMap.isSelected(row, columnIndex);
         }
 
         @Override public boolean isEmpty() {
-            return selectedCells.isEmpty();
+            return selectedCellsMap.isEmpty();
         }
 
         @Override public void selectPrevious() {

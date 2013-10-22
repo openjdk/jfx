@@ -25,18 +25,9 @@
 
 package javafx.scene.control;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
-import java.util.Arrays;
-import java.util.Collection;
-
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.scene.control.TableView.TableViewFocusModel;
-import javafx.scene.control.TableView.TableViewSelectionModel;
-
+import javafx.scene.control.TreeTableView.TreeTableViewSelectionModel;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -44,6 +35,11 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+
+import java.util.Arrays;
+import java.util.Collection;
+
+import static org.junit.Assert.*;
 
 /**
  * Unit tests that are specific for the TableViewSelectionModel API. Other tests
@@ -53,54 +49,56 @@ import org.junit.runners.Parameterized.Parameters;
  * @author Jonathan Giles
  */
 @RunWith(Parameterized.class)
-public class TableViewSelectionModelImplTest {
+public class TreeTableViewSelectionModelImplTest {
 
-    private TableViewSelectionModel<String> model;
-    private TableViewFocusModel focusModel;
+    private TreeTableView.TreeTableViewSelectionModel<String> model;
+    private TreeTableView.TreeTableViewFocusModel focusModel;
 
-    private Class<? extends TableViewSelectionModel> modelClass;
+    private Class<? extends TreeTableViewSelectionModel> modelClass;
 
     // ListView model data
-    private static ObservableList<String> defaultData = FXCollections.<String>observableArrayList();
-    private static ObservableList<String> data = FXCollections.<String>observableArrayList();
-    private static final String ROW_1_VALUE = "Row 1";
-    private static final String ROW_2_VALUE = "Row 2";
-    private static final String ROW_5_VALUE = "Row 5";
-    private static final String ROW_20_VALUE = "Row 20";
+//    private static ObservableList<String> defaultData = FXCollections.<String>observableArrayList();
+//    private static ObservableList<String> data = FXCollections.<String>observableArrayList();
+//    private static final String ROW_1_VALUE = "Row 1";
+//    private static final String ROW_2_VALUE = "Row 2";
+//    private static final String ROW_5_VALUE = "Row 5";
+//    private static final String ROW_20_VALUE = "Row 20";
 
     // TableView
-    private static final TableView<String> tableView;
-    private static final TableColumn<String,String> col0;
-    private static final TableColumn<String,String> col1;
-    private static final TableColumn<String,String> col2;
+    private static final TreeTableView<String> tableView;
+    private static final TreeTableColumn<String,String> col0;
+    private static final TreeTableColumn<String,String> col1;
+    private static final TreeTableColumn<String,String> col2;
 
     static {
-        defaultData.addAll(ROW_1_VALUE, ROW_2_VALUE, "Long Row 3", "Row 4", ROW_5_VALUE, "Row 6",
-                "Row 7", "Row 8", "Row 9", "Row 10", "Row 11", "Row 12", "Row 13",
-                "Row 14", "Row 15", "Row 16", "Row 17", "Row 18", "Row 19", ROW_20_VALUE);
+//        defaultData.addAll(ROW_1_VALUE, ROW_2_VALUE, "Long Row 3", "Row 4", ROW_5_VALUE, "Row 6",
+//                "Row 7", "Row 8", "Row 9", "Row 10", "Row 11", "Row 12", "Row 13",
+//                "Row 14", "Row 15", "Row 16", "Row 17", "Row 18", "Row 19", ROW_20_VALUE);
 
-        data.setAll(defaultData);
+//        data.setAll(defaultData);
 
-        // TableView init
-        tableView = new TableView();
-        tableView.setItems(data);
+        // TreeTableView init
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        for (int i = 0; i < 20; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+        tableView = new TreeTableView(root);
         tableView.getColumns().addAll(
-            col0 = new TableColumn<String,String>(),
-            col1 = new TableColumn<String,String>(),
-            col2 = new TableColumn<String,String>()
+            col0 = new TreeTableColumn<>(),
+            col1 = new TreeTableColumn<>(),
+            col2 = new TreeTableColumn<>()
         );
-
-
-        // --- TableView init
+        // --- TreeTableView init
     }
 
     @Parameters public static Collection implementations() {
         return Arrays.asList(new Object[][] {
-            { TableView.TableViewArrayListSelectionModel.class }
+            { TreeTableView.TreeTableViewArrayListSelectionModel.class }
         });
     }
 
-    public TableViewSelectionModelImplTest(Class<? extends TableViewSelectionModel> modelClass) {
+    public TreeTableViewSelectionModelImplTest(Class<? extends TreeTableViewSelectionModel> modelClass) {
         this.modelClass = modelClass;
     }
 
@@ -108,16 +106,16 @@ public class TableViewSelectionModelImplTest {
 
     @Before public void setUp() throws Exception {
         // reset the data model
-        data.setAll(defaultData);
+//        data.setAll(defaultData);
 
-        if (TableViewSelectionModel.class.isAssignableFrom(modelClass)) {
+        if (TreeTableViewSelectionModel.class.isAssignableFrom(modelClass)) {
             // recreate the selection model
-            model = modelClass.getConstructor(TableView.class).newInstance(tableView);
-            tableView.setSelectionModel((TableViewSelectionModel) model);
+            model = modelClass.getConstructor(TreeTableView.class).newInstance(tableView);
+            tableView.setSelectionModel((TreeTableViewSelectionModel) model);
 
             // create a new focus model
-            focusModel = new TableViewFocusModel(tableView);
-            tableView.setFocusModel((TableViewFocusModel) focusModel);
+            focusModel = new TreeTableView.TreeTableViewFocusModel(tableView);
+            tableView.setFocusModel(focusModel);
         }
     }
 
@@ -137,9 +135,9 @@ public class TableViewSelectionModelImplTest {
         return "Selected Items: " + sm.getSelectedItems();
     }
 
-    private String cells(TableViewSelectionModel<?> sm) {
+    private String cells(TreeTableViewSelectionModel<?> sm) {
         StringBuilder sb = new StringBuilder("Selected Cells: ");
-        for (TablePosition tp : sm.getSelectedCells()) {
+        for (TreeTablePosition tp : sm.getSelectedCells()) {
             sb.append("(");
             sb.append(tp.getRow());
             sb.append(",");
@@ -153,8 +151,8 @@ public class TableViewSelectionModelImplTest {
         return "Focused Cell: " + focusModel.getFocusedCell();
     }
 
-    private TablePosition pos(int row, TableColumn<String,?> col) {
-        return new TablePosition(tableView, row, col);
+    private TreeTablePosition pos(int row, TreeTableColumn<String,?> col) {
+        return new TreeTablePosition(tableView, row, col);
     }
 
     @Test public void selectRowWhenInSingleCellSelectionMode() {
@@ -274,7 +272,7 @@ public class TableViewSelectionModelImplTest {
     @Test public void selectRightCellWhenAtEdge() {
         model.setSelectionMode(SelectionMode.SINGLE);
         model.setCellSelectionEnabled(true);
-        TableColumn<String,?> rightEdge = tableView.getVisibleLeafColumn(tableView.getVisibleLeafColumns().size() - 1);
+        TreeTableColumn<String,?> rightEdge = tableView.getVisibleLeafColumn(tableView.getVisibleLeafColumns().size() - 1);
         model.select(0, rightEdge);
         assertTrue(model.isSelected(0, rightEdge));
         model.selectRightCell();
@@ -295,7 +293,7 @@ public class TableViewSelectionModelImplTest {
     @Test public void selectNextCellWhenAtEdge() {
         model.setSelectionMode(SelectionMode.SINGLE);
         model.setCellSelectionEnabled(true);
-        int count = data.size();
+        int count = tableView.getExpandedItemCount();
         model.select(count - 1, col0);
         assertTrue(model.isSelected(count - 1, col0));
         model.selectBelowCell();
@@ -465,7 +463,7 @@ public class TableViewSelectionModelImplTest {
         model.setCellSelectionEnabled(false);
         model.select(4);
         model.selectLast();
-        assertTrue(cells(model), model.isSelected(tableView.getItems().size() - 1));
+        assertTrue(cells(model), model.isSelected(tableView.getExpandedItemCount() - 1));
         assertEquals(1, model.getSelectedCells().size());
     }
 
@@ -474,7 +472,7 @@ public class TableViewSelectionModelImplTest {
         model.setCellSelectionEnabled(true);
         model.select(4, col1);
         model.selectLast();
-        assertTrue(cells(model), model.isSelected(tableView.getItems().size() - 1, col1));
+        assertTrue(cells(model), model.isSelected(tableView.getExpandedItemCount() - 1, col1));
         assertEquals(1, model.getSelectedCells().size());
     }
 
@@ -483,7 +481,7 @@ public class TableViewSelectionModelImplTest {
         model.setCellSelectionEnabled(false);
         model.select(4);
         model.selectLast();
-        assertTrue(cells(model), model.isSelected(tableView.getItems().size() - 1));
+        assertTrue(cells(model), model.isSelected(tableView.getExpandedItemCount() - 1));
         assertTrue(cells(model), model.isSelected(4));
         assertEquals(2, model.getSelectedCells().size());
     }
@@ -493,7 +491,7 @@ public class TableViewSelectionModelImplTest {
         model.setCellSelectionEnabled(true);
         model.select(4, col1);
         model.selectLast();
-        assertTrue(cells(model), model.isSelected(tableView.getItems().size() - 1, col1));
+        assertTrue(cells(model), model.isSelected(tableView.getExpandedItemCount() - 1, col1));
         assertTrue(cells(model), model.isSelected(4, col1));
         assertEquals(2, model.getSelectedCells().size());
     }
@@ -517,44 +515,44 @@ public class TableViewSelectionModelImplTest {
         focusModel.focus(3);
         assertTrue(focusedCell(), focusModel.isFocused(3));
         assertTrue(focusedCell(), focusModel.isFocused(3, null));
-        assertEquals(new TablePosition(tableView, 3, null), focusModel.getFocusedCell());
-        assertEquals(tableView.getItems().get(3), focusModel.getFocusedItem());
+        assertEquals(new TreeTablePosition(tableView, 3, null), focusModel.getFocusedCell());
+        assertEquals(tableView.getTreeItem(3), focusModel.getFocusedItem());
     }
 
     @Test public void focusOnNegativeRowIndex() {
         focusModel.focus(-20);
-        assertEquals(new TablePosition(tableView, -1, null), focusModel.getFocusedCell());
+        assertEquals(new TreeTablePosition(tableView, -1, null), focusModel.getFocusedCell());
         assertFalse(focusedCell(), focusModel.isFocused(-20, null));
     }
 
     @Test public void focusOutOfColumnsBounds() {
         focusModel.focus(3, null);
-        assertEquals(new TablePosition(tableView, 3, null), focusModel.getFocusedCell());
+        assertEquals(new TreeTablePosition(tableView, 3, null), focusModel.getFocusedCell());
         assertTrue(focusedCell(), focusModel.isFocused(3, null));
     }
 
     @Test public void focusPreviousRow() {
         focusModel.focus(3);
-        assertEquals(new TablePosition(tableView, 3, null), focusModel.getFocusedCell());
+        assertEquals(new TreeTablePosition(tableView, 3, null), focusModel.getFocusedCell());
         assertTrue(focusedCell(), focusModel.isFocused(3));
         assertTrue(focusedCell(), focusModel.isFocused(3, null));
 
         focusModel.focusPrevious();
-        assertEquals(new TablePosition(tableView, 2, null), focusModel.getFocusedCell());
+        assertEquals(new TreeTablePosition(tableView, 2, null), focusModel.getFocusedCell());
         assertTrue(focusedCell(), focusModel.isFocused(2));
         assertTrue(focusedCell(), focusModel.isFocused(2, null));
     }
 
     @Test public void focusPreviousRowImmediately() {
         focusModel.focusPrevious();
-        assertEquals(new TablePosition(tableView, 0, null), focusModel.getFocusedCell());
+        assertEquals(new TreeTablePosition(tableView, 0, null), focusModel.getFocusedCell());
         assertTrue(focusedCell(), focusModel.isFocused(0, null));
     }
 
     @Test public void focusPreviousRowFromFirstRow() {
         focusModel.focus(0);
         focusModel.focusPrevious();
-        assertEquals(new TablePosition(tableView, 0, null), focusModel.getFocusedCell());
+        assertEquals(new TreeTablePosition(tableView, 0, null), focusModel.getFocusedCell());
         assertTrue(focusedCell(), focusModel.isFocused(0));
         assertTrue(focusedCell(), focusModel.isFocused(0, null));
     }
@@ -563,38 +561,38 @@ public class TableViewSelectionModelImplTest {
         focusModel.focus(3);
         focusModel.focusNext();
 
-        assertEquals(new TablePosition(tableView, 4, null), focusModel.getFocusedCell());
+        assertEquals(new TreeTablePosition(tableView, 4, null), focusModel.getFocusedCell());
         assertTrue(focusedCell(), focusModel.isFocused(4));
         assertTrue(focusedCell(), focusModel.isFocused(4, null));
     }
 
     @Test public void focusNextRowImmediately() {
-        assertEquals(new TablePosition(tableView, -1, null), focusModel.getFocusedCell());
+        assertEquals(new TreeTablePosition(tableView, -1, null), focusModel.getFocusedCell());
 
         focusModel.focusNext();
 
-        assertEquals(new TablePosition(tableView, 0, null), focusModel.getFocusedCell());
+        assertEquals(new TreeTablePosition(tableView, 0, null), focusModel.getFocusedCell());
         assertTrue(focusedCell(), focusModel.isFocused(0));
         assertTrue(focusedCell(), focusModel.isFocused(0, null));
     }
 
     @Test public void focusNextRowFromLastRow() {
-        int rowCount = tableView.getItems().size() - 1;
+        int rowCount = tableView.getExpandedItemCount() - 1;
         focusModel.focus(rowCount);
         focusModel.focusNext();
 
-        assertEquals(new TablePosition(tableView, rowCount, null), focusModel.getFocusedCell());
+        assertEquals(new TreeTablePosition(tableView, rowCount, null), focusModel.getFocusedCell());
         assertTrue(focusedCell(), focusModel.isFocused(rowCount));
         assertTrue(focusedCell(), focusModel.isFocused(rowCount, null));
     }
 
     @Test public void focusAboveCell() {
         focusModel.focus(3, col1);
-        assertEquals(new TablePosition(tableView, 3, col1), focusModel.getFocusedCell());
+        assertEquals(new TreeTablePosition(tableView, 3, col1), focusModel.getFocusedCell());
         assertTrue(focusedCell(), focusModel.isFocused(3, col1));
 
         focusModel.focusAboveCell();
-        assertEquals(new TablePosition(tableView, 2, col1), focusModel.getFocusedCell());
+        assertEquals(new TreeTablePosition(tableView, 2, col1), focusModel.getFocusedCell());
         // not sure about this - a row probably shouldn't be focused when we've given it specifically to a cell
         assertTrue(focusedCell(), focusModel.isFocused(2));
         assertTrue(focusedCell(), focusModel.isFocused(2, col1));
@@ -603,7 +601,7 @@ public class TableViewSelectionModelImplTest {
     @Test public void focusAboveCellFromFirstRow() {
         focusModel.focus(0, col1);
         focusModel.focusAboveCell();
-        assertEquals(new TablePosition(tableView, 0, col1), focusModel.getFocusedCell());
+        assertEquals(new TreeTablePosition(tableView, 0, col1), focusModel.getFocusedCell());
         assertTrue(focusedCell(), focusModel.isFocused(0));
         assertTrue(focusedCell(), focusModel.isFocused(0, col1));
     }
@@ -612,17 +610,17 @@ public class TableViewSelectionModelImplTest {
         focusModel.focus(3, col1);
         focusModel.focusBelowCell();
 
-        assertEquals(new TablePosition(tableView, 4, col1), focusModel.getFocusedCell());
+        assertEquals(new TreeTablePosition(tableView, 4, col1), focusModel.getFocusedCell());
         assertTrue(focusedCell(), focusModel.isFocused(4));
         assertTrue(focusedCell(), focusModel.isFocused(4, col1));
     }
 
     @Test public void focusBelowCellFromLastRow() {
-        int rowCount = tableView.getItems().size() - 1;
+        int rowCount = tableView.getExpandedItemCount() - 1;
         focusModel.focus(rowCount, col1);
         focusModel.focusBelowCell();
 
-        assertEquals(new TablePosition(tableView, rowCount, col1), focusModel.getFocusedCell());
+        assertEquals(new TreeTablePosition(tableView, rowCount, col1), focusModel.getFocusedCell());
         assertTrue(focusedCell(), focusModel.isFocused(rowCount));
         assertTrue(focusedCell(), focusModel.isFocused(rowCount, col1));
     }
@@ -631,7 +629,7 @@ public class TableViewSelectionModelImplTest {
         focusModel.focus(3, col1);
         focusModel.focusLeftCell();
 
-        assertEquals(new TablePosition(tableView, 3, col0), focusModel.getFocusedCell());
+        assertEquals(new TreeTablePosition(tableView, 3, col0), focusModel.getFocusedCell());
         assertTrue(focusedCell(), focusModel.isFocused(3));
         assertTrue(focusedCell(), focusModel.isFocused(3, col0));
     }
@@ -640,7 +638,7 @@ public class TableViewSelectionModelImplTest {
         focusModel.focus(3, col0);
         focusModel.focusLeftCell();
 
-        assertEquals(new TablePosition(tableView, 3, col0), focusModel.getFocusedCell());
+        assertEquals(new TreeTablePosition(tableView, 3, col0), focusModel.getFocusedCell());
         assertTrue(focusedCell(), focusModel.isFocused(3));
         assertTrue(focusedCell(), focusModel.isFocused(3, col0));
     }
@@ -649,7 +647,7 @@ public class TableViewSelectionModelImplTest {
         focusModel.focus(3, null);
         focusModel.focusLeftCell();
 
-        assertEquals(new TablePosition(tableView, 3, null), focusModel.getFocusedCell());
+        assertEquals(new TreeTablePosition(tableView, 3, null), focusModel.getFocusedCell());
         assertTrue(focusedCell(), focusModel.isFocused(3));
         assertTrue(focusedCell(), focusModel.isFocused(3, null));
     }
@@ -658,18 +656,18 @@ public class TableViewSelectionModelImplTest {
         focusModel.focus(3, col0);
         focusModel.focusRightCell();
 
-        assertEquals(new TablePosition(tableView, 3, col1), focusModel.getFocusedCell());
+        assertEquals(new TreeTablePosition(tableView, 3, col1), focusModel.getFocusedCell());
         assertTrue(focusedCell(), focusModel.isFocused(3));
         assertTrue(focusedCell(), focusModel.isFocused(3, col1));
     }
 
     @Test public void focusRightCellFromEndColumn() {
-        TableColumn<String,?> rightEdge = tableView.getVisibleLeafColumn(tableView.getVisibleLeafColumns().size() - 1);
+        TreeTableColumn<String,?> rightEdge = tableView.getVisibleLeafColumn(tableView.getVisibleLeafColumns().size() - 1);
 
         focusModel.focus(3, rightEdge);
         focusModel.focusRightCell();
 
-        assertEquals(new TablePosition(tableView, 3, rightEdge), focusModel.getFocusedCell());
+        assertEquals(new TreeTablePosition(tableView, 3, rightEdge), focusModel.getFocusedCell());
         assertTrue(focusedCell(), focusModel.isFocused(3));
         assertTrue(focusedCell(), focusModel.isFocused(3, rightEdge));
     }

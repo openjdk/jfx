@@ -449,28 +449,46 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
          * selected.
          */
         if (isEmpty()) return;
+
+        final boolean isSelected = isSelected();
+        if (! isInCellSelectionMode()) {
+            if (isSelected) {
+                updateSelected(false);
+            }
+            return;
+        }
         
         final TreeTableView<S> tv = getTreeTableView();
-        if (getIndex() == -1 || getTreeTableView() == null) return;
-        if (tv.getSelectionModel() == null) return;
-        
-        boolean isSelected = isInCellSelectionMode() &&
-                tv.getSelectionModel().isSelected(getIndex(), getTableColumn());
-        if (isSelected() == isSelected) return;
+        if (getIndex() == -1 || tv == null) return;
 
-        updateSelected(isSelected);
+        TreeTableView.TreeTableViewSelectionModel<S> sm = tv.getSelectionModel();
+        if (sm == null) return;
+
+        boolean isSelectedNow = sm.isSelected(getIndex(), getTableColumn());
+        if (isSelected == isSelectedNow) return;
+
+        updateSelected(isSelectedNow);
     }
 
     private void updateFocus() {
+        final boolean isFocused = isFocused();
+        if (! isInCellSelectionMode()) {
+            if (isFocused) {
+                setFocused(false);
+            }
+            return;
+        }
+
         final TreeTableView<S> tv = getTreeTableView();
         if (getIndex() == -1 || tv == null) return;
-        if (tv.getFocusModel() == null) return;
-        
-        boolean isFocused = isInCellSelectionMode() &&
-                tv.getFocusModel() != null &&
-                tv.getFocusModel().isFocused(getIndex(), getTableColumn());
 
-        setFocused(isFocused);
+        TreeTableView.TreeTableViewFocusModel fm = tv.getFocusModel();
+        if (fm == null) return;
+
+        boolean isFocusedNow = fm != null &&
+                            fm.isFocused(getIndex(), getTableColumn());
+
+        setFocused(isFocusedNow);
     }
 
     private void updateEditing() {
@@ -501,10 +519,10 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
     }
 
     private boolean isInCellSelectionMode() {
-        TreeTableView<S> treeTable = getTreeTableView();
-        return treeTable != null &&
-                treeTable.getSelectionModel() != null &&
-                treeTable.getSelectionModel().isCellSelectionEnabled();
+        TreeTableView<S> tv = getTreeTableView();
+        if (tv == null) return false;
+        TreeTableView.TreeTableViewSelectionModel<S> sm = tv.getSelectionModel();
+        return sm != null && sm.isCellSelectionEnabled();
     }
     
     /*
