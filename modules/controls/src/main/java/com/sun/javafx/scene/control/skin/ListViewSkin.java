@@ -313,6 +313,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         if (getItemCount() == 0) {
             // show message overlay instead of empty listview
             if (placeholderRegion != null) {
+                placeholderRegion.setVisible(w > 0 && h > 0);
                 placeholderRegion.resizeRelocate(x, y, w, h);
             }
         } else {
