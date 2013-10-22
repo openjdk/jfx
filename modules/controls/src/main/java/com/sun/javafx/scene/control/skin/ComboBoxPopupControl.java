@@ -27,17 +27,15 @@ package com.sun.javafx.scene.control.skin;
 
 import javafx.css.Styleable;
 import javafx.geometry.*;
-import javafx.scene.control.ComboBoxBase;
+import javafx.scene.control.*;
 import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
-import javafx.scene.control.PopupControl;
-import javafx.scene.control.Skin;
-import javafx.scene.control.Skinnable;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.Region;
 
 public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     
@@ -175,13 +173,13 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         final double newHeight = currentHeight < minHeight ? minHeight : currentHeight;
 
         if (newWidth != currentWidth || newHeight != currentHeight) {
+            // Resizing content to resolve issues such as RT-32582 and RT-33700
+            // (where RT-33700 was introduced due to a previous fix for RT-32582)
             popupContent.resize(newWidth, newHeight);
-
-            // fix for RT-32582. It seems that resizing the popup whilst it is showing
-            // doesn't work, so we briefly hide and then show it again with the correct
-            // sizes having been worked out as above.
-            hide();
-            popup.show(getSkinnable().getScene().getWindow(), p.getX(), p.getY());
+            if (popupContent instanceof Region) {
+                ((Region)popupContent).setMinSize(newWidth, newHeight);
+                ((Region)popupContent).setPrefSize(newWidth, newHeight);
+            }
         }
     }
 }
