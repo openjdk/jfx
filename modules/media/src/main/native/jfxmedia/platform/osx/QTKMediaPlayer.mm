@@ -444,6 +444,10 @@
         if (movie && movieReady) {
             [movie stop];
         }
+        
+        if (previousPlayerState == kPlayerState_STALLED) {
+            [self setPlayerState:kPlayerState_PAUSED];
+        }
     }
 }
 
@@ -469,6 +473,10 @@
         } else {
             currentTime = 0.0;
         }
+        
+        if (previousPlayerState == kPlayerState_STALLED) {
+            [self setPlayerState:kPlayerState_STOPPED];
+        }
     }
 }
 
@@ -480,15 +488,18 @@
      *      PLAYING - rate != 0
      *      PAUSED  - reqRate == 0, rate == 0
      *      STOPPED - stopFlag && reqRate == 0, rate == 0
-     *      STALLED - detected by load state as rate does not change in this condition
+     *      STALLED - detected by load state or reqRate != 0, rate == 0 and state is PLAYING
      */
     if (newRate == 0.0) {
         // slop for FP/timescale error
         if (requestedState == kPlaybackState_Stop) {
             [self setPlayerState:kPlayerState_STOPPED];
+        } else if (requestedState == kPlaybackState_Play && previousPlayerState == kPlayerState_PLAYING && requestedRate != 0.0) {
+            [self setPlayerState:kPlayerState_STALLED];        
         } else if (requestedState != kPlaybackState_Finished) {
             [self setPlayerState:kPlayerState_PAUSED];
         }
+        
     } else {
         // non-zero is always playing
         [self setPlayerState:kPlayerState_PLAYING];
