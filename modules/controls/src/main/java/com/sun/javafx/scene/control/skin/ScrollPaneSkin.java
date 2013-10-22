@@ -327,10 +327,10 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
 
         viewRect.setOnMousePressed(new EventHandler<javafx.scene.input.MouseEvent>() {
            @Override public void handle(javafx.scene.input.MouseEvent e) {
+               mouseDown = true;
                if (IS_TOUCH_SUPPORTED) {
                    startSBReleasedAnimation();
                }
-               mouseDown = true;
                pressX = e.getX();
                pressY = e.getY();
                ohvalue = hsb.getValue();
@@ -360,11 +360,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
 
         viewRect.addEventFilter(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
             @Override public void handle(MouseEvent e) {
-                  if (IS_TOUCH_SUPPORTED) {
-                    startSBReleasedAnimation();
-                 }
                  mouseDown = false;
-
                  if (dragDetected == true) {
                      if (saveCursor != null) {
                          getSkinnable().setCursor(saveCursor);
@@ -583,7 +579,6 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         getSkinnable().setOnTouchReleased(new EventHandler<TouchEvent>() {
             @Override public void handle(TouchEvent e) {
                 touchDetected = false;
-                startSBReleasedAnimation();
                 e.consume();
             }
         });
@@ -1085,6 +1080,9 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             sbTouchKF1 = new KeyFrame(Duration.millis(0), new EventHandler<ActionEvent>() {
                 @Override public void handle(ActionEvent event) {
                     tempVisibility = true;
+                    if (touchDetected == true || mouseDown == true) {
+                        sbTouchTimeline.playFromStart();
+                    }
                 }
             });
 
