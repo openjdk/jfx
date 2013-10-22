@@ -1046,11 +1046,9 @@ public abstract class Node implements EventTarget, Styleable {
                     if (getScene() == null) return;
 
                     // If the style has changed, then styles of this node
-                    // and child nodes might be affected. So if the cssFlag
-                    // is not already set to reapply or recalculate, make it so.
-                    if (cssFlag != CssFlags.REAPPLY ||
-                            cssFlag != CssFlags.RECALCULATE) {
-                        cssFlag = CssFlags.RECALCULATE;
+                    // and child nodes might be affected.
+                    if (cssFlag != CssFlags.REAPPLY) {
+                        cssFlag = CssFlags.REAPPLY;
                         notifyParentsOfInvalidatedCSS();
                     }
                 }
@@ -8655,8 +8653,6 @@ public abstract class Node implements EventTarget, Styleable {
                 }
                 break;
             }
-            case RECALCULATE:
-                cssFlag = CssFlags.REAPPLY; // TODO
             case REAPPLY:
             case UPDATE:
             default:
@@ -8665,25 +8661,73 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * If invoked, will update / reapply styles from here on down. If reapply
-     * is false, then we will only update from here on down, otherwise we will
-     * do a full reapply.
-     *
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated // SB-dependency: RT-21206 has been filed to track this
+     @Deprecated
     public final void impl_processCSS(boolean reapply) {
 
-        if (getScene() == null) return;
+         final boolean flag = (reapply || cssFlag == CssFlags.REAPPLY);
+         cssFlag = flag ? CssFlags.REAPPLY : CssFlags.UPDATE;
 
-        //
-        // Normally, css is processed from the root down. If this method
-        // is called, then the code is trying to force css to be applied
-        // in the middle of a pulse.
-        //
-        final boolean flag = (reapply || cssFlag == CssFlags.REAPPLY);
-        cssFlag = flag ? CssFlags.REAPPLY : CssFlags.UPDATE;
+         applyCss();
+     }
+
+    /**
+     * If required, apply styles to this Node and its children, if any. This method does not normally need to 
+     * be invoked directly but may be used in conjunction with {@link Parent#layout()} to size a Node before the
+     * next pulse, or if the {@link #getScene() Scene} is not in a {@link javafx.stage.Stage}. 
+     * <p>CSS is applied to this Node only if this Node's CSS state is other than clean, or there is a parent that
+     * needs CSS to be applied. This method is a no-op if the Node is not in a Scene. The Scene does not have
+     * to be in a Stage.</p>
+     * <p>This method does not invoke the {@link Parent#layout()} method. Typically, the caller will use the 
+     * following sequence of operations.</p>
+     * <pre><code>
+     *     parentNode.applyCss();
+     *     parentNode.layout();
+     * </code></pre>
+     * <p>As a more complete example, the following code uses {@code applyCss()} and {@code layout()} to find
+     * the width and height of the Button before the Stage has been shown. If either the call to {@code applyCss()}
+     * or the call to {@code layout()} is commented out, the calls to {@code getWidth()} and {@code getHeight()}
+     * will return zero (until some time after the Stage is shown). </p>
+     * <pre><code>
+     * {@literal @}Override
+     * public void start(Stage stage) throws Exception {
+     *
+     *    Group root = new Group();
+     *    Scene scene = new Scene(root);
+     *
+     *    Button button = new Button("Hello World");
+     *    root.getChildren().add(button);
+     *
+     *    root.applyCss();
+     *    root.layout();
+     *
+     *    double width = button.getWidth();
+     *    double height = button.getHeight();
+     *
+     *    System.out.println(width + ", " + height);
+     *
+     *    stage.setScene(scene);
+     *    stage.show();
+     * }
+     * </code></pre>
+     */
+    public final void applyCss() {
+
+        if (getScene() == null) {
+            return;
+        }
+
+        // quick check to see if there is any possibility that this node needs CSS applied
+        if(cssFlag == CssFlags.CLEAN && getScene().getRoot().cssFlag == CssFlags.CLEAN) {
+            return;
+        }
+
+        // If this flag is clean or dirty_branch, make it update
+        if (cssFlag != CssFlags.REAPPLY) {
+            cssFlag = CssFlags.UPDATE;
+        }
 
         //
         // RT-28394 - need to see if any ancestor has a flag other than clean
@@ -8705,7 +8749,12 @@ public abstract class Node implements EventTarget, Styleable {
             }
             _parent = _parent.getParent();
         }
+        // If we're at the root of the scene-graph, make sure the NODE_CSS dirty bit is cleared (see Scene#doCSSPass())
+        if (topMost == getScene().getRoot()) {
+            getScene().getRoot().impl_clearDirty(DirtyBits.NODE_CSS);
+        }
         topMost.processCSS(new SimpleBooleanProperty(false));
+
     }
 
     /**
@@ -8732,11 +8781,6 @@ public abstract class Node implements EventTarget, Styleable {
             return;
         }
 
-        if (cssFlag == CssFlags.RECALCULATE) {
-            // TODO: re-evalutate handling of CssFlags.RECALCULATE - see below
-            cssFlag = CssFlags.REAPPLY;
-        }
-
         if (cssFlag == CssFlags.REAPPLY) {
 
             // RT-24621 - If this node's parent's cssFlag is REAPPLY, then CSS should be applied to the parent first,
@@ -8760,15 +8804,6 @@ public abstract class Node implements EventTarget, Styleable {
             // Match new styles if my own indicates I need to reapply
             styleHelper = CssStyleHelper.createStyleHelper(this, cacheHint);
 
-//        } else if (cssFlag == CssFlags.RECALCULATE) {
-//
-//            // Recalculate means that the in-line style has changed.
-//
-//            // Note: recalculate used to do something different than reapply,
-//            // but the way calculated values are cached has changed.
-//            cssFlag = CssFlags.REAPPLY;
-//            styleHelper = CssStyleHelper.createStyleHelper(this);
-//
         }
 
         final CssFlags flag = cssFlag;

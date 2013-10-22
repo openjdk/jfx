@@ -49,14 +49,6 @@ public enum CssFlags {
      */
     UPDATE,
     /**
-     * Indicates that we must recalculate all the styles for this node and 
-     * all child nodes. This is typically in response to an inline-style change
-     * where it is not necessary to remap rules to nodes. But the inline-style
-     * might affect styles in this or in child nodes, so styles need to be
-     * recalculated.
-     */
-    RECALCULATE,
-    /**
      * Indicates that we must reapply all the styles from this point downwards
      * in the tree, including figuring out which styles apply to each Node. This
      * is the most expensive CSS operation that can occur, and usually only
