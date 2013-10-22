@@ -1088,7 +1088,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
                 }
             });
 
-            sbTouchKF2 = new KeyFrame(Duration.millis(500), new EventHandler<ActionEvent>() {
+            sbTouchKF2 = new KeyFrame(Duration.millis(1000), new EventHandler<ActionEvent>() {
                 @Override public void handle(ActionEvent event) {
                     tempVisibility = false;
                     getSkinnable().requestLayout();
