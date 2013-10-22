@@ -381,6 +381,17 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
                     if (t != null)
                         t.removeEventFilter(MouseEvent.MOUSE_CLICKED, weakSceneMouseEventHandler);
                 }
+                
+                /**
+                 * remove the f10 accelerator from the old scene
+                 * add it to the new scene
+                 */
+                if (t != null) {
+                    t.getAccelerators().remove(acceleratorKeyCombo);
+                }
+                if (t1 != null ) {
+                    t1.getAccelerators().put(acceleratorKeyCombo, firstMenuRunnable);
+                }
             }
         });
     }
