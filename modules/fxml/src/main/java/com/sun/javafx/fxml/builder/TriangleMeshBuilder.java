@@ -25,17 +25,17 @@
 
 package com.sun.javafx.fxml.builder;
 
-import java.util.Locale;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.StringTokenizer;
-import java.util.TreeMap;
 import javafx.scene.shape.TriangleMesh;
 import javafx.util.Builder;
 
+import java.util.Locale;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeMap;
+
 public class TriangleMeshBuilder extends TreeMap<String, Object> implements Builder<TriangleMesh> {
 
-    private static final String VALUE_SEPARATOR = ",";
+    private static final String VALUE_SEPARATOR_REGEX = "[,\\s]+";
 
     private float[] points;
     private float[] texCoords;
@@ -64,32 +64,28 @@ public class TriangleMeshBuilder extends TreeMap<String, Object> implements Buil
     public Object put(String key, Object value) {
 
         if ("points".equalsIgnoreCase(key)) {
-            StringTokenizer tokenizer = new StringTokenizer((String) value, VALUE_SEPARATOR);
-            points = new float[tokenizer.countTokens()];
-            int counter = 0;
-            while (tokenizer.hasMoreTokens()) {
-                points[counter++] = Float.parseFloat(tokenizer.nextToken().trim());
+            String[] split = ((String) value).split(VALUE_SEPARATOR_REGEX);
+            points = new float[split.length];
+            for (int i = 0; i < split.length; ++i) {
+                points[i] = Float.parseFloat(split[i]);
             }
         } else if ("texcoords".equalsIgnoreCase(key)) {
-            StringTokenizer tokenizer = new StringTokenizer((String) value, VALUE_SEPARATOR);
-            texCoords = new float[tokenizer.countTokens()];
-            int counter = 0;
-            while (tokenizer.hasMoreTokens()) {
-                texCoords[counter++] = Float.parseFloat(tokenizer.nextToken().trim());
+            String[] split = ((String) value).split(VALUE_SEPARATOR_REGEX);
+            texCoords = new float[split.length];
+            for (int i = 0; i < split.length; ++i) {
+                texCoords[i] = Float.parseFloat(split[i]);
             }
         } else if ("faces".equalsIgnoreCase(key)) {
-            StringTokenizer tokenizer = new StringTokenizer((String) value, VALUE_SEPARATOR);
-            faces = new int[tokenizer.countTokens()];
-            int counter = 0;
-            while (tokenizer.hasMoreTokens()) {
-                faces[counter++] = Integer.parseInt(tokenizer.nextToken().trim());
+            String[] split = ((String) value).split(VALUE_SEPARATOR_REGEX);
+            faces = new int[split.length];
+            for (int i = 0; i < split.length; ++i) {
+                faces[i] = Integer.parseInt(split[i]);
             }
         } else if ("facesmoothinggroups".equalsIgnoreCase(key)) {
-            StringTokenizer tokenizer = new StringTokenizer((String) value, VALUE_SEPARATOR);
-            faceSmoothingGroups = new int[tokenizer.countTokens()];
-            int counter = 0;
-            while (tokenizer.hasMoreTokens()) {
-                faceSmoothingGroups[counter++] = Integer.parseInt(tokenizer.nextToken().trim());
+            String[] split = ((String) value).split(VALUE_SEPARATOR_REGEX);
+            faceSmoothingGroups = new int[split.length];
+            for (int i = 0; i < split.length; ++i) {
+                faceSmoothingGroups[i] = Integer.parseInt(split[i]);
             }
         }
 
