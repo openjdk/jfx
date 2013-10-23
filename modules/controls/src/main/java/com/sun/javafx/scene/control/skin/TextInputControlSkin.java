@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.ConditionalFeature;
@@ -359,7 +360,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             });
         }
 
-        textInput.setInputMethodRequests(new InputMethodRequests() {
+        textInput.setInputMethodRequests(new ExtendedInputMethodRequests() {
             @Override public Point2D getTextLocation(int offset) {
                 Scene scene = getSkinnable().getScene();
                 Window window = scene.getWindow();
@@ -387,10 +388,41 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
 
                 return textInput.getText(selection.getStart(), selection.getEnd());
             }
+
+            @Override
+            public int getInsertPositionOffset() {
+                int caretPosition = getSkinnable().getCaretPosition();
+                if (caretPosition < imstart) {
+                    return caretPosition;
+                } else if (caretPosition < imstart + imlength) {
+                    return imstart;
+                } else {
+                    return caretPosition - imlength;
+                }
+            }
+
+            @Override
+            public String getCommittedText(int begin, int end) {
+                TextInputControl textInput = getSkinnable();
+                if (begin < imstart) {
+                    if (end <= imstart) {
+                        return textInput.getText(begin, end);
+                    } else {
+                        return textInput.getText(begin, imstart) + textInput.getText(imstart + imlength, end + imlength);
+                    }
+                } else {
+                    return textInput.getText(begin + imlength, end + imlength);
+                }
+            }
+
+            @Override
+            public int getCommittedTextLength() {
+                return getSkinnable().getText().length() - imlength;
+            }
         });
     }
-    
-    // For PasswordFieldSkin
+
+    // For use with PasswordField in TextFieldSkin
     protected String maskText(String txt) {
         return txt;
     }

@@ -51,8 +51,8 @@
 
 .key {
     -fx-border-image-source: url("images/vk-light.png");
-    -fx-border-image-slice: 14 fill;
-    -fx-border-image-width: 14;
+    -fx-border-image-slice: 10 fill;
+    -fx-border-image-width: 10;
     -fx-border-image-repeat: stretch;
     -fx-border-image-insets: -3 -3 -3 -3;
     -fx-padding: 3 3 5 0;

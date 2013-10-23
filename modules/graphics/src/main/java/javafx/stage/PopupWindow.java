@@ -65,6 +65,7 @@ import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.ReadOnlyProperty;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.input.KeyCombination;
@@ -132,6 +133,7 @@ public abstract class PopupWindow extends Window {
     public PopupWindow() {
         final Pane popupRoot = new Pane();
         popupRoot.setBackground(Background.EMPTY);
+        popupRoot.getStyleClass().add("popup");
 
         final Scene scene = SceneHelper.createPopupScene(popupRoot);
         scene.setFill(null);
@@ -152,6 +154,7 @@ public abstract class PopupWindow extends Window {
                                        .removeListener(popupWindowUpdater);
                                 oldRoot.boundsInLocalProperty()
                                        .removeListener(popupWindowUpdater);
+                                oldRoot.getStyleClass().remove("popup");
                             }
 
                             if (newRoot != null) {
@@ -159,6 +162,7 @@ public abstract class PopupWindow extends Window {
                                        .addListener(popupWindowUpdater);
                                 newRoot.boundsInLocalProperty()
                                        .addListener(popupWindowUpdater);
+                                newRoot.getStyleClass().add("popup");
                             }
 
                             oldRoot = newRoot;

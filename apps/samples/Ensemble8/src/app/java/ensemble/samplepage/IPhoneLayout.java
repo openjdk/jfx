@@ -54,7 +54,7 @@ public class IPhoneLayout extends Region {
     private Parent iPhoneTabs;
     
     public IPhoneLayout(SamplePage samplePage) {
-        sample = new SampleContainer(sampleNode = samplePage.sample.buildSampleNode());
+        sample = new SampleContainer(sampleNode = samplePage.sampleInfo.getSampleNode());
         description = new Description(samplePage);
         sources = new Sources(samplePage);
         if (samplePage.sample.needsPlayground()) {

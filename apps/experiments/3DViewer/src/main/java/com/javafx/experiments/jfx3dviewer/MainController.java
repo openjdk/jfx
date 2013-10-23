@@ -273,7 +273,7 @@ public class MainController implements Initializable {
             TriangleMesh mesh = (TriangleMesh)((MeshView)node).getMesh();
             if (mesh != null) {
                 meshCount ++;
-                triangleCount += mesh.getFaces().size() / TriangleMesh.NUM_COMPONENTS_PER_FACE;
+                triangleCount += mesh.getFaces().size() / mesh.getFaceElementSize();
             }
         }
     }

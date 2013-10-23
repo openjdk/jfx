@@ -714,10 +714,18 @@ jlong _1createWindow(JNIEnv *env, jobject jWindow, jlong jOwnerPtr, jlong jScree
     
     {
         UIScreen *screen = (UIScreen*)jlong_to_ptr(jScreenPtr);
-     
+        BOOL hidden = YES;
         if (jOwnerPtr == 0L) {
             // no owner means it is the primary stage; Decorated primary stage shows status bar by default
-            [UIApplication sharedApplication].statusBarHidden = ((jStyleMask&com_sun_glass_ui_Window_TITLED) == 0);
+            hidden = ((jStyleMask&com_sun_glass_ui_Window_TITLED) == 0);
+            
+            NSObject * values = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"UIStatusBarHidden"];
+            //we prefer explicit settings from .plist
+            if (values != nil) {
+                hidden = (values == @(YES))?YES:NO;
+            }
+            
+            [UIApplication sharedApplication].statusBarHidden = hidden;    
         }
 
         

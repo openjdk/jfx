@@ -36,7 +36,6 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Control;
 import javafx.scene.layout.VBox;
-import javafx.scene.layout.VBoxBuilder;
 import javafx.stage.Stage;
 
 /**
@@ -50,7 +49,7 @@ public class SearchBoxApp extends Application {
 
     public Parent createContent() {
         String searchBoxCss = SearchBoxApp.class.getResource("SearchBox.css").toExternalForm();
-        VBox vbox = VBoxBuilder.create().build();
+        VBox vbox = new VBox();
         vbox.getStylesheets().add(searchBoxCss);
         vbox.setPrefWidth(200);
         vbox.setMaxWidth(Control.USE_PREF_SIZE);

@@ -32,18 +32,10 @@
 package ensemble.samples.media.advancedmedia;
 
 import javafx.application.Application;
-import javafx.event.EventHandler;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.effect.Light;
-import javafx.scene.effect.LightingBuilder;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.media.AudioClip;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
-import javafx.scene.shape.RectangleBuilder;
 import javafx.stage.Stage;
 
 /**
@@ -73,27 +65,6 @@ public class AdvancedMediaApp extends Application {
         mediaControl.setMaxSize(480, 280);
 
         return mediaControl;
-    }
-
-    public static Rectangle createKey(Color color, double x, double width, double height, String sound) {
-        // create a audio clip that this key will play
-        final AudioClip barNote = new AudioClip(
-                AdvancedMediaApp.class.getResource(sound).toExternalForm());
-        // create the rectangle that draws the key
-        return RectangleBuilder.create()
-                .x(x)
-                .y(-(height / 2))
-                .width(width)
-                .height(height)
-                .fill(color)
-                .onMousePressed(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent me) {
-                barNote.play();
-            }
-        })
-                .effect(LightingBuilder.create().surfaceScale(1).light(new Light.Point(-20, -20, 100, Color.WHITE)).build())
-                .build();
     }
 
     @Override

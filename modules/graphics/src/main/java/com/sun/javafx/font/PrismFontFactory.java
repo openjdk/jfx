@@ -53,6 +53,7 @@ public abstract class PrismFontFactory implements FontFactory {
     public static final boolean isIOS;
     public static final boolean isAndroid;
     public static final boolean isEmbedded;
+    public static int cacheLayoutSize = 0x10000;
     static boolean useNativeRasterizer;
     private static boolean subPixelEnabled;
     private static boolean lcdEnabled;
@@ -123,6 +124,18 @@ public abstract class PrismFontFactory implements FontFactory {
                     String defLCDProp = lcdTextOff ? "false" : "true";
                     String lcdProp = System.getProperty("prism.lcdtext", defLCDProp);
                     lcdEnabled = lcdProp.equals("true");
+
+                    s = System.getProperty("prism.cacheLayoutSize");
+                    if (s != null) {
+                        try {
+                            cacheLayoutSize = Integer.parseInt(s);
+                            if (cacheLayoutSize < 0) cacheLayoutSize = 0;
+                        } catch (NumberFormatException nfe) {
+                            System.err.println("Cannot parse cache layout size '"
+                                    + s + "'");
+                        }
+                    }
+
                     return debug;
                 }
             });

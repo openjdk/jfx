@@ -47,7 +47,7 @@ jlong Do_com_sun_glass_ui_ios_IosView__1create(JNIEnv *env, jobject jView, jobje
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     
     {
-        view = [[GlassViewGL alloc] initWithFrame:CGRectMake(0,0,0,0) withJview:jView withJproperties:jCapabilities];
+        view = [[GlassViewGL alloc] initWithFrame:CGRectMake(0,0,1,1) withJview:jView withJproperties:jCapabilities];
         (*env)->SetLongField(env, jView, (*env)->GetFieldID(env, mat_jViewClass, "nativePtr", "J"), ptr_to_jlong(view));
     }
     [pool drain];

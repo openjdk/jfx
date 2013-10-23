@@ -238,14 +238,8 @@ final class SWPaint {
     {
         paintTx.setTransform(tx);
 
-        final float[] scale_correction = new float[2];
-        computeScaleAndPixelCorrection(scale_correction, dx1, dx2, sx1, sx2);
-        final float scaleX = scale_correction[0];
-        final float x_pixel_correction = scale_correction[1];
-
-        computeScaleAndPixelCorrection(scale_correction, dy1, dy2, sy1, sy2);
-        final float scaleY = scale_correction[0];
-        final float y_pixel_correction = scale_correction[1];
+        final float scaleX = computeScale(dx1, dx2, sx1, sx2);
+        final float scaleY = computeScale(dy1, dy2, sy1, sy2);
 
         if (scaleX == 1 && scaleY == 1) {
             paintTx.deriveWithTranslation(-Math.min(sx1, sx2) + Math.min(dx1, dx2),
@@ -255,32 +249,20 @@ final class SWPaint {
             paintTx.deriveWithTranslation((scaleX >= 0) ? 0 : Math.abs(dx2 - dx1),
                     (scaleY >= 0) ? 0 : Math.abs(dy2 - dy1));
             paintTx.deriveWithConcatenation(scaleX, 0, 0, scaleY, 0, 0);
-            paintTx.deriveWithTranslation(-Math.min(sx1, sx2) + x_pixel_correction,
-                    -Math.min(sy1, sy2) + y_pixel_correction);
+            paintTx.deriveWithTranslation(-Math.min(sx1, sx2), -Math.min(sy1, sy2));
         }
 
         SWUtils.convertToPiscesTransform(paintTx, piscesTx);
         return piscesTx;
     }
 
-    private void computeScaleAndPixelCorrection(float[] target, float dv1, float dv2, float sv1, float sv2) {
+    private float computeScale(float dv1, float dv2, float sv1, float sv2) {
         final float dv_diff = dv2 - dv1;
         float scale = dv_diff / (sv2 - sv1);
-        float pixel_correction = 0;
-        if (Math.abs(scale) > 2*Math.abs(dv_diff)) {
-            // scaling "single" pixel
-            // we need to "2*" since there is half-pixel shift for
-            // the purpose of interpolation in the native
-            scale = 2 * Math.signum(scale) * Math.abs(dv_diff);
-            if ((int)sv2 != (int)sv1) {
-                // scaling parts of two neighboring pixels
-                final float sx_min = Math.min(sv1, sv2);
-                final float pixel_reminder = (float)(Math.ceil(sx_min)) - sx_min;
-                pixel_correction = pixel_reminder / (2*(sv2 - sv1));
-            }
+        if (Math.abs(scale) > (Integer.MAX_VALUE >> 16)) {
+            scale = Math.signum(scale) * (Integer.MAX_VALUE >> 16);
         }
-        target[0] = scale;
-        target[1] = pixel_correction;
+        return scale;
     }
 
     Transform6 computeSetTexturePaintTransform(Paint p, BaseTransform tx, RectBounds nodeBounds,

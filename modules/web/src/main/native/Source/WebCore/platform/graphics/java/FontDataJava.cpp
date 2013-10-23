@@ -95,8 +95,7 @@ bool SimpleFontData::containsCharacters(const UChar *characters, int length) con
 
 PassRefPtr<SimpleFontData> SimpleFontData::platformCreateScaledFontData(const FontDescription& fontDescription, float scaleFactor) const
 {
-    const float scaledSize = lroundf(fontDescription.computedSize() * scaleFactor);
-    return SimpleFontData::create(FontPlatformData(fontDescription, scaledSize), isCustomFont(), false);
+    return SimpleFontData::create(*m_platformData.derive(scaleFactor), isCustomFont(), false);
 }
 
 float SimpleFontData::platformWidthForGlyph(Glyph c) const

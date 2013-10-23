@@ -462,25 +462,46 @@ public class TableCell<S,T> extends IndexedCell<T> {
          * selected.
          */
         if (isEmpty()) return;
-        if (getIndex() == -1 || getTableView() == null) return;
-        if (getTableView().getSelectionModel() == null) return;
-        
-        boolean isSelected = isInCellSelectionMode() &&
-                getTableView().getSelectionModel().isSelected(getIndex(), getTableColumn());
-        if (isSelected() == isSelected) return;
 
-        updateSelected(isSelected);
+        final boolean isSelected = isSelected();
+        if (! isInCellSelectionMode()) {
+            if (isSelected) {
+                updateSelected(false);
+            }
+            return;
+        }
+
+        final TableView<S> tableView = getTableView();
+        if (getIndex() == -1 || tableView == null) return;
+
+        TableSelectionModel<S> sm = tableView.getSelectionModel();
+        if (sm == null) return;
+
+        boolean isSelectedNow = sm.isSelected(getIndex(), getTableColumn());
+        if (isSelected == isSelectedNow) return;
+
+        updateSelected(isSelectedNow);
     }
 
     private void updateFocus() {
-        if (getIndex() == -1 || getTableView() == null) return;
-        if (getTableView().getFocusModel() == null) return;
-        
-        boolean isFocused = isInCellSelectionMode() &&
-                getTableView().getFocusModel() != null &&
-                getTableView().getFocusModel().isFocused(getIndex(), getTableColumn());
+        final boolean isFocused = isFocused();
+        if (! isInCellSelectionMode()) {
+            if (isFocused) {
+                setFocused(false);
+            }
+            return;
+        }
 
-        setFocused(isFocused);
+        final TableView<S> tableView = getTableView();
+        if (getIndex() == -1 || tableView == null) return;
+
+        final TableViewFocusModel<S> fm = tableView.getFocusModel();
+        if (fm == null) return;
+        
+        boolean isFocusedNow = fm != null &&
+                            fm.isFocused(getIndex(), getTableColumn());
+
+        setFocused(isFocusedNow);
     }
 
     private void updateEditing() {
@@ -510,9 +531,10 @@ public class TableCell<S,T> extends IndexedCell<T> {
     }
 
     private boolean isInCellSelectionMode() {
-        return getTableView() != null &&
-                getTableView().getSelectionModel() != null &&
-                getTableView().getSelectionModel().isCellSelectionEnabled();
+        TableView<S> tableView = getTableView();
+        if (tableView == null) return false;
+        TableSelectionModel<S> sm = tableView.getSelectionModel();
+        return sm != null && sm.isCellSelectionEnabled();
     }
     
     /*

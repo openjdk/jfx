@@ -23,7 +23,6 @@
  * questions.
  */
 
-#include "debug.h"
 #include "JniUtils.h"
 #include "com_sun_media_jfxmediaimpl_NativeAudioClip.h"
 

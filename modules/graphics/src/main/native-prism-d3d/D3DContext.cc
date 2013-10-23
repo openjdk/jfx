@@ -179,6 +179,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_d3d_D3DContext_nCreateD3DMesh
 {
     TraceLn(NWT_TRACE_INFO, "D3DContext_nCreateD3DMesh");
     D3DContext *pCtx = (D3DContext*) jlong_to_ptr(ctx);
+    RETURN_STATUS_IF_NULL(pCtx, 0L);
+    
     D3DMesh *mesh = new D3DMesh(pCtx);
     return ptr_to_jlong(mesh);
 }
@@ -208,6 +210,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_d3d_D3DContext_nBuildNativeGeometr
 {
     TraceLn(NWT_TRACE_INFO, "D3DContext_nBuildNativeGeometryShort");
     D3DMesh *mesh = (D3DMesh *) jlong_to_ptr(nativeMesh);
+    RETURN_STATUS_IF_NULL(mesh, JNI_FALSE);
 
     UINT vertexBufferSize = env->GetArrayLength(vb);
     float *vertexBuffer = (float *) (env->GetPrimitiveArrayCritical(vb, NULL));
@@ -242,6 +245,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_d3d_D3DContext_nBuildNativeGeometr
 {
     TraceLn(NWT_TRACE_INFO, "D3DContext_nBuildNativeGeometryInt");
     D3DMesh *mesh = (D3DMesh *) jlong_to_ptr(nativeMesh);
+    RETURN_STATUS_IF_NULL(mesh, JNI_FALSE);
 
     UINT vertexBufferSize = env->GetArrayLength(vb);
     float *vertexBuffer = (float *) (env->GetPrimitiveArrayCritical(vb, NULL));
@@ -276,6 +280,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_d3d_D3DContext_nCreateD3DPhongMateria
 {
     TraceLn(NWT_TRACE_INFO, "D3DContext_nCreateD3DPhongMaterial");
     D3DContext *pCtx = (D3DContext*) jlong_to_ptr(ctx);
+    RETURN_STATUS_IF_NULL(pCtx, 0L);
+    
     D3DPhongMaterial *phongMaterial = new D3DPhongMaterial(pCtx);
     return ptr_to_jlong(phongMaterial);
 }
@@ -306,6 +312,8 @@ JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetSolidColor
 {
     TraceLn(NWT_TRACE_INFO, "D3DContext_nSetSolidColor");
     D3DPhongMaterial *phongMaterial = (D3DPhongMaterial *) jlong_to_ptr(nativePhongMaterial);
+    RETURN_IF_NULL(phongMaterial);
+
     phongMaterial->setSolidColor(r, g, b, a);
 }
 
@@ -321,6 +329,8 @@ JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetMap
     TraceLn(NWT_TRACE_INFO, "D3DContext_nSetMap");
     D3DPhongMaterial *phongMaterial = (D3DPhongMaterial *) jlong_to_ptr(nativePhongMaterial);
     IDirect3DBaseTexture9 *texMap = (IDirect3DBaseTexture9 *)  jlong_to_ptr(nativeTexture);
+    RETURN_IF_NULL(phongMaterial);
+
     phongMaterial->setMap(mapType, texMap, isSpecularAlpha ? true : false, isBumpAlpha ? true : false);
 }
 
@@ -334,7 +344,11 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_d3d_D3DContext_nCreateD3DMeshView
 {
     TraceLn(NWT_TRACE_INFO, "D3DContext_nCreateD3DMeshView");
     D3DContext *pCtx = (D3DContext*) jlong_to_ptr(ctx);
+    RETURN_STATUS_IF_NULL(pCtx, 0L);
+
     D3DMesh *mesh = (D3DMesh *) jlong_to_ptr(nativeMesh);
+    RETURN_STATUS_IF_NULL(mesh, 0L);
+    
     D3DMeshView *meshView = new D3DMeshView(pCtx, mesh);
     return ptr_to_jlong(meshView);
 }
@@ -364,6 +378,8 @@ JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetCullingMode
 {
     TraceLn(NWT_TRACE_INFO, "D3DContext_nSetCullingMode");
     D3DMeshView *meshView = (D3DMeshView *) jlong_to_ptr(nativeMeshView);
+    RETURN_IF_NULL(meshView);
+
     switch (cullMode) {
         case com_sun_prism_d3d_D3DContext_CULL_BACK:
             cullMode = D3DCULL_CW;
@@ -390,17 +406,21 @@ JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nBlit
 {
     TraceLn(NWT_TRACE_INFO, "D3DContext_nBlit");
     D3DContext *pCtx = (D3DContext*) jlong_to_ptr(ctx);
+    RETURN_IF_NULL(pCtx);
+    
     D3DResource *srcRes = (D3DResource*) jlong_to_ptr(nSrcRTT);
-    D3DResource *dstRes = (D3DResource*) jlong_to_ptr(nDstRTT);
     if (srcRes == NULL) {
-        TraceLn(NWT_TRACE_INFO, "   error srcRes NULL");
+        TraceLn(NWT_TRACE_INFO, "   error srcRes is NULL");
         return;
     }
+    
     IDirect3DSurface9 *pSrcSurface = srcRes->GetSurface();
     if (pSrcSurface == NULL) {
-        TraceLn(NWT_TRACE_INFO, "   error pSrcSurface NULL");
+        TraceLn(NWT_TRACE_INFO, "   error pSrcSurface is NULL");
         return;
     }
+    
+    D3DResource *dstRes = (D3DResource*) jlong_to_ptr(nDstRTT);
     IDirect3DSurface9 *pDstSurface = (dstRes == NULL) ? NULL : dstRes->GetSurface();
 
     pCtx->stretchRect(pSrcSurface, srcX0, srcY0, srcX1, srcY1,
@@ -417,6 +437,8 @@ JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetMaterial
 {
     TraceLn(NWT_TRACE_INFO, "D3DContext_nSetMaterial");
     D3DMeshView *meshView = (D3DMeshView *) jlong_to_ptr(nativeMeshView);
+    RETURN_IF_NULL(meshView);
+    
     D3DPhongMaterial *phongMaterial = (D3DPhongMaterial *) jlong_to_ptr(nativePhongMaterial);
     meshView->setMaterial(phongMaterial);
 }
@@ -431,6 +453,8 @@ JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetWireframe
 {
     TraceLn(NWT_TRACE_INFO, "D3DContext_nSetWireframe");
     D3DMeshView *meshView = (D3DMeshView *) jlong_to_ptr(nativeMeshView);
+    RETURN_IF_NULL(meshView);
+
     meshView->setWireframe(wireframe ? true : false);
 }
 
@@ -445,6 +469,8 @@ JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetAmbientLight
 {
     TraceLn(NWT_TRACE_INFO, "D3DContext_nSetAmbientLight");
     D3DMeshView *meshView = (D3DMeshView *) jlong_to_ptr(nativeMeshView);
+    RETURN_IF_NULL(meshView);
+    
     meshView->setAmbientLight(r, g, b);
 }
 
@@ -459,6 +485,8 @@ JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetPointLight
 {
     TraceLn(NWT_TRACE_INFO, "D3DContext_nSetPointLight");
     D3DMeshView *meshView = (D3DMeshView *) jlong_to_ptr(nativeMeshView);
+    RETURN_IF_NULL(meshView);
+
     meshView->setPointLight(index, x, y, z, r, g, b, w);
 }
 
@@ -472,6 +500,8 @@ JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nRenderMeshView
 {
     TraceLn(NWT_TRACE_INFO, "D3DContext_nRenderMeshView");
     D3DMeshView *meshView = (D3DMeshView *) jlong_to_ptr(nativeMeshView);
+    RETURN_IF_NULL(meshView);
+
     meshView->render();
 }
 
@@ -485,10 +515,14 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DContext_nSetDeviceParametersFor
 {
     TraceLn(NWT_TRACE_INFO, "D3DContext_nSetDeviceParametersFor2D");
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
+    RETURN_STATUS_IF_NULL(pCtx, S_FALSE);
+    
     return pCtx->setDeviceParametersFor2D();
 }
 
 HRESULT D3DContext::setDeviceParametersFor2D() {
+
+    RETURN_STATUS_IF_NULL(pd3dDevice, S_FALSE);
 
     HRESULT res = S_OK;
 
@@ -519,10 +553,14 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DContext_nSetDeviceParametersFor
 {
     TraceLn(NWT_TRACE_INFO, "D3DContext_nSet3DVShaderAndVertexBuffer");
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
+    RETURN_STATUS_IF_NULL(pCtx, S_FALSE);
+    
     return pCtx->setDeviceParametersFor3D();
 }
 
 HRESULT D3DContext::setDeviceParametersFor3D() {
+    
+    RETURN_STATUS_IF_NULL(pd3dDevice, S_FALSE);
 
     D3DMATRIX mat;
     HRESULT res = S_OK;
@@ -564,6 +602,9 @@ HRESULT D3DContext::setDeviceParametersFor3D() {
     return res;
 }
 
+/*
+ * Note: this method assumes that pIndices is not null
+ */
 static HRESULT fillQuadIndices(IDirect3DIndexBuffer9 *pIndices, int maxQuads) {
     short * data = 0;
     HRESULT hr = pIndices->Lock(0, maxQuads * 6 * sizeof(short), (void **)&data, 0);
@@ -588,6 +629,8 @@ HRESULT D3DContext::InitDevice(IDirect3DDevice9 *pd3dDevice)
 #if defined PERF_COUNTERS
     stats.clear();
 #endif
+
+    RETURN_STATUS_IF_NULL(pd3dDevice, S_FALSE);
 
     HRESULT res = S_OK;
 
@@ -669,9 +712,11 @@ HRESULT D3DContext::InitDevice(IDirect3DDevice9 *pd3dDevice)
 HRESULT
 D3DContext::TestCooperativeLevel()
 {
-    HRESULT res = pd3dDevice ? pd3dDevice->TestCooperativeLevel() : E_FAIL;
-
     TraceLn(NWT_TRACE_INFO, "D3DContext::testCooperativeLevel");
+
+    RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
+
+    HRESULT res = pd3dDevice->TestCooperativeLevel();
 
     switch (res) {
     case S_OK: break;
@@ -697,14 +742,12 @@ D3DContext::TestCooperativeLevel()
 HRESULT
 D3DContext::Clear(DWORD colorArgbPre, BOOL clearDepth, BOOL ignoreScissor)
 {
+    RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
+
     HRESULT res;
     DWORD bSE = FALSE;
     DWORD bDE = FALSE;
     DWORD flags = D3DCLEAR_TARGET;
-
-    if (!pd3dDevice) {
-        return E_FAIL;
-    }
 
     if (ignoreScissor) {
         // scissor test affects Clear so it needs to be disabled first
@@ -743,7 +786,10 @@ D3DContext::Clear(DWORD colorArgbPre, BOOL clearDepth, BOOL ignoreScissor)
 BOOL D3DContext::IsDepthStencilBufferOk(D3DSURFACE_DESC *pTargetDesc, IDirect3DSurface9 *pTargetDepth)
 {
     TraceLn(NWT_TRACE_INFO, "D3DContext::IsDepthStencilBufferOk");
-    if (pTargetDepth == NULL) { return true; } // NOP
+
+    RETURN_STATUS_IF_NULL(pTargetDepth, true);
+    RETURN_STATUS_IF_NULL(pd3dDevice, false);
+    RETURN_STATUS_IF_NULL(pd3dObject, false);
 
     D3DSURFACE_DESC descStencil;
     pTargetDepth->GetDesc(&descStencil);
@@ -765,11 +811,13 @@ BOOL D3DContext::IsDepthStencilBufferOk(D3DSURFACE_DESC *pTargetDesc, IDirect3DS
 HRESULT
 D3DContext::InitDepthStencilBuffer(D3DSURFACE_DESC *pTargetDesc, IDirect3DSurface9 **ppDepthSSurface)
 {
-    HRESULT res;
-    D3DDISPLAYMODE dm;
-
     TraceLn(NWT_TRACE_INFO, "D3DContext::InitDepthStencilBuffer");
 
+    RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
+    RETURN_STATUS_IF_NULL(pTargetDesc, E_FAIL);
+
+    HRESULT res;
+    D3DDISPLAYMODE dm;
     if (FAILED(res = pd3dDevice->GetDisplayMode(0, &dm))) {
         return res;
     }
@@ -788,10 +836,11 @@ D3DContext::InitDepthStencilBuffer(D3DSURFACE_DESC *pTargetDesc, IDirect3DSurfac
 HRESULT
 D3DContext::UpdateVertexShaderTX()
 {
-    D3DMATRIX wvp;
-
     TraceLn(NWT_TRACE_INFO, "D3DContext::UpdateVertexShaderTX");
 
+    RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
+
+    D3DMATRIX wvp;
     // create the WorldViewProj matrix
     // wvp = T(w * v * p);
     // since view is currently included in the projection matrix, wvp = T(w * p)
@@ -816,17 +865,17 @@ D3DContext::SetRenderTarget(IDirect3DSurface9 *pSurface,
         IDirect3DSurface9 **ppTargetDepthSurface,
         BOOL depthBuffer, BOOL msaa)
 {
-    HRESULT res;
-    D3DSURFACE_DESC descNew;
-    IDirect3DSurface9 *pCurrentTarget;
-    bool renderTargetChanged = false;
-
     TraceLn1(NWT_TRACE_INFO,
                 "D3DContext::SetRenderTarget: pSurface=0x%x",
                 pSurface);
 
     RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
     RETURN_STATUS_IF_NULL(pSurface, E_FAIL);
+
+    HRESULT res;
+    D3DSURFACE_DESC descNew;
+    IDirect3DSurface9 *pCurrentTarget;
+    bool renderTargetChanged = false;
 
     pSurface->GetDesc(&descNew);
 
@@ -914,9 +963,9 @@ HRESULT
 D3DContext::SetCameraPosition(jdouble camPosX, jdouble camPosY, jdouble camPosZ)
 {
     TraceLn(NWT_TRACE_INFO, "D3DContext::SetCameraPosition");
-    if (pd3dDevice == NULL) {
-        return E_FAIL;
-    }
+
+    RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
+    
     camPos.x = (float) camPosX;
     camPos.y = (float) camPosY;
     camPos.z = (float) camPosZ;
@@ -933,9 +982,8 @@ D3DContext::SetProjViewMatrix(BOOL depthTest,
 {
     TraceLn(NWT_TRACE_INFO, "D3DContext::SetProjViewMatrix");
     TraceLn1(NWT_TRACE_VERBOSE, "  depthTest=%d", depthTest);
-    if (pd3dDevice == NULL) {
-        return E_FAIL;
-    }
+    
+    RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
 
     projection._11 = (float)m00;    // Scale X
     projection._12 = (float)m10;    // Shear Y
@@ -991,9 +1039,8 @@ D3DContext::SetProjViewMatrix(BOOL depthTest,
 void
 D3DContext::setWorldTransformIndentity() {
     TraceLn(NWT_TRACE_INFO, "D3DContext::setWorldTransformIndentity");
-    if (pd3dDevice == NULL) {
-        return;
-    }
+    
+    RETURN_IF_NULL(pd3dDevice);
 
     D3DUtils_SetIdentityMatrix(&world);
 }
@@ -1048,9 +1095,9 @@ D3DContext::setWorldTransform(jdouble m00, jdouble m01, jdouble m02, jdouble m03
 
 //    std::cerr << "D3DContext::setWorldTransform" << std::endl;
     TraceLn(NWT_TRACE_INFO, "D3DContext::setWorldTransform");
-    if (pd3dDevice == NULL) {
-        return;
-    }
+    
+    RETURN_IF_NULL(pd3dDevice);
+    
     setWorldTx(world,
             m00, m01, m02, m03,
             m10, m11, m12, m13,
@@ -1062,9 +1109,8 @@ HRESULT
 D3DContext::ResetTransform()
 {
     TraceLn(NWT_TRACE_INFO, "D3DContext::ResetTransform");
-    if (pd3dDevice == NULL) {
-        return E_FAIL;
-    }
+
+    RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
 
     D3DUtils_SetIdentityMatrix(&world);
     return UpdateVertexShaderTX();
@@ -1080,9 +1126,9 @@ D3DContext::SetTransform(jdouble m00, jdouble m01, jdouble m02, jdouble m03,
 
 //    std::cerr << "D3DContext::SetTransform" << std::endl;
     TraceLn(NWT_TRACE_INFO, "D3DContext::SetTransform");
-    if (pd3dDevice == NULL) {
-        return E_FAIL;
-    }
+    
+    RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
+    
     setWorldTx(world,
             m00, m01, m02, m03,
             m10, m11, m12, m13,
@@ -1095,10 +1141,6 @@ D3DContext::SetTransform(jdouble m00, jdouble m01, jdouble m02, jdouble m03,
 HRESULT
 D3DContext::SetRectClip(int x1, int y1, int x2, int y2)
 {
-    HRESULT res = S_OK;
-    D3DSURFACE_DESC desc;
-    IDirect3DSurface9 *pCurrentTarget;
-
     TraceLn(NWT_TRACE_INFO, "D3DContext::SetRectClip");
     TraceLn4(NWT_TRACE_VERBOSE,
                 "  x1=%-4d y1=%-4d x2=%-4d y2=%-4d",
@@ -1106,9 +1148,11 @@ D3DContext::SetRectClip(int x1, int y1, int x2, int y2)
 
     RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
 
-    res = pd3dDevice->GetRenderTarget(0, &pCurrentTarget);
+    IDirect3DSurface9 *pCurrentTarget;
+    HRESULT res = pd3dDevice->GetRenderTarget(0, &pCurrentTarget);
     RETURN_STATUS_IF_FAILED(res);
 
+    D3DSURFACE_DESC desc;
     pCurrentTarget->GetDesc(&desc);
     SAFE_RELEASE(pCurrentTarget);
 
@@ -1145,22 +1189,23 @@ HRESULT
 D3DContext::ResetClip()
 {
     TraceLn(NWT_TRACE_INFO, "D3DContext::ResetClip");
+
+    RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
+    
     return pd3dDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
 }
 
 HRESULT D3DContext::BeginScene()
 {
-    if (!pd3dDevice) {
-        return E_FAIL;
-    } else {
-        if (!bBeginScenePending) {
-            bBeginScenePending = TRUE;
-            HRESULT res = pd3dDevice->BeginScene();
-            TraceLn(NWT_TRACE_INFO, "D3DContext::BeginScene");
-            return res;
-        }
-        return S_OK;
+    RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
+
+    if (!bBeginScenePending) {
+        bBeginScenePending = TRUE;
+        HRESULT res = pd3dDevice->BeginScene();
+        TraceLn(NWT_TRACE_INFO, "D3DContext::BeginScene");
+        return res;
     }
+    return S_OK;
 }
 
 HRESULT D3DContext::EndScene()

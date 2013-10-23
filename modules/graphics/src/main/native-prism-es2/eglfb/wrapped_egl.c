@@ -42,288 +42,113 @@
 #include <stdlib.h>
 #include <linux/fb.h>
 #include <fcntl.h>
+#ifndef __USE_GNU // required for dladdr() & Dl_info
+#define __USE_GNU
+#endif
 #include <dlfcn.h>
 #include <sys/ioctl.h>
+
+#include <string.h>
+#include <strings.h>
+
+#if ! ((defined(ANDROID_NDK) || defined(EGL_X11_FB_CONTAINER)))
+#include "lensPort.h"
+#endif
 
 #define WRAPPEDAPI
 #include "wrapped_egl.h"
 
-#ifdef USE_DISPMAN
-//Broadcom specials
-
-#ifndef BCM_HOST_H
-#include "bcm_host.h"
-#endif
-
-static void (*wr_bcm_host_init)(void);
-static  int (*wr_vc_dispmanx_display_close)(DISPMANX_DISPLAY_HANDLE_T display);
-static  int (*wr_vc_dispmanx_display_get_info)(DISPMANX_DISPLAY_HANDLE_T display, DISPMANX_MODEINFO_T *pinfo);
-static  DISPMANX_DISPLAY_HANDLE_T(*wr_vc_dispmanx_display_open)(uint32_t device);
-static  DISPMANX_ELEMENT_HANDLE_T(*wr_vc_dispmanx_element_add)(
-    DISPMANX_UPDATE_HANDLE_T update, DISPMANX_DISPLAY_HANDLE_T display,
-    int32_t layer, const VC_RECT_T *dest_rect, DISPMANX_RESOURCE_HANDLE_T src,
-    const VC_RECT_T *src_rect, DISPMANX_PROTECTION_T protection,
-    VC_DISPMANX_ALPHA_T *alpha, DISPMANX_CLAMP_T *clamp, DISPMANX_TRANSFORM_T transform);
-static  DISPMANX_UPDATE_HANDLE_T(*wr_vc_dispmanx_update_start)(int32_t priority);
-static  int (*wr_vc_dispmanx_update_submit_sync)(DISPMANX_UPDATE_HANDLE_T update);
-#endif /* USE_DISPMAN */
-
-//Vivante specials
-static EGLNativeDisplayType (*wr_fbGetDisplayByIndex)(int DisplayIndex);
-static EGLNativeWindowType (*wr_fbCreateWindow)(EGLNativeDisplayType Display, int X, int Y, int Width, int Height);
-int useDispman = 0;
-int useVivanteFB = 0;
-
-#define DEBUG
-#ifdef DEBUG
-
-// This method is good for early debug, but is unneeded for general use
-static void *get_check_symbol(void *handle, const char *name) {
-    void *ret = dlsym(handle, name);
-    if (!ret) {
-        fprintf(stderr, "failed to load symbol %s\n", name);
-    }
-    return ret;
-}
-#define GET_SYMBOL(handle,name) get_check_symbol(handle,name)
-
-#else // #ifdef DEBUG
-
-#define GET_SYMBOL(handle,name) dlsym(handle,name)
-
-#endif
-
+int load_wrapped_gles_symbols(void);
 void *libglesv2;
 void *libegl;
-
-
-/***************************** Special cases  ***************************/
-
-static EGLDisplay(*_eglGetDisplay)(EGLNativeDisplayType display_id);
-
-EGLDisplay wr_eglGetDisplay(EGLNativeDisplayType display_id) {
-    EGLDisplay ret = (*_eglGetDisplay)(display_id);
-    return ret;
-}
-
-static EGLNativeWindowType(*_ANDROID_getNativeWindow)();
-
-/***************************** EGL *************************************/
-
-static int load_egl_symbols(void *lib) {
-    int error = 0;
-
-    if (!(_eglGetDisplay = GET_SYMBOL(lib, "eglGetDisplay"))) {
-        error++;
-    }
-
-    if (error) {
-        // handle error conditions better ?
-        fprintf(stderr, "failed to load all EGL symbols %d\n", error);
-        return 1;
-    }
-    return 0;
-}
-
-/*************************************** BROADCOM ******************************************/
-
-static int load_bcm_symbols(void *lib) {
-#ifdef USE_DISPMAN
-    int error = 0;
-
-    if (!(wr_bcm_host_init = GET_SYMBOL(lib, "bcm_host_init"))) {
-        error++;
-    }
-    if (!(wr_vc_dispmanx_display_close = GET_SYMBOL(lib, "vc_dispmanx_display_close"))) {
-        error++;
-    }
-    if (!(wr_vc_dispmanx_display_get_info = GET_SYMBOL(lib, "vc_dispmanx_display_get_info"))) {
-        error++;
-    }
-    if (!(wr_vc_dispmanx_display_open = GET_SYMBOL(lib, "vc_dispmanx_display_open"))) {
-        error++;
-    }
-    if (!(wr_vc_dispmanx_element_add = GET_SYMBOL(lib, "vc_dispmanx_element_add"))) {
-        error++;
-    }
-    if (!(wr_vc_dispmanx_update_start = GET_SYMBOL(lib, "vc_dispmanx_update_start"))) {
-        error++;
-    }
-    if (!(wr_vc_dispmanx_update_submit_sync = GET_SYMBOL(lib, "vc_dispmanx_update_submit_sync"))) {
-        error++;
-    }
-
-    if (error) {
-        // handle error conditions better ?
-        fprintf(stderr, "failed to load all bcm_host symbols %d\n", error);
-        return 1;
-    }
-    return 0;
-#else
-    return 1;
-#endif /* USE_DISPMAN */
-}
-
-static int load_vivante_symbols(void *lib) {
-    int error = 0;
-    if (!(wr_fbGetDisplayByIndex = GET_SYMBOL(lib, "fbGetDisplayByIndex"))) {
-        error++;
-    }
-    if (!(wr_fbCreateWindow = GET_SYMBOL(lib, "fbCreateWindow"))) {
-        error++;
-    }
-    if (error != 0) {
-        fprintf(stderr, "failed to load all Vivante symbols %d\n", error);
-        return 1;
-    }
-    return error;
-}
-static int done_loading_symbols = 0;
+int done_loading_symbols = 0;
 
 /***************************** UTILITY ********************************/
 
-int load_wrapped_gles_symbols() {
+#ifdef ANDROID_NDK
 
+static EGLDisplay(*_eglGetDisplay)(EGLNativeDisplayType display_id);
+static EGLNativeWindowType(*_ANDROID_getNativeWindow)();
+
+#else 
+
+PrismNativePort prismPort;
+
+#endif
+
+int load_wrapped_gles_symbols() {
     if (done_loading_symbols)  {
         return 0;
     }
     done_loading_symbols = 1;
 
-    //Note that there is an order depenacy here - The PI wants GLES first.
-    // Other platfroms needs the RTLD_GLOBAL to resolve symbols correctly.
-
-
+#ifdef ANDROID_NDK
     libglesv2 = dlopen("libGLESv2.so", RTLD_LAZY | RTLD_GLOBAL);
     if (!libglesv2) {
         fprintf(stderr, "Did not find libGLESv2.so %s\n", dlerror());
         return 0;
     }
 
-    libegl = dlopen("libEGL.so", RTLD_LAZY | RTLD_GLOBAL);
-    if (!libegl) {
-        fprintf(stderr, "Did not find libEGL.so %s\n", dlerror());
-        return 0;
+    _eglGetDisplay = dlsym(libglesv2, "eglGetDisplay");
+#else
+    
+    Dl_info dlinfo;
+    if (dladdr(&load_wrapped_gles_symbols, &dlinfo)) {
+
+        size_t rslash = (size_t)rindex(dlinfo.dli_fname,'/');
+        if (rslash) {
+            char *b = (char *) alloca(strlen(dlinfo.dli_fname)+20);
+            rslash = rslash + 1 - (size_t)dlinfo.dli_fname;
+            strncpy(b, dlinfo.dli_fname,rslash);
+            strcpy(b + rslash, LENSPORT_LIBRARY_NAME);
+
+            jboolean (*prism_platform_init)(PrismNativePort*) =  0;
+
+            void *dlhand = dlopen(b,RTLD_NOW); 
+            if (dlhand) {
+                prism_platform_init =  dlsym(dlhand, "prism_platform_initialize");
+                if (!prism_platform_init) {
+                    fprintf(stderr,"prism_platform_initialize missing in %s\n",LENSPORT_LIBRARY_NAME);
+                    exit(-1);
+                }
+            } else {
+                fprintf(stderr,"Prism FAILED TO OPEN %s\n",b);
+                fprintf(stderr,"dlopen reports %s\n",dlerror());
+                exit(-1);
+            }
+            prismPort.version = NATIVE_PRISM_PORT_VERSION;
+
+            if (!(*prism_platform_init)(&prismPort)) {
+                fprintf(stderr,"prism_platform_initialize failed\n");
+                exit(-1);
+            }
+        }
+    } else {
+        printf("Did not get DLINFO\n");
+        exit(-1);
     }
 
-    void *libbcm = dlopen("libbcm_host.so", RTLD_LAZY);
-
-    int error = 0;
-
-    if (libbcm) {
-        useDispman = 1;
-        error += load_bcm_symbols(libbcm);
-    } else if (dlopen("libVIVANTE.so", RTLD_LAZY)) {
-        useVivanteFB = 1;
-        error += load_vivante_symbols(libegl);
-    }
-
-    error += load_egl_symbols(libegl);
-
-    return error;
+#endif
+    return 1;
 }
 
 EGLNativeDisplayType getNativeDisplayType() {
-    static EGLNativeDisplayType cachedNativeDisplayType;
-    static int cached = 0;
+    if (!done_loading_symbols) {
+        load_wrapped_gles_symbols();
+    }
+#ifdef ANDROID_NDK
+    return (EGLNativeDisplayType) NULL;
+#else
+    return (EGLNativeDisplayType) (*prismPort.getNativeDisplayType)();
+#endif
 
+}
+
+EGLNativeWindowType getNativeWindowType() {
     if (!done_loading_symbols) {
         load_wrapped_gles_symbols();
     }
 
-    if (!cached) {
-        if (useDispman) {
-            cachedNativeDisplayType = EGL_DEFAULT_DISPLAY;
-        } else if (useVivanteFB)  {
-            cachedNativeDisplayType = wr_fbGetDisplayByIndex(0);
-        } else {
-            cachedNativeDisplayType = (EGLNativeDisplayType)NULL;
-        }
-
-        cached ++;
-    }
-
-
-    return cachedNativeDisplayType;
-}
-
-EGLNativeWindowType getNativeWindowType() {
-    static NativeWindowType cachedWindowType;
-    static int cached = 0;
-
-    if (!cached) {
-
-        if (!done_loading_symbols) {
-            load_wrapped_gles_symbols();
-        }
-
-        if (useDispman) {
-#ifdef USE_DISPMAN
-
-            EGL_DISPMANX_WINDOW_T *dispmanWindow;
-            DISPMANX_DISPLAY_HANDLE_T display = 0;
-            DISPMANX_ELEMENT_HANDLE_T element;
-            DISPMANX_UPDATE_HANDLE_T update;
-            VC_RECT_T dst = { 0, 0, };
-            VC_RECT_T src = { 0, 0, };
-
-            (*wr_bcm_host_init)();
-
-            dispmanWindow = (EGL_DISPMANX_WINDOW_T *)calloc(sizeof(EGL_DISPMANX_WINDOW_T), 1);
-
-            display = (*wr_vc_dispmanx_display_open)(0 /* LCD */);
-            if (display == 0) {
-                fprintf(stderr, "Dispman: Cannot open display\n");
-                return 0;
-            }
-            int fbFileHandle;
-            struct fb_var_screeninfo screenInfo;
-            fbFileHandle = open("/dev/fb0", O_RDONLY);
-            if (fbFileHandle < 0) {
-                fprintf(stderr, "Cannot open framebuffer\n");
-                return 0;
-            }
-            if (ioctl(fbFileHandle, FBIOGET_VSCREENINFO, &screenInfo)) {
-                fprintf(stderr, "Cannot get screen info\n");
-                return 0;
-            }
-            close(fbFileHandle);
-
-            dst.width = screenInfo.xres;
-            dst.height = screenInfo.yres;
-            src.width = screenInfo.xres << 16;
-            src.height = screenInfo.yres << 16;
-
-            VC_DISPMANX_ALPHA_T alpha;
-            alpha.flags = DISPMANX_FLAGS_ALPHA_FROM_SOURCE;
-            alpha.opacity = 0xff;
-            alpha.mask = (DISPMANX_RESOURCE_HANDLE_T) 0;
-            update = (*wr_vc_dispmanx_update_start)(0);
-            element = (*wr_vc_dispmanx_element_add)(
-                          update,
-                          display,
-                          1 /*layer*/,
-                          &dst,
-                          0 /*src*/,
-                          &src,
-                          DISPMANX_PROTECTION_NONE,
-                          &alpha,
-                          0 /*clamp*/,
-                          0 /*transform*/);
-
-            dispmanWindow->element = element;
-            dispmanWindow->width = screenInfo.xres;
-            dispmanWindow->height = screenInfo.yres;
-            (*wr_vc_dispmanx_update_submit_sync)(update);
-
-            cachedWindowType = (NativeWindowType)dispmanWindow;
-#endif /* USE_DISPMAN */
-        } else if (useVivanteFB)  {
-            cachedWindowType = (*wr_fbCreateWindow)(getNativeDisplayType(), 0, 0, 0, 0);
-        } else {
-            cachedWindowType = NULL;      // hence the EGL NULL
-        }
-        cached ++;
-    }
 #ifdef ANDROID_NDK
     //don't cache for Android!
     printf("Using getAndroidNativeWindow() from glass.\n");
@@ -332,21 +157,30 @@ EGLNativeWindowType getNativeWindowType() {
         fprintf(stderr, "Did not find libglass_lens_android.so %s\n", dlerror());
            return NULL;
     }
-    _ANDROID_getNativeWindow = GET_SYMBOL(libglass_android, "ANDROID_getNativeWindow");
+    _ANDROID_getNativeWindow = dlsym(libglass_android, "ANDROID_getNativeWindow");
     if (!_ANDROID_getNativeWindow) {
        fprintf(stderr, "Did not find symbol \"ANDROID_getNativeWindow\" %s\n", dlerror());
        return NULL;
     }
     return (*_ANDROID_getNativeWindow)();
+#else
+    return (EGLNativeWindowType) (*prismPort.getNativeWindowType)();
 #endif
-
-    return cachedWindowType;
 }
 
+EGLDisplay wr_eglGetDisplay(EGLNativeDisplayType display_id) {
+#ifdef ANDROID_NDK
+    return  (*_eglGetDisplay)(display_id);
+#else
+    return (EGLDisplay) (*prismPort.wr_eglGetDisplay)((void*)display_id);
+#endif
+}
 
-
-//void __attribute__ ((constructor)) wr_init(void) {
-//    printf("LOADING IN INIT\n");
-//    load_wrapped_gles_symbols();
-//}
+void * getLibGLEShandle() {
+#ifdef ANDROID_NDK
+    return libglesv2;
+#else
+    return (*prismPort.getLibGLEShandle)();
+#endif
+}
 

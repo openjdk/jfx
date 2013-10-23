@@ -674,4 +674,38 @@ public class TableViewSelectionModelImplTest {
         assertTrue(focusedCell(), focusModel.isFocused(3, rightEdge));
     }
 
+    @Test public void test_rt33442() {
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.setCellSelectionEnabled(true);
+
+        assertTrue(model.getSelectedCells().isEmpty());
+
+        // select from (0,0) to (4,2) -> 5 x 3 cells = 15 cells in total
+        model.selectRange(0, col0, 4, col2);
+        assertEquals(15, model.getSelectedCells().size());
+
+        for (int row = 0; row <= 4; row++) {
+            for (int column = 0; column <= 2; column++) {
+                assertTrue(model.isSelected(row, tableView.getVisibleLeafColumn(column)));
+            }
+        }
+    }
+
+    @Test public void test_rt33442_changeSelectionModeClearsSelection() {
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.setCellSelectionEnabled(true);
+
+        assertTrue(model.getSelectedCells().isEmpty());
+
+        // select from (0,0) to (4,2) -> 5 x 3 cells = 15 cells in total
+        model.selectRange(0, col0, 4, col2);
+        assertEquals(15, model.getSelectedCells().size());
+
+        model.setSelectionMode(SelectionMode.SINGLE);
+        for (int row = 0; row <= 4; row++) {
+            for (int column = 0; column <= 2; column++) {
+                assertFalse(model.isSelected(row, tableView.getVisibleLeafColumn(column)));
+            }
+        }
+    }
 }

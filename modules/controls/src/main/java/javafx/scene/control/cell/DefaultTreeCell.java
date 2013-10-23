@@ -79,7 +79,7 @@ class DefaultTreeCell<T> extends TreeCell<T> {
         }
     }
 
-    private void updateDisplay(T item, boolean empty) {
+    void updateDisplay(T item, boolean empty) {
         if (item == null || empty) {
             hbox = null;
             setText(null);

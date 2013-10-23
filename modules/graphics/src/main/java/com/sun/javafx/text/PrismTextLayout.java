@@ -34,6 +34,7 @@ import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.Metrics;
 import com.sun.javafx.font.PGFont;
+import com.sun.javafx.font.PrismFontFactory;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.Point2D;
@@ -49,6 +50,8 @@ import com.sun.javafx.scene.text.TextSpan;
 import java.text.Bidi;
 import java.text.BreakIterator;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Hashtable;
 
 public class PrismTextLayout implements TextLayout {
     private static final BaseTransform IDENTITY = BaseTransform.IDENTITY_TRANSFORM;
@@ -57,10 +60,17 @@ public class PrismTextLayout implements TextLayout {
     private static final int X_MAX_INDEX = 2;
     private static final int Y_MAX_INDEX = 3;
 
+    private static final Hashtable<Integer, LayoutCache> stringCache = new Hashtable<>();
+    private static final Object  CACHE_SIZE_LOCK = new Object();
+    private static int cacheSize = 0;
+    private static final int MAX_STRING_SIZE = 256;
+    private static final int MAX_CACHE_SIZE = PrismFontFactory.cacheLayoutSize;
+
     private char[] text;
     private TextSpan[] spans;   /* Rich text  (null for single font text) */
     private PGFont font;        /* Single font text (null for rich text) */
     private FontStrike strike;  /* cached strike of font (identity) */
+    private Integer cacheKey;
     private TextLine[] lines;
     private TextRun[] runs;
     private int runCount;
@@ -74,6 +84,7 @@ public class PrismTextLayout implements TextLayout {
 
     public PrismTextLayout() {
         logicalBounds = new RectBounds();
+        flags = ALIGN_LEFT;
     }
 
     private void reset() {
@@ -116,6 +127,7 @@ public class PrismTextLayout implements TextLayout {
         this.font = null;
         this.strike = null;
         this.text = null;   /* Initialized in getText() */
+        this.cacheKey = null;
         return true;
     }
 
@@ -125,6 +137,12 @@ public class PrismTextLayout implements TextLayout {
         this.font = (PGFont)font;
         this.strike = ((PGFont)font).getStrike(IDENTITY);
         this.text = text.toCharArray();
+        if (MAX_CACHE_SIZE > 0) {
+            int length = text.length();
+            if (0 < length && length <= MAX_STRING_SIZE) {
+                cacheKey = text.hashCode() * strike.hashCode();
+            }
+        }
         return true;
     }
 
@@ -140,7 +158,7 @@ public class PrismTextLayout implements TextLayout {
         if ((flags & BOUNDS_MASK) == type) return false;
         flags &= ~BOUNDS_MASK;
         flags |= (type & BOUNDS_MASK);
-        reset(); /* Reset to force run metrics to be recomputed */
+        reset();
         return true;
     }
 
@@ -646,6 +664,54 @@ public class PrismTextLayout implements TextLayout {
         return index;
     }
 
+    private boolean copyCache() {
+        int align = flags & ALIGN_MASK;
+        int boundsType = flags & BOUNDS_MASK;
+        /* Caching for boundsType == Center, bias towards  Modena */
+        return wrapWidth != 0 || align != ALIGN_LEFT || boundsType == 0 || isMirrored();
+    }
+
+    private void initCache() {
+        if (cacheKey != null) {
+            if (layoutCache == null) {
+                LayoutCache cache = stringCache.get(cacheKey);
+                if (cache != null && cache.font.equals(font) && Arrays.equals(cache.text, text)) {
+                    layoutCache = cache;
+                    runs = cache.runs;
+                    runCount = cache.runCount;
+                    flags |= FLAGS_ANALYSIS_VALID;
+                }
+            }
+            if (layoutCache != null) {
+                if (copyCache()) {
+                    /* This instance has some property that requires it to
+                     * build its own lines (i.e. wrapping width). Thus, only use
+                     * the runs from the cache (and it needs to make a copy
+                     * before using it as they will be modified).
+                     * Note: the copy of the elements in the array happens in
+                     * reuseRuns().
+                     */
+                    if (layoutCache.runs == runs) {
+                        runs = new TextRun[runCount];
+                        System.arraycopy(layoutCache.runs, 0, runs, 0, runCount);
+                    }
+                } else {
+                    if (layoutCache.lines != null) {
+                        runs = layoutCache.runs;
+                        runCount = layoutCache.runCount;
+                        flags |= FLAGS_ANALYSIS_VALID;
+                        lines = layoutCache.lines;
+                        layoutWidth = layoutCache.layoutWidth;
+                        layoutHeight = layoutCache.layoutHeight;
+                        float ascent = lines[0].getBounds().getMinY();
+                        logicalBounds = logicalBounds.deriveWithNewBounds(0, ascent, 0,
+                                layoutWidth, layoutHeight + ascent, 0);
+                    }
+                }
+            }
+        }
+    }
+
     private int getLineCount() {
         return lines.length;
     }
@@ -939,6 +1005,11 @@ public class PrismTextLayout implements TextLayout {
     }
 
     private void layout() {
+        /* Try the cache */
+        initCache();
+
+        /* Whole layout retrieved from the cache */
+        if (lines != null) return;
         char[] chars = getText();
 
         /* runs and runCount are set in reuseRuns or buildRuns */
@@ -1115,10 +1186,8 @@ public class PrismTextLayout implements TextLayout {
             }
         }
         if (layout != null) layout.dispose();
-        if (layoutCache != null) layoutCache.valid = true;
 
         linesList.add(createLine(startIndex, runCount - 1, startOffset));
-
         lines = new TextLine[linesList.size()];
         linesList.toArray(lines);
 
@@ -1201,6 +1270,34 @@ public class PrismTextLayout implements TextLayout {
         layoutHeight = lineY;
         logicalBounds = logicalBounds.deriveWithNewBounds(0, ascent, 0, layoutWidth,
                                             layoutHeight + ascent, 0);
+
+
+        if (layoutCache != null) {
+            if (cacheKey != null && !layoutCache.valid && !copyCache()) {
+                /* After layoutCache is added to the stringCache it can be
+                 * accessed by multiple threads. All the data in it must
+                 * be immutable. See copyCache() for the cases where the entire
+                 * layout is immutable.
+                 */
+                layoutCache.font = font;
+                layoutCache.text = text;
+                layoutCache.runs = runs;
+                layoutCache.runCount = runCount;
+                layoutCache.lines = lines;
+                layoutCache.layoutWidth = layoutWidth;
+                layoutCache.layoutHeight = layoutHeight;
+                synchronized (CACHE_SIZE_LOCK) {
+                    int charCount = chars.length;
+                    if (cacheSize + charCount > MAX_CACHE_SIZE) {
+                        stringCache.clear();
+                        cacheSize = 0;
+                    }
+                    stringCache.put(cacheKey, layoutCache);
+                    cacheSize += charCount;
+                }
+            }
+            layoutCache.valid = true;
+        }
     }
 
     @Override

@@ -133,7 +133,11 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         registerChangeListener(scrollpane.hbarPolicyProperty(), "HBAR_POLICY");
         registerChangeListener(scrollpane.vbarPolicyProperty(), "VBAR_POLICY");
         registerChangeListener(scrollpane.hvalueProperty(), "HVALUE");
+        registerChangeListener(scrollpane.hmaxProperty(), "HMAX");
+        registerChangeListener(scrollpane.hminProperty(), "HMIN");
         registerChangeListener(scrollpane.vvalueProperty(), "VVALUE");
+        registerChangeListener(scrollpane.vmaxProperty(), "VMAX");
+        registerChangeListener(scrollpane.vminProperty(), "VMIN");
         registerChangeListener(scrollpane.prefViewportWidthProperty(), "PREF_VIEWPORT_WIDTH");
         registerChangeListener(scrollpane.prefViewportHeightProperty(), "PREF_VIEWPORT_HEIGHT");
     }
@@ -323,10 +327,10 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
 
         viewRect.setOnMousePressed(new EventHandler<javafx.scene.input.MouseEvent>() {
            @Override public void handle(javafx.scene.input.MouseEvent e) {
+               mouseDown = true;
                if (IS_TOUCH_SUPPORTED) {
                    startSBReleasedAnimation();
                }
-               mouseDown = true;
                pressX = e.getX();
                pressY = e.getY();
                ohvalue = hsb.getValue();
@@ -356,11 +360,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
 
         viewRect.addEventFilter(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
             @Override public void handle(MouseEvent e) {
-                  if (IS_TOUCH_SUPPORTED) {
-                    startSBReleasedAnimation();
-                 }
                  mouseDown = false;
-
                  if (dragDetected == true) {
                      if (saveCursor != null) {
                          getSkinnable().setCursor(saveCursor);
@@ -579,7 +579,6 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         getSkinnable().setOnTouchReleased(new EventHandler<TouchEvent>() {
             @Override public void handle(TouchEvent e) {
                 touchDetected = false;
-                startSBReleasedAnimation();
                 e.consume();
             }
         });
@@ -620,8 +619,16 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             getSkinnable().requestLayout();
         } else if ("HVALUE".equals(p)) {
             hsb.setValue(getSkinnable().getHvalue());
+        } else if ("HMAX".equals(p)) {
+            hsb.setMax(getSkinnable().getHmax());
+        } else if ("HMIN".equals(p)) {
+            hsb.setMin(getSkinnable().getHmin());
         } else if ("VVALUE".equals(p)) {
             vsb.setValue(getSkinnable().getVvalue());
+        } else if ("VMAX".equals(p)) {
+            vsb.setMax(getSkinnable().getVmax());
+        } else if ("VMIN".equals(p)) {
+            vsb.setMin(getSkinnable().getVmin());
         } else if ("PREF_VIEWPORT_WIDTH".equals(p) || "PREF_VIEWPORT_HEIGHT".equals(p)) {
             // change affects pref size, so requestLayout on control
             getSkinnable().requestLayout();
@@ -1073,10 +1080,13 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             sbTouchKF1 = new KeyFrame(Duration.millis(0), new EventHandler<ActionEvent>() {
                 @Override public void handle(ActionEvent event) {
                     tempVisibility = true;
+                    if (touchDetected == true || mouseDown == true) {
+                        sbTouchTimeline.playFromStart();
+                    }
                 }
             });
 
-            sbTouchKF2 = new KeyFrame(Duration.millis(500), new EventHandler<ActionEvent>() {
+            sbTouchKF2 = new KeyFrame(Duration.millis(1000), new EventHandler<ActionEvent>() {
                 @Override public void handle(ActionEvent event) {
                     tempVisibility = false;
                     getSkinnable().requestLayout();

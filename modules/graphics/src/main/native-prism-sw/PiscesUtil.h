@@ -35,6 +35,14 @@
 
 #include <PiscesSysutils.h>
 
+#ifdef PISCES_DEBUG_FLAG
+#define PISCES_DEBUG(...) printf(__VAR_ARGS__)
+#define PISCES_DEBUG_FLUSH(x) fflush(x)
+#else
+#define PISCES_DEBUG(...) /* (__VAR_ARGS__) */
+#define PISCES_DEBUG_FLUSH(x)
+#endif
+
 #ifndef ABS
 /**
  * @def ABS(x)

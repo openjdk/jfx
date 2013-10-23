@@ -41,59 +41,153 @@ import static launchertest.Constants.*;
 @RunWith(Parameterized.class)
 public class MainLauncherTest {
 
+    private static final String className = MainLauncherTest.class.getName();
+    private static final String pkgName = className.substring(0, className.lastIndexOf("."));
+
     private static Collection params = null;
 
-    private static final String[] testAppNames = {
-        "launchertest.TestApp",
-        "launchertest.TestAppNoMain",
-        "launchertest.TestNotApplication"
+    public static class TestData {
+        final String appName;
+        final String pldrName;
+        final int exitCode;
+
+        public TestData(String appName) {
+            this(appName, 0);
+        }
+
+        public TestData(String appName, int exitCode) {
+            this(appName, null, exitCode);
+        }
+
+        public TestData(String appName, String pldrName, int exitCode) {
+            this.appName = pkgName + "." + appName;
+            this.pldrName = pldrName == null ? null : pkgName + "." +  pldrName;
+            this.exitCode = exitCode;
+        }
+    }
+
+    private static final TestData[] testData = {
+        new TestData("TestApp"),
+        new TestData("TestAppNoMain"),
+        new TestData("TestNotApplication"),
+        new TestData("TestAppThreadCheck", ERROR_NONE),
+        new TestData("TestAppNoMainThreadCheck", ERROR_NONE),
+        new TestData("TestNotApplicationThreadCheck", ERROR_NONE),
+        new TestData("TestAppThreadCheck", "TestPreloader", ERROR_NONE),
+        new TestData("TestAppNoMainThreadCheck", "TestPreloader", ERROR_NONE),
     };
 
     @Parameters
     public static Collection getParams() {
         if (params == null) {
             params = new ArrayList();
-            for (String name : testAppNames) {
-                params.add(new String[] { name });
+            for (TestData data : testData) {
+                params.add(new TestData[] { data });
             }
         }
         return params;
     }
 
-    private String testAppName;
+    private final String testAppName;
+    private final String testPldrName;
+    private final int testExitCode;
 
-    public MainLauncherTest(String testAppName) {
-        this.testAppName = testAppName;
+    public MainLauncherTest(TestData testData) {
+        this.testAppName = testData.appName;
+        this.testPldrName = testData.pldrName;
+        this.testExitCode = testData.exitCode;
     }
 
     @Test (timeout=5000)
     public void testMainLauncher() throws Exception {
         final String classpath = System.getProperty("java.class.path");
-        ProcessBuilder builder = new ProcessBuilder("java", "-cp", classpath, testAppName);
+        ProcessBuilder builder;
+        if (testPldrName != null) {
+            builder = new ProcessBuilder("java", "-cp", classpath,
+                    "-Djavafx.preloader=" + testPldrName, testAppName);
+        } else {
+            builder = new ProcessBuilder("java", "-cp", classpath, testAppName);
+        }
         builder.redirectError(ProcessBuilder.Redirect.INHERIT);
         builder.redirectOutput(ProcessBuilder.Redirect.INHERIT);
         Process process = builder.start();
         int retVal = process.waitFor();
         switch (retVal) {
-            case 0:
-                // SUCCESS
+            case 0:// SUCCESS
+            case ERROR_NONE:
+                if (retVal != testExitCode) {
+                    throw new AssertionFailedError(testAppName
+                            + ": Unexpected 'success' exit; expected:"
+                            + testExitCode + " was:" + retVal);
+                }
                 return;
-            case ERROR_START_BEFORE_MAIN:
+            case 1:
                 throw new AssertionFailedError(testAppName
-                        + ": main method not called before start");
-            case ERROR_STOP_BEFORE_MAIN:
-                throw new AssertionFailedError(testAppName
-                        + ": main method not called before stop");
-            case ERROR_STOP_BEFORE_START:
-                throw new AssertionFailedError(testAppName
-                        + ": start method not called before stop");
+                        + ": unable to launch java application");
             case ERROR_TOOLKIT_NOT_RUNNING:
                 throw new AssertionFailedError(testAppName
                         + ": Toolkit not running prior to loading application class");
             case ERROR_TOOLKIT_IS_RUNNING:
                 throw new AssertionFailedError(testAppName
                         + ": Toolkit is running but should not be");
-            default:
+
+            case ERROR_INIT_BEFORE_MAIN:
+                throw new AssertionFailedError(testAppName
+                        + ": main method not called before init");
+            case ERROR_START_BEFORE_MAIN:
+                throw new AssertionFailedError(testAppName
+                        + ": main method not called before start");
+            case ERROR_STOP_BEFORE_MAIN:
+                throw new AssertionFailedError(testAppName
+                        + ": main method not called before stop");
+
+            case ERROR_START_BEFORE_INIT:
+                throw new AssertionFailedError(testAppName
+                        + ": init method not called before start");
+            case ERROR_STOP_BEFORE_INIT:
+                throw new AssertionFailedError(testAppName
+                        + ": init method not called before stop");
+
+            case ERROR_STOP_BEFORE_START:
+                throw new AssertionFailedError(testAppName
+                        + ": start method not called before stop");
+
+            case ERROR_CLASS_INIT_WRONG_THREAD:
+                throw new AssertionFailedError(testAppName
+                        + ": class initialization called on wrong thread");
+            case ERROR_MAIN_WRONG_THREAD:
+                throw new AssertionFailedError(testAppName
+                        + ": main called on wrong thread");
+            case ERROR_CONSTRUCTOR_WRONG_THREAD:
+                throw new AssertionFailedError(testAppName
+                        + ": constructor called on wrong thread");
+            case ERROR_INIT_WRONG_THREAD:
+                throw new AssertionFailedError(testAppName
+                        + ": init called on wrong thread");
+            case ERROR_START_WRONG_THREAD:
+                throw new AssertionFailedError(testAppName
+                        + ": start called on wrong thread");
+            case ERROR_STOP_WRONG_THREAD:
+                throw new AssertionFailedError(testAppName
+                        + ": stop called on wrong thread");
+
+            case ERROR_PRELOADER_CLASS_INIT_WRONG_THREAD:
+                throw new AssertionFailedError(testAppName
+                        + ": preloader class initialization called on wrong thread");
+            case ERROR_PRELOADER_CONSTRUCTOR_WRONG_THREAD:
+                throw new AssertionFailedError(testAppName
+                        + ": preloader constructor called on wrong thread");
+            case ERROR_PRELOADER_INIT_WRONG_THREAD:
+                throw new AssertionFailedError(testAppName
+                        + ": preloader init called on wrong thread");
+            case ERROR_PRELOADER_START_WRONG_THREAD:
+                throw new AssertionFailedError(testAppName
+                        + ": preloader start called on wrong thread");
+            case ERROR_PRELOADER_STOP_WRONG_THREAD:
+                throw new AssertionFailedError(testAppName
+                        + ": preloader stop called on wrong thread");
+
+           default:
                 throw new AssertionFailedError(testAppName
                         + ": Unexpected error exit: " + retVal);
         }

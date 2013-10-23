@@ -40,14 +40,11 @@
 JNIEXPORT jlong JNICALL Java_com_sun_prism_d3d_D3DResourceFactory_nGetContext
   (JNIEnv *jEnv, jclass, jint adapterOrdinal)
 {
-
     D3DPipelineManager *pMgr = D3DPipelineManager::GetInstance();
-    D3DContext *pCtx = NULL;
-    HRESULT res;
-
     RETURN_STATUS_IF_NULL(pMgr, 0L);
-
-    res = pMgr->GetD3DContext(adapterOrdinal, &pCtx);
+    
+    D3DContext *pCtx = NULL;
+    HRESULT res = pMgr->GetD3DContext(adapterOrdinal, &pCtx);
     if (SUCCEEDED(res)) {
         pCtx->ResetClip();
         pCtx->ResetTransform();
@@ -70,17 +67,20 @@ Java_com_sun_prism_d3d_D3DResourceFactory_nCreateTexture
         jlong ctx, jint formatHint, jint usageHint, jboolean isRTT,
         jint width, jint height, jint samples)
 {
-    HRESULT res;
-
     TraceLn5(NWT_TRACE_INFO,
              "nCreateTexture formatHint=%d usageHint=%d isRTT=%d w=%d h=%d",
              formatHint, usageHint, isRTT, width, height);
 
     D3DContext *pCtx = (D3DContext *)jlong_to_ptr(ctx);
+    RETURN_STATUS_IF_NULL(pCtx, 0L);
 
     D3DResourceManager *pMgr = pCtx->GetResourceManager();
+    RETURN_STATUS_IF_NULL(pMgr, 0L);
+    
     D3DResource *pTexResource;
     D3DFORMAT format = D3DFMT_UNKNOWN;
+    HRESULT res;
+    
     // only considered when the format isn't explicitly requested
     BOOL isOpaque = FALSE;
 
@@ -139,27 +139,26 @@ Java_com_sun_prism_d3d_D3DResourceFactory_nCreateTexture
 JNIEXPORT jlong JNICALL Java_com_sun_prism_d3d_D3DResourceFactory_nCreateSwapChain
   (JNIEnv *jEnv, jclass, jlong ctx, jlong hwnd, jboolean isVsyncEnabled)
 {
-    HRESULT res;
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
-
+    RETURN_STATUS_IF_NULL(pCtx, 0L);
+    
     HWND hWnd = (HWND)(jlong_to_ptr(hwnd));
-    D3DResource *pSwapChainRes = NULL;
-
     if (!::IsWindow(hWnd)) {
         TraceLn1(NWT_TRACE_ERROR, "nGetSwapChain: hwnd=%x is not a window\n", hWnd);
         return 0L;
     }
 
-    res = pCtx->GetResourceManager()->
-        CreateSwapChain(hWnd, 1,
-                        0, 0,
-                        // have to use COPY since we don't re-render the scene
-                        // if it didn't change
-                        D3DSWAPEFFECT_COPY,
-                        isVsyncEnabled ?
-                            D3DPRESENT_INTERVAL_ONE :
-                            D3DPRESENT_INTERVAL_IMMEDIATE,
-                        &pSwapChainRes);
+    D3DResource *pSwapChainRes = NULL;
+    HRESULT res = pCtx->GetResourceManager()->
+            CreateSwapChain(hWnd, 1,
+            0, 0,
+            // have to use COPY since we don't re-render the scene
+            // if it didn't change
+            D3DSWAPEFFECT_COPY,
+            isVsyncEnabled ?
+            D3DPRESENT_INTERVAL_ONE :
+            D3DPRESENT_INTERVAL_IMMEDIATE,
+            &pSwapChainRes);
 
     if (SUCCEEDED(res)) {
         return ptr_to_jlong(pSwapChainRes);
@@ -175,10 +174,11 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_d3d_D3DResourceFactory_nCreateSwapCha
 JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DResourceFactory_nReleaseResource
   (JNIEnv *env, jclass, jlong ctx, jlong resource)
 {
-    D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
     IManagedResource *pResource = (IManagedResource*)jlong_to_ptr(resource);
-
     RETURN_STATUS_IF_NULL(pResource, D3D_OK);
+
+    D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
+    RETURN_STATUS_IF_NULL(pCtx, S_FALSE);
 
     return pCtx->GetResourceManager()->ReleaseResource(pResource);
 }
@@ -191,8 +191,12 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DResourceFactory_nReleaseResourc
 JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DResourceFactory_nGetMaximumTextureSize
   (JNIEnv *, jclass, jlong ctx)
 {
-    D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
+    D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);    
+    RETURN_STATUS_IF_NULL(pCtx, -1);
+
     D3DCAPS9 *caps = pCtx->GetDeviceCaps();
+    RETURN_STATUS_IF_NULL(caps, -1);
+
     DWORD maxw = caps->MaxTextureWidth;
     DWORD maxh = caps->MaxTextureHeight;
     DWORD max = (maxw < maxh) ? maxw : maxh;
@@ -227,7 +231,9 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DResourceFactory_nGetTextureHeig
     return (jint)pResource->GetDesc()->Height;
 }
 
-
+/*
+ * Note: this method assumes that pCtx, pTexResource and pixels are not null
+ */
 inline HRESULT updateTexture(
     D3DContext *pCtx, D3DResource *pTexResource, PBYTE pixels, jint size, jint format,
     jint dstx, jint dsty, jint srcx, jint srcy, jint srcw, jint srch, jint srcscan)
@@ -240,7 +246,7 @@ inline HRESULT updateTexture(
         srcx, srcy, srcw, srch,
         size, PFormat(format), srcscan);
 
-    if (!paramsOK) return E_INVALIDARG;
+    RETURN_STATUS_IF_NULL(paramsOK, E_INVALIDARG);
 
     TextureUpdater updater;
     updater.setTarget(pTexResource->GetTexture(), desc, dstx, dsty);
@@ -284,6 +290,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DResourceFactory_nUpdateTextureI
    jint srcx, jint srcy,
    jint srcw, jint srch, jint srcscan)
 {
+    RETURN_STATUS_IF_NULL(ctx, E_FAIL);
     RETURN_STATUS_IF_NULL(resource, E_FAIL);
 
     jint size = pixelArray ?
@@ -294,9 +301,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DResourceFactory_nUpdateTextureI
         env->GetPrimitiveArrayCritical(pixelArray, NULL) :
         env->GetDirectBufferAddress(buf));
 
-    if (pixels == NULL) {
-        return E_OUTOFMEMORY;
-    }
+    RETURN_STATUS_IF_NULL(pixels, E_OUTOFMEMORY);
 
     HRESULT res = updateTexture(
         PD3DContext(ctx), PD3DResource(resource), pixels, size, PFORMAT_INT_ARGB_PRE,
@@ -320,6 +325,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DResourceFactory_nUpdateTextureB
    jint srcx, jint srcy,
    jint srcw, jint srch, jint srcscan)
 {
+    RETURN_STATUS_IF_NULL(ctx, E_FAIL);
     RETURN_STATUS_IF_NULL(resource, E_FAIL);
 
     jint size = pixelArray ?
@@ -330,9 +336,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DResourceFactory_nUpdateTextureB
         env->GetPrimitiveArrayCritical(pixelArray, NULL) :
         env->GetDirectBufferAddress(buf));
 
-    if (pixels == NULL) {
-        return E_OUTOFMEMORY;
-    }
+    RETURN_STATUS_IF_NULL(pixels, E_OUTOFMEMORY);
 
     HRESULT res = updateTexture(
         PD3DContext(ctx), PD3DResource(resource), pixels, size, formatHint,
@@ -356,6 +360,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DResourceFactory_nUpdateTextureF
    jint srcx, jint srcy,
    jint srcw, jint srch, jint srcscan)
 {
+    RETURN_STATUS_IF_NULL(ctx, E_FAIL);
     RETURN_STATUS_IF_NULL(resource, E_FAIL);
 
     jint size = pixelArray ?
@@ -366,9 +371,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DResourceFactory_nUpdateTextureF
         env->GetPrimitiveArrayCritical(pixelArray, NULL) :
         env->GetDirectBufferAddress(buf));
 
-    if (pixels == NULL) {
-        return E_OUTOFMEMORY;
-    }
+    RETURN_STATUS_IF_NULL(pixels, E_OUTOFMEMORY);
 
     HRESULT res = updateTexture(
         PD3DContext(ctx), PD3DResource(resource), pixels, size, PFORMAT_FLOAT_XYZW,
@@ -389,14 +392,18 @@ static void copy_X8R8G8B8(DWORD *pDstPixels, DWORD const *pSrcPixels, int n) {
     }
 }
 
+/*
+ * Note: this method assumes that pCtx, pResource and pixels are not null
+ */
 static HRESULT D3DResourceFactory_nReadPixels(D3DContext *pCtx, D3DResource *pResource, BYTE *pixels, int cntW, int cntH)
 {
 
     TraceLn(NWT_TRACE_INFO, "D3DResourceFactory_nReadPixels");
 
     IDirect3DDevice9 *pd3dDevice = pCtx->Get3DDevice();
-    IDirect3DSurface9 *pSrc = pResource->GetSurface();
     RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
+    
+    IDirect3DSurface9 *pSrc = pResource->GetSurface();
     RETURN_STATUS_IF_NULL(pSrc, E_FAIL);
 
     D3DFORMAT srcFmt = pResource->GetDesc()->Format;
@@ -468,7 +475,7 @@ static HRESULT nReadPixelsHelper(
             env->GetPrimitiveArrayCritical(pixelArray, 0) :
             env->GetDirectBufferAddress(buf));
 
-    if (!pixels) return E_OUTOFMEMORY;
+    RETURN_STATUS_IF_NULL(pixels, E_OUTOFMEMORY);
 
     // sanity check about we have enought memory
     // Since we are certain cntW and cntH are positive numbers
@@ -480,9 +487,10 @@ static HRESULT nReadPixelsHelper(
     }
 
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(context);
-    D3DResource *pResource = (D3DResource*)jlong_to_ptr(resource);
+    RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
 
-    if (!pResource) return E_FAIL;
+    D3DResource *pResource = (D3DResource*)jlong_to_ptr(resource);
+    RETURN_STATUS_IF_NULL(pResource, E_FAIL);
 
     HRESULT res = D3DResourceFactory_nReadPixels(pCtx, pResource, pixels, cntW, cntH);
 
@@ -539,7 +547,8 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DResourceFactory_nTestCooperativ
   (JNIEnv *, jclass, jlong context)
 {
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(context);
-
+    RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
+    
     return pCtx->TestCooperativeLevel();
 }
 
@@ -547,7 +556,8 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DResourceFactory_nResetDevice
   (JNIEnv *env, jclass, jlong context)
 {
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(context);
-
+    RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
+    
     return pCtx->ResetContext();
 }
 
@@ -555,6 +565,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_d3d_D3DResourceFactory_nGetDevice
   (JNIEnv *env, jclass, jlong context)
 {
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(context);
+    RETURN_STATUS_IF_NULL(pCtx, 0L);
+
     return jlong(pCtx->Get3DDevice());
 }
 
@@ -562,5 +574,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_d3d_D3DResourceFactory_nGetNativeText
   (JNIEnv *, jclass, jlong resource)
 {
     D3DResource *pResource = (D3DResource*)jlong_to_ptr(resource);
+    RETURN_STATUS_IF_NULL(pResource, 0L);
+
     return jlong(pResource->GetTexture());
 }

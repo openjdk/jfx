@@ -29,11 +29,31 @@ public class Constants {
 
     // Error exit codes. Note that 0 and 1 are reserved for normal exit and
     // failure to launch java, respectively
-    static final int ERROR_START_BEFORE_MAIN = 2;
-    static final int ERROR_STOP_BEFORE_MAIN = 3;
-    static final int ERROR_STOP_BEFORE_START = 4;
-    static final int ERROR_TOOLKIT_NOT_RUNNING = 5;
-    static final int ERROR_UNEXPECTED_EXCEPTION = 6;
-    static final int ERROR_TOOLKIT_IS_RUNNING = 7;
+    static final int ERROR_NONE = 2;
 
+    static final int ERROR_TOOLKIT_NOT_RUNNING = 3;
+    static final int ERROR_UNEXPECTED_EXCEPTION = 4;
+    static final int ERROR_TOOLKIT_IS_RUNNING = 5;
+
+    static final int ERROR_INIT_BEFORE_MAIN = 6;
+    static final int ERROR_START_BEFORE_MAIN = 7;
+    static final int ERROR_STOP_BEFORE_MAIN = 8;
+
+    static final int ERROR_START_BEFORE_INIT = 9;
+    static final int ERROR_STOP_BEFORE_INIT = 10;
+
+    static final int ERROR_STOP_BEFORE_START = 11;
+
+    static final int ERROR_CLASS_INIT_WRONG_THREAD = 12;
+    static final int ERROR_MAIN_WRONG_THREAD = 13;
+    static final int ERROR_CONSTRUCTOR_WRONG_THREAD = 14;
+    static final int ERROR_INIT_WRONG_THREAD = 15;
+    static final int ERROR_START_WRONG_THREAD = 16;
+    static final int ERROR_STOP_WRONG_THREAD = 17;
+
+    static final int ERROR_PRELOADER_CLASS_INIT_WRONG_THREAD = 18;
+    static final int ERROR_PRELOADER_CONSTRUCTOR_WRONG_THREAD = 19;
+    static final int ERROR_PRELOADER_INIT_WRONG_THREAD = 20;
+    static final int ERROR_PRELOADER_START_WRONG_THREAD = 21;
+    static final int ERROR_PRELOADER_STOP_WRONG_THREAD = 22;
 }

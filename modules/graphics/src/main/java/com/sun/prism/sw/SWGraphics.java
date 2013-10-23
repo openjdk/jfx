@@ -717,12 +717,11 @@ final class SWGraphics implements ReadbackGraphics {
             System.out.println("dstBBox: " + dstBBox);
         }
 
-        final int interpolateMinX = Math.max(0, SWUtils.fastFloor(Math.min(sx1, sx2)));
-        final int interpolateMinY = Math.max(0, SWUtils.fastFloor(Math.min(sy1, sy2)));
-        final int interpolateMaxX = Math.min(tex.getContentWidth() - 1,
-                SWUtils.fastCeil(Math.max(sx1, sx2)) - 1);
-        final int interpolateMaxY = Math.min(tex.getContentHeight() - 1,
-                SWUtils.fastCeil(Math.max(sy1, sy2)) - 1);
+        // texture coordinates range
+        final int txMin = Math.max(0, SWUtils.fastFloor(Math.min(sx1, sx2)));
+        final int tyMin = Math.max(0, SWUtils.fastFloor(Math.min(sy1, sy2)));
+        final int txMax = Math.min(tex.getContentWidth() - 1, SWUtils.fastCeil(Math.max(sx1, sx2)) - 1);
+        final int tyMax = Math.min(tex.getContentHeight() - 1, SWUtils.fastCeil(Math.max(sy1, sy2)) - 1);
 
         this.pr.drawImage(RendererBase.TYPE_INT_ARGB_PRE, imageMode,
                 data, tex.getContentWidth(), tex.getContentHeight(),
@@ -732,7 +731,7 @@ final class SWGraphics implements ReadbackGraphics {
                 (int)(SWUtils.TO_PISCES * dstBBox.getMinX()), (int)(SWUtils.TO_PISCES * dstBBox.getMinY()),
                 (int)(SWUtils.TO_PISCES * dstBBox.getWidth()), (int)(SWUtils.TO_PISCES * dstBBox.getHeight()),
                 lEdge, rEdge, tEdge, bEdge,
-                interpolateMinX, interpolateMinY, interpolateMaxX, interpolateMaxY,
+                txMin, tyMin, txMax, tyMax,
                 swTex.hasAlpha());
 
         if (PrismSettings.debug) {

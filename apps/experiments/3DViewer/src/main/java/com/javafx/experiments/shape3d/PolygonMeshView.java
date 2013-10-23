@@ -1,3 +1,34 @@
+/*
+ * Copyright (c) 2010, 2013 Oracle and/or its affiliates.
+ * All rights reserved. Use is subject to license terms.
+ *
+ * This file is available and licensed under the following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *  - Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  - Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the distribution.
+ *  - Neither the name of Oracle Corporation nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 package com.javafx.experiments.shape3d;
 
 import java.util.Arrays;
@@ -245,10 +276,12 @@ public class PolygonMeshView extends Parent {
             meshView.setMesh(triangleMesh);
             return;
         }
-        
+
+        final int pointElementSize = triangleMesh.getPointElementSize();
+        final int faceElementSize = triangleMesh.getFaceElementSize();
         final boolean isWireframe = getDrawMode() == DrawMode.LINE;
         if (DEBUG) System.out.println("UPDATE MESH -- "+(isWireframe?"WIREFRAME":"SOLID"));
-        final int numOfPoints = pmesh.getPoints().size()/NUM_COMPONENTS_PER_POINT;
+        final int numOfPoints = pmesh.getPoints().size() / pointElementSize;
         if (DEBUG) System.out.println("numOfPoints = " + numOfPoints);
         
         if(isWireframe) {
@@ -262,7 +295,7 @@ public class PolygonMeshView extends Parent {
             if (facesDirty) {
                 facesDirty = false;
                 // create faces for each edge
-                int [] facesArray = new int [pmesh.getNumEdgesInFaces() * NUM_COMPONENTS_PER_FACE];
+                int [] facesArray = new int [pmesh.getNumEdgesInFaces() * faceElementSize];
                 int facesInd = 0;
                 int pointsInd = pmesh.getPoints().size();
                 for(int[] face: pmesh.faces) {
@@ -276,10 +309,10 @@ public class PolygonMeshView extends Parent {
                         facesArray[facesInd++] = 0;
                         facesArray[facesInd++] = pointIndex;
                         facesArray[facesInd++] = 0;
-                        facesArray[facesInd++] = pointsInd/NUM_COMPONENTS_PER_POINT;
+                        facesArray[facesInd++] = pointsInd / pointElementSize;
                         facesArray[facesInd++] = 0;
                         if (DEBUG) System.out.println("            facesInd = " + facesInd);
-                        pointsInd += NUM_COMPONENTS_PER_POINT;
+                        pointsInd += pointElementSize;
                         lastPointIndex = pointIndex;
                     }
                 }
@@ -304,12 +337,12 @@ public class PolygonMeshView extends Parent {
                     for (int p=0;p<face.length;p+=2) {
                         int pointIndex = face[p];
                         // get start and end point
-                        final float x1 = pointsArray[lastPointIndex*NUM_COMPONENTS_PER_POINT];
-                        final float y1 = pointsArray[lastPointIndex*NUM_COMPONENTS_PER_POINT+1];
-                        final float z1 = pointsArray[lastPointIndex*NUM_COMPONENTS_PER_POINT+2];
-                        final float x2 = pointsArray[pointIndex*NUM_COMPONENTS_PER_POINT];
-                        final float y2 = pointsArray[pointIndex*NUM_COMPONENTS_PER_POINT+1];
-                        final float z2 = pointsArray[pointIndex*NUM_COMPONENTS_PER_POINT+2];
+                        final float x1 = pointsArray[lastPointIndex * pointElementSize];
+                        final float y1 = pointsArray[lastPointIndex * pointElementSize + 1];
+                        final float z1 = pointsArray[lastPointIndex * pointElementSize + 2];
+                        final float x2 = pointsArray[pointIndex * pointElementSize];
+                        final float y2 = pointsArray[pointIndex * pointElementSize + 1];
+                        final float z2 = pointsArray[pointIndex * pointElementSize + 2];
                         final float distance = Math.abs(distanceBetweenPoints(x1,y1,z1,x2,y2,z2));
                         final float offset = distance/1000;
                         // add new point
@@ -334,7 +367,7 @@ public class PolygonMeshView extends Parent {
                 // create faces and break into triangles
                 final int numOfFacesBefore = pmesh.faces.length;
                 final int numOfFacesAfter = pmesh.getNumEdgesInFaces() - 2*numOfFacesBefore;
-                int [] facesArray = new int [numOfFacesAfter * NUM_COMPONENTS_PER_FACE];
+                int [] facesArray = new int [numOfFacesAfter * faceElementSize];
                 int [] smoothingGroupsArray = new int [numOfFacesAfter];
                 int facesInd = 0;
                 for(int f = 0; f < pmesh.faces.length; f++) {
@@ -348,12 +381,12 @@ public class PolygonMeshView extends Parent {
                     for (int p=4;p<face.length;p+=2) {
                         int pointIndex = face[p];
                         int texIndex = face[p+1];
-                        facesArray[facesInd * NUM_COMPONENTS_PER_FACE] = firstPointIndex;
-                        facesArray[facesInd * NUM_COMPONENTS_PER_FACE + 1] = firstTexIndex;
-                        facesArray[facesInd * NUM_COMPONENTS_PER_FACE + 2] = lastPointIndex;
-                        facesArray[facesInd * NUM_COMPONENTS_PER_FACE + 3] = lastTexIndex;
-                        facesArray[facesInd * NUM_COMPONENTS_PER_FACE + 4] = pointIndex;
-                        facesArray[facesInd * NUM_COMPONENTS_PER_FACE + 5] = texIndex;
+                        facesArray[facesInd * faceElementSize] = firstPointIndex;
+                        facesArray[facesInd * faceElementSize + 1] = firstTexIndex;
+                        facesArray[facesInd * faceElementSize + 2] = lastPointIndex;
+                        facesArray[facesInd * faceElementSize + 3] = lastTexIndex;
+                        facesArray[facesInd * faceElementSize + 4] = pointIndex;
+                        facesArray[facesInd * faceElementSize + 5] = texIndex;
                         smoothingGroupsArray[facesInd] = currentSmoothGroup;
                         facesInd++;
                         lastPointIndex = pointIndex;

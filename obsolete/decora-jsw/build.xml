@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project name="decora-jsw" default="jar" basedir=".">
-  <description>Builds, tests, and runs the project decora-jsw.</description>
-
-  <import file="build-common.xml"/>
-
-</project>

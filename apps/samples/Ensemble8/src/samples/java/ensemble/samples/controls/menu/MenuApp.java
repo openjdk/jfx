@@ -42,18 +42,14 @@ import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.CheckMenuItem;
-import javafx.scene.control.CheckMenuItemBuilder;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
-import javafx.scene.control.MenuBuilder;
 import javafx.scene.control.MenuItem;
-import javafx.scene.control.MenuItemBuilder;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.HBoxBuilder;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
@@ -78,9 +74,10 @@ public class MenuApp extends Application {
         final MenuBar menuBar = new MenuBar();
 
         //Sub menus for Options->Submenu 1
-        MenuItem menu111 = MenuItemBuilder.create().text("blah").build();
-        final MenuItem menu112 = MenuItemBuilder.create().text("foo").build();
-        final CheckMenuItem menu113 = CheckMenuItemBuilder.create().text("Show \"foo\" item").selected(true).build();
+        MenuItem menu111 = new MenuItem("blah");
+        final MenuItem menu112 = new MenuItem("foo");
+        final CheckMenuItem menu113 = new CheckMenuItem("Show \"foo\" item");
+        menu113.setSelected(true);
         menu113.selectedProperty().addListener(new InvalidationListener() {
             @Override
             public void invalidated(Observable valueModel) {
@@ -89,20 +86,19 @@ public class MenuApp extends Application {
             }
         });
         // Options->Submenu 1 submenu 
-        Menu menu11 = MenuBuilder.create()
-                .text("Submenu 1")
-                .graphic(new ImageView(new Image(MenuApp.class.getResourceAsStream("/ensemble/samples/shared-resources/menuInfo.png"))))
-                .items(menu111, menu112, menu113)
-                .build();
-
+        Menu menu11 = new Menu("Submenu 1",
+                new ImageView(new Image(MenuApp.class.getResourceAsStream("/ensemble/samples/shared-resources/menuInfo.png"))));
+        menu11.getItems().addAll(menu111, menu112, menu113);
         // Options->Submenu 2 submenu
-        MenuItem menu121 = MenuItemBuilder.create().text("Item 1").build();
-        MenuItem menu122 = MenuItemBuilder.create().text("Item 2").build();
-        Menu menu12 = MenuBuilder.create().text("Submenu 2").items(menu121, menu122).build();
+        MenuItem menu121 = new MenuItem("Item 1");
+        MenuItem menu122 = new MenuItem("Item 2");
+        Menu menu12 = new Menu("Submenu 2");
+        menu12.getItems().addAll(menu121, menu122);
 
         // Options->Change Text
         final String change[] = {"Change Text", "Change Back"};
-        final MenuItem menu13 = MenuItemBuilder.create().text(change[0]).accelerator(KeyCombination.keyCombination("Shortcut+C")).build();
+        final MenuItem menu13 = new MenuItem(change[0]);
+        menu13.setAccelerator(KeyCombination.keyCombination("Shortcut+C"));
         menu13.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent t) {
@@ -111,9 +107,9 @@ public class MenuApp extends Application {
             }
         });
 
-        // Options menu
-        Menu menu1 = MenuBuilder.create().text("Options").items(menu11, menu12, menu13).build();
-
+        // Options menu       
+        Menu menu1 = new Menu("Options");
+        menu1.getItems().addAll(menu11, menu12, menu13);
         menuBar.getMenus().addAll(menu1);
 
         if (os != null && os.startsWith("Mac")) {
@@ -126,7 +122,8 @@ public class MenuApp extends Application {
 
             menuBar.getMenus().add(systemMenuBarMenu);
 
-            HBox hbox = HBoxBuilder.create().alignment(Pos.CENTER).build();
+            HBox hbox = new HBox();
+            hbox.setAlignment(Pos.CENTER);
             sysMenuLabel.setStyle("-fx-font-size: 24");
             hbox.getChildren().add(sysMenuLabel);
             vbox.getChildren().add(hbox);

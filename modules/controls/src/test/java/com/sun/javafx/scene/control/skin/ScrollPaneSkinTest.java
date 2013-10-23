@@ -39,10 +39,7 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.input.ScrollEvent;
-import javafx.scene.input.SwipeEvent;
+import javafx.scene.input.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
@@ -368,11 +365,11 @@ public class ScrollPaneSkinTest {
         stage.show();
 
         Event.fireEvent(scrollPaneInner,
-              MouseEvent.impl_mouseEvent(50.0, 50.0, 50.0, 50.0,
+              new MouseEvent(MouseEvent.MOUSE_CLICKED, 50.0, 50.0, 50.0, 50.0,
                          MouseButton.PRIMARY, 1,
                          false, false, false, false, false,
-                         true, false, false, false,
-                         MouseEvent.MOUSE_CLICKED));
+                         true, false, false, false, false, null
+                         ));
 
         /*
         ** did it work?
@@ -834,9 +831,9 @@ public class ScrollPaneSkinTest {
                 primaryButtonDown = false;
             }
 
-            MouseEvent event = MouseEvent.impl_mouseEvent(x, y, x, y, button,
+            MouseEvent event = new MouseEvent(type, x, y, x, y, button,
                     1, false, false, false, false, false, primaryButtonDown,
-                    false, false, false, type);
+                    false, false, false, false, null);
 
             return event;
         }

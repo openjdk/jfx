@@ -110,7 +110,6 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_EGLFBGLDrawable_nSwapBuffers
 (JNIEnv *env, jclass jeglfbDrawable, jlong nativeDInfo) {
     int value;
 
-    glFlush();
     DrawableInfo *dInfo = (DrawableInfo *) jlong_to_ptr(nativeDInfo);
     if (dInfo == NULL) {
         return JNI_FALSE;

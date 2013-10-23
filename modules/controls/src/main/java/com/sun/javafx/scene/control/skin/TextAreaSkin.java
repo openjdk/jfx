@@ -1380,4 +1380,8 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         }
         return p;
     }
+
+    public Bounds getCaretBounds() {
+        return getSkinnable().sceneToLocal(caretPath.localToScene(caretPath.getBoundsInLocal()));
+    }
 }

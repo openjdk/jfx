@@ -92,7 +92,12 @@ IDirect3DBaseTexture9 * D3DPhongMaterial::getMap(int type) {
 
 void D3DPhongMaterial::setMap(int mapID, IDirect3DBaseTexture9 *texMap,
         bool isSA, bool isBA) {
-    map[mapID] = texMap;
-    specularAlpha = isSA;
-    bumpAlpha = isBA;
+    // Within the range of DIFFUSE, SPECULAR, BUMP, SELFILLUMINATION
+    if (mapID >= 0 && mapID <= 3) {
+        map[mapID] = texMap;
+        specularAlpha = isSA;
+        bumpAlpha = isBA;
+    } else {
+        cerr << "D3DPhongMaterial::getMap -- mapID is out of range - mapID = " << mapID << endl;
+    }
 }

@@ -63,6 +63,17 @@ import java.util.List;
  */
 public class VirtualFlow<T extends IndexedCell> extends Region {
 
+    /**
+     * Scroll events may request to scroll about a number of "lines". We first
+     * decide how big one "line" is - for fixed cell size it's clear,
+     * for variable cell size we settle on a single number so that the scrolling
+     * speed is consistent. Now if the line is so big that
+     * MIN_SCROLLING_LINES_PER_PAGE of them don't fit into one page, we make
+     * them smaller to prevent the scrolling step to be too big (perhaps
+     * even more than one page).
+     */
+    private static final int MIN_SCROLLING_LINES_PER_PAGE = 8;
+                    
     private boolean touchDetected = false;
     private boolean mouseDown = false;
 
@@ -538,17 +549,26 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                             virtualDelta = event.getTextDeltaY() * lastHeight;
                             break;
                         case LINES:
-                            /*
-                            ** if we've selected a cell, then use
-                            ** it's length for the scroll, otherwise
-                            ** use the length of the first visible cell
-                            */
-                            if (lastCellLength != -1) {
-                                virtualDelta = event.getTextDeltaY() * lastCellLength;
+                            double lineSize;
+                            if (fixedCellSizeEnabled) {
+                                lineSize = fixedCellSize;
+                            } else {
+                                // For the scrolling to be reasonably consistent
+                                // we set the lineSize to the average size
+                                // of all currently loaded lines.
+                                T lastCell = cells.getLast();
+                                lineSize =
+                                        (getCellPosition(lastCell)
+                                            + getCellLength(lastCell)
+                                            - getCellPosition(cells.getFirst()))
+                                        / cells.size();
                             }
-                            else if (getFirstVisibleCell() != null) {
-                                virtualDelta = event.getTextDeltaY() * getCellLength(getFirstVisibleCell());
+
+                            if (lastHeight / lineSize < MIN_SCROLLING_LINES_PER_PAGE) {
+                                lineSize = lastHeight / MIN_SCROLLING_LINES_PER_PAGE;
                             }
+
+                            virtualDelta = event.getTextDeltaY() * lineSize;
                             break;
                         case NONE:
                             virtualDelta = event.getDeltaY();
@@ -861,10 +881,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             lastWidth = -1;
             lastHeight = -1;
         }
+
+        boolean recreatedOrRebuilt = needsRebuildCells || needsRecreateCells || sizeChanged;
        
         needsRecreateCells = false;
         needsReconfigureCells = false;
         needsRebuildCells = false;
+        sizeChanged = false;
         
         if (needsCellsLayout) {
             for (int i = 0, max = cells.size(); i < max; i++) {
@@ -1027,7 +1050,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         }
 
         updateViewport();
-        updateScrollBarsAndCells();  
+        updateScrollBarsAndCells(recreatedOrRebuilt);
 
         // Get the index of the "current" cell
         int currentIndex = computeCurrentIndex();
@@ -1075,9 +1098,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         } else if (needTrailingCells) {
             addTrailingCells(true);
         }
-
         updateViewport(); 
-        updateScrollBarsAndCells();
+        updateScrollBarsAndCells(recreatedOrRebuilt);
 
         lastWidth = getWidth();
         lastHeight = getHeight();
@@ -1319,6 +1341,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     @Override protected void setWidth(double value) {
         if (value != lastWidth) {
             super.setWidth(value);
+            sizeChanged = true;
             setNeedsLayout(true);
             requestLayout();
         }
@@ -1327,12 +1350,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     @Override protected void setHeight(double value) {
         if (value != lastHeight) {
             super.setHeight(value);
+            sizeChanged = true;
             setNeedsLayout(true);
             requestLayout();
         }
     }
 
-    private void updateScrollBarsAndCells() {
+    private void updateScrollBarsAndCells(boolean recreate) {
         // Assign the hbar and vbar to the breadthBar and lengthBar so as
         // to make some subsequent calculations easier.
         final boolean isVertical = isVertical();
@@ -1448,28 +1472,29 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         if (lengthBar.isVisible()) {
             // determine how many cells there are on screen so that the scrollbar
             // thumb can be appropriately sized
-            int numCellsVisibleOnScreen = 0;
-            for (int i = 0, max = cells.size(); i < max; i++) {
-                T cell = cells.get(i);
-                if (cell != null && ! cell.isEmpty()) {
-                    sumCellLength += (isVertical ? cell.getHeight() : cell.getWidth());
-                    if (sumCellLength > flowLength) {
-                        break;
-                    }
+            if (recreate) {
+                int numCellsVisibleOnScreen = 0;
+                for (int i = 0, max = cells.size(); i < max; i++) {
+                    T cell = cells.get(i);
+                    if (cell != null && ! cell.isEmpty()) {
+                        sumCellLength += (isVertical ? cell.getHeight() : cell.getWidth());
+                        if (sumCellLength > flowLength) {
+                            break;
+                        }
 
-                    numCellsVisibleOnScreen++;
+                        numCellsVisibleOnScreen++;
+                    }
+                }
+
+                lengthBar.setMax(1);
+                if (numCellsVisibleOnScreen == 0 && cellCount == 1) {
+                    // special case to help resolve RT-17701 and the case where we have
+                    // only a single row and it is bigger than the viewport
+                    lengthBar.setVisibleAmount(flowLength / sumCellLength);
+                } else {
+                    lengthBar.setVisibleAmount(numCellsVisibleOnScreen / (float) cellCount);
                 }
             }
-
-            lengthBar.setMax(1);
-            if (numCellsVisibleOnScreen == 0 && cellCount == 1) {
-                // special case to help resolve RT-17701 and the case where we have
-                // only a single row and it is bigger than the viewport
-                lengthBar.setVisibleAmount(flowLength / sumCellLength);
-            } else {
-                lengthBar.setVisibleAmount(numCellsVisibleOnScreen / (float) cellCount);
-            }
-            
 
             // Fix for RT-11873. If this isn't here, we can have a situation where
             // the scrollbar scrolls endlessly. This is possible when the cell
@@ -2149,7 +2174,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         cull();
 
         // Finally, update the scroll bars
-        updateScrollBarsAndCells();
+        updateScrollBarsAndCells(false);
         lastPosition = getPosition();
 
         // notify
@@ -2160,6 +2185,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     private boolean needsRecreateCells = false; // when cell factory changed
     private boolean needsRebuildCells = false; // when cell contents have changed
     private boolean needsCellsLayout = false;
+    private boolean sizeChanged = false;
     
     public void reconfigureCells() {
         needsReconfigureCells = true;
@@ -2593,7 +2619,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 }
             });
 
-            sbTouchKF2 = new KeyFrame(Duration.millis(500), new EventHandler<ActionEvent>() {
+            sbTouchKF2 = new KeyFrame(Duration.millis(1000), new EventHandler<ActionEvent>() {
                 @Override public void handle(ActionEvent event) {
                     if (touchDetected == false && mouseDown == false) {
                         tempVisibility = false;

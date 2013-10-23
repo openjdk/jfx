@@ -105,6 +105,12 @@ class ES2Context extends BaseShaderContext {
            ES2Pipeline.glFactory.updateDeviceDetails(devDetails, glContext);
         }
     }
+    
+    final void clearContext() {
+        if (currentDrawable != null) {
+            currentDrawable.swapBuffers(glContext);
+        }
+    }
 
     final void setIndexBuffer(int ib) {
         if (indexBuffer != ib) {

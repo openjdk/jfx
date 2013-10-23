@@ -50,7 +50,6 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.shape.MeshView;
 import javafx.scene.shape.TriangleMesh;
-import static javafx.scene.shape.TriangleMesh.*;
 import javafx.scene.transform.Transform;
 import javafx.util.Duration;
 
@@ -161,11 +160,13 @@ public class Optimizer {
             newFaces.ensureCapacity(faces.size());
             newFaceSmoothingGroups.clear();
             newFaceSmoothingGroups.ensureCapacity(faceSmoothingGroups.size());
-            for (int i = 0; i < faces.size(); i += NUM_COMPONENTS_PER_FACE) {
+            int pointElementSize = mesh.getPointElementSize();
+            int faceElementSize = mesh.getFaceElementSize();
+            for (int i = 0; i < faces.size(); i += faceElementSize) {
                 total++;
-                int i1 = faces.get(i) * NUM_COMPONENTS_PER_POINT;
-                int i2 = faces.get(i + 2) * NUM_COMPONENTS_PER_POINT;
-                int i3 = faces.get(i + 4) * NUM_COMPONENTS_PER_POINT;
+                int i1 = faces.get(i) * pointElementSize;
+                int i2 = faces.get(i + 2) * pointElementSize;
+                int i3 = faces.get(i + 4) * pointElementSize;
                 if (i1 == i2 || i1 == i3 || i2 == i3) {
                     sameIndexes++;
                     continue;
@@ -191,8 +192,8 @@ public class Optimizer {
 //                            + "p1 = %s\np2 = %s\np3 = %s\n", a, b, c, sqarea, p1.toString(), p2.toString(), p3.toString());
                     continue;
                 }
-                newFaces.addAll(faces, i, NUM_COMPONENTS_PER_FACE);
-                int fIndex = i / NUM_COMPONENTS_PER_FACE;
+                newFaces.addAll(faces, i, faceElementSize);
+                int fIndex = i / faceElementSize;
                 if (fIndex < faceSmoothingGroups.size()) {
                     newFaceSmoothingGroups.addAll(faceSmoothingGroups.get(fIndex));
                 }
@@ -223,7 +224,8 @@ public class Optimizer {
         for (MeshView meshView : meshViews) {
             TriangleMesh mesh = (TriangleMesh) meshView.getMesh();
             ObservableFloatArray points = mesh.getPoints();
-            int os = points.size() / NUM_COMPONENTS_PER_POINT;
+            int pointElementSize = mesh.getPointElementSize();
+            int os = points.size() / pointElementSize;
 
             pp.clear();
             newPoints.clear();
@@ -231,7 +233,7 @@ public class Optimizer {
             reindex.clear();
             reindex.resize(os);
 
-            for (int i = 0, oi = 0, ni = 0; i < points.size(); i += NUM_COMPONENTS_PER_POINT, oi++) {
+            for (int i = 0, oi = 0, ni = 0; i < points.size(); i += pointElementSize, oi++) {
                 float x = points.get(i);
                 float y = points.get(i + 1);
                 float z = points.get(i + 2);
@@ -247,7 +249,7 @@ public class Optimizer {
                 }
             }
 
-            int ns = newPoints.size() / NUM_COMPONENTS_PER_POINT;
+            int ns = newPoints.size() / pointElementSize;
 
             int d = os - ns;
             duplicates += d;
@@ -264,7 +266,7 @@ public class Optimizer {
 //            System.out.printf("There are %d (%.2f%%) duplicate points out of %d total for mesh '%s'.\n",
 //                    d, 100d * d / os, os, meshView.getId());
 
-            check += mesh.getPoints().size() / NUM_COMPONENTS_PER_POINT;
+            check += mesh.getPoints().size() / pointElementSize;
         }
         System.out.printf("There are %d (%.2f%%) duplicate points out of %d total.\n",
                 duplicates, 100d * duplicates / total, total);
@@ -281,7 +283,8 @@ public class Optimizer {
         for (MeshView meshView : meshViews) {
             TriangleMesh mesh = (TriangleMesh) meshView.getMesh();
             ObservableFloatArray texcoords = mesh.getTexCoords();
-            int os = texcoords.size() / NUM_COMPONENTS_PER_TEXCOORD;
+            int texcoordElementSize = mesh.getTexCoordElementSize();
+            int os = texcoords.size() / texcoordElementSize;
 
             pp.clear();
             newTexCoords.clear();
@@ -289,7 +292,7 @@ public class Optimizer {
             reindex.clear();
             reindex.resize(os);
 
-            for (int i = 0, oi = 0, ni = 0; i < texcoords.size(); i += NUM_COMPONENTS_PER_TEXCOORD, oi++) {
+            for (int i = 0, oi = 0, ni = 0; i < texcoords.size(); i += texcoordElementSize, oi++) {
                 float x = texcoords.get(i);
                 float y = texcoords.get(i + 1);
                 Point2D p = new Point2D(x, y);
@@ -304,7 +307,7 @@ public class Optimizer {
                 }
             }
 
-            int ns = newTexCoords.size() / NUM_COMPONENTS_PER_TEXCOORD;
+            int ns = newTexCoords.size() / texcoordElementSize;
 
             int d = os - ns;
             duplicates += d;
@@ -321,7 +324,7 @@ public class Optimizer {
 //            System.out.printf("There are %d (%.2f%%) duplicate texcoords out of %d total for mesh '%s'.\n",
 //                    d, 100d * d / os, os, meshView.getId());
 
-            check += mesh.getTexCoords().size() / NUM_COMPONENTS_PER_TEXCOORD;
+            check += mesh.getTexCoords().size() / texcoordElementSize;
         }
         System.out.printf("There are %d (%.2f%%) duplicate texcoords out of %d total.\n",
                 duplicates, 100d * duplicates / total, total);

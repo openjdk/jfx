@@ -37,12 +37,25 @@ import static launchertest.Constants.*;
 public class TestApp extends Application {
 
     private static volatile boolean mainCalled = false;
+    private static volatile boolean initCalled = false;
     private static volatile boolean startCalled = false;
+
+    @Override public void init() {
+        if (!mainCalled) {
+            System.err.println("ERROR: main method not called before init");
+            System.exit(ERROR_INIT_BEFORE_MAIN);
+        }
+        initCalled = true;
+    }
 
     @Override public void start(Stage stage) throws Exception {
         if (!mainCalled) {
             System.err.println("ERROR: main method not called before start");
             System.exit(ERROR_START_BEFORE_MAIN);
+        }
+        if (!initCalled) {
+            System.err.println("ERROR: init method not called before start");
+            System.exit(ERROR_START_BEFORE_INIT);
         }
         startCalled = true;
         Platform.runLater(new Runnable() {
@@ -56,6 +69,10 @@ public class TestApp extends Application {
         if (!mainCalled) {
             System.err.println("ERROR: main method not called before stop");
             System.exit(ERROR_STOP_BEFORE_MAIN);
+        }
+        if (!initCalled) {
+            System.err.println("ERROR: init method not called before stop");
+            System.exit(ERROR_STOP_BEFORE_INIT);
         }
         if (!startCalled) {
             System.err.println("ERROR: start method not called before stop");

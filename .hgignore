@@ -12,7 +12,12 @@
 ^\.gradle/
 ^buildSrc/\.gradle/
 ^.idea/out/
-build/
+^build/
+^buildSrc/build/
+^modules/[a-zA-Z0-9_]*/build/
+^apps/build/
+^apps/.*/build/
+^tests/.*/build/
 bin/
 dist/
 test.keystore

@@ -44,6 +44,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
@@ -306,32 +307,48 @@ public class LauncherImpl {
     }
     
     // Must be public since we could be called from a different class loader
-    public static void launchApplicationWithArgs(String mainClassName,
-            String preloaderClassName, String[] args) {
+    public static void launchApplicationWithArgs(final String mainClassName,
+            final String preloaderClassName, String[] args) {
+
+        try {
+            startToolkit();
+        } catch (InterruptedException ex) {
+            abort(ex, "Toolkit initialization error", mainClassName);
+        }
+
         Class<? extends Application> appClass;
         Class<? extends Preloader> preClass = null;
         Class<?> tempAppClass = null;
-        Class<?> tempPreClass = null;
 
         final ClassLoader loader = Thread.currentThread().getContextClassLoader();
-        try {
-            tempAppClass = loader.loadClass(mainClassName);
-        } catch (ClassNotFoundException cnfe) {
-            abort(cnfe, "Missing JavaFX application class %1$s", mainClassName);
-        }
+        final AtomicReference<Class<?>> tmpClassRef = new AtomicReference<>();
+        final AtomicReference<Class<? extends Preloader>> preClassRef = new AtomicReference<>();
+        PlatformImpl.runAndWait(new Runnable() {
+            @Override public void run() {
+                Class<?> clz = null;
+                try {
+                    clz = Class.forName(mainClassName, true, loader);
+                } catch (ClassNotFoundException cnfe) {
+                    abort(cnfe, "Missing JavaFX application class %1$s", mainClassName);
+                }
+                tmpClassRef.set(clz);
 
-        if (preloaderClassName != null) {
-            try {
-                tempPreClass = loader.loadClass(preloaderClassName);
-            } catch (ClassNotFoundException cnfe) {
-                abort(cnfe, "Missing JavaFX preloader class %1$s", preloaderClassName);
-            }
+                if (preloaderClassName != null) {
+                    try {
+                        clz = Class.forName(preloaderClassName, true, loader);
+                    } catch (ClassNotFoundException cnfe) {
+                        abort(cnfe, "Missing JavaFX preloader class %1$s", preloaderClassName);
+                    }
 
-            if (!Preloader.class.isAssignableFrom(tempPreClass)) {
-                abort(null, "JavaFX preloader class %1$s does not extend javafx.application.Preloader", preClass.getName());
+                    if (!Preloader.class.isAssignableFrom(clz)) {
+                        abort(null, "JavaFX preloader class %1$s does not extend javafx.application.Preloader", clz.getName());
+                    }
+                    preClassRef.set(clz.asSubclass(Preloader.class));
+                }
             }
-            preClass = tempPreClass.asSubclass(Preloader.class);
-        }
+        });
+        preClass = preClassRef.get();
+        tempAppClass = tmpClassRef.get();
 
         // Save the preloader class in a static field for later use when
         // main calls back into launchApplication.
@@ -342,7 +359,6 @@ public class LauncherImpl {
 
         Exception theEx = null;
         try {
-            startToolkit();
             Method mainMethod = tempAppClass.getMethod("main",
                     new Class[] { (new String[0]).getClass() });
             if (verbose) {
@@ -350,7 +366,7 @@ public class LauncherImpl {
             }
             mainMethod.invoke(null, new Object[] { args });
             return;
-        } catch (NoSuchMethodException | IllegalAccessException | InterruptedException ex) {
+        } catch (NoSuchMethodException | IllegalAccessException ex) {
             theEx = ex;
             savedPreloaderClass = null;
         } catch (InvocationTargetException ex) {
@@ -691,22 +707,27 @@ public class LauncherImpl {
         PlatformImpl.addListener(listener);
 
         try {
-            Preloader pldr = null;
+            final AtomicReference<Preloader> pldr = new AtomicReference<>();
             if (preloaderClass != null) {
-                // Construct an instance of the preloader and call its init
-                // method on this thread. Then call the start method on the FX thread.
-                try {
-                    Constructor<? extends Preloader> c = preloaderClass.getConstructor();
-                    pldr = c.newInstance();
-                    // Set startup parameters
-                    ParametersImpl.registerParameters(pldr, new ParametersImpl(args));
-                } catch (Throwable t) {
-                    System.err.println("Exception in Preloader constructor");
-                    pConstructorError = t;
-                    error = true;
-                }
+                // Construct an instance of the preloader on the FX thread, then
+                // call its init method on this (launcher) thread. Then call
+                // the start method on the FX thread.
+                PlatformImpl.runAndWait(new Runnable() {
+                    @Override public void run() {
+                        try {
+                            Constructor<? extends Preloader> c = preloaderClass.getConstructor();
+                            pldr.set(c.newInstance());
+                            // Set startup parameters
+                            ParametersImpl.registerParameters(pldr.get(), new ParametersImpl(args));
+                        } catch (Throwable t) {
+                            System.err.println("Exception in Preloader constructor");
+                            pConstructorError = t;
+                            error = true;
+                        }
+                    }
+                });
             }
-            currentPreloader = pldr;
+            currentPreloader = pldr.get();
 
             // Call init method unless exit called or error detected
             if (currentPreloader != null && !error && !exitCalled.get()) {
@@ -746,9 +767,10 @@ public class LauncherImpl {
                 }
             }
 
-            // Construct an instance of the application and call its init
-            // method on this thread. Then call the start method on the FX thread.
-            Application app = null;
+            // Construct an instance of the application on the FX thread, then
+            // call its init method on this (launcher) thread. Then call
+            // the start method on the FX thread.
+            final AtomicReference<Application> app = new AtomicReference<>();
             if (!error && !exitCalled.get()) {
                 if (currentPreloader != null) {
                     if (simulateSlowProgress) {
@@ -762,19 +784,23 @@ public class LauncherImpl {
                             StateChangeNotification.Type.BEFORE_LOAD, null);
                 }
 
-                try {
-                    Constructor<? extends Application> c = appClass.getConstructor();
-                    app = c.newInstance();
-                    // Set startup parameters
-                    ParametersImpl.registerParameters(app, new ParametersImpl(args));
-                    PlatformImpl.setApplicationName(appClass);
-                } catch (Throwable t) {
-                    System.err.println("Exception in Application constructor");
-                    constructorError = t;
-                    error = true;
-                }
+                PlatformImpl.runAndWait(new Runnable() {
+                    @Override public void run() {
+                        try {
+                            Constructor<? extends Application> c = appClass.getConstructor();
+                            app.set(c.newInstance());
+                            // Set startup parameters
+                            ParametersImpl.registerParameters(app.get(), new ParametersImpl(args));
+                            PlatformImpl.setApplicationName(appClass);
+                        } catch (Throwable t) {
+                            System.err.println("Exception in Application constructor");
+                            constructorError = t;
+                            error = true;
+                        }
+                    }
+                });
             }
-            final Application theApp = app;
+            final Application theApp = app.get();
 
             // Call init method unless exit called or error detected
             if (!error && !exitCalled.get()) {

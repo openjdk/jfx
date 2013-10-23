@@ -150,7 +150,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
 
     private void initializeSwipeAndTouchHandlers() {
         final Pagination control = getSkinnable();
-                    
+
         getSkinnable().setOnTouchPressed(new EventHandler<TouchEvent>() {
             @Override public void handle(TouchEvent e) {
                 if (touchEventId == -1) {
@@ -675,7 +675,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
         } else if ("HEIGHT".equals(p)) {
             clipRect.setHeight(getSkinnable().getHeight());
         }
-        
+
         getSkinnable().requestLayout();
     }
 
@@ -734,12 +734,17 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                     minButtonSize = newFont.getSize() * 2;
                     for(Node child: controlBox.getChildren()) {
                         ((Control)child).setMinSize(minButtonSize, minButtonSize);
+                        // RT-33327 : min size is set on the toggle button but the
+                        // pref size does not match as computed by LabeledSkinBase#computePrefHeight 
+                        // so setting the prefSize ensures the desired size on the button.
+                        ((Control)child).setPrefSize(minButtonSize, minButtonSize);
                     }
                     // We want to relayout the indicator buttons because the size has changed.
                     requestLayout();
                 }
             });
             leftArrowButton.setMinSize(minButtonSize, minButtonSize);
+            leftArrowButton.setPrefSize(minButtonSize, minButtonSize);
             leftArrowButton.getStyleClass().add("left-arrow-button");
             leftArrowButton.setFocusTraversable(false);
             HBox.setMargin(leftArrowButton, new Insets(0, snapSize(arrowButtonGap.get()), 0, 0));
@@ -750,6 +755,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
 
             rightArrowButton = new Button();
             rightArrowButton.setMinSize(minButtonSize, minButtonSize);
+            rightArrowButton.setPrefSize(minButtonSize, minButtonSize);
             rightArrowButton.getStyleClass().add("right-arrow-button");
             rightArrowButton.setFocusTraversable(false);
             HBox.setMargin(rightArrowButton, new Insets(0, 0, 0, snapSize(arrowButtonGap.get())));
@@ -826,6 +832,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             for (int i = fromIndex; i <= toIndex; i++) {
                 IndicatorButton ib = new IndicatorButton(i);
                 ib.setMinSize(minButtonSize, minButtonSize);
+                ib.setPrefSize(minButtonSize, minButtonSize);
                 ib.setToggleGroup(indicatorButtons);
                 controlBox.getChildren().add(ib);
             }

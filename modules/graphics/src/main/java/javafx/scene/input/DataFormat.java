@@ -117,6 +117,13 @@ public class DataFormat {
      *
      * With the above code, if I were to look on the clipboard, I'd find the String "Hello"
      * listed both for "text/foo" and "text/bar" on the clipboard.
+     *
+     * <p>
+     * Note that the ids may be subject to platform restrictions in some cases.
+     * For instance, Swing requires a mime type so if an {@code id} is not
+     * of the "type/subtype" format it won't be possible
+     * to drag data of this type from/to {@link javafx.embed.swing.JFXPanel}.
+     * </p>
      * @param ids The set of ids used to represent this DataFormat on the clipboard.
      * @throws IllegalArgumentException if one of the given mime types is already
      *         assigned to another DataFormat.

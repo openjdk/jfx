@@ -37,14 +37,14 @@ extern "C" {
 #endif
 
     /* Initialize the Java VM instance variable when the library is first loaded */
-    JavaVM *jvm;
+    JavaVM *javavm;
 
     /*
      * Specify the required JNI version.
      */
     JNIEXPORT jint JNICALL JNI_OnLoad_jfxmedia(JavaVM *vm, void *reserved) {
 
-        jvm = vm;
+        javavm = vm;
 #ifdef JNI_VERSION_1_8
         //min. returned JNI_VERSION required by JDK8 for builtin libraries
         JNIEnv *env;

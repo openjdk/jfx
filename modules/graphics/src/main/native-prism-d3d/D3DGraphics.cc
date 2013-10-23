@@ -40,12 +40,15 @@
 JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DSwapChain_nPresent
   (JNIEnv *, jclass, jlong ctx, jlong swapChain)
 {
+    TraceLn(NWT_TRACE_INFO, "D3DSwapChain_nPresent");
+    
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
+    
+    RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
+
     D3DResource *pSwapChainRes = (D3DResource*)jlong_to_ptr(swapChain);
 
     RETURN_STATUS_IF_NULL(pSwapChainRes, E_FAIL);
-
-    TraceLn(NWT_TRACE_INFO, "D3DSwapChain_nPresent");
 
     pCtx->EndScene();
 
@@ -63,12 +66,13 @@ void setIntField(JNIEnv *env, jobject object, jclass clazz, const char *name, in
 JNIEXPORT jboolean JNICALL Java_com_sun_prism_d3d_D3DContext_nGetFrameStats
   (JNIEnv *env, jclass, jlong ctx, jobject pResultObject, jboolean bReset)
 {
-    if (!pResultObject)
-        return false;
+    RETURN_STATUS_IF_NULL(pResultObject, false);
 
 #if defined PERF_COUNTERS
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
-
+    
+    RETURN_STATUS_IF_NULL(pCtx, false);
+    
     D3DContext::FrameStats &st = pCtx->getStats();
 
     jclass pResultClass = env->GetObjectClass(pResultObject);
@@ -107,15 +111,14 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DVertexBuffer_nDrawIndexedQuads
 {
     TraceLn(NWT_TRACE_INFO, "D3DVertexBuffer_nDrawIndexedQuads");
 
+    D3DContext *pCtx = (D3DContext *)jlong_to_ptr(ctx);
+    
+    RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
+
     PrismSourceVertex *pSrcFloats = (PrismSourceVertex *)env->GetPrimitiveArrayCritical(fbuf, 0);
     BYTE *pSrcColors = (BYTE *)env->GetPrimitiveArrayCritical(bbuf, 0);
 
-    // context is never null here,
-    // this check is done in D3DPipline.createResourceFactory
-
-    D3DContext *pCtx = (D3DContext *)jlong_to_ptr(ctx);
-
-    HRESULT hr = (pSrcFloats && pSrcColors)
+    HRESULT hr = (pSrcFloats && pSrcColors && remainingVerts > 0)
         ? pCtx->drawIndexedQuads(pSrcFloats, pSrcColors, remainingVerts) : E_FAIL;
 
     if (pSrcColors) env->ReleasePrimitiveArrayCritical(bbuf, pSrcColors, JNI_ABORT);
@@ -133,15 +136,14 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DVertexBuffer_nDrawTriangleList
 {
     TraceLn(NWT_TRACE_INFO, "D3DVertexBuffer_nDrawTriangleList");
 
+    D3DContext *pCtx = (D3DContext *)jlong_to_ptr(ctx);
+    
+    RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
+    
     PrismSourceVertex *pSrcFloats = (PrismSourceVertex *)env->GetPrimitiveArrayCritical(fbuf, 0);
     BYTE *pSrcColors = (BYTE *)env->GetPrimitiveArrayCritical(bbuf, 0);
 
-    // context is never null here,
-    // this check is done in D3DPipline.createResourceFactory
-
-    D3DContext *pCtx = (D3DContext *)jlong_to_ptr(ctx);
-
-    HRESULT hr = (pSrcFloats && pSrcColors) ?
+    HRESULT hr = (pSrcFloats && pSrcColors && numTrinagles > 0) ?
         pCtx->drawTriangleList(pSrcFloats, pSrcColors, numTrinagles) : E_FAIL;
 
     if (pSrcColors) env->ReleasePrimitiveArrayCritical(bbuf, pSrcColors, JNI_ABORT);
@@ -149,7 +151,9 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DVertexBuffer_nDrawTriangleList
     return hr;
 }
 
-
+/*
+ * Note: this method assumes that pVert, pSrcFloats and pSrcColors are not null
+ */
 void fillVB(PRISM_VERTEX_2D *pVert, PrismSourceVertex const *pSrcFloats, BYTE const *pSrcColors, UINT numVerts) {
     for (UINT i = 0; i < numVerts; i++) {
 
@@ -182,6 +186,8 @@ void D3DContext::stretchRect(IDirect3DSurface9* pSrcSurface,
                                IDirect3DSurface9* pDstSurface,
                                int dstX0, int dstY0, int dstX1, int dstY1)
 {
+    RETURN_IF_NULL(pd3dDevice);
+    
     HRESULT res;
     IDirect3DSurface9* pDst = (pDstSurface == NULL) ? currentSurface : pDstSurface;
     RECT srcRect = {srcX0, srcY0, srcX1, srcY1};
@@ -192,8 +198,14 @@ void D3DContext::stretchRect(IDirect3DSurface9* pSrcSurface,
     }
 }
 
+/*
+ * Note: this method assumes that pSrcFloats and pSrcColors are not null and
+ * numVerts is a positive number
+ */
 HRESULT D3DContext::drawIndexedQuads(PrismSourceVertex const *pSrcFloats, BYTE const *pSrcColors, int numVerts) {
 
+    RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
+    
     // pVertexBufferRes and pVertexBuffer is never null
     // it is checked in D3DContext::InitDevice
     IDirect3DVertexBuffer9 *pVertexBuffer = pVertexBufferRes->GetVertexBuffer();
@@ -249,8 +261,14 @@ HRESULT D3DContext::drawIndexedQuads(PrismSourceVertex const *pSrcFloats, BYTE c
     return res;
 }
 
+/*
+ * Note: this method assumes that pSrcFloats and pSrcColors are not null and
+ * numTriangles is a positive number
+ */
 HRESULT D3DContext::drawTriangleList(struct PrismSourceVertex const *pSrcFloats, BYTE const *pSrcColors, int numTriangles) {
 
+     RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
+     
     // pVertexBufferRes and pVertexBuffer is never null
     // it is checked in D3DContext::InitDevice
     IDirect3DVertexBuffer9 *pVertexBuffer = pVertexBufferRes->GetVertexBuffer();
@@ -311,12 +329,12 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DGraphics_nClear
     (JNIEnv *, jclass, jlong ctx, jint colorArgbPre,
      jboolean clearDepth, jboolean ignoreScissor)
 {
-    HRESULT res;
-    D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
-
     TraceLn(NWT_TRACE_INFO, "D3DGraphics_nClear");
+    
+    D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
+    RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
 
-    res = pCtx->BeginScene();
+    HRESULT res = pCtx->BeginScene();
     RETURN_STATUS_IF_FAILED(res);
 
     return pCtx->Clear(colorArgbPre, clearDepth, ignoreScissor);
@@ -329,13 +347,16 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DGraphics_nClear
 JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DContext_nSetBlendEnabled
   (JNIEnv *, jclass, jlong ctx, jint d3dmode)
 {
+    D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
+    RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
+    
+    IDirect3DDevice9 *pd3dDevice = pCtx->Get3DDevice();
+    RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
+
     HRESULT res;
     D3DBLEND srcBlend, dstBlend;
     BOOL enable = TRUE;
-    D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
-
-    IDirect3DDevice9 *pd3dDevice = pCtx->Get3DDevice();
-
+    
     switch (d3dmode) {
         case com_sun_prism_d3d_D3DContext_D3DCOMPMODE_CLEAR:
             srcBlend = D3DBLEND_ZERO;
@@ -374,8 +395,9 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DContext_nSetRenderTarget
   (JNIEnv *, jclass, jlong ctx, jlong targetRes, jboolean depthBuffer, jboolean msaa)
 {
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
-    D3DResource *pRes = (D3DResource *)jlong_to_ptr(targetRes);
+    RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
 
+    D3DResource *pRes = (D3DResource *)jlong_to_ptr(targetRes);
     RETURN_STATUS_IF_NULL(pRes, E_FAIL);
 
     IDirect3DSurface9 *pRenderTarget = pRes->GetSurface();
@@ -396,9 +418,8 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DContext_nSetTexture
   (JNIEnv *, jclass, jlong ctx, jlong textureRes, jint texUnit,
    jboolean linear, jint wrapMode)
 {
-    HRESULT res;
-
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
+    RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
 
     D3DResource *pRes = (D3DResource *)jlong_to_ptr(textureRes);
 
@@ -406,10 +427,12 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DContext_nSetTexture
     pCtx->getStats().numSetTexture++;
 #endif
 
-    res = pCtx->BeginScene();
+    HRESULT res = pCtx->BeginScene();
     RETURN_STATUS_IF_FAILED(res);
 
     IDirect3DDevice9 *pd3dDevice = pCtx->Get3DDevice();
+    RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
+
     IDirect3DTexture9 *pTex = pRes == NULL ? NULL : pRes->GetTexture();
     res = pd3dDevice->SetTexture(texUnit, pTex);
     RETURN_STATUS_IF_FAILED(res);
@@ -436,7 +459,8 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DContext_nSetCameraPosition
     jdouble camPosX, jdouble camPosY, jdouble camPosZ)
 {
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
-
+    RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
+    
     return pCtx->SetCameraPosition(camPosX, camPosY, camPosZ);
 }
 
@@ -452,7 +476,8 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DContext_nSetProjViewMatrix
    jdouble m30, jdouble m31, jdouble m32, jdouble m33)
 {
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
-
+    RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
+    
     return pCtx->SetProjViewMatrix(isOrtho,
         m00, m01, m02, m03,
         m10, m11, m12, m13,
@@ -472,7 +497,8 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DContext_nSetTransform
    jdouble m30, jdouble m31, jdouble m32, jdouble m33)
 {
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
-
+    RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
+    
     return pCtx->SetTransform(m00, m01, m02, m03,
                               m10, m11, m12, m13,
                               m20, m21, m22, m23,
@@ -487,7 +513,8 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DContext_nResetTransform
   (JNIEnv *, jclass, jlong ctx)
 {
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
-
+    RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
+    
     return pCtx->ResetTransform();
 }
 
@@ -500,7 +527,8 @@ JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetWorldTransformToIde
   (JNIEnv *, jclass, jlong ctx)
 {
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
-
+    RETURN_IF_NULL(pCtx);
+    
     pCtx->setWorldTransformIndentity();
 }
 
@@ -516,6 +544,7 @@ JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetWorldTransform
    jdouble m20, jdouble m21, jdouble m22, jdouble m23,
    jdouble m30, jdouble m31, jdouble m32, jdouble m33) {
     D3DContext *pCtx = (D3DContext*) jlong_to_ptr(ctx);
+    RETURN_IF_NULL(pCtx);
 
     pCtx->setWorldTransform(m00, m01, m02, m03,
             m10, m11, m12, m13,
@@ -532,6 +561,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DContext_nSetClipRect
    jint x1, jint y1, jint x2, jint y2)
 {
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
+    RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
 
     return pCtx->SetRectClip(x1, y1, x2, y2);
 }
@@ -544,6 +574,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DContext_nResetClipRect
   (JNIEnv *, jclass, jlong ctx)
 {
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
+    RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
 
     return pCtx->ResetClip();
 }
@@ -556,5 +587,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_d3d_D3DContext_nIsRTTVolatile
   (JNIEnv *, jclass, jlong ctx)
 {
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
+    RETURN_STATUS_IF_NULL(pCtx, false);
+    
     return pCtx->Get3DExDevice() ? false : true;
 }

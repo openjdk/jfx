@@ -29,8 +29,8 @@
 #ifdef ANDROID_NDK
 #include <stdio.h>
 #endif
-#include "stdlib.h"
-#include "string.h"
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include <jni.h>
@@ -1523,5 +1523,8 @@ void glass_cursor_terminate(void);
 
 
 #include "LensLogger.h"
+
+#include "lensport/lensPort.h"
+extern LensNativePort lensPort;
 
 #endif // LENS_COMMON_H

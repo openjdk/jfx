@@ -41,15 +41,12 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.control.ButtonBuilder;
+import javafx.scene.control.Button;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
-import javafx.scene.control.LabelBuilder;
 import javafx.scene.control.Slider;
-import javafx.scene.control.SliderBuilder;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.HBoxBuilder;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -127,19 +124,12 @@ public class PlayerPane extends BorderPane {
         mvPane.getChildren().add(mediaView);
         setCenter(mvPane);
 
-        mediaTopBar = HBoxBuilder.create()
-                .padding(new Insets(5, 10, 5, 10))
-                .alignment(Pos.CENTER)
-                .opacity(1)
-                .build();
+        mediaTopBar = new HBox();
+        mediaTopBar.setPadding(new Insets(5, 10, 5, 10));
+        mediaTopBar.setAlignment(Pos.CENTER);
+        mediaTopBar.setOpacity(1);
         BorderPane.setAlignment(mediaTopBar, Pos.CENTER);
 
-        mediaBottomBar = HBoxBuilder.create()
-                .padding(new Insets(5, 10, 5, 10))
-                .alignment(Pos.CENTER)
-                .opacity(1)
-                .build();
-        BorderPane.setAlignment(mediaBottomBar, Pos.CENTER);
 
         mp.currentTimeProperty().addListener(new ChangeListener<Duration>() {
             @Override
@@ -175,19 +165,16 @@ public class PlayerPane extends BorderPane {
         mp.setCycleCount(repeat ? MediaPlayer.INDEFINITE : 1);
 
         // Time label
-        Label timeLabel = LabelBuilder.create()
-                .text("Time")
-                .minWidth(Control.USE_PREF_SIZE)
-                .textFill(Color.WHITE)
-                .build();
+        Label timeLabel = new Label("Time");
+        timeLabel.setMinWidth(Control.USE_PREF_SIZE);
+        timeLabel.setTextFill(Color.WHITE);
         mediaTopBar.getChildren().add(timeLabel);
 
         // Time slider
-        timeSlider = SliderBuilder.create()
-                .id("media-slider")
-                .minWidth(240)
-                .maxWidth(Double.MAX_VALUE)
-                .build();
+        timeSlider = new Slider();
+        timeSlider.setId("media-slider");
+        timeSlider.setMinWidth(240);
+        timeSlider.setMaxWidth(Double.MAX_VALUE);
         timeSlider.valueProperty().addListener(new InvalidationListener() {
             @Override
             public void invalidated(Observable ov) {
@@ -205,28 +192,24 @@ public class PlayerPane extends BorderPane {
         mediaTopBar.getChildren().add(timeSlider);
 
         // Play label
-        playTime = LabelBuilder.create()
-                .prefWidth(130)
-                .minWidth(50)
-                .textFill(Color.WHITE)
-                .build();
+        playTime = new Label();
+        playTime.setPrefWidth(130);
+        playTime.setMinWidth(50);
+        playTime.setTextFill(Color.WHITE);
         mediaTopBar.getChildren().add(playTime);
 
         // Volume label
-        Label volumeLabel = LabelBuilder.create()
-                .text("Vol")
-                .textFill(Color.WHITE)
-                .minWidth(Control.USE_PREF_SIZE)
-                .build();
+        Label volumeLabel = new Label("Vol");
+        volumeLabel.setMinWidth(Control.USE_PREF_SIZE);
+        volumeLabel.setTextFill(Color.WHITE);
         mediaTopBar.getChildren().add(volumeLabel);
 
         // Volume slider
-        volumeSlider = SliderBuilder.create()
-                .id("media-slider")
-                .prefWidth(120)
-                .maxWidth(Region.USE_PREF_SIZE)
-                .minWidth(30)
-                .build();
+        volumeSlider = new Slider();
+        volumeSlider.setId("media-slider");
+        volumeSlider.setPrefWidth(120);
+        volumeSlider.setMinWidth(30);
+        volumeSlider.setMaxWidth(Region.USE_PREF_SIZE);
         volumeSlider.valueProperty().addListener(new InvalidationListener() {
             @Override
             public void invalidated(Observable ov) {
@@ -276,38 +259,32 @@ public class PlayerPane extends BorderPane {
             }
         };
 
-        mediaBottomBar = HBoxBuilder.create()
-                .id("bottom")
-                .spacing(0)
-                .alignment(Pos.CENTER)
-                .children(
-                ButtonBuilder.create()
-                .id("back-button")
-                .text("Back")
-                .onAction(backAction)
-                .build(),
-                ButtonBuilder.create()
-                .id("stop-button")
-                .text("Stop")
-                .onAction(stopAction)
-                .build(),
-                ButtonBuilder.create()
-                .id("play-button")
-                .text("Play")
-                .onAction(playAction)
-                .build(),
-                ButtonBuilder.create()
-                .id("pause-button")
-                .text("Pause")
-                .onAction(pauseAction)
-                .build(),
-                ButtonBuilder.create()
-                .id("forward-button")
-                .text("Forward")
-                .onAction(forwardAction)
-                .build())
-                .build();
-
+        Button backButton = new Button("Back");
+        backButton.setId("back-button");
+        backButton.setOnAction(backAction);
+ 
+        Button stopButton = new Button("Stop");
+        stopButton.setId("stop-button");
+        stopButton.setOnAction(stopAction);
+ 
+        Button playButton = new Button("Play");
+        playButton.setId("play-button");
+        playButton.setOnAction(playAction);
+ 
+        Button pauseButton = new Button("Pause");
+        pauseButton.setId("pause-button");
+        pauseButton.setOnAction(pauseAction);
+ 
+        Button forwardButton = new Button("Forward");
+        forwardButton.setId("forward-button");
+        forwardButton.setOnAction(forwardAction);
+        
+        mediaBottomBar = new HBox();
+        mediaBottomBar.setId("bottom");
+        mediaBottomBar.setSpacing(0);
+        mediaBottomBar.setAlignment(Pos.CENTER);
+        mediaBottomBar.getChildren().addAll(backButton, stopButton, playButton, pauseButton, forwardButton);
+        BorderPane.setAlignment(mediaBottomBar, Pos.CENTER);
         setBottom(mediaBottomBar);
     }
 

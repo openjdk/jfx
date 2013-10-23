@@ -26,7 +26,11 @@
 package com.sun.javafx.tk.quantum;
 
 import javafx.application.Platform;
+import javafx.collections.ObservableList;
 import javafx.event.EventType;
+import javafx.scene.input.InputMethodEvent;
+import javafx.scene.input.InputMethodRequests;
+import javafx.scene.input.InputMethodTextRun;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import java.nio.IntBuffer;
@@ -54,9 +58,6 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
 
     volatile IntBuffer textureBits;
     volatile int bitsLineStride;
-
-    int width;
-    int height;
 
     private final EmbeddedSceneDnD dndDelegate;
 
@@ -144,15 +145,6 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
 
     @Override
     public void setSize(final int width, final int height) {
-        ViewPainter.renderLock.lock();
-        try {
-            this.width = width;
-            this.height = height;
-            updateSceneState();
-        } finally {
-            ViewPainter.renderLock.unlock();
-        }
-
         Platform.runLater(new Runnable() {
             @Override
             public void run() {
@@ -167,8 +159,6 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
                 }, getAccessControlContext());
             }
         });
-
-        entireSceneNeedsRepaint();
     }
 
     @Override
@@ -238,7 +228,26 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
             }
         });
     }
-    
+
+    @Override
+    public void inputMethodEvent(EventType<InputMethodEvent> type,
+                                 ObservableList<InputMethodTextRun> composed, String committed,
+                                 int caretPosition) {
+        Platform.runLater(new Runnable() {
+            @Override
+            public void run() {
+                AccessController.doPrivileged(new PrivilegedAction<Void>() {
+                    @Override
+                    public Void run() {
+                        if (sceneListener != null) {
+                            sceneListener.inputMethodEvent(type, composed, committed, caretPosition);
+                        }
+                        return null;
+                    }
+                });
+            }
+        });
+    }
 
     @Override
     public void menuEvent(final int x, final int y, final int xAbs, final int yAbs, final boolean isKeyboardTrigger) {
@@ -302,5 +311,10 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     @Override
     public EmbeddedSceneDropTargetInterface createDropTarget() {
         return dndDelegate.createDropTarget();
+    }
+
+    @Override
+    public InputMethodRequests getInputMethodRequests() {
+        return inputMethodRequests;
     }
 }

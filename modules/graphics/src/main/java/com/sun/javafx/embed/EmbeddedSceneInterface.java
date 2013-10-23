@@ -28,6 +28,12 @@ package com.sun.javafx.embed;
 import java.nio.IntBuffer;
 
 import com.sun.javafx.scene.traversal.Direction;
+import com.sun.javafx.tk.TKSceneListener;
+import javafx.collections.ObservableList;
+import javafx.event.EventType;
+import javafx.scene.input.InputMethodEvent;
+import javafx.scene.input.InputMethodRequests;
+import javafx.scene.input.InputMethodTextRun;
 
 /**
  * An interface for embedded FX scene peer. It is used by HostInterface
@@ -71,4 +77,10 @@ public interface EmbeddedSceneInterface {
     public void setDragStartListener(EmbeddedSceneDragStartListenerInterface l);
 
     public EmbeddedSceneDropTargetInterface createDropTarget();
+
+    public void inputMethodEvent(EventType<InputMethodEvent> type,
+                                 ObservableList<InputMethodTextRun> composed, String committed,
+                                 int caretPosition);
+
+    public InputMethodRequests getInputMethodRequests();
 }
