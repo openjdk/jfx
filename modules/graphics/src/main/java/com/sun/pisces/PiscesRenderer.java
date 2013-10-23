@@ -386,7 +386,7 @@ public final class PiscesRenderer {
         Transform6 textureTransform, boolean repeat,
         int bboxX, int bboxY, int bboxW, int bboxH,
         int lEdge, int rEdge, int tEdge, int bEdge,
-        int interpolateMinX, int interpolateMinY, int interpolateMaxX, int interpolateMaxY,
+        int txMin, int tyMin, int txMax, int tyMax,
         boolean hasAlpha)
     {
         this.inputImageCheck(width, height, offset, stride, data.length);
@@ -394,7 +394,7 @@ public final class PiscesRenderer {
             textureTransform, repeat,
             bboxX, bboxY, bboxW, bboxH,
             lEdge, rEdge, tEdge, bEdge,
-            interpolateMinX, interpolateMinY, interpolateMaxX, interpolateMaxY,
+            txMin, tyMin, txMax, tyMax,
             hasAlpha);
     }
 
@@ -402,7 +402,7 @@ public final class PiscesRenderer {
         Transform6 textureTransform, boolean repeat,
         int bboxX, int bboxY, int bboxW, int bboxH,
         int lEdge, int rEdge, int tEdge, int bEdge,
-        int interpolateMinX, int interpolateMinY, int interpolateMaxX, int interpolateMaxY,
+        int txMin, int tyMin, int txMax, int tyMax,
         boolean hasAlpha);
 
     private void inputImageCheck(int width, int height, int offset, int stride, int data_length) {

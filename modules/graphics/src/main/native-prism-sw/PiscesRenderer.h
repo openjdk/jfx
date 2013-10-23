@@ -356,8 +356,8 @@ typedef struct _Renderer {
     jint _texture_imageWidth;
     jint _texture_imageHeight;
     jint _texture_stride;
-    jint _texture_interpolateMinX, _texture_interpolateMinY;
-    jint _texture_interpolateMaxX, _texture_interpolateMaxY;
+    jint _texture_txMin, _texture_tyMin;
+    jint _texture_txMax, _texture_tyMax;
     jboolean _texture_repeat;
     jlong _texture_m00, _texture_m01, _texture_m02;
     jlong _texture_m10, _texture_m11, _texture_m12;

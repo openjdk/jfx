@@ -660,7 +660,7 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_drawImageImpl
     jintArray dataArray, jint width, jint height, jint offset, jint stride,
     jobject jTransform, jboolean repeat, jint bboxX, jint bboxY, jint bboxW, jint bboxH,
     jint lEdge, jint rEdge, jint tEdge, jint bEdge,
-    jint interpolateMinX, jint interpolateMinY, jint interpolateMaxX, jint interpolateMaxY,
+    jint txMin, jint tyMin, jint txMax, jint tyMax,
     jboolean hasAlpha)
 {
     Renderer* rdr;
@@ -674,7 +674,7 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_drawImageImpl
         transform_get6(&textureTransform, env, jTransform);
         renderer_setTexture(rdr, imageMode, data + offset, width, height, stride,
             repeat, JNI_TRUE, &textureTransform, JNI_FALSE, hasAlpha,
-            interpolateMinX, interpolateMinY, interpolateMaxX, interpolateMaxY);
+            txMin, tyMin, txMax, tyMax);
 
         fillRect(env, this, rdr,
             bboxX, bboxY, bboxW, bboxH,
@@ -690,6 +690,7 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_drawImageImpl
         JNI_ThrowNew(env, "java/lang/OutOfMemoryError",
                      "Allocation of internal renderer buffer failed.");
     }
+    PISCES_DEBUG_FLUSH(stdout);
 }
 
 /*
