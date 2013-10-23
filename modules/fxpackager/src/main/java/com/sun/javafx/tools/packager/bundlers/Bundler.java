@@ -106,7 +106,7 @@ public abstract class Bundler {
         } catch (IOException ioe) {}
 
         Log.verbose("Looking for bundlers for type=" + p.type.toString()
-                + " format=" + (p.bundleFormat != null ? p.bundleFormat : "any"));
+                + " format=" + (p.bundleFormat.isEmpty() ? "any" : p.bundleFormat.toString()));
         for (Bundler b: knownBundlers) {
             if (verbose) {
                 b.setVerbose(true);

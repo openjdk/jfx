@@ -104,7 +104,7 @@ public class WinExeBundler extends Bundler {
     @Override
     boolean validate(BundleParams p) throws Bundler.UnsupportedPlatformException, Bundler.ConfigException {
         if (!(p.type == Bundler.BundleType.ALL || p.type == Bundler.BundleType.INSTALLER)
-                 || !(p.bundleFormat == null || "exe".equals(p.bundleFormat))) {
+                 || !(p.bundleFormat.isEmpty() || p.bundleFormat.contains("exe"))) {
             return false;
         }
         //run basic validation to ensure requirements are met
