@@ -1124,16 +1124,14 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                     final double closeBtnHeight = showCloseButton() ? snapSize(closeBtn.prefHeight(-1)) : 0;
                     final double minWidth = snapSize(skinnable.getTabMinWidth());
                     final double maxWidth = snapSize(skinnable.getTabMaxWidth());
-                    final double minHeight = snapSize(skinnable.getTabMinHeight());
                     final double maxHeight = snapSize(skinnable.getTabMaxHeight());
 
                     double labelAreaWidth = prefLabelWidth;
-                    double labelAreaHeight = prefLabelHeight;
                     double labelWidth = prefLabelWidth;
                     double labelHeight = prefLabelHeight;
                     
                     final double childrenWidth = labelAreaWidth + closeBtnWidth;
-                    final double childrenHeight = Math.max(labelAreaHeight, closeBtnHeight);
+                    final double childrenHeight = Math.max(labelHeight, closeBtnHeight);
                     
                     if (childrenWidth > maxWidth && maxWidth != Double.MAX_VALUE) {
                         labelAreaWidth = maxWidth - closeBtnWidth;
@@ -1143,10 +1141,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                     }
 
                     if (childrenHeight > maxHeight && maxHeight != Double.MAX_VALUE) {
-                        labelAreaHeight = maxHeight;
                         labelHeight = maxHeight;
-                    } else if (childrenHeight < minHeight) {
-                        labelAreaHeight = minHeight;
                     }
 
                     if (animating) {
@@ -1179,12 +1174,12 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                         positionInArea(closeBtn, closeBtnStartX, paddingTop, closeBtnWidth, h,
                                 /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
                     }
-                    
+
                     focusIndicator.resizeRelocate(
-                            label.getLayoutX() - padding, 
-                            Math.min(label.getLayoutY(), closeBtn.isVisible() ? closeBtn.getLayoutY() : Double.MAX_VALUE) - padding, 
-                            labelWidth + closeBtnWidth + padding * 2,
-                            Math.max(labelHeight, closeBtnHeight) + padding*2);
+                            paddingLeft - padding,
+                            paddingTop + padding,
+                            w + 2 * padding,
+                            h - 2 * padding);
                 }
             };
             inner.getStyleClass().add("tab-container");
