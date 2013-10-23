@@ -174,6 +174,8 @@ public class TriangleMesh extends Mesh {
 
     /**
      * Gets the {@code ObservableFloatArray} of texture coordinates of this {@code TriangleMesh}.
+     * The coordinates are proportional, so texture's top-left corner
+     * is at [0, 0] and bottom-right corner is at [1, 1].
      *
      * @return {@code ObservableFloatArray} array of texture coordinates
      * where each texture coordinate is represented by 2 float values: u and v,
