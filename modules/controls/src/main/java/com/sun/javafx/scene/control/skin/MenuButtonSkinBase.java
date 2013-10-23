@@ -248,11 +248,16 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
      **************************************************************************/
     
     @Override protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
-        return computePrefWidth(height, topInset, rightInset, bottomInset, leftInset);
+        return leftInset
+                + label.minWidth(height)
+                + snapSize(arrowButton.minWidth(height))
+                + rightInset;
     }
-    
+
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        return computePrefHeight(width, topInset, rightInset, bottomInset, leftInset);
+        return topInset
+                + Math.max(label.minHeight(width), snapSize(arrowButton.minHeight(-1)))
+                + bottomInset;
     }
 
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
