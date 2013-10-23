@@ -158,9 +158,8 @@ public class PlanetaryPlayerPane extends BorderPane {
         mediaBottomBar.setAlignment(Pos.CENTER);
         BorderPane.setAlignment(mediaBottomBar, Pos.CENTER);
 
-        Button backButton = new Button();
+        Button backButton = new Button("Back");
         backButton.setId("back-button");
-        backButton.setText("Back");
         backButton.setOnAction(backAction);
 
         Button stopButton = new Button("Stop");
