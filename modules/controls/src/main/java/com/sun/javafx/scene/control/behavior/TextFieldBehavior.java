@@ -27,6 +27,7 @@ package com.sun.javafx.scene.control.behavior;
 
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WeakChangeListener;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
@@ -55,6 +56,8 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     private TextFieldSkin skin;
     private ContextMenu contextMenu;
     private TwoLevelFocusBehavior tlFocus;
+    private ChangeListener<Scene> sceneListener;
+    private ChangeListener<Node> focusOwnerListener;
 
     public TextFieldBehavior(final TextField textField) {
         super(textField, TEXT_INPUT_BINDINGS);
@@ -73,6 +76,38 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
                 handleFocusChange();
             }
         });
+
+        focusOwnerListener = new ChangeListener<Node>() {
+            @Override public void changed(ObservableValue<? extends Node> observable, Node oldValue, Node newValue) {
+                // RT-23699: The selection is now only affected when the TextField
+                // gains or loses focus within the Scene, and not when the whole
+                // stage becomes active or inactive.
+                if (newValue == textField) {
+                    if (!focusGainedByMouseClick) {
+                        textField.selectRange(textField.getLength(), 0);
+                    }
+                } else {
+                    textField.selectRange(0, 0);
+                }
+            }
+        };
+
+        sceneListener = new ChangeListener<Scene>() {
+            private WeakChangeListener<Node> weakListener = new WeakChangeListener<Node>(focusOwnerListener);
+            @Override public void changed(ObservableValue<? extends Scene> observable, Scene oldValue, Scene newValue) {
+                if (oldValue != null) {
+                    oldValue.focusOwnerProperty().removeListener(weakListener);
+                }
+                if (newValue != null) {
+                    newValue.focusOwnerProperty().addListener(weakListener);
+                }
+            }
+        };
+        textField.sceneProperty().addListener(new WeakChangeListener<Scene>(sceneListener));
+
+        if (textField.getScene() != null) {
+            textField.getScene().focusOwnerProperty().addListener(focusOwnerListener);
+        }
 
         // Only add this if we're on an embedded platform that supports 5-button navigation
         if (com.sun.javafx.scene.control.skin.Utils.isTwoLevelFocus()) {
@@ -116,7 +151,6 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
                         trans.getMzx(), trans.getMzy(), trans.getMzz(), trans.getMzt());
             }
             if (!focusGainedByMouseClick) {
-                textField.selectRange(textField.getLength(), 0);
                 setCaretAnimating(true);
             }
         } else {
@@ -124,7 +158,6 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
                 // releasing the focus => we need to hide the native component and also native keyboard
                 textField.getScene().getWindow().impl_getPeer().releaseInput();
             }
-            textField.selectRange(0, 0);
             focusGainedByMouseClick = false;
             setCaretAnimating(false);
         }
