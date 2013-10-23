@@ -27,7 +27,7 @@ questions.
 <?import javafx.scene.shape.TriangleMesh?>
 
 <TriangleMesh points="0 1 2 3 4 5 6 7 8 9"
-              texcoords="0,1    ,2,3,4,5,6,7,8,9"
+              texcoords="0,1    ,2,3,4,5, 6,7,   8,9"
               faces="0 1 2 3 4
                      5 6 7 8 9"
               facesmoothinggroups="0,1,2,3,4,5 6 7 8 9"/>
