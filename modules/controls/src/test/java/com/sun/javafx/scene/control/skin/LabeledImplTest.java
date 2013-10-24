@@ -25,6 +25,10 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.pgstub.StubImageLoaderFactory;
+import com.sun.javafx.pgstub.StubPlatformImageInfo;
+import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.tk.Toolkit;
 import javafx.css.StyleConverter;
 import javafx.css.CssMetaData;
 import java.util.ArrayList;
@@ -49,6 +53,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
 import javax.swing.GroupLayout;
 
+import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -60,7 +65,16 @@ import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)
 public class LabeledImplTest {
-    
+
+    @BeforeClass
+    public static void configureImageLoaderFactory() {
+        final StubImageLoaderFactory imageLoaderFactory =
+                ((StubToolkit) Toolkit.getToolkit()).getImageLoaderFactory();
+        imageLoaderFactory.reset();
+        imageLoaderFactory.registerImage(LabeledImpl.class.getResource("caspian/center-btn.png").toExternalForm(),
+                new StubPlatformImageInfo(32, 32));
+    }
+
     private static final Labeled LABELED = new Label("label");
     private static final LabeledImpl LABELED_IMPL = new LabeledImpl(LABELED);
     

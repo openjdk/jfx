@@ -430,49 +430,97 @@ public abstract class Labeled extends Control {
     }
     public final Node getGraphic() { return graphic == null ? null : graphic.getValue(); }
 
-    private StringProperty imageUrl = null;
+    private StyleableStringProperty imageUrl = null;
     /**
      * The imageUrl property is set from CSS and then the graphic property is
      * set from the invalidated method. This ensures that the same image isn't
      * reloaded. 
      */
-    private StringProperty imageUrlProperty() {
+    private StyleableStringProperty imageUrlProperty() {
         if (imageUrl == null) {
             imageUrl = new StyleableStringProperty() {
 
+                //
+                // If imageUrlProperty is invalidated, this is the origin of the style that
+                // triggered the invalidation. This is used in the invaildated() method where the
+                // value of super.getStyleOrigin() is not valid until after the call to set(v) returns,
+                // by which time invalidated will have been called.
+                // This value is initialized to USER in case someone calls set on the imageUrlProperty, which
+                // is possible:
+                //     CssMetaData metaData = ((StyleableProperty)labeled.graphicProperty()).getCssMetaData();
+                //     StyleableProperty prop = metaData.getStyleableProperty(labeled);
+                //     prop.set(someUrl);
+                //
+                // TODO: Note that prop != labeled, which violates the contract between StyleableProperty and CssMetaData.
+                //
+                StyleOrigin origin = StyleOrigin.USER;
+
                 @Override
                 public void applyStyle(StyleOrigin origin, String v) {
-                    super.applyStyle(origin, v);
-                    if (v == null) {
+
+                    this.origin = origin;
+
+                    // Don't want applyStyle to throw an exception which would leave this.origin set to the wrong value
+                    if (graphic.isBound() == false) super.applyStyle(origin, v);
+
+                    // Origin is only valid for this invocation of applyStyle, so reset it to USER in case someone calls set.
+                    this.origin = StyleOrigin.USER;
+                }
+
+                @Override
+                protected void invalidated() {
+
+                    // need to call super.get() here since get() is overridden to return the graphicProperty's value
+                    String url = super.get();
+
+                    if (url == null) {
                         ((StyleableProperty)graphicProperty()).applyStyle(origin, null);
-                    } else if (v.startsWith(CSSParser.SPECIAL_REGION_URL_PREFIX)) {
-                        final Region region = new Region();
-                        final String styleClassOrId = v.substring(CSSParser.SPECIAL_REGION_URL_PREFIX.length());
-                        if (styleClassOrId.length() > 0) {
-                            Selector s = Selector.createSelector(styleClassOrId);
-                            if (s instanceof SimpleSelector) {
-                                SimpleSelector ss = (SimpleSelector)s;
-                                region.setId(ss.getId());
-                                region.getStyleClass().addAll(ss.getStyleClasses());
-                            }
-                        }
-                        ((StyleableProperty)graphicProperty()).applyStyle(origin, region);
                     } else {
-                        URL url = null;
-                        try {
-                            url = new URL(v);
-                        } catch (MalformedURLException malf) {
-                            // This may be a relative URL, so try resolving it using the application classloader
-                            final ClassLoader cl = Thread.currentThread().getContextClassLoader();
-                            url = cl.getResource(v);
-                        }
-                        if (url != null) {
-                            final Image img = StyleManager.getInstance().getCachedImage(url.toExternalForm());
-                            if (img != null) {
-                                ((StyleableProperty)graphicProperty()).applyStyle(origin, new ImageView(img));
-                            }
+
+                        final Image img = StyleManager.getInstance().getCachedImage(url);
+
+                        if (img != null) {
+                            //
+                            // Note that it is tempting to try to re-use existing ImageView simply by setting
+                            // the image on the current ImageView, if there is one. This would effectively change
+                            // the image, but not the ImageView which means that no graphicProperty listeners would
+                            // be notified. This is probably not what we want.
+                            //
+
+                            //
+                            // Have to call applyStyle on graphicProperty so that the graphicProperty's
+                            // origin matches the imageUrlProperty's origin.
+                            //
+                            ((StyleableProperty)graphicProperty()).applyStyle(origin, new ImageView(img));
                         }
                     }
+                }
+
+                @Override
+                public String get() {
+
+                    //
+                    // The value of the imageUrlProperty is that of the graphicProperty.
+                    // Return the value in a way that doesn't expand the graphicProperty.
+                    //
+                    final Node graphic = getGraphic();
+                    if (graphic instanceof ImageView) {
+                        final Image image = ((ImageView)graphic).getImage();
+                        if (image != null) {
+                            return image.impl_getUrl();
+                        }
+                    }
+                    return null;
+                }
+
+                @Override
+                public StyleOrigin getStyleOrigin() {
+
+                    //
+                    // The origin of the imageUrlProperty is that of the graphicProperty.
+                    // Return the origin in a way that doesn't expand the graphicProperty.
+                    //
+                    return graphic != null ? ((StyleableProperty)graphic).getStyleOrigin() : null;
                 }
 
                 @Override
@@ -884,7 +932,7 @@ public abstract class Labeled extends Control {
 
             @Override
             public StyleableProperty<String> getStyleableProperty(Labeled n) {
-                return (StyleableProperty)n.imageUrlProperty();
+                return n.imageUrlProperty();
             }
         };
         
