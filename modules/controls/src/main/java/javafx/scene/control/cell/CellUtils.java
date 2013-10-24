@@ -227,6 +227,10 @@ class CellUtils {
         }
         
         textField.selectAll();
+
+        // requesting focus so that key input can immediately go into the
+        // TextField (see RT-28132)
+        textField.requestFocus();
     }
     
     static <T> void cancelEdit(Cell<T> cell, final StringConverter<T> converter, Node graphic) {
