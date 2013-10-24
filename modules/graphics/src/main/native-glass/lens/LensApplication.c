@@ -478,6 +478,8 @@ void glass_application_notifyMouseEvent(JNIEnv *env,
                                isPopupTrigger, JNI_FALSE);
         if (glass_application_checkReportException(env)) {
             //an exception happened, bail now.
+            //because the stack trace doesn't include native function, print a message
+            GLASS_LOG_SEVERE("Exception detected, bailing out");
             return;
         }
 

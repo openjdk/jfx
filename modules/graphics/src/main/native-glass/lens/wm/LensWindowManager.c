@@ -44,6 +44,8 @@ static int _mousePosY;
 static jboolean _mousePressed = JNI_FALSE;
 static jboolean _onDraggingAction = JNI_FALSE;
 static NativeWindow _dragGrabbingWindow = NULL;
+static int _mousePressedButton = com_sun_glass_events_MouseEvent_BUTTON_NONE;
+static NativeWindow touchWindow = NULL;
 
 static jboolean isDnDStarted = JNI_FALSE;
 
@@ -942,6 +944,7 @@ NativeWindow glass_window_findWindowAtLocation(int absX, int absY,
     GLASS_LOG_FINER("Absolute coordinates %i,%i are not on a window",
                     absX, absY);
 
+
     return NULL;
 }
 
@@ -1004,16 +1007,34 @@ void lens_wm_notifyButtonEvent(JNIEnv *env,
     //cache new coordinates
     _mousePosX = xabs;
     _mousePosY = yabs;
-
     window = glass_window_findWindowAtLocation(xabs, yabs,
                           &relX, &relY);
 
-    _mousePressed = pressed;
+    GLASS_LOG_FINEST("button event on window %d[%p], pressed %s, button %d, abs (%d,%d) rel (%d,%d)",
+                                      window?window->id:-1,
+                                      window,
+                                      pressed?"true":"false",
+                                      button,
+                                      xabs, yabs,
+                                      relX, relY);
+
+    if (_mousePressedButton == com_sun_glass_events_MouseEvent_BUTTON_NONE) {
+        if (_onDraggingAction) {
+             GLASS_LOG_SEVERE("bad native mouse drag state - Press event while on drag, resetting");
+             _onDraggingAction = JNI_FALSE;
+             _dragGrabbingWindow = NULL;
+        }
+        GLASS_LOG_FINEST("first press (button %d)", button);
+        _mousePressedButton = button;
+         
+    } else if (!pressed && button == _mousePressedButton) {
+        GLASS_LOG_FINEST("pressed button %d released - stopping native mouse drag", button);
+        _mousePressedButton = com_sun_glass_events_MouseEvent_BUTTON_NONE;        
+         _onDraggingAction = JNI_FALSE;
+        _dragGrabbingWindow = NULL;
+    }
 
     if (_onDraggingAction) {
-        if (pressed) {
-            GLASS_LOG_SEVERE("Press event while on drag !");
-        }
 
         if (_dragGrabbingWindow != NULL) {
 
@@ -1026,9 +1047,11 @@ void lens_wm_notifyButtonEvent(JNIEnv *env,
                                                button);
 
         }
-
-        _onDraggingAction = JNI_FALSE;
-        _dragGrabbingWindow = NULL;
+        
+        if (button == _mousePressedButton) {
+            _onDraggingAction = JNI_FALSE;
+            _dragGrabbingWindow = NULL;
+        }
 
     } else {
         if (window != NULL) {
@@ -1051,78 +1074,90 @@ void lens_wm_notifyButtonEvent(JNIEnv *env,
 
 }
 
-
 // check for window grab then forward event to application.
 // check for focus changes and handle them.
 void lens_wm_notifyMultiTouchEvent(JNIEnv *env,
                                    jint count,
                                    jint *states,
                                    jlong *ids,
-                                   int *xabs, int *yabs) {
+                                   int *xabs, int *yabs,
+                                   int primaryPointIndex) {
 
     int i;
-    int dx, dy;
-    NativeWindow window;
-    jboolean allReleased;
+    int dx, dy, relX, relY, absX, absY;
+    jboolean allReleased;    
 
-    //cache new coordinates
-    _mousePosX = xabs[0];
-    _mousePosY = yabs[0];
-
-    fbCursorSetPosition(_mousePosX, _mousePosY);
-
-    if (_dragGrabbingWindow == NULL) {
-        int relX, relY;
-        window = glass_window_findWindowAtLocation(xabs[0], yabs[0],
-                          &relX, &relY);
-        dx = relX - xabs[0];
-        dy = relY - yabs[0];
-        lens_wm_setMouseWindow(window);
-    } else {
-        window = _dragGrabbingWindow;
-        dx = -window->currentBounds.x;
-        dy = -window->currentBounds.y;
+    //set the touch window on first touch event
+    if (touchWindow == NULL) {
+        //find the touch window for first event
+        touchWindow = glass_window_findWindowAtLocation(xabs[primaryPointIndex],
+                                                        yabs[primaryPointIndex],
+                                                        &relX, &relY);
+        lens_wm_setMouseWindow(touchWindow);
     }
 
-    if (states[0] == com_sun_glass_events_TouchEvent_TOUCH_PRESSED && !_mousePressed) {
-        _mousePressed = JNI_TRUE;
-        if (window) {
-            // Pressed on window
-            glass_application_notifyMouseEvent(env,
-                                               window,
-                                               com_sun_glass_events_MouseEvent_ENTER,
-                                               xabs[0] + dx, yabs[0] + dy, xabs[0], yabs[0],
-                                               com_sun_glass_events_MouseEvent_BUTTON_NONE);
+    GLASS_LOG_FINER("touch window %d, indexPoint = %d",
+                    touchWindow? touchWindow->id : -1,
+                    primaryPointIndex);
+    if (touchWindow == NULL && primaryPointIndex == -1) {
+        GLASS_LOG_FINER("Touch event outside a window");
+    }
+    //sythesis mouse events.
+    // handling of grab, exit/enter events etc. is done by the mouse handlers
+    if (primaryPointIndex == -1) {
+        //all points released, release button
+        GLASS_LOG_FINEST("touch -> mouse - release");
+        //use last location
+        absX = _mousePosX; 
+        absY = _mousePosY;
+        lens_wm_notifyButtonEvent(env,
+                                  JNI_FALSE, //pressed
+                                  com_sun_glass_events_MouseEvent_BUTTON_LEFT,
+                                  absX,
+                                  absY);
+    } else {
+        //use new location
+        absX = xabs[primaryPointIndex];
+        absY = yabs[primaryPointIndex];
+        switch (states[primaryPointIndex]) {
+            case com_sun_glass_events_TouchEvent_TOUCH_PRESSED:
+                //send button pressed
+                GLASS_LOG_FINEST("touch -> mouse - pressed");
+                lens_wm_notifyButtonEvent(env,
+                                          JNI_TRUE, //preseed
+                                          com_sun_glass_events_MouseEvent_BUTTON_LEFT,
+                                          absX,
+                                          absY);
+
+                break;
+            case com_sun_glass_events_TouchEvent_TOUCH_MOVED:
+                GLASS_LOG_FINEST("touch -> mouse - move");
+                lens_wm_notifyMotionEvent(env,
+                                          absX,
+                                          absY);
+                break;
+            case com_sun_glass_events_TouchEvent_TOUCH_STILL:
+                //nothing to do
+                GLASS_LOG_FINEST("touch -> mouse - still, ignoring");
+                break;
+            case com_sun_glass_events_TouchEvent_TOUCH_RELEASED:
+                GLASS_LOG_WARNING("touch -> mouse - release, illegal state");
+                break;
         }
     }
-
-    allReleased = JNI_TRUE;
-    for (i = 0; i < count && allReleased; i++) {
-        if (states[i] != com_sun_glass_events_TouchEvent_TOUCH_RELEASED) {
-            allReleased = JNI_FALSE;
-            break;
-        }
-    }
-    if (allReleased) {
-        _mousePressed = JNI_FALSE;
-        _onDraggingAction = JNI_FALSE;
-        _dragGrabbingWindow = NULL;
-        glass_inputEvents_updateMouseButtonModifiers(
-            com_sun_glass_events_MouseEvent_BUTTON_LEFT,
-            com_sun_glass_events_MouseEvent_DOWN);
-    } else {
-        glass_inputEvents_updateMouseButtonModifiers(
-            com_sun_glass_events_MouseEvent_BUTTON_LEFT,
-            com_sun_glass_events_MouseEvent_UP);
-    }
-
-    if (window != NULL) {
-        glass_application_notifyMultiTouchEvent(env, window, count,
+    
+    if (touchWindow != NULL) {
+        dx = -touchWindow->currentBounds.x;
+        dy = -touchWindow->currentBounds.y;
+        glass_application_notifyMultiTouchEvent(env, touchWindow, count,
                                                 states, ids, xabs, yabs,
                                                 dx, dy);
+        if (primaryPointIndex == -1) {
+            //all released
+            touchWindow = NULL;
+        }
     }
-    handleClickOrTouchEvent(env, xabs[0] + dx, yabs[0] + dy);
-
+   
 }
 
 
@@ -1142,9 +1177,8 @@ void lens_wm_notifyMotionEvent(JNIEnv *env, int mousePosX, int mousePosY) {
         _onDraggingAction = JNI_TRUE;
         _dragGrabbingWindow = lens_wm_getMouseWindow();
     }
-    
-    NativeWindow window = glass_window_findWindowAtLocation(
-                              _mousePosX, _mousePosY, &relX, &relY);
+    NativeWindow window = glass_window_findWindowAtLocation(_mousePosX, _mousePosY,
+                                                            &relX, &relY);
 
     GLASS_LOG_FINER("Motion event on window %i[%p] absX=%i absY=%i, relX=%i, relY=%i",
                     (window)?window->id:-1,
