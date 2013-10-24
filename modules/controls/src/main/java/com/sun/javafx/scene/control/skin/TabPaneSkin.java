@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.Utils;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -1101,7 +1102,6 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             
             updateGraphicRotation();
 
-            final int padding = 2;
             final Region focusIndicator = new Region();
             focusIndicator.setMouseTransparent(true);
             focusIndicator.getStyleClass().add("focus-indicator");
@@ -1175,11 +1175,20 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                                 /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
                     }
 
+                    // Magic numbers regretfully introduced for RT-28944 (so that
+                    // the focus rect appears as expected on Windows and Mac).
+                    // In short we use the vPadding to shift the focus rect down
+                    // into the content area (whereas previously it was being clipped
+                    // on Windows, whilst it still looked fine on Mac). In the
+                    // future we may want to improve this code to remove the
+                    // magic number. Similarly, the hPadding differs on Mac.
+                    final int vPadding = Utils.isMac() ? 2 : 3;
+                    final int hPadding = Utils.isMac() ? 2 : 1;
                     focusIndicator.resizeRelocate(
-                            paddingLeft - padding,
-                            paddingTop + padding,
-                            w + 2 * padding,
-                            h - 2 * padding);
+                            paddingLeft - hPadding,
+                            paddingTop + vPadding,
+                            w + 2 * hPadding,
+                            h - 2 * vPadding);
                 }
             };
             inner.getStyleClass().add("tab-container");
