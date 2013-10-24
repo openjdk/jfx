@@ -26,7 +26,7 @@
 ext.ARMV6SF = [:]
 
 fetchExternalTools('ARMV6SF', [ "armv6-vfp-04.tgz" ], 
-  rootProject.CROSS_TOOLS_DIR, rootProject.IMPORT_CROSS_TOOLS)
+  rootProject.CROSS_TOOLS_DIR, rootProject.IS_IMPORT_CROSS_TOOLS)
 
 // Define the location of the sdk and toolchain
 def sdk=file("${rootProject.CROSS_TOOLS_DIR}/armv6-vfp-04")

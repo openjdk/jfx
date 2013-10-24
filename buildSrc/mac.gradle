@@ -91,9 +91,9 @@ def ccFlags = [
         commonParams,
         IS_DEBUG_NATIVE ? "-DDEBUG" : ["-O3", "-DNDEBUG"]].flatten()
 
-def compiler = COMPILE_PARFAIT ? "parfait-gcc" : "gcc";
-def cc_compiler = COMPILE_PARFAIT ? "parfait-cc" : "cc";
-def linker = COMPILE_PARFAIT ? "parfait-g++" : "g++";
+def compiler = IS_COMPILE_PARFAIT ? "parfait-gcc" : "gcc";
+def cc_compiler = IS_COMPILE_PARFAIT ? "parfait-cc" : "cc";
+def linker = IS_COMPILE_PARFAIT ? "parfait-g++" : "g++";
 
 MAC.glass = [:]
 MAC.glass.javahInclude = [

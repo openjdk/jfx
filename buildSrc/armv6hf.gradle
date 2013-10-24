@@ -28,7 +28,7 @@ ext.ARMV6HF = [:]
 fetchExternalTools('ARMV6HF', 
   ["armhf-raspberry-pi-10.tgz",
    "gcc-linaro-arm-linux-gnueabihf-raspbian-2012.09-20120921_linux.tgz" ], 
-  rootProject.CROSS_TOOLS_DIR, rootProject.IMPORT_CROSS_TOOLS)
+  rootProject.CROSS_TOOLS_DIR, rootProject.IS_IMPORT_CROSS_TOOLS)
 
 // Define the location of the sdk and toolchain
 def sdk=file("${rootProject.CROSS_TOOLS_DIR}/armhf-raspberry-pi-10")

@@ -95,8 +95,6 @@ def closedDir = file("$projectDir/../rt-closed")
 def toolchainArchs = ["arm-linux-androideabi", "mipsel-linux-android", "x86"]
 def armArchs = ["armeabi", "armeabiv-7a"]
 
-defineProperty("COMPILE_PANGO", "false")
-
 ANDROID = [:]
 ANDROID.compileSwing = false;
 ANDROID.compileSWT = false;
