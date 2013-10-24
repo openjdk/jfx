@@ -26,19 +26,26 @@
 package com.sun.javafx.font.directwrite;
 
 import com.sun.javafx.font.DisposerRecord;
+import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrikeDesc;
 import com.sun.javafx.font.Glyph;
 import com.sun.javafx.font.PrismFontFactory;
 import com.sun.javafx.font.PrismFontStrike;
 import com.sun.javafx.geom.Path2D;
+import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 
 class DWFontStrike extends PrismFontStrike<DWFontFile> {
     DWRITE_MATRIX matrix;
-    static final boolean SUBPIXEL;
+    static final boolean SUBPIXEL_ON;
+    static final boolean SUBPIXEL_Y;
+    static final boolean SUBPIXEL_NATIVE;
     static {
-        SUBPIXEL = PrismFontFactory.getFontFactory().isSubPixelEnabled();
+        int mode = PrismFontFactory.getFontFactory().getSubPixelMode();
+        SUBPIXEL_ON = (mode & PrismFontFactory.SUB_PIXEL_ON) != 0;
+        SUBPIXEL_Y = (mode & PrismFontFactory.SUB_PIXEL_Y) != 0;
+        SUBPIXEL_NATIVE = (mode & PrismFontFactory.SUB_PIXEL_NATIVE) != 0;
     }
 
     DWFontStrike(DWFontFile fontResource, float size, BaseTransform tx,
@@ -70,13 +77,38 @@ class DWFontStrike extends PrismFontStrike<DWFontFile> {
     }
 
     @Override
-    public boolean isSubPixelGlyph() {
-        /* Disable subpixel for DirectWrite until better support for it
-         * is implemented on Prism. DirectWrite support 3 subpixel positions
-         * for LCD and Gray text. Prism currently expects it to support 4.
-         */
-//        return SUBPIXEL && matrix == null;
-        return false;
+    public int getQuantizedPosition(Point2D point) {
+        if (SUBPIXEL_ON && (matrix == null || SUBPIXEL_NATIVE)) {
+            /* Using DirectWrite to produce subpixel glyph masks for grayscale
+             * text and (by default) let Prism produce subpixel glyphs for LCD
+             * using shaders (thus, saving texture and memory).
+             */
+            if (getAAMode() == FontResource.AA_GREYSCALE || SUBPIXEL_NATIVE) {
+                float subPixel = point.x;
+                point.x = (int)point.x;
+                subPixel -= point.x;
+                int index = 0;
+                if (subPixel >= 0.66f) {
+                    index = 2;
+                } else if (subPixel >= 0.33f) {
+                    index = 1;
+                }
+                if (SUBPIXEL_Y) {
+                    subPixel = point.y;
+                    point.y = (int)point.y;
+                    subPixel -= point.y;
+                    if (subPixel >= 0.66f) {
+                        index += 6;
+                    } else if (subPixel >= 0.33f) {
+                        index += 3;
+                    }
+                } else {
+                    point.y = (float)Math.round(point.y);
+                }
+                return index;
+            }
+        }
+        return super.getQuantizedPosition(point);
     }
 
     IDWriteFontFace getFontFace() {

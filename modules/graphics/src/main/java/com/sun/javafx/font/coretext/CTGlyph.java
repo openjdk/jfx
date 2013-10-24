@@ -143,8 +143,7 @@ class CTGlyph implements Glyph {
         return cachedContextRef;
     }
 
-    private synchronized byte[] getImage(double x, double y, int w, int h,
-                                         double subPixelX, double subPixelY) {
+    private synchronized byte[] getImage(double x, double y, int w, int h, int subPixel) {
 
         if (w == 0 || h == 0) return new byte[0];
 
@@ -168,12 +167,8 @@ class CTGlyph implements Glyph {
         if (matrix != null) {
             OS.CGContextTranslateCTM(context, -x, -y);
         } else {
-            drawX = x;
+            drawX = x - strike.getSubPixelPosition(subPixel);
             drawY = y;
-            if (strike.isSubPixelGlyph()) {
-                drawX -= subPixelX;
-                drawX -= subPixelY;
-            }
         }
 
         /* Draw the text with black */
@@ -198,13 +193,13 @@ class CTGlyph implements Glyph {
     }
 
     @Override public byte[] getPixelData() {
-        return getPixelData(0, 0);
+        return getPixelData(0);
     }
 
-    @Override public byte[] getPixelData(float x, float y) {
+    @Override public byte[] getPixelData(int subPixel) {
         checkBounds();
         return getImage(bounds.origin.x, bounds.origin.y,
-                        (int)bounds.size.width, (int)bounds.size.height, x, y);
+                        (int)bounds.size.width, (int)bounds.size.height, subPixel);
     }
 
     @Override public float getAdvance() {

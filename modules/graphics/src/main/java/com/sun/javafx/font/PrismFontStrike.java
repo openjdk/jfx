@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.sun.javafx.geom.Path2D;
+import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -132,6 +133,19 @@ public abstract class PrismFontStrike<T extends PrismFontFile> implements FontSt
 
     public BaseTransform getTransform() {
         return transform;
+    }
+
+    @Override
+    public int getQuantizedPosition(Point2D point) {
+        if (aaMode == FontResource.AA_GREYSCALE) {
+            /* No subpixel position */
+            point.x = (float)Math.round(point.x);
+        } else {
+            /* Prism can produce 3 subpixel positions in the shader */
+            point.x = (float)Math.round(3.0 * point.x)/ 3.0f;
+        }
+        point.y = (float)Math.round(point.y);
+        return 0;
     }
 
     /**

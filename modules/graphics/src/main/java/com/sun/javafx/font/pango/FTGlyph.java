@@ -82,7 +82,7 @@ class FTGlyph implements Glyph {
     }
 
     @Override
-    public byte[] getPixelData(float x, float y) {
+    public byte[] getPixelData(int subPixel) {
         init();
         return buffer;
     }

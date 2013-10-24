@@ -55,7 +55,11 @@ public abstract class PrismFontFactory implements FontFactory {
     public static final boolean isEmbedded;
     public static int cacheLayoutSize = 0x10000;
     static boolean useNativeRasterizer;
-    private static boolean subPixelEnabled;
+    private static int subPixelMode;
+    public static final int SUB_PIXEL_ON = 1;
+    public static final int SUB_PIXEL_Y = 2;
+    public static final int SUB_PIXEL_NATIVE = 4;
+
     private static boolean lcdEnabled;
     private static float lcdContrast = -1;
     private static String jreFontDir;
@@ -106,8 +110,16 @@ public abstract class PrismFontFactory implements FontFactory {
                                     + s + "'");
                         }
                     }
-                    s = System.getProperty("prism.subpixeltext");
-                    subPixelEnabled = s == null || s.equalsIgnoreCase("true");
+                    s = System.getProperty("prism.subpixeltext", "on");
+                    if (s.indexOf("on") != -1 || s.indexOf("true") != -1) {
+                        subPixelMode = SUB_PIXEL_ON;
+                    }
+                    if (s.indexOf("native") != -1) {
+                        subPixelMode |= SUB_PIXEL_NATIVE | SUB_PIXEL_ON;
+                    }
+                    if (s.indexOf("vertical") != -1) {
+                        subPixelMode |= SUB_PIXEL_Y | SUB_PIXEL_NATIVE | SUB_PIXEL_ON;
+                    }
 
                     useNativeRasterizer = isMacOSX || isWindows;
                     String defPrismText = useNativeRasterizer ? "native" : "t2k";
@@ -163,6 +175,16 @@ public abstract class PrismFontFactory implements FontFactory {
         }
         if (debugFonts) {
             System.err.println("Loading FontFactory " + factoryClass);
+            if (subPixelMode != 0) {
+                String s = "Subpixel: enabled";
+                if ((subPixelMode & SUB_PIXEL_Y) != 0) {
+                    s += ", vertical";
+                }
+                if ((subPixelMode & SUB_PIXEL_NATIVE) != 0) {
+                    s += ", native";
+                }
+                System.err.println(s);
+            }
         }
         theFontFactory = getFontFactory(factoryClass);
         if (theFontFactory == null) {
@@ -1309,8 +1331,8 @@ public abstract class PrismFontFactory implements FontFactory {
         }
     }
 
-    public final boolean isSubPixelEnabled() {
-        return subPixelEnabled;
+    public final int getSubPixelMode() {
+        return subPixelMode;
     }
 
     public boolean isLCDTextSupported() {

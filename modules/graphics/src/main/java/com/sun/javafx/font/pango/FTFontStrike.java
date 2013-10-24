@@ -62,11 +62,6 @@ class FTFontStrike extends PrismFontStrike<FTFontFile> {
     }
 
     @Override
-    public boolean isSubPixelGlyph() {
-        return false;
-    }
-
-    @Override
     protected DisposerRecord createDisposer(FontStrikeDesc desc) {
         return null;
     }
