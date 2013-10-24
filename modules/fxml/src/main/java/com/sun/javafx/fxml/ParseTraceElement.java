@@ -23,13 +23,13 @@
  * questions.
  */
 
-package javafx.fxml;
+package com.sun.javafx.fxml;
 
 import java.net.URL;
 
 /**
  * An element in a parse trace, as returned by
- * {@link FXMLLoader#getParseTrace()}.
+ * {@link javafx.fxml.FXMLLoader#impl_getParseTrace()}.
  *
  * @treatAsPrivate
  * @since JavaFX 2.1

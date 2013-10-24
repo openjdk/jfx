@@ -25,7 +25,6 @@ package javafx.fxml;
  */
 
 import com.sun.javafx.fxml.LoadListener;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -38,10 +37,10 @@ public class FXMLLoader_ScriptTest {
     @SuppressWarnings("deprecation")
     public void testStaticScriptLoad() throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("static_script_load.fxml"));
-        fxmlLoader.setStaticLoad(true);
+        fxmlLoader.impl_setStaticLoad(true);
         AtomicBoolean scriptCalled = new AtomicBoolean();
         AtomicBoolean scriptEndCalled = new AtomicBoolean();
-        fxmlLoader.setLoadListener(new LoadListener() {
+        fxmlLoader.impl_setLoadListener(new LoadListener() {
 
             @Override
             public void readImportProcessingInstruction(String target) {
@@ -114,7 +113,7 @@ public class FXMLLoader_ScriptTest {
 
             @Override
             public void endElement(Object value) {
-                if (value instanceof String && ((String)value).contains("doSomething")) {
+                if (value instanceof String && ((String) value).contains("doSomething")) {
                     assertTrue(scriptCalled.get());
                     assertFalse(scriptEndCalled.getAndSet(true));
                 }
