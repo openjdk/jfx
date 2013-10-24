@@ -900,6 +900,7 @@ public abstract class Node implements EventTarget, Styleable {
      * </p>
      *
      * @defaultValue null
+     * @see <a href="doc-files/cssref.html">CSS Reference Guide</a>.
      */
     private StringProperty id;
 
@@ -919,6 +920,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @return the id assigned to this {@code Node} using the {@code setId}
      *         method or {@code null}, if no id has been assigned.
      * @defaultValue null
+     * @see <a href="doc-files/cssref.html">CSS Reference Guide</a>.
      */
     public final String getId() {
         return id == null ? null : id.get();
@@ -957,6 +959,7 @@ public abstract class Node implements EventTarget, Styleable {
      * each element of the list is a style class to which this Node belongs.
      *
      * @see <a href="http://www.w3.org/TR/css3-selectors/#class-html">CSS3 class selectors</a>
+     * @see <a href="doc-files/cssref.html">CSS Reference Guide</a>.
      * @defaultValue null
      */
     private ObservableList<String> styleClass = new TrackableObservableList<String>() {
@@ -996,6 +999,7 @@ public abstract class Node implements EventTarget, Styleable {
      * variable contains style properties and values and not the
      * selector portion of a style rule.
      * @defaultValue empty string
+     * @see <a href="doc-files/cssref.html">CSS Reference Guide</a>.
      */
     private StringProperty style;
 
@@ -1008,6 +1012,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @param value The inline CSS style to use for this {@code Node}.
      *         {@code null} is implicitly converted to an empty String.
      * @defaultValue empty string
+     * @see <a href="doc-files/cssref.html">CSS Reference Guide</a>.
      */
     public final void setStyle(String value) {
         styleProperty().set(value);
@@ -1024,6 +1029,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @return The inline CSS style associated with this {@code Node}.
      *         If this {@code Node} does not have an inline style,
      *         an empty String is returned.
+     * @see <a href="doc-files/cssref.html">CSS Reference Guide</a>.
      */
     public final String getStyle() {
         return style == null ? "" : style.get();
