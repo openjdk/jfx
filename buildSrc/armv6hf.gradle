@@ -435,7 +435,7 @@ ARMV6HF.fontPango.compiler = compiler
 ARMV6HF.fontPango.ccFlags = ["-DJFXFONT_PLUS", ccFlags, pangoCCFlags].flatten()
 ARMV6HF.fontPango.linker = linker
 ARMV6HF.fontPango.linkFlags = [linkFlags, pangoLinkFlags].flatten()
-ARMV6HF.fontPango.lib = "javafx-font-pango"
+ARMV6HF.fontPango.lib = "javafx_font_pango"
 
 ARMV6HF.webkit = [:]
 ARMV6HF.webkit.binDir   = "$compilerHome/bin"

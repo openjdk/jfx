@@ -305,7 +305,8 @@ ext.IS_COMPILE_WEBKIT = Boolean.parseBoolean(COMPILE_WEBKIT)
 defineProperty("COMPILE_MEDIA", "false")
 ext.IS_COMPILE_MEDIA = Boolean.parseBoolean(COMPILE_MEDIA)
 
-// COMPILE_PANGO specifies whether to build javafx-font-pango.
+// COMPILE_PANGO specifies whether to build javafx_font_pango.
+//KCR: defineProperty("COMPILE_PANGO", "${IS_LINUX}")
 defineProperty("COMPILE_PANGO", "false")
 ext.IS_COMPILE_PANGO = Boolean.parseBoolean(COMPILE_PANGO)
 
@@ -677,10 +678,9 @@ ext.BUILD_SRC = rootProject.files("buildSrc/build/libs/buildSrc.jar")
  * @param name The name of the project, such as "prism-common". This name is used
  *        in the name of the generated task, such as ccPrismCommon, and also
  *        in the name of the final library, such as libprism-common.dylib.
- * @param optional If the task is optional or not
  */
-void addNative(Project project, String name, boolean optional = false) {
-    addNative(project, name, null, optional)
+void addNative(Project project, String name) {
+    addNative(project, name, null)
 }
 
 /**
@@ -693,9 +693,8 @@ void addNative(Project project, String name, boolean optional = false) {
  *        in the name of the generated task, such as ccPrismCommon, and also
  *        in the name of the final library, such as libprism-common.dylib.
  * @param list of compile targets. Library is applicable only for these targets.
- * @param optional If the task is optional or not
  */
-void addNative(Project project, String name, List<String> includeTargets, boolean optional = false) {
+void addNative(Project project, String name, List<String> includeTargets) {
     // TODO if we want to handle 32/64 bit windows in the same build,
     // Then we will need to modify the win compile target to be win32 or win64
     def capitalName = name.split("-").collect{it.capitalize()}.join()
@@ -706,9 +705,7 @@ void addNative(Project project, String name, List<String> includeTargets, boolea
         description = "Clean native objects for $name"
     }
     if (project.hasProperty("nativeAllTask")) project.nativeAllTask.dependsOn nativeTask
-    if (!optional) {
-        project.assemble.dependsOn(nativeTask)
-    }
+    project.assemble.dependsOn(nativeTask)
     if (project.hasProperty("cleanNativeAllTask")) project.cleanNativeAllTask.dependsOn cleanTask
     
     // Each of the different compile targets will be placed in a sub directory
@@ -1077,9 +1074,9 @@ project(":graphics") {
     addNative(project, "iio")
     addNative(project, "prismES2")
 
-    // Currently lets not build pango by default
-    if (IS_LINUX) {
-        addNative(project, "fontPango", ["linux","armv6hf", "armv6sf"],!IS_COMPILE_PANGO)
+    if (IS_COMPILE_PANGO) {
+        // TODO: embedded support
+        addNative(project, "fontPango", ["linux"])
     }
 
     if (IS_WINDOWS) {
@@ -2161,7 +2158,10 @@ compileTargets { t ->
                 from("modules/graphics/build/libs/jsl-decora/${t.name}/${library(targetProperties.decora.lib)}")
                 def libs = ['font', 'prism', 'prismSW', 'prismES2', 'glass', 'iio']
                 if (IS_COMPILE_PANGO) {
-                    libs += 'fontPango';
+                    // TODO: embedded support
+                    if ("${defaultHostTarget}" == "${t.name}") {
+                        libs += 'fontPango';
+                    }
                 }
                 libs.each { lib ->
                     def variants = targetProperties[lib].containsKey('variants') && !useLipo ? targetProperties[lib].variants : [null]

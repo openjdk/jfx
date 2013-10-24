@@ -233,7 +233,7 @@ LINUX.fontPango.compiler = compiler
 LINUX.fontPango.ccFlags = ["-DJFXFONT_PLUS", ccFlags, pangoCCFlags].flatten()
 LINUX.fontPango.linker = linker
 LINUX.fontPango.linkFlags = [linkFlags, pangoLinkFlags].flatten()
-LINUX.fontPango.lib = "javafx-font-pango"
+LINUX.fontPango.lib = "javafx_font_pango"
 
 LINUX.media = [:]
 LINUX.media.compiler = compiler

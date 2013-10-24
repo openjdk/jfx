@@ -36,7 +36,7 @@ class OS {
     static {
         AccessController.doPrivileged(new PrivilegedAction<Void>() {
            public Void run() {
-               NativeLibLoader.loadLibrary("javafx-font-pango");
+               NativeLibLoader.loadLibrary("javafx_font_pango");
                return null;
            }
         });
