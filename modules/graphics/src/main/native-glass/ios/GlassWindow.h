@@ -39,12 +39,6 @@
 }
 
 @end
-// Toplevel containers of all GlassWindows
-// once we support multiple screens on iOS - there will be one masterWindow/
-// masterWindowHost per screen; These windows are not part of FX/Glass window hierarchy, they
-// serve us as OS containers. They allow us to easily change orientation for all GlassWindows, etc.
-extern GlassMainWindow * masterWindow;
-extern GlassMainView   * masterWindowHost;
 
 @interface GlassWindow : UIView
 {
@@ -76,6 +70,13 @@ extern GlassMainView   * masterWindowHost;
 
     NSMutableArray      *childWindows; // This GlassWindow is parentWindow of its childWindows
 }
+
+// Toplevel containers of all GlassWindows
+// once we support multiple screens on iOS - there will be one masterWindow/
+// masterWindowHost per screen; These windows are not part of FX/Glass window hierarchy, they
+// serve us as OS containers. They allow us to easily change orientation for all GlassWindows, etc.
++(GlassMainWindow *)  getMasterWindow;
++(GlassMainView *) getMasterWindowHost;
 
 - (void)setEnabled:(BOOL)enabled; // see isFocusable
 - (void)_setTransparent:(BOOL)state;

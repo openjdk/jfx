@@ -28,6 +28,7 @@
 
 #import "GlassTimer.h"
 #import "GlassViewGL.h"
+#import "GlassWindow.h"
 #import "com_sun_glass_events_KeyEvent.h"
 #import "com_sun_glass_events_MouseEvent.h"
 #import "com_sun_glass_ui_View_Capability.h"
@@ -230,10 +231,6 @@ static EAGLContext * ctx = nil;
         [self setNeedsDisplay];
     }
     
-    [[NSNotificationCenter defaultCenter] addObserver:self 
-                                             selector:@selector(keyboardDidShow:) 
-                                                 name:UIKeyboardDidShowNotification 
-                                               object:nil];
     return self;
 }
 
@@ -402,6 +399,8 @@ static EAGLContext * ctx = nil;
         textField.layer.borderColor =[[UIColor clearColor] CGColor];
         // textField.backgroundColor = [UIColor clearColor];
         
+        textField.delegate = self->delegate;
+        
         nativeView = textField;
         
     } else if (type == 3) { // TextArea
@@ -468,6 +467,9 @@ static EAGLContext * ctx = nil;
         [[NSNotificationCenter defaultCenter] removeObserver:self name:UITextFieldTextDidChangeNotification object:nativeView];
         [nativeView resignFirstResponder];
         [nativeView removeFromSuperview];
+        
+        [nativeView release];
+        nativeView = nil;
     }
 }
 
@@ -519,15 +521,6 @@ static EAGLContext * ctx = nil;
 - (void) doneClicked
 {
     [self releaseInput];
-}
-
-- (void) keyboardDidShow:(NSNotification *) notification
-{
-#if MAT_IOS_DEBUG
-    NSDictionary *info = [notification userInfo];
-    CGRect keyboardFrame = [[info objectForKey:UIKeyboardFrameEndUserInfoKey] CGRectValue];
-    GLASS_LOG("Keyboard frame x = %f, y = %f, width = %f, height = %f", keyboardFrame.origin.x, keyboardFrame.origin.y, keyboardFrame.size.width, keyboardFrame.size.height);
-#endif
 }
 
 @end
