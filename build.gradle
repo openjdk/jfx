@@ -334,6 +334,10 @@ ext.IS_BUILD_SRC_ZIP = Boolean.parseBoolean(BUILD_SRC_ZIP)
 defineProperty("FULL_TEST", "false")
 ext.IS_FULL_TEST = Boolean.parseBoolean(FULL_TEST);
 
+// Specifies whether to run robot-based visual tests (only used when FULL_TEST is also enabled)
+defineProperty("USE_ROBOT", "true")
+ext.IS_USE_ROBOT = Boolean.parseBoolean(USE_ROBOT);
+
 // Specify the build configuration (Release, Debug, or DebugNative)
 defineProperty("CONF", "Debug")
 ext.IS_DEBUG_JAVA = CONF == "Debug" || CONF == "DebugNative"
@@ -1427,6 +1431,13 @@ project(":systemTests") {
     def sdkDir = "${rootProject.buildDir}/${defaultHostTarget}-sdk"
     test {
         enabled = IS_FULL_TEST
+        if (!IS_USE_ROBOT) {
+            // Disable all robot-based visual tests
+            exclude("**/helloworld/*.*");
+            exclude("**/javafx/embed/swing/*.*");
+            exclude("**/javafx/scene/layout/*.*");
+            exclude("**/test3d/*.*");
+        }
         forkEvery = 1
         classpath = files("$sdkDir/rt/lib/ext/jfxrt.jar") + classpath
     }
