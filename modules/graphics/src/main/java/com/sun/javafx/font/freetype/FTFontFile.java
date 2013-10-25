@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx.font.pango;
+package com.sun.javafx.font.freetype;
 
 import com.sun.javafx.font.Disposer;
 import com.sun.javafx.font.FontResource;
@@ -60,20 +60,20 @@ class FTFontFile extends PrismFontFile {
 
     private synchronized void init() throws Exception {
         long[] ptr = new long[1];
-        int error = OS.FT_Init_FreeType(ptr);
+        int error = OSFreetype.FT_Init_FreeType(ptr);
         if (error != 0) {
             throw new Exception("FT_Init_FreeType Failed error " + error);
         }
         library = ptr[0];
-        if (PangoFactory.LCD_SUPPORT) {
-            OS.FT_Library_SetLcdFilter(library, OS.FT_LCD_FILTER_DEFAULT);
+        if (FTFactory.LCD_SUPPORT) {
+            OSFreetype.FT_Library_SetLcdFilter(library, OSFreetype.FT_LCD_FILTER_DEFAULT);
         }
 
         String file = getFileName();
         int fontIndex = getFontIndex();
         /* Freetype expects 'a standard C string' */
         byte[] buffer = (file+"\0").getBytes();
-        error = OS.FT_New_Face(library, buffer, fontIndex, ptr);
+        error = OSFreetype.FT_New_Face(library, buffer, fontIndex, ptr);
         if (error != 0) {
             throw new Exception("FT_New_Face Failed error " + error +
                                 " Font File " + file +
@@ -95,10 +95,10 @@ class FTFontFile extends PrismFontFile {
 
     @Override
     protected synchronized int[] createGlyphBoundingBox(int gc) {
-        int flags = OS.FT_LOAD_NO_SCALE;
-        OS.FT_Load_Glyph(face, gc, flags);
+        int flags = OSFreetype.FT_LOAD_NO_SCALE;
+        OSFreetype.FT_Load_Glyph(face, gc, flags);
         int[] bbox = new int[4];
-        FT_GlyphSlotRec glyphRec = OS.getGlyphSlot(face);
+        FT_GlyphSlotRec glyphRec = OSFreetype.getGlyphSlot(face);
         if (glyphRec != null && glyphRec.metrics != null) {
             FT_Glyph_Metrics gm = glyphRec.metrics;
             bbox[0] = (int)gm.horiBearingX;
@@ -111,10 +111,10 @@ class FTFontFile extends PrismFontFile {
 
     synchronized Path2D createGlyphOutline(int gc, float size) {
         int size26dot6 = (int)(size * 64);
-        OS.FT_Set_Char_Size(face, 0, size26dot6, 72, 72);
-        int flags = OS.FT_LOAD_NO_HINTING | OS.FT_LOAD_NO_BITMAP | OS.FT_LOAD_IGNORE_TRANSFORM;
-        OS.FT_Load_Glyph(face, gc, flags);
-        return OS.FT_Outline_Decompose(face);
+        OSFreetype.FT_Set_Char_Size(face, 0, size26dot6, 72, 72);
+        int flags = OSFreetype.FT_LOAD_NO_HINTING | OSFreetype.FT_LOAD_NO_BITMAP | OSFreetype.FT_LOAD_IGNORE_TRANSFORM;
+        OSFreetype.FT_Load_Glyph(face, gc, flags);
+        return OSFreetype.FT_Outline_Decompose(face);
     }
 
     synchronized void initGlyph(FTGlyph glyph, FTFontStrike strike) {
@@ -125,26 +125,26 @@ class FTFontFile extends PrismFontFile {
             return;
         }
         int size26dot6 = (int)(size * 64);
-        OS.FT_Set_Char_Size(face, 0, size26dot6, 72, 72);
+        OSFreetype.FT_Set_Char_Size(face, 0, size26dot6, 72, 72);
 
         boolean lcd = strike.getAAMode() == FontResource.AA_LCD &&
-                      PangoFactory.LCD_SUPPORT;
+                      FTFactory.LCD_SUPPORT;
 
-        int flags = OS.FT_LOAD_RENDER | OS.FT_LOAD_NO_HINTING;
+        int flags = OSFreetype.FT_LOAD_RENDER | OSFreetype.FT_LOAD_NO_HINTING;
         FT_Matrix matrix = strike.matrix;
         if (matrix != null) {
-            OS.FT_Set_Transform(face, matrix, 0, 0);
+            OSFreetype.FT_Set_Transform(face, matrix, 0, 0);
         } else {
-            flags |= OS.FT_LOAD_IGNORE_TRANSFORM;
+            flags |= OSFreetype.FT_LOAD_IGNORE_TRANSFORM;
         }
         if (lcd) {
-            flags |= OS.FT_LOAD_TARGET_LCD;
+            flags |= OSFreetype.FT_LOAD_TARGET_LCD;
         } else {
-            flags |= OS.FT_LOAD_TARGET_NORMAL;
+            flags |= OSFreetype.FT_LOAD_TARGET_NORMAL;
         }
 
         int glyphCode = glyph.getGlyphCode();
-        int error = OS.FT_Load_Glyph(face, glyphCode, flags);
+        int error = OSFreetype.FT_Load_Glyph(face, glyphCode, flags);
         if (error != 0) {
             if (PrismFontFactory.debugFonts) {
                 System.err.println("FT_Load_Glyph failed " + error +
@@ -154,7 +154,7 @@ class FTFontFile extends PrismFontFile {
             return;
         }
 
-        FT_GlyphSlotRec glyphRec = OS.getGlyphSlot(face);
+        FT_GlyphSlotRec glyphRec = OSFreetype.getGlyphSlot(face);
         if (glyphRec == null) return;
         FT_Bitmap bitmap = glyphRec.bitmap;
         if (bitmap == null) return;
@@ -163,7 +163,7 @@ class FTFontFile extends PrismFontFile {
         int pitch = bitmap.pitch;
         byte[] buffer;
         if (width != 0 && height != 0) {
-            buffer = OS.getBitmapData(face);
+            buffer = OSFreetype.getBitmapData(face);
             if (buffer != null && pitch != width) {
                 /* Common for LCD glyphs */
                 byte[] newBuffer = new byte[width * height];

@@ -69,7 +69,7 @@ public abstract class PrismFontFactory implements FontFactory {
     private static final String T2K_FACTORY = "com.sun.javafx.font.t2k.T2KFactory";
     private static final String CT_FACTORY = "com.sun.javafx.font.coretext.CTFactory";
     private static final String DW_FACTORY = "com.sun.javafx.font.directwrite.DWFactory";
-    private static final String PANGO_FACTORY = "com.sun.javafx.font.pango.PangoFactory";
+    private static final String FT_FACTORY = "com.sun.javafx.font.freetype.FTFactory";
 
     /* We need two maps. One to hold pointers to the raw fonts, another
      * to hold pointers to the composite resources. Top level look ups
@@ -156,7 +156,7 @@ public abstract class PrismFontFactory implements FontFactory {
     private static String getNativeFactoryName() {
         if (isWindows) return DW_FACTORY;
         if (isMacOSX || isIOS) return CT_FACTORY;
-        if (isLinux) return PANGO_FACTORY;
+        if (isLinux || isAndroid) return FT_FACTORY;
         return null;
     }
 

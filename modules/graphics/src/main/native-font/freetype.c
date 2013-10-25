@@ -23,18 +23,18 @@
  * questions.
  */
 
-#if defined __linux__
-#if defined _ENABLE_PANGO
+#if defined __linux__ || ANDROID_NDK
+#if defined _ENABLE_PANGO || _ENABLE_HARFBUZZ
 
 #include <jni.h>
-#include <com_sun_javafx_font_pango_OS.h>
+#include <com_sun_javafx_font_freetype_OSFreetype.h>
 #include <dlfcn.h>
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include FT_OUTLINE_H
 #include FT_LCD_FILTER_H
 
-#define OS_NATIVE(func) Java_com_sun_javafx_font_pango_OS_##func
+#define OS_NATIVE(func) Java_com_sun_javafx_font_freetype_OSFreetype_##func
 
 /**************************************************************************/
 /*                                                                        */
@@ -152,15 +152,15 @@ FT_GlyphSlotRec_FID_CACHE FT_GlyphSlotRecFc;
 void cacheFT_GlyphSlotRecFields(JNIEnv *env)
 {
     if (FT_GlyphSlotRecFc.cached) return;
-    jclass tmpClass = (*env)->FindClass(env, "com/sun/javafx/font/pango/FT_GlyphSlotRec");
+    jclass tmpClass = (*env)->FindClass(env, "com/sun/javafx/font/freetype/FT_GlyphSlotRec");
     FT_GlyphSlotRecFc.clazz =  (jclass)(*env)->NewGlobalRef(env, tmpClass);
-    FT_GlyphSlotRecFc.metrics = (*env)->GetFieldID(env, FT_GlyphSlotRecFc.clazz, "metrics", "Lcom/sun/javafx/font/pango/FT_Glyph_Metrics;");
+    FT_GlyphSlotRecFc.metrics = (*env)->GetFieldID(env, FT_GlyphSlotRecFc.clazz, "metrics", "Lcom/sun/javafx/font/freetype/FT_Glyph_Metrics;");
     FT_GlyphSlotRecFc.linearHoriAdvance = (*env)->GetFieldID(env, FT_GlyphSlotRecFc.clazz, "linearHoriAdvance", "J");
     FT_GlyphSlotRecFc.linearVertAdvance = (*env)->GetFieldID(env, FT_GlyphSlotRecFc.clazz, "linearVertAdvance", "J");
     FT_GlyphSlotRecFc.advance_x = (*env)->GetFieldID(env, FT_GlyphSlotRecFc.clazz, "advance_x", "J");
     FT_GlyphSlotRecFc.advance_y = (*env)->GetFieldID(env, FT_GlyphSlotRecFc.clazz, "advance_y", "J");
     FT_GlyphSlotRecFc.format = (*env)->GetFieldID(env, FT_GlyphSlotRecFc.clazz, "format", "I");
-    FT_GlyphSlotRecFc.bitmap = (*env)->GetFieldID(env, FT_GlyphSlotRecFc.clazz, "bitmap", "Lcom/sun/javafx/font/pango/FT_Bitmap;");
+    FT_GlyphSlotRecFc.bitmap = (*env)->GetFieldID(env, FT_GlyphSlotRecFc.clazz, "bitmap", "Lcom/sun/javafx/font/freetype/FT_Bitmap;");
     FT_GlyphSlotRecFc.bitmap_left = (*env)->GetFieldID(env, FT_GlyphSlotRecFc.clazz, "bitmap_left", "I");
     FT_GlyphSlotRecFc.bitmap_top = (*env)->GetFieldID(env, FT_GlyphSlotRecFc.clazz, "bitmap_top", "I");
     FT_GlyphSlotRecFc.init = (*env)->GetMethodID(env, FT_GlyphSlotRecFc.clazz, "<init>", "()V");
@@ -470,5 +470,23 @@ JNIEXPORT jobject JNICALL OS_NATIVE(FT_1Outline_1Decompose)
     return path2D;
 }
 
-#endif /* ENABLE_PANGO */
-#endif /* __linux__ */
+JNIEXPORT jboolean JNICALL JNICALL OS_NATIVE(isPangoEnabled)
+    (JNIEnv *env, jclass that) {
+    #ifdef _ENABLE_PANGO
+    return JNI_TRUE;
+    #else
+    return JNI_FALSE;
+    #endif
+}
+
+JNIEXPORT jboolean JNICALL JNICALL OS_NATIVE(isHarfbuzzEnabled)
+  (JNIEnv *env, jclass that) {
+    #ifdef _ENABLE_HARFBUZZ
+    return JNI_TRUE;
+    #else
+    return JNI_FALSE;
+    #endif
+}
+
+#endif /* ENABLE_PANGO || ENABLE_HARFBUZZ */
+#endif /* __linux__ || ANDROID_NDK */

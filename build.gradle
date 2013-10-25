@@ -1076,6 +1076,7 @@ project(":graphics") {
 
     if (IS_COMPILE_PANGO) {
         // TODO: embedded support
+        addNative(project, "fontFreetype", ["linux"])
         addNative(project, "fontPango", ["linux"])
     }
 
@@ -2160,7 +2161,7 @@ compileTargets { t ->
                 if (IS_COMPILE_PANGO) {
                     // TODO: embedded support
                     if ("${defaultHostTarget}" == "${t.name}") {
-                        libs += 'fontPango';
+                        libs += ['fontFreetype', 'fontPango'];
                     }
                 }
                 libs.each { lib ->

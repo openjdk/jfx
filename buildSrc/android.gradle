@@ -163,6 +163,13 @@ if (!ANDROID.canBuild) {
     return
 }
 
+def freetypeDir = project.hasProperty("FREETYPE_DIR") ? "${FREETYPE_DIR}" : null
+if (!assertDir(freetypeDir)) {
+    logger.warn("FREETYPE_DIR $freetypeDir doesn't exists! Build continues without native text support.")
+    freetypeDir = null
+}
+def compileNativeText = freetypeDir != null
+
 def compiler = file("$compilerHome/bin/${toolchainArchs[0]}-gcc").getAbsolutePath()
 def linker = file("$compilerHome/bin/${toolchainArchs[0]}-g++").getAbsolutePath()
 
@@ -171,6 +178,8 @@ logger.quiet("ANDROID_SDK: $sdk")
 logger.quiet("ANDROID_SDK_TARGET: $sdk_target")
 logger.quiet("ANDROID_NDK: $ndk")
 logger.quiet("ANDROID_NDK_TARGET: $ndk_target")
+logger.quiet("FREETYPE_DIR: $freetypeDir")
+logger.quiet("Compile native text: $compileNativeText") 
 logger.quiet("Android Compiler: $compiler")
 logger.quiet("Android Linker: $linker")
 
@@ -184,7 +193,7 @@ project(":graphics") {
         classpath = files("build/classes/android")
         destinationDir = file("build/classes/android")
         dependencyCacheDir = file("build/dependency-cache")
-        source "src/android/java"
+        source fileTree(dir: 'src/android/java').matching { include 'com/oracle/dalvik/**' }
     }
 
     task jarDalvikLibs(type: Jar, group: "Build", dependsOn: compileDalvikLibs) {
@@ -195,12 +204,18 @@ project(":graphics") {
         include("com/oracle/dalvik/**/*")
         dependsOn(compileDalvikLibs)
     }
-
+    
     afterEvaluate {
         addNative(project, "surface", ["android"])
         addNative(project, "vmlauncher", ["android"])
+        if (compileNativeText) {
+            addNative(project, "fontNativeFreetype", ["android"])
+        }
         tasks["javahAndroidVmlauncher"].dependsOn(compileDalvikLibs)
         tasks["native"].dependsOn("nativeSurface", "nativeVmlauncher")
+        if (compileNativeText) {
+            tasks["native"].dependsOn("nativeFontNativeFreetype")
+        }
 
         sdkAndroid  {
             dependsOn(jarDalvikLibs)
@@ -216,6 +231,12 @@ project(":graphics") {
                 copy {
                     from ("modules/graphics/build/libs/${props.jfxdvklib}")
                     into ("build/android-sdk/dalvik/lib")
+                }
+                if (compileNativeText) {
+                    copy {
+                        from ("modules/graphics/build/libs/fontNativeFreetype/android")
+                        into ("build/android-sdk/rt/$ANDROID.libDest")
+                    }
                 }
             }
         }
@@ -336,12 +357,16 @@ ANDROID.jfxrtJarExcludes = [
     "com/oracle/dalvik"
 ]
 
+def text = (compileNativeText) ? "native" : "t2k"
+
 ANDROID.javafxPlatformProperties = """
 javafx.platform=android
 android.glass.platform=Lens
 android.glass.lens=eglfb
 android.prism.glDepthSize=16
 android.prism.lcdtext=false
+android.prism.debugfonts=true
+android.prism.text=$text
 android.embedded=eglfb
 android.prism.allowhidpi=false
 android.prism.maxTextureSize=2048
@@ -352,7 +377,13 @@ android.com.sun.javafx.isEmbedded=true
 """
 def sysroot = "$ndk/platforms/$ndk_target/arch-arm"
 
-def ccFlags = ["--sysroot=$sysroot","-std=c99", "-DANDROID", "-c", "-nostdlib", "-DANDROID_NDK"]
+def ccFlags = ["--sysroot=$sysroot","-std=c99", "-DANDROID", "-c", "-nostdlib", 
+               "-DANDROID_NDK"]
+
+if (project.hasProperty("DALVIK_VM")) {
+    ccFlags += ["-DDALVIK_VM"]
+}
+
 def ccOptFlags = ["-fpic", "-ffunction-sections", "-funwind-tables","-fstack-protector",
                   "-Os", "-O2", "-fno-strict-aliasing", "-finline-limit=64", "-fomit-frame-pointer"]
 def ccWarnFlags = ["-Wa,--noexecstack", "-Wno-psabi"]
@@ -526,18 +557,44 @@ ANDROID.font.linker = linker
 ANDROID.font.linkFlags = [linkFlags].flatten()
 ANDROID.font.lib = "javafx_font"
 
-ANDROID.fontT2K = [:]
-ANDROID.fontT2K.javahInclude = ["com/sun/javafx/font/t2k/**/*"]
-ANDROID.fontT2K.nativeSource = [
-    file("$closedDir/javafx-font-t2k-native/src"),
-    file("$closedDir/javafx-font-t2k-native/src/layout"),
-    file("$closedDir/javafx-font-t2k-native/src/layoutfx")]
-ANDROID.fontT2K.compiler = compiler
-ANDROID.fontT2K.ccFlags = [ccFlags, "-fno-exceptions", "-fno-rtti", ccWarnFlags,
-    ccArchFlags, ccOptFlags, ccDebugFlags, ccDefaultIncludeFlags].flatten()
-ANDROID.fontT2K.linker = linker
-ANDROID.fontT2K.linkFlags = [linkFlags, "-lstdc++"].flatten()
-ANDROID.fontT2K.lib = "javafx_font_t2k"
+if (BUILD_CLOSED) {
+    ANDROID.fontT2K = [:]
+    ANDROID.fontT2K.javahInclude = ["com/sun/javafx/font/t2k/**/*"]
+    ANDROID.fontT2K.nativeSource = [
+        file("$closedDir/javafx-font-t2k-native/src"),
+        file("$closedDir/javafx-font-t2k-native/src/layout"),
+        file("$closedDir/javafx-font-t2k-native/src/layoutfx")]
+    ANDROID.fontT2K.compiler = compiler
+    ANDROID.fontT2K.ccFlags = [ccFlags, "-fno-exceptions", "-fno-rtti", ccWarnFlags,
+        ccArchFlags, ccOptFlags, ccDebugFlags, ccDefaultIncludeFlags].flatten()
+    ANDROID.fontT2K.linker = linker
+    ANDROID.fontT2K.linkFlags = [linkFlags, "-lstdc++"].flatten()
+    ANDROID.fontT2K.lib = "javafx_font_t2k"
+} 
+
+if (compileNativeText) {
+    ANDROID.fontNativeFreetype = [:]
+    ANDROID.fontNativeFreetype.javahInclude = [
+        "com/sun/javafx/font/freetype/OSFreetype.class"
+    ]
+    ANDROID.fontNativeFreetype.nativeSource = [
+        file("modules/graphics/src/main/native-font/freetype.c")
+    ]
+    ANDROID.fontNativeFreetype.compiler = compiler
+    ANDROID.fontNativeFreetype.linker = linker
+    ANDROID.fontNativeFreetype.lib = "javafx_font_freetype"
+
+    ccFlags += ["-D_ENABLE_HARFBUZZ"]
+
+    ANDROID.fontNativeFreetype.ccFlags = 
+        [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
+        ccDebugFlags, ccDefaultIncludeFlags,
+        "-I$freetypeDir/include", "-I$freetypeDir/include/freetype2"].flatten()  
+        
+    ANDROID.fontNativeFreetype.linkFlags = 
+        [linkFlags, "-llog", 
+         "-L$freetypeDir/lib", "$freetypeDir/lib/libfreetype.a"].flatten()
+}
 
 ANDROID.media = [:]
 ANDROID.media.compiler = compiler

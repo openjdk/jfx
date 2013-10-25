@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx.font.pango;
+package com.sun.javafx.font.freetype;
 
 class FT_Glyph_Metrics {
     long width;

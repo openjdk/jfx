@@ -23,16 +23,34 @@
  * questions.
  */
 
-package com.sun.javafx.font.pango;
+package com.sun.javafx.font.freetype;
 
-class FT_GlyphSlotRec {
-    FT_Glyph_Metrics metrics = new FT_Glyph_Metrics();
-    long linearHoriAdvance;
-    long linearVertAdvance;
-    long advance_x;
-    long advance_y;
-    int format;
-    FT_Bitmap bitmap = new FT_Bitmap();
-    int bitmap_left;
-    int bitmap_top;
+import com.sun.javafx.font.DisposerRecord;
+import com.sun.javafx.font.PrismFontFactory;
+
+class FTDisposer implements DisposerRecord  {
+    long library;
+    long face;
+
+    FTDisposer(long library, long face) {
+        this.library = library;
+        this.face = face;
+    }
+
+    public synchronized void dispose() {
+        if (face != 0) {
+            OSFreetype.FT_Done_Face(face);
+            if (PrismFontFactory.debugFonts) {
+                System.err.println("Done Face=" + face);
+            }
+            face = 0;
+        }
+        if (library != 0) {
+            OSFreetype.FT_Done_FreeType(library);
+            if (PrismFontFactory.debugFonts) {
+                System.err.println("Done Library=" + library);
+            }
+            library = 0;
+        }
+    }
 }

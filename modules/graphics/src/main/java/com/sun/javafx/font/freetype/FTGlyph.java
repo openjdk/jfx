@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx.font.pango;
+package com.sun.javafx.font.freetype;
 
 import com.sun.javafx.font.Glyph;
 import com.sun.javafx.geom.RectBounds;
