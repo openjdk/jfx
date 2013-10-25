@@ -1,0 +1,8 @@
+com.sun.javafx.tools.packager.bundlers.LinuxAppBundler
+com.sun.javafx.tools.packager.bundlers.LinuxDebBundler
+com.sun.javafx.tools.packager.bundlers.LinuxRPMBundler
+com.sun.javafx.tools.packager.bundlers.MacAppBundler
+com.sun.javafx.tools.packager.bundlers.MacDMGBundler
+com.sun.javafx.tools.packager.bundlers.WinAppBundler
+com.sun.javafx.tools.packager.bundlers.WinExeBundler
+com.sun.javafx.tools.packager.bundlers.WinMsiBundler
