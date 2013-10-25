@@ -2421,9 +2421,10 @@ project(":web") {
         }
 
         def webkitOutputDir = "$buildDir/${t.name}"
+        def webkitConfig = IS_DEBUG_NATIVE ? "Debug" : "Release"
 
         def compileNativeTask = task("compileNative${t.capital}", dependsOn: generateHeaders) << {
-            println "Building Webkit configuration /$CONF/ into $webkitOutputDir"
+            println "Building Webkit configuration /$webkitConfig/ into $webkitOutputDir"
             
             def dependencyFile = configurations.webkit.filter(
                     { File f -> f.getName().contains(classifier) }
@@ -2433,7 +2434,7 @@ project(":web") {
 
             exec {
                 workingDir("$projectDir/src/main/native")
-                commandLine("perl", "Tools/Scripts/set-webkit-configuration", "--$CONF")
+                commandLine("perl", "Tools/Scripts/set-webkit-configuration", "--$webkitConfig")
                 environment(["WEBKITOUTPUTDIR" : webkitOutputDir])
             }
 
@@ -2510,17 +2511,17 @@ load(qt_config)""")
 
             def library = rootProject.ext[t.upper].library
             copy {
-                from "$webkitOutputDir/$CONF/lib/${library('jfxwebkit')}"
+                from "$webkitOutputDir/$webkitConfig/lib/${library('jfxwebkit')}"
                 into "$buildDir/libs/${t.name}"
             }
             copy {
-                from "$webkitOutputDir/$CONF/lib/${library('DumpRenderTreeJava')}"
+                from "$webkitOutputDir/$webkitConfig/lib/${library('DumpRenderTreeJava')}"
                 into "$buildDir/test/${t.name}"
             }
         }
     
         def compileGeneratedTask = task("compileGenerated${t.capital}", type: JavaCompile, dependsOn: compileNativeTask) {
-            def gensrcDir = "$webkitOutputDir/$CONF/WebCore/generated/java"
+            def gensrcDir = "$webkitOutputDir/$webkitConfig/WebCore/generated/java"
             doFirst {
                 copy {
                     from "$projectDir/src/main/native/Source/WebCore/bindings/java/EventListenerImpl.java"
