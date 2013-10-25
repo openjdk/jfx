@@ -1560,6 +1560,13 @@ public abstract class PrismFontFactory implements FontFactory {
             return null; // yes, this means the caller needs to handle null.
         }
 
+        String family = fr.getFamilyName();
+        if (family == null || family.length() == 0) return null;
+        String fullname = fr.getFullName();
+        if (fullname == null || fullname.length() == 0) return null;
+        String psname = fr.getPSName();
+        if (psname == null || psname.length() == 0) return null;
+
         /* Use filename from the resource so woff fonts are handled */
         if (!registerEmbeddedFont(fr.getFileName())) {
             /* This font file can't be used by the underlying rasterizer */
@@ -1600,8 +1607,7 @@ public abstract class PrismFontFactory implements FontFactory {
         removeEmbeddedFont(fname);
         embeddedFonts.put(fname, fr);
         storeInMap(fname, fr);
-        String family = fr.getFamilyName() + dotStyleStr(fr.isBold(),
-                                                         fr.isItalic());
+        family = family + dotStyleStr(fr.isBold(), fr.isItalic());
         storeInMap(family, fr);
         /* The remove call is to assist the case where we have
          * previously mapped into the composite map a different style

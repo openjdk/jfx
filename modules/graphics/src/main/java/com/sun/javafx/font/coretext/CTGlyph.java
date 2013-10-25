@@ -185,6 +185,10 @@ class CTGlyph implements Glyph {
         } else {
             imageData = OS.CGBitmapContextGetData(context, w, h, 8);
         }
+        if (imageData == null) {
+            bounds = new CGRect();
+            imageData = new byte[0];
+        }
 
         if (!cache) {
             OS.CGContextRelease(context);
