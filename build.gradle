@@ -306,8 +306,7 @@ defineProperty("COMPILE_MEDIA", "false")
 ext.IS_COMPILE_MEDIA = Boolean.parseBoolean(COMPILE_MEDIA)
 
 // COMPILE_PANGO specifies whether to build javafx_font_pango.
-//KCR: defineProperty("COMPILE_PANGO", "${IS_LINUX}")
-defineProperty("COMPILE_PANGO", "false")
+defineProperty("COMPILE_PANGO", "${IS_LINUX}")
 ext.IS_COMPILE_PANGO = Boolean.parseBoolean(COMPILE_PANGO)
 
 // COMPILE_PARFAIT specifies whether to build parfait
