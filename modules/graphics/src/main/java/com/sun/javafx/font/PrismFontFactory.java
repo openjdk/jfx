@@ -129,7 +129,6 @@ public abstract class PrismFontFactory implements FontFactory {
                     } else {
                         useNativeRasterizer = prismText.equals("native");
                     }
-                    if (isAndroid) useNativeRasterizer = false;
 
                     boolean lcdTextOff = (isMacOSX && !useNativeRasterizer) ||
                                          isIOS || isAndroid || isEmbedded;
