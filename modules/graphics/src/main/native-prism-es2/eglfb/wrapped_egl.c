@@ -83,13 +83,13 @@ int load_wrapped_gles_symbols() {
     done_loading_symbols = 1;
 
 #ifdef ANDROID_NDK
-    libglesv2 = dlopen("libGLESv2.so", RTLD_LAZY | RTLD_GLOBAL);
-    if (!libglesv2) {
-        fprintf(stderr, "Did not find libGLESv2.so %s\n", dlerror());
+    libegl = dlopen("libEGL.so", RTLD_LAZY | RTLD_GLOBAL);
+    if (!libegl) {
+        fprintf(stderr, "Did not find libEGL.so %s\n", dlerror());
         return 0;
     }
 
-    _eglGetDisplay = dlsym(libglesv2, "eglGetDisplay");
+    _eglGetDisplay = dlsym(libegl, "eglGetDisplay");
 #else
     
     Dl_info dlinfo;
