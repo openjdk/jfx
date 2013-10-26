@@ -51,6 +51,7 @@ import javafx.stage.Stage;
  * @see javafx.scene.control.Accordion
  * @related /Controls/Toggle Button
  * @related /Controls/Toolbar/ToolBar
+ * @embedded
  */
 public class AccordionApp extends Application {
 

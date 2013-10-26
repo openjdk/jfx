@@ -89,6 +89,8 @@ public class SampleInfo {
     public final PlaygroundProperty[] playgroundProperties;
     /** List of features that require specific platform support */
     public final ConditionalFeature[] conditionalFeatures;
+    /** If true, then the sample runs on embedded platform  */
+    public final boolean runsOnEmbedded;
 
     // =============== RELATED =================================================
 
@@ -102,7 +104,8 @@ public class SampleInfo {
     public SampleInfo(String name, String description, String ensemblePath, String baseUri, String appClass,
                   String previewUrl, String[] resourceUrls, String[] apiClasspaths,
                   String[] docsUrls, String[] relatesSamplePaths, String mainFileUrl,
-                  PlaygroundProperty[] playgroundProperties, ConditionalFeature[] conditionalFeatures) {
+                  PlaygroundProperty[] playgroundProperties, ConditionalFeature[] conditionalFeatures, 
+                  boolean runsOnEmbedded) {
         this.name = name;
         this.description = description;
         this.ensemblePath = ensemblePath;
@@ -116,6 +119,7 @@ public class SampleInfo {
         this.relatesSamplePaths = relatesSamplePaths;
         this.playgroundProperties = playgroundProperties;
         this.conditionalFeatures = conditionalFeatures;
+        this.runsOnEmbedded = runsOnEmbedded;
         
         if (EnsembleApp.PRELOAD_PREVIEW_IMAGES) {
             getImage(getClass().getResource(previewUrl).toExternalForm());

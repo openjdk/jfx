@@ -43,7 +43,8 @@ import javafx.stage.Stage;
  *
  * @sampleName Hidden SplitPane
  * @preview preview.png
- * @see javafx.scene.control.SplitPane 
+ * @see javafx.scene.control.SplitPane
+ * @embedded
  */
 public class HiddenSplitPaneApp extends Application {
 

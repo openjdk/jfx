@@ -31,6 +31,7 @@
  */
 package ensemble.util;
 
+import ensemble.PlatformFeatures;
 import ensemble.SampleInfo;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,6 +46,10 @@ public class FeatureChecker {
             if (!Platform.isSupported(oneCF)) {
                 return false;
             }
+        }
+
+        if (PlatformFeatures.EMBEDDED && !sample.runsOnEmbedded) {
+            return false;
         }
         return true;
     }

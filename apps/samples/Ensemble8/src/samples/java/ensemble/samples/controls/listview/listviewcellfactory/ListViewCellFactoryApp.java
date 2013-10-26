@@ -52,11 +52,12 @@ import javafx.util.Callback;
  * @see javafx.scene.control.SelectionModel
  * @related /Controls/Listview/HorizontalListView
  * @related /Controls/Listview/Simple ListView
+ * @embedded
  */
 public class ListViewCellFactoryApp extends Application {
 
     public Parent createContent() {
-         final ListView<Number> listView = new ListView<Number>();
+         final ListView<Number> listView = new ListView<>();
         listView.setItems(FXCollections.<Number>observableArrayList(
                 100.00, -12.34, 33.01, 71.00, 23000.00, -6.00, 0, 42223.00, -12.05, 500.00,
                 430000.00, 1.00, -4.00, 1922.01, -90.00, 11111.00, 3901349.00, 12.00, -1.00, -2.00,

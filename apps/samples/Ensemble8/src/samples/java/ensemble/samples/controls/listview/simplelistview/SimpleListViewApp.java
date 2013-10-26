@@ -31,16 +31,12 @@
  */
 package ensemble.samples.controls.listview.simplelistview;
 
-import ensemble.samples.controls.listview.horizontallistview.*;
 import javafx.application.Application;
 import javafx.collections.FXCollections;
-import javafx.geometry.Orientation;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.SelectionMode;
-import javafx.scene.layout.Region;
 import javafx.stage.Stage;
 
 /**
@@ -56,6 +52,7 @@ import javafx.stage.Stage;
  * @see javafx.scene.control.SelectionModel
  * @related /Controls/Listview/HorizontalListView
  * @related /Controls/Listview/ListViewCellFactory
+ * @embedded
  */
 public class SimpleListViewApp extends Application {
 

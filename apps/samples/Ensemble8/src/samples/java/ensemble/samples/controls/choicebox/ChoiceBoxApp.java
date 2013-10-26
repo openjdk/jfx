@@ -45,6 +45,7 @@ import javafx.stage.Stage;
  * @sampleName ChoiceBox
  * @preview preview.png
  * @see javafx.scene.control.ChoiceBox
+ * @embedded
  */
 public class ChoiceBoxApp extends Application {
 

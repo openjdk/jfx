@@ -54,6 +54,7 @@ import javafx.stage.Stage;
  * @see javafx.scene.control.SelectionModel
  * @related /Controls/Listview/ListViewCellFactory
  * @related /Controls/Listview/Simple ListView
+ * @embedded
  */
 public class HorizontalListViewApp extends Application {
 

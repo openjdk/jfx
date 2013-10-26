@@ -59,6 +59,7 @@ import javafx.stage.Stage;
  * @preview preview.png
  * @see javafx.scene.control.Tab
  * @see javafx.scene.control.TabPane
+ * @embedded
  */
 public class TabPaneApp extends Application {
 

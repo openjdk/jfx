@@ -61,6 +61,7 @@ import static javafx.util.Duration.seconds;
  * @related /Animation/Transitions/Sequential Transition
  * @related /Animation/Transitions/Stroke Transition
  * @related /Animation/Transitions/Translate Transition
+ * @embedded
  */
 public class PauseTransitionApp extends Application {
 

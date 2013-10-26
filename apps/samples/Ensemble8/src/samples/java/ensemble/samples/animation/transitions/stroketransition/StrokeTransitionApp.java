@@ -58,6 +58,7 @@ import javafx.util.Duration;
  * @related /Animation/Transitions/Scale Transition
  * @related /Animation/Transitions/Sequential Transition
  * @related /Animation/Transitions/Translate Transition
+ * @embedded
  */
 public class StrokeTransitionApp extends Application {
 

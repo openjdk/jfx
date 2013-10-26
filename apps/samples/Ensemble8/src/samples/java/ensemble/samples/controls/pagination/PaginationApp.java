@@ -53,6 +53,7 @@ import javafx.util.Callback;
  * @sampleName Pagination
  * @preview preview.png
  * @see javafx.scene.control.Pagination
+ * @embedded
  */
 public class PaginationApp extends Application {
 

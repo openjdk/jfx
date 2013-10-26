@@ -62,6 +62,7 @@ import javafx.util.Duration;
  * @related /Animation/Transitions/Scale Transition
  * @related /Animation/Transitions/Stroke Transition
  * @related /Animation/Transitions/Translate Transition
+ * @embedded
  */
 public class SequentialTransitionApp extends Application {
 
