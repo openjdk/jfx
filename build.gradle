@@ -2142,7 +2142,7 @@ task javadoc(type: Javadoc) {
     description = "Generates the JavaDoc for all the public API"
     executable = JAVADOC
     def projectsToDocument = [
-            project(":base"), project(":graphics"), project(":controls"),
+            project(":base"), project(":graphics"), project(":controls"), project(":media"),
             project(":swing"), project(":swt"), project(":fxml"), project(":web")]
     source(projectsToDocument.collect({
         [it.sourceSets.main.java, "$it.buildDir/generated-src/builders"]
