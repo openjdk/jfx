@@ -407,7 +407,12 @@ public class TreeCell<T> extends IndexedCell<T> {
         if (tree != null) {
             // reset the editing item in the TreetView
             tree.edit(null);
-            tree.requestFocus();
+
+            // request focus back onto the tree, only if the current focus
+            // owner has the tree as a parent (otherwise the user might have
+            // clicked out of the tree entirely and given focus to something else.
+            // It would be rude of us to request it back again.
+            ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(tree);
         }
     }
 
@@ -422,7 +427,12 @@ public class TreeCell<T> extends IndexedCell<T> {
         if (tree != null) {
             // reset the editing index on the TreeView
             if (updateEditingIndex) tree.edit(null);
-            tree.requestFocus();
+
+            // request focus back onto the tree, only if the current focus
+            // owner has the tree as a parent (otherwise the user might have
+            // clicked out of the tree entirely and given focus to something else.
+            // It would be rude of us to request it back again.
+            ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(tree);
         
             tree.fireEvent(new TreeView.EditEvent<T>(tree,
                     TreeView.<T>editCancelEvent(),

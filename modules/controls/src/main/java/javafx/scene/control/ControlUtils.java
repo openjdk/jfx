@@ -29,6 +29,9 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.collections.ObservableMap;
 import javafx.event.Event;
+import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 
 class ControlUtils {
     private static final String SCROLL_TO_INDEX_KEY = "util.scroll.index";
@@ -94,5 +97,22 @@ class ControlUtils {
     
     private static void fireScrollToColumnEvent(final Control control, final TableColumnBase<?, ?> column) {
         control.fireEvent(new ScrollToEvent<TableColumnBase<?, ?>>(control, control, ScrollToEvent.scrollToColumn(), column));
+    }
+
+    static void requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(Control c) {
+        Scene scene = c.getScene();
+        final Node focusOwner = scene == null ? null : scene.getFocusOwner();
+        if (focusOwner == null) {
+            c.requestFocus();
+        } else if (! c.equals(focusOwner)) {
+            Parent p = focusOwner.getParent();
+            while (p != null) {
+                if (c.equals(p)) {
+                    c.requestFocus();
+                    break;
+                }
+                p = p.getParent();
+            }
+        }
     }
 }
