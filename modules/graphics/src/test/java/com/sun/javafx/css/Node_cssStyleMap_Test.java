@@ -46,21 +46,17 @@ import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import static org.junit.Assert.*;
-import org.junit.Test;
 
+import org.junit.Test;
 
 public class Node_cssStyleMap_Test {
     
     public Node_cssStyleMap_Test() {
     }
 
-    int nchanges = 0;
+    boolean disabled = false;
     int nadds = 0;
     int nremoves = 0;
-    boolean disabled = false;
-    Group group;
-    Rectangle rect;
-    Text text;    
 
     static List<CascadingStyle> createStyleList(List<Declaration> decls) {
         
@@ -100,7 +96,7 @@ public class Node_cssStyleMap_Test {
         return smap;
     }
     
-    @Test @org.junit.Ignore
+    @Test
     public void testStyleMapTracksChanges() {
                 
         final List<Declaration> declsNoState = new ArrayList<Declaration>();
@@ -120,7 +116,7 @@ public class Node_cssStyleMap_Test {
         
         Rule rule = new Rule(selsNoState, declsNoState);        
         
-        Stylesheet stylesheet = new Stylesheet();
+        Stylesheet stylesheet = new Stylesheet("testStyleMapTracksChanges");
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
         stylesheet.getRules().add(rule);
         
@@ -143,7 +139,6 @@ public class Node_cssStyleMap_Test {
         
         // add to this list on wasAdded, check bean on wasRemoved.
         final List<StyleableProperty<?>> beans = new ArrayList<StyleableProperty<?>>();
-        
         Rectangle rect = new Rectangle(50,50);
         rect.getStyleClass().add("rect");
         rect.impl_setStyleMap(FXCollections.observableMap(new HashMap<StyleableProperty<?>, List<Style>>()));
@@ -206,7 +201,7 @@ public class Node_cssStyleMap_Test {
         
     }
     
-    @Test @org.junit.Ignore
+    @Test
     public void testRT_21212() {
 
         final List<Declaration> rootDecls = new ArrayList<Declaration>();
@@ -223,7 +218,7 @@ public class Node_cssStyleMap_Test {
         
         Rule rootRule = new Rule(rootSels, rootDecls);        
         
-        Stylesheet stylesheet = new Stylesheet();
+        Stylesheet stylesheet = new Stylesheet("testRT_21212");
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
         stylesheet.getRules().add(rootRule);
 
@@ -232,7 +227,7 @@ public class Node_cssStyleMap_Test {
         final Map<StyleCache.Key, StyleCache> styleCache = 
             new HashMap<StyleCache.Key, StyleCache>();
         
-        group = new Group();
+        Group group = new Group();
         group.getStyleClass().add("root");
         
         
@@ -263,11 +258,11 @@ public class Node_cssStyleMap_Test {
         final Map<String,List<CascadingStyle>> styleMap = createStyleMap(styles);
         final Map<String,List<CascadingStyle>> emptyMap = createStyleMap(null);
 
-        text = new Text("HelloWorld");
+        Text text = new Text("HelloWorld");
         group.getChildren().add(text);
 
         final List<Declaration> expecteds = new ArrayList<Declaration>();
-//        expecteds.addAll(rootDecls);
+        expecteds.addAll(rootDecls);
         expecteds.addAll(textDecls);
         text.getStyleClass().add("text");
         text.impl_setStyleMap(FXCollections.observableMap(new HashMap<StyleableProperty<?>, List<Style>>()));
@@ -283,7 +278,7 @@ public class Node_cssStyleMap_Test {
                         assertTrue(expecteds.contains(style.getDeclaration()));
                         expecteds.remove(style.getDeclaration());
                     }
-                } 
+                }
             }
         });
              
@@ -292,18 +287,10 @@ public class Node_cssStyleMap_Test {
         Stage stage = new Stage();
         stage.setScene(scene);
         stage.show();
-        
+
         assertEquals(18, text.getFont().getSize(),0);
         assertTrue(Integer.toString(expecteds.size()), expecteds.isEmpty());
 
-        text.getStyleClass().clear();
-
-        Toolkit.getToolkit().firePulse();
-        
-        // PENDING RT-25002
-//        assertEquals(12, text.getFont().getSize(),0);
-//        assertTrue(text.impl_getStyleMap().toString(), text.impl_getStyleMap().isEmpty());
-        
     } 
     
 }

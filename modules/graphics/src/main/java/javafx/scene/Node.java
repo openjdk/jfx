@@ -150,12 +150,7 @@ import com.sun.javafx.scene.transform.TransformUtils;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
-import com.sun.javafx.geom.transform.Affine2D;
-import com.sun.javafx.geom.transform.AffineBase;
-import com.sun.javafx.geom.transform.Translate2D;
 import com.sun.prism.impl.PrismSettings;
-import javafx.scene.transform.Translate;
 import sun.util.logging.PlatformLogger;
 import sun.util.logging.PlatformLogger.Level;
 
@@ -8548,7 +8543,14 @@ public abstract class Node implements EventTarget, Styleable {
       */
      @Deprecated // SB-dependency: RT-21096 has been filed to track this
      public final void impl_setStyleMap(ObservableMap<StyleableProperty<?>, List<Style>> styleMap) {
-         if (styleHelper != null) {
+         //
+         // Node doesn't have a field for this map. Rather, this is held by CssStyleHelper. If this node
+         // doesn't have a styleHelper, then there is nothing to attach the listener to. So a styleHelper has
+         // to be created.
+         //
+         if (styleHelper == null) {
+             styleHelper = CssStyleHelper.createStyleHelper(this, null, styleMap);
+         } else {
              styleHelper.setObservableStyleMap(styleMap);
          }
      }
@@ -8860,8 +8862,11 @@ public abstract class Node implements EventTarget, Styleable {
                 return;
             }
 
+            ObservableMap<StyleableProperty<?>, List<Style>> styleObserver =
+                    styleHelper != null ? styleHelper.observableStyleMap : null;
+
             // Match new styles if my own indicates I need to reapply
-            styleHelper = CssStyleHelper.createStyleHelper(this, cacheHint);
+            styleHelper = CssStyleHelper.createStyleHelper(this, cacheHint, styleObserver);
 
         }
 
