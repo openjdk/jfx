@@ -133,6 +133,9 @@ public class RadioMenuItem extends MenuItem implements Toggle {
      **************************************************************************/
     
     // --- Toggle Group
+    /**
+     * Represents the {@link ToggleGroup} that this RadioMenuItem belongs to.
+     */
     private ObjectProperty<ToggleGroup> toggleGroup;
     @Override public final void setToggleGroup(ToggleGroup value) {
         toggleGroupProperty().set(value);
