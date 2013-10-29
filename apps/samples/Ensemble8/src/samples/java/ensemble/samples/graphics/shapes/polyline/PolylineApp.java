@@ -51,6 +51,7 @@ import javafx.stage.Stage;
  * @playground polyline1.fill (name="Polyline 1 Fill")
  * @playground polyline1.stroke (name="Polyline 1 Stroke")
  * @playground polyline2.stroke (name="Polyline 2 Stroke")
+ * @embedded
  */
 public class PolylineApp extends Application {
     // Unclosed triangle

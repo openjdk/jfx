@@ -43,6 +43,7 @@ import javafx.stage.Stage;
  * @sampleName Text Field
  * @preview preview.png
  * @see javafx.scene.control.TextField
+ * @embedded
  */
 public class TextFieldApp extends Application {
 

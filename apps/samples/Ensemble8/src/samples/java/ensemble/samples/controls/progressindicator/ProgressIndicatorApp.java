@@ -52,6 +52,7 @@ import javafx.util.Duration;
  * @preview preview.png
  * @see javafx.scene.control.ProgressIndicator
  * @related /Controls/Progress Bar
+ * @embedded
  */
 public class ProgressIndicatorApp extends Application {
     final Timeline timeline = new Timeline();

@@ -24,6 +24,7 @@
  */
 
 #import <UIKit/UIKit.h>
+#import <Foundation/NSNotification.h>
 
 #include "GlassWindow.h"
 
@@ -35,16 +36,53 @@
 #include "GlassViewController.h"
 
 static UIView * s_grabWindow = nil;
-GlassWindow   * focusOwner; // currently focused GlassWindow - i.e. key events receiver
+static GlassWindow   * focusOwner; // currently focused GlassWindow - i.e. key events receiver
 
 
 @implementation GlassMainWindow
+
+-(id)initWithFrame:(CGRect)frame {
+    self = [super initWithFrame:frame];
+
+    [[NSNotificationCenter defaultCenter] addObserver:self 
+                                             selector:@selector(keyboardDidShow:) 
+                                                 name:UIKeyboardDidShowNotification 
+                                               object:nil];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(keyboardDidHide:)
+                                                 name:UIKeyboardDidHideNotification
+                                               object:nil];
+    return self;
+}
+
 // multitouch debugging
 - (void) sendEvent:(UIEvent *)event
 {
     GLASS_LOG("GlassMainWindow received UIEvent: %@", event);
     [super sendEvent:event];
 }
+
+- (void) keyboardDidShow:(NSNotification *) notification
+{
+#if MAT_IOS_DEBUG
+    GLASS_LOG("[GlassMainWindow keyboardDidShow]");
+    NSDictionary *info = [notification userInfo];
+    CGRect keyboardFrame = [[info objectForKey:UIKeyboardFrameEndUserInfoKey] CGRectValue];
+    GLASS_LOG("Keyboard frame x = %f, y = %f, width = %f, height = %f", keyboardFrame.origin.x, keyboardFrame.origin.y, keyboardFrame.size.width, keyboardFrame.size.height);
+#endif
+}
+
+- (void) keyboardDidHide:(NSNotification *) notification
+{
+    GLASS_LOG("[GlassMainWindow keyboardidHide]");
+    [self resignFocusOwner];
+}
+
+- (void) resignFocusOwner {
+    [focusOwner resignKeyWindow];
+}
+
 @end
 
 @implementation GlassMainView
@@ -69,8 +107,8 @@ GlassWindow   * focusOwner; // currently focused GlassWindow - i.e. key events r
 //Toplevel containers of all GlassWindows
 //once we support multiple screens on iOS - there will be one masterWindow/
 //masterWindowHost per screen
-GlassMainWindow * masterWindow = nil;
-GlassMainView * masterWindowHost = nil;
+static GlassMainWindow * masterWindow = nil;
+static GlassMainView * masterWindowHost = nil;
 
 @interface GlassWindow (JavaAdditions)
 - (void)displaySubviews;
@@ -168,6 +206,13 @@ static inline void setWindowFrame(GlassWindow *window, CGFloat x, CGFloat y, CGF
 
 @implementation GlassWindow
 
++(GlassMainWindow *)  getMasterWindow {
+    return masterWindow;
+}
+
++(GlassMainView *) getMasterWindowHost {
+    return masterWindowHost;
+}
 // request subviews to repaint
 - (void) displaySubviews
 {
@@ -592,16 +637,11 @@ static inline void setWindowFrame(GlassWindow *window, CGFloat x, CGFloat y, CGF
 
 - (void) makeKeyWindow
 {
-    
-    if (self->isEnabled && self->isFocusable) {
+    if (self->isEnabled && self->isFocusable && focusOwner != self) {
         
-        if (focusOwner != nil) {
-            [focusOwner resignKeyWindow];
-            focusOwner = nil;
-        }
+        [focusOwner resignKeyWindow];
     
-        focusOwner = self;
-        [focusOwner becomeKeyWindow];
+        [self becomeKeyWindow];
     }
 }
 
@@ -623,6 +663,8 @@ static inline void setWindowFrame(GlassWindow *window, CGFloat x, CGFloat y, CGF
         return;
     }
     
+    focusOwner = self;
+    
     (*env)->CallVoidMethod(env, self->jWindow, mat_jWindowNotifyFocus, com_sun_glass_events_WindowEvent_FOCUS_GAINED);
 }
 
@@ -631,6 +673,10 @@ static inline void setWindowFrame(GlassWindow *window, CGFloat x, CGFloat y, CGF
 {
     GLASS_LOG("Window did resign key");
     NSAssert([[NSThread currentThread] isMainThread] == YES, @"must be on main thread" );
+    
+    if (focusOwner == self) {
+        focusOwner = nil;
+    }
     
     [self _ungrabFocus];
     
@@ -717,7 +763,7 @@ jlong _1createWindow(JNIEnv *env, jobject jWindow, jlong jOwnerPtr, jlong jScree
         BOOL hidden = YES;
         if (jOwnerPtr == 0L) {
             // no owner means it is the primary stage; Decorated primary stage shows status bar by default
-            hidden = ((jStyleMask&com_sun_glass_ui_Window_TITLED) == 0);
+            hidden = ((jStyleMask & com_sun_glass_ui_Window_TITLED) == 0);
             
             NSObject * values = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"UIStatusBarHidden"];
             //we prefer explicit settings from .plist

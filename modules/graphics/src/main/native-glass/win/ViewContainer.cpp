@@ -731,22 +731,22 @@ void ViewContainer::WmImeNotify(HWND hwnd, WPARAM wParam, LPARAM lParam)
 {
     if (wParam == IMN_OPENCANDIDATE) {
         JNIEnv *env = GetEnv();
-        RECT curPos;
-        RECT winPos;
+        POINT curPos;
         UINT bits = 1;
         HIMC hIMC = ImmGetContext(hwnd);
         CANDIDATEFORM cf;
 
-        GetWindowRect(hwnd, &winPos);        
         GetCandidatePos(&curPos);
+        ::ScreenToClient(hwnd, &curPos);
 
         for (int iCandType=0; iCandType<32; iCandType++, bits<<=1) {
             if (lParam & bits) {
                 cf.dwIndex = iCandType;
                 cf.dwStyle = CFS_CANDIDATEPOS;
-                cf.ptCurrentPos.x = curPos.left - winPos.left;
-                cf.ptCurrentPos.y = curPos.top - winPos.top;
-                ImmSetCandidateWindow(hIMC, &cf);
+                // The constant offset is needed because Windows is moving the IM window
+                cf.ptCurrentPos.x = curPos.x - 6;
+                cf.ptCurrentPos.y = curPos.y - 15;
+                ::ImmSetCandidateWindow(hIMC, &cf);
             }
         }
         ImmReleaseContext(hwnd, hIMC);
@@ -803,7 +803,7 @@ void ViewContainer::SendInputMethodEvent(jstring text,
 }
 
 // Gets the candidate position
-void ViewContainer::GetCandidatePos(RECT* curPos) 
+void ViewContainer::GetCandidatePos(LPPOINT curPos)
 {
     JNIEnv *env = GetEnv();
     double* nativePos; 
@@ -813,8 +813,8 @@ void ViewContainer::GetCandidatePos(RECT* curPos)
                         0);
     nativePos = env->GetDoubleArrayElements(pos, NULL);
 
-    curPos->left = (int)nativePos[0];
-    curPos->top  = (int)nativePos[1];
+    curPos->x = (int)nativePos[0];
+    curPos->y  = (int)nativePos[1];
 
     env->ReleaseDoubleArrayElements(pos, nativePos, 0);
 }

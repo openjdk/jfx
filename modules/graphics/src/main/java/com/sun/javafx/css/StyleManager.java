@@ -1673,18 +1673,23 @@ final public class StyleManager {
 
                 List<Selector> selectors = rule != null ? rule.getUnobservedSelectorList() : null;
                 Selector selector = selectors != null && !selectors.isEmpty() ? selectors.get(0) : null;
-                selector.setOrdinal(-1);
 
-                inlineStylesCache.put(inlineStyle, selector);
-                return selector;
+                // selector might be null if parser throws some exception
+                if (selector != null) {
+                    selector.setOrdinal(-1);
 
-            } else {
+                    inlineStylesCache.put(inlineStyle, selector);
+                    return selector;
+                }
+                // if selector is null, fall through
 
-                // even if inlineStylesheet is null, put it in cache so we don't
-                // bother with trying to parse it again.
-                inlineStylesCache.put(inlineStyle, null);
-                return null;
             }
+
+            // even if selector is null, put it in cache so we don't
+            // bother with trying to parse it again.
+            inlineStylesCache.put(inlineStyle, null);
+            return null;
+
         }
 
         private Map<StyleCache.Key,StyleCache> styleCache;

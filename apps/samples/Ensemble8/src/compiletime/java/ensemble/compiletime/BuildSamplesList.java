@@ -58,7 +58,7 @@ public class BuildSamplesList {
     private static List<Sample> allSamples = new ArrayList<>();
     
     public static List<Sample> build(File samplesSrcDir, File samplesResourcesDir, File samplesSourceFile) {
-        BuildSamplesList.samplesSrcDir = samplesSrcDir;       
+        BuildSamplesList.samplesSrcDir = samplesSrcDir;                 
         File samplesDir = new File(samplesSrcDir,"ensemble/samples");
         BuildSamplesList.samplesResourcesDir = samplesResourcesDir; //Resources are in a different location from *.java files
         File resourcesDir = new File(samplesResourcesDir, "ensemble/samples");
@@ -83,7 +83,7 @@ public class BuildSamplesList {
             fout.println("import javafx.application.ConditionalFeature;");
             fout.println("import java.util.HashMap;");
             fout.println("public class Samples{");
-            // write samples
+            // write samples         
             for (int sampleIndex=0; sampleIndex < ALL_SAMPLES.size(); sampleIndex ++) {
                 fout.print("    private static final SampleInfo SAMPLE_"+sampleIndex+" = ");
                 fout.print(generateCode(ALL_SAMPLES.get(sampleIndex)));
@@ -226,6 +226,8 @@ public class BuildSamplesList {
                             System.err.println("@conditionalFeatures entry is not a feature: " + feature); 
                         }
                     }
+                } else if (trimedLine.startsWith("@embedded")) {
+                    sample.runsOnEmbedded = true;
                 } else {
                     descBuilder.append(trimedLine);
                     descBuilder.append(' ');

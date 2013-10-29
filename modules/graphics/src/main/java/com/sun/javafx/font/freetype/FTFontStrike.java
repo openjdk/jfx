@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx.font.pango;
+package com.sun.javafx.font.freetype;
 
 import com.sun.javafx.font.DisposerRecord;
 import com.sun.javafx.font.FontStrikeDesc;
@@ -59,11 +59,6 @@ class FTFontStrike extends PrismFontStrike<FTFontFile> {
                 drawShapes = true;
             }
         }
-    }
-
-    @Override
-    public boolean isSubPixelGlyph() {
-        return false;
     }
 
     @Override

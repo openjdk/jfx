@@ -50,6 +50,7 @@ import javafx.stage.Stage;
  * @related /Controls/Text/Advanced Label
  * @related /Controls/Button/Graphic Button
  * @related /Controls/Text/Inset Text
+ * @embedded
  */
 public class SimpleLabelApp extends Application {
 

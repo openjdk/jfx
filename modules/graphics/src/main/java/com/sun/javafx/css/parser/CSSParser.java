@@ -2933,7 +2933,7 @@ final public class CSSParser {
         int paint = 0;
 
         while(term != null) {
-            if (term.token == null) error(term, "Expected \'<paint>\'");
+            if (term.token == null || paints.length <= paint) error(term, "Expected \'<paint>\'");
             paints[paint++] = parse(term);
             term = term.nextInSeries;
         }

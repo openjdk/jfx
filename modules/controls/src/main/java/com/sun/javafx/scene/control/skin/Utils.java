@@ -30,8 +30,6 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.text.BreakIterator;
 
 import static javafx.scene.control.OverrunStyle.*;
@@ -54,6 +52,8 @@ import javafx.scene.text.TextBoundsType;
 
 import com.sun.javafx.scene.control.behavior.TextBinding;
 import com.sun.javafx.scene.text.HitInfo;
+import com.sun.javafx.scene.text.TextLayout;
+import com.sun.javafx.tk.Toolkit;
 
 /**
  * BE REALLY CAREFUL WITH RESTORING OR RESETTING STATE OF helper NODE AS LEFTOVER
@@ -70,58 +70,62 @@ public class Utils {
     static final String DEFAULT_TEXT = helper.getText();
     static final TextBoundsType DEFAULT_BOUNDS_TYPE = helper.getBoundsType();
 
+    /* Using TextLayout directly for simple text measurement.
+     * Instead of restoring the TextLayout attributes to default values
+     * (each renders the TextLayout unable to efficiently cache layout data).
+     * It always sets all the attributes pertinent to calculation being performed.
+     * Note that lineSpacing and boundsType are important when computing the height
+     * but irrelevant when computing the width.
+     *
+     * Note: This code assumes that TextBoundsType#VISUAL is never used by controls.
+     * */
+    static final TextLayout layout = Toolkit.getToolkit().getTextLayoutFactory().createLayout();
+
     static double getAscent(Font font, TextBoundsType boundsType) {
-        helper.setFont(font);
-        helper.setBoundsType(boundsType);
-        final double ascent = helper.getBaselineOffset();
-        // RESTORE STATE
-        helper.setBoundsType(DEFAULT_BOUNDS_TYPE);
-        return ascent;
+        layout.setContent("", font.impl_getNativeFont());
+        layout.setWrapWidth(0);
+        layout.setLineSpacing(0);
+        if (boundsType == TextBoundsType.LOGICAL_VERTICAL_CENTER) {
+            layout.setBoundsType(TextLayout.BOUNDS_CENTER);
+        } else {
+            layout.setBoundsType(0);
+        }
+        return -layout.getBounds().getMinY();
     }
 
     static double getLineHeight(Font font, TextBoundsType boundsType) {
-        helper.setFont(font);
-        helper.setBoundsType(boundsType);
-        final double lineHeight = helper.getLayoutBounds().getHeight();
-        // RESTORE STATE
-        helper.setBoundsType(DEFAULT_BOUNDS_TYPE);
-        return lineHeight;
+        layout.setContent("", font.impl_getNativeFont());
+        layout.setWrapWidth(0);
+        layout.setLineSpacing(0);
+        if (boundsType == TextBoundsType.LOGICAL_VERTICAL_CENTER) {
+            layout.setBoundsType(TextLayout.BOUNDS_CENTER);
+        } else {
+            layout.setBoundsType(0);
+        }
+        return layout.getBounds().getHeight();
     }
 
     static double computeTextWidth(Font font, String text, double wrappingWidth) {
-        helper.setText(text);
-        helper.setFont(font);
-        // Note that the wrapping width needs to be set to zero before
-        // getting the text's real preferred width.
-        helper.setWrappingWidth(0);
-        helper.setLineSpacing(0);
-        double w = Math.min(helper.prefWidth(-1), wrappingWidth);
-        helper.setWrappingWidth((int)Math.ceil(w));
-        w = Math.ceil(helper.getLayoutBounds().getWidth());
-        // RESTORE STATE
-        helper.setWrappingWidth(DEFAULT_WRAPPING_WIDTH);
-        helper.setLineSpacing(DEFAULT_LINE_SPACING);
-        helper.setText(DEFAULT_TEXT);
-        return w;
+        layout.setContent(text != null ? text : "", font.impl_getNativeFont());
+        layout.setWrapWidth((float)wrappingWidth);
+        return layout.getBounds().getWidth();
     }
 
     static double computeTextHeight(Font font, String text, double wrappingWidth, TextBoundsType boundsType) {
         return computeTextHeight(font, text, wrappingWidth, 0, boundsType);
     }
 
+    @SuppressWarnings("deprecation")
     static double computeTextHeight(Font font, String text, double wrappingWidth, double lineSpacing, TextBoundsType boundsType) {
-        helper.setText(text);
-        helper.setFont(font);
-        helper.setWrappingWidth((int)wrappingWidth);
-        helper.setLineSpacing((int)lineSpacing);
-        helper.setBoundsType(boundsType);
-        final double height = helper.getLayoutBounds().getHeight();
-        // RESTORE STATE
-        helper.setWrappingWidth(DEFAULT_WRAPPING_WIDTH);
-        helper.setLineSpacing(DEFAULT_LINE_SPACING);
-        helper.setText(DEFAULT_TEXT);
-        helper.setBoundsType(DEFAULT_BOUNDS_TYPE);
-        return height;
+        layout.setContent(text != null ? text : "", font.impl_getNativeFont());
+        layout.setWrapWidth((float)wrappingWidth);
+        layout.setLineSpacing((float)lineSpacing);
+        if (boundsType == TextBoundsType.LOGICAL_VERTICAL_CENTER) {
+            layout.setBoundsType(TextLayout.BOUNDS_CENTER);
+        } else {
+            layout.setBoundsType(0);
+        }
+        return layout.getBounds().getHeight();
     }
 
     static int computeTruncationIndex(Font font, String text, double width) {
@@ -667,7 +671,7 @@ public class Utils {
                 ** check is there are any mnemonics in this menu
                 */
                 if (menuitem.isMnemonicParsing()) {
-                
+
                     TextBinding bindings = new TextBinding(menuitem.getText());
                     int mnemonicIndex = bindings.getMnemonicIndex() ;
                     if (mnemonicIndex >= 0) {
@@ -686,7 +690,7 @@ public class Utils {
             }
         }
     }
-    
+
     static double computeXOffset(double width, double contentWidth, HPos hpos) {
         switch(hpos) {
             case LEFT:
@@ -716,7 +720,7 @@ public class Utils {
     ** Returns true if the platform is to use Two-Level-Focus.
     ** This is in the Util class to ease any changes in
     ** the criteria for enabling this feature.
-    ** 
+    **
     ** TwoLevelFocus is needed on platforms that
     ** only support 5-button navigation (arrow keys and Select/OK).
     **

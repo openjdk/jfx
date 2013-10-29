@@ -34,8 +34,8 @@ import javafx.collections.ObservableSet;
 import javafx.scene.text.Font;
 
 /** 
- * Styleable comprises the minimal interface required for an object to be 
- * styled by CSS.
+ * Styleable comprises the minimal interface required for an object to be styled by CSS.
+ * @see <a href="../scene/doc-files/cssref.html">CSS Reference Guide</a>.
  * @since JavaFX 8.0
  */
 public interface Styleable { 

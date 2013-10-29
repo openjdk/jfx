@@ -309,6 +309,7 @@
               <li><a href="#splitmenubutton">SplitMenuButton</a></li>
               <li><a href="#splitpane">SplitPane</a></li>
               <li><a href="#tabpane">TabPane</a></li>
+              <li><a href="#tablecolumnheader">TableColumnHeader</a></li>
               <li><a href="#tableview">TableView</a></li>
               <li><a href="#textarea">TextArea</a></li>
               <li><a href="#textinputcontrol">TextInputControl</a></li>
@@ -3586,7 +3587,7 @@
           <td class="value">[ top-left | top-center | top-right | center-left |
             center | center-right bottom-left | bottom-center | bottom-right |
             baseline-left | baseline-center | baseline-right ]</td>
-          <td class="default">top-left</td>
+          <td class="default">center-left</td>
           <td>&nbsp;</td>
         </tr>
         <tr>
@@ -4105,13 +4106,13 @@
         <tr>
           <td class="propertyname">-fx-hbar-policy</td>
           <td class="value">[ never | always | as-needed ]</td>
-          <td>1</td>
+          <td>as-needed</td>
           <td>&nbsp;</td>
         </tr>
         <tr>
           <td class="propertyname">-fx-vbar-policy</td>
           <td class="value">[ never | always | as-needed ]</td>
-          <td>1</td>
+          <td>as-needed</td>
           <td>&nbsp;</td>
         </tr>
         <tr>
@@ -4307,6 +4308,21 @@
     </ul>
     <h4><a name="splitmenubutton" id="splitmenubutton">SplitMenuButton</a></h4>
     <p class="styleclass">Style class: split-menu-button</p>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+        <thead>
+        <tr>
+            <th class="propertyname">CSS Property</th>
+            <th class="value">Values</th>
+            <th>Default</th>
+            <th>Comments</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td colspan="4" class="parents">Also has all properties of <a href="#menubutton">MenuButton</a></td>
+        </tr>
+        </tbody>
+    </table>
     <h4><a name="splitpane" id="splitpane">SplitPane</a></h4>
     <p class="styleclass">Style class: split-pane</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
@@ -4465,6 +4481,69 @@
       </ul>
       <li>tab-content-area &mdash; StackPane</li>
     </ul>
+    <h4><a name="tablecolumnheader" id="tablecolumnheader">TableColumnHeader</a></h4>
+    <p class="styleclass">Style class: column-header</p>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+        <thead>
+        <tr>
+            <th class="propertyname">CSS Property</th>
+            <th class="value">Values</th>
+            <th>Default</th>
+            <th>Comments</th>
+        <tr>
+            <td class="propertyname">-fx-size</td>
+            <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a></td>
+            <td>20</td>
+            <td>The table column header size.</td>
+        </tr>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td colspan="4" class="parents">Also has all properties of <a href="#region">Region</a></td>
+        </tr>
+        </tbody>
+    </table>
+    <h4>Pseudo-classes</h4>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+        <thead>
+        <tr>
+            <th class="propertyname">CSS Pseudo-class</th>
+            <th>Comments</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td class="propertyname">last-visible</td>
+            <td>applies if this is the last visible column in the table.</td>
+        </tr>
+        <tr>
+            <td colspan="2" class="parents">Also has all pseudo-classes of <a href="#node">Node</a></td>
+        </tr>
+        </tbody>
+    </table>
+    <h4>Substructure</h4>
+    <ul>
+        <li>column-resize-line - Region</li>
+        <li>column-overlay - Region</li>
+        <li>placeholder - StackPane</li>
+        <li>column-header-background - StackPane</li>
+        <ul>
+            <li>nested-column-header</li>
+            <ul>
+                <li>column-header</li>
+            </ul>
+            <li>filler - Region</li>
+            <li>show-hide-columns-button - StackPane</li>
+            <ul>
+                <li>show-hide-column-image - StackPane</li>
+            </ul>
+            <li>column-drag-header - StackPane</li>
+            <ul>
+                <li>label - Label</li>
+            </ul>
+        </ul>
+    </ul>
     <h4><a name="tableview" id="tableview">TableView</a></h4>
     <p class="styleclass">Style class: table-view</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
@@ -4475,10 +4554,11 @@
           <th>Default</th>
           <th>Comments</th>
         <tr>
-          <td class="propertyname">-fx-size</td>
+          <td class="propertyname">-fx-fixed-cell-size</td>
           <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a></td>
-          <td>20</td>
-          <td>The table column header size.</td>
+          <td>-1</td>
+          <td>A value greater than zero sets the fixed cell size of the table.
+              A value of zero or less disables fixed cell size.</td>
         </tr>
         </tr>
       </thead>

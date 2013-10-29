@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,9 +23,36 @@
  * questions.
  */
 
-#if defined(OMAP3) || defined(IMX6_PLATFORM) 
-# ifndef USE_FB_ROBOT
-    #define USE_FB_ROBOT
-# endif
-#endif
+package com.sun.javafx.fxml;
 
+import java.net.URL;
+
+/**
+ * An element in a parse trace, as returned by
+ * {@link javafx.fxml.FXMLLoader#impl_getParseTrace()}.
+ *
+ * @treatAsPrivate
+ * @since JavaFX 2.1
+ */
+public class ParseTraceElement {
+    private URL location;
+    private int lineNumber;
+
+    public ParseTraceElement(URL location, int lineNumber) {
+        this.location = location;
+        this.lineNumber = lineNumber;
+    }
+
+    public URL getLocation() {
+        return location;
+    }
+
+    public int getLineNumber() {
+        return lineNumber;
+    }
+
+    @Override
+    public String toString() {
+        return ((location == null) ? "?" : location.getPath()) + ": " + lineNumber;
+    }
+}

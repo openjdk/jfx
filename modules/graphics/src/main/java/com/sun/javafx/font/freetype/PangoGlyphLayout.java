@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx.font.pango;
+package com.sun.javafx.font.freetype;
 
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
@@ -46,13 +46,13 @@ class PangoGlyphLayout extends GlyphLayout {
     private int getSlot(PGFont font, PangoGlyphString glyphString) {
         CompositeFontResource fr = (CompositeFontResource)font.getFontResource();
         long fallbackFont = glyphString.font;
-        long fallbackFd = OS.pango_font_describe(fallbackFont);
-        String fallbackFamily = OS.pango_font_description_get_family(fallbackFd);
-        int fallbackStyle = OS.pango_font_description_get_style(fallbackFd);
-        int fallbackWeight = OS.pango_font_description_get_weight(fallbackFd);
-        OS.pango_font_description_free(fallbackFd);
-        boolean bold = fallbackWeight == OS.PANGO_WEIGHT_BOLD;
-        boolean italic = fallbackStyle != OS.PANGO_STYLE_NORMAL;
+        long fallbackFd = OSPango.pango_font_describe(fallbackFont);
+        String fallbackFamily = OSPango.pango_font_description_get_family(fallbackFd);
+        int fallbackStyle = OSPango.pango_font_description_get_style(fallbackFd);
+        int fallbackWeight = OSPango.pango_font_description_get_weight(fallbackFd);
+        OSPango.pango_font_description_free(fallbackFd);
+        boolean bold = fallbackWeight == OSPango.PANGO_WEIGHT_BOLD;
+        boolean italic = fallbackStyle != OSPango.PANGO_STYLE_NORMAL;
 
         PrismFontFactory prismFactory = PrismFontFactory.getFontFactory();
         PGFont fallbackPGFont = prismFactory.createFont(fallbackFamily, bold,
@@ -96,32 +96,32 @@ class PangoGlyphLayout extends GlyphLayout {
             fr = ((CompositeFontResource)fr).getSlotResource(0);
         }
 
-        long fontmap = OS.pango_ft2_font_map_new();
-        long context = OS.pango_font_map_create_context(fontmap);
+        long fontmap = OSPango.pango_ft2_font_map_new();
+        long context = OSPango.pango_font_map_create_context(fontmap);
         float size = font.getSize();
-        int style = fr.isItalic() ? OS.PANGO_STYLE_ITALIC : OS.PANGO_STYLE_NORMAL;
-        int weight = fr.isBold() ? OS.PANGO_WEIGHT_BOLD : OS.PANGO_WEIGHT_NORMAL;
-        long desc = OS.pango_font_description_new();
-        OS.pango_font_description_set_family(desc, fr.getFamilyName());
-        OS.pango_font_description_set_absolute_size(desc, size * OS.PANGO_SCALE);
-        OS.pango_font_description_set_stretch(desc, OS.PANGO_STRETCH_NORMAL);
-        OS.pango_font_description_set_style(desc, style);
-        OS.pango_font_description_set_weight(desc, weight);
-        long attrList = OS.pango_attr_list_new();
-        long attr = OS.pango_attr_font_desc_new(desc);
-        OS.pango_attr_list_insert(attrList, attr);
+        int style = fr.isItalic() ? OSPango.PANGO_STYLE_ITALIC : OSPango.PANGO_STYLE_NORMAL;
+        int weight = fr.isBold() ? OSPango.PANGO_WEIGHT_BOLD : OSPango.PANGO_WEIGHT_NORMAL;
+        long desc = OSPango.pango_font_description_new();
+        OSPango.pango_font_description_set_family(desc, fr.getFamilyName());
+        OSPango.pango_font_description_set_absolute_size(desc, size * OSPango.PANGO_SCALE);
+        OSPango.pango_font_description_set_stretch(desc, OSPango.PANGO_STRETCH_NORMAL);
+        OSPango.pango_font_description_set_style(desc, style);
+        OSPango.pango_font_description_set_weight(desc, weight);
+        long attrList = OSPango.pango_attr_list_new();
+        long attr = OSPango.pango_attr_font_desc_new(desc);
+        OSPango.pango_attr_list_insert(attrList, attr);
         if (!composite) {
-            attr = OS.pango_attr_fallback_new(false);
-            OS.pango_attr_list_insert(attrList, attr);
+            attr = OSPango.pango_attr_fallback_new(false);
+            OSPango.pango_attr_list_insert(attrList, attr);
         }
-        long runs = OS.pango_itemize(context, out, 0, out.position(), attrList, 0);
+        long runs = OSPango.pango_itemize(context, out, 0, out.position(), attrList, 0);
         if (runs != 0) {
-            int runsCount = OS.g_list_length(runs);
+            int runsCount = OSPango.g_list_length(runs);
             int runStart = start;
             for (int i = 0; i < runsCount; i++) {
-                long pangoItem = OS.g_list_nth_data(runs, i);
-                PangoGlyphString glyphString = OS.pango_shape(out, pangoItem);
-                OS.pango_item_free(pangoItem);
+                long pangoItem = OSPango.g_list_nth_data(runs, i);
+                PangoGlyphString glyphString = OSPango.pango_shape(out, pangoItem);
+                OSPango.pango_item_free(pangoItem);
                 if (glyphString != null) {
                     int slot = composite ? getSlot(font, glyphString) : 0;
                     int glyphCount = glyphString.num_glyphs;
@@ -136,7 +136,7 @@ class PangoGlyphLayout extends GlyphLayout {
                             glyphs[j] = (slot << 24) | info.glyph;
                         }
                         if (size != 0) width += info.width;
-                        pos[k] = ((float)width) / OS.PANGO_SCALE;
+                        pos[k] = ((float)width) / OSPango.PANGO_SCALE;
                         k += 2;
                     }
 
@@ -147,13 +147,13 @@ class PangoGlyphLayout extends GlyphLayout {
                     runStart += runLength;
                 }
             }
-            OS.g_list_free(runs);
+            OSPango.g_list_free(runs);
         }
         /* pango_attr_list_unref() also frees the attributes it contains */
-        OS.pango_attr_list_unref(attrList);
-        OS.pango_font_description_free(desc);
-        OS.g_object_unref(context);
-        OS.g_object_unref(fontmap);
+        OSPango.pango_attr_list_unref(attrList);
+        OSPango.pango_font_description_free(desc);
+        OSPango.g_object_unref(context);
+        OSPango.g_object_unref(fontmap);
         return textRun;
     }
 

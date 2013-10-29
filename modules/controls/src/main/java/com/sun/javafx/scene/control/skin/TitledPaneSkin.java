@@ -215,10 +215,10 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             w, headerHeight, 0, HPos.LEFT, VPos.CENTER);
 
         // content
-        double contentHeight = h - headerHeight;
+        double contentHeight = (h - headerHeight) * getTransition();
         if (isInsideAccordion()) {
             if (prefHeightFromAccordion != 0) {
-                contentHeight = prefHeightFromAccordion - headerHeight;
+                contentHeight = (prefHeightFromAccordion - headerHeight) * getTransition();
             }
         }
 
@@ -265,18 +265,16 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
     }
 
     private void doAnimationTransition() {
-        Duration duration;
-
-        
         if (contentRegion.getContent() == null) {
             return;
         }
 
+        Duration duration;
         if (timeline != null && (timeline.getStatus() != Status.STOPPED)) {
             duration = timeline.getCurrentTime();
             timeline.stop();
         } else {
-                duration = TRANSITION_DURATION;
+            duration = TRANSITION_DURATION;
         }
 
         timeline = new Timeline();

@@ -84,7 +84,7 @@ import javafx.event.EventDispatchChain;
 public class Menu extends MenuItem {
 
     /**
-     * <p>Called when the contentMenu for this menu <b>will</b> be shown. However if the
+     * <p>Called when the contextMenu for this menu <b>will</b> be shown. However if the
      * contextMenu is empty then this will not be called.
      * </p>
      */
@@ -92,7 +92,7 @@ public class Menu extends MenuItem {
             new EventType<Event>(Event.ANY, "MENU_ON_SHOWING");
 
     /**
-     * <p>Called when the contentMenu for this menu shows. However if the
+     * <p>Called when the contextMenu for this menu shows. However if the
      * contextMenu is empty then this will not be called.
      * </p>
      */
@@ -100,7 +100,7 @@ public class Menu extends MenuItem {
             new EventType<Event>(Event.ANY, "MENU_ON_SHOWN");
 
     /**
-     * <p>Called when the contentMenu for this menu <b>will</b> be hidden. However if the
+     * <p>Called when the contextMenu for this menu <b>will</b> be hidden. However if the
      * contextMenu is empty then this will not be called.
      * </p>
      */
@@ -108,7 +108,7 @@ public class Menu extends MenuItem {
             new EventType<Event>(Event.ANY, "MENU_ON_HIDING");
 
     /**
-     * <p>Called when the contentMenu for this menu is hidden. However if the
+     * <p>Called when the contextMenu for this menu is hidden. However if the
      * contextMenu is empty then this will not be called.
      * </p>
      */
@@ -221,12 +221,12 @@ public class Menu extends MenuItem {
 
 
     // --- On Showing
-    public final ObjectProperty<EventHandler<Event>> onShowingProperty() { return onShowing; }
     /**
      * Called just prior to the {@code ContextMenu} being shown, even if the menu has
      * no items to show. Note however that this won't be called if the menu does
      * not have a valid anchor node.
      */
+    public final ObjectProperty<EventHandler<Event>> onShowingProperty() { return onShowing; }
     public final void setOnShowing(EventHandler<Event> value) { onShowingProperty().set(value); }
     public final EventHandler<Event> getOnShowing() { return onShowingProperty().get(); }
     private ObjectProperty<EventHandler<Event>> onShowing = new ObjectPropertyBase<EventHandler<Event>>() {
@@ -247,10 +247,10 @@ public class Menu extends MenuItem {
 
 
     // -- On Shown
-    public final ObjectProperty<EventHandler<Event>> onShownProperty() { return onShown; }
     /**
      * Called just after the {@link ContextMenu} is shown.
      */
+    public final ObjectProperty<EventHandler<Event>> onShownProperty() { return onShown; }
     public final void setOnShown(EventHandler<Event> value) { onShownProperty().set(value); }
     public final EventHandler<Event> getOnShown() { return onShownProperty().get(); }
     private ObjectProperty<EventHandler<Event>> onShown = new ObjectPropertyBase<EventHandler<Event>>() {
@@ -271,10 +271,10 @@ public class Menu extends MenuItem {
 
 
     // --- On Hiding
-    public final ObjectProperty<EventHandler<Event>> onHidingProperty() { return onHiding; }
     /**
      * Called just prior to the {@link ContextMenu} being hidden.
      */
+    public final ObjectProperty<EventHandler<Event>> onHidingProperty() { return onHiding; }
     public final void setOnHiding(EventHandler<Event> value) { onHidingProperty().set(value); }
     public final EventHandler<Event> getOnHiding() { return onHidingProperty().get(); }
     private ObjectProperty<EventHandler<Event>> onHiding = new ObjectPropertyBase<EventHandler<Event>>() {
@@ -295,10 +295,10 @@ public class Menu extends MenuItem {
 
 
     // --- On Hidden
-    public final ObjectProperty<EventHandler<Event>> onHiddenProperty() { return onHidden; }
     /**
      * Called just after the {@link ContextMenu} has been hidden.
      */
+    public final ObjectProperty<EventHandler<Event>> onHiddenProperty() { return onHidden; }
     public final void setOnHidden(EventHandler<Event> value) { onHiddenProperty().set(value); }
     public final EventHandler<Event> getOnHidden() { return onHiddenProperty().get(); }
     private ObjectProperty<EventHandler<Event>> onHidden = new ObjectPropertyBase<EventHandler<Event>>() {
@@ -392,11 +392,13 @@ public class Menu extends MenuItem {
         }
         setShowing(false);
     }
-    
+
+    /** {@inheritDoc} */
     @Override public <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<E> eventHandler) {
         eventHandlerManager.addEventHandler(eventType, eventHandler);
     }
-    
+
+    /** {@inheritDoc} */
     @Override public <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<E> eventHandler) {
         eventHandlerManager.removeEventHandler(eventType, eventHandler);
     }

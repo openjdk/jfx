@@ -42,7 +42,6 @@ import com.sun.javafx.geom.transform.AffineBase;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.scene.text.GlyphList;
-import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.CompositeMode;
@@ -2049,7 +2048,7 @@ public abstract class BaseShaderGraphics
 
         //Since we currently cannot support LCD text on transparant surfaces, we
         //verify that we are drawing to an opaque surface.
-        if (strike.getAAMode() == FontResource.AA_LCD && lcdSupported) {
+        if (strike.getAAMode() == FontResource.AA_LCD) {
             if (nodeBounds == null) {
                 // If drawString is called directly without using
                 // setNodeBounds then we must determine the bounds of the str,
@@ -2097,26 +2096,18 @@ public abstract class BaseShaderGraphics
             float unitXCoord = 1.0f/((float)cacheTex.getPhysicalWidth());
             shader.setConstant("gamma", gamma, invgamma, unitXCoord);
             setCompositeMode(blendMode); // Restore composite mode
-            if (isSimpleTranslate) {
-                // Applying this rounding allows for smoother text animation,
-                // when animating simple translated text.
-                if (!strike.isSubPixelGlyph()) {
-                    p2d.x = (float)Math.round(3.0 * p2d.x)/ 3.0f;
-                }
-                p2d.y = (float)Math.round(p2d.y);
-            }
         } else {
-            if (isSimpleTranslate) {
-                // Asking glyph textures to be rendered at non-integral
-                // locations produces very poor text. This doesn't solve
-                // the problem for scaled (etc) cases, but addresses a
-                // common case.
-                if (!strike.isSubPixelGlyph()) {
-                    p2d.x = (float)Math.round(p2d.x);
-                }
-                p2d.y = (float)Math.round(p2d.y);
-            }
             context.validatePaintOp(this, IDENT, cacheTex, bx, by, bw, bh);
+        }
+        if (isSimpleTranslate) {
+            // Applying this rounding allows for smoother text animation,
+            // when animating simple translated text.
+            // Asking glyph textures to be rendered at non-integral
+            // locations produces very poor text. This doesn't solve
+            // the problem for scaled (etc) cases, but addresses a
+            // common case.
+            p2d.y = Math.round(p2d.y);
+            p2d.x = Math.round(p2d.x);
         }
         glyphCache.render(context, gl, p2d.x, p2d.y, selectStart, selectEnd,
                           selectColor, textColor, xform, clip);

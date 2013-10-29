@@ -46,8 +46,8 @@ import javafx.stage.Stage;
  *
  * @sampleName HyperLink
  * @preview preview.png
- * 
- *  @see javafx.scene.control.Hyperlink
+ * @see javafx.scene.control.Hyperlink
+ * @embedded
  */
 public class HyperLinkApp extends Application {
 

@@ -1,5 +1,6 @@
+package javafx.fxml;
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,16 +24,24 @@
  * questions.
  */
 
-package com.sun.javafx.font.pango;
+import javafx.scene.shape.TriangleMesh;
+import org.junit.Test;
 
-class PangoGlyphString {
-    /* Fields from PangoItem */
-    int offset;
-    int length;
-    int num_chars;
-    /* pangoItem->analysis->font*/
-    long font;
-    int num_glyphs;
-    PangoGlyphInfo[] glyphs;
-    int[] log_clusters;
+import static org.junit.Assert.*;
+
+import java.io.IOException;
+
+public class FXMLLoader_BuilderTest {
+
+    @Test
+    public void testTriangleMeshBuilder() throws IOException {
+        TriangleMesh mesh = FXMLLoader.load(getClass().getResource("builders_trianglemesh.fxml"));
+        float[] refFloatArray = {0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f, 8f, 9f};
+        int[] refIntArray = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+        assertArrayEquals(refIntArray, mesh.getFaces().toArray(new int[0]));
+        assertArrayEquals(refIntArray, mesh.getFaceSmoothingGroups().toArray(new int[0]));
+        assertArrayEquals(refFloatArray, mesh.getPoints().toArray(new float[0]), 1e-10f);
+        assertArrayEquals(refFloatArray, mesh.getTexCoords().toArray(new float[0]), 1e-10f);
+    }
+
 }

@@ -74,10 +74,7 @@ public class GlyphCache {
 
     // Because of SEGSHIFT the 5 high bit in the key to glyphDataMap are unused
     // Using them for subpixel
-    private static final int SUBPIXEL_NONE = 0;
-    private static final int SUBPIXEL_ONEQUARTER    = 0x08000000; // bit 27
-    private static final int SUBPIXEL_ONEHALF       = 0x10000000; // bit 28
-    private static final int SUBPIXEL_THREEQUARTERS = 0x18000000; // bit 27+28
+    private static final int SUBPIXEL_SHIFT = 27;
 
     private RectanglePacker packer;
 
@@ -136,8 +133,6 @@ public class GlyphCache {
         Color currentColor = null;
         Point2D pt = new Point2D();
 
-        boolean subPixel = strike.isSubPixelGlyph();
-        float subPixelX = 0;
         for (int gi = 0; gi < len; gi++) {
             int gc = gl.getGlyphCode(gi) & CompositeGlyphMapper.GLYPHMASK;
 
@@ -148,21 +143,13 @@ public class GlyphCache {
                 continue;
             }
             pt.setLocation(x + gl.getPosX(gi), y + gl.getPosY(gi));
-            if (subPixel) {
-                subPixelX = pt.x;
-                pt.x = (int)pt.x;
-                subPixelX -= pt.x;
-            }
-            GlyphData data = getCachedGlyph(gl, gi, subPixelX, 0);
+            int subPixel = strike.getQuantizedPosition(pt);
+            GlyphData data = getCachedGlyph(gc, subPixel);
             if (data != null) {
                 if (clip != null) {
                     // Always check clipping using user space.
                     if (x + gl.getPosX(gi) > clip.getMaxX()) break;
-                    if (x + gl.getPosX(gi + 1) < clip.getMinX()) {
-                        pt.x += data.getXAdvance();
-                        pt.y += data.getYAdvance();
-                        continue;
-                    }
+                    if (x + gl.getPosX(gi + 1) < clip.getMinX()) continue;
                 }
                 /* Will not render selected text for complex
                  * paints such as gradient.
@@ -250,24 +237,10 @@ public class GlyphCache {
         packer.clear();
     }
 
-    private GlyphData getCachedGlyph(GlyphList gl, int gi, float x, float y) {
-        int glyphCode = gl.getGlyphCode(gi);
+    private GlyphData getCachedGlyph(int glyphCode, int subPixel) {
         int segIndex = glyphCode >> SEGSHIFT;
         int subIndex = glyphCode % SEGSIZE;
-        if (x != 0) {
-            if (x < 0.25) {
-                x = 0;
-            } else if (x < 0.50) {
-                x = 0.25f;
-                segIndex |= SUBPIXEL_ONEQUARTER;
-            } else if (x < 0.75) {
-                x = 0.50f;
-                segIndex |= SUBPIXEL_ONEHALF;
-            } else {
-                x = 0.75f;
-                segIndex |= SUBPIXEL_THREEQUARTERS;
-            }
-        }
+        segIndex |= (subPixel << SUBPIXEL_SHIFT);
         GlyphData[] segment = glyphDataMap.get(segIndex);
         if (segment != null) {
             if (segment[subIndex] != null) {
@@ -282,18 +255,18 @@ public class GlyphCache {
         GlyphData data = null;
         Glyph glyph = strike.getGlyph(glyphCode);
         if (glyph != null) {
-            if (glyph.getWidth() == 0 || glyph.getHeight() == 0) {
+            byte[] glyphImage = glyph.getPixelData(subPixel);
+            if (glyphImage == null || glyphImage.length == 0) {
                 data = new GlyphData(0, 0, 0,
                                      glyph.getPixelXAdvance(),
                                      glyph.getPixelYAdvance(),
                                      null);
             } else {
                 // Rasterize the glyph
-                // TODO: needs more work for fractional metrics support (RT-27423)
                 // NOTE : if the MaskData can be stored back directly
                 // in the glyph, even as an opaque type, it should save
                 // repeated work next time the glyph is used.
-                MaskData maskData = MaskData.create(glyph.getPixelData(x ,y),
+                MaskData maskData = MaskData.create(glyphImage,
                                                     glyph.getOriginX(),
                                                     glyph.getOriginY(),
                                                     glyph.getWidth(),

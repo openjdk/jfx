@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.Utils;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -1101,7 +1102,6 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             
             updateGraphicRotation();
 
-            final int padding = 2;
             final Region focusIndicator = new Region();
             focusIndicator.setMouseTransparent(true);
             focusIndicator.getStyleClass().add("focus-indicator");
@@ -1124,16 +1124,14 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                     final double closeBtnHeight = showCloseButton() ? snapSize(closeBtn.prefHeight(-1)) : 0;
                     final double minWidth = snapSize(skinnable.getTabMinWidth());
                     final double maxWidth = snapSize(skinnable.getTabMaxWidth());
-                    final double minHeight = snapSize(skinnable.getTabMinHeight());
                     final double maxHeight = snapSize(skinnable.getTabMaxHeight());
 
                     double labelAreaWidth = prefLabelWidth;
-                    double labelAreaHeight = prefLabelHeight;
                     double labelWidth = prefLabelWidth;
                     double labelHeight = prefLabelHeight;
                     
                     final double childrenWidth = labelAreaWidth + closeBtnWidth;
-                    final double childrenHeight = Math.max(labelAreaHeight, closeBtnHeight);
+                    final double childrenHeight = Math.max(labelHeight, closeBtnHeight);
                     
                     if (childrenWidth > maxWidth && maxWidth != Double.MAX_VALUE) {
                         labelAreaWidth = maxWidth - closeBtnWidth;
@@ -1143,10 +1141,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                     }
 
                     if (childrenHeight > maxHeight && maxHeight != Double.MAX_VALUE) {
-                        labelAreaHeight = maxHeight;
                         labelHeight = maxHeight;
-                    } else if (childrenHeight < minHeight) {
-                        labelAreaHeight = minHeight;
                     }
 
                     if (animating) {
@@ -1179,12 +1174,21 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                         positionInArea(closeBtn, closeBtnStartX, paddingTop, closeBtnWidth, h,
                                 /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
                     }
-                    
+
+                    // Magic numbers regretfully introduced for RT-28944 (so that
+                    // the focus rect appears as expected on Windows and Mac).
+                    // In short we use the vPadding to shift the focus rect down
+                    // into the content area (whereas previously it was being clipped
+                    // on Windows, whilst it still looked fine on Mac). In the
+                    // future we may want to improve this code to remove the
+                    // magic number. Similarly, the hPadding differs on Mac.
+                    final int vPadding = Utils.isMac() ? 2 : 3;
+                    final int hPadding = Utils.isMac() ? 2 : 1;
                     focusIndicator.resizeRelocate(
-                            label.getLayoutX() - padding, 
-                            Math.min(label.getLayoutY(), closeBtn.isVisible() ? closeBtn.getLayoutY() : Double.MAX_VALUE) - padding, 
-                            labelWidth + closeBtnWidth + padding * 2,
-                            Math.max(labelHeight, closeBtnHeight) + padding*2);
+                            paddingLeft - hPadding,
+                            paddingTop + vPadding,
+                            w + 2 * hPadding,
+                            h - 2 * vPadding);
                 }
             };
             inner.getStyleClass().add("tab-container");

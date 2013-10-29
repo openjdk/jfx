@@ -142,6 +142,9 @@ public class MenuButton extends ButtonBase {
     }
 
     // --- Showing
+    /**
+     * Indicates whether the {@link ContextMenu} is currently visible.
+     */
     private ReadOnlyBooleanWrapper showing = new ReadOnlyBooleanWrapper(this, "showing", false) {
         @Override protected void invalidated() {
             pseudoClassStateChanged(PSEUDO_CLASS_SHOWING, get());
@@ -149,10 +152,7 @@ public class MenuButton extends ButtonBase {
         }
     };
     private void setShowing(boolean value) { showing.set(value); }
-    /**
-     * Indicates whether the {@link ContextMenu} is currently visible.
-     */
-    public final boolean isShowing() { return showing.get(); }    
+    public final boolean isShowing() { return showing.get(); }
     public final ReadOnlyBooleanProperty showingProperty() { return showing.getReadOnlyProperty(); }
     
     

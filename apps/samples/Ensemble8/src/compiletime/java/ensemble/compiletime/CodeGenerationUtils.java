@@ -90,7 +90,8 @@ public class CodeGenerationUtils {
         sb.append(stringArrayToCode(sample.relatesSamplePaths)); sb.append(',');
         sb.append(stringToCode(sample.mainFileUrl)); sb.append(',');
         sb.append(playgroundPropertyArrayToCode(sample.playgroundProperties)); sb.append(',');
-        sb.append(conditionalFeatureArrayToCode(sample.conditionalFeatures));
+        sb.append(conditionalFeatureArrayToCode(sample.conditionalFeatures)); sb.append(',');
+        sb.append(Boolean.toString(sample.runsOnEmbedded));
         sb.append(")");      
         return sb.toString();
     }

@@ -51,6 +51,17 @@ import javafx.scene.control.TableColumn.CellEditEvent;
  * {@link #indexProperty() index} property, as well as a 
  * {@link #tableColumnProperty() tableColumn} property. In addition, a TableCell
  * instance knows what {@link TableRow} it exists in.
+ *
+ * <p><strong>A note about selection:</strong> A TableCell visually shows it is
+ * selected when two conditions are met:
+ * <ol>
+ *   <li>The {@link TableSelectionModel#isSelected(int, TableColumnBase)} method
+ *   returns true for the row / column that this cell represents, and</li>
+ *   <li>The {@link javafx.scene.control.TableSelectionModel#cellSelectionEnabledProperty() cell selection mode}
+ *   property is set to true (to represent that it is allowable to select
+ *   individual cells (and not just rows of cells)).</li>
+ * </ol>
+ * </p>
  * 
  * @see TableView
  * @see TableColumn
@@ -337,7 +348,12 @@ public class TableCell<S,T> extends IndexedCell<T> {
         if (table != null) {
             // reset the editing cell on the TableView
             table.edit(-1, null);
-            table.requestFocus();
+
+            // request focus back onto the table, only if the current focus
+            // owner has the table as a parent (otherwise the user might have
+            // clicked out of the table entirely and given focus to something else.
+            // It would be rude of us to request it back again.
+            ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(table);
         }
     }
 
@@ -354,7 +370,11 @@ public class TableCell<S,T> extends IndexedCell<T> {
             TablePosition editingCell = table.getEditingCell();
             if (updateEditingIndex) table.edit(-1, null);
 
-            table.requestFocus();
+            // request focus back onto the table, only if the current focus
+            // owner has the table as a parent (otherwise the user might have
+            // clicked out of the table entirely and given focus to something else.
+            // It would be rude of us to request it back again.
+            ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(table);
 
             CellEditEvent editEvent = new CellEditEvent(
                 table,

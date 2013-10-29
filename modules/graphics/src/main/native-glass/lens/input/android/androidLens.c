@@ -93,7 +93,8 @@ void notifyTouchEvent(
            &state,
            &jlid,
            &xabs,
-           &yabs);
+           &yabs,
+           0 /*primary point index*/);
                    
    if (sendAlsoButtonEvent) {
         lens_wm_notifyButtonEvent(env,
@@ -121,7 +122,8 @@ void notifyMultiTouchEvent(
            states,
            jids,
            xs,
-           ys);
+           ys,
+           0 /*primary point index */);
     DETACH_JNI_THREAD();
 }
 

@@ -52,6 +52,7 @@ import javafx.stage.Stage;
  * @preview preview.png
  * @see javafx.scene.Parent
  * @see javafx.scene.Node
+ * @embedded
  */
 public class CustomNodeApp extends Application {
 

@@ -78,6 +78,7 @@ import javafx.stage.Stage;
  * @playground textWorld.rotate (name="World rotate", min=-180, max=180)
  * @playground textWorld.translateX (name="World translateX")
  * @playground textWorld.translateY (name="World translateY")
+ * @embedded
  */
 public class TextFlowApp extends Application {
 

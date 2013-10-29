@@ -39,7 +39,6 @@
 #endif
 
 #ifdef GLASS_ROBOT_ENABLED
-extern UIView *masterWindowHost;
 
 static inline void DumpImage(CGImageRef image)
 {
@@ -308,7 +307,7 @@ static inline void DumpImage(CGImageRef image)
 
 - (void)mousePress
 {
-     touch = [[UITouch alloc] initInView:masterWindowHost :touchLocation];
+     touch = [[UITouch alloc] initInView:[GlassWindow getMasterWindowHost] :touchLocation];
     UIEvent *eventDown = [[UIEvent alloc] initWithTouch:touch];
     
     [touch.view touchesBegan:[eventDown allTouches] withEvent:eventDown];
@@ -364,7 +363,7 @@ static inline void DumpImage(CGImageRef image)
     // On iOS 4 and later, use UIGraphicsBeginImageContextWithOptions to take the scale into consideration
     // Set the scale parameter to your OpenGL ES view's contentScaleFactor
     // so that you get a high-resolution snapshot when its value is greater than 1.0
-    CGFloat scale = masterWindowHost.contentScaleFactor;
+    CGFloat scale = [GlassWindow getMasterWindowHost].contentScaleFactor;
     NSInteger widthInPoints = width / scale;
     NSInteger heightInPoints = height / scale;
     UIGraphicsBeginImageContextWithOptions(CGSizeMake(widthInPoints, heightInPoints), NO, scale);
@@ -413,7 +412,7 @@ static inline void DumpImage(CGImageRef image)
 }
 
 - (void)keyPress:(NSString *)chr {
-    UIView *subview = [[masterWindowHost subviews] objectAtIndex:0];
+    UIView *subview = [[[GlassWindow getMasterWindowHost] subviews] objectAtIndex:0];
     if (subview != NULL) {
         subview = [[subview subviews] objectAtIndex:0];
         if (subview != NULL) {

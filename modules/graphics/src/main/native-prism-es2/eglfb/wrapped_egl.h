@@ -35,12 +35,10 @@
 #endif
 
 // Call load_wrapped_gles_symbols to initialize everything up front.
-WRAPPEDAPI int load_wrapped_gles_symbols(void);
-WRAPPEDAPI int useDispman;
-WRAPPEDAPI void *libglesv2;
-WRAPPEDAPI void *libegl;
 WRAPPEDAPI EGLNativeWindowType getNativeWindowType();
 WRAPPEDAPI EGLNativeDisplayType getNativeDisplayType();
+
+WRAPPEDAPI void * getLibGLEShandle();
 
 WRAPPEDAPI EGLDisplay wr_eglGetDisplay(EGLNativeDisplayType display_id);
 //This is needed until we can make sure load_wrapped_gles_symbols

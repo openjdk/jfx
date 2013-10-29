@@ -481,6 +481,10 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         return columnCount * characterWidth + leftInset + rightInset;
     }
 
+    @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+        return computePrefHeight(width, topInset, rightInset, bottomInset, leftInset);
+    }
+
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         return topInset + textNode.getLayoutBounds().getHeight() + bottomInset;
     }

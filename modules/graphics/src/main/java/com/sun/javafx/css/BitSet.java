@@ -196,8 +196,17 @@ abstract class BitSet<T> implements ObservableSet<T> {
 
         // if index[element] == temp, then the bit was not there
         final boolean modified = (bits[element] != temp);
-        if (modified && SetListenerHelper.hasListeners(listenerHelper)) {
-            notifyObservers(t, Change.ELEMENT_REMOVED);
+        if (modified) {
+            if (SetListenerHelper.hasListeners(listenerHelper)) {
+                notifyObservers(t, Change.ELEMENT_REMOVED);
+            }
+
+            // did removing the bit leave an empty set?
+            boolean isEmpty = true;
+            for (int n=0; n<bits.length && isEmpty; n++) {
+                isEmpty &= bits[n] == 0;
+            }
+            if (isEmpty) bits = EMPTY_SET;
         }
         return modified;
     }
@@ -268,7 +277,7 @@ abstract class BitSet<T> implements ObservableSet<T> {
         // Math.max(maskOne.length, maskTwo.length) is too slow
         final int max = a < b ? b : a;
 
-        final long[] union = max > 0 ? new long[max] : null;
+        final long[] union = max > 0 ? new long[max] : EMPTY_SET;
 
         for(int n = 0; n < max; n++) {
 
@@ -312,7 +321,7 @@ abstract class BitSet<T> implements ObservableSet<T> {
                 }
             }
 
-            this.bits = union != null ? union : new long[0];
+            this.bits = union;
         }
 
         return modified;
@@ -340,8 +349,7 @@ abstract class BitSet<T> implements ObservableSet<T> {
         // Math.min(maskOne.length, maskTwo.length) is too slow
         final int max = a < b ? a : b;
 
-        final long[] intersection = max > 0 ? new long[max] : null;
-
+        final long[] intersection = max > 0 ? new long[max] : EMPTY_SET;
 
         //
         // Make sure modified is set if maskOne has more bits than maskTwo.
@@ -352,9 +360,21 @@ abstract class BitSet<T> implements ObservableSet<T> {
         //
         modified |= (maskOne.length > max);
 
+        //
+        // RT-32872 - If the intersection is empty, then set bits to the EMPTY_SET.
+        // This ensures that {a,b,c}.retainAll({}) yields bits = EMPTY_SET as
+        // opposed to bits = long[1] and bits[0] == 0.
+        //
+        // Assume isEmpty is true. If any intersection[n] != 0,
+        // isEmpty will be set to false and will remain false.
+        //
+        //
+        boolean isEmpty = true;
+
         for(int n = 0; n < max; n++) {
             intersection[n] = maskOne[n] & maskTwo[n];
             modified |= intersection[n] != maskOne[n];
+            isEmpty &= intersection[n] == 0;
         }
 
         if (modified) {
@@ -383,7 +403,7 @@ abstract class BitSet<T> implements ObservableSet<T> {
                 }
             }
 
-            this.bits = intersection != null ? intersection : new long[0];
+            this.bits = isEmpty == false ? intersection : EMPTY_SET;
         }
 
         return modified;
@@ -411,12 +431,23 @@ abstract class BitSet<T> implements ObservableSet<T> {
         // Math.min(maskOne.length, maskTwo.length) is too slow
         final int max = a < b ? a : b;
 
-        final long[] difference = max > 0 ? new long[max] : null;
+        final long[] difference = max > 0 ? new long[max] : EMPTY_SET;
+
+        //
+        // RT-32872 - If the intersection is empty, then set bits to the EMPTY_SET.
+        // This ensures that {a,b,c}.retainAll({}) yields bits = EMPTY_SET as
+        // opposed to bits = long[1] and bits[0] == 0.
+        //
+        // Assume isEmpty is true. If any difference[n] != 0,
+        // isEmpty will be set to false and will remain false.
+        //
+        //
+        boolean isEmpty = true;
 
         for(int n = 0; n < max; n++) {
             difference[n] = maskOne[n] & ~maskTwo[n];
-
             modified |= difference[n] != maskOne[n];
+            isEmpty &= difference[n] == 0;
         }
 
         if (modified) {
@@ -437,7 +468,7 @@ abstract class BitSet<T> implements ObservableSet<T> {
                 }
             }
 
-            this.bits = difference != null ? difference : new long[0];
+            this.bits = isEmpty == false ? difference : EMPTY_SET;
         }
 
         return modified;
@@ -460,13 +491,18 @@ abstract class BitSet<T> implements ObservableSet<T> {
             }
         }
 
-        bits = new long[0];
+        bits = EMPTY_SET;
     }
     
     @Override
     public int hashCode() {
         int hash = 7;
-        hash = 71 * (hash + Arrays.hashCode(this.bits));
+        if (bits.length > 0) {
+            for (int n = 0; n < bits.length; n++) {
+                final long mask = bits[n];
+                hash = 71 * hash + (int)(mask ^ (mask >>> 32));
+            }
+        }
         return hash;
     }
 

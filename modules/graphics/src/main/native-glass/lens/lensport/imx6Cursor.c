@@ -26,16 +26,21 @@
 #ifdef IMX6_PLATFORM
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include <linux/fb.h>
 #include <sys/ioctl.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <dlfcn.h>
 #include <errno.h>
-#include <linux/mxcfb.h>
-#include "LensCommon.h"
-#include "platformUtil.h"
+#include <linux/mxcfb.h>  // note: i.MX unique header
+
+#include "lensPort.h"
+#include "lensPortInternal.h"
+#include "lensPortLogger.h"
 
 
 #define RGB565TOCOLORKEY(rgb)                              \
@@ -337,24 +342,25 @@ static void fbImx6SetVisible(jboolean isVisible) {
     }
 }
 
+static char * platformName = "imx6";
 
-jboolean check_imx6_cursor() {
+jboolean check_imx6_cursor(LensNativePort *lensPort) {
 
-    if (dlopen("libVIVANTE.so", RTLD_LAZY)) {
-        fbPlatformSetNativeCursor = fbImx6SetNativeCursor;
-        fbPlatformCursorInitialize = fbImx6CursorInitialize;
-        fbPlatformCursorSetPosition = fbImx6CursorSetPosition;
-        fbPlatformCursorClose = fbImx6CursorClose;
-        fbPlatformCreateNativeCursor = fbImx6CreateNativeCursor;
-        fbPlatformReleaseNativeCursor = fbImx6ReleaseNativeCursor;
-        fbPlatformSetVisible = fbImx6SetVisible;
-        fbPlatformCursorTranslucency = (use32bit ? JNI_TRUE : JNI_FALSE);
+    if (access("/dev/mxc_vpu", F_OK) == 0) {
+        lensPort->platformName = platformName;
+        lensPort->setNativeCursor = fbImx6SetNativeCursor;
+        lensPort->cursorInitialize = fbImx6CursorInitialize;
+        lensPort->cursorSetPosition = fbImx6CursorSetPosition;
+        lensPort->cursorClose = fbImx6CursorClose;
+        lensPort->createNativeCursor = fbImx6CreateNativeCursor;
+        lensPort->releaseNativeCursor = fbImx6ReleaseNativeCursor;
+        lensPort->setVisible = fbImx6SetVisible;
+        lensPort->cursorTranslucency = (use32bit ? JNI_TRUE : JNI_FALSE);
 
         return JNI_TRUE;
     } 
     
     return JNI_FALSE;
 }
-
 
 #endif // IMX6_PLATFORM

@@ -53,6 +53,7 @@ import javafx.stage.Stage;
  * @see javafx.scene.layout.BorderPane
  * @related /Controls/Text/Simple Label
  * @related /Graphics/Images/Image Creation
+ * @embedded
  */
 public class BorderPaneApp extends Application {
 

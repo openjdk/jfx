@@ -119,6 +119,10 @@ public class NGCanvas extends NGNode {
     public static final byte                   FX_BASE = 60;
     public static final byte FX_APPLY_EFFECT = FX_BASE + 0;
 
+    public static final byte                   UTIL_BASE = 70;
+    public static final byte RESET           = UTIL_BASE + 0;
+    public static final byte SET_DIMS        = UTIL_BASE + 1;
+
     public static final byte CAP_BUTT   = 0;
     public static final byte CAP_ROUND  = 1;
     public static final byte CAP_SQUARE = 2;
@@ -292,15 +296,15 @@ public class NGCanvas extends NGNode {
     private static Image TMP_IMAGE = Image.fromIntArgbPreData(new int[1], 1, 1);
     private static Blend BLENDER = new MyBlend(Mode.SRC_OVER, null, null);
 
-    private GrowableDataBuffer<Object> thebuf;
+    private GrowableDataBuffer thebuf;
 
     private int tw, th;
+    private int cw, ch;
     private RenderBuf cv;
     private RenderBuf temp;
     private RenderBuf clip;
 
     private float globalAlpha;
-    private byte fillRule;
     private Blend.Mode blendmode;
     private Paint fillPaint, strokePaint;
     private float linewidth;
@@ -329,8 +333,16 @@ public class NGCanvas extends NGNode {
         temp = new RenderBuf(InitType.CLEAR);
         clip = new RenderBuf(InitType.FILL_WHITE);
 
+        path = new Path2D();
+        ngtext = new NGText();
+        textLayout = new PrismTextLayout();
+        transform = new Affine2D();
+        clipStack = new LinkedList<Path2D>();
+        initAttributes();
+    }
+
+    private void initAttributes() {
         globalAlpha = 1.0f;
-        fillRule = FILL_RULE_NON_ZERO;
         blendmode = Mode.SRC_OVER;
         fillPaint = Color.BLACK;
         strokePaint = Color.BLACK;
@@ -339,15 +351,14 @@ public class NGCanvas extends NGNode {
         linejoin = BasicStroke.JOIN_MITER;
         miterlimit = 10f;
         stroke = null;
-        path = new Path2D();
-        ngtext = new NGText();
-        textLayout = new PrismTextLayout();
+        path.setWindingRule(Path2D.WIND_NON_ZERO);
+        // ngtext stores no state between render operations
+        // textLayout stores no state between render operations
         pgfont = (PGFont) Font.getDefault().impl_getNativeFont();
         align = ALIGN_LEFT;
         baseline = VPos.BASELINE.ordinal();
-        transform = new Affine2D(highestPixelScale, 0, 0,
-                                 highestPixelScale, 0, 0);
-        clipStack = new LinkedList<Path2D>();
+        transform.setToScale(highestPixelScale, highestPixelScale);
+        clipStack.clear();
     }
 
     static final Affine2D TEMP_PATH_TX = new Affine2D();
@@ -507,9 +518,8 @@ public class NGCanvas extends NGNode {
         initCanvas(g);
         if (cv.tex != null) {
             if (thebuf != null) {
-                thebuf.switchToRead();
                 renderStream(thebuf);
-                thebuf.resetForWrite();
+                GrowableDataBuffer.returnBuffer(thebuf);
                 thebuf = null;
             }
             float dw = tw / highestPixelScale;
@@ -535,6 +545,14 @@ public class NGCanvas extends NGNode {
             cv.tex.makePermanent();
             cv.tex.lock();
         }
+    }
+
+    private void clearCanvas(int x, int y, int w, int h) {
+        cv.g.setCompositeMode(CompositeMode.SRC);
+        cv.g.setTransform(BaseTransform.IDENTITY_TRANSFORM);
+        cv.g.setPaint(Color.TRANSPARENT);
+        cv.g.fillRect(x, y, w, h);
+        cv.g.setCompositeMode(CompositeMode.SRC_OVER);
     }
 
     private void initClip() {
@@ -635,9 +653,39 @@ public class NGCanvas extends NGNode {
     };
     private static final Affine2D TEMP_TX = new Affine2D();
     private void renderStream(GrowableDataBuffer buf) {
-        while (!buf.isEmpty()) {
+        while (buf.hasValues()) {
             int token = buf.getByte();
             switch (token) {
+                case RESET:
+                    initAttributes();
+                    // RESET is always followed by SET_DIMS
+                    // Setting cwh = twh avoids unnecessary double clears
+                    this.cw = this.tw;
+                    this.ch = this.th;
+                    clearCanvas(0, 0, this.tw, this.th);
+                    break;
+                case SET_DIMS:
+                    int neww = (int) Math.ceil(buf.getFloat() * highestPixelScale);
+                    int newh = (int) Math.ceil(buf.getFloat() * highestPixelScale);
+                    int clearx = Math.min(neww, this.cw);
+                    int cleary = Math.min(newh, this.ch);
+                    if (clearx < this.tw) {
+                        // tw is set to the final width, we simulate all of
+                        // the intermediate changes in size by making sure
+                        // that all pixels outside of any size change are
+                        // cleared at the stream point where they happened
+                        clearCanvas(clearx, 0, this.tw-clearx, this.th);
+                    }
+                    if (cleary < this.th) {
+                        // th is set to the final width, we simulate all of
+                        // the intermediate changes in size by making sure
+                        // that all pixels outside of any size change are
+                        // cleared at the stream point where they happened
+                        clearCanvas(0, cleary, this.tw, this.th-cleary);
+                    }
+                    this.cw = neww;
+                    this.ch = newh;
+                    break;
                 case PATHSTART:
                     path.reset();
                     break;
@@ -759,8 +807,7 @@ public class NGCanvas extends NGNode {
                     globalAlpha = buf.getFloat();
                     break;
                 case FILL_RULE:
-                    fillRule = buf.getByte();
-                    if (fillRule == FILL_RULE_NON_ZERO) {
+                    if (buf.getByte() == FILL_RULE_NON_ZERO) {
                         path.setWindingRule(Path2D.WIND_NON_ZERO);
                     } else {
                         path.setWindingRule(Path2D.WIND_EVEN_ODD);
@@ -1278,18 +1325,40 @@ public class NGCanvas extends NGNode {
         geometryChanged();
     }
 
-    public void updateRendering(GrowableDataBuffer buf) {
-        this.thebuf = buf;
+    // Returns true if we are falling behind in rendering (i.e. we
+    // have unrendered data at the time of the synch.  This tells
+    // the FX layer that it should consider emitting a RESET if it
+    // detects a full-canvas clear command even if it looks like it
+    // is superfluous.
+    public boolean updateRendering(GrowableDataBuffer buf) {
+        if (buf.isEmpty()) {
+            GrowableDataBuffer.returnBuffer(buf);
+            return (this.thebuf != null);
+        }
+        boolean reset = (buf.peekByte(0) == RESET);
+        GrowableDataBuffer retbuf;
+        if (reset || this.thebuf == null) {
+            retbuf = this.thebuf;
+            this.thebuf = buf;
+        } else {
+            this.thebuf.append(buf);
+            retbuf = buf;
+        }
         geometryChanged();
+        if (retbuf != null) {
+            GrowableDataBuffer.returnBuffer(retbuf);
+            return true;
+        }
+        return false;
     }
 
     class RenderInput extends Effect {
         float x, y, w, h;
         int token;
-        GrowableDataBuffer<Object> buf;
+        GrowableDataBuffer buf;
         Affine2D savedBoundsTx = new Affine2D();
 
-        public RenderInput(int token, GrowableDataBuffer<Object> buf,
+        public RenderInput(int token, GrowableDataBuffer buf,
                            BaseTransform boundsTx, RectBounds rb)
         {
             this.token = token;

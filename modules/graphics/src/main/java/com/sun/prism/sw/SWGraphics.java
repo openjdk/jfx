@@ -607,13 +607,13 @@ final class SWGraphics implements ReadbackGraphics {
 
         final Glyph g = strike.getGlyph(gl.getGlyphCode(idx));
         if (drawAsMasks) {
-            final float posX = (float)(x + tx.getMxt() + gl.getPosX(idx));
-            final float posY = (float)(y + tx.getMyt() + gl.getPosY(idx));
-            final float subPosX = getSubPos(posX);
-            final byte pixelData[] = g.getPixelData(subPosX, 0);
+            final Point2D pt = new Point2D((float)(x + tx.getMxt() + gl.getPosX(idx)),
+                                           (float)(y + tx.getMyt() + gl.getPosY(idx)));
+            int subPixel = strike.getQuantizedPosition(pt);
+            final byte pixelData[] = g.getPixelData(subPixel);
             if (pixelData != null) {
-                final int intPosX = g.getOriginX() + (int)posX;
-                final int intPosY = g.getOriginY() + (int)posY;
+                final int intPosX = g.getOriginX() + (int)pt.x;
+                final int intPosY = g.getOriginY() + (int)pt.y;
                 if (g.isLCDGlyph()) {
                     this.pr.fillLCDAlphaMask(pixelData, intPosX, intPosY,
                             g.getWidth(), g.getHeight(),
@@ -632,22 +632,6 @@ final class SWGraphics implements ReadbackGraphics {
                 this.paintShapePaintAlreadySet(shape, null, glyphTx);
             }
         }
-    }
-
-    private float getSubPos(float value) {
-        float v = value - ((int)value);
-        if (v != 0f) {
-            if (v < 0.25f) {
-                v = 0;
-            } else if (v < 0.50f) {
-                v = 0.25f;
-            } else if (v < 0.75f) {
-                v = 0.50f;
-            } else {
-                v = 0.75f;
-            }
-        }
-        return v;
     }
 
     public void drawTexture(Texture tex, float x, float y, float w, float h) {
@@ -717,12 +701,11 @@ final class SWGraphics implements ReadbackGraphics {
             System.out.println("dstBBox: " + dstBBox);
         }
 
-        final int interpolateMinX = Math.max(0, SWUtils.fastFloor(Math.min(sx1, sx2)));
-        final int interpolateMinY = Math.max(0, SWUtils.fastFloor(Math.min(sy1, sy2)));
-        final int interpolateMaxX = Math.min(tex.getContentWidth() - 1,
-                SWUtils.fastCeil(Math.max(sx1, sx2)) - 1);
-        final int interpolateMaxY = Math.min(tex.getContentHeight() - 1,
-                SWUtils.fastCeil(Math.max(sy1, sy2)) - 1);
+        // texture coordinates range
+        final int txMin = Math.max(0, SWUtils.fastFloor(Math.min(sx1, sx2)));
+        final int tyMin = Math.max(0, SWUtils.fastFloor(Math.min(sy1, sy2)));
+        final int txMax = Math.min(tex.getContentWidth() - 1, SWUtils.fastCeil(Math.max(sx1, sx2)) - 1);
+        final int tyMax = Math.min(tex.getContentHeight() - 1, SWUtils.fastCeil(Math.max(sy1, sy2)) - 1);
 
         this.pr.drawImage(RendererBase.TYPE_INT_ARGB_PRE, imageMode,
                 data, tex.getContentWidth(), tex.getContentHeight(),
@@ -732,7 +715,7 @@ final class SWGraphics implements ReadbackGraphics {
                 (int)(SWUtils.TO_PISCES * dstBBox.getMinX()), (int)(SWUtils.TO_PISCES * dstBBox.getMinY()),
                 (int)(SWUtils.TO_PISCES * dstBBox.getWidth()), (int)(SWUtils.TO_PISCES * dstBBox.getHeight()),
                 lEdge, rEdge, tEdge, bEdge,
-                interpolateMinX, interpolateMinY, interpolateMaxX, interpolateMaxY,
+                txMin, tyMin, txMax, tyMax,
                 swTex.hasAlpha());
 
         if (PrismSettings.debug) {

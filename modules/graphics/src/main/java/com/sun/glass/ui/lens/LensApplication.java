@@ -53,6 +53,7 @@ import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
 import sun.util.logging.PlatformLogger.Level;
 import java.util.Arrays;
+import java.util.Iterator;
 
 final class LensApplication extends Application {
 
@@ -501,12 +502,6 @@ final class LensApplication extends Application {
         @Override
         void dispatch() {
             LensTouchInputSupport.postTouchEvent(view, state, id, x, y, absX, absY);
-            if (state == TouchEvent.TOUCH_MOVED) {
-                view._notifyMouse(MouseEvent.DRAG, MouseEvent.BUTTON_NONE,
-                                  x, y, absX, absY, KeyEvent.MODIFIER_BUTTON_PRIMARY,
-                                  false, true);
-            } 
-	    // else do nothing; other events are synthesized in native code
         }
 
         @Override
@@ -547,12 +542,6 @@ final class LensApplication extends Application {
         void dispatch() {
             LensTouchInputSupport.postMultiTouchEvent(
                     view, states, ids, xs, ys, dx, dy);
-            if (states.length > 0 && states[0] == TouchEvent.TOUCH_MOVED) {
-                view._notifyMouse(MouseEvent.DRAG, MouseEvent.BUTTON_NONE,
-                    xs[0] + dx, ys[0] + dy, xs[0], ys[0],
-                    KeyEvent.MODIFIER_BUTTON_PRIMARY, false, true);
-            }
-	    // else do nothing; other events are synthesized in native code
         }
 
         @Override
@@ -746,22 +735,25 @@ final class LensApplication extends Application {
         synchronized (eventList) {
             if (!eventList.isEmpty() && (eventType == MouseEvent.DRAG
                     || eventType == MouseEvent.MOVE)) {
-                Event lastEvent = eventList.getLast();
-                if (lastEvent instanceof LensMouseEvent) {
-                    LensMouseEvent e = (LensMouseEvent) lastEvent;
-                    if (e.target == view
-                            && e.action == eventType
-                            && e.button == button
-                            && e.modifiers == modifiers
-                            && e.isPopupTrigger == isPopupTrigger
-                            && e.isSynthesized == isSynthesized) {
-                        // rewrite the coordinates of the scheduled event with
-                        // the coordinates of this event.
-                        e.x = x;
-                        e.y = y;
-                        e.absx = absx;
-                        e.absy = absy;
-                        return;
+                Iterator <Event>events = eventList.descendingIterator();
+                while (events.hasNext()) {
+                    Event lastEvent = events.next();
+                    if (lastEvent instanceof LensMouseEvent) {
+                        LensMouseEvent e = (LensMouseEvent) lastEvent;
+                        if (e.target == view
+                                && e.action == eventType
+                                && e.button == button
+                                && e.modifiers == modifiers
+                                && e.isPopupTrigger == isPopupTrigger
+                                && e.isSynthesized == isSynthesized) {
+                            // rewrite the coordinates of the scheduled event with
+                            // the coordinates of this event.
+                            e.x = x;
+                            e.y = y;
+                            e.absx = absx;
+                            e.absy = absy;
+                            return;
+                        }
                     }
                 }
             }
@@ -1173,7 +1165,7 @@ final class LensApplication extends Application {
             }
 
             //continue process events only if not already consumed
-            if (!handleDragEvents(view, eventType, x, y, absx, absy, button, modifiers)) {
+            if (!handleDragEvents(view, eventType, x, y, absx, absy, button, modifiers)) {                
                 postMouseEvent(view, eventType, x, y, absx, absy,
                                button, modifiers,
                                isPopupTrigger, isSynthesized);
@@ -1413,25 +1405,37 @@ final class LensApplication extends Application {
      */
     private void postTouchMoveEvent(LensView view, long id, int x, int y, int absX, int absY) {
         synchronized (eventList) {
+            boolean isEventCompacted = false;
             if (!eventList.isEmpty()) {
-                Event lastEvent = eventList.getLast();
-                if (lastEvent instanceof LensTouchEvent) {
-                    LensTouchEvent e = (LensTouchEvent) lastEvent;
-                    if (e.view == view &&
-                        e.id == id && 
-                        (e.state == TouchEvent.TOUCH_MOVED || e.state == TouchEvent.TOUCH_STILL)) {
-                        // Rewrite the coordinates of the scheduled event
-                        // with the coordinates of this event.
-                        e.x = x;
-                        e.y = y;
-                        e.absX = absX;
-                        e.absY = absY;
-                        return;
+                Iterator <Event>events = eventList.descendingIterator();
+                while (events.hasNext()) {
+                    Event lastEvent = events.next();
+                    if (lastEvent instanceof LensTouchEvent) {
+                        LensTouchEvent e = (LensTouchEvent) lastEvent;
+                        if (e.view == view &&
+                            e.id == id && 
+                            (e.state == TouchEvent.TOUCH_MOVED || e.state == TouchEvent.TOUCH_STILL)) {
+                            // Rewrite the coordinates of the scheduled event
+                            // with the coordinates of this event.
+                            e.x = x;
+                            e.y = y;
+                            e.absX = absX;
+                            e.absY = absY;
+                            isEventCompacted = true;
+                        }
+                        //we have found the last touch event on the queue, break
+                        break;
+                    } else if (lastEvent instanceof LensMultiTouchEvent) {
+                        //another touch event type was posted, can't update event
+                        break;
                     }
                 }
-            } else {
+            }
+             
+            if (!isEventCompacted) {
                 postEvent(new LensTouchEvent(view, TouchEvent.TOUCH_MOVED, id, x, y, absX, absY));
             }
+            
         }
     }
 
@@ -1488,37 +1492,50 @@ final class LensApplication extends Application {
                                             + " on " + view);
             }
             synchronized (eventList) {
-                // Try to match this multitouch event against a pending event
-                //This code assume that the order of touch points doesn't 
+                // Try to match this multitouch event against a the last multi touch 
+                // pending event on the queue, if they match and event type is move,
+                // update the existing event with the new values instead of posting a new event
+                // This code assume that the order of touch points doesn't 
                 //change between events
                 boolean match = false;
                 if (!eventList.isEmpty()) {
-                    Event lastEvent = eventList.getLast();
-                    if (lastEvent instanceof LensMultiTouchEvent) {
-                        LensMultiTouchEvent e = (LensMultiTouchEvent) lastEvent;
-                        if (e.view == view
-                                && e.states.length == states.length) {
-                            assert(states.length == ids.length);
-                            assert(e.states.length == e.ids.length);
-                            match = true;
-                            for (int i = 0; i < states.length && match; i++) {
-                                //check if event is motion related
-                                if ((e.states[i] != TouchEvent.TOUCH_MOVED &&
-                                     e.states[i] != TouchEvent.TOUCH_STILL) ||
-                                    (states[i] != TouchEvent.TOUCH_MOVED && 
-                                     states[i] != TouchEvent.TOUCH_STILL)) {
-                                    match = false;
+                    Iterator <Event>events = eventList.descendingIterator();
+                    while (events.hasNext()) {
+                        Event lastEvent = events.next();
+                        if (lastEvent instanceof LensMultiTouchEvent) {
+                            LensMultiTouchEvent e = (LensMultiTouchEvent) lastEvent;
+                            if (e.view == view
+                                    && e.states.length == states.length) {
+                                assert(states.length == ids.length);
+                                assert(e.states.length == e.ids.length);
+                                match = true;
+                                for (int i = 0; i < states.length && match; i++) {
+                                    //check if event is motion related
+                                    if ((e.states[i] != TouchEvent.TOUCH_MOVED &&
+                                         e.states[i] != TouchEvent.TOUCH_STILL) ||
+                                        (states[i] != TouchEvent.TOUCH_MOVED && 
+                                         states[i] != TouchEvent.TOUCH_STILL)) {
+                                        match = false;
+                                    }
+                                    if (e.ids[i] != ids[i]) {
+                                        match = false;
+                                    }
                                 }
-                                if (e.ids[i] != ids[i]) {
-                                    match = false;
+                                if (match) {
+                                    // rewrite the coordinates of the scheduled event
+                                    // with the coordinates of this event.
+                                    e.xs = xs;
+                                    e.ys = ys;
+                                    e.states = states;
+                                    e.dx = dx;
+                                    e.dy = dy;
                                 }
                             }
-                            if (match) {
-                                // rewrite the coordinates of the scheduled event
-                                // with the coordinates of this event.
-                                e.xs = xs;
-                                e.ys = ys;
-                            }
+                            //we have found the last touch event on the queue, break
+                            break;
+                        } else if (lastEvent instanceof LensTouchEvent) {
+                            //another touch event type was posted, can't update event
+                            break;
                         }
                     }
                 }

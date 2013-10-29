@@ -6,6 +6,8 @@
   <string>10.7.4</string>
   <key>CFBundleDevelopmentRegion</key>
   <string>English</string>
+  <key>CFBundleAllowMixedLocalizations</key>
+  <true/>
   <key>CFBundleExecutable</key>
   <string>DEPLOY_LAUNCHER_NAME</string>
   <key>CFBundleIconFile</key>

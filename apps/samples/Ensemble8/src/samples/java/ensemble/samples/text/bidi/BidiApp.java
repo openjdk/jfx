@@ -60,6 +60,7 @@ import javafx.stage.Stage;
  * @playground text2.rotate (name="...to me. rotate", min=-180, max=180)
  * @playground text2.translateX (name="...to me. translateX")
  * @playground text2.translateY (name="...to me. translateY")
+ * @embedded
  * 
  */
 public class BidiApp extends Application {

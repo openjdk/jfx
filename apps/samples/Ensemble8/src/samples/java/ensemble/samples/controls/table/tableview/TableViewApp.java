@@ -50,6 +50,7 @@ import javafx.stage.Stage;
  * @see javafx.scene.control.TablePosition
  * @see javafx.scene.control.TableRow
  * @see javafx.scene.control.TableView
+ * @embedded
  */
 public class TableViewApp extends Application {
 

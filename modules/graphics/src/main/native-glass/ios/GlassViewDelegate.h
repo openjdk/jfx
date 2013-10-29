@@ -38,7 +38,7 @@
 typedef __attribute__((NSObject)) CFMutableDictionaryRef GlassMutableDictionaryRef;
 
 // helper class that implements the custom GlassView functionality
-@interface GlassViewDelegate : NSObject<UIScrollViewDelegate, GlassDragSourceDelegate>
+@interface GlassViewDelegate : NSObject<UIScrollViewDelegate, GlassDragSourceDelegate, UITextFieldDelegate>
 {
    
 }

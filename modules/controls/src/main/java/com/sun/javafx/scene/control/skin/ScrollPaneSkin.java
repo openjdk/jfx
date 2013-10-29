@@ -85,6 +85,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
 
     private double nodeWidth;
     private double nodeHeight;
+    private boolean nodeSizeInvalid = true;
 
     private double posX;
     private double posY;
@@ -144,7 +145,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
 
     private final InvalidationListener nodeListener = new InvalidationListener() {
         @Override public void invalidated(Observable valueModel) {
-            if (nodeWidth != -1.0 && nodeHeight != -1.0) {
+            if (!nodeSizeInvalid) {
                 /*
                 ** if the new size causes scrollbar visibility to change, then need to relayout
                 ** we also need to correct the thumb size when the scrollnode's size changes 
@@ -265,14 +266,13 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         viewContent = new StackPane() {
             @Override public void requestLayout() {
                 // if scrollNode requested layout, will want to recompute
-                nodeWidth = -1;
-                nodeHeight = -1;
+                nodeSizeInvalid = true;
                 updateVerticalSB();
                 updateHorizontalSB();
                 super.requestLayout(); // add as layout root for next layout pass
             }
             @Override protected void layoutChildren() {
-                if (nodeWidth == -1 || nodeHeight == -1) {
+                if (nodeSizeInvalid) {
                     computeScrollNodeSize(getWidth(),getHeight());
                 }
                 if (scrollNode != null && scrollNode.isResizable()) {

@@ -44,6 +44,7 @@ import javafx.stage.Stage;
  * @sampleName Tool Bar
  * @preview preview.png
  * @see javafx.scene.control.ToolBar
+ * @embedded
  */
 public class ToolBarApp extends Application {
 

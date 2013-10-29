@@ -58,6 +58,7 @@ import javafx.stage.Stage;
  * @playground cubicCurve.controlY2 (name="Cubic Curve Control Y2", min=0, max=90)
  * @playground cubicCurve.endX (name="Cubic Curve End X", min=10, max=180)
  * @playground cubicCurve.endY (name="Cubic Curve End Y", min=0, max=80)
+ * @embedded
  */
 public class CubicCurveApp extends Application {
 

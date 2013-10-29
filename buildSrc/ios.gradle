@@ -28,7 +28,7 @@ ext.IOS = [:]
 if (BUILD_CLOSED) {
     fetchExternalTools('IOS', 
       ["ios-libs-08.tgz"], 
-      rootProject.CROSS_TOOLS_DIR, rootProject.IMPORT_CROSS_TOOLS)
+      rootProject.CROSS_TOOLS_DIR, rootProject.IS_IMPORT_CROSS_TOOLS)
 }
 
 // TODO Check for presence of iOS tools
@@ -43,11 +43,13 @@ IOS.compileFXPackager = false;
 IOS.compileDesignTime = false;
 
 defineProperty("USE_LIPO", "false")
+IOS.useLipo = Boolean.parseBoolean(USE_LIPO)
+
 defineProperty("GENERATE_SYMBOLS", "false")
+IOS.generateSymbols = Boolean.parseBoolean(GENERATE_SYMBOLS)
+
 defineProperty("BUILD_IOS_TOOLS", "true")
-if (USE_LIPO instanceof String) IOS.useLipo = Boolean.parseBoolean(USE_LIPO)
-if (GENERATE_SYMBOLS instanceof String) IOS.generateSymbols = Boolean.parseBoolean(GENERATE_SYMBOLS)
-if (BUILD_IOS_TOOLS instanceof String) ext.BUILD_IOS_TOOLS = Boolean.parseBoolean(BUILD_IOS_TOOLS)
+ext.IS_BUILD_IOS_TOOLS = Boolean.parseBoolean(BUILD_IOS_TOOLS)
 
 IOS.generateSymbolsExcludes = [
     "libprism_sw.a",

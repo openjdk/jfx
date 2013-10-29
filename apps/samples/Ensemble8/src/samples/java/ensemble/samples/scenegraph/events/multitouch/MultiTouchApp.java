@@ -47,6 +47,7 @@ import javafx.stage.Stage;
  * @see javafx.scene.input.RotateEvent
  * @see javafx.scene.input.ZoomEvent
  * @conditionalFeatures INPUT_MULTITOUCH
+ * @embedded
  */
 public class MultiTouchApp extends Application {
 

@@ -29,6 +29,7 @@ import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.Path2D;
+import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.Shape;
 
 public class CompositeStrike implements FontStrike {
@@ -125,10 +126,6 @@ public class CompositeStrike implements FontStrike {
         }
     }
 
-    public boolean isSubPixelGlyph() {
-        return getStrikeSlot(0).isSubPixelGlyph();
-    }
-
     public FontResource getFontResource() {
         return fontResource;
     }
@@ -176,6 +173,11 @@ public class CompositeStrike implements FontStrike {
     public float getCharAdvance(char ch) {
         int glyphCode = fontResource.getGlyphMapper().charToGlyph((int)ch);
         return fontResource.getAdvance(glyphCode, size);
+    }
+
+    @Override
+    public int getQuantizedPosition(Point2D point) {
+        return getStrikeSlot(0).getQuantizedPosition(point);
     }
 
     public Shape getOutline(GlyphList gl, BaseTransform transform) {

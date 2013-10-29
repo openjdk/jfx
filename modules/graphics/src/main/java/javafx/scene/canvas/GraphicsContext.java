@@ -109,7 +109,7 @@ public final class GraphicsContext {
     State curState;
     LinkedList<State> stateStack;
     LinkedList<Path2D> clipStack;
-  
+
     GraphicsContext(Canvas theCanvas) {
         this.theCanvas = theCanvas;
         this.path = new Path2D();
@@ -138,22 +138,26 @@ public final class GraphicsContext {
         FillRule fillRule;
 
         State() {
-            this(1.0, BlendMode.SRC_OVER,
-                 new Affine2D(),
-                 Color.BLACK, Color.BLACK,
-                 1.0, StrokeLineCap.SQUARE, StrokeLineJoin.MITER, 10.0,
-                 0, Font.getDefault(), TextAlignment.LEFT, VPos.BASELINE,
-                 null, FillRule.NON_ZERO);
+            init();
+        }
+
+        final void init() {
+            set(1.0, BlendMode.SRC_OVER,
+                new Affine2D(),
+                Color.BLACK, Color.BLACK,
+                1.0, StrokeLineCap.SQUARE, StrokeLineJoin.MITER, 10.0,
+                0, Font.getDefault(), TextAlignment.LEFT, VPos.BASELINE,
+                null, FillRule.NON_ZERO);
         }
 
         State(State copy) {
-            this(copy.globalAlpha, copy.blendop,
-                 new Affine2D(copy.transform),
-                 copy.fill, copy.stroke,
-                 copy.linewidth, copy.linecap, copy.linejoin, copy.miterlimit,
-                 copy.numClipPaths,
-                 copy.font, copy.textalign, copy.textbaseline,
-                 copy.effect, copy.fillRule);
+            set(copy.globalAlpha, copy.blendop,
+                new Affine2D(copy.transform),
+                copy.fill, copy.stroke,
+                copy.linewidth, copy.linecap, copy.linejoin, copy.miterlimit,
+                copy.numClipPaths,
+                copy.font, copy.textalign, copy.textbaseline,
+                copy.effect, copy.fillRule);
         }
 
         State(double globalAlpha, BlendMode blendop,
@@ -163,6 +167,23 @@ public final class GraphicsContext {
                      int numClipPaths,
                      Font font, TextAlignment align, VPos baseline,
                      Effect effect, FillRule fillRule)
+        {
+            set(globalAlpha, blendop,
+                new Affine2D(transform),
+                fill, stroke,
+                linewidth, linecap, linejoin, miterlimit,
+                numClipPaths,
+                font, textalign, textbaseline,
+                effect, fillRule);
+        }
+
+        final void set(double globalAlpha, BlendMode blendop,
+                       Affine2D transform, Paint fill, Paint stroke,
+                       double linewidth, StrokeLineCap linecap,
+                       StrokeLineJoin linejoin, double miterlimit,
+                       int numClipPaths,
+                       Font font, TextAlignment align, VPos baseline,
+                       Effect effect, FillRule fillRule)
         {
             this.globalAlpha = globalAlpha;
             this.blendop = blendop;
@@ -376,7 +397,7 @@ public final class GraphicsContext {
         buf.putObject(text);
     }
 
-    private void writeParam(double v, byte command) {
+    void writeParam(double v, byte command) {
         GrowableDataBuffer buf = getBuffer();
         buf.putByte(command);
         buf.putFloat((float) v);
@@ -402,8 +423,68 @@ public final class GraphicsContext {
             buf.putDouble(curState.transform.getMyt());
         }
     }
-    
-   /**
+
+    void updateDimensions() {
+        GrowableDataBuffer buf = getBuffer();
+        buf.putByte(NGCanvas.SET_DIMS);
+        buf.putFloat((float) theCanvas.getWidth());
+        buf.putFloat((float) theCanvas.getHeight());
+    }
+
+    private void reset() {
+        GrowableDataBuffer buf = getBuffer();
+        // Only reset if we have a significant amount of data to omit,
+        // this prevents a common occurence of "setFill(bg); fillRect();"
+        // at the start of a session from invoking a reset.
+        // But, do a reset anyway if the rendering layer has been falling
+        // behind because that lets the synchronization step throw out the
+        // older buffers that have been backing up.
+        if (buf.writeValuePosition() > Canvas.DEFAULT_VAL_BUF_SIZE ||
+            theCanvas.isRendererFallingBehind())
+        {
+            buf.reset();
+            buf.putByte(NGCanvas.RESET);
+            updateDimensions();
+            txdirty = true;
+            pathDirty = true;
+            State s = this.curState;
+            int numClipPaths = this.curState.numClipPaths;
+            this.curState = new State();
+            for (int i = 0; i < numClipPaths; i++) {
+                Path2D clip = clipStack.get(i);
+                buf.putByte(NGCanvas.PUSH_CLIP);
+                buf.putObject(clip);
+            }
+            this.curState.numClipPaths = numClipPaths;
+            s.restore(this);
+        }
+    }
+
+    private void resetIfCovers(Paint p, double x, double y, double w, double h) {
+        Affine2D tx = this.curState.transform;
+        if (tx.isTranslateOrIdentity()) {
+            x += tx.getMxt();
+            y += tx.getMyt();
+            if (x > 0 || y > 0 ||
+                (x+w) < theCanvas.getWidth() ||
+                (y+h) < theCanvas.getHeight())
+            {
+                return;
+            }
+        } else {
+//          quad test for coverage...?
+            return;
+        }
+        if (p != null) {
+            if (this.curState.blendop != BlendMode.SRC_OVER) return;
+            if (!p.isOpaque() || this.curState.globalAlpha < 1.0) return;
+        }
+        if (this.curState.numClipPaths > 0) return;
+        if (this.curState.effect != null) return;
+        reset();
+    }
+
+    /**
     * Gets the {@code Canvas} that the {@code GraphicsContext} is issuing draw
     * commands to. There is only ever one {@code Canvas} for a 
     * {@code GraphicsContext}.
@@ -1426,6 +1507,7 @@ public final class GraphicsContext {
      */
     public void clearRect(double x, double y, double w, double h) {
         if (w != 0 && h != 0) {
+            resetIfCovers(null, x, y, w, h);
             writeOp4(x, y, w, h, NGCanvas.CLEAR_RECT);
         }
     }
@@ -1440,6 +1522,7 @@ public final class GraphicsContext {
      */
     public void fillRect(double x, double y, double w, double h) {
         if (w != 0 && h != 0) {
+            resetIfCovers(this.curState.fill, x, y, w, h);
             writeOp4(x, y, w, h, NGCanvas.FILL_RECT);
         }
     }
@@ -1722,8 +1805,8 @@ public final class GraphicsContext {
                                           PixelFormat pf, int scan)
                 {
                     // assert (w >= 0 && h >= 0) - checked by caller
-                    int cw = (int) theCanvas.getWidth();
-                    int ch = (int) theCanvas.getHeight();
+                    int cw = (int) Math.ceil(theCanvas.getWidth());
+                    int ch = (int) Math.ceil(theCanvas.getHeight());
                     if (x >= 0 && y >= 0 && x+w <= cw && y+h <= ch) {
                         return null;
                     }

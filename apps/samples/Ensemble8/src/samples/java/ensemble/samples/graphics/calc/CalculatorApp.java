@@ -62,6 +62,7 @@ import javafx.scene.paint.Color;
  * @see javafx.scene.text.Text
  * @see javafx.event.EventHandler
  * @see javafx.geometry.VPos
+ * @embedded
  */
 
 public class CalculatorApp extends Application {

@@ -1174,5 +1174,104 @@ public class PseudoClassTest {
 
     }
 
+    @Test public void testRetainAllOfEmptySetResultsInEmptySet() {
+
+        final PseudoClass[] pseudoClasses = new PseudoClass[] {
+                PseudoClass.getPseudoClass("ONE"),
+                PseudoClass.getPseudoClass("TWO"),
+                PseudoClass.getPseudoClass("THREE"),
+                PseudoClass.getPseudoClass("FOUR")
+
+        };
+
+        Set<PseudoClass> setA = new PseudoClassState();
+        for (int n=0; n<pseudoClasses.length; n++) {
+            setA.add(pseudoClasses[n]);
+        };
+
+        Set<PseudoClass> setB = new PseudoClassState();
+
+        assertTrue(setA.retainAll(setB));
+
+        assertArrayEquals(new long[0], ((PseudoClassState)setA).getBits());
+
+    }
+
+    @Test public void testRemoveAllOfSameSetResultsInEmptySet() {
+
+        final PseudoClass[] pseudoClasses = new PseudoClass[] {
+                PseudoClass.getPseudoClass("ONE"),
+                PseudoClass.getPseudoClass("TWO"),
+                PseudoClass.getPseudoClass("THREE"),
+                PseudoClass.getPseudoClass("FOUR")
+
+        };
+
+        Set<PseudoClass> setA = new PseudoClassState();
+        for (int n=0; n<pseudoClasses.length; n++) {
+            setA.add(pseudoClasses[n]);
+        };
+
+        assertTrue(setA.removeAll(setA));
+
+        assertArrayEquals(new long[0], ((PseudoClassState)setA).getBits());
+
+    }
+
+    @Test public void testRemoveLastBitResultsInEmptySet() {
+
+        final PseudoClass[] pseudoClasses = new PseudoClass[] {
+                PseudoClass.getPseudoClass("ONE"),
+                PseudoClass.getPseudoClass("TWO"),
+                PseudoClass.getPseudoClass("THREE"),
+                PseudoClass.getPseudoClass("FOUR")
+
+        };
+
+        Set<PseudoClass> setA = new PseudoClassState();
+        for (int n=0; n<pseudoClasses.length; n++) {
+            setA.add(pseudoClasses[n]);
+        };
+
+        for (int n=0; n<pseudoClasses.length; n++) {
+            assertTrue(setA.remove(pseudoClasses[n]));
+        };
+
+        assertArrayEquals(new long[0], ((PseudoClassState)setA).getBits());
+
+    }
+
+    @Test public void testRemoveLastBitByIteratorResultsInEmptySet() {
+
+        final PseudoClass[] pseudoClasses = new PseudoClass[] {
+                PseudoClass.getPseudoClass("ONE"),
+                PseudoClass.getPseudoClass("TWO"),
+                PseudoClass.getPseudoClass("THREE"),
+                PseudoClass.getPseudoClass("FOUR")
+
+        };
+
+        Set<PseudoClass> setA = new PseudoClassState();
+        for (int n=0; n<pseudoClasses.length; n++) {
+            setA.add(pseudoClasses[n]);
+        };
+
+        Iterator<PseudoClass> iterator = setA.iterator();
+        while (iterator.hasNext()) {
+            iterator.remove();
+        }
+
+        assertArrayEquals(new long[0], ((PseudoClassState)setA).getBits());
+
+    }
+
+    @Test public void testAddEmptyToEmptyResultsInEmptySet() {
+
+        Set<PseudoClass> setA = new PseudoClassState();
+        Set<PseudoClass> setB = new PseudoClassState();
+        assertFalse(setA.addAll(setB));
+        assertArrayEquals(new long[0], ((PseudoClassState)setA).getBits());
+
+    }
 
 }

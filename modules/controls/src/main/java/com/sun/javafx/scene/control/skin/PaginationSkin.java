@@ -150,7 +150,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
 
     private void initializeSwipeAndTouchHandlers() {
         final Pagination control = getSkinnable();
-                    
+
         getSkinnable().setOnTouchPressed(new EventHandler<TouchEvent>() {
             @Override public void handle(TouchEvent e) {
                 if (touchEventId == -1) {
@@ -298,7 +298,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
         fromIndex = 0;
         previousIndex = 0;
         currentIndex = usePageIndex ? getCurrentPageIndex() : 0;
-        toIndex = fromIndex + (pageCount - 1);
+        toIndex = pageCount - 1;
 
         if (pageCount == Pagination.INDETERMINATE && maxPageIndicatorCount == Pagination.INDETERMINATE) {
             // We do not know how many indicators  can fit.  Let the layout pass compute it.
@@ -675,7 +675,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
         } else if ("HEIGHT".equals(p)) {
             clipRect.setHeight(getSkinnable().getHeight());
         }
-        
+
         getSkinnable().requestLayout();
     }
 
@@ -734,12 +734,17 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                     minButtonSize = newFont.getSize() * 2;
                     for(Node child: controlBox.getChildren()) {
                         ((Control)child).setMinSize(minButtonSize, minButtonSize);
+                        // RT-33327 : min size is set on the toggle button but the
+                        // pref size does not match as computed by LabeledSkinBase#computePrefHeight 
+                        // so setting the prefSize ensures the desired size on the button.
+                        ((Control)child).setPrefSize(minButtonSize, minButtonSize);
                     }
                     // We want to relayout the indicator buttons because the size has changed.
                     requestLayout();
                 }
             });
             leftArrowButton.setMinSize(minButtonSize, minButtonSize);
+            leftArrowButton.setPrefSize(minButtonSize, minButtonSize);
             leftArrowButton.getStyleClass().add("left-arrow-button");
             leftArrowButton.setFocusTraversable(false);
             HBox.setMargin(leftArrowButton, new Insets(0, snapSize(arrowButtonGap.get()), 0, 0));
@@ -750,6 +755,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
 
             rightArrowButton = new Button();
             rightArrowButton.setMinSize(minButtonSize, minButtonSize);
+            rightArrowButton.setPrefSize(minButtonSize, minButtonSize);
             rightArrowButton.getStyleClass().add("right-arrow-button");
             rightArrowButton.setFocusTraversable(false);
             HBox.setMargin(rightArrowButton, new Insets(0, 0, 0, snapSize(arrowButtonGap.get())));
@@ -826,6 +832,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             for (int i = fromIndex; i <= toIndex; i++) {
                 IndicatorButton ib = new IndicatorButton(i);
                 ib.setMinSize(minButtonSize, minButtonSize);
+                ib.setPrefSize(minButtonSize, minButtonSize);
                 ib.setToggleGroup(indicatorButtons);
                 controlBox.getChildren().add(ib);
             }
@@ -833,7 +840,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
         }
 
         // Finds and selects the IndicatorButton using the currentIndex.
-        private void updatePageIndicators() {
+         private void updatePageIndicators() {
             for (int i = 0; i < indicatorButtons.getToggles().size(); i++) {
                 IndicatorButton ib = (IndicatorButton)indicatorButtons.getToggles().get(i);
                 if (ib.getPageNumber() == currentIndex) {
@@ -875,7 +882,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             final double leftArrowWidth = snapSize(Utils.boundedSize(leftArrowButton.prefWidth(-1), leftArrowButton.minWidth(-1), leftArrowButton.maxWidth(-1)));
             final double rightArrowWidth = snapSize(Utils.boundedSize(rightArrowButton.prefWidth(-1), rightArrowButton.minWidth(-1), rightArrowButton.maxWidth(-1)));
             final double spacing = snapSize(controlBox.getSpacing());
-            double w = width - (controlBoxleft + leftArrowWidth + spacing + rightArrowWidth + controlBoxRight);
+            double w = width - (controlBoxleft + leftArrowWidth + 2* arrowButtonGap.get() + spacing + rightArrowWidth + controlBoxRight);
 
             if (isPageInformationVisible() &&
                     (Side.LEFT.equals(getPageInformationAlignment()) ||
@@ -893,20 +900,22 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                     iw = snapSize(Utils.boundedSize(ib.prefWidth(-1), ib.minWidth(-1), ib.maxWidth(-1)));
                 }
 
-                x += (iw + controlBox.getSpacing());
+                x += (iw + spacing);
                 if (x > w) {
                     break;
                 }
                 indicatorCount++;
             }
+            if (indicatorCount == 0) {
+               indicatorCount = 1; // The parent didn't respect the minSize of this Pagination.
+                                   // We will show at least one indicator nonetheless.
+            }
 
             if (indicatorCount != previousIndicatorCount) {
                 if (indicatorCount < getMaxPageIndicatorCount()) {
                     maxPageIndicatorCount = indicatorCount;
-                } else if (indicatorCount >= getMaxPageIndicatorCount()) {
-                    maxPageIndicatorCount = getMaxPageIndicatorCount();
                 } else {
-                    maxPageIndicatorCount = toIndex - fromIndex;
+                    maxPageIndicatorCount = getMaxPageIndicatorCount();
                 }
 
                 int lastIndicatorButtonIndex;
@@ -1064,8 +1073,10 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             if (Side.LEFT.equals(side) || Side.RIGHT.equals(side)) {
                 pageInformationWidth = snapSize(pageInformation.prefWidth(-1));
             }
+            double arrowGap = arrowButtonGap.get();
 
-            return left + leftArrowWidth + spacing + rightArrowWidth + right + pageInformationWidth;
+            return left + leftArrowWidth + 2 *arrowGap + minButtonSize /*at least one button*/ 
+                    + 2 * spacing + rightArrowWidth + right + pageInformationWidth;
         }
 
         @Override protected double computeMinHeight(double width) {

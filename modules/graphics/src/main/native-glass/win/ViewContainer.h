@@ -52,7 +52,7 @@ class ViewContainer {
             int cClause, int* rgClauseBoundary,
             int cAttrBlock, int* rgAttrBoundary, BYTE *rgAttrValue,
             int commitedTextLength, int caretPos, int visiblePos);
-        void GetCandidatePos(RECT* curPos);
+        void GetCandidatePos(LPPOINT curPos);
 
     protected:
         void HandleViewMenuEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);

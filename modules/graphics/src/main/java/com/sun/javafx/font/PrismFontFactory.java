@@ -55,7 +55,11 @@ public abstract class PrismFontFactory implements FontFactory {
     public static final boolean isEmbedded;
     public static int cacheLayoutSize = 0x10000;
     static boolean useNativeRasterizer;
-    private static boolean subPixelEnabled;
+    private static int subPixelMode;
+    public static final int SUB_PIXEL_ON = 1;
+    public static final int SUB_PIXEL_Y = 2;
+    public static final int SUB_PIXEL_NATIVE = 4;
+
     private static boolean lcdEnabled;
     private static float lcdContrast = -1;
     private static String jreFontDir;
@@ -65,7 +69,7 @@ public abstract class PrismFontFactory implements FontFactory {
     private static final String T2K_FACTORY = "com.sun.javafx.font.t2k.T2KFactory";
     private static final String CT_FACTORY = "com.sun.javafx.font.coretext.CTFactory";
     private static final String DW_FACTORY = "com.sun.javafx.font.directwrite.DWFactory";
-    private static final String PANGO_FACTORY = "com.sun.javafx.font.pango.PangoFactory";
+    private static final String FT_FACTORY = "com.sun.javafx.font.freetype.FTFactory";
 
     /* We need two maps. One to hold pointers to the raw fonts, another
      * to hold pointers to the composite resources. Top level look ups
@@ -106,8 +110,16 @@ public abstract class PrismFontFactory implements FontFactory {
                                     + s + "'");
                         }
                     }
-                    s = System.getProperty("prism.subpixeltext");
-                    subPixelEnabled = s == null || s.equalsIgnoreCase("true");
+                    s = System.getProperty("prism.subpixeltext", "on");
+                    if (s.indexOf("on") != -1 || s.indexOf("true") != -1) {
+                        subPixelMode = SUB_PIXEL_ON;
+                    }
+                    if (s.indexOf("native") != -1) {
+                        subPixelMode |= SUB_PIXEL_NATIVE | SUB_PIXEL_ON;
+                    }
+                    if (s.indexOf("vertical") != -1) {
+                        subPixelMode |= SUB_PIXEL_Y | SUB_PIXEL_NATIVE | SUB_PIXEL_ON;
+                    }
 
                     useNativeRasterizer = isMacOSX || isWindows;
                     String defPrismText = useNativeRasterizer ? "native" : "t2k";
@@ -117,7 +129,6 @@ public abstract class PrismFontFactory implements FontFactory {
                     } else {
                         useNativeRasterizer = prismText.equals("native");
                     }
-                    if (isAndroid) useNativeRasterizer = false;
 
                     boolean lcdTextOff = (isMacOSX && !useNativeRasterizer) ||
                                          isIOS || isAndroid || isEmbedded;
@@ -144,7 +155,7 @@ public abstract class PrismFontFactory implements FontFactory {
     private static String getNativeFactoryName() {
         if (isWindows) return DW_FACTORY;
         if (isMacOSX || isIOS) return CT_FACTORY;
-        if (isLinux) return PANGO_FACTORY;
+        if (isLinux || isAndroid) return FT_FACTORY;
         return null;
     }
 
@@ -163,6 +174,16 @@ public abstract class PrismFontFactory implements FontFactory {
         }
         if (debugFonts) {
             System.err.println("Loading FontFactory " + factoryClass);
+            if (subPixelMode != 0) {
+                String s = "Subpixel: enabled";
+                if ((subPixelMode & SUB_PIXEL_Y) != 0) {
+                    s += ", vertical";
+                }
+                if ((subPixelMode & SUB_PIXEL_NATIVE) != 0) {
+                    s += ", native";
+                }
+                System.err.println(s);
+            }
         }
         theFontFactory = getFontFactory(factoryClass);
         if (theFontFactory == null) {
@@ -1309,8 +1330,8 @@ public abstract class PrismFontFactory implements FontFactory {
         }
     }
 
-    public final boolean isSubPixelEnabled() {
-        return subPixelEnabled;
+    public final int getSubPixelMode() {
+        return subPixelMode;
     }
 
     public boolean isLCDTextSupported() {
@@ -1539,6 +1560,13 @@ public abstract class PrismFontFactory implements FontFactory {
             return null; // yes, this means the caller needs to handle null.
         }
 
+        String family = fr.getFamilyName();
+        if (family == null || family.length() == 0) return null;
+        String fullname = fr.getFullName();
+        if (fullname == null || fullname.length() == 0) return null;
+        String psname = fr.getPSName();
+        if (psname == null || psname.length() == 0) return null;
+
         /* Use filename from the resource so woff fonts are handled */
         if (!registerEmbeddedFont(fr.getFileName())) {
             /* This font file can't be used by the underlying rasterizer */
@@ -1579,8 +1607,7 @@ public abstract class PrismFontFactory implements FontFactory {
         removeEmbeddedFont(fname);
         embeddedFonts.put(fname, fr);
         storeInMap(fname, fr);
-        String family = fr.getFamilyName() + dotStyleStr(fr.isBold(),
-                                                         fr.isItalic());
+        family = family + dotStyleStr(fr.isBold(), fr.isItalic());
         storeInMap(family, fr);
         /* The remove call is to assist the case where we have
          * previously mapped into the composite map a different style

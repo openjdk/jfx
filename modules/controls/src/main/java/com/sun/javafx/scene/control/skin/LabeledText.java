@@ -281,7 +281,11 @@ public class LabeledText extends Text {
         @Override protected void invalidated() {
             property.applyStyle(this.getStyleOrigin(), this.get());
         }
-        
+
+        @Override public StyleOrigin getStyleOrigin() {
+            return property.getStyleOrigin();
+        }
+
         private final StyleableProperty<T> property;
     } 
        

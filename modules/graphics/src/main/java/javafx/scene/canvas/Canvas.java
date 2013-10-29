@@ -72,10 +72,15 @@ root.getChildren().add(canvas);
  * @since JavaFX 2.2
  */
 public class Canvas extends Node {
-    private static final int DEFAULT_BUF_SIZE = 1024;
+    static final int DEFAULT_VAL_BUF_SIZE = 1024;
+    static final int DEFAULT_OBJ_BUF_SIZE = 32;
+    private static final int SIZE_HISTORY = 5;
 
-    private GrowableDataBuffer<Object> empty;
-    private GrowableDataBuffer<Object> full;
+    private GrowableDataBuffer current;
+    private boolean rendererBehind;
+    private int recentvalsizes[];
+    private int recentobjsizes[];
+    private int lastsizeindex;
 
     private GraphicsContext theContext;
 
@@ -93,17 +98,33 @@ public class Canvas extends Node {
      * @param height height of the canvas
      */
     public Canvas(double width, double height) {
+        this.recentvalsizes = new int[SIZE_HISTORY];
+        this.recentobjsizes = new int[SIZE_HISTORY];
         setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
         setWidth(width);
         setHeight(height);
     }
 
-    GrowableDataBuffer<Object> getBuffer() {
-        impl_markDirty(DirtyBits.NODE_CONTENTS);
-        if (empty == null) {
-            empty = new GrowableDataBuffer<Object>(DEFAULT_BUF_SIZE);
+    private static int max(int sizes[], int defsize) {
+        for (int s : sizes) {
+            if (defsize < s) defsize = s;
         }
-        return empty;
+        return defsize;
+    }
+
+    GrowableDataBuffer getBuffer() {
+        impl_markDirty(DirtyBits.NODE_CONTENTS);
+        if (current == null) {
+            int vsize = max(recentvalsizes, DEFAULT_VAL_BUF_SIZE);
+            int osize = max(recentobjsizes, DEFAULT_OBJ_BUF_SIZE);
+            current = GrowableDataBuffer.getBuffer(vsize, osize);
+            theContext.updateDimensions();
+        }
+        return current;
+    }
+
+    boolean isRendererFallingBehind() {
+        return rendererBehind;
     }
 
     /**
@@ -148,6 +169,14 @@ public class Canvas extends Node {
                 }
 
                 @Override
+                public void set(double newValue) {
+                    super.set(newValue);
+                    if (theContext != null) {
+                        theContext.updateDimensions();
+                    }
+                }
+
+                @Override
                 public String getName() {
                     return "width";
                 }
@@ -188,6 +217,14 @@ public class Canvas extends Node {
                 }
 
                 @Override
+                public void set(double newValue) {
+                    super.set(newValue);
+                    if (theContext != null) {
+                        theContext.updateDimensions();
+                    }
+                }
+
+                @Override
                 public String getName() {
                     return "height";
                 }
@@ -220,17 +257,18 @@ public class Canvas extends Node {
         }
         if (impl_isDirty(DirtyBits.NODE_CONTENTS)) {
             NGCanvas peer = impl_getPeer();
-            if (empty != null && empty.position() > 0) {
-                 peer.updateRendering(empty);
-                 if (full != null) {
-                    full.resetForWrite();
-                 }
-                 GrowableDataBuffer tmp = empty;
-                 empty = full;
-                 full = tmp;
+            if (current != null && !current.isEmpty()) {
+                if (--lastsizeindex < 0) {
+                    lastsizeindex = SIZE_HISTORY - 1;
+                }
+                recentvalsizes[lastsizeindex] = current.writeValuePosition();
+                recentobjsizes[lastsizeindex] = current.writeObjectPosition();
+                rendererBehind = peer.updateRendering(current);
+                current = null;
             }
         }
     }
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version

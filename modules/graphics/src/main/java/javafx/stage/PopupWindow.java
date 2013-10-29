@@ -66,6 +66,7 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyProperty;
+import javafx.beans.value.WeakChangeListener;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.input.KeyCombination;
@@ -120,7 +121,7 @@ public abstract class PopupWindow extends Window {
      * RT-28454: When a parent node or parent window we are associated with is not
      * visible anymore, possibly because the scene was not valid anymore, we should hide.
      */
-    private final ChangeListener<Boolean> ownerNodeListener = new ChangeListener<Boolean>() {
+    private ChangeListener<Boolean> changeListener = new ChangeListener<Boolean>() {
         @Override public void changed(
                 ObservableValue<? extends Boolean> observable, 
                 Boolean oldValue, Boolean newValue) {
@@ -129,6 +130,8 @@ public abstract class PopupWindow extends Window {
             }
         }
     };
+    
+    private WeakChangeListener<Boolean> weakOwnerNodeListener = new WeakChangeListener(changeListener);
 
     public PopupWindow() {
         final Pane popupRoot = new Pane();
@@ -384,7 +387,7 @@ public abstract class PopupWindow extends Window {
 
         // RT-28454 PopupWindow should disappear when owner node is not visible
         if (ownerNode != null) {
-            ownerNode.visibleProperty().addListener(ownerNodeListener);
+            ownerNode.visibleProperty().addListener(weakOwnerNodeListener);
         }
 
         updateWindow(anchorX, anchorY);
@@ -419,7 +422,7 @@ public abstract class PopupWindow extends Window {
         }
         // RT-28454 PopupWindow should disappear when owner node is not visible
         if (owner != null) {
-            owner.showingProperty().addListener(ownerNodeListener);
+            owner.showingProperty().addListener(weakOwnerNodeListener);
         }
 
         final Scene sceneValue = getScene();
@@ -453,8 +456,8 @@ public abstract class PopupWindow extends Window {
         children.clear();
         super.hide();
         // RT-28454 when popup hides, remove listeners; these are added when the popup shows.
-        if (getOwnerWindow() != null) getOwnerWindow().showingProperty().removeListener(ownerNodeListener);
-        if (getOwnerNode() != null) getOwnerNode().visibleProperty().removeListener(ownerNodeListener);
+        if (getOwnerWindow() != null) getOwnerWindow().showingProperty().removeListener(weakOwnerNodeListener);
+        if (getOwnerNode() != null) getOwnerNode().visibleProperty().removeListener(weakOwnerNodeListener);
     }
 
     /**

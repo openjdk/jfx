@@ -56,6 +56,7 @@ import javafx.stage.Stage;
  * @see javafx.scene.control.ProgressIndicator
  * @see javafx.scene.control.TableColumn
  * @see javafx.scene.control.TableView
+ * @embedded
  */
 public class TaskApp extends Application {
 

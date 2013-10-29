@@ -308,7 +308,7 @@ renderer_setTexture(Renderer* rdr, jint renderMode, jint* data, jint width, jint
                     jboolean repeat, jboolean smooth, 
                     const Transform6* transform, jboolean freeData,
                     jboolean textureHasAlpha,
-                    jint interpolateMinX, jint interpolateMinY, jint interpolateMaxX, jint interpolateMaxY) {
+                    jint txMin, jint tyMin, jint txMax, jint tyMax) {
     Transform6 compoundTransform;
 
     pisces_transform_assign(&rdr->_paint_transform, transform);
@@ -337,10 +337,10 @@ renderer_setTexture(Renderer* rdr, jint renderMode, jint* data, jint width, jint
     rdr->_texture_imageHeight = height;
     rdr->_texture_stride = stride;
     rdr->_texture_repeat = repeat;
-    rdr->_texture_interpolateMinX = interpolateMinX;
-    rdr->_texture_interpolateMinY = interpolateMinY;
-    rdr->_texture_interpolateMaxX = interpolateMaxX;
-    rdr->_texture_interpolateMaxY = interpolateMaxY;
+    rdr->_texture_txMin = txMin;
+    rdr->_texture_tyMin = tyMin;
+    rdr->_texture_txMax = txMax;
+    rdr->_texture_tyMax = tyMax;
 
     rdr->_texture_m00 = compoundTransform.m00;
     rdr->_texture_m01 = compoundTransform.m01;

@@ -53,6 +53,7 @@ import javafx.stage.Stage;
  * @playground rectA.opacity (name="Rectangle A Opacity", min=0, max=1)
  * @playground rectB.opacity (name="Rectangle B Opacity", min=0, max=1)
  * @playground rectC.opacity (name="Rectangle C Opacity", min=0, max=1)
+ * @embedded
  */
 public class NodePropertiesApp extends Application {
 

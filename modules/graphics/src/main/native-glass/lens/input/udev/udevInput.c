@@ -106,6 +106,8 @@ typedef struct _LensInputMouseState {
 
     /* multitouch points */
     int                     nextTouchID; // ID used for the next new touch point
+    // the ID of the point that mouse events will be synthesize from
+    int                     touchPrimaryPointID; 
     /* existing touch points that have already been sent up to Glass */
     int                     touchPointCount;
     int                     touchIDs[LENS_MAX_TOUCH_POINTS];
@@ -126,7 +128,6 @@ typedef struct _LensInputMouseState {
     int pressedX;
     int pressedY;
 
-    jboolean isTouchDragging; //true when touch is dragging
 } LensInputMouseState;
 
 typedef struct {
@@ -698,7 +699,7 @@ static LensResult lens_input_mouseStateAllocateAndInit(LensInputDevice *device) 
 
     state->pressedX = 0;
     state->pressedY = 0;
-    state->isTouchDragging = JNI_FALSE;
+    state->touchPrimaryPointID = -1; //not set
 
     return LENS_OK;
 }
@@ -1756,19 +1757,78 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
             }
         }
         if (needToNotify) {
+
+
+            int primaryPointIndex = -1;
+            //Find the primary point in this touch event. Mouse events will be
+            //synthesized from it
+            if (mouseState->touchPrimaryPointID == -1) {
+                //no previous primary point
+                for (i = 0; i < count; i++) {
+                    if (states[i] == com_sun_glass_events_TouchEvent_TOUCH_PRESSED) {
+                        mouseState->touchPrimaryPointID = (int)ids[i];
+                        primaryPointIndex = i;
+                        GLASS_LOG_FINEST("no previous primary touch point -"
+                                         " assigning point (index %d, id %d) as primary point",
+                                         i,
+                                         (int)ids[i]);
+                        break;
+                    }
+                }
+            } else if (mouseState->touchPrimaryPointID > 0) { //Glass id starts from 1
+                //we have a previous primary point, try to find it
+                for (i = 0; i < count; i++) {
+                    if (ids[i] == mouseState->touchPrimaryPointID &&
+                        states[i] != com_sun_glass_events_TouchEvent_TOUCH_RELEASED) {
+                        primaryPointIndex = i;
+                        GLASS_LOG_FINEST("primary point (id %d), found at index %d",
+                                     (int)ids[i],
+                                     i);
+                        break;
+                    }
+                }
+
+                if (primaryPointIndex == -1) {
+                    //previous primary point doesn't exist or released, find a new one
+                    for (i = 0; i < count; i++) {
+                        if (states[i] != com_sun_glass_events_TouchEvent_TOUCH_RELEASED) {
+                            mouseState->touchPrimaryPointID = (int)ids[i];
+                            primaryPointIndex = i;
+                            GLASS_LOG_FINEST("previous primary point doesn't exist"
+                                         " reassign to point[%d], id = %d ",
+                                         i,
+                                         (int)ids[i]);
+                            break;
+                        }
+                    }
+                }
+
+            } else {
+                GLASS_LOG_SEVERE("Illegal indexed touch point state");
+            }
+
+
+            if (primaryPointIndex == -1) {
+                 GLASS_LOG_FINEST("primary point not found - release");
+            }
+
             GLASS_IF_LOG_FINEST {
                 GLASS_LOG_FINEST("lens_wm_notifyMultiTouchEvent() with:");
                 for (i = 0; i < count; i++) {
-                    GLASS_LOG_FINEST("point %d / %d id=%d state=%d, x=%d y=%d",
+                    char *isPrimary = primaryPointIndex >=0?
+                                        "[Primary]":
+                                        "";
+                    GLASS_LOG_FINEST("point %d / %d id=%d state=%d, x=%d y=%d %s",
                                      i+1,
                                      count,
                                      (int)ids[i],
                                      states[i],
-                                     xs[i], ys[i]);
+                                     xs[i], ys[i],
+                                     isPrimary);
                 }
                 GLASS_LOG_FINEST(""); //make it easier to read the log
             }
-            lens_wm_notifyMultiTouchEvent(gJNIEnv, count, states, ids, xs, ys);
+            lens_wm_notifyMultiTouchEvent(gJNIEnv, count, states, ids, xs, ys, primaryPointIndex);
         } else {
             GLASS_LOG_FINEST("all points are STILL - skipping event");
         }
@@ -1782,27 +1842,29 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
     GLASS_LOG_FINEST("device %p x %d y %d reportMove %d keyEventIndex: %d\n",
                      device, mousePosX, mousePosY, reportMouseMove, keyEventIndex);
 
-    if (keyEventIndex >= 0) {
-         lens_input_pointerEvents_handleKeyEvent(device,
-                                                 &mouseState->pendingInputEvents[keyEventIndex]);
-    }
-
-    if (reportMouseMove) {
-
-        //report move
-        lens_wm_notifyMotionEvent(gJNIEnv, mousePosX, mousePosY);
-
-        if (mouseState->rel[REL_WHEEL] != 0) {
-            //report wheel
-            lens_wm_notifyScrollEvent(gJNIEnv, mousePosX, mousePosY,
-                                      mouseState->rel[REL_WHEEL]);
+    if (!device->isTouch) {
+        if (keyEventIndex >= 0) {
+             lens_input_pointerEvents_handleKeyEvent(device,
+                                                     &mouseState->pendingInputEvents[keyEventIndex]);
         }
 
-        for (i = 0; i < REL_MAX + 1; i++) {
-            mouseState->rel[i] = 0;
-        }
-    }
+        if (reportMouseMove) {
 
+            //report move
+            lens_wm_notifyMotionEvent(gJNIEnv, mousePosX, mousePosY);
+
+            if (mouseState->rel[REL_WHEEL] != 0) {
+                //report wheel
+                lens_wm_notifyScrollEvent(gJNIEnv, mousePosX, mousePosY,
+                                          mouseState->rel[REL_WHEEL]);
+            }
+
+            for (i = 0; i < REL_MAX + 1; i++) {
+                mouseState->rel[i] = 0;
+            }
+        }
+
+    }
     mouseState->pendingInputEventCount = 0;
 
     // recording pending touch points as existing touch points

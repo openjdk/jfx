@@ -6,7 +6,6 @@
             <name>web</name>
             <explicit-platform explicit-source-supported="true"/>
             <source-roots>
-                <root id="src.java.dir"/>
                 <root id="src.dir"/>
             </source-roots>
             <test-roots>
@@ -32,30 +31,6 @@
             </reference>
             <reference>
                 <foreign-project>graphics</foreign-project>
-                <artifact-type>jar</artifact-type>
-                <script>build.xml</script>
-                <target>jar</target>
-                <clean-target>clean</clean-target>
-                <id>jar</id>
-            </reference>
-            <reference>
-                <foreign-project>javafx-ui-desktop</foreign-project>
-                <artifact-type>jar</artifact-type>
-                <script>build.xml</script>
-                <target>jar</target>
-                <clean-target>clean</clean-target>
-                <id>jar</id>
-            </reference>
-            <reference>
-                <foreign-project>javafx-ui-desktop</foreign-project>
-                <artifact-type>folder</artifact-type>
-                <script>build.xml</script>
-                <target>jar</target>
-                <clean-target>clean</clean-target>
-                <id>jar2</id>
-            </reference>
-            <reference>
-                <foreign-project>jfxmedia</foreign-project>
                 <artifact-type>jar</artifact-type>
                 <script>build.xml</script>
                 <target>jar</target>

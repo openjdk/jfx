@@ -1757,7 +1757,7 @@ class Loader {
                 }
                 smGroups = SmoothingGroups.calcSmoothGroups(mesh, fff, faceNormals, normals.get());
             } else {
-                smGroups = new int[fff.length];
+                smGroups = new int[fff.length/6];
                 Arrays.fill(smGroups, 1);
             }
             

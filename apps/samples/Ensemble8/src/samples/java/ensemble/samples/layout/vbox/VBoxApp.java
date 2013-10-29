@@ -46,6 +46,7 @@ import javafx.stage.Stage;
  * @sampleName VBox
  * @preview preview.png
  * @see javafx.scene.layout.VBox
+ * @embedded
  */
 public class VBoxApp extends Application {
     

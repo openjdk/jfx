@@ -64,7 +64,7 @@ public class AudioClipApp extends Application {
         Rectangle r1 = new Rectangle(0, 15, barWidth * 11.5, 10);
         r1.setFill(new Color(0.2, 0.12, 0.1, 1.0));
         Rectangle r2 = new Rectangle(0, -25, barWidth * 11.5, 10);
-        r1.setFill(new Color(0.2, 0.12, 0.1, 1.0));
+        r2.setFill(new Color(0.2, 0.12, 0.1, 1.0));
 
         final Group content = new Group(
                 r1,

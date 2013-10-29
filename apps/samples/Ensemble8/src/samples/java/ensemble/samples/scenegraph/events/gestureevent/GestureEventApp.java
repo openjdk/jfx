@@ -70,6 +70,7 @@ import javafx.stage.Stage;
  * @see javafx.scene.input.SwipeEvent
  * @see javafx.scene.input.ZoomEvent
  * @see javafx.event.EventHandler
+ * @embedded
  */
 public class GestureEventApp extends Application {
 

@@ -57,9 +57,9 @@ public class SeparatorMenuItem extends CustomMenuItem {
      * Constructors                                                            *
      *                                                                         *
      **************************************************************************/
-    
+
     /**
-     * 
+     * Creates a default SeparatorMenuItem instance.
      */
     public SeparatorMenuItem() {
         super(new Separator(Orientation.HORIZONTAL), false);

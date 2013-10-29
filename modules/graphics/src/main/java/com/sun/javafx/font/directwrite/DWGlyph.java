@@ -39,7 +39,8 @@ public class DWGlyph implements Glyph {
     private float pixelXAdvance, pixelYAdvance;
     private RECT rect;
     private boolean drawShapes;
-    private byte[] pixelData;
+    private byte[][] pixelData;
+    private RECT[] rects;
 
     private static final boolean CACHE_TARGET = true;
     private static IWICBitmap cachedBitmap;
@@ -55,6 +56,9 @@ public class DWGlyph implements Glyph {
     DWGlyph(DWFontStrike strike, int glyphCode, boolean drawShapes) {
         this.strike = strike;
         this.drawShapes = drawShapes;
+        int size = DWFontStrike.SUBPIXEL_Y ? 9 : 3;
+        this.pixelData = new byte[size][];
+        this.rects = new RECT[size];
 
         IDWriteFontFace face = strike.getFontFace();
         run = new DWRITE_GLYPH_RUN();
@@ -111,6 +115,12 @@ public class DWGlyph implements Glyph {
         }
         if (rect == null) {
             rect = new RECT();
+        } else {
+            /* Increase the RECT */
+            rect.left--;
+            rect.top--;
+            rect.right++;
+            rect.bottom++;
         }
     }
 
@@ -146,11 +156,6 @@ public class DWGlyph implements Glyph {
             return new byte[0];
         }
 
-        /* Increase the RECT */
-        rect.left--;
-        rect.top--;
-        rect.right++;
-        rect.bottom++;
         float glyphX = rect.left;
         float glyphY = rect.top;
         int w = rect.right - rect.left;
@@ -174,7 +179,7 @@ public class DWGlyph implements Glyph {
         if (matrix != null) {
             transform = new D2D1_MATRIX_3X2_F(matrix.m11, matrix.m12,
                                               matrix.m21, matrix.m22,
-                                              -glyphX, -glyphY);
+                                              -glyphX + subPixelX, -glyphY + subPixelY);
             glyphX = glyphY = 0;
         } else {
             transform = D2D2_MATRIX_IDENTITY;
@@ -254,7 +259,9 @@ public class DWGlyph implements Glyph {
     IDWriteGlyphRunAnalysis createAnalysis(float x, float y) {
         if (run.fontFace == 0) return null;
         IDWriteFactory factory = DWFactory.getDWriteFactory();
-        int renderingMode = OS.DWRITE_RENDERING_MODE_NATURAL;
+        int renderingMode = DWFontStrike.SUBPIXEL_Y ?
+                            OS.DWRITE_RENDERING_MODE_NATURAL_SYMMETRIC :
+                            OS.DWRITE_RENDERING_MODE_NATURAL;
         int measuringMode = OS.DWRITE_MEASURING_MODE_NATURAL;
         DWRITE_MATRIX matrix = strike.matrix; /* can be null */
         float dpi = 1;  /* Assumes WICBitmap has 96 dpi */
@@ -319,15 +326,35 @@ public class DWGlyph implements Glyph {
 
     @Override
     public byte[] getPixelData() {
-        return getPixelData(0, 0);
+        return getPixelData(0);
     }
 
     @Override
-    public byte[] getPixelData(float x, float y) {
-        if (pixelData == null) {
-            pixelData = isLCDGlyph() ? getLCDMask(x, y) : getD2DMask(x, y, false);
+    public byte[] getPixelData(int subPixel) {
+        byte[] data = pixelData[subPixel];
+        /* Caching all possible masks has an important performance impact on the
+         * software pipeline (as it doesn't have a glyph cache).
+         * Note: The same cache is not implemented on CTGlyph.
+         */
+        if (data == null) {
+            float x = 0, y = 0;
+            int index = subPixel;
+            if (index >= 6) {
+                index -= 6;
+                y = 0.66f;
+            } else if (index >= 3) {
+                index -= 3;
+                y = 0.33f;
+            }
+            if (index == 1) x = 0.33f;
+            if (index == 2) x = 0.66f;
+            pixelData[subPixel] = data = isLCDGlyph() ? getLCDMask(x, y) :
+                                                        getD2DMask(x, y, false);
+            rects[subPixel] = rect;
+        } else {
+            rect = rects[subPixel];
         }
-        return pixelData;
+        return data;
     }
 
     @Override

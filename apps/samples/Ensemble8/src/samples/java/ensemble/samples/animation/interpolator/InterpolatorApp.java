@@ -74,6 +74,7 @@ import javafx.util.Duration;
  * @see javafx.animation.KeyValue
  * @see javafx.animation.Timeline
  * @see javafx.util.Duration
+ * @embedded
  */
 public class InterpolatorApp extends Application {
 

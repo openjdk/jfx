@@ -48,6 +48,7 @@ import javafx.stage.Stage;
  * @sampleName StackPane
  * @preview preview.png
  * @see javafx.scene.layout.StackPane
+ * @embedded
  */
 public class StackPaneApp extends Application {
 

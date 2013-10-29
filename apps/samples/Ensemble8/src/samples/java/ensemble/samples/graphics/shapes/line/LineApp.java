@@ -56,6 +56,7 @@ import javafx.stage.Stage;
  * @playground exampleLine.strokeLineCap
  * @playground exampleLine.getStrokeDashArray
  * @playground exampleLine.strokeDashOffset (min=0, max=500)
+ * @embedded
  */
 public class LineApp extends Application {
     

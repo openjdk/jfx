@@ -31,10 +31,19 @@
 #include <sys/ioctl.h>
 #include <linux/fb.h>
 
-#include "utilInternal.h"
-#include "platformUtil.h"
+#include "lensPort.h"
+#include "lensPortInternal.h"
+#include "lensPortLogger.h"
 
-#include "LensLogger.h"
+#if defined(OMAP3) || defined(IMX6_PLATFORM) 
+# ifndef USE_FB_ROBOT
+    #define USE_FB_ROBOT
+# endif
+#endif
+
+#ifdef OMAP3 
+#include <linux/omapfb.h>
+#endif
 
 #ifdef USE_FB_ROBOT
 

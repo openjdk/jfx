@@ -68,6 +68,8 @@ public class Sample {
     public final List<PlaygroundProperty> playgroundProperties = new ArrayList<>();   
     /** List of conditional features the platform must support to run certain samples */
     public final List<ConditionalFeature> conditionalFeatures = new ArrayList<>();
+    /** If true, then the sample runs on embedded platform  */
+    public boolean runsOnEmbedded = false;
       
     // =============== RELATED =================================================
     
@@ -80,19 +82,20 @@ public class Sample {
 
     @Override public String toString() {
         return "Sample{" + 
-                 "\n         name                =" + name + 
-                ",\n         description         =" + description + 
-                ",\n         ensemblePath        =" + ensemblePath + 
-                ",\n         previewUrl          =" + previewUrl + 
-                ",\n         baseUri             =" + baseUri + 
-                ",\n         resourceUrls        =" + resourceUrls + 
-                ",\n         mainFileUrl         =" + mainFileUrl + 
-                ",\n         appClass            =" + appClass + 
-                ",\n         apiClasspaths       =" + apiClasspaths + 
-                ",\n         docsUrls            =" + docsUrls + 
-                ",\n         relatesSamplePaths  =" + relatesSamplePaths + 
-                ",\n         playgroundProperties  =" + playgroundProperties + 
+                 "\n         name                 =" + name + 
+                ",\n         description          =" + description + 
+                ",\n         ensemblePath         =" + ensemblePath + 
+                ",\n         previewUrl           =" + previewUrl + 
+                ",\n         baseUri              =" + baseUri + 
+                ",\n         resourceUrls         =" + resourceUrls + 
+                ",\n         mainFileUrl          =" + mainFileUrl + 
+                ",\n         appClass             =" + appClass + 
+                ",\n         apiClasspaths        =" + apiClasspaths + 
+                ",\n         docsUrls             =" + docsUrls + 
+                ",\n         relatesSamplePaths   =" + relatesSamplePaths + 
+                ",\n         playgroundProperties =" + playgroundProperties + 
                 ",\n         conditionalFeatures  =" + conditionalFeatures +
+                ",\n         runsOnEmbedded       =" + runsOnEmbedded +
                 '}';
     }
     

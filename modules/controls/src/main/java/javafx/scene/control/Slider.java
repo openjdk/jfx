@@ -98,6 +98,9 @@ import javafx.css.StyleableProperty;
  */
 public class Slider extends Control {
 
+    /**
+     * Creates a default Slider instance.
+     */
     public Slider() {
         initialize();
     }

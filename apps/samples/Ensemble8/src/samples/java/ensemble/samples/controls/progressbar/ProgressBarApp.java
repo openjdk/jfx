@@ -45,6 +45,7 @@ import javafx.stage.Stage;
  * @preview preview.png
  * @see javafx.scene.control.ProgressBar
  * @related /Controls/Progress Indicator
+ * @embedded
  */
 public class ProgressBarApp extends Application {
 

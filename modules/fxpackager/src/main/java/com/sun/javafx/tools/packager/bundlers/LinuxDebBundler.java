@@ -91,7 +91,7 @@ public class LinuxDebBundler extends Bundler {
     @Override
     boolean validate(BundleParams p) throws Bundler.UnsupportedPlatformException, Bundler.ConfigException {
         if (!(p.type == Bundler.BundleType.ALL || p.type == Bundler.BundleType.INSTALLER)
-                 || !(p.bundleFormat == null || "deb".equals(p.bundleFormat))) {
+                 || !(p.bundleFormat.isEmpty() || p.bundleFormat.contains("deb"))) {
             return false;
         }
         //run basic validation to ensure requirements are met

@@ -35,7 +35,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import com.sun.javafx.scene.CssFlags;
-import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.WritableValue;
@@ -88,7 +87,7 @@ final class CssStyleHelper {
     /**
      * Creates a new StyleHelper.
      */
-    static CssStyleHelper createStyleHelper(final Node node, WritableValue<Boolean> clearCacheOnReuse) {
+    static CssStyleHelper createStyleHelper(final Node node, WritableValue<Boolean> clearCacheOnReuse, ObservableMap<StyleableProperty<?>, List<Style>> styleObserver) {
 
         // need to know how far we are to root in order to init arrays.
         // TODO: should we hang onto depth to avoid this nonsense later?
@@ -156,13 +155,28 @@ final class CssStyleHelper {
 
             if (mightInherit == false) {
 
-                // If this node had a style helper, then reset properties to their initial value
-                // since the node won't have a style helper after this call
-                if (node.styleHelper != null) {
-                    node.styleHelper.resetToInitialValues(node);
-                }
+                //
+                // If there is an observer listening for css style changes, then that listener needs to be
+                // preserved, even if there aren't any changes. At some point in the future, this node might
+                // have styles and the observer should start notifying of changes.
+                //
+                // So, if there isn't an observer listening for css style changes, we can just return null here.
+                // If there is, then we'll fall through and create a new StyleHelper which will be assigned
+                // the current StyleHelper's observer.
+                //
+                if ((styleObserver == null) || (FXCollections.emptyObservableMap() == (ObservableMap)styleObserver)) {
 
-                return null;
+                    // If this node had a style helper, then reset properties to their initial value
+                    // since the node won't have a style helper after this call
+                    if (node.styleHelper != null) {
+                        node.styleHelper.resetToInitialValues(node);
+                    }
+
+                    //
+                    // This node didn't have a StyleHelper before and it doesn't need one now since there are
+                    // no styles in the StyleMap and no inherited styles.
+                    return null;
+                }
             }
 
         }
@@ -206,6 +220,9 @@ final class CssStyleHelper {
         if (node.styleHelper != null) {
             node.styleHelper.resetToInitialValues(node);
         }
+
+        // Don't lose track of the observer, if any.
+        helper.observableStyleMap = styleObserver;
 
         return helper;
     }
@@ -884,6 +901,7 @@ final class CssStyleHelper {
 
         if (cssMetaData.getConverter() == FontConverter.getInstance()) {
 
+            if (styleList != null) styleList.addAll(getMatchingStyles(styleable, cssMetaData));
             return lookupFont(styleable, cssMetaData.getProperty(), styleMap, cachedFont, styleList);
         }
 

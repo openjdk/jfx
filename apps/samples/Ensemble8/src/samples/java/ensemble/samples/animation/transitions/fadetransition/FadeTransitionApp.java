@@ -58,6 +58,7 @@ import javafx.util.Duration;
  * @related /Animation/Transitions/Sequential Transition
  * @related /Animation/Transitions/Stroke Transition
  * @related /Animation/Transitions/Translate Transition
+ * @embedded
  */
 public class FadeTransitionApp extends Application {
 

@@ -37,8 +37,8 @@ public class RT_18218Test {
     @SuppressWarnings({"unchecked", "deprecation"})
     public void testStaticScriptLoad() throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_18218.fxml"));
-        fxmlLoader.setStaticLoad(true);
-        fxmlLoader.setLoadListener(new LoadListener() {
+        fxmlLoader.impl_setStaticLoad(true);
+        fxmlLoader.impl_setLoadListener(new LoadListener() {
             private String unknownStaticPropertyElementName = null;
 
             @Override

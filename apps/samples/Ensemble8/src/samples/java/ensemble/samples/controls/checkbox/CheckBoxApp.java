@@ -46,6 +46,7 @@ import javafx.stage.Stage;
  * @preview preview.png
  * @see javafx.scene.control.CheckBox
  * @related /Controls/Radiobutton/Radio Button
+ * @embedded
  */
 public class CheckBoxApp extends Application {
 

@@ -27,12 +27,12 @@
 #if defined _ENABLE_PANGO
 
 #include <jni.h>
-#include <com_sun_javafx_font_pango_OS.h>
+#include <com_sun_javafx_font_freetype_OSPango.h>
 #include <pango/pango.h>
 #include <pango/pangoft2.h>
 #include <dlfcn.h>
 
-#define OS_NATIVE(func) Java_com_sun_javafx_font_pango_OS_##func
+#define OS_NATIVE(func) Java_com_sun_javafx_font_freetype_OSPango_##func
 
 /**************************************************************************/
 /*                                                                        */

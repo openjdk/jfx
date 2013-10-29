@@ -1321,7 +1321,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             try {
                 if (image != null && image instanceof PrismImage) {
                     // blending on canvas
-                    dstImg = (PrDrawable) Effect.createCompatibleImage(fctx, clip.width, clip.height);
+                    dstImg = (PrDrawable) Effect.getCompatibleImage(fctx, clip.width, clip.height);
                     Graphics dstG = dstImg.createGraphics();
                     ((PrismImage) image).draw(dstG,
                             0, 0, clip.width, clip.height,
@@ -1333,7 +1333,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                     dstImg = PrDrawable.create(fctx, texture);
                 }
 
-                srcImg = (PrDrawable) Effect.createCompatibleImage(fctx, clip.width, clip.height);
+                srcImg = (PrDrawable) Effect.getCompatibleImage(fctx, clip.width, clip.height);
                 Graphics srcG = srcImg.createGraphics();
                 state.apply(srcG);
                 doPaint(srcG);
@@ -1420,9 +1420,15 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                 Rectangle outputClip,
                 Object renderHelper,
                 Effect defaultInput) {
-            return new ImageData(fctx, img, new Rectangle(
-                    (int) transform.getMxt(), (int) transform.getMyt(),
-                    width, height));
+            // We have an unpaired lock() here, because unlocking is done
+            // internally by ImageData. See RT-33625 for details.
+            img.lock();
+            ImageData imgData = new ImageData(fctx, img, new Rectangle(
+                                              (int) transform.getMxt(),
+                                              (int) transform.getMyt(),
+                                              width, height));
+            imgData.setReusable(true);
+            return imgData;
         }
 
         @Override public RectBounds getBounds(

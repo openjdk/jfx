@@ -27,6 +27,7 @@
 
 #if defined(OMAP3) || defined(IMX6_PLATFORM)
 
+#include <assert.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -34,74 +35,52 @@
 #include <linux/omapfb.h>
 #include <sys/ioctl.h>
 
-#include "platform-util/platformUtil.h"
-
 static void fbCreateCursor(jbyte *cursorImage, int width, int height, int bpp) {
-    if (fbPlatformCreateCursor) {
-        (*fbPlatformCreateCursor)(cursorImage, width, height, bpp);
-    } 
-    else {fprintf(stderr, "missing native fbPlatformCreateCursor"); }
+    assert (lensPort.createCursor);
+    (*lensPort.createCursor)(cursorImage, width, height, bpp);
 }
 
 void fbCursorInitialize(int screenWidth, int screenHeight) {
-    if (fbPlatformCursorInitialize) {
-        (*fbPlatformCursorInitialize)(screenWidth, screenHeight);
-    }
-    else {fprintf(stderr, "missing native fbPlatformCursorInitialize"); }
+    assert (lensPort.cursorInitialize);
+    (*lensPort.cursorInitialize)(screenWidth, screenHeight);
 }
 
 void fbCursorSetPosition(int x, int y) {
-
-    if (fbPlatformCursorSetPosition) {
-        return (*fbPlatformCursorSetPosition)(x, y);
-    }
-    else {fprintf(stderr, "missing native fbPlatformCursorSetPosition"); }
+    assert (lensPort.cursorSetPosition);
+    return (*lensPort.cursorSetPosition)(x, y);
 }
 
 
 void fbCursorClose() {
-    if (fbPlatformCursorClose) {
-        (*fbPlatformCursorClose)();
-    }
-    else {fprintf(stderr, "missing native fbPlatformCursorClose"); }
+    assert (lensPort.cursorClose);
+    (*lensPort.cursorClose)();
 }
 
 void glass_cursor_setVisible(jboolean isVisible) {
-    if (fbPlatformSetVisible) {
-        (*fbPlatformSetVisible)(isVisible);
-    }
-    else {fprintf(stderr, "missing native fbPlatformSetVisible"); }
+    assert (lensPort.setVisible);
+    (*lensPort.setVisible)(isVisible);
 }
 
 void glass_cursor_setNativeCursor(jlong nativeCursorPointer) {
-    if (fbPlatformSetNativeCursor) {
-        (*fbPlatformSetNativeCursor)(nativeCursorPointer);
-    }
-    else {fprintf(stderr, "missing native fbPlatformSetNativeCursor"); }
+    assert (lensPort.setNativeCursor);
+    (*lensPort.setNativeCursor)(nativeCursorPointer);
 }
 
 void glass_cursor_releaseNativeCursor(jlong nativeCursorPointer) {
-    if (fbPlatformReleaseNativeCursor) {
-         (*fbPlatformReleaseNativeCursor)(nativeCursorPointer);
-    }
-    else {fprintf(stderr, "missing native fbPlatformReleaseNativeCursor"); }
+    assert (lensPort.releaseNativeCursor);
+    (*lensPort.releaseNativeCursor)(nativeCursorPointer);
 }
 
 
 jlong glass_cursor_createNativeCursor(JNIEnv *env, jint x, jint y, jbyte *srcArray, jint width, jint height) {
-    if (fbPlatformCreateNativeCursor) {
-        return (*fbPlatformCreateNativeCursor)(env, x, y, srcArray, width, height);
-    } else {
-       fprintf(stderr, "missing native fbPlatformCreateNativeCursor"); 
-        return 0;
-    } 
+    assert (lensPort.createNativeCursor);
+    return (*lensPort.createNativeCursor)(env, x, y, srcArray, width, height);
 }
 
 
 jboolean glass_cursor_supportsTranslucency() {
-    return fbPlatformCursorTranslucency;
+    return lensPort.cursorTranslucency;
 }
-
 
 
 void glass_cursor_terminate(void) {

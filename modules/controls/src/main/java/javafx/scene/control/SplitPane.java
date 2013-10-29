@@ -456,6 +456,14 @@ public class SplitPane extends Control {
      * @since JavaFX 2.0
      */
     public static class Divider {
+
+        /**
+         * Creates a default Divider instance.
+         */
+        public Divider() {
+
+        }
+
         /**
          * <p>Represents the location where the divider should ideally be
          * positioned, between 0.0 and 1.0 (inclusive). 0.0 represents the

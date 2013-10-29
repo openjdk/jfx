@@ -50,6 +50,7 @@ import javafx.stage.Stage;
  * @sampleName ScrollBar
  * @preview preview.png
  * @see javafx.scene.control.ScrollBar
+ * @embedded
  */
 public class ScrollBarApp extends Application {
     private Circle circle;

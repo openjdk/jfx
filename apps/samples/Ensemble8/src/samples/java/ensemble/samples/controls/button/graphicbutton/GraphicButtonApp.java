@@ -48,6 +48,7 @@ import javafx.stage.Stage;
  * 
  * @see javafx.scene.control.Button
  * @related /Controls/Button/Colored Buttons
+ * @embedded
  */
 public class GraphicButtonApp extends Application {
     private static final Image ICON_48 = new Image(GraphicButtonApp.class.getResourceAsStream("/ensemble/samples/shared-resources/icon-48x48.png"));   

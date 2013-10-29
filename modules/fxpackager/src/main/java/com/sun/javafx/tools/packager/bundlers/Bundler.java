@@ -34,6 +34,7 @@ import java.net.URL;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.ServiceLoader;
 import java.util.Set;
 
 public abstract class Bundler {
@@ -77,18 +78,7 @@ public abstract class Bundler {
         }
     };
 
-    private static final List<Bundler> knownBundlers = new LinkedList<Bundler>();
-
-    static {
-        knownBundlers.add(new WinAppBundler());
-        knownBundlers.add(new MacAppBundler());
-        knownBundlers.add(new WinMsiBundler());
-        knownBundlers.add(new WinExeBundler());
-        knownBundlers.add(new MacDMGBundler());
-        knownBundlers.add(new LinuxAppBundler());
-        knownBundlers.add(new LinuxRPMBundler());
-        knownBundlers.add(new LinuxDebBundler());
-    }
+   private static ServiceLoader<Bundler> bundlerLoader = ServiceLoader.load(Bundler.class);
 
     protected void setBuildRoot(File dir) {
         buildRoot = dir;
@@ -106,8 +96,8 @@ public abstract class Bundler {
         } catch (IOException ioe) {}
 
         Log.verbose("Looking for bundlers for type=" + p.type.toString()
-                + " format=" + (p.bundleFormat != null ? p.bundleFormat : "any"));
-        for (Bundler b: knownBundlers) {
+                + " format=" + (p.bundleFormat.isEmpty() ? "any" : p.bundleFormat.toString()));
+        for (Bundler b: bundlerLoader) {
             if (verbose) {
                 b.setVerbose(true);
             }

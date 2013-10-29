@@ -81,7 +81,6 @@ import com.sun.javafx.fxml.expression.KeyPath;
 import java.net.MalformedURLException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.Deque;
 import java.util.EnumMap;
 import java.util.Locale;
 import java.util.StringTokenizer;
@@ -1125,7 +1124,7 @@ public class FXMLLoader {
                         FXMLLoader.this.location.toExternalForm()));
             }
             fxmlLoader.setClassLoader(classLoader);
-            fxmlLoader.setStaticLoad(staticLoad);
+            fxmlLoader.impl_setStaticLoad(staticLoad);
 
             Object value = fxmlLoader.load();
 
@@ -2312,7 +2311,7 @@ public class FXMLLoader {
      * @treatAsPrivate
      * @deprecated
      */
-    public boolean isStaticLoad() {
+    public boolean impl_isStaticLoad() {
         // SB-dependency: RT-21226 has been filed to track this
         return staticLoad;
     }
@@ -2325,7 +2324,7 @@ public class FXMLLoader {
      * @treatAsPrivate
      * @deprecated
      */
-    public void setStaticLoad(boolean staticLoad) {
+    public void impl_setStaticLoad(boolean staticLoad) {
         // SB-dependency: RT-21226 has been filed to track this
         this.staticLoad = staticLoad;
     }
@@ -2336,7 +2335,7 @@ public class FXMLLoader {
      * @treatAsPrivate
      * @deprecated
      */
-    public LoadListener getLoadListener() {
+    public LoadListener impl_getLoadListener() {
         // SB-dependency: RT-21228 has been filed to track this
         return loadListener;
     }
@@ -2349,7 +2348,7 @@ public class FXMLLoader {
      * @treatAsPrivate
      * @deprecated
      */
-    public void setLoadListener(LoadListener loadListener) {
+    public void impl_setLoadListener(LoadListener loadListener) {
         // SB-dependency: RT-21228 has been filed to track this
         this.loadListener = loadListener;
     }
@@ -2569,7 +2568,7 @@ public class FXMLLoader {
 
             if (loader.current != null) {
                 messageBuilder.append(":");
-                messageBuilder.append(loader.getLineNumber());
+                messageBuilder.append(loader.impl_getLineNumber());
             }
 
             messageBuilder.append("\n");
@@ -2584,7 +2583,7 @@ public class FXMLLoader {
      * @deprecated
      * @since JavaFX 2.2
      */
-    public int getLineNumber() {
+    public int impl_getLineNumber() {
         return xmlStreamReader.getLocation().getLineNumber();
     }
 
@@ -2596,13 +2595,13 @@ public class FXMLLoader {
      * @since JavaFX 2.1
      */
     // SB-dependency: RT-21475 has been filed to track this
-    public ParseTraceElement[] getParseTrace() {
+    public ParseTraceElement[] impl_getParseTrace() {
         ParseTraceElement[] parseTrace = new ParseTraceElement[loaders.size()];
 
         int i = 0;
         for (FXMLLoader loader : loaders) {
             parseTrace[i++] = new ParseTraceElement(loader.location, (loader.current != null) ?
-                loader.getLineNumber() : -1);
+                loader.impl_getLineNumber() : -1);
         }
 
         return parseTrace;

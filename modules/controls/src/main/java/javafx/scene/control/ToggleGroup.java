@@ -47,6 +47,14 @@ import com.sun.javafx.collections.TrackableObservableList;
  * @since JavaFX 2.0
  */
 public class ToggleGroup {
+
+    /**
+     * Creates a default ToggleGroup instance.
+     */
+    public ToggleGroup() {
+
+    }
+
     /**
      * The list of toggles within the ToggleGroup.
      */

@@ -28,7 +28,7 @@ ext.ARMV6HF = [:]
 fetchExternalTools('ARMV6HF', 
   ["armhf-raspberry-pi-10.tgz",
    "gcc-linaro-arm-linux-gnueabihf-raspbian-2012.09-20120921_linux.tgz" ], 
-  rootProject.CROSS_TOOLS_DIR, rootProject.IMPORT_CROSS_TOOLS)
+  rootProject.CROSS_TOOLS_DIR, rootProject.IS_IMPORT_CROSS_TOOLS)
 
 // Define the location of the sdk and toolchain
 def sdk=file("${rootProject.CROSS_TOOLS_DIR}/armhf-raspberry-pi-10")
@@ -246,6 +246,30 @@ setupTools("armv6hf_pango_tools",
     }
 )
 
+def freetypeCCFlags = [ext.COMPILE_PANGO ? "-D_ENABLE_PANGO" : 
+                       ext.COMPILE_HARFBUZZ ? "-D_ENABLE_HARFBUZZ" : ""]
+def freetypeLinkFlags = []
+setupTools("armv6hf_freetype_tools",
+    { propFile ->
+        ByteArrayOutputStream results = new ByteArrayOutputStream();
+        exec {
+            commandLine "$sdk/bin/pkg-config", "--cflags", "freetype2"
+            standardOutput = results
+        }
+        propFile << "cflags=" << results.toString().trim() << "\n";
+
+        results = new ByteArrayOutputStream();
+        exec {
+            commandLine "$sdk/bin/pkg-config", "--libs", "freetype2"
+            standardOutput = results
+        }
+        propFile << "libs=" << results.toString().trim();
+    },
+    { properties ->
+        freetypeCCFlags.addAll(properties.getProperty("cflags").split(" "))
+        freetypeLinkFlags.addAll(properties.getProperty("libs").split(" "))
+    }
+)
 
 def compiler = file("$compilerHome/bin/arm-linux-gnueabihf-gcc").getAbsolutePath()
 def linker = file("$compilerHome/bin/arm-linux-gnueabihf-g++").getAbsolutePath()
@@ -262,7 +286,7 @@ ARMV6HF.glass.lib = "glass"
 
 ARMV6HF.glass.lensport = [:]
 ARMV6HF.glass.lensport.nativeSource = [
-    file("modules/graphics/src/main/native-glass/lens/platform-util") ]
+    file("modules/graphics/src/main/native-glass/lens/lensport") ]
 ARMV6HF.glass.lensport.compiler = compiler
 ARMV6HF.glass.lensport.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DISEGLFB",
     "-DLENSPORT", "-I", file("modules/graphics/src/main/native-glass/lens/") ].flatten()
@@ -283,9 +307,7 @@ ARMV6HF.glass.eglfb.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/wm"),
     file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
     file("modules/graphics/src/main/native-glass/lens/input/udev"),
-    file("modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c"),
-    file("modules/graphics/src/main/native-glass/lens/platform-util") ]
-    //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
+    file("modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c") ]
 ARMV6HF.glass.eglfb.compiler = compiler
 ARMV6HF.glass.eglfb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DISEGLFB"].flatten()
 ARMV6HF.glass.eglfb.linker = linker
@@ -298,9 +320,7 @@ ARMV6HF.glass.directfb.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/wm"),
     file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
     file("modules/graphics/src/main/native-glass/lens/input/udev"),
-    file("modules/graphics/src/main/native-glass/lens/wm/screen/dfbScreen.c"),
-    file("modules/graphics/src/main/native-glass/lens/platform-util") ]
-    //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
+    file("modules/graphics/src/main/native-glass/lens/wm/screen/dfbScreen.c") ]
 ARMV6HF.glass.directfb.compiler = compiler
 ARMV6HF.glass.directfb.ccFlags = ["-ffast-math", extraCFlags, "-I$sdk/usr/include/directfb", "-DLINUX"].flatten()
 ARMV6HF.glass.directfb.linker = linker
@@ -313,9 +333,7 @@ ARMV6HF.glass.fb.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/wm"),
     file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
     file("modules/graphics/src/main/native-glass/lens/input/udev"),
-    file("modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c"),
-    file("modules/graphics/src/main/native-glass/lens/platform-util") ]
-    //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
+    file("modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c") ]
 ARMV6HF.glass.fb.compiler = compiler
 ARMV6HF.glass.fb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX"].flatten()
 ARMV6HF.glass.fb.linker = linker
@@ -391,7 +409,7 @@ ARMV6HF.prismES2.eglfb.nativeSource = [
     file("modules/graphics/src/main/native-prism-es2/eglfb")
 ]
 ARMV6HF.prismES2.eglfb.compiler = compiler
-ARMV6HF.prismES2.eglfb.ccFlags = es2EglfbCFlags
+ARMV6HF.prismES2.eglfb.ccFlags = [ es2EglfbCFlags, "-I", ARMV6HF.glass.lensport.nativeSource ].flatten()
 ARMV6HF.prismES2.eglfb.linker = linker
 ARMV6HF.prismES2.eglfb.linkFlags = es2EglfbLFlags
 ARMV6HF.prismES2.eglfb.lib = "prism_es2_eglfb"
@@ -432,16 +450,23 @@ ARMV6HF.fontT2K.linker = linker
 ARMV6HF.fontT2K.linkFlags = fontLFlags
 ARMV6HF.fontT2K.lib = "javafx_font_t2k"
 
+ARMV6HF.fontFreetype = [:]
+ARMV6HF.fontFreetype.javahInclude = ["com/sun/javafx/font/freetype/OSFreetype.class*"]
+ARMV6HF.fontFreetype.nativeSource = ["src/main/native-font/freetype.c"]
+ARMV6HF.fontFreetype.compiler = compiler
+ARMV6HF.fontFreetype.ccFlags = ["-DJFXFONT_PLUS", ccFlags, fontCFlags, freetypeCCFlags].flatten()
+ARMV6HF.fontFreetype.linker = linker
+ARMV6HF.fontFreetype.linkFlags = [linkFlags, fontLFlags, freetypeLinkFlags].flatten()
+ARMV6HF.fontFreetype.lib = "javafx_font_freetype"
+
 ARMV6HF.fontPango = [:]
-ARMV6HF.fontPango.javahInclude = ["com/sun/javafx/font/pango/*"]
-ARMV6HF.fontPango.nativeSource = [
-    "src/main/native-font/pango.c",
-    "src/main/native-font/freetype.c"]
+ARMV6HF.fontPango.javahInclude = ["com/sun/javafx/font/freetype/OSPango.class"]
+ARMV6HF.fontPango.nativeSource = ["src/main/native-font/pango.c"]
 ARMV6HF.fontPango.compiler = compiler
 ARMV6HF.fontPango.ccFlags = ["-DJFXFONT_PLUS", ccFlags, pangoCCFlags].flatten()
 ARMV6HF.fontPango.linker = linker
 ARMV6HF.fontPango.linkFlags = [linkFlags, pangoLinkFlags].flatten()
-ARMV6HF.fontPango.lib = "javafx-font-pango"
+ARMV6HF.fontPango.lib = "javafx_font_pango"
 
 ARMV6HF.webkit = [:]
 ARMV6HF.webkit.binDir   = "$compilerHome/bin"

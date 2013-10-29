@@ -38,6 +38,10 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 
 import javafx.collections.WeakListChangeListener;
+import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+
 import java.lang.ref.WeakReference;
 import java.util.List;
 
@@ -362,7 +366,7 @@ public class ListCell<T> extends IndexedCell<T> {
     @Override public void commitEdit(T newValue) {
         if (! isEditing()) return;
         ListView<T> list = getListView();
-        
+
         if (list != null) {
             // Inform the ListView of the edit being ready to be committed.
             list.fireEvent(new ListView.EditEvent<T>(list,
@@ -387,7 +391,12 @@ public class ListCell<T> extends IndexedCell<T> {
             // the ListView editingIndex property (if they choose to do that
             // rather than just grab the int from the event).
             list.edit(-1);
-            list.requestFocus();
+
+            // request focus back onto the list, only if the current focus
+            // owner has the list as a parent (otherwise the user might have
+            // clicked out of the list entirely and given focus to something else.
+            // It would be rude of us to request it back again.
+            ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(list);
         }
     }
     
@@ -405,7 +414,12 @@ public class ListCell<T> extends IndexedCell<T> {
             
             // reset the editing index on the ListView
             if (updateEditingIndex) list.edit(-1);
-            list.requestFocus();
+
+            // request focus back onto the list, only if the current focus
+            // owner has the list as a parent (otherwise the user might have
+            // clicked out of the list entirely and given focus to something else.
+            // It would be rude of us to request it back again.
+            ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(list);
         
             list.fireEvent(new ListView.EditEvent<T>(list,
                     ListView.<T>editCancelEvent(),

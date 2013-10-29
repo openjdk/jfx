@@ -74,7 +74,7 @@ public class CustomMenuItem extends MenuItem {
      **************************************************************************/
     
     /**
-     * 
+     * Creates a default CustomMenuItem instance.
      */
     public CustomMenuItem() {
         this(null, true);

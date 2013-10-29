@@ -59,6 +59,7 @@ import javafx.util.StringConverter;
  * @see javafx.scene.control.TablePosition
  * @see javafx.scene.control.TableRow
  * @see javafx.scene.control.TableView
+ * @embedded
  */
 public class TableCellFactoryApp extends Application {
 

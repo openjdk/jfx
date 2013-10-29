@@ -1546,18 +1546,19 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
     }
 
     boolean doMediaPulseTask() {
-        if (this.isMediaPulseEnabled.get()) {
-            markerLock.lock();
+        if (this.isMediaPulseEnabled.get()) {            
             disposeLock.lock();
 
             if (isDisposed) {
                 disposeLock.unlock();
-                markerLock.unlock();
                 return false;
             }
+            
+            double thisTime = getPresentationTime();
+            
+            markerLock.lock();
 
             try {
-                double thisTime = getPresentationTime();
                 //System.out.println("Media pulse @ pts "+thisTime+" previous "+previousTime);
 
                 if (checkSeek) {

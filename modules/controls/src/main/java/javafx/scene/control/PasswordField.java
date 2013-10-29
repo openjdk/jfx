@@ -30,6 +30,10 @@ package javafx.scene.control;
  * @since JavaFX 2.0
  */
 public class PasswordField extends TextField {
+
+    /**
+     * Creates a default PasswordField instance.
+     */
     public PasswordField() {
         getStyleClass().add("password-field");
     }
@@ -43,16 +47,14 @@ public class PasswordField extends TextField {
     /**
      * Does nothing for PasswordField.
      */
-    @Override
-    public void cut() {
+    @Override public void cut() {
         // No-op
     }
 
     /**
      * Does nothing for PasswordField.
      */
-    @Override
-    public void copy() {
+    @Override public void copy() {
         // No-op
     }
 }

@@ -150,12 +150,7 @@ import com.sun.javafx.scene.transform.TransformUtils;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
-import com.sun.javafx.geom.transform.Affine2D;
-import com.sun.javafx.geom.transform.AffineBase;
-import com.sun.javafx.geom.transform.Translate2D;
 import com.sun.prism.impl.PrismSettings;
-import javafx.scene.transform.Translate;
 import sun.util.logging.PlatformLogger;
 import sun.util.logging.PlatformLogger.Level;
 
@@ -900,6 +895,7 @@ public abstract class Node implements EventTarget, Styleable {
      * </p>
      *
      * @defaultValue null
+     * @see <a href="doc-files/cssref.html">CSS Reference Guide</a>.
      */
     private StringProperty id;
 
@@ -919,6 +915,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @return the id assigned to this {@code Node} using the {@code setId}
      *         method or {@code null}, if no id has been assigned.
      * @defaultValue null
+     * @see <a href="doc-files/cssref.html">CSS Reference Guide</a>.
      */
     public final String getId() {
         return id == null ? null : id.get();
@@ -957,6 +954,7 @@ public abstract class Node implements EventTarget, Styleable {
      * each element of the list is a style class to which this Node belongs.
      *
      * @see <a href="http://www.w3.org/TR/css3-selectors/#class-html">CSS3 class selectors</a>
+     * @see <a href="doc-files/cssref.html">CSS Reference Guide</a>.
      * @defaultValue null
      */
     private ObservableList<String> styleClass = new TrackableObservableList<String>() {
@@ -996,6 +994,7 @@ public abstract class Node implements EventTarget, Styleable {
      * variable contains style properties and values and not the
      * selector portion of a style rule.
      * @defaultValue empty string
+     * @see <a href="doc-files/cssref.html">CSS Reference Guide</a>.
      */
     private StringProperty style;
 
@@ -1008,6 +1007,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @param value The inline CSS style to use for this {@code Node}.
      *         {@code null} is implicitly converted to an empty String.
      * @defaultValue empty string
+     * @see <a href="doc-files/cssref.html">CSS Reference Guide</a>.
      */
     public final void setStyle(String value) {
         styleProperty().set(value);
@@ -1024,6 +1024,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @return The inline CSS style associated with this {@code Node}.
      *         If this {@code Node} does not have an inline style,
      *         an empty String is returned.
+     * @see <a href="doc-files/cssref.html">CSS Reference Guide</a>.
      */
     public final String getStyle() {
         return style == null ? "" : style.get();
@@ -3290,6 +3291,14 @@ public abstract class Node implements EventTarget, Styleable {
     private BaseBounds geomBounds = new RectBounds();
 
     /**
+     * The cached local bounds (without transforms, with clip and effects).
+     * If there is neither clip nor effect
+     * local bounds are equal to geom bounds, so in this case we don't keep
+     * the extra instance and set null to this variable.
+     */
+    private BaseBounds localBounds = null;
+
+    /**
      * This special flag is used only by Parent to flag whether or not
      * the *parent* has processed the fact that bounds have changed for this
      * child Node. We need some way of flagging this on a per-node basis to
@@ -3413,36 +3422,42 @@ public abstract class Node implements EventTarget, Styleable {
      * to promote from a RectBounds to a BoxBounds (3D).
      */
     BaseBounds getLocalBounds(BaseBounds bounds, BaseTransform tx) {
-        if (getEffect() != null || getClip() != null) {
-            // We either get the bounds of the effect (if it isn't null)
-            // or we get the geom bounds (if effect is null). We will then
-            // intersect this with the clip.
-            if (getEffect() != null) {
-                BaseBounds b = getEffect().impl_getBounds(bounds, tx, this, boundsAccessor);
-                bounds = bounds.deriveWithNewBounds(b);
-            } else {
-                bounds = getGeomBounds(bounds, tx);
-            }
-            // intersect with the clip. Take care with "bounds" as it may
-            // actually be TEMP_BOUNDS, so we save off state
-            if (getClip() != null) {
-                //TODO: For 3D case the intersecting transformed bounds and
-                //      transformed clip will not produce the correct bounds.
-                double x1 = bounds.getMinX();
-                double y1 = bounds.getMinY();
-                double x2 = bounds.getMaxX();
-                double y2 = bounds.getMaxY();
-                double z1 = bounds.getMinZ();
-                double z2 = bounds.getMaxZ();
-                bounds = getClip().getTransformedBounds(bounds, tx);
-                bounds.intersectWith((float)x1, (float)y1, (float)z1,
-                        (float)x2, (float)y2, (float)z2);
-            }
-            // return the bounds
-            return bounds;
-        } else {
-            // fast path, simply return geom bounds
+        if (getEffect() == null && getClip() == null) {
             return getGeomBounds(bounds, tx);
+        }
+
+        if (tx.isTranslateOrIdentity()) {
+            // we can take a fast path since we know tx is either a simple
+            // translation or is identity
+            updateLocalBounds();
+            bounds = bounds.deriveWithNewBounds(localBounds);
+            if (!tx.isIdentity()) {
+                double translateX = tx.getMxt();
+                double translateY = tx.getMyt();
+                double translateZ = tx.getMzt();
+                bounds = bounds.deriveWithNewBounds((float) (bounds.getMinX() + translateX),
+                        (float) (bounds.getMinY() + translateY),
+                        (float) (bounds.getMinZ() + translateZ),
+                        (float) (bounds.getMaxX() + translateX),
+                        (float) (bounds.getMaxY() + translateY),
+                        (float) (bounds.getMaxZ() + translateZ));
+            }
+            return bounds;
+        } else if (tx.is2D()
+                && (tx.getType()
+                & ~(BaseTransform.TYPE_UNIFORM_SCALE | BaseTransform.TYPE_TRANSLATION
+                | BaseTransform.TYPE_FLIP | BaseTransform.TYPE_QUADRANT_ROTATION)) != 0) {
+            // this is a non-uniform scale / non-quadrant rotate / skew transform
+            return computeLocalBounds(bounds, tx);
+        } else {
+            // 3D transformations and
+            // selected 2D transformations (unifrom transform, flip, quadrant rotation).
+            // These 2D transformation will yield tight bounds when applied on the pre-computed
+            // geomBounds
+            // Note: Transforming the local bounds into a 3D space will yield a bounds
+            // that isn't as tight as transforming its geometry and compute it bounds.
+            updateLocalBounds();
+            return tx.transform(localBounds, bounds);
         }
     }
 
@@ -3502,13 +3517,62 @@ public abstract class Node implements EventTarget, Styleable {
     public abstract BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx);
 
     /**
-     * If necessary, recomputes the cached local bounds. If the bounds are not
+     * If necessary, recomputes the cached geom bounds. If the bounds are not
      * invalid, then this method is a no-op.
      */
     void updateGeomBounds() {
         if (geomBoundsInvalid) {
             geomBounds = impl_computeGeomBounds(geomBounds, BaseTransform.IDENTITY_TRANSFORM);
             geomBoundsInvalid = false;
+        }
+    }
+
+    /**
+     * Computes the local bounds of this Node.
+     */
+    private BaseBounds computeLocalBounds(BaseBounds bounds, BaseTransform tx) {
+        // We either get the bounds of the effect (if it isn't null)
+        // or we get the geom bounds (if effect is null). We will then
+        // intersect this with the clip.
+        if (getEffect() != null) {
+            BaseBounds b = getEffect().impl_getBounds(bounds, tx, this, boundsAccessor);
+            bounds = bounds.deriveWithNewBounds(b);
+        } else {
+            bounds = getGeomBounds(bounds, tx);
+        }
+        // intersect with the clip. Take care with "bounds" as it may
+        // actually be TEMP_BOUNDS, so we save off state
+        if (getClip() != null) {
+            //TODO: For 3D case the intersecting transformed bounds and
+            //      transformed clip will not produce the correct bounds.
+            double x1 = bounds.getMinX();
+            double y1 = bounds.getMinY();
+            double x2 = bounds.getMaxX();
+            double y2 = bounds.getMaxY();
+            double z1 = bounds.getMinZ();
+            double z2 = bounds.getMaxZ();
+            bounds = getClip().getTransformedBounds(bounds, tx);
+            bounds.intersectWith((float)x1, (float)y1, (float)z1,
+                    (float)x2, (float)y2, (float)z2);
+        }
+        return bounds;
+    }
+
+
+    /**
+     * If necessary, recomputes the cached local bounds. If the bounds are not
+     * invalid, then this method is a no-op.
+     */
+    private void updateLocalBounds() {
+        if (localBoundsInvalid) {
+            if (getClip() != null || getEffect() != null) {
+                localBounds = computeLocalBounds(
+                        localBounds == null ? new RectBounds() : localBounds,
+                        BaseTransform.IDENTITY_TRANSFORM);
+            } else {
+                localBounds = null;
+            }
+            localBoundsInvalid = false;
         }
     }
 
@@ -3694,6 +3758,7 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     private boolean geomBoundsInvalid = true;
+    private boolean localBoundsInvalid = true;
     private boolean txBoundsInvalid = true;
 
     /**
@@ -3701,6 +3766,7 @@ public abstract class Node implements EventTarget, Styleable {
      * and notifying this node that its transformed bounds have changed.
      */
     void localBoundsChanged() {
+        localBoundsInvalid = true;
         invalidateBoundsInLocal();
         transformedBoundsChanged();
     }
@@ -3821,18 +3887,6 @@ public abstract class Node implements EventTarget, Styleable {
                     return false;
                 }
                 if (!getClip().contains(tempState.point.x, tempState.point.y)) {
-                    return false;
-                }
-            }
-            // if there is an effect, then we need to check the effect
-            // for containment as well.
-            if (getEffect() != null) {
-                tempBounds = getEffect().impl_getBounds(
-                                    tempBounds,
-                                    BaseTransform.IDENTITY_TRANSFORM,
-                                    this, boundsAccessor);
-
-                if (!tempBounds.contains((float)localX, (float)localY)) {
                     return false;
                 }
             }
@@ -8489,7 +8543,14 @@ public abstract class Node implements EventTarget, Styleable {
       */
      @Deprecated // SB-dependency: RT-21096 has been filed to track this
      public final void impl_setStyleMap(ObservableMap<StyleableProperty<?>, List<Style>> styleMap) {
-         if (styleHelper != null) {
+         //
+         // Node doesn't have a field for this map. Rather, this is held by CssStyleHelper. If this node
+         // doesn't have a styleHelper, then there is nothing to attach the listener to. So a styleHelper has
+         // to be created.
+         //
+         if (styleHelper == null) {
+             styleHelper = CssStyleHelper.createStyleHelper(this, null, styleMap);
+         } else {
              styleHelper.setObservableStyleMap(styleMap);
          }
      }
@@ -8801,8 +8862,11 @@ public abstract class Node implements EventTarget, Styleable {
                 return;
             }
 
+            ObservableMap<StyleableProperty<?>, List<Style>> styleObserver =
+                    styleHelper != null ? styleHelper.observableStyleMap : null;
+
             // Match new styles if my own indicates I need to reapply
-            styleHelper = CssStyleHelper.createStyleHelper(this, cacheHint);
+            styleHelper = CssStyleHelper.createStyleHelper(this, cacheHint, styleObserver);
 
         }
 

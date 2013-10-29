@@ -50,6 +50,7 @@ import javafx.stage.Stage;
  * @see javafx.scene.paint.Color
  * @playground polygon1.fill (name="Polygon 1 Fill")
  * @playground polygon2.stroke (name="Polygon 2 Stroke")
+ * @embedded
  */
 public class PolygonApp extends Application {
 

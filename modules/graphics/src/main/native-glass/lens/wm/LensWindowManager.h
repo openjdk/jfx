@@ -114,18 +114,33 @@ void lens_wm_notifyScrollEvent(JNIEnv *env, int xabs,
 
 
 /**
- * Process a touch or multitouch event and pass it on to
- * glass_application_notifyTouchEvent or
- * glass_application_notifyMultiTouchEvent, taking into account the grabbed
- * window.
- * Note: a NULL window is appropriate as that 
- * will cause the grab window to be release.
+ * Process a touch or multitouch event and simulate the required
+ * mouse events. Notification is done through 
+ * glass_application_notifyTouchEvent or 
+ * glass_application_notifyMultiTouchEvent Note: 
+ *  
+ * @param env 
+ * 
+ * @param count number of touch points
+ * 
+ * @param state array of states for each point
+ * 
+ * @param ids array of ids for each point
+ * 
+ * @param xabs array of X coordinates for each point
+ * 
+ * @param yabs array of Y coordinates for each point
+ * 
+ * @param primaryPointIndex the index of the point that mouse 
+ *                   events will be synthesis from
+ * 
  */
 void lens_wm_notifyMultiTouchEvent(JNIEnv *env,
                                    int count,
                                    jint *state,
                                    jlong *ids,
-                                   int *xabs, int *yabs);
+                                   int *xabs, int *yabs,
+                                   int primaryPointIndex);
 
 
 /**

@@ -55,7 +55,8 @@ import javafx.stage.Stage;
  * @playground arc2.stroke (name="Arc 2 Stroke")
  * @playground arc2.strokeWidth (name="Arc 2 Stroke Width", min=0, max=5)
  * @playground arc2.radiusX (name="Arc 2 Radius X", min=0, max=50)
- * @playground arc2.radiusY (name="Arc 2 Radius Y", min=0, max=50) 
+ * @playground arc2.radiusY (name="Arc 2 Radius Y", min=0, max=50)
+ * @embedded
  */
 public class ArcApp extends Application {
 

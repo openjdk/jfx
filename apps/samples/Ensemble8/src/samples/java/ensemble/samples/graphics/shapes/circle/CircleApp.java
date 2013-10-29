@@ -54,7 +54,8 @@ import javafx.stage.Stage;
  * @playground circle1.radius (name="Circle 1 Radius", min=10, max=40)
  * @playground circle2.stroke (name="Circle 1 Stroke")
  * @playground circle2.strokeWidth (name="Circle 2 Stroke Width", min=1, max=5)
- * @playground circle2.radius (name="Circle 2 Radius", min=10, max=40) 
+ * @playground circle2.radius (name="Circle 2 Radius", min=10, max=40)
+ * @embedded
  */
 public class CircleApp extends Application {
 

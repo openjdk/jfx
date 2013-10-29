@@ -32,6 +32,7 @@
 
 #import "GlassStatics.h"
 #import "GlassMacros.h"
+#import "GlassWindow.h"
 
 //#define VERBOSE_DND
 #ifdef VERBOSE_DND
@@ -116,6 +117,9 @@ static jint getTouchStateFromPhase(int phase)
         CGPoint viewPoint = [touch locationInView:self.uiView.superview];
 
         self.mouseTouch = touch;
+        
+        //focus owning GlassWindow
+        [self.uiView.superview.superview makeKeyWindow];
 
         [self sendJavaMouseEvent:viewPoint type:com_sun_glass_events_MouseEvent_ENTER button:com_sun_glass_events_MouseEvent_BUTTON_NONE];
         [self sendJavaMouseEvent:viewPoint type:com_sun_glass_events_MouseEvent_DOWN button:com_sun_glass_events_MouseEvent_BUTTON_LEFT];
@@ -692,5 +696,19 @@ static BOOL isTouchEnded(int phase)
 {
     return NO;
 }
+
+#pragma mark --- UITextFieldDelegate
+
+-(BOOL)textFieldShouldReturn:(UITextField *)textField{
+    [self sendJavaKeyEventWithType:com_sun_glass_events_KeyEvent_PRESS
+                                          keyCode:com_sun_glass_events_KeyEvent_VK_ENTER
+                                            chars:(char)13
+                                        modifiers:0];
+    
+    [[GlassWindow getMasterWindow] resignFocusOwner];
+    
+    return YES;
+}
+
 
 @end
