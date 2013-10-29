@@ -1455,7 +1455,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             // There was a weird bug where the newMax would sometimes go < 0
             // when switching vertical and that would drive the min value to
             // something crazy negative.
-            double newMax = Math.max(1, getMaxPrefBreadth() - viewportBreadth);
+            // Math.abs(..) used here to resolve RT-31653
+            double newMax = Math.max(1, Math.abs(getMaxPrefBreadth() - viewportBreadth));
             if (newMax != breadthBar.getMax()) {
                 breadthBar.setMax(newMax);
 
