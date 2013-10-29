@@ -132,7 +132,7 @@ int load_bcm_symbols() {
 
     void *lib = dlopen("libbcm_host.so", RTLD_LAZY);
     if (!lib) {
-        return 0;
+        return 1;
     }
 
     int error = 0;
@@ -215,7 +215,7 @@ int load_wrapped_gles_symbols() {
 
     int error = 0;
 
-    if (load_bcm_symbols()) {
+    if (load_bcm_symbols() == 0) {
         // useDispman
     } else if (dlopen("libVIVANTE.so", RTLD_LAZY)) {
         useVivanteFB = 1;
