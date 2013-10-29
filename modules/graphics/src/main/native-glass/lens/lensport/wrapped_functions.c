@@ -44,7 +44,7 @@
 #include <fcntl.h>
 #include <dlfcn.h>
 #include <sys/ioctl.h>
-
+#include <unistd.h>
 #include <string.h>
 #include <strings.h>
 
@@ -217,7 +217,7 @@ int load_wrapped_gles_symbols() {
 
     if (load_bcm_symbols() == 0) {
         // useDispman
-    } else if (dlopen("libVIVANTE.so", RTLD_LAZY)) {
+    } else if (access("/dev/mxc_vpu", F_OK) == 0) {
         useVivanteFB = 1;
         error += load_vivante_symbols(libegl);
     }

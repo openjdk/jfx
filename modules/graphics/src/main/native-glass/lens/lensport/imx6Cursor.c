@@ -346,7 +346,7 @@ static char * platformName = "imx6";
 
 jboolean check_imx6_cursor(LensNativePort *lensPort) {
 
-    if (dlopen("libVIVANTE.so", RTLD_LAZY)) {
+    if (access("/dev/mxc_vpu", F_OK) == 0) {
         lensPort->platformName = platformName;
         lensPort->setNativeCursor = fbImx6SetNativeCursor;
         lensPort->cursorInitialize = fbImx6CursorInitialize;
