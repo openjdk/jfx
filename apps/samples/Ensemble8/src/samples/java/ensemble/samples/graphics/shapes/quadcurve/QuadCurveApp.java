@@ -58,6 +58,7 @@ import javafx.stage.Stage;
  * @playground quadCurve.controlY (name="Cubic Curve Control Y", min=0, max=90)
  * @playground quadCurve.endX (name="Cubic Curve End X", min=10, max=180)
  * @playground quadCurve.endY (name="Cubic Curve End Y", min=10, max=80)
+ * @embedded
  */
 public class QuadCurveApp extends Application {
         // Create quadCurve shape

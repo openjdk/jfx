@@ -47,6 +47,7 @@ import javafx.stage.Stage;
  * @preview preview.png
  * @see javafx.scene.layout.FlowPane
  * @related /Graphics/Images/Image Creation
+ * @embedded
  */
 public class FlowPaneApp extends Application {
 

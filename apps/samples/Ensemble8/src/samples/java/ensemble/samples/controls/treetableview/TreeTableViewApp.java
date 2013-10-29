@@ -58,6 +58,7 @@ import javafx.util.converter.DefaultStringConverter;
  * @see javafx.scene.control.TreeTableCell
  * @see javafx.scene.control.TreeTableColumn
  * @see javafx.scene.control.TreeTableView
+ * @embedded
  */
 public class TreeTableViewApp extends Application {
 

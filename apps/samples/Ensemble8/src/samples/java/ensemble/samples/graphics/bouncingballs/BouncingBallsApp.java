@@ -79,7 +79,8 @@ import javafx.geometry.Insets;
  * @see javafx.event.EventHandler
  * @see javafx.event.ActionEvent
  * @see javafx.scene.input.MouseEvent 
- * @see javafx.geometry.Insets 
+ * @see javafx.geometry.Insets
+ * @embedded
  */
 
 public class BouncingBallsApp extends Application {

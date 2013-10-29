@@ -46,6 +46,7 @@ import javafx.stage.Stage;
  * @preview preview.png
  * @see javafx.scene.control.Button
  * @related /Controls/Button/Graphic Button
+ * @embedded
  */
 public class ColorButtonApp extends Application {
 

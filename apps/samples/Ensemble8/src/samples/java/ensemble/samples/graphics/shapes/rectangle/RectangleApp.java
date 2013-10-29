@@ -61,6 +61,7 @@ import javafx.stage.Stage;
  * @playground rect2.height (name="Rectangle 2 Height", min=10, max=50)
  * @playground rect2.arcWidth (name="Rectangle 2 Arc Width", min=0, max=50)
  * @playground rect2.arcHeight (name="Rectangle 2 Arc Height", min=0, max=50)
+ * @embedded
  */
 public class RectangleApp extends Application {
     // Simple filled rectangle

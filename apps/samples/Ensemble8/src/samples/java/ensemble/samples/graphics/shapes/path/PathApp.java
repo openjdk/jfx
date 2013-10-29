@@ -66,6 +66,7 @@ import javafx.stage.Stage;
  * @see javafx.scene.paint.Color
  * @playground path1.stroke (name="Path 1 Stroke")
  * @playground path2.stroke (name="Path 2 Stroke")
+ * @embedded
  */
 public class PathApp extends Application {
 

@@ -63,6 +63,7 @@ import javafx.stage.Stage;
  * @preview preview.png
  * @see javafx.scene.layout.GridPane
  * @related /Controls/Text/Simple Label
+ * @embedded
  */
 public class GridPaneApp extends Application {
 

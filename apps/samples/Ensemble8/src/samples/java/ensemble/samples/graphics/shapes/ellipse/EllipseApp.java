@@ -56,7 +56,8 @@ import javafx.stage.Stage;
  * @playground ellipse2.stroke (name="Ellipse 2 Stroke")
  * @playground ellipse2.strokeWidth (name="Ellipse 2 Stroke Width", min=1, max=5)
  * @playground ellipse2.radiusX (name="Ellipse 2 Width", min=10, max=40)
- * @playground ellipse2.radiusY (name="Ellipse 2 Height", min=10, max=45) 
+ * @playground ellipse2.radiusY (name="Ellipse 2 Height", min=10, max=45)
+ * @embedded
  */
 public class EllipseApp extends Application {
 

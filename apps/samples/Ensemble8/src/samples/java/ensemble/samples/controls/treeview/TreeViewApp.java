@@ -46,6 +46,7 @@ import javafx.stage.Stage;
  * @sampleName TreeView
  * @preview preview.png
  * @see javafx.scene.control.TreeView
+ * @embedded
  */
 public class TreeViewApp extends Application {
 

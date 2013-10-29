@@ -49,6 +49,7 @@ import javafx.stage.Stage;
  * @preview preview.png
  * @see javafx.scene.layout.TilePane
  * @related /Graphics/Images/Image Creation
+ * @embedded
  */
 public class TilePaneApp extends Application {
 

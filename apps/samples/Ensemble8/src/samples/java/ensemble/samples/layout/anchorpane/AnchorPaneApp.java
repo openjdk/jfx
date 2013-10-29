@@ -50,6 +50,7 @@ import javafx.stage.Stage;
  * @see javafx.scene.layout.AnchorPane
  * @see javafx.collections.ObservableList
  * @related /Controls/Text/Simple Label
+ * @embedded
  */
 public class AnchorPaneApp extends Application {
 

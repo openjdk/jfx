@@ -53,6 +53,7 @@ import javafx.stage.Stage;
  * @related /Controls/Choice Box
  * @related /Controls/Accordion
  * @related /Controls/Toolbar/Tool Bar
+ * @embedded
  */
 public class ToggleButtonApp extends Application {
     private final static double TOGGLEBUTTON_WIDTH = 72;

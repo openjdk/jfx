@@ -48,6 +48,7 @@ import javafx.stage.Stage;
  * @preview preview.png
  * @see javafx.scene.layout.HBox
  * @related /Controls/Text/Text Field
+ * @embedded
  */
 public class HBoxApp extends Application {
 
