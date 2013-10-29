@@ -47,6 +47,7 @@ import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import static org.junit.Assert.*;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class Node_cssStyleMap_Test {
@@ -96,6 +97,7 @@ public class Node_cssStyleMap_Test {
         return smap;
     }
     
+    @Ignore("RT-33919")
     @Test
     public void testStyleMapTracksChanges() {
                 
