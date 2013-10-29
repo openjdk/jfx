@@ -1080,27 +1080,29 @@ public class TreeTableView<S> extends Control {
      * (or Region.USE_COMPUTED_SIZE) will be used to disabled fixed cell size
      * mode.
      *
-     * @param value The new fixed cell size value, or -1 (or Region.USE_COMPUTED_SIZE)
-     *                  to disable.
+     * @param value The new fixed cell size value, or a value less than or equal
+     *              to zero (or Region.USE_COMPUTED_SIZE) to disable.
+     * @since JavaFX 8.0
      */
     public final void setFixedCellSize(double value) {
         fixedCellSizeProperty().set(value);
     }
 
     /**
-     * Returns the fixed cell size value, which may be -1 to represent fixed cell
-     * size mode is disabled, or a value greater than zero to represent the size
-     * of all cells in this control.
+     * Returns the fixed cell size value. A value less than or equal to zero is
+     * used to represent that fixed cell size mode is disabled, and a value
+     * greater than zero represents the size of all cells in this control.
      *
-     * @return A double representing the fixed cell size of this control, or -1
-     *      if fixed cell size mode is disabled.
+     * @return A double representing the fixed cell size of this control, or a
+     *      value less than or equal to zero if fixed cell size mode is disabled.
+     * @since JavaFX 8.0
      */
     public final double getFixedCellSize() {
         return fixedCellSize == null ? Region.USE_COMPUTED_SIZE : fixedCellSize.get();
     }
     /**
      * Specifies whether this control has cells that are a fixed height (of the
-     * specified value). If this value is -1 (i.e. {@link Region#USE_COMPUTED_SIZE}),
+     * specified value). If this value is less than or equal to zero,
      * then all cells are individually sized and positioned. This is a slow
      * operation. Therefore, when performance matters and developers are not
      * dependent on variable cell sizes it is a good idea to set the fixed cell
@@ -1116,6 +1118,8 @@ public class TreeTableView<S> extends Control {
      * performance gains from being possible). Therefore, when performance matters
      * use -fx-fixed-cell-size, instead of -fx-cell-size. If both properties are
      * specified in CSS, -fx-fixed-cell-size takes precedence.</p>
+     *
+     * @since JavaFX 8.0
      */
     public final DoubleProperty fixedCellSizeProperty() {
         if (fixedCellSize == null) {
