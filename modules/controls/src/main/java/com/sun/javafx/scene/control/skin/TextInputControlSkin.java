@@ -531,7 +531,9 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
         double minY = 0f;
         double maxY = 0f;
 
-        for (PathElement pe: getUnderlineShape(start, end)) {
+        PathElement elements[] = getUnderlineShape(start, end);
+        for (int i = 0; i < elements.length; i++) {
+            PathElement pe = elements[i];
             if (pe instanceof MoveTo) {
                 minX = maxX = ((MoveTo)pe).getX();
                 minY = maxY = ((MoveTo)pe).getY();
@@ -546,7 +548,11 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             } else if (pe instanceof VLineTo) {
                 minY = (minY < ((VLineTo)pe).getY() ? minY : ((VLineTo)pe).getY());
                 maxY = (maxY > ((VLineTo)pe).getY() ? maxY : ((VLineTo)pe).getY());
-            } else if (pe instanceof ClosePath) {
+            }
+            // Don't assume that shapes are ended with ClosePath.
+            if (pe instanceof ClosePath ||
+                i == elements.length - 1 ||
+                (i < elements.length - 1 && elements[i+1] instanceof MoveTo)) {
                 // Now, create the attribute.
                 Shape attr = null;
                 if (highlight == InputMethodHighlight.SELECTED_RAW) {
