@@ -36,7 +36,7 @@ public class NGParallelCamera extends NGCamera {
 
     @Override
     public PickRay computePickRay(float x, float y, PickRay pickRay) {
-        return PickRay.computeParallelPickRay(x, y, worldTransform, zNear, zFar,
-                pickRay);
+        return PickRay.computeParallelPickRay(x, y, viewHeight, worldTransform,
+                zNear, zFar, pickRay);
     }
 }

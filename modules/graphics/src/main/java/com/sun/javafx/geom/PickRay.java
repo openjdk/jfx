@@ -47,8 +47,8 @@ public class PickRay {
         set(origin, direction, nearClip, farClip);
     }
 
-    public PickRay(double x, double y, double nearClip, double farClip) {
-        set(x, y, nearClip, farClip);
+    public PickRay(double x, double y, double z, double nearClip, double farClip) {
+        set(x, y, z, nearClip, farClip);
     }
 
     public static PickRay computePerspectivePickRay(
@@ -93,7 +93,7 @@ public class PickRay {
     }
 
     public static PickRay computeParallelPickRay(
-            double x, double y,
+            double x, double y, double viewHeight,
             Affine3D cameraTransform,
             double nearClip, double farClip,
             PickRay pickRay) {
@@ -102,7 +102,12 @@ public class PickRay {
             pickRay = new PickRay();
         }
 
-        pickRay.set(x, y, nearClip, farClip);
+        // This is the same math as in the perspective case, fixed
+        // for the default 30 degrees vertical field of view.
+        final double distanceZ = (viewHeight / 2.0)
+                / Math.tan(Math.toRadians(15.0));
+
+        pickRay.set(x, y, distanceZ, nearClip, farClip);
 
         if (cameraTransform != null) {
             pickRay.transform(cameraTransform);
@@ -118,17 +123,9 @@ public class PickRay {
         this.farClip = farClip;
     }
 
-    public final void set(double x, double y, double nearClip, double farClip) {
-        // Right now the parallel camera picks nodes even on negative distances
-        // (behind the camera). Therefore, it doesn't matter
-        // what is the Z coordinate of the origin. Also the reported distance
-        // is always an infinity so it doesn't matter what is the magnitude
-        // of the direction.
-        // Right now we need the (origin+direction) point be in the XY plane
-        // for correct picking of the scene. This requirement will be removed
-        // when the projection plane is properly used for the intersection.
-        setOrigin(x, y, -1);
-        setDirection(0, 0, 1);
+    public final void set(double x, double y, double z, double nearClip, double farClip) {
+        setOrigin(x, y, -z);
+        setDirection(0, 0, z);
         this.nearClip = nearClip;
         this.farClip = farClip;
     }

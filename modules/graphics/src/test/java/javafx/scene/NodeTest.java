@@ -247,10 +247,10 @@ public class NodeTest {
         scene.getRoot().getChildren().add(rect);
 
         PickResultChooser res = new PickResultChooser();
-        rect.impl_pickNode(new PickRay(50, 50, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY), res);
+        rect.impl_pickNode(new PickRay(50, 50, 1, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY), res);
         assertSame(rect, res.getIntersectedNode());
         res = new PickResultChooser();
-        rect.impl_pickNode(new PickRay(0, 0, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY), res);
+        rect.impl_pickNode(new PickRay(0, 0, 1, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY), res);
         assertNull(res.getIntersectedNode());
     }
 
@@ -266,10 +266,10 @@ public class NodeTest {
         scene.getRoot().getChildren().add(rect);
 
         PickResultChooser res = new PickResultChooser();
-        rect.impl_pickNode(new PickRay(50, 50, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY), res);
+        rect.impl_pickNode(new PickRay(50, 50, 1, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY), res);
         assertSame(rect, res.getIntersectedNode());
         res = new PickResultChooser();
-        rect.impl_pickNode(new PickRay(0, 0, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY), res);
+        rect.impl_pickNode(new PickRay(0, 0, 1, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY), res);
         assertNull(res.getIntersectedNode());
     }
 

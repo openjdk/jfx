@@ -71,7 +71,8 @@ public class ParallelCamera extends Camera {
 
     @Override
     final PickRay computePickRay(double x, double y, PickRay pickRay) {
-        return PickRay.computeParallelPickRay(x, y, getCameraTransform(),
+        return PickRay.computeParallelPickRay(x, y, getViewHeight(),
+                getCameraTransform(),
                 //TODO: use actual clips after rendering uses them
                 Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, pickRay);
     }
@@ -97,7 +98,13 @@ public class ParallelCamera extends Camera {
             position = new Vec3d();
         }
 
-        position.set(0.0, 0.0, -1.0);
+        // This is the same math as in PerspectiveCamera, fixed for the default
+        // 30 degrees vertical field of view.
+        final double halfViewWidth = getViewWidth() / 2.0;
+        final double halfViewHeight = getViewHeight() / 2.0;
+        final double distanceZ = halfViewHeight / Math.tan(Math.toRadians(15.0));
+        position.set(halfViewWidth, halfViewHeight, -distanceZ);
+
         return position;
     }
 }

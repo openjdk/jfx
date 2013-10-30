@@ -1794,7 +1794,7 @@ public class Scene implements EventTarget {
      */
     Node test_pick(double x, double y) {
         inMousePick = true;
-        PickResult result = mouseHandler.pickNode(new PickRay(x, y,
+        PickResult result = mouseHandler.pickNode(new PickRay(x, y, 1,
                 Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY));
         inMousePick = false;
         if (result != null) {
