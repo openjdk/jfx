@@ -60,6 +60,15 @@ final class LensTouchInputSupport {
      */    
     private static final int touchMoveSensitivity;
 
+    /**
+     * This property enable/disable multi touch support by the input driver.
+     * When the property is disabled and a multitouch screen is connected, the
+     * input driver will 'downgrade' the screen events to a single touch 
+     * point, as if a single touch screen was connected 
+     * 
+     */
+    private static final boolean useMultiTouch;
+
     static {
         touchTapRadius = AccessController.doPrivileged(
         new PrivilegedAction<Integer>() {
@@ -74,6 +83,14 @@ final class LensTouchInputSupport {
             @Override
             public Integer run() {
                 return Integer.getInteger("lens.input.touch.MoveSensitivity", 3);
+            }
+        });
+
+        useMultiTouch = AccessController.doPrivileged(
+        new PrivilegedAction<Boolean>() {
+            @Override
+            public Boolean run() {
+                return Boolean.getBoolean("com.sun.javafx.experimental.embedded.multiTouch");
             }
         });
     }

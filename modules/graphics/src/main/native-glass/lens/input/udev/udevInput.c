@@ -107,7 +107,7 @@ typedef struct _LensInputMouseState {
     /* multitouch points */
     int                     nextTouchID; // ID used for the next new touch point
     // the ID of the point that mouse events will be synthesize from
-    int                     touchPrimaryPointID; 
+    int                     touchPrimaryPointID;
     /* existing touch points that have already been sent up to Glass */
     int                     touchPointCount;
     int                     touchIDs[LENS_MAX_TOUCH_POINTS];
@@ -236,6 +236,8 @@ static int gTapRadius = 20;//pixels
 #define LENS_MAX_MOVE_SENSITIVITY 1000
 static int gTouchMoveSensitivity = 3; //pixels
 
+static jboolean gUseMultiTouch = JNI_FALSE;
+
 
 //JNI
 static JNIEnv *gJNIEnv = NULL;
@@ -343,6 +345,10 @@ jboolean lens_input_initialize(JNIEnv *env) {
                                                            "touchMoveSensitivity",
                                                            "I");
 
+        jfieldID useMultiVar = (*env)->GetStaticFieldID(env,
+                                                           lensTouchInputSupport,
+                                                           "useMultiTouch",
+                                                           "Z");
         //try to set tap radius
         if (radiusVar != NULL) {
             int confRadius = (*env)->GetStaticIntField(env,
@@ -388,6 +394,20 @@ jboolean lens_input_initialize(JNIEnv *env) {
         } else {
             GLASS_LOG_SEVERE("Could not find static touchMoveSensitivity filed in %s",
                              className);
+        }
+
+        //try to set multi-touch enabled property
+        if (useMultiVar != NULL) {
+            gUseMultiTouch = (*env)->GetStaticBooleanField(env,
+                                                           lensTouchInputSupport,
+                                                           useMultiVar);
+            GLASS_LOG_CONFIG("multitouch usage was set to %s",
+                             gUseMultiTouch? "true" : "false");
+        } else {
+            GLASS_LOG_SEVERE("Could not find static useMultiTouch filed in %s, "
+                             "disabling multi touch support",
+                             className);
+            gUseMultiTouch = JNI_FALSE;
         }
 
     } else {
@@ -1760,6 +1780,8 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
 
 
             int primaryPointIndex = -1;
+            jboolean primaryPointReassigned = JNI_FALSE;
+
             //Find the primary point in this touch event. Mouse events will be
             //synthesized from it
             if (mouseState->touchPrimaryPointID == -1) {
@@ -1798,6 +1820,7 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
                                          " reassign to point[%d], id = %d ",
                                          i,
                                          (int)ids[i]);
+                            primaryPointReassigned = JNI_TRUE;
                             break;
                         }
                     }
@@ -1810,7 +1833,43 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
 
             if (primaryPointIndex == -1) {
                  GLASS_LOG_FINEST("primary point not found - release");
+                 mouseState->touchPrimaryPointID = -1; //mark as not set
+
             }
+
+            //check if we can use multi touch events and simulate single touch 
+            //screen event, if not.
+            //follow primaryPointIndex for notifications
+            if (!gUseMultiTouch && 
+                device->isTouch && device->touchProtocolType != TOUCH_PROTOCOL_ST ) {                
+                if (primaryPointIndex > -1) {
+                    GLASS_LOG_FINEST("[multi->single] Using primary point with index"
+                                     " %d for notification",
+                                     primaryPointIndex);
+                    //use index point
+
+                    ids[0] = 1; //always use same point id
+                    count = 1;
+                    if (primaryPointReassigned && 
+                        states[primaryPointIndex] == com_sun_glass_events_TouchEvent_TOUCH_PRESSED) {
+                        //avoid double press
+                        states[0] = com_sun_glass_events_TouchEvent_TOUCH_MOVED;
+                    } else {
+                        states[0] = states[primaryPointIndex];
+                    }
+                    xs[0] = xs[primaryPointIndex];
+                    ys[0] = ys[primaryPointIndex];
+                    
+                    primaryPointIndex = 0;
+                } else {
+                    //all points were released, just drop the count to 1. The 
+                    //coordinates from the first point will be used for the notification
+                    GLASS_LOG_FINEST("[multi->single] All points released, using first "
+                                     " point for notification");
+                    ids[0] = 1;
+                    count = 1;
+                }
+            }//!gUseMultiTouch
 
             GLASS_IF_LOG_FINEST {
                 GLASS_LOG_FINEST("lens_wm_notifyMultiTouchEvent() with:");
