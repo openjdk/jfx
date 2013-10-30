@@ -43,6 +43,7 @@
 - (void)_setResizable;
 - (NSRect)_constrainFrame:(NSRect)frame;
 - (void)_setVisible;
+- (void)_setBounds:(jint)x y:(jint)y xSet:(jboolean)xSet ySet:(jboolean)ySet w:(jint)w h:(jint)h cw:(jint)cw ch:(jint)ch;
 - (void)_setWindowFrameWithRect:(NSRect)rect withDisplay:(jboolean)display withAnimate:(jboolean)animate;
 - (void)_restorePreZoomedRect;
 - (NSScreen*)_getScreen;

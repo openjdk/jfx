@@ -291,6 +291,21 @@ static NSWindow *s_grabWindow = nil;
 
 }
 
+- (void)_setBounds:(jint)x y:(jint)y xSet:(jboolean)xSet ySet:(jboolean)ySet w:(jint)w h:(jint)h cw:(jint)cw ch:(jint)ch
+{
+    NSPoint origin = [self _flipFrame].origin;
+    NSSize size = [self->nsWindow frame].size;
+    NSSize sizeForClient = [NSWindow frameRectForContentRect:NSMakeRect(0.0, 0.0, cw > 0 ? cw : 0.0, ch > 0 ? ch : 0.0) styleMask:[self->nsWindow styleMask]].size;
+
+    jint newX = xSet == JNI_TRUE ? x : (jint)origin.x;
+    jint newY = ySet == JNI_TRUE ? y : (jint)origin.y;
+
+    jint newW = (w > 0) ? w : (cw > 0) ? (jint)sizeForClient.width : (jint)size.width;
+    jint newH = (h > 0) ? h : (ch > 0) ? (jint)sizeForClient.height : (jint)size.height;
+
+    [self _setWindowFrameWithRect:NSMakeRect(newX, newY, newW, newH) withDisplay:JNI_TRUE withAnimate:JNI_FALSE];
+}
+
 - (void)_restorePreZoomedRect
 {
     [self _setWindowFrameWithRect:NSMakeRect(self->preZoomedRect.origin.x, self->preZoomedRect.origin.y, self->preZoomedRect.size.width, self->preZoomedRect.size.height) withDisplay:JNI_TRUE withAnimate:JNI_TRUE];

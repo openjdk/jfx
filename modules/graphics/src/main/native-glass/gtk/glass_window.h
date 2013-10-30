@@ -376,6 +376,8 @@ class WindowContextTop: public WindowContextBase {
 
     bool frame_extents_initialized;
     bool map_received;
+    bool location_assigned;
+    bool size_assigned;
 public:
     WindowContextTop(jobject, WindowContext*, long, WindowFrameType, WindowType);
     void process_map();
@@ -402,6 +404,7 @@ public:
     void set_modal(bool, WindowContext* parent = NULL);
     void set_gravity(float, float);
     void set_level(int);
+    void set_visible(bool);
 
     void enter_fullscreen();
     void exit_fullscreen();
