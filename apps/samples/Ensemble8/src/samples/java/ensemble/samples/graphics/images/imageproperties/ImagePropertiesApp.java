@@ -91,6 +91,9 @@ public class ImagePropertiesApp extends Application {
         VBox vb = new VBox(10);
         vb.setAlignment(Pos.CENTER);
         vb.getChildren().addAll(hBox, sample2);
+        vb.setMinSize(VBox.USE_PREF_SIZE, VBox.USE_PREF_SIZE);
+        vb.setMaxSize(VBox.USE_PREF_SIZE, VBox.USE_PREF_SIZE);
+ 
         return vb;
     }
 
