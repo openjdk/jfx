@@ -47,6 +47,7 @@ public:
 
     inline BOOL IsInputMethodEventEnabled() { return m_InputMethodEventsEnabled; }
     void EnableInputMethodEvents(BOOL enable);
+    void FinishInputMethodComposition();
 
 private:
     jobject m_grefThis;

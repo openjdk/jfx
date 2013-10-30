@@ -116,6 +116,13 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
         }
     }
 
+    @Override
+    public void finishInputMethodComposition() {
+        if (QuantumToolkit.verbose) {
+            System.err.println("EmbeddedScene.finishInputMethodComposition");
+        }
+    }
+
     // Called by EmbeddedPainter on the render thread under renderLock
     void uploadPixels(IntBuffer pixels, int stride) {
         textureBits = pixels;

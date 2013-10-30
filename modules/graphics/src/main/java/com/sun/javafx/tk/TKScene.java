@@ -78,6 +78,8 @@ public interface TKScene {
 
     public void enableInputMethodEvents(boolean enable);
 
+    public void finishInputMethodComposition();
+
     public void entireSceneNeedsRepaint();
 
     public TKClipboard createDragboard(boolean isDragSource);

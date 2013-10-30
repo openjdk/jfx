@@ -89,6 +89,11 @@ public class StubScene implements TKScene {
         // ignore
     }
 
+    @Override
+    public void finishInputMethodComposition() {
+        // ignore
+    }
+
     public void entireSceneNeedsRepaint() {
     }
 

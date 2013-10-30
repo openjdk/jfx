@@ -354,6 +354,9 @@ public abstract class View {
     }
 
     protected abstract void _enableInputMethodEvents(long ptr, boolean enable);
+    protected void _finishInputMethodComposition(long ptr) {
+        // Action needed only on Windows.
+    }
 
     /*
         Read by the checkNotClosed method which could be called from lock/unlock on render thread
@@ -622,6 +625,12 @@ public abstract class View {
         Application.checkEventThread();
         checkNotClosed();
         _enableInputMethodEvents(this.ptr, enable);
+    }
+
+    public void finishInputMethodComposition() {
+        Application.checkEventThread();
+        checkNotClosed();
+        _finishInputMethodComposition(this.ptr);
     }
 
     private double[] getInputMethodCandidatePos(int offset) {
