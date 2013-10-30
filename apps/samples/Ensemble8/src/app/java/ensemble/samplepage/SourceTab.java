@@ -34,14 +34,13 @@ package ensemble.samplepage;
 import ensemble.EnsembleApp;
 import ensemble.SampleInfo.URL;
 import ensemble.util.Utils;
-import javafx.scene.control.ScrollPaneBuilder;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TextArea;
-import javafx.scene.control.TextAreaBuilder;
-import javafx.scene.control.TooltipBuilder;
+import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
-import javafx.scene.image.ImageViewBuilder;
-import javafx.scene.layout.StackPaneBuilder;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.StackPane;
 import javafx.scene.web.WebView;
 
 /**
@@ -68,7 +67,8 @@ class SourceTab extends Tab {
                     //                            .build();
                     //
                     //                    Reader r = new BufferedReader(new InputStreamReader(getClass().getResourceAsStream(url)));
-                    TextArea textArea = TextAreaBuilder.create().text(source).style("-fx-font-family: 'Courier New';").build();
+                    TextArea textArea = new TextArea(source);
+                    textArea.setStyle("-fx-font-family: 'Courier New';");
                     setContent(textArea);
                 } else {
                     WebView webView = new WebView();
@@ -78,10 +78,15 @@ class SourceTab extends Tab {
                 break;
             case ".jpg":
             case ".png":
-                setContent(ScrollPaneBuilder.create().fitToHeight(true).fitToWidth(true).content(StackPaneBuilder.create().children(ImageViewBuilder.create().image(new Image(url)).build()).build()).build());
+                ImageView imageView = new ImageView(new Image(url));
+                StackPane stackPane = new StackPane(imageView);
+                ScrollPane scrollPane = new ScrollPane(stackPane);
+                scrollPane.setFitToHeight(true);
+                scrollPane.setFitToWidth(true);
+                setContent(scrollPane);
                 break;
         }
-        setTooltip(TooltipBuilder.create().text(url).build());
+        setTooltip(new Tooltip(url));
     }
     
 }
