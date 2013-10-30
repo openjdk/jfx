@@ -215,8 +215,8 @@ public class ImageView extends Node {
                                 addListener(platformImageChangeListener.getWeakListener());
                     }
                     if (dimensionChanged) {
-                        impl_geomChanged();
                         invalidateWidthHeight();
+                        impl_geomChanged();
                     }
                     impl_markDirty(DirtyBits.NODE_CONTENTS);
                 }
@@ -280,9 +280,9 @@ public class ImageView extends Node {
             new AbstractNotifyListener() {
         @Override
         public void invalidated(Observable valueModel) {
+            invalidateWidthHeight();
             impl_markDirty(DirtyBits.NODE_CONTENTS);
             impl_geomChanged();
-            invalidateWidthHeight();
         }
     };
     /**
@@ -393,9 +393,9 @@ public class ImageView extends Node {
 
                 @Override
                 protected void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_VIEWPORT);
-                    impl_geomChanged();
                     invalidateWidthHeight();
+                    impl_markDirty(DirtyBits.NODE_VIEWPORT);
+                    impl_geomChanged();                    
                 }
 
                 @Override
@@ -441,9 +441,9 @@ public class ImageView extends Node {
 
                 @Override
                 protected void invalidated() {
+                    invalidateWidthHeight();
                     impl_markDirty(DirtyBits.NODE_VIEWPORT);
                     impl_geomChanged();
-                    invalidateWidthHeight();
                 }
 
                 @Override
@@ -506,9 +506,9 @@ public class ImageView extends Node {
 
                 @Override
                 protected void invalidated() {
+                    invalidateWidthHeight();
                     impl_markDirty(DirtyBits.NODE_VIEWPORT);
                     impl_geomChanged();
-                    invalidateWidthHeight();
                 }
 
                 @Override
@@ -610,9 +610,9 @@ public class ImageView extends Node {
 
                 @Override
                 protected void invalidated() {
+                    invalidateWidthHeight();
                     impl_markDirty(DirtyBits.NODE_VIEWPORT);
                     impl_geomChanged();
-                    invalidateWidthHeight();
                 }
 
                 @Override
