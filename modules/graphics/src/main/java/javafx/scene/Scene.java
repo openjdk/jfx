@@ -2328,6 +2328,8 @@ public class Scene implements EventTarget {
                 PerformanceTracker.logEvent("Scene - first repaint");
             }
 
+            focusCleanup();
+
             if (PULSE_LOGGING_ENABLED) {
                 long start = System.currentTimeMillis();
                 Scene.this.doCSSPass();
@@ -2385,8 +2387,6 @@ public class Scene implements EventTarget {
 
             // required for image cursor created from animated image
             Scene.this.mouseHandler.updateCursorFrame();
-
-            focusCleanup();
 
             if (firstPulse) {
                 if (PerformanceTracker.isLoggingEnabled()) {
