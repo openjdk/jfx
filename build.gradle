@@ -1422,6 +1422,18 @@ project(":designTime") {
     }
 }
 
+project(":jmx") {
+    dependencies {
+        compile project(":base")
+        compile project(":graphics")
+        compile project(":swing")
+        compile project(":media")
+    }
+
+    // Tests are disabled until RT-33926 can be fixed
+    test.enabled = false
+}
+
 // This project is for system tests that need to run with a full SDK.
 // Most of them display a stage or do other things that preclude running
 // them in a shared JVM or as part of the "smoke test" run (which must
@@ -2377,6 +2389,16 @@ compileTargets { t ->
     }
     jfxrt.dependsOn(jfxswtIndexTask)
 
+    def jmxTask = task ("jmx${t.capital}", type: Jar) {
+        group = "Basic"
+        description = "Creates the javafx-mx.jar"
+        archiveName = "build/${t.name}-sdk/lib/javafx-mx.jar";
+        includeEmptyDirs = false
+        from "modules/jmx/build/classes/main"
+        from "modules/jmx/build/resources/main"
+        dependsOn project(":jmx").assemble
+    }
+
     // The 'sdk' task will build the rest of the SDK, and depends on the 'jfxrtTask' task. After
     // executing this task the sdk bundle for the current COMPILE_TARGETS will be fully created.
     def sdkTask = task("sdk$t.capital") {
@@ -2489,6 +2511,7 @@ compileTargets { t ->
                 }
             }
         }
+        dependsOn(jmxTask);
         dependsOn(jfxrtTask)
         dependsOn(javadoc)
         dependsOn(src)
