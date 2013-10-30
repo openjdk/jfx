@@ -34,6 +34,9 @@ package ensemble.samplepage;
 import ensemble.EnsembleApp;
 import ensemble.SampleInfo.URL;
 import ensemble.util.Utils;
+import ensemble.util.WebViewWrapper;
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TextArea;
@@ -41,19 +44,14 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
-import javafx.scene.web.WebView;
 
 /**
  *
  */
 class SourceTab extends Tab {
-    private URL sourceURL;
-    private final SamplePage samplePage;
 
     public SourceTab(URL sourceURL, final SamplePage samplePage) {
         super(sourceURL.getName());
-        this.samplePage = samplePage;
-        this.sourceURL = sourceURL;
         String url = sourceURL.getURL();
         String ext = url.substring(url.lastIndexOf('.')).toLowerCase();
         switch (ext) {
@@ -61,7 +59,7 @@ class SourceTab extends Tab {
             case ".css":
             case ".fxml":
                 String source = Utils.loadFile(getClass().getResource(url));
-                if (EnsembleApp.IS_EMBEDDED || EnsembleApp.IS_IOS) {
+                if (EnsembleApp.IS_EMBEDDED || EnsembleApp.IS_IOS || !Platform.isSupported(ConditionalFeature.WEB)) {
                     // TODO: Convert to TextFlow
                     //                    TextFlow textFlow = TextFlowBuilder.create()
                     //                            .build();
@@ -71,9 +69,8 @@ class SourceTab extends Tab {
                     textArea.setStyle("-fx-font-family: 'Courier New';");
                     setContent(textArea);
                 } else {
-                    WebView webView = new WebView();
-                    webView.getEngine().loadContent(samplePage.convertToHTML(source));
-                    setContent(webView);
+                    String html = samplePage.convertToHTML(source);
+                    setContent(WebViewWrapper.createWebView(html));
                 }
                 break;
             case ".jpg":
