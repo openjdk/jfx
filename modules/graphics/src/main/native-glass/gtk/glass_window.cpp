@@ -1257,6 +1257,10 @@ void WindowContextTop::applyShapeMask(cairo_surface_t* cairo_surface, uint width
 void WindowContextTop::set_minimized(bool minimize) {
     is_iconified = minimize;
     if (minimize) {
+        if (frame_type == TRANSPARENT) {
+            // https://bugs.launchpad.net/ubuntu/+source/unity/+bug/1245571
+            gdk_window_input_shape_combine_mask(gdk_window, NULL, 0, 0);
+        }
         gtk_window_iconify(GTK_WINDOW(gtk_widget));
     } else {
         gtk_window_deiconify(GTK_WINDOW(gtk_widget));
