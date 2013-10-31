@@ -52,6 +52,7 @@ import com.sun.javafx.embed.EmbeddedSceneInterface;
 import com.sun.javafx.embed.EmbeddedStageInterface;
 import com.sun.javafx.embed.HostInterface;
 import com.sun.javafx.stage.EmbeddedWindow;
+import java.lang.reflect.Method;
 
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.DragSource;
@@ -91,6 +92,8 @@ import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.PaletteData;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.graphics.GCData;
+import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.ControlListener;
 import org.eclipse.swt.events.FocusListener;
@@ -166,6 +169,8 @@ public class FXCanvas extends Canvas {
         }
     };
     
+    private double scaleFactor = 1.0;
+    
     private DropTarget dropTarget;
     
     static Transfer [] StandardTransfers = new Transfer [] {
@@ -197,6 +202,34 @@ public class FXCanvas extends Canvas {
         newCustom[CustomTransfers.length] = transfer;
         CustomTransfers = newCustom;
         return transfer;
+    }
+    
+    private static Field viewField;
+    private static Method windowMethod;
+    private static Method screenMethod;
+    private static Method backingScaleFactorMethod;
+    
+    static {
+        if (SWT.getPlatform().equals("cocoa")) {
+            try {
+                viewField = GCData.class.getDeclaredField("view");
+                viewField.setAccessible(true);
+
+                Class nsViewClass = Class.forName("org.eclipse.swt.internal.cocoa.NSView");            
+                windowMethod = nsViewClass.getDeclaredMethod("window");
+                windowMethod.setAccessible(true);
+
+                Class nsWindowClass = Class.forName("org.eclipse.swt.internal.cocoa.NSWindow");
+                screenMethod = nsWindowClass.getDeclaredMethod("screen");
+                screenMethod.setAccessible(true);
+
+                Class nsScreenClass = Class.forName("org.eclipse.swt.internal.cocoa.NSScreen");
+                backingScaleFactorMethod = nsScreenClass.getDeclaredMethod("backingScaleFactor");
+                backingScaleFactorMethod.setAccessible(true);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
     
     /**
@@ -466,6 +499,8 @@ public class FXCanvas extends Canvas {
             height = lastHeight;
             buffer = lastPixelsBuf;
         }
+        width = (int)Math.round(width * scaleFactor);
+        height = (int)Math.round(height * scaleFactor);
 
         // Consider optimizing this
         ImageData imageData = null;
@@ -486,14 +521,43 @@ public class FXCanvas extends Canvas {
             }
             /*ImageData*/ imageData = new ImageData(width, height, 32, palette, 4, dstData);
         } else {
+            if (width * height > buffer.array().length) {
+                // We shouldn't be here...
+                System.err.println("FXCanvas.paintControl: scale mismatch!");
+                return;
+            }
             PaletteData palette = new PaletteData(0x00ff0000, 0x0000ff00, 0x000000ff);
             /*ImageData*/  imageData = new ImageData(width, height, 32, palette);
             imageData.setPixels(0, 0,width * height, buffer.array(), 0);
         }
 
         Image image = new Image(Display.getDefault(), imageData);
-        pe.gc.drawImage(image, 0, 0);
+        pe.gc.drawImage(image, 0, 0, width, height, 0, 0, pWidth, pHeight);
         image.dispose();
+        
+        double newScaleFactor = getScaleFactor(pe.gc);
+        if (scaleFactor != newScaleFactor) {
+            resizePixelBuffer(newScaleFactor);
+            // The scene will request repaint.
+            scenePeer.setPixelScaleFactor((float)newScaleFactor);
+            scaleFactor = newScaleFactor;
+        }
+    }
+    
+    private double getScaleFactor(GC gc) {
+        double scale = 1.0;
+        if (SWT.getPlatform().equals("cocoa")) {
+            try {
+                Object nsWindow = windowMethod.invoke(viewField.get(gc.getGCData()));
+                Object nsScreen = screenMethod.invoke(nsWindow);
+                Object bsFactor = backingScaleFactorMethod.invoke(nsScreen);
+
+                scale = ((Double)bsFactor).doubleValue();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return scale;
     }
     
     private void sendMoveEventToFX() {
@@ -593,11 +657,7 @@ public class FXCanvas extends Canvas {
         pWidth = getClientArea().width;
         pHeight = getClientArea().height;
 
-        if ((pWidth <= 0) || (pHeight <= 0)) {
-            pixelsBuf = lastPixelsBuf = null;
-        } else {
-            pixelsBuf = IntBuffer.allocate(pWidth * pHeight);
-        }
+        resizePixelBuffer(scaleFactor);
 
         if (scenePeer == null) {
             return;
@@ -605,6 +665,17 @@ public class FXCanvas extends Canvas {
 
         stagePeer.setSize(pWidth, pHeight);
         scenePeer.setSize(pWidth, pHeight);
+    }
+    
+    private void resizePixelBuffer(double newScaleFactor) {
+        lastPixelsBuf = null;
+        if ((pWidth <= 0) || (pHeight <= 0)) {
+            pixelsBuf = null;
+        } else {
+            pixelsBuf = IntBuffer.allocate((int)Math.round(pWidth * newScaleFactor) *
+                                           (int)Math.round(pHeight * newScaleFactor));
+            // TODO: render old pixels to the new buffer, see JFXPanel.resizePixelBuffer
+        }        
     }
 
     private void sendFocusEventToFX(FocusEvent fe, boolean focused) {

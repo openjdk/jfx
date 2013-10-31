@@ -49,6 +49,7 @@ import com.sun.javafx.tk.TKClipboard;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Paint;
+import com.sun.glass.ui.Pixels;
 
 final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
 
@@ -57,12 +58,13 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
 
     private UploadingPainter        painter;
     private PaintRenderJob          paintRenderJob;
+    
+    private final EmbeddedSceneDnD dndDelegate;    
 
-    volatile IntBuffer textureBits;
-    volatile int bitsLineStride;
-
-    private final EmbeddedSceneDnD dndDelegate;
-
+    volatile IntBuffer  texBits;
+    volatile int        texLineStride; // pre-scaled
+    volatile float      texScaleFactor = 1.0f;
+ 
     public EmbeddedScene(HostInterface host, boolean depthBuffer, boolean antiAliasing) {
         super(depthBuffer, antiAliasing);
         sceneState = new EmbeddedState(this);
@@ -124,11 +126,18 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
             System.err.println("EmbeddedScene.finishInputMethodComposition");
         }
     }
+    
+    @Override
+    public void setPixelScaleFactor(float scale) {
+        painter.setPixelScaleFactor(scale);
+        entireSceneNeedsRepaint();
+    }
 
     // Called by EmbeddedPainter on the render thread under renderLock
-    void uploadPixels(IntBuffer pixels, int stride) {
-        textureBits = pixels;
-        bitsLineStride = stride;
+    void uploadPixels(Pixels pixels) {
+        texBits = (IntBuffer)pixels.getPixels();
+        texLineStride = pixels.getWidthUnsafe();
+        texScaleFactor = pixels.getScaleUnsafe();
         if (host != null) {
             host.repaint();
         }
@@ -170,31 +179,44 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
         });
     }
 
+    /**
+     * @param dest the destination buffer
+     * @param width the logical width of the buffer
+     * @param height the logical height of the buffer
+     * @param scale the scale factor
+     * @return 
+     */
     @Override
     public boolean getPixels(IntBuffer dest, int width, int height) {
         ViewPainter.renderLock.lock();
         try {
-            if (textureBits == null) return false;
+            // The dest buffer scale factor is expected to match painter.getPixelScaleFactor().
+            if (painter.getPixelScaleFactor() != texScaleFactor || texBits == null) {
+                return false;
+            }
+            width = (int)Math.round(width * texScaleFactor);
+            height = (int)Math.round(height * texScaleFactor);
+        
             dest.rewind();
-            textureBits.rewind();            
-            if (dest.capacity() != textureBits.capacity()) {
+            texBits.rewind();
+            if (dest.capacity() != texBits.capacity()) {
                 // Calculate the intersection of the dest & src images.
-                int w = Math.min(width, bitsLineStride);
-                int h = Math.min(height, textureBits.capacity() / bitsLineStride);
+                int w = Math.min(width, texLineStride);
+                int h = Math.min(height, texBits.capacity() / texLineStride);
 
                 // Copy the intersection to the dest.
                 // The backed array of the textureBits may not be available,
                 // so not relying on it.
                 int[] linebuf = new int[w];
                 for (int i = 0; i < h; i++) {
-                    textureBits.position(i * bitsLineStride);
-                    textureBits.get(linebuf, 0, w);
+                    texBits.position(i * texLineStride);
+                    texBits.get(linebuf, 0, w);
                     dest.position(i * width);
                     dest.put(linebuf);
                 }
                 return true;
             }
-            dest.put(textureBits);
+            dest.put(texBits);
             return true;
         } finally {
             ViewPainter.renderLock.unlock();
