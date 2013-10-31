@@ -47,6 +47,8 @@ import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.TKClipboard;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.prism.paint.Color;
+import com.sun.prism.paint.Paint;
 
 final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
 
@@ -197,6 +199,16 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
         } finally {
             ViewPainter.renderLock.unlock();
         }
+    }
+    
+    @Override
+    protected Color getClearColor() {
+        if (fillPaint != null && fillPaint.getType() == Paint.Type.COLOR &&
+            ((Color)fillPaint).getAlpha() == 0f)
+        {
+            return (Color)fillPaint;
+        }
+        return super.getClearColor();
     }
 
     @Override
