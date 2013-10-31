@@ -32,6 +32,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+
 import org.junit.Test;
 
 
@@ -652,5 +654,182 @@ public class CSSLexerTest {
             assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
             assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
         }
-    }    
+    }
+
+    @Test
+    public void testScanUrl() {
+
+        //             1           2               3        4
+        //             01234567890101234567890123450123456780123456789
+        String str =  "url(http://foo.bar.com/fonts/serif/fubar.ttf)";
+        Token[] expected = new Token[]{
+            new Token(CSSLexer.URL, "http://foo.bar.com/fonts/serif/fubar.ttf", 1, 0),
+            Token.EOF_TOKEN
+        };
+
+        List<Token> tlist = getTokens(str);
+        checkTokens(tlist, expected);
+
+        for(int n=0; n<tlist.size(); n++) {
+            Token tok = tlist.get(n);
+            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
+            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+        }
+
+    }
+
+    @Test
+    public void testScanUrlWithWhiteSpace() {
+
+        //             1           2               3        4
+        //             01234567890101234567890123450123456780123456789
+        String str =  "url(    http://foo.bar.com/fonts/serif/fubar.ttf\t)";
+        Token[] expected = new Token[]{
+                new Token(CSSLexer.URL, "http://foo.bar.com/fonts/serif/fubar.ttf", 1, 0),
+                Token.EOF_TOKEN
+        };
+
+        List<Token> tlist = getTokens(str);
+        checkTokens(tlist, expected);
+
+        for(int n=0; n<tlist.size(); n++) {
+            Token tok = tlist.get(n);
+            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
+            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+        }
+
+    }
+
+    @Test
+    public void testScanQuotedUrlWithWhiteSpace() {
+
+        //             1           2               3        4
+        //             01234567890101234567890123450123456780123456789
+        String str =  "url(    'http://foo.bar.com/fonts/serif/fubar.ttf'\t)";
+        Token[] expected = new Token[]{
+                new Token(CSSLexer.URL, "http://foo.bar.com/fonts/serif/fubar.ttf", 1, 0),
+                Token.EOF_TOKEN
+        };
+
+        List<Token> tlist = getTokens(str);
+        checkTokens(tlist, expected);
+
+        for(int n=0; n<tlist.size(); n++) {
+            Token tok = tlist.get(n);
+            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
+            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+        }
+
+    }
+
+    @Test
+    public void testScanQuotedUrl() {
+
+        //             1           2               3        4
+        //             01234567890101234567890123450123456780123456789
+        String str =  "url(\"http://foo.bar.com/fonts/serif/fubar.ttf\")";
+        Token[] expected = new Token[]{
+                new Token(CSSLexer.URL, "http://foo.bar.com/fonts/serif/fubar.ttf", 1, 0),
+                Token.EOF_TOKEN
+        };
+
+        List<Token> tlist = getTokens(str);
+        checkTokens(tlist, expected);
+
+        for(int n=0; n<tlist.size(); n++) {
+            Token tok = tlist.get(n);
+            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
+            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+        }
+
+    }
+
+    @Test
+    public void testScanUrlWithEscapes() {
+
+        //             1           2               3        4
+        //             01234567890101234567890123450123456780123456789
+        String str =  "url(http://foo.bar.com/fonts/true\\ type/fubar.ttf)";
+        Token[] expected = new Token[]{
+                new Token(CSSLexer.URL, "http://foo.bar.com/fonts/true type/fubar.ttf", 1, 0),
+                Token.EOF_TOKEN
+        };
+
+        List<Token> tlist = getTokens(str);
+        checkTokens(tlist, expected);
+
+        for(int n=0; n<tlist.size(); n++) {
+            Token tok = tlist.get(n);
+            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
+            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+        }
+
+    }
+
+    @Test
+    public void testScanQuotedUrlWithEscapes() {
+
+        //             1           2               3        4
+        //             01234567890101234567890123450123456780123456789
+        String str =  "url(\"http://foo.bar.com/fonts/true\\ type/fubar.ttf\")";
+        Token[] expected = new Token[]{
+                new Token(CSSLexer.URL, "http://foo.bar.com/fonts/true type/fubar.ttf", 1, 0),
+                Token.EOF_TOKEN
+        };
+
+        List<Token> tlist = getTokens(str);
+        checkTokens(tlist, expected);
+
+        for(int n=0; n<tlist.size(); n++) {
+            Token tok = tlist.get(n);
+            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
+            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+        }
+
+    }
+
+    @Test
+    public void testScanUrlWithSyntaxError() {
+
+        //             1           2               3        4
+        //             01234567890101234567890123450123456780123456789
+        String str =  "url(http://foo.bar.com/fonts/true'type/fubar.ttf)";
+        Token[] expected = new Token[]{
+                new Token(Token.INVALID, "http://foo.bar.com/fonts/true", 1, 0),
+                Token.EOF_TOKEN
+        };
+
+        List<Token> tlist = getTokens(str);
+        checkTokens(tlist, expected);
+
+        for(int n=0; n<tlist.size(); n++) {
+            Token tok = tlist.get(n);
+            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
+            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+        }
+
+    }
+
+    @Test
+    public void testScanQuotedUrlWithSyntaxError() {
+
+        //             1           2               3        4
+        //             01234567890101234567890123450123456780123456789
+        String str =  "url('http://foo.bar.com/fonts/true\rtype/fubar.ttf')";
+        Token[] expected = new Token[]{
+                new Token(Token.INVALID, "http://foo.bar.com/fonts/true", 2, 0),
+                Token.EOF_TOKEN
+        };
+
+        List<Token> tlist = getTokens(str);
+        checkTokens(tlist, expected);
+
+        for(int n=0; n<tlist.size(); n++) {
+            Token tok = tlist.get(n);
+            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
+            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+        }
+
+    }
+
 }

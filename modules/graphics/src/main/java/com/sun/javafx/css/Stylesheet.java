@@ -60,8 +60,9 @@ public class Stylesheet {
     /**
      * Version number of binary CSS format. The value is incremented whenever the format of the
      * binary stream changes. This number does not correlate with JavaFX versions.
+     * Version 5: persist @font-face
      */
-    public final static int BINARY_CSS_VERSION = 4;
+    final static int BINARY_CSS_VERSION = 5;
             
     private final String url;
     /** The URL from which the stylesheet was loaded.
@@ -196,6 +197,16 @@ public class Stylesheet {
         os.writeShort(index);
         os.writeShort(rules.size());
         for (Rule r : rules) r.writeBinary(os,stringStore);
+
+        // Version 5 adds persistence of FontFace
+        List<FontFace> fontFaceList = getFontFaces();
+        int nFontFaces = fontFaceList != null ? fontFaceList.size() : 0;
+        os.writeShort(nFontFaces);
+
+        for(int n=0; n<nFontFaces; n++) {
+            FontFace fontFace = fontFaceList.get(n);
+            fontFace.writeBinary(os, stringStore);
+        }
     }
     
     // protected for unit testing 
@@ -211,7 +222,15 @@ public class Stylesheet {
             persistedRules.add(Rule.readBinary(bssVersion,is,strings));
         }
         this.rules.addAll(persistedRules);
-        
+
+        if (bssVersion >= 5) {
+            List<FontFace> fontFaceList = this.getFontFaces();
+            int nFontFaces = is.readShort();
+            for (int n=0; n<nFontFaces; n++) {
+                FontFace fontFace = FontFace.readBinary(bssVersion, is, strings);
+                fontFaceList.add(fontFace);
+            }
+        }
     }
 
     private String[] stringStore;

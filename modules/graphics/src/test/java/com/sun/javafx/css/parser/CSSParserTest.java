@@ -33,6 +33,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import javafx.css.ParsedValue;
 import javafx.scene.paint.Color;
@@ -201,5 +202,80 @@ public class CSSParserTest {
         }
         
     }
-    
+
+    @Test public void testFontFace() {
+
+        // http://fonts.googleapis.com/css?family=Bree+Serif
+        String css = "@font-face {\n" +
+            "font-family: 'Bree Serif';\n" +
+            "font-style: normal;\n" +
+            "font-weight: 400;\n" +
+            "src: local('Bree Serif'), local('BreeSerif-Regular'), url(http://themes.googleusercontent.com/static/fonts/breeserif/v2/LQ7WLTaITDg4OSRuOZCps73hpw3pgy2gAi-Ip7WPMi0.woff) format('woff');\n"+
+        "}";
+
+        Stylesheet stylesheet = CSSParser.getInstance().parse(css);
+
+        int nFontFaceSrcs = checkFontFace(stylesheet);
+
+        assertEquals(3, nFontFaceSrcs);
+    }
+
+    @Test public void testFontFaceMoreThanOneSrc() {
+
+        // http://fonts.googleapis.com/css?family=Bree+Serif
+        String css = "@font-face {\n" +
+                "font-family: 'Bree Serif';\n" +
+                "font-style: normal;\n" +
+                "font-weight: 400;\n" +
+                "src: local('Bree Serif'), local('BreeSerif-Regular'), url(http://themes.googleusercontent.com/static/fonts/breeserif/v2/LQ7WLTaITDg4OSRuOZCps73hpw3pgy2gAi-Ip7WPMi0.woff) format('woff'),\n"+
+                "     local('Bree Serif'), local('BreeSerif-Regular'), url(http://themes.googleusercontent.com/static/fonts/breeserif/v2/LQ7WLTaITDg4OSRuOZCps73hpw3pgy2gAi-Ip7WPMi0.woff) format('woff');\n"+
+                "}";
+
+        Stylesheet stylesheet = CSSParser.getInstance().parse(css);
+
+        int nFontFaceSrcs = checkFontFace(stylesheet);
+        assertEquals(6, nFontFaceSrcs);
+    }
+
+    public static int checkFontFace(Stylesheet stylesheet) {
+
+        List<FontFace> fontFaces = stylesheet.getFontFaces();
+        assertNotNull(fontFaces);
+        assertEquals(1, fontFaces.size());
+
+        FontFace fontFace = fontFaces.get(0);
+
+        Map<String,String> descriptors = fontFace.getDescriptors();
+        assertEquals("'Bree Serif'", descriptors.get("font-family"));
+        assertEquals("normal", descriptors.get("font-style"));
+        assertEquals("400", descriptors.get("font-weight"));
+
+        List<FontFace.FontFaceSrc> fontFaceSrcs = fontFace.getSources();
+
+        int nFontFaceSrcs = fontFaceSrcs != null ? fontFaceSrcs.size() : 0;
+
+        for(int n=0; n<nFontFaceSrcs; n++) {
+            FontFace.FontFaceSrc fontFaceSrc = fontFaceSrcs.get(n);
+            FontFace.FontFaceSrcType type = fontFaceSrc.getType();
+            switch(type) {
+                case LOCAL: {
+                    String src = fontFaceSrc.getSrc();
+                    assertTrue("Bree Serif".equals(src) || "BreeSerif-Regular".equals(src));
+                    assertNull(fontFaceSrc.getFormat());
+                    break;
+                }
+                case URL: {
+                    String src = fontFaceSrc.getSrc();
+                    assertEquals(src, "http://themes.googleusercontent.com/static/fonts/breeserif/v2/LQ7WLTaITDg4OSRuOZCps73hpw3pgy2gAi-Ip7WPMi0.woff");
+                    assertEquals(fontFaceSrc.getFormat(), "woff");
+                    break;
+                }
+                case REFERENCE:
+                default:
+                        fail();
+            }
+        }
+
+        return nFontFaceSrcs;
+    }
 }

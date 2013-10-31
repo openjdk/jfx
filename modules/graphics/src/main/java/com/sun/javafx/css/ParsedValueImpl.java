@@ -572,7 +572,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
             return new ParsedValueImpl(value, converter, lookup);
 
         } else if (valType == VALUE_ARRAY) {
-            if (bssVersion == 4) {
+            if (bssVersion >= 4) {
                 // This byte was used to denote whether or not array was all nulls.
                 // But really, just need to know nVals
                 is.readByte();
@@ -592,7 +592,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
             return new ParsedValueImpl(values, converter, lookup);
 
         } else if (valType == ARRAY_OF_VALUE_ARRAY) {
-            if (bssVersion == 4) {
+            if (bssVersion >= 4) {
                 // This byte was used to denote whether or not array was all nulls.
                 // But really, just need to know nLayers
                 is.readByte();
@@ -602,7 +602,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
             final ParsedValueImpl[][] layers = nLayers > 0 ? new ParsedValueImpl[nLayers][0] : null;
 
             for (int l=0; l<nLayers; l++) {
-                if (bssVersion == 4) {
+                if (bssVersion >= 4) {
                     // was used to denote whether or not array was all nulls
                     // but really just need to know nVals
                     is.readByte();
@@ -635,6 +635,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
             final int nameIndex = is.readShort();
             final String ename = strings[nameIndex];
 
+            // Note: this block should be entered _only_ if version 2
             if (bssVersion == 2) {
                 // RT-31022
                 // Once upon a time, the enum's class name was added to the
