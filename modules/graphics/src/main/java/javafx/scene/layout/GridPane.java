@@ -1980,8 +1980,13 @@ public class GridPane extends Pane {
             if (portion != 0) {
                 for (Iterator<Integer> i = adjusting.iterator(); i.hasNext();) {
                     final int index = i.next();
-                    final double limit = snapSpace(limitSize.getProportionalSize(index))
+                    double limit = snapSpace(limitSize.getProportionalMinOrMaxSize(index, shrinking))
                             - heights.getSize(index); // negative in shrinking case
+                    if (shrinking && limit > 0
+                            || !shrinking && limit < 0) { // Limit completely if current size
+                                                 // (originally based on preferred) already passed the computed limit
+                        limit = 0;
+                    }
                     final double change = Math.abs(limit) <= Math.abs(portion)? limit : portion;
                     heights.addSize(index, change);
                     available -= change;
@@ -2209,8 +2214,13 @@ public class GridPane extends Pane {
             if (portion != 0) {
                 for (Iterator<Integer> i = adjusting.iterator(); i.hasNext();) {
                     final int index = i.next();
-                    final double limit = snapSpace(limitSize.getProportionalSize(index))
+                    double limit = snapSpace(limitSize.getProportionalMinOrMaxSize(index, shrinking))
                             - widths.getSize(index); // negative in shrinking case
+                    if (shrinking && limit > 0
+                            || !shrinking && limit < 0) { // Limit completely if current size
+                                                 // (originally based on preferred) already passed the computed limit
+                        limit = 0;
+                    }
                     final double change = Math.abs(limit) <= Math.abs(portion)? limit : portion;
                     widths.addSize(index, change);
                     available -= change;
@@ -2543,7 +2553,7 @@ public class GridPane extends Pane {
             }
         }
 
-        private double getProportionalSize(int position) {
+        private double getProportionalMinOrMaxSize(int position, boolean min) {
             double result = singleSizes[position];
             if (!isPreset(position) && multiSizes != null) {
                 for (Interval i : multiSizes.keySet()) {
@@ -2552,18 +2562,18 @@ public class GridPane extends Pane {
                         double propSize = segment;
                         for (int j = i.begin; j < i.end; ++j) {
                             if (j != position) {
-                                if (singleSizes[j] > segment) {
-                                    propSize += singleSizes[j] - segment;
+                                if (min ? singleSizes[j] > segment : singleSizes[j] < segment) {
+                                    propSize += segment - singleSizes[j];
                                 }
                             }
                         }
-                        result = Math.max(result, propSize);
+                        result = min ? Math.max(result, propSize) : Math.min(result, propSize);
                     }
                 }
             }
             return result;
         }
-
+        
         private double computeTotal(final int from, final int to) {
             double total = gap * (to - from - 1);
             for (int i = from; i < to; ++i) {
