@@ -41,6 +41,7 @@ import javafx.event.EventHandler;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.effect.Lighting;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
@@ -103,7 +104,7 @@ public class TimelineEventsApp extends Application {
         EventHandler<ActionEvent> onFinished = new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent t) {
-                 stack.setTranslateX(java.lang.Math.random()*200-100);
+                 stack.setTranslateX(java.lang.Math.random() * 200);
                  //reset counter
                  i = 0;
             }
@@ -111,7 +112,10 @@ public class TimelineEventsApp extends Application {
         KeyFrame keyFrame = new KeyFrame(duration, onFinished , keyValueX, keyValueY);
         //add the keyframe to the timeline
         timeline.getKeyFrames().add(keyFrame);
-        return stack;
+        Pane pane = new Pane(stack);
+        pane.setPrefSize(260, 60);
+        pane.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
+        return pane;
     }
 
      public void play() {
