@@ -3808,6 +3808,18 @@ public class Scene implements EventTarget {
 
     class KeyHandler {
         private void setFocusOwner(final Node value) {
+            // Cancel IM composition if there is one in progress.
+            // This needs to be done before the focus owner is switched as it
+            // generates event that needs to be delivered to the old focus owner.
+            if (oldFocusOwner != null) {
+                final Scene s = oldFocusOwner.getScene();
+                if (s != null) {
+                    final TKScene peer = s.impl_getPeer();
+                    if (peer != null) {
+                        peer.finishInputMethodComposition();
+                    }
+                }
+            }
             focusOwner.set(value);
         }
 
