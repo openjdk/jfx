@@ -494,6 +494,16 @@ public class Locator {
         }
         return contentLength;
     }
+    
+    /**
+     * Blocks until locator is ready (connection is established or failed).
+     */
+    public void waitForReadySignal() {
+        try {
+            readySignal.await();
+        } catch (Exception e) {
+        }
+    }
 
     /**
      * Retrieves the associated
