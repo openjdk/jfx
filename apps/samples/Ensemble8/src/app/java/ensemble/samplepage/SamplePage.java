@@ -35,32 +35,66 @@ import ensemble.EnsembleApp;
 import ensemble.Page;
 import ensemble.PageBrowser;
 import ensemble.SampleInfo;
+import static ensemble.SampleInfo.SampleRuntimeInfo;
 import ensemble.control.BendingPages;
 import ensemble.util.Utils;
 import java.util.regex.Pattern;
+import javafx.beans.binding.ObjectBinding;
+import javafx.beans.binding.StringBinding;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyStringProperty;
-import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
+import javafx.util.Callback;
 
 /**
  * Page for showing a sample
  */
 public class SamplePage extends Region implements Page {
     static final double INDENT = 8;
-    SampleInfo sample;
+    final ObjectProperty<SampleInfo> sampleInfoProperty = new SimpleObjectProperty<>();
+    private final StringProperty titleProperty = new SimpleStringProperty();
     PageBrowser pageBrowser;
-    private final ReadOnlyStringProperty titleProperty;
-    final SampleInfo.SampleRuntimeInfo sampleInfo;
+    final ObjectProperty<SampleRuntimeInfo> sampleRuntimeInfoProperty = new SimpleObjectProperty<>();
+    private final SlidingPages slidingPages;
+    private final BendingPages bendingPages;
 
-    public SamplePage(SampleInfo sample, String url, final PageBrowser pageBrowser) {
-        this.sample = sample;
+    public SamplePage(SampleInfo sampleInfo, String url, final PageBrowser pageBrowser) {
+        sampleInfoProperty.set(sampleInfo);
         this.pageBrowser = pageBrowser;
         getStyleClass().add("sample-page");
-        titleProperty = new ReadOnlyStringWrapper(sample.name);
-        sampleInfo = sample.buildSampleNode();
+        titleProperty.bind(new StringBinding() {
+            {
+                bind(sampleInfoProperty);
+            }
+
+            @Override
+            protected String computeValue() {
+                SampleInfo sample = SamplePage.this.sampleInfoProperty.get();
+                if (sample != null) {
+                    return sample.name;
+                } else {
+                    return null;
+                }
+            }
+        });
+        sampleRuntimeInfoProperty.bind(new ObjectBinding<SampleRuntimeInfo>() {
+            {
+                bind(sampleInfoProperty);
+            }
+
+            @Override
+            protected SampleRuntimeInfo computeValue() {
+                return sampleInfoProperty.get().buildSampleNode();
+            }
+        });
 
         if (EnsembleApp.IS_IPHONE) {
             IPhoneLayout iPhoneLayout = new IPhoneLayout(this);
@@ -72,15 +106,16 @@ public class SamplePage extends Region implements Page {
             BackPage backPage = new BackPage(this);
 
             if (EnsembleApp.IS_EMBEDDED || EnsembleApp.IS_IOS) {
-                SlidingPages slidingPages = new SlidingPages();
+                bendingPages = null;
+                slidingPages = new SlidingPages();
                 slidingPages.prefWidthProperty().bind(widthProperty());
                 slidingPages.prefHeightProperty().bind(heightProperty());
                 slidingPages.setFrontPage(frontPage);
                 slidingPages.setBackPage(backPage);
                 getChildren().setAll(slidingPages);
             } else {
-                
-                BendingPages bendingPages = new BendingPages();
+                slidingPages = null;
+                bendingPages = new BendingPages();
                 bendingPages.prefWidthProperty().bind(widthProperty());
                 bendingPages.prefHeightProperty().bind(heightProperty());
                 bendingPages.setFrontPage(frontPage);
@@ -92,16 +127,26 @@ public class SamplePage extends Region implements Page {
         }
     }
 
+    public void update(SampleInfo sampleInfo, String url) {
+        sampleInfoProperty.set(sampleInfo);
+        if (slidingPages != null) {
+            slidingPages.reset();
+        }
+        if (bendingPages != null) {
+            bendingPages.reset();
+        }
+    }
+
     @Override public ReadOnlyStringProperty titleProperty() {
         return titleProperty;
     }
 
     @Override public String getTitle() {
-        return sample.name;
+        return titleProperty.get();
     }
 
     @Override public String getUrl() {
-        return "sample://"+sample.ensemblePath;
+        return "sample://" + sampleInfoProperty.get().ensemblePath;
     }
 
     @Override public Node getNode() {
@@ -209,5 +254,21 @@ public class SamplePage extends Region implements Page {
 //        System.out.println(html);
 //        System.out.println("------------------------------------------------------------");
         return html.toString();
+    }
+
+    /**
+     * This method is equivalent to bind(ObjectBinding) as it would invoke
+     * updater immediately as well as on any change to SampleInfo
+     * @param updater a method that updates content for a given SampleInfo
+     */
+    void registerSampleInfoUpdater(final Callback<SampleInfo, Void> updater) {
+        sampleInfoProperty.addListener(new ChangeListener<SampleInfo>() {
+
+            @Override
+            public void changed(ObservableValue<? extends SampleInfo> ov, SampleInfo t, SampleInfo sampleInfo) {
+                updater.call(sampleInfo);
+            }
+        });
+        updater.call(sampleInfoProperty.get());
     }
 }

@@ -46,20 +46,22 @@ import javafx.scene.layout.HBoxBuilder;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
+import javafx.util.Callback;
 import javax.swing.filechooser.FileSystemView;
 
 /**
  *
  */
 public class Sources extends VBox {
-    
-    private Button copy;
-    private Button saveAsProject;
-    private HBox buttons;
-    private TabPane tabPane;
+
+    private final SamplePage samplePage;
+    private final Button saveAsProject;
+    private final HBox buttons;
+    private final TabPane tabPane;
 
     public Sources(final SamplePage samplePage) {
         super(SamplePage.INDENT);
+        this.samplePage = samplePage;
         saveAsProject = ButtonBuilder.create().text("Save As Project").build();
         saveAsProject.setOnAction(new EventHandler<ActionEvent>() {
              @Override public void handle(ActionEvent actionEvent) {
@@ -69,16 +71,29 @@ public class Sources extends VBox {
                  fileChooser.setInitialDirectory(initialDir);
                  File result = fileChooser.showSaveDialog(saveAsProject.getScene().getWindow());
                  if (result != null) {
-                     SampleProjectBuilder.createSampleProject(result, samplePage.sample);
+                     SampleProjectBuilder.createSampleProject(result, samplePage.sampleInfoProperty.get());
                  }
              }
          });        
         buttons = HBoxBuilder.create().spacing(SamplePage.INDENT).alignment(Pos.BOTTOM_RIGHT).children(saveAsProject).build();
         tabPane = TabPaneBuilder.create().minWidth(50).minHeight(50).styleClass("floating").build();
-        for (SampleInfo.URL sourceURL : samplePage.sample.getSources()) {
-            tabPane.getTabs().add(new SourceTab(sourceURL, samplePage));
-        }
+        tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+        samplePage.registerSampleInfoUpdater(new Callback<SampleInfo, Void>() {
+
+            @Override
+            public Void call(SampleInfo sampleInfo) {
+                update(sampleInfo);
+                return null;
+            }
+        });
         VBox.setVgrow(tabPane, Priority.ALWAYS);
         getChildren().setAll(buttons, tabPane);
+    }
+
+    private void update(SampleInfo sampleInfo) {
+        tabPane.getTabs().clear();
+        for (SampleInfo.URL sourceURL : sampleInfo.getSources()) {
+            tabPane.getTabs().add(new SourceTab(sourceURL, samplePage));
+        }
     }
 }

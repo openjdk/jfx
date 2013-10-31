@@ -31,6 +31,7 @@
  */
 package ensemble.samplepage;
 
+import ensemble.SampleInfo;
 import javafx.beans.binding.ObjectBinding;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
@@ -40,30 +41,44 @@ import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.HBoxBuilder;
 import javafx.scene.layout.Region;
+import javafx.util.Callback;
 
 /**
  *
  */
 public class IPhoneLayout extends Region {
-    
-    private PlaygroundTabs playground;
-    private Parent sampleNode;
+
+    private final SamplePage samplePage;
+    private final PlaygroundTabs playground;
     private SampleContainer sample;
-    private Description description;
-    private Sources sources;
-    private Parent iPhoneTabs;
+    private final Description description;
+    private final Sources sources;
+    private final Parent iPhoneTabs;
     
     public IPhoneLayout(SamplePage samplePage) {
-        sample = new SampleContainer(sampleNode = samplePage.sampleInfo.getSampleNode());
+        this.samplePage = samplePage;
         description = new Description(samplePage);
         sources = new Sources(samplePage);
-        if (samplePage.sample.needsPlayground()) {
-            playground = new PlaygroundTabs(samplePage);
-            getChildren().add(playground);
-        }
+        playground = new PlaygroundTabs(samplePage);
         iPhoneTabs = buildIPhoneTabs();
         getStyleClass().add("sample-page-iphone");
-        getChildren().addAll(sample, description, sources, iPhoneTabs);
+        samplePage.registerSampleInfoUpdater(new Callback<SampleInfo, Void>() {
+
+            @Override
+            public Void call(SampleInfo sampleInfo) {
+                update(sampleInfo);
+                return null;
+            }
+        });
+    }
+
+    private void update(SampleInfo sampleInfo) {
+        sample = new SampleContainer(samplePage.sampleRuntimeInfoProperty.get().getSampleNode());
+        if (sampleInfo.needsPlayground()) {
+            getChildren().addAll(playground, sample, description, sources, iPhoneTabs);
+        } else {
+            getChildren().addAll(sample, description, sources, iPhoneTabs);
+        }
     }
 
     @Override protected void layoutChildren() {
