@@ -30,11 +30,9 @@ import javafx.collections.FXCollections;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import javafx.collections.*;
-import com.sun.javafx.pgstub.StubToolkit;
-import com.sun.javafx.tk.Toolkit;
 
 import javafx.scene.Node;
-import javafx.scene.Scene;
+import javafx.scene.chart.XYChart.Series;
 import javafx.scene.layout.StackPane;
 
 /**
@@ -114,4 +112,22 @@ public class BarChartTest extends XYChartTestBase {
         assertEquals("0", xAxis.getCategories().get(0));
     }
     
+    @Test
+    public void testRemoveAndAddSameSeriesBeforeAnimationCompletes() {
+        startApp();
+        assertEquals(2, bc.getData().size());
+        // remove and add the same series.
+        bc.getData().add(bc.getData().remove(0));
+        pulse();
+        assertEquals(2, bc.getData().size());
+    }
+    
+    @Test
+    public void testRemoveAndAddSameDataBeforeAnimationCompletes() {
+        startApp();
+        Series s = bc.getData().get(0);
+        assertEquals(3, s.getDataSize());
+        s.getData().add(s.getData().remove(0));
+        assertEquals(3, s.getDataSize());
+    }
 }

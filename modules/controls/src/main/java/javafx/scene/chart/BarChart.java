@@ -69,15 +69,16 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
     private Map<Series, Map<String, Data<X,Y>>> seriesCategoryMap = 
                                 new HashMap<Series, Map<String, Data<X,Y>>>();
     private Legend legend = new Legend();
-    private boolean seriesRemove = false;
     private final Orientation orientation;
     private CategoryAxis categoryAxis;
     private ValueAxis valueAxis;
     private Timeline dataRemoveTimeline;
-    private Data<X,Y> dataItemBeingRemoved = null;
-    private Series<X,Y> seriesOfDataRemoved = null;
     private double bottomPos  = 0;
     private static String NEGATIVE_STYLE = "negative";
+    private ParallelTransition pt;
+    // For storing data values in case removed and added immediately.
+    private Map<Data<X,Y>, Double> XYValueMap = 
+                                new HashMap<Data<X,Y>, Double>();
     // -------------- PUBLIC PROPERTIES ----------------------------------------
 
     /** The gap to leave between bars in the same category */
@@ -217,15 +218,6 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         categoryMap.put(category, item);
         Node bar = createBar(series, getData().indexOf(series), item, itemIndex);
         if (shouldAnimate()) {
-            if (dataRemoveTimeline != null && dataRemoveTimeline.getStatus().equals(Animation.Status.RUNNING)) {
-                if (dataItemBeingRemoved != null && dataItemBeingRemoved == item) {
-                    dataRemoveTimeline.stop();
-                    getPlotChildren().remove(bar);
-                    removeDataItemFromDisplay(seriesOfDataRemoved, item);
-                    dataItemBeingRemoved = null;
-                    seriesOfDataRemoved = null;
-                }
-            }
             animateDataAdd(item, bar);
         } else {
             getPlotChildren().add(bar);
@@ -235,24 +227,17 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
     @Override protected void dataItemRemoved(final Data<X,Y> item, final Series<X,Y> series) {
         final Node bar = item.getNode();
         if (shouldAnimate()) {
+            XYValueMap.clear();
             dataRemoveTimeline = createDataRemoveTimeline(item, bar, series);
-            dataItemBeingRemoved = item;
-            seriesOfDataRemoved = series;
             dataRemoveTimeline.setOnFinished(new EventHandler<ActionEvent>() {
                 public void handle(ActionEvent event) {
                     item.setSeries(null);
-                    getPlotChildren().remove(bar);
                     removeDataItemFromDisplay(series, item);
-                    dataItemBeingRemoved = null;
-                    updateMap(series, item);
                 }
             });
             dataRemoveTimeline.play();
         } else {
-            item.setSeries(null);
-            getPlotChildren().remove(bar);
-            removeDataItemFromDisplay(series, item);
-            updateMap(series, item);
+            processDataRemove(series, item);
         }
     }
 
@@ -277,7 +262,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
              item.getNode().getStyleClass().remove(NEGATIVE_STYLE);
          }
     }
-    
+
     @Override protected void seriesAdded(Series<X,Y> series, int seriesIndex) {
         // handle any data already in series
         // create entry in the map
@@ -311,22 +296,21 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         updateDefaultColorIndex(series);
         // remove all symbol nodes
         if (shouldAnimate()) {
-            ParallelTransition pt = new ParallelTransition();
+            pt = new ParallelTransition();
             pt.setOnFinished(new EventHandler<ActionEvent>() {
                 public void handle(ActionEvent event) {
                     removeSeriesFromDisplay(series);
                 }
             });
+            
+            boolean lastSeries = (getSeriesSize() > 1) ? false : true;
+            XYValueMap.clear();
             for (final Data<X,Y> d : series.getData()) {
                 final Node bar = d.getNode();
-                seriesRemove = true;
                 // Animate series deletion
-                if (getSeriesSize() > 1) {
-                    for (int j=0; j< series.getData().size(); j++) {
-                        Data<X,Y> item = series.getData().get(j);
-                        Timeline t = createDataRemoveTimeline(item, bar, series);
+                if (!lastSeries) {
+                        Timeline t = createDataRemoveTimeline(d, bar, series);
                         pt.getChildren().add(t);
-                    }
                 } else {
                     // fade out last series
                     FadeTransition ft = new FadeTransition(Duration.millis(700),bar);
@@ -334,8 +318,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
                     ft.setToValue(0);
                     ft.setOnFinished(new EventHandler<ActionEvent>() {
                          @Override public void handle(ActionEvent actionEvent) {
-                            getPlotChildren().remove(bar);
-                            updateMap(series, d);
+                            processDataRemove(series, d);
                          }
                     });
                     pt.getChildren().add(ft);
@@ -434,6 +417,13 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         }
         if (seriesCategoryMap.isEmpty() && categoryAxis.isAutoRanging()) categoryAxis.getCategories().clear();
     }
+    
+    private void processDataRemove(final Series<X,Y> series, final Data<X,Y> item) {
+        Node bar = item.getNode();
+        getPlotChildren().remove(bar);
+        updateMap(series, item);
+    }
+     
     private void animateDataAdd(Data<X,Y> item, Node bar) {
         double barVal;
         if (orientation == Orientation.VERTICAL) {
@@ -471,24 +461,29 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         Timeline t = new Timeline();
         if (orientation == Orientation.VERTICAL) {
 //            item.setYValue(getYAxis().toRealValue(getYAxis().getZeroPosition()));
+            
+            // save data values in case the same data item gets added immediately.
+            XYValueMap.put(item, ((Number)item.getYValue()).doubleValue());
             item.setYValue(getYAxis().toRealValue(bottomPos));
             t.getKeyFrames().addAll(new KeyFrame(Duration.ZERO,
                                     new KeyValue(item.currentYProperty(), item.getCurrentY())),
                                     new KeyFrame(Duration.millis(700), new EventHandler<ActionEvent>() {
                                     @Override public void handle(ActionEvent actionEvent) {
-                                        getPlotChildren().remove(bar);
-                                        updateMap(series, item);
+                                        processDataRemove(series, item);
+                                        XYValueMap.clear();
                                     }
                                 },
                                 new KeyValue(item.currentYProperty(), item.getYValue(),
                                 Interpolator.EASE_BOTH) ));
         } else {
+            // save data values in case the same data item gets added immediately.
+             XYValueMap.put(item, ((Number)item.getXValue()).doubleValue());
             item.setXValue(getXAxis().toRealValue(getXAxis().getZeroPosition()));
             t.getKeyFrames().addAll(new KeyFrame(Duration.ZERO, new KeyValue(item.currentXProperty(), item.getCurrentX())),
                 new KeyFrame(Duration.millis(700), new EventHandler<ActionEvent>() {
                         @Override public void handle(ActionEvent actionEvent) {
-                            getPlotChildren().remove(bar);
-                            updateMap(series, item);
+                            processDataRemove(series, item);
+                            XYValueMap.clear();
                         }
                     },
                     new KeyValue(item.currentXProperty(), item.getXValue(),
@@ -497,6 +492,54 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         return t;
     }
     
+    @Override void dataBeingRemovedIsAdded(Data item, Series series) {
+        if (dataRemoveTimeline != null) {
+            dataRemoveTimeline.setOnFinished(null);
+            dataRemoveTimeline.stop();
+        }
+        processDataRemove(series, item);
+        item.setSeries(null);
+        removeDataItemFromDisplay(series, item);
+        restoreDataValues(item);
+        XYValueMap.clear();
+    }
+    
+    private void restoreDataValues(Data item) {
+        Double value = XYValueMap.get(item);
+        if (value != null) {
+            // Restoring original X/Y values 
+            if (orientation.equals(Orientation.VERTICAL)) {
+                item.setYValue(value);
+                item.setCurrentY(value);
+            } else {
+                item.setXValue(value);
+                item.setCurrentX(value);
+
+            }
+        }
+    }
+    @Override void seriesBeingRemovedIsAdded(Series<X,Y> series) {
+        boolean lastSeries = (pt.getChildren().size() == 1) ? true : false;
+        if (pt!= null) {
+            if (!pt.getChildren().isEmpty()) {
+                for (Animation a : pt.getChildren()) {
+                    a.setOnFinished(null);
+                }
+            }
+            for (Data item : series.getData()) {
+                processDataRemove(series, item);
+                if (!lastSeries) {
+                    restoreDataValues(item);
+                }
+            }
+            XYValueMap.clear();
+            pt.setOnFinished(null);
+            pt.getChildren().clear();
+            pt.stop();
+            removeSeriesFromDisplay(series);
+        }
+    }
+     
     private void updateDefaultColorIndex(final Series<X,Y> series) {
         int clearIndex = seriesColorMap.get(series);
         colorBits.clear(clearIndex);
@@ -524,7 +567,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         Map<String, Data<X,Y>> catmap = seriesCategoryMap.get(series);
         return (catmap != null) ? catmap.get(category) : null;
     }
-
+    
     // -------------- STYLESHEET HANDLING ------------------------------------------------------------------------------
 
     /**

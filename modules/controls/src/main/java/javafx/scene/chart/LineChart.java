@@ -77,7 +77,10 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
     private Timeline dataRemoveTimeline;
     private Series<X,Y> seriesOfDataRemoved = null;
     private Data<X,Y> dataItemBeingRemoved = null;
-
+    private FadeTransition fadeSymbolTransition = null;
+    private Map<Data<X,Y>, Double> XYValueMap = 
+                                new HashMap<Data<X,Y>, Double>();
+    private Timeline seriesRemoveTimeline = null;
     // -------------- PUBLIC PROPERTIES ----------------------------------------
 
     /** When true, CSS styleable symbols are created for any data items that don't have a symbol node specified. */
@@ -230,6 +233,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
         // remove item from sorted list
         int itemIndex = series.getItemIndex(item);
         if (shouldAnimate()) {
+            XYValueMap.clear();
             boolean animate = false;
             if (itemIndex > 0 && itemIndex < series.getDataSize()) {
                 animate = true;
@@ -277,16 +281,16 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
                 // fade out symbol
                 if (symbol != null) {
                     symbol.setOpacity(0);
-                    FadeTransition ft = new FadeTransition(Duration.millis(500),symbol);
-                    ft.setToValue(0);
-                    ft.setOnFinished(new EventHandler<ActionEvent>() {
+                    fadeSymbolTransition = new FadeTransition(Duration.millis(500),symbol);
+                    fadeSymbolTransition.setToValue(0);
+                    fadeSymbolTransition.setOnFinished(new EventHandler<ActionEvent>() {
                         @Override public void handle(ActionEvent actionEvent) {
                             item.setSeries(null);
                             getPlotChildren().remove(symbol);
                             removeDataItemFromDisplay(series, item);
                         }
                     });
-                    ft.play();
+                    fadeSymbolTransition.play();
                 }
             }
             if (animate) {
@@ -395,8 +399,8 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
                 startValues[j]   = new KeyValue(nodes.get(j).opacityProperty(),1);
                 endValues[j]       = new KeyValue(nodes.get(j).opacityProperty(),0);
             }
-            Timeline tl = new Timeline();
-            tl.getKeyFrames().addAll(
+            seriesRemoveTimeline = new Timeline();
+            seriesRemoveTimeline.getKeyFrames().addAll(
                 new KeyFrame(Duration.ZERO,startValues),
                 new KeyFrame(Duration.millis(900), new EventHandler<ActionEvent>() {
                     @Override public void handle(ActionEvent actionEvent) {
@@ -405,7 +409,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
                     }
                 },endValues)
             );
-            tl.play();
+            seriesRemoveTimeline.play();
         } else {
             getPlotChildren().remove(series.getNode());
             for (Data d:series.getData()) getPlotChildren().remove(d.getNode());
@@ -442,10 +446,46 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
             }
         }
     }
+    /** @inheritDoc */
+    @Override void dataBeingRemovedIsAdded(Data item, Series series) {
+        if (fadeSymbolTransition != null) {
+            fadeSymbolTransition.setOnFinished(null);
+            fadeSymbolTransition.stop();
+        }
+        if (dataRemoveTimeline != null) {
+            dataRemoveTimeline.setOnFinished(null);
+            dataRemoveTimeline.stop();
+        }
+        final Node symbol = item.getNode();
+        if (symbol != null) getPlotChildren().remove(symbol);
+        
+        item.setSeries(null);
+        removeDataItemFromDisplay(series, item);
+        
+        // restore values to item
+        Double value = XYValueMap.get(item);
+        if (value != null) {
+            item.setYValue(value);
+            item.setCurrentY(value);
+        }
+        XYValueMap.clear();
+    }
+    /** @inheritDoc */
+    @Override void seriesBeingRemovedIsAdded(Series<X,Y> series) {
+        if (seriesRemoveTimeline != null) {
+            seriesRemoveTimeline.setOnFinished(null);
+            seriesRemoveTimeline.stop();
+            getPlotChildren().remove(series.getNode());
+            for (Data d:series.getData()) getPlotChildren().remove(d.getNode());
+            removeSeriesFromDisplay(series);
+        }
+    }
 
     private Timeline createDataRemoveTimeline(final Data<X,Y> item, final Node symbol, final Series<X,Y> series) {
         Timeline t = new Timeline();
-
+        // save data values in case the same data item gets added immediately.
+        XYValueMap.put(item, ((Number)item.getYValue()).doubleValue());
+            
         t.getKeyFrames().addAll(new KeyFrame(Duration.ZERO, new KeyValue(item.currentYProperty(),
                 item.getCurrentY()), new KeyValue(item.currentXProperty(),
                 item.getCurrentX())),
@@ -453,6 +493,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
                     @Override public void handle(ActionEvent actionEvent) {
                         if (symbol != null) getPlotChildren().remove(symbol);
                         removeDataItemFromDisplay(series, item);
+                        XYValueMap.clear();
                     }
                 },
                 new KeyValue(item.currentYProperty(),
