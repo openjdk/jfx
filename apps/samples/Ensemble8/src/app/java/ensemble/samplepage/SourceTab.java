@@ -67,6 +67,7 @@ class SourceTab extends Tab {
                     //                    Reader r = new BufferedReader(new InputStreamReader(getClass().getResourceAsStream(url)));
                     TextArea textArea = new TextArea(source);
                     textArea.setStyle("-fx-font-family: 'Courier New';");
+                    textArea.setEditable(false);
                     setContent(textArea);
                 } else {
                     String html = samplePage.convertToHTML(source);

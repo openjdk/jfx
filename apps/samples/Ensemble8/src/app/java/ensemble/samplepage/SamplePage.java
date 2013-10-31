@@ -236,13 +236,13 @@ public class SamplePage extends Region implements Page {
         if (copyRight != null) {
             html.append("    <div onclick='document.getElementById(\"licenceText\").className = \"showing\";document.getElementById(\"licenseBtn\").className = \"hidden\";' id=\"licenseBtn\" class=\"button\">/* ....Show License.... */</div>\n");
             html.append("    <div id=\"licenceText\"class=\"hidden\">\n");
-            html.append("    <pre class=\"brush: java;gutter: false;toolbar: false;\">\n");
+            html.append("    <pre class=\"brush: java; gutter: false; toolbar: false; quick-code: false;\">\n");
             html.append(copyRight);
             html.append('\n');
             html.append("    </pre>\n");
             html.append("    </div>\n");
         }
-        html.append("    <pre class=\"brush: java;gutter: false;toolbar: false;\">\n");
+        html.append("    <pre class=\"brush: java; gutter: false; toolbar: false; quick-code: false;\">\n");
         html.append(source);
         html.append('\n');
         html.append("    </pre>\n");
