@@ -432,8 +432,10 @@ public abstract class PopupWindow extends Window {
         
         // RT-28447
         final Scene ownerScene = getRootWindow(owner).getScene();
-        sceneValue.getStylesheets().setAll(ownerScene.getStylesheets());
-        
+        if (ownerScene != null) {
+            sceneValue.getStylesheets().setAll(ownerScene.getStylesheets());
+        }
+
         // It is required that the root window exist and be visible to show the popup.
         if (getRootWindow(owner).isShowing()) {
             // We do show() first so that the width and height of the
