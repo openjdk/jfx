@@ -2168,7 +2168,9 @@ task javadoc(type: Javadoc) {
         project.sourceSets.main.output
     });
     exclude("com/**/*", "javafx/scene/ParentDesignInfo*", "Compile*", "javafx/builder/**/*");
-    options.windowTitle("JavaFX ${RELEASE_NAME}")
+    options.windowTitle("${javadocTitle}")
+    options.header("${javadocHeader}")
+    options.bottom("${javadocBottom}")
     options.links(JDK_DOCS);
     options.addBooleanOption("XDignore.symbol.file").setValue(true);
     options.addBooleanOption("Xdoclint:none").setValue(!IS_DOC_LINT);
