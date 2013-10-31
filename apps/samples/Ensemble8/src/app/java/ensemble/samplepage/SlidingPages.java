@@ -63,6 +63,10 @@ public class SlidingPages extends Region {
         getChildren().add(actionNode);
     }
 
+    public void reset() {
+        slide.reset();
+    }
+
     @Override protected void layoutChildren() {
         super.layoutChildren();
         if (frontPage != null) {
@@ -251,6 +255,11 @@ public class SlidingPages extends Region {
 //                currentScreen = targetScreen;
 //                nextScreen = baseScreen;
 //            }
+        }
+
+        public void reset() {
+            targetScreen.setTranslateX(fromX);
+            targetScreen.setTranslateY(fromY);
         }
     }
     

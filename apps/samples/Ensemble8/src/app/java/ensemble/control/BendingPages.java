@@ -97,6 +97,16 @@ public class BendingPages extends Region {
         this.backPage.set(backPage);
     }
 
+    public void reset() {
+        if (animation != null) {
+            animation.stop();
+        }
+        state = State.CLOSED;
+        setTarget();
+        update();
+        fixMouseTransparency();
+    }
+
     @Override
     protected void layoutChildren() {
         super.layoutChildren();
@@ -154,6 +164,14 @@ public class BendingPages extends Region {
     
     public void setGripSize(double gripSize) {
         this.gripSize.set(gripSize);
+    }
+
+    private void fixMouseTransparency() {
+        if (state == State.OPENED) {
+            frontPage.get().setMouseTransparent(true);
+        } else if (state == State.CLOSED) {
+            frontPage.get().setMouseTransparent(false);
+        }
     }
     
     static enum AnimationState { NO_ANIMATION, FOLLOWING_MOVING_MOUSE, 
@@ -367,11 +385,7 @@ public class BendingPages extends Region {
                 .build();
         animation.play();
         animState = ANIMATION;
-        if (state == State.OPENED) {
-            frontPage.get().setMouseTransparent(true);
-        } else if (state == State.CLOSED) {
-            frontPage.get().setMouseTransparent(false);
-        }
+        fixMouseTransparency();
     }
     
     /**
