@@ -80,13 +80,15 @@ import com.sun.javafx.fxml.expression.ExpressionValue;
 import com.sun.javafx.fxml.expression.KeyPath;
 import java.net.MalformedURLException;
 import java.security.AccessController;
+import java.security.AllPermission;
 import java.security.PrivilegedAction;
 import java.util.EnumMap;
 import java.util.Locale;
 import java.util.StringTokenizer;
 import javafx.beans.InvalidationListener;
+import sun.reflect.CallerSensitive;
+import sun.reflect.Reflection;
 import sun.reflect.misc.ConstructorUtil;
-import sun.reflect.misc.FieldUtil;
 import sun.reflect.misc.MethodUtil;
 import sun.reflect.misc.ReflectUtil;
 
@@ -545,12 +547,18 @@ public class FXMLLoader {
                     }
 
                     for (SupportedType t : types) {
-                        Method method = getControllerMethods().get(t).get(handlerName);
+                        Method method = controllerAccessor
+                                            .getControllerMethods()
+                                            .get(t)
+                                            .get(handlerName);
                         if (method != null) {
                             return new MethodHandler(controller, method, t);
                         }
                     }
-                    Method method = getControllerMethods().get(SupportedType.PARAMETERLESS).get(handlerName);
+                    Method method = controllerAccessor
+                                        .getControllerMethods()
+                                        .get(SupportedType.PARAMETERLESS)
+                                        .get(handlerName);
                     if (method != null) {
                         return new MethodHandler(controller, method, SupportedType.PARAMETERLESS);
                     }
@@ -683,7 +691,7 @@ public class FXMLLoader {
                 }
 
                 if (handlerValue.startsWith(CONTROLLER_METHOD_PREFIX)) {
-                    MethodHandler handler = getControllerMethodHandle(handlerValue, SupportedType.PROPERTY_CHANGE_LISTENER, SupportedType.EVENT);
+                    final MethodHandler handler = getControllerMethodHandle(handlerValue, SupportedType.PROPERTY_CHANGE_LISTENER, SupportedType.EVENT);
                     if (handler != null) {
                         if (handler.type == SupportedType.EVENT) {
                             // Note: this part is solely for purpose of 2.2 backward compatibility where an Event object
@@ -836,7 +844,8 @@ public class FXMLLoader {
 
                 // Set the controller field value
                 if (controller != null) {
-                    Field field = getControllerFields().get(fx_id);
+                    Field field = controllerAccessor.getControllerFields()
+                                                    .get(fx_id);
 
                     if (field != null) {
                         try {
@@ -1126,7 +1135,7 @@ public class FXMLLoader {
             fxmlLoader.setClassLoader(classLoader);
             fxmlLoader.impl_setStaticLoad(staticLoad);
 
-            Object value = fxmlLoader.load();
+            Object value = fxmlLoader.loadImpl(callerClass);
 
             if (fx_id != null) {
                 String id = this.fx_id + CONTROLLER_SUFFIX;
@@ -1135,7 +1144,8 @@ public class FXMLLoader {
                 namespace.put(id, controller);
 
                 if (FXMLLoader.this.controller != null) {
-                    Field field = getControllerFields().get(id);
+                    Field field = controllerAccessor.getControllerFields()
+                                                    .get(id);
 
                     if (field != null) {
                         try {
@@ -1764,9 +1774,6 @@ public class FXMLLoader {
     private List<String> packages = new LinkedList<String>();
     private Map<String, Class<?>> classes = new HashMap<String, Class<?>>();
 
-    private Map<String, Field> controllerFields = null;
-    private Map<SupportedType, Map<String, Method>> controllerMethods = null;
-
     private ScriptEngineManager scriptEngineManager = null;
 
     private static ClassLoader defaultClassLoader;
@@ -2221,8 +2228,7 @@ public class FXMLLoader {
             namespace.put(CONTROLLER_KEYWORD, controller);
         }
 
-        controllerFields = null;
-        controllerMethods = null;
+        controllerAccessor.setController(controller);
     }
 
     /**
@@ -2370,27 +2376,11 @@ public class FXMLLoader {
      * The loaded object hierarchy.
      * @since JavaFX 2.1
      */
+    @CallerSensitive
     public <T> T load() throws IOException {
-        if (location == null) {
-            throw new IllegalStateException("Location is not set.");
-        }
-
-        InputStream inputStream = null;
-        T value;
-        try {
-            inputStream = location.openStream();
-            value = load(inputStream);
-        } catch (LoadException exception) {
-            throw exception;
-        } catch (Exception exception) {
-            throw constructLoadException(exception);
-        } finally {
-            if (inputStream != null) {
-                inputStream.close();
-            }
-        }
-
-        return value;
+        return loadImpl((System.getSecurityManager() != null)
+                            ? Reflection.getCallerClass()
+                            : null);
     }
 
     /**
@@ -2402,143 +2392,186 @@ public class FXMLLoader {
      * @return
      * The loaded object hierarchy.
      */
-    @SuppressWarnings("dep-ann")
+    @CallerSensitive
     public <T> T load(InputStream inputStream) throws IOException {
+        return loadImpl(inputStream, (System.getSecurityManager() != null)
+                                         ? Reflection.getCallerClass()
+                                         : null);
+    }
+
+    private Class<?> callerClass;
+
+    private <T> T loadImpl(final Class<?> callerClass) throws IOException {
+        if (location == null) {
+            throw new IllegalStateException("Location is not set.");
+        }
+
+        InputStream inputStream = null;
+        T value;
+        try {
+            inputStream = location.openStream();
+            value = loadImpl(inputStream, callerClass);
+        } finally {
+            if (inputStream != null) {
+                inputStream.close();
+            }
+        }
+
+        return value;
+    }
+
+    @SuppressWarnings({ "dep-ann", "unchecked" })
+    private <T> T loadImpl(InputStream inputStream,
+                           Class<?> callerClass) throws IOException {
         if (inputStream == null) {
             throw new NullPointerException("inputStream is null.");
         }
 
-        clearImports();
-
-        // Initialize the namespace
-        namespace.put(LOCATION_KEY, location);
-        namespace.put(RESOURCES_KEY, resources);
-
-        // Clear the script engine
-        scriptEngine = null;
-
-        // Create the parser
+        this.callerClass = callerClass;
+        controllerAccessor.setCallerClass(callerClass);
         try {
-            XMLInputFactory xmlInputFactory = XMLInputFactory.newInstance();
-            xmlInputFactory.setProperty("javax.xml.stream.isCoalescing", true);
+            clearImports();
 
-            // Some stream readers incorrectly report an empty string as the prefix
-            // for the default namespace; correct this as needed
-            InputStreamReader inputStreamReader = new InputStreamReader(inputStream, charset);
-            xmlStreamReader = new StreamReaderDelegate(xmlInputFactory.createXMLStreamReader(inputStreamReader)) {
-                @Override
-                public String getPrefix() {
-                    String prefix = super.getPrefix();
+            // Initialize the namespace
+            namespace.put(LOCATION_KEY, location);
+            namespace.put(RESOURCES_KEY, resources);
 
-                    if (prefix != null
-                        && prefix.length() == 0) {
-                        prefix = null;
+            // Clear the script engine
+            scriptEngine = null;
+
+            // Create the parser
+            try {
+                XMLInputFactory xmlInputFactory = XMLInputFactory.newInstance();
+                xmlInputFactory.setProperty("javax.xml.stream.isCoalescing", true);
+
+                // Some stream readers incorrectly report an empty string as the prefix
+                // for the default namespace; correct this as needed
+                InputStreamReader inputStreamReader = new InputStreamReader(inputStream, charset);
+                xmlStreamReader = new StreamReaderDelegate(xmlInputFactory.createXMLStreamReader(inputStreamReader)) {
+                    @Override
+                    public String getPrefix() {
+                        String prefix = super.getPrefix();
+
+                        if (prefix != null
+                            && prefix.length() == 0) {
+                            prefix = null;
+                        }
+
+                        return prefix;
                     }
 
-                    return prefix;
+                    @Override
+                    public String getAttributePrefix(int index) {
+                        String attributePrefix = super.getAttributePrefix(index);
+
+                        if (attributePrefix != null
+                            && attributePrefix.length() == 0) {
+                            attributePrefix = null;
+                        }
+
+                        return attributePrefix;
+                    }
+                };
+            } catch (XMLStreamException exception) {
+                throw constructLoadException(exception);
+            }
+
+            // Push this loader onto the stack
+            loaders.push(this);
+
+            // Parse the XML stream
+            try {
+                while (xmlStreamReader.hasNext()) {
+                    int event = xmlStreamReader.next();
+
+                    switch (event) {
+                        case XMLStreamConstants.PROCESSING_INSTRUCTION: {
+                            processProcessingInstruction();
+                            break;
+                        }
+
+                        case XMLStreamConstants.COMMENT: {
+                            processComment();
+                            break;
+                        }
+
+                        case XMLStreamConstants.START_ELEMENT: {
+                            processStartElement();
+                            break;
+                        }
+
+                        case XMLStreamConstants.END_ELEMENT: {
+                            processEndElement();
+                            break;
+                        }
+
+                        case XMLStreamConstants.CHARACTERS: {
+                            processCharacters();
+                            break;
+                        }
+                    }
                 }
+            } catch (XMLStreamException exception) {
+                throw constructLoadException(exception);
+            }
 
-                @Override
-                public String getAttributePrefix(int index) {
-                    String attributePrefix = super.getAttributePrefix(index);
+            if (controller != null) {
+                if (controller instanceof Initializable) {
+                    ((Initializable)controller).initialize(location, resources);
+                } else {
+                    // Inject controller fields
+                    Map<String, Field> controllerFields =
+                            controllerAccessor.getControllerFields();
 
-                    if (attributePrefix != null
-                        && attributePrefix.length() == 0) {
-                        attributePrefix = null;
+                    Field locationField = controllerFields.get(LOCATION_KEY);
+                    if (locationField != null) {
+                        try {
+                            locationField.set(controller, location);
+                        } catch (IllegalAccessException exception) {
+                            // TODO Throw when Initializable is deprecated/removed
+                            // throw constructLoadException(exception);
+                        }
                     }
 
-                    return attributePrefix;
-                }
-            };
-        } catch (XMLStreamException exception) {
-            throw constructLoadException(exception);
-        }
-
-        // Push this loader onto the stack
-        loaders.push(this);
-
-        // Parse the XML stream
-        try {
-            while (xmlStreamReader.hasNext()) {
-                int event = xmlStreamReader.next();
-
-                switch (event) {
-                    case XMLStreamConstants.PROCESSING_INSTRUCTION: {
-                        processProcessingInstruction();
-                        break;
+                    Field resourcesField = controllerFields.get(RESOURCES_KEY);
+                    if (resourcesField != null) {
+                        try {
+                            resourcesField.set(controller, resources);
+                        } catch (IllegalAccessException exception) {
+                            // TODO Throw when Initializable is deprecated/removed
+                            // throw constructLoadException(exception);
+                        }
                     }
 
-                    case XMLStreamConstants.COMMENT: {
-                        processComment();
-                        break;
-                    }
+                    // Initialize the controller
+                    Method initializeMethod = controllerAccessor
+                                                  .getControllerMethods()
+                                                  .get(SupportedType.PARAMETERLESS)
+                                                  .get(INITIALIZE_METHOD_NAME);
 
-                    case XMLStreamConstants.START_ELEMENT: {
-                        processStartElement();
-                        break;
-                    }
-
-                    case XMLStreamConstants.END_ELEMENT: {
-                        processEndElement();
-                        break;
-                    }
-
-                    case XMLStreamConstants.CHARACTERS: {
-                        processCharacters();
-                        break;
+                    if (initializeMethod != null) {
+                        try {
+                            MethodUtil.invoke(initializeMethod, controller, new Object [] {});
+                        } catch (IllegalAccessException exception) {
+                            // TODO Throw when Initializable is deprecated/removed
+                            // throw constructLoadException(exception);
+                        } catch (InvocationTargetException exception) {
+                            throw constructLoadException(exception);
+                        }
                     }
                 }
             }
-        } catch (XMLStreamException exception) {
+        } catch (final LoadException exception) {
+            throw exception;
+        } catch (final Exception exception) {
             throw constructLoadException(exception);
+        } finally {
+            controllerAccessor.setCallerClass(null);
+            // Clear controller accessor caches
+            controllerAccessor.reset();
+            // Clear the parser
+            xmlStreamReader = null;
         }
-
-        if (controller != null) {
-            if (controller instanceof Initializable) {
-                ((Initializable)controller).initialize(location, resources);
-            } else {
-                // Inject controller fields
-                Map<String, Field> controllerFields = getControllerFields();
-
-                Field locationField = controllerFields.get(LOCATION_KEY);
-                if (locationField != null) {
-                    try {
-                        locationField.set(controller, location);
-                    } catch (IllegalAccessException exception) {
-                        // TODO Throw when Initializable is deprecated/removed
-                        // throw constructLoadException(exception);
-                    }
-                }
-
-                Field resourcesField = controllerFields.get(RESOURCES_KEY);
-                if (resourcesField != null) {
-                    try {
-                        resourcesField.set(controller, resources);
-                    } catch (IllegalAccessException exception) {
-                        // TODO Throw when Initializable is deprecated/removed
-                        // throw constructLoadException(exception);
-                    }
-                }
-
-                // Initialize the controller
-                Method initializeMethod = getControllerMethods().get(SupportedType.PARAMETERLESS).
-                        get(INITIALIZE_METHOD_NAME);
-
-                if (initializeMethod != null) {
-                    try {
-                        MethodUtil.invoke(initializeMethod, controller, new Object [] {});
-                    } catch (IllegalAccessException exception) {
-                        // TODO Throw when Initializable is deprecated/removed
-                        // throw constructLoadException(exception);
-                    } catch (InvocationTargetException exception) {
-                        throw constructLoadException(exception);
-                    }
-                }
-            }
-        }
-
-        // Clear the parser
-        xmlStreamReader = null;
 
         return (T)root;
     }
@@ -2871,44 +2904,6 @@ public class FXMLLoader {
         return classLoader.loadClass(packageName + "." + className.replace('.', '$'));
     }
 
-    private Map<String, Field> getControllerFields() throws LoadException {
-        if (controllerFields == null) {
-            controllerFields = new HashMap<>();
-
-            Class<?> controllerType = controller.getClass();
-            Class<?> type = controllerType;
-
-            while (type != Object.class) {
-                Field[] fields = FieldUtil.getDeclaredFields(type);
-
-                for (int i = 0; i < fields.length; i++) {
-                    Field field = fields[i];
-                    int modifiers = field.getModifiers();
-
-                    // Only add fields that are visible to this controller type
-                    if (type == controllerType
-                        || (modifiers & Modifier.PRIVATE) == 0) {
-                        // Ensure that the field is accessible
-                        if ((modifiers & Modifier.PUBLIC) == 0
-                            && field.getAnnotation(FXML.class) != null) {
-                            try {
-                                field.setAccessible(true);
-                            } catch (SecurityException exception) {
-                                throw constructLoadException(exception);
-                            }
-                        }
-
-                        controllerFields.put(field.getName(), field);
-                    }
-                }
-
-                type = type.getSuperclass();
-            }
-        }
-
-        return controllerFields;
-    }
-
     private static enum SupportedType {
         PARAMETERLESS {
 
@@ -2968,65 +2963,13 @@ public class FXMLLoader {
         protected abstract boolean methodIsOfType(Method m);
     }
 
-    private SupportedType toSupportedType(Method m) {
+    private static SupportedType toSupportedType(Method m) {
         for (SupportedType t : SupportedType.values()) {
             if (t.methodIsOfType(m)) {
                 return t;
             }
         }
         return null;
-    }
-
-    private Map<SupportedType, Map<String, Method>> getControllerMethods() throws LoadException {
-        if (controllerMethods == null) {
-            controllerMethods = new EnumMap<>(SupportedType.class);
-            for (SupportedType t: SupportedType.values()) {
-                controllerMethods.put(t, new HashMap<String, Method>());
-            }
-
-            Class<?> controllerType = controller.getClass();
-            Class<?> type = controllerType;
-
-            while (type != Object.class) {
-                ReflectUtil.checkPackageAccess(type);
-                Method[] methods = type.getDeclaredMethods();
-
-                for (int i = 0; i < methods.length; i++) {
-                    Method method = methods[i];
-                    int modifiers = method.getModifiers();
-
-                    // Only add methods that are visible to this controller type
-                    if (type == controllerType
-                        || (modifiers & Modifier.PRIVATE) == 0) {
-                        // Ensure that the method is accessible
-                        if ((modifiers & Modifier.PUBLIC) == 0
-                            && method.getAnnotation(FXML.class) != null) {
-                            try {
-                                method.setAccessible(true);
-                            } catch (SecurityException exception) {
-                                throw constructLoadException(exception);
-                            }
-                        }
-
-                        // Add this method to the map if:
-                        // a) it is the initialize() method, or
-                        // b) it takes a single event argument, or
-                        // c) it takes no arguments and a handler with this
-                        //    name has not already been defined
-                        String methodName = method.getName();
-                        SupportedType convertedType;
-
-                        if ((convertedType = toSupportedType(method)) != null) {
-                            controllerMethods.get(convertedType).put(methodName, method);
-                        }
-                    }
-                }
-
-                type = type.getSuperclass();
-            }
-        }
-
-        return controllerMethods;
     }
 
     private ScriptEngineManager getScriptEngineManager() {
@@ -3092,9 +3035,16 @@ public class FXMLLoader {
      *
      * @param location
      */
-    @SuppressWarnings("unchecked")
+    @CallerSensitive
     public static <T> T load(URL location) throws IOException {
-        return (T)load(location, null);
+        return loadImpl(location, (System.getSecurityManager() != null)
+                                      ? Reflection.getCallerClass()
+                                      : null);
+    }
+
+    private static <T> T loadImpl(URL location, Class<?> callerClass)
+            throws IOException {
+        return loadImpl(location, null, callerClass);
     }
 
     /**
@@ -3103,9 +3053,19 @@ public class FXMLLoader {
      * @param location
      * @param resources
      */
-    @SuppressWarnings("unchecked")
-    public static <T> T load(URL location, ResourceBundle resources) throws IOException {
-        return (T)load(location, resources, new JavaFXBuilderFactory());
+    @CallerSensitive
+    public static <T> T load(URL location, ResourceBundle resources)
+                                     throws IOException {
+        return loadImpl(location, resources,
+                        (System.getSecurityManager() != null)
+                            ? Reflection.getCallerClass()
+                            : null);
+    }
+
+    private static <T> T loadImpl(URL location, ResourceBundle resources,
+                                  Class<?> callerClass) throws IOException {
+        return loadImpl(location, resources,  new JavaFXBuilderFactory(),
+                        callerClass);
     }
 
     /**
@@ -3115,10 +3075,20 @@ public class FXMLLoader {
      * @param resources
      * @param builderFactory
      */
-    @SuppressWarnings("unchecked")
-    public static <T> T load(URL location, ResourceBundle resources, BuilderFactory builderFactory)
-        throws IOException {
-        return (T)load(location, resources, builderFactory, null);
+    @CallerSensitive
+    public static <T> T load(URL location, ResourceBundle resources,
+                             BuilderFactory builderFactory)
+                                     throws IOException {
+        return loadImpl(location, resources, builderFactory,
+                        (System.getSecurityManager() != null)
+                            ? Reflection.getCallerClass()
+                            : null);
+    }
+
+    private static <T> T loadImpl(URL location, ResourceBundle resources,
+                                  BuilderFactory builderFactory,
+                                  Class<?> callerClass) throws IOException {
+        return loadImpl(location, resources, builderFactory, null, callerClass);
     }
 
     /**
@@ -3130,10 +3100,23 @@ public class FXMLLoader {
      * @param controllerFactory
      * @since JavaFX 2.1
      */
-    @SuppressWarnings("unchecked")
-    public static <T> T load(URL location, ResourceBundle resources, BuilderFactory builderFactory,
-        Callback<Class<?>, Object> controllerFactory) throws IOException {
-        return (T)load(location, resources, builderFactory, controllerFactory, Charset.forName(DEFAULT_CHARSET_NAME));
+    @CallerSensitive
+    public static <T> T load(URL location, ResourceBundle resources,
+                             BuilderFactory builderFactory,
+                             Callback<Class<?>, Object> controllerFactory)
+                                     throws IOException {
+        return loadImpl(location, resources, builderFactory, controllerFactory,
+                        (System.getSecurityManager() != null)
+                            ? Reflection.getCallerClass()
+                            : null);
+    }
+
+    private static <T> T loadImpl(URL location, ResourceBundle resources,
+                                  BuilderFactory builderFactory,
+                                  Callback<Class<?>, Object> controllerFactory,
+                                  Class<?> callerClass) throws IOException {
+        return loadImpl(location, resources, builderFactory, controllerFactory,
+                        Charset.forName(DEFAULT_CHARSET_NAME), callerClass);
     }
 
     /**
@@ -3146,16 +3129,32 @@ public class FXMLLoader {
      * @param charset
      * @since JavaFX 2.1
      */
-    @SuppressWarnings("unchecked")
-    public static <T> T load(URL location, ResourceBundle resources, BuilderFactory builderFactory,
-        Callback<Class<?>, Object> controllerFactory, Charset charset) throws IOException {
+    @CallerSensitive
+    public static <T> T load(URL location, ResourceBundle resources,
+                             BuilderFactory builderFactory,
+                             Callback<Class<?>, Object> controllerFactory,
+                             Charset charset) throws IOException {
+        return loadImpl(location, resources, builderFactory, controllerFactory,
+                        charset,
+                        (System.getSecurityManager() != null)
+                            ? Reflection.getCallerClass()
+                            : null);
+    }
+
+    private static <T> T loadImpl(URL location, ResourceBundle resources,
+                                  BuilderFactory builderFactory,
+                                  Callback<Class<?>, Object> controllerFactory,
+                                  Charset charset, Class<?> callerClass)
+                                          throws IOException {
         if (location == null) {
             throw new NullPointerException("Location is required.");
         }
 
-        FXMLLoader fxmlLoader = new FXMLLoader(location, resources, builderFactory, controllerFactory, charset);
+        FXMLLoader fxmlLoader =
+                new FXMLLoader(location, resources, builderFactory,
+                               controllerFactory, charset);
 
-        return (T)fxmlLoader.load();
+        return fxmlLoader.<T>loadImpl(callerClass);
     }
 
     /**
@@ -3236,4 +3235,249 @@ public class FXMLLoader {
         return retVal;
     }
 
+    private static void checkAllPermissions() {
+        final SecurityManager securityManager = System.getSecurityManager();
+        if (securityManager != null) {
+            securityManager.checkPermission(new AllPermission());
+        }
+    }
+
+    private final ControllerAccessor controllerAccessor =
+            new ControllerAccessor();
+
+    private static final class ControllerAccessor {
+        private static final int PUBLIC = 1;
+        private static final int PROTECTED = 2;
+        private static final int PACKAGE = 4;
+        private static final int PRIVATE = 8;
+        private static final int INITIAL_CLASS_ACCESS =
+                PUBLIC | PACKAGE;
+        private static final int INITIAL_MEMBER_ACCESS =
+                PUBLIC | PROTECTED | PACKAGE | PRIVATE;
+
+        private static final int METHODS = 0;
+        private static final int FIELDS = 1;
+
+        private Object controller;
+        private ClassLoader callerClassLoader;
+
+        private Map<String, Field> controllerFields;
+        private Map<SupportedType, Map<String, Method>> controllerMethods;
+
+        public void setController(final Object controller) {
+            if (this.controller != controller) {
+                this.controller = controller;
+                reset();
+            }
+        }
+
+        public void setCallerClass(final Class<?> callerClass) {
+            final ClassLoader newCallerClassLoader =
+                    (callerClass != null) ? callerClass.getClassLoader()
+                                          : null;
+            if (callerClassLoader != newCallerClassLoader) {
+                callerClassLoader = newCallerClassLoader;
+                reset();
+            }
+        }
+
+        public void reset() {
+            controllerFields = null;
+            controllerMethods = null;
+        }
+
+        public Map<String, Field> getControllerFields() {
+            if (controllerFields == null) {
+                controllerFields = new HashMap<>();
+
+                if (callerClassLoader == null) {
+                    // allow null class loader only with full permission check
+                    checkAllPermissions();
+                }
+
+                addAccessibleMembers(controller.getClass(),
+                                     INITIAL_CLASS_ACCESS,
+                                     INITIAL_MEMBER_ACCESS,
+                                     FIELDS);
+            }
+
+            return controllerFields;
+        }
+
+        public Map<SupportedType, Map<String, Method>> getControllerMethods() {
+            if (controllerMethods == null) {
+                controllerMethods = new EnumMap<>(SupportedType.class);
+                for (SupportedType t: SupportedType.values()) {
+                    controllerMethods.put(t, new HashMap<String, Method>());
+                }
+
+                if (callerClassLoader == null) {
+                    // allow null class loader only with full permission check
+                    checkAllPermissions();
+                }
+
+                addAccessibleMembers(controller.getClass(),
+                                     INITIAL_CLASS_ACCESS,
+                                     INITIAL_MEMBER_ACCESS,
+                                     METHODS);
+            }
+
+            return controllerMethods;
+        }
+
+        private void addAccessibleMembers(final Class<?> type,
+                                          final int prevAllowedClassAccess,
+                                          final int prevAllowedMemberAccess,
+                                          final int membersType) {
+            if (type == Object.class) {
+                return;
+            }
+
+            int allowedClassAccess = prevAllowedClassAccess;
+            int allowedMemberAccess = prevAllowedMemberAccess;
+            if ((callerClassLoader != null)
+                    && (type.getClassLoader() != callerClassLoader)) {
+                // restrict further access
+                allowedClassAccess &= PUBLIC;
+                allowedMemberAccess &= PUBLIC;
+            }
+
+            final int classAccess = getAccess(type.getModifiers());
+            if ((classAccess & allowedClassAccess) == 0) {
+                // we are done
+                return;
+            }
+
+            ReflectUtil.checkPackageAccess(type);
+
+            addAccessibleMembers(type.getSuperclass(),
+                                 allowedClassAccess,
+                                 allowedMemberAccess & ~PRIVATE,
+                                 membersType);
+
+            final int finalAllowedMemberAccess = allowedMemberAccess;
+            AccessController.doPrivileged(
+                    new PrivilegedAction<Void>() {
+                        @Override
+                        public Void run() {
+                            if (membersType == FIELDS) {
+                                addAccessibleFields(type,
+                                                    finalAllowedMemberAccess);
+                            } else {
+                                addAccessibleMethods(type,
+                                                     finalAllowedMemberAccess);
+                            }
+
+                            return null;
+                        }
+                    });
+        }
+
+        private boolean isAccessibleToController(
+                final Class<?> type, final int memberModifiers) {
+            if (Modifier.isPublic(memberModifiers)
+                    || Modifier.isProtected(memberModifiers)) {
+                return true;
+            }
+
+            return Reflection.verifyMemberAccess(controller.getClass(),
+                                                 type,
+                                                 controller,
+                                                 memberModifiers);
+        }
+
+        private void addAccessibleFields(final Class<?> type,
+                                         final int allowedMemberAccess) {
+            final boolean isPublicType = Modifier.isPublic(type.getModifiers());
+
+            final Field[] fields = type.getDeclaredFields();
+            for (int i = 0; i < fields.length; ++i) {
+                final Field field = fields[i];
+                final int memberModifiers = field.getModifiers();
+
+                if (((memberModifiers & (Modifier.STATIC
+                                             | Modifier.FINAL)) != 0)
+                        || ((getAccess(memberModifiers) & allowedMemberAccess)
+                                == 0)
+                        || !isAccessibleToController(type, memberModifiers)) {
+                    continue;
+                }
+
+                if (!isPublicType || !Modifier.isPublic(memberModifiers)) {
+                    if (field.getAnnotation(FXML.class) == null) {
+                        // no fxml annotation on a non-public field
+                        continue;
+                    }
+
+                    // Ensure that the field is accessible
+                    field.setAccessible(true);
+                }
+
+                controllerFields.put(field.getName(), field);
+            }
+        }
+
+        private void addAccessibleMethods(final Class<?> type,
+                                          final int allowedMemberAccess) {
+            final boolean isPublicType = Modifier.isPublic(type.getModifiers());
+
+            final Method[] methods = type.getDeclaredMethods();
+            for (int i = 0; i < methods.length; ++i) {
+                final Method method = methods[i];
+                final int memberModifiers = method.getModifiers();
+
+                if (((memberModifiers & (Modifier.STATIC
+                                             | Modifier.ABSTRACT
+                                             | Modifier.NATIVE)) != 0)
+                        || ((getAccess(memberModifiers) & allowedMemberAccess)
+                                == 0)
+                        || !isAccessibleToController(type, memberModifiers)) {
+                    continue;
+                }
+
+                if (!isPublicType || !Modifier.isPublic(memberModifiers)) {
+                    if (method.getAnnotation(FXML.class) == null) {
+                        // no fxml annotation on a non-public method
+                        continue;
+                    }
+
+                    // Ensure that the method is accessible
+                    method.setAccessible(true);
+                }
+
+                // Add this method to the map if:
+                // a) it is the initialize() method, or
+                // b) it takes a single event argument, or
+                // c) it takes no arguments and a handler with this
+                //    name has not already been defined
+                final String methodName = method.getName();
+                final SupportedType convertedType;
+
+                if ((convertedType = toSupportedType(method)) != null) {
+                    controllerMethods.get(convertedType)
+                                     .put(methodName, method);
+                }
+            }
+        }
+
+        private static int getAccess(final int fullModifiers) {
+            final int untransformedAccess =
+                    fullModifiers & (Modifier.PRIVATE | Modifier.PROTECTED
+                                                      | Modifier.PUBLIC);
+
+            switch (untransformedAccess) {
+                case Modifier.PUBLIC:
+                    return PUBLIC;
+
+                case Modifier.PROTECTED:
+                    return PROTECTED;
+
+                case Modifier.PRIVATE:
+                    return PRIVATE;
+
+                default:
+                    return PACKAGE;
+            }
+        }
+    }
 }
