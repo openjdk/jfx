@@ -107,7 +107,7 @@ public class PickRay {
         final double distanceZ = (viewHeight / 2.0)
                 / Math.tan(Math.toRadians(15.0));
 
-        pickRay.set(x, y, distanceZ, nearClip, farClip);
+        pickRay.set(x, y, distanceZ, nearClip * distanceZ, farClip * distanceZ);
 
         if (cameraTransform != null) {
             pickRay.transform(cameraTransform);
