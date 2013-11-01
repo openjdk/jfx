@@ -39,8 +39,6 @@ import ensemble.generated.Samples;
 import java.util.ArrayList;
 import java.util.List;
 import javafx.application.Application;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
@@ -55,6 +53,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
 import javafx.scene.transform.Scale;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
@@ -74,7 +73,7 @@ public class EnsembleApp extends Application {
     public static final boolean PRELOAD_PREVIEW_IMAGES = true;
     public static final boolean SHOW_HIGHLIGHTS = IS_DESKTOP;
     public static final boolean SHOW_MENU = IS_DESKTOP;
-    public static final boolean SELECT_IOS_THEME = IS_MAC || IS_IOS;
+    public static final boolean SELECT_IOS_THEME = false;
     private static final int TOOL_BAR_BUTTON_SIZE = 30;
     private Scene scene;
     private Pane root;
@@ -99,9 +98,6 @@ public class EnsembleApp extends Application {
     }
 
     @Override public void init() throws Exception {
-        // LOAD FONTS
-    //    Font font = Font.loadFont(EnsembleApp.class.getResource("fonts/BreeSerif-Regular.ttf").toString(),10);
-     //   System.out.println("font = " + font);
         // CREATE ROOT
         root = new Pane() {
             @Override protected void layoutChildren() {
@@ -126,32 +122,10 @@ public class EnsembleApp extends Application {
                 searchPopover.setLayoutY((int)searchBoxBottomCenter.getY()+20);
             }
         };
-        // CREATE MENUBAR/STATUSBAR SPACER
-        if (IS_IOS) {
-            Region statusSpacer = new Region();
-            statusSpacer.setPrefHeight(20);
-            root.getChildren().add(statusSpacer);
-        }
+        // CREATE MENUBAR
         if (SHOW_MENU) {
             menuBar = new MenuBar();
             menuBar.setUseSystemMenuBar(true);
-            Menu themeMenu = new Menu("Theme");
-            final RadioMenuItem caspianThemeMenuItem = new RadioMenuItem("Caspian");
-            final RadioMenuItem iOSThemeMenuItem = new RadioMenuItem("iOS");
-            final ToggleGroup tg = new ToggleGroup();
-            caspianThemeMenuItem.setToggleGroup(tg);
-            iOSThemeMenuItem.setToggleGroup(tg);
-            tg.selectToggle(SELECT_IOS_THEME ? iOSThemeMenuItem : caspianThemeMenuItem);
-            tg.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
-                @Override public void changed(ObservableValue<? extends Toggle> arg0, Toggle oldValue, Toggle newValue) {
-                    if (newValue != null) {
-                        setStylesheets(newValue == iOSThemeMenuItem);
-                    }
-                }
-            });
-            themeMenu.getItems().addAll(caspianThemeMenuItem,iOSThemeMenuItem);
-            menuBar.getMenus().add(themeMenu);
-            
             ToggleGroup screenSizeToggle = new ToggleGroup();
             menuBar.getMenus().add(
                     MenuBuilder.create()
@@ -179,13 +153,17 @@ public class EnsembleApp extends Application {
         root.getChildren().add(toolBar);
         backButton = new Button();
         backButton.setId("back");
+        backButton.getStyleClass().add("left-pill");
         backButton.setPrefSize(TOOL_BAR_BUTTON_SIZE, TOOL_BAR_BUTTON_SIZE);
         forwardButton = new Button();
         forwardButton.setId("forward");
+        forwardButton.getStyleClass().add("center-pill");
         forwardButton.setPrefSize(TOOL_BAR_BUTTON_SIZE, TOOL_BAR_BUTTON_SIZE);
         homeButton = new Button();
         homeButton.setId("home");
         homeButton.setPrefSize(TOOL_BAR_BUTTON_SIZE, TOOL_BAR_BUTTON_SIZE);
+        homeButton.getStyleClass().add("right-pill");
+        HBox navButtons = new HBox(0,backButton,forwardButton,homeButton);
         listButton = new ToggleButton();
         listButton.setId("list");
         listButton.setPrefSize(TOOL_BAR_BUTTON_SIZE, TOOL_BAR_BUTTON_SIZE);
@@ -201,7 +179,7 @@ public class EnsembleApp extends Application {
             listButton.setGraphic(new Region());
             searchButton.setGraphic(new Region());
         }
-        toolBar.addLeftItems(backButton,forwardButton,homeButton,listButton);
+        toolBar.addLeftItems(navButtons,listButton);
         toolBar.addRightItems(searchBox);
 
         // create PageBrowser
@@ -291,19 +269,10 @@ public class EnsembleApp extends Application {
     }
 
     private void setStylesheets(boolean isIOsSelected) {
-        List<String> stylesheets = new ArrayList<>(5);
-        String base = "/ensemble/EnsembleStyles" + (isIOsSelected ? "IOS" : "Caspian");
-        stylesheets.add("/ensemble/EnsembleStylesCommon.css");
-        stylesheets.add(base + ".css");
-        if (IS_DESKTOP) {
-            stylesheets.add("/ensemble/EnsembleStylesCommonDesktop.css");
-            stylesheets.add(base + "Desktop.css");
-        }
-        if (IS_MAC || IS_IOS) {
-            stylesheets.add("/ensemble/EnsembleStylesHelvetica.css");
-        }                    
-        stylesheets.add("http://fonts.googleapis.com/css?family=Bree+Serif");
-        scene.getStylesheets().setAll(stylesheets);
+        scene.getStylesheets().setAll(
+            "http://fonts.googleapis.com/css?family=Source+Sans+Pro:200,300,400,600",
+            "/ensemble/EnsembleStylesCommon.css"
+        );
     }    
     
     @Override public void start(final Stage stage) throws Exception {
@@ -314,10 +283,6 @@ public class EnsembleApp extends Application {
         }
         setStylesheets(SELECT_IOS_THEME);
         stage.setScene(scene);
-        // SHOW STAGE
-        if (IS_IOS) {
-            setupIosStage(stage, scene);
-        }
         // START FULL SCREEN IF WANTED
         if (PlatformFeatures.START_FULL_SCREEN) {
             Rectangle2D primaryScreenBounds = Screen.getPrimary().getVisualBounds();
@@ -336,49 +301,4 @@ public class EnsembleApp extends Application {
     public static void main(String[] args) {
         launch(args);
     }
-
-    private void setupIosStage(Stage stage, Scene scene) {}
-//    private void setupIosStage(final Stage stage,final Scene scene) {
-//        // Synthisize Scroll Events from mouse drag events
-//        IosScrollEventSynthesizer scrollEventSynthesizer = new IosScrollEventSynthesizer(scene);
-//        javafx.ext.ios.IOSApplication.setStatusBarStyleAnimated(javafx.ext.ios.StatusBarStyle.DEFAULT, false);
-//        final double SCREEN_WIDTH = Screen.getPrimary().getBounds().getWidth();
-//        final double SCREEN_HEIGHT = Screen.getPrimary().getBounds().getHeight();
-//        stage.setX(0.0); //to avoid centerOnScreen() calculations
-//        stage.setY(0.0);
-//        stage.setWidth(SCREEN_WIDTH);
-//        stage.setHeight(SCREEN_HEIGHT);
-//        Screen.getScreens().addListener(new ListChangeListener(){
-//            @Override public void onChanged(ListChangeListener.Change change) {
-//                if(Screen.getScreens().size() > 0) {
-//                    switch(Screen.getPrimary().getOrientation()) {
-//                        case Screen.OrientationPortraitUpsideDown:
-//                        case Screen.OrientationPortrait:
-//                            stage.setWidth(SCREEN_WIDTH);
-//                            stage.setHeight(SCREEN_HEIGHT);
-//                            break;
-//                        case Screen.OrientationLandscapeLeft:
-//                        case Screen.OrientationLandscapeRight:
-//                            stage.setWidth(SCREEN_HEIGHT);
-////                                stage.setHeight(SCREEN_WIDTH);
-//                            break;
-//                    }
-//                    switch(Screen.getPrimary().getOrientation()) {
-//                        case Screen.OrientationPortraitUpsideDown:
-//                            javafx.ext.ios.IOSApplication.setStatusBarOrientationAnimated(javafx.ext.ios.StatusBarOrientation.PORTRAIT_UPSIDE_DOWN, false);
-//                            break;
-//                        case Screen.OrientationPortrait:
-//                            javafx.ext.ios.IOSApplication.setStatusBarOrientationAnimated(javafx.ext.ios.StatusBarOrientation.PORTRAIT, false);
-//                            break;
-//                        case Screen.OrientationLandscapeLeft:
-//                            javafx.ext.ios.IOSApplication.setStatusBarOrientationAnimated(javafx.ext.ios.StatusBarOrientation.LANDSCAPE_RIGHT, false);
-//                            break;
-//                        case Screen.OrientationLandscapeRight:
-//                            javafx.ext.ios.IOSApplication.setStatusBarOrientationAnimated(javafx.ext.ios.StatusBarOrientation.LANDSCAPE_LEFT, false);
-//                            break;
-//                    }
-//                }
-//            }
-//        });
-//    }
 }

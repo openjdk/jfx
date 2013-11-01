@@ -31,6 +31,7 @@
  */
 package ensemble;
 
+import ensemble.samplepage.SourcePage;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyStringProperty;
@@ -148,6 +149,20 @@ public class PageBrowser extends Region {
             sample = Samples.ROOT.sampleForPath(samplePath);
             if (sample != null) {
                 currentPage = updateSamplePage(sample, url);
+                getChildren().add(currentPage.getNode());
+            } else {
+                throw new UnsupportedOperationException("Unknown sample url ["+url+"]");
+            }
+        } else if (url.startsWith("sample-src://")) {
+            String samplePath = url.substring("sample-src://".length());
+            if (samplePath.contains("?")) {
+                samplePath = samplePath.substring(0, samplePath.indexOf('?') - 1);
+            }
+            sample = Samples.ROOT.sampleForPath(samplePath);
+            if (sample != null) {
+                SourcePage sourcePage = new SourcePage();
+                sourcePage.setSampleInfo(sample);
+                currentPage = sourcePage;
                 getChildren().add(currentPage.getNode());
             } else {
                 throw new UnsupportedOperationException("Unknown sample url ["+url+"]");

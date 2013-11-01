@@ -36,9 +36,8 @@ import javafx.geometry.VPos;
 import javafx.scene.Parent;
 import javafx.scene.layout.Region;
 
-
 /**
- *
+ * Container for a Sample, responsible for sizing and centering sample
  */
 public class SampleContainer extends Region {
         
@@ -50,13 +49,8 @@ public class SampleContainer extends Region {
         resizable = sampleNode.isResizable() && 
                 (sampleNode.maxWidth(-1) == 0 || sampleNode.maxWidth(-1) > sampleNode.minWidth(-1))
                 && (sampleNode.maxHeight(-1) == 0 || sampleNode.maxHeight(-1) > sampleNode.minHeight(-1));
-//            System.out.println("sampleNode.isResizable() = " + sampleNode.isResizable());
-//            System.out.println("sampleNode.maxWidth(-1) = " + sampleNode.maxWidth(-1));
-//            System.out.println("sampleNode.minWidth(-1) = " + sampleNode.minWidth(-1));
-//            System.out.println("sampleNode.maxHeight(-1) = " + sampleNode.maxHeight(-1));
-//            System.out.println("sampleNode.minHeight(-1) = " + sampleNode.minHeight(-1));
-//            System.out.println("resizable = " + resizable);
         getChildren().add(sampleNode);
+        getStyleClass().add("sample-container");
     }
 
     @Override protected void layoutChildren() {

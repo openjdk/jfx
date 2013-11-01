@@ -31,26 +31,57 @@
  */
 package ensemble.samplepage;
 
-
-import static ensemble.samplepage.SamplePageContent.*;
-
-import javafx.geometry.Pos;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.VBox;
-
+import ensemble.Page;
+import ensemble.SampleInfo;
+import javafx.beans.binding.StringBinding;
+import javafx.beans.property.*;
+import javafx.scene.Node;
+import javafx.scene.control.TabPane;
 
 /**
- * Playground section on Sample Page
+ * Page showing tabs with all the source code and resources for a sample
  */
-public class PlaygroundNode extends VBox {
+public class SourcePage extends TabPane implements Page {
+    private final ObjectProperty<SampleInfo> sampleInfoProperty = new SimpleObjectProperty<>();
+    private final StringProperty titleProperty = new SimpleStringProperty();
 
-    public PlaygroundNode(SamplePage samplePage) {
-        PlaygroundTabs playgroundTabs = new PlaygroundTabs(samplePage);
-        setAlignment(Pos.TOP_LEFT);
-        getChildren().setAll(
-                title("PLAYGROUND"), 
-                playgroundTabs);
-        VBox.setVgrow(playgroundTabs, Priority.ALWAYS);
-        getStyleClass().add("sample-page-box");
+    public SourcePage() {
+        getStyleClass().add("source-page");
+        titleProperty.bind(new StringBinding() {
+            { bind(sampleInfoProperty); }
+            @Override protected String computeValue() {
+                SampleInfo sample = sampleInfoProperty.get();
+                if (sample != null) {
+                    return sample.name+" :: Source";
+                } else {
+                    return null;
+                }
+            }
+        });
+        setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+    }
+
+    public void setSampleInfo(SampleInfo sampleInfo) {
+        sampleInfoProperty.set(sampleInfo);
+        getTabs().clear();
+        for (SampleInfo.URL sourceURL : sampleInfo.getSources()) {
+            getTabs().add(new SourceTab(sourceURL));
+        }
+    }
+
+    @Override public ReadOnlyStringProperty titleProperty() {
+        return titleProperty;
+    }
+
+    @Override public String getTitle() {
+        return titleProperty.get();
+    }
+
+    @Override public String getUrl() {
+        return "sample-src://" + sampleInfoProperty.get().ensemblePath;
+    }
+
+    @Override public Node getNode() {
+        return this;
     }
 }

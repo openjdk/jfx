@@ -31,20 +31,18 @@
  */
 package ensemble.samplepage;
 
-
 import ensemble.SampleInfo;
-import static ensemble.samplepage.SamplePage.INDENT;
 import javafx.scene.Node;
-import javafx.scene.control.Label;
-import javafx.scene.control.LabelBuilder;
 import javafx.scene.layout.Region;
+import javafx.scene.text.Text;
 import javafx.util.Callback;
 
+import static ensemble.samplepage.SamplePage.INDENT;
 
 /**
- *
+ * The content for Sample Page
  */
-class FrontPage extends Region {
+class SamplePageContent extends Region {
     
     private Node playground;
     private Description description;
@@ -52,12 +50,10 @@ class FrontPage extends Region {
     private boolean needsPlayground;
     final SamplePage samplePage;
 
-    FrontPage(final SamplePage samplePage) {
+    SamplePageContent(final SamplePage samplePage) {
         this.samplePage = samplePage;
-        getStyleClass().add("sample-page-front");
         playground = new PlaygroundNode(samplePage);
         description = new Description(samplePage);
-        setStyle("-fx-background-color: rgb(238, 238, 238);");
         samplePage.registerSampleInfoUpdater(new Callback<SampleInfo, Void>() {
 
             @Override
@@ -77,7 +73,6 @@ class FrontPage extends Region {
         boolean landscape = getWidth() >= getHeight();
         boolean wide = getWidth() >= getHeight() * 1.5;
         if (wide) {
-
             // Sample on right, everything else on left
             double x = Math.round(getWidth() / 2 + INDENT / 2);
             double w = getWidth() - INDENT - x;
@@ -90,7 +85,6 @@ class FrontPage extends Region {
                 description.resizeRelocate(INDENT, INDENT, w, maxHeight);
             }
         } else {
-
             // Sample on top, everything else on bottom
             sampleContainer.resizeRelocate(INDENT, INDENT, maxWidth, (getHeight() - 3 * INDENT) / 2);
             double y = Math.round(getHeight() / 2 + INDENT / 2);
@@ -117,8 +111,10 @@ class FrontPage extends Region {
         }
     }
 
-    static Label title(String text) {
-        return LabelBuilder.create().text(text).styleClass("sample-page-box-title").build();
+    static Text title(String text) {
+        Text title = new Text(text);
+        title.getStyleClass().add("sample-page-box-title");
+        return title;
     }
 
     private void update(SampleInfo sampleInfo) {

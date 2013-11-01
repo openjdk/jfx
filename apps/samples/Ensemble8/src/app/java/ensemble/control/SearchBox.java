@@ -49,7 +49,7 @@ public class SearchBox extends TextField implements ChangeListener<String>{
     private final Region icon = new Region();
 
     public SearchBox() {
-        getStyleClass().setAll("search-box");
+        getStyleClass().addAll("search-box");
         icon.getStyleClass().setAll("search-box-icon");
         innerBackground.getStyleClass().setAll("search-box-inner");
         setPromptText("Search");

@@ -58,7 +58,7 @@ public class TitledToolBar extends HBox {
     public void setTitleText(String text) { titleText.set(text);}
 
     public TitledToolBar() {
-        getStyleClass().add("ensmeble-tool-bar");
+        getStyleClass().addAll("tool-bar","ensmeble-tool-bar");
         titleLabel.getStyleClass().add("title");
         titleLabel.setManaged(false);
         titleLabel.textProperty().bind(titleText);

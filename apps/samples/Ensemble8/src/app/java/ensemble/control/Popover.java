@@ -336,7 +336,7 @@ public class Popover extends Region implements EventHandler<Event>{
         
         title = new Text(page.getPageTitle());
         title.getStyleClass().add("popover-title");
-        title.setFill(Color.WHITE);
+        //debtest title.setFill(Color.WHITE);
         title.setTextOrigin(VPos.CENTER);
         title.setTranslateX(newPageX + (int) ((pageWidth - title.getLayoutBounds().getWidth()) / 2d));
         titlesPane.getChildren().add(title);
