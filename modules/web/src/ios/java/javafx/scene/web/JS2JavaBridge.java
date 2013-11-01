@@ -117,7 +117,7 @@ class JS2JavaBridge {
         sb = sb.append(getJavaBridge()).append(".exportJSObject(").append(
              getJavaBridge()).append("['").append(jsName).append("'])");
         
-        Long jsId = (Long) webEngine.executeScript(sb.toString());
+        Integer jsId = (Integer) webEngine.executeScript(sb.toString());
         exportedObjectsByJSIds.put(jsId.toString(), jsObj);
         jsIdsByExportedObjects.put(jsObj, jsId.toString());
         log("populateObject<<executeScript");
