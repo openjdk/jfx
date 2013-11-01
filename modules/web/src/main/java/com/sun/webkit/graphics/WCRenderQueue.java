@@ -69,7 +69,7 @@ public abstract class WCRenderQueue extends Ref {
                 GraphicsDecoder.decode(
                     WCGraphicsManager.getGraphicsManager(), gc, bdata);
             } catch (RuntimeException e) {
-                e.printStackTrace();
+                log.fine("Exception occurred: " + e);
             }
         }
         dispose();
