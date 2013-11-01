@@ -33,7 +33,7 @@ import org.junit.Test;
  */
 public class RT30650Test {
     
-    @Test
+    @Test(timeout=10000)
     public void test() {
         Assert.assertTrue(RT30650GUI.test());
         
