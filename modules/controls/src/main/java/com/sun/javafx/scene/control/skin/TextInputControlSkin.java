@@ -494,15 +494,15 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
                 textInput.replaceText(textInput.getSelection(), committed);
             }
 
-            // Insert composed text
+            // Replace composed text
             imstart = textInput.getSelection().getStart();
             StringBuilder composed = new StringBuilder();
             for (InputMethodTextRun run : event.getComposed()) {
                 composed.append(run.getText());
             }
+            textInput.replaceText(textInput.getSelection(), composed.toString());
             imlength = composed.length();
             if (imlength != 0) {
-                textInput.replaceText(textInput.getSelection(), composed.toString());
                 int pos = imstart;
                 for (InputMethodTextRun run : event.getComposed()) {
                     int endPos = pos + run.getText().length();
