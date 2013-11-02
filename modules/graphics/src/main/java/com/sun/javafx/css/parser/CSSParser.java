@@ -877,6 +877,8 @@ final public class CSSParser {
             break;
         case CSSLexer.FUNCTION:
             return  parseFunction(root);
+        case CSSLexer.URL:
+            return parseURI(root);
         default:
             final String msg = "Unknown token type: \'" + ttype + "\'";
             error(root, msg);
@@ -1383,8 +1385,6 @@ final public class CSSParser {
             return parseLadder(root);
         } else if ("region".regionMatches(true, 0, fcn, 0, 6)) {
             return parseRegion(root);
-        } else if ("url".regionMatches(true, 0, fcn, 0, 3)) {
-            return parseURI(root);
         } else {
             error(root, "Unexpected function \'" + fcn + "\'");
         }
@@ -3387,26 +3387,18 @@ final public class CSSParser {
         return new ParsedValueImpl<String,String>(styleClassOrId, StringConverter.getInstance());
     }
 
-    // parse a URI value
-    // i.e., url("<uri>")
+    // url("<uri>") is tokenized by the lexer, so the root arg should be a URL token.
     private ParsedValueImpl<ParsedValue[],String> parseURI(Term root)
             throws ParseException {
 
-        // first term in the chain is the function name...
-        final String fn = (root.token != null) ? root.token.getText() : null;
-        if (!"url".regionMatches(true, 0, fn, 0, 3)) {
-            error(root,"Expected \'url\'");
-        }
+        if (root == null) error(root, "Expected \'url(\"<uri-string>\")\'");
 
-        Term arg = root.firstArg;
-        if (arg == null) error(root, "Expected \'url(\"<uri-string>\")\'");
+        if (root.token == null ||
+            root.token.getType() != CSSLexer.URL ||
+            root.token.getText() == null ||
+            root.token.getText().isEmpty()) error(root, "Expected \'url(\"<uri-string>\")\'");
 
-        if (arg.token == null ||
-            arg.token.getType() != CSSLexer.STRING ||
-            arg.token.getText() == null ||
-            arg.token.getText().isEmpty()) error(arg, "Expected \'url(\"<uri-string>\")\'");
-
-        final String uri = arg.token.getText();
+        final String uri = root.token.getText();
         ParsedValueImpl[] uriValues = new ParsedValueImpl[] {
             new ParsedValueImpl<String,String>(uri, StringConverter.getInstance()),
             null // placeholder for Stylesheet URL
@@ -3763,77 +3755,68 @@ final public class CSSParser {
                             if (currentToken.getType() == CSSLexer.IDENT) {
                                 // simple reference to other font-family
                                 sources.add(new FontFace.FontFaceSrc(FontFace.FontFaceSrcType.REFERENCE,currentToken.getText()));
-                            } else if (currentToken.getType() == CSSLexer.FUNCTION) {
-                                if ("url(".equalsIgnoreCase(currentToken.getText())) {
-                                    // consume the function token
-                                    currentToken = nextToken(lexer);
-                                    // parse function contents
-                                    final StringBuilder urlSb = new StringBuilder();
-                                    while(true) {
-                                        if((currentToken != null) && (currentToken.getType() != CSSLexer.RPAREN) &&
-                                                (currentToken.getType() != Token.EOF)) {
-                                            urlSb.append(currentToken.getText());
-                                        } else {
-                                            break;
-                                        }
-                                        currentToken = nextToken(lexer);
+
+                            } else if (currentToken.getType() == CSSLexer.URL) {
+
+                                // let URLConverter do the conversion
+                                ParsedValueImpl[] uriValues = new ParsedValueImpl[] {
+                                        new ParsedValueImpl<String,String>(currentToken.getText(), StringConverter.getInstance()),
+                                        new ParsedValueImpl<String,String>(sourceOfStylesheet, null)
+                                };
+                                ParsedValue<ParsedValue[], String> parsedValue =
+                                        new ParsedValueImpl<ParsedValue[], String>(uriValues, URLConverter.getInstance());
+                                String urlStr = parsedValue.convert(null);
+
+                                URL url = null;
+                                try {
+                                    URI fontUri = new URI(urlStr);
+                                    url = fontUri.toURL();
+                                } catch (URISyntaxException |  MalformedURLException malf) {
+
+                                    final int line = currentToken.getLine();
+                                    final int pos = currentToken.getOffset();
+                                    final String msg = MessageFormat.format("Could not resolve @font-face url [{2}] at [{0,number,#},{1,number,#}]",line,pos,urlStr);
+                                    CssError error = createError(msg);
+                                    if (LOGGER.isLoggable(Level.WARNING)) {
+                                        LOGGER.warning(error.toString());
                                     }
-                                    int start = 0, end = urlSb.length();
-                                    if (urlSb.charAt(start) == '\'' || urlSb.charAt(start) == '\"') start ++;
-                                    if (urlSb.charAt(start) == '/' || urlSb.charAt(start) == '\\') start ++;
-                                    if (urlSb.charAt(end-1) == '\'' || urlSb.charAt(end-1) == '\"') end --;
-                                    final String urlStr = urlSb.substring(start,end);
+                                    reportError(error);
 
-                                    URL url = null;
-                                    Exception exception = null;
-                                    try {
-                                        URI stylesheetUri = new URI(sourceOfStylesheet);
-                                        URI fontUri = stylesheetUri.resolve(urlStr);
-                                        url = fontUri.toURL();
-                                    } catch (URISyntaxException |  MalformedURLException malf) {
-
-                                        final int line = currentToken.getLine();
-                                        final int pos = currentToken.getOffset();
-                                        final String msg = MessageFormat.format("Could not resolve @font-face url [{2}] at [{0,number,#},{1,number,#}]",line,pos,urlStr);
-                                        CssError error = createError(msg);
-                                        if (LOGGER.isLoggable(Level.WARNING)) {
-                                            LOGGER.warning(error.toString());
-                                        }
-                                        reportError(error);
-
-                                        // skip the rest.
-                                        while(currentToken != null) {
-                                            int ttype = currentToken.getType();
-                                            if (ttype == CSSLexer.RPAREN ||
+                                    // skip the rest.
+                                    while(currentToken != null) {
+                                        int ttype = currentToken.getType();
+                                        if (ttype == CSSLexer.RBRACE ||
                                                 ttype == Token.EOF) {
-                                                return null;
-                                            }
-                                            currentToken = nextToken(lexer);
+                                            return null;
                                         }
-                                    }
-                                    String format = null;
-                                    while(true) {
                                         currentToken = nextToken(lexer);
-                                        final int ttype = (currentToken != null) ? currentToken.getType() : Token.EOF;
-                                        if (ttype == CSSLexer.FUNCTION) {
-                                            if ("format(".equalsIgnoreCase(currentToken.getText())) {
-                                                continue;
-                                            } else {
-                                                break;
-                                            }
-                                        } else if (ttype == CSSLexer.IDENT ||
-                                                ttype == CSSLexer.STRING) {
+                                    }
+                                }
 
-                                            format = Utils.stripQuotes(currentToken.getText());
-                                        } else if (ttype == CSSLexer.RPAREN) {
+                                String format = null;
+                                while(true) {
+                                    currentToken = nextToken(lexer);
+                                    final int ttype = (currentToken != null) ? currentToken.getType() : Token.EOF;
+                                    if (ttype == CSSLexer.FUNCTION) {
+                                        if ("format(".equalsIgnoreCase(currentToken.getText())) {
                                             continue;
                                         } else {
                                             break;
                                         }
-                                    }
+                                    } else if (ttype == CSSLexer.IDENT ||
+                                            ttype == CSSLexer.STRING) {
 
-                                    sources.add(new FontFace.FontFaceSrc(FontFace.FontFaceSrcType.URL,url.toExternalForm(), format));
-                                } else if ("local(".equalsIgnoreCase(currentToken.getText())) {
+                                        format = Utils.stripQuotes(currentToken.getText());
+                                    } else if (ttype == CSSLexer.RPAREN) {
+                                        continue;
+                                    } else {
+                                        break;
+                                    }
+                                }
+                                sources.add(new FontFace.FontFaceSrc(FontFace.FontFaceSrcType.URL,url.toExternalForm(), format));
+
+                            } else if (currentToken.getType() == CSSLexer.FUNCTION) {
+                                if ("local(".equalsIgnoreCase(currentToken.getText())) {
                                     // consume the function token
                                     currentToken = nextToken(lexer);
                                     // parse function contents
@@ -4387,6 +4370,9 @@ final public class CSSParser {
                     }
 
                 }
+
+            case CSSLexer.URL:
+                break;
 
             default:
                 final int line = currentToken != null ? currentToken.getLine() : -1;

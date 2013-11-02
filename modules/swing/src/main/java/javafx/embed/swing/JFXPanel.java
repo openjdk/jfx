@@ -70,6 +70,7 @@ import com.sun.javafx.tk.Toolkit;
 import java.util.concurrent.atomic.AtomicInteger;
 import sun.awt.CausedFocusEvent;
 import sun.awt.SunToolkit;
+import sun.java2d.SunGraphics2D;
 
 /**
 * {@code JFXPanel} is a component to embed JavaFX content into
@@ -138,9 +139,13 @@ public class JFXPanel extends JComponent {
     private EmbeddedStageInterface stagePeer;
     private EmbeddedSceneInterface scenePeer;
 
-    // Dimensions of back buffer used to draw FX content
+    // The logical size of the FX content
     private int pWidth;
     private int pHeight;
+    
+    // The scale factor, used to translate b/w the logical (the FX content dimension)
+    // and physical (the back buffer's dimension) coordinate spaces
+    private int scaleFactor = 1;
 
     // Preferred size set from FX
     private volatile int pPreferredWidth = -1;
@@ -490,7 +495,7 @@ public class JFXPanel extends JComponent {
             pHeight -= (i.top + i.bottom);
         }        
         if (oldWidth != pWidth || oldHeight != pHeight) {
-            resizePixels();
+            resizePixelBuffer(scaleFactor);
             sendResizeEventToFX();
         }
     }
@@ -580,23 +585,30 @@ public class JFXPanel extends JComponent {
     }
 
     // called on EDT only
-    private void resizePixels() {
+    private void resizePixelBuffer(int newScaleFactor) {
         if ((pWidth <= 0) || (pHeight <= 0)) {
-            pixelsIm = null;
+             pixelsIm = null;
         } else {
-            BufferedImage oldIm = pixelsIm;
-            pixelsIm = new BufferedImage(pWidth, pHeight, BufferedImage.TYPE_INT_ARGB);
+            BufferedImage oldIm = pixelsIm;                        
+            pixelsIm = new BufferedImage(pWidth * newScaleFactor,
+                                         pHeight * newScaleFactor,
+                                         BufferedImage.TYPE_INT_ARGB);
             if (oldIm != null) {
+                double ratio = newScaleFactor / scaleFactor;
+                // Transform old size to the new coordinate space.
+                int oldW = (int)Math.round(oldIm.getWidth() * ratio);
+                int oldH = (int)Math.round(oldIm.getHeight() * ratio);
+                 
                 Graphics g = pixelsIm.getGraphics();
                 try {
-                    g.drawImage(oldIm, 0, 0, null);
+                    g.drawImage(oldIm, 0, 0, oldW, oldH, null);
                 } finally {
                     g.dispose();
                 }
             }
         }
     }
-
+    
     @Override
     protected void processInputMethodEvent(InputMethodEvent e) {
         if (e.getID() == InputMethodEvent.INPUT_METHOD_TEXT_CHANGED) {
@@ -630,13 +642,12 @@ public class JFXPanel extends JComponent {
         if ((scenePeer == null) || (pixelsIm == null)) {
             return;
         }
-
+        
         DataBufferInt dataBuf = (DataBufferInt)pixelsIm.getRaster().getDataBuffer();
         int[] pixelsData = dataBuf.getData();
-        IntBuffer buf = IntBuffer.wrap(pixelsData);
+        IntBuffer buf = IntBuffer.wrap(pixelsData);           
         if (!scenePeer.getPixels(buf, pWidth, pHeight)) {
-            // May happen during early Quantum initialization
-            return;
+            // In this case we just render what we have so far in the buffer.
         }
 
         Graphics gg = null;
@@ -651,7 +662,18 @@ public class JFXPanel extends JComponent {
                 Insets i = getBorder().getBorderInsets(this);
                 gg.translate(i.left, i.top);
             }
-            gg.drawImage(pixelsIm, 0, 0, null);
+            gg.drawImage(pixelsIm, 0, 0, pWidth, pHeight, null);
+
+            int newScaleFactor = scaleFactor;
+            if (g instanceof SunGraphics2D) {
+                newScaleFactor = ((SunGraphics2D)g).surfaceData.getDefaultScale();
+            }            
+            if (scaleFactor != newScaleFactor) {
+                resizePixelBuffer(newScaleFactor);
+                // The scene will request repaint.
+                scenePeer.setPixelScaleFactor(newScaleFactor);
+                scaleFactor = newScaleFactor;
+            }
         } catch (Throwable th) {
             th.printStackTrace();
         } finally {

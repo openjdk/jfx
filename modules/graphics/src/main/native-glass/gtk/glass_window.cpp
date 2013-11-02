@@ -627,7 +627,9 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
             resizable(),
             xshape(),
             frame_extents_initialized(),
-            map_received(false)
+            map_received(false),
+            location_assigned(false),
+            size_assigned(false)
 {
     jwindow = mainEnv->NewGlobalRef(_jwindow);
 
@@ -1032,6 +1034,18 @@ void WindowContextTop::set_resizable(bool res) {
     }
 }
 
+void WindowContextTop::set_visible(bool visible)
+{
+    if (visible) {
+        if (!size_assigned) {
+            set_bounds(0, 0, false, false, 320, 200, -1, -1);
+        }
+        if (!location_assigned) {
+            set_bounds(0, 0, true, true, -1, -1, -1, -1);
+        }
+    }
+    WindowContextBase::set_visible(visible);
+}
 
 void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int h, int cw, int ch) {
     if (!frame_extents_initialized && frame_type == TITLED) {
@@ -1088,6 +1102,9 @@ void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int
         windowChanges.y = geometry_get_window_y(&geometry);
         windowChangesMask |= CWY;
     }
+
+    if (xSet || ySet) location_assigned = true;
+    if (w > 0 || h > 0 || cw > 0 || ch > 0) size_assigned = true;
 
     window_configure(&windowChanges, windowChangesMask);
 
@@ -1240,6 +1257,10 @@ void WindowContextTop::applyShapeMask(cairo_surface_t* cairo_surface, uint width
 void WindowContextTop::set_minimized(bool minimize) {
     is_iconified = minimize;
     if (minimize) {
+        if (frame_type == TRANSPARENT) {
+            // https://bugs.launchpad.net/ubuntu/+source/unity/+bug/1245571
+            gdk_window_input_shape_combine_mask(gdk_window, NULL, 0, 0);
+        }
         gtk_window_iconify(GTK_WINDOW(gtk_widget));
     } else {
         gtk_window_deiconify(GTK_WINDOW(gtk_widget));

@@ -44,13 +44,17 @@ import javafx.stage.Stage;
  * @preview preview.png
  *
  * @see javafx.scene.canvas.Canvas
- * @see javafx.scene.canvas.GraphicsContext
+ * @see javafx.animation.AnimationTimer
+ * @see javafx.scene.paint.RadialGradient
  * @see javafx.scene.effect.BlendMode
- * @see javafx.scene.effect.BoxBlur
- * @see javafx.scene.shape.Circle
- * @see javafx.scene.Group
- * @see javafx.scene.paint.LinearGradient
- * @see javafx.animation.Timeline
+ * @see javafx.scene.canvas.GraphicsContext
+ * @see javafx.scene.effect.Reflection
+ * @see javafx.scene.image.ImageView
+ * @see javafx.scene.layout.Pane
+ * @see javafx.scene.paint.Color
+ * @see javafx.scene.paint.Paint
+ * @see javafx.scene.paint.CycleMethod
+ * @see javafx.scene.paint.Stop
  */
 public class FireworksApp extends Application {
 

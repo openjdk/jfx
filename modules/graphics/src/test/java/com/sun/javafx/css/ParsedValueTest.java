@@ -52,8 +52,8 @@ public class ParsedValueTest {
     public void testGetValue() {
         //System.out.println("getValue");
         ParsedValue<Size,Size> instance =
-                new ParsedValueImpl<Size,Size>(new Size(100.0f, SizeUnits.PERCENT), null);
-        Size expResult = new Size(100.0f, SizeUnits.PERCENT);;
+                new ParsedValueImpl<Size,Size>(new Size(100.0, SizeUnits.PERCENT), null);
+        Size expResult = new Size(100.0, SizeUnits.PERCENT);;
         Size result = instance.getValue();
         assertEquals(expResult, result);
     }
@@ -65,10 +65,10 @@ public class ParsedValueTest {
     public void testConvert() {
         ///System.out.println("convert");
         Font font = Font.getDefault();
-        Size size = new Size(1.0f, SizeUnits.EM);
+        Size size = new Size(1.0, SizeUnits.EM);
         ParsedValue<ParsedValue<?,Size>,Number> value =
             new ParsedValueImpl<ParsedValue<?,Size>,Number>(
-                new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
+                new ParsedValueImpl<Size,Size>(new Size(1.0, SizeUnits.EM), null),
                 SizeConverter.getInstance());
 
         double expResult = font.getSize();
@@ -80,15 +80,15 @@ public class ParsedValueTest {
     public void testEquals() {
 
         Font font = Font.getDefault();
-        Size size = new Size(1.0f, SizeUnits.EM);
+        Size size = new Size(1.0, SizeUnits.EM);
         ParsedValue<ParsedValue<?,Size>,Number> value1 =
             new ParsedValueImpl<ParsedValue<?,Size>,Number>(
-                new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
+                new ParsedValueImpl<Size,Size>(new Size(1.0, SizeUnits.EM), null),
                 SizeConverter.getInstance());
 
         ParsedValue<ParsedValue<?,Size>,Number> value2 =
             new ParsedValueImpl<ParsedValue<?,Size>,Number>(
-                new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
+                new ParsedValueImpl<Size,Size>(new Size(1.0, SizeUnits.EM), null),
                 null);
 
         // ParsedValue.equals doesn't care about the converter
@@ -96,19 +96,19 @@ public class ParsedValueTest {
 
         value1 =
             new ParsedValueImpl<ParsedValue<?,Size>,Number>(
-                new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
+                new ParsedValueImpl<Size,Size>(new Size(1.0, SizeUnits.EM), null),
                 SizeConverter.getInstance());
 
         value2 =
             new ParsedValueImpl<ParsedValue<?,Size>,Number>(
-                new ParsedValueImpl<Size,Size>(new Size(2.0f, SizeUnits.EM), null),
+                new ParsedValueImpl<Size,Size>(new Size(2.0, SizeUnits.EM), null),
                 SizeConverter.getInstance());
 
         assertFalse(value1.equals(value2));
 
         value2 =
             new ParsedValueImpl<ParsedValue<?,Size>,Number>(
-                new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.PX), null),
+                new ParsedValueImpl<Size,Size>(new Size(1.0, SizeUnits.PX), null),
                 SizeConverter.getInstance());
 
         assertFalse(value1.equals(value2));
@@ -121,8 +121,8 @@ public class ParsedValueTest {
         ParsedValue<ParsedValue[],Number[]> value3 =
                 new ParsedValueImpl<ParsedValue[],Number[]>(
                     new ParsedValueImpl[] {
-                        new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
-                        new ParsedValueImpl<Size,Size>(new Size(2.0f, SizeUnits.EM), null)
+                        new ParsedValueImpl<Size,Size>(new Size(1.0, SizeUnits.EM), null),
+                        new ParsedValueImpl<Size,Size>(new Size(2.0, SizeUnits.EM), null)
                     }, SizeConverter.SequenceConverter.getInstance()
                 );
 
@@ -132,8 +132,8 @@ public class ParsedValueTest {
         ParsedValue<ParsedValue[],Number[]> value4 =
                 new ParsedValueImpl<ParsedValue[],Number[]>(
                     new ParsedValueImpl[] {
-                        new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
-                        new ParsedValueImpl<Size,Size>(new Size(2.0f, SizeUnits.EM), null)
+                        new ParsedValueImpl<Size,Size>(new Size(1.0, SizeUnits.EM), null),
+                        new ParsedValueImpl<Size,Size>(new Size(2.0, SizeUnits.EM), null)
                     }, SizeConverter.SequenceConverter.getInstance()
                 );
 
@@ -142,7 +142,7 @@ public class ParsedValueTest {
         value4 =
                 new ParsedValueImpl<ParsedValue[],Number[]>(
                     new ParsedValueImpl[] {
-                        new ParsedValueImpl<Size,Size>(new Size(2.0f, SizeUnits.EM), null),
+                        new ParsedValueImpl<Size,Size>(new Size(2.0, SizeUnits.EM), null),
                         null
                     }, SizeConverter.SequenceConverter.getInstance()
                 );
@@ -152,9 +152,9 @@ public class ParsedValueTest {
         value4 =
                 new ParsedValueImpl<ParsedValue[],Number[]>(
                     new ParsedValueImpl[] {
-                        new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
-                        new ParsedValueImpl<Size,Size>(new Size(2.0f, SizeUnits.EM), null),
-                        new ParsedValueImpl<Size,Size>(new Size(3.0f, SizeUnits.EM), null)
+                        new ParsedValueImpl<Size,Size>(new Size(1.0, SizeUnits.EM), null),
+                        new ParsedValueImpl<Size,Size>(new Size(2.0, SizeUnits.EM), null),
+                        new ParsedValueImpl<Size,Size>(new Size(3.0, SizeUnits.EM), null)
                     }, SizeConverter.SequenceConverter.getInstance()
                 );
 
@@ -181,12 +181,12 @@ public class ParsedValueTest {
                 new ParsedValueImpl<ParsedValue[][],Number[][]>(
                     new ParsedValueImpl[][] {
                         new ParsedValueImpl[] {
-                            new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
-                            new ParsedValueImpl<Size,Size>(new Size(2.0f, SizeUnits.EM), null)
+                            new ParsedValueImpl<Size,Size>(new Size(1.0, SizeUnits.EM), null),
+                            new ParsedValueImpl<Size,Size>(new Size(2.0, SizeUnits.EM), null)
                         },
                         new ParsedValueImpl[] {
-                            new ParsedValueImpl<Size,Size>(new Size(3.0f, SizeUnits.EM), null),
-                            new ParsedValueImpl<Size,Size>(new Size(4.0f, SizeUnits.EM), null)
+                            new ParsedValueImpl<Size,Size>(new Size(3.0, SizeUnits.EM), null),
+                            new ParsedValueImpl<Size,Size>(new Size(4.0, SizeUnits.EM), null)
                         }
                     }, null
                 );
@@ -200,12 +200,12 @@ public class ParsedValueTest {
                 new ParsedValueImpl<ParsedValue[][],Number[][]>(
                     new ParsedValueImpl[][] {
                         new ParsedValueImpl[] {
-                            new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
-                            new ParsedValueImpl<Size,Size>(new Size(2.0f, SizeUnits.EM), null)
+                            new ParsedValueImpl<Size,Size>(new Size(1.0, SizeUnits.EM), null),
+                            new ParsedValueImpl<Size,Size>(new Size(2.0, SizeUnits.EM), null)
                         },
                         new ParsedValueImpl[] {
-                            new ParsedValueImpl<Size,Size>(new Size(3.0f, SizeUnits.EM), null),
-                            new ParsedValueImpl<Size,Size>(new Size(4.0f, SizeUnits.EM), null)
+                            new ParsedValueImpl<Size,Size>(new Size(3.0, SizeUnits.EM), null),
+                            new ParsedValueImpl<Size,Size>(new Size(4.0, SizeUnits.EM), null)
                         }
                     }, null
                 );
@@ -216,13 +216,13 @@ public class ParsedValueTest {
                 new ParsedValueImpl<ParsedValue[][],Number[][]>(
                     new ParsedValueImpl[][] {
                         new ParsedValueImpl[] {
-                            new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
-                            new ParsedValueImpl<Size,Size>(new Size(2.0f, SizeUnits.EM), null)
+                            new ParsedValueImpl<Size,Size>(new Size(1.0, SizeUnits.EM), null),
+                            new ParsedValueImpl<Size,Size>(new Size(2.0, SizeUnits.EM), null)
                         },
                         new ParsedValueImpl[] {
-                            new ParsedValueImpl<Size,Size>(new Size(3.0f, SizeUnits.EM), null),
-                            new ParsedValueImpl<Size,Size>(new Size(5.0f, SizeUnits.EM), null),
-                            new ParsedValueImpl<Size,Size>(new Size(4.0f, SizeUnits.EM), null)
+                            new ParsedValueImpl<Size,Size>(new Size(3.0, SizeUnits.EM), null),
+                            new ParsedValueImpl<Size,Size>(new Size(5.0, SizeUnits.EM), null),
+                            new ParsedValueImpl<Size,Size>(new Size(4.0, SizeUnits.EM), null)
                         }
                     }, null
                 );
@@ -233,11 +233,11 @@ public class ParsedValueTest {
                 new ParsedValueImpl<ParsedValue[][],Number[][]>(
                     new ParsedValueImpl[][] {
                         new ParsedValueImpl[] {
-                            new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
-                            new ParsedValueImpl<Size,Size>(new Size(2.0f, SizeUnits.EM), null)
+                            new ParsedValueImpl<Size,Size>(new Size(1.0, SizeUnits.EM), null),
+                            new ParsedValueImpl<Size,Size>(new Size(2.0, SizeUnits.EM), null)
                         },
                         new ParsedValueImpl[] {
-                            new ParsedValueImpl<Size,Size>(new Size(3.0f, SizeUnits.EM), null),
+                            new ParsedValueImpl<Size,Size>(new Size(3.0, SizeUnits.EM), null),
                             null
                         }
                     }, null
@@ -249,8 +249,8 @@ public class ParsedValueTest {
                 new ParsedValueImpl<ParsedValue[][],Number[][]>(
                     new ParsedValueImpl[][] {
                         new ParsedValueImpl[] {
-                            new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
-                            new ParsedValueImpl<Size,Size>(new Size(2.0f, SizeUnits.EM), null)
+                            new ParsedValueImpl<Size,Size>(new Size(1.0, SizeUnits.EM), null),
+                            new ParsedValueImpl<Size,Size>(new Size(2.0, SizeUnits.EM), null)
                         },
                         null
                     }, null
@@ -281,11 +281,11 @@ public class ParsedValueTest {
     @Test
     public void testWriteReadBinary() throws Exception {
         Font font = Font.getDefault();
-        Size size = new Size(1.0f, SizeUnits.EM);
+        Size size = new Size(1.0, SizeUnits.EM);
         
         ParsedValueImpl parsedValue =
             new ParsedValueImpl<ParsedValue<?,Size>,Number>(
-                new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
+                new ParsedValueImpl<Size,Size>(new Size(1.0, SizeUnits.EM), null),
                 SizeConverter.getInstance());
 
         writeBinary(parsedValue);
@@ -293,8 +293,8 @@ public class ParsedValueTest {
         parsedValue =
                 new ParsedValueImpl<ParsedValue[],Number[]>(
                     new ParsedValueImpl[] {
-                        new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
-                        new ParsedValueImpl<Size,Size>(new Size(2.0f, SizeUnits.EM), null)
+                        new ParsedValueImpl<Size,Size>(new Size(1.0, SizeUnits.EM), null),
+                        new ParsedValueImpl<Size,Size>(new Size(2.0, SizeUnits.EM), null)
                     }, SizeConverter.SequenceConverter.getInstance()
                 );
 
@@ -304,12 +304,12 @@ public class ParsedValueTest {
                 new ParsedValueImpl<ParsedValue[][],Number[][]>(
                     new ParsedValueImpl[][] {
                         new ParsedValueImpl[] {
-                            new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
-                            new ParsedValueImpl<Size,Size>(new Size(2.0f, SizeUnits.EM), null)
+                            new ParsedValueImpl<Size,Size>(new Size(1.0, SizeUnits.EM), null),
+                            new ParsedValueImpl<Size,Size>(new Size(2.0, SizeUnits.EM), null)
                         },
                         new ParsedValueImpl[] {
-                            new ParsedValueImpl<Size,Size>(new Size(3.0f, SizeUnits.EM), null),
-                            new ParsedValueImpl<Size,Size>(new Size(4.0f, SizeUnits.EM), null)
+                            new ParsedValueImpl<Size,Size>(new Size(3.0, SizeUnits.EM), null),
+                            new ParsedValueImpl<Size,Size>(new Size(4.0, SizeUnits.EM), null)
                         }
                     }, null
                 );
@@ -320,11 +320,11 @@ public class ParsedValueTest {
                 new ParsedValueImpl<ParsedValue[][],Number[][]>(
                     new ParsedValueImpl[][] {
                         new ParsedValueImpl[] {
-                            new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
-                            new ParsedValueImpl<Size,Size>(new Size(2.0f, SizeUnits.EM), null)
+                            new ParsedValueImpl<Size,Size>(new Size(1.0, SizeUnits.EM), null),
+                            new ParsedValueImpl<Size,Size>(new Size(2.0, SizeUnits.EM), null)
                         },
                         new ParsedValueImpl[] {
-                            new ParsedValueImpl<Size,Size>(new Size(3.0f, SizeUnits.EM), null),
+                            new ParsedValueImpl<Size,Size>(new Size(3.0, SizeUnits.EM), null),
                             null
                         }
                     }, null
@@ -336,8 +336,8 @@ public class ParsedValueTest {
                 new ParsedValueImpl<ParsedValue[][],Number[][]>(
                     new ParsedValueImpl[][] {
                         new ParsedValueImpl[] {
-                            new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
-                            new ParsedValueImpl<Size,Size>(new Size(2.0f, SizeUnits.EM), null)
+                            new ParsedValueImpl<Size,Size>(new Size(1.0, SizeUnits.EM), null),
+                            new ParsedValueImpl<Size,Size>(new Size(2.0, SizeUnits.EM), null)
                         },
                         null
                     }, null
@@ -361,6 +361,7 @@ public class ParsedValueTest {
             ParsedValue<?,?> pv = ParsedValueImpl.readBinary(Stylesheet.BINARY_CSS_VERSION, dis, strings);
             org.junit.Assert.assertEquals(parsedValue, pv);
         } catch (IOException ioe) {
+            System.err.println(ioe);
             org.junit.Assert.fail(parsedValue.toString());
         }
         
@@ -371,11 +372,11 @@ public class ParsedValueTest {
     @Test
     public void testReadBinary() throws Exception {
         Font font = Font.getDefault();
-        Size size = new Size(1.0f, SizeUnits.EM);
+        Size size = new Size(1.0, SizeUnits.EM);
         
         ParsedValueImpl parsedValue =
             new ParsedValueImpl<ParsedValue<?,Size>,Number>(
-                new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
+                new ParsedValueImpl<Size,Size>(new Size(1.0, SizeUnits.EM), null),
                 SizeConverter.getInstance());
 
         writeAndReadBinary(parsedValue);
@@ -383,8 +384,8 @@ public class ParsedValueTest {
         parsedValue =
                 new ParsedValueImpl<ParsedValue[],Number[]>(
                     new ParsedValueImpl[] {
-                        new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
-                        new ParsedValueImpl<Size,Size>(new Size(2.0f, SizeUnits.EM), null)
+                        new ParsedValueImpl<Size,Size>(new Size(1.0, SizeUnits.EM), null),
+                        new ParsedValueImpl<Size,Size>(new Size(2.0, SizeUnits.EM), null)
                     }, SizeConverter.SequenceConverter.getInstance()
                 );
 
@@ -394,12 +395,12 @@ public class ParsedValueTest {
                 new ParsedValueImpl<ParsedValue[][],Number[][]>(
                     new ParsedValueImpl[][] {
                         new ParsedValueImpl[] {
-                            new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
-                            new ParsedValueImpl<Size,Size>(new Size(2.0f, SizeUnits.EM), null)
+                            new ParsedValueImpl<Size,Size>(new Size(1.0, SizeUnits.EM), null),
+                            new ParsedValueImpl<Size,Size>(new Size(2.0, SizeUnits.EM), null)
                         },
                         new ParsedValueImpl[] {
-                            new ParsedValueImpl<Size,Size>(new Size(3.0f, SizeUnits.EM), null),
-                            new ParsedValueImpl<Size,Size>(new Size(4.0f, SizeUnits.EM), null)
+                            new ParsedValueImpl<Size,Size>(new Size(3.0, SizeUnits.EM), null),
+                            new ParsedValueImpl<Size,Size>(new Size(4.0, SizeUnits.EM), null)
                         }
                     }, null
                 );
@@ -410,11 +411,11 @@ public class ParsedValueTest {
                 new ParsedValueImpl<ParsedValue[][],Number[][]>(
                     new ParsedValueImpl[][] {
                         new ParsedValueImpl[] {
-                            new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
-                            new ParsedValueImpl<Size,Size>(new Size(2.0f, SizeUnits.EM), null)
+                            new ParsedValueImpl<Size,Size>(new Size(1.0, SizeUnits.EM), null),
+                            new ParsedValueImpl<Size,Size>(new Size(2.0, SizeUnits.EM), null)
                         },
                         new ParsedValueImpl[] {
-                            new ParsedValueImpl<Size,Size>(new Size(3.0f, SizeUnits.EM), null),
+                            new ParsedValueImpl<Size,Size>(new Size(3.0, SizeUnits.EM), null),
                             null
                         }
                     }, null
@@ -426,8 +427,8 @@ public class ParsedValueTest {
                 new ParsedValueImpl<ParsedValue[][],Number[][]>(
                     new ParsedValueImpl[][] {
                         new ParsedValueImpl[] {
-                            new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
-                            new ParsedValueImpl<Size,Size>(new Size(2.0f, SizeUnits.EM), null)
+                            new ParsedValueImpl<Size,Size>(new Size(1.0, SizeUnits.EM), null),
+                            new ParsedValueImpl<Size,Size>(new Size(2.0, SizeUnits.EM), null)
                         },
                         null
                     }, null

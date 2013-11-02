@@ -80,10 +80,12 @@ public class DWGlyphLayout extends GlyphLayout {
 
     public void layout(TextRun run, PGFont font, FontStrike strike, char[] text) {
 
+        int slot = 0;
         FontResource fr = font.getFontResource();
         boolean composite = fr instanceof CompositeFontResource;
         if (composite) {
-            fr = ((CompositeFontResource)fr).getSlotResource(0);
+            slot = getInitialSlot(fr);
+            fr = ((CompositeFontResource)fr).getSlotResource(slot);
         }
         IDWriteFontFace face = ((DWFontFile)fr).getFontFace();
         if (face == null) return;
@@ -135,10 +137,11 @@ public class DWGlyphLayout extends GlyphLayout {
         int step = rtl ? -1 : 1;
         int i, j;
         int[] iglyphs = new int[glyphCount];
+        int slotMask = slot << 24;
         boolean missingGlyph = false;
         i = 0; j = rtl ? glyphCount - 1 : 0;
         while (i < glyphCount) {
-            iglyphs[i] = glyphs[j];
+            iglyphs[i] = glyphs[j] | slotMask;
             if (iglyphs[i] == 0) {
                 missingGlyph = true;
                 break;
@@ -148,7 +151,7 @@ public class DWGlyphLayout extends GlyphLayout {
         }
         if (missingGlyph && composite) {
             analyzer.Release();
-            renderShape(text, run, font);
+            renderShape(text, run, font, slot);
             return;
         }
 
@@ -251,7 +254,7 @@ public class DWGlyphLayout extends GlyphLayout {
     }
 
     private int getFontSlot(IDWriteFontFace face, CompositeFontResource composite,
-                            String primaryFont) {
+                            String primaryFont, int slot) {
         if (face == null) return -1;
         IDWriteFontCollection collection = DWFactory.getFontCollection();
         PrismFontFactory prismFactory = PrismFontFactory.getFontFactory();
@@ -306,7 +309,6 @@ public class DWGlyphLayout extends GlyphLayout {
         }
 
         String fallbackName = fr.getFullName();
-        int slot = 0;
         if (!primaryFont.equalsIgnoreCase(fallbackName)) {
             slot = composite.getSlotForFont(fallbackName);
         }
@@ -319,9 +321,9 @@ public class DWGlyphLayout extends GlyphLayout {
         return slot;
     }
 
-    private void renderShape(char[] text, TextRun run, PGFont font) {
+    private void renderShape(char[] text, TextRun run, PGFont font, int slot) {
         CompositeFontResource composite = (CompositeFontResource)font.getFontResource();
-        FontResource fr = composite.getSlotResource(0);
+        FontResource fr = composite.getSlotResource(slot);
         String family = fr.getFamilyName();
         String fullName = fr.getFullName();
         int weight = fr.isBold() ? OS.DWRITE_FONT_WEIGHT_BOLD :
@@ -371,7 +373,7 @@ public class DWGlyphLayout extends GlyphLayout {
                 int textStart = 0;
                 while (renderer.Next()) {
                     IDWriteFontFace fallback = renderer.GetFontFace();
-                    int slot = getFontSlot(fallback, composite, fullName);
+                    slot = getFontSlot(fallback, composite, fullName, slot);
                     if (slot >= 0) {
                         renderer.GetGlyphIndices(glyphs, glyphStart, slot << 24);
                         renderer.GetGlyphOffsets(offsets, glyphStart * 2);

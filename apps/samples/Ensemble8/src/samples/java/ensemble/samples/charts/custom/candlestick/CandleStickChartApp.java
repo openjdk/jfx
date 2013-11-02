@@ -156,7 +156,6 @@ public class CandleStickChartApp extends Application {
         yAxis = new NumberAxis();
         chart = new CandleStickChart(xAxis,yAxis);
         // setup chart
-        chart.setTitle("Custom Candle Stick Chart");
         xAxis.setLabel("Day");
         yAxis.setLabel("Price");
         // add starting data

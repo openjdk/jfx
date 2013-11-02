@@ -32,6 +32,7 @@ import com.sun.javafx.tk.TKClipboard;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKSceneListener;
 import com.sun.javafx.tk.TKScenePaintListener;
+import javafx.scene.Node;
 
 public class StubScene implements TKScene {
 
@@ -39,6 +40,7 @@ public class StubScene implements TKScene {
     private TKSceneListener listener;
     private Object cursor;
     private NGCamera camera;
+    Runnable inputMethodCompistionFinishedDelegate;
 
     @Override
     public void dispose() {
@@ -87,6 +89,17 @@ public class StubScene implements TKScene {
 
     public void enableInputMethodEvents(boolean enable) {
         // ignore
+    }
+
+    @Override
+    public void finishInputMethodComposition() {
+        if (inputMethodCompistionFinishedDelegate != null) {
+            inputMethodCompistionFinishedDelegate.run();
+        }
+    }
+
+    public void setInputMethodCompositionFinishDelegate(Runnable r) {
+        inputMethodCompistionFinishedDelegate = r;
     }
 
     public void entireSceneNeedsRepaint() {

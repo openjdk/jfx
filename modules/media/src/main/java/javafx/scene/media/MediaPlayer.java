@@ -450,14 +450,19 @@ public final class MediaPlayer {
     }
     
     private void init() throws MediaException {
-        synchronized (disposeLock) {
-            if (getStatus() == Status.DISPOSED) {
-                return;
-            }
+        try {
+            // Create a new player
+            Locator locator = media.retrieveJfxLocator();
             
-            try {
-                // Create a new player
-                Locator locator = media.retrieveJfxLocator();
+            // This call will block until we connected or fail to connect.
+            // Call it here, so we do not block while initializing and holding locks like disposeLock.
+            locator.waitForReadySignal();
+
+            synchronized (disposeLock) {
+                if (getStatus() == Status.DISPOSED) {
+                    return;
+                }
+                
                 jfxPlayer = MediaManager.getPlayer(locator);
 
                 if (jfxPlayer != null) {
@@ -500,18 +505,18 @@ public final class MediaPlayer {
                         }
                     }
                 }
-            } catch (com.sun.media.jfxmedia.MediaException e) {
-                throw MediaException.exceptionToMediaException(e);
             }
-
-            // Register for the Player's event
-            Platform.runLater(new Runnable() {
-                @Override
-                public void run() {
-                    registerListeners();
-                }
-            });
+        } catch (com.sun.media.jfxmedia.MediaException e) {
+            throw MediaException.exceptionToMediaException(e);
         }
+
+        // Register for the Player's event
+        Platform.runLater(new Runnable() {
+            @Override
+            public void run() {
+                registerListeners();
+            }
+        });
     }
 
     private class InitMediaPlayer implements Runnable {

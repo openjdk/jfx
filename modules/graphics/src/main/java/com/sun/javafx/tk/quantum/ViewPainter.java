@@ -176,7 +176,7 @@ abstract class ViewPainter implements Runnable {
         // might be reassigned to the sceneBuffer graphics.
         Graphics g = backBufferGraphics;
         // Take into account the pixel scale factor for retina displays
-        final float pixelScale = presentable == null ? 1.0f : presentable.getPixelScaleFactor();
+        final float pixelScale = getPixelScaleFactor();
         // Initialize renderEverything based on various conditions that will cause us to render
         // the entire scene every time.
         boolean renderEverything = renderOverlay ||
@@ -434,6 +434,10 @@ abstract class ViewPainter implements Runnable {
         height = viewHeight = sceneState.getHeight();
 
         return sceneState.isWindowVisible() && !sceneState.isWindowMinimized();
+    }
+    
+    protected float getPixelScaleFactor() {
+        return presentable == null ? 0.1f : presentable.getPixelScaleFactor();
     }
 
     private void doPaint(Graphics g, NodePath renderRootPath) {

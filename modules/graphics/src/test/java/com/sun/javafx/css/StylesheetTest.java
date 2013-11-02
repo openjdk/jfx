@@ -41,6 +41,8 @@ import java.net.URL;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+
 import javafx.css.StyleableProperty;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -59,6 +61,7 @@ import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 import org.junit.*;
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 
 public class StylesheetTest {
@@ -436,19 +439,28 @@ public class StylesheetTest {
     public void testRT_30953_parse() {
 
         try {
-            // RT-30953-2.2.4_33.bss was generated with javafx version 2.2.4_33
+            // Make sure RT-30953.css can be parsed, serialized and deserialized with the current code,
+            // no matter the bss version
             URL url = StylesheetTest.class.getResource("RT-30953.css");
             if (url == null) {
                 fail("Can't find RT-30953.css");
             }
 
             Stylesheet ss = CSSParser.getInstance().parse(url);
+            int nFontFaceSrcs = checkFontFace(ss);
+            assertEquals(3, nFontFaceSrcs);
             checkConvert(ss);
 
         } catch (Exception e) {
             fail(e.toString());
         }
 
+    }
+
+    @Test public void testRT_30953_deserialize_from_v4() {
+        // RT-30953-v4.bss was generated with version 4
+        Stylesheet ss = deserialize("RT-30953-v4.bss");
+        checkConvert(ss);
     }
 
     @Test
@@ -562,6 +574,10 @@ public class StylesheetTest {
             else fail(decl.getProperty() + ", " + e.toString());
         }
 
+    }
+
+    private int checkFontFace(Stylesheet stylesheet) {
+        return com.sun.javafx.css.parser.CSSParserTest.checkFontFace(stylesheet);
     }
 
 }

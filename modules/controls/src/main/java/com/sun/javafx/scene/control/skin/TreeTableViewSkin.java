@@ -437,7 +437,7 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeItem<S>, Tree
             needCellsRecreated = true;
             forceCellRecreate = false;
         } else if (newCount != oldCount) {
-            needCellsReconfigured = true;
+            needCellsRebuilt = true;
         } else {
             needCellsReconfigured = true;
         }

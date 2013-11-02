@@ -729,7 +729,7 @@ void ViewContainer::WmImeComposition(HWND hwnd, WPARAM wParam, LPARAM lParam)
 
 void ViewContainer::WmImeNotify(HWND hwnd, WPARAM wParam, LPARAM lParam) 
 {
-    if (wParam == IMN_OPENCANDIDATE) {
+    if (wParam == IMN_OPENCANDIDATE || wParam == IMN_CHANGECANDIDATE) {
         JNIEnv *env = GetEnv();
         POINT curPos;
         UINT bits = 1;

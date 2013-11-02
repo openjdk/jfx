@@ -92,21 +92,22 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
             }
         };
 
+        final WeakChangeListener<Node> weakFocusOwnerListener =
+                                new WeakChangeListener<Node>(focusOwnerListener);
         sceneListener = new ChangeListener<Scene>() {
-            private WeakChangeListener<Node> weakListener = new WeakChangeListener<Node>(focusOwnerListener);
             @Override public void changed(ObservableValue<? extends Scene> observable, Scene oldValue, Scene newValue) {
                 if (oldValue != null) {
-                    oldValue.focusOwnerProperty().removeListener(weakListener);
+                    oldValue.focusOwnerProperty().removeListener(weakFocusOwnerListener);
                 }
                 if (newValue != null) {
-                    newValue.focusOwnerProperty().addListener(weakListener);
+                    newValue.focusOwnerProperty().addListener(weakFocusOwnerListener);
                 }
             }
         };
         textField.sceneProperty().addListener(new WeakChangeListener<Scene>(sceneListener));
 
         if (textField.getScene() != null) {
-            textField.getScene().focusOwnerProperty().addListener(focusOwnerListener);
+            textField.getScene().focusOwnerProperty().addListener(weakFocusOwnerListener);
         }
 
         // Only add this if we're on an embedded platform that supports 5-button navigation

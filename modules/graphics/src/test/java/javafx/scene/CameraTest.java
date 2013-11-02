@@ -488,9 +488,9 @@ public class CameraTest {
         Camera cam = new ParallelCamera();
         scene.setCamera(cam);
         Vec3d v = cam.computePosition(null);
-        assertEquals(0.0, v.x, 0.000001);
-        assertEquals(0.0, v.y, 0.000001);
-        assertEquals(-1.0, v.z, 0.000001);
+        assertEquals(150.0, v.x, 0.000001);
+        assertEquals(100.0, v.y, 0.000001);
+        assertEquals(-373.205080, v.z, 0.000001);
     }
 
     @Test
@@ -584,9 +584,9 @@ public class CameraTest {
         expected.ortho(0.0, 300, 200, 0.0, -150, 150);
 
         TransformHelper.assertMatrix(pc.getProjViewTx(), expected);
-        assertEquals(0.0, pc.getPosition().x, 0.000001);
-        assertEquals(0.0, pc.getPosition().y, 0.000001);
-        assertEquals(-1.0, pc.getPosition().z, 0.000001);
+        assertEquals(150.0, pc.getPosition().x, 0.000001);
+        assertEquals(100.0, pc.getPosition().y, 0.000001);
+        assertEquals(-373.205080, pc.getPosition().z, 0.000001);
     }
 
     @Test
@@ -610,9 +610,9 @@ public class CameraTest {
         expected.ortho(0.0, 300, 200, 0.0, -150, 150);
 
         TransformHelper.assertMatrix(pc.getProjViewTx(), expected);
-        assertEquals(0.0, pc.getPosition().x, 0.000001);
-        assertEquals(0.0, pc.getPosition().y, 0.000001);
-        assertEquals(-1.0, pc.getPosition().z, 0.000001);
+        assertEquals(150.0, pc.getPosition().x, 0.000001);
+        assertEquals(100.0, pc.getPosition().y, 0.000001);
+        assertEquals(-373.205080, pc.getPosition().z, 0.000001);
     }
 
     @Test
@@ -635,9 +635,9 @@ public class CameraTest {
         expected.ortho(0.0, 300, 200, 0.0, -150, 150);
 
         TransformHelper.assertMatrix(pc.getProjViewTx(), expected);
-        assertEquals(0.0, pc.getPosition().x, 0.000001);
-        assertEquals(0.0, pc.getPosition().y, 0.000001);
-        assertEquals(-1.0, pc.getPosition().z, 0.000001);
+        assertEquals(150.0, pc.getPosition().x, 0.000001);
+        assertEquals(100.0, pc.getPosition().y, 0.000001);
+        assertEquals(-373.205080, pc.getPosition().z, 0.000001);
     }
 
     @Test
@@ -661,9 +661,9 @@ public class CameraTest {
         expected.ortho(0.0, 300, 200, 0.0, -150, 150);
 
         TransformHelper.assertMatrix(pc.getProjViewTx(), expected);
-        assertEquals(0.0, pc.getPosition().x, 0.000001);
-        assertEquals(0.0, pc.getPosition().y, 0.000001);
-        assertEquals(-1.0, pc.getPosition().z, 0.000001);
+        assertEquals(150.0, pc.getPosition().x, 0.000001);
+        assertEquals(100.0, pc.getPosition().y, 0.000001);
+        assertEquals(-373.205080, pc.getPosition().z, 0.000001);
     }
 
     @Test

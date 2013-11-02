@@ -134,12 +134,12 @@ public class GlyphCache {
         Point2D pt = new Point2D();
 
         for (int gi = 0; gi < len; gi++) {
-            int gc = gl.getGlyphCode(gi) & CompositeGlyphMapper.GLYPHMASK;
+            int gc = gl.getGlyphCode(gi);
 
             // If we have a supplementary character, then a special
             // glyph is inserted in the list, which is one we skip
             // over for rendering. It has no advance.
-            if (gc == CharToGlyphMapper.INVISIBLE_GLYPH_ID) {
+            if ((gc & CompositeGlyphMapper.GLYPHMASK) == CharToGlyphMapper.INVISIBLE_GLYPH_ID) {
                 continue;
             }
             pt.setLocation(x + gl.getPosX(gi), y + gl.getPosY(gi));

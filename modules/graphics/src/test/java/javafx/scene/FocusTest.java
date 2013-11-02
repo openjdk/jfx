@@ -26,11 +26,13 @@
 package javafx.scene;
 
 
+import com.sun.javafx.pgstub.StubScene;
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -55,6 +57,7 @@ public class FocusTest {
     private List<Node> nodes;
     private int nodeIndex;
     private StubToolkit toolkit;
+    private boolean actionTaken;
 
     @Before
     public void setUp() {
@@ -705,6 +708,36 @@ public class FocusTest {
         n2.requestFocus();
         assertTrue(n1.isFocused());
         assertFalse(n2.isFocused());
+    }
+
+    @Test public void shouldCancelInputMethodWhenLoosingFocus() {
+        final Node n1 = n();
+        final Node n2 = n();
+        scene.setRoot(new Group(n1, n2));
+
+        stage.show();
+
+        Toolkit.getToolkit().firePulse();
+
+        n1.requestFocus();
+        assertSame(n1, scene.getFocusOwner());
+        actionTaken = false;
+
+        ((StubScene) scene.impl_getPeer()).setInputMethodCompositionFinishDelegate(
+                new Runnable() {
+                    @Override public void run() {
+                        assertSame(n1, scene.getFocusOwner());
+                        actionTaken = true;
+                    }
+                });
+
+        n2.requestFocus();
+
+        ((StubScene) scene.impl_getPeer()).setInputMethodCompositionFinishDelegate(
+                null);
+
+        assertSame(n2, scene.getFocusOwner());
+        assertTrue(actionTaken);
     }
 
     // TODO: tests for moving nodes between scenes

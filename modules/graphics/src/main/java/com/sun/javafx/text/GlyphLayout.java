@@ -302,6 +302,30 @@ public abstract class GlyphLayout {
     public abstract void layout(TextRun run, PGFont font,
                                 FontStrike strike, char[] text);
 
+    protected int getInitialSlot(FontResource fr) {
+        /* For some reason, DirectWrite and CoreText do not work with the JRE
+         * fonts (Lucida Sans). For example, with Arabic text the glyphs
+         * do not have ligatures (as if all glyphs were generated using just
+         * the CMAP table). Possible reasons for this failure is the
+         * presence of a system version of Lucida Sans, which does not include
+         * Arabic, and that causes some internal cache to fail (since both fonts
+         * would have the same postscript name); or possibly the JRE fonts
+         * have some internal settings that causes DirectWrite and
+         * CoreText to fail. Pango and ICU do not present the same problem.
+         * The fix is to use a different font.
+         * This fix relies that a CompositeFontResource has at least one
+         * fallback, and that is not a JRE font, and this method is used
+         * only to process complex text.
+         */
+        if (PrismFontFactory.isJreFont(fr)) {
+            if (PrismFontFactory.debugFonts) {
+                System.err.println("Avoiding JRE Font: " + fr.getFullName());
+            }
+            return 1;
+        }
+        return 0;
+    }
+
     /* This scheme creates a singleton GlyphLayout which is checked out
      * for use. Callers who find its checked out create one that after use
      * is discarded. This means that in a MT-rendering environment,

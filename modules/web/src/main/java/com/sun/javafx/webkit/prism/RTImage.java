@@ -70,6 +70,9 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
             int dstx1, int dsty1, int dstx2, int dsty2,
             int srcx1, int srcy1, int srcx2, int srcy2)
     {
+        if (txt == null) {
+            return;
+        }
         if (g instanceof PrinterGraphics) {
             // We're printing. Copy [txt] into a J2DTexture and draw it.
             int w = srcx2 - srcx1;

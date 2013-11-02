@@ -1338,6 +1338,11 @@ public abstract class PrismFontFactory implements FontFactory {
         return lcdEnabled;
     }
 
+    public static boolean isJreFont(FontResource fr) {
+        String file = fr.getFileName();
+        return file.startsWith(jreFontDir);
+    }
+
     public static float getLCDContrast() {
         if (lcdContrast == -1) {
             if (isWindows) {

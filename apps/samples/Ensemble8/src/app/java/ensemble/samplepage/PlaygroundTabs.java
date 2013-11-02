@@ -31,6 +31,7 @@
  */
 package ensemble.samplepage;
 
+import ensemble.SampleInfo;
 import ensemble.playground.PlaygroundProperty;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -74,6 +75,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Rectangle;
+import javafx.util.Callback;
 import javafx.util.StringConverter;
 
 /**
@@ -81,19 +83,70 @@ import javafx.util.StringConverter;
  */
 class PlaygroundTabs extends TabPane {
     private final SamplePage samplePage;
+    private final GridPane grid;
 
     PlaygroundTabs(final SamplePage samplePage) {
         this.samplePage = samplePage;
-        GridPane grid = new GridPane();
+        grid = new GridPane();
         grid.setHgap(SamplePage.INDENT);
         grid.setVgap(SamplePage.INDENT);
         grid.setPadding(new Insets(SamplePage.INDENT));
+        samplePage.registerSampleInfoUpdater(new Callback<SampleInfo, Void>() {
+
+            @Override
+            public Void call(SampleInfo sampleInfo) {
+                update(sampleInfo);
+                return null;
+            }
+        });
+        getStyleClass().add("floating");
+        ScrollPane scrollPane = new ScrollPane(grid);
+        scrollPane.getStyleClass().clear();
+        Tab tab = new Tab("Properties");
+        tab.setContent(scrollPane);
+        getTabs().add(tab);
+        setMinSize(100, 100);
+    }
+
+    private PropertyController newPropertyController(PlaygroundProperty playgroundProperty, Object object, Object property) {
+        if (playgroundProperty.propertyName.equals("getStrokeDashArray")) {
+            return new StrokeDashArrayPropertyController(playgroundProperty, object, (ObservableList<Double>) property);
+        }
+        if (property instanceof DoubleProperty) {
+            DoubleProperty prop = (DoubleProperty) property;
+            return new DoublePropertyController(playgroundProperty, object, prop);
+        } else if (property instanceof IntegerProperty) {
+            IntegerProperty prop = (IntegerProperty) property;
+            return new IntegerPropertyController(playgroundProperty, object, prop);
+        } else if (property instanceof BooleanProperty) {
+            BooleanProperty prop = (BooleanProperty) property;
+            return new BooleanPropertyController(playgroundProperty, object, prop);
+        } else if (property instanceof StringProperty) {
+            StringProperty prop = (StringProperty) property;
+            return new StringPropertyController(playgroundProperty, object, prop);
+        } else if (property instanceof ObjectProperty) {
+            final ObjectProperty prop = (ObjectProperty) property;
+            if (prop.get() instanceof Color) {
+                return new ColorPropertyController(playgroundProperty, object, prop);
+            }
+            if (prop.get() instanceof String) {
+                return new StringPropertyController(playgroundProperty, object, prop);
+            }
+            if (prop.get() != null && prop.get().getClass().isEnum()) {
+                return new EnumPropertyController(playgroundProperty, object, prop, (Enum) prop.get());
+            }
+        }
+        return null;
+    }
+
+    private void update(SampleInfo sampleInfo) {
+        grid.getChildren().clear();
         int rowIndex = 0;
-        for (PlaygroundProperty prop : samplePage.sample.playgroundProperties) {
+        for (PlaygroundProperty prop : sampleInfo.playgroundProperties) {
             try {
-                Object object = samplePage.sampleInfo.getApp();
+                Object object = samplePage.sampleRuntimeInfoProperty.get().getApp();
                 if (prop.fieldName != null) {
-                    Field declaredField = samplePage.sampleInfo.getClz().getDeclaredField(prop.fieldName);
+                    Field declaredField = samplePage.sampleRuntimeInfoProperty.get().getClz().getDeclaredField(prop.fieldName);
                     declaredField.setAccessible(true);
                     object = declaredField.get(object);
                 }
@@ -154,44 +207,6 @@ class PlaygroundTabs extends TabPane {
                 Logger.getLogger(SamplePage.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
-        getStyleClass().add("floating");
-        ScrollPane scrollPane = new ScrollPane(grid);
-        scrollPane.getStyleClass().clear();
-        Tab tab = new Tab("Properties");
-        tab.setContent(scrollPane);
-        getTabs().add(tab);
-        setMinSize(100, 100);
-    }
-
-    private PropertyController newPropertyController(PlaygroundProperty playgroundProperty, Object object, Object property) {
-        if (playgroundProperty.propertyName.equals("getStrokeDashArray")) {
-            return new StrokeDashArrayPropertyController(playgroundProperty, object, (ObservableList<Double>) property);
-        }
-        if (property instanceof DoubleProperty) {
-            DoubleProperty prop = (DoubleProperty) property;
-            return new DoublePropertyController(playgroundProperty, object, prop);
-        } else if (property instanceof IntegerProperty) {
-            IntegerProperty prop = (IntegerProperty) property;
-            return new IntegerPropertyController(playgroundProperty, object, prop);
-        } else if (property instanceof BooleanProperty) {
-            BooleanProperty prop = (BooleanProperty) property;
-            return new BooleanPropertyController(playgroundProperty, object, prop);
-        } else if (property instanceof StringProperty) {
-            StringProperty prop = (StringProperty) property;
-            return new StringPropertyController(playgroundProperty, object, prop);
-        } else if (property instanceof ObjectProperty) {
-            final ObjectProperty prop = (ObjectProperty) property;
-            if (prop.get() instanceof Color) {
-                return new ColorPropertyController(playgroundProperty, object, prop);
-            }
-            if (prop.get() instanceof String) {
-                return new StringPropertyController(playgroundProperty, object, prop);
-            }
-            if (prop.get() != null && prop.get().getClass().isEnum()) {
-                return new EnumPropertyController(playgroundProperty, object, prop, (Enum) prop.get());
-            }
-        }
-        return null;
     }
 
     private class PropertyController {

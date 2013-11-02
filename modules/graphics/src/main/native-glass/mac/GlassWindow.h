@@ -62,7 +62,13 @@
     GlassAccessibleBaseProvider *accFocusElement ; // Focussed element
     BOOL                isAccessibleInitComplete ;
         
-    BOOL                 isClosed;   
+    BOOL                isClosed;   
+
+    // We track whether an explicit size/location have been assigned to the window
+    // in order to differentiate between an explicitly assigned zero bounds, and the
+    // deafult bounds (which are also zeros - see a comment in _createWindowCommon().)
+    BOOL                isSizeAssigned;
+    BOOL                isLocationAssigned;
 }
 
 - (void)setFullscreenWindow:(NSWindow *)fsWindow;

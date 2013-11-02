@@ -60,7 +60,7 @@ class CTGlyphLayout extends GlyphLayout {
         return lineRef;
     }
 
-    private int getFontSlot(long runRef, CompositeFontResource fr, String name) {
+    private int getFontSlot(long runRef, CompositeFontResource fr, String name, int slot) {
         long runAttrs = OS.CTRunGetAttributes(runRef);
         if (runAttrs == 0) return -1;
         long actualFont = OS.CFDictionaryGetValue(runAttrs, OS.kCTFontAttributeName());
@@ -70,7 +70,6 @@ class CTGlyphLayout extends GlyphLayout {
          * instead of CTFontCopyDisplayName() to avoid localized names*/
         String fontName = OS.CTFontCopyAttributeDisplayName(actualFont);
         if (fontName == null) return -1;
-        int slot = 0;
         if (!fontName.equalsIgnoreCase(name)) {
             if (fr == null) return -1;
             slot = fr.getSlotForFont(fontName);
@@ -83,10 +82,12 @@ class CTGlyphLayout extends GlyphLayout {
 
     public void layout(TextRun run, PGFont font, FontStrike strike, char[] text) {
 
+        int slot = 0;
         CompositeFontResource composite = null;
         if (strike instanceof CompositeStrike) {
             composite = (CompositeFontResource)strike.getFontResource();
-            strike = ((CompositeStrike)strike).getStrikeSlot(0);
+            slot = getInitialSlot(composite);
+            strike = ((CompositeStrike)strike).getStrikeSlot(slot);
         }
         float size = strike.getSize();
         String fontName = strike.getFontResource().getFullName();
@@ -105,7 +106,7 @@ class CTGlyphLayout extends GlyphLayout {
             for (int i = 0; i < runCount; i++) {
                 long runRef = OS.CFArrayGetValueAtIndex(runs, i);
                 if (runRef == 0) continue;
-                int slot = getFontSlot(runRef, composite, fontName) ;
+                slot = getFontSlot(runRef, composite, fontName, slot);
                 if (slot != -1) {
                     glyphStart += OS.CTRunGetGlyphs(runRef, slot << 24, glyphStart, glyphs);
                 } else {

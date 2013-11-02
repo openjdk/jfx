@@ -36,7 +36,6 @@ import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.impl.BufferUtil;
 import com.sun.prism.impl.Disposer;
 import com.sun.prism.impl.ManagedResource;
-import com.sun.prism.impl.PrismSettings;
 
 /**
  * UploadingPainter is used when we need to render into an offscreen buffer.
@@ -50,6 +49,8 @@ final class UploadingPainter extends ViewPainter implements Runnable {
     private IntBuffer   pixBits; // Users for RTTs that are backed by a SW array
     private final AtomicInteger uploadCount = new AtomicInteger(0);
     private RTTexture   rttexture;
+    
+    private volatile float pixScaleFactor = 1.0f;
 
     UploadingPainter(GlassScene view) {
         super(view);
@@ -61,6 +62,15 @@ final class UploadingPainter extends ViewPainter implements Runnable {
             rttexture = null;
         }
     }
+    
+    public void setPixelScaleFactor(float scale) {
+        pixScaleFactor = scale;
+    }
+    
+    @Override
+    public float getPixelScaleFactor() {
+        return pixScaleFactor;
+    }    
 
     @Override public void run() {
         renderLock.lock();
@@ -82,9 +92,13 @@ final class UploadingPainter extends ViewPainter implements Runnable {
             if (factory == null || !factory.isDeviceReady()) {
                 return;
             }
-
-            boolean needsReset = (rttexture == null) || (viewWidth != penWidth) || (viewHeight != penHeight);
-
+            
+            float scale = pixScaleFactor;
+            
+            boolean needsReset = (pix == null) ||
+                                 (scale != pix.getScaleUnsafe()) ||
+                                 (viewWidth != penWidth) || (viewHeight != penHeight);
+            
             if (!needsReset) {
                 rttexture.lock();
                 if (rttexture.isSurfaceLost()) {
@@ -92,10 +106,13 @@ final class UploadingPainter extends ViewPainter implements Runnable {
                     needsReset = true;
                 }
             }
-
+            
+            int bufWidth = (int)Math.round(viewWidth * scale);
+            int bufHeight = (int)Math.round(viewHeight * scale);
+            
             if (needsReset) {
                 disposeRTTexture();
-                rttexture = factory.createRTTexture(viewWidth, viewHeight, WrapMode.CLAMP_NOT_NEEDED);
+                rttexture = factory.createRTTexture(bufWidth, bufHeight, WrapMode.CLAMP_NOT_NEEDED);
                 if (rttexture == null) {
                     return;
                 }
@@ -110,24 +127,25 @@ final class UploadingPainter extends ViewPainter implements Runnable {
                 sceneState.getScene().entireSceneNeedsRepaint();
                 return;
             }
+            g.scale(scale, scale);
             paintImpl(g);
 
             int rawbits[] = rttexture.getPixels();
-
+            
             if (rawbits != null) {
                 if (pixBits == null || uploadCount.get() > 0) {
-                    pixBits = IntBuffer.allocate(viewWidth * viewHeight);
+                    pixBits = IntBuffer.allocate(bufWidth * bufHeight);
                 }
-                System.arraycopy(rawbits, 0, pixBits.array(), 0, viewWidth * viewHeight);
-                pix = app.createPixels(viewWidth, viewHeight, pixBits);
+                System.arraycopy(rawbits, 0, pixBits.array(), 0, bufWidth * bufHeight);
+                pix = app.createPixels(bufWidth, bufHeight, pixBits, scale);
             } else {
                 if (textureBits == null || uploadCount.get() > 0) {
-                    textureBits = BufferUtil.newIntBuffer(viewWidth * viewHeight);
+                    textureBits = BufferUtil.newIntBuffer(bufWidth * bufHeight);
                 }
                 
                 if (textureBits != null) {
                     if (rttexture.readPixels(textureBits)) {
-                        pix = app.createPixels(viewWidth, viewHeight, textureBits);
+                        pix = app.createPixels(bufWidth, bufHeight, textureBits, scale);
                     } else {
                         /* device lost */
                         sceneState.getScene().entireSceneNeedsRepaint();

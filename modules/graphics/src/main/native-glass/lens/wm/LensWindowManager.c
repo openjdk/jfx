@@ -1088,7 +1088,7 @@ void lens_wm_notifyMultiTouchEvent(JNIEnv *env,
     jboolean allReleased;    
 
     //set the touch window on first touch event
-    if (touchWindow == NULL) {
+    if (touchWindow == NULL && primaryPointIndex >= 0) {
         //find the touch window for first event
         touchWindow = glass_window_findWindowAtLocation(xabs[primaryPointIndex],
                                                         yabs[primaryPointIndex],

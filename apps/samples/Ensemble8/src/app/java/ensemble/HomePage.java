@@ -36,8 +36,10 @@ import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Bounds;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -72,24 +74,6 @@ import static ensemble.EnsembleApp.SHOW_HIGHLIGHTS;
  * The home page for ensemble.
  */
 public class HomePage extends ListView<HomePage.HomePageRow> implements Callback<ListView<HomePage.HomePageRow>, ListCell<HomePage.HomePageRow>>, ChangeListener<Number>, Page{
-    private static final Effect RIBBON_EFFECT = BlendBuilder.create()
-            .topInput(
-                    InnerShadowBuilder.create()
-                            .color(Color.rgb(0, 0, 0, 0.75))
-                            .offsetX(1)
-                            .offsetY(1)
-                            .radius(1)
-                            .blurType(BlurType.ONE_PASS_BOX)
-                            .build())
-            .bottomInput(
-                    DropShadowBuilder.create()
-                            .color(Color.rgb(255, 255, 255, 0.33))
-                            .offsetX(1)
-                            .offsetY(1)
-                            .radius(0)
-                            .blurType(BlurType.ONE_PASS_BOX)
-                            .build())
-            .build();
     private static final int ITEM_WIDTH = 216;
     private static final int ITEM_HEIGHT = 162;
     private static final int ITEM_GAP = 32;
@@ -98,15 +82,13 @@ public class HomePage extends ListView<HomePage.HomePageRow> implements Callback
     private int numberOfColumns = -1;
     private final HomePageRow HIGHLIGHTS_ROW = new HomePageRow(RowType.Highlights,null,null);
     private final PageBrowser pageBrowser;
-    private final ReadOnlyStringProperty titleProperty = new ReadOnlyStringWrapper("JavaFX Ensemble");
+    private final ReadOnlyStringProperty titleProperty = new ReadOnlyStringWrapper();
 
     public HomePage(PageBrowser pageBrowser) {
         this.pageBrowser = pageBrowser;
-        getStyleClass().clear();
         setId("HomePage");
         // don't use any of the standard ListView CSS
-        //   getStyleClass().clear();
-
+        getStyleClass().clear();
         // listen for when the list views width changes and recalculate number of columns
         widthProperty().addListener(this);
         // set our custom cell factory
@@ -133,8 +115,7 @@ public class HomePage extends ListView<HomePage.HomePageRow> implements Callback
     @Override public void changed(ObservableValue<? extends Number> observableValue, Number number, Number newWidth) {
         // calculate new number of columns that will fit
         double width = newWidth.doubleValue();
-        width -= MIN_MARGIN + MIN_MARGIN;
-        width += ITEM_GAP;
+        width -= 60;
         final int newNumOfColumns = Math.max(1, (int) (width / (ITEM_WIDTH + ITEM_GAP)));
         // our size may have changed, so see if we need to rebuild items list
         if (numberOfColumns != newNumOfColumns) {
@@ -189,11 +170,13 @@ public class HomePage extends ListView<HomePage.HomePageRow> implements Callback
     private Map<SampleInfo, Button> buttonCache = new WeakHashMap<>();
 
     private static int cellCount = 0;
-    
+    private static final PseudoClass TITLE_PSEUDO_CLASS = PseudoClass.getPseudoClass(RowType.Title.toString());
+
     private class HomeListCell extends ListCell<HomePageRow> implements Callback<Integer,Node>,  Skin<HomeListCell> {
         private static final double HIGHLIGHTS_HEIGHT = 430;
-        private static final double RIBBON_HEIGHT = 58;
-        private static final double DEFAULT_HEIGHT = 208;
+        private static final double RIBBON_HEIGHT = 60;
+        private static final double DEFAULT_HEIGHT = 230;
+        private static final double DEFAULT_WIDTH = 100;
         private double height = DEFAULT_HEIGHT;
         int cellIndex;
         private RowType oldRowType = null;
@@ -208,24 +191,34 @@ public class HomePage extends ListView<HomePage.HomePageRow> implements Callback
             setSkin(this);
         }
 
-        @Override
-        protected double computeMaxHeight(double d) {
+        @Override protected double computeMaxHeight(double d) {
             return height;
         }
 
-        @Override
-        protected double computePrefHeight(double d) {
+        @Override protected double computePrefHeight(double d) {
             return height;
         }
 
-        @Override
-        protected double computeMinHeight(double d) {
+        @Override protected double computeMinHeight(double d) {
             return height;
         }
-        
+
+        @Override protected double computeMaxWidth(double height) {
+            return Double.MAX_VALUE;
+        }
+
+        @Override protected double computePrefWidth(double height) {
+            return DEFAULT_WIDTH;
+        }
+
+        @Override protected double computeMinWidth(double height) {
+            return DEFAULT_WIDTH;
+        }
+
         // CELL METHODS
         @Override protected void updateItem(HomePageRow item, boolean empty) {
             super.updateItem(item, empty);
+            box.pseudoClassStateChanged(TITLE_PSEUDO_CLASS,item !=null && item.rowType == RowType.Title);
             if (item == null) {
                 oldRowType = null;
                 box.getChildren().clear();
@@ -241,14 +234,15 @@ public class HomePage extends ListView<HomePage.HomePageRow> implements Callback
                                 pagination = new Pagination(Samples.HIGHLIGHTS.length);
                                 pagination.getStyleClass().add(Pagination.STYLE_CLASS_BULLET);
                                 pagination.setMaxWidth(USE_PREF_SIZE);
+                                pagination.setMaxHeight(USE_PREF_SIZE);
                                 pagination.setPageFactory(this);
                                 paginationCache = new WeakReference<>(pagination);
                             }
                             if (highlightRibbon == null) {
                                 highlightRibbon = new ImageView(new Image(getClass().getResource("images/highlights-ribbon.png").toExternalForm()));
                                 highlightRibbon.setManaged(false);
-                                highlightRibbon.layoutXProperty().bind(pagination.layoutXProperty().subtract(4));
-                                highlightRibbon.layoutYProperty().bind(pagination.layoutYProperty().subtract(4));
+                                highlightRibbon.layoutXProperty().bind(pagination.layoutXProperty().add(5));
+                                highlightRibbon.layoutYProperty().bind(pagination.layoutYProperty().add(5));
                             }
                             box.setAlignment(Pos.CENTER);
                             box.getChildren().setAll(pagination, highlightRibbon);
@@ -258,11 +252,11 @@ public class HomePage extends ListView<HomePage.HomePageRow> implements Callback
                         height = RIBBON_HEIGHT;
                         SectionRibbon ribbon = ribbonsCache.get(item.title);
                         if (ribbon == null) {
-                            ribbon = new SectionRibbon(item.title);
+                            ribbon = new SectionRibbon(item.title.toUpperCase());
                             ribbonsCache.put(item.title, ribbon);
                         }
                         box.getChildren().setAll(ribbon);
-                        box.setAlignment(Pos.CENTER_LEFT);
+                        box.setAlignment(Pos.CENTER);
                         break;
                     case Samples:
                         height = DEFAULT_HEIGHT;
@@ -333,25 +327,34 @@ public class HomePage extends ListView<HomePage.HomePageRow> implements Callback
         }
     }
 
-    private static class SectionRibbon extends Region {
-        private Text textNode = new Text();
+    private static class SectionRibbon extends Text {
         public SectionRibbon(String text) {
-            textNode.setText(text);
-            getStyleClass().add("section-ribbon");
-            textNode.setFill(Color.web("#0059a9"));
-            textNode.setStyle("-fx-font-family: 'Bree Serif'; -fx-font-size: 16");
-            setPrefHeight(38);
-            setMaxWidth(USE_PREF_SIZE);
-            textNode.setEffect(RIBBON_EFFECT);
-            getChildren().add(textNode);
-        }
-
-        public void setText(String text) {
-            textNode.setText(text);
-        }
-
-        @Override protected void layoutChildren() {
-            textNode.relocate(30, snapPosition((getHeight() - textNode.getBoundsInParent().getHeight()) / 2) - 3);
+            super(text);
+            getStyleClass().add("section-ribbon-text");
         }
     }
+//    private static class SectionRibbon extends Region {
+//        private Text textNode = new Text();
+//        public SectionRibbon(String text) {
+//            textNode.setText(text);
+//            textNode.getStyleClass().add("section-ribbon-text");
+//            getStyleClass().add("section-ribbon");
+//            setPrefHeight(50);
+//            setMaxWidth(USE_PREF_SIZE);
+//    //        textNode.setEffect(RIBBON_EFFECT);
+//            getChildren().add(textNode);
+//        }
+//
+//        public void setText(String text) {
+//            textNode.setText(text);
+//        }
+//
+//        @Override protected void layoutChildren() {
+//            final Bounds textBounds = textNode.getBoundsInParent();
+//            System.out.println("textBounds = " + textBounds);
+//            System.out.println("getWidth() = " + getWidth());
+//            textNode.relocate(0,
+//                    snapPosition((getHeight() - textBounds.getHeight()) / 2) - 3);
+//        }
+//    }
 }

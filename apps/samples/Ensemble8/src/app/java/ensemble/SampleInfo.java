@@ -44,6 +44,7 @@ import java.util.logging.Logger;
 import javafx.application.ConditionalFeature;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.scene.Node;
@@ -52,13 +53,8 @@ import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.Background;
-import javafx.scene.layout.BackgroundImage;
-import javafx.scene.layout.BackgroundPosition;
-import javafx.scene.layout.BackgroundRepeat;
-import javafx.scene.layout.BackgroundSize;
-import javafx.scene.layout.Pane;
-import javafx.scene.layout.Region;
+import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
 
 /**
  * Descriptor for a ensemble sample. Everything the ui needs is determined at 
@@ -152,14 +148,21 @@ public class SampleInfo {
         Region label = new Region();
         if (previewUrl != null) {
             String url = getClass().getResource(previewUrl).toExternalForm();
-            label.setBackground(new Background(
-                new BackgroundImage(
-                    getImage(url), 
-                    BackgroundRepeat.NO_REPEAT, 
-                    BackgroundRepeat.NO_REPEAT, 
-                    new BackgroundPosition(Side.LEFT,5,false, Side.TOP,5,false), 
-                    new BackgroundSize(206, 152, false, false, false, false)
-                )));
+            label.setBackground(
+                    new Background(
+                            new BackgroundFill[]{
+                                new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)
+                            },
+                            new BackgroundImage[]{
+                                new BackgroundImage(
+                                    getImage(url),
+                                    BackgroundRepeat.NO_REPEAT,
+                                    BackgroundRepeat.NO_REPEAT,
+                                    new BackgroundPosition(Side.LEFT,5,false, Side.TOP,5,false),
+                                    new BackgroundSize(206, 152, false, false, false, false)
+                                )
+                            }
+                    ));
         }
         label.getStyleClass().add("sample-medium-preview");
         label.setMinSize(216, 162);

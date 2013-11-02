@@ -8738,9 +8738,10 @@ public abstract class Node implements EventTarget, Styleable {
      * If required, apply styles to this Node and its children, if any. This method does not normally need to 
      * be invoked directly but may be used in conjunction with {@link Parent#layout()} to size a Node before the
      * next pulse, or if the {@link #getScene() Scene} is not in a {@link javafx.stage.Stage}. 
-     * <p>CSS is applied to this Node only if this Node's CSS state is other than clean, or there is a parent that
-     * needs CSS to be applied. This method is a no-op if the Node is not in a Scene. The Scene does not have
-     * to be in a Stage.</p>
+     * <p>Provided that the Node&#39;s {@link #getScene() Scene} is not null, CSS is applied to this Node regardless
+     * of whether this Node&#39;s CSS state is clean. CSS styles are applied from the top&#8209;most parent
+     * of this Node whose CSS state is other than clean, which may affect the styling of other nodes.
+     * This method is a no-op if the Node is not in a Scene. The Scene does not have to be in a Stage.</p>
      * <p>This method does not invoke the {@link Parent#layout()} method. Typically, the caller will use the 
      * following sequence of operations.</p>
      * <pre><code>
@@ -8777,11 +8778,6 @@ public abstract class Node implements EventTarget, Styleable {
     public final void applyCss() {
 
         if (getScene() == null) {
-            return;
-        }
-
-        // quick check to see if there is any possibility that this node needs CSS applied
-        if(cssFlag == CssFlags.CLEAN && getScene().getRoot().cssFlag == CssFlags.CLEAN) {
             return;
         }
 

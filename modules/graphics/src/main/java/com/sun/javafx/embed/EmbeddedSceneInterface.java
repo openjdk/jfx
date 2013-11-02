@@ -28,7 +28,6 @@ package com.sun.javafx.embed;
 import java.nio.IntBuffer;
 
 import com.sun.javafx.scene.traversal.Direction;
-import com.sun.javafx.tk.TKSceneListener;
 import javafx.collections.ObservableList;
 import javafx.event.EventType;
 import javafx.scene.input.InputMethodEvent;
@@ -48,6 +47,11 @@ public interface EmbeddedSceneInterface {
      * A notification about the embedded container is resized.
      */
     public void setSize(int width, int height);
+    
+    /*
+     * A notification about the scale factor is changed.
+     */
+    public void setPixelScaleFactor(float scale);
 
     /*
      * A request to fetch all the FX scene pixels into a offscreen buffer.

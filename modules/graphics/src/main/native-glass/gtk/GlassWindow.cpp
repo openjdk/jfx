@@ -176,7 +176,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow_maximizeImpl
 
 /*
  * Class:     com_sun_glass_ui_gtk_GtkWindow
- * Method:    _setBounds
+ * Method:    setBoundsImpl
  * Signature: (JIIZZIIII)V
  */
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow_setBoundsImpl

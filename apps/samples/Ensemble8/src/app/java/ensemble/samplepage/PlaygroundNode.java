@@ -32,18 +32,21 @@
 package ensemble.samplepage;
 
 
-import static ensemble.samplepage.FrontPage.*;
+import static ensemble.samplepage.SamplePageContent.*;
+
+import javafx.geometry.Pos;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
 
 /**
- *
+ * Playground section on Sample Page
  */
 public class PlaygroundNode extends VBox {
 
     public PlaygroundNode(SamplePage samplePage) {
         PlaygroundTabs playgroundTabs = new PlaygroundTabs(samplePage);
+        setAlignment(Pos.TOP_LEFT);
         getChildren().setAll(
                 title("PLAYGROUND"), 
                 playgroundTabs);

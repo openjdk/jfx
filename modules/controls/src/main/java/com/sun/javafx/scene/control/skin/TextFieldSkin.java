@@ -693,8 +693,8 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
 
         Bounds textBounds = textGroup.getBoundsInParent();
 
-        return new Rectangle2D(x + textBounds.getMinX(), y + textBounds.getMinY(),
-                               width, height);
+        return new Rectangle2D(x + textBounds.getMinX() + textTranslateX.get(),
+                               y + textBounds.getMinY(), width, height);
     }
 
     @Override protected PathElement[] getUnderlineShape(int start, int end) {

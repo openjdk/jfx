@@ -17,6 +17,7 @@
 ^modules/[a-zA-Z0-9_]*/build/
 ^apps/build/
 ^apps/.*/build/
+^netbeans/.*/build/
 ^tests/.*/build/
 bin/
 dist/

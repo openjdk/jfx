@@ -36,6 +36,8 @@ import java.math.BigInteger;
 import java.util.*;
 
 import java.lang.reflect.*;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 
 import javafx.beans.value.ObservableValue;
 import sun.reflect.misc.FieldUtil;
@@ -111,7 +113,7 @@ public class BeanAdapter extends AbstractMap<String, Object> {
         localCache = getClassMethodCache(bean.getClass());
     }
 
-    private static MethodCache getClassMethodCache(Class<?> type) {
+    private static MethodCache getClassMethodCache(final Class<?> type) {
         if (type == Object.class) {
             return null;
         }
@@ -123,21 +125,32 @@ public class BeanAdapter extends AbstractMap<String, Object> {
             Map<String, List<Method>> classMethods = new HashMap<>();
 
             ReflectUtil.checkPackageAccess(type);
-            Method[] declaredMethods = type.getDeclaredMethods();
-            for (int i = 0; i < declaredMethods.length; i++) {
-                Method method = declaredMethods[i];
-                int modifiers = method.getModifiers();
+            if (Modifier.isPublic(type.getModifiers())) {
+                // only interested in public methods in public classes in
+                // non-restricted packages
+                final Method[] declaredMethods =
+                        AccessController.doPrivileged(
+                                new PrivilegedAction<Method[]>() {
+                                    @Override
+                                    public Method[] run() {
+                                        return type.getDeclaredMethods();
+                                    }
+                                });
+                for (int i = 0; i < declaredMethods.length; i++) {
+                    Method method = declaredMethods[i];
+                    int modifiers = method.getModifiers();
 
-                if (Modifier.isPublic(modifiers) && !Modifier.isStatic(modifiers)) {
-                    String name = method.getName();
-                    List<Method> namedMethods = classMethods.get(name);
+                    if (Modifier.isPublic(modifiers) && !Modifier.isStatic(modifiers)) {
+                        String name = method.getName();
+                        List<Method> namedMethods = classMethods.get(name);
 
-                    if (namedMethods == null) {
-                        namedMethods = new ArrayList<>();
-                        classMethods.put(name, namedMethods);
+                        if (namedMethods == null) {
+                            namedMethods = new ArrayList<>();
+                            classMethods.put(name, namedMethods);
+                        }
+
+                        namedMethods.add(method);
                     }
-
-                    namedMethods.add(method);
                 }
             }
             MethodCache cache = new MethodCache(classMethods, getClassMethodCache(type.getSuperclass()));

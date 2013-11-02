@@ -545,6 +545,9 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
         
         window->fullscreenWindow = nil;
         window->isAccessibleInitComplete = NO;
+
+        window->isSizeAssigned = NO;
+        window->isLocationAssigned = NO;
     }
     [pool drain];
     
@@ -1092,16 +1095,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setBounds
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
-        NSPoint origin = [window _flipFrame].origin;
-        NSSize size = [window->nsWindow frame].size;
-        NSSize sizeForClient = [NSWindow frameRectForContentRect:NSMakeRect(0.0, 0.0, cw > 0 ? cw : 0.0, ch > 0 ? ch : 0.0) styleMask:[window->nsWindow styleMask]].size;
-        
-        jint newX = xSet == JNI_TRUE ? x : (jint)origin.x;
-        jint newY = ySet == JNI_TRUE ? y : (jint)origin.y;
-        jint newW = (w > 0) ? w : (cw > 0) ? (jint)sizeForClient.width : (jint)size.width;
-        jint newH = (h > 0) ? h : (ch > 0) ? (jint)sizeForClient.height : (jint)size.height;
-        
-        [window _setWindowFrameWithRect:NSMakeRect(newX, newY, newW, newH) withDisplay:JNI_TRUE withAnimate:JNI_FALSE];
+        if (xSet || ySet) window->isLocationAssigned = YES;
+        if (w > 0 || h > 0 || cw > 0 || ch > 0) window->isSizeAssigned = YES;
+        [window _setBounds:x y:y xSet:xSet ySet:ySet w:w h:h cw:cw ch:ch];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -1195,6 +1191,12 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setVisible
         GlassWindow *window = getGlassWindow(env, jPtr);
         if (jVisible == JNI_TRUE)
         {
+            if (!window->isLocationAssigned) {
+                [window _setBounds:0 y:0 xSet:JNI_TRUE ySet:JNI_TRUE w:-1 h:-1 cw:-1 ch:-1];
+            }
+            if (!window->isSizeAssigned) {
+                [window _setBounds:0 y:0 xSet:JNI_FALSE ySet:JNI_FALSE w:320 h:200 cw:-1 ch:-1];
+            }
             [window _setVisible];
         }
         else

@@ -125,14 +125,26 @@ public abstract class Pixels {
         Application.checkEventThread();
         return this.scale;
     }
+    
+    public final float getScaleUnsafe() {
+        return this.scale;
+    }
 
     public final int getWidth() {
         Application.checkEventThread();
         return this.width;
     }
 
+    public final int getWidthUnsafe() {
+        return this.width;
+    }
+
     public final int getHeight() {
         Application.checkEventThread();
+        return this.height;
+    }
+    
+    public final int getHeightUnsafe() {
         return this.height;
     }
     

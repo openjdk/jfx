@@ -134,6 +134,20 @@ void GlassView::EnableInputMethodEvents(BOOL enable)
     m_InputMethodEventsEnabled = enable;
 }
 
+void GlassView::FinishInputMethodComposition()
+{
+    HWND hwnd = GetHostHwnd();
+    if (hwnd)
+    {
+        HIMC hIMC = ::ImmGetContext(hwnd);
+        if(hIMC)
+        {
+            ::ImmNotifyIME(hIMC, NI_COMPOSITIONSTR, CPS_COMPLETE, 0);
+            ::ImmReleaseContext(hwnd, hIMC);
+        }
+    }
+}
+
 /*
  * JNI methods section
  *
@@ -528,4 +542,17 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinView__1enableInputMethodEven
     GlassView* view = (GlassView*)jlong_to_ptr(ptr);
     view->EnableInputMethodEvents(jbool_to_bool(enable));
 }
+
+/*
+ * Class:     com_sun_glass_ui_win_WinView
+ * Method:    _finishInputMethodComposition
+ * Signature: (JZ)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinView__1finishInputMethodComposition
+  (JNIEnv *env, jobject jview, jlong ptr)
+{
+    GlassView* view = (GlassView*)jlong_to_ptr(ptr);
+    view->FinishInputMethodComposition();
+}
+
 }   // extern "C"

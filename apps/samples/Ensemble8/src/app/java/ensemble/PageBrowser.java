@@ -31,6 +31,7 @@
  */
 package ensemble;
 
+import ensemble.samplepage.SourcePage;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyStringProperty;
@@ -52,6 +53,7 @@ public class PageBrowser extends Region {
     public static final String HOME_URL = "home";
     private HomePage homePage;
     private Page currentPage;
+    private SamplePage samplePage;
     private String currentPageUrl;
     private DocsPage docsPage;
     private LinkedList<String> pastHistory = new LinkedList<>();
@@ -137,7 +139,7 @@ public class PageBrowser extends Region {
             docsPage.goToUrl(url);
             getChildren().add(currentPage.getNode());
         } else if (sample != null) {
-            currentPage = new SamplePage(sample,url,this);
+            currentPage = updateSamplePage(sample, url);
             getChildren().add(currentPage.getNode());
         } else if (url.startsWith("sample://")) {
             String samplePath = url.substring("sample://".length());
@@ -146,7 +148,21 @@ public class PageBrowser extends Region {
             }
             sample = Samples.ROOT.sampleForPath(samplePath);
             if (sample != null) {
-                currentPage = new SamplePage(sample,url,this);
+                currentPage = updateSamplePage(sample, url);
+                getChildren().add(currentPage.getNode());
+            } else {
+                throw new UnsupportedOperationException("Unknown sample url ["+url+"]");
+            }
+        } else if (url.startsWith("sample-src://")) {
+            String samplePath = url.substring("sample-src://".length());
+            if (samplePath.contains("?")) {
+                samplePath = samplePath.substring(0, samplePath.indexOf('?') - 1);
+            }
+            sample = Samples.ROOT.sampleForPath(samplePath);
+            if (sample != null) {
+                SourcePage sourcePage = new SourcePage();
+                sourcePage.setSampleInfo(sample);
+                currentPage = sourcePage;
                 getChildren().add(currentPage.getNode());
             } else {
                 throw new UnsupportedOperationException("Unknown sample url ["+url+"]");
@@ -169,5 +185,14 @@ public class PageBrowser extends Region {
 
     public String getCurrentPageUrl() {
         return currentPageUrl;
+    }
+
+    private SamplePage updateSamplePage(SampleInfo sample, String url) {
+        if (samplePage == null) {
+            samplePage = new SamplePage(sample, url, this);
+        } else {
+            samplePage.update(sample, url);
+        }
+        return samplePage;
     }
 }

@@ -461,7 +461,7 @@ public abstract class Labeled extends Control {
                     this.origin = origin;
 
                     // Don't want applyStyle to throw an exception which would leave this.origin set to the wrong value
-                    if (graphic.isBound() == false) super.applyStyle(origin, v);
+                    if (graphic == null || graphic.isBound() == false) super.applyStyle(origin, v);
 
                     // Origin is only valid for this invocation of applyStyle, so reset it to USER in case someone calls set.
                     this.origin = StyleOrigin.USER;

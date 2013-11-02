@@ -226,13 +226,13 @@
 }
 
 .syntaxhighlighter {
-  background-color: white !important;
+  background-color: #f4f4f4 !important;
 }
 .syntaxhighlighter .line.alt1 {
-  background-color: white !important;
+  background-color: #f4f4f4 !important;
 }
 .syntaxhighlighter .line.alt2 {
-  background-color: white !important;
+  background-color: #f4f4f4 !important;
 }
 .syntaxhighlighter .line.highlighted.alt1, .syntaxhighlighter .line.highlighted.alt2 {
   background-color: #e0e0e0 !important;
@@ -261,7 +261,7 @@
 }
 .syntaxhighlighter.collapsed .toolbar {
   color: blue !important;
-  background: white !important;
+  background: #f4f4f4 !important;
   border: 1px solid #6ce26c !important;
 }
 .syntaxhighlighter.collapsed .toolbar a {
@@ -271,12 +271,12 @@
   color: red !important;
 }
 .syntaxhighlighter .toolbar {
-  color: white !important;
+  color: #f4f4f4 !important;
   background: #6ce26c !important;
   border: none !important;
 }
 .syntaxhighlighter .toolbar a {
-  color: white !important;
+  color: #f4f4f4 !important;
 }
 .syntaxhighlighter .toolbar a:hover {
   color: black !important;

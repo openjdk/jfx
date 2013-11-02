@@ -150,6 +150,11 @@ class ViewScene extends GlassScene {
         platformView.enableInputMethodEvents(enable);
     }
 
+    @Override
+    public void finishInputMethodComposition() {
+        platformView.finishInputMethodComposition();
+    }
+
     @Override public String toString() {
         View view = getPlatformView();
         return (" scene: " + hashCode() + " @ (" + view.getWidth() + "," + view.getHeight() + ")");

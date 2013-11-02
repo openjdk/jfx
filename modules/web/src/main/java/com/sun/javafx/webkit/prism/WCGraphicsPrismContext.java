@@ -1579,8 +1579,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
 
     public void dispose() {
         if (!states.isEmpty()) {
-            new IllegalStateException("Unbalanced saveState/restoreState")
-                    .printStackTrace();
+            log.fine("Unbalanced saveState/restoreState");
         }
         while (!states.isEmpty()) {
             restoreStateInternal();

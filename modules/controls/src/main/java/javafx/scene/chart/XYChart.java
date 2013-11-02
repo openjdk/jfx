@@ -112,6 +112,7 @@ public abstract class XYChart<X,Y> extends Chart {
             while (c.next()) {
                 if (c.getRemoved().size() > 0) updateLegend();
                 for (Series<X,Y> series : c.getRemoved()) {
+                    series.setToRemove = true;
                     series.setChart(null);
                     seriesRemoved(series);
 //                    seriesDefaultColorIndex --;
@@ -120,6 +121,10 @@ public abstract class XYChart<X,Y> extends Chart {
                     final Series<X,Y> series = c.getList().get(i);
                     // add new listener to data
                     series.setChart(XYChart.this);
+                    if (series.setToRemove) {
+                        series.setToRemove = false;
+                        series.getChart().seriesBeingRemovedIsAdded(series);
+                    }
                     // update linkedList Pointers for series
                     if (XYChart.this.begin == null) {
                         XYChart.this.begin = getData().get(i);
@@ -555,6 +560,19 @@ public abstract class XYChart<X,Y> extends Chart {
     protected void updateLegend(){}
 
     /**
+     * This method is called when there is an attempt to add series that was  
+     * set to be removed, and the removal might not have completed. 
+     * @param series 
+     */
+    void seriesBeingRemovedIsAdded(Series<X,Y> series) {}
+    
+    /**
+     * This method is called when there is an attempt to add a Data item that was
+     * set to be removed, and the removal might not have completed.
+     * @param data 
+     */
+    void dataBeingRemovedIsAdded(Data<X,Y> item, Series<X,Y> series) {}
+    /**
      * Called when a data item has been added to a series. This is where implementations of XYChart can create/add new
      * nodes to getPlotChildren to represent this data item. They also may animate that data add with a fade in or
      * similar if animated = true.
@@ -906,6 +924,7 @@ public abstract class XYChart<X,Y> extends Chart {
      * @param series The series to remove
      */
     protected final void removeSeriesFromDisplay(Series<X, Y> series) {
+        if (series != null) series.setToRemove = false;
         if (begin == series) {
             begin = series.next;
         } else {
@@ -1447,7 +1466,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
         /** the style class for default color for this series */
         String defaultColorStyleClass;
-
+        boolean setToRemove = false;
         Data<X,Y> begin = null; // start pointer of a data linked list.
         /*
          * Next pointer for the next series. We maintain a linkedlist of the
@@ -1485,7 +1504,8 @@ public abstract class XYChart<X,Y> extends Chart {
                     if (c.getAddedSize() > 0) {
                         for (Data<X,Y> itemPtr = begin; itemPtr != null; itemPtr = itemPtr.next) {
                             if (itemPtr.setToRemove) {
-                                removeDataItemRef(itemPtr);
+                                getChart().dataBeingRemovedIsAdded(itemPtr, Series.this);
+                                itemPtr.setToRemove = false;
                             }
                         }
                     }
@@ -1696,6 +1716,7 @@ public abstract class XYChart<X,Y> extends Chart {
          * when data is deleted.
          */
         private void removeDataItemRef(Data<X,Y> item) {
+            if (item != null) item.setToRemove = false;
             if (begin == item) {
                 begin = item.next;
             } else {
@@ -1724,5 +1745,5 @@ public abstract class XYChart<X,Y> extends Chart {
             return count;
         }
     }
-
+    
 }

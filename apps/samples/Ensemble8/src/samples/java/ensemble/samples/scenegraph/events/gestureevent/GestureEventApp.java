@@ -89,8 +89,9 @@ public class GestureEventApp extends Application {
     public Parent createContent() {
         //set up the console
         console.setItems(consoleObservableList);
-        //      console.setLayoutY(5);
         console.setPrefSize(CONSOLE_WIDTH, CONSOLE_HEIGHT);
+        console.setMinSize(ListView.USE_PREF_SIZE, ListView.USE_PREF_SIZE);
+        console.setMaxSize(ListView.USE_PREF_SIZE, ListView.USE_PREF_SIZE);
         VBox root = new VBox();
         root.setSpacing(2);
         root.setPrefSize(SAMPLE_SCREEN_WIDTH, SAMPLE_SCREEN_HEIGHT);

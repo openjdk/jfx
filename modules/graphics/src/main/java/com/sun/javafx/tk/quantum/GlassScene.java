@@ -69,7 +69,7 @@ abstract class GlassScene implements TKScene {
 
     private NGNode root;
     private NGCamera camera;
-    private Paint fillPaint;
+    protected Paint fillPaint;
 
     // Write from FX thread, read from render thread
     private volatile boolean entireSceneDirty = true;
@@ -332,7 +332,7 @@ abstract class GlassScene implements TKScene {
         return doPresent;
     }
 
-    final Color getClearColor() {
+    protected Color getClearColor() {
         WindowStage windowStage = stage instanceof WindowStage ? (WindowStage)stage : null;
         if (windowStage != null && windowStage.getPlatformWindow().isTransparentWindow()) {
             return (Color.TRANSPARENT);

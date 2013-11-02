@@ -364,7 +364,8 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             @Override public Point2D getTextLocation(int offset) {
                 Scene scene = getSkinnable().getScene();
                 Window window = scene.getWindow();
-                Rectangle2D characterBounds = getCharacterBounds(imstart + offset);
+                // Don't use imstart here because it isn't initialized yet.
+                Rectangle2D characterBounds = getCharacterBounds(textInput.getSelection().getStart() + offset);
                 Point2D p = getSkinnable().localToScene(characterBounds.getMinX(), characterBounds.getMaxY());
                 Point2D location = new Point2D(window.getX() + scene.getX() + p.getX(),
                                                window.getY() + scene.getY() + p.getY());
@@ -493,15 +494,15 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
                 textInput.replaceText(textInput.getSelection(), committed);
             }
 
-            // Insert composed text
+            // Replace composed text
             imstart = textInput.getSelection().getStart();
             StringBuilder composed = new StringBuilder();
             for (InputMethodTextRun run : event.getComposed()) {
                 composed.append(run.getText());
             }
+            textInput.replaceText(textInput.getSelection(), composed.toString());
             imlength = composed.length();
             if (imlength != 0) {
-                textInput.replaceText(textInput.getSelection(), composed.toString());
                 int pos = imstart;
                 for (InputMethodTextRun run : event.getComposed()) {
                     int endPos = pos + run.getText().length();
@@ -531,7 +532,9 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
         double minY = 0f;
         double maxY = 0f;
 
-        for (PathElement pe: getUnderlineShape(start, end)) {
+        PathElement elements[] = getUnderlineShape(start, end);
+        for (int i = 0; i < elements.length; i++) {
+            PathElement pe = elements[i];
             if (pe instanceof MoveTo) {
                 minX = maxX = ((MoveTo)pe).getX();
                 minY = maxY = ((MoveTo)pe).getY();
@@ -546,7 +549,11 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             } else if (pe instanceof VLineTo) {
                 minY = (minY < ((VLineTo)pe).getY() ? minY : ((VLineTo)pe).getY());
                 maxY = (maxY > ((VLineTo)pe).getY() ? maxY : ((VLineTo)pe).getY());
-            } else if (pe instanceof ClosePath) {
+            }
+            // Don't assume that shapes are ended with ClosePath.
+            if (pe instanceof ClosePath ||
+                i == elements.length - 1 ||
+                (i < elements.length - 1 && elements[i+1] instanceof MoveTo)) {
                 // Now, create the attribute.
                 Shape attr = null;
                 if (highlight == InputMethodHighlight.SELECTED_RAW) {

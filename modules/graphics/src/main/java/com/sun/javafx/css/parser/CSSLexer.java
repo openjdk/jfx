@@ -75,6 +75,7 @@ final class CSSLexer {
     final static int WS = 40;
     final static int NL = 41;
     final static int FONT_FACE = 42;
+    final static int URL = 43;
 
     private final Recognizer A = new SimpleRecognizer('a','A');
     private final Recognizer B = new SimpleRecognizer('b','B');
@@ -199,7 +200,20 @@ final class CSSLexer {
     // lparen after ident implies function
     final LexerState lparenState = new LexerState(FUNCTION, "lparenState",
         LPAREN_CHAR
-    );
+    ) {
+        @Override public int getType() {
+
+            if (text.indexOf("url(") == 0) {
+                try {
+                    return consumeUrl();
+                } catch (IOException ioe) {
+                    return Token.INVALID;
+                }
+            }
+            return super.getType();
+        }
+    };
+
 
     // initial digits in a number
     final LexerState leadingDigitsState = new LexerState(NUMBER,"leadingDigitsState",
@@ -283,7 +297,7 @@ final class CSSLexer {
         // ident '-'? {nmchar}+
         // nmStartState -- [_a-z0-9-] --> nmCharState
         // nmCharState -- [_a-z0-9-] --> nmCharState
-        // nmCharState -- [)] --> lparenState
+        // nmCharState -- [(] --> lparenState
         //
         map.put(
                 nmStartState,
@@ -354,7 +368,7 @@ final class CSSLexer {
                     unitsState
                 }
         );
-    
+
         return map;
     }
 
@@ -446,7 +460,158 @@ final class CSSLexer {
             }
         }
     }
-   
+
+    // http://www.ietf.org/rfc/rfc3986
+    // http://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html#uri
+    // http://www.w3.org/TR/css3-syntax/#consume-a-url-token
+    private int consumeUrl() throws IOException {
+
+        text.delete(0, text.length());
+
+        // skip initial white space
+        while (WS_CHARS.recognize(ch)) {
+            ch = readChar();
+        }
+
+        if (ch == Token.EOF) {
+            return Token.EOF;
+        }
+
+        if (ch == '\'' || ch == '"') {
+
+            int endQuote = ch;
+
+            ch = readChar();
+
+            // consume the string
+            while (ch != endQuote) {
+
+                if (ch == Token.EOF) {
+                    break;
+                }
+
+                // un-escaped newline is an error
+                if (NL_CHARS.recognize(ch)) {
+                    break;
+                }
+
+                // handle escaped char
+                // Note: this block does not handle the algorithm for consuming hex-digits
+                if (ch == '\\') {
+
+                    ch = readChar();
+
+                    if (NL_CHARS.recognize(ch)) {
+
+                        // consume newline
+                        while(NL_CHARS.recognize(ch)) {
+                            ch = readChar();
+                        }
+
+                    } else if (ch != Token.EOF) {
+                        // if EOF, do nothing
+                        text.append((char)ch);
+                        ch = readChar();
+                    }
+
+                    continue;
+                }
+
+                text.append((char)ch);
+                ch = readChar();
+
+            }
+
+            if (ch == endQuote) {
+
+                ch = readChar();
+                while(WS_CHARS.recognize(ch)) {
+                    ch = readChar();
+                }
+
+                // After consuming white-space, the char has to be rparen or EOF. Error otherwise.
+                if (ch == ')') {
+                    // consume the rparen
+                    ch = readChar();
+                    return URL;
+                }
+
+                if(ch == Token.EOF) {
+                    return URL;
+                }
+            }
+
+        } else {
+
+            // TODO: a lot of repeat code from above
+            text.append((char)ch);
+            ch = readChar();
+
+            while (true) {
+
+                while (WS_CHARS.recognize(ch)) {
+                    ch = readChar();
+                }
+
+                if (ch == ')') {
+                    // consume the rparen
+                    ch = readChar();
+                    return URL;
+                }
+
+                if (ch == Token.EOF) {
+                    return URL;
+                }
+
+                // handle escaped char
+                // Note: this block does not handle the algorithm for consuming hex-digits
+                if (ch == '\\') {
+
+                    ch = readChar();
+
+                    if (NL_CHARS.recognize(ch)) {
+
+                        // consume newline
+                        while(NL_CHARS.recognize(ch)) {
+                            ch = readChar();
+                        }
+
+                    } else if (ch != Token.EOF) {
+                        // if EOF, do nothing
+                        text.append((char)ch);
+                        ch = readChar();
+                    }
+
+                    continue;
+                }
+
+                if (ch == '\'' || ch == '"' || ch == '(') {
+                    break;
+                }
+
+                text.append((char)ch);
+                ch = readChar();
+
+            }
+        }
+
+        // if we get to here, then the token is bad
+        // consume up to rparen or eof
+        while(true) {
+            int lastCh = ch;
+            if (ch == Token.EOF) {
+                return Token.EOF;
+            } else if (ch == ')' && lastCh != '\\') {
+                ch = readChar();
+                return Token.INVALID;
+            }
+
+            lastCh = ch;
+            ch = readChar();
+        }
+
+    }
+
     private class UnitsState extends LexerState {
 
         private Recognizer units[][] = {

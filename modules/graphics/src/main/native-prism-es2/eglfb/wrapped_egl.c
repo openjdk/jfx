@@ -90,6 +90,12 @@ int load_wrapped_gles_symbols() {
     }
 
     _eglGetDisplay = dlsym(libegl, "eglGetDisplay");
+    
+    libglesv2 = dlopen("libGLESv2.so", RTLD_LAZY | RTLD_GLOBAL);
+    if (!libglesv2) {
+        fprintf(stderr, "Did not find libGLESv2.so %s\n", dlerror());
+        return 0;
+    }
 #else
     
     Dl_info dlinfo;

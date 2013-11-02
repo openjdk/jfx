@@ -38,6 +38,9 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Comparator;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.geometry.Bounds;
 
 import static org.junit.Assert.*;
 
@@ -126,6 +129,27 @@ public final class ImageViewTest {
     public void testNullViewport() {
         imageView.setViewport(null);
         assertNull(imageView.getViewport());
+    }
+
+    private static class BoundsChangedListener implements ChangeListener<Bounds> {
+        private boolean wasCalled = false;
+
+        public void changed(ObservableValue<? extends Bounds> ov, Bounds oldValue, Bounds newValue) {
+                assertEquals(oldValue.getWidth(), 32, 1e-10);
+                assertEquals(oldValue.getHeight(), 32, 1e-10);
+                assertEquals(newValue.getWidth(), 200, 1e-10);
+                assertEquals(newValue.getHeight(), 100, 1e-10);
+                wasCalled = true;
+        }
+    }
+
+    @Test
+    public void testImageChangesBoundsWithListener() {
+        BoundsChangedListener listener = new BoundsChangedListener();
+        imageView.setImage(TestImages.TEST_IMAGE_32x32);
+        imageView.boundsInParentProperty().addListener(listener);
+        imageView.setImage(TestImages.TEST_IMAGE_200x100);
+        assertTrue(listener.wasCalled);
     }
 
     /*
