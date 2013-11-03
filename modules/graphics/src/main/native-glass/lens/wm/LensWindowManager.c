@@ -1093,10 +1093,72 @@ void lens_wm_notifyMultiTouchEvent(JNIEnv *env,
         touchWindow = glass_window_findWindowAtLocation(xabs[primaryPointIndex],
                                                         yabs[primaryPointIndex],
                                                         &relX, &relY);
-        lens_wm_setMouseWindow(touchWindow);
+        if (touchWindow) {
+            //As this is the first time we find a window to report to, we need to
+            //transform all points states to 'press' and ignore release events, as 
+            //the input driver state calculation is done without a window context.
+            //An example for a wrong state -  tapping on an 'open space' and then
+            //dragging the finger over a window. The touch events will be 
+            //reported as move, from the input driver, but the window expect them to be
+            //pressed event as it the first time it get a notification for those
+            //points
+
+            GLASS_LOG_FINEST("[touch window] window %d[%p] own the touch sequence",
+                             touchWindow->id,
+                             touchWindow);
+
+            int actualCount = 0;
+            for (i = 0; i < count; i++) {
+                if (states[i] == com_sun_glass_events_TouchEvent_TOUCH_RELEASED) {
+                    //skip and drop release events
+                    GLASS_LOG_FINEST("[touch window] Dropping touch point (index %d id %d)",
+                                     i,
+                                     (int)ids[i]);
+                    continue;
+                } else {
+                    //copy 
+                    ids[actualCount] = ids[i];
+                    states[actualCount] = com_sun_glass_events_TouchEvent_TOUCH_PRESSED;
+                    xabs[actualCount] = xabs[i];
+                    yabs[actualCount] = yabs[i];
+
+                    //update the index of the primary point 
+                    if (primaryPointIndex == i) {
+                        primaryPointIndex = actualCount;
+                    }
+
+                    actualCount ++;
+                }
+            }
+
+            GLASS_IF_LOG_FINEST {
+                if (count != actualCount) {                    
+                    GLASS_LOG_FINEST("[touch window] points array have been updated to:");
+                        for (i = 0; i < actualCount; i++) {
+                            const char *isPrimary = primaryPointIndex == i?
+                                                    "[Primary]":
+                                                    "";
+                            GLASS_LOG_FINEST("[touch window] point %d / %d id=%d state=%d, x=%d y=%d %s",
+                                             i+1,
+                                             actualCount,
+                                             (int)ids[i],
+                                             states[i],
+                                             xabs[i], yabs[i],
+                                             isPrimary);
+                        }
+                        GLASS_LOG_FINEST(" "); //make it easier to read the log
+                }
+
+            }
+            //update count
+            count = actualCount;
+
+            lens_wm_setMouseWindow(touchWindow);
+        }
+        
     }
 
-    GLASS_LOG_FINER("touch window %d, indexPoint = %d",
+    GLASS_LOG_FINEST("touch window %d, indexPoint = %d",
                     touchWindow? touchWindow->id : -1,
                     primaryPointIndex);
     if (touchWindow == NULL && primaryPointIndex == -1) {

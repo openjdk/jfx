@@ -1874,9 +1874,9 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
             GLASS_IF_LOG_FINEST {
                 GLASS_LOG_FINEST("lens_wm_notifyMultiTouchEvent() with:");
                 for (i = 0; i < count; i++) {
-                    char *isPrimary = primaryPointIndex >=0?
-                                        "[Primary]":
-                                        "";
+                    const char *isPrimary = primaryPointIndex == i?
+                                            "[Primary]":
+                                            "";
                     GLASS_LOG_FINEST("point %d / %d id=%d state=%d, x=%d y=%d %s",
                                      i+1,
                                      count,
