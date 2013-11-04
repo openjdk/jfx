@@ -1348,16 +1348,11 @@ public class NGRegion extends NGGroup {
                        0, 0, rightWidth, bottomWidth);
             // paint the center slice
             if (ib.isFilled()) {
-                // we will get gaps if we don't round to pixel boundaries
-                final int areaX = leftInset + leftWidth;
-                final int areaY = topInset + topWidth;
-                final int areaW = Math.round(width) - rightInset - rightWidth - areaX;
-                final int areaH = Math.round(height) - bottomInset - bottomWidth - areaY;
                 // handle no repeat as stretch
                 final float imgW = (ib.getRepeatX() == BorderRepeat.STRETCH) ? centerW : centerSliceWidth;
                 final float imgH = (ib.getRepeatY() == BorderRepeat.STRETCH) ? centerH : centerSliceHeight;
                 paintTiles(g, prismImage, ib.getRepeatX(), ib.getRepeatY(), Side.LEFT, Side.TOP,
-                           areaX, areaY, areaW, areaH,
+                           centerMinX, centerMinY, centerW, centerH,
                            leftSlice, topSlice, centerSliceWidth, centerSliceHeight,
                            0, 0, imgW, imgH);
             }
@@ -1792,7 +1787,7 @@ public class NGRegion extends NGGroup {
     {
         // If the destination width/height is 0 or the src width / height is 0 then we have
         // nothing to draw, so we can just bail.
-        if (regionWidth == 0 || regionHeight == 0 || srcW == 0 || srcH == 0) return;
+        if (regionWidth <= 0 || regionHeight <= 0 || srcW <= 0 || srcH <= 0) return;
 
         // At this point we should have real values for the image source coordinates
         assert srcX >= 0 && srcY >= 0 && srcW > 0 && srcH > 0;
