@@ -121,24 +121,26 @@ inline void matrixTransposed(D3DMATRIX& r, const D3DMATRIX& a) {
 }
 
 void D3DMeshView::render() {
-    D3DMATRIX mat;
-    HRESULT status = true;
-    IDirect3DDevice9 *device = context->Get3DDevice();
+    RETURN_IF_NULL(context);
+    RETURN_IF_NULL(material);
+    RETURN_IF_NULL(mesh);
 
-    if (material == NULL) {
+    IDirect3DDevice9 *device = context->Get3DDevice();
+    RETURN_IF_NULL(device);
+
+    HRESULT status = SUCCEEDED(device->SetFVF(mesh->getVertexFVF()));
+    if (!status) {
+        cout << "D3DMeshView.render() - SetFVF failed !!!" << endl;
         return;
     }
 
-    status = SUCCEEDED(device->SetFVF(mesh->getVertexFVF()));
-    if (!status) {
-        cout << "D3DMeshView.render() - SetFVF failed !!!" << endl;
-    }
-
     D3DPhongShader *pShader = context->getPhongShader();
+    RETURN_IF_NULL(pShader);
 
     status = SUCCEEDED(device->SetVertexShader(pShader->getVertexShader()));
     if (!status) {
         cout << "D3DMeshView.render() - SetVertexShader failed !!!" << endl;
+        return;
     }
 
     // TODO: 3D - Use Java layer sorting instead of the local sort.
@@ -151,11 +153,13 @@ void D3DMeshView::render() {
     status = SUCCEEDED(device->SetVertexShaderConstantF(VSR_AMBIENTCOLOR, ambientLightColor, 1));
     if (!status) {
         cout << "D3DMeshView.render() - SetVertexShaderConstantF (VSR_AMBIENTCOLOR) failed !!!" << endl;
+        return;
     }
 
     status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_CONSTANTCOLOR, material->getSolidColor(), 1));
     if (!status) {
         cout << "D3DMeshView.render() - SetPixelShaderConstantF (PSR_CONSTANTCOLOR) failed !!!" << endl;
+        return;
     }
 
     float lightsColor[12];
@@ -169,6 +173,7 @@ void D3DMeshView::render() {
     status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_LIGHTCOLOR, lightsColor, 3));
     if (!status) {
         cout << "D3DMeshView.render() - SetPixelShaderConstantF (PSR_LIGHTCOLOR) failed !!!" << endl;
+        return;
     }
 
     int bm = pShader->getBumpMode(material->isBumpMap());
@@ -179,6 +184,7 @@ void D3DMeshView::render() {
     status = pShader->setPixelShader(numLights, sm, bm, im);
     if (!status) {
         cout << "D3DMeshView.render() - setPixelShader failed !!!" << endl;
+        return;
     }
 
     SUCCEEDED(device->SetTexture(SR_DIFFUSEMAP, material->getMap(DIFFUSE)));
@@ -186,6 +192,7 @@ void D3DMeshView::render() {
     SUCCEEDED(device->SetTexture(SR_BUMPHEIGHTMAP, material->getMap(BUMP)));
     SUCCEEDED(device->SetTexture(SR_SELFILLUMMAP, material->getMap(SELFILLUMINATION)));
 
+    D3DMATRIX mat;
     matrixTransposed(mat, *(context->GetWorldTx()));
 //    std::cerr << "Transposed world transform:\n";
 //    fprintf(stderr, "  %5f %5f %5f %5f\n", mat._11, mat._12, mat._13, mat._14);

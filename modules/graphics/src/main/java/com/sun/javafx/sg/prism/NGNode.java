@@ -2017,19 +2017,20 @@ public abstract class NGNode {
         // approximation, but somewhat more accurate (at least it doesn't include
         // groups which don't paint anything themselves).
         boolean p = false;
-        if (g instanceof ReadbackGraphics && needsBlending()) {
+        // NOTE: Opt out 2D operations on 3D Shapes, which are not yet handled by Prism
+        if (!isShape3D() && g instanceof ReadbackGraphics && needsBlending()) {
             renderNodeBlendMode(g);
             p = true;
-        } else if (getOpacity() < 1f) {
+        } else if (!isShape3D() && getOpacity() < 1f) {
             renderOpacity(g);
             p = true;
-        } else if (getCacheFilter() != null) {
+        } else if (!isShape3D() && getCacheFilter() != null) {
             renderCached(g);
             p = true;
-        } else if (getClipNode() != null) {
+        } else if (!isShape3D() && getClipNode() != null) {
             renderClip(g);
             p = true;
-        } else if (getEffectFilter() != null && effectsSupported) {
+        } else if (!isShape3D() && getEffectFilter() != null && effectsSupported) {
             renderEffect(g);
             p = true;
         } else {
