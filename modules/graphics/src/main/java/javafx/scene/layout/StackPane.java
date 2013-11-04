@@ -264,12 +264,15 @@ public class StackPane extends Pane {
      */
     @Override public Orientation getContentBias() {
         if (biasDirty) {
+            bias = null;
             final List<Node> children = getManagedChildren();
             for (Node child : children) {
                 Orientation contentBias = child.getContentBias();
                 if (contentBias != null) {
                     bias = contentBias;
-                    break;
+                    if (contentBias == Orientation.HORIZONTAL) {
+                        break;
+                    }
                 }
             }
             biasDirty = false;

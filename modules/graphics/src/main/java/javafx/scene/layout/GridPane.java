@@ -1191,11 +1191,14 @@ public class GridPane extends Pane {
                 columnPercentTotal = 100;
             }
 
+            bias = null;
             for (int i = 0; i < managed.size(); ++i) {
                 final Orientation b = managed.get(i).getContentBias();
                 if (b != null) {
                     bias = b;
-                    break;
+                    if (b == Orientation.HORIZONTAL) {
+                        break;
+                    }
                 }
             }
 
