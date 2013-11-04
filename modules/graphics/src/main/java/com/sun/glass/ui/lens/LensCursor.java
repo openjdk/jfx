@@ -42,7 +42,7 @@ final class LensCursor extends Cursor {
     protected LensCursor(int type) {
         super(type);
 
-        if (type != CURSOR_NONE && type != CURSOR_DISAPPEAR) {
+        if (type != CURSOR_NONE) {
             ptr = _createNativeCursorByType(type);
         }
     }
@@ -97,10 +97,12 @@ final class LensCursor extends Cursor {
         }
 
         int type = getType();
-        if (type == CURSOR_DISAPPEAR) {
-            // CURSOR_DISAPPEAR is mapped to setVisible(false) and will be registered 
+        if (type == CURSOR_NONE) {
+            // CURSOR_NONE is mapped to setVisible(false) and will be registered
             // in LensApplication as a user preference to not show the cursor.
             ((LensApplication)Application.GetApplication()).staticCursor_setVisible(false);
+        } else {
+            ((LensApplication)Application.GetApplication()).staticCursor_setVisible(true);
         }
     }
 
