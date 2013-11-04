@@ -1,0 +1,125 @@
+/*
+ * Copyright (c) 2009, 2011, Oracle anis/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+ /*******************************************************************************
+ *																			   *
+ * 2-level focus setting for Caspian										   *
+ *																			   *
+ ******************************************************************************/
+
+/*******************************************************************************
+ *																			   *
+ * ChoiceBox																   *
+ *																			   *
+ ******************************************************************************/
+.choice-box:showing {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+}
+/*******************************************************************************
+ *																			   *
+ * TextField																   *
+ *																			   *
+ ******************************************************************************/
+.text-input:focused:internal-focus {
+    -fx-highlight-fill: -fx-accent;
+    -fx-highlight-text-fill: white;
+}
+.text-input:focused:external-focus {
+    -fx-highlight-fill: -fx-control-inner-background;
+    -fx-highlight-text-fill: -fx-text-inner-color;
+}
+.text-field:focused:external-focus {
+    -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
+}
+.text-field:focused:internal-focus {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-prompt-text-fill: transparent;
+}
+/*******************************************************************************
+ *																			   *
+ * TextArea																	   *
+ *																			   *
+ ******************************************************************************/
+.text-area:focused:internal-focus {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
+}
+.text-area:focused:external-focus {
+    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
+}
+/*******************************************************************************
+ *																			   *
+ * Slider																	   *
+ *																			   *
+ ******************************************************************************/
+.slider {
+    -fx-padding: 5;
+}
+.slider:focused:external-focus {
+    -fx-background-color: -fx-focus-color, -fx-control-inner-background;
+    -fx-background-insets: -0.4, 1;
+    -fx-background-radius: 3.4, 2;
+}
+.slider:focused:internal-focus {
+    -fx-background-color: transparent;
+}
+.slider:focused:external-focus .thumb {
+    -fx-background-color:
+        derive(-fx-color,-36%),
+        derive(-fx-color,73%),
+        linear-gradient(to bottom, derive(-fx-color,-19%),derive(-fx-color,61%));
+    -fx-background-insets: 0, 1, 2;
+}
+/*******************************************************************************
+ *																			   *
+ * ListView, TableView														   *
+ *																			   *
+ ******************************************************************************/
+.list-view:focused:external-focus > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected,
+.table-view:focused:external-focus > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:selected,
+.table-view:focused:external-focus > .virtual-flow > .clipped-container > .sheet > .table-row-cell > .table-cell:selected,
+.table-view:row-selection:focused:external-focus > .virtual-flow > .clipped-container > .sheet > .table-row-cell:selected:filled {
+    -fx-background-color: lightgray;
+    -fx-background: -fx-control-inner-background;
+    -fx-text-fill: -fx-text-inner-color;
+}
+.list-view:focused:internal-focus,
+.table-view:focused:internal-focus {
+    -fx-background-color: -fx-box-border, -fx-control-inner-background;
+    -fx-background-insets: 0, 1;
+}
+/*******************************************************************************
+ *																			   *
+ * ComboBox																	   *
+ *																			   *
+ ******************************************************************************/
+.combo-box-base:focused:showing  {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+    -fx-background-radius: 5, 5, 4, 3;
+    -fx-background-insets: 0 0 -1 0, 0, 1, 2;
+    -fx-padding: 0;
+}
+.combo-box-base:editable:focused:showing > .text-field:focused {
+    -fx-prompt-text-fill: transparent;
+}
