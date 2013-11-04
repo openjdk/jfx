@@ -31,6 +31,7 @@
 #include <fcntl.h>
 #include <linux/fb.h>
 #include <sys/ioctl.h>
+#include <sys/types.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
@@ -61,10 +62,16 @@ typedef struct {
     int screenWidth;
     int screenHeight;
     jlong currentCursor;
+    // When the cursor is at the extreme right or bottom of the screen, it
+    // needs to be shifted to show in the correct location. IMX doesn't let us
+    // position the framebuffer so that it is only partically visible.
+    int xShift;
+    int yShift;
     jboolean isVisible;
 } Imx6FBCursor;
 
-static Imx6FBCursor cursor = { .fd = -1, .width = 0, .height = 0, .x = 0, .y = 0, .currentCursor = 0, .isVisible = 0};
+static Imx6FBCursor cursor = { .fd = -1, .width = 0, .height = 0, .x = 0, .y = 0, .currentCursor = 0, .isVisible = 0,
+                              .xShift = 0, .yShift = 0 };
 
 //TODO : platform supports 32 and 16 bits, how do we choose what to use ?
 static int use32bit = 0;
@@ -79,6 +86,105 @@ typedef struct {
 } Imx6CursorImage;
 
 
+static void fbImx6BlankCursor(){
+     char buffer[256];
+     int bytesToWrite;
+
+     // Set buffer to be transparent
+     memset((void*)buffer, use32bit ? 0 : LENSFB_IMX6_CURSOR_COLOR_KEY, sizeof(buffer));
+
+     if (lseek(cursor.fd, 0, SEEK_SET) == -1) {
+         GLASS_LOG_SEVERE("Cannot rewrite cursor image");
+         return;
+     } 
+
+     bytesToWrite = cursor.width * cursor.height * (use32bit ? 4 : 2);
+     while (bytesToWrite > 0) {
+         int n = bytesToWrite > sizeof(buffer) ? sizeof(buffer) : bytesToWrite;
+         int res;
+         if ((res = write(cursor.fd, buffer, n)) < n) {
+             GLASS_LOG_SEVERE("Cannot write cursor plane %i bytes, wrote %i bytes", n, res);
+             return;
+         }
+         bytesToWrite -= n;
+     }
+}
+
+
+/* Updates values of xShift and yShift based on the cursor location */
+static void fbImx6AdjustShift(){
+    if (cursor.x > cursor.screenWidth - cursor.width) {
+        cursor.xShift = cursor.width + cursor.x - cursor.screenWidth;
+    } else {
+        cursor.xShift = 0;
+    }
+    if (cursor.y > cursor.screenHeight - cursor.height) {
+        cursor.yShift = cursor.height + cursor.y - cursor.screenHeight;
+    } else {
+        cursor.yShift = 0;
+    }
+}
+
+/* Writes an image into the cursor framebuffer with the given x and y shits. */
+static void fbImx6WriteCursor(int fd, jbyte *cursorImage, int bpp) {
+    int i, j, k;
+    char buffer[256];
+    int cursorSize = cursor.width * cursor.height * bpp;
+    int xShift = cursor.xShift;
+    int yShift = cursor.yShift;
+    GLASS_LOG_FINEST("Cursor shift = (%i, %i) at (%i, %i)\n",
+                     xShift, yShift, cursor.x, cursor.y);
+    if (xShift == 0 && yShift == 0) {
+        GLASS_LOG_FINEST("write(cursor.fd, .. %i)", cursorSize);
+        if ((i = write(cursor.fd, cursorImage, cursorSize)) < cursorSize) {
+            GLASS_LOG_SEVERE("Cannot write cursor plane cursorSize : %i, wrote %i bytes", cursorSize, i);
+        }
+        return;
+    }
+
+    // Set buffer to be transparent
+    memset((void*)buffer, use32bit ? 0 : LENSFB_IMX6_CURSOR_COLOR_KEY, sizeof(buffer));
+
+    // fill the y-shift rectangular area
+    for (i = 0; i < yShift; i++) {
+        for (j = 0; j < cursor.width * bpp; j += sizeof(buffer)) {
+            size_t n = cursor.width * bpp - j;
+            if (n > sizeof(buffer)) {
+                n = sizeof(buffer);
+            }
+            GLASS_LOG_FINEST("write(cursor.fd, .. %u)", n);
+            if (write(cursor.fd, buffer, n) < (int)n) {
+                GLASS_LOG_SEVERE("Cannot write cursor plane");
+                return;
+            }
+        }
+    }
+    // set the rest of the image
+    for (i = 0; i < cursor.height - yShift; i++) {
+        for (j = 0; j < xShift * bpp; j += sizeof(buffer)) {
+            size_t n = xShift * bpp;
+            if (n > sizeof(buffer)) {
+                n = sizeof(buffer);
+            }
+            GLASS_LOG_FINEST("write(cursor.fd, .. %u)", n);
+            if (write(cursor.fd, buffer, n) < (int)n) {
+                GLASS_LOG_SEVERE("Cannot write cursor plane");
+                return;
+            }
+        }
+        size_t n = (cursor.width - xShift) * bpp;
+        GLASS_LOG_FINEST("write(cursor.fd, .. %u)", n);
+        if (write(cursor.fd, cursorImage + i * cursor.width * bpp, n) < (int)n) {
+            GLASS_LOG_SEVERE("Cannot write cursor plane");
+            return;
+        }
+    }
+}
+
+
+
+
+
 static int fbImx6ChangeCursorSize(int width, int height) {
 
     struct fb_var_screeninfo screenInfo;
@@ -89,8 +195,8 @@ static int fbImx6ChangeCursorSize(int width, int height) {
 
     screenInfo.xres = width;
     screenInfo.yres = height;
-    screenInfo.xres_virtual = 0;
-    screenInfo.yres_virtual = 0;
+    screenInfo.xres_virtual = width;
+    screenInfo.yres_virtual = height;
     screenInfo.xoffset = 0;
     screenInfo.yoffset = 0;
     screenInfo.activate = 0;
@@ -156,8 +262,8 @@ static void fbImx6CursorInitialize(int screenWidth, int screenHeight) {
 
     screenInfo.xres = LENSFB_IMX6_CURSOR_SIZE;
     screenInfo.yres = LENSFB_IMX6_CURSOR_SIZE;
-    screenInfo.xres_virtual = 0;
-    screenInfo.yres_virtual = 0;
+    screenInfo.xres_virtual = LENSFB_IMX6_CURSOR_SIZE;
+    screenInfo.yres_virtual = LENSFB_IMX6_CURSOR_SIZE;
     screenInfo.xoffset = 0;
     screenInfo.yoffset = 0;
     screenInfo.activate = 0;
@@ -284,31 +390,63 @@ static void fbImx6SetNativeCursor(jlong nativeCursorHandle) {
         cursorImage != NULL && cursorImage->buffer != NULL) 
     {
         if (cursorImage->width != cursor.width || cursorImage->height != cursor.height) {
+            fbImx6BlankCursor();
             if (fbImx6ChangeCursorSize(cursorImage->width, cursorImage->height)) {
                 GLASS_LOG_SEVERE("Error in fbImx6ChangeCursorSize() w : %d h : %d", cursorImage->width, cursorImage->height);
                 return;
             }
         }
 
-        GLASS_LOG_INFO("Writing cursor size %d to fd : %d", cursorImage->bufferSize, cursor.fd);
-        if (write(cursor.fd, cursorImage->buffer, cursorImage->bufferSize) < cursorImage->bufferSize) {
-            GLASS_LOG_SEVERE("Error %s in writing cursor image", strerror(errno));
-            return;
-        }
-
         cursor.isVisible = 1;
         cursor.currentCursor = nativeCursorHandle;
+
+        fbImx6AdjustShift();
+        if (lseek(cursor.fd, 0, SEEK_SET) == -1) {
+                GLASS_LOG_SEVERE("Cannot rewrite cursor image");
+        } else {
+            fbImx6WriteCursor(cursor.fd, cursorImage->buffer, use32bit ? 4 : 2);
+        }
     }
 }
 
 
 
 static void fbImx6CursorSetPosition(int x, int y) {
+    int xShift = cursor.xShift;
+    int yShift = cursor.yShift;
+
+    if (x < 0) {
+        x = 0;
+    }
+    if (y < 0) {
+        y = 0;
+    }
+    if (x > cursor.screenWidth - 1) {
+        x = cursor.screenWidth - 1;
+    }
+    if (y > cursor.screenHeight - 1) {
+        y = cursor.screenHeight - 1;
+    }
 
     cursor.x = x;
     cursor.y = y;
 
     if (cursor.isVisible) {
+
+        fbImx6AdjustShift();
+        x -= cursor.xShift;
+        y -= cursor.yShift;
+        if (xShift != cursor.xShift || yShift != cursor.yShift) {
+            GLASS_LOG_FINEST("Calling lseek to rewind cursor fd");
+            if (lseek(cursor.fd, 0, SEEK_SET) == -1) {
+                GLASS_LOG_SEVERE("Cannot rewrite cursor image");
+            } else {
+                Imx6CursorImage *fbCursorImage = (Imx6CursorImage *)
+                    jlong_to_ptr(cursor.currentCursor);
+                fbImx6WriteCursor(cursor.fd, fbCursorImage->buffer, use32bit ? 4 : 2);
+            }
+        }
+
         struct mxcfb_pos cpos = {x, y};
         if (ioctl(cursor.fd, MXCFB_SET_OVERLAY_POS, &cpos)) {
             GLASS_LOG_SEVERE("Error %s in setting overlay position", strerror(errno));
@@ -336,7 +474,7 @@ static void fbImx6SetVisible(jboolean isVisible) {
         }
     } else {
         if (cursor.isVisible) {
-            write(cursor.fd,"",0);
+            fbImx6BlankCursor();
         }
         cursor.isVisible = 0;
     }
