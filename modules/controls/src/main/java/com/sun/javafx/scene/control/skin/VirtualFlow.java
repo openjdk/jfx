@@ -1365,7 +1365,39 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         
         double breadthBarLength = snapSize(isVertical ? hbar.prefHeight(-1) : vbar.prefWidth(-1));
         double lengthBarBreadth = snapSize(isVertical ? vbar.prefWidth(-1) : hbar.prefHeight(-1));
-        
+
+        // Update cell positions.
+        // When rebuilding the cells, we add the cells and along the way compute
+        // the maxPrefBreadth. Based on the computed value, we may add
+        // the breadth scrollbar which changes viewport length, so we need
+        // to re-position the cells.
+        if (!cells.isEmpty()) {
+            final double currOffset = -computeViewportOffset(getPosition());
+            final int currIndex = computeCurrentIndex() - cells.getFirst().getIndex();
+            final int size = cells.size();
+
+            // position leading cells
+            double offset = currOffset;
+            boolean first = true;
+            for (int i = currIndex; i >= 0 && i < size; i--) {
+                final T cell = cells.get(i);
+
+                offset -= first ? 0.0 : getCellLength(cell);
+                first = false;
+
+                positionCell(cell, offset);
+            }
+
+            // position trailing cells
+            offset = currOffset;
+            for (int i = currIndex; i >= 0 && i < size; i++) {
+                final T cell = cells.get(i);
+                positionCell(cell, offset);
+
+                offset += getCellLength(cell);
+            }
+        }
+
         // Now that we've laid out the cells, we may need to adjust the scroll
         // bars and update the viewport dimensions based on the bars
         // We have to do the following work twice because the first pass
