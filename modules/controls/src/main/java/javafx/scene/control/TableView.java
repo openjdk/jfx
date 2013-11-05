@@ -648,9 +648,8 @@ public class TableView<S> extends Control {
             // be notified of all changes (even when the item is the same, such
             // as in the case of a new empty items list replacing an old (but
             // equal) empty items list
-            @Override public void set(ObservableList<S> newValue) {
-                super.set(newValue);
-
+            
+            @Override protected void invalidated() {
                 ObservableList<S> oldItems = oldItemsRef == null ? null : oldItemsRef.get();
 
                 // FIXME temporary fix for RT-15793. This will need to be
