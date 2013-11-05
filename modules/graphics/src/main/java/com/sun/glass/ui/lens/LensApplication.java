@@ -823,10 +823,9 @@ final class LensApplication extends Application {
     }
 
     private Object _runLoop() {
-        if (!_initialize()) {
-            LensLogger.getLogger().severe("Display failed initialization");
-            throw new RuntimeException("Display failed initialization");
-        }
+        // Note: this method can be recursively called
+        // so do not add any platform initialization code here !
+        
         final RunLoopControl control = new RunLoopControl();
 
         //push this new instance on the stack
@@ -911,6 +910,10 @@ final class LensApplication extends Application {
         new Runnable() {
             @Override
             public void run() {
+                if (!_initialize()) {
+                    LensLogger.getLogger().severe("Display failed initialization");
+                    throw new RuntimeException("Display failed initialization");
+                }
                 _runLoop();
             }
         }, "Lens Event Thread");
