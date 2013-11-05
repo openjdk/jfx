@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+/*
+ * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+-->
+<project>
+    <property name="jfxlauncher" value="${basedir}/target/jfxlauncher"/>
+    <property name="jdk8mobile.sdk.root" value="./jdk8-mobile-ios-ejdk"/>
+    <property name="jfx.ios.artifacts.root" value="./JFXLibs"/>
+
+    <available property="jfxlauncher.exists" file="${jfxlauncher}/build.xml"/>
+    <target name="-copy-launcher" unless="jfxlauncher.exists">
+        <mkdir dir="${jfxlauncher}"/>
+        <copy todir="${jfxlauncher}">
+            <fileset dir="${basedir}/target/ios-maven-plugin/JFXLauncher">
+                <exclude name="**/*.pbxproj"/>
+            </fileset>
+        </copy>
+        <copy todir="${jfxlauncher}">
+            <fileset dir="${basedir}/target/ios-maven-plugin/JFXLauncher">
+                <include name="**/*.pbxproj"/>
+            </fileset>
+            <filterset>
+                <filter token="JVMROOT_TOKEN" value="${jdk8mobile.sdk.root}"/>
+                <filter token="JFXSDKROOT_TOKEN" value="${jfx.ios.artifacts.root}"/>
+                <filter token="RESDIR_TOKEN" value="${resourcesDirResolved}"/>
+                <filter token="APPLICATIONJAR_TOKEN" value="${jarfile}"/>
+                <filter token="JAVA_PROFILE_TOKEN" value="${javaProfile}"/>
+            </filterset>
+        </copy>
+        <chmod dir="${jfxlauncher}" perm="a+x" includes="*.sh,ios-sim"/>
+    </target>
+
+    <condition property="do.fast.deploy">
+        <and>
+            <equals arg1="true" arg2="${fastDeploy}"/>
+            <not>
+                <isset property="jpdaAddress"/>
+            </not>
+        </and>
+    </condition>
+    <condition property="resourcesDirResolved" value="${basedir}/${resourcesDir}">
+        <isset property="resourcesDir"/>
+    </condition>
+    <property name="resourcesDirResolved" value=""/>
+
+    <target name="-fast-deploy" depends="-copy-launcher" if="do.fast.deploy">
+        <java fork="true" failonerror="false" classname="org.netbeans.mobilecenter.Redeploy"
+          resultproperty="deploy.result"
+        >
+            <classpath>
+                <pathelement location="${basedir}/target/ios-maven-plugin/mobilecenter.jar"/>
+            </classpath>
+            <arg value="${jarfile}"/>
+        </java>
+        <condition property="skip.run" value="true">
+            <equals arg1="0" arg2="${deploy.result}"/>
+        </condition>
+        <pathconvert property="appjarDebugName">
+            <flattenmapper/>
+            <path>
+                <pathelement path="${jarfile}"/>
+            </path>
+        </pathconvert>
+    </target>
+
+    <target name="runJFXLauncher" depends="-copy-launcher,-fast-deploy" unless="skip.run">
+        <property name="runtime.classpath.tmp" refid="maven.runtime.classpath"/>
+        <condition value="${runtime.classpath.tmp}:${basedir}/target/ios-maven-plugin/mobilecenter.jar" property="runtime.classpath">
+            <isset property="fastDeploy"/>
+        </condition>
+        <property name="runtime.classpath" value="${runtime.classpath.tmp}"/>
+
+        <condition value="org.netbeans.mobilecenter.MobileCenter" property="app.main.class">
+            <isset property="fastDeploy"/>
+        </condition>
+        <property name="app.main.class" value="${mainclass}"/>
+
+        <antcall target="write.plist.debug">
+            <param name="ipAddress" value="127.0.0.1" />
+            <param name="jpdaAddress" value="${jpdaAddress}" />
+        </antcall>
+        <antcall target="write.appjar.debug">
+            <param name="appjarDebugName" value="${appjarDebugName}" />
+        </antcall>
+        <ant dir="${jfxlauncher}" target="runsim-mvn">
+            <property name="mvn.classpath" value="${runtime.classpath}"/>
+            <property name="mvn.app.jar" value="${jarfile}"/>
+            <property name="launcher.CFBundleDisplayName" value="${title}"/>
+            <property name="application.title" value="${title}"/>
+            <property name="javafx.enable" value="${javafx}"/>
+            <property name="launcher.javaMainClass" value="${app.main.class}"/>
+            <property name="product.config" value="${runMode}" />
+            <property name="resources.dir" value="${resourcesDirResolved}"/>
+            <property name="launcher.IconImagesDir" value="${basedir}/${iconsDir}" />
+            <property name="launcher.DefaultImagesDir" value="${basedir}/${imagesDir}" />
+            <property name="launcher.MinimumOSVersion" value="${deploymentTarget}" />
+            <property name="launcher.UIDeviceFamily" value="${targetDevices}" />
+            <property name="launcher.UISupportedInterfaceOrientations" value="${supportedInterfaceOrientations}" />
+            <property name="launcher.UISupportedInterfaceOrientations~ipad" value="${iPadSupportedInterfaceOrientations}" />
+            <property name="launcher.UIPrerenderedIcon" value="${prerenderedIcons}" />
+            <property name="launcher.CFBundleIdentifier" value="${bundleId}" />
+            <property name="provisioning.profile" value="${provisioningProfile}" />
+        </ant>
+        <delete dir="${basedir}/target/ios-maven-plugin" />
+    </target>
+
+    <!-- ************* DEBUG helpers ************* -->
+    <target name="write.plist.debug">
+        <property name="plist.file" value="${jfxlauncher}/jfx-runjava.properties" />
+        <echo message="jpdaAddress=${ipAddress}:${jpdaAddress}${line.separator}" file="${plist.file}" append="true" />
+    </target>
+    <target name="write.appjar.debug" if="fastDeploy" >
+        <property name="plist.file" value="${jfxlauncher}/jfx-runjava.properties" />
+        <echo message="bgReloadJar=${appjarDebugName}${line.separator}" file="${plist.file}" append="true" />
+    </target>
+
+    <!-- ************* BUILD IPA TARGET ************* -->
+    <target name="buildIPA" depends="-copy-launcher">
+        <property name="runtime.classpath.tmp" refid="maven.runtime.classpath"/>
+        <condition value="${runtime.classpath.tmp}:${basedir}/target/ios-maven-plugin/mobilecenter.jar" property="runtime.classpath">
+            <isset property="fastDeploy"/>
+        </condition>
+        <property name="runtime.classpath" value="${runtime.classpath.tmp}"/>
+
+        <condition value="org.netbeans.mobilecenter.MobileCenter" property="app.main.class">
+            <isset property="fastDeploy"/>
+        </condition>
+        <property name="app.main.class" value="${mainclass}"/>
+
+        <chmod dir="${basedir}/target/ios-maven-plugin/JFXLauncher" perm="ugo+rx" includes="**/*"/>
+        <antcall target="write.plist.debug">
+            <param name="ipAddress" value="${ipAddress}" />
+            <param name="jpdaAddress" value="${jpdaAddress}" />
+        </antcall>
+        <antcall target="write.appjar.debug">
+            <param name="appjarDebugName" value="${appjarDebugName}" />
+        </antcall>
+        <ant dir="${jfxlauncher}" target="package-mvn">
+            <property name="mvn.classpath" value="${runtime.classpath}"/>
+            <property name="mvn.app.jar" value="${jarfile}"/>
+            <property name="launcher.CFBundleDisplayName" value="${title}"/>
+            <property name="application.title" value="${title}"/>
+            <property name="javafx.enable" value="${javafx}"/>
+            <property name="launcher.javaMainClass" value="${app.main.class}"/>
+            <property name="product.config" value="${runMode}" />
+            <property name="provisioning.profile" value="${provisioningProfile}" />
+            <property name="resources.dir" value="${resourcesDirResolved}"/>
+            <property name="launcher.IconImagesDir" value="${basedir}/${iconsDir}" />
+            <property name="launcher.DefaultImagesDir" value="${basedir}/${imagesDir}" />
+            <property name="launcher.MinimumOSVersion" value="${deploymentTarget}" />
+            <property name="launcher.UIDeviceFamily" value="${targetDevices}" />
+            <property name="launcher.UISupportedInterfaceOrientations" value="${supportedInterfaceOrientations}" />
+            <property name="launcher.UISupportedInterfaceOrientations~ipad" value="${iPadSupportedInterfaceOrientations}" />
+            <property name="launcher.UIPrerenderedIcon" value="${prerenderedIcons}" />
+            <property name="launcher.CFBundleIdentifier" value="${bundleId}" />
+            <property name="provisioning.profile" value="${provisioningProfile}" />
+        </ant>
+        <copy file="${jfxlauncher}/build/${title}.ipa" tofile="${basedir}/target/${title}.ipa" />
+        <ant dir="${jfxlauncher}" target="open-ipa-in-itunes-mvn">
+            <property name="application.title" value="${title}"/>
+            <property name="project.target" value="${basedir}/target" />
+        </ant>
+        <delete dir="${basedir}/target/ios-maven-plugin" />
+    </target>
+</project>

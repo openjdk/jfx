@@ -1,0 +1,66 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.netbeans.ios</groupId>
+    <artifactId>mobile-center</artifactId>
+    <version>0.6-SNAPSHOT</version>
+    <parent>
+        <groupId>org.netbeans.ios</groupId>
+        <artifactId>Maven</artifactId>
+        <version>0.6-SNAPSHOT</version>
+    </parent>
+    <packaging>jar</packaging>
+
+    <name>NetBeansMobileCenter</name>
+    <url>http://maven.apache.org</url>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.3.2</version>
+                <configuration>
+                    <source>1.7</source>
+                    <target>1.7</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>com.oracle</groupId>
+            <artifactId>javafx</artifactId>
+            <version>8.0</version>
+            <scope>system</scope>
+            <systemPath>${jfxrt.jar}</systemPath>
+        </dependency>
+    </dependencies>
+   <profiles>
+      <profile>
+          <id>jdk8</id>
+          <activation>
+              <file>
+                  <exists>${java.home}/lib/ext/jfxrt.jar</exists>
+              </file>
+          </activation>
+          <properties>
+            <jfxrt.jar>${java.home}/lib/ext/jfxrt.jar</jfxrt.jar>
+          </properties>
+      </profile>
+      <profile>
+          <id>jdk7</id>
+          <activation>
+              <file>
+                  <exists>${java.home}/lib/jfxrt.jar</exists>
+              </file>
+          </activation>
+          <properties>
+            <jfxrt.jar>${java.home}/lib/jfxrt.jar</jfxrt.jar>
+          </properties>
+      </profile>
+  </profiles>
+</project>

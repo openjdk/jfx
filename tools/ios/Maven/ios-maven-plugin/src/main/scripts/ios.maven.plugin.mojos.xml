@@ -1,0 +1,327 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+/*
+ * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+-->
+<pluginMetadata xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/plugin-metadata-1.0.0.xsd">
+    <mojos>
+        <mojo>
+            <!-- target name to call in ant script -->
+            <call>runJFXLauncher</call>
+            <!-- mojo goal name -->
+            <goal>deploy</goal>
+            <requiresDependencyResolution>runtime</requiresDependencyResolution>
+            <parameters>
+                <parameter>
+                    <name>jarfile</name>
+                    <expression>${jarfile}</expression>
+                    <required>true</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                </parameter>
+                <parameter>
+                    <name>title</name>
+                    <expression>${title}</expression>
+                    <required>true</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                </parameter>
+                <parameter>
+                    <name>javafx</name>
+                    <expression>${javafx}</expression>
+                    <required>true</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.Boolean</type>
+                    <defaultValue>true</defaultValue>
+                </parameter>
+                <parameter>
+                    <name>javaProfile</name>
+                    <expression>${javaProfile}</expression>
+                    <required>false</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                    <defaultValue>compact1</defaultValue>
+                </parameter>
+                <parameter>
+                    <name>mainclass</name>
+                    <expression>${mainclass}</expression>
+                    <required>true</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                </parameter>
+                <parameter>
+                    <name>runMode</name>
+                    <expression>runMode</expression>
+                    <required>false</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                    <defaultValue>Release</defaultValue>
+                </parameter>
+                <parameter>
+                    <name>jpdaAddress</name>
+                    <expression>jpdaAddress</expression>
+                    <required>false</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                </parameter>
+                <parameter>
+                    <name>fastDeploy</name>
+                    <expression>fastDeploy</expression>
+                    <required>false</required>
+                    <readonly>false</readonly>
+                    <type>boolean</type>
+                </parameter>
+                <parameter>
+                    <name>iconsDir</name>
+                    <expression>${iconsDir}</expression>
+                    <required>false</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                    <defaultValue>src/main/ios-icons</defaultValue>
+                </parameter>
+                <parameter>
+                    <name>imagesDir</name>
+                    <expression>${imagesDir}</expression>
+                    <required>false</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                    <defaultValue>src/main/ios-images</defaultValue>
+                </parameter>
+                <parameter>
+                    <name>targetDevices</name>
+                    <expression>${deviceType}</expression>
+                    <required>false</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                    <defaultValue>1,2</defaultValue>
+                </parameter>
+                <parameter>
+                    <name>bundleId</name>
+                    <expression>${groupId}:${artifactId}</expression>
+                    <required>true</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                </parameter>
+                <parameter>
+                    <name>deploymentTarget</name>
+                    <expression>${deploymentTarget}</expression>
+                    <required>false</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                    <defaultValue>6.1</defaultValue>
+                </parameter>
+                <parameter>
+                    <name>supportedInterfaceOrientations</name>
+                    <expression>${supportedInterfaceOrientations}</expression>
+                    <required>false</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                    <defaultValue>UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeRight, UIInterfaceOrientationPortraitUpsideDown</defaultValue>
+                </parameter>
+                <parameter>
+                    <name>iPadSupportedInterfaceOrientations</name>
+                    <expression>${iPadSupportedInterfaceOrientations}</expression>
+                    <required>false</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                    <defaultValue>UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeRight, UIInterfaceOrientationPortraitUpsideDown</defaultValue>
+                </parameter>
+                <parameter>
+                    <name>prerenderedIcons</name>
+                    <expression>${prerenderedIcons}</expression>
+                    <required>false</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.Boolean</type>
+                    <defaultValue>false</defaultValue>
+                </parameter>
+                <parameter>
+                    <name>resourcesDir</name>
+                    <required>false</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                </parameter>
+                <parameter>
+                    <name>provisioningProfile</name>
+                    <expression>${provisioningProfile}</expression>
+                    <required>false</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                </parameter>
+            </parameters>
+        </mojo>
+        <mojo>
+            <!-- target name to call in ant script -->
+            <call>buildIPA</call>
+            <!-- mojo goal name -->
+            <goal>build-IPA</goal>
+            <requiresDependencyResolution>runtime</requiresDependencyResolution>
+            <parameters>
+                <parameter>
+                    <name>jarfile</name>
+                    <expression>${jarfile}</expression>
+                    <required>true</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                </parameter>
+                <parameter>
+                    <name>title</name>
+                    <expression>${title}</expression>
+                    <required>true</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                </parameter>
+                <parameter>
+                    <name>javafx</name>
+                    <expression>${javafx}</expression>
+                    <required>true</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.Boolean</type>
+                    <defaultValue>true</defaultValue>
+                </parameter>
+                <parameter>
+                    <name>javaProfile</name>
+                    <expression>${java.profile}</expression>
+                    <required>false</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                    <defaultValue>compact1</defaultValue>
+                </parameter>
+                <parameter>
+                    <name>mainclass</name>
+                    <expression>${mainclass}</expression>
+                    <required>true</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                </parameter>
+                <parameter>
+                    <name>runMode</name>
+                    <expression>runMode</expression>
+                    <required>false</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                    <defaultValue>Release</defaultValue>
+                </parameter>
+                <parameter>
+                    <name>provisioningProfile</name>
+                    <expression>provisioningProfile</expression>
+                    <required>true</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                </parameter>
+                <parameter>
+                    <name>ipAddress</name>
+                    <expression>ipAddress</expression>
+                    <required>false</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                </parameter>
+                <parameter>
+                    <name>jpdaAddress</name>
+                    <expression>jpdaAddress</expression>
+                    <required>false</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                </parameter>
+                <parameter>
+                    <name>appjarDebug</name>
+                    <expression>appjarDebug</expression>
+                    <required>false</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                </parameter>
+                <parameter>
+                    <name>appjarDebugName</name>
+                    <expression>appjarDebugName</expression>
+                    <required>false</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                </parameter>
+                <parameter>
+                    <name>iconsDir</name>
+                    <expression>${iconsDir}</expression>
+                    <required>false</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                    <defaultValue>src/main/ios-icons</defaultValue>
+                </parameter>
+                <parameter>
+                    <name>imagesDir</name>
+                    <expression>${imagesDir}</expression>
+                    <required>false</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                    <defaultValue>src/main/ios-images</defaultValue>
+                </parameter>
+                <parameter>
+                    <name>resourcesDir</name>
+                    <expression>${resourcesDir}</expression>
+                    <required>false</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                </parameter>
+                <parameter>
+                    <name>targetDevices</name>
+                    <expression>${deviceType}</expression>
+                    <required>false</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                    <defaultValue>1,2</defaultValue>
+                </parameter>
+                <parameter>
+                    <name>bundleId</name>
+                    <expression>${groupId}:${artifactId}</expression>
+                    <required>true</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                </parameter>
+                <parameter>
+                    <name>deploymentTarget</name>
+                    <expression>${deploymentTarget}</expression>
+                    <required>false</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                    <defaultValue>6.1</defaultValue>
+                </parameter>
+                <parameter>
+                    <name>supportedInterfaceOrientations</name>
+                    <expression>${supportedInterfaceOrientations}</expression>
+                    <required>false</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                    <defaultValue>UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeRight, UIInterfaceOrientationPortraitUpsideDown</defaultValue>
+                </parameter>
+                <parameter>
+                    <name>iPadSupportedInterfaceOrientations</name>
+                    <expression>${iPadSupportedInterfaceOrientations}</expression>
+                    <required>false</required>
+                    <readonly>false</readonly>
+                    <type>java.lang.String</type>
+                    <defaultValue>UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeRight, UIInterfaceOrientationPortraitUpsideDown</defaultValue>
+                </parameter>
+            </parameters>
+        </mojo>
+    </mojos>
+</pluginMetadata>
