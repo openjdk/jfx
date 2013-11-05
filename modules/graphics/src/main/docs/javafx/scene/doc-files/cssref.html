@@ -2277,25 +2277,13 @@
         </tr>
         <tr>
           <td class="propertyname">-fx-background-radius</td>
-          <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a>
-            | <a href="#typesize" class="typelink">&lt;size&gt;</a> <a href="#typesize"
-              class="typelink">&lt;size&gt;</a>
-            <a href="#typesize" class="typelink">&lt;size&gt;</a> <a href="#typesize"
-              class="typelink">&lt;size&gt;</a>
-            [ , [ <a href="#typesize" class="typelink">&lt;size&gt;</a> | <a href="#typesize"
-              class="typelink">&lt;size&gt;</a>
-            <a href="#typesize" class="typelink">&lt;size&gt;</a> <a href="#typesize"
-              class="typelink">&lt;size&gt;</a>
-            <a href="#typesize" class="typelink">&lt;size&gt;</a>] ]*</td>
-          <td class="default">0 0 0 0</td>
-          <td>
-            <p>A series of radius values or sets of four radius values,
-              separated by commas. A single radius value means the radius of all
-              four corners is the same. Otherwise, the four values in the set
-              determine the radii of the top-left, top-right, bottom-right, and
-              bottom-left corners, in that order. Each comma-separated value or
-              set of values in the series applies to the corresponding
-              background color.</p>
+            <td class="value">[<a href="#typesize" class="typelink">&lt;size&gt;</a>]{1,4} [ / [<a href="#typesize" class="typelink">&lt;size&gt;</a>]{1,4} ]?
+                [ , [<a href="#typesize" class="typelink">&lt;size&gt;</a>]{1,4} [ / [<a href="#typesize" class="typelink">&lt;size&gt;</a>]{1,4} ]? ]*
+            <td class="default">0 0 0 0</td>
+            <td>
+                <p>The same syntax and semenatics as CSS Backgrounds and Borders Module Level 3: <a href="http://www.w3.org/TR/css3-background/#the-border-radius">Curve Radii</a>
+                applies to -fx-background-radius. Note that JavaFX supports only the short-hand syntax.</p>
+                <p>Each comma-separated value or set of values in the series applies to the corresponding background color.</p>
           </td>
         </tr>
         <tr>
@@ -2423,25 +2411,13 @@
         </tr>
         <tr>
           <td class="propertyname">-fx-border-radius</td>
-          <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a>
-            | <a href="#typesize" class="typelink">&lt;size&gt;</a> <a href="#typesize"
-              class="typelink">&lt;size&gt;</a>
-            <a href="#typesize" class="typelink">&lt;size&gt;</a> <a href="#typesize"
-              class="typelink">&lt;size&gt;</a>
-            [ , [ <a href="#typesize" class="typelink">&lt;size&gt;</a> | <a href="#typesize"
-              class="typelink">&lt;size&gt;</a>
-            <a href="#typesize" class="typelink">&lt;size&gt;</a> <a href="#typesize"
-              class="typelink">&lt;size&gt;</a>
-            <a href="#typesize" class="typelink">&lt;size&gt;</a>] ]*</td>
+          <td class="value">[<a href="#typesize" class="typelink">&lt;size&gt;</a>]{1,4} [ / [<a href="#typesize" class="typelink">&lt;size&gt;</a>]{1,4} ]?
+            [ , [<a href="#typesize" class="typelink">&lt;size&gt;</a>]{1,4} [ / [<a href="#typesize" class="typelink">&lt;size&gt;</a>]{1,4} ]? ]*
           <td class="default">null</td>
           <td>
-            <p>A series of radius or sets of four radius values, separated by
-              commas. For each item in the series, a single radius value means
-              that all corner radii are the same; and if a set of four radius
-              values is specified, they are used as the radii of the top-left,
-              top-right, bottom-right, and bottom-left corners, in that order.
-              Each item in the series of radii applies to the corresponding item
-              in the series of border colors.</p>
+            <p>Refer to CSS Backgrounds and Borders Module Level 3: <a href="http://www.w3.org/TR/css3-background/#the-border-radius">Curve Radii</a>.
+            JavaFX supports only the short-hand syntax.</p>
+            <p>Each comma-separated value or set of values in the series applies to the corresponding border color.</p>
           </td>
         </tr>
         <tr>

@@ -121,6 +121,8 @@ public class RegionCSSTest {
         scene = new Scene(region);
 
         installImage("javafx/scene/layout/red.png");
+        installImage("javafx/scene/layout/green.png");
+        installImage("javafx/scene/layout/blue.png");
         installImage("javafx/scene/layout/center-btn.png");
     }
 
@@ -329,6 +331,25 @@ public class RegionCSSTest {
         assertEquals(expected, fill);
     }
 
+    // See example 23 in http://www.w3.org/TR/css3-background/#the-border-radius
+    @Test public void testBackgroundRadiusWithHorizontalAndVerticalRadii() {
+
+        region.setStyle("-fx-background-color: black; -fx-background-radius: 2px 1px 4px / 0.5px 3px;");
+        processCSS();
+
+        assertNull(region.getBorder());
+        assertEquals(1, region.getBackground().getFills().size(), 0);
+        assertEquals(0, region.getBackground().getImages().size(), 0);
+
+        BackgroundFill fill = region.getBackground().getFills().get(0);
+        BackgroundFill expected = new BackgroundFill(Color.BLACK,
+                new CornerRadii(2, .5, 3, 1, 4, .5, 3, 1, false, false, false, false, false, false, false, false),
+                Insets.EMPTY);
+
+        assertEquals(expected, fill);
+
+    }
+
 
     /**************************************************************************
      *                                                                        *
@@ -349,9 +370,6 @@ public class RegionCSSTest {
      * in this file are checking one specific aspect of the functionality tested
      * herein.
      */
-    @Ignore ("This test fails for two reasons. First, the parser doesn't allow order independent specification of " +
-            "background-position. Second, the url has to have single quotes. It should not require this, nor should " +
-            "it complain about a missing leading /.")
     @Test public void specExample1() {
         region.setStyle(
                 "-fx-background-image: url(javafx/scene/layout/red.png), url(javafx/scene/layout/green.png), url(javafx/scene/layout/blue.png);" +
@@ -369,21 +387,21 @@ public class RegionCSSTest {
         BackgroundImage expected = new BackgroundImage(image.getImage(),
                 BackgroundRepeat.NO_REPEAT, BackgroundRepeat.NO_REPEAT,
                 new BackgroundPosition(Side.LEFT, .5, true, Side.TOP, .5, true),
-                new BackgroundSize(0, 0, false, false, false, false));
+                BackgroundSize.DEFAULT);
         assertEquals(expected, image);
 
         image = region.getBackground().getImages().get(1);
         expected = new BackgroundImage(image.getImage(),
                 BackgroundRepeat.NO_REPEAT, BackgroundRepeat.NO_REPEAT,
                 new BackgroundPosition(Side.LEFT, .2, true, Side.TOP, .8, true),
-                new BackgroundSize(0, 0, false, false, false, false));
+                BackgroundSize.DEFAULT);
         assertEquals(expected, image);
 
         image = region.getBackground().getImages().get(2);
         expected = new BackgroundImage(image.getImage(),
                 BackgroundRepeat.NO_REPEAT, BackgroundRepeat.NO_REPEAT,
                 BackgroundPosition.DEFAULT,
-                new BackgroundSize(0, 0, false, false, false, false));
+                BackgroundSize.DEFAULT);
         assertEquals(expected, image);
     }
 
@@ -2734,7 +2752,28 @@ public class RegionCSSTest {
     }
 
     // TODO Example 22
-    // TODO Example 23
+
+    // http://www.w3.org/TR/css3-background/#the-border-radius
+    // Example 23 (except using px here instead of em)
+    @Test public void testBorderRadiusWithHorizontalAndVerticalRadii() {
+
+        region.setStyle("-fx-border-color: black; -fx-border-radius: 2px 1px 4px / 0.5px 3px;");
+        processCSS();
+
+        assertNull(region.getBackground());
+        assertEquals(1, region.getBorder().getStrokes().size(), 0);
+        assertEquals(0, region.getBorder().getImages().size(), 0);
+
+        BorderStroke stroke = region.getBorder().getStrokes().get(0);
+        BorderStroke expected = new BorderStroke(Color.BLACK, BorderStrokeStyle.SOLID,
+                new CornerRadii(2, .5, 3, 1, 4, .5, 3, 1, false, false, false, false, false, false, false, false),
+                BorderStroke.DEFAULT_WIDTHS);
+
+        assertEquals(expected, stroke);
+
+    }
+
+
 
     @Test public void borderStrokeIsTransparent() {
         region.setStyle(

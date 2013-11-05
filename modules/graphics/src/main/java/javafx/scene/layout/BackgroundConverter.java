@@ -62,26 +62,13 @@ class BackgroundConverter extends StyleConverterImpl<ParsedValue[], Background> 
             final Insets[] insets = tmp == null ? new Insets[0] : (Insets[]) tmp;
 
             tmp = convertedValues.get(Background.BACKGROUND_RADIUS);
-            final Insets[] radii = tmp == null ? new Insets[0] : (Insets[]) tmp;
+            final CornerRadii[] radii = tmp == null ? new CornerRadii[0] : (CornerRadii[]) tmp;
 
             final int lastInsetsIndex = insets.length - 1;
             final int lastRadiiIndex = radii.length - 1;
             for (int i=0; i<fills.length; i++) {
                 Insets in = insets.length > 0 ? insets[i <= lastInsetsIndex ? i : lastInsetsIndex] : Insets.EMPTY;
-                CornerRadii ra = CornerRadii.EMPTY;
-                Insets rai = radii.length > 0 ? radii[i <= lastRadiiIndex ? i : lastRadiiIndex] : null;
-                if (rai != null && rai != Insets.EMPTY) {
-                    double top = rai.getTop();
-                    double right = rai.getRight();
-                    double bottom = rai.getBottom();
-                    double left = rai.getLeft();
-                    // TODO need to write a unit test for cases where top, right, bottom, left are < 0
-                    ra = new CornerRadii(
-                            top < 0 ? 0 : top,
-                            right < 0 ? 0 : right,
-                            bottom < 0 ? 0 : bottom,
-                            left < 0 ? 0 : left, false);
-                }
+                CornerRadii ra = radii.length > 0 ? radii[i <= lastRadiiIndex ? i : lastRadiiIndex] : CornerRadii.EMPTY;
                 backgroundFills[i] = new BackgroundFill(fills[i], ra, in);
             }
         }

@@ -96,9 +96,9 @@ public final class Border {
             new SubCssMetaData<Margins[]> ("-fx-border-width",
                     Margins.SequenceConverter.getInstance());
 
-    static final CssMetaData<Node,Margins[]> BORDER_RADIUS =
-            new SubCssMetaData<Margins[]>("-fx-border-radius",
-                    Margins.SequenceConverter.getInstance());
+    static final CssMetaData<Node,CornerRadii[]> BORDER_RADIUS =
+            new SubCssMetaData<CornerRadii[]>("-fx-border-radius",
+                    CornerRadiiConverter.getInstance());
 
     static final CssMetaData<Node,Insets[]> BORDER_INSETS =
             new SubCssMetaData<Insets[]>("-fx-border-insets",

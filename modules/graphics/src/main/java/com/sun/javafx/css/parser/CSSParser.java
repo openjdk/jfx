@@ -34,6 +34,8 @@ import javafx.scene.layout.BackgroundRepeat;
 import javafx.scene.layout.BackgroundSize;
 import javafx.scene.layout.BorderStrokeStyle;
 import javafx.scene.layout.BorderWidths;
+import javafx.scene.layout.CornerRadii;
+import javafx.scene.layout.CornerRadiiConverter;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.Paint;
@@ -58,7 +60,6 @@ import com.sun.javafx.css.SimpleSelector;
 import com.sun.javafx.css.Size;
 import com.sun.javafx.css.SizeUnits;
 import com.sun.javafx.css.StyleManager;
-import javafx.css.Styleable;
 import com.sun.javafx.css.Stylesheet;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EffectConverter;
@@ -719,7 +720,7 @@ final public class CSSParser {
         } else if ("-fx-background-position".equals(prop)) {
              return parseBackgroundPositionLayers(root);
         } else if ("-fx-background-radius".equals(prop)) {
-             return parseInsetsLayers(root);
+            return parseCornerRadius(root);
         } else if ("-fx-background-repeat".equals(prop)) {
              return parseBackgroundRepeatStyleLayers(root);
         } else if ("-fx-background-size".equals(prop)) {
@@ -729,7 +730,7 @@ final public class CSSParser {
         } else if ("-fx-border-insets".equals(prop)) {
              return parseInsetsLayers(root);
         } else if ("-fx-border-radius".equals(prop)) {
-             return parseMarginsLayers(root);
+             return parseCornerRadius(root);
         } else if ("-fx-border-style".equals(prop)) {
              return parseBorderStyleLayers(root);
         } else if ("-fx-border-width".equals(prop)) {
@@ -2385,6 +2386,121 @@ final public class CSSParser {
         }
 
         return new ParsedValueImpl<ParsedValue<ParsedValue[],Margins>[], Margins[]>(layers, Margins.SequenceConverter.getInstance());
+    }
+
+
+    // http://www.w3.org/TR/css3-background/#the-border-radius
+    // <size>{1,4} [ '/' <size>{1,4}]? [',' <size>{1,4} [ '/' <size>{1,4}]?]?
+    private ParsedValueImpl<ParsedValue<ParsedValue<?,Size>[][],CornerRadii>[], CornerRadii[]> parseCornerRadius(Term root)
+            throws ParseException {
+
+
+        int nLayers = numberOfLayers(root);
+
+        Term term = root;
+        int layer = 0;
+        ParsedValueImpl<ParsedValue<?,Size>[][],CornerRadii>[] layers = new ParsedValueImpl[nLayers];
+
+        while(term != null) {
+
+            int nHorizontalTerms = 0;
+            Term temp = term;
+            while (temp != null) {
+                if (temp.token.getType() == CSSLexer.SOLIDUS) {
+                    temp = temp.nextInSeries;
+                    break;
+                }
+                nHorizontalTerms += 1;
+                temp = temp.nextInSeries;
+            };
+
+            int nVerticalTerms = 0;
+            while (temp != null) {
+                if (temp.token.getType() == CSSLexer.SOLIDUS) {
+                    error(temp, "unexpected SOLIDUS");
+                    break;
+                }
+                nVerticalTerms += 1;
+                temp = temp.nextInSeries;
+            }
+
+            if ((nHorizontalTerms == 0 || nHorizontalTerms > 4) || nVerticalTerms > 4) {
+                error(root, "expected [<length>|<percentage>]{1,4} [/ [<length>|<percentage>]{1,4}]?");
+            }
+
+            // used as index into margins[]. horizontal = 0, vertical = 1
+            int orientation = 0;
+
+            // at most, there should be four radii in the horizontal orientation and four in the vertical.
+            ParsedValueImpl<?,Size>[][] radii = new ParsedValueImpl[2][4];
+
+            ParsedValueImpl<?,Size> zero = new ParsedValueImpl<Size,Size>(new Size(0,SizeUnits.PX), null);
+            for (int r=0; r<4; r++) { radii[0][r] = zero; radii[1][r] = zero; }
+
+            int hr = 0;
+            int vr = 0;
+
+            Term lastTerm = term;
+            while ((hr <= 4) && (vr <= 4) && (term != null)) {
+
+                if (term.token.getType() == CSSLexer.SOLIDUS) {
+                    orientation += 1;
+                } else  {
+                    ParsedValueImpl<?,Size> parsedValue = parseSize(term);
+                    if (orientation == 0) {
+                        radii[orientation][hr++] = parsedValue;
+                    } else {
+                        radii[orientation][vr++] = parsedValue;
+                    }
+                }
+                lastTerm = term;
+                term = term.nextInSeries;
+            }
+
+            //
+            // http://www.w3.org/TR/css3-background/#the-border-radius
+            // The four values for each radii are given in the order top-left, top-right, bottom-right, bottom-left.
+            // If bottom-left is omitted it is the same as top-right.
+            // If bottom-right is omitted it is the same as top-left.
+            // If top-right is omitted it is the same as top-left.
+            //
+            // If there is no vertical component, then set both equally.
+            // If either is zero, then both are zero.
+            //
+
+            // if hr == 0, then there were no horizontal radii (which would be an error caught above)
+            if (hr != 0) {
+                if (hr < 2) radii[0][1] = radii[0][0]; // top-right = top-left
+                if (hr < 3) radii[0][2] = radii[0][0]; // bottom-right = top-left
+                if (hr < 4) radii[0][3] = radii[0][1]; // bottom-left = top-right
+            } else {
+                assert(false);
+            }
+
+            // if vr == 0, then there were no vertical radii
+            if (vr != 0) {
+                if (vr < 2) radii[1][1] = radii[1][0]; // top-right = top-left
+                if (vr < 3) radii[1][2] = radii[1][0]; // bottom-right = top-left
+                if (vr < 4) radii[1][3] = radii[1][1]; // bottom-left = top-right
+            } else {
+                // if no vertical, the vertical value is same as horizontal
+                radii[1][0] = radii[0][0];
+                radii[1][1] = radii[0][1];
+                radii[1][2] = radii[0][2];
+                radii[1][3] = radii[0][3];
+            }
+
+            // if either is zero, both are zero
+            if (zero.equals(radii[0][0]) || zero.equals(radii[1][0])) { radii[1][0] = radii[0][0] = zero; }
+            if (zero.equals(radii[0][1]) || zero.equals(radii[1][1])) { radii[1][1] = radii[0][1] = zero; }
+            if (zero.equals(radii[0][2]) || zero.equals(radii[1][2])) { radii[1][2] = radii[0][2] = zero; }
+            if (zero.equals(radii[0][3]) || zero.equals(radii[1][3])) { radii[1][3] = radii[0][3] = zero; }
+
+            layers[layer++] = new ParsedValueImpl<ParsedValue<?,Size>[][],CornerRadii>(radii, null);
+
+            term = nextLayer(lastTerm);
+        }
+        return new ParsedValueImpl<ParsedValue<ParsedValue<?,Size>[][],CornerRadii>[], CornerRadii[]>(layers, CornerRadiiConverter.getInstance());
     }
 
     /* Constant for background position */
@@ -4372,6 +4488,9 @@ final public class CSSParser {
                 }
 
             case CSSLexer.URL:
+                break;
+
+            case CSSLexer.SOLIDUS:
                 break;
 
             default:

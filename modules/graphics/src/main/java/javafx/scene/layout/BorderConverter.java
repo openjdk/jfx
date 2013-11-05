@@ -87,7 +87,7 @@ class BorderConverter extends StyleConverterImpl<ParsedValue[], Border> {
             final int lastMarginIndex = borderWidths.length - 1;
 
             tmp = convertedValues.get(Border.BORDER_RADIUS);
-            final Margins[] borderRadii = tmp == null ? new Margins[0] : (Margins[]) tmp;
+            final CornerRadii[] borderRadii = tmp == null ? new CornerRadii[0] : (CornerRadii[]) tmp;
             final int lastRadiusIndex = borderRadii.length - 1;
 
             tmp = convertedValues.get(Border.BORDER_INSETS);
@@ -125,8 +125,8 @@ class BorderConverter extends StyleConverterImpl<ParsedValue[], Border> {
                 final Margins margins = borderWidths.length == 0 ?
                         null :
                         borderWidths[i <= lastMarginIndex ? i : lastMarginIndex];
-                final Margins radii = borderRadii.length == 0 ?
-                        null :
+                final CornerRadii radii = borderRadii.length == 0 ?
+                        CornerRadii.EMPTY :
                         borderRadii[i <= lastRadiusIndex ? i : lastRadiusIndex];
                 final Insets insets = borderInsets.length == 0 ?
                         null :
@@ -135,11 +135,7 @@ class BorderConverter extends StyleConverterImpl<ParsedValue[], Border> {
                 borderStrokes[i] = new BorderStroke(
                         strokes[0], strokes[1], strokes[2], strokes[3],
                         styles[0], styles[1], styles[2], styles[3],
-                        radii == null ?
-                                CornerRadii.EMPTY :
-                                new CornerRadii(
-                                    radii.getTop(), radii.getRight(), radii.getBottom(), radii.getLeft(),
-                                    radii.isProportional()),
+                        radii,
                         margins == null ?
                                 BorderStroke.DEFAULT_WIDTHS :
                                 new BorderWidths(margins.getTop(), margins.getRight(), margins.getBottom(), margins.getLeft()),

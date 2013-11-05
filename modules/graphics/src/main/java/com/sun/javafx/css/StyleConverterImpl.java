@@ -265,6 +265,9 @@ public class StyleConverterImpl<F, T> extends StyleConverter<F, T> {
         case "com.sun.javafx.scene.layout.region.Margins$SequenceConverter" :
             styleConverter = com.sun.javafx.scene.layout.region.Margins.SequenceConverter.getInstance();
             break;
+        case "javafx.scene.layout.CornerRadiiConverter" :
+            styleConverter = javafx.scene.layout.CornerRadiiConverter.getInstance();
+            break;
 
         // parser stuff
         case "com.sun.javafx.css.parser.DeriveColorConverter" :

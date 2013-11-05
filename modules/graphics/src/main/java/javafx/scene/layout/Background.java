@@ -74,10 +74,10 @@ public final class Background {
                     PaintConverter.SequenceConverter.getInstance(),
                     new Paint[] {Color.TRANSPARENT});
 
-    static final CssMetaData<Node,Insets[]> BACKGROUND_RADIUS =
+    static final CssMetaData<Node,CornerRadii[]> BACKGROUND_RADIUS =
             new SubCssMetaData<>("-fx-background-radius",
-                    InsetsConverter.SequenceConverter.getInstance(),
-                    new Insets[] {Insets.EMPTY});
+                    CornerRadiiConverter.getInstance(),
+                    new CornerRadii[] {CornerRadii.EMPTY});
 
     static final CssMetaData<Node,Insets[]> BACKGROUND_INSETS =
             new SubCssMetaData<>("-fx-background-insets",

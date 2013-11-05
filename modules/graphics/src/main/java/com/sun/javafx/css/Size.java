@@ -117,28 +117,38 @@ final public class Size {
 
     @Override public boolean equals(Object obj) {
         if (this == obj) return true;
-        if (obj instanceof Size) {
-            final Size other = (Size)obj;
-            if (units == other.units &&
-                (value > 0) ? other.value > 0 : other.value < 0) {
-                //
-                // double == double is not reliable since a double is kind of
-                // a fuzzy value. And Double.compare is too precise.
-                // For javafx, most sizes are rounded to the nearest tenth
-                // (see SizeUnits.round) so comparing  here to the nearest
-                // millionth is more than adequate. In the case of rads and
-                // percents, this is also be more than adequate.
-                //
-                // Math.abs is too slow!
-                final double v0 = value > 0 ? value : -value;
-                final double v1 = other.value > 0 ? other.value : -other.value;
-                final double diff = value  - other.value;
-                if (diff < -0.000001 || 0.000001 < diff) {
-                    return false;
-                }
 
-                return true;
+        if (obj == null || obj.getClass() != this.getClass()) {
+            return false;
+        }
+        final Size other = (Size)obj;
+
+        if (units != other.units) {
+            return false;
+        }
+
+        if (value == other.value) {
+            return true;
+        }
+
+        if ((value > 0) ? other.value > 0 : other.value < 0) {
+            //
+            // double == double is not reliable since a double is kind of
+            // a fuzzy value. And Double.compare is too precise.
+            // For javafx, most sizes are rounded to the nearest tenth
+            // (see SizeUnits.round) so comparing  here to the nearest
+            // millionth is more than adequate. In the case of rads and
+            // percents, this is also be more than adequate.
+            //
+            // Math.abs is too slow!
+            final double v0 = value > 0 ? value : -value;
+            final double v1 = other.value > 0 ? other.value : -other.value;
+            final double diff = value  - other.value;
+            if (diff < -0.000001 || 0.000001 < diff) {
+                return false;
             }
+
+            return true;
         }
         return false;
     }
