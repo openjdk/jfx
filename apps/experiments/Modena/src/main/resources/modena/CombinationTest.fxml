@@ -50,6 +50,43 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     </Label>
     <TilePane hgap="10.0" prefColumns="3" prefHeight="-1.0" prefTileHeight="300.0" prefTileWidth="300.0" prefWidth="-1.0" vgap="10.0">
       <children>
+        <TabPane prefHeight="200.0" prefWidth="200.0" styleClass="floating" tabClosingPolicy="UNAVAILABLE">
+          <tabs>
+            <Tab text="ScrollPane">
+              <content>
+                <ScrollPane prefHeight="200.0" prefWidth="200.0">
+                  <content>
+                    <Pane prefHeight="1000.0" prefWidth="1000.0" />
+                  </content>
+                </ScrollPane>
+              </content>
+            </Tab>
+            <Tab text="Untitled Tab 2">
+              <content>
+                <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+              </content>
+            </Tab>
+          </tabs>
+        </TabPane>
+        <TabPane prefHeight="200.0" prefWidth="200.0" styleClass="floating" tabClosingPolicy="UNAVAILABLE">
+          <tabs>
+            <Tab text="ScrollPane">
+              <content>
+                <TableView prefHeight="200.0" prefWidth="200.0">
+                  <columns>
+                    <TableColumn prefWidth="75.0" text="Column X" />
+                    <TableColumn prefWidth="75.0" text="Column X" />
+                  </columns>
+                </TableView>
+              </content>
+            </Tab>
+            <Tab text="Untitled Tab 2">
+              <content>
+                <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+              </content>
+            </Tab>
+          </tabs>
+        </TabPane>
         <TabPane prefHeight="200.0" prefWidth="200.0" tabClosingPolicy="UNAVAILABLE">
           <tabs>
             <Tab text="ScrollPane">

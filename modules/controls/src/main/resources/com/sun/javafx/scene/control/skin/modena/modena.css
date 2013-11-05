@@ -1682,7 +1682,7 @@ is being used to size a border should also be in pixels.
 .tab-pane.floating > .tab-content-area {
     -fx-background-color: -fx-outer-border, -fx-background;
     -fx-background-insets: 0, 1;
-    -fx-background-radius: 3, 2;
+    -fx-background-radius: 2, 0;
     -fx-padding: 2;
 }
 
@@ -2906,6 +2906,17 @@ is being used to size a border should also be in pixels.
     -fx-background-insets: 0, 0;
     -fx-padding: 0;
  }
+.tab-pane.floating > * > .table-view,
+.tab-pane.floating > * > .tree-table-view,
+.tab-pane.floating > * > .list-view,
+.tab-pane.floating > * > .tree-view,
+.tab-pane.floating > * > .scroll-pane,
+.tab-pane.floating > * > .split-pane,
+.tab-pane.floating > * > .text-area,
+.tab-pane.floating > * > .html-editor {
+    -fx-background-insets: 0, 0;
+    -fx-padding: -1;
+}
 .split-pane > * > .accordion > .titled-pane > *.content {
     -fx-border-color: null;
     -fx-border-insets: 0;
