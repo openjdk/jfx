@@ -1407,33 +1407,6 @@ JNIEXPORT jlong JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_initDecompr
                         cinfo->jpeg_color_space = JCS_UNKNOWN;
                         cinfo->out_color_space = JCS_UNKNOWN;
                     }
-                } else if (!cinfo->saw_JFIF_marker && !IS_EXIF(cinfo)) {
-                    /*
-                     * IJG assumes all unidentified 3-channels are YCbCr.
-                     * We assume that only if the second two channels are
-                     * subsampled (either horizontally or vertically).  If not,
-                     * we assume RGB.
-                     *
-                     * 4776576: Some digital cameras output YCbCr JPEG images
-                     * that do not contain a JFIF APP0 marker but are only
-                     * vertically subsampled (no horizontal subsampling).
-                     * We should only assume this is RGB data if the subsampling
-                     * factors for the second two channels are the same as the
-                     * first (check both horizontal and vertical factors).
-                     */
-                    h_samp0 = cinfo->comp_info[0].h_samp_factor;
-                    h_samp1 = cinfo->comp_info[1].h_samp_factor;
-                    h_samp2 = cinfo->comp_info[2].h_samp_factor;
-
-                    v_samp0 = cinfo->comp_info[0].v_samp_factor;
-                    v_samp1 = cinfo->comp_info[1].v_samp_factor;
-                    v_samp2 = cinfo->comp_info[2].v_samp_factor;
-
-                    if ((h_samp1 == h_samp0) && (h_samp2 == h_samp0) &&
-                            (v_samp1 == v_samp0) && (v_samp2 == v_samp0)) {
-                        cinfo->jpeg_color_space = JCS_RGB;
-                        /* output is already RGB, so it stays the same */
-                    }
                 }
                 break;
 #ifdef YCCALPHA
