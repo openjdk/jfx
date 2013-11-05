@@ -32,6 +32,8 @@
 package ensemble.control;
 
 import java.util.LinkedList;
+
+import ensemble.EnsembleApp;
 import javafx.animation.Animation;
 import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
@@ -51,6 +53,7 @@ import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.image.Image;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
@@ -111,8 +114,10 @@ public class Popover extends Region implements EventHandler<Event>{
         // setup buttons
         leftButton.setOnMouseClicked(this);
         leftButton.getStyleClass().add("popover-left-button");
+        leftButton.setMinWidth(USE_PREF_SIZE);
         rightButton.setOnMouseClicked(this);
         rightButton.getStyleClass().add("popover-right-button");
+        rightButton.setMinWidth(USE_PREF_SIZE);
         pagesClipRect.setSmooth(false);
         pagesPane.setClip(pagesClipRect);
         titlesClipRect.setSmooth(false);
@@ -254,9 +259,9 @@ public class Popover extends Region implements EventHandler<Event>{
         int buttonHeight = (int)(leftButton.prefHeight(-1));
         if (buttonHeight < 30) buttonHeight = 30;
         final int buttonTop = (int)((top-buttonHeight)/2d);
-        final int leftButtonWidth = (int)(leftButton.prefWidth(-1)+0.5d);
+        final int leftButtonWidth = (int)snapSize(leftButton.prefWidth(-1));
         leftButton.resizeRelocate(left, buttonTop,leftButtonWidth,buttonHeight);
-        final int rightButtonWidth = (int)(rightButton.prefWidth(-1)+0.5d);
+        final int rightButtonWidth = (int)snapSize(rightButton.prefWidth(-1));
         rightButton.resizeRelocate(width-right-rightButtonWidth, buttonTop,rightButtonWidth,buttonHeight);
 
         final double leftButtonRight = leftButton.isVisible() ? (left + leftButtonWidth) : left;

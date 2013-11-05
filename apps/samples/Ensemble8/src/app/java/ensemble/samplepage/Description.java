@@ -41,16 +41,18 @@ import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.*;
+import javafx.scene.layout.ColumnConstraints;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 
-import static ensemble.samplepage.SamplePageContent.title;
 import static ensemble.samplepage.SamplePage.INDENT;
+import static ensemble.samplepage.SamplePageContent.title;
 
 /**
  * Description Section on Sample Page
  */
-public class Description extends GridPane {
+public class Description extends VBox {
     private static final Image ORANGE_ARROW = new Image(EnsembleApp.class.getResource("images/orange-arrrow.png").toExternalForm());
     private final SamplePage samplePage;
     private final Label description;
@@ -58,43 +60,45 @@ public class Description extends GridPane {
     private final VBox relatedSamples;
     
     public Description(final SamplePage samplePage) {
-        setVgap(INDENT);
-        setHgap(INDENT);
         this.samplePage = samplePage;
         getStyleClass().add("sample-page-box");
 
-        // Setup Columns
-        ColumnConstraints leftColumn = new ColumnConstraints();
-        leftColumn.setPercentWidth(50);
-        ColumnConstraints rightColumn = new ColumnConstraints();
-        rightColumn.setPercentWidth(50);
-        getColumnConstraints().addAll(leftColumn,rightColumn);
-
         // Add Description
         Text descriptionTitle = title("DESCRIPTION");
-        setConstraints(descriptionTitle,0,0,2,1);
         description = new Label();
         description.setWrapText(true);
         description.setMinHeight(Label.USE_PREF_SIZE);
-        description.setPadding(new Insets(8,0,8,0));
-        setConstraints(description, 0, 1, 2, 1);
+        description.setPadding(new Insets(8, 0, 8, 0));
+        getChildren().addAll(descriptionTitle,description);
 
         // Add View Source Hyperlink
         Hyperlink sourceBtn = new Hyperlink("VIEW SOURCE");
-        setConstraints(sourceBtn,0,2,2,1);
         sourceBtn.getStyleClass().add("sample-page-box-title");
         sourceBtn.setGraphic(new ImageView(ORANGE_ARROW));
         sourceBtn.setContentDisplay(ContentDisplay.RIGHT);
         sourceBtn.setOnAction(event -> {
             samplePage.pageBrowser.goToPage(samplePage.getUrl().replaceFirst("sample://", "sample-src://"));
         });
+        if (!EnsembleApp.IS_EMBEDDED) getChildren().add(sourceBtn);
+
+        // Setup Columns
+        GridPane gridPane = new GridPane();
+        getChildren().add(gridPane);
+        gridPane.setVgap(INDENT);
+        gridPane.setHgap(INDENT);
+        ColumnConstraints leftColumn = new ColumnConstraints();
+        leftColumn.setPercentWidth(50);
+        ColumnConstraints rightColumn = new ColumnConstraints();
+        rightColumn.setPercentWidth(50);
+        gridPane.getColumnConstraints().addAll(leftColumn, rightColumn);
 
         // Add Related Documents
         Text relatedDocumentsTitle = title("RELATED DOCUMENTS");
-        setConstraints(relatedDocumentsTitle,0,3);
+        GridPane.setConstraints(relatedDocumentsTitle, 0, 0);
         relatedDocumentsList = new VBox();
         ScrollPane relatedDocumentsScrollPane = new ScrollPane(relatedDocumentsList);
-        setConstraints(relatedDocumentsScrollPane,0,4);
+        relatedDocumentsScrollPane.setPrefSize(50,20);
+        GridPane.setConstraints(relatedDocumentsScrollPane, 0, 1);
         relatedDocumentsScrollPane.setFitToHeight(true);
         relatedDocumentsScrollPane.setFitToWidth(true);
         relatedDocumentsScrollPane.prefHeightProperty().bind(heightProperty());
@@ -102,19 +106,15 @@ public class Description extends GridPane {
 
         // Add Related Samples
         Text relatedSamplesTitle = title("RELATED SAMPLES");
-        setConstraints(relatedSamplesTitle,1,3);
+        GridPane.setConstraints(relatedSamplesTitle, 1, 0);
         relatedSamples = new VBox();
-        setConstraints(relatedSamples,1,4);
+        GridPane.setConstraints(relatedSamples, 1, 1);
 
-        getChildren().addAll(
-                descriptionTitle,
-                description,
+        gridPane.getChildren().addAll(
                 relatedDocumentsTitle,
                 relatedDocumentsScrollPane,
                 relatedSamplesTitle,
-                relatedSamples
-                );
-        if (!EnsembleApp.IS_EMBEDDED) getChildren().add(sourceBtn);
+                relatedSamples);
 
         // listen for when sample changes
         samplePage.registerSampleInfoUpdater(sampleInfo -> {

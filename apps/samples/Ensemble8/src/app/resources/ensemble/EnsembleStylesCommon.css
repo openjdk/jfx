@@ -62,9 +62,9 @@
    * DOCS PAGE
    ****************************************************************************/
 .sidebar-title {
-    -fx-font-family: "Source Sans Pro Semibold";
-    -fx-font-size: 16 !important;
-    -fx-text-fill: #e1731c;
+    -fx-font-family: "Source Sans Pro Light";
+    -fx-font-size: 20 !important;
+    -fx-text-fill: #f3472f;
 }
 
 /* *****************************************************************************
@@ -80,14 +80,17 @@
     -fx-text-overrun: leading-word-ellipsis;
 }
 .sample-page-box-title {
-    -fx-font-family: "Source Sans Pro Semibold";
-    -fx-font-size: 16 !important;
-    -fx-text-fill: #e1731c;
-    -fx-fill: #e1731c;
+    -fx-font-family: "Source Sans Pro Light";
+    -fx-font-size: 20 !important;
+    -fx-text-fill: #f3472f;
+    -fx-fill: #f3472f;
     -fx-padding: 0;
 }
 .sample-container {
     -fx-background-color: -fx-background; /* give sample area a solid color for occlusion culling */
+}
+.sample-page-box .tab-pane.floating {
+    -fx-outer-border: derive(-fx-color,-13%);
 }
 
 /* *****************************************************************************
@@ -112,6 +115,10 @@
     -fx-font-size: 20px;
  /*   -fx-text-fill: white;
     -fx-font-weight: bold; */
+}
+.popover .button {
+    -fx-font-family: "Source Sans Pro";
+    -fx-font-size: 16px;
 }
 .popover-tree-list-cell {
     -fx-background-color: white;
@@ -144,10 +151,11 @@
     -fx-text-fill: #444444;
 }
 .search-icon-pane .label {
-    -fx-font-family: "Source Sans Pro Light";
+    -fx-font-family: "Source Sans Pro Semibold";
     -fx-font-size: 16px;
     -fx-background-color: #515151;
     -fx-background-radius: 3px;
+    -fx-text-fill: white;
     -fx-alignment: center;
 }
 .sample-tree-list-cell {
@@ -211,7 +219,7 @@
     -fx-padding: 0 0 0 30;
 }
 .search-box:focused {
-    -fx-background-radius: 15,14,16,0;
+    -fx-background-radius: 15,14,16,14;
 }
 .search-clear-button {
     -fx-shape: "M9.521,0.083c-5.212,0-9.438,4.244-9.438,9.479c0,5.234,4.225,9.479,9.438,9.479c5.212,0,9.437-4.244,9.437-9.479C18.958,4.327,14.733,0.083,9.521,0.083z M13.91,13.981c-0.367,0.369-0.963,0.369-1.329,0l-3.019-3.03l-3.019,3.03c-0.367,0.369-0.962,0.369-1.329,0c-0.367-0.368-0.366-0.965,0.001-1.334l3.018-3.031L5.216,6.585C4.849,6.217,4.849,5.618,5.217,5.25c0.366-0.369,0.961-0.368,1.328,0l3.018,3.031l3.019-3.031c0.366-0.368,0.961-0.369,1.328,0c0.366,0.368,0.366,0.967,0,1.335l-3.019,3.031l3.02,3.031C14.276,13.017,14.276,13.613,13.91,13.981z";

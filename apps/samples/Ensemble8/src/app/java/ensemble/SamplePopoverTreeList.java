@@ -89,7 +89,7 @@ public class SamplePopoverTreeList extends PopoverTreeList implements Popover.Pa
     }
 
     @Override public String leftButtonText() {
-        return category == Samples.ROOT ? null : "Back";
+        return category == Samples.ROOT ? null : "< Back";
     }
 
     @Override public void handleLeftButton() {
