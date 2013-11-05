@@ -338,6 +338,10 @@ ext.IS_FULL_TEST = Boolean.parseBoolean(FULL_TEST);
 defineProperty("USE_ROBOT", "true")
 ext.IS_USE_ROBOT = Boolean.parseBoolean(USE_ROBOT);
 
+// Specifies whether to run system tests that depend on AWT (only used when FULL_TEST is also enabled)
+defineProperty("AWT_TEST", "true")
+ext.IS_AWT_TEST = Boolean.parseBoolean(AWT_TEST);
+
 // Specify the build configuration (Release, Debug, or DebugNative)
 defineProperty("CONF", "Debug")
 ext.IS_DEBUG_JAVA = CONF == "Debug" || CONF == "DebugNative"
@@ -1449,6 +1453,11 @@ project(":systemTests") {
             exclude("**/javafx/embed/swing/*.*");
             exclude("**/javafx/scene/layout/*.*");
             exclude("**/test3d/*.*");
+        }
+        if (!IS_AWT_TEST) {
+            // Disable all AWT-based tests
+            exclude("**/javafx/embed/swing/*.*");
+            exclude("**/com/sun/javafx/application/Swing*.*");
         }
         forkEvery = 1
         classpath = files("$sdkDir/rt/lib/ext/jfxrt.jar") + classpath

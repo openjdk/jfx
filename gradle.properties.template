@@ -63,6 +63,11 @@
 
 #USE_ROBOT = false
 
+# Specifies whether to run system tests that depend on AWT.
+# This flag is ignored if FULL_TEST is false.
+
+#AWT_TEST = false
+
 # Specify the COMPILE_TARGETS when performing cross compiles. A Cross-Compile is
 # when you build for a platform other than the one you are building on. For example,
 # to build for Apple iOS, you would specify ios as one of the COMPILE_TARGETS.
