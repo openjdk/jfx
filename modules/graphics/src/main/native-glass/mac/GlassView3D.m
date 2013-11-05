@@ -211,7 +211,7 @@
         [self addTrackingArea: self->_trackingArea];
         self->nsAttrBuffer = [[NSAttributedString alloc] initWithString:@""];
         self->imEnabled = NO;
-        
+        self->shouldProcessKeyEvent = YES;
     }
     return self;
 }
@@ -457,12 +457,11 @@
 {
     KEYLOG("keyDown");
     [GlassApplication registerKeyEvent:theEvent];
-    shouldProcessKeyEvent = YES;
-    [self interpretKeyEvents:[NSArray arrayWithObject:theEvent]];
 
-    if (shouldProcessKeyEvent) { 
+    if (![[self inputContext] handleEvent:theEvent] || shouldProcessKeyEvent) {
         [self->_delegate sendJavaKeyEvent:theEvent isDown:YES]; 
     }
+    shouldProcessKeyEvent = YES;
 }
 
 - (void)keyUp:(NSEvent *)theEvent
@@ -677,6 +676,9 @@
 - (void)doCommandBySelector:(SEL)aSelector
 {
     IMLOG("doCommandBySelector called ");
+    // In case the IM was stopped with a mouse and the next typed key
+    // is a special command key (backspace, tab, etc.)
+    self->shouldProcessKeyEvent = YES;
 }
 
 - (void) insertText:(id)aString replacementRange:(NSRange)replacementRange
