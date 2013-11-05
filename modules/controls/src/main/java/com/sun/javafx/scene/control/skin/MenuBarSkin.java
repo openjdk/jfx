@@ -175,6 +175,10 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
     private EventHandler<MouseEvent> mouseEventHandler;
     private ChangeListener<Boolean> menuBarFocusedPropertyListener;
     
+    EventHandler<KeyEvent> getKeyEventHandler() {
+        return keyEventHandler;
+    }
+
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
@@ -578,7 +582,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         getSkinnable().focusedProperty().addListener(menuBarFocusedPropertyListener);
         for (final Menu menu : getSkinnable().getMenus()) {
             if (!menu.isVisible()) continue;
-            final MenuBarButton menuButton = new MenuBarButton(menu.getText(), menu.getGraphic());
+            final MenuBarButton menuButton = new MenuBarButton(this, menu.getText(), menu.getGraphic());
             menuButton.setFocusTraversable(false);
             menuButton.getStyleClass().add("menu");
             menuButton.setStyle(menu.getStyle()); // copy style
@@ -619,6 +623,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
                 public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
                     if (menu.isShowing()) {
                         menuButton.show();
+                        focusedMenuIndex = container.getChildren().indexOf(menuButton);
                     } else {
                         menuButton.hide();
                     }
@@ -916,18 +921,16 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
 
     static class MenuBarButton extends MenuButton {
         private ChangeListener<Boolean> menuListener;
+        private MenuBarSkin menuBarSkin;
         private Menu menu;
 
-        public MenuBarButton() {
-            super();
-        }
-
-        public MenuBarButton(String text) {
-            super(text);
-        }
-
-        public MenuBarButton(String text, Node graphic) {
+        public MenuBarButton(MenuBarSkin menuBarSkin, String text, Node graphic) {
             super(text, graphic);
+            this.menuBarSkin = menuBarSkin;
+        }
+
+        public MenuBarSkin getMenuBarSkin() {
+            return menuBarSkin;
         }
 
         private void clearHover() {

@@ -52,6 +52,7 @@ import javafx.geometry.Orientation;
 import javafx.geometry.Side;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
@@ -563,6 +564,26 @@ public class ContextMenuContent extends Region {
                         break;
                     default:
                         break;
+                }
+
+                if (!ke.isConsumed()) {
+                    Node ownerNode = contextMenu.getOwnerNode();
+                    if (ownerNode instanceof MenuItemContainer) {
+                        // Forward to parent menu
+                        Parent parent = ownerNode.getParent();
+                        while (parent != null && !(parent instanceof ContextMenuContent)) {
+                            parent = parent.getParent();
+                        }
+                        if (parent instanceof ContextMenuContent) {
+                            ((ContextMenuContent)parent).getOnKeyPressed().handle(ke);
+                        }
+                    } else if (ownerNode instanceof MenuBarSkin.MenuBarButton) {
+                        // This is a top-level MenuBar Menu, so forward event to MenuBar
+                        MenuBarSkin mbs = ((MenuBarSkin.MenuBarButton)ownerNode).getMenuBarSkin();
+                        if (mbs != null && mbs.getKeyEventHandler() != null) {
+                            mbs.getKeyEventHandler().handle(ke);
+                        }
+                    }
                 }
             }
         });
