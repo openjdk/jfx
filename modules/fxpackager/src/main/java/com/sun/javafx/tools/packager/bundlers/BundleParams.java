@@ -35,7 +35,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
@@ -45,7 +44,7 @@ public class BundleParams {
     RelativeFileSet runtime;
     RelativeFileSet appResources;
     Bundler.BundleType type;
-    Set<String> bundleFormat = new TreeSet<String>();
+    String bundleFormat;
     File icon;
 
     /* Name of bundle file and native launcher.
@@ -195,16 +194,7 @@ public class BundleParams {
     }
 
     public void setBundleFormat(String t) {
-        bundleFormat.clear();
-        if (t != null) {
-            if (t.startsWith("[") && t.endsWith("]")) {
-                t = t.substring(1, t.length() - 1);
-            }
-            for (String s : t.split(",")) {
-                if (s.isEmpty()) continue;
-                bundleFormat.add(s.trim());
-            }
-        }
+        bundleFormat = t;
     }
 
     private boolean shouldExclude(File baseDir, File f, Rule ruleset[]) {

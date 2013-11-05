@@ -104,7 +104,7 @@ public class WinMsiBundler extends Bundler {
     @Override
     boolean validate(BundleParams p) throws UnsupportedPlatformException, ConfigException {
         if (!(p.type == Bundler.BundleType.ALL || p.type == Bundler.BundleType.INSTALLER)
-                 || !(p.bundleFormat.isEmpty() || p.bundleFormat.contains("msi"))) {
+                 || !(p.bundleFormat == null || "msi".equals(p.bundleFormat))) {
             return false;
         }
         //run basic validation to ensure requirements are met

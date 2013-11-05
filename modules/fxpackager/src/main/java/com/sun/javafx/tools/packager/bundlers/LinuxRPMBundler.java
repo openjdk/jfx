@@ -86,7 +86,7 @@ public class LinuxRPMBundler extends Bundler {
     @Override
     boolean validate(BundleParams p) throws Bundler.UnsupportedPlatformException, Bundler.ConfigException {
         if (!(p.type == Bundler.BundleType.ALL || p.type == Bundler.BundleType.INSTALLER)
-                 || !(p.bundleFormat.isEmpty() || p.bundleFormat.contains("rpm"))) {
+                 || !(p.bundleFormat == null || "rpm".equals(p.bundleFormat))) {
             return false;
         }
         //run basic validation to ensure requirements are met
