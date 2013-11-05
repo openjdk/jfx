@@ -33,6 +33,7 @@ import com.sun.prism.RTTexture;
 import com.sun.prism.ReadbackRenderTarget;
 import com.sun.prism.Texture;
 import com.sun.prism.impl.PrismSettings;
+import com.sun.prism.impl.PrismTrace;
 
 import java.nio.Buffer;
 
@@ -54,6 +55,9 @@ class ES2RTTexture extends ES2Texture<ES2RTTextureData>
                 contentX, contentY,
                 contentWidth, contentHeight,
                 maxContentWidth, maxContentHeight);
+        PrismTrace.rttCreated(resource.getResource().getFboID(),
+                              physicalWidth, physicalHeight,
+                              PixelFormat.BYTE_BGRA_PRE.getBytesPerPixelUnit());
         this.opaque = false;
     }
 
@@ -281,7 +285,8 @@ class ES2RTTexture extends ES2Texture<ES2RTTextureData>
             }
         }
         ES2RTTextureData texData =
-            new ES2RTTextureData(context, nativeTexID, nativeFBOID, size);
+            new ES2RTTextureData(context, nativeTexID, nativeFBOID,
+                                 texWidth, texHeight, size);
         ES2TextureResource<ES2RTTextureData> texRes = new ES2TextureResource<ES2RTTextureData>(texData);
 
         ES2RTTexture es2RTT = new ES2RTTexture(context, texRes, wrapMode,

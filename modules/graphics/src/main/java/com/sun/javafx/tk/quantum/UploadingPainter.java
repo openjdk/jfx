@@ -76,6 +76,7 @@ final class UploadingPainter extends ViewPainter implements Runnable {
         renderLock.lock();
 
         boolean valid = false;
+        boolean errored = false;
         try {
             valid = validateStageGraphics();
 
@@ -168,6 +169,7 @@ final class UploadingPainter extends ViewPainter implements Runnable {
             }
                 
         } catch (Throwable th) {
+            errored = true;
             th.printStackTrace(System.err);
         } finally {
             if (rttexture != null && rttexture.isLocked()) {
@@ -179,7 +181,7 @@ final class UploadingPainter extends ViewPainter implements Runnable {
 
             sceneState.getScene().setPainting(false);
 
-            ManagedResource.freeDisposalRequestedAndCheckResources();
+            ManagedResource.freeDisposalRequestedAndCheckResources(errored);
 
             renderLock.unlock();
         }

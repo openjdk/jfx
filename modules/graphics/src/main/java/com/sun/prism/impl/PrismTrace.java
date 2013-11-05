@@ -77,6 +77,18 @@ public class PrismTrace {
         return size;
     }
 
+    public static void textureCreated(long id, int w, int h, long size) {
+        if (!enabled) return;
+
+        texData.put(id, size);
+        texBytes += size;
+        System.out.println("Created Texture: "+
+            "id=" + id + ", " + w + "x" + h +" pixels, " + size + " bytes," +
+            summary(SummaryType.TYPE_TEX) +
+            summary(SummaryType.TYPE_ALL));
+        //Thread.dumpStack();
+    }
+
     public static void textureCreated(long id, int w, int h, int bytesPerPixel) {
         if (!enabled) return;
 
@@ -101,6 +113,17 @@ public class PrismTrace {
         System.out.println("Disposed Texture: "+
             "id=" + id + ", " + size + " bytes" +
             summary(SummaryType.TYPE_TEX) +
+            summary(SummaryType.TYPE_ALL));
+    }
+
+    public static void rttCreated(long id, int w, int h, long size) {
+        if (!enabled) return;
+
+        rttData.put(id, size);
+        rttBytes += size;
+        System.out.println("Created RTTexture: "+
+            "id=" + id + ", " + w + "x" + h +" pixels, " + size + " bytes," +
+            summary(SummaryType.TYPE_RTT) +
             summary(SummaryType.TYPE_ALL));
     }
 

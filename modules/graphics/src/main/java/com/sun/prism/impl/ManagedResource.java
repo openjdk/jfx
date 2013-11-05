@@ -32,17 +32,117 @@ import java.util.HashMap;
 
 public abstract class ManagedResource<T> implements GraphicsResource {
     private static final boolean trackLockSources = false;
+    // Number of calls to checkAndDispose() before we consider a resource to
+    // have not been used in a hypothetical "FOREVER".
+    private static final int FOREVER = 1024;
+
     private static WeakLinkedList resourceHead = new WeakLinkedList();
 
-    public static enum PruningLevel {
-        OBSOLETE, UNINTERESTING, ALL_UNLOCKED
+    /* 
+     * Which resources to clean up in a call to {@link cleanup}.
+     */
+     public static enum PruningLevel {
+        /**
+         * Only resources that have been reclaimed through GC or other
+         * asynchronous disposal mechanisms should be pruned.
+         * This basically makes sure that our resource accounting is up
+         * to date.
+         */
+        OBSOLETE,
+
+        /**
+         * Only (unlocked, nonpermanent) resources that have not been used in
+         * a very long time should be pruned.
+         */
+        UNUSED_FOREVER,
+
+        /**
+         * Only (unlocked, nonpermanent) resources that hold no interesting
+         * data should be pruned.
+         */
+        UNINTERESTING,
+
+        /**
+         * Any resource that is unlocked and nonpermanent should be pruned.
+         */
+        ALL_UNLOCKED
     }
 
+    /**
+     * Clean up the resources in the indicated pool according to the
+     * specified level of aggressiveness.
+     * 
+     * @param pool which pool to clean up resources from
+     * @param plevel how aggressively to clean up the resources
+     * @see PruningLevel
+     */
     public static void cleanup(ResourcePool pool, PruningLevel plevel) {
+        cleanup(pool, plevel, FOREVER);
+    }
+
+    /**
+     * Clean up the resources in the indicated pool using a standard
+     * algorithm until at least the specified amount of resource units
+     * have been reclaimed.
+     * The standard algorithm uses the following stages until it obtains
+     * enough room in the pool:
+     * <ol>
+     * <li> Prune any resources which are already free, but have not been
+     *      accounted for yet.
+     * <li> Prune any resources that have not been used in a very long time.
+     * <li> Go through 2 more passes cleaning out any resources that have
+     *      not been used in a long time with decreasing cutoff limits for
+     *      the maximum age of the resource.
+     * <li> Finally, prune any resources that are not currently being used
+     *      (i.e. locked or permanent).
+     * </ol>
+     * 
+     * @param pool
+     * @param plevel
+     * @param needed
+     */
+    public static boolean cleanup(ResourcePool pool, long needed) {
+        if (pool.used() + needed <= pool.target()) return true;
+        cleanup(pool, PruningLevel.OBSOLETE, FOREVER);
+        if (pool.used() + needed <= pool.target()) return true;
+        cleanup(pool, PruningLevel.UNUSED_FOREVER, FOREVER);
+        if (pool.used() + needed <= pool.target()) return true;
+        cleanup(pool, PruningLevel.UNUSED_FOREVER, FOREVER/2);
+        if (pool.used() + needed <= pool.target()) return true;
+        cleanup(pool, PruningLevel.UNUSED_FOREVER, FOREVER/4);
+        if (pool.used() + needed <= pool.target()) return true;
+        cleanup(pool, PruningLevel.UNINTERESTING, FOREVER);
+        if (pool.used() + needed <= pool.target()) return true;
+        System.gc();
+        cleanup(pool, PruningLevel.ALL_UNLOCKED, FOREVER);
+        if (pool.used() + needed <= pool.max()) return true;
+        // Our alternative is to return false and cause an allocation
+        // failure which is usually bad news for any SG, so it is worth
+        // sleeping to give the GC some time to find a dead resource that
+        // was dropped on the floor...
+        System.gc();
+        try { Thread.sleep(20); } catch (InterruptedException e) { }
+        cleanup(pool, PruningLevel.ALL_UNLOCKED, FOREVER);
+        return (pool.used() + needed <= pool.max());
+    }
+
+    private static boolean _isgone(ManagedResource mr) {
+        if (mr == null) return true;
+        if (mr.disposalRequested) {
+            mr.free();
+            mr.resource = null;
+            mr.disposalRequested = false;
+            return true;
+        }
+        return !mr.isValid();
+    }
+
+    private static void cleanup(ResourcePool pool, PruningLevel plevel, int max_age) {
         if (PrismSettings.poolDebug) {
             switch (plevel) {
                 case OBSOLETE: System.err.print("Pruning"); break;
-                case UNINTERESTING: System.err.print("Cleaning up"); break;
+                case UNUSED_FOREVER: System.err.print("Cleaning up unused in "+max_age); break;
+                case UNINTERESTING: System.err.print("Cleaning up uninteresting"); break;
                 case ALL_UNLOCKED: System.err.print("Aggressively cleaning up"); break;
                 default: throw new InternalError("Unrecognized pruning level: "+plevel);
             }
@@ -54,13 +154,13 @@ public abstract class ManagedResource<T> implements GraphicsResource {
         WeakLinkedList cur = prev.next;
         while (cur != null) {
             ManagedResource mr = cur.getResource();
-            if (mr == null || !mr.isValid()) {
+            if (_isgone(mr)) {
                 if (PrismSettings.poolDebug) {
-                    System.err.println("pruning: "+mr+" ("+cur.size+") "+
+                    System.err.println("pruning: "+mr+" ("+cur.size+")"+
                                        ((mr == null) ? "" :
-                                        ((mr.isPermanent() ? " perm " : "") +
-                                         (mr.isLocked() ? " lock " : "") +
-                                         (mr.isInteresting() ? " int " : ""))));
+                                        ((mr.isPermanent() ? " perm" : "") +
+                                         (mr.isLocked() ? " lock" : "") +
+                                         (mr.isInteresting() ? " int" : ""))));
                 }
                 cur.pool.recordFree(cur.size);
                 cur = cur.next;
@@ -69,13 +169,15 @@ public abstract class ManagedResource<T> implements GraphicsResource {
                        mr.getPool() == pool &&
                        !mr.isPermanent() &&
                        !mr.isLocked() &&
-                       (plevel == PruningLevel.ALL_UNLOCKED || !mr.isInteresting()))
+                       (plevel == PruningLevel.ALL_UNLOCKED ||
+                        (plevel == PruningLevel.UNINTERESTING && !mr.isInteresting()) ||
+                        (/* plevel == PruningLevel.UNUSED_FOREVER && */ mr.age >= max_age)))
             {
                 if (PrismSettings.poolDebug) {
-                    System.err.println("disposing: "+mr+" ("+cur.size+") "+
-                                       (mr.isPermanent() ? " perm " : "") +
-                                       (mr.isLocked() ? " lock " : "") +
-                                       (mr.isInteresting() ? " int " : ""));
+                    System.err.println("disposing: "+mr+" ("+cur.size+") age="+mr.age+
+                                       (mr.isPermanent() ? " perm" : "") +
+                                       (mr.isLocked() ? " lock" : "") +
+                                       (mr.isInteresting() ? " int" : ""));
                 }
                 mr.free();
                 mr.resource = null;
@@ -94,29 +196,53 @@ public abstract class ManagedResource<T> implements GraphicsResource {
         }
     }
 
-    public static void freeDisposalRequestedAndCheckResources() {
+    /**
+     * Check that all resources are in the correct state for an idle condition
+     * and free any resources which were disposed from a non-resource thread.
+     * This method must be called on a thread that is appropriate for disposing
+     * and managing resources for the resource pools.
+     * The boolean {@code forgiveStaleLocks} parameter is used to indicate that
+     * an exceptional condition occurred which caused the caller to abort a
+     * cycle of resource usage, potentially with outstanding resource locks.
+     * This method will unlock all non-permanent resources that have outstanding
+     * locks if {@code forgiveStaleLocks} is {@code true}, or it will print out
+     * a warning and a resource summary if that parameter is {@code false}.
+     * 
+     * @param forgiveStaleLocks {@code true} if the caller wishes to forgive
+     *         and unlock all outstanding locks on non-permanent resources
+     */
+    public static void freeDisposalRequestedAndCheckResources(boolean forgiveStaleLocks) {
         boolean anyLockedResources = false;
         WeakLinkedList prev = resourceHead;
         WeakLinkedList cur = prev.next;
         while (cur != null) {
             ManagedResource mr = cur.getResource();
-            if (mr != null && mr.disposalRequested) {
-                mr.free();
-                mr.resource = null;
-                mr.disposalRequested = false;
+            if (_isgone(mr)) {
                 cur.pool.recordFree(cur.size);
                 cur = cur.next;
                 prev.next = cur;
             } else {
-                if (mr != null && mr.isValid() && !mr.isPermanent() && mr.isLocked()) {
-                    anyLockedResources = true;
+                if (!mr.isPermanent()) {
+                    if (mr.isLocked() && !mr.mismatchDetected) {
+                        if (forgiveStaleLocks) {
+                            mr.unlockall();
+                        } else {
+                            mr.mismatchDetected = true;
+                            anyLockedResources = true;
+                        }
+                    }
+                    int age = mr.age;
+                    if (age < FOREVER) {
+                        mr.age = age + 1;
+                    }
                 }
                 prev = cur;
                 cur = cur.next;
             }
         }
 
-        if (PrismSettings.poolStats || anyLockedResources) {    
+        if (PrismSettings.poolStats || anyLockedResources) {
+            System.err.println("Outstanding resource locks detected:");
             ManagedResource.printSummary();
         }
     }
@@ -130,12 +256,15 @@ public abstract class ManagedResource<T> implements GraphicsResource {
         int numlocked = 0;
         int numpermanent = 0;
         int numinteresting = 0;
+        int nummismatched = 0;
+        int numancient = 0;
+        long total_age = 0;
         int total = 0;
         HashMap<ResourcePool, ResourcePool> poolsSeen = new HashMap<ResourcePool, ResourcePool>();
         for (WeakLinkedList cur = resourceHead.next; cur != null; cur = cur.next) {
             ManagedResource mr = cur.getResource();
             total++;
-            if (mr == null || !mr.isValid()) {
+            if (mr == null || !mr.isValid() || mr.disposalRequested) {
                 numgone++;
             } else {
                 ResourcePool pool = mr.getPool();
@@ -149,6 +278,13 @@ public abstract class ManagedResource<T> implements GraphicsResource {
                                       pool.managed(), percentManaged,
                                       pool.max());
                     System.err.println(str);
+                }
+                total_age += mr.age;
+                if (mr.age >= FOREVER) {
+                    numancient++;
+                }
+                if (mr.mismatchDetected) {
+                    nummismatched++;
                 }
                 if (mr.isPermanent()) {
                     numpermanent++;
@@ -168,15 +304,21 @@ public abstract class ManagedResource<T> implements GraphicsResource {
             }
         }
         System.err.println(total+" total resources being managed");
-        System.err.println(numpermanent+" permanent resources ("+
-                           Math.round(numpermanent * 1000.0 / total)/10.0+"%)");
-        System.err.println(numlocked+" resources locked ("+
-                           Math.round(numlocked * 1000.0 / total)/10.0+"%)");
-        System.err.println(numinteresting+" resources contain interesting data ("+
-                           Math.round(numinteresting * 1000.0 / total)/10.0+"%)");
-        System.err.println(numgone+" resources disappeared ("+
-                           Math.round(numgone * 1000.0 / total)/10.0+"%)");
+        System.err.println("average resource age is "+
+                           Math.round((total_age * 10.0)/total)/10.0+" frames");
+        printpoolpercent(numancient, total, "at maximum supported age");
+        printpoolpercent(numpermanent, total, "marked permanent");
+        printpoolpercent(nummismatched, total, "have had mismatched locks");
+        printpoolpercent(numlocked, total, "locked");
+        printpoolpercent(numinteresting, total, "contain interesting data");
+        printpoolpercent(numgone, total, "disappeared");
         System.err.println();
+    }
+
+    private static void printpoolpercent(int stat, int total, String desc) {
+        double percent = Math.round(stat * 1000.0 / total)/10.0;
+        String str = String.format("%d resources %s (%f)", stat, desc, percent);
+        System.err.println(str);
     }
 
     protected T resource;
@@ -185,7 +327,9 @@ public abstract class ManagedResource<T> implements GraphicsResource {
     private int employcount;
     ArrayList<Throwable> lockedFrom;
     private boolean permanent;
+    private boolean mismatchDetected;
     private boolean disposalRequested = false;
+    private int age;
 
     protected ManagedResource(T resource, ResourcePool<T> pool) {
         this.resource = resource;
@@ -267,6 +411,7 @@ public abstract class ManagedResource<T> implements GraphicsResource {
         if (pool.isManagerThread()) {
             if (resource != null) {
                 free();
+                disposalRequested = false;
                 resource = null;
                 unlink();
             }
@@ -282,10 +427,18 @@ public abstract class ManagedResource<T> implements GraphicsResource {
 
     public final T lock() {
         lockcount++;
+        age = 0;
         if (trackLockSources && !permanent) {
             lockedFrom.add(new Throwable(Integer.toString(lockcount)));
         }
         return resource;
+    }
+
+    private void unlockall() {
+        lockcount = 0;
+        if (trackLockSources && !permanent) {
+            lockedFrom.clear();
+        }
     }
 
     public final void unlock() {

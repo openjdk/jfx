@@ -81,13 +81,7 @@ public abstract class BaseResourcePool<T> implements ResourcePool<T> {
 
     @Override
     public boolean prepareForAllocation(long size) {
-        if (used() + size <= target()) return true;
-        ManagedResource.cleanup(this, ManagedResource.PruningLevel.OBSOLETE);
-        if (used() + size <= target()) return true;
-        ManagedResource.cleanup(this, ManagedResource.PruningLevel.UNINTERESTING);
-        if (used() + size <= target()) return true;
-        ManagedResource.cleanup(this, ManagedResource.PruningLevel.ALL_UNLOCKED);
-        return (used() + size <= max());
+        return ManagedResource.cleanup(this, size);
     }
 
     @Override

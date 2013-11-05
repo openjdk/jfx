@@ -27,6 +27,7 @@ package com.sun.prism.es2;
 
 import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.impl.Disposer;
+import com.sun.prism.impl.PrismTrace;
 
 class ES2TextureData implements Disposer.Record {
     protected final ES2Context context;
@@ -36,10 +37,18 @@ class ES2TextureData implements Disposer.Record {
     private boolean lastAssociatedFilterMode = true;
     private WrapMode lastAssociatedWrapMode = WrapMode.REPEAT;
 
-    ES2TextureData(ES2Context context, int texID, long size) {
+    // Caller must call PrismTrace.somethingCreated(...);
+    protected ES2TextureData(ES2Context context, int texID, long size) {
         this.context = context;
         this.texID = texID;
         this.size = size;
+    }
+
+    ES2TextureData(ES2Context context, int texID, int w, int h, long size) {
+        this.context = context;
+        this.texID = texID;
+        this.size = size;
+        PrismTrace.textureCreated(texID, w, h, size);
     }
 
     public int getTexID() {
@@ -67,6 +76,7 @@ class ES2TextureData implements Disposer.Record {
     }
 
     void traceDispose() {
+        PrismTrace.textureDisposed(texID);
     }
 
     public void dispose() {

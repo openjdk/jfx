@@ -54,10 +54,6 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
               physicalWidth, physicalHeight,
               contentX, contentY, contentWidth, contentHeight);
         this.context = context;
-        
-        int texID = resource.getResource().getTexID();
-        PrismTrace.textureCreated(texID, physicalWidth, physicalHeight,
-                format.getBytesPerPixelUnit());
     }
     
     ES2Texture(ES2Context context, ES2TextureResource<T> resource,
@@ -71,10 +67,6 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
               contentX, contentY, contentWidth, contentHeight, 
               maxContentWidth, maxContentHeight);
         this.context = context;
-        
-        int texID = resource.getResource().getTexID();
-        PrismTrace.textureCreated(texID, physicalWidth, physicalHeight,
-                format.getBytesPerPixelUnit());
     }
 
     private ES2Texture(ES2Texture sharedTex, WrapMode newMode) {
@@ -216,7 +208,8 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
         // save current texture object for this texture unit
         int savedTex = glCtx.getBoundTexture();
         ES2TextureData texData =
-            new ES2TextureData(context, glCtx.genAndBindTexture(), size);
+            new ES2TextureData(context, glCtx.genAndBindTexture(),
+                               texWidth, texHeight, size);
         ES2TextureResource texRes = new ES2TextureResource(texData);
 
         boolean result = uploadPixels(glCtx, GLContext.GL_TEXTURE_2D, null, format,
@@ -314,7 +307,8 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
         int savedTex = glCtx.getBoundTexture();
 
         ES2TextureData texData =
-            new ES2TextureData(context, glCtx.genAndBindTexture(), size);
+            new ES2TextureData(context, glCtx.genAndBindTexture(),
+                               texWidth, texHeight, size);
         ES2TextureResource texRes = new ES2TextureResource(texData);
 
         boolean result = uploadPixels(context.getGLContext(), GLContext.GL_TEXTURE_2D,

@@ -57,6 +57,11 @@ public class D3DTextureData extends D3DResource.D3DRecord {
                : estimateSize(physicalWidth, physicalHeight, format);
         this.isRTT = isRTT;
         this.samples = numberOfSamples;
+        if (isRTT) {
+            PrismTrace.rttCreated(pResource, physicalWidth, physicalHeight, size);
+        } else {
+            PrismTrace.textureCreated(pResource, physicalWidth, physicalHeight, size);
+        }
     }
 
     int getSamples() {

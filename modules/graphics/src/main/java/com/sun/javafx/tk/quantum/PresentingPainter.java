@@ -30,7 +30,6 @@ import com.sun.prism.Graphics;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.impl.Disposer;
 import com.sun.prism.impl.ManagedResource;
-import com.sun.prism.impl.PrismSettings;
 
 /**
  * The PresentingPainter is used when we are rendering to the main screen.
@@ -47,6 +46,7 @@ final class PresentingPainter extends ViewPainter {
 
         boolean locked = false;
         boolean valid = false;
+        boolean errored = false;
 
         try {
             valid = validateStageGraphics();
@@ -114,6 +114,7 @@ final class PresentingPainter extends ViewPainter {
                 }
             }
         } catch (Throwable th) {
+            errored = true;
             th.printStackTrace(System.err);
         } finally {
             if (valid) {
@@ -126,7 +127,7 @@ final class PresentingPainter extends ViewPainter {
             ViewScene viewScene = (ViewScene)sceneState.getScene();
             viewScene.setPainting(false);
 
-            ManagedResource.freeDisposalRequestedAndCheckResources();
+            ManagedResource.freeDisposalRequestedAndCheckResources(errored);
 
             renderLock.unlock();
             if (PulseLogger.PULSE_LOGGING_ENABLED) {

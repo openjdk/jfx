@@ -32,9 +32,12 @@ class ES2RTTextureData extends ES2TextureData {
     private int dbID;
     private int rbID;
 
-    ES2RTTextureData(ES2Context context, int texID, int fboID, long size) {
+    ES2RTTextureData(ES2Context context, int texID, int fboID,
+                     int w, int h, long size)
+    {
         super(context, texID, size);
         this.fboID = fboID;
+        PrismTrace.rttCreated(fboID, w, h, size);
     }
 
     public int getFboID() {

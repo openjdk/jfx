@@ -1335,6 +1335,7 @@ public final class QuantumToolkit extends Toolkit {
                     return;
                 }
 
+                boolean errored = false;
                 try {
                     QuantumImage pImage = (params.platformImage instanceof QuantumImage) ?
                             (QuantumImage)params.platformImage : new QuantumImage(null);
@@ -1370,10 +1371,11 @@ public final class QuantumToolkit extends Toolkit {
                     params.platformImage = pImage;
 
                 } catch (Throwable t) {
+                    errored = true;
                     t.printStackTrace(System.err);
                 } finally {
                     Disposer.cleanUp();            
-                    ManagedResource.freeDisposalRequestedAndCheckResources();
+                    ManagedResource.freeDisposalRequestedAndCheckResources(errored);
                 }
             }
         });
