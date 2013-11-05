@@ -62,7 +62,7 @@ public class MacDMGBundler extends Bundler {
     boolean validate(BundleParams p)
             throws UnsupportedPlatformException, ConfigException {
         if (!(p.type == Bundler.BundleType.ALL || p.type == Bundler.BundleType.INSTALLER)
-                 || !(p.bundleFormat.isEmpty() || p.bundleFormat.contains("dmg"))) {
+                 || !(p.bundleFormat == null || "dmg".equals(p.bundleFormat))) {
             return false;
         }
         //run basic validation to ensure requirements are met
