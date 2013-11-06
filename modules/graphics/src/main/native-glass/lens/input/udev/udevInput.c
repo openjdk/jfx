@@ -1279,8 +1279,6 @@ int lens_input_convertButtonToFXButtonCode(int button) {
 static void lens_input_pointerEvents_handleEvent(LensInputDevice *device,
                                                  struct input_event *event) {
 
-    lens_input_printEvent(*event);
-
     switch (event->type) {
         case EV_SYN:
             if (event->code == SYN_REPORT) {
@@ -1486,7 +1484,7 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
             mouseState->pendingTouchPointCount = 1; //we always have 1 event
             mouseState->pendingTouchXs[0] = mouseState->pressedX;
             mouseState->pendingTouchYs[0] = mouseState->pressedY;
-        } else if (mouseState->pressedX == -1 && mouseState->pressedY != -1) {
+        } else if (touchButtonValue == -1 && mouseState->pressedX != -1 && mouseState->pressedY != -1) {
             GLASS_LOG_FINEST("ST - press event with no button on %d %d",
                              mouseState->pressedX,
                              mouseState->pressedY);
@@ -1494,6 +1492,10 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
             mouseState->pendingTouchPointCount = 1; //we always have 1 event
             mouseState->pendingTouchXs[0] = mouseState->pressedX;
             mouseState->pendingTouchYs[0] = mouseState->pressedY;            
+        } else if (touchButtonValue == 0) {
+            //release
+             GLASS_LOG_FINEST("ST - RELEASE");
+
         }
     }
 
@@ -1755,7 +1757,7 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
         //com_sun_glass_events_TouchEvent_TOUCH_RELEASED is never registered in
         //MouseState, so all previous touch events are press/move events and need
         // to be released
-        GLASS_LOG_FINEST("All points (%d) -> RELEASE", count+1);
+        GLASS_LOG_FINEST("All points (%d) -> RELEASE", count);
         for (i = 0; i < mouseState->touchPointCount; i++) {
             ids[i] = mouseState->touchIDs[i];
             xs[i] = mouseState->touchXs[i];
