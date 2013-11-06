@@ -189,11 +189,6 @@ public abstract class GlyphLayout {
                     }
                     start = i;
                 }
-                i++;
-                /* Only merge \r\n when the are in the same text span */
-                if (ch == '\r' && i < spanEnd && chars[i] == '\n') {
-                    i++;
-                }
             }
             boolean spanChanged = i >= spanEnd && i < length;
             boolean levelChanged = i >= bidiEnd && i < length;
@@ -261,6 +256,12 @@ public abstract class GlyphLayout {
                 scriptRun = script;
             }
             if (delimiter) {
+                i++;
+                /* Only merge \r\n when the are in the same text span */
+                if (ch == '\r' && i < spanEnd && chars[i] == '\n') {
+                    i++;
+                }
+
                 /* Create delimiter run */
                 run = new TextRun(start, i - start, bidiLevel, false,
                                   ScriptMapper.COMMON, span, 0, false);
