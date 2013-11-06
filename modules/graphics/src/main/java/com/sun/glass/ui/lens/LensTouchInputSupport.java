@@ -82,7 +82,7 @@ final class LensTouchInputSupport {
         new PrivilegedAction<Integer>() {
             @Override
             public Integer run() {
-                return Integer.getInteger("lens.input.touch.MoveSensitivity", 3);
+                return Integer.getInteger("lens.input.touch.MoveSensitivity", 20);
             }
         });
 

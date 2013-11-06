@@ -234,7 +234,7 @@ static int newMousePosY = 0;
 static int gTapRadius = 20;//pixels
 
 #define LENS_MAX_MOVE_SENSITIVITY 1000
-static int gTouchMoveSensitivity = 3; //pixels
+static int gTouchMoveSensitivity = 20; //pixels
 
 static jboolean gUseMultiTouch = JNI_FALSE;
 
