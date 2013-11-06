@@ -217,6 +217,9 @@ public abstract class Control extends Region implements Skinnable {
         private Skin<?> oldValue;
 
         @Override
+        //This code is basically a kind of optimization that prevents a Skin that is equal but not instance equal.
+        //Although it's not kosher from the property perspective (bindings won't pass through set), it should not do any harm.
+        //But it should be evaluated in the future.
         public void set(Skin<?> v) {
             if (v == null
                 ? oldValue == null
@@ -224,11 +227,14 @@ public abstract class Control extends Region implements Skinnable {
                 return;
 
             super.set(v);
+        }
 
+        @Override protected void invalidated() {
+            Skin<?> skin = get();
             // Collect the name of the currently installed skin class. We do this
             // so that subsequent updates from CSS to the same skin class will not
             // result in reinstalling the skin
-            currentSkinClassName = v == null ? null : v.getClass().getName();
+            currentSkinClassName = skin == null ? null : skin.getClass().getName();
 
             // If skinClassName is null, then someone called setSkin directly
             // rather than the skin being set via css. We know this is because
@@ -247,14 +253,13 @@ public abstract class Control extends Region implements Skinnable {
             // called set on skinClassName in order to keep CSS from overwriting
             // the skin.
             skinClassNameProperty().set(currentSkinClassName);
-        }
-
-        @Override protected void invalidated() {
+            
+            
             // Dispose of the old skin
             if (oldValue != null) oldValue.dispose();
 
             // Get the new value, and save it off as the new oldValue
-            final Skin<?> skin = oldValue = getValue();
+            oldValue = skin;
 
             // Reset skinBase to null - it will be set to the new Skin if it
             // is a SkinBase, otherwise it will remain null, as expected

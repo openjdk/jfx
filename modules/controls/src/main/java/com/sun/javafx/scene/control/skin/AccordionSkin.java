@@ -229,15 +229,15 @@ public class AccordionSkin extends BehaviorSkinBase<Accordion, AccordionBehavior
                 previousPane = expandedPane;
                 final Accordion accordion = getSkinnable();
                 if (expanded) {
-                    if (accordion.getExpandedPane() != null) {
-                        accordion.getExpandedPane().setExpanded(false);
+                    if (expandedPane != null) {
+                        expandedPane.setExpanded(false);
                     }
                     if (tp != null) {
                         accordion.setExpandedPane(tp);
                     }
                     expandedPane = accordion.getExpandedPane();
                 } else {
-                    expandedPane = accordion.getExpandedPane();
+                    expandedPane = null;
                     accordion.setExpandedPane(null);
                 }
             }

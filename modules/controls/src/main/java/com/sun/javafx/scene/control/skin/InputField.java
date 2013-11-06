@@ -76,12 +76,21 @@ abstract class InputField extends Control {
      * calculating the {@code InputField}'s preferred width.
      */
     private IntegerProperty prefColumnCount = new IntegerPropertyBase(DEFAULT_PREF_COLUMN_COUNT) {
-        @Override public void set(int value) {
+        private int oldValue = get();
+        
+        @Override
+        protected void invalidated() {
+            int value = get();
+            
             if (value < 0) {
+                if (isBound()) {
+                    unbind();
+                }
+                set(oldValue);
                 throw new IllegalArgumentException("value cannot be negative.");
             }
-
-            super.set(value);
+            
+            oldValue = value;
         }
 
         @Override public Object getBean() { return InputField.this; }

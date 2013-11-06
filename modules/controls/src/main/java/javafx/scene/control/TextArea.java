@@ -498,13 +498,20 @@ public class TextArea extends TextInputControl {
      * calculating the {@code TextArea}'s preferred width.
      */
     private IntegerProperty prefColumnCount = new StyleableIntegerProperty(DEFAULT_PREF_COLUMN_COUNT) {
+
+        private int oldValue = get();
+        
         @Override
-        public void set(int value) {
+        protected void invalidated() {
+            int value = get();
             if (value < 0) {
+                if (isBound()) {
+                    unbind();
+                }
+                set(oldValue);
                 throw new IllegalArgumentException("value cannot be negative.");
             }
-
-            super.set(value);
+            oldValue = value;
         }
 
         @Override public CssMetaData<TextArea,Number> getCssMetaData() {
@@ -531,13 +538,21 @@ public class TextArea extends TextInputControl {
      * the {@code TextArea}'s preferred height.
      */
     private IntegerProperty prefRowCount = new StyleableIntegerProperty(DEFAULT_PREF_ROW_COUNT) {
+
+        private int oldValue = get();
+        
         @Override
-        public void set(int value) {
+        protected void invalidated() {
+            int value = get();
             if (value < 0) {
+                if (isBound()) {
+                    unbind();
+                }
+                set(oldValue);
                 throw new IllegalArgumentException("value cannot be negative.");
             }
 
-            super.set(value);
+            oldValue = value;
         }
 
         @Override public CssMetaData<TextArea,Number> getCssMetaData() {

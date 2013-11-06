@@ -164,15 +164,22 @@ public class TextField extends TextInputControl {
      * calculating the {@code TextField}'s preferred width.
      */
     private IntegerProperty prefColumnCount = new StyleableIntegerProperty(DEFAULT_PREF_COLUMN_COUNT) {
+
+        private int oldValue = get();
+        
         @Override
-        public void set(int value) {
+        protected void invalidated() {
+            int value = get();
             if (value < 0) {
+                if (isBound()) {
+                    unbind();
+                }
+                set(oldValue);
                 throw new IllegalArgumentException("value cannot be negative.");
             }
-
-            super.set(value);
+            oldValue = value;
         }
-
+        
         @Override public CssMetaData<TextField,Number> getCssMetaData() {
             return StyleableProperties.PREF_COLUMN_COUNT;
         }

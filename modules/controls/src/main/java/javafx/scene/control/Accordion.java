@@ -26,12 +26,12 @@
 package javafx.scene.control;
 
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.scene.control.skin.AccordionSkin;
+import javafx.beans.property.ObjectPropertyBase;
 import javafx.css.StyleableProperty;
 
 /**
@@ -111,21 +111,33 @@ public class Accordion extends Control {
      **************************************************************************/
 
     // --- Expanded Pane
-    private ObjectProperty<TitledPane> expandedPane = new SimpleObjectProperty<TitledPane>(this, "expandedPane") {
-        @Override public void set(final TitledPane newSelectedToggle) {
-            if (isBound()) {
-                throw new java.lang.RuntimeException("A bound value cannot be set.");
-            }            
-            if (newSelectedToggle != null) {
-                newSelectedToggle.setExpanded(true);
+    private ObjectProperty<TitledPane> expandedPane = new ObjectPropertyBase<TitledPane>() {
+
+        private TitledPane oldValue;
+        
+        @Override
+        protected void invalidated() {
+            final TitledPane value = get();
+            if (value != null) {
+                value.setExpanded(true);
             } else {
-                TitledPane old = get();
-                if (old != null) {
-                    old.setExpanded(false);
+                if (oldValue != null) {
+                    oldValue.setExpanded(false);
                 }
             }
-            super.set(newSelectedToggle);
+            oldValue = value;
         }
+
+        @Override
+        public String getName() {
+            return "expandedPane";
+        }
+
+        @Override
+        public Object getBean() {
+            return Accordion.this;
+        }
+        
     };
 
     /**
