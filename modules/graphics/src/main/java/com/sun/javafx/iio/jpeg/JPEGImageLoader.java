@@ -76,8 +76,6 @@ public class JPEGImageLoader extends ImageLoaderImpl {
      */
     private int outColorSpaceCode;
     /** Set by setInputAttributes native code callback */
-    private int inNumComponents;
-    /** Set by setInputAttributes native code callback */
     private byte[] iccData;
     /** Set by setOutputAttributes native code callback. */
     private int outWidth;
@@ -97,8 +95,11 @@ public class JPEGImageLoader extends ImageLoaderImpl {
     /** Sets up per-reader C structure and returns a pointer to it. */
     private native long initDecompressor(InputStream stream) throws IOException;
 
-    /** Sets output color space and scale factor. */
-    private native void startDecompression(long structPointer,
+    /** Sets output color space and scale factor.
+     *  Returns number of components which native decoder
+     *  will produce for requested output color space.
+     */
+    private native int startDecompression(long structPointer,
             int outColorSpaceCode, int scaleNum, int scaleDenom);
 
     private native boolean decompressIndirect(long structPointer, boolean reportProgress, byte[] array) throws IOException;
@@ -129,7 +130,6 @@ public class JPEGImageLoader extends ImageLoaderImpl {
         this.inHeight = height;
         this.inColorSpaceCode = colorSpaceCode;
         this.outColorSpaceCode = outColorSpaceCode;
-        this.inNumComponents = numComponents;
         this.iccData = iccData;
 
         // Set outImageType.
@@ -232,12 +232,15 @@ public class JPEGImageLoader extends ImageLoaderImpl {
 
         ByteBuffer buffer = null;
 
+        int outNumComponents;
         try {
-            startDecompression(structPointer, outColorSpaceCode, width, height);
+            outNumComponents = startDecompression(structPointer,
+                    outColorSpaceCode, width, height);
+
             // Uncomment next line for direct ByteBuffer.
             //buffer = decompressDirect(structPointer, listeners != null && !listeners.isEmpty());
             // Comment out next three lines to suppress indirect ByteBuffers.
-            byte[] array = new byte[outWidth*outHeight*inNumComponents];
+            byte[] array = new byte[outWidth*outHeight*outNumComponents];
             buffer = ByteBuffer.wrap(array);
             decompressIndirect(structPointer, listeners != null && !listeners.isEmpty(), buffer.array());
         } catch (IOException e) {
@@ -270,9 +273,9 @@ public class JPEGImageLoader extends ImageLoaderImpl {
                 buffer.get(outData);
             }
 
-            PushbroomScaler scaler = ScalerFactory.createScaler(outWidth, outHeight, inNumComponents,
-                    width, height, smooth);
-            int stride = outWidth * inNumComponents;
+            PushbroomScaler scaler = ScalerFactory.createScaler(outWidth, outHeight,
+                    outNumComponents, width, height, smooth);
+            int stride = outWidth * outNumComponents;
             int off = 0;
             for (int y = 0; y < outHeight; y++) {
                 if (scaler.putSourceScanline(outData, off)) {
@@ -282,11 +285,11 @@ public class JPEGImageLoader extends ImageLoaderImpl {
             }
             buffer = scaler.getDestination();
             frame = new ImageFrame(outImageType, buffer,
-                    width, height, width * inNumComponents, null, md);
+                    width, height, width * outNumComponents, null, md);
         }
         else {
             frame = new ImageFrame(outImageType, buffer,
-                                   outWidth, outHeight, outWidth * inNumComponents, null, md);
+                                   outWidth, outHeight, outWidth * outNumComponents, null, md);
         }
 
         return frame;

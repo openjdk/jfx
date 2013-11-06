@@ -233,6 +233,116 @@ gray_rgb_convert (j_decompress_ptr cinfo,
   }
 }
 
+/*
+ * YCCK->CMYK->CMY->RGB conversion.
+ *
+ * NB: this color conversion is introduced in jfx libjpeg snapshot as
+ *     a part of the fix for RT-17000. In case of library upgrade, please
+ *     check whether this convertor needs to be moved into upgraded version
+ *     of the library.
+ */
+METHODDEF(void)
+ycck_rgb_convert (j_decompress_ptr cinfo,
+                   JSAMPIMAGE input_buf, JDIMENSION input_row,
+                   JSAMPARRAY output_buf, int num_rows)
+{
+  my_cconvert_ptr cconvert = (my_cconvert_ptr) cinfo->cconvert;
+  register int y, cb, cr, k;
+  register int C, M, Y;
+  register int r, g, b;
+  register JSAMPROW outptr;
+  register JSAMPROW inptr0, inptr1, inptr2, inptr3;
+  register JDIMENSION col;
+  JDIMENSION num_cols = cinfo->output_width;
+  /* copy these pointers into registers if possible */
+  register JSAMPLE * range_limit = cinfo->sample_range_limit;
+  register int * Crrtab = cconvert->Cr_r_tab;
+  register int * Cbbtab = cconvert->Cb_b_tab;
+  register INT32 * Crgtab = cconvert->Cr_g_tab;
+  register INT32 * Cbgtab = cconvert->Cb_g_tab;
+  SHIFT_TEMPS
+
+  while (--num_rows >= 0) {
+    inptr0 = input_buf[0][input_row];
+    inptr1 = input_buf[1][input_row];
+    inptr2 = input_buf[2][input_row];
+    inptr3 = input_buf[3][input_row];
+    input_row++;
+    outptr = *output_buf++;
+    for (col = 0; col < num_cols; col++) {
+      y  = GETJSAMPLE(inptr0[col]);
+      cb = GETJSAMPLE(inptr1[col]);
+      cr = GETJSAMPLE(inptr2[col]);
+      k  = GETJSAMPLE(inptr3[col]);
+
+      C = MAXJSAMPLE - (y + Crrtab[cr]);
+      M = MAXJSAMPLE - (y + ((int) RIGHT_SHIFT(Cbgtab[cb] + Crgtab[cr], SCALEBITS)));
+      Y = MAXJSAMPLE - (y + Cbbtab[cb]);
+
+      r = C * k / MAXJSAMPLE;
+      g = M * k / MAXJSAMPLE;
+      b = Y * k / MAXJSAMPLE;
+
+      /* Range-limiting is essential due to noise introduced by DCT losses. */
+      outptr[RGB_RED] = range_limit[r];
+      outptr[RGB_GREEN] = range_limit[g];
+      outptr[RGB_BLUE] = range_limit[b];
+     
+      outptr += RGB_PIXELSIZE;
+    }
+  }
+}
+
+/*
+ * CMYK->CMY->RGB conversion.
+ *
+ * NB: this color conversion is introduced in jfx libjpeg snapshot as
+ *     a part of the fix for RT-17000. In case of library upgrade, please
+ *     check whether this convertor needs to be moved into upgraded version
+ *     of the library.
+ */
+METHODDEF(void)
+cmyk_rgb_convert (j_decompress_ptr cinfo,
+                   JSAMPIMAGE input_buf, JDIMENSION input_row,
+                   JSAMPARRAY output_buf, int num_rows)
+{
+  my_cconvert_ptr cconvert = (my_cconvert_ptr) cinfo->cconvert;
+  register int c, m, y, k;
+  register int r, g, b;
+  register JSAMPROW outptr;
+  register JSAMPROW inptr0, inptr1, inptr2, inptr3;
+  register JDIMENSION col;
+  JDIMENSION num_cols = cinfo->output_width;
+  /* copy these pointers into registers if possible */
+  register JSAMPLE * range_limit = cinfo->sample_range_limit;
+  SHIFT_TEMPS
+
+  while (--num_rows >= 0) {
+    inptr0 = input_buf[0][input_row];
+    inptr1 = input_buf[1][input_row];
+    inptr2 = input_buf[2][input_row];
+    inptr3 = input_buf[3][input_row];
+    input_row++;
+    outptr = *output_buf++;
+    for (col = 0; col < num_cols; col++) {
+      c = GETJSAMPLE(inptr0[col]);
+      m = GETJSAMPLE(inptr1[col]);
+      y = GETJSAMPLE(inptr2[col]);
+      k = GETJSAMPLE(inptr3[col]);
+
+      r = c * k / MAXJSAMPLE;
+      g = m * k / MAXJSAMPLE;
+      b = y * k / MAXJSAMPLE;
+
+      /* Range-limiting is essential due to noise introduced by DCT losses. */
+      outptr[RGB_RED] = range_limit[r];
+      outptr[RGB_GREEN] = range_limit[g];
+      outptr[RGB_BLUE] = range_limit[b];
+     
+      outptr += RGB_PIXELSIZE;
+    }
+  }
+}
 
 /*
  * Adobe-style YCCK->CMYK conversion.
@@ -364,8 +474,14 @@ jinit_color_deconverter (j_decompress_ptr cinfo)
       cconvert->pub.color_convert = gray_rgb_convert;
     } else if (cinfo->jpeg_color_space == JCS_RGB && RGB_PIXELSIZE == 3) {
       cconvert->pub.color_convert = null_convert;
-    } else
+    } else if (cinfo->jpeg_color_space == JCS_YCCK) {
+      cconvert->pub.color_convert = ycck_rgb_convert;
+      build_ycc_rgb_table(cinfo);
+    } else if (cinfo->jpeg_color_space == JCS_CMYK) {
+      cconvert->pub.color_convert = cmyk_rgb_convert;
+    } else {
       ERREXIT(cinfo, JERR_CONVERSION_NOTIMPL);
+    }
     break;
 
   case JCS_CMYK:
