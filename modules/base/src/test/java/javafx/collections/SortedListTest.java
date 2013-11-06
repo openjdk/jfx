@@ -352,4 +352,13 @@ public class SortedListTest {
         assertEquals(1, sorted.size());
         assertTrue(sorted.get(0) == other);
     }
+    
+    @Test
+    public void testAddAllOnEmpty() {
+        list = FXCollections.observableArrayList();
+        SortedList<String> sl = list.sorted(String.CASE_INSENSITIVE_ORDER);
+        list.addAll("B", "A");
+        
+        assertEquals(Arrays.asList("A", "B"), sl);
+    }
 }

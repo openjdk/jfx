@@ -341,8 +341,8 @@ public final class SortedList<E> extends TransformationList<E, E>{
     }
 
     private void setAllToMapping(List<? extends E> list, int to) {
+        ensureSize(to);
         size = to;
-        ensureSize(size);
         for (int i = 0; i < to; ++i) {
             sorted[i] = new Element<E>(list.get(i), i);
         }
