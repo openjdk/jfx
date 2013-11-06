@@ -386,33 +386,21 @@ static INLINE void checkBoundsNoRepeat(jint *a, jlong *la, jint min, jint max) {
 static INLINE void getPointsToInterpolate(jint *pts, jint *data, jint sidx, jint stride, jint p00,
     jint tx, jint txMax, jint ty, jint tyMax)
 {
-    jint txn = tx+1;
-    jint tyn = ty+1;
-    if (txn > txMax) {
-        txn = txMax;
-    }
-    if (tyn > tyMax) {
-        tyn = tyMax;
-    }
-    pts[0] = data[MAX(0, ty) * stride + txn];
-    pts[1] = data[tyn * stride + MAX(0, tx)];
-    pts[2] = data[tyn * stride + txn];
+    jint sidx2 = (ty >= tyMax) ? sidx : sidx + stride;
+    jboolean isXin = (tx < txMax);
+    pts[0] = (isXin) ? data[sidx + 1] : p00;
+    pts[1] = data[sidx2];
+    pts[2] = (isXin) ? data[sidx2 + 1] : data[sidx2];
 }
 
 static INLINE void getPointsToInterpolateRepeat(jint *pts, jint *data, jint sidx, jint stride, jint p00,
     jint tx, jint txMax, jint ty, jint tyMax)
 {
-    jint txn = tx+1;
-    jint tyn = ty+1;
-    if (txn > txMax) {
-        txn = 0;
-    }
-    if (tyn > tyMax) {
-        tyn = 0;
-    }
-    pts[0] = data[MAX(0, ty) * stride + txn];
-    pts[1] = data[tyn * stride + MAX(0, tx)];
-    pts[2] = data[tyn * stride + txn];
+    jint sidx2 = (ty >= tyMax) ? MAX(tx,0) : sidx + stride;
+    jboolean isXin = (tx < txMax);
+    pts[0] = (isXin) ? data[sidx + 1] : data[sidx - MAX(tx,0)];
+    pts[1] = data[sidx2];
+    pts[2] = (isXin) ? data[sidx2 + 1] : data[sidx2 - MAX(tx,0)];
 }
 
 void
