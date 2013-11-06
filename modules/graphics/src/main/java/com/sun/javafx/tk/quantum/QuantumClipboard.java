@@ -499,8 +499,9 @@ final class QuantumClipboard implements TKClipboard {
                        t.equalsIgnoreCase(Clipboard.URI_TYPE)) {
                 return true;
             } else if (dataFormat == DataFormat.IMAGE &&
-                       t.equalsIgnoreCase(Clipboard.HTML_TYPE)) {
-                return (parseIMG(systemAssistant.getData(Clipboard.HTML_TYPE)) != null);
+                       t.equalsIgnoreCase(Clipboard.HTML_TYPE) &&
+                       parseIMG(systemAssistant.getData(Clipboard.HTML_TYPE)) != null) {
+                return true;
             } else if (dataFormat == DataFormat.FILES &&
                     t.equalsIgnoreCase(Clipboard.FILE_LIST_TYPE)) {
                 return true;
