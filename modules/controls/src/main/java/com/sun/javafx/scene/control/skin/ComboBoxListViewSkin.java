@@ -186,6 +186,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                     // This forwards the event down into the TextField when
                     // the key event is actually received by the ComboBox.
                     textField.fireEvent(ke.copyFor(textField, textField));
+                    ke.consume();
                 }
             }
         });

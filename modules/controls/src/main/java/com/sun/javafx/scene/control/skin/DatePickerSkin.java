@@ -147,6 +147,7 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
                     // This forwards the event down into the TextField when
                     // the key event is actually received by the ComboBox.
                     textField.fireEvent(ke.copyFor(textField, textField));
+                    ke.consume();
                 }
             }
         });

@@ -43,6 +43,7 @@ import static javafx.scene.input.KeyCode.PAGE_UP;
 import static javafx.scene.input.KeyCode.RIGHT;
 import static javafx.scene.input.KeyCode.SPACE;
 import static javafx.scene.input.KeyCode.UP;
+import static javafx.scene.input.KeyEvent.*;
 
 /**
  * Behaviors for LocalDate based cells types. Simply defines methods
@@ -59,8 +60,8 @@ public class DateCellBehavior extends CellBehaviorBase<DateCell> {
         DATE_CELL_BINDINGS.add(new KeyBinding(DOWN, "TraverseDown"));
         DATE_CELL_BINDINGS.add(new KeyBinding(LEFT, "TraverseLeft"));
         DATE_CELL_BINDINGS.add(new KeyBinding(RIGHT, "TraverseRight"));
-        DATE_CELL_BINDINGS.add(new KeyBinding(ENTER, "SelectDate"));
-        DATE_CELL_BINDINGS.add(new KeyBinding(SPACE, "SelectDate"));
+        DATE_CELL_BINDINGS.add(new KeyBinding(ENTER, KEY_RELEASED, "SelectDate"));
+        DATE_CELL_BINDINGS.add(new KeyBinding(SPACE, KEY_RELEASED, "SelectDate"));
     }
 
 
