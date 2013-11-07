@@ -46,6 +46,6 @@ public class PlatformFeatures {
     public static final boolean USE_IOS_THEME = IOS;
     public static final boolean START_FULL_SCREEN = ARM;
     public static final boolean EMBEDDED = ARM || IOS;
-    
+        
     private PlatformFeatures(){}
 }

@@ -31,6 +31,7 @@
  */
 package ensemble.samplepage;
 
+import ensemble.PlatformFeatures;
 import ensemble.SampleInfo;
 import javafx.scene.Node;
 import javafx.scene.layout.Region;
@@ -120,7 +121,11 @@ class SamplePageContent extends Region {
     private void update(SampleInfo sampleInfo) {
         sampleContainer = new SampleContainer(samplePage.sampleRuntimeInfoProperty.get().getSampleNode());
         sampleContainer.getStyleClass().add("sample-page-sample-node");
-        needsPlayground = sampleInfo.needsPlayground();
+        if (PlatformFeatures.EMBEDDED) {
+            needsPlayground = false;
+        } else {
+            needsPlayground = sampleInfo.needsPlayground();
+        }
         if (needsPlayground) {
             getChildren().setAll(playground, description, sampleContainer);
         } else {
