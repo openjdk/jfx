@@ -31,6 +31,7 @@ class LayoutCache {
     int[] glyphs;
     float[] advances;
     boolean valid;
+    int analysis;
     char[] text;
     PGFont font;
     TextRun[] runs;

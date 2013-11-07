@@ -679,7 +679,7 @@ public class PrismTextLayout implements TextLayout {
                     layoutCache = cache;
                     runs = cache.runs;
                     runCount = cache.runCount;
-                    flags |= FLAGS_ANALYSIS_VALID;
+                    flags |= cache.analysis;
                 }
             }
             if (layoutCache != null) {
@@ -699,7 +699,7 @@ public class PrismTextLayout implements TextLayout {
                     if (layoutCache.lines != null) {
                         runs = layoutCache.runs;
                         runCount = layoutCache.runCount;
-                        flags |= FLAGS_ANALYSIS_VALID;
+                        flags |= layoutCache.analysis;
                         lines = layoutCache.lines;
                         layoutWidth = layoutCache.layoutWidth;
                         layoutHeight = layoutCache.layoutHeight;
@@ -1286,6 +1286,7 @@ public class PrismTextLayout implements TextLayout {
                 layoutCache.lines = lines;
                 layoutCache.layoutWidth = layoutWidth;
                 layoutCache.layoutHeight = layoutHeight;
+                layoutCache.analysis = flags | ANALYSIS_MASK;
                 synchronized (CACHE_SIZE_LOCK) {
                     int charCount = chars.length;
                     if (cacheSize + charCount > MAX_CACHE_SIZE) {
