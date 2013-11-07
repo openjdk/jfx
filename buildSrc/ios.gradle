@@ -56,7 +56,7 @@ IOS.generateSymbolsExcludes = [
     "libdecora_sse_armv7.a"
 ]
 
-defineProperty("IOS_VERSION", "6.1")
+defineProperty("IOS_VERSION", "7.0")
 
 // Lambda for naming the generated libs
 IOS.library = { name -> return "lib${name}.a" as String }
@@ -386,7 +386,7 @@ IOS.media = [:]
 IOS.media.lib = "jfxmedia"
 IOS.media.javahSource = files("modules/media/build/classes/main")
 IOS.media.javahClasspath = files("modules/media/build/classes/main")
-IOS.media.javahInclude = ["javafx/scene/media/*"]
+IOS.media.javahInclude = ["com/sun/media/jfxmediaimpl/*"]
 IOS.media.variants = ["arm", "x86"];
 
 IOS.media.arm = [:]
