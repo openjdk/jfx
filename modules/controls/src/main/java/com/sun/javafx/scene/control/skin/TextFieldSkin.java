@@ -57,6 +57,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import java.util.List;
 import com.sun.javafx.scene.control.behavior.TextFieldBehavior;
+import com.sun.javafx.scene.control.behavior.PasswordFieldBehavior;
 import com.sun.javafx.scene.text.HitInfo;
 
 /**
@@ -127,7 +128,9 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
      * @param textField not null
      */
     public TextFieldSkin(final TextField textField) {
-        this(textField, new TextFieldBehavior(textField));
+        this(textField, (textField instanceof PasswordField)
+                                     ? new PasswordFieldBehavior((PasswordField)textField)
+                                     : new TextFieldBehavior(textField));
     }
 
     public TextFieldSkin(final TextField textField, final TextFieldBehavior behavior) {
