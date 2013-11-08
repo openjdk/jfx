@@ -1250,6 +1250,7 @@ public class NGRegion extends NGGroup {
             }
             final int imgWidth = prismImage.getWidth();
             final int imgHeight = prismImage.getHeight();
+            final float imgScale = prismImage.getPixelScale();
             final BorderWidths widths = ib.getWidths();
             final Insets insets = ib.getInsets();
             final BorderWidths slices = ib.getSlices();
@@ -1260,23 +1261,15 @@ public class NGRegion extends NGGroup {
             final int bottomInset = (int) Math.round(insets.getBottom());
             final int leftInset = (int) Math.round(insets.getLeft());
 
-            final int topWidth = (int) Math.round(
-                    widths.isTopAsPercentage() ? height * widths.getTop() : widths.getTop());
-            final int rightWidth = (int) Math.round(
-                    widths.isRightAsPercentage() ? width * widths.getRight() : widths.getRight());
-            final int bottomWidth = (int) Math.round(
-                    widths.isBottomAsPercentage() ? height * widths.getBottom() : widths.getBottom());
-            final int leftWidth = (int) Math.round(
-                    widths.isLeftAsPercentage() ? width * widths.getLeft() : widths.getLeft());
+            final int topWidth = widthSize(widths.isTopAsPercentage(), widths.getTop(), height);
+            final int rightWidth = widthSize(widths.isRightAsPercentage(), widths.getRight(), width);
+            final int bottomWidth = widthSize(widths.isBottomAsPercentage(), widths.getBottom(), height);
+            final int leftWidth = widthSize(widths.isLeftAsPercentage(), widths.getLeft(), width);
 
-            final int topSlice = (int) Math.round((
-                    slices.isTopAsPercentage() ? height * slices.getTop() : slices.getTop()) * prismImage.getPixelScale());
-            final int rightSlice = (int) Math.round((
-                    slices.isRightAsPercentage() ? width * slices.getRight() : slices.getRight()) * prismImage.getPixelScale());
-            final int bottomSlice = (int) Math.round((
-                    slices.isBottomAsPercentage() ? height * slices.getBottom() : slices.getBottom()) * prismImage.getPixelScale());
-            final int leftSlice = (int) Math.round((
-                    slices.isLeftAsPercentage() ? width * slices.getLeft() : slices.getLeft()) * prismImage.getPixelScale());
+            final int topSlice = sliceSize(slices.isTopAsPercentage(), slices.getTop(), imgHeight, imgScale);
+            final int rightSlice = sliceSize(slices.isRightAsPercentage(), slices.getRight(), imgWidth, imgScale);
+            final int bottomSlice = sliceSize(slices.isBottomAsPercentage(), slices.getBottom(), imgHeight, imgScale);
+            final int leftSlice = sliceSize(slices.isLeftAsPercentage(), slices.getLeft(), imgWidth, imgScale);
 
             // handle case where region is too small to fit in borders
             if ((leftInset + leftWidth + rightInset + rightWidth) > width
@@ -1382,6 +1375,17 @@ public class NGRegion extends NGGroup {
             left = (float) Math.max(left, insets.getLeft() + Math.max(radii.getTopLeftHorizontalRadius(), radii.getBottomLeftHorizontalRadius()));
         }
         backgroundInsets = new Insets(roundUp(top), roundUp(right), roundUp(bottom), roundUp(left));
+    }
+
+    private int widthSize(boolean isPercent, double sliceSize, float objSize) {
+        //Not strictly correct. See RT-34051
+        return (int) Math.round(isPercent ? sliceSize * objSize : sliceSize);
+    }
+
+    private int sliceSize(boolean isPercent, double sliceSize, float objSize, float scale) {
+        if (isPercent) sliceSize *= objSize;
+        if (sliceSize > objSize) sliceSize = objSize;
+        return (int) Math.round(sliceSize * scale);
     }
 
     private int roundUp(double d) {
