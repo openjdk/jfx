@@ -565,10 +565,11 @@ public final class QuantumToolkit extends Toolkit {
     }
 
     @Override public TKStage createTKPopupStage(Window peerWindow,
+                                                StageStyle popupStyle,
                                                 TKStage owner,
                                                 AccessControlContext acc) {
         assertToolkitRunning();
-        WindowStage stage = new WindowStage(peerWindow, StageStyle.TRANSPARENT, null, owner);
+        WindowStage stage = new WindowStage(peerWindow, popupStyle, null, owner);
         stage.setSecurityContext(acc);
         stage.setIsPopup();
         stage.init(systemMenu);

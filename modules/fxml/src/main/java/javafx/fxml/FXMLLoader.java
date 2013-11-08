@@ -39,6 +39,7 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.security.AllPermission;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -52,6 +53,7 @@ import java.util.regex.Pattern;
 
 import com.sun.javafx.fxml.*;
 import javafx.beans.DefaultProperty;
+import javafx.beans.InvalidationListener;
 import javafx.beans.property.Property;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -85,12 +87,12 @@ import java.security.PrivilegedAction;
 import java.util.EnumMap;
 import java.util.Locale;
 import java.util.StringTokenizer;
-import javafx.beans.InvalidationListener;
 import sun.reflect.CallerSensitive;
 import sun.reflect.Reflection;
 import sun.reflect.misc.ConstructorUtil;
 import sun.reflect.misc.MethodUtil;
 import sun.reflect.misc.ReflectUtil;
+import sun.security.util.SecurityConstants;
 
 /**
  * Loads an object hierarchy from an XML document.
@@ -382,7 +384,7 @@ public class FXMLLoader {
                     return aValue;
                 } else {
                         if (aValue.charAt(0) == '/') {
-                            final URL res = classLoader.getResource(aValue.substring(1));
+                            final URL res = getClassLoader().getResource(aValue.substring(1));
                             if (res == null) {
                                 throw constructLoadException("Invalid resource: " + aValue + " not found on the classpath");
                             }
@@ -917,7 +919,7 @@ public class FXMLLoader {
                     if (!staticLoad) {
                         Class<?> type;
                         try {
-                            type = classLoader.loadClass(value);
+                            type = getClassLoader().loadClass(value);
                         } catch (ClassNotFoundException exception) {
                             throw constructLoadException(exception);
                         }
@@ -1107,8 +1109,9 @@ public class FXMLLoader {
             }
 
             URL location;
+            final ClassLoader cl = getClassLoader();
             if (source.charAt(0) == '/') {
-                location = classLoader.getResource(source.substring(1));
+                location = cl.getResource(source.substring(1));
                 if (location == null) {
                     throw constructLoadException("Cannot resolve path: " + source);
                 }
@@ -1132,7 +1135,7 @@ public class FXMLLoader {
                         fxmlLoader.location.toExternalForm(),
                         FXMLLoader.this.location.toExternalForm()));
             }
-            fxmlLoader.setClassLoader(classLoader);
+            fxmlLoader.setClassLoader(cl);
             fxmlLoader.impl_setStaticLoad(staticLoad);
 
             Object value = fxmlLoader.loadImpl(callerClass);
@@ -1482,13 +1485,14 @@ public class FXMLLoader {
 
                 String extension = source.substring(i + 1);
                 ScriptEngine engine;
+                final ClassLoader cl = getClassLoader();
                 if (scriptEngine != null && scriptEngine.getFactory().getExtensions().contains(extension)) {
                     // If we have a page language and it's engine supports the extension, use the same engine
                     engine = scriptEngine;
                 } else {
                     ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
                     try {
-                        Thread.currentThread().setContextClassLoader(classLoader);
+                        Thread.currentThread().setContextClassLoader(cl);
                         ScriptEngineManager scriptEngineManager = getScriptEngineManager();
                         engine = scriptEngineManager.getEngineByExtension(extension);
                     } finally {
@@ -1504,7 +1508,7 @@ public class FXMLLoader {
                 try {
                     URL location;
                     if (source.charAt(0) == '/') {
-                        location = classLoader.getResource(source.substring(1));
+                        location = cl.getResource(source.substring(1));
                     } else {
                         if (FXMLLoader.this.location == null) {
                             throw constructLoadException("Base location is undefined.");
@@ -1760,7 +1764,7 @@ public class FXMLLoader {
 
     private final LinkedList<FXMLLoader> loaders;
 
-    private ClassLoader classLoader = defaultClassLoader;
+    private ClassLoader classLoader = null;
     private boolean staticLoad = false;
     private LoadListener loadListener = null;
 
@@ -1776,7 +1780,7 @@ public class FXMLLoader {
 
     private ScriptEngineManager scriptEngineManager = null;
 
-    private static ClassLoader defaultClassLoader;
+    private static ClassLoader defaultClassLoader = null;
 
     private static final Pattern extraneousWhitespacePattern = Pattern.compile("\\s+");
 
@@ -1998,12 +2002,6 @@ public class FXMLLoader {
     public static final String FX_NAMESPACE_VERSION = "1";
 
     static {
-        defaultClassLoader = Thread.currentThread().getContextClassLoader();
-
-        if (defaultClassLoader == null) {
-            throw new NullPointerException();
-        }
-
         JAVAFX_VERSION = AccessController.doPrivileged(new PrivilegedAction<String>() {
             @Override
             public String run() {
@@ -2290,7 +2288,15 @@ public class FXMLLoader {
      * Returns the classloader used by this serializer.
      * @since JavaFX 2.1
      */
+    @CallerSensitive
     public ClassLoader getClassLoader() {
+        if (classLoader == null) {
+            final SecurityManager sm = System.getSecurityManager();
+            final Class caller = (sm != null) ?
+                    Reflection.getCallerClass() :
+                    null;
+            return getDefaultClassLoader(caller);
+        }
         return classLoader;
     }
 
@@ -2901,7 +2907,7 @@ public class FXMLLoader {
 
     // TODO Rename to loadType() when deprecated static version is removed
     private Class<?> loadTypeForPackage(String packageName, String className) throws ClassNotFoundException {
-        return classLoader.loadClass(packageName + "." + className.replace('.', '$'));
+        return getClassLoader().loadClass(packageName + "." + className.replace('.', '$'));
     }
 
     private static enum SupportedType {
@@ -3004,15 +3010,56 @@ public class FXMLLoader {
      */
     public static Class<?> loadType(String className) throws ClassNotFoundException {
         ReflectUtil.checkPackageAccess(className);
-        return Class.forName(className, true, defaultClassLoader);
+        return Class.forName(className, true, getDefaultClassLoader());
+    }
+
+    private static boolean needsClassLoaderPermissionCheck(ClassLoader from, ClassLoader to) {
+        if (from == to) {
+            return false;
+        }
+        if (from == null) {
+            return false;
+        }
+        if (to == null) {
+            return true;
+        }
+        ClassLoader acl = to;
+        do {
+            acl = acl.getParent();
+            if (from == acl) {
+                return false;
+            }
+        } while (acl != null);
+        return true;
+    }
+
+    private static ClassLoader getDefaultClassLoader(Class caller) {
+        if (defaultClassLoader == null) {
+            final SecurityManager sm = System.getSecurityManager();
+            if (sm != null) {
+                final ClassLoader callerClassLoader = (caller != null) ?
+                        caller.getClassLoader() :
+                        null;
+                if (needsClassLoaderPermissionCheck(callerClassLoader, FXMLLoader.class.getClassLoader())) {
+                    sm.checkPermission(SecurityConstants.GET_CLASSLOADER_PERMISSION);
+                }
+            }
+            return Thread.currentThread().getContextClassLoader();
+        }
+        return defaultClassLoader;
     }
 
     /**
      * Returns the default class loader.
      * @since JavaFX 2.1
      */
+    @CallerSensitive
     public static ClassLoader getDefaultClassLoader() {
-        return defaultClassLoader;
+        final SecurityManager sm = System.getSecurityManager();
+        final Class caller = (sm != null) ?
+                Reflection.getCallerClass() :
+                null;
+        return getDefaultClassLoader(caller);
     }
 
     /**
@@ -3025,6 +3072,10 @@ public class FXMLLoader {
     public static void setDefaultClassLoader(ClassLoader defaultClassLoader) {
         if (defaultClassLoader == null) {
             throw new NullPointerException();
+        }
+        final SecurityManager sm = System.getSecurityManager();
+        if (sm != null) {
+            sm.checkPermission(new AllPermission());
         }
 
         FXMLLoader.defaultClassLoader = defaultClassLoader;
