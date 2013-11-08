@@ -523,6 +523,7 @@ public class NGRegion extends NGGroup {
             final int textureWidth = Math.round(outsetShapeBounds.getWidth()),
                       textureHeight = Math.round(outsetShapeBounds.getHeight());
 
+            final int border = 1;
             // See if we have a cached representation for this region background already. In UI controls,
             // the arrow in a scroll bar button or the dot in a radio button or the tick in a check box are
             // all examples of cases where we'd like to reuse a cached image for performance reasons rather
@@ -537,7 +538,7 @@ public class NGRegion extends NGGroup {
                 if (imageCache.isImageCachable(textureWidth, textureHeight)) {
                     final Integer key = getCacheKey(textureWidth, textureHeight);
                     rect = TEMP_RECT;
-                    rect.setBounds(0, 0, textureWidth, textureHeight);
+                    rect.setBounds(0, 0, textureWidth + border, textureHeight + border);
                     boolean render = imageCache.getImageLocation(key, rect, background, shape, g);
                     if (!rect.isEmpty()) {
                         // An empty rect indicates a failure occurred in the imageCache
@@ -726,6 +727,7 @@ public class NGRegion extends NGGroup {
                 background.getFills().size() > 1 && // Not worth the overhead otherwise
                 cacheMode != 0 &&
                 g.getTransformNoClone().isTranslateOrIdentity();
+        final int border = 1;
         RTTexture cached = null;
         Rectangle rect = null;
         if (cache) {
@@ -733,7 +735,7 @@ public class NGRegion extends NGGroup {
             if (imageCache.isImageCachable(textureWidth, textureHeight)) {
                 final Integer key = getCacheKey(textureWidth, textureHeight);
                 rect = TEMP_RECT;
-                rect.setBounds(0, 0, textureWidth, textureHeight);
+                rect.setBounds(0, 0, textureWidth + border, textureHeight + border);
                 boolean render = imageCache.getImageLocation(key, rect, background, shape, g);
                 if (!rect.isEmpty()) {
                     // An empty rect indicates a failure occurred in the imageCache
@@ -902,8 +904,8 @@ public class NGRegion extends NGGroup {
 
         final float dstWidth = outsetsLeft + width + outsetsRight;
         final float dstHeight = outsetsTop + height + outsetsBottom;
-        final boolean sameWidth = rect.width == dstWidth;
-        final boolean sameHeight = rect.height == dstHeight;
+        final boolean sameWidth = textureWidth == dstWidth;
+        final boolean sameHeight = textureHeight == dstHeight;
         final float dstX1 = -outsetsLeft;
         final float dstY1 = -outsetsTop;
         final float dstX2 = width + outsetsRight;
