@@ -2523,7 +2523,8 @@ compileTargets { t ->
             }
         }
         dependsOn(jmxTask);
-        dependsOn(jfxrtTask)
+        dependsOn(jfxrtIndexTask)
+        dependsOn(jfxswtIndexTask)
         dependsOn(javadoc)
         dependsOn(src)
     }
