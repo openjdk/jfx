@@ -1107,33 +1107,35 @@ public class NGRegion extends NGGroup {
             if (stroke.isStrokeUniform()) {
                 // If the stroke is uniform, then that means that the style, width, and stroke of
                 // all four sides is the same.
-                float w = width - l - r;
-                float h = height - t - b;
-                // The length of each side of the path we're going to stroke
-                final double di = 2 * radii.getTopLeftHorizontalRadius();
-                final double circle = di*Math.PI;
-                final double totalLineLength =
-                        circle +
-                        2 * (width - di) +
-                        2 * (height - di);
+                if (!(topStroke instanceof Color && ((Color)topStroke).getOpacity() == 0f) && topStyle != BorderStrokeStyle.NONE) {
+                    float w = width - l - r;
+                    float h = height - t - b;
+                    // The length of each side of the path we're going to stroke
+                    final double di = 2 * radii.getTopLeftHorizontalRadius();
+                    final double circle = di*Math.PI;
+                    final double totalLineLength =
+                            circle +
+                            2 * (width - di) +
+                            2 * (height - di);
 
-                if (w >= 0 && h >= 0) {
-                    setBorderStyle(g, stroke, totalLineLength);
-                    if (radii.isUniform() && radius == 0) {
-                        // We're just drawing a squared stroke on all four sides of the same style
-                        // and width and color, so a simple drawRect call is all that is needed.
-                        g.drawRect(l, t, w, h);
-                    } else if (radii.isUniform()) {
-                        // The radii are uniform, but are not squared up, so we have to
-                        // draw a rounded rectangle.
-                        float ar = radius + radius;
-                        if (ar > w) ar = w;
-                        if (ar > h) ar = h;
-                        g.drawRoundRect(l, t, w, h, ar, ar);
-                    } else {
-                        // We do not have uniform radii, so we need to create a path that represents
-                        // the stroke and then draw that.
-                        g.draw(createPath(width, height, t, l, b, r, radii));
+                    if (w >= 0 && h >= 0) {
+                        setBorderStyle(g, stroke, totalLineLength);
+                        if (radii.isUniform() && radius == 0) {
+                            // We're just drawing a squared stroke on all four sides of the same style
+                            // and width and color, so a simple drawRect call is all that is needed.
+                            g.drawRect(l, t, w, h);
+                        } else if (radii.isUniform()) {
+                            // The radii are uniform, but are not squared up, so we have to
+                            // draw a rounded rectangle.
+                            float ar = radius + radius;
+                            if (ar > w) ar = w;
+                            if (ar > h) ar = h;
+                            g.drawRoundRect(l, t, w, h, ar, ar);
+                        } else {
+                            // We do not have uniform radii, so we need to create a path that represents
+                            // the stroke and then draw that.
+                            g.draw(createPath(width, height, t, l, b, r, radii));
+                        }
                     }
                 }
             } else if (radii.isUniform() && radius == 0) {
