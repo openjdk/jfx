@@ -196,8 +196,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         textNode.textProperty().bind(new StringBinding() {
             { bind(textField.textProperty()); }
             @Override protected String computeValue() {
-                String txt = maskText(textField.getText());
-                return txt == null ? "" : txt;
+                return maskText(textField.textProperty().getValueSafe());
             }
         });
         textNode.fillProperty().bind(textFill);
