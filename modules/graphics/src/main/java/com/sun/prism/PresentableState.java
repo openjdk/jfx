@@ -52,6 +52,7 @@ public class PresentableState {
     protected long nativeView;
     protected int viewWidth, viewHeight;
     protected int screenHeight;
+    protected int screenWidth;
     protected boolean isWindowVisible;
     protected boolean isWindowMinimized;
     protected float screenScale;
@@ -153,6 +154,15 @@ public class PresentableState {
      */
     public int getScreenHeight() {
         return screenHeight;
+    }
+
+    /**
+     * @return the current width of the screen
+     *
+     * May be called on any thread.
+     */
+    public int getScreenWidth() {
+        return screenWidth;
     }
 
     /**
@@ -282,6 +292,7 @@ public class PresentableState {
                 // !hasWindowManager so should be safe to ignore
                 // when null, most likely because of "In Browswer"
                 screenHeight = screen.getHeight();
+                screenWidth = screen.getWidth();
                 screenScale = screen.getScale();
             } else {
                 screenScale = 1.f;

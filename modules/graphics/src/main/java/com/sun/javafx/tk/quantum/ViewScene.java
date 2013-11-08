@@ -35,8 +35,7 @@ import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.GraphicsPipeline;
-import com.sun.prism.j2d.J2DPipeline;
-import com.sun.prism.sw.SWPipeline;
+import javafx.scene.Parent;
 
 class ViewScene extends GlassScene {
 
@@ -158,6 +157,23 @@ class ViewScene extends GlassScene {
     @Override public String toString() {
         View view = getPlatformView();
         return (" scene: " + hashCode() + " @ (" + view.getWidth() + "," + view.getHeight() + ")");
+    }
+
+    void synchroniseOverlayWarning() {
+        try {
+            waitForSynchronization();
+            OverlayWarning warning = getWindowStage().getWarning();
+            if (warning == null) {
+                painter.setOverlayRoot(null);
+            } else {
+                painter.setOverlayRoot(warning.impl_getPeer());
+                warning.updateBounds();
+                warning.impl_updatePeer();
+            }
+        } finally {
+            releaseSynchronization();
+            entireSceneNeedsRepaint();
+        }
     }
 }
 
