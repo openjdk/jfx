@@ -28,6 +28,7 @@ package com.sun.javafx.scene.control.skin;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.PasswordField;
 import org.junit.Test;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -68,6 +69,25 @@ public class TextInputControlSkinTest {
         assertTrue(caretAnimating.get());
         textArea.setFocus(false);
         assertFalse(caretAnimating.get());
+    }
+
+    @Test public void skinsCanHandleNullValues_RT34178() {
+        // RT-34178: NPE in TextFieldSkin of PasswordField
+
+        // The skins should always use textProperty().getValueSafe()
+        // instead of getText().
+
+        TextArea textArea = new TextArea();
+        textArea.setSkin(new TextAreaSkin(textArea));
+        textArea.setText(null);
+
+        TextField textField = new TextField();
+        textField.setSkin(new TextFieldSkin(textField));
+        textField.setText(null);
+
+        PasswordField passwordField = new PasswordField();
+        passwordField.setSkin(new TextFieldSkin(passwordField));
+        passwordField.setText(null);
     }
 
     public class FocusableTextField extends TextField {

@@ -36,6 +36,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.*;
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
@@ -89,45 +91,35 @@ public class IndexSearcher {
                 DocumentType docType = DocumentType.valueOf(groupDocs.groupValue);
                 List<SearchResult> results = new ArrayList<>();
                 for (ScoreDoc scoreDoc : groupDocs.scoreDocs) {
-                    Document doc = searcher.doc(scoreDoc.doc);
-                    SearchResult result = new SearchResult(
-                            docType,
-                            doc.get("name"),
-                            doc.get("url"),
-                            doc.get("className"),
-                            doc.get("package"),
-                            doc.get("ensemblePath"),
-                            docType == DocumentType.DOC ? 
-                                    doc.get("bookTitle") == null ? doc.get("chapter") : doc.get("bookTitle")
-                                    : doc.get("shortDescription").trim()
-                    );
-                    /* If the result is a sample, then filter out the samples that 
-                     * the runtime platform does not support. We really want to show
-                     * just 5 results, but we search for 10 and filter out unsupported
-                     * samples and show just 5.
-                     */
-                    // If result is a sample, check if supported sample exists before adding so it's
-                    // either not sample or it is a supported sample
-                    if (!result.getDocumentType().name().equals(DocumentType.SAMPLE.name())
-                            || Samples.ROOT.sampleForPath(result.getEnsemblePath().substring(9).trim()) != null) {
-                        results.add(result);
-                        if (results.size() == 5) {
-                            // 5 samples is enough
-                            break;
+                    if ((Platform.isSupported(ConditionalFeature.WEB)) || (docType != DocumentType.DOC)) {
+                        Document doc = searcher.doc(scoreDoc.doc);
+                        SearchResult result = new SearchResult(
+                                docType,
+                                doc.get("name"),
+                                doc.get("url"),
+                                doc.get("className"),
+                                doc.get("package"),
+                                doc.get("ensemblePath"),
+                                docType == DocumentType.DOC
+                                        ? doc.get("bookTitle") == null ? doc.get("chapter") : doc.get("bookTitle")
+                                        : doc.get("shortDescription").trim()
+                        );
+                        /* If the result is a sample, then filter out the samples that
+                        * the runtime platform does not support. We really want to show
+                        * just 5 results, but we search for 10 and filter out unsupported
+                        * samples and show just 5.
+                        */
+                        // If result is a sample, check if supported sample exists before adding so it's
+                        // either not sample or it is a supported sample
+                        if (!result.getDocumentType().name().equals(DocumentType.SAMPLE.name())
+                                || Samples.ROOT.sampleForPath(result.getEnsemblePath().substring(9).trim()) != null) {
+                            results.add(result);
+                            if (results.size() == 5) {
+                                // 5 samples is enough
+                                break;
+                            }
                         }
-                    }
-
-                    /*                   if (results.size() < 5) {
-                     //If result is a sample check if supported sample exists before adding
-                     if (result.getDocumentType().name().equals(DocumentType.SAMPLE.name())) {
-                     if (Samples.ROOT.sampleForPath(result.getEnsemblePath().substring(9).trim()) != null) {
-                     results.add(result);
-                     }
-                     } else {
-                     results.add(result);
-                     }
-                     }
-                     */
+                    } 
                 }
                 resultMap.put(docType, results);
             }

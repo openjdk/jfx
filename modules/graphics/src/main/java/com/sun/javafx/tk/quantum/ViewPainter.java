@@ -88,8 +88,6 @@ abstract class ViewPainter implements Runnable {
     private int width;
     private int height;
 
-    private boolean renderOverlay = false;
-
     /**
      * root is the root node of the scene. overlayRoot is the root node of any
      * overlay which may be present (such as used for full screen overlay).
@@ -151,10 +149,6 @@ abstract class ViewPainter implements Runnable {
         overlayRoot = node;
     }
 
-    protected final void setRenderOverlay(boolean val) {
-        renderOverlay = val;
-    }
-
     private void adjustPerspective(NGCamera camera) {
         // This should definitely be true since this is only called by setDirtyRect
         assert PrismSettings.dirtyOptsEnabled;
@@ -179,7 +173,7 @@ abstract class ViewPainter implements Runnable {
         final float pixelScale = getPixelScaleFactor();
         // Initialize renderEverything based on various conditions that will cause us to render
         // the entire scene every time.
-        boolean renderEverything = renderOverlay ||
+        boolean renderEverything = overlayRoot != null ||
                 sceneState.getScene().isEntireSceneDirty() ||
                 sceneState.getScene().getDepthBuffer() ||
                 !PrismSettings.dirtyOptsEnabled;
@@ -331,7 +325,7 @@ abstract class ViewPainter implements Runnable {
         }
 
         // If we have an overlay then we need to render it too.
-        if (renderOverlay) {
+        if (overlayRoot != null) {
             overlayRoot.render(g);
         }
 

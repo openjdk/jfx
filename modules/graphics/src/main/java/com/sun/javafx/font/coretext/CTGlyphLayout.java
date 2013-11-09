@@ -82,12 +82,12 @@ class CTGlyphLayout extends GlyphLayout {
 
     public void layout(TextRun run, PGFont font, FontStrike strike, char[] text) {
 
-        int slot = 0;
+        int baseSlot = 0;
         CompositeFontResource composite = null;
         if (strike instanceof CompositeStrike) {
             composite = (CompositeFontResource)strike.getFontResource();
-            slot = getInitialSlot(composite);
-            strike = ((CompositeStrike)strike).getStrikeSlot(slot);
+            baseSlot = getInitialSlot(composite);
+            strike = ((CompositeStrike)strike).getStrikeSlot(baseSlot);
         }
         float size = strike.getSize();
         String fontName = strike.getFontResource().getFullName();
@@ -106,7 +106,7 @@ class CTGlyphLayout extends GlyphLayout {
             for (int i = 0; i < runCount; i++) {
                 long runRef = OS.CFArrayGetValueAtIndex(runs, i);
                 if (runRef == 0) continue;
-                slot = getFontSlot(runRef, composite, fontName, slot);
+                int slot = getFontSlot(runRef, composite, fontName, baseSlot);
                 if (slot != -1) {
                     glyphStart += OS.CTRunGetGlyphs(runRef, slot << 24, glyphStart, glyphs);
                 } else {

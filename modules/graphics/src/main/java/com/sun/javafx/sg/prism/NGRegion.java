@@ -523,6 +523,7 @@ public class NGRegion extends NGGroup {
             final int textureWidth = Math.round(outsetShapeBounds.getWidth()),
                       textureHeight = Math.round(outsetShapeBounds.getHeight());
 
+            final int border = 1;
             // See if we have a cached representation for this region background already. In UI controls,
             // the arrow in a scroll bar button or the dot in a radio button or the tick in a check box are
             // all examples of cases where we'd like to reuse a cached image for performance reasons rather
@@ -537,7 +538,7 @@ public class NGRegion extends NGGroup {
                 if (imageCache.isImageCachable(textureWidth, textureHeight)) {
                     final Integer key = getCacheKey(textureWidth, textureHeight);
                     rect = TEMP_RECT;
-                    rect.setBounds(0, 0, textureWidth, textureHeight);
+                    rect.setBounds(0, 0, textureWidth + border, textureHeight + border);
                     boolean render = imageCache.getImageLocation(key, rect, background, shape, g);
                     if (!rect.isEmpty()) {
                         // An empty rect indicates a failure occurred in the imageCache
@@ -726,6 +727,7 @@ public class NGRegion extends NGGroup {
                 background.getFills().size() > 1 && // Not worth the overhead otherwise
                 cacheMode != 0 &&
                 g.getTransformNoClone().isTranslateOrIdentity();
+        final int border = 1;
         RTTexture cached = null;
         Rectangle rect = null;
         if (cache) {
@@ -733,7 +735,7 @@ public class NGRegion extends NGGroup {
             if (imageCache.isImageCachable(textureWidth, textureHeight)) {
                 final Integer key = getCacheKey(textureWidth, textureHeight);
                 rect = TEMP_RECT;
-                rect.setBounds(0, 0, textureWidth, textureHeight);
+                rect.setBounds(0, 0, textureWidth + border, textureHeight + border);
                 boolean render = imageCache.getImageLocation(key, rect, background, shape, g);
                 if (!rect.isEmpty()) {
                     // An empty rect indicates a failure occurred in the imageCache
@@ -902,8 +904,8 @@ public class NGRegion extends NGGroup {
 
         final float dstWidth = outsetsLeft + width + outsetsRight;
         final float dstHeight = outsetsTop + height + outsetsBottom;
-        final boolean sameWidth = rect.width == dstWidth;
-        final boolean sameHeight = rect.height == dstHeight;
+        final boolean sameWidth = textureWidth == dstWidth;
+        final boolean sameHeight = textureHeight == dstHeight;
         final float dstX1 = -outsetsLeft;
         final float dstY1 = -outsetsTop;
         final float dstX2 = width + outsetsRight;
@@ -1107,33 +1109,35 @@ public class NGRegion extends NGGroup {
             if (stroke.isStrokeUniform()) {
                 // If the stroke is uniform, then that means that the style, width, and stroke of
                 // all four sides is the same.
-                float w = width - l - r;
-                float h = height - t - b;
-                // The length of each side of the path we're going to stroke
-                final double di = 2 * radii.getTopLeftHorizontalRadius();
-                final double circle = di*Math.PI;
-                final double totalLineLength =
-                        circle +
-                        2 * (width - di) +
-                        2 * (height - di);
+                if (!(topStroke instanceof Color && ((Color)topStroke).getOpacity() == 0f) && topStyle != BorderStrokeStyle.NONE) {
+                    float w = width - l - r;
+                    float h = height - t - b;
+                    // The length of each side of the path we're going to stroke
+                    final double di = 2 * radii.getTopLeftHorizontalRadius();
+                    final double circle = di*Math.PI;
+                    final double totalLineLength =
+                            circle +
+                            2 * (width - di) +
+                            2 * (height - di);
 
-                if (w >= 0 && h >= 0) {
-                    setBorderStyle(g, stroke, totalLineLength);
-                    if (radii.isUniform() && radius == 0) {
-                        // We're just drawing a squared stroke on all four sides of the same style
-                        // and width and color, so a simple drawRect call is all that is needed.
-                        g.drawRect(l, t, w, h);
-                    } else if (radii.isUniform()) {
-                        // The radii are uniform, but are not squared up, so we have to
-                        // draw a rounded rectangle.
-                        float ar = radius + radius;
-                        if (ar > w) ar = w;
-                        if (ar > h) ar = h;
-                        g.drawRoundRect(l, t, w, h, ar, ar);
-                    } else {
-                        // We do not have uniform radii, so we need to create a path that represents
-                        // the stroke and then draw that.
-                        g.draw(createPath(width, height, t, l, b, r, radii));
+                    if (w >= 0 && h >= 0) {
+                        setBorderStyle(g, stroke, totalLineLength);
+                        if (radii.isUniform() && radius == 0) {
+                            // We're just drawing a squared stroke on all four sides of the same style
+                            // and width and color, so a simple drawRect call is all that is needed.
+                            g.drawRect(l, t, w, h);
+                        } else if (radii.isUniform()) {
+                            // The radii are uniform, but are not squared up, so we have to
+                            // draw a rounded rectangle.
+                            float ar = radius + radius;
+                            if (ar > w) ar = w;
+                            if (ar > h) ar = h;
+                            g.drawRoundRect(l, t, w, h, ar, ar);
+                        } else {
+                            // We do not have uniform radii, so we need to create a path that represents
+                            // the stroke and then draw that.
+                            g.draw(createPath(width, height, t, l, b, r, radii));
+                        }
                     }
                 }
             } else if (radii.isUniform() && radius == 0) {
@@ -1250,6 +1254,7 @@ public class NGRegion extends NGGroup {
             }
             final int imgWidth = prismImage.getWidth();
             final int imgHeight = prismImage.getHeight();
+            final float imgScale = prismImage.getPixelScale();
             final BorderWidths widths = ib.getWidths();
             final Insets insets = ib.getInsets();
             final BorderWidths slices = ib.getSlices();
@@ -1260,23 +1265,15 @@ public class NGRegion extends NGGroup {
             final int bottomInset = (int) Math.round(insets.getBottom());
             final int leftInset = (int) Math.round(insets.getLeft());
 
-            final int topWidth = (int) Math.round(
-                    widths.isTopAsPercentage() ? height * widths.getTop() : widths.getTop());
-            final int rightWidth = (int) Math.round(
-                    widths.isRightAsPercentage() ? width * widths.getRight() : widths.getRight());
-            final int bottomWidth = (int) Math.round(
-                    widths.isBottomAsPercentage() ? height * widths.getBottom() : widths.getBottom());
-            final int leftWidth = (int) Math.round(
-                    widths.isLeftAsPercentage() ? width * widths.getLeft() : widths.getLeft());
+            final int topWidth = widthSize(widths.isTopAsPercentage(), widths.getTop(), height);
+            final int rightWidth = widthSize(widths.isRightAsPercentage(), widths.getRight(), width);
+            final int bottomWidth = widthSize(widths.isBottomAsPercentage(), widths.getBottom(), height);
+            final int leftWidth = widthSize(widths.isLeftAsPercentage(), widths.getLeft(), width);
 
-            final int topSlice = (int) Math.round((
-                    slices.isTopAsPercentage() ? height * slices.getTop() : slices.getTop()) * prismImage.getPixelScale());
-            final int rightSlice = (int) Math.round((
-                    slices.isRightAsPercentage() ? width * slices.getRight() : slices.getRight()) * prismImage.getPixelScale());
-            final int bottomSlice = (int) Math.round((
-                    slices.isBottomAsPercentage() ? height * slices.getBottom() : slices.getBottom()) * prismImage.getPixelScale());
-            final int leftSlice = (int) Math.round((
-                    slices.isLeftAsPercentage() ? width * slices.getLeft() : slices.getLeft()) * prismImage.getPixelScale());
+            final int topSlice = sliceSize(slices.isTopAsPercentage(), slices.getTop(), imgHeight, imgScale);
+            final int rightSlice = sliceSize(slices.isRightAsPercentage(), slices.getRight(), imgWidth, imgScale);
+            final int bottomSlice = sliceSize(slices.isBottomAsPercentage(), slices.getBottom(), imgHeight, imgScale);
+            final int leftSlice = sliceSize(slices.isLeftAsPercentage(), slices.getLeft(), imgWidth, imgScale);
 
             // handle case where region is too small to fit in borders
             if ((leftInset + leftWidth + rightInset + rightWidth) > width
@@ -1382,6 +1379,17 @@ public class NGRegion extends NGGroup {
             left = (float) Math.max(left, insets.getLeft() + Math.max(radii.getTopLeftHorizontalRadius(), radii.getBottomLeftHorizontalRadius()));
         }
         backgroundInsets = new Insets(roundUp(top), roundUp(right), roundUp(bottom), roundUp(left));
+    }
+
+    private int widthSize(boolean isPercent, double sliceSize, float objSize) {
+        //Not strictly correct. See RT-34051
+        return (int) Math.round(isPercent ? sliceSize * objSize : sliceSize);
+    }
+
+    private int sliceSize(boolean isPercent, double sliceSize, float objSize, float scale) {
+        if (isPercent) sliceSize *= objSize;
+        if (sliceSize > objSize) sliceSize = objSize;
+        return (int) Math.round(sliceSize * scale);
     }
 
     private int roundUp(double d) {

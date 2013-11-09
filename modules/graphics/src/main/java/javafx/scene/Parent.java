@@ -1702,7 +1702,7 @@ public abstract class Parent extends Node {
                                                         maxX, maxY, maxZ);
     }
 
-    @Override void updateBounds() {
+    @Override protected void updateBounds() {
         for (int i=0, max=children.size(); i<max; i++) {
             children.get(i).updateBounds();
         }

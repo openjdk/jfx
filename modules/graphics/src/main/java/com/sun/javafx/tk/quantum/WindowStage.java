@@ -36,7 +36,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
 
 import javafx.scene.input.KeyCombination;
 import javafx.stage.Modality;
@@ -556,7 +555,7 @@ class WindowStage extends GlassStage {
                     v.enterFullscreen(false, false, false);
                     if (warning != null && warning.inWarningTransition()) {
                         warning.setView(getViewScene());
-                    } else {                        
+                    } else {
                         boolean showWarning = true;
 
                         KeyCombination key = null;
@@ -568,16 +567,16 @@ class WindowStage extends GlassStage {
 
                             exitMessage = fxStage.getFullScreenExitHint();
                         }
-                        
+
                         savedFullScreenExitKey =
                                 key == null
                                 ? defaultFullScreenExitKeycombo
                                 : key;
 
                         if (
-                            // the hint is "" 
+                            // the hint is ""
                             "".equals(exitMessage) ||
-                            // if the key is NO_MATCH 
+                            // if the key is NO_MATCH
                             (savedFullScreenExitKey.equals(KeyCombination.NO_MATCH))
                                 ) {
                             showWarning = false;
@@ -589,12 +588,12 @@ class WindowStage extends GlassStage {
                                 exitMessage = RESOURCES.getString("OverlayWarningESC");
                             } else {
                                 String f = RESOURCES.getString("OverlayWarningKey");
-                                exitMessage = f.format(f, savedFullScreenExitKey.toString()); 
+                                exitMessage = f.format(f, savedFullScreenExitKey.toString());
                             }
                         }
-                        
+
                         if (showWarning && warning == null) {
-                            warning = new OverlayWarning(getViewScene());
+                            setWarning(new OverlayWarning(getViewScene()));
                         }
 
                         if (showWarning && warning != null) {
@@ -605,7 +604,7 @@ class WindowStage extends GlassStage {
             } else {
                 if (warning != null) {
                     warning.cancel();
-                    warning = null;
+                    setWarning(null);
                 }
                 v.exitFullscreen(false);
             }
@@ -614,8 +613,17 @@ class WindowStage extends GlassStage {
         } else if (!isVisible() && warning != null) {
             // if the window is closed - re-open with fresh warning
             warning.cancel();
-            warning = null;
+            setWarning(null);
         }
+    }
+
+    void setWarning(OverlayWarning newWarning) {
+        this.warning = newWarning;
+        getViewScene().synchroniseOverlayWarning();
+    }
+
+    OverlayWarning getWarning() {
+        return warning;
     }
 
     @Override public void setFullScreen(boolean fullScreen) {

@@ -50,6 +50,55 @@ import sun.util.logging.PlatformLogger;
 
 /**
  * Base class for a camera used to render a scene.
+ * The camera defines the mapping of the scene coordinate space onto the window.
+ * Camera is an abstract class with two concrete subclasses:
+ * {@link ParallelCamera} and {@link PerspectiveCamera}.
+ *
+ * <p>
+ * The default camera is positioned in the scene such that its projection plane
+ * in the scene coordinate space is at Z = 0, and it is looking into the screen in
+ * the positive Z direction. The distance in Z from the camera to the projection
+ * plane is determined by the {@code width} and {@code height} of the Scene to
+ * which it is attached and its {@code fieldOfView}.
+ * </p>
+ *
+ * <p>
+ * The {@code nearClip} and {@code farClip} of this camera are specified in the
+ * eye coordinate space. This space is defined such that the eye is at its
+ * origin and the projection plane is one unit in front of the eye in the
+ * positive Z direction.
+ * </p>
+ *
+ * <p>
+ * The following pseudo code is the math used to compute the near and far clip
+ * distances in the scene coordinate space:
+ *
+ * <ul><pre>
+ * final double tanOfHalfFOV = Math.tan(Math.toRadians(FOV) / 2.0);
+ * final double halfHeight = HEIGHT / 2;
+ * final double focalLenght = halfHeight / tanOfHalfFOV;
+ * final double eyePositionZ = -1.0 * focalLenght;
+ * final double nearClipDistance = focalLenght * NEAR + eyePositionZ;
+ * final double farClipDistance = focalLenght * FAR + eyePositionZ;
+ * </pre></ul>
+ *
+ * where {@code FOV} is {@code fieldOfView} in degrees,
+ * {@code NEAR} is {@code nearClip} specified in eye space,
+ * and {@code FAR} is {@code farClip} specified in eye space.
+ * </p>
+ *
+ * <p>
+ * Note: Since the ParallelCamera class has no {@code fieldOfView} property, a
+ * 30 degrees vertical field of view is used.
+ * </p>
+ *
+ * <p>
+ * Note: For the case of a PerspectiveCamera where the fixedEyeAtCameraZero
+ * attribute is true, the scene coordinate space is normalized in order to fit
+ * into the view frustum (see {@link PerspectiveCamera} for more details). In
+ * this mode, the eye coordinate space is the same as this Camera node's local
+ * coordinate space. Hence the conversion formula mentioned above is not used.
+ * </p>
  *
  * @since JavaFX 2.0
  */
@@ -132,9 +181,11 @@ public abstract class Camera extends Node {
     }
 
     /**
-     * Specifies the near clipping plane of this {@code Camera} in the eye
-     * coordinate system of this node. Objects closer to the eye than the 
-     * {@code nearClip} plane are not drawn.
+     * Specifies the distance from the eye of the near clipping plane of
+     * this {@code Camera} in the eye coordinate space.
+     * Objects closer to the eye than {@code nearClip} are not drawn.
+     * {@code nearClip} is specified as a value greater than zero. A value less
+     * than or equal to zero is treated as a very small positive number.
      *
      * @defaultValue 0.1
      * @since JavaFX 8.0
@@ -163,10 +214,13 @@ public abstract class Camera extends Node {
     }
 
     /**
-     * Specifies the far clipping plane of this {@code Camera} in the eye
-     * coordinate system of this node. Objects farther away from the eye than
-     * the {@code farClip} plane are not drawn.
-     * <p>
+     * Specifies the distance from the eye of the far clipping plane of
+     * this {@code Camera} in the eye coordinate space.
+     * Objects farther away from the eye than {@code farClip} are not
+     * drawn.
+     * {@code farClip} is specified as a value greater than {@code nearClip}.
+     * A value less than or equal to {@code nearClip} is treated as 
+     * {@code nearClip} plus a very small positive number.
      *
      * @defaultValue 100.0
      * @since JavaFX 8.0

@@ -763,6 +763,9 @@ public class JFXPanel extends JComponent {
 
     @Override
     public InputMethodRequests getInputMethodRequests() {
+        if (scenePeer == null) {
+            return null;
+        }
         return new InputMethodSupport.InputMethodRequestsAdapter(scenePeer.getInputMethodRequests());
     }
 

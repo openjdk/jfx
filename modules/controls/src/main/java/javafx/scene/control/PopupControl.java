@@ -1079,19 +1079,21 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
 
                 super.set(v);
 
+            }
+
+            @Override protected void invalidated() {
+                Skin<?> skin = get();
+                
                 // Collect the name of the currently installed skin class. We do this
                 // so that subsequent updates from CSS to the same skin class will not
                 // result in reinstalling the skin
-                currentSkinClassName = v == null ? null : v.getClass().getName();
+                currentSkinClassName = skin == null ? null : skin.getClass().getName();
 
                 // if someone calls setSkin, we need to make it look like they
                 // called set on skinClassName in order to keep CSS from overwriting
                 // the skin.
                 skinClassNameProperty().set(currentSkinClassName);
-
-            }
-
-            @Override protected void invalidated() {
+                
                 // Let CSS know that this property has been manually changed
                 // Dispose of the old skin
                 if (oldValue != null) oldValue.dispose();

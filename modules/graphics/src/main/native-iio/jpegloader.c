@@ -1423,6 +1423,9 @@ JNIEXPORT jlong JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_initDecompr
                      */
                     cinfo->jpeg_color_space = JCS_UNKNOWN;
                     cinfo->out_color_space = JCS_UNKNOWN;
+                } else {
+                    /* There is no support for YCCK on jfx side, so request RGB output */
+                    cinfo->out_color_space = JCS_RGB;
                 }
                 break;
             case JCS_CMYK:
@@ -1445,6 +1448,9 @@ JNIEXPORT jlong JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_initDecompr
                     cinfo->jpeg_color_space = JCS_YCCK;
                     /* Leave the output space as CMYK */
                 }
+
+                /* There is no support for CMYK on jfx side, so request RGB output */
+                cinfo->out_color_space = JCS_RGB;
         }
         RELEASE_ARRAYS(env, data, src->next_input_byte);
 
@@ -1468,7 +1474,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_initDecompr
     return ptr_to_jlong(data);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_startDecompression
+JNIEXPORT jint JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_startDecompression
 (JNIEnv *env, jobject this, jlong ptr, jint outCS, jint dest_width, jint dest_height) {
     imageIODataPtr data = (imageIODataPtr) jlong_to_ptr(ptr);
     j_decompress_ptr cinfo = (j_decompress_ptr) data->jpegObj;
@@ -1483,7 +1489,7 @@ JNIEXPORT void JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_startDecompr
         ThrowByName(env,
                 "java/io/IOException",
                 "Array pin failed");
-        return;
+        return JCS_UNKNOWN;
     }
 
     cinfo = (j_decompress_ptr) data->jpegObj;
@@ -1501,7 +1507,7 @@ JNIEXPORT void JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_startDecompr
                     buffer);
             ThrowByName(env, "java/io/IOException", buffer);
         }
-        return;
+        return JCS_UNKNOWN;
     }
 
     cinfo->out_color_space = outCS;
@@ -1542,6 +1548,8 @@ JNIEXPORT void JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_startDecompr
             JPEGImageLoader_setOutputAttributesID,
             cinfo->output_width,
             cinfo->output_height);
+
+    return cinfo->output_components;
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompressIndirect

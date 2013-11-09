@@ -275,10 +275,19 @@ public class TableColumnHeader extends Region {
     private DoubleProperty sizeProperty() {
         if (size == null) {
             size = new StyleableDoubleProperty(20) {
-                @Override public void set(double v) {
-                    // guard against a 0 or negative size
-                    super.set(((v <= 0) ? 20.0 : v));
+                @Override
+                protected void invalidated() {
+                    double value = get();
+                    if (value <= 0) {
+                        if (isBound()) {
+                            unbind();
+                        }
+                        set(20);
+                        throw new IllegalArgumentException("Size cannot be 0 or negative");
+                    }
                 }
+                
+                
 
                 @Override public Object getBean() {
                     return TableColumnHeader.this;

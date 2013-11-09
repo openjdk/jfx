@@ -726,16 +726,17 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
     private ObjectProperty<Paint> progressColor =
             new StyleableObjectProperty<Paint>(null) {
 
-                @Override public void set(Paint newProgressColor) {
-                    final Paint color = (newProgressColor instanceof Color)
-                            ? newProgressColor
-                            : null;
-                    super.set(color);
-                }
-
                 @Override protected void invalidated() {
-                    if (spinner!=null) spinner.setFillOverride(get());
-                    if (determinateIndicator!=null) determinateIndicator.setFillOverride(get());
+                    final Paint value = get();
+                    if (value != null && !(value instanceof Color)) {
+                        if (isBound()) {
+                            unbind();
+                        }
+                        set(null);
+                        throw new IllegalArgumentException("Only Color objects are supported");
+                    }
+                    if (spinner!=null) spinner.setFillOverride(value);
+                    if (determinateIndicator!=null) determinateIndicator.setFillOverride(value);
                 }
 
                 @Override public Object getBean() {

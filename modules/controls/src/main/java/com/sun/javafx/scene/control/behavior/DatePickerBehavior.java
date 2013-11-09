@@ -78,9 +78,6 @@ public class DatePickerBehavior extends ComboBoxBaseBehavior<LocalDate> {
         DATE_PICKER_BINDINGS.add(new KeyBinding(F4, KEY_RELEASED, "togglePopup"));
         DATE_PICKER_BINDINGS.add(new KeyBinding(UP, "togglePopup").alt());
         DATE_PICKER_BINDINGS.add(new KeyBinding(DOWN, "togglePopup").alt());
-        DATE_PICKER_BINDINGS.add(new KeyBinding(ESCAPE, KEY_PRESSED, CLOSE_ACTION));
-        DATE_PICKER_BINDINGS.add(new KeyBinding(SPACE, KEY_PRESSED, OPEN_ACTION));
-        DATE_PICKER_BINDINGS.add(new KeyBinding(ENTER, KEY_PRESSED, OPEN_ACTION));
     }
 
     @Override protected void callAction(String name) {

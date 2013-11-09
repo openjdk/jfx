@@ -25,6 +25,7 @@
 
 package com.sun.javafx.tk.quantum;
 
+import com.sun.javafx.scene.DirtyBits;
 import javafx.animation.Animation.Status;
 import javafx.animation.FadeTransition;
 import javafx.animation.PauseTransition;
@@ -33,7 +34,6 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
-import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
@@ -41,10 +41,7 @@ import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import javafx.util.Duration;
 
-import java.util.Locale;
-import java.util.ResourceBundle;
-
-public class OverlayWarning {
+public class OverlayWarning extends Group {
 
     private static final float  PAD      = 40f;
     private static final float  RECTW    = 600f;
@@ -53,36 +50,27 @@ public class OverlayWarning {
     private static final int    FONTSIZE = 24;
     
     private ViewScene               view;
-    private Group                   sceneRoot;
     private SequentialTransition    overlayTransition;
-    private ViewPainter             painter;
     private boolean                 warningTransition;
-    
+
     public OverlayWarning(final ViewScene vs) {
         view = vs;
         
-        sceneRoot = createOverlayGroup();
-        painter = view.getPainter();
-
-        // TODO - needs to be thread-safe - see RT-13813
-        Scene.impl_setAllowPGAccess(true);
-        painter.setOverlayRoot(sceneRoot.impl_getPeer());
-        Scene.impl_setAllowPGAccess(false);
+        createOverlayGroup();
         
         PauseTransition pause = new PauseTransition(Duration.millis(4000));
-        FadeTransition fade = new FadeTransition(Duration.millis(1000), sceneRoot);
+        FadeTransition fade = new FadeTransition(Duration.millis(1000), this);
         fade.setFromValue(1);
         fade.setToValue(0);
         
         overlayTransition = new SequentialTransition();
         overlayTransition.getChildren().add(pause);
         overlayTransition.getChildren().add(fade);
-        
         overlayTransition.setOnFinished(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent event) {
-                painter.setRenderOverlay(false);
-                view.entireSceneNeedsRepaint();
+            @Override
+            public void handle(ActionEvent event) {
                 warningTransition = false;
+                view.getWindowStage().setWarning(null);
             }
         });
     }
@@ -92,51 +80,28 @@ public class OverlayWarning {
     }
 
     protected final void setView(ViewScene vs) {
-        if (painter != null) {
-            painter.setRenderOverlay(false);
-            view.entireSceneNeedsRepaint();
+        if (view != null) {
+            view.getWindowStage().setWarning(null);
         }
 
         view = vs;
-        painter = vs.getPainter();
-
-        // TODO - needs to be thread-safe - see RT-13813
-        Scene.impl_setAllowPGAccess(true);
-        painter.setOverlayRoot(sceneRoot.impl_getPeer());
-        Scene.impl_setAllowPGAccess(false);
-
-        painter.setRenderOverlay(true);
         view.entireSceneNeedsRepaint();
-
-        overlayTransition.setOnFinished(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent event) {
-                painter.setRenderOverlay(false);
-                view.entireSceneNeedsRepaint();
-                warningTransition = false;
-            }
-        });
    }
     
     protected void warn(String msg) {
         text.setText(msg);
-        // needed to force the text to update...
-        text.impl_updatePeer();
         
         warningTransition = true;
-        painter.setRenderOverlay(true);
         overlayTransition.play();
     }
 
     protected void cancel() {
         if (overlayTransition != null &&
             overlayTransition.getStatus() == Status.RUNNING) {
-
             overlayTransition.stop();
-            
-            painter.setRenderOverlay(false);
-            view.entireSceneNeedsRepaint();
             warningTransition = false;
         }
+        view.getWindowStage().setWarning(null);
     }
 
     protected boolean inWarningTransition() {
@@ -145,14 +110,12 @@ public class OverlayWarning {
     
     private Text text = new Text();
     private Rectangle background;
-    private Group root;
     
-    private Group createOverlayGroup() {
-        final Scene scene = new Scene(new Group());
+    private void createOverlayGroup() {
         final Font font = new Font(Font.getDefault().getFamily(), FONTSIZE);
-        final Rectangle2D screenBounds = javafx.stage.Screen.getPrimary().getBounds();
-        
-        scene.setFill(null);
+        final Rectangle2D screenBounds = new Rectangle2D(0, 0,
+                view.getSceneState().getScreenWidth(),
+                view.getSceneState().getScreenHeight());
         
         String TEXT_CSS =
             "-fx-effect: dropshadow(two-pass-box, rgba(0,0,0,0.75), 3, 0.0, 0, 2);";
@@ -163,23 +126,14 @@ public class OverlayWarning {
         text.setStyle(TEXT_CSS);
         text.setTextAlignment(TextAlignment.CENTER);
         
-        Rectangle background = createBackground(text, screenBounds);
+        background = createBackground(text, screenBounds);
 
-        Group root = (Group)scene.getRoot();
-        root.getChildren().add(background);
-        root.getChildren().add(text);
-
-        Scene.impl_setAllowPGAccess(true);
-        text.impl_updatePeer();
-        background.impl_updatePeer();
-        root.impl_updatePeer();
-        Scene.impl_setAllowPGAccess(false);
-        return root;
+        getChildren().add(background);
+        getChildren().add(text);
     }
     
     private Rectangle createBackground(Text text, Rectangle2D screen) {
         Rectangle rectangle = new Rectangle();
-
         double textW = text.getLayoutBounds().getWidth();
         double textH = text.getLayoutBounds().getHeight();
         double rectX = (screen.getWidth() - RECTW) / 2.0;
@@ -197,5 +151,23 @@ public class OverlayWarning {
         text.setY(rectY - (RECTH  / 2.0) + ((textH - text.getBaselineOffset()) / 2.0));
 
         return rectangle;
+    }
+
+    @Override
+    public void impl_updatePeer() {
+        text.impl_updatePeer();
+        background.impl_updatePeer();
+        super.impl_updatePeer();
+    }
+
+    @Override
+    protected void updateBounds() {
+        super.updateBounds();
+    }
+
+    @Override
+    protected void impl_markDirty(DirtyBits dirtyBit) {
+        super.impl_markDirty(dirtyBit);
+        view.synchroniseOverlayWarning();
     }
 }

@@ -52,6 +52,7 @@ import javafx.geometry.Orientation;
 import javafx.geometry.Side;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
@@ -520,7 +521,7 @@ public class ContextMenuContent extends Region {
 
 //        // FIXME For some reason getSkinnable()Behavior traversal functions don't
 //        // get called as expected, so I've just put the important code below.
-        setOnKeyPressed(new EventHandler<KeyEvent>() {
+        addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
             @Override
             public void handle(KeyEvent ke) {
                 switch (ke.getCode()) {
@@ -564,10 +565,30 @@ public class ContextMenuContent extends Region {
                     default:
                         break;
                 }
+
+                if (!ke.isConsumed()) {
+                    Node ownerNode = contextMenu.getOwnerNode();
+                    if (ownerNode instanceof MenuItemContainer) {
+                        // Forward to parent menu
+                        Parent parent = ownerNode.getParent();
+                        while (parent != null && !(parent instanceof ContextMenuContent)) {
+                            parent = parent.getParent();
+                        }
+                        if (parent instanceof ContextMenuContent) {
+                            ((ContextMenuContent)parent).getOnKeyPressed().handle(ke);
+                        }
+                    } else if (ownerNode instanceof MenuBarSkin.MenuBarButton) {
+                        // This is a top-level MenuBar Menu, so forward event to MenuBar
+                        MenuBarSkin mbs = ((MenuBarSkin.MenuBarButton)ownerNode).getMenuBarSkin();
+                        if (mbs != null && mbs.getKeyEventHandler() != null) {
+                            mbs.getKeyEventHandler().handle(ke);
+                        }
+                    }
+                }
             }
         });
 
-        setOnScroll(new EventHandler<javafx.scene.input.ScrollEvent>() {
+        addEventHandler(ScrollEvent.SCROLL, new EventHandler<javafx.scene.input.ScrollEvent>() {
             @Override public void handle(ScrollEvent event) {
                 /*
                 ** we'll only scroll is the arrows are visible in the direction
@@ -991,7 +1012,7 @@ public class ContextMenuContent extends Region {
             upDownArrow.setMouseTransparent(true);
             upDownArrow.getStyleClass().setAll(isUp() ? "menu-up-arrow" : "menu-down-arrow");
     //        setMaxWidth(Math.max(upDownArrow.prefWidth(-1), getWidth()));
-            setOnMouseEntered(new EventHandler<MouseEvent>() {
+            addEventHandler(MouseEvent.MOUSE_ENTERED, new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent me) {
                     if (scrollTimeline != null && (scrollTimeline.getStatus() != Status.STOPPED)) {
                         return;
@@ -999,7 +1020,7 @@ public class ContextMenuContent extends Region {
                     startTimeline();
                 }
             });
-             setOnMouseExited(new EventHandler<MouseEvent>() {
+            addEventHandler(MouseEvent.MOUSE_EXITED, new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent me) {
                     stopTimeline();
                 }
@@ -1165,7 +1186,7 @@ public class ContextMenuContent extends Region {
             // this background also acts as the receiver of user input
             if (item instanceof CustomMenuItem) {
                 createNodeMenuItemChildren((CustomMenuItem)item);
-                setOnMouseEntered(new EventHandler<MouseEvent>() {
+                addEventHandler(MouseEvent.MOUSE_ENTERED, new EventHandler<MouseEvent>() {
                     @Override public void handle(MouseEvent event) {
                         requestFocus(); // request Focus on hover
                     }
@@ -1200,7 +1221,7 @@ public class ContextMenuContent extends Region {
 
                 label.setMouseTransparent(true);
                 getChildren().add(label);
-                setOnMouseEntered(new EventHandler<MouseEvent>() {
+                addEventHandler(MouseEvent.MOUSE_ENTERED, new EventHandler<MouseEvent>() {
                     @Override public void handle(MouseEvent event) {
                         requestFocus();  // request Focus on hover
                     }
@@ -1227,7 +1248,7 @@ public class ContextMenuContent extends Region {
                     getChildren().add(rightPane);
                     
                     // show submenu when the menu is hovered over
-                    setOnMouseEntered(new EventHandler<MouseEvent>() {
+                    addEventHandler(MouseEvent.MOUSE_ENTERED, new EventHandler<MouseEvent>() {
                         @Override public void handle(MouseEvent event) {
                             if (openSubmenu != null && item != openSubmenu) {
                                 // if a submenu of a different menu is already
@@ -1241,7 +1262,7 @@ public class ContextMenuContent extends Region {
                             requestFocus();  // request Focus on hover
                         }
                     });
-                    setOnMouseReleased(new EventHandler<MouseEvent>() {
+                    addEventHandler(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
                         @Override public void handle(MouseEvent event) {
                             item.fire();
                         }
@@ -1262,8 +1283,8 @@ public class ContextMenuContent extends Region {
                     // accelerator support
                     updateAccelerator();
                     listener.registerChangeListener(item.acceleratorProperty(), "ACCELERATOR");
-                    
-                    setOnMouseEntered(new EventHandler<MouseEvent>() {
+
+                    addEventHandler(MouseEvent.MOUSE_ENTERED,new EventHandler<MouseEvent>() {
                         @Override public void handle(MouseEvent event) {
                             if (openSubmenu != null) {
                                 openSubmenu.hide();
@@ -1271,7 +1292,7 @@ public class ContextMenuContent extends Region {
                             requestFocus();  // request Focus on hover
                         }
                     });
-                    setOnMouseReleased(new EventHandler<MouseEvent>() {
+                    addEventHandler(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
                         @Override public void handle(MouseEvent event) {
                             doSelect();
                         }
@@ -1338,7 +1359,7 @@ public class ContextMenuContent extends Region {
             Node node = item.getContent();
             getChildren().add(node);
             // handle hideOnClick
-            node.setOnMouseClicked(new EventHandler<MouseEvent>() {
+            node.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent event) {
                     if (item == null || item.isDisable()) return;
 

@@ -86,11 +86,14 @@ extern jint glass_log_level;
 #define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, __VA_ARGS__))
 #define LOGV(...) ((void)__android_log_print(ANDROID_LOG_VERBOSE, __VA_ARGS__))
 #define GLASS_LOG(level,...) \
+        GLASS_IF_LOG(level) \
         LOGI(TAG, __VA_ARGS__)
+
 #else
 #define GLASS_LOG(level,...) \
     GLASS_IF_LOG(level) \
     glass_logf(level, __func__, __FILE__, __LINE__, __VA_ARGS__)
+#endif 
 
 #define GLASS_IF_LOG_SEVERE  GLASS_IF_LOG(GLASS_LOG_LEVEL_SEVERE)
 #define GLASS_IF_LOG_WARNING GLASS_IF_LOG(GLASS_LOG_LEVEL_WARNING)
@@ -99,7 +102,6 @@ extern jint glass_log_level;
 #define GLASS_IF_LOG_FINE    GLASS_IF_LOG(GLASS_LOG_LEVEL_FINE)
 #define GLASS_IF_LOG_FINER   GLASS_IF_LOG(GLASS_LOG_LEVEL_FINER)
 #define GLASS_IF_LOG_FINEST  GLASS_IF_LOG(GLASS_LOG_LEVEL_FINEST)
-#endif
 
 #ifdef NO_LOGGING
 #define GLASS_LOG_SEVERE(...)  (void)0, ##__VA_ARGS__

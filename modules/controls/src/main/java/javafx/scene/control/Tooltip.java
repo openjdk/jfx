@@ -107,6 +107,12 @@ public class Tooltip extends PopupControl {
 //    private static TooltipBehavior BEHAVIOR = new TooltipBehavior(
 //        new Duration(1000), new Duration(5000), new Duration(600), true);
     private static String TOOLTIP_PROP_KEY = "javafx.scene.control.Tooltip";
+    // RT-31134 : the tooltip style includes a shadow around the tooltip with a 
+    // width of 9 and height of 5. This causes mouse events to not reach the control
+    // undernath resulting in losing hover state on the control while the tooltip is showing.
+    // Displaying the tooltip at an offset indicated below resolves this issue.
+    private static int TOOLTIP_XOFFSET = 10;
+    private static int TOOLTIP_YOFFSET = 5;
     private static TooltipBehavior BEHAVIOR = new TooltipBehavior(
         new Duration(1000), new Duration(5000), new Duration(200), false);
 
@@ -785,8 +791,7 @@ public class Tooltip extends PopupControl {
                         if (nodeOrientation == NodeOrientation.RIGHT_TO_LEFT) {
                             x -= activatedTooltip.getWidth();
                         }
-
-                        activatedTooltip.show(owner, x, y);
+                        activatedTooltip.show(owner, x+TOOLTIP_XOFFSET, y+TOOLTIP_YOFFSET);
                         visibleTooltip = activatedTooltip;
                         hoveredNode = null;
                         hideTimer.playFromStart();
@@ -873,7 +878,8 @@ public class Tooltip extends PopupControl {
                         if (leftTimer.getStatus() == Timeline.Status.RUNNING) {
                             if (visibleTooltip != null) visibleTooltip.hide();
                             visibleTooltip = t;
-                            t.show(owner, event.getScreenX(), event.getScreenY());
+                            t.show(owner, event.getScreenX()+TOOLTIP_XOFFSET, 
+                                    event.getScreenY()+TOOLTIP_YOFFSET);
                             leftTimer.stop();
                             hideTimer.playFromStart();
                         } else {

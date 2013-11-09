@@ -321,9 +321,9 @@ public class DWGlyphLayout extends GlyphLayout {
         return slot;
     }
 
-    private void renderShape(char[] text, TextRun run, PGFont font, int slot) {
+    private void renderShape(char[] text, TextRun run, PGFont font, int baseSlot) {
         CompositeFontResource composite = (CompositeFontResource)font.getFontResource();
-        FontResource fr = composite.getSlotResource(slot);
+        FontResource fr = composite.getSlotResource(baseSlot);
         String family = fr.getFamilyName();
         String fullName = fr.getFullName();
         int weight = fr.isBold() ? OS.DWRITE_FONT_WEIGHT_BOLD :
@@ -373,7 +373,7 @@ public class DWGlyphLayout extends GlyphLayout {
                 int textStart = 0;
                 while (renderer.Next()) {
                     IDWriteFontFace fallback = renderer.GetFontFace();
-                    slot = getFontSlot(fallback, composite, fullName, slot);
+                    int slot = getFontSlot(fallback, composite, fullName, baseSlot);
                     if (slot >= 0) {
                         renderer.GetGlyphIndices(glyphs, glyphStart, slot << 24);
                         renderer.GetGlyphOffsets(offsets, glyphStart * 2);

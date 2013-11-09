@@ -164,6 +164,7 @@ public class AccordionSkin extends BehaviorSkinBase<Accordion, AccordionBehavior
             }
             tp.resize(w, ph);
 
+            boolean needsRelocate = true;
             if (! rebuild && previousPane != null && expandedPane != null) {
                 List<TitledPane> panes = getSkinnable().getPanes();
                 final int previousPaneIndex = panes.indexOf(previousPane);
@@ -176,6 +177,7 @@ public class AccordionSkin extends BehaviorSkinBase<Accordion, AccordionBehavior
                     if (currentPaneIndex <= expandedPaneIndex) {
                         tp.relocate(x, y);
                         y += ph;
+                        needsRelocate = false;
                     }
                 } else if (previousPaneIndex > expandedPaneIndex) {
                     // Previous pane is after the current expanded pane.
@@ -183,6 +185,7 @@ public class AccordionSkin extends BehaviorSkinBase<Accordion, AccordionBehavior
                     if (currentPaneIndex <= previousPaneIndex) {
                         tp.relocate(x, y);
                         y += ph;
+                        needsRelocate = false;
                     }
                 } else {
                     // Previous and current expanded pane are the same.
@@ -190,8 +193,11 @@ public class AccordionSkin extends BehaviorSkinBase<Accordion, AccordionBehavior
                     // all the panes.
                     tp.relocate(x, y);
                     y += ph;
+                    needsRelocate = false;
                 }
-            } else {
+            }
+
+            if (needsRelocate) {
                 tp.relocate(x, y);
                 y += ph;
             }
@@ -229,15 +235,15 @@ public class AccordionSkin extends BehaviorSkinBase<Accordion, AccordionBehavior
                 previousPane = expandedPane;
                 final Accordion accordion = getSkinnable();
                 if (expanded) {
-                    if (accordion.getExpandedPane() != null) {
-                        accordion.getExpandedPane().setExpanded(false);
+                    if (expandedPane != null) {
+                        expandedPane.setExpanded(false);
                     }
                     if (tp != null) {
                         accordion.setExpandedPane(tp);
                     }
                     expandedPane = accordion.getExpandedPane();
                 } else {
-                    expandedPane = accordion.getExpandedPane();
+                    expandedPane = null;
                     accordion.setExpandedPane(null);
                 }
             }
