@@ -692,6 +692,10 @@ public class Utils {
     }
 
     static double computeXOffset(double width, double contentWidth, HPos hpos) {
+        if (hpos == null) {
+            return 0;
+        }
+
         switch(hpos) {
             case LEFT:
                return 0;
@@ -699,12 +703,17 @@ public class Utils {
                return (width - contentWidth) / 2;
             case RIGHT:
                return width - contentWidth;
+            default:
+                return 0;
         }
-        return 0;
     }
 
     static double computeYOffset(double height, double contentHeight, VPos vpos) {
-       switch(vpos) {
+        if (vpos == null) {
+            return 0;
+        }
+
+        switch(vpos) {
             case TOP:
                return 0;
             case CENTER:

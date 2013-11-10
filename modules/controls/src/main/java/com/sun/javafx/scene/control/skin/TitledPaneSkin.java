@@ -120,8 +120,8 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
         registerChangeListener(titleRegion.alignmentProperty(), "TITLE_REGION_ALIGNMENT");
 
         pos = titledPane.getAlignment();
-        hpos = titledPane.getAlignment().getHpos();
-        vpos = titledPane.getAlignment().getVpos();
+        hpos = pos == null ? HPos.LEFT   : pos.getHpos();
+        vpos = pos == null ? VPos.CENTER : pos.getVpos();
     }
 
     public StackPane getContentRegion() {

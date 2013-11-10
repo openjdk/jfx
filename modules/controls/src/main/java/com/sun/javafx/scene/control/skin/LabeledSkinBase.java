@@ -936,8 +936,8 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             alignment = labeled.getAlignment();
         }
 
-        final HPos hpos = alignment.getHpos();
-        final VPos vpos = alignment.getVpos();
+        final HPos hpos = alignment == null ? HPos.LEFT   : alignment.getHpos();
+        final VPos vpos = alignment == null ? VPos.CENTER : alignment.getVpos();
 
         // Figure out whether we should ignore the Graphic, and/or
         // ignore the Text
