@@ -31,7 +31,7 @@
 #include "com_sun_glass_events_KeyEvent.h"
 #include "com_sun_glass_events_WindowEvent.h"
 
-#if ! ((defined(ANDROID_NDK) || defined(EGL_X11_FB_CONTAINER)))
+#if !defined(ANDROID_NDK)
 #ifndef __USE_GNU // required for dladdr() & Dl_info
 #define __USE_GNU
 #endif

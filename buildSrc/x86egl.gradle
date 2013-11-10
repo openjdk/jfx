@@ -103,7 +103,7 @@ def fontLFlags = [extraLFlags].flatten()
 def iioCFlags = [extraCFlags].flatten()
 def iioLFlags = [extraLFlags].flatten()
 
-def es2EglfbCFlags = [extraCFlags, "-DIS_EGLFB", "-DLINUX"].flatten()
+def es2EglfbCFlags = [extraCFlags, "-DIS_EGLFB", "-DLINUX", "-ffast-math" ].flatten()
 def es2EglfbLFlags = [extraLFlags].flatten()
 
 def es2X11CFlags = [extraCFlags, "-DUSE_XSHM", "-DDEBUG", "-DIS_EGLX11", "-DLINUX"].flatten()
@@ -241,11 +241,10 @@ X86EGL.glass.eglfb.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/wm"),
     file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
     file("modules/graphics/src/main/native-glass/lens/input/udev"),
-    file("modules/graphics/src/main/native-glass/lens/wm/screen/x11ContainerScreen.c"),
-    file("modules/graphics/src/main/native-glass/lens/lensport") ]
+    file("modules/graphics/src/main/native-glass/lens/wm/screen/x11ContainerScreen.c") ]
     //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
 X86EGL.glass.eglfb.compiler = compiler
-X86EGL.glass.eglfb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX"].flatten()
+X86EGL.glass.eglfb.ccFlags = [ es2EglfbCFlags, "-I", X86EGL.glass.lensport.nativeSource ].flatten()
 X86EGL.glass.eglfb.linker = linker
 X86EGL.glass.eglfb.linkFlags = [lensLFlags].flatten()
 X86EGL.glass.eglfb.lib = "glass_lens_eglfb"
@@ -349,7 +348,7 @@ X86EGL.prismES2.eglfb.nativeSource = [
     file("modules/graphics/src/main/native-prism-es2/eglfb")
 ]
 X86EGL.prismES2.eglfb.compiler = compiler
-X86EGL.prismES2.eglfb.ccFlags = es2EglfbCFlags
+X86EGL.prismES2.eglfb.ccFlags = [ es2EglfbCFlags, "-I", X86EGL.glass.lensport.nativeSource ].flatten()
 X86EGL.prismES2.eglfb.linker = linker
 X86EGL.prismES2.eglfb.linkFlags = es2EglfbLFlags
 X86EGL.prismES2.eglfb.lib = "prism_es2_eglfb"

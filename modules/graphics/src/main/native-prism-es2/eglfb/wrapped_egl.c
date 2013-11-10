@@ -51,7 +51,7 @@
 #include <string.h>
 #include <strings.h>
 
-#if ! ((defined(ANDROID_NDK) || defined(EGL_X11_FB_CONTAINER)))
+#if !defined(ANDROID_NDK)
 #include "lensPort.h"
 #endif
 
