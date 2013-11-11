@@ -46,13 +46,9 @@ import javafx.event.WeakEventHandler;
 
 import com.sun.javafx.scene.control.skin.TreeTableViewSkin;
 
+import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import javafx.application.Platform;
 import javafx.beans.DefaultProperty;
@@ -574,6 +570,10 @@ public class TreeTableView<S> extends Control {
     // layoutChildren method to determine whether the tree item count should
     // be recalculated.
     private boolean expandedItemCountDirty = true;
+
+    // Used in the getTreeItem(int row) method to act as a cache.
+    // See RT-26716 for the justification and performance gains.
+    private Map<Integer, SoftReference<TreeItem<S>>> treeItemCacheMap = new HashMap<>();
 
     // this is the only publicly writable list for columns. This represents the
     // columns as they are given initially by the developer.
@@ -1464,8 +1464,19 @@ public class TreeTableView<S> extends Control {
      */
     public TreeItem<S> getTreeItem(int row) {
         // normalize the requested row based on whether showRoot is set
-        int r = isShowRoot() ? row : (row + 1);
-        return TreeUtil.getItem(getRoot(), r, expandedItemCountDirty);
+        final int _row = isShowRoot() ? row : (row + 1);
+
+        if (treeItemCacheMap.containsKey(_row)) {
+            SoftReference<TreeItem<S>> treeItemRef = treeItemCacheMap.get(_row);
+            TreeItem<S> treeItem = treeItemRef.get();
+            if (treeItem != null) {
+                return treeItem;
+            }
+        }
+
+        TreeItem<S> treeItem = TreeUtil.getItem(getRoot(), _row, expandedItemCountDirty);
+        treeItemCacheMap.put(_row, new SoftReference<>(treeItem));
+        return treeItem;
     }
     
     /**
@@ -1639,6 +1650,13 @@ public class TreeTableView<S> extends Control {
     
     private void updateExpandedItemCount(TreeItem<S> treeItem) {
         setExpandedItemCount(TreeUtil.updateExpandedItemCount(treeItem, expandedItemCountDirty, isShowRoot()));
+
+        if (expandedItemCountDirty) {
+            // this is a very inefficient thing to do, but for now having a cache
+            // is better than nothing at all...
+            treeItemCacheMap.clear();
+        }
+
         expandedItemCountDirty = false;
     }
 
@@ -2118,6 +2136,8 @@ public class TreeTableView<S> extends Control {
 
                 final int oldSelectedIndex = getSelectedIndex();
                 final TreeItem<S> oldSelectedItem = getSelectedItem();
+
+                treeTableView.expandedItemCountDirty = true;
                 
                 // we only shift selection from this row - everything before it
                 // is safe. We might change this below based on certain criteria
@@ -2202,7 +2222,6 @@ public class TreeTableView<S> extends Control {
                     select(oldSelectedItem);
                 }
                 
-                treeTableView.expandedItemCountDirty = true;
                 shiftSelection(startRow, shift, new Callback<ShiftParams, Void>() {
                     @Override public Void call(ShiftParams param) {
                         final int clearIndex = param.getClearIndex();

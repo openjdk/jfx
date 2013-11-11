@@ -25,9 +25,8 @@
 
 package javafx.scene.control;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.lang.ref.SoftReference;
+import java.util.*;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -51,6 +50,7 @@ import javafx.event.WeakEventHandler;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.TreeViewSkin;
 import java.lang.ref.WeakReference;
+
 import javafx.application.Platform;
 import javafx.beans.DefaultProperty;
 import javafx.beans.property.ReadOnlyIntegerProperty;
@@ -319,6 +319,10 @@ public class TreeView<T> extends Control {
     // layoutChildren method to determine whether the tree item count should
     // be recalculated.
     private boolean expandedItemCountDirty = true;
+
+    // Used in the getTreeItem(int row) method to act as a cache.
+    // See RT-26716 for the justification and performance gains.
+    private Map<Integer, SoftReference<TreeItem<T>>> treeItemCacheMap = new HashMap<>();
     
     
     /***************************************************************************
@@ -921,8 +925,19 @@ public class TreeView<T> extends Control {
      */
     public TreeItem<T> getTreeItem(int row) {
         // normalize the requested row based on whether showRoot is set
-        int r = isShowRoot() ? row : (row + 1);
-        return TreeUtil.getItem(getRoot(), r, expandedItemCountDirty);
+        final int _row = isShowRoot() ? row : (row + 1);
+
+        if (treeItemCacheMap.containsKey(_row)) {
+            SoftReference<TreeItem<T>> treeItemRef = treeItemCacheMap.get(_row);
+            TreeItem<T> treeItem = treeItemRef.get();
+            if (treeItem != null) {
+                return treeItem;
+            }
+        }
+
+        TreeItem<T> treeItem = TreeUtil.getItem(getRoot(), _row, expandedItemCountDirty);
+        treeItemCacheMap.put(_row, new SoftReference<>(treeItem));
+        return treeItem;
     }
 
     /** {@inheritDoc} */
@@ -938,6 +953,13 @@ public class TreeView<T> extends Control {
     
     private void updateExpandedItemCount(TreeItem<T> treeItem) {
         setExpandedItemCount(TreeUtil.updateExpandedItemCount(treeItem, expandedItemCountDirty, isShowRoot()));
+
+        if (expandedItemCountDirty) {
+            // this is a very inefficient thing to do, but for now having a cache
+            // is better than nothing at all...
+            treeItemCacheMap.clear();
+        }
+
         expandedItemCountDirty = false;
     }
 
@@ -1142,6 +1164,8 @@ public class TreeView<T> extends Control {
                 
                 final TreeItem<T> treeItem = e.getTreeItem();
                 if (treeItem == null) return;
+
+                treeView.expandedItemCountDirty = true;
                 
                 // we only shift selection from this row - everything before it
                 // is safe. We might change this below based on certain criteria
@@ -1220,7 +1244,6 @@ public class TreeView<T> extends Control {
                     }
                 }
                 
-                treeView.expandedItemCountDirty = true;
                 shiftSelection(startRow, shift, null);
             }
         };
