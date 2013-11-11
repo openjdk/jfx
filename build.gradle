@@ -1641,12 +1641,14 @@ project(":fxpackager") {
             }
         }
     } else {
-        task buildJavaFXPackager(group: "Build") << {
+        task buildJavaFXPackager(group: "Build") {
             enabled = COMPILE_FXPACKAGER
-            copy {
-                from "src/main/native/javafxpackager/shell"
-                into "$buildDir/javafxpackager"
-                fileMode = 0755
+            doLast {
+	            copy {
+    	            from "src/main/native/javafxpackager/shell"
+        		    into "$buildDir/javafxpackager"
+                	fileMode = 0755
+                }
             }
         }
     }
