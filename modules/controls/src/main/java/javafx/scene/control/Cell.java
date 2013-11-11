@@ -262,6 +262,73 @@ import javafx.css.StyleableProperty;
  * .list-cell .negative {
  *   -fx-text-fill: red;
  * }</pre>
+ *
+ * <h3>Editing</h3>
+ * <p>Most virtualized controls that use the Cell architecture (e.g. {@link ListView},
+ * {@link TreeView}, {@link TableView} and {@link TreeTableView}) all support
+ * the notion of editing values directly via the cell. You can learn more about
+ * the control-specific details by going to the 'editing' section in the class
+ * documentation for the controls linked above. The remainder of this section
+ * will cover some of the finer details of editing with cells.</p>
+ *
+ * <p>The general flow of editing is as follows (note that in these steps the
+ * {@link ListView} control is used as an example, but similar API exists for
+ * all controls mentioned above, and the process is exactly the same in general):</p>
+ *
+ * <ol>
+ *     <li>User requests a cell enter editing mode (via keyboard or mouse commands),
+ *     or the developer requests that a cell enter editing mode (by calling a
+ *     method such as the ListView {@link ListView#edit(int) edit} method.
+ *     <strong>Note:</strong> If the user double-clicks or fires an appropriate
+ *     keyboard command to initiate editing, then they are effectively calling
+ *     the appropriate edit method on the control (i.e. the entry method for
+ *     user-initiated and developer-initiated editing is the same).</li>
+ *     <li>Each cell in the visible region of the control is notified that the
+ *     current {@link javafx.scene.control.ListView#editingIndexProperty() editing cell}
+ *     has changed, and checks to see if it is itself. At this point one of three
+ *     things can happen:
+ *         <ol>
+ *             <li>If the editing index is the same index as the cell,
+ *             {@link #startEdit()} will be called on this cell. Some pointers:
+ *                 <ol>
+ *                     <li>It is recommended that subclasses of Cell override the {@link #startEdit()}
+ *                     method to update the visuals of the cell when enters the editing state. Note
+ *                     however that it is very important that subclasses that override the
+ *                     {@link #startEdit()} method continue to call {@code super.startEdit()} so
+ *                     that parent classes can update additional state that is necessary for
+ *                     editing to be successful.</li>
+ *                     <li>Within the {@link #startEdit()} method is an ideal
+ *                     time to change the visuals of the cell. For example (and
+ *                     note that this example is more fleshed out in the UI control
+ *                     javadocs for {@link ListView}, etc), you may set the
+ *                     {@link #graphicProperty()} of the cell to a
+ *                     {@link TextField} and set the {@link #textProperty()}
+ *                     to null. This would allow end users to then type in input
+ *                     and make changes to your data model.</li>
+ *                     <li>When the user has completed editing, they will want
+ *                     to commit or cancel their change. This is your responsibility
+ *                     to handle (e.g. by having the Enter key
+ *                     {@link #commitEdit(Object) commit the edit}
+ *                     and the ESC key {@link #cancelEdit() cancel the edit}).
+ *                     You do this by attaching the appropriate event listeners
+ *                     to the nodes you show whilst in the editing state.</li>
+ *                 </ol>
+ *             </li>
+ *             <li>If the editing index is not the same index as the cell, and
+ *             if the cell is currently in the {@link #isEditing() editing state},
+ *             {@link #cancelEdit()} will be called on this cell. As with the
+ *             {@link #startEdit()} method, you should override this method to
+ *             clean up the visuals of the cell (and most probably return the
+ *             {@link #graphicProperty()} back to null and set the
+ *             {@link #textProperty()} to its (possibly new) value. Again,
+ *             be sure to always call {@code super.cancelEdit()} to make sure all
+ *             state is correctly updated.</li>
+ *             <li>If the editing index is not the same index as the cell, and
+ *             if the cell is not currently in the {@link #isEditing()} editing state},
+ *             then nothing will happen on this cell.</li>
+ *         </ol>
+ *     </li>
+ * </ol>
  * 
  * 
  * @param <T> The type of the item contained within the Cell.
@@ -516,12 +583,27 @@ public class Cell<T> extends Labeled {
     }
 
     /**
-     * Call this function to transition from an editing state into a non-editing
-     * state, and in the process saving any user input.
+     * Call this function when appropriate (based on the user interaction requirements
+     * of your cell editing user interface) to do two things:
+     *
+     * <ol>
+     *     <li>Fire the appropriate events back to the backing UI control (e.g.
+     *     {@link ListView}). This will begin the process of pushing this edit
+     *     back to the relevant data source / property (although it does not
+     *     guarantee that this will be successful - that is dependent upon the
+     *     specific edit commit handler being used). Refer to the UI control
+     *     class javadoc for more detail.</li>
+     *     <li>Begin the transition from an editing state into a non-editing state.</li>
+     * </ol>
+     *
+     * <p>In general there is no need to override this method in custom cell
+     * implementations - it should be sufficient to simply call this method
+     * when appropriate (e.g. when the user pressed the Enter key, you may do something
+     * like {@code cell.commitEdit(converter.fromString(textField.getText()));}</p>
      * 
      * @param newValue The value as input by the end user, which should be 
      *      persisted in the relevant way given the data source underpinning the
-     *      user interface.
+     *      user interface and the install edit commit handler of the UI control.
      */
     public void commitEdit(T newValue) {
         if (isEditing()) {

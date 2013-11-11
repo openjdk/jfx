@@ -155,10 +155,17 @@ import javafx.beans.value.WeakChangeListener;
  * {@link TreeView#setOnEditCommit(javafx.event.EventHandler)}. Similarly,
  * you can also observe edit events for
  * {@link TreeView#setOnEditStart(javafx.event.EventHandler) edit start}
- * and {@link TreeView#setOnEditCancel(javafx.event.EventHandler) edit cancel}.
- * By default the TreeView edit commit handler is non-null, with a default
- * edit commit handler that attempts to overwrite the value of the
- * item in the currently-being-edited row. If you call
+ * and {@link TreeView#setOnEditCancel(javafx.event.EventHandler) edit cancel}.</p>
+ *
+ * <p>By default the TreeView edit commit handler is non-null, with a default
+ * handler that attempts to overwrite the property value for the
+ * item in the currently-being-edited row. It is able to do this as the
+ * {@link Cell#commitEdit(Object)} method is passed in the new value, and this
+ * is passed along to the edit commit handler via the
+ * {@link EditEvent} that is fired. It is simply a matter of calling
+ * {@link EditEvent#getNewValue()} to retrieve this value.
+ *
+ * <p>It is very important to note that if you call
  * {@link TreeView#setOnEditCommit(javafx.event.EventHandler)} with your own
  * {@link EventHandler}, then you will be removing the default handler. Unless
  * you then handle the writeback to the property (or the relevant data source),
