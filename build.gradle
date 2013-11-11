@@ -1361,6 +1361,12 @@ project(":controls") {
     }
 }
 
+project(":extensions") {
+    dependencies {
+        compile BUILD_SRC, project(":base"), project(":graphics")
+    }
+}
+
 project(":swing") {
     /* should not be built, but needed in builders and JMX
     tasks.all {
@@ -2352,7 +2358,9 @@ compileTargets { t ->
                   "modules/controls/build/classes/android",
                   "modules/controls/build/resources/android")
         } else if (t.name == 'ios') {
-            from ("modules/web/build/classes/ios", "modules/web/build/resources/ios")
+            from ("modules/web/build/classes/ios",
+                  "modules/web/build/resources/ios",
+                  "modules/extensions/build/classes/ios")
         } else {
             from ("modules/web/build/classes/main", "modules/web/build/resources/main")
         }

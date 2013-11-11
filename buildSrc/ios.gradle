@@ -151,6 +151,29 @@ IOS.glass.x86.linker = linker
 IOS.glass.x86.linkFlags = ["-arch_only", archX86, "-syslibroot", sdkPath(iPhoneSim), linkFlags, "-L${sdkPath(iPhoneSim)}/usr/lib"].flatten()
 IOS.glass.x86.lib = "glass_${archX86}"
 
+IOS.extensions = [:]
+IOS.extensions.variants = ["arm", "x86"];
+IOS.extensions.javahSource = files("modules/extensions/build/classes/ios")
+IOS.extensions.javahClasspath = files("modules/extensions/build/classes/ios/")
+IOS.extensions.javahInclude = ["com/sun/javafx/ext/device/ios/**/*"]
+IOS.extensions.lib = "extensions_ios"
+
+IOS.extensions.arm = [:]
+IOS.extensions.arm.nativeSource = file("modules/extensions/src/ios/native-device/ios")
+IOS.extensions.arm.compiler = compiler
+IOS.extensions.arm.ccFlags = ["-x", "objective-c", ccFlags, "-arch", archArm, "-isysroot", sdkPath(iPhoneOS)].flatten()
+IOS.extensions.arm.linker = linker
+IOS.extensions.arm.linkFlags = ["-arch_only", archArm, "-syslibroot", sdkPath(iPhoneOS), linkFlags, "-L${sdkPath(iPhoneOS)}/usr/lib"].flatten()
+IOS.extensions.arm.lib = "extensions_ios_${archArm}"
+
+IOS.extensions.x86 = [:]
+IOS.extensions.x86.nativeSource = file("modules/extensions/src/ios/native-device/ios")
+IOS.extensions.x86.compiler = compiler
+IOS.extensions.x86.ccFlags = ["-x", "objective-c", ccFlags, "-arch", archX86, "-isysroot", sdkPath(iPhoneSim)].flatten()
+IOS.extensions.x86.linker = linker
+IOS.extensions.x86.linkFlags = ["-arch_only", archX86, "-syslibroot", sdkPath(iPhoneSim), linkFlags, "-L${sdkPath(iPhoneSim)}/usr/lib"].flatten()
+IOS.extensions.x86.lib = "extensions_ios_${archX86}"
+
 IOS.decora = [:]
 IOS.decora.compiler = compiler
 IOS.decora.ccFlags = [ccFlags, "-arch", archArm, "-isysroot", sdkPath(iPhoneOS), "-ffast-math"].flatten()
@@ -420,6 +443,38 @@ project(":media") {
                         from ("modules/media/build/libs/media/ios/${props.library(props.media.lib)}")
                     } else {
                         from ("modules/media/build/libs/media/ios")
+                    }
+                    into ("build/ios-sdk/rt/${props.libDest}")
+                }
+            }
+        }
+    }
+}
+
+project(":extensions") {
+    apply plugin: 'java'
+
+    compileJava {
+        destinationDir = file("build/classes/ios")
+        source file("src/ios/java")
+    }
+    
+    jar {
+        from("build/classes/ios")
+    }
+    
+    afterEvaluate {
+
+        addNative(project, "extensions")
+
+        sdkIos  {
+            doLast {
+                def props = project.ext["IOS"]
+                copy {
+                    if (props.useLipo) {
+                        from ("modules/extensions/build/libs/extensions/ios/${props.library(props.extensions.lib)}")
+                    } else {
+                        from ("modules/extensions/build/libs/extensions/ios")
                     }
                     into ("build/ios-sdk/rt/${props.libDest}")
                 }
