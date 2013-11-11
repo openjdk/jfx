@@ -26,7 +26,7 @@
 #include "JniUtils.h"
 
 
-extern JavaVM *jvm;
+extern JavaVM *javavm;
 
 
 JNIEnv *media_getEnv(bool *attached) {
@@ -34,10 +34,10 @@ JNIEnv *media_getEnv(bool *attached) {
     JNIEnv *env = NULL;
     *attached = false;
 
-    if (jvm != NULL) {
-        jint status = (*jvm)->GetEnv(jvm, (void **) &env, JNI_VERSION_1_2);
+    if (javavm != NULL) {
+        jint status = (*javavm)->GetEnv(javavm, (void **) &env, JNI_VERSION_1_2);
         if (status != JNI_OK) {
-            (*jvm)->AttachCurrentThreadAsDaemon(jvm, (void **) &env, NULL);
+            (*javavm)->AttachCurrentThreadAsDaemon(javavm, (void **) &env, NULL);
             *attached = true;
         }
     }
@@ -46,7 +46,7 @@ JNIEnv *media_getEnv(bool *attached) {
 }
 
 void detachThread() {
-    if (jvm != NULL) {
-        (*jvm)->DetachCurrentThread(jvm);
+    if (javavm != NULL) {
+        (*javavm)->DetachCurrentThread(javavm);
     }
 }
