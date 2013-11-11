@@ -31,14 +31,12 @@
  */
 package ensemble.samples.concurrency.task;
 
-import ensemble.samples.concurrency.service.*;
 import javafx.application.Application;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.ProgressIndicator;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -59,9 +57,7 @@ import javafx.stage.Stage;
  * @embedded
  */
 public class TaskApp extends Application {
-
- final GetDailySalesService service = new GetDailySalesService();    
-    
+   
     public Parent createContent() {
        TableView<DailySales> tableView = new TableView<>();
         Region veil = new Region();
