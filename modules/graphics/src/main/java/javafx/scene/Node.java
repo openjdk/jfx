@@ -729,7 +729,7 @@ public abstract class Node implements EventTarget, Styleable {
                         // notifyParentsOfInvalidatedCSS() will be skipped thus leaving the node un-styled.
                         cssFlag = CssFlags.CLEAN;
                     }
-                    updateTreeVisible();
+                    updateTreeVisible(true);
                     oldParent = newParent;
                     invalidateLocalToSceneTransform();
                     parentResolvedOrientationInvalidated();
@@ -757,7 +757,7 @@ public abstract class Node implements EventTarget, Styleable {
 
     private final InvalidationListener parentTreeVisibleChangedListener = new InvalidationListener() {
         @Override public void invalidated(Observable valueModel) {
-            updateTreeVisible();
+            updateTreeVisible(true);
         }
     };
 
@@ -1097,7 +1097,7 @@ public abstract class Node implements EventTarget, Styleable {
                     if (oldValue != get()) {
                         impl_markDirty(DirtyBits.NODE_VISIBLE);
                         impl_geomChanged();
-                        updateTreeVisible();
+                        updateTreeVisible(false);
                         if (getParent() != null) {
                             // notify the parent of the potential change in visibility
                             // of this node, since visibility affects bounds of the
@@ -2294,7 +2294,7 @@ public abstract class Node implements EventTarget, Styleable {
         //    PerformanceTracker.logEvent("Node.init for [{this}, id=\"{id}\"]");
         //}
         setDirty();
-        updateTreeVisible();
+        updateTreeVisible(false);
         //if (PerformanceTracker.isLoggingEnabled()) {
         //    PerformanceTracker.logEvent("Node.postinit " +
         //                                "for [{this}, id=\"{id}\"] finished");
@@ -6367,13 +6367,13 @@ public abstract class Node implements EventTarget, Styleable {
                             if (oldClip != null) {
                                 oldClip.clipParent = null;
                                 oldClip.setScenes(null, null);
-                                oldClip.updateTreeVisible();
+                                oldClip.updateTreeVisible(false);
                             }
 
                             if (newClip != null) {
                                 newClip.clipParent = Node.this;
                                 newClip.setScenes(getScene(), getSubScene());
-                                newClip.updateTreeVisible();
+                                newClip.updateTreeVisible(true);
                             }
 
                             impl_markDirty(DirtyBits.NODE_CLIP);
@@ -7738,13 +7738,20 @@ public abstract class Node implements EventTarget, Styleable {
 
     }
 
-    private void updateTreeVisible() {
+    private void updateTreeVisible(boolean parentChanged) {
         boolean isTreeVisible = isVisible();
+        final Node parentNode = getParent() != null ? getParent() :
+                    clipParent != null ? clipParent :
+                    getSubScene() != null ? getSubScene() : null;
         if (isTreeVisible) {
-            final Parent p = getParent();
-            isTreeVisible = p != null ? p.impl_isTreeVisible() :
-                    clipParent != null ? clipParent.impl_isTreeVisible() :
-                    getSubScene() == null || getSubScene().impl_isTreeVisible();
+            isTreeVisible = parentNode == null || parentNode.impl_isTreeVisible();
+        }
+        // When the parent has changed to visible and we have unsynchornized visibility,
+        // we have to synchronize, because the rendering will now pass throught the newly-visible parent
+        // Otherwise an invisible Node might get rendered
+        if (parentChanged && parentNode != null && parentNode.impl_isTreeVisible()
+                && impl_isDirty(DirtyBits.NODE_VISIBLE)) {
+            addToSceneDirtyList();
         }
         setTreeVisible(isTreeVisible);
     }
@@ -7758,11 +7765,9 @@ public abstract class Node implements EventTarget, Styleable {
             updateCanReceiveFocus();
             focusSetDirty(getScene());
             if (getClip() != null) {
-                getClip().updateTreeVisible();
+                getClip().updateTreeVisible(true);
             }
             if (treeVisible && !impl_isDirtyEmpty()) {
-                // The node hasn't been synchronized while invisible, so
-                // synchronize now
                 addToSceneDirtyList();
             }
             ((TreeVisiblePropertyReadOnly)impl_treeVisibleProperty()).invalidate();

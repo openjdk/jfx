@@ -1044,6 +1044,96 @@ public class NodeTest {
         assertEquals(100.0, sc.getRadius(), 0.01);
 
     }
+    
+    @Test
+    public void testSynchronizationOfInvisibleNodes_2() {
+        final Group g = new Group();
+        final Circle c = new CircleTest.StubCircle(50);
+        
+        Scene s = new Scene(g);
+        Stage st = new Stage();
+        st.show();
+        st.setScene(s);
+
+        final NGGroup sg = g.impl_getPeer();
+        final CircleTest.StubNGCircle sc = c.impl_getPeer();
+        
+        g.getChildren().add(c);
+
+        s.scenePulseListener.pulse();
+
+        g.setVisible(false);
+
+        s.scenePulseListener.pulse();
+
+        assertFalse(sg.isVisible());
+        assertTrue(sc.isVisible());
+
+        c.setCenterX(10);             // Make the circle dirty. It won't be synchronized as it is practically invisible (through the parent)
+
+        s.scenePulseListener.pulse();
+
+        c.setVisible(false);         // As circle is invisible and dirty, this won't trigger a synchronization
+
+        s.scenePulseListener.pulse();
+
+        assertFalse(sg.isVisible());
+        assertTrue(sc.isVisible()); // This has not been synchronized, as it's not necessary
+                                    // The rendering will stop at the Group, which is invisible
+
+        g.setVisible(true);
+
+        s.scenePulseListener.pulse();
+        
+        assertTrue(sg.isVisible());
+        assertFalse(sc.isVisible()); // Now the group is visible again, we need to synchronize also 
+                                     // the Circle
+    }
+    
+    @Test
+    public void testSynchronizationOfInvisibleNodes_2_withClip() {
+        final Group g = new Group();
+        final Circle c = new CircleTest.StubCircle(50);
+        
+        Scene s = new Scene(g);
+        Stage st = new Stage();
+        st.show();
+        st.setScene(s);
+
+        final NGGroup sg = g.impl_getPeer();
+        final CircleTest.StubNGCircle sc = c.impl_getPeer();
+        
+        g.setClip(c);
+
+        s.scenePulseListener.pulse();
+
+        g.setVisible(false);
+
+        s.scenePulseListener.pulse();
+
+        assertFalse(sg.isVisible());
+        assertTrue(sc.isVisible());
+
+        c.setCenterX(10);             // Make the circle dirty. It won't be synchronized as it is practically invisible (through the parent)
+
+        s.scenePulseListener.pulse();
+
+        c.setVisible(false);         // As circle is invisible and dirty, this won't trigger a synchronization
+
+        s.scenePulseListener.pulse();
+
+        assertFalse(sg.isVisible());
+        assertTrue(sc.isVisible()); // This has not been synchronized, as it's not necessary
+                                    // The rendering will stop at the Group, which is invisible
+
+        g.setVisible(true);
+
+        s.scenePulseListener.pulse();
+        
+        assertTrue(sg.isVisible());
+        assertFalse(sc.isVisible()); // Now the group is visible again, we need to synchronize also 
+                                     // the Circle
+    }
 
     @Test
     public void testLocalToScreen() {
