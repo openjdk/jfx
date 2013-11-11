@@ -1,7 +1,7 @@
-Package: APPLICATION_NAME
+Package: APPLICATION_PACKAGE
 Version: APPLICATION_VERSION
 Section: unknown
-Maintainer: APPLICATION_VENDOR
+Maintainer: APPLICATION_MAINTAINER
 Priority: optional
 Architecture: APPLICATION_ARCH
 Provides: APPLICATION_NAME

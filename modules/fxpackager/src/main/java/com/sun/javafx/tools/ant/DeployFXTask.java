@@ -181,7 +181,8 @@ public class DeployFXTask extends Task {
             deployParams.setCategory(appInfo.category);
             deployParams.setLicenseType(appInfo.licenseType);
             deployParams.setCopyright(appInfo.copyright);
-
+            deployParams.setEmail(appInfo.email);
+            
             for (Info.Icon i: appInfo.icons) {
                 if (i instanceof Info.Splash) {
                    deployParams.addIcon(i.href, i.kind, i.width, i.height, i.depth,

@@ -33,8 +33,14 @@ import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
+import java.nio.file.Files;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class LinuxDebBundler extends Bundler {
     LinuxAppBundler appBundler = new LinuxAppBundler();
@@ -175,6 +181,23 @@ public class LinuxDebBundler extends Bundler {
         }
     }
 
+    /*
+     * set permissions with a string like "rwxr-xr-x"
+     * 
+     * This cannot be directly backport to 22u which is unfortunately built with 1.6
+     */
+    private void setPermissions(File file, String permissions) {
+        Set<PosixFilePermission> filePermissions = PosixFilePermissions.fromString(permissions);
+        try {
+            if (file.exists()) {
+                Files.setPosixFilePermissions(file.toPath(), filePermissions);
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(LinuxDebBundler.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+    }
+    
     protected void saveConfigFiles() {
         try {
             if (getConfig_ControlFile().exists()) {
@@ -186,11 +209,11 @@ public class LinuxDebBundler extends Bundler {
                         new File(configRoot, getConfig_CopyrightFile().getName()));
             }
             if (getConfig_PostinstallFile().exists()) {
-                IOUtils.copyFile(getConfig_PostinstallFile(),
+                IOUtils.copyFile(getConfig_PostinstallFile(), 
                         new File(configRoot, getConfig_PostinstallFile().getName()));
             }
             if (getConfig_PostrmFile().exists()) {
-                IOUtils.copyFile(getConfig_PostrmFile(),
+                IOUtils.copyFile(getConfig_PostrmFile(), 
                         new File(configRoot, getConfig_PostrmFile().getName()));
             }
             if (getConfig_DesktopShortcutFile().exists()) {
@@ -291,12 +314,33 @@ public class LinuxDebBundler extends Bundler {
         }
         return count;
     }
+    
+    private String getVendor() {
+        return params.vendor != null ? params.vendor : "Unknown";
+    }
 
+    /*
+     * maintainer is required by Debian and must be in the form
+     * "Name <contact@company.com>"
+     * 
+     * Note that we combine Vendor and then whatever email is supplied
+     */
+    private String getMaintainer() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(getVendor());
+        sb.append("<");
+        sb.append(params.email != null ? params.email : "Unknown");
+        sb.append(">");
+        return sb.toString();
+    }
+    
     private boolean prepareProjectConfig() throws IOException {
         Map<String, String> data = new HashMap<String, String>();
 
         data.put("APPLICATION_NAME", getBundleName());
-        data.put("APPLICATION_VENDOR", params.vendor != null ? params.vendor : "Unknown");
+        data.put("APPLICATION_PACKAGE", getBundleName().toLowerCase());
+        data.put("APPLICATION_VENDOR", getVendor());
+        data.put("APPLICATION_MAINTAINER", getMaintainer());
         data.put("APPLICATION_VERSION", getVersion());
         data.put("APPLICATION_LAUNCHER_FILENAME",
                 appBundler.getLauncher(imageDir, params).getName());
@@ -331,7 +375,7 @@ public class LinuxDebBundler extends Bundler {
                 "DEB postinstall script", DEFAULT_POSTINSTALL_TEMPLATE, data);
         w.write(content);
         w.close();
-        getConfig_PostinstallFile().setExecutable(true, false);
+        setPermissions(getConfig_PostinstallFile(), "rwxr-xr-x");
 
         w = new BufferedWriter(new FileWriter(getConfig_PostrmFile()));
         content = preprocessTextResource(
@@ -339,8 +383,8 @@ public class LinuxDebBundler extends Bundler {
                 "DEB postinstall script", DEFAULT_POSTRM_TEMPLATE, data);
         w.write(content);
         w.close();
-        getConfig_PostrmFile().setExecutable(true, false);
-
+        setPermissions(getConfig_PostrmFile(), "rwxr-xr-x");
+ 
         w = new BufferedWriter(new FileWriter(getConfig_CopyrightFile()));
         content = preprocessTextResource(
                 LinuxAppBundler.LINUX_BUNDLER_PREFIX + getConfig_CopyrightFile().getName(),
@@ -409,7 +453,7 @@ public class LinuxDebBundler extends Bundler {
 
         //run rpmbuild
         ProcessBuilder pb = new ProcessBuilder(
-                TOOL_DPKG, "-b",  getFullPackageName(),
+                "fakeroot", TOOL_DPKG, "-b",  getFullPackageName(),
                 outFile.getAbsolutePath());
         pb = pb.directory(imageDir.getParentFile());
         IOUtils.exec(pb, verbose);

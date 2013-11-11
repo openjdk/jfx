@@ -51,6 +51,7 @@ public class DeployParams extends CommonParams {
     String id;
     String title;
     String vendor;
+    String email;
     String description;
     String category;
     String licenseType;
@@ -269,6 +270,10 @@ public class DeployParams extends CommonParams {
         this.vendor = vendor;
     }
 
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
     public void setWidth(int width) {
         this.width = width;
     }
@@ -483,6 +488,7 @@ public class DeployParams extends CommonParams {
             bundleParams.setType(bundleType);
             bundleParams.setBundleFormat(targetFormat);
             bundleParams.setVendor(vendor);
+            bundleParams.setEmail(email);
             bundleParams.setShortcutHint(needShortcut);
             bundleParams.setMenuHint(needMenu);
             bundleParams.setSystemWide(systemWide);

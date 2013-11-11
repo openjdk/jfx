@@ -53,6 +53,9 @@ public class BundleParams {
 
     /* application vendor, used by most of the bundlers */
     String vendor = null;
+    
+    /* email name and email, only used for debian */
+    String email = null;
 
     /* Copyright. Used on Mac */
     String copyright = null;
@@ -595,4 +598,11 @@ public class BundleParams {
            this.vendor = vendor;
         }
     }
+
+    public void setEmail(String email) {
+        if (email != null) {
+            this.email = email;
+        }
+    }
+
 }
