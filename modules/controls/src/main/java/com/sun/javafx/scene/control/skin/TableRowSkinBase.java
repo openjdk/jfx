@@ -347,11 +347,17 @@ public abstract class TableRowSkinBase<T,
                     getChildren().add(tableCell);
                 }
 
-                // Added for RT-32700. It is possible that changing the state of
-                // the cell alignment may break custom cells...but for now there
-                // are no known issues.
+                // Added for RT-32700, and then updated for RT-34074.
+                // We change the alignment from CENTER_LEFT to TOP_LEFT if the
+                // height of the row is greater than the default size, and if
+                // the alignment is the default alignment.
+                // What I would rather do is only change the alignment if the
+                // alignment has not been manually changed, but for now this will
+                // do.
                 final boolean centreContent = h <= 24.0;
-                tableCell.setAlignment(centreContent ? Pos.CENTER_LEFT : Pos.TOP_LEFT);
+                if (! centreContent && tableCell.getAlignment() == Pos.CENTER_LEFT) {
+                    tableCell.setAlignment(Pos.TOP_LEFT);
+                }
 
                 ///////////////////////////////////////////
                 // further indentation code starts here
