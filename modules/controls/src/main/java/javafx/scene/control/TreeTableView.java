@@ -258,6 +258,65 @@ import javafx.util.Callback;
  * <p>See the {@link Cell} class documentation for a more complete
  * description of how to write custom Cells.
  *
+ * <h3>Editing</h3>
+ * <p>This control supports inline editing of values, and this section attempts to
+ * give an overview of the available APIs and how you should use them.</p>
+ *
+ * <p>Firstly, cell editing most commonly requires a different user interface
+ * than when a cell is not being edited. This is the responsibility of the
+ * {@link Cell} implementation being used. For TreeTableView, it is highly
+ * recommended that editing be
+ * {@link javafx.scene.control.TreeTableColumn#cellFactoryProperty() per-TreeTableColumn},
+ * rather than {@link #rowFactoryProperty() per row}, as more often than not
+ * you want users to edit each column value differently, and this approach allows
+ * for editors specific to each column. It is your choice whether the cell is
+ * permanently in an editing state (e.g. this is common for {@link CheckBox} cells),
+ * or to switch to a different UI when editing begins (e.g. when a double-click
+ * is received on a cell).</p>
+ *
+ * <p>To know when editing has been requested on a cell,
+ * simply override the {@link javafx.scene.control.Cell#startEdit()} method, and
+ * update the cell {@link javafx.scene.control.Cell#textProperty() text} and
+ * {@link javafx.scene.control.Cell#graphicProperty() graphic} properties as
+ * appropriate (e.g. set the text to null and set the graphic to be a
+ * {@link TextField}). Additionally, you should also override
+ * {@link Cell#cancelEdit()} to reset the UI back to its original visual state
+ * when the editing concludes. In both cases it is important that you also
+ * ensure that you call the super method to have the cell perform all duties it
+ * must do to enter or exit its editing mode.</p>
+ *
+ * <p>Once your cell is in an editing state, the next thing you are most probably
+ * interested in is how to commit or cancel the editing that is taking place. This is your
+ * responsibility as the cell factory provider. Your cell implementation will know
+ * when the editing is over, based on the user input (e.g. when the user presses
+ * the Enter or ESC keys on their keyboard). When this happens, it is your
+ * responsibility to call {@link Cell#commitEdit(Object)} or
+ * {@link Cell#cancelEdit()}, as appropriate.</p>
+ *
+ * <p>When you call {@link Cell#commitEdit(Object)} an event is fired to the
+ * TreeTableView, which you can observe by adding an {@link EventHandler} via
+ * {@link TreeTableColumn#setOnEditCommit(javafx.event.EventHandler)}. Similarly,
+ * you can also observe edit events for
+ * {@link TreeTableColumn#setOnEditStart(javafx.event.EventHandler) edit start}
+ * and {@link TreeTableColumn#setOnEditCancel(javafx.event.EventHandler) edit cancel}.
+ * By default the TreeTableColumn edit commit handler is non-null, with a default
+ * edit commit handler that attempts to overwrite the property value for the
+ * item in the currently-being-edited row. If you call
+ * {@link TreeTableColumn#setOnEditCommit(javafx.event.EventHandler)} with your own
+ * {@link EventHandler}, then you will be removing the default handler. Unless
+ * you then handle the writeback to the property (or the relevant data source),
+ * nothing will happen. You can work around this by using the
+ * {@link TreeTableColumn#addEventHandler(javafx.event.EventType, javafx.event.EventHandler)}
+ * method to add a {@link TreeTableColumn#EDIT_COMMIT_EVENT} {@link EventType} with
+ * your desired {@link EventHandler} as the second argument. Using this method,
+ * you will not replace the default implementation, but you will be notified when
+ * an edit commit has occurred.</p>
+ *
+ * <p>Hopefully this summary answers some of the commonly asked questions.
+ * Fortunately, JavaFX ships with a number of pre-built cell factories that
+ * handle all the editing requirements on your behalf. You can find these
+ * pre-built cell factories in the javafx.scene.control.cell package.</p>
+ *
  * @see TreeTableColumn
  * @see TreeTablePosition
  * @param <S> The type of the TreeItem instances used in this TreeTableView.
