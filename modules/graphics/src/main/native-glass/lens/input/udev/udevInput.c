@@ -1637,15 +1637,6 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
                                  mappedIndex);
             }
         }
-        mousePosX = mouseState->pendingTouchXs[0];
-        mousePosY = mouseState->pendingTouchYs[0];
-        GLASS_LOG_FINEST("Update mouse position from touchPoint[0] with id %d (%d %d)",
-                         mouseState->pendingTouchIDs[0],
-                         mousePosX,
-                         mousePosY);
-    } else {
-        mousePosX = newMousePosX;
-        mousePosY = newMousePosY;
     }
 
     //process touch points states and prepare data structures for notification
@@ -1873,6 +1864,13 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
                 }
             }//!gUseMultiTouch
 
+            //update the mouse position for future calculations
+            if (primaryPointIndex > -1) {
+                //update mouse location
+                mousePosX = mouseState->pendingTouchXs[primaryPointIndex];
+                mousePosY = mouseState->pendingTouchYs[primaryPointIndex];
+            }
+
             GLASS_IF_LOG_FINEST {
                 GLASS_LOG_FINEST("lens_wm_notifyMultiTouchEvent() with:");
                 for (i = 0; i < count; i++) {
@@ -1897,13 +1895,16 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
         GLASS_LOG_FINEST("no touch points");
     }
 
-    //at these point we processed all touch events
-    //now process mouse events and synthesize mouse events from touch point
+    if (!device->isTouch) {
+        //handle mouse events
 
-    GLASS_LOG_FINEST("device %p x %d y %d reportMove %d keyEventIndex: %d\n",
+        //update mouse location
+        mousePosX = newMousePosX;
+        mousePosY = newMousePosY;
+
+        GLASS_LOG_FINEST("device %p x %d y %d reportMove %d keyEventIndex: %d\n",
                      device, mousePosX, mousePosY, reportMouseMove, keyEventIndex);
 
-    if (!device->isTouch) {
         if (keyEventIndex >= 0) {
              lens_input_pointerEvents_handleKeyEvent(device,
                                                      &mouseState->pendingInputEvents[keyEventIndex]);

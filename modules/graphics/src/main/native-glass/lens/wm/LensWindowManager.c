@@ -1185,12 +1185,15 @@ void lens_wm_notifyMultiTouchEvent(JNIEnv *env,
             case com_sun_glass_events_TouchEvent_TOUCH_PRESSED:
                 //send button pressed
                 GLASS_LOG_FINEST("touch -> mouse - pressed");
+
                 lens_wm_notifyButtonEvent(env,
                                           JNI_TRUE, //preseed
                                           com_sun_glass_events_MouseEvent_BUTTON_LEFT,
                                           absX,
                                           absY);
 
+                //explicitly update the cursor as lens_wm_notifyButtonEvent doesn't
+                fbCursorSetPosition(absX, absY);
                 break;
             case com_sun_glass_events_TouchEvent_TOUCH_MOVED:
                 GLASS_LOG_FINEST("touch -> mouse - move");
