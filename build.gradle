@@ -110,6 +110,7 @@ void defineProperty(String name, Properties props, String defaultValue) {
  */
 String cygpath(String path) {
     if (!IS_WINDOWS) return path;
+    if (path == null || "".equals(path)) return path;
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     logger.info("Converting path '$path' via cygpath")
     exec {
@@ -259,7 +260,8 @@ ext.IS_LINUX = OS_NAME.contains("linux")
 //    c:\Program Files (x86)\Java\jre8\
 // Because of this, you may sometimes get the jdk's JRE (in which case the logic we used to have here
 // was correct and consistent with all other platforms), or it might be the standalone JRE (for the love!).
-def envJavaHome = cygpath(System.getenv("JAVA_HOME"))
+def envJavaHome = cygpath(System.getenv("JDK_HOME"))
+if (envJavaHome == null || envJavaHome.equals("")) envJavaHome = cygpath(System.getenv("JAVA_HOME"))
 def javaHome = envJavaHome == null || envJavaHome.equals("") ? System.getProperty("java.home") : envJavaHome
 def javaHomeFile = file(javaHome)
 defineProperty("JDK_HOME",
@@ -602,12 +604,43 @@ if (COMPILE_TARGETS == null || COMPILE_TARGETS == "") {
     throw new Exception("Unable to determine compilation platform, must specify valid COMPILE_TARGETS!")
 }
 
-// Make sure JAVA_HOME/bin/java exists
+// Make sure JDK_HOME/bin/java exists
 if (!file(JAVA).exists()) throw new Exception("Missing or incorrect path to 'java': '$JAVA'. Perhaps bad JDK_HOME? $JDK_HOME")
 if (!file(JAVAC).exists()) throw new Exception("Missing or incorrect path to 'javac': '$JAVAC'. Perhaps bad JDK_HOME? $JDK_HOME")
 if (!file(JAVAH).exists()) throw new Exception("Missing or incorrect path to 'javah': '$JAVAH'. Perhaps bad JDK_HOME? $JDK_HOME")
 if (!file(JAVADOC).exists()) throw new Exception("Missing or incorrect path to 'javadoc': '$JAVADOC'. Perhaps bad JDK_HOME? $JDK_HOME")
 if (BINARY_STUB != null && !BINARY_STUB.getSingleFile().exists()) logger.warn("Missing or incorrect path to 'jfxrt.jar': '${BINARY_STUB.asPath}'. Perhaps bad JDK_HOME? $JDK_HOME")
+
+
+// Determine the verion of Java in JDK_HOME. It looks like this:
+//
+// $ java -version
+// java version "1.7.0_45"
+// Java(TM) SE Runtime Environment (build 1.7.0_45-b18)
+// Java HotSpot(TM) 64-Bit Server VM (build 24.45-b08, mixed mode)
+//
+// We need to parse the second line
+def inStream = new java.io.BufferedReader(new java.io.InputStreamReader(new java.lang.ProcessBuilder(JAVA, "-version").start().getErrorStream()));
+try {
+    if (inStream.readLine() != null) {
+        String v = inStream.readLine();
+        if (v != null) {
+            int ib = v.indexOf(" (build ");
+            if (ib != -1) {
+                String ver = v.substring(ib + 8, v.size() - 1);
+
+                defineProperty("jdkRuntimeVersion", ver)
+                defineProperty("jdkVersion", jdkRuntimeVersion.split("[_\\-]")[0])
+                defineProperty("jdkBuildNumber", jdkRuntimeVersion.substring(jdkRuntimeVersion.lastIndexOf("-b") + 2))
+            }
+        }
+    }
+} finally {
+    inStream.close();
+}
+if (!project.hasProperty("jdkRuntimeVersion")) throw new Exception("Unable to determine the version of Java in JDK_HOME at $JDK_HOME");
+
+
 
 // Verify that CONF is something useful
 if (CONF != "Release" && CONF != "Debug") logger.warn("Unknown configuration CONF='$CONF'. Treating as 'Release'")
@@ -640,6 +673,9 @@ logger.quiet("JDK_HOME: $JDK_HOME")
 logger.quiet("java.runtime.version: ${javaRuntimeVersion}")
 logger.quiet("java version: ${javaVersion}")
 logger.quiet("java build number: ${javaBuildNumber}")
+logger.quiet("jdk.runtime.version: ${jdkRuntimeVersion}")
+logger.quiet("jdk version: ${jdkVersion}")
+logger.quiet("jdk build number: ${jdkBuildNumber}")
 logger.quiet("minimum java build number: ${jfxBuildJdkBuildnumMin}")
 logger.quiet("COMPILE_TARGETS: $COMPILE_TARGETS")
 logger.quiet("COMPILE_FLAGS_FILES: $COMPILE_FLAGS_FILES")
@@ -850,10 +886,10 @@ void addJSL(Project project, String name, String pkg, Closure compile) {
 // Task to verify the minimum level of Java needed to build JavaFX
 task verifyJava() {
     doLast {
-        if (javaVersion != jfxBuildJdkVersion) {
-            fail("java version mismatch: ${javaVersion} must be ${jfxBuildJdkVersion}")
+        if (jdkVersion != jfxBuildJdkVersion) {
+            fail("java version mismatch: ${jdkVersion} must be ${jfxBuildJdkVersion}")
         }
-        def buildNum = Integer.parseInt(javaBuildNumber)
+        def buildNum = Integer.parseInt(jdkBuildNumber)
         def minBuildNum = Integer.parseInt(jfxBuildJdkBuildnumMin)
         if (buildNum < minBuildNum) {
             fail("java build number ($buildNum) < minimum build number ($minBuildNum)")
@@ -864,7 +900,7 @@ task verifyJava() {
 // Task to check whether jfxrt.jar is present in the JDK
 task checkJfxrtJar {
     doLast {
-        def jfxrtFile = new File("$JAVA_HOME/jre/lib/ext/jfxrt.jar");
+        def jfxrtFile = new File("$JDK_HOME/jre/lib/ext/jfxrt.jar");
         if (jfxrtFile.exists()) {
             if (BUILD_CLOSED) {
                 fail("$jfxrtFile must be removed before building closed sdk")
@@ -1399,7 +1435,7 @@ project(":fxml") {
         // tracker and this attempts to fire up the toolkit and this looks for native libraries and fails,
         // we have to use the stub toolkit for now.
         jvmArgs "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit"
-        classpath += files("$JAVA_HOME/jre/lib/ext/nashorn.jar")
+        classpath += files("$JDK_HOME/jre/lib/ext/nashorn.jar")
     }
 }
 
@@ -1759,7 +1795,7 @@ project(":media") {
             doLast {
                 exec {
                     commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/jfxmedia/projects/${projectDir}")
-                    args("JAVA_HOME=${JAVA_HOME}", "GENERATED_HEADERS_DIR=${generatedHeadersDir}",
+                    args("JAVA_HOME=${JDK_HOME}", "GENERATED_HEADERS_DIR=${generatedHeadersDir}",
                          "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=jfxmedia")
 
                     if (t.name == "win") {
@@ -2017,7 +2053,7 @@ load(qt_config)""")
                     args("--nocache")
                 }
                 environment([
-                    "JAVA_HOME"       : JAVA_HOME,
+                    "JAVA_HOME"       : JDK_HOME,
                     "WEBKITOUTPUTDIR" : webkitOutputDir,
                 ])
 
