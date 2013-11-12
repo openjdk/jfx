@@ -234,6 +234,10 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         ScrollPane control = getSkinnable();
         scrollNode = control.getContent();
 
+        TraversalEngine traversalEngine = new TraversalEngine(getSkinnable(), false);
+        traversalEngine.addTraverseListener(this);
+        getSkinnable().setImpl_traversalEngine(traversalEngine);
+
         if (scrollNode != null) {
             scrollNode.layoutBoundsProperty().addListener(nodeListener);
             scrollNode.layoutBoundsProperty().addListener(boundsChangeListener);
@@ -582,10 +586,6 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
                 e.consume();
             }
         });
-
-        TraversalEngine traversalEngine = new TraversalEngine(getSkinnable(), false);
-        traversalEngine.addTraverseListener(this);
-        getSkinnable().setImpl_traversalEngine(traversalEngine);
 
         // ScrollPanes do not block all MouseEvents by default, unlike most other UI Controls.
         consumeMouseEvents(false);

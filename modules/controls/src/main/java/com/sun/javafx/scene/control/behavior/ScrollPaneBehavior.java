@@ -212,47 +212,30 @@ public class ScrollPaneBehavior extends BehaviorBase<ScrollPane> {
             verticalEnd();
             break;
         case TRAVERSE_NEXT:
-            // Are there any focusable node in the TitlePane content
-            if (getControl().getImpl_traversalEngine().registeredNodes.isEmpty()) {
-                super.callAction(name);
-            }
-            else {
-                /**
-                 *if we have the focus owner then traverse from it, otherwise
-                 * request focus in the top-left
-                 */
-                List<Node> children = getControl().getChildrenUnmodifiable();
-                Node focusNode = getControl().getScene().getFocusOwner();
-                if (focusNode != null && (isChildFocused(focusNode, children) == true)) {
-                    focusNode.impl_traverse(Direction.NEXT);
-                }
-                else {
-                    focusFirstChild(children);
-                }
-            }
-            break;
-
         case TRAVERSE_PREVIOUS:
-            // Are there any focusable node in the TitlePane content
-            if (getControl().getImpl_traversalEngine().registeredNodes.isEmpty()) {
-                super.callAction(name);
-            }
-            else {
+            // Is there any focusable node in the ScrollPane content
+            if (getControl().getImpl_traversalEngine().registeredNodes.isEmpty() ||
+                TabPaneBehavior.getFirstPopulatedInnerTraversalEngine(getControl().getChildrenUnmodifiable()) != null) {
                 /**
                  * if we have the focus owner then traverse from it, otherwise
                  * request focus in the top-left
                  */
                 List<Node> children = getControl().getChildrenUnmodifiable();
                 Node focusNode = getControl().getScene().getFocusOwner();
-
-                if (focusNode != null && (isChildFocused(focusNode, children) == true)) {
-                    focusNode.impl_traverse(Direction.PREVIOUS);
-                }
-                else {
+                if (focusNode != null && isChildFocused(focusNode, children)) {
+                    // TODO: Can this happen? Explain how we got this
+                    // action if it was a child that had focus.
+                    focusNode.impl_traverse("TraverseNext".equals(name) ? Direction.NEXT : Direction.PREVIOUS);
+                } else if ("TraverseNext".equals(name)) {
+                    focusFirstChild(children);
+                } else {
                     super.callAction(name);
                 }
+            } else {
+                super.callAction(name);
             }
             break;
+
         default :
          super.callAction(name);
             break;

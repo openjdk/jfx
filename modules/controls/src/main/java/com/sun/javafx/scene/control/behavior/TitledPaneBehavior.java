@@ -63,58 +63,44 @@ public class TitledPaneBehavior extends BehaviorBase<TitledPane> {
     }
 
     @Override protected void callAction(String name) {
-        if (PRESS_ACTION.equals(name)) {
-            TitledPane tp = getControl();
-            if (tp.isCollapsible() && tp.isFocused()) {
-                tp.setExpanded(!tp.isExpanded());
-                tp.requestFocus();
+        switch (name) {
+          case PRESS_ACTION:
+            if (titledPane.isCollapsible() && titledPane.isFocused()) {
+                titledPane.setExpanded(!titledPane.isExpanded());
+                titledPane.requestFocus();
             }
-        } else if ("TraverseNext".equals(name)) {
-            TitledPane tp = getControl();
-            TitledPaneSkin tps = (TitledPaneSkin)tp.getSkin();
-            //tps.getContentRegion().getImpl_traversalEngine().getTopLeftFocusableNode();
-            // Are there any focusable node in the TitlePane content
-            if (!tp.isExpanded() || tps.getContentRegion().getImpl_traversalEngine().registeredNodes.isEmpty()) {
-                super.callAction(name);
-            }
-            else {
-                /*
-                ** if we have the focus owner then traverse from it, otherwise
-                ** request focus in the top-left
-                */
-                List<Node> children = tp.getChildrenUnmodifiable();
-                Node focusNode = tp.getScene().getFocusOwner();
-                    
-                if (focusNode != null && (isChildFocused(focusNode, children) == true)) {
-                    focusNode.impl_traverse(Direction.NEXT);
-                }
-                else {
-                    focusFirstChild(children);
-                }
-            }
-        } else if ("TraversePrevious".equals(name)) {
-            TitledPane tp = getControl();
-            TitledPaneSkin tps = (TitledPaneSkin)tp.getSkin();
-            // Are there any focusable node in the TitlePane content
-            if (!tp.isExpanded() || tps.getContentRegion().getImpl_traversalEngine().registeredNodes.isEmpty()) {
-                super.callAction(name);
-            }
-            else {
-                /*
-                ** if we have the focus owner then traverse from it, otherwise
-                ** request focus in the top-left
-                */
-                List<Node> children = tp.getChildrenUnmodifiable();
-                Node focusNode = tp.getScene().getFocusOwner();
+            break;
 
-                if (focusNode != null && (isChildFocused(focusNode, children) == true)) {
-                    focusNode.impl_traverse(Direction.PREVIOUS);
-                }
-                else {
+        case "TraverseNext":
+        case "TraversePrevious":
+            TitledPaneSkin tps = (TitledPaneSkin)titledPane.getSkin();
+            //tps.getContentRegion().getImpl_traversalEngine().getTopLeftFocusableNode();
+            // Is there any focusable node in the TitledPane content
+            if (titledPane.isExpanded() &&
+                (!tps.getContentRegion().getImpl_traversalEngine().registeredNodes.isEmpty() ||
+                 TabPaneBehavior.getFirstPopulatedInnerTraversalEngine(tps.getContentRegion().getChildren()) != null)) {
+                /*
+                ** if we have the focus owner then traverse from it, otherwise
+                ** request focus in the top-left
+                */
+                List<Node> children = titledPane.getChildrenUnmodifiable();
+                Node focusNode = titledPane.getScene().getFocusOwner();
+                    
+                if (focusNode != null && isChildFocused(focusNode, children)) {
+                    // TODO: Can this happen? Explain how we got this
+                    // action if it was a child that had focus.
+                    focusNode.impl_traverse("TraverseNext".equals(name) ? Direction.NEXT : Direction.PREVIOUS);
+                } else if ("TraverseNext".equals(name)) {
+                    focusFirstChild(children);
+                } else {
                     super.callAction(name);
                 }
+            } else {
+                super.callAction(name);
             }
-        } else {
+            break;
+
+          default:
             super.callAction(name);
         }
     }
