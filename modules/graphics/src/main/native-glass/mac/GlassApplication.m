@@ -463,7 +463,10 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
             if (appName) {
                 // make the name available to Java side, before Launchable.fnishLaunching callback
                 jstring jname = (*jEnv)->NewStringUTF(jEnv, [appName UTF8String]);
-                (*jEnv)->SetObjectField(jEnv, glassApp->jApplication, (*jEnv)->GetFieldID(jEnv, cls, "name", "Ljava/lang/String;"), jname);
+                jmethodID setNameMethod = (*jEnv)->GetMethodID(jEnv, cls, "setName", "(Ljava/lang/String;)V");
+                if (setNameMethod != NULL) {
+                    (*jEnv)->CallVoidMethod(jEnv, glassApp->jApplication, setNameMethod, jname);
+                }
                 GLASS_CHECK_EXCEPTION(jEnv);
             }
         }

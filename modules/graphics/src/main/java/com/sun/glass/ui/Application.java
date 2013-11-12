@@ -190,14 +190,18 @@ public abstract class Application {
      * be used to identify the application in the user interface or
      * as part of the platform specific path used to store application
      * data.
-     * 
+     *
+     * The name could be set only ones. All subsequent calls are ignored.
+     *
      * This is a hint and may not be used on some platforms.
      * 
      * @param name the new application name
      */
     public void setName(String name) {
         checkEventThread();
-        this.name = name == null ? DEFAULT_NAME : name;
+        if (name != null && DEFAULT_NAME.equals(this.name)) {
+            this.name = name;
+        }
     }
 
     /**
