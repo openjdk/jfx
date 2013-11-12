@@ -148,7 +148,9 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             if (me.getClickCount() == 2 && me.isPrimaryButtonDown()) {
                 // the user wants to resize the column such that its
                 // width is equal to the widest element in the column
-                header.getTableViewSkin().resizeColumnToFitContent(column, -1);
+                if (column.isResizable()) {
+                    header.getTableViewSkin().resizeColumnToFitContent(column, -1);
+                }
             } else {
                 // rather than refer to the rect variable, we just grab
                 // it from the source to prevent a small memory leak.
