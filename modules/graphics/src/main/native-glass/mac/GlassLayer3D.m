@@ -99,8 +99,8 @@ static NSArray *allModes = nil;
 
         if (allModes == nil) {
             allModes = [[NSArray arrayWithObjects:NSDefaultRunLoopMode,
-                        NSModalPanelRunLoopMode,
-                        NSModalPanelRunLoopMode, nil] retain];
+                                                  NSEventTrackingRunLoopMode,
+                                                  NSModalPanelRunLoopMode, nil] retain];
         }
     }
     return self;
@@ -189,11 +189,10 @@ static NSArray *allModes = nil;
     if ([NSThread isMainThread]) {
         [[self->_glassOffscreen getLayer] setNeedsDisplay];
     } else {
-        [[NSRunLoop mainRunLoop] performSelector:@selector(setNeedsDisplay)
-                                          target:[self->_glassOffscreen getLayer]
-                                        argument:nil
-                                           order:0
-                                           modes:allModes];
+        [[self->_glassOffscreen getLayer] performSelectorOnMainThread:@selector(setNeedsDisplay)
+                                                           withObject:nil
+                                                        waitUntilDone:NO
+                                                                modes:allModes];
     }
 }
 
