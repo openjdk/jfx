@@ -191,7 +191,7 @@ public abstract class Application {
      * as part of the platform specific path used to store application
      * data.
      *
-     * The name could be set only ones. All subsequent calls are ignored.
+     * The name could be set only once. All subsequent calls are ignored.
      *
      * This is a hint and may not be used on some platforms.
      * 
