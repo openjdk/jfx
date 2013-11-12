@@ -113,7 +113,7 @@ public class TimelineEventsApp extends Application {
         //add the keyframe to the timeline
         timeline.getKeyFrames().add(keyFrame);
         Pane pane = new Pane(stack);
-        pane.setPrefSize(260, 60);
+        pane.setPrefSize(300, 100);
         pane.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
         return pane;
     }

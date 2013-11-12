@@ -66,7 +66,7 @@ public class FillTransitionApp extends Application {
 
     public Parent createContent() {
         Pane root = new Pane();
-        root.setPrefSize(245, 100);
+        root.setPrefSize(105, 105);
         root.setMinSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
         root.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
 

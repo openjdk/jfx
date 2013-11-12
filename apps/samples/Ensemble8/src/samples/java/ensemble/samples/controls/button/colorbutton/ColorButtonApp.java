@@ -79,6 +79,7 @@ public class ColorButtonApp extends Application {
 
         VBox vBox = new VBox(20);
         vBox.getChildren().addAll(hBox, hBox2);
+        vBox.setPrefHeight(140);
         vBox.setMaxSize(VBox.USE_PREF_SIZE, VBox.USE_PREF_SIZE);
         vBox.setMinSize(VBox.USE_PREF_SIZE, VBox.USE_PREF_SIZE);
         return vBox;

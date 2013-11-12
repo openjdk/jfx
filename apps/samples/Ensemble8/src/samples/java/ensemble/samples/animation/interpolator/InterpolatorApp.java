@@ -87,9 +87,9 @@ public class InterpolatorApp extends Application {
 
     public Parent createContent() {
         Pane root = new Pane();
-        root.setPrefSize(245, 100);
-        root.setMinSize(245, 100);
-        root.setMaxSize(245, 100);
+        root.setPrefSize(245, 230);
+        root.setMinSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
+        root.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
 
         //create circles by method createMovingCircle listed below
         //default interpolator
@@ -123,7 +123,7 @@ public class InterpolatorApp extends Application {
         //create a transparent circle
         Circle circle = new Circle(45, 45, 40, color);
         circle.setOpacity(0);
-        circle.setCenterY(centerY);
+        circle.setCenterY(centerY + 40);
         //add effect
         circle.setEffect(new Lighting());
         //create a timeline for moving the circle

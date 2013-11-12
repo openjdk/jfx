@@ -70,6 +70,7 @@ public class MenuApp extends Application {
     public Parent createContent() {
         final String os = System.getProperty("os.name");
         VBox vbox = new VBox(20);
+        vbox.setPrefSize(300, 100);
         final Label outputLabel = new Label();
         final MenuBar menuBar = new MenuBar();
 
@@ -127,11 +128,11 @@ public class MenuApp extends Application {
             sysMenuLabel.setStyle("-fx-font-size: 24");
             hbox.getChildren().add(sysMenuLabel);
             vbox.getChildren().add(hbox);
-            sysMenuLabel.setVisible((menuBar.getHeight() == 0) ? true : false);
+            sysMenuLabel.setVisible((menuBar.getHeight() == 0));
             menuBar.heightProperty().addListener(new ChangeListener<Number>() {
                 @Override
                 public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
-                    sysMenuLabel.setVisible((menuBar.getHeight() == 0) ? true : false);
+                    sysMenuLabel.setVisible((menuBar.getHeight() == 0));
                 }
             });
         }

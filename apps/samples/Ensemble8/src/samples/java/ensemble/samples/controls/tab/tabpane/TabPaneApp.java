@@ -72,6 +72,9 @@ public class TabPaneApp extends Application {
     public Parent createContent() {
         //Each tab illustrates different capabilities
         tabPane = new TabPane();
+        tabPane.setPrefSize(400, 360);
+        tabPane.setMinSize(TabPane.USE_PREF_SIZE, TabPane.USE_PREF_SIZE);
+        tabPane.setMaxSize(TabPane.USE_PREF_SIZE, TabPane.USE_PREF_SIZE);
         tab1 = new Tab();
         tab2 = new Tab();
         tab3 = new Tab();
