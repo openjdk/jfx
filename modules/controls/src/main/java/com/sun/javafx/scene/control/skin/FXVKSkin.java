@@ -347,8 +347,6 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
         super(fxvk, new BehaviorBase<>(fxvk, Collections.EMPTY_LIST));
         this.fxvk = fxvk;
 
-        StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/fxvk.css");
-
         fxvk.setFocusTraversable(false);
 
         if (fxvk != secondaryVK) {

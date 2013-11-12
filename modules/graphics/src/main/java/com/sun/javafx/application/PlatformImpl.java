@@ -649,6 +649,10 @@ public class PlatformImpl {
                             if (isSupported(ConditionalFeature.TWO_LEVEL_FOCUS)) {
                                 StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/two-level-focus.css");
                             }
+
+                            if (isSupported(ConditionalFeature.VIRTUAL_KEYBOARD)) {
+                                StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/fxvk.css");
+                            }
                             return null;
                         }
                     });
@@ -673,6 +677,10 @@ public class PlatformImpl {
 
                             if (isSupported(ConditionalFeature.TWO_LEVEL_FOCUS)) {
                                 StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/modena/two-level-focus.css");
+                            }
+
+                            if (isSupported(ConditionalFeature.VIRTUAL_KEYBOARD)) {
+                                StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/fxvk.css");
                             }
                             return null;
                         }
