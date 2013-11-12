@@ -36,11 +36,14 @@ import javafx.event.EventHandler;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
+import javafx.scene.control.ResizeFeaturesBase;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TreeTableView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
+import javafx.util.Callback;
 
 /**
  * <p>This class is used to construct the header of a TableView. We take the approach
@@ -308,7 +311,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         if (getColumns() != null) {
             getColumns().removeListener(weakColumnsListener);
         }
-        
+
         for (int i = 0; i < getColumnHeaders().size(); i++) {
             TableColumnHeader header = getColumnHeaders().get(i);
             header.dispose();
@@ -468,20 +471,32 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             rect.visibleProperty().unbind();
         }
         dragRects.clear();
-        
-        if (getColumns() == null) {
+
+        List<? extends TableColumnBase> columns = getColumns();
+
+        if (columns == null) {
             return;
         }
 
-        boolean isConstrainedResize = TableView.CONSTRAINED_RESIZE_POLICY.equals(
-                getTableViewSkin().columnResizePolicyProperty());
-        
-        for (int col = 0; col < getColumns().size(); col++) {
+        final TableViewSkinBase<?,?,?,?,?,?> skin = getTableViewSkin();
+        Callback<ResizeFeaturesBase, Boolean> columnResizePolicy = skin.columnResizePolicyProperty().get();
+        boolean isConstrainedResize =
+                skin instanceof TableViewSkin ? TableView.CONSTRAINED_RESIZE_POLICY.equals(columnResizePolicy) :
+                skin instanceof TreeTableViewSkin ? TreeTableView.CONSTRAINED_RESIZE_POLICY.equals(columnResizePolicy) :
+                false;
+
+        // RT-32547 - don't show resize cursor when in constrained resize mode
+        // and there is only one column
+        if (isConstrainedResize && skin.getVisibleLeafColumns().size() == 1) {
+            return;
+        }
+
+        for (int col = 0; col < columns.size(); col++) {
             if (isConstrainedResize && col == getColumns().size() - 1) {
                 break;
             }
-            
-            final TableColumnBase c = getColumns().get(col);
+
+            final TableColumnBase c = columns.get(col);
             final Rectangle rect = new Rectangle();
             rect.getProperties().put(TABLE_COLUMN_KEY, c);
             rect.getProperties().put(TABLE_COLUMN_HEADER_KEY, this);
