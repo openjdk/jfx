@@ -757,9 +757,9 @@
 
 - (NSRect) firstRectForCharacterRange:(NSRange)theRange actualRange:(NSRangePointer)actualRange
 {
-    IMLOG("firstRectForCharacterRange called %lu %lu", 
-            (unsigned long)theRange.location, (unsigned long)theRange.length);    
-    NSRect result = [self->_delegate getInputMethodCandidatePosRequest:(int)theRange.length];
+    IMLOG("firstRectForCharacterRange called %lu %lu",
+          (unsigned long)theRange.location, (unsigned long)theRange.length);
+    NSRect result = [self->_delegate getInputMethodCandidatePosRequest:0];
     NSRect screenFrame = [[NSScreen mainScreen] frame];
     result.origin.y = screenFrame.size.height - result.origin.y;
     return result;
