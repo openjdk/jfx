@@ -1704,11 +1704,21 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkGetInsertPositionOffset
     Frame* frame = page->mainFrame();
 
     jint position = 0;
-    if (frame->editor().canEdit()) {
+    Editor &editor = frame->editor();
+    if (editor.canEdit()) {
         VisibleSelection selection = frame->selection()->selection();
         if (selection.isCaret()) {
             VisiblePosition caret = selection.visibleStart();
             position = caret.deepEquivalent().offsetInContainerNode();
+            if (editor.hasComposition()) {
+                int start = editor.compositionStart();
+                int end = editor.compositionEnd();
+                if (start < position && position <= end) {
+                    position = start;
+                } else if (position > end) {
+                    position -= end - start;
+                }
+            }
         }
     }
     return position;
