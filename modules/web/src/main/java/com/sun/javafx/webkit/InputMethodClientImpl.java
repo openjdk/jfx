@@ -96,7 +96,9 @@ public final class InputMethodClientImpl
     // InputMethodRequests implementation
     public Point2D getTextLocation(int offset) {
         int[] loc = webPage.getClientTextLocation(offset);
-        WCPoint point = webPage.getPageClient().windowToScreen(new WCPoint(loc[0], loc[1]));
+        WCPoint point = webPage.getPageClient().windowToScreen(
+                // We need lower left corner of the char bounds rectangle here
+                new WCPoint(loc[0], loc[1] + loc[3]));
         return new Point2D(point.getIntX(), point.getIntY());
     }
 
