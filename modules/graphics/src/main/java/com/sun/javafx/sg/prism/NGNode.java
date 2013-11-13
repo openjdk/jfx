@@ -452,11 +452,17 @@ public abstract class NGNode {
      * @param blendMode may be null to indicate "default"
      */
     public void setNodeBlendMode(Blend.Mode blendMode) {
-        // A SRC_OVER blend mode is the same as null, so just convert it here to save us trouble
-        // down the line.
-        if (blendMode == Blend.Mode.SRC_OVER) {
-            blendMode = null;
-        }
+        // The following code was a broken optimization that made an
+        // incorrect assumption about null meaning the same thing as
+        // SRC_OVER.  In reality, null means "pass through blending
+        // from children" and SRC_OVER means "intercept blending of
+        // children, allow them to blend with each other, but pass
+        // their result on in a single SRC_OVER operation into the bg".
+        // For leaf nodes, those are mostly the same thing, but Regions
+        // and Groups might behave differently for the two modes.
+//        if (blendMode == Blend.Mode.SRC_OVER) {
+//            blendMode = null;
+//        }
 
         // If the blend mode has changed, react. If this node is being cached,
         // then we do not want to invalidate the cache due to a compositing

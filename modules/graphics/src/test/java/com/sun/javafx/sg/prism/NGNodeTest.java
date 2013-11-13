@@ -406,11 +406,12 @@ public class NGNodeTest extends NGTestBase {
             n.getOpaqueRegion();
             assertTrue(n.opaqueRegionRecomputed);
 
-            // Set to SRC_OVER (nothing should happen)
+            // Set to SRC_OVER (should recompute even though it may be a NOP)
+            // For leaf nodes it is a NOP, but for groups there is a difference
             n.opaqueRegionRecomputed = false;
             n.setNodeBlendMode(Blend.Mode.SRC_OVER);
             n.getOpaqueRegion();
-            assertFalse(n.opaqueRegionRecomputed);
+            assertTrue(n.opaqueRegionRecomputed);
 
             // Set to blend mode (should do it)
             n.opaqueRegionRecomputed = false;
@@ -428,7 +429,7 @@ public class NGNodeTest extends NGTestBase {
             n.opaqueRegionRecomputed = false;
             n.setNodeBlendMode(null);
             n.getOpaqueRegion();
-            assertFalse(n.opaqueRegionRecomputed);
+            assertTrue(n.opaqueRegionRecomputed);
         }
     }
 
