@@ -707,7 +707,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                         // Swap caret and anchor
                         textArea.selectRange(textArea.getCaretPosition(), textArea.getAnchor());
                     }
-                    if (pos >= 0) {
+                    if (pos > 0) {
                         if (pos >= textArea.getAnchor()) {
                             pos = textArea.getAnchor();
                         }
@@ -718,8 +718,8 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                             hit.setCharIndex(pos - 1);
                         }
                         textNode.setImpl_caretPosition(oldPos);
-                        positionCaret(hit, true, false);
                     }
+                    positionCaret(hit, true, false);
                     e.consume();
                 }
             });
