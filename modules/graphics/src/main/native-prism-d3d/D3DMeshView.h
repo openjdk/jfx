@@ -44,7 +44,7 @@ public:
     void setAmbientLight(float r, float g, float b);
     void setPointLight(int index, float x, float y, float z,
     float r, float g, float b, float w);
-    void sortLights();
+    void computeNumLights();
     void render();
 
 private:
@@ -52,7 +52,6 @@ private:
     D3DMesh *mesh;
     D3DPhongMaterial *material;
     D3DLight lights[3];
-    int lightsOrder[3];
     float ambientLightColor[3];
     int  numLights;
     bool lightsDirty;
