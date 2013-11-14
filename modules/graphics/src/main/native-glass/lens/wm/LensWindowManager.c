@@ -41,7 +41,6 @@ static pthread_mutex_t renderMutex = PTHREAD_MUTEX_INITIALIZER;
 static int _mousePosX;
 static int _mousePosY;
 
-static jboolean _mousePressed = JNI_FALSE;
 static jboolean _onDraggingAction = JNI_FALSE;
 static NativeWindow _dragGrabbingWindow = NULL;
 static int _mousePressedButton = com_sun_glass_events_MouseEvent_BUTTON_NONE;
@@ -1088,74 +1087,36 @@ void lens_wm_notifyMultiTouchEvent(JNIEnv *env,
     jboolean allReleased;    
 
     //set the touch window on first touch event
-    if (touchWindow == NULL && primaryPointIndex >= 0) {
+    if (touchWindow == NULL && primaryPointIndex >= 0 && !_onDraggingAction) {
         //find the touch window for first event
         touchWindow = glass_window_findWindowAtLocation(xabs[primaryPointIndex],
                                                         yabs[primaryPointIndex],
                                                         &relX, &relY);
-        if (touchWindow) {
-            //As this is the first time we find a window to report to, we need to
-            //transform all points states to 'press' and ignore release events, as 
-            //the input driver state calculation is done without a window context.
-            //An example for a wrong state -  tapping on an 'open space' and then
-            //dragging the finger over a window. The touch events will be 
-            //reported as move, from the input driver, but the window expect them to be
-            //pressed event as it the first time it get a notification for those
-            //points
-
-            GLASS_LOG_FINEST("[touch window] window %d[%p] own the touch sequence",
-                             touchWindow->id,
-                             touchWindow);
-
-            int actualCount = 0;
-            for (i = 0; i < count; i++) {
-                if (states[i] == com_sun_glass_events_TouchEvent_TOUCH_RELEASED) {
-                    //skip and drop release events
-                    GLASS_LOG_FINEST("[touch window] Dropping touch point (index %d id %d)",
-                                     i,
-                                     (int)ids[i]);
-                    continue;
-                } else {
-                    //copy 
-                    ids[actualCount] = ids[i];
-                    states[actualCount] = com_sun_glass_events_TouchEvent_TOUCH_PRESSED;
-                    xabs[actualCount] = xabs[i];
-                    yabs[actualCount] = yabs[i];
-
-                    //update the index of the primary point 
-                    if (primaryPointIndex == i) {
-                        primaryPointIndex = actualCount;
-                    }
-
-                    actualCount ++;
-                }
-            }
-
-            GLASS_IF_LOG_FINEST {
-                if (count != actualCount) {                    
-                    GLASS_LOG_FINEST("[touch window] points array have been updated to:");
-                        for (i = 0; i < actualCount; i++) {
-                            const char *isPrimary = primaryPointIndex == i?
-                                                    "[Primary]":
-                                                    "";
-                            GLASS_LOG_FINEST("[touch window] point %d / %d id=%d state=%d, x=%d y=%d %s",
-                                             i+1,
-                                             actualCount,
-                                             (int)ids[i],
-                                             states[i],
-                                             xabs[i], yabs[i],
-                                             isPrimary);
-                        }
-                        GLASS_LOG_FINEST(" "); //make it easier to read the log
-                }
-
-            }
-            //update count
-            count = actualCount;
-
-            lens_wm_setMouseWindow(touchWindow);
-        }
         
+        if (touchWindow) {
+            GLASS_IF_LOG_FINEST("[touch event -> window] touch event on window %d[%p]",
+                                touchWindow->id,
+                                touchWindow);
+            //we have a touch point over a window, we need to check that its the
+            //starting point of the touch event sequence (all points pressed and
+            // we are not in the a middle of a drag), if not ignore the event.
+            //
+            //example scenario - touch outside a window and drag the finger
+            //into the window - same as press with a mouse outside a window, hold the
+            //button and drag mouse into the window
+
+
+            for (i = 0; i < count; i++) {
+                if (states[i] != com_sun_glass_events_TouchEvent_TOUCH_PRESSED) {
+                    GLASS_IF_LOG_FINEST("[touch event -> window] in middle of touch sequance (states[%d]=%d) - ignore",
+                                        i,
+                                        states[i]);
+                    touchWindow = NULL;
+                    break;
+                }
+            }
+        }
+
     }
 
     GLASS_LOG_FINEST("touch window %d, indexPoint = %d",
@@ -1237,10 +1198,13 @@ void lens_wm_notifyMotionEvent(JNIEnv *env, int mousePosX, int mousePosY) {
 
     fbCursorSetPosition(mousePosX, mousePosY);
     
-    if (_mousePressed && !_onDraggingAction && !isDnDStarted) {
-        GLASS_LOG_FINE("Starting native mouse drag");
+    if (_mousePressedButton != com_sun_glass_events_MouseEvent_BUTTON_NONE &&
+         !_onDraggingAction && !isDnDStarted) {
         _onDraggingAction = JNI_TRUE;
         _dragGrabbingWindow = lens_wm_getMouseWindow();
+        GLASS_LOG_FINE("Starting native mouse drag on windown %d[%p]",
+                       _dragGrabbingWindow?_dragGrabbingWindow->id : -1,
+                       _dragGrabbingWindow);
     }
     NativeWindow window = glass_window_findWindowAtLocation(_mousePosX, _mousePosY,
                                                             &relX, &relY);
