@@ -562,10 +562,9 @@ if (BUILD_CLOSED) {
     ANDROID.fontT2K.javahInclude = ["com/sun/javafx/font/t2k/**/*"]
     ANDROID.fontT2K.nativeSource = [
         file("$closedDir/javafx-font-t2k-native/src"),
-        file("$closedDir/javafx-font-t2k-native/src/layout"),
-        file("$closedDir/javafx-font-t2k-native/src/layoutfx")]
+        file("$closedDir/javafx-font-t2k-native/src/layout")]
     ANDROID.fontT2K.compiler = compiler
-    ANDROID.fontT2K.ccFlags = [ccFlags, "-fno-exceptions", "-fno-rtti", ccWarnFlags,
+    ANDROID.fontT2K.ccFlags = [ccFlags, "-DLE_STANDALONE", "-fno-exceptions", "-fno-rtti", ccWarnFlags,
         ccArchFlags, ccOptFlags, ccDebugFlags, ccDefaultIncludeFlags].flatten()
     ANDROID.fontT2K.linker = linker
     ANDROID.fontT2K.linkFlags = [linkFlags, "-lstdc++"].flatten()
