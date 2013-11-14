@@ -43,6 +43,8 @@ class GlassSceneDnDEventHandler {
         this.scene = scene;
     }
 
+    // Drop target handlers
+
     public TransferMode handleDragEnter(final int x, final int y, final int xAbs, final int yAbs,
                                         final TransferMode recommendedTransferMode,
                                         final ClipboardAssistance dropTargetAssistant)
@@ -52,7 +54,8 @@ class GlassSceneDnDEventHandler {
             @Override
             public TransferMode run() {
                 if (scene.dropTargetListener != null) {
-                    QuantumClipboard dragboard = QuantumClipboard.getDragboardInstance(dropTargetAssistant);
+                    QuantumClipboard dragboard =
+                            QuantumClipboard.getDragboardInstance(dropTargetAssistant, false);
                     return scene.dropTargetListener.dragEnter(x, y, xAbs, yAbs,
                             recommendedTransferMode, dragboard);
                 }
@@ -108,6 +111,12 @@ class GlassSceneDnDEventHandler {
         }, scene.getAccessControlContext());
     }
 
+    // Drag source handlers
+
+    // This is a callback from the native platform, when a drag gesture is
+    // detected. This mechanism is currently not used in FX, as we have
+    // a custom gesture recognizer in Scene, and DnD is started with
+    // Toolkit.startDrag().
     public void handleDragStart(final int button, final int x, final int y, final int xAbs, final int yAbs,
                                 final ClipboardAssistance dragSourceAssistant)
     {
@@ -116,7 +125,8 @@ class GlassSceneDnDEventHandler {
             @Override
             public Void run() {
                 if (scene.dragGestureListener != null) {
-                    QuantumClipboard dragboard = QuantumClipboard.getDragboardInstance(dragSourceAssistant);
+                    QuantumClipboard dragboard =
+                            QuantumClipboard.getDragboardInstance(dragSourceAssistant, true);
                     scene.dragGestureListener.dragGestureRecognized(
                             x, y, xAbs, yAbs, button, dragboard);
                 }
@@ -125,9 +135,9 @@ class GlassSceneDnDEventHandler {
         }, scene.getAccessControlContext());
     }
 
-    // Used in case the drag has started from the handleDragStart() above - 
-    // it's delivered by Glass itself.
-    // Otherwise, see QuantumToolkit.createDragboard() and startDrag()
+    // This is a callback from the native platform, when the drag was started
+    // from handleDragStart() above, or when FX as a drag source is embedded
+    // to Swing/SWT.
     public void handleDragEnd(final TransferMode performedTransferMode,
                               final ClipboardAssistance dragSourceAssistant)
     {
@@ -135,9 +145,12 @@ class GlassSceneDnDEventHandler {
         AccessController.doPrivileged(new PrivilegedAction<Void>() {
             @Override
             public Void run() {
-                if (scene.dragSourceListener != null) {
-                    scene.dragSourceListener.dragDropEnd(0, 0, 0, 0,
-                            performedTransferMode);
+                try {
+                    if (scene.dragSourceListener != null) {
+                        scene.dragSourceListener.dragDropEnd(0, 0, 0, 0, performedTransferMode);
+                    }
+                } finally {
+                    QuantumClipboard.releaseCurrentDragboard();
                 }
                 return null;
             }

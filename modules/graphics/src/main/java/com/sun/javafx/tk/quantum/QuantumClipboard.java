@@ -30,6 +30,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FilePermission;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInput;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
@@ -40,7 +41,6 @@ import java.net.SocketPermission;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.security.AccessControlContext;
-import java.security.AccessController;
 import java.security.AllPermission;
 import java.security.Permission;
 import java.util.ArrayList;
@@ -88,26 +88,6 @@ final class QuantumClipboard implements TKClipboard {
     private AccessControlContext accessContext = null;
 
     /**
-     * Disallow direct creation of QuantumClipboard
-     */
-    private QuantumClipboard() {
-    }
-
-    @Override public void setSecurityContext(AccessControlContext acc) {
-        if (accessContext != null) {
-            throw new RuntimeException("Clipboard security context has been already set!");
-        }
-        accessContext = acc;
-    }
-
-    private AccessControlContext getAccessControlContext() {
-        if (accessContext == null) {
-            throw new RuntimeException("Clipboard security context has not been set!");
-        }
-        return accessContext;
-    }
-
-    /**
      * Distinguishes between clipboard and dragboard. This is needed
      * because dragboard's flush() starts DnD operation so it mustn't be
      * called too early.
@@ -138,6 +118,28 @@ final class QuantumClipboard implements TKClipboard {
     private double dragOffsetX = 0;
     private double dragOffsetY = 0;
 
+    private static ClipboardAssistance currentDragboard;
+
+    /**
+     * Disallow direct creation of QuantumClipboard
+     */
+    private QuantumClipboard() {
+    }
+
+    @Override public void setSecurityContext(AccessControlContext acc) {
+        if (accessContext != null) {
+            throw new RuntimeException("Clipboard security context has been already set!");
+        }
+        accessContext = acc;
+    }
+
+    private AccessControlContext getAccessControlContext() {
+        if (accessContext == null) {
+            throw new RuntimeException("Clipboard security context has not been set!");
+        }
+        return accessContext;
+    }
+
     /**
      * Gets an instance of QuantumClipboard for the given assistant. This may be
      * a new instance after each call.
@@ -151,6 +153,15 @@ final class QuantumClipboard implements TKClipboard {
         return c;
     }
 
+    static ClipboardAssistance getCurrentDragboard() {
+        return currentDragboard;
+    }
+
+    static void releaseCurrentDragboard() {
+        assert currentDragboard != null;
+        currentDragboard = null;
+    }
+
     /**
      * Gets an instance of QuantumClipboard for the given assistant for usage
      * as dragboard during drag and drop. It doesn't flush the data implicitly
@@ -159,10 +170,13 @@ final class QuantumClipboard implements TKClipboard {
      * @param assistant
      * @return
      */
-    public static QuantumClipboard getDragboardInstance(ClipboardAssistance assistant) {
+    public static QuantumClipboard getDragboardInstance(ClipboardAssistance assistant, boolean isDragSource) {
         QuantumClipboard c = new QuantumClipboard();
         c.systemAssistant = assistant;
         c.isCaching = true;
+        if (isDragSource) {
+            currentDragboard = assistant;
+        }
         return c;
     }
 
@@ -212,12 +226,12 @@ final class QuantumClipboard implements TKClipboard {
     }
 
     @Override public Set<TransferMode> getTransferModes() {
-
         if (transferModesCache != null) {
             return EnumSet.copyOf(transferModesCache);
         }
 
-        final Set<TransferMode> tms = clipboardActionsToTransferModes(systemAssistant.getSupportedSourceActions());
+        ClipboardAssistance assistant = (currentDragboard != null) ? currentDragboard : systemAssistant;
+        final Set<TransferMode> tms = clipboardActionsToTransferModes(assistant.getSupportedSourceActions());
 
         return tms;
     }
@@ -270,12 +284,15 @@ final class QuantumClipboard implements TKClipboard {
             return null;
         }
 
+        ClipboardAssistance assistant =
+                (currentDragboard != null) ? currentDragboard : systemAssistant;
+
         if (dataFormat == DataFormat.IMAGE) {
             return readImage();
         } else if (dataFormat == DataFormat.URL) {
-            return systemAssistant.getData(Clipboard.URI_TYPE);
+            return assistant.getData(Clipboard.URI_TYPE);
         } else if (dataFormat == DataFormat.FILES) {
-            Object data = systemAssistant.getData(Clipboard.FILE_LIST_TYPE);
+            Object data = assistant.getData(Clipboard.FILE_LIST_TYPE);
             if (data == null) return Collections.emptyList();
             String[] paths = (String[]) data;
             List<File> list = new ArrayList<File>(paths.length);
@@ -286,7 +303,7 @@ final class QuantumClipboard implements TKClipboard {
         }
 
         for (String mimeType : dataFormat.getIdentifiers()) {
-            Object data = systemAssistant.getData(mimeType);
+            Object data = assistant.getData(mimeType);
             if (data instanceof ByteBuffer) {
                 try {
                     ByteBuffer bb = (ByteBuffer) data;
@@ -346,9 +363,12 @@ final class QuantumClipboard implements TKClipboard {
     }
 
     private Image readImage() {
-        Object rawData = systemAssistant.getData(Clipboard.RAW_IMAGE_TYPE);
+        ClipboardAssistance assistant =
+                (currentDragboard != null) ? currentDragboard : systemAssistant;
+
+        Object rawData = assistant.getData(Clipboard.RAW_IMAGE_TYPE);
         if (rawData == null) {
-            Object htmlData = systemAssistant.getData(Clipboard.HTML_TYPE);
+            Object htmlData = assistant.getData(Clipboard.HTML_TYPE);
             if (htmlData != null) {
                 String url = parseIMG(htmlData);
                 if (url != null) {
@@ -433,7 +453,6 @@ final class QuantumClipboard implements TKClipboard {
     }
 
     @Override public Set<DataFormat> getContentTypes() {
-
         Set<DataFormat> set = new HashSet<DataFormat>();
 
         if (dataCache != null) {
@@ -443,7 +462,10 @@ final class QuantumClipboard implements TKClipboard {
             return set;
         }
 
-        String[] types = systemAssistant.getMimeTypes();
+        ClipboardAssistance assistant =
+                (currentDragboard != null) ? currentDragboard : systemAssistant;
+
+        String[] types = assistant.getMimeTypes();
         if (types == null) {
             return set;
         }
@@ -459,7 +481,7 @@ final class QuantumClipboard implements TKClipboard {
                 // RT-16812 - IE puts images on the clipboard in a HTML IMG url
                 try {
                     //HTML header could be improperly formatted and we can get an exception here
-                    if (parseIMG(systemAssistant.getData(Clipboard.HTML_TYPE)) != null) {
+                    if (parseIMG(assistant.getData(Clipboard.HTML_TYPE)) != null) {
                         set.add(DataFormat.IMAGE);
                     }
                 } catch (Exception ex) {
@@ -487,7 +509,10 @@ final class QuantumClipboard implements TKClipboard {
             return false;
         }
 
-        String[] stypes = systemAssistant.getMimeTypes();
+        ClipboardAssistance assistant =
+                (currentDragboard != null) ? currentDragboard : systemAssistant;
+
+        String[] stypes = assistant.getMimeTypes();
         if (stypes == null) {
             return false;
         }
@@ -500,7 +525,7 @@ final class QuantumClipboard implements TKClipboard {
                 return true;
             } else if (dataFormat == DataFormat.IMAGE &&
                        t.equalsIgnoreCase(Clipboard.HTML_TYPE) &&
-                       parseIMG(systemAssistant.getData(Clipboard.HTML_TYPE)) != null) {
+                       parseIMG(assistant.getData(Clipboard.HTML_TYPE)) != null) {
                 return true;
             } else if (dataFormat == DataFormat.FILES &&
                     t.equalsIgnoreCase(Clipboard.FILE_LIST_TYPE)) {
@@ -587,9 +612,9 @@ final class QuantumClipboard implements TKClipboard {
                 }
             } else {
                 if (data instanceof Serializable) {
-                    if ((dataFormat != DataFormat.PLAIN_TEXT &&
-                            dataFormat != DataFormat.HTML) ||
-                            ! (data instanceof String)) {
+                    if ((dataFormat != DataFormat.PLAIN_TEXT && dataFormat != DataFormat.HTML) ||
+                        !(data instanceof String))
+                    {
                         try {
                             ByteArrayOutputStream bos = new ByteArrayOutputStream();
                             ObjectOutput out = new ObjectOutputStream(bos);
@@ -597,10 +622,22 @@ final class QuantumClipboard implements TKClipboard {
                             out.close();
                             data = ByteBuffer.wrap(bos.toByteArray());
                         } catch (IOException e) {
-                            throw new IllegalArgumentException("Could not "
-                                    + "serialize the data", e);
+                            throw new IllegalArgumentException("Could not serialize the data", e);
                         }
                     }
+                } else if (data instanceof InputStream) {
+                    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+                    try (InputStream is = (InputStream)data) {
+                        // TODO: performance
+                        int i = is.read();
+                        while (i != -1) {
+                            bout.write(i);
+                            i = is.read();
+                        }
+                    } catch (IOException e) {
+                        throw new IllegalArgumentException("Could not serialize the data", e);
+                    }
+                    data = ByteBuffer.wrap(bout.toByteArray());
                 } else if (!(data instanceof ByteBuffer)) {
                     throw new IllegalArgumentException("Only serializable "
                             + "objects or ByteBuffer can be used as data "

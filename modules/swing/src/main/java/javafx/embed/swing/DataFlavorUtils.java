@@ -25,6 +25,9 @@
 
 package javafx.embed.swing;
 
+import javafx.scene.input.DataFormat;
+
+import java.io.ByteArrayOutputStream;
 import java.util.Set;
 import java.util.Map;
 import java.util.List;
@@ -35,19 +38,23 @@ import java.util.Collections;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
+
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 
 
 final class DataFlavorUtils {
+
     static String getFxMimeType(final DataFlavor flavor) {
         return flavor.getPrimaryType() + "/" + flavor.getSubType();
     }
 
     static Object adjustFxData(final DataFlavor flavor, final Object fxData)
-            throws UnsupportedEncodingException {
+            throws UnsupportedEncodingException
+    {
         // TBD: Handle more data types!!!
         if (fxData instanceof String) {
             if (flavor.isRepresentationClassInputStream()) {
@@ -56,12 +63,17 @@ final class DataFlavorUtils {
                         ? ((String) fxData).getBytes(encoding)
                         : ((String) fxData).getBytes());
             }
+            if (flavor.isRepresentationClassByteBuffer()) {
+                // ...
+            }
         }
         return fxData;
     }
 
     static Object adjustSwingData(final DataFlavor flavor,
-                                  final Object swingData) {
+                                  final String mimeType,
+                                  final Object swingData)
+    {
         if (flavor.isFlavorJavaFileListType()) {
             // RT-12663
             final List<File> fileList = (List<File>)swingData;
@@ -72,17 +84,37 @@ final class DataFlavorUtils {
             }
             return paths;
         }
+        DataFormat dataFormat = DataFormat.lookupMimeType(mimeType);
+        if (DataFormat.PLAIN_TEXT.equals(dataFormat)) {
+            if (flavor.isFlavorTextType()) {
+                if (swingData instanceof InputStream) {
+                    InputStream in = (InputStream)swingData;
+                    // TBD: charset
+                    ByteArrayOutputStream out = new ByteArrayOutputStream();
+                    byte[] bb = new byte[64];
+                    try {
+                        int len = in.read(bb);
+                        while (len != -1) {
+                            out.write(bb, 0, len);
+                            len = in.read(bb);
+                        }
+                        out.close();
+                        return new String(out.toByteArray());
+                    } catch (Exception z) {
+                        // ignore
+                    }
+                }
+            } else if (swingData != null) {
+                return swingData.toString();
+            }
+        }
         return swingData;
     }
 
-    static Map<String, DataFlavor> adjustSwingDataFlavors(
-            final DataFlavor[] flavors) {
-
-        //
+    static Map<String, DataFlavor> adjustSwingDataFlavors(final DataFlavor[] flavors) {
         // Group data flavors by FX mime type.
-        //
         final Map<String, Set<DataFlavor>> mimeType2Flavors =
-                new HashMap<String, Set<DataFlavor>>(flavors.length);
+                new HashMap<>(flavors.length);
         for (DataFlavor flavor : flavors) {
             final String mimeType = getFxMimeType(flavor);
             if (mimeType2Flavors.containsKey(mimeType)) {
@@ -112,11 +144,8 @@ final class DataFlavorUtils {
             }
         }
 
-        //
         // Choose the best data flavor corresponding to the given FX mime type
-        //
-        final Map<String, DataFlavor> mimeType2Flavor =
-                new HashMap<String, DataFlavor>();
+        final Map<String, DataFlavor> mimeType2Flavor = new HashMap<>();
         for (String mimeType : mimeType2Flavors.keySet()) {
             final DataFlavor[] mimeTypeFlavors = mimeType2Flavors.get(mimeType).
                     toArray(new DataFlavor[0]);
@@ -131,29 +160,38 @@ final class DataFlavorUtils {
         return mimeType2Flavor;
     }
 
-    static Map<String, Object> readAllData(final Transferable t) {
-        final Map<String, DataFlavor> fxMimeType2DataFlavor =
-                adjustSwingDataFlavors(t.getTransferDataFlavors());
-        return readAllData(t, fxMimeType2DataFlavor);
+    private static Object readData(final Transferable t, final DataFlavor flavor) {
+        Object obj = null;
+        try {
+            obj = t.getTransferData(flavor);
+        } catch (UnsupportedFlavorException ex) {
+            // FIXME: report error
+            ex.printStackTrace(System.err);
+        } catch (IOException ex) {
+            // FIXME: report error
+            ex.printStackTrace(System.err);
+        }
+        return obj;
     }
-    
-    static Map<String, Object> readAllData(final Transferable t,
-                                           final Map<String, DataFlavor> fxMimeType2DataFlavor) {
-        final Map<String, Object> fxMimeType2Data =
-                new HashMap<String, Object>();
-        
-        for (Map.Entry<String, DataFlavor> e: fxMimeType2DataFlavor.entrySet()) {
-            Object obj = null;
-            try {
-                obj = t.getTransferData(e.getValue());
-            } catch (UnsupportedFlavorException ex) {
-                // FIXME: report error
-            } catch (IOException ex) {
-                // FIXME: report error
-            }
 
+    static Map<String, Object> readAllData(final Transferable t,
+                                           final Map<String, DataFlavor> fxMimeType2DataFlavor)
+    {
+        final Map<String, Object> fxMimeType2Data = new HashMap<>();
+        for (DataFlavor flavor : t.getTransferDataFlavors()) {
+            Object obj = readData(t, flavor);
             if (obj != null) {
-                obj = adjustSwingData(e.getValue(), obj);
+                String mimeType = getFxMimeType(flavor);
+                obj = adjustSwingData(flavor, mimeType, obj);
+                fxMimeType2Data.put(mimeType, obj);
+            }
+        }
+        for (Map.Entry<String, DataFlavor> e: fxMimeType2DataFlavor.entrySet()) {
+            String mimeType = e.getKey();
+            DataFlavor flavor = e.getValue();
+            Object obj = readData(t, flavor);
+            if (obj != null) {
+                obj = adjustSwingData(flavor, mimeType, obj);
                 fxMimeType2Data.put(e.getKey(), obj);
             }
         }

@@ -65,8 +65,6 @@ abstract class GlassScene implements TKScene {
     protected InputMethodRequests inputMethodRequests;
     private TKScenePaintListener scenePaintListener;
 
-    private TKClipboard dragSourceClipboard;
-
     private NGNode root;
     private NGCamera camera;
     protected Paint fillPaint;
@@ -241,25 +239,26 @@ abstract class GlassScene implements TKScene {
     @Override
     public TKClipboard createDragboard(boolean isDragSource) {
         ClipboardAssistance assistant = new ClipboardAssistance(Clipboard.DND) {
-            @Override public void actionPerformed(final int performedAction) {
+            @Override
+            public void actionPerformed(final int performedAction) {
+                super.actionPerformed(performedAction);
                 AccessController.doPrivileged(new PrivilegedAction<Void>() {
                     @Override
                     public Void run() {
-                        if ((dragSourceClipboard != null) && (dragSourceListener != null)) {
-                            dragSourceListener.dragDropEnd(0, 0, 0, 0,
-                                    QuantumToolkit.clipboardActionToTransferMode(performedAction));
+                        try {
+                            if (dragSourceListener != null) {
+                                dragSourceListener.dragDropEnd(0, 0, 0, 0,
+                                        QuantumToolkit.clipboardActionToTransferMode(performedAction));
+                            }
+                        } finally {
+                            QuantumClipboard.releaseCurrentDragboard();
                         }
-                        dragSourceClipboard = null;
                         return null;
                     }
                 }, getAccessControlContext());
             }
         };
-        QuantumClipboard dragboard = QuantumClipboard.getDragboardInstance(assistant);
-        if (isDragSource) {
-            dragSourceClipboard = dragboard;
-        }
-        return dragboard;
+        return QuantumClipboard.getDragboardInstance(assistant, isDragSource);
     }
 
     protected final GlassStage getStage() {

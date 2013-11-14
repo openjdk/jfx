@@ -134,7 +134,8 @@ public class JFXPanel extends JComponent {
     private volatile EmbeddedWindow stage;
     private volatile Scene scene;
 
-    private final SwingDnD dnd;
+    // Accessed on EDT only
+    private SwingDnD dnd;
 
     private EmbeddedStageInterface stagePeer;
     private EmbeddedSceneInterface scenePeer;
@@ -156,7 +157,7 @@ public class JFXPanel extends JComponent {
     private volatile int screenX = 0;
     private volatile int screenY = 0;
 
-    // accessed on EDT only
+    // Accessed on EDT only
     private BufferedImage pixelsIm;
 
     private volatile float opacity = 1.0f;
@@ -227,13 +228,6 @@ public class JFXPanel extends JComponent {
 
         setFocusable(true);
         setFocusTraversalKeysEnabled(false);
-
-        this.dnd = new SwingDnD(this, new SwingDnD.JFXPanelFacade() {
-            @Override
-            public EmbeddedSceneInterface getScene() {
-                return isFxEnabled() ? scenePeer : null;
-            }
-        });
     }
 
     /**
@@ -705,13 +699,21 @@ public class JFXPanel extends JComponent {
 
     private void setFxEnabled(boolean enabled) {
         if (!enabled) {
-            disableCount.incrementAndGet();
+            if (disableCount.incrementAndGet() == 1) {
+                if (dnd != null) {
+                    dnd.removeNotify();
+                }
+            }
         } else {
             if (disableCount.get() == 0) {
                 //should report a warning about an extra enable call ?
                 return;
             }
-            disableCount.decrementAndGet();
+            if (disableCount.decrementAndGet() == 0) {
+                if (dnd != null) {
+                    dnd.addNotify();
+                }
+            }
         }
     }
 
@@ -741,7 +743,6 @@ public class JFXPanel extends JComponent {
         super.addNotify();
 
         registerFinishListener();
-        dnd.addNotify();
         AccessController.doPrivileged(new PrivilegedAction<Void>() {
             public Void run() {
                 JFXPanel.this.getToolkit().addAWTEventListener(ungrabListener,
@@ -797,8 +798,6 @@ public class JFXPanel extends JComponent {
             }
         });
 
-        dnd.removeNotify();
-
         /* see CR 4867453 */
         getInputContext().removeNotify(this);
 
@@ -824,19 +823,28 @@ public class JFXPanel extends JComponent {
 
         @Override
         public void setEmbeddedScene(EmbeddedSceneInterface embeddedScene) {
+            if (scenePeer == embeddedScene) {
+                return;
+            }
             scenePeer = embeddedScene;
             if (scenePeer == null) {
+                SwingUtilities.invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        dnd.removeNotify();
+                        dnd = null;
+                    }
+                });
                 return;
             }
             if (pWidth > 0 && pHeight > 0) {
                 scenePeer.setSize(pWidth, pHeight);
             }
-
-            // DnD-related calls on 'scenePeer' should go from AWT EDT.
             SwingUtilities.invokeLater(new Runnable() {
-
                 @Override
                 public void run() {
+                    dnd = new SwingDnD(JFXPanel.this, scenePeer);
+                    dnd.addNotify();
                     if (scenePeer != null) {
                         scenePeer.setDragStartListener(dnd.getDragStartListener());
                     }

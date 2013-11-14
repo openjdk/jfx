@@ -25,12 +25,12 @@
 
 package javafx.embed.swing;
 
-import com.sun.javafx.embed.EmbeddedSceneDragSourceInterface;
+import com.sun.javafx.embed.EmbeddedSceneDSInterface;
 import com.sun.javafx.tk.Toolkit;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
-import java.awt.dnd.DnDConstants;
 import java.awt.dnd.DropTargetDragEvent;
+import java.awt.dnd.DropTargetDropEvent;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
@@ -40,45 +40,29 @@ import javafx.scene.input.TransferMode;
 /**
  * Drag source to deliver data from Swing environment to embedded FX scene.
  */
-final class SwingDragSource implements EmbeddedSceneDragSourceInterface {
+final class SwingDragSource implements EmbeddedSceneDSInterface {
 
-    private Map<String, Object> mimeType2Data = Collections.EMPTY_MAP;
     private int sourceActions;
-    private Set<TransferMode> cachedTransferModes;
-    
-    SwingDragSource(final DropTargetDragEvent e) {
-        setContents(e);
+    private Map<String, Object> mimeType2Data = Collections.EMPTY_MAP;
+
+    SwingDragSource() {
     }
     
     void updateContents(final DropTargetDragEvent e) {
-        updateSourceActions(e.getSourceActions());
+        sourceActions = e.getSourceActions();
         updateData(e.getTransferable());
     }
 
-    private void setContents(final DropTargetDragEvent e) {
-        this.sourceActions = DnDConstants.ACTION_NONE;
-        this.cachedTransferModes = null;
-        this.mimeType2Data = Collections.EMPTY_MAP;
-        updateContents(e);
+    void updateContents(final DropTargetDropEvent e) {
+        sourceActions = e.getSourceActions();
+        updateData(e.getTransferable());
     }
 
-    private void updateSourceActions(final int newSourceActions) {
-        if (newSourceActions != this.sourceActions) {
-            this.sourceActions = newSourceActions;
-            this.cachedTransferModes = null;
-        }
-    }
-
-    private void updateData(final Transferable t) {
+    private void updateData(Transferable t) {
         final Map<String, DataFlavor> mimeType2DataFlavor =
                 DataFlavorUtils.adjustSwingDataFlavors(
                 t.getTransferDataFlavors());
-        if (mimeType2DataFlavor.keySet().equals(mimeType2Data.keySet())) {
-            // Mime types have't changed. Assume data has not been
-            // changed as well, so don't need to reread it
-            return;
-        }
-        //
+
         // Read data from the given Transferable in advance. Need to do this
         // because we don't want Transferable#getTransferData() to be called
         // from DropTargetListener#drop().
@@ -99,7 +83,7 @@ final class SwingDragSource implements EmbeddedSceneDragSourceInterface {
         // SwingDragSource#getData() is called from FX user code and from
         // QuantumClipboard#getContent() (sik!). These calls usually take
         // place in the context of 
-        // EmbeddedSceneDropTargetInterface#handleDragDrop() method as the 
+        // EmbeddedSceneDTInterface#handleDragDrop() method as the
         // normal handling of DnD.
         // Instead of keeping reference to source Transferable we just read
         // all its data while in the context safe for calling
@@ -118,11 +102,7 @@ final class SwingDragSource implements EmbeddedSceneDragSourceInterface {
     @Override
     public Set<TransferMode> getSupportedActions() {
         assert Toolkit.getToolkit().isFxUserThread();
-        if (cachedTransferModes == null) {
-            cachedTransferModes =
-                    SwingDnD.dropActionsToTransferModes(sourceActions);
-        }
-        return cachedTransferModes;
+        return SwingDnD.dropActionsToTransferModes(sourceActions);
     }
 
     @Override
