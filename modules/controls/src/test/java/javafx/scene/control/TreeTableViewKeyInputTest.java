@@ -52,7 +52,6 @@ import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-//@Ignore("Disabling tests as they fail with OOM in continuous builds")
 public class TreeTableViewKeyInputTest {
     private TreeTableView<String> tableView;
     private TreeTableView.TreeTableViewSelectionModel<String> sm;

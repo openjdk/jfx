@@ -51,7 +51,6 @@ import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-//@Ignore("Disabling tests as they fail with OOM in continuous builds")
 public class TableViewKeyInputTest {
     private TableView<String> tableView;
     private TableView.TableViewSelectionModel<String> sm;
