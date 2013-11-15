@@ -52,6 +52,9 @@ import com.sun.scenario.animation.shared.ClipEnvelope;
 import com.sun.scenario.animation.shared.PulseReceiver;
 
 import static com.sun.javafx.animation.TickCalculation.*;
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 
 /**
  * The class {@code Animation} provides the core functionality of all animations
@@ -130,14 +133,25 @@ public abstract class Animation {
     private boolean paused = false;
     private final AbstractMasterTimer timer;
 
+    // Access control context, captured whenever we add this pulse reciever to
+    // the master timer (which is called when an animation is played or resumed)
+    private AccessControlContext accessCtrlCtx = null;
+
     private long now() {
         return TickCalculation.fromNano(timer.nanos());
+    }
+
+    private void addPulseReceiver() {
+        // Capture the Access Control Context to be used during the animation pulse
+        accessCtrlCtx = AccessController.getContext();
+
+        timer.addPulseReceiver(pulseReceiver);
     }
 
     void startReceiver(long delay) {
         paused = false;
         startTime = now() + delay;
-        timer.addPulseReceiver(pulseReceiver);
+        addPulseReceiver();
     }
 
     void pauseReceiver() {
@@ -153,7 +167,7 @@ public abstract class Animation {
             final long deltaTime = now() - pauseTime;
             startTime += deltaTime;
             paused = false;
-            timer.addPulseReceiver(pulseReceiver);
+            addPulseReceiver();
         }
     }
 
@@ -164,8 +178,16 @@ public abstract class Animation {
             if (elapsedTime < 0) {
                 return;
             }
+            if (accessCtrlCtx == null) {
+                throw new IllegalStateException("Error: AccessControlContext not captured");
+            }
 
-            impl_timePulse(elapsedTime);
+            AccessController.doPrivileged(new PrivilegedAction<Void>() {
+                @Override public Void run() {
+                    impl_timePulse(elapsedTime);
+                    return null;
+                }
+            }, accessCtrlCtx);
         }
     };
 

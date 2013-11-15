@@ -27,6 +27,10 @@ package javafx.animation;
 
 import com.sun.javafx.tk.Toolkit;
 import com.sun.scenario.animation.AbstractMasterTimer;
+import com.sun.scenario.animation.shared.TimerReceiver;
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 
 /**
  * The class {@code AnimationTimer} allows to create a timer, that is called in
@@ -43,8 +47,27 @@ import com.sun.scenario.animation.AbstractMasterTimer;
  */
 public abstract class AnimationTimer {
 
+    private class AnimationTimerReceiver implements TimerReceiver {
+        @Override public void handle(final long now) {
+            if (accessCtrlCtx == null) {
+                throw new IllegalStateException("Error: AccessControlContext not captured");
+            }
+
+            AccessController.doPrivileged(new PrivilegedAction<Void>() {
+                @Override public Void run() {
+                    AnimationTimer.this.handle(now);
+                    return null;
+                }
+            }, accessCtrlCtx);
+        }
+    }
+
     private final AbstractMasterTimer timer;
+    private final AnimationTimerReceiver timerReceiver = new AnimationTimerReceiver();
     private boolean active;
+
+    // Access control context, captured in start()
+    private AccessControlContext accessCtrlCtx = null;
 
     /**
      * Creates a new timer.
@@ -78,7 +101,9 @@ public abstract class AnimationTimer {
      */
     public void start() {
         if (!active) {
-            timer.addAnimationTimer(this);
+            // Capture the Access Control Context to be used during the animation pulse
+            accessCtrlCtx = AccessController.getContext();
+            timer.addAnimationTimer(timerReceiver);
             active = true;
         }
     }
@@ -89,7 +114,7 @@ public abstract class AnimationTimer {
      */
     public void stop() {
         if (active) {
-            timer.removeAnimationTimer(this);
+            timer.removeAnimationTimer(timerReceiver);
             active = false;
         }
     }

@@ -54,8 +54,6 @@ import sun.reflect.misc.ReflectUtil;
 public class BeanAdapter extends AbstractMap<String, Object> {
     private final Object bean;
 
-    private static final ClassLoader contextClassLoader;
-
     private static class MethodCache {
         private final Map<String, List<Method>> methods;
         private final MethodCache nextClassCache;
@@ -93,14 +91,7 @@ public class BeanAdapter extends AbstractMap<String, Object> {
     public static final String PROPERTY_SUFFIX = "Property";
 
     public static final String VALUE_OF_METHOD_NAME = "valueOf";
-    
-    static {
-        contextClassLoader = Thread.currentThread().getContextClassLoader();
 
-        if (contextClassLoader == null) {
-            throw new NullPointerException();
-        }
-    }
     /**
      * Creates a new Bean adapter.
      *
@@ -474,10 +465,11 @@ public class BeanAdapter extends AbstractMap<String, Object> {
         } else if (type == Class.class) {
             try {   
                 ReflectUtil.checkPackageAccess(value.toString());
+                final ClassLoader cl = Thread.currentThread().getContextClassLoader();
                 coercedValue = Class.forName(
                         value.toString(), 
                         false, 
-                        BeanAdapter.contextClassLoader);
+                        cl);
             } catch (ClassNotFoundException exception) {
                 throw new IllegalArgumentException(exception);
             }

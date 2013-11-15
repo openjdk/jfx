@@ -62,6 +62,7 @@ import com.sun.javafx.stage.PopupWindowPeerListener;
 import com.sun.javafx.stage.WindowCloseRequestHandler;
 import com.sun.javafx.stage.WindowEventDispatcher;
 import com.sun.javafx.tk.Toolkit;
+import java.security.AllPermission;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
@@ -474,7 +475,18 @@ public abstract class PopupWindow extends Window {
         Toolkit toolkit = Toolkit.getToolkit();
         if (visible && (impl_peer == null)) {
             // Setup the peer
-            impl_peer = toolkit.createTKPopupStage(this, getOwnerWindow().impl_getPeer(), acc);
+            StageStyle popupStyle;
+            try {
+                final SecurityManager securityManager =
+                        System.getSecurityManager();
+                if (securityManager != null) {
+                    securityManager.checkPermission(new AllPermission());
+                }
+                popupStyle = StageStyle.TRANSPARENT;
+            } catch (final SecurityException e) {
+                popupStyle = StageStyle.UNDECORATED;
+            }
+            impl_peer = toolkit.createTKPopupStage(this, popupStyle, getOwnerWindow().impl_getPeer(), acc);
             peerListener = new PopupWindowPeerListener(PopupWindow.this);
         }
     }
