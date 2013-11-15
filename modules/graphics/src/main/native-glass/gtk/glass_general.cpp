@@ -107,6 +107,13 @@ jfieldID jApplicationScreen;
 jfieldID jApplicationVisualID;
 jmethodID jApplicationReportException;
 
+void init_threads() {
+    if (!g_thread_supported()) {
+        g_thread_init(NULL);
+    }
+    gdk_threads_init();
+}
+
 JNIEXPORT jint JNICALL
 JNI_OnLoad(JavaVM *jvm, void *reserved)
 {
@@ -212,8 +219,24 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
     jApplicationReportException = env->GetStaticMethodID(
         jApplicationCls, "reportException", "(Ljava/lang/Throwable;)V");
 
-    g_thread_init(NULL);
-    gdk_threads_init();
+    clazz = env->FindClass("sun/misc/GThreadHelper");
+    if (clazz) {
+        jmethodID mid_getAndSetInitializationNeededFlag = env->GetStaticMethodID(clazz, "getAndSetInitializationNeededFlag", "()Z");
+        jmethodID mid_lock = env->GetStaticMethodID(clazz, "lock", "()V");
+        jmethodID mid_unlock = env->GetStaticMethodID(clazz, "unlock", "()V");
+
+        env->CallStaticVoidMethod(clazz, mid_lock);
+
+        if (!env->CallStaticBooleanMethod(clazz, mid_getAndSetInitializationNeededFlag)) {
+            init_threads();
+        }
+
+        env->CallStaticVoidMethod(clazz, mid_unlock);
+    } else {
+        env->ExceptionClear();
+        init_threads();
+    }
+
     gdk_threads_enter();
     gtk_init(NULL, NULL);
 
