@@ -75,31 +75,6 @@ D3DPipelineManager::D3DPipelineManager(IConfig &cfg)
 
     devType = SelectDeviceType();
 
-    // Partial fix to RT-5534
-    // Cache the value set to prism.multisample (in the Java land)
-
-    int numSamples = cfg.getInt("numSamples");
-
-    switch (numSamples) {
-        case 0:
-            userMultiSampleType = D3DMULTISAMPLE_NONE;
-            break;
-        case 2:
-            userMultiSampleType = D3DMULTISAMPLE_2_SAMPLES;
-            RlsTrace(NWT_TRACE_INFO, "Multisample == D3DMULTISAMPLE_2_SAMPLES\n");
-            break;
-        case 4:
-            userMultiSampleType = D3DMULTISAMPLE_4_SAMPLES;
-            RlsTrace(NWT_TRACE_INFO, "Multisample == D3DMULTISAMPLE_4_SAMPLES\n");
-            break;
-        case 8:
-            userMultiSampleType = D3DMULTISAMPLE_8_SAMPLES;
-            RlsTrace(NWT_TRACE_INFO, "Multisample == D3DMULTISAMPLE_8_SAMPLES\n");
-            break;
-        default:
-            userMultiSampleType = D3DMULTISAMPLE_NONE;
-            RlsTrace(NWT_TRACE_INFO, "Only support multisample value of 2|4|8, forcing to D3DMULTISAMPLE_0_SAMPLES\n");
-    }
 }
 
 HRESULT D3DPipelineManager::ReleaseD3D()

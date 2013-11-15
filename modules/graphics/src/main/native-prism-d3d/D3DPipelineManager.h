@@ -83,8 +83,6 @@ public:
     LPDIRECT3D9 GetD3DObject() { return pd3d9; }
     D3DDEVTYPE GetDeviceType() { return devType; }
 
-    D3DMULTISAMPLE_TYPE GetUserMultiSampleType() { return userMultiSampleType; };
-
     // returns adapterOrdinal given a HMONITOR handle
     UINT GetAdapterOrdinalByHmon(HMONITOR hMon);
 
@@ -146,7 +144,6 @@ private:
     // instance of this object
     static D3DPipelineManager* pMgr;
 
-    D3DMULTISAMPLE_TYPE userMultiSampleType;
 };
 
 #define OS_UNDEFINED    (0 << 0)
