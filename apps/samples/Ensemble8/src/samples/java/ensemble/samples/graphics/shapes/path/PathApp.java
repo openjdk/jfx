@@ -98,6 +98,7 @@ public class PathApp extends Application {
         path2.setFill(null);
         path2.setStroke(Color.DODGERBLUE);
         path2.setStrokeWidth(2);
+        path2.setTranslateY(36);
         root.getChildren().addAll(path1, path2);
         return root;
     }

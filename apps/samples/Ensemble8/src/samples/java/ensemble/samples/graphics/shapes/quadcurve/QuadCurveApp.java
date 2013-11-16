@@ -31,14 +31,12 @@
  */
 package ensemble.samples.graphics.shapes.quadcurve;
 
-import ensemble.samples.graphics.shapes.polyline.*;
 import javafx.application.Application;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Polyline;
 import javafx.scene.shape.QuadCurve;
 import javafx.stage.Stage;
 
@@ -66,7 +64,7 @@ public class QuadCurveApp extends Application {
 
     public Parent createContent() {
         Pane root = new Pane();
-        root.setPrefSize(245, 100);
+        root.setPrefSize(184, 100);
         root.setMinSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
         root.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
         quadCurve.setStartX(0);

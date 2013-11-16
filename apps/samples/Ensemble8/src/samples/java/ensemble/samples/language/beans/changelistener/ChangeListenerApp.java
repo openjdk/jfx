@@ -36,6 +36,7 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Parent;
@@ -119,6 +120,7 @@ public class ChangeListenerApp extends Application {
         // show all nodes
         vbox.getChildren().addAll(text, buttonAdd, buttonRemove);
         outerHbox.getChildren().addAll(vbox, rect);
+        outerHbox.setPadding(new Insets(5,5,5,5));
         return outerHbox;
     }
     
