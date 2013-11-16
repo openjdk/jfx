@@ -172,18 +172,14 @@ HRESULT D3DPipelineManager::InitAdapters(IConfig &cfg)
 HRESULT
 D3DPipelineManager::CheckOSVersion()
 {
-    // require Windows XP or newer client-class OS
-    if (OS::isWindowsXPorNewer() &&
-        !D3DPPLM_OsVersionMatches(OS_WINSERV_2008|OS_WINSERV_2003))
-    {
+    // require Windows XP or newer OS
+    if (OS::isWindowsXPorNewer()) {
         TraceLn(NWT_TRACE_INFO,
-                   "D3DPPLM::CheckOSVersion: Windows XP or newer client-classs"\
-                   " OS detected, passed");
+                   "D3DPPLM::CheckOSVersion: Windows XP or newer OS detected, passed");
         return S_OK;
     }
     RlsTraceLn(NWT_TRACE_ERROR,
-                  "D3DPPLM::CheckOSVersion: Windows 2000 or earlier (or a "\
-                  "server) OS detected, failed");
+                  "D3DPPLM::CheckOSVersion: Windows 2000 or earlier OS detected, failed");
     if (bNoHwCheck) {
         RlsTraceLn(NWT_TRACE_WARNING,
                       "  OS check overridden via NEWT_D3D_NO_HWCHECK");
