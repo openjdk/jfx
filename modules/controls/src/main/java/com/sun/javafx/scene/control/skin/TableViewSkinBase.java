@@ -651,6 +651,15 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
     /** {@inheritDoc} */
     @Override protected void layoutChildren(final double x, double y,
             final double w, final double h) {
+
+        C table = getSkinnable();
+
+        // an unlikely scenario, but it does pop up in unit tests, so guarding
+        // here to prevent test failures seems ok.
+        if (table == null) {
+            return;
+        }
+
         super.layoutChildren(x, y, w, h);
         
         if (needCellsRecreated) {
@@ -664,8 +673,8 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
         needCellsRebuilt = false;
         needCellsRecreated = false;
         needCellsReconfigured = false;
-        
-        final double baselineOffset = getSkinnable().getLayoutBounds().getHeight() / 2;
+
+        final double baselineOffset = table.getLayoutBounds().getHeight() / 2;
 
         // position the table header
         double tableHeaderRowHeight = tableHeaderRow.prefHeight(-1);

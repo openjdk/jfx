@@ -810,7 +810,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
 
         int leadIndex = fm.getFocusedIndex();
         int leadSelectedIndex = onScrollPageUp.call(getAnchor());
-        sm.selectRange(leadSelectedIndex, leadIndex + 1);
+        sm.selectRange(leadIndex, leadSelectedIndex - 1);
     }
     
     private void discontinuousSelectPageDown() {

@@ -1676,4 +1676,26 @@ public class ListViewKeyInputTest {
         assertEquals(4, sm.getSelectedItems().size());
         assertTrue(fm.isFocused(3));
     }
+
+    @Test public void test_rt34200() {
+        final int items = 100;
+        listView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        new StageLoader(listView);
+        final FocusModel fm = listView.getFocusModel();
+        final MultipleSelectionModel sm = listView.getSelectionModel();
+
+        sm.clearAndSelect(99);
+        listView.scrollTo(99);
+        assertEquals(99, getAnchor());
+        assertEquals(99, fm.getFocusedIndex());
+
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(99, getAnchor());
+        assertTrue(fm.getFocusedIndex() < 99);
+    }
 }

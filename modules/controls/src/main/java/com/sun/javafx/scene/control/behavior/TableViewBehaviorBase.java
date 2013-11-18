@@ -1192,7 +1192,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         int leadSelectedIndex = onScrollPageUp.call(null);
         
         if (! sm.isCellSelectionEnabled()) {
-            sm.selectRange(leadSelectedIndex, leadIndex + 1);
+            sm.selectRange(leadIndex, leadSelectedIndex - 1);
         }
     }
     
