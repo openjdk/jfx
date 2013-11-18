@@ -26,9 +26,6 @@
 #ifndef D3DPHONGMATERIAL_H
 #define D3DPHONGMATERIAL_H
 
-#include <windows.h>
-#include <d3d9.h>
-#include <stddef.h>
 #include "D3DContext.h"
 
 // See MaterialPhong.h, MaterialPhongShaders.h

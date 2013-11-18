@@ -26,9 +26,6 @@
 #ifndef D3DMESHVIEW_H
 #define D3DMESHVIEW_H
 
-#include <windows.h>
-#include <d3d9.h>
-#include <stddef.h>
 #include "D3DContext.h"
 #include "D3DLight.h"
 #include "D3DMesh.h"

@@ -26,9 +26,6 @@
 #ifndef D3DMESH_H
 #define D3DMESH_H
 
-#include <windows.h>
-#include <d3d9.h>
-#include <stddef.h>
 #include "D3DContext.h"
 
 // See     MeshVbIb.h
