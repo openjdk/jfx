@@ -78,6 +78,12 @@ public class CreateJarParams extends CommonParams {
         this.css2bin = css2bin;
     }
 
+    /**
+     * In JKD8/FX8 launcher is never embedded,
+     * app must use main to call Application launcher()
+     * @deprecated
+     * @param embedLauncher
+     */
     public void setEmbedLauncher(boolean embedLauncher) {
         this.embedLauncher = embedLauncher;
     }
@@ -109,7 +115,7 @@ public class CreateJarParams extends CommonParams {
         return "CreateJarParams{" + "applicationClass=" + applicationClass
                 + " preloader=" + preloader + " classpath=" + classpath
                 + " manifestAttrs=" + manifestAttrs
-                + " embedLauncher=" + embedLauncher + " css2bin=" + css2bin
+                + " embedLauncher=deprecated" + " css2bin=" + css2bin
                 + " outfile=" + outfile + " sdkHome=" + fxVersion + '}'
                 + "            CommonParams{" + "outdir=" + outdir
                 + " verbose=" + verbose + " resources=" + resources + '}';

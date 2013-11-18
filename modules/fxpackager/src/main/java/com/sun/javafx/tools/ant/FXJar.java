@@ -115,8 +115,6 @@ public class FXJar extends Task {
         checkAttributesAndElements();
 
         createJarParams.setCss2bin(css2bin);
-        //always embed JavaFX launcher
-        createJarParams.setEmbedLauncher(true);
 
         if (app != null) {
            createJarParams.setApplicationClass(app.get().mainClass);
