@@ -1678,7 +1678,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             Callback<VirtualFlow,T> createCell = getCreateCell();
             if (createCell != null) {
                 accumCell = createCell.call(this);
-                accumCell.getProperties().put(NEW_CELL, null);
                 accumCellParent.getChildren().setAll(accumCell);
             }
         }
@@ -1786,10 +1785,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         assert cell != null;
 
         cell.updateIndex(index);
-        
-        if (cell.isNeedsLayout() && cell.getScene() != null && cell.getProperties().containsKey(NEW_CELL)) {
+
+        // make sure the cell is sized correctly. This is important for both
+        // general layout of cells in a VirtualFlow, but also in cases such as
+        // RT-34333, where the sizes were being reported incorrectly to the
+        // ComboBox popup.
+        if (cell.isNeedsLayout() && cell.getScene() != null) {
             cell.impl_processCSS(false);
-            cell.getProperties().remove(NEW_CELL);
         }
     }
 
@@ -1799,13 +1801,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      *                                                                         *
      **************************************************************************/
 
-    /**
-     * Indicates that this is a newly created cell and we need call impl_processCSS for it.
-     * 
-     * See RT-23616 for more details.
-     */
-    private static final String NEW_CELL = "newcell";
-    
     /**
      * Get a cell which can be used in the layout. This function will reuse
      * cells from the pile where possible, and will create new cells when
@@ -1855,7 +1850,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 }
             } else {
                 cell = getCreateCell().call(this);
-                cell.getProperties().put(NEW_CELL, null);
             }
         }
 
