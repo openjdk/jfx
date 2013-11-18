@@ -29,6 +29,7 @@ import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.geometry.HPos;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
@@ -1149,7 +1150,11 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                 textClip = new Rectangle();
             }
 
-            textClip.setX(text.getLayoutBounds().getMinX());
+            if (labeled.getEffectiveNodeOrientation() == NodeOrientation.LEFT_TO_RIGHT) {
+                textClip.setX(text.getLayoutBounds().getMinX());
+            } else {
+                textClip.setX(text.getLayoutBounds().getMaxX() - wrapWidth);
+            }
             textClip.setY(text.getLayoutBounds().getMinY());
             textClip.setWidth(wrapWidth);
             textClip.setHeight(wrapHeight);
