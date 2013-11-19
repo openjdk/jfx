@@ -78,22 +78,23 @@ public class Hueristic2D implements Algorithm {
                     newNode = traversalNodeStack.pop();
                 }
             }
-
-            Bounds currentB = node.localToScene(node.getLayoutBounds());
-
-            if (cacheStartTraversalNode != null) {
-                Bounds cachedB = cacheStartTraversalNode.localToScene(cacheStartTraversalNode.getLayoutBounds());
-                switch (dir) {
-                case UP:
-                case DOWN:
-                    newNode = getNearestNodeUpOrDown(currentB, cachedB, engine, node, newNode, dir);
-                    break;
-                case LEFT:
-                case RIGHT:
-                    newNode = getNearestNodeLeftOrRight(currentB, cachedB, engine, node, newNode, dir);
-                    break;
-                default:
-                    break;
+            
+            if (newNode == null) {
+                Bounds currentB = node.localToScene(node.getLayoutBounds());
+                if (cacheStartTraversalNode != null) {
+                    Bounds cachedB = cacheStartTraversalNode.localToScene(cacheStartTraversalNode.getLayoutBounds());
+                    switch (dir) {
+                        case UP:
+                        case DOWN:
+                            newNode = getNearestNodeUpOrDown(currentB, cachedB, engine, node, dir);
+                            break;
+                        case LEFT:
+                        case RIGHT:
+                            newNode = getNearestNodeLeftOrRight(currentB, cachedB, engine, node, dir);
+                            break;
+                        default:
+                            break;
+                    }
                 }
             }
         }
@@ -447,7 +448,7 @@ public class Hueristic2D implements Algorithm {
         }
     };
 
-    protected Node getNearestNodeUpOrDown(Bounds currentB, Bounds originB, TraversalEngine engine, Node node, Node reversingNode, Direction dir) {
+    protected Node getNearestNodeUpOrDown(Bounds currentB, Bounds originB, TraversalEngine engine, Node node, Direction dir) {
 
         List<Node> nodes = engine.getAllTargetNodes();
         
@@ -456,9 +457,12 @@ public class Hueristic2D implements Algorithm {
         
         Bounds biasedB = new BoundingBox(originB.getMinX(), currentB.getMinY(), originB.getWidth(), currentB.getHeight());
 
-        Point2D currentMid2D = new Point2D(currentB.getMinX()+(currentB.getWidth()/2), currentB.getMinY());
-        Point2D currenLeftCorner2D = new Point2D(currentB.getMinX(),ySideInDirection.apply(currentB));
+        Point2D currentMid2D = new Point2D(currentB.getMinX()+(currentB.getWidth()/2), ySideInDirection.apply(currentB));
+        Point2D biasedMid2D = new Point2D(originB.getMinX()+(originB.getWidth()/2), ySideInDirection.apply(currentB));
+        Point2D currentLeftCorner2D = new Point2D(currentB.getMinX(),ySideInDirection.apply(currentB));
+        Point2D biasedLeftCorner2D = new Point2D(originB.getMinX(),ySideInDirection.apply(currentB));
         Point2D currentRightCorner2D = new Point2D(currentB.getMaxX(), ySideInDirection.apply(currentB));
+        Point2D biasedRightCorner2D = new Point2D(originB.getMaxX(), ySideInDirection.apply(currentB));
 
         Point2D originLeftCorner2D = new Point2D(originB.getMinX(), ySideInDirection.apply(originB));
 
@@ -471,167 +475,156 @@ public class Hueristic2D implements Algorithm {
         TargetNode nearestNodeLeft = null;
         TargetNode nearestNodeAnythingAnywhere = null;
 
-        if (nodes.size() > 0) {
+        for (int nodeIndex = 0; nodeIndex < nodes.size(); nodeIndex++) {
+            final Node n = nodes.get(nodeIndex);
+
+            Bounds targetBounds = n.localToScene(n.getLayoutBounds());
             /*
-             ** we've just changed direction, and have a node on stack.
-             ** there is a strong preference for this node, just make sure
-             ** it's not a bad choice, as sometimes we got here as a last-chance
+             ** check that the target node starts after we 
+             ** and the target node ends after we end
              */
-            if (reversingNode != null) {
-                return reversingNode;
-            }
-            
-            for (int nodeIndex = 0; nodeIndex < nodes.size(); nodeIndex++) {
-                final Node n = nodes.get(nodeIndex);
+            if (dir == UP ? (currentB.getMinY() > targetBounds.getMaxY())
+                    : currentB.getMaxY() < targetBounds.getMinY()) {
 
-                Bounds targetBounds = n.localToScene(n.getLayoutBounds());
+                targetNode.node = n;
+                targetNode.bounds = targetBounds;
+
                 /*
-                ** check that the target node starts after we 
-                ** and the target node ends after we end
-                */
-                if (dir == UP ? (currentB.getMinY() > targetBounds.getMaxY()) :
-                        currentB.getMaxY() < targetBounds.getMinY()) {
+                 * closest biased : simple 2d
+                 * Negative means the Node is on the same Y axis. This will result in outdB == 0, making this a preferred Node.
+                 */
+                double outdB = Math.max(0, outDistance(dir, biasedB, targetBounds));
 
-                    targetNode.node = n;
-                    targetNode.bounds = targetBounds;
+                if (isOnAxis(dir, biasedB, targetBounds)) {
+                    targetNode.biased2DMetric = outdB + centerSideDistance(dir, biasedB, targetBounds) / 100;
+                } else {
+                    final double cosd = cornerSideDistance(dir, biasedB, targetBounds);
+                    targetNode.biased2DMetric = 100000 + outdB * outdB + 9 * cosd * cosd;
+                }
+                /*
+                 * closest current : simple 2d
+                 * Negative means the Node is on the same Y axis. This will result in outdB == 0, making this a preferred Node.
+                 */
+                double outdC = Math.max(0, outDistance(dir, currentB, targetBounds));
 
-                    /*
-                    ** closest biased : simple 2d
-                    */
-                    double outdB = outDistance(dir, biasedB, targetBounds);
+                if (isOnAxis(dir, currentB, targetBounds)) {
+                    targetNode.current2DMetric = outdC + centerSideDistance(dir, currentB, targetBounds) / 100;
+                } else {
+                    final double cosd = cornerSideDistance(dir, currentB, targetBounds);
+                    targetNode.current2DMetric = 100000 + outdC * outdC + 9 * cosd * cosd;
+                }
 
-                    if (isOnAxis(dir, biasedB, targetBounds)) {
-                        targetNode.biased2DMetric = outdB + centerSideDistance(dir, biasedB, targetBounds) / 100;
-                    }
-                    else {
-                        final double cosd = cornerSideDistance(dir, biasedB, targetBounds);
-                        targetNode.biased2DMetric = 100000 + outdB*outdB + 9*cosd*cosd;
-                    }
-                    /*
-                    ** closest current : simple 2d
-                    */
-                    double outdC = outDistance(dir, currentB, targetBounds);
+                targetNode.leftCornerDistance = currentLeftCorner2D.distance(targetBounds.getMinX(), ySideInOpositeDirection.apply(targetBounds));
+                targetNode.rightCornerDistance = currentRightCorner2D.distance(targetBounds.getMaxX(), ySideInOpositeDirection.apply(targetBounds));
 
-                    if (isOnAxis(dir, currentB, targetBounds)) {
-                        targetNode.current2DMetric = outdC + centerSideDistance(dir, currentB, targetBounds) / 100;
-                    }
-                    else {
-                        final double cosd = cornerSideDistance(dir, currentB, targetBounds);
-                        targetNode.current2DMetric = 100000 + outdC*outdC + 9*cosd*cosd;
-                    }
+                double midDistance = currentMid2D.distance(targetBounds.getMinX() + (targetBounds.getWidth() / 2), ySideInOpositeDirection.apply(targetBounds));
+                double currentLeftToTargetMidDistance = currentLeftCorner2D.distance(targetBounds.getMinX() + (targetBounds.getWidth() / 2), ySideInOpositeDirection.apply(targetBounds));
+                double currentLeftToTargetRightDistance = currentLeftCorner2D.distance(targetBounds.getMaxX(), ySideInOpositeDirection.apply(targetBounds));
+                double currentRightToTargetLeftDistance = currentRightCorner2D.distance(targetBounds.getMinX(), ySideInOpositeDirection.apply(targetBounds));
+                double currentRightToTargetMidDistance = currentRightCorner2D.distance(targetBounds.getMinX() + (targetBounds.getWidth() / 2), ySideInOpositeDirection.apply(targetBounds));
+                double currentRightToTargetRightDistance = currentRightCorner2D.distance(targetBounds.getMaxX(), ySideInOpositeDirection.apply(targetBounds));
+                double currentMidToTargetLeftDistance = currentMid2D.distance(targetBounds.getMinX(), ySideInOpositeDirection.apply(targetBounds));
+                double currentMidToTargetMidDistance = currentMid2D.distance(targetBounds.getMinX() + (targetBounds.getWidth() / 2), ySideInOpositeDirection.apply(targetBounds));
+                double currentMidToTargetRightDistance = currentMid2D.distance(targetBounds.getMaxX(), ySideInOpositeDirection.apply(targetBounds));
 
-                    targetNode.leftCornerDistance = currenLeftCorner2D.distance(targetBounds.getMinX(), ySideInOpositeDirection.apply(targetBounds));
-                    targetNode.midDistance = currentMid2D.distance(targetBounds.getMinX()+(originB.getWidth()/2), ySideInOpositeDirection.apply(targetBounds));
-                    targetNode.rightCornerDistance = currentRightCorner2D.distance(originB.getMaxX(), ySideInOpositeDirection.apply(targetBounds));
+                double biasLeftToTargetMidDistance = biasedLeftCorner2D.distance(targetBounds.getMinX() + (targetBounds.getWidth() / 2), ySideInOpositeDirection.apply(targetBounds));
+                double biasLeftToTargetRightDistance = biasedLeftCorner2D.distance(targetBounds.getMaxX(), ySideInOpositeDirection.apply(targetBounds));
+                double biasRightToTargetMidDistance = biasedRightCorner2D.distance(targetBounds.getMinX() + (targetBounds.getWidth() / 2), ySideInOpositeDirection.apply(targetBounds));
+                double biasMidToTargetRightDistance = biasedMid2D.distance(targetBounds.getMaxX(), ySideInOpositeDirection.apply(targetBounds));
 
-                    double currentTopLeftToTargetMidDistance = currenLeftCorner2D.distance(targetBounds.getMinX()+(targetBounds.getWidth()/2), ySideInOpositeDirection.apply(targetBounds));
-                    double currentTopLeftToTargetBottomRightDistance = currenLeftCorner2D.distance(targetBounds.getMaxX(), ySideInOpositeDirection.apply(targetBounds));
-                    double currentTopRightToTargetBottomLeftDistance = currentRightCorner2D.distance(targetBounds.getMinX(), ySideInOpositeDirection.apply(targetBounds));
-                    double currentTopRightToTargetMidDistance = currentRightCorner2D.distance(targetBounds.getMinX()+(targetBounds.getWidth()/2), ySideInOpositeDirection.apply(targetBounds));
-                    double currentTopRightToTargetBottomRightDistance = currentRightCorner2D.distance(targetBounds.getMaxX(), ySideInOpositeDirection.apply(targetBounds));
-                    double currentMidToTargetBottomLeftDistance = currentMid2D.distance(targetBounds.getMinX(), ySideInOpositeDirection.apply(targetBounds));
-                    double currentMidToTargetMidDistance = currentMid2D.distance(targetBounds.getMinX()+(targetBounds.getWidth()/2), ySideInOpositeDirection.apply(targetBounds));
-                    double currentMidToTargetBottomRightDistance = currentMid2D.distance(targetBounds.getMaxX(), ySideInOpositeDirection.apply(targetBounds));
+                targetNode.averageDistance
+                        = (targetNode.leftCornerDistance + biasLeftToTargetMidDistance + biasLeftToTargetRightDistance
+                        + currentRightToTargetLeftDistance + targetNode.rightCornerDistance + biasRightToTargetMidDistance + midDistance) / 7;
 
-                    double biasTopLeftToTargetMidDistance = currenLeftCorner2D.distance(targetBounds.getMinX()+(originB.getWidth()/2), ySideInOpositeDirection.apply(targetBounds));
-                    double biasTopLeftToTargetBottomRightDistance = currenLeftCorner2D.distance(originB.getMaxX(), ySideInOpositeDirection.apply(targetBounds));
-                    double biasTopRightToTargetMidDistance = currentRightCorner2D.distance(targetBounds.getMinX()+(originB.getWidth()/2), ySideInOpositeDirection.apply(targetBounds));
-                    double biasMidToTargetBottomRightDistance = currentMid2D.distance(originB.getMaxX(), ySideInOpositeDirection.apply(targetBounds));
+                targetNode.biasShortestDistance
+                        = findMin(targetNode.leftCornerDistance, biasLeftToTargetMidDistance, biasLeftToTargetRightDistance,
+                                currentRightToTargetLeftDistance, biasRightToTargetMidDistance, targetNode.rightCornerDistance,
+                                currentMidToTargetLeftDistance, midDistance, biasMidToTargetRightDistance);
 
-                    targetNode.averageDistance =
-                        (targetNode.leftCornerDistance+biasTopLeftToTargetMidDistance+biasTopLeftToTargetBottomRightDistance+
-                         currentTopRightToTargetBottomLeftDistance+targetNode.rightCornerDistance+biasTopRightToTargetMidDistance+targetNode.midDistance)/7;
+                targetNode.shortestDistance
+                        = findMin(targetNode.leftCornerDistance, currentLeftToTargetMidDistance, currentLeftToTargetRightDistance,
+                                currentRightToTargetLeftDistance, currentRightToTargetMidDistance, currentRightToTargetRightDistance,
+                                currentMidToTargetLeftDistance, currentMidToTargetMidDistance, currentMidToTargetRightDistance);
 
-                    targetNode.biasShortestDistance =
-                        findMin(targetNode.leftCornerDistance, biasTopLeftToTargetMidDistance, biasTopLeftToTargetBottomRightDistance,
-                                 currentTopRightToTargetBottomLeftDistance, biasTopRightToTargetMidDistance, targetNode.rightCornerDistance,
-                                 currentMidToTargetBottomLeftDistance, targetNode.midDistance, biasMidToTargetBottomRightDistance);
+                /*
+                 ** closest biased : simple 2d
+                 */
+                if (outdB >= 0.0) {
+                    if (nearestNodeOriginSimple2D == null || targetNode.biased2DMetric < nearestNodeOriginSimple2D.biased2DMetric) {
 
-                    targetNode.shortestDistance =
-                        findMin(targetNode.leftCornerDistance, currentTopLeftToTargetMidDistance, currentTopLeftToTargetBottomRightDistance,
-                                 currentTopRightToTargetBottomLeftDistance, currentTopRightToTargetMidDistance, currentTopRightToTargetBottomRightDistance,
-                                 currentMidToTargetBottomLeftDistance, currentMidToTargetMidDistance, currentMidToTargetBottomRightDistance);
-
-                    /*
-                    ** closest biased : simple 2d
-                    */
-                    if (outdB >= 0.0) {
-                        if (nearestNodeOriginSimple2D == null || targetNode.biased2DMetric < nearestNodeOriginSimple2D.biased2DMetric) {
-
-                            if (nearestNodeOriginSimple2D == null) {
-                                nearestNodeOriginSimple2D = new TargetNode();
-                            }
-                            nearestNodeOriginSimple2D.copy(targetNode);
+                        if (nearestNodeOriginSimple2D == null) {
+                            nearestNodeOriginSimple2D = new TargetNode();
                         }
+                        nearestNodeOriginSimple2D.copy(targetNode);
                     }
-                    /*
-                    ** closest current : simple 2d
-                    */
-                    if (outdC >= 0.0) {
-                        if (nearestNodeCurrentSimple2D == null || targetNode.current2DMetric < nearestNodeCurrentSimple2D.current2DMetric) {
+                }
+                /*
+                 ** closest current : simple 2d
+                 */
+                if (outdC >= 0.0) {
+                    if (nearestNodeCurrentSimple2D == null || targetNode.current2DMetric < nearestNodeCurrentSimple2D.current2DMetric) {
 
-                            if (nearestNodeCurrentSimple2D == null) {
-                                nearestNodeCurrentSimple2D = new TargetNode();
-                            }
-                            nearestNodeCurrentSimple2D.copy(targetNode);
+                        if (nearestNodeCurrentSimple2D == null) {
+                            nearestNodeCurrentSimple2D = new TargetNode();
                         }
+                        nearestNodeCurrentSimple2D.copy(targetNode);
                     }
-                    /*
-                    ** on the Origin X
-                    */
-                    if ((originB.getMaxX() > targetBounds.getMinX()) && (targetBounds.getMaxX() > originB.getMinX())) {
-                        if (nearestNodeOnOriginX == null || nearestNodeOnOriginX.biasShortestDistance > targetNode.biasShortestDistance) {
+                }
+                /*
+                 ** on the Origin X
+                 */
+                if ((originB.getMaxX() > targetBounds.getMinX()) && (targetBounds.getMaxX() > originB.getMinX())) {
+                    if (nearestNodeOnOriginX == null || nearestNodeOnOriginX.biasShortestDistance > targetNode.biasShortestDistance) {
 
-                            if (nearestNodeOnOriginX == null) {
-                                nearestNodeOnOriginX = new TargetNode();
-                            }
-                            nearestNodeOnOriginX.copy(targetNode);
+                        if (nearestNodeOnOriginX == null) {
+                            nearestNodeOnOriginX = new TargetNode();
                         }
+                        nearestNodeOnOriginX.copy(targetNode);
                     }
-                    /*
-                    ** on the Current X
-                    */
-                    if ((currentB.getMaxX() > targetBounds.getMinX()) && (targetBounds.getMaxX() > currentB.getMinX())) {
-                        if (nearestNodeOnCurrentX == null || nearestNodeOnCurrentX.biasShortestDistance > targetNode.biasShortestDistance) {
+                }
+                /*
+                 ** on the Current X
+                 */
+                if ((currentB.getMaxX() > targetBounds.getMinX()) && (targetBounds.getMaxX() > currentB.getMinX())) {
+                    if (nearestNodeOnCurrentX == null || nearestNodeOnCurrentX.biasShortestDistance > targetNode.biasShortestDistance) {
 
-                            if (nearestNodeOnCurrentX == null) {
-                                nearestNodeOnCurrentX = new TargetNode();
-                            }
-                            nearestNodeOnCurrentX.copy(targetNode);
+                        if (nearestNodeOnCurrentX == null) {
+                            nearestNodeOnCurrentX = new TargetNode();
                         }
+                        nearestNodeOnCurrentX.copy(targetNode);
                     }
-                    /*
-                    ** Closest top left / bottom left corners.
-                    */
-                    if (nearestNodeLeft == null || nearestNodeLeft.leftCornerDistance > targetNode.leftCornerDistance) {
-                        if (((originB.getMinX() >= currentB.getMinX()) && (targetBounds.getMinX() >= currentB.getMinX()))  ||
-                            ((originB.getMinX() <= currentB.getMinX()) && (targetBounds.getMinX() <= currentB.getMinX()))) {
+                }
+                /*
+                 ** Closest top left / bottom left corners.
+                 */
+                if (nearestNodeLeft == null || nearestNodeLeft.leftCornerDistance > targetNode.leftCornerDistance) {
+                    if (((originB.getMinX() >= currentB.getMinX()) && (targetBounds.getMinX() >= currentB.getMinX()))
+                            || ((originB.getMinX() <= currentB.getMinX()) && (targetBounds.getMinX() <= currentB.getMinX()))) {
 
-                            if (nearestNodeLeft == null) {
-                                nearestNodeLeft = new TargetNode();
-                            }
-                            nearestNodeLeft.copy(targetNode);
+                        if (nearestNodeLeft == null) {
+                            nearestNodeLeft = new TargetNode();
                         }
+                        nearestNodeLeft.copy(targetNode);
                     }
+                }
 
-                    if (nearestNodeAverage == null || nearestNodeAverage.averageDistance > targetNode.averageDistance) {
-                        if (((originB.getMinX() >= currentB.getMinX()) && (targetBounds.getMinX() >= currentB.getMinX()))  ||
-                            ((originB.getMinX() <= currentB.getMinX()) && (targetBounds.getMinX() <= currentB.getMinX()))) {
+                if (nearestNodeAverage == null || nearestNodeAverage.averageDistance > targetNode.averageDistance) {
+                    if (((originB.getMinX() >= currentB.getMinX()) && (targetBounds.getMinX() >= currentB.getMinX()))
+                            || ((originB.getMinX() <= currentB.getMinX()) && (targetBounds.getMinX() <= currentB.getMinX()))) {
 
-                            if (nearestNodeAverage == null) {
-                                nearestNodeAverage = new TargetNode();
-                            }
-                            nearestNodeAverage.copy(targetNode);
+                        if (nearestNodeAverage == null) {
+                            nearestNodeAverage = new TargetNode();
                         }
+                        nearestNodeAverage.copy(targetNode);
                     }
+                }
 
-                    if (nearestNodeAnythingAnywhere == null || nearestNodeAnythingAnywhere.shortestDistance > targetNode.shortestDistance) {
+                if (nearestNodeAnythingAnywhere == null || nearestNodeAnythingAnywhere.shortestDistance > targetNode.shortestDistance) {
 
-                        if (nearestNodeAnythingAnywhere == null) {
-                            nearestNodeAnythingAnywhere = new TargetNode();
-                        }
-                        nearestNodeAnythingAnywhere.copy(targetNode);
+                    if (nearestNodeAnythingAnywhere == null) {
+                        nearestNodeAnythingAnywhere = new TargetNode();
                     }
+                    nearestNodeAnythingAnywhere.copy(targetNode);
                 }
             }
         }
@@ -673,7 +666,7 @@ public class Hueristic2D implements Algorithm {
             }
         }
 
-        if (nearestNodeOnOriginX != null && nearestNodeOnOriginX.biasShortestDistance < Double.MAX_VALUE) {
+        if (nearestNodeOnOriginX != null) {
             /*
             ** there's a preference, all else being equal, to return nearestNodeOnOriginX
             */
@@ -688,10 +681,10 @@ public class Hueristic2D implements Algorithm {
                 return nearestNodeOnOriginX.node;
             }
 
-            if (nearestNodeOnCurrentX != null && nearestNodeOnCurrentX.biasShortestDistance < Double.MAX_VALUE) {
+            if (nearestNodeOnCurrentX != null) {
                 if ((nearestNodeOnCurrentX.leftCornerDistance < nearestNodeOnOriginX.leftCornerDistance) &&
                     (nearestNodeOnCurrentX.originLeftCornerDistance < nearestNodeOnOriginX.originLeftCornerDistance) &&
-                (nearestNodeOnCurrentX.bounds.getMinX() - currenLeftCorner2D.getX()) < (nearestNodeOnOriginX.bounds.getMinX() - currenLeftCorner2D.getX())) {
+                (nearestNodeOnCurrentX.bounds.getMinX() - currentLeftCorner2D.getX()) < (nearestNodeOnOriginX.bounds.getMinX() - currentLeftCorner2D.getX())) {
 
                     return nearestNodeOnCurrentX.node;
                 } else if (nearestNodeAverage == null || nearestNodeOnOriginX.averageDistance < nearestNodeAverage.averageDistance) {
@@ -699,7 +692,7 @@ public class Hueristic2D implements Algorithm {
                 }
             }
         } else {
-            if (nearestNodeOnOriginX == null && nearestNodeOnCurrentX == null && nearestNodeCurrentSimple2D != null) {
+            if (nearestNodeOnCurrentX == null && nearestNodeCurrentSimple2D != null) {
                 if (nearestNodeAverage != null && nearestNodeLeft != null && (nearestNodeAverage.node == nearestNodeLeft.node && nearestNodeAverage.node == nearestNodeAnythingAnywhere.node)) {
                     return nearestNodeAverage.node;
                 }
@@ -709,11 +702,7 @@ public class Hueristic2D implements Algorithm {
                      nearestNodeAverage.biasShortestDistance == nearestNodeAnythingAnywhere.biasShortestDistance &&
                      nearestNodeAverage.biasShortestDistance < Double.MAX_VALUE) {
 
-                if (nearestNodeOnOriginX != null && nearestNodeOnOriginX.originLeftCornerDistance < nearestNodeAverage.originLeftCornerDistance) {
-                    return nearestNodeOnOriginX.node;
-                } else {
                     return nearestNodeAverage.node;
-                }
             }
         }
 
@@ -789,18 +778,21 @@ public class Hueristic2D implements Algorithm {
         }
     };
 
-    protected Node getNearestNodeLeftOrRight(Bounds currentB, Bounds originB, TraversalEngine engine, Node node, Node reversingNode, Direction dir) {
+    protected Node getNearestNodeLeftOrRight(Bounds currentB, Bounds originB, TraversalEngine engine, Node node, Direction dir) {
 
         List<Node> nodes = engine.getAllTargetNodes();
         
         Function<Bounds, Double> xSideInDirection = dir == LEFT ? BOUNDS_LEFT_SIDE : BOUNDS_RIGHT_SIDE;
         Function<Bounds, Double> xSideInOpositeDirection = dir == LEFT ? BOUNDS_RIGHT_SIDE : BOUNDS_LEFT_SIDE;
 
-        Bounds biasedB = new BoundingBox(xSideInDirection.apply(currentB), originB.getMinY(), currentB.getWidth(), originB.getHeight());
+        Bounds biasedB = new BoundingBox(currentB.getMinX(), originB.getMinY(), currentB.getWidth(), originB.getHeight());
 
         Point2D currentMid2D = new Point2D(xSideInDirection.apply(currentB), currentB.getMinY()+(currentB.getHeight()/2));
+        Point2D biasedMid2D = new Point2D(xSideInDirection.apply(currentB), originB.getMinY()+(originB.getHeight()/2));
         Point2D currentTopCorner2D = new Point2D(xSideInDirection.apply(currentB), currentB.getMinY());
+        Point2D biasedTopCorner2D = new Point2D(xSideInDirection.apply(currentB), originB.getMinY());
         Point2D currentBottomCorner2D = new Point2D(xSideInDirection.apply(currentB), currentB.getMaxY());
+        Point2D biasedBottomCorner2D = new Point2D(xSideInDirection.apply(currentB), originB.getMaxY());
 
         Point2D originTopCorner2D = new Point2D(xSideInDirection.apply(originB), originB.getMinY());
 
@@ -813,161 +805,150 @@ public class Hueristic2D implements Algorithm {
         TargetNode nearestNodeTopLeft = null;
         TargetNode nearestNodeAnythingAnywhereLeft = null;
 
-        if (nodes.size() > 0) {
+        for (int nodeIndex = 0; nodeIndex < nodes.size(); nodeIndex++) {
+            final Node n = nodes.get(nodeIndex);
+
+            Bounds targetBounds = n.localToScene(n.getLayoutBounds());
             /*
-             ** we've just changed direction, and have a node on stack.
-             ** there is a strong preference for this node, just make sure
-             ** it's not a bad choice, as sometimes we got here as a last-chance
+             ** check that the target node starts after we start
+             ** and the target node ends after we end 
              */
-            if (reversingNode != null) {
-                return reversingNode;
-            }
-            
-            for (int nodeIndex = 0; nodeIndex < nodes.size(); nodeIndex++) {
-                final Node n = nodes.get(nodeIndex);
+            if (dir == LEFT ? currentB.getMinX() > targetBounds.getMinX()
+                    : currentB.getMaxX() < targetBounds.getMaxX()) {
 
-                Bounds targetBounds = n.localToScene(n.getLayoutBounds());
+                targetNode.node = n;
+                targetNode.bounds = targetBounds;
+
                 /*
-                ** check that the target node starts after we start
-                ** and the target node ends after we end 
-                */
-                if (dir == LEFT ? currentB.getMinX() >  targetBounds.getMinX() : 
-                        currentB.getMaxX() < targetBounds.getMaxX()) {
+                 * closest biased : simple 2d.
+                 * Negative means the Node is on the same Y axis. This will result in outdB == 0, making this a preferred Node.
+                 */
+                double outdB = Math.max(0, outDistance(dir, biasedB, targetBounds));
 
-                    targetNode.node = n;
-                    targetNode.bounds = targetBounds;
+                if (isOnAxis(dir, biasedB, targetBounds)) {
+                    targetNode.biased2DMetric = outdB + centerSideDistance(dir, biasedB, targetBounds) / 100;
+                } else {
+                    final double cosd = cornerSideDistance(dir, biasedB, targetBounds);
+                    targetNode.biased2DMetric = 100000 + outdB * outdB + 9 * cosd * cosd;
+                }
+                /*
+                 * closest current : simple 2d
+                 *Negative means the Node is on the same Y axis. This will result in outdB == 0, making this a preferred Node.
+                 */
+                double outdC = Math.max(0, outDistance(dir, currentB, targetBounds));
 
-                    /*
-                    ** closest biased : simple 2d
-                    */
-                    double outdB = outDistance(dir, biasedB, targetBounds);
+                if (isOnAxis(dir, currentB, targetBounds)) {
+                    targetNode.current2DMetric = outdC + centerSideDistance(dir, currentB, targetBounds) / 100;
+                } else {
+                    final double cosd = cornerSideDistance(dir, currentB, targetBounds);
+                    targetNode.current2DMetric = 100000 + outdC * outdC + 9 * cosd * cosd;
+                }
 
-                    if (isOnAxis(dir, biasedB, targetBounds)) {
-                        targetNode.biased2DMetric = outdB + centerSideDistance(dir, biasedB, targetBounds) / 100;
-                    }
-                    else {
-                        final double cosd = cornerSideDistance(dir, biasedB, targetBounds);
-                        targetNode.biased2DMetric = 100000 + outdB*outdB + 9*cosd*cosd;
-                    }
-                    /*
-                    ** closest current : simple 2d
-                    */
-                    double outdC = outDistance(dir, currentB, targetBounds);
+                targetNode.topCornerDistance = currentTopCorner2D.distance(xSideInOpositeDirection.apply(targetBounds), targetBounds.getMinY());
+                targetNode.bottomCornerDistance = currentBottomCorner2D.distance(xSideInOpositeDirection.apply(targetBounds), targetBounds.getMaxY());
 
-                    if (isOnAxis(dir, currentB, targetBounds)) {
-                        targetNode.current2DMetric = outdC + centerSideDistance(dir, currentB, targetBounds) / 100;
-                    }
-                    else {
-                        final double cosd = cornerSideDistance(dir, currentB, targetBounds);
-                        targetNode.current2DMetric = 100000 + outdC*outdC + 9*cosd*cosd;
-                    }
+                double midDistance = currentMid2D.distance(xSideInOpositeDirection.apply(targetBounds), targetBounds.getMinY() + (targetBounds.getHeight() / 2));
+                double currentTopToTargetBottomDistance = currentTopCorner2D.distance(xSideInOpositeDirection.apply(targetBounds), targetBounds.getMaxY());
+                double currentTopToTargetMidDistance = currentTopCorner2D.distance(xSideInOpositeDirection.apply(targetBounds), targetBounds.getMinY() + (targetBounds.getHeight() / 2));
+                double currentBottomToTargetTopDistance = currentBottomCorner2D.distance(xSideInOpositeDirection.apply(targetBounds), targetBounds.getMinY());
+                double currentBottomToTargetBottomDistance = currentBottomCorner2D.distance(xSideInOpositeDirection.apply(targetBounds), targetBounds.getMaxY());
+                double currentBottomToTargetMidDistance = currentBottomCorner2D.distance(xSideInOpositeDirection.apply(targetBounds), targetBounds.getMinY() + (targetBounds.getHeight() / 2));
+                double currentMidToTargetTopDistance = currentMid2D.distance(xSideInOpositeDirection.apply(targetBounds), targetBounds.getMinY());
+                double currentMidToTargetBottomDistance = currentMid2D.distance(xSideInOpositeDirection.apply(targetBounds), targetBounds.getMaxY());
+                double currentMidToTargetMidDistance = currentMid2D.distance(xSideInOpositeDirection.apply(targetBounds), targetBounds.getMinY() + (targetBounds.getHeight() / 2));
 
-                    targetNode.topCornerDistance = currentTopCorner2D.distance(xSideInOpositeDirection.apply(targetBounds), targetBounds.getMinY());
-                    targetNode.midDistance = currentMid2D.distance(xSideInOpositeDirection.apply(targetBounds), targetBounds.getMinY()+(originB.getHeight()/2));
-                    targetNode.bottomCornerDistance = currentBottomCorner2D.distance(xSideInOpositeDirection.apply(originB), targetBounds.getMaxY());
+                double biasTopToTargetBottomDistance = biasedTopCorner2D.distance(xSideInOpositeDirection.apply(targetBounds), targetBounds.getMaxY());
+                double biasTopToTargetMidDistance = biasedTopCorner2D.distance(xSideInOpositeDirection.apply(targetBounds), targetBounds.getMinY() + (targetBounds.getHeight() / 2));
+                double biasBottomToTargetMidDistance = biasedBottomCorner2D.distance(xSideInOpositeDirection.apply(targetBounds), targetBounds.getMinY() + (targetBounds.getHeight() / 2));
+                double biasMidToTargetBottomDistance = biasedMid2D.distance(xSideInOpositeDirection.apply(targetBounds), targetBounds.getMaxY());
 
-                    double currentTopLeftToTargetBottomRightDistance = currentTopCorner2D.distance(xSideInOpositeDirection.apply(targetBounds), targetBounds.getMaxY());
-                    double currentTopLeftToTargetMidDistance = currentTopCorner2D.distance(xSideInOpositeDirection.apply(targetBounds), targetBounds.getMinY()+(targetBounds.getHeight()/2));
-                    double currentBottomLeftToTargetTopRightDistance = currentBottomCorner2D.distance(xSideInOpositeDirection.apply(targetBounds), targetBounds.getMinY());
-                    double currentBottomLeftToTargetBottomRightDistance = currentBottomCorner2D.distance(xSideInOpositeDirection.apply(targetBounds), targetBounds.getMaxY());
-                    double currentBottomLeftToTargetMidDistance = currentBottomCorner2D.distance(xSideInOpositeDirection.apply(targetBounds), targetBounds.getMinY()+(targetBounds.getHeight()/2));
-                    double currentMidToTargetTopRightDistance = currentMid2D.distance(xSideInOpositeDirection.apply(targetBounds), targetBounds.getMinY());
-                    double currentMidToTargetBottomRightDistance = currentMid2D.distance(xSideInOpositeDirection.apply(targetBounds), targetBounds.getMaxY());
-                    double currentMidToTargetMidDistance = currentMid2D.distance(xSideInOpositeDirection.apply(targetBounds), targetBounds.getMinY()+(targetBounds.getHeight()/2));
+                targetNode.averageDistance
+                        = (targetNode.topCornerDistance + biasTopToTargetBottomDistance + biasTopToTargetMidDistance
+                        + currentBottomToTargetTopDistance + targetNode.bottomCornerDistance + biasBottomToTargetMidDistance + midDistance) / 7;
 
-                    double biasTopLeftToTargetBottomRightDistance = currentTopCorner2D.distance(xSideInOpositeDirection.apply(originB), targetBounds.getMaxY());
-                    double biasTopLeftToTargetMidDistance = currentTopCorner2D.distance(xSideInOpositeDirection.apply(targetBounds), targetBounds.getMinY()+(originB.getHeight()/2));
-                    double biasBottomLeftToTargetMidDistance = currentBottomCorner2D.distance(xSideInOpositeDirection.apply(targetBounds), targetBounds.getMinY()+(originB.getHeight()/2));
-                    double biasMidToTargetBottomRightDistance = currentMid2D.distance(xSideInOpositeDirection.apply(originB), targetBounds.getMaxY());
+                targetNode.biasShortestDistance
+                        = findMin(targetNode.topCornerDistance, biasTopToTargetBottomDistance, biasTopToTargetMidDistance,
+                                currentBottomToTargetTopDistance, targetNode.bottomCornerDistance, biasBottomToTargetMidDistance,
+                                currentMidToTargetTopDistance, biasMidToTargetBottomDistance, midDistance);
 
-                    targetNode.averageDistance =
-                        (targetNode.topCornerDistance+biasTopLeftToTargetBottomRightDistance+biasTopLeftToTargetMidDistance+
-                         currentBottomLeftToTargetTopRightDistance+targetNode.bottomCornerDistance+biasBottomLeftToTargetMidDistance)/7;
+                targetNode.shortestDistance
+                        = findMin(targetNode.topCornerDistance, currentTopToTargetBottomDistance, currentTopToTargetMidDistance,
+                                currentBottomToTargetTopDistance, currentBottomToTargetBottomDistance, currentBottomToTargetMidDistance,
+                                currentMidToTargetTopDistance, currentMidToTargetBottomDistance, currentMidToTargetMidDistance);
 
-                    targetNode.biasShortestDistance =
-                        findMin(targetNode.topCornerDistance, biasTopLeftToTargetBottomRightDistance, biasTopLeftToTargetMidDistance,
-                                 currentBottomLeftToTargetTopRightDistance, targetNode.bottomCornerDistance, biasBottomLeftToTargetMidDistance,
-                                 currentMidToTargetTopRightDistance, biasMidToTargetBottomRightDistance, targetNode.midDistance);
+                /*
+                 ** closest biased : simple 2d
+                 */
+                if (outdB >= 0.0) {
+                    if (nearestNodeOriginSimple2D == null || targetNode.biased2DMetric < nearestNodeOriginSimple2D.biased2DMetric) {
 
-                    targetNode.shortestDistance =
-                        findMin(targetNode.topCornerDistance, currentTopLeftToTargetBottomRightDistance, currentTopLeftToTargetMidDistance,
-                                 currentBottomLeftToTargetTopRightDistance, currentBottomLeftToTargetBottomRightDistance, currentBottomLeftToTargetMidDistance,
-                                 currentMidToTargetTopRightDistance, currentMidToTargetBottomRightDistance, currentMidToTargetMidDistance);
-
-                    /*
-                    ** closest biased : simple 2d
-                    */
-                    if (outdB >= 0.0) {
-                        if (nearestNodeOriginSimple2D == null || targetNode.biased2DMetric < nearestNodeOriginSimple2D.biased2DMetric) {
-
-                            if (nearestNodeOriginSimple2D == null) {
-                                nearestNodeOriginSimple2D = new TargetNode();
-                            }
-                            nearestNodeOriginSimple2D.copy(targetNode);
+                        if (nearestNodeOriginSimple2D == null) {
+                            nearestNodeOriginSimple2D = new TargetNode();
                         }
+                        nearestNodeOriginSimple2D.copy(targetNode);
                     }
-                    /*
-                    ** closest current : simple 2d
-                    */
-                    if (outdC >= 0.0) {
-                        if (nearestNodeCurrentSimple2D == null || targetNode.current2DMetric < nearestNodeCurrentSimple2D.current2DMetric) {
+                }
+                /*
+                 ** closest current : simple 2d
+                 */
+                if (outdC >= 0.0) {
+                    if (nearestNodeCurrentSimple2D == null || targetNode.current2DMetric < nearestNodeCurrentSimple2D.current2DMetric) {
 
-                            if (nearestNodeCurrentSimple2D == null) {
-                                nearestNodeCurrentSimple2D = new TargetNode();
-                            }
-                            nearestNodeCurrentSimple2D.copy(targetNode);
+                        if (nearestNodeCurrentSimple2D == null) {
+                            nearestNodeCurrentSimple2D = new TargetNode();
                         }
+                        nearestNodeCurrentSimple2D.copy(targetNode);
                     }
-                    /*
-                    ** on the Origin Y
-                    */
-                    if ((originB.getMaxY() > targetBounds.getMinY()) && (targetBounds.getMaxY() > originB.getMinY())) {
-                        if (nearestNodeOnOriginY == null || nearestNodeOnOriginY.topCornerDistance > targetNode.topCornerDistance) {
+                }
+                /*
+                 ** on the Origin Y
+                 */
+                if ((originB.getMaxY() > targetBounds.getMinY()) && (targetBounds.getMaxY() > originB.getMinY())) {
+                    if (nearestNodeOnOriginY == null || nearestNodeOnOriginY.topCornerDistance > targetNode.topCornerDistance) {
 
-                            if (nearestNodeOnOriginY == null) {
-                                nearestNodeOnOriginY = new TargetNode();
-                            }
-                            nearestNodeOnOriginY.copy(targetNode);
+                        if (nearestNodeOnOriginY == null) {
+                            nearestNodeOnOriginY = new TargetNode();
                         }
+                        nearestNodeOnOriginY.copy(targetNode);
                     }
-                    /*
-                    ** on the Current Y
-                    */
-                    if ((currentB.getMaxY() > targetBounds.getMinY()) && (targetBounds.getMaxY() > currentB.getMinY())) {
-                        if (nearestNodeOnCurrentY == null || nearestNodeOnCurrentY.topCornerDistance > targetNode.topCornerDistance) {
+                }
+                /*
+                 ** on the Current Y
+                 */
+                if ((currentB.getMaxY() > targetBounds.getMinY()) && (targetBounds.getMaxY() > currentB.getMinY())) {
+                    if (nearestNodeOnCurrentY == null || nearestNodeOnCurrentY.topCornerDistance > targetNode.topCornerDistance) {
 
-                            if (nearestNodeOnCurrentY == null) {
-                                nearestNodeOnCurrentY = new TargetNode();
-                            }
-                            nearestNodeOnCurrentY.copy(targetNode);
+                        if (nearestNodeOnCurrentY == null) {
+                            nearestNodeOnCurrentY = new TargetNode();
                         }
+                        nearestNodeOnCurrentY.copy(targetNode);
                     }
-                    /*
-                    ** Closest top left / top right corners.
-                    */
-                    if (nearestNodeTopLeft == null || nearestNodeTopLeft.topCornerDistance > targetNode.topCornerDistance) {
+                }
+                /*
+                 ** Closest top left / top right corners.
+                 */
+                if (nearestNodeTopLeft == null || nearestNodeTopLeft.topCornerDistance > targetNode.topCornerDistance) {
 
-                        if (nearestNodeTopLeft == null) {
-                            nearestNodeTopLeft = new TargetNode();
-                        }
-                        nearestNodeTopLeft.copy(targetNode);
+                    if (nearestNodeTopLeft == null) {
+                        nearestNodeTopLeft = new TargetNode();
                     }
+                    nearestNodeTopLeft.copy(targetNode);
+                }
 
-                    if (nearestNodeAverage == null || nearestNodeAverage.averageDistance > targetNode.averageDistance) {
+                if (nearestNodeAverage == null || nearestNodeAverage.averageDistance > targetNode.averageDistance) {
 
-                        if (nearestNodeAverage == null) {
-                            nearestNodeAverage = new TargetNode();
-                        }
-                        nearestNodeAverage.copy(targetNode);
+                    if (nearestNodeAverage == null) {
+                        nearestNodeAverage = new TargetNode();
                     }
+                    nearestNodeAverage.copy(targetNode);
+                }
 
-                    if (nearestNodeAnythingAnywhereLeft == null || nearestNodeAnythingAnywhereLeft.shortestDistance > targetNode.shortestDistance) {
+                if (nearestNodeAnythingAnywhereLeft == null || nearestNodeAnythingAnywhereLeft.shortestDistance > targetNode.shortestDistance) {
 
-                        if (nearestNodeAnythingAnywhereLeft == null) {
-                            nearestNodeAnythingAnywhereLeft = new TargetNode();
-                        }
-                        nearestNodeAnythingAnywhereLeft.copy(targetNode);
+                    if (nearestNodeAnythingAnywhereLeft == null) {
+                        nearestNodeAnythingAnywhereLeft = new TargetNode();
                     }
+                    nearestNodeAnythingAnywhereLeft.copy(targetNode);
                 }
             }
         }
@@ -1016,7 +997,7 @@ public class Hueristic2D implements Algorithm {
             }
         }
 
-        if (nearestNodeOnOriginY != null && nearestNodeOnOriginY.biasShortestDistance < Double.MAX_VALUE) {
+        if (nearestNodeOnOriginY != null) {
             /*
              ** there's a preference, all else being equal, to return nearestNodeOnOriginY
              */
@@ -1031,7 +1012,7 @@ public class Hueristic2D implements Algorithm {
                 return nearestNodeOnOriginY.node;
             }
 
-            if (nearestNodeOnCurrentY != null && nearestNodeOnCurrentY.biasShortestDistance < Double.MAX_VALUE) {
+            if (nearestNodeOnCurrentY != null) {
                 if ((nearestNodeOnCurrentY.bottomCornerDistance < nearestNodeOnOriginY.bottomCornerDistance)
                         && (nearestNodeOnCurrentY.originTopCornerDistance < nearestNodeOnOriginY.originTopCornerDistance)
                         && (nearestNodeOnCurrentY.bounds.getMinY() - currentTopCorner2D.getY()) < (nearestNodeOnOriginY.bounds.getMinY() - currentTopCorner2D.getY())) {
@@ -1042,7 +1023,7 @@ public class Hueristic2D implements Algorithm {
                 }
             }
         } else {
-            if (nearestNodeOnOriginY == null && nearestNodeOnCurrentY == null && nearestNodeCurrentSimple2D != null) {
+            if (nearestNodeOnCurrentY == null && nearestNodeCurrentSimple2D != null) {
                 if (nearestNodeAverage != null && nearestNodeTopLeft != null
                         && nearestNodeAverage.node == nearestNodeTopLeft.node && nearestNodeAverage.node == nearestNodeAnythingAnywhereLeft.node) {
                     return nearestNodeAverage.node;
@@ -1052,12 +1033,7 @@ public class Hueristic2D implements Algorithm {
                     && nearestNodeAverage.biasShortestDistance == nearestNodeTopLeft.biasShortestDistance
                     && nearestNodeAverage.biasShortestDistance == nearestNodeAnythingAnywhereLeft.biasShortestDistance
                     && nearestNodeAverage.biasShortestDistance < Double.MAX_VALUE) {
-
-                if (nearestNodeOnOriginY != null && nearestNodeOnOriginY.originTopCornerDistance < nearestNodeAverage.originTopCornerDistance) {
-                    return nearestNodeOnOriginY.node;
-                } else {
                     return nearestNodeAverage.node;
-                }
             }
         }
 
@@ -1126,7 +1102,6 @@ public class Hueristic2D implements Algorithm {
         double current2DMetric = Double.MAX_VALUE;
 
         double leftCornerDistance = Double.MAX_VALUE;
-        double midDistance = Double.MAX_VALUE;
         double rightCornerDistance = Double.MAX_VALUE;
         double topCornerDistance = Double.MAX_VALUE;
         double bottomCornerDistance = Double.MAX_VALUE;
@@ -1145,7 +1120,6 @@ public class Hueristic2D implements Algorithm {
             current2DMetric = source.current2DMetric;
 
             leftCornerDistance = source.leftCornerDistance;
-            midDistance = source.midDistance;
             rightCornerDistance = source.rightCornerDistance;
 
             shortestDistance = source.shortestDistance;
