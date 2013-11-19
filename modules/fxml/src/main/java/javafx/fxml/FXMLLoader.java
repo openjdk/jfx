@@ -3254,7 +3254,7 @@ public class FXMLLoader {
         private static final int PACKAGE = 4;
         private static final int PRIVATE = 8;
         private static final int INITIAL_CLASS_ACCESS =
-                PUBLIC | PACKAGE;
+                PUBLIC | PACKAGE | PRIVATE;
         private static final int INITIAL_MEMBER_ACCESS =
                 PUBLIC | PROTECTED | PACKAGE | PRIVATE;
 
@@ -3267,14 +3267,14 @@ public class FXMLLoader {
         private Map<String, Field> controllerFields;
         private Map<SupportedType, Map<String, Method>> controllerMethods;
 
-        public void setController(final Object controller) {
+        void setController(final Object controller) {
             if (this.controller != controller) {
                 this.controller = controller;
                 reset();
             }
         }
 
-        public void setCallerClass(final Class<?> callerClass) {
+        void setCallerClass(final Class<?> callerClass) {
             final ClassLoader newCallerClassLoader =
                     (callerClass != null) ? callerClass.getClassLoader()
                                           : null;
@@ -3284,12 +3284,12 @@ public class FXMLLoader {
             }
         }
 
-        public void reset() {
+        void reset() {
             controllerFields = null;
             controllerMethods = null;
         }
 
-        public Map<String, Field> getControllerFields() {
+        Map<String, Field> getControllerFields() {
             if (controllerFields == null) {
                 controllerFields = new HashMap<>();
 
@@ -3307,7 +3307,7 @@ public class FXMLLoader {
             return controllerFields;
         }
 
-        public Map<SupportedType, Map<String, Method>> getControllerMethods() {
+        Map<SupportedType, Map<String, Method>> getControllerMethods() {
             if (controllerMethods == null) {
                 controllerMethods = new EnumMap<>(SupportedType.class);
                 for (SupportedType t: SupportedType.values()) {
@@ -3430,7 +3430,6 @@ public class FXMLLoader {
                 final int memberModifiers = method.getModifiers();
 
                 if (((memberModifiers & (Modifier.STATIC
-                                             | Modifier.ABSTRACT
                                              | Modifier.NATIVE)) != 0)
                         || ((getAccess(memberModifiers) & allowedMemberAccess)
                                 == 0)
