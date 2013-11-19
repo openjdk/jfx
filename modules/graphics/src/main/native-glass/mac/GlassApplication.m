@@ -28,7 +28,6 @@
 #import "com_sun_glass_ui_mac_MacApplication.h"
 #import "com_sun_glass_events_KeyEvent.h"
 
-#import <JavaRuntimeSupport/JavaRuntimeSupport.h>
 
 #import "GlassMacros.h"
 #import "GlassApplication.h"

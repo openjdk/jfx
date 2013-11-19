@@ -28,7 +28,6 @@
 #import "com_sun_glass_ui_mac_MacCursor.h"
 
 #import <Cocoa/Cocoa.h>
-#import <JavaRuntimeSupport/JavaRuntimeSupport.h>
 
 #import "GlassMacros.h"
 #import "GlassHelper.h"

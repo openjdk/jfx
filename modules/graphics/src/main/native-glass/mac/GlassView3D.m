@@ -29,9 +29,6 @@
 #import "com_sun_glass_events_MouseEvent.h"
 #import "com_sun_glass_ui_View_Capability.h"
 #import "com_sun_glass_ui_mac_MacGestureSupport.h"
-
-#import <JavaRuntimeSupport/JavaRuntimeSupport.h>
-
 #import "GlassMacros.h"
 #import "GlassView3D.h"
 #import "GlassLayer3D.h"

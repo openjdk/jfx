@@ -66,30 +66,32 @@ MAC.jfxrtJarExcludes = [
 // properties in your home dir to override these settings or pass them on the command line via -P
 defineProperty("MACOSX_MIN_VERSION", "10.7");
 defineProperty("MACOSX_SDK_PATH", "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${MACOSX_MIN_VERSION}.sdk");
-defineProperty("MACOSX_JDK_FRAMEWORK", "/System/Library/Frameworks/JavaVM.framework");
 
 def commonParams = [
         "-mmacosx-version-min=$MACOSX_MIN_VERSION",
         "-isysroot", "$MACOSX_SDK_PATH",
-        "-arch", "x86_64",
-        "-F$MACOSX_JDK_FRAMEWORK/Frameworks"]
+        "-arch", "x86_64"]
 
-def linkFlags = [
-        "-framework", "AppKit",
-        "-framework", "ApplicationServices",
-        "-framework", "JavaVM",
-        "-framework", "JavaRuntimeSupport",
-        "-framework", "OpenGL",
-        "-framework", "QuartzCore",
-        "-dynamiclib", "-lobjc", commonParams].flatten();
+def ccBaseFlags = [
+        commonParams,
+        "-I$JDK_HOME/include",
+        "-I$JDK_HOME/include/darwin"].flatten()
+
 
 def ccFlags = [
+        ccBaseFlags,
         "-std=c99",
         "-c",
-        "-I$JDK_HOME/include",
-        "-I$JDK_HOME/include/darwin",
-        commonParams,
         IS_DEBUG_NATIVE ? "-DDEBUG" : ["-O3", "-DNDEBUG"]].flatten()
+
+def linkFlags = [
+        commonParams,
+        "-framework", "AppKit",
+        "-framework", "ApplicationServices",
+        "-framework", "OpenGL",
+        "-framework", "QuartzCore",
+        "-dynamiclib", "-lobjc"].flatten();
+
 
 def compiler = IS_COMPILE_PARFAIT ? "parfait-gcc" : "gcc";
 def cc_compiler = IS_COMPILE_PARFAIT ? "parfait-cc" : "cc";
@@ -110,30 +112,18 @@ MAC.glass.lib = "glass"
 
 MAC.decora = [:]
 MAC.decora.compiler = compiler
-MAC.decora.ccFlags = ["-O1", "-ffast-math",
-        "-I$JDK_HOME/include",
-        "-I$JDK_HOME/include/darwin",
-        "-mmacosx-version-min=$MACOSX_MIN_VERSION",
-        "-arch", "x86_64", "-c"].flatten()
+MAC.decora.ccFlags = ["-O1", "-ffast-math", "-c", ccBaseFlags].flatten()
 MAC.decora.linker = linker
-MAC.decora.linkFlags = ["-dynamiclib",
-        "-mmacosx-version-min=$MACOSX_MIN_VERSION",
-        "-arch", "x86_64"].flatten()
+MAC.decora.linkFlags = ["-dynamiclib", commonParams].flatten()
 MAC.decora.lib = "decora_sse"
 
 MAC.prism = [:]
 MAC.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
 MAC.prism.nativeSource = file("modules/graphics/src/main/native-prism")
 MAC.prism.compiler = cc_compiler
-MAC.prism.ccFlags = ["-O3", "-DINLINE=inline",
-        "-I$JDK_HOME/include",
-        "-I$JDK_HOME/include/darwin",
-        "-mmacosx-version-min=$MACOSX_MIN_VERSION",
-        "-arch", "x86_64", "-c"].flatten()
+MAC.prism.ccFlags = ["-O3", "-DINLINE=inline", "-c", ccBaseFlags].flatten()
 MAC.prism.linker = linker
-MAC.prism.linkFlags = ["-dynamiclib",
-        "-mmacosx-version-min=$MACOSX_MIN_VERSION",
-        "-arch", "x86_64"].flatten()
+MAC.prism.linkFlags = ["-dynamiclib", commonParams].flatten()
 MAC.prism.lib = "prism_common"
 
 MAC.prismSW = [:]
@@ -149,10 +139,7 @@ MAC.launcher = [:]
 MAC.launcher.compiler = compiler
 MAC.launcher.ccFlags = [
         "-std=c99",
-        "-I$JDK_HOME/include",
-        "-I$JDK_HOME/include/darwin",
-        "-mmacosx-version-min=$MACOSX_MIN_VERSION",
-        "-arch", "x86_64",
+        ccBaseFlags,
         "-framework", "Cocoa",
         IS_DEBUG_NATIVE ? ["-DDEBUG", "-O0"] : ["-O3", "-DNDEBUG"]].flatten()
 MAC.launcher.linker = linker
