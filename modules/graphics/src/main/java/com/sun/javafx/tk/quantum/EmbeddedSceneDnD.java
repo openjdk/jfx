@@ -96,7 +96,17 @@ final class EmbeddedSceneDnD {
      * dragOver() in SwingDnD is executed before dragEnter() is finished
      */
     <T> T executeOnFXThread(final Callable<T> r) {
-        assert !Platform.isFxApplicationThread();
+        
+        // When running under SWT, the main thread is the FX thread
+        // so execute the callable right away (return null on failure)
+        if (Platform.isFxApplicationThread()) {
+            try {
+                return r.call();
+            } catch (Exception z) {
+                // ignore
+            }
+            return null;
+        }
 
         final AtomicReference<T> result = new AtomicReference<>();
         final CountDownLatch l = new CountDownLatch(1);
