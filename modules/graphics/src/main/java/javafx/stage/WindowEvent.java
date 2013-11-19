@@ -25,6 +25,7 @@
 
 package javafx.stage;
 
+import javafx.beans.NamedArg;
 import javafx.event.Event;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
@@ -84,7 +85,7 @@ public class WindowEvent extends Event {
      * @param source    the event source which sent the event
      * @param eventType the event type
      */
-    public WindowEvent(final Window source, final EventType<? extends Event> eventType) {
+    public WindowEvent(final @NamedArg("source") Window source, final @NamedArg("eventType") EventType<? extends Event> eventType) {
         super(source, source, eventType);
     }
 

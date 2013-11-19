@@ -3,6 +3,7 @@
  */
 package javafx.scene.web;
 
+import javafx.beans.NamedArg;
 import javafx.event.Event;
 import javafx.event.EventType;
 
@@ -58,7 +59,7 @@ final public class WebEvent<T> extends Event {
     /**
      * Creates a new event object.
      */
-    public WebEvent(Object source, EventType<WebEvent> type, T data) {
+    public WebEvent(@NamedArg("source") Object source, @NamedArg("type") EventType<WebEvent> type, @NamedArg("data") T data) {
         super(source, null, type);
         this.data = data;
     }

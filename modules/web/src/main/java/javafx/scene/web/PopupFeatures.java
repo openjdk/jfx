@@ -3,6 +3,9 @@
  */
 package javafx.scene.web;
 
+import javafx.beans.NamedArg;
+
+
 /**
  * This class describes features of a Web popup window as specified by
  * JavaScript {@code window.open} function. Instances are passed into popup
@@ -26,7 +29,7 @@ public final class PopupFeatures {
      * @param resizable whether popup window should be resizable
      */
     public PopupFeatures(
-            boolean menu, boolean status, boolean toolbar, boolean resizable) {
+            @NamedArg("menu") boolean menu, @NamedArg("status") boolean status, @NamedArg("toolbar") boolean toolbar, @NamedArg("resizable") boolean resizable) {
         this.menu = menu;
         this.status = status;
         this.toolbar = toolbar;

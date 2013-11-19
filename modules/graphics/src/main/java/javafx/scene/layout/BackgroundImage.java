@@ -25,6 +25,7 @@
 
 package javafx.scene.layout;
 
+import javafx.beans.NamedArg;
 import javafx.scene.image.Image;
 
 /**
@@ -108,8 +109,8 @@ public final class BackgroundImage {
      * @param size        The BackgroundSize. If null, defaults to BackgroundSize.DEFAULT.
      */
     public BackgroundImage(
-            Image image, BackgroundRepeat repeatX, BackgroundRepeat repeatY,
-            BackgroundPosition position, BackgroundSize size)
+            @NamedArg("image") Image image, @NamedArg("repeatX") BackgroundRepeat repeatX, @NamedArg("repeatY") BackgroundRepeat repeatY,
+            @NamedArg("position") BackgroundPosition position, @NamedArg("size") BackgroundSize size)
     {
         if (image == null) throw new NullPointerException("Image cannot be null");
         this.image = image;

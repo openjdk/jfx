@@ -42,6 +42,7 @@ import com.sun.javafx.cursor.CursorType;
 import com.sun.javafx.embed.EmbeddedSceneDSInterface;
 import com.sun.javafx.embed.HostDragStartListener;
 import javafx.application.Platform;
+import javafx.beans.NamedArg;
 import javafx.scene.Scene;
 import javafx.scene.input.TransferMode;
 
@@ -235,7 +236,7 @@ public class FXCanvas extends Canvas {
     /**
      * @inheritDoc
      */
-    public FXCanvas(Composite parent, int style) {
+    public FXCanvas(@NamedArg("parent") Composite parent, @NamedArg("style") int style) {
         super(parent, style | SWT.NO_BACKGROUND);
         initFx();
         hostContainer = new HostContainer();

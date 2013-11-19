@@ -25,6 +25,9 @@
 
 package javafx.geometry;
 
+import javafx.beans.NamedArg;
+
+
 /**
  * A rectangular bounding box which is used to describe the bounds of a node
  * or other scene graph object.
@@ -45,7 +48,7 @@ public class BoundingBox extends Bounds {
      * @param height the height of the {@code BoundingBox}
      * @param depth the depth of the {@code BoundingBox}
      */
-    public BoundingBox(double minX, double minY, double minZ, double width, double height, double depth) {
+    public BoundingBox(@NamedArg("minX") double minX, @NamedArg("minY") double minY, @NamedArg("minZ") double minZ, @NamedArg("width") double width, @NamedArg("height") double height, @NamedArg("depth") double depth) {
         super(minX, minY, minZ, width, height, depth);
     }
 
@@ -56,7 +59,7 @@ public class BoundingBox extends Bounds {
      * @param width the width of the {@code BoundingBox}
      * @param height the height of the {@code BoundingBox}
      */
-    public BoundingBox(double minX, double minY, double width, double height) {
+    public BoundingBox(@NamedArg("minX") double minX, @NamedArg("minY") double minY, @NamedArg("width") double width, @NamedArg("height") double height) {
         super(minX, minY, 0, width, height, 0);
     }
 

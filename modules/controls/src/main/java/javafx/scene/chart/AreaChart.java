@@ -35,6 +35,7 @@ import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
+import javafx.beans.NamedArg;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.FXCollections;
@@ -135,7 +136,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
      * @param xAxis The x axis to use
      * @param yAxis The y axis to use
      */
-    public AreaChart(Axis<X> xAxis, Axis<Y> yAxis) {
+    public AreaChart(@NamedArg("xAxis") Axis<X> xAxis, @NamedArg("yAxis") Axis<Y> yAxis) {
         this(xAxis,yAxis, FXCollections.<Series<X,Y>>observableArrayList());
     }
 
@@ -146,7 +147,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
      * @param yAxis The y axis to use
      * @param data The data to use, this is the actual list used so any changes to it will be reflected in the chart
      */
-    public AreaChart(Axis<X> xAxis, Axis<Y> yAxis, ObservableList<Series<X,Y>> data) {
+    public AreaChart(@NamedArg("xAxis") Axis<X> xAxis, @NamedArg("yAxis") Axis<Y> yAxis, @NamedArg("data") ObservableList<Series<X,Y>> data) {
         super(xAxis,yAxis);
         setLegend(legend);
         setData(data);

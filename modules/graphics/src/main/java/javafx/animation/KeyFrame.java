@@ -30,6 +30,7 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
+import javafx.beans.NamedArg;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.util.Duration;
@@ -137,8 +138,8 @@ public final class KeyFrame {
      * @throws IllegalArgumentException
      *             if {@code time} is invalid (see {@link #time})
      */
-    public KeyFrame(Duration time, String name,
-            EventHandler<ActionEvent> onFinished, Collection<KeyValue> values) {
+    public KeyFrame(@NamedArg("time") Duration time, @NamedArg("name") String name,
+            @NamedArg("onFinished") EventHandler<ActionEvent> onFinished, @NamedArg("values") Collection<KeyValue> values) {
         if (time == null) {
             throw new NullPointerException("The time has to be specified");
         }
@@ -179,8 +180,8 @@ public final class KeyFrame {
      * @throws IllegalArgumentException
      *             if {@code time} is invalid (see {@link #time})
      */
-    public KeyFrame(Duration time, String name,
-            EventHandler<ActionEvent> onFinished, KeyValue... values) {
+    public KeyFrame(@NamedArg("time") Duration time, @NamedArg("name") String name,
+            @NamedArg("onFinished") EventHandler<ActionEvent> onFinished, @NamedArg("values") KeyValue... values) {
         if (time == null) {
             throw new NullPointerException("The time has to be specified");
         }
@@ -220,8 +221,8 @@ public final class KeyFrame {
      * @throws IllegalArgumentException
      *             if {@code time} is invalid (see {@link #time})
      */
-    public KeyFrame(Duration time, EventHandler<ActionEvent> onFinished,
-            KeyValue... values) {
+    public KeyFrame(@NamedArg("time") Duration time, @NamedArg("onFinished") EventHandler<ActionEvent> onFinished,
+            @NamedArg("values") KeyValue... values) {
         this(time, DEFAULT_NAME, onFinished, values);
     }
 
@@ -239,7 +240,7 @@ public final class KeyFrame {
      * @throws IllegalArgumentException
      *             if {@code time} is invalid (see {@link #time})
      */
-    public KeyFrame(Duration time, String name, KeyValue... values) {
+    public KeyFrame(@NamedArg("time") Duration time, @NamedArg("name") String name, @NamedArg("values") KeyValue... values) {
         this(time, name, DEFAULT_ON_FINISHED, values);
     }
 
@@ -255,7 +256,7 @@ public final class KeyFrame {
      * @throws IllegalArgumentException
      *             if {@code time} is invalid (see {@link #time})
      */
-    public KeyFrame(Duration time, KeyValue... values) {
+    public KeyFrame(@NamedArg("time") Duration time, @NamedArg("values") KeyValue... values) {
         this(time, DEFAULT_NAME, DEFAULT_ON_FINISHED, values);
     }
 

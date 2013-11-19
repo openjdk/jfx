@@ -26,6 +26,7 @@
 package javafx.util;
 
 import java.io.Serializable;
+import javafx.beans.NamedArg;
 
  /**
   * <p>A convenience class to represent name-value pairs.</p>
@@ -60,7 +61,7 @@ public class Pair<K,V> implements Serializable{
      * @param key The key for this pair
      * @param value The value to use for this pair
      */
-    public Pair(K key, V value) {
+    public Pair(@NamedArg("key") K key, @NamedArg("value") V value) {
         this.key = key;
         this.value = value;
     }

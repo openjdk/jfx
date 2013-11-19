@@ -25,6 +25,9 @@
 
 package javafx.geometry;
 
+import javafx.beans.NamedArg;
+
+
 /**
  * A 2D dimension object that contains a width and a height.
  *
@@ -38,7 +41,7 @@ public class Dimension2D {
      * @param width the width
      * @param height the height
      */
-    public Dimension2D(double width, double height) {
+    public Dimension2D(@NamedArg("width") double width, @NamedArg("height") double height) {
         this.width = width;
         this.height = height;
     }

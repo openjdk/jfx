@@ -26,6 +26,7 @@
 package javafx.scene.input;
 
 import com.sun.javafx.tk.Toolkit;
+import javafx.beans.NamedArg;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 
@@ -188,9 +189,9 @@ public final class KeyEvent extends InputEvent {
      * @param metaDown true if meta modifier was pressed.
      * @since JavaFX 8.0
      */
-    public KeyEvent(Object source, EventTarget target, EventType<KeyEvent> eventType, String character,
-            String text, KeyCode code, boolean shiftDown, boolean controlDown,
-            boolean altDown, boolean metaDown) {
+    public KeyEvent(@NamedArg("source") Object source, @NamedArg("target") EventTarget target, @NamedArg("eventType") EventType<KeyEvent> eventType, @NamedArg("character") String character,
+            @NamedArg("text") String text, @NamedArg("code") KeyCode code, @NamedArg("shiftDown") boolean shiftDown, @NamedArg("controlDown") boolean controlDown,
+            @NamedArg("altDown") boolean altDown, @NamedArg("metaDown") boolean metaDown) {
         super(source, target, eventType);
         boolean isKeyTyped = eventType == KEY_TYPED;
 
@@ -215,9 +216,9 @@ public final class KeyEvent extends InputEvent {
      * @param metaDown true if meta modifier was pressed.
      * @since JavaFX 8.0
      */
-    public KeyEvent(EventType<KeyEvent> eventType, String character,
-            String text, KeyCode code, boolean shiftDown, boolean controlDown,
-            boolean altDown, boolean metaDown) {
+    public KeyEvent(@NamedArg("eventType") EventType<KeyEvent> eventType, @NamedArg("character") String character,
+            @NamedArg("text") String text, @NamedArg("code") KeyCode code, @NamedArg("shiftDown") boolean shiftDown, @NamedArg("controlDown") boolean controlDown,
+            @NamedArg("altDown") boolean altDown, @NamedArg("metaDown") boolean metaDown) {
         super(eventType);
         boolean isKeyTyped = eventType == KEY_TYPED;
 

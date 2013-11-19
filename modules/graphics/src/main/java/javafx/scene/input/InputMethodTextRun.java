@@ -26,6 +26,7 @@
 package javafx.scene.input;
 
 import java.io.Serializable;
+import javafx.beans.NamedArg;
 
 /**
  * Represents a single run in which the characters have the same 
@@ -44,8 +45,8 @@ public class InputMethodTextRun implements Serializable {
      * @param highlight the highlighting of the text
      * @since JavaFX 8.0
      */
-    public InputMethodTextRun(String text,
-            InputMethodHighlight highlight) {
+    public InputMethodTextRun(@NamedArg("text") String text,
+            @NamedArg("highlight") InputMethodHighlight highlight) {
         this.text = text;
         this.highlight = highlight;
     }

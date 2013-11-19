@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
+import javafx.beans.NamedArg;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.collections.ListChangeListener.Change;
@@ -70,7 +71,7 @@ public final class SortedList<E> extends TransformationList<E, E>{
      * @param comparator a comparator to use or null for the unordered List
      */
     @SuppressWarnings("unchecked")
-    public SortedList(ObservableList<? extends E> source, Comparator<? super E> comparator) {
+    public SortedList(@NamedArg("source") ObservableList<? extends E> source, @NamedArg("comparator") Comparator<? super E> comparator) {
         super(source);
         sorted = (Element<E>[]) new Element[source.size() *3/2 + 1];
         size = source.size();
@@ -88,7 +89,7 @@ public final class SortedList<E> extends TransformationList<E, E>{
      * @param source the source list
      * @see #SortedList(java.util.List, java.util.Comparator)
      */
-    public SortedList(ObservableList<? extends E> source) {
+    public SortedList(@NamedArg("source") ObservableList<? extends E> source) {
         this(source, (Comparator)null);
     }
 

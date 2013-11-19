@@ -25,6 +25,7 @@
 
 package javafx.scene.control.cell;
 
+import javafx.beans.NamedArg;
 import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.value.ObservableValue;
@@ -106,7 +107,7 @@ public class TreeItemPropertyValueFactory<S,T> implements Callback<TreeTableColu
      * @param property The name of the property with which to attempt to
      *      reflectively extract a corresponding value for in a given object.
      */
-    public TreeItemPropertyValueFactory(String property) {
+    public TreeItemPropertyValueFactory(@NamedArg("property") String property) {
         this.property = property;
     }
 

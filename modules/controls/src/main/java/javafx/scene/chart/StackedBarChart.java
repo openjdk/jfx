@@ -28,6 +28,7 @@ package javafx.scene.chart;
 
 import java.util.*;
 import javafx.animation.*;
+import javafx.beans.NamedArg;
 import javafx.beans.property.DoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -129,7 +130,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
         * @param xAxis The x axis to use
         * @param yAxis The y axis to use
         */
-    public StackedBarChart(Axis<X> xAxis, Axis<Y> yAxis) {
+    public StackedBarChart(@NamedArg("xAxis") Axis<X> xAxis, @NamedArg("yAxis") Axis<Y> yAxis) {
         this(xAxis, yAxis, FXCollections.<Series<X, Y>>observableArrayList());
     }
 
@@ -141,7 +142,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
         * @param yAxis The y axis to use
         * @param data The data to use, this is the actual list used so any changes to it will be reflected in the chart
         */
-    public StackedBarChart(Axis<X> xAxis, Axis<Y> yAxis, ObservableList<Series<X, Y>> data) {
+    public StackedBarChart(@NamedArg("xAxis") Axis<X> xAxis, @NamedArg("yAxis") Axis<Y> yAxis, @NamedArg("data") ObservableList<Series<X, Y>> data) {
         super(xAxis, yAxis);
         getStyleClass().add("stacked-bar-chart");
         setLegend(legend);
@@ -174,7 +175,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
         * @param data The data to use, this is the actual list used so any changes to it will be reflected in the chart
         * @param categoryGap The gap to leave between bars in separate categories
         */
-    public StackedBarChart(Axis<X> xAxis, Axis<Y> yAxis, ObservableList<Series<X, Y>> data, double categoryGap) {
+    public StackedBarChart(@NamedArg("xAxis") Axis<X> xAxis, @NamedArg("yAxis") Axis<Y> yAxis, @NamedArg("data") ObservableList<Series<X, Y>> data, @NamedArg("categoryGap") double categoryGap) {
         this(xAxis, yAxis);
         setData(data);
         setCategoryGap(categoryGap);

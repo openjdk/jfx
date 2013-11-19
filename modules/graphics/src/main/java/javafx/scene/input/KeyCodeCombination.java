@@ -25,6 +25,9 @@
 
 package javafx.scene.input;
 
+import javafx.beans.NamedArg;
+
+
 // PENDING_DOC_REVIEW
 /**
  * This class represents a key combination in which the main key is specified
@@ -57,12 +60,12 @@ public final class KeyCodeCombination extends KeyCombination {
      * @param meta the value of the {@code meta} modifier key
      * @param shortcut the value of the {@code shortcut} modifier key
      */
-    public KeyCodeCombination(final KeyCode code,
-                              final ModifierValue shift,
-                              final ModifierValue control,
-                              final ModifierValue alt,
-                              final ModifierValue meta,
-                              final ModifierValue shortcut) {
+    public KeyCodeCombination(final @NamedArg("code") KeyCode code,
+                              final @NamedArg("shift") ModifierValue shift,
+                              final @NamedArg("control") ModifierValue control,
+                              final @NamedArg("alt") ModifierValue alt,
+                              final @NamedArg("meta") ModifierValue meta,
+                              final @NamedArg("shortcut") ModifierValue shortcut) {
         super(shift, control, alt, meta, shortcut);
 
         validateKeyCode(code);
@@ -80,8 +83,8 @@ public final class KeyCodeCombination extends KeyCombination {
      * @param code the key code of the main key
      * @param modifiers the list of modifier keys and their corresponding values
      */
-    public KeyCodeCombination(final KeyCode code,
-                              final Modifier... modifiers) {
+    public KeyCodeCombination(final @NamedArg("code") KeyCode code,
+                              final @NamedArg("modifiers") Modifier... modifiers) {
         super(modifiers);
 
         validateKeyCode(code);

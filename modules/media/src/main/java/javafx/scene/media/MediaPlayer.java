@@ -36,6 +36,7 @@ import java.util.ListIterator;
 import java.util.ArrayList;
 
 import javafx.application.Platform;
+import javafx.beans.NamedArg;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.DoubleProperty;
@@ -390,7 +391,7 @@ public final class MediaPlayer {
      * @throws MediaException if any synchronous errors occur within the
      * constructor.
      */
-    public MediaPlayer(Media media) {
+    public MediaPlayer(@NamedArg("media") Media media) {
         if (null == media) {
             throw new NullPointerException("media == null!");
         }

@@ -28,6 +28,7 @@ package javafx.scene.input;
 import java.util.EnumSet;
 import java.util.Set;
 
+import javafx.beans.NamedArg;
 import javafx.event.Event;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
@@ -341,10 +342,10 @@ public final class DragEvent extends InputEvent {
      *                   based on the scene coordinates and the target
      * @since JavaFX 8.0
      */
-    public DragEvent(Object source, EventTarget target, EventType<DragEvent> eventType, Dragboard dragboard,
-            double x, double y,
-            double screenX, double screenY, TransferMode transferMode,
-            Object gestureSource, Object gestureTarget, PickResult pickResult) {
+    public DragEvent(@NamedArg("source") Object source, @NamedArg("target") EventTarget target, @NamedArg("eventType") EventType<DragEvent> eventType, @NamedArg("dragboard") Dragboard dragboard,
+            @NamedArg("x") double x, @NamedArg("y") double y,
+            @NamedArg("screenX") double screenX, @NamedArg("screenY") double screenY, @NamedArg("transferMode") TransferMode transferMode,
+            @NamedArg("gestureSource") Object gestureSource, @NamedArg("gestureTarget") Object gestureTarget, @NamedArg("pickResult") PickResult pickResult) {
         super(source, target, eventType);
         this.gestureSource = gestureSource;
         this.gestureTarget = gestureTarget;
@@ -387,10 +388,10 @@ public final class DragEvent extends InputEvent {
      *                   based on the scene coordinates
      * @since JavaFX 8.0
      */
-    public DragEvent(EventType<DragEvent> eventType, Dragboard dragboard,
-            double x, double y,
-            double screenX, double screenY, TransferMode transferMode,
-            Object gestureSource, Object gestureTarget, PickResult pickResult) {
+    public DragEvent(@NamedArg("eventType") EventType<DragEvent> eventType, @NamedArg("dragboard") Dragboard dragboard,
+            @NamedArg("x") double x, @NamedArg("y") double y,
+            @NamedArg("screenX") double screenX, @NamedArg("screenY") double screenY, @NamedArg("transferMode") TransferMode transferMode,
+            @NamedArg("gestureSource") Object gestureSource, @NamedArg("gestureTarget") Object gestureTarget, @NamedArg("pickResult") PickResult pickResult) {
         this(null, null, eventType, dragboard, x, y, screenX, screenY, transferMode,
                 gestureSource, gestureTarget, pickResult);
     }

@@ -25,6 +25,7 @@
 
 package javafx.collections;
 
+import javafx.beans.NamedArg;
 import javafx.beans.WeakListener;
 
 import java.lang.ref.WeakReference;
@@ -62,7 +63,7 @@ public final class WeakMapChangeListener<K, V> implements MapChangeListener<K, V
      * @param listener
      *            The original listener that should be notified
      */
-    public WeakMapChangeListener(MapChangeListener<K, V> listener) {
+    public WeakMapChangeListener(@NamedArg("listener") MapChangeListener<K, V> listener) {
         if (listener == null) {
             throw new NullPointerException("Listener must be specified.");
         }

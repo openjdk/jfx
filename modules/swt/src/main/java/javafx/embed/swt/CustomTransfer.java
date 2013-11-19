@@ -27,6 +27,7 @@ package javafx.embed.swt;
 
 import java.nio.ByteBuffer;
 
+import javafx.beans.NamedArg;
 import org.eclipse.swt.dnd.ByteArrayTransfer;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.TransferData;
@@ -41,7 +42,7 @@ import org.eclipse.swt.dnd.TransferData;
 public class CustomTransfer extends ByteArrayTransfer {
     private String name, mime;
     
-    public CustomTransfer (String name, String mime) {
+    public CustomTransfer (@NamedArg("name") String name, @NamedArg("mime") String mime) {
         this.name = name;
         this.mime = mime;
     }

@@ -25,6 +25,7 @@
 
 package javafx.css;
 
+import javafx.beans.NamedArg;
 import javafx.beans.property.SimpleBooleanProperty;
 
 /**
@@ -55,7 +56,7 @@ public class SimpleStyleableBooleanProperty extends StyleableBooleanProperty {
      * @param cssMetaData
      *            the CssMetaData associated with this {@code StyleableProperty}
      */
-    public SimpleStyleableBooleanProperty(CssMetaData<? extends Styleable, Boolean> cssMetaData) {
+    public SimpleStyleableBooleanProperty(@NamedArg("cssMetaData") CssMetaData<? extends Styleable, Boolean> cssMetaData) {
         this(cssMetaData, DEFAULT_BEAN, DEFAULT_NAME);
     }
 
@@ -67,7 +68,7 @@ public class SimpleStyleableBooleanProperty extends StyleableBooleanProperty {
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableBooleanProperty(CssMetaData<? extends Styleable, Boolean> cssMetaData, boolean initialValue) {
+    public SimpleStyleableBooleanProperty(@NamedArg("cssMetaData") CssMetaData<? extends Styleable, Boolean> cssMetaData, @NamedArg("initialValue") boolean initialValue) {
         this(cssMetaData, DEFAULT_BEAN, DEFAULT_NAME, initialValue);
     }
 
@@ -81,7 +82,7 @@ public class SimpleStyleableBooleanProperty extends StyleableBooleanProperty {
      * @param name
      *            the name of this {@code BooleanProperty}
      */
-    public SimpleStyleableBooleanProperty(CssMetaData<? extends Styleable, Boolean> cssMetaData, Object bean, String name) {
+    public SimpleStyleableBooleanProperty(@NamedArg("cssMetaData") CssMetaData<? extends Styleable, Boolean> cssMetaData, @NamedArg("bean") Object bean, @NamedArg("name") String name) {
         this.bean = bean;
         this.name = (name == null) ? DEFAULT_NAME : name;
         this.cssMetaData = cssMetaData;
@@ -99,7 +100,7 @@ public class SimpleStyleableBooleanProperty extends StyleableBooleanProperty {
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableBooleanProperty(CssMetaData<? extends Styleable, Boolean> cssMetaData, Object bean, String name, boolean initialValue) {
+    public SimpleStyleableBooleanProperty(@NamedArg("cssMetaData") CssMetaData<? extends Styleable, Boolean> cssMetaData, @NamedArg("bean") Object bean, @NamedArg("name") String name, @NamedArg("initialValue") boolean initialValue) {
         super(initialValue);
         this.bean = bean;
         this.name = (name == null) ? DEFAULT_NAME : name;

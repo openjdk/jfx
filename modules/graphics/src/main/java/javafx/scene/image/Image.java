@@ -38,6 +38,7 @@ import java.util.concurrent.CancellationException;
 import java.util.regex.Pattern;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.beans.NamedArg;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyDoubleProperty;
@@ -50,7 +51,6 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.paint.Color;
 import javafx.util.Duration;
-import com.sun.javafx.beans.annotations.Default;
 import com.sun.javafx.runtime.async.AsyncOperation;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
 import com.sun.javafx.tk.ImageLoader;
@@ -594,7 +594,7 @@ public class Image {
      * @throws NullPointerException if URL is null
      * @throws IllegalArgumentException if URL is invalid or unsupported
      */
-    public Image(String url) {
+    public Image(@NamedArg("url") String url) {
         this(validateUrl(url), null, 0, 0, false, false, false);
         initialize(null);
     }
@@ -610,7 +610,7 @@ public class Image {
      * @throws NullPointerException if URL is null
      * @throws IllegalArgumentException if URL is invalid or unsupported
      */
-    public Image(String url, boolean backgroundLoading) {
+    public Image(@NamedArg("url") String url, @NamedArg("backgroundLoading") boolean backgroundLoading) {
         this(validateUrl(url), null, 0, 0, false, false, backgroundLoading);
         initialize(null);
     }
@@ -632,8 +632,8 @@ public class Image {
      * @throws NullPointerException if URL is null
      * @throws IllegalArgumentException if URL is invalid or unsupported
      */
-    public Image(String url, double requestedWidth, double requestedHeight,
-                 boolean preserveRatio, boolean smooth) {
+    public Image(@NamedArg("url") String url, @NamedArg("requestedWidth") double requestedWidth, @NamedArg("requestedHeight") double requestedHeight,
+                 @NamedArg("preserveRatio") boolean preserveRatio, @NamedArg("smooth") boolean smooth) {
         this(validateUrl(url), null, requestedWidth, requestedHeight,
              preserveRatio, smooth, false);
         initialize(null);
@@ -662,12 +662,12 @@ public class Image {
      * @throws IllegalArgumentException if URL is invalid or unsupported
      */
     public Image(
-            @Default("\"\"") String url,
-            double requestedWidth,
-            double requestedHeight,
-            boolean preserveRatio,
-            @Default("true") boolean smooth,
-            boolean backgroundLoading) {
+            @NamedArg(value="url", defaultValue="\"\"") String url,
+            @NamedArg("requestedWidth") double requestedWidth,
+            @NamedArg("requestedHeight") double requestedHeight,
+            @NamedArg("preserveRatio") boolean preserveRatio,
+            @NamedArg(value="smooth", defaultValue="true") boolean smooth,
+            @NamedArg("backgroundLoading") boolean backgroundLoading) {
         this(validateUrl(url), null, requestedWidth, requestedHeight,
              preserveRatio, smooth, backgroundLoading);
         initialize(null);
@@ -680,7 +680,7 @@ public class Image {
      * @param is the stream from which to load the image
      * @throws NullPointerException if input stream is null
      */
-    public Image(InputStream is) {
+    public Image(@NamedArg("is") InputStream is) {
         this(null, validateInputStream(is), 0, 0, false, false, false);
         initialize(null);
     }
@@ -699,8 +699,8 @@ public class Image {
      *      the specified bounding box
      * @throws NullPointerException if input stream is null
      */
-    public Image(InputStream is, double requestedWidth, double requestedHeight,
-                 boolean preserveRatio, boolean smooth) {
+    public Image(@NamedArg("is") InputStream is, @NamedArg("requestedWidth") double requestedWidth, @NamedArg("requestedHeight") double requestedHeight,
+                 @NamedArg("preserveRatio") boolean preserveRatio, @NamedArg("smooth") boolean smooth) {
         this(null, validateInputStream(is), requestedWidth, requestedHeight,
              preserveRatio, smooth, false);
         initialize(null);

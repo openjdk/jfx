@@ -25,6 +25,7 @@
 
 package javafx.scene.input;
 
+import javafx.beans.NamedArg;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 
@@ -110,17 +111,17 @@ public final class SwipeEvent extends GestureEvent {
      *                   based on the scene coordinates and the target
      * @since JavaFX 8.0
      */
-    public SwipeEvent(Object source, EventTarget target,
-            final EventType<SwipeEvent> eventType,
-            double x, double y,
-            double screenX, double screenY,
-            boolean shiftDown,
-            boolean controlDown,
-            boolean altDown,
-            boolean metaDown,
-            boolean direct,
-            int touchCount,
-            PickResult pickResult) {
+    public SwipeEvent(@NamedArg("source") Object source, @NamedArg("target") EventTarget target,
+            final @NamedArg("eventType") EventType<SwipeEvent> eventType,
+            @NamedArg("x") double x, @NamedArg("y") double y,
+            @NamedArg("screenX") double screenX, @NamedArg("screenY") double screenY,
+            @NamedArg("shiftDown") boolean shiftDown,
+            @NamedArg("controlDown") boolean controlDown,
+            @NamedArg("altDown") boolean altDown,
+            @NamedArg("metaDown") boolean metaDown,
+            @NamedArg("direct") boolean direct,
+            @NamedArg("touchCount") int touchCount,
+            @NamedArg("pickResult") PickResult pickResult) {
 
         super(source, target, eventType, x, y, screenX, screenY,
                 shiftDown, controlDown, altDown, metaDown, direct, false,
@@ -146,16 +147,16 @@ public final class SwipeEvent extends GestureEvent {
      *                   based on the scene coordinates
      * @since JavaFX 8.0
      */
-    public SwipeEvent(final EventType<SwipeEvent> eventType,
-            double x, double y,
-            double screenX, double screenY,
-            boolean shiftDown,
-            boolean controlDown,
-            boolean altDown,
-            boolean metaDown,
-            boolean direct,
-            int touchCount,
-            PickResult pickResult) {
+    public SwipeEvent(final @NamedArg("eventType") EventType<SwipeEvent> eventType,
+            @NamedArg("x") double x, @NamedArg("y") double y,
+            @NamedArg("screenX") double screenX, @NamedArg("screenY") double screenY,
+            @NamedArg("shiftDown") boolean shiftDown,
+            @NamedArg("controlDown") boolean controlDown,
+            @NamedArg("altDown") boolean altDown,
+            @NamedArg("metaDown") boolean metaDown,
+            @NamedArg("direct") boolean direct,
+            @NamedArg("touchCount") int touchCount,
+            @NamedArg("pickResult") PickResult pickResult) {
         this(null, null, eventType, x, y, screenX, screenY, shiftDown, controlDown,
                 altDown, metaDown, direct, touchCount, pickResult);
     }

@@ -25,6 +25,7 @@
 
 package javafx.scene.paint;
 
+import javafx.beans.NamedArg;
 import javafx.scene.image.Image;
 import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.tk.Toolkit;
@@ -229,7 +230,7 @@ public final class ImagePattern extends Paint {
      * @throws IllegalArgumentException if image is not done loading, 
      * that is if progress is < 1.
      */
-    public ImagePattern(Image image) {
+    public ImagePattern(@NamedArg("image") Image image) {
         if (image == null) {
             throw new NullPointerException("Image must be non-null.");
         } else if (image.getProgress() < 1.0) {
@@ -252,8 +253,8 @@ public final class ImagePattern extends Paint {
      * @throws IllegalArgumentException if image is not done loading, 
      * that is if progress is < 1.
      */
-    public ImagePattern(Image image, double x, double y, double width,
-            double height, boolean proportional) {
+    public ImagePattern(@NamedArg("image") Image image, @NamedArg("x") double x, @NamedArg("y") double y, @NamedArg("width") double width,
+            @NamedArg("height") double height, @NamedArg("proportional") boolean proportional) {
 
         if (image == null) {
             throw new NullPointerException("Image must be non-null.");

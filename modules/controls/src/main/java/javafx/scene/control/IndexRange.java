@@ -25,6 +25,9 @@
 
 package javafx.scene.control;
 
+import javafx.beans.NamedArg;
+
+
 /**
  * Class representing a contiguous range of integral values.
  * @since JavaFX 2.0
@@ -45,7 +48,7 @@ public final class IndexRange {
      * @param start The start position of the range.
      * @param end The end position of the range.
      */
-    public IndexRange(int start, int end) {
+    public IndexRange(@NamedArg("start") int start, @NamedArg("end") int end) {
         if (end < start) {
             throw new IllegalArgumentException();
         }
@@ -61,7 +64,7 @@ public final class IndexRange {
      * @param range The IndexRange instance from which to copy the start and end
      *      values.
      */
-    public IndexRange(IndexRange range) {
+    public IndexRange(@NamedArg("range") IndexRange range) {
         this.start = range.start;
         this.end = range.end;
     }

@@ -28,6 +28,7 @@ package javafx.scene.layout;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import javafx.beans.NamedArg;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.shape.StrokeType;
@@ -149,9 +150,9 @@ public final class BorderStrokeStyle {
      * @param dashOffset    The dashOffset. 0 is a good default value.
      * @param dashArray    The dash array. If null, defaults to an empty list.
      */
-    public BorderStrokeStyle(StrokeType type, StrokeLineJoin lineJoin,
-                       StrokeLineCap lineCap, double miterLimit,
-                       double dashOffset, List<Double> dashArray) {
+    public BorderStrokeStyle(@NamedArg("type") StrokeType type, @NamedArg("lineJoin") StrokeLineJoin lineJoin,
+                       @NamedArg("lineCap") StrokeLineCap lineCap, @NamedArg("miterLimit") double miterLimit,
+                       @NamedArg("dashOffset") double dashOffset, @NamedArg("dashArray") List<Double> dashArray) {
         this.type = (type != null) ?
                 type : StrokeType.CENTERED;
         this.lineJoin = (lineJoin != null) ?

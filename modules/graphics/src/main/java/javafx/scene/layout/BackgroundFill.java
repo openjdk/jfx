@@ -25,6 +25,7 @@
 
 package javafx.scene.layout;
 
+import javafx.beans.NamedArg;
 import javafx.geometry.Insets;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
@@ -84,7 +85,7 @@ public final class BackgroundFill {
      * @param radii  The corner Radii. If null, the value Radii.EMPTY is used.
      * @param insets The insets. If null, the value Insets.EMPTY is used.
      */
-    public BackgroundFill(Paint fill, CornerRadii radii, Insets insets) {
+    public BackgroundFill(@NamedArg("fill") Paint fill, @NamedArg("radii") CornerRadii radii, @NamedArg("insets") Insets insets) {
         // As per the CSS Spec (section 3.2): initial value of background-color is TRANSPARENT
         this.fill = fill == null ? Color.TRANSPARENT : fill;
         this.radii = radii == null ? CornerRadii.EMPTY : radii;

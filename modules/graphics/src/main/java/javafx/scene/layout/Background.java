@@ -25,6 +25,7 @@
 
 package javafx.scene.layout;
 
+import javafx.beans.NamedArg;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.geometry.Insets;
@@ -201,7 +202,7 @@ public final class Background {
      *                  contained nulls are filtered out and not included in the
      *                  final List of fills. A null array becomes an empty List.
      */
-    public Background(final BackgroundFill... fills) {
+    public Background(final @NamedArg("fills") BackgroundFill... fills) {
         this(fills, null);
     }
 
@@ -214,7 +215,7 @@ public final class Background {
      *                  contained nulls are filtered out and not included in the
      *                  final List of images. A null array becomes an empty List.
      */
-    public Background(final BackgroundImage... images) {
+    public Background(final @NamedArg("images") BackgroundImage... images) {
         this(null, images);
     }
 
@@ -232,7 +233,7 @@ public final class Background {
      *                  contained nulls are filtered out and not included in the
      *                  final List of images. A null List becomes an empty List.
      */
-    public Background(final List<BackgroundFill> fills, final List<BackgroundImage> images) {
+    public Background(final @NamedArg("fills") List<BackgroundFill> fills, final @NamedArg("images") List<BackgroundImage> images) {
         // NOTE: This constructor had to be supplied in order to cause a Builder
         // to be auto-generated, because otherwise the types of the fills and images
         // properties didn't match the types of the array based constructor parameters.
@@ -256,7 +257,7 @@ public final class Background {
      *                  contained nulls are filtered out and not included in the
      *                  final List of images. A null array becomes an empty List.
      */
-    public Background(final BackgroundFill[] fills, final BackgroundImage[] images) {
+    public Background(final @NamedArg("fills") BackgroundFill[] fills, final @NamedArg("images") BackgroundImage[] images) {
         // The cumulative insets
         double outerTop = 0, outerRight = 0, outerBottom = 0, outerLeft = 0;
         boolean hasPercentOpaqueInsets = false;

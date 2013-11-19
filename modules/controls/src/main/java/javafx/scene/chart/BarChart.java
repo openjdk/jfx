@@ -38,6 +38,7 @@ import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.ParallelTransition;
 import javafx.animation.Timeline;
+import javafx.beans.NamedArg;
 import javafx.beans.property.DoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -138,7 +139,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
      * @param xAxis The x axis to use
      * @param yAxis The y axis to use
      */
-    public BarChart(Axis<X> xAxis, Axis<Y> yAxis) {
+    public BarChart(@NamedArg("xAxis") Axis<X> xAxis, @NamedArg("yAxis") Axis<Y> yAxis) {
         this(xAxis, yAxis, FXCollections.<Series<X, Y>>observableArrayList());
     }
 
@@ -150,7 +151,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
      * @param yAxis The y axis to use
      * @param data The data to use, this is the actual list used so any changes to it will be reflected in the chart
      */
-    public BarChart(Axis<X> xAxis, Axis<Y> yAxis, ObservableList<Series<X,Y>> data) {
+    public BarChart(@NamedArg("xAxis") Axis<X> xAxis, @NamedArg("yAxis") Axis<Y> yAxis, @NamedArg("data") ObservableList<Series<X,Y>> data) {
         super(xAxis, yAxis);
         getStyleClass().add("bar-chart");
         setLegend(legend);
@@ -182,7 +183,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
      * @param data The data to use, this is the actual list used so any changes to it will be reflected in the chart
      * @param categoryGap The gap to leave between bars in separate categories
      */
-     public BarChart(Axis<X> xAxis, Axis<Y> yAxis, ObservableList<Series<X,Y>> data, double categoryGap) {
+     public BarChart(@NamedArg("xAxis") Axis<X> xAxis, @NamedArg("yAxis") Axis<Y> yAxis, @NamedArg("data") ObservableList<Series<X,Y>> data, @NamedArg("categoryGap") double categoryGap) {
         this(xAxis, yAxis);
         setData(data);
         setCategoryGap(categoryGap);

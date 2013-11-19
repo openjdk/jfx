@@ -26,6 +26,7 @@
 package javafx.scene.input;
 
 import com.sun.javafx.tk.Toolkit;
+import javafx.beans.NamedArg;
 import javafx.event.Event;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
@@ -319,22 +320,22 @@ public class MouseEvent extends InputEvent {
      * @since JavaFX 8.0
      */
     public MouseEvent(
-            EventType<? extends MouseEvent> eventType,
-            double x, double y,
-            double screenX, double screenY,
-            MouseButton button,
-            int clickCount,
-            boolean shiftDown,
-            boolean controlDown,
-            boolean altDown,
-            boolean metaDown,
-            boolean primaryButtonDown,
-            boolean middleButtonDown,
-            boolean secondaryButtonDown,
-            boolean synthesized,
-            boolean popupTrigger,
-            boolean stillSincePress,
-            PickResult pickResult) {
+            @NamedArg("eventType") EventType<? extends MouseEvent> eventType,
+            @NamedArg("x") double x, @NamedArg("y") double y,
+            @NamedArg("screenX") double screenX, @NamedArg("screenY") double screenY,
+            @NamedArg("button") MouseButton button,
+            @NamedArg("clickCount") int clickCount,
+            @NamedArg("shiftDown") boolean shiftDown,
+            @NamedArg("controlDown") boolean controlDown,
+            @NamedArg("altDown") boolean altDown,
+            @NamedArg("metaDown") boolean metaDown,
+            @NamedArg("primaryButtonDown") boolean primaryButtonDown,
+            @NamedArg("middleButtonDown") boolean middleButtonDown,
+            @NamedArg("secondaryButtonDown") boolean secondaryButtonDown,
+            @NamedArg("synthesized") boolean synthesized,
+            @NamedArg("popupTrigger") boolean popupTrigger,
+            @NamedArg("stillSincePress") boolean stillSincePress,
+            @NamedArg("pickResult") PickResult pickResult) {
         this(null, null, eventType, x, y, screenX, screenY, button, clickCount,
                 shiftDown, controlDown, altDown, metaDown,
                 primaryButtonDown, middleButtonDown, secondaryButtonDown,
@@ -367,23 +368,23 @@ public class MouseEvent extends InputEvent {
      *                   based on the scene coordinates and target
      * @since JavaFX 8.0
      */
-    public MouseEvent(Object source, EventTarget target,
-            EventType<? extends MouseEvent> eventType,
-            double x, double y,
-            double screenX, double screenY,
-            MouseButton button,
-            int clickCount,
-            boolean shiftDown,
-            boolean controlDown,
-            boolean altDown,
-            boolean metaDown,
-            boolean primaryButtonDown,
-            boolean middleButtonDown,
-            boolean secondaryButtonDown,
-            boolean synthesized,
-            boolean popupTrigger,
-            boolean stillSincePress,
-            PickResult pickResult) {
+    public MouseEvent(@NamedArg("source") Object source, @NamedArg("target") EventTarget target,
+            @NamedArg("eventType") EventType<? extends MouseEvent> eventType,
+            @NamedArg("x") double x, @NamedArg("y") double y,
+            @NamedArg("screenX") double screenX, @NamedArg("screenY") double screenY,
+            @NamedArg("button") MouseButton button,
+            @NamedArg("clickCount") int clickCount,
+            @NamedArg("shiftDown") boolean shiftDown,
+            @NamedArg("controlDown") boolean controlDown,
+            @NamedArg("altDown") boolean altDown,
+            @NamedArg("metaDown") boolean metaDown,
+            @NamedArg("primaryButtonDown") boolean primaryButtonDown,
+            @NamedArg("middleButtonDown") boolean middleButtonDown,
+            @NamedArg("secondaryButtonDown") boolean secondaryButtonDown,
+            @NamedArg("synthesized") boolean synthesized,
+            @NamedArg("popupTrigger") boolean popupTrigger,
+            @NamedArg("stillSincePress") boolean stillSincePress,
+            @NamedArg("pickResult") PickResult pickResult) {
         super(source, target, eventType);
         this.x = x;
         this.y = y;

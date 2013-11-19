@@ -25,6 +25,7 @@
 
 package javafx.scene.input;
 
+import javafx.beans.NamedArg;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 
@@ -107,17 +108,17 @@ public final class RotateEvent extends GestureEvent {
      *                   based on the scene coordinates and the target
      * @since JavaFX 8.0
      */
-    public RotateEvent(Object source, EventTarget target,
-            final EventType<RotateEvent> eventType,
-            double x, double y,
-            double screenX, double screenY,
-            boolean shiftDown,
-            boolean controlDown,
-            boolean altDown,
-            boolean metaDown,
-            boolean direct,
-            boolean inertia, double angle, double totalAngle,
-            PickResult pickResult) {
+    public RotateEvent(@NamedArg("source") Object source, @NamedArg("target") EventTarget target,
+            final @NamedArg("eventType") EventType<RotateEvent> eventType,
+            @NamedArg("x") double x, @NamedArg("y") double y,
+            @NamedArg("screenX") double screenX, @NamedArg("screenY") double screenY,
+            @NamedArg("shiftDown") boolean shiftDown,
+            @NamedArg("controlDown") boolean controlDown,
+            @NamedArg("altDown") boolean altDown,
+            @NamedArg("metaDown") boolean metaDown,
+            @NamedArg("direct") boolean direct,
+            @NamedArg("inertia") boolean inertia, @NamedArg("angle") double angle, @NamedArg("totalAngle") double totalAngle,
+            @NamedArg("pickResult") PickResult pickResult) {
 
         super(source, target, eventType, x, y, screenX, screenY,
                 shiftDown, controlDown, altDown, metaDown, direct, inertia,
@@ -146,16 +147,16 @@ public final class RotateEvent extends GestureEvent {
      *                   based on the scene coordinates
      * @since JavaFX 8.0
      */
-    public RotateEvent(final EventType<RotateEvent> eventType,
-            double x, double y,
-            double screenX, double screenY,
-            boolean shiftDown,
-            boolean controlDown,
-            boolean altDown,
-            boolean metaDown,
-            boolean direct,
-            boolean inertia, double angle, double totalAngle,
-            PickResult pickResult) {
+    public RotateEvent(final @NamedArg("eventType") EventType<RotateEvent> eventType,
+            @NamedArg("x") double x, @NamedArg("y") double y,
+            @NamedArg("screenX") double screenX, @NamedArg("screenY") double screenY,
+            @NamedArg("shiftDown") boolean shiftDown,
+            @NamedArg("controlDown") boolean controlDown,
+            @NamedArg("altDown") boolean altDown,
+            @NamedArg("metaDown") boolean metaDown,
+            @NamedArg("direct") boolean direct,
+            @NamedArg("inertia") boolean inertia, @NamedArg("angle") double angle, @NamedArg("totalAngle") double totalAngle,
+            @NamedArg("pickResult") PickResult pickResult) {
         this(null, null, eventType, x, y, screenX, screenY, shiftDown, controlDown,
                 altDown, metaDown, direct, inertia, angle, totalAngle, pickResult);
     }

@@ -25,12 +25,12 @@
 
 package javafx.scene.paint;
 
-import com.sun.javafx.beans.annotations.Default;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import javafx.beans.NamedArg;
 
 /**
  * Defines one element of the ramp of colors to use on a gradient.
@@ -187,7 +187,7 @@ public final class Stop {
      * @param offset Stop's position (ranging from {@code 0} to {@code 1}
      * @param color Stop's color
      */
-    public Stop(double offset, @Default("javafx.scene.paint.Color.BLACK") Color color) {
+    public Stop(@NamedArg("offset") double offset, @NamedArg(value="color", defaultValue="BLACK") Color color) {
         this.offset = offset;
         this.color = color;
     }

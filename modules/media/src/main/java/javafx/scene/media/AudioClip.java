@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.io.FileNotFoundException;
 import java.net.URISyntaxException;
 
+import javafx.beans.NamedArg;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.IntegerProperty;
@@ -75,7 +76,7 @@ public final class AudioClip {
      * <a href="http://www.ietf.org/rfc/rfc2396.txt">RFC 2396</a>.
      * @throws MediaException if there is some other problem loading the media.
      */
-    public AudioClip(String source) {
+    public AudioClip(@NamedArg("source") String source) {
         URI srcURI = URI.create(source);
         sourceURL = source;
         try {

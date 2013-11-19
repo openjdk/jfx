@@ -26,6 +26,7 @@
 package javafx.scene.control;
 
 import java.lang.ref.WeakReference;
+import javafx.beans.NamedArg;
 
 /**
  * This class is used to represent a single row/column/cell in a TreeTableView.
@@ -63,7 +64,7 @@ public class TreeTablePosition<S,T> extends TablePositionBase<TreeTableColumn<S,
      * @param row The row that this TreeTablePosition is representing.
      * @param tableColumn The TreeTableColumn instance that this TreeTablePosition represents.
      */
-    public TreeTablePosition(TreeTableView<S> treeTableView, int row, TreeTableColumn<S,T> tableColumn) {
+    public TreeTablePosition(@NamedArg("treeTableView") TreeTableView<S> treeTableView, @NamedArg("row") int row, @NamedArg("tableColumn") TreeTableColumn<S,T> tableColumn) {
         super(row, tableColumn);
         this.controlRef = new WeakReference<TreeTableView<S>>(treeTableView);
         this.treeItemRef = new WeakReference<TreeItem<S>>(treeTableView.getTreeItem(row));

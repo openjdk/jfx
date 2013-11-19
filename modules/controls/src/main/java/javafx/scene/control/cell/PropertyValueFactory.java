@@ -25,6 +25,7 @@
 
 package javafx.scene.control.cell;
 
+import javafx.beans.NamedArg;
 import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.value.ObservableValue;
@@ -109,7 +110,7 @@ public class PropertyValueFactory<S,T> implements Callback<CellDataFeatures<S,T>
      * @param property The name of the property with which to attempt to
      *      reflectively extract a corresponding value for in a given object.
      */
-    public PropertyValueFactory(String property) {
+    public PropertyValueFactory(@NamedArg("property") String property) {
         this.property = property;
     }
 

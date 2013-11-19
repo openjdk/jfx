@@ -25,6 +25,9 @@
 
 package javafx.scene.control;
 
+import javafx.beans.NamedArg;
+
+
 /**
  * An immutable wrapper class for use by the column resize policies offered by
  * controls such as {@link TableView} and {@link TreeTableView}. 
@@ -44,7 +47,7 @@ public class ResizeFeaturesBase<S> {
    * @param delta The amount of horizontal space added or removed in the 
    *      resize operation.
    */
-  public ResizeFeaturesBase(TableColumnBase<S,?> column, Double delta) {
+  public ResizeFeaturesBase(@NamedArg("column") TableColumnBase<S,?> column, @NamedArg("delta") Double delta) {
       this.column = column;
       this.delta = delta;
   }

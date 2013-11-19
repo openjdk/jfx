@@ -25,6 +25,9 @@
 
 package javafx.scene.layout;
 
+import javafx.beans.NamedArg;
+
+
 /**
  * Defines the size of the area that a BackgroundImage should fill relative
  * to the Region it is styling. There are several properties who's values
@@ -137,9 +140,9 @@ public final class BackgroundSize {
      * @param contain               Whether the image should be sized to fit within the Region maximally
      * @param cover                 Whether the image should be sized to "cover" the Region
      */
-    public BackgroundSize(double width, double height,
-                          boolean widthAsPercentage, boolean heightAsPercentage,
-                          boolean contain, boolean cover) {
+    public BackgroundSize(@NamedArg("width") double width, @NamedArg("height") double height,
+                          @NamedArg("widthAsPercentage") boolean widthAsPercentage, @NamedArg("heightAsPercentage") boolean heightAsPercentage,
+                          @NamedArg("contain") boolean contain, @NamedArg("cover") boolean cover) {
         // TODO Should deal with NaN and Infinity values as well
         if (width < 0 && width != AUTO)
             throw new IllegalArgumentException("Width cannot be < 0, except when AUTO");

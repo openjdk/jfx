@@ -26,6 +26,7 @@
 package javafx.scene.control;
 
 import java.lang.ref.WeakReference;
+import javafx.beans.NamedArg;
 
 /**
  * This class is used to represent a single row/column/cell in a TableView.
@@ -63,7 +64,7 @@ public class TablePosition<S,T> extends TablePositionBase<TableColumn<S,T>> {
      * @param row The row that this TablePosition is representing.
      * @param tableColumn The TableColumn instance that this TablePosition represents.
      */
-    public TablePosition(TableView<S> tableView, int row, TableColumn<S,T> tableColumn) {
+    public TablePosition(@NamedArg("tableView") TableView<S> tableView, @NamedArg("row") int row, @NamedArg("tableColumn") TableColumn<S,T> tableColumn) {
         super(row, tableColumn);
         this.controlRef = new WeakReference<TableView<S>>(tableView);
     }

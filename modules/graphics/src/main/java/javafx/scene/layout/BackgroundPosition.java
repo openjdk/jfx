@@ -25,6 +25,7 @@
 
 package javafx.scene.layout;
 
+import javafx.beans.NamedArg;
 import javafx.geometry.Side;
 
 /**
@@ -132,8 +133,8 @@ public class BackgroundPosition {
      * @param verticalPosition          The vertical position value.
      * @param verticalAsPercentage      Whether to interpret the vertical position as a decimal or percentage
      */
-    public BackgroundPosition(Side horizontalSide, double horizontalPosition, boolean horizontalAsPercentage,
-                              Side verticalSide, double verticalPosition, boolean verticalAsPercentage) {
+    public BackgroundPosition(@NamedArg("horizontalSide") Side horizontalSide, @NamedArg("horizontalPosition") double horizontalPosition, @NamedArg("horizontalAsPercentage") boolean horizontalAsPercentage,
+                              @NamedArg("verticalSide") Side verticalSide, @NamedArg("verticalPosition") double verticalPosition, @NamedArg("verticalAsPercentage") boolean verticalAsPercentage) {
 
         if (horizontalSide == Side.TOP || horizontalSide == Side.BOTTOM) {
             throw new IllegalArgumentException("The horizontalSide must be LEFT or RIGHT");

@@ -25,6 +25,7 @@
 
 package javafx.animation;
 
+import javafx.beans.NamedArg;
 import javafx.beans.value.WritableBooleanValue;
 import javafx.beans.value.WritableDoubleValue;
 import javafx.beans.value.WritableFloatValue;
@@ -128,8 +129,8 @@ public final class KeyValue {
      * @throws NullPointerException
      *             if {@code target} or {@code interpolator} are {@code null}
      */
-    public <T> KeyValue(WritableValue<T> target, T endValue,
-            Interpolator interpolator) {
+    public <T> KeyValue(@NamedArg("target") WritableValue<T> target, @NamedArg("endValue") T endValue,
+            @NamedArg("interpolator") Interpolator interpolator) {
         if (target == null) {
             throw new NullPointerException("Target needs to be specified");
         }
@@ -159,7 +160,7 @@ public final class KeyValue {
      * @throws NullPointerException
      *             if {@code target} or {@code interpolator} are {@code null}
      */
-    public <T> KeyValue(WritableValue<T> target, T endValue) {
+    public <T> KeyValue(@NamedArg("target") WritableValue<T> target, @NamedArg("endValue") T endValue) {
         this(target, endValue, DEFAULT_INTERPOLATOR);
     }
 

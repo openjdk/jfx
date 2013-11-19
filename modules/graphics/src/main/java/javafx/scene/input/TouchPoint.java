@@ -28,6 +28,7 @@ package javafx.scene.input;
 import com.sun.javafx.scene.input.InputEventUtils;
 import java.io.IOException;
 import java.io.Serializable;
+import javafx.beans.NamedArg;
 import javafx.event.EventTarget;
 import javafx.geometry.Point3D;
 import javafx.scene.Node;
@@ -70,8 +71,8 @@ public final class TouchPoint implements Serializable{
      *                   based on the scene coordinates and target
      * @since JavaFX 8.0
      */
-    public TouchPoint(int id, State state, double x, double y, double screenX,
-            double screenY, EventTarget target, PickResult pickResult) {
+    public TouchPoint(@NamedArg("id") int id, @NamedArg("state") State state, @NamedArg("x") double x, @NamedArg("y") double y, @NamedArg("screenX") double screenX,
+            @NamedArg("screenY") double screenY, @NamedArg("target") EventTarget target, @NamedArg("pickResult") PickResult pickResult) {
         this.target = target;
         this.id = id;
         this.state = state;

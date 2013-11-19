@@ -32,6 +32,7 @@ import java.net.URLConnection;
 import java.util.List;
 
 import com.sun.javafx.tk.Toolkit;
+import javafx.beans.NamedArg;
 
 /**
  * <p>The {@code Font} class represents fonts, which are used to render text on
@@ -293,7 +294,7 @@ public final class Font {
      *
      * @param size the font size to use
      */
-    public Font(double size) {
+    public Font(@NamedArg("size") double size) {
         this(null, size);
     }
 
@@ -303,7 +304,7 @@ public final class Font {
      * @param name full name of the font.
      * @param size the font size to use
      */
-    public Font(String name, double size) {
+    public Font(@NamedArg("name") String name, @NamedArg("size") double size) {
         this.name = name;
         this.size = size;
 

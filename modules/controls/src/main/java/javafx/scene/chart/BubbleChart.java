@@ -31,6 +31,7 @@ import java.util.List;
 
 import javafx.animation.FadeTransition;
 import javafx.animation.ParallelTransition;
+import javafx.beans.NamedArg;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -63,7 +64,7 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
      * @param xAxis The x axis to use
      * @param yAxis The y axis to use
      */
-    public BubbleChart(Axis<X> xAxis, Axis<Y> yAxis) {
+    public BubbleChart(@NamedArg("xAxis") Axis<X> xAxis, @NamedArg("yAxis") Axis<Y> yAxis) {
         this(xAxis, yAxis, FXCollections.<Series<X, Y>>observableArrayList());
     }
 
@@ -75,7 +76,7 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
      * @param yAxis The y axis to use
      * @param data The data to use, this is the actual list used so any changes to it will be reflected in the chart
      */
-    public BubbleChart(Axis<X> xAxis, Axis<Y> yAxis, ObservableList<Series<X,Y>> data) {
+    public BubbleChart(@NamedArg("xAxis") Axis<X> xAxis, @NamedArg("yAxis") Axis<Y> yAxis, @NamedArg("data") ObservableList<Series<X,Y>> data) {
         super(xAxis, yAxis);
         setLegend(legend);
         if (!(xAxis instanceof ValueAxis && yAxis instanceof ValueAxis)) {

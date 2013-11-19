@@ -24,6 +24,8 @@
  */
 
  package javafx.geometry;
+ 
+ import javafx.beans.NamedArg;
 
 /**
  * A set of inside offsets for the 4 side of a rectangular area
@@ -73,7 +75,7 @@ public class Insets {
      * @param bottom the bottom offset
      * @param left the left offset
      */
-    public Insets(double top, double right, double bottom, double left) {
+    public Insets(@NamedArg("top") double top, @NamedArg("right") double right, @NamedArg("bottom") double bottom, @NamedArg("left") double left) {
         this.top = top;
         this.right = right;
         this.bottom = bottom;
@@ -86,7 +88,7 @@ public class Insets {
      * @param topRightBottomLeft the value used for top, bottom, right and left 
      * offset
      */
-    public Insets(double topRightBottomLeft) {
+    public Insets(@NamedArg("topRightBottomLeft") double topRightBottomLeft) {
         this.top = topRightBottomLeft;
         this.right = topRightBottomLeft;
         this.bottom = topRightBottomLeft;

@@ -28,6 +28,7 @@ package javafx.beans.binding;
 import java.lang.ref.WeakReference;
 
 import javafx.beans.InvalidationListener;
+import javafx.beans.NamedArg;
 import javafx.beans.Observable;
 import javafx.beans.value.ObservableBooleanValue;
 import javafx.beans.value.ObservableDoubleValue;
@@ -69,7 +70,7 @@ public class When {
      * @param condition
      *            the condition of the ternary expression
      */
-    public When(final ObservableBooleanValue condition) {
+    public When(final @NamedArg("condition") ObservableBooleanValue condition) {
         if (condition == null) {
             throw new NullPointerException("Condition must be specified.");
         }

@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 
 import javafx.application.Platform;
+import javafx.beans.NamedArg;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.collections.FXCollections;
@@ -371,7 +372,7 @@ public final class Media {
      * (type {@link MediaException.Type#MEDIA_INACCESSIBLE}) or is not supported
      * (type {@link MediaException.Type#MEDIA_UNSUPPORTED}).
      */
-    public Media(String source) {
+    public Media(@NamedArg("source") String source) {
         this.source = source;
 
         URI uri = null;

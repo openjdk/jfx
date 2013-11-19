@@ -25,6 +25,9 @@
 
 package javafx.scene.layout;
 
+import javafx.beans.NamedArg;
+
+
 /**
  * Defines the radii of each of the four corners of a BorderStroke. The
  * CornerRadii class is immutable and therefore can be reused on multiple
@@ -162,7 +165,7 @@ public class CornerRadii {
      *
      * @param radius    The radii for each corner. Negative values are not allowed.
      */
-    public CornerRadii(double radius) {
+    public CornerRadii(@NamedArg("radius") double radius) {
         // As per the CSS Spec 5.1
         if (radius < 0) {
             throw new IllegalArgumentException("The radii value may not be < 0");
@@ -190,7 +193,7 @@ public class CornerRadii {
      * @param radius       The radii for each corner. Negative values are not allowed.
      * @param asPercent    Whether the radii should be interpreted as a percentage.
      */
-    public CornerRadii(double radius, boolean asPercent) {
+    public CornerRadii(@NamedArg("radius") double radius, @NamedArg("asPercent") boolean asPercent) {
         if (radius < 0) {
             throw new IllegalArgumentException("The radii value may not be < 0");
         }
@@ -219,7 +222,7 @@ public class CornerRadii {
      * @param bottomLeft     The radii of the bottom-left corner. Negative numbers are not allowed.
      * @param asPercent      Whether all four radii should be considered as values or percentages
      */
-    public CornerRadii(double topLeft, double topRight, double bottomRight, double bottomLeft, boolean asPercent) {
+    public CornerRadii(@NamedArg("topLeft") double topLeft, @NamedArg("topRight") double topRight, @NamedArg("bottomRight") double bottomRight, @NamedArg("bottomLeft") double bottomLeft, @NamedArg("asPercent") boolean asPercent) {
         if (topLeft < 0 || topRight < 0 || bottomRight < 0 || bottomLeft < 0) {
             throw new IllegalArgumentException("No radii value may be < 0");
         }
@@ -260,11 +263,11 @@ public class CornerRadii {
      * @param bottomLeftHorizontalRadiusAsPercent
      */
     public CornerRadii(
-            double topLeftHorizontalRadius, double topLeftVerticalRadius, double topRightVerticalRadius, double topRightHorizontalRadius,
-            double bottomRightHorizontalRadius, double bottomRightVerticalRadius, double bottomLeftVerticalRadius, double bottomLeftHorizontalRadius,
-            boolean topLeftHorizontalRadiusAsPercent, boolean topLeftVerticalRadiusAsPercent, boolean topRightVerticalRadiusAsPercent,
-            boolean topRightHorizontalRadiusAsPercent, boolean bottomRightHorizontalRadiusAsPercent, boolean bottomRightVerticalRadiusAsPercent,
-            boolean bottomLeftVerticalRadiusAsPercent, boolean bottomLeftHorizontalRadiusAsPercent)
+            @NamedArg("topLeftHorizontalRadius") double topLeftHorizontalRadius, @NamedArg("topLeftVerticalRadius") double topLeftVerticalRadius, @NamedArg("topRightVerticalRadius") double topRightVerticalRadius, @NamedArg("topRightHorizontalRadius") double topRightHorizontalRadius,
+            @NamedArg("bottomRightHorizontalRadius") double bottomRightHorizontalRadius, @NamedArg("bottomRightVerticalRadius") double bottomRightVerticalRadius, @NamedArg("bottomLeftVerticalRadius") double bottomLeftVerticalRadius, @NamedArg("bottomLeftHorizontalRadius") double bottomLeftHorizontalRadius,
+            @NamedArg("topLeftHorizontalRadiusAsPercent") boolean topLeftHorizontalRadiusAsPercent, @NamedArg("topLeftVerticalRadiusAsPercent") boolean topLeftVerticalRadiusAsPercent, @NamedArg("topRightVerticalRadiusAsPercent") boolean topRightVerticalRadiusAsPercent,
+            @NamedArg("topRightHorizontalRadiusAsPercent") boolean topRightHorizontalRadiusAsPercent, @NamedArg("bottomRightHorizontalRadiusAsPercent") boolean bottomRightHorizontalRadiusAsPercent, @NamedArg("bottomRightVerticalRadiusAsPercent") boolean bottomRightVerticalRadiusAsPercent,
+            @NamedArg("bottomLeftVerticalRadiusAsPercent") boolean bottomLeftVerticalRadiusAsPercent, @NamedArg("bottomLeftHorizontalRadiusAsPercent") boolean bottomLeftHorizontalRadiusAsPercent)
     {
         if (topLeftHorizontalRadius < 0 || topLeftVerticalRadius < 0 ||
                 topRightVerticalRadius < 0 || topRightHorizontalRadius < 0 ||

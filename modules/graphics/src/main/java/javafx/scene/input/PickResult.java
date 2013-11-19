@@ -25,6 +25,7 @@
 
 package javafx.scene.input;
 
+import javafx.beans.NamedArg;
 import javafx.event.EventTarget;
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
@@ -56,7 +57,7 @@ public class PickResult {
      * @param face The intersected face of the picked Node
      * @param texCoord The intersected texture coordinates of the picked Node
      */
-    public PickResult(Node node, Point3D point, double distance, int face, Point2D texCoord) {
+    public PickResult(@NamedArg("node") Node node, @NamedArg("point") Point3D point, @NamedArg("distance") double distance, @NamedArg("face") int face, @NamedArg("texCoord") Point2D texCoord) {
         this.node = node;
         this.point = point;
         this.distance = distance;
@@ -71,7 +72,7 @@ public class PickResult {
      * @param point The intersected point in local coordinate of the picked Node
      * @param distance The intersected distance between camera position and the picked Node
      */
-    public PickResult(Node node, Point3D point, double distance) {
+    public PickResult(@NamedArg("node") Node node, @NamedArg("point") Point3D point, @NamedArg("distance") double distance) {
         this.node = node;
         this.point = point;
         this.distance = distance;
@@ -89,7 +90,7 @@ public class PickResult {
      * @param sceneX The scene X coordinate
      * @param sceneY The scene Y coordinate
      */
-    public PickResult(EventTarget target, double sceneX, double sceneY) {
+    public PickResult(@NamedArg("target") EventTarget target, @NamedArg("sceneX") double sceneX, @NamedArg("sceneY") double sceneY) {
         this(target instanceof Node ? (Node) target : null,
                 target instanceof Node ? ((Node) target).sceneToLocal(sceneX, sceneY, 0) : new Point3D(sceneX, sceneY, 0),
                 1.0);

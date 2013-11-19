@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import javafx.beans.NamedArg;
 import javafx.event.Event;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
@@ -87,7 +88,7 @@ public class ScrollToEvent<T> extends Event {
      * @param type the event type
      * @param target the target of the scroll to operation
      */
-    public ScrollToEvent(Object source, EventTarget target, EventType<ScrollToEvent<T>> type, T scrollTarget) {
+    public ScrollToEvent(@NamedArg("source") Object source, @NamedArg("target") EventTarget target, @NamedArg("type") EventType<ScrollToEvent<T>> type, @NamedArg("scrollTarget") T scrollTarget) {
         super(source, target, type);
         assert scrollTarget != null;
         this.scrollTarget = scrollTarget;

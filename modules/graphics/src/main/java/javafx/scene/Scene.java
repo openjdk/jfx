@@ -33,6 +33,7 @@ import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
+import javafx.beans.NamedArg;
 import javafx.beans.Observable;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
@@ -109,7 +110,6 @@ import java.util.Set;
 
 import com.sun.javafx.Logging;
 import com.sun.javafx.Utils;
-import com.sun.javafx.beans.annotations.Default;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.cursor.CursorFrame;
@@ -220,7 +220,7 @@ public class Scene implements EventTarget {
      * other than the JavaFX Application Thread.
      * @throws NullPointerException if root is null
      */
-    public Scene(Parent root) {
+    public Scene(@NamedArg("root") Parent root) {
         this(root, -1, -1, Color.WHITE, false, SceneAntialiasing.DISABLED);
     }
 
@@ -251,7 +251,7 @@ public class Scene implements EventTarget {
      * other than the JavaFX Application Thread.
      * @throws NullPointerException if root is null
      */
-    public Scene(Parent root, double width, double height) {
+    public Scene(@NamedArg("root") Parent root, @NamedArg("width") double width, @NamedArg("height") double height) {
         this(root, width, height, Color.WHITE, false, SceneAntialiasing.DISABLED);
     }
 
@@ -265,7 +265,7 @@ public class Scene implements EventTarget {
      * other than the JavaFX Application Thread.
      * @throws NullPointerException if root is null
      */
-    public Scene(Parent root, @Default("javafx.scene.paint.Color.WHITE") Paint fill) {
+    public Scene(@NamedArg("root") Parent root, @NamedArg(value="fill", defaultValue="WHITE") Paint fill) {
         this(root, -1, -1, fill, false, SceneAntialiasing.DISABLED);
     }
 
@@ -281,8 +281,8 @@ public class Scene implements EventTarget {
      * other than the JavaFX Application Thread.
      * @throws NullPointerException if root is null
      */
-    public Scene(Parent root, double width, double height,
-            @Default("javafx.scene.paint.Color.WHITE") Paint fill) {
+    public Scene(@NamedArg("root") Parent root, @NamedArg("width") double width, @NamedArg("height") double height,
+            @NamedArg(value="fill", defaultValue="WHITE") Paint fill) {
         this(root, width, height, fill, false, SceneAntialiasing.DISABLED);
     }
 
@@ -306,7 +306,7 @@ public class Scene implements EventTarget {
      *
      * @see javafx.scene.Node#setDepthTest(DepthTest)
      */
-    public Scene(Parent root, @Default("-1") double width, @Default("-1") double height, boolean depthBuffer) {
+    public Scene(@NamedArg("root") Parent root, @NamedArg(value="width", defaultValue="-1") double width, @NamedArg(value="height", defaultValue="-1") double height, @NamedArg("depthBuffer") boolean depthBuffer) {
         this(root, width, height, Color.WHITE, depthBuffer, SceneAntialiasing.DISABLED);
     }
 
@@ -334,9 +334,9 @@ public class Scene implements EventTarget {
      * @see javafx.scene.Node#setDepthTest(DepthTest)
      * @since JavaFX 8.0
      */
-    public Scene(Parent root, @Default("-1") double width, @Default("-1") double height,
-            boolean depthBuffer,
-            @Default("javafx.scene.SceneAntialiasing.DISABLED") SceneAntialiasing antiAliasing) {
+    public Scene(@NamedArg("root") Parent root, @NamedArg(value="width", defaultValue="-1") double width, @NamedArg(value="height", defaultValue="-1") double height,
+            @NamedArg("depthBuffer") boolean depthBuffer,
+            @NamedArg(value="antiAliasing", defaultValue="DISABLED") SceneAntialiasing antiAliasing) {
         this(root, width, height, Color.WHITE, depthBuffer, antiAliasing);
 
         if (antiAliasing != null && antiAliasing != SceneAntialiasing.DISABLED &&
@@ -348,8 +348,7 @@ public class Scene implements EventTarget {
         }
     }
 
-    private Scene(Parent root, double width, double height,
-            @Default("javafx.scene.paint.Color.WHITE") Paint fill,
+    private Scene(Parent root, double width, double height, Paint fill,
             boolean depthBuffer, SceneAntialiasing antiAliasing) {
         this.depthBuffer = depthBuffer;
         this.antiAliasing = antiAliasing;

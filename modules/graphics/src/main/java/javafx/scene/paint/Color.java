@@ -30,8 +30,8 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import com.sun.javafx.Utils;
-import com.sun.javafx.beans.annotations.Default;
 import com.sun.javafx.tk.Toolkit;
+import javafx.beans.NamedArg;
 
 // NOTE: this definition, while correct, contains a lot of information which
 // is irrelevant to most developers. We should get to the basic definition and
@@ -127,7 +127,7 @@ public final class Color extends Paint implements Interpolatable<Color> {
      * @return the {@code Color}
      * @throws IllegalArgumentException if any value is out of range
      */
-    public static Color color(double red, double green, double blue, @Default("1") double opacity) {
+    public static Color color(double red, double green, double blue, double opacity) {
         return new Color(red, green, blue, opacity);
     }
 
@@ -1873,7 +1873,7 @@ public final class Color extends Paint implements Interpolatable<Color> {
      * @param blue blue component ranging from {@code 0} to {@code 1}
      * @param opacity opacity ranging from {@code 0} to {@code 1}
      */
-    public Color(double red, double green, double blue, @Default("1") double opacity) {
+    public Color(@NamedArg("red") double red, @NamedArg("green") double green, @NamedArg("blue") double blue, @NamedArg(value="opacity", defaultValue="1") double opacity) {
         if (red < 0 || red > 1) {
             throw new IllegalArgumentException("Color's red value (" + red + ") must be in the range 0.0-1.0");
         }

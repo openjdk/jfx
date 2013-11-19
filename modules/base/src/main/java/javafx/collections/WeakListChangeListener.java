@@ -25,6 +25,7 @@
 
 package javafx.collections;
 
+import javafx.beans.NamedArg;
 import javafx.beans.WeakListener;
 
 import java.lang.ref.WeakReference;
@@ -62,7 +63,7 @@ public final class WeakListChangeListener<E> implements ListChangeListener<E>, W
      * @param listener
      *            The original listener that should be notified
      */
-    public WeakListChangeListener(ListChangeListener<E> listener) {
+    public WeakListChangeListener(@NamedArg("listener") ListChangeListener<E> listener) {
         if (listener == null) {
             throw new NullPointerException("Listener must be specified.");
         }

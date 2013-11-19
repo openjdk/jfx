@@ -27,6 +27,7 @@ package javafx.scene;
 
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
+import javafx.beans.NamedArg;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
@@ -76,7 +77,7 @@ public class SubScene extends Node {
      * other than the JavaFX Application Thread.
      * @throws NullPointerException if root is null
      */
-    public SubScene(Parent root, double width, double height) {
+    public SubScene(@NamedArg("root") Parent root, @NamedArg("width") double width, @NamedArg("height") double height) {
         this(root, width, height, false, SceneAntialiasing.DISABLED);
     }
 
@@ -103,8 +104,8 @@ public class SubScene extends Node {
      *
      * @see javafx.scene.Node#setDepthTest(DepthTest)
      */
-    public SubScene(Parent root, double width, double height,
-            boolean depthBuffer, SceneAntialiasing antiAliasing)
+    public SubScene(@NamedArg("root") Parent root, @NamedArg("width") double width, @NamedArg("height") double height,
+            @NamedArg("depthBuffer") boolean depthBuffer, @NamedArg("antiAliasing") SceneAntialiasing antiAliasing)
     {
         this.depthBuffer = depthBuffer;
         this.antiAliasing = antiAliasing;

@@ -1,5 +1,6 @@
 package javafx.scene.control;
 
+import javafx.beans.NamedArg;
 import javafx.event.Event;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
@@ -34,7 +35,7 @@ public class SortEvent<C> extends Event {
 //     * @param type the event type
 //     * @param target the target of the scroll to operation
 //     */
-    public SortEvent(C source, EventTarget target) {
+    public SortEvent(@NamedArg("source") C source, @NamedArg("target") EventTarget target) {
         super(source, target, sortEvent());
         
     }

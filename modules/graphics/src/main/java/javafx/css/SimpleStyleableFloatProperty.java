@@ -25,6 +25,7 @@
 
 package javafx.css;
 
+import javafx.beans.NamedArg;
 import javafx.beans.property.SimpleFloatProperty;
 
 /**
@@ -55,7 +56,7 @@ public class SimpleStyleableFloatProperty extends StyleableFloatProperty {
      * @param cssMetaData
      *            the CssMetaData associated with this {@code StyleableProperty}
      */
-    public SimpleStyleableFloatProperty(CssMetaData<? extends Styleable, Number> cssMetaData) {
+    public SimpleStyleableFloatProperty(@NamedArg("cssMetaData") CssMetaData<? extends Styleable, Number> cssMetaData) {
         this(cssMetaData, DEFAULT_BEAN, DEFAULT_NAME);
     }
 
@@ -67,7 +68,7 @@ public class SimpleStyleableFloatProperty extends StyleableFloatProperty {
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableFloatProperty(CssMetaData<? extends Styleable, Number> cssMetaData, Float initialValue) {
+    public SimpleStyleableFloatProperty(@NamedArg("cssMetaData") CssMetaData<? extends Styleable, Number> cssMetaData, @NamedArg("initialValue") Float initialValue) {
         this(cssMetaData, DEFAULT_BEAN, DEFAULT_NAME, initialValue);
     }
 
@@ -81,7 +82,7 @@ public class SimpleStyleableFloatProperty extends StyleableFloatProperty {
      * @param name
      *            the name of this {@code FloatProperty}
      */
-    public SimpleStyleableFloatProperty(CssMetaData<? extends Styleable, Number> cssMetaData, Object bean, String name) {
+    public SimpleStyleableFloatProperty(@NamedArg("cssMetaData") CssMetaData<? extends Styleable, Number> cssMetaData, @NamedArg("bean") Object bean, @NamedArg("name") String name) {
         this.bean = bean;
         this.name = (name == null) ? DEFAULT_NAME : name;
         this.cssMetaData = cssMetaData;
@@ -99,7 +100,7 @@ public class SimpleStyleableFloatProperty extends StyleableFloatProperty {
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableFloatProperty(CssMetaData<? extends Styleable, Number> cssMetaData, Object bean, String name, Float initialValue) {
+    public SimpleStyleableFloatProperty(@NamedArg("cssMetaData") CssMetaData<? extends Styleable, Number> cssMetaData, @NamedArg("bean") Object bean, @NamedArg("name") String name, @NamedArg("initialValue") Float initialValue) {
         super(initialValue);
         this.bean = bean;
         this.name = (name == null) ? DEFAULT_NAME : name;

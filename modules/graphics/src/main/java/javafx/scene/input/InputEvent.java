@@ -25,6 +25,7 @@
 
 package javafx.scene.input;
 
+import javafx.beans.NamedArg;
 import javafx.event.Event;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
@@ -47,7 +48,7 @@ public class InputEvent extends Event {
      * Creates new instance of InputEvent.
      * @param eventType Type of the event
      */
-    public InputEvent(final EventType<? extends InputEvent> eventType) {
+    public InputEvent(final @NamedArg("eventType") EventType<? extends InputEvent> eventType) {
         super(eventType);
     }
 
@@ -57,9 +58,9 @@ public class InputEvent extends Event {
      * @param target Event target
      * @param eventType Type of the event
      */
-    public InputEvent(final Object source,
-                      final EventTarget target,
-                      final EventType<? extends InputEvent> eventType) {
+    public InputEvent(final @NamedArg("source") Object source,
+                      final @NamedArg("target") EventTarget target,
+                      final @NamedArg("eventType") EventType<? extends InputEvent> eventType) {
         super(source, target, eventType);
     }
 

@@ -26,6 +26,7 @@
 package javafx.scene.input;
 
 import com.sun.javafx.tk.Toolkit;
+import javafx.beans.NamedArg;
 
 // PENDING_DOC_REVIEW
 /**
@@ -60,12 +61,12 @@ public final class KeyCharacterCombination extends KeyCombination {
      * @param meta the value of the {@code meta} modifier key
      * @param shortcut the value of the {@code shortcut} modifier key
      */
-    public KeyCharacterCombination(final String character,
-                                   final ModifierValue shift,
-                                   final ModifierValue control,
-                                   final ModifierValue alt,
-                                   final ModifierValue meta,
-                                   final ModifierValue shortcut) {
+    public KeyCharacterCombination(final @NamedArg("character") String character,
+                                   final @NamedArg("shift") ModifierValue shift,
+                                   final @NamedArg("control") ModifierValue control,
+                                   final @NamedArg("alt") ModifierValue alt,
+                                   final @NamedArg("meta") ModifierValue meta,
+                                   final @NamedArg("shortcut") ModifierValue shortcut) {
         super(shift, control, alt, meta, shortcut);
 
         validateKeyCharacter(character);
@@ -83,8 +84,8 @@ public final class KeyCharacterCombination extends KeyCombination {
      * @param character the main key character
      * @param modifiers the list of modifier keys and their corresponding values
      */
-    public KeyCharacterCombination(final String character,
-                                   final Modifier... modifiers) {
+    public KeyCharacterCombination(final @NamedArg("character") String character,
+                                   final @NamedArg("modifiers") Modifier... modifiers) {
         super(modifiers);
 
         validateKeyCharacter(character);

@@ -28,6 +28,7 @@ package javafx.scene.layout;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import javafx.beans.NamedArg;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.paint.Paint;
@@ -221,7 +222,7 @@ public final class Border {
      *                  strokes are shown. In this way, strokes can be defined as
      *                  a fallback in the case that an image failed to load.
      */
-    public Border(BorderStroke... strokes) {
+    public Border(@NamedArg("strokes") BorderStroke... strokes) {
         this(strokes, null);
     }
 
@@ -235,7 +236,7 @@ public final class Border {
      *                  contained nulls are filtered out and not included in the
      *                  final List of images. A null array becomes an empty List.
      */
-    public Border(BorderImage... images) {
+    public Border(@NamedArg("images") BorderImage... images) {
         this(null, images);
     }
 
@@ -257,7 +258,7 @@ public final class Border {
      *                  contained nulls are filtered out and not included in the
      *                  final List of images. A null array becomes an empty List.
      */
-    public Border(List<BorderStroke> strokes, List<BorderImage> images) {
+    public Border(@NamedArg("strokes") List<BorderStroke> strokes, @NamedArg("images") List<BorderImage> images) {
         // NOTE: This constructor had to be supplied in order to cause a Builder
         // to be auto-generated, because otherwise the types of the strokes and images
         // properties didn't match the types of the array based constructor parameters.
@@ -285,7 +286,7 @@ public final class Border {
      *                  contained nulls are filtered out and not included in the
      *                  final List of images. A null array becomes an empty List.
      */
-    public Border(BorderStroke[] strokes, BorderImage[] images) {
+    public Border(@NamedArg("strokes") BorderStroke[] strokes, @NamedArg("images") BorderImage[] images) {
         double innerTop = 0, innerRight = 0, innerBottom = 0, innerLeft = 0;
         double outerTop = 0, outerRight = 0, outerBottom = 0, outerLeft = 0;
 

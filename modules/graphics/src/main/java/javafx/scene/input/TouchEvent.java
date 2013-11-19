@@ -28,6 +28,7 @@ package javafx.scene.input;
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import java.util.Collections;
 import java.util.List;
+import javafx.beans.NamedArg;
 import javafx.event.Event;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
@@ -106,10 +107,10 @@ public final class TouchEvent extends InputEvent {
      * @param metaDown true if meta modifier was pressed.
      * @since JavaFX 8.0
      */
-    public TouchEvent(Object source, EventTarget target, EventType<TouchEvent> eventType,
-            TouchPoint touchPoint, List<TouchPoint> touchPoints, int eventSetId,
-            boolean shiftDown, boolean controlDown, boolean altDown,
-            boolean metaDown) {
+    public TouchEvent(@NamedArg("source") Object source, @NamedArg("target") EventTarget target, @NamedArg("eventType") EventType<TouchEvent> eventType,
+            @NamedArg("touchPoint") TouchPoint touchPoint, @NamedArg("touchPoints") List<TouchPoint> touchPoints, @NamedArg("eventSetId") int eventSetId,
+            @NamedArg("shiftDown") boolean shiftDown, @NamedArg("controlDown") boolean controlDown, @NamedArg("altDown") boolean altDown,
+            @NamedArg("metaDown") boolean metaDown) {
         super(source, target, eventType);
         this.touchPoints = touchPoints != null ? Collections.unmodifiableList(touchPoints) : null;
         this.eventSetId = eventSetId;
@@ -133,10 +134,10 @@ public final class TouchEvent extends InputEvent {
      * @param direct true if the event was caused by direct input device. See {@link #isDirect() }
      * @since JavaFX 8.0
      */
-    public TouchEvent(EventType<TouchEvent> eventType,
-            TouchPoint touchPoint, List<TouchPoint> touchPoints, int eventSetId,
-            boolean shiftDown, boolean controlDown, boolean altDown,
-            boolean metaDown) {
+    public TouchEvent(@NamedArg("eventType") EventType<TouchEvent> eventType,
+            @NamedArg("touchPoint") TouchPoint touchPoint, @NamedArg("touchPoints") List<TouchPoint> touchPoints, @NamedArg("eventSetId") int eventSetId,
+            @NamedArg("shiftDown") boolean shiftDown, @NamedArg("controlDown") boolean controlDown, @NamedArg("altDown") boolean altDown,
+            @NamedArg("metaDown") boolean metaDown) {
         this(null, null, eventType, touchPoint, touchPoints, eventSetId,
                 shiftDown, controlDown, altDown, metaDown);
     }

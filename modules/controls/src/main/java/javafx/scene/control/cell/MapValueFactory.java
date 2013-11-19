@@ -27,6 +27,7 @@ package javafx.scene.control.cell;
 
 import java.util.Map;
 
+import javafx.beans.NamedArg;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.ReadOnlyFloatWrapper;
@@ -82,7 +83,7 @@ public class MapValueFactory<T> implements Callback<CellDataFeatures<Map,T>, Obs
      * 
      * @param key The key to use to lookup the value in the {@code Map}.
      */
-    public MapValueFactory(final Object key) {
+    public MapValueFactory(final @NamedArg("key") Object key) {
         this.key = key;
     }
     

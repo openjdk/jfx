@@ -26,6 +26,7 @@
 package javafx.util.converter;
 
 import java.text.*;
+import javafx.beans.NamedArg;
 import javafx.util.StringConverter;
 
 /**
@@ -42,7 +43,7 @@ public class FormatStringConverter<T> extends StringConverter<T> {
     
     // ------------------------------------------------------------ Constructors
     
-    public FormatStringConverter(Format format) {
+    public FormatStringConverter(@NamedArg("format") Format format) {
         this.format = format;
     }
 

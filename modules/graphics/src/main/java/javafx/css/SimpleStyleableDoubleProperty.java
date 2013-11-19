@@ -25,6 +25,7 @@
 
 package javafx.css;
 
+import javafx.beans.NamedArg;
 import javafx.beans.property.SimpleDoubleProperty;
 
 /**
@@ -55,7 +56,7 @@ public class SimpleStyleableDoubleProperty extends StyleableDoubleProperty {
      * @param cssMetaData
      *            the CssMetaData associated with this {@code StyleableProperty}
      */
-    public SimpleStyleableDoubleProperty(CssMetaData<? extends Styleable, Number> cssMetaData) {
+    public SimpleStyleableDoubleProperty(@NamedArg("cssMetaData") CssMetaData<? extends Styleable, Number> cssMetaData) {
         this(cssMetaData, DEFAULT_BEAN, DEFAULT_NAME);
     }
 
@@ -67,7 +68,7 @@ public class SimpleStyleableDoubleProperty extends StyleableDoubleProperty {
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableDoubleProperty(CssMetaData<? extends Styleable, Number> cssMetaData, Double initialValue) {
+    public SimpleStyleableDoubleProperty(@NamedArg("cssMetaData") CssMetaData<? extends Styleable, Number> cssMetaData, @NamedArg("initialValue") Double initialValue) {
         this(cssMetaData, DEFAULT_BEAN, DEFAULT_NAME, initialValue);
     }
 
@@ -81,7 +82,7 @@ public class SimpleStyleableDoubleProperty extends StyleableDoubleProperty {
      * @param name
      *            the name of this {@code DoubleProperty}
      */
-    public SimpleStyleableDoubleProperty(CssMetaData<? extends Styleable, Number> cssMetaData, Object bean, String name) {
+    public SimpleStyleableDoubleProperty(@NamedArg("cssMetaData") CssMetaData<? extends Styleable, Number> cssMetaData, @NamedArg("bean") Object bean, @NamedArg("name") String name) {
         this.bean = bean;
         this.name = (name == null) ? DEFAULT_NAME : name;
         this.cssMetaData = cssMetaData;
@@ -99,7 +100,7 @@ public class SimpleStyleableDoubleProperty extends StyleableDoubleProperty {
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableDoubleProperty(CssMetaData<? extends Styleable, Number> cssMetaData, Object bean, String name, Double initialValue) {
+    public SimpleStyleableDoubleProperty(@NamedArg("cssMetaData") CssMetaData<? extends Styleable, Number> cssMetaData, @NamedArg("bean") Object bean, @NamedArg("name") String name, @NamedArg("initialValue") Double initialValue) {
         super(initialValue);
         this.bean = bean;
         this.name = (name == null) ? DEFAULT_NAME : name;

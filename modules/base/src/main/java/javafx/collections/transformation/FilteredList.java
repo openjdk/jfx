@@ -33,6 +33,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.function.Predicate;
+import javafx.beans.NamedArg;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.collections.ListChangeListener.Change;
@@ -67,7 +68,7 @@ public final class FilteredList<E> extends TransformationList<E, E>{
      * @param source the source list
      * @param predicate the predicate to match the elements. Cannot be null.
      */
-    public FilteredList(ObservableList<E> source, Predicate<? super E> predicate) {
+    public FilteredList(@NamedArg("source") ObservableList<E> source, @NamedArg("predicate") Predicate<? super E> predicate) {
         super(source);
         if (predicate == null) {
             throw new NullPointerException();
@@ -85,7 +86,7 @@ public final class FilteredList<E> extends TransformationList<E, E>{
      * of this list.
      * @param source the source list
      */
-    public FilteredList(ObservableList<E> source) {
+    public FilteredList(@NamedArg("source") ObservableList<E> source) {
         this(source, ALWAYS_TRUE);
     }
 

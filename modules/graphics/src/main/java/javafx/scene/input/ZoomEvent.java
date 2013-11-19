@@ -25,6 +25,7 @@
 
 package javafx.scene.input;
 
+import javafx.beans.NamedArg;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 
@@ -108,18 +109,18 @@ public final class ZoomEvent extends GestureEvent {
      *                   based on the scene coordinates and the target
      * @since JavaFX 8.0
      */
-    public ZoomEvent(Object source, EventTarget target, final EventType<ZoomEvent> eventType,
-            double x, double y,
-            double screenX, double screenY,
-            boolean shiftDown,
-            boolean controlDown,
-            boolean altDown,
-            boolean metaDown,
-            boolean direct,
-            boolean inertia,
-            double zoomFactor,
-            double totalZoomFactor,
-            PickResult pickResult) {
+    public ZoomEvent(@NamedArg("source") Object source, @NamedArg("target") EventTarget target, final @NamedArg("eventType") EventType<ZoomEvent> eventType,
+            @NamedArg("x") double x, @NamedArg("y") double y,
+            @NamedArg("screenX") double screenX, @NamedArg("screenY") double screenY,
+            @NamedArg("shiftDown") boolean shiftDown,
+            @NamedArg("controlDown") boolean controlDown,
+            @NamedArg("altDown") boolean altDown,
+            @NamedArg("metaDown") boolean metaDown,
+            @NamedArg("direct") boolean direct,
+            @NamedArg("inertia") boolean inertia,
+            @NamedArg("zoomFactor") double zoomFactor,
+            @NamedArg("totalZoomFactor") double totalZoomFactor,
+            @NamedArg("pickResult") PickResult pickResult) {
 
         super(source, target, eventType, x, y, screenX, screenY,
                 shiftDown, controlDown, altDown, metaDown, direct, inertia, pickResult);
@@ -148,18 +149,18 @@ public final class ZoomEvent extends GestureEvent {
      *                   based on the scene coordinates
      * @since JavaFX 8.0
      */
-    public ZoomEvent(final EventType<ZoomEvent> eventType,
-            double x, double y,
-            double screenX, double screenY,
-            boolean shiftDown,
-            boolean controlDown,
-            boolean altDown,
-            boolean metaDown,
-            boolean direct,
-            boolean inertia,
-            double zoomFactor,
-            double totalZoomFactor,
-            PickResult pickResult) {
+    public ZoomEvent(final @NamedArg("eventType") EventType<ZoomEvent> eventType,
+            @NamedArg("x") double x, @NamedArg("y") double y,
+            @NamedArg("screenX") double screenX, @NamedArg("screenY") double screenY,
+            @NamedArg("shiftDown") boolean shiftDown,
+            @NamedArg("controlDown") boolean controlDown,
+            @NamedArg("altDown") boolean altDown,
+            @NamedArg("metaDown") boolean metaDown,
+            @NamedArg("direct") boolean direct,
+            @NamedArg("inertia") boolean inertia,
+            @NamedArg("zoomFactor") double zoomFactor,
+            @NamedArg("totalZoomFactor") double totalZoomFactor,
+            @NamedArg("pickResult") PickResult pickResult) {
         this(null, null, eventType, x, y, screenX, screenY, shiftDown, controlDown,
                 altDown, metaDown, direct, inertia, zoomFactor, totalZoomFactor,
                 pickResult);

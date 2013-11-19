@@ -25,6 +25,7 @@
 
 package javafx.scene.input;
 
+import javafx.beans.NamedArg;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 
@@ -193,21 +194,21 @@ public final class ScrollEvent extends GestureEvent {
      *                   based on the scene coordinates and the target
      * @since JavaFX 8.0
      */
-    public ScrollEvent(Object source, EventTarget target,
-                       final EventType<ScrollEvent> eventType,
-                       double x, double y,
-                       double screenX, double screenY,
-                       boolean shiftDown,
-                       boolean controlDown,
-                       boolean altDown,
-                       boolean metaDown,
-                       boolean direct,
-                       boolean inertia,
-                       double deltaX, double deltaY,
-                       double totalDeltaX, double totalDeltaY,
-                       HorizontalTextScrollUnits textDeltaXUnits, double textDeltaX,
-                       VerticalTextScrollUnits textDeltaYUnits, double textDeltaY,
-                       int touchCount, PickResult pickResult) {
+    public ScrollEvent(@NamedArg("source") Object source, @NamedArg("target") EventTarget target,
+                       final @NamedArg("eventType") EventType<ScrollEvent> eventType,
+                       @NamedArg("x") double x, @NamedArg("y") double y,
+                       @NamedArg("screenX") double screenX, @NamedArg("screenY") double screenY,
+                       @NamedArg("shiftDown") boolean shiftDown,
+                       @NamedArg("controlDown") boolean controlDown,
+                       @NamedArg("altDown") boolean altDown,
+                       @NamedArg("metaDown") boolean metaDown,
+                       @NamedArg("direct") boolean direct,
+                       @NamedArg("inertia") boolean inertia,
+                       @NamedArg("deltaX") double deltaX, @NamedArg("deltaY") double deltaY,
+                       @NamedArg("totalDeltaX") double totalDeltaX, @NamedArg("totalDeltaY") double totalDeltaY,
+                       @NamedArg("textDeltaXUnits") HorizontalTextScrollUnits textDeltaXUnits, @NamedArg("textDeltaX") double textDeltaX,
+                       @NamedArg("textDeltaYUnits") VerticalTextScrollUnits textDeltaYUnits, @NamedArg("textDeltaY") double textDeltaY,
+                       @NamedArg("touchCount") int touchCount, @NamedArg("pickResult") PickResult pickResult) {
         this(source, target, eventType, x, y, screenX, screenY, shiftDown, controlDown,
                 altDown, metaDown, direct, inertia, deltaX, deltaY, totalDeltaX,
                 totalDeltaY, 1.0, 1.0, textDeltaXUnits, textDeltaX, textDeltaYUnits, textDeltaY,
@@ -241,21 +242,21 @@ public final class ScrollEvent extends GestureEvent {
      *                   based on the scene coordinates
      * @since JavaFX 8.0
      */
-    public ScrollEvent(final EventType<ScrollEvent> eventType,
-            double x, double y,
-            double screenX, double screenY,
-            boolean shiftDown,
-            boolean controlDown,
-            boolean altDown,
-            boolean metaDown,
-            boolean direct,
-            boolean inertia,
-            double deltaX, double deltaY,
-            double totalDeltaX, double totalDeltaY,
-            HorizontalTextScrollUnits textDeltaXUnits, double textDeltaX,
-            VerticalTextScrollUnits textDeltaYUnits, double textDeltaY,
-            int touchCount,
-            PickResult pickResult) {
+    public ScrollEvent(final @NamedArg("eventType") EventType<ScrollEvent> eventType,
+            @NamedArg("x") double x, @NamedArg("y") double y,
+            @NamedArg("screenX") double screenX, @NamedArg("screenY") double screenY,
+            @NamedArg("shiftDown") boolean shiftDown,
+            @NamedArg("controlDown") boolean controlDown,
+            @NamedArg("altDown") boolean altDown,
+            @NamedArg("metaDown") boolean metaDown,
+            @NamedArg("direct") boolean direct,
+            @NamedArg("inertia") boolean inertia,
+            @NamedArg("deltaX") double deltaX, @NamedArg("deltaY") double deltaY,
+            @NamedArg("totalDeltaX") double totalDeltaX, @NamedArg("totalDeltaY") double totalDeltaY,
+            @NamedArg("textDeltaXUnits") HorizontalTextScrollUnits textDeltaXUnits, @NamedArg("textDeltaX") double textDeltaX,
+            @NamedArg("textDeltaYUnits") VerticalTextScrollUnits textDeltaYUnits, @NamedArg("textDeltaY") double textDeltaY,
+            @NamedArg("touchCount") int touchCount,
+            @NamedArg("pickResult") PickResult pickResult) {
         this(null, null, eventType, x, y, screenX, screenY, shiftDown, controlDown,
                 altDown, metaDown, direct, inertia, deltaX, deltaY, totalDeltaX,
                 totalDeltaY, 1.0, 1.0, textDeltaXUnits, textDeltaX, textDeltaYUnits, textDeltaY,
@@ -291,22 +292,22 @@ public final class ScrollEvent extends GestureEvent {
      *                   based on the scene coordinates
      * @since JavaFX 8.0
      */
-    public ScrollEvent(final EventType<ScrollEvent> eventType,
-                       double x, double y,
-                       double screenX, double screenY,
-                       boolean shiftDown,
-                       boolean controlDown,
-                       boolean altDown,
-                       boolean metaDown,
-                       boolean direct,
-                       boolean inertia,
-                       double deltaX, double deltaY,
-                       double totalDeltaX, double totalDeltaY,
-                       double multiplierX, double multiplierY,
-                       HorizontalTextScrollUnits textDeltaXUnits, double textDeltaX,
-                       VerticalTextScrollUnits textDeltaYUnits, double textDeltaY,
-                       int touchCount,
-                       PickResult pickResult) {
+    public ScrollEvent(final @NamedArg("eventType") EventType<ScrollEvent> eventType,
+                       @NamedArg("x") double x, @NamedArg("y") double y,
+                       @NamedArg("screenX") double screenX, @NamedArg("screenY") double screenY,
+                       @NamedArg("shiftDown") boolean shiftDown,
+                       @NamedArg("controlDown") boolean controlDown,
+                       @NamedArg("altDown") boolean altDown,
+                       @NamedArg("metaDown") boolean metaDown,
+                       @NamedArg("direct") boolean direct,
+                       @NamedArg("inertia") boolean inertia,
+                       @NamedArg("deltaX") double deltaX, @NamedArg("deltaY") double deltaY,
+                       @NamedArg("totalDeltaX") double totalDeltaX, @NamedArg("totalDeltaY") double totalDeltaY,
+                       @NamedArg("multiplierX") double multiplierX, @NamedArg("multiplierY") double multiplierY,
+                       @NamedArg("textDeltaXUnits") HorizontalTextScrollUnits textDeltaXUnits, @NamedArg("textDeltaX") double textDeltaX,
+                       @NamedArg("textDeltaYUnits") VerticalTextScrollUnits textDeltaYUnits, @NamedArg("textDeltaY") double textDeltaY,
+                       @NamedArg("touchCount") int touchCount,
+                       @NamedArg("pickResult") PickResult pickResult) {
         this(null, null, eventType, x, y, screenX, screenY, shiftDown, controlDown,
                 altDown, metaDown, direct, inertia, deltaX, deltaY, totalDeltaX,
                 totalDeltaY, multiplierX, multiplierY, textDeltaXUnits, textDeltaX,

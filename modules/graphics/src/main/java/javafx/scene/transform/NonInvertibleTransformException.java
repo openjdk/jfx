@@ -25,6 +25,9 @@
 
 package javafx.scene.transform;
 
+import javafx.beans.NamedArg;
+
+
 /**
  * The <code>NonInvertibleTransformException</code> class represents
  * an exception that is thrown if an operation is performed requiring
@@ -38,7 +41,7 @@ public class NonInvertibleTransformException extends java.lang.Exception {
      * with the specified detail message.
      * @param message the detail message
      */
-    public NonInvertibleTransformException(String message) {
+    public NonInvertibleTransformException(@NamedArg("message") String message) {
         super (message);
     }
 }

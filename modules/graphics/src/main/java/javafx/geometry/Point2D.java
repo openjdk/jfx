@@ -25,6 +25,9 @@
 
 package javafx.geometry;
 
+import javafx.beans.NamedArg;
+
+
 // PENDING_DOC_REVIEW of this whole class
 /**
  * A 2D geometric point that usually represents the x, y coordinates.
@@ -78,7 +81,7 @@ public class Point2D {
      * @param x the x coordinate of the point
      * @param y the y coordinate of the point
      */
-    public Point2D(double x, double y) {
+    public Point2D(@NamedArg("x") double x, @NamedArg("y") double y) {
         this.x  = x;
         this.y = y;
     }

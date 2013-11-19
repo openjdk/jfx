@@ -26,6 +26,7 @@
 package javafx.event;
 
 import java.lang.ref.WeakReference;
+import javafx.beans.NamedArg;
 
 /**
  * Used in event handler registration in place of its associated event handler.
@@ -50,7 +51,7 @@ public final class WeakEventHandler<T extends Event>
      * @param eventHandler the original event handler to which to forward event
      *      notifications
      */
-    public WeakEventHandler(final EventHandler<T> eventHandler) {
+    public WeakEventHandler(final @NamedArg("eventHandler") EventHandler<T> eventHandler) {
         weakRef = new WeakReference<EventHandler<T>>(eventHandler);
     }
 

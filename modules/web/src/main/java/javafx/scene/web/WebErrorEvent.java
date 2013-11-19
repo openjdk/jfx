@@ -3,6 +3,7 @@
  */
 package javafx.scene.web;
 
+import javafx.beans.NamedArg;
 import javafx.event.Event;
 import javafx.event.EventType;
 
@@ -112,8 +113,8 @@ public final class WebErrorEvent extends Event {
      * @param exception the exception associated with the event;
      *        may be {@code null}
      */
-    public WebErrorEvent(Object source, EventType<WebErrorEvent> type,
-                         String message, Throwable exception)
+    public WebErrorEvent(@NamedArg("source") Object source, @NamedArg("type") EventType<WebErrorEvent> type,
+                         @NamedArg("message") String message, @NamedArg("exception") Throwable exception)
     {
         super(source, null, type);
         this.message = message;

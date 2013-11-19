@@ -25,6 +25,7 @@
 
 package javafx.scene.input;
 
+import javafx.beans.NamedArg;
 import javafx.event.ActionEvent;
 import javafx.scene.Node;
 
@@ -52,7 +53,7 @@ public class Mnemonic {
      * @param node the {@link javafx.scene.Node Node} that will receive the {@link javafx.event.ActionEvent ActionEvent}.
      * @param keyCombination the {@link KeyCombination} that will trigger the Mnemonic.
      */
-    public Mnemonic(Node node, KeyCombination keyCombination) {
+    public Mnemonic(@NamedArg("node") Node node, @NamedArg("keyCombination") KeyCombination keyCombination) {
         this.node = node;
         this.keyCombination = keyCombination;
     }

@@ -26,6 +26,7 @@
 package javafx.util;
 
 import java.io.Serializable;
+import javafx.beans.NamedArg;
 
 /**
  * <p>
@@ -184,7 +185,7 @@ public class Duration implements Comparable<Duration>, Serializable {
      * Creates a new Duration with potentially fractional millisecond resolution.
      * @param millis The number of milliseconds
      */
-    public Duration(double millis) {
+    public Duration(@NamedArg("millis") double millis) {
         this.millis = millis;
     }
 

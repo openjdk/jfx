@@ -30,6 +30,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import javafx.beans.NamedArg;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventTarget;
@@ -79,9 +80,9 @@ public final class InputMethodEvent extends InputEvent{
      * @param caretPosition the current position of the caret.
      * @since JavaFX 8.0
      */
-    public InputMethodEvent(Object source, EventTarget target, EventType<InputMethodEvent> eventType,
-            List<InputMethodTextRun> composed, String committed,
-            int caretPosition) {
+    public InputMethodEvent(@NamedArg("source") Object source, @NamedArg("target") EventTarget target, @NamedArg("eventType") EventType<InputMethodEvent> eventType,
+            @NamedArg("composed") List<InputMethodTextRun> composed, @NamedArg("committed") String committed,
+            @NamedArg("caretPosition") int caretPosition) {
         super(source, target, eventType);
         this.composed = FXCollections.unmodifiableObservableList(FXCollections.observableArrayList(composed));
         this.committed = committed;
@@ -96,9 +97,9 @@ public final class InputMethodEvent extends InputEvent{
      * @param caretPosition the current position of the caret.
      * @since JavaFX 8.0
      */
-    public InputMethodEvent(EventType<InputMethodEvent> eventType,
-            List<InputMethodTextRun> composed, String committed,
-            int caretPosition) {
+    public InputMethodEvent(@NamedArg("eventType") EventType<InputMethodEvent> eventType,
+            @NamedArg("composed") List<InputMethodTextRun> composed, @NamedArg("committed") String committed,
+            @NamedArg("caretPosition") int caretPosition) {
         this(null, null, eventType, composed, committed, caretPosition);
     }
     

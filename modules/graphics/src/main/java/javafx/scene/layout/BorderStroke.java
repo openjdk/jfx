@@ -25,6 +25,7 @@
 
 package javafx.scene.layout;
 
+import javafx.beans.NamedArg;
 import javafx.geometry.Insets;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
@@ -189,7 +190,7 @@ public class BorderStroke {
      * @param radii     The radii to use. If null, we default to CornerRadii.EMPTY
      * @param widths    The widths to use. If null, we default to DEFAULT_WIDTHS
      */
-    public BorderStroke(Paint stroke, BorderStrokeStyle style, CornerRadii radii, BorderWidths widths) {
+    public BorderStroke(@NamedArg("stroke") Paint stroke, @NamedArg("style") BorderStrokeStyle style, @NamedArg("radii") CornerRadii radii, @NamedArg("widths") BorderWidths widths) {
         // TODO: Note that we default to THIN, not to MEDIUM as the CSS spec says. So it will be
         // up to our CSS converter code to make sure the default is MEDIUM in that case.
         this.leftStroke = this.topStroke = this.rightStroke = this.bottomStroke = stroke == null ? Color.BLACK : stroke;
@@ -234,7 +235,7 @@ public class BorderStroke {
      * @param widths    The widths to use. If null, we default to DEFAULT_WIDTHS
      * @param insets    The insets indicating where to draw the border relative to the region edges.
      */
-    public BorderStroke(Paint stroke, BorderStrokeStyle style, CornerRadii radii, BorderWidths widths, Insets insets) {
+    public BorderStroke(@NamedArg("stroke") Paint stroke, @NamedArg("style") BorderStrokeStyle style, @NamedArg("radii") CornerRadii radii, @NamedArg("widths") BorderWidths widths, @NamedArg("insets") Insets insets) {
         this(stroke, stroke, stroke, stroke, style, style, style, style, radii, widths, insets);
     }
 
@@ -254,10 +255,10 @@ public class BorderStroke {
      * @param insets    The insets indicating where to draw the border relative to the region edges.
      */
     public BorderStroke(
-            Paint topStroke, Paint rightStroke, Paint bottomStroke, Paint leftStroke,
-            BorderStrokeStyle topStyle, BorderStrokeStyle rightStyle,
-            BorderStrokeStyle bottomStyle, BorderStrokeStyle leftStyle,
-            CornerRadii radii, BorderWidths widths, Insets insets)
+            @NamedArg("topStroke") Paint topStroke, @NamedArg("rightStroke") Paint rightStroke, @NamedArg("bottomStroke") Paint bottomStroke, @NamedArg("leftStroke") Paint leftStroke,
+            @NamedArg("topStyle") BorderStrokeStyle topStyle, @NamedArg("rightStyle") BorderStrokeStyle rightStyle,
+            @NamedArg("bottomStyle") BorderStrokeStyle bottomStyle, @NamedArg("leftStyle") BorderStrokeStyle leftStyle,
+            @NamedArg("radii") CornerRadii radii, @NamedArg("widths") BorderWidths widths, @NamedArg("insets") Insets insets)
     {
         this.topStroke = topStroke == null ? Color.BLACK : topStroke;
         this.rightStroke = rightStroke == null ? this.topStroke : rightStroke;

@@ -27,10 +27,10 @@ package javafx.scene.paint;
 
 import java.util.List;
 
-import com.sun.javafx.beans.annotations.Default;
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import com.sun.javafx.scene.paint.GradientUtils;
 import com.sun.javafx.tk.Toolkit;
+import javafx.beans.NamedArg;
 
 /**
  * <p>The {@code LinearGradient} class fills a shape
@@ -213,13 +213,13 @@ public final class LinearGradient extends Paint {
      * @param stops the gradient's color specification
      */
     public LinearGradient(
-            double startX,
-            double startY,
-            @Default("1") double endX,
-            @Default("1") double endY,
-            @Default("true") boolean proportional,
-            CycleMethod cycleMethod,
-            Stop... stops) {
+            @NamedArg("startX") double startX,
+            @NamedArg("startY") double startY,
+            @NamedArg(value="endX", defaultValue="1") double endX,
+            @NamedArg(value="endY", defaultValue="1") double endY,
+            @NamedArg(value="proportional", defaultValue="true") boolean proportional,
+            @NamedArg("cycleMethod") CycleMethod cycleMethod,
+            @NamedArg("stops") Stop... stops) {
         this.startX = startX;
         this.startY = startY;
         this.endX = endX;
@@ -242,13 +242,13 @@ public final class LinearGradient extends Paint {
      * @param stops the gradient's color specification
      */
     public LinearGradient(
-            double startX,
-            double startY,
-            @Default("1") double endX,
-            @Default("1") double endY,
-            @Default("true") boolean proportional,
-            CycleMethod cycleMethod,
-            List<Stop> stops) {
+            @NamedArg("startX") double startX,
+            @NamedArg("startY") double startY,
+            @NamedArg(value="endX", defaultValue="1") double endX,
+            @NamedArg(value="endY", defaultValue="1") double endY,
+            @NamedArg(value="proportional", defaultValue="true") boolean proportional,
+            @NamedArg("cycleMethod") CycleMethod cycleMethod,
+            @NamedArg("stops") List<Stop> stops) {
         this.startX = startX;
         this.startY = startY;
         this.endX = endX;

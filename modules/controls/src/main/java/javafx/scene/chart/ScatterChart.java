@@ -27,6 +27,7 @@ package javafx.scene.chart;
 
 import javafx.animation.FadeTransition;
 import javafx.animation.ParallelTransition;
+import javafx.beans.NamedArg;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -56,7 +57,7 @@ public class ScatterChart<X,Y> extends XYChart<X,Y> {
      * @param xAxis The x axis to use
      * @param yAxis The y axis to use
      */
-    public ScatterChart(Axis<X> xAxis, Axis<Y> yAxis) {
+    public ScatterChart(@NamedArg("xAxis") Axis<X> xAxis, @NamedArg("yAxis") Axis<Y> yAxis) {
         this(xAxis, yAxis, FXCollections.<Series<X, Y>>observableArrayList());
     }
 
@@ -67,7 +68,7 @@ public class ScatterChart<X,Y> extends XYChart<X,Y> {
      * @param yAxis The y axis to use
      * @param data The data to use, this is the actual list used so any changes to it will be reflected in the chart
      */
-    public ScatterChart(Axis<X> xAxis, Axis<Y> yAxis, ObservableList<Series<X,Y>> data) {
+    public ScatterChart(@NamedArg("xAxis") Axis<X> xAxis, @NamedArg("yAxis") Axis<Y> yAxis, @NamedArg("data") ObservableList<Series<X,Y>> data) {
         super(xAxis,yAxis);
         setLegend(legend);
         setData(data);

@@ -25,6 +25,7 @@
 
 package javafx.css;
 
+import javafx.beans.NamedArg;
 import javafx.beans.property.SimpleIntegerProperty;
 
 /**
@@ -55,7 +56,7 @@ public class SimpleStyleableIntegerProperty extends StyleableIntegerProperty {
      * @param cssMetaData
      *            the CssMetaData associated with this {@code StyleableProperty}
      */
-    public SimpleStyleableIntegerProperty(CssMetaData<? extends Styleable, Number> cssMetaData) {
+    public SimpleStyleableIntegerProperty(@NamedArg("cssMetaData") CssMetaData<? extends Styleable, Number> cssMetaData) {
         this(cssMetaData, DEFAULT_BEAN, DEFAULT_NAME);
     }
 
@@ -67,7 +68,7 @@ public class SimpleStyleableIntegerProperty extends StyleableIntegerProperty {
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableIntegerProperty(CssMetaData<? extends Styleable, Number> cssMetaData, Integer initialValue) {
+    public SimpleStyleableIntegerProperty(@NamedArg("cssMetaData") CssMetaData<? extends Styleable, Number> cssMetaData, @NamedArg("initialValue") Integer initialValue) {
         this(cssMetaData, DEFAULT_BEAN, DEFAULT_NAME, initialValue);
     }
 
@@ -81,7 +82,7 @@ public class SimpleStyleableIntegerProperty extends StyleableIntegerProperty {
      * @param name
      *            the name of this {@code IntegerProperty}
      */
-    public SimpleStyleableIntegerProperty(CssMetaData<? extends Styleable, Number> cssMetaData, Object bean, String name) {
+    public SimpleStyleableIntegerProperty(@NamedArg("cssMetaData") CssMetaData<? extends Styleable, Number> cssMetaData, @NamedArg("bean") Object bean, @NamedArg("name") String name) {
         this.bean = bean;
         this.name = (name == null) ? DEFAULT_NAME : name;
         this.cssMetaData = cssMetaData;
@@ -99,7 +100,7 @@ public class SimpleStyleableIntegerProperty extends StyleableIntegerProperty {
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableIntegerProperty(CssMetaData<? extends Styleable, Number> cssMetaData, Object bean, String name, Integer initialValue) {
+    public SimpleStyleableIntegerProperty(@NamedArg("cssMetaData") CssMetaData<? extends Styleable, Number> cssMetaData, @NamedArg("bean") Object bean, @NamedArg("name") String name, @NamedArg("initialValue") Integer initialValue) {
         super(initialValue);
         this.bean = bean;
         this.name = (name == null) ? DEFAULT_NAME : name;

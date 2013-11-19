@@ -41,6 +41,7 @@ import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.cursor.ImageCursorFrame;
 import com.sun.javafx.tk.Toolkit;
 import java.util.Arrays;
+import javafx.beans.NamedArg;
 
 
 /**
@@ -176,7 +177,7 @@ public class ImageCursor extends Cursor {
      *
      * @param image the image
      */
-    public ImageCursor(final Image image) {
+    public ImageCursor(@NamedArg("image") final Image image) {
         this(image, 0f, 0f);
     }
 
@@ -188,9 +189,9 @@ public class ImageCursor extends Cursor {
      * @param hotspotX the X coordinate of the cursor's hot spot
      * @param hotspotY the Y coordinate of the cursor's hot spot
      */
-    public ImageCursor(final Image image,
-                       double hotspotX,
-                       double hotspotY) {
+    public ImageCursor(@NamedArg("image") final Image image,
+                       @NamedArg("hotspotX") double hotspotX,
+                       @NamedArg("hotspotY") double hotspotY) {
         if ((image != null) && (image.getProgress() < 1)) {
             DelayedInitialization.applyTo(
                     this, image, hotspotX, hotspotY);

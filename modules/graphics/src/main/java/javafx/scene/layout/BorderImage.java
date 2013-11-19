@@ -26,6 +26,7 @@
 package javafx.scene.layout;
 
 import com.sun.javafx.scene.layout.region.BorderImageSlices;
+import javafx.beans.NamedArg;
 import javafx.geometry.Insets;
 import javafx.scene.image.Image;
 
@@ -140,8 +141,8 @@ public class BorderImage {
      *                   value as repeatX.
      */
     public BorderImage(
-            Image image, BorderWidths widths, Insets insets, BorderWidths slices, boolean filled,
-            BorderRepeat repeatX, BorderRepeat repeatY) {
+            @NamedArg("image") Image image, @NamedArg("widths") BorderWidths widths, @NamedArg("insets") Insets insets, @NamedArg("slices") BorderWidths slices, @NamedArg("filled") boolean filled,
+            @NamedArg("repeatX") BorderRepeat repeatX, @NamedArg("repeatY") BorderRepeat repeatY) {
         if (image == null) throw new NullPointerException("Image cannot be null");
         this.image = image;
         this.widths = widths == null ? BorderWidths.DEFAULT : widths;

@@ -29,6 +29,7 @@ import java.util.EventObject;
 
 import com.sun.javafx.event.EventUtil;
 import java.io.IOException;
+import javafx.beans.NamedArg;
 
 // PENDING_DOC_REVIEW
 /**
@@ -81,7 +82,7 @@ public class Event extends EventObject implements Cloneable {
      *
      * @param eventType the event type
      */
-    public Event(final EventType<? extends Event> eventType) {
+    public Event(final @NamedArg("eventType") EventType<? extends Event> eventType) {
         this(null, null, eventType);
     }
 
@@ -94,9 +95,9 @@ public class Event extends EventObject implements Cloneable {
      * @param target the event target to associate with the event
      * @param eventType the event type
      */
-    public Event(final Object source,
-                 final EventTarget target,
-                 final EventType<? extends Event> eventType) {
+    public Event(final @NamedArg("source") Object source,
+                 final @NamedArg("target") EventTarget target,
+                 final @NamedArg("eventType") EventType<? extends Event> eventType) {
         super((source != null) ? source : NULL_SOURCE_TARGET);
         this.target = (target != null) ? target : NULL_SOURCE_TARGET;
         this.eventType = eventType;

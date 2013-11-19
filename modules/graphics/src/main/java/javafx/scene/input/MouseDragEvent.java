@@ -25,6 +25,7 @@
 
 package javafx.scene.input;
 
+import javafx.beans.NamedArg;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 
@@ -153,13 +154,13 @@ public final class MouseDragEvent extends MouseEvent{
      * @param gestureSource source object of the ongoing gesture.
      * @since JavaFX 8.0
      */
-    public MouseDragEvent(Object source, EventTarget target, EventType<MouseDragEvent> eventType,
-            double x, double y, double screenX, double screenY,
-            MouseButton button, int clickCount,
-            boolean shiftDown, boolean controlDown, boolean altDown, boolean metaDown,
-            boolean primaryButtonDown, boolean middleButtonDown, boolean secondaryButtonDown,
-            boolean synthesized, boolean popupTrigger, PickResult pickResult,
-            Object gestureSource) {
+    public MouseDragEvent(@NamedArg("source") Object source, @NamedArg("target") EventTarget target, @NamedArg("eventType") EventType<MouseDragEvent> eventType,
+            @NamedArg("x") double x, @NamedArg("y") double y, @NamedArg("screenX") double screenX, @NamedArg("screenY") double screenY,
+            @NamedArg("button") MouseButton button, @NamedArg("clickCount") int clickCount,
+            @NamedArg("shiftDown") boolean shiftDown, @NamedArg("controlDown") boolean controlDown, @NamedArg("altDown") boolean altDown, @NamedArg("metaDown") boolean metaDown,
+            @NamedArg("primaryButtonDown") boolean primaryButtonDown, @NamedArg("middleButtonDown") boolean middleButtonDown, @NamedArg("secondaryButtonDown") boolean secondaryButtonDown,
+            @NamedArg("synthesized") boolean synthesized, @NamedArg("popupTrigger") boolean popupTrigger, @NamedArg("pickResult") PickResult pickResult,
+            @NamedArg("gestureSource") Object gestureSource) {
         super(source, target, eventType, x, y, screenX, screenY, button,
                 clickCount, shiftDown, controlDown, altDown, metaDown,
                 primaryButtonDown, middleButtonDown, secondaryButtonDown,
@@ -192,13 +193,13 @@ public final class MouseDragEvent extends MouseEvent{
      * @param gestureSource source object of the ongoing gesture.
      * @since JavaFX 8.0
      */
-    public MouseDragEvent(EventType<MouseDragEvent> eventType,
-            double x, double y, double screenX, double screenY,
-            MouseButton button, int clickCount,
-            boolean shiftDown, boolean controlDown, boolean altDown, boolean metaDown,
-            boolean primaryButtonDown, boolean middleButtonDown, boolean secondaryButtonDown,
-            boolean synthesized, boolean popupTrigger, PickResult pickResult,
-            Object gestureSource) {
+    public MouseDragEvent(@NamedArg("eventType") EventType<MouseDragEvent> eventType,
+            @NamedArg("x") double x, @NamedArg("y") double y, @NamedArg("screenX") double screenX, @NamedArg("screenY") double screenY,
+            @NamedArg("button") MouseButton button, @NamedArg("clickCount") int clickCount,
+            @NamedArg("shiftDown") boolean shiftDown, @NamedArg("controlDown") boolean controlDown, @NamedArg("altDown") boolean altDown, @NamedArg("metaDown") boolean metaDown,
+            @NamedArg("primaryButtonDown") boolean primaryButtonDown, @NamedArg("middleButtonDown") boolean middleButtonDown, @NamedArg("secondaryButtonDown") boolean secondaryButtonDown,
+            @NamedArg("synthesized") boolean synthesized, @NamedArg("popupTrigger") boolean popupTrigger, @NamedArg("pickResult") PickResult pickResult,
+            @NamedArg("gestureSource") Object gestureSource) {
         this(null, null, eventType, x, y, screenX, screenY, button, clickCount,
                 shiftDown, controlDown, altDown, metaDown, primaryButtonDown,
                 middleButtonDown, secondaryButtonDown, synthesized, popupTrigger, 

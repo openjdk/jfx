@@ -27,6 +27,7 @@ package javafx.scene.input;
 
 import com.sun.javafx.scene.input.InputEventUtils;
 import java.io.IOException;
+import javafx.beans.NamedArg;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.geometry.Point3D;
@@ -77,9 +78,9 @@ public class ContextMenuEvent extends InputEvent {
      *                   based on the scene coordinates and the target
      * @since JavaFX 8.0
      */
-    public ContextMenuEvent(Object source, EventTarget target, EventType<ContextMenuEvent> eventType, double x, double y,
-            double screenX, double screenY, boolean keyboardTrigger,
-            PickResult pickResult) {
+    public ContextMenuEvent(@NamedArg("source") Object source, @NamedArg("target") EventTarget target, @NamedArg("eventType") EventType<ContextMenuEvent> eventType, @NamedArg("x") double x, @NamedArg("y") double y,
+            @NamedArg("screenX") double screenX, @NamedArg("screenY") double screenY, @NamedArg("keyboardTrigger") boolean keyboardTrigger,
+            @NamedArg("pickResult") PickResult pickResult) {
         super(source, target, eventType);
         this.screenX = screenX;
         this.screenY = screenY;
@@ -108,9 +109,9 @@ public class ContextMenuEvent extends InputEvent {
      *                   based on the scene coordinates
      * @since JavaFX 8.0
      */
-    public ContextMenuEvent(EventType<ContextMenuEvent> eventType, double x, double y,
-            double screenX, double screenY, boolean keyboardTrigger,
-            PickResult pickResult) {
+    public ContextMenuEvent(@NamedArg("eventType") EventType<ContextMenuEvent> eventType, @NamedArg("x") double x, @NamedArg("y") double y,
+            @NamedArg("screenX") double screenX, @NamedArg("screenY") double screenY, @NamedArg("keyboardTrigger") boolean keyboardTrigger,
+            @NamedArg("pickResult") PickResult pickResult) {
         this(null, null, eventType, x, y, screenX, screenY, keyboardTrigger,
                 pickResult);
     }

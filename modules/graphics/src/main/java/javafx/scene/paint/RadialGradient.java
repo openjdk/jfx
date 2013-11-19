@@ -27,10 +27,10 @@ package javafx.scene.paint;
 
 import java.util.List;
 
-import com.sun.javafx.beans.annotations.Default;
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import com.sun.javafx.scene.paint.GradientUtils;
 import com.sun.javafx.tk.Toolkit;
+import javafx.beans.NamedArg;
 
 /**
  * The {@code RadialGradient} class provides a way to fill a shape
@@ -220,14 +220,14 @@ public final class RadialGradient extends Paint {
      * @param stops the gradient's color specification
      */
     public RadialGradient(
-            double focusAngle,
-            double focusDistance,
-            double centerX,
-            double centerY,
-            @Default("1") double radius,
-            @Default("true") boolean proportional,
-            CycleMethod cycleMethod,
-            Stop... stops) {
+            @NamedArg("focusAngle") double focusAngle,
+            @NamedArg("focusDistance") double focusDistance,
+            @NamedArg("centerX") double centerX,
+            @NamedArg("centerY") double centerY,
+            @NamedArg(value="radius", defaultValue="1") double radius,
+            @NamedArg(value="proportional", defaultValue="true") boolean proportional,
+            @NamedArg("cycleMethod") CycleMethod cycleMethod,
+            @NamedArg("stops") Stop... stops) {
         this.focusAngle = focusAngle;
         this.focusDistance = focusDistance;
         this.centerX = centerX;
@@ -254,14 +254,14 @@ public final class RadialGradient extends Paint {
      * @param stops the gradient's color specification
      */
     public RadialGradient(
-            double focusAngle,
-            double focusDistance,
-            double centerX,
-            double centerY,
-            @Default("1") double radius,
-            @Default("true") boolean proportional,
-            CycleMethod cycleMethod,
-            List<Stop> stops) {
+            @NamedArg("focusAngle") double focusAngle,
+            @NamedArg("focusDistance") double focusDistance,
+            @NamedArg("centerX") double centerX,
+            @NamedArg("centerY") double centerY,
+            @NamedArg(value="radius", defaultValue="1") double radius,
+            @NamedArg(value="proportional", defaultValue="true") boolean proportional,
+            @NamedArg("cycleMethod") CycleMethod cycleMethod,
+            @NamedArg("stops") List<Stop> stops) {
         this.focusAngle = focusAngle;
         this.focusDistance = focusDistance;
         this.centerX = centerX;

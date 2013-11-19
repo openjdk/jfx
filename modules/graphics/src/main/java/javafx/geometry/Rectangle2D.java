@@ -25,6 +25,9 @@
 
 package javafx.geometry;
 
+import javafx.beans.NamedArg;
+
+
 /**
  * A 2D rectangle used to describe the bounds of an object. It is defined by a
  * location (minX, minY) and dimension (width x height).
@@ -96,7 +99,7 @@ public class Rectangle2D {
      * @param width The width of the {@code Rectangle2D}
      * @param height The height of the {@code Rectangle2D} 
      */
-    public Rectangle2D(double minX, double minY, double width, double height) {
+    public Rectangle2D(@NamedArg("minX") double minX, @NamedArg("minY") double minY, @NamedArg("width") double width, @NamedArg("height") double height) {
         if (width < 0 || height < 0) {
             throw new IllegalArgumentException("Both width and height must be >= 0");
         }

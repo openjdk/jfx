@@ -25,6 +25,7 @@
 
 package javafx.css;
 
+import javafx.beans.NamedArg;
 import javafx.beans.property.SimpleObjectProperty;
 
 /**
@@ -55,7 +56,7 @@ public class SimpleStyleableObjectProperty<T> extends StyleableObjectProperty<T>
      * @param cssMetaData
      *            the CssMetaData associated with this {@code StyleableProperty}
      */
-    public SimpleStyleableObjectProperty(CssMetaData<? extends Styleable, T> cssMetaData) {
+    public SimpleStyleableObjectProperty(@NamedArg("cssMetaData") CssMetaData<? extends Styleable, T> cssMetaData) {
         this(cssMetaData, DEFAULT_BEAN, DEFAULT_NAME);
     }
 
@@ -67,7 +68,7 @@ public class SimpleStyleableObjectProperty<T> extends StyleableObjectProperty<T>
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableObjectProperty(CssMetaData<? extends Styleable, T> cssMetaData, T initialValue) {
+    public SimpleStyleableObjectProperty(@NamedArg("cssMetaData") CssMetaData<? extends Styleable, T> cssMetaData, @NamedArg("initialValue") T initialValue) {
         this(cssMetaData, DEFAULT_BEAN, DEFAULT_NAME, initialValue);
     }
 
@@ -81,7 +82,7 @@ public class SimpleStyleableObjectProperty<T> extends StyleableObjectProperty<T>
      * @param name
      *            the name of this {@code ObjectProperty}
      */
-    public SimpleStyleableObjectProperty(CssMetaData<? extends Styleable, T> cssMetaData, Object bean, String name) {
+    public SimpleStyleableObjectProperty(@NamedArg("cssMetaData") CssMetaData<? extends Styleable, T> cssMetaData, @NamedArg("bean") Object bean, @NamedArg("name") String name) {
         this.bean = bean;
         this.name = (name == null) ? DEFAULT_NAME : name;
         this.cssMetaData = cssMetaData;
@@ -99,7 +100,7 @@ public class SimpleStyleableObjectProperty<T> extends StyleableObjectProperty<T>
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableObjectProperty(CssMetaData<? extends Styleable, T> cssMetaData, Object bean, String name, T initialValue) {
+    public SimpleStyleableObjectProperty(@NamedArg("cssMetaData") CssMetaData<? extends Styleable, T> cssMetaData, @NamedArg("bean") Object bean, @NamedArg("name") String name, @NamedArg("initialValue") T initialValue) {
         super(initialValue);
         this.bean = bean;
         this.name = (name == null) ? DEFAULT_NAME : name;

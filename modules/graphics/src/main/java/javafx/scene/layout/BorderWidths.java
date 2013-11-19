@@ -25,6 +25,9 @@
 
 package javafx.scene.layout;
 
+import javafx.beans.NamedArg;
+
+
 /**
  * Defines widths for four components (top, right, bottom, and left).
  * Each width is defined as a non-negative
@@ -140,7 +143,7 @@ public final class BorderWidths {
      *
      * @param width The border width. This cannot be negative.
      */
-    public BorderWidths(double width) {
+    public BorderWidths(@NamedArg("width") double width) {
         this(width, width, width, width, false, false, false, false);
     }
 
@@ -154,7 +157,7 @@ public final class BorderWidths {
      * @param bottom    The thickness of the border on the bottom. Must be non-negative.
      * @param left    The thickness of the border on the left. Must be non-negative.
      */
-    public BorderWidths(double top, double right, double bottom, double left) {
+    public BorderWidths(@NamedArg("top") double top, @NamedArg("right") double right, @NamedArg("bottom") double bottom, @NamedArg("left") double left) {
         this(top, right, bottom, left, false, false, false, false);
     }
 
@@ -172,8 +175,8 @@ public final class BorderWidths {
      * @param leftAsPercentage        Whether the left should be treated as a percentage.
      */
     public BorderWidths(
-            double top, double right, double bottom, double left, boolean topAsPercentage,
-            boolean rightAsPercentage, boolean bottomAsPercentage, boolean leftAsPercentage) {
+            @NamedArg("top") double top, @NamedArg("right") double right, @NamedArg("bottom") double bottom, @NamedArg("left") double left, @NamedArg("topAsPercentage") boolean topAsPercentage,
+            @NamedArg("rightAsPercentage") boolean rightAsPercentage, @NamedArg("bottomAsPercentage") boolean bottomAsPercentage, @NamedArg("leftAsPercentage") boolean leftAsPercentage) {
 
         // As per CSS 3 Spec (4.3), cannot be negative
         if ((top != AUTO && top < 0) ||

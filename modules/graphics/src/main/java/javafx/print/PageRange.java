@@ -27,6 +27,7 @@ package javafx.print;
 
 import java.util.Arrays;
 
+import javafx.beans.NamedArg;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
@@ -52,7 +53,7 @@ public final class PageRange {
      * @param endPage the last page in the range.
      * @throws IllegalArgumentException if the page range is not valid
      */
-    public PageRange(int startPage, int endPage) {
+    public PageRange(@NamedArg("startPage") int startPage, @NamedArg("endPage") int endPage) {
         if (startPage <= 0 || startPage > endPage) {
             throw new IllegalArgumentException("Invalid range : " +
                                                startPage + " -> " + endPage);

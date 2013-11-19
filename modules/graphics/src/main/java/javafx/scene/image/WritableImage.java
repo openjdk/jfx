@@ -31,6 +31,7 @@ import com.sun.javafx.tk.Toolkit;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
+import javafx.beans.NamedArg;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.scene.paint.Color;
 
@@ -69,7 +70,7 @@ public class WritableImage extends Image {
      * @param height the desired height of the desired image
      * @throws IllegalArgumentException if either dimension is negative or zero.
      */
-    public WritableImage(int width, int height) {
+    public WritableImage(@NamedArg("width") int width, @NamedArg("height") int height) {
         super(width, height);
     }
 
@@ -94,7 +95,7 @@ public class WritableImage extends Image {
      *         not access a surface of at least the requested dimensions
      * @throws IllegalArgumentException if either dimension is negative or zero.
      */
-    public WritableImage(PixelReader reader, int width, int height) {
+    public WritableImage(@NamedArg("reader") PixelReader reader, @NamedArg("width") int width, @NamedArg("height") int height) {
         super(width, height);
         getPixelWriter().setPixels(0, 0, width, height, reader, 0, 0);
     }
@@ -124,8 +125,8 @@ public class WritableImage extends Image {
      *         not access a surface containing at least the indicated region
      * @throws IllegalArgumentException if either dimension is negative or zero.
      */
-    public WritableImage(PixelReader reader,
-                         int x, int y, int width, int height)
+    public WritableImage(@NamedArg("reader") PixelReader reader,
+                         @NamedArg("x") int x, @NamedArg("y") int y, @NamedArg("width") int width, @NamedArg("height") int height)
     {
         super(width, height);
         getPixelWriter().setPixels(0, 0, width, height, reader, x, y);

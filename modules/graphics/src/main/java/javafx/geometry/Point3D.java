@@ -25,6 +25,9 @@
 
 package javafx.geometry;
 
+import javafx.beans.NamedArg;
+
+
 // PENDING_DOC_REVIEW of this whole class
 /**
  * A 3D geometric point that usually represents the x, y, z coordinates.
@@ -95,7 +98,7 @@ public class Point3D {
      * @param y The Y coordinate of the {@code Point3D}
      * @param z The Z coordinate of the {@code Point3D}
      */
-    public Point3D(double x, double y, double z) {
+    public Point3D(@NamedArg("x") double x, @NamedArg("y") double y, @NamedArg("z") double z) {
         this.x = x;
         this.y = y;
         this.z = z;

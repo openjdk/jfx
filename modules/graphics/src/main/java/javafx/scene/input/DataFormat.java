@@ -32,6 +32,7 @@ import java.util.Iterator;
 import java.util.Set;
 
 import com.sun.javafx.WeakReferenceQueue;
+import javafx.beans.NamedArg;
 
 /**
  * Data format identifier used as means
@@ -128,7 +129,7 @@ public class DataFormat {
      * @throws IllegalArgumentException if one of the given mime types is already
      *         assigned to another DataFormat.
      */
-    public DataFormat(String... ids) {
+    public DataFormat(@NamedArg("ids") String... ids) {
         DATA_FORMAT_LIST.cleanup();
         if (ids != null) {
             for (String id : ids) {
