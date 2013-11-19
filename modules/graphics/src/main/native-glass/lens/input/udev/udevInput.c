@@ -589,8 +589,7 @@ static jboolean lens_input_deviceCheckProperties(LensInputDevice *device,
         device->isPointer = JNI_TRUE;
         isValidDevice = JNI_TRUE;
         GLASS_LOG_FINE("Device is a pointer");
-    } else if (!strcmp(key, "ID_INPUT_TOUCHSCREEN")
-               || !strcmp(key, "ID_INPUT_TABLET")) {
+    } else if (!strcmp(key, "ID_INPUT_TOUCHSCREEN")) {
         device->isTouch = JNI_TRUE;
         //default touch protocol to ST (single touch), which is always supported 
         //by touch devices. multi touch support protocol is checked in 
