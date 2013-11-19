@@ -396,10 +396,15 @@ void glass_pixel_attachIntBuffer(JNIEnv *env, jint *src,
         DFBBREAK(dfbWindow->GetSize(dfbWindow, &_w, &_h));
 
         //check for window update
+        //There are scenarios in which the value of window->currentBounds.width/height
+        //can differ from the size of width/height. This happens when window->currentBounds
+        //were updated to their new values while rendering requests are waiting in the application
+        //thread's queue, to be executed. Therefore, we will use the buffer width/height to determine
+        //the surface size.
         if (_x != window->currentBounds.x ||
             _y != window->currentBounds.y ||
-            _w != window->currentBounds.width ||
-            _h != window->currentBounds.height) {
+            _w != width ||
+            _h != height) {
 
             GLASS_LOG_FINER("Window dimentions have been changed, updating");
 
@@ -411,8 +416,8 @@ void glass_pixel_attachIntBuffer(JNIEnv *env, jint *src,
             DFBBREAK(dfbWindow->SetBounds(window->data->dfbWindow,
                                                         window->currentBounds.x,
                                                         window->currentBounds.y,
-                                                        window->currentBounds.width,
-                                                        window->currentBounds.height));
+                                                        width,
+                                                        height));
             dimensionsUpdated = JNI_TRUE;
         }
         
