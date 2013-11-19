@@ -25,10 +25,6 @@
 
 package javafx.scene.control;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import java.util.List;
 
 import com.sun.javafx.tk.Toolkit;
@@ -47,6 +43,8 @@ import com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
+
+import static org.junit.Assert.*;
 
 //@Ignore("Disabling tests as they fail with OOM in continuous builds")
 public class TableViewMouseInputTest {
@@ -385,9 +383,6 @@ public class TableViewMouseInputTest {
     }
 
     private int rt_30626_count = 0;
-    @Ignore("This test has stopped working, but the TreeTableViewMouseInputTest one works." +
-            "It seems that the cells returned in each clickOnRow call are different." +
-            "Needs more investigation...")
     @Test public void test_rt_30626() {
         final int items = 8;
         tableView.getItems().clear();
@@ -414,5 +409,43 @@ public class TableViewMouseInputTest {
 
         VirtualFlowTestUtils.clickOnRow(tableView, 1);
         assertEquals(1, rt_30626_count);
+    }
+
+    @Test public void test_rt_33897_rowSelection() {
+        final int items = 8;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        final TableView.TableViewSelectionModel<String> sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(false);
+
+        VirtualFlowTestUtils.clickOnRow(tableView, 1);
+        assertEquals(1, sm.getSelectedCells().size());
+
+        TablePosition pos = sm.getSelectedCells().get(0);
+        assertEquals(1, pos.getRow());
+        assertNull(pos.getTableColumn());
+    }
+
+    @Test public void test_rt_33897_cellSelection() {
+        final int items = 8;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        final TableView.TableViewSelectionModel<String> sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+
+        VirtualFlowTestUtils.clickOnRow(tableView, 1);
+        assertEquals(1, sm.getSelectedCells().size());
+
+        TablePosition pos = sm.getSelectedCells().get(0);
+        assertEquals(1, pos.getRow());
+        assertNotNull(pos.getTableColumn());
     }
 }
