@@ -2485,4 +2485,56 @@ public class TableViewKeyInputTest {
         assertEquals(99, getAnchor().getRow());
         assertTrue(fm.getFocusedIndex() < 99);
     }
+
+    @Test public void test_rt34369_cellSelection() {
+        final int items = 100;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        final TableFocusModel fm = tableView.getFocusModel();
+        final TableSelectionModel sm = tableView.getSelectionModel();
+
+        sm.setCellSelectionEnabled(true);
+
+        new StageLoader(tableView);
+
+        sm.clearAndSelect(99, col0);
+        tableView.scrollTo(99);
+        assertEquals(99, getAnchor().getRow());
+        assertEquals(col0, getAnchor().getTableColumn());
+        assertEquals(99, fm.getFocusedIndex());
+
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(99, getAnchor().getRow());
+        assertEquals(col0, getAnchor().getTableColumn());
+        assertTrue(fm.getFocusedIndex() < 99);
+    }
+
+    @Test public void test_rt34369_rowSelection() {
+        final int items = 100;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        final TableFocusModel fm = tableView.getFocusModel();
+        final TableSelectionModel sm = tableView.getSelectionModel();
+
+        sm.setCellSelectionEnabled(false);
+
+        new StageLoader(tableView);
+
+        sm.clearAndSelect(99);
+        tableView.scrollTo(99);
+        assertEquals(99, getAnchor().getRow());
+        assertEquals(99, fm.getFocusedIndex());
+
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(99, getAnchor().getRow());
+        assertTrue(fm.getFocusedIndex() < 99);
+    }
 }

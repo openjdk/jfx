@@ -980,11 +980,9 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         } else {
             sm.clearSelection();
             if (sm.isCellSelectionEnabled()) {
-                for (int _row = leadSelectedIndex; _row <= leadIndex + 1; _row++) {
-                    sm.select(_row, col);
-                }
+                sm.selectRange(leadIndex, col, leadSelectedIndex - 1, col);
             } else {
-                sm.selectRange(leadSelectedIndex, leadIndex + 1);
+                sm.selectRange(leadIndex, leadSelectedIndex - 1);
             }
         }
         selectionChanging = false;

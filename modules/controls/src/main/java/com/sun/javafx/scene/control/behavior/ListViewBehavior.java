@@ -601,7 +601,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         }
         
         int leadSelectedIndex = onScrollPageUp.call(getAnchor());
-        
+
         MultipleSelectionModel<T> sm = getControl().getSelectionModel();
         if (sm == null) return;
         
@@ -610,7 +610,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             sm.select(leadSelectedIndex);
         } else {
             sm.clearSelection();
-            sm.selectRange(leadSelectedIndex, leadIndex + 1);
+            sm.selectRange(leadIndex, leadSelectedIndex - 1);
         }
         selectionChanging = false;
     }
@@ -810,7 +810,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
 
         int leadIndex = fm.getFocusedIndex();
         int leadSelectedIndex = onScrollPageUp.call(getAnchor());
-        sm.selectRange(leadIndex, leadSelectedIndex - 1);
+        sm.selectRange(leadIndex, leadSelectedIndex + 1);
     }
     
     private void discontinuousSelectPageDown() {
