@@ -28,12 +28,7 @@ package javafx.scene.control;
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import static javafx.scene.control.TreeTableColumn.SortType.ASCENDING;
 import static javafx.scene.control.TreeTableColumn.SortType.DESCENDING;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.util.Comparator;
 import java.util.List;
@@ -2656,5 +2651,57 @@ public class TreeTableViewTest {
         // now start an edit and count the start edit events - it should be just 1
         treeTableView.edit(0, col);
         assertEquals(1, rt_29849_start_count);
+    }
+
+    @Test public void test_rt_34327() {
+        // by default the comparator is null.
+        // NOTE: this method (prior to the fix as part of RT-34327) would have
+        // returned Comparator<String>, but after the fix it correctly returns
+        // a Comparator<TreeItem<String>>
+        Comparator nonGenericComparator = treeTableView.getComparator();
+        Comparator<TreeItem<String>> genericComparator = treeTableView.getComparator();
+        assertNull(nonGenericComparator);
+        assertNull(genericComparator);
+
+        // add in a column and some data
+        TreeTableColumn<String, String> col = new TreeTableColumn<>("column");
+        col.setEditable(true);
+        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
+            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
+                return new ReadOnlyObjectWrapper<>(param.getValue().getValue());
+            }
+        });
+        treeTableView.getColumns().add(col);
+
+        installChildren();
+
+        // sort by that column
+        treeTableView.getSortOrder().add(col);
+
+        // get the new comparator, which should no longer be null
+        nonGenericComparator = treeTableView.getComparator();
+        genericComparator = treeTableView.getComparator();
+        assertNotNull(nonGenericComparator);
+        assertNotNull(genericComparator);
+
+        // now, as noted above, previously we would use the Comparator to compare
+        // two String instances, which would fail at runtime as the Comparator
+        // was actually expecting to compare two TreeItem<String>, but the API
+        // was failing us.
+        try {
+            nonGenericComparator.compare("abc", "def");
+            fail("This should not work!");
+        } catch (ClassCastException e) {
+            // if we get the exception, we're happy
+        }
+
+        try {
+            Object string1 = "abc";
+            Object string2 = "def";
+            genericComparator.compare((TreeItem<String>)string1, (TreeItem<String>)string2);
+            fail("This should not work!");
+        } catch (ClassCastException e) {
+            // if we get the exception, we're happy
+        }
     }
 }

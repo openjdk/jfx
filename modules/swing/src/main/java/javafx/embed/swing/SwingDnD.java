@@ -25,7 +25,8 @@
 
 package javafx.embed.swing;
 
-import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+
 import java.util.Collections;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -33,12 +34,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
+import com.sun.javafx.embed.EmbeddedSceneDSInterface;
+import com.sun.javafx.embed.HostDragStartListener;
 import javafx.scene.input.TransferMode;
 
 import com.sun.javafx.embed.EmbeddedSceneInterface;
-import com.sun.javafx.embed.EmbeddedSceneDragSourceInterface;
-import com.sun.javafx.embed.EmbeddedSceneDragStartListenerInterface;
-import com.sun.javafx.embed.EmbeddedSceneDropTargetInterface;
+import com.sun.javafx.embed.EmbeddedSceneDTInterface;
 import com.sun.javafx.tk.Toolkit;
 
 import javax.swing.JComponent;
@@ -48,7 +49,6 @@ import java.awt.Point;
 
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
-import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.dnd.DnDConstants;
 import java.awt.dnd.DragGestureEvent;
 import java.awt.dnd.DragGestureRecognizer;
@@ -61,6 +61,7 @@ import java.awt.dnd.DropTargetAdapter;
 import java.awt.dnd.DropTargetDragEvent;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.dnd.DropTargetEvent;
+import java.awt.dnd.DropTargetListener;
 
 import java.awt.event.InputEvent;
 import java.awt.event.MouseAdapter;
@@ -71,102 +72,89 @@ import java.awt.event.MouseEvent;
  */
 final class SwingDnD {
 
-    private final JFXPanelFacade facade;
     private final Transferable dndTransferable = new DnDTransferable();
+
+    private final DragSource dragSource;
     private final DragSourceListener dragSourceListener;
+
+    // swingDragSource and fxDropTarget are used when DnD is initiated from
+    // Swing or external process, i.e. this SwingDnD is used as a drop target
     private SwingDragSource swingDragSource;
-    private EmbeddedSceneDragSourceInterface fxDragSource;
-    private EmbeddedSceneDropTargetInterface dropTarget;
+    private EmbeddedSceneDTInterface fxDropTarget;
+
+    // fxDragSource is used when DnD is initiated from FX, i.e. this
+    // SwingDnD acts as a drag source
+    private EmbeddedSceneDSInterface fxDragSource;
+
     private MouseEvent me;
 
-    interface JFXPanelFacade {
-
-        EmbeddedSceneInterface getScene();
-    }
-
-    SwingDnD(final JComponent comp, final JFXPanelFacade facade) {
-        this.facade = facade;
+    SwingDnD(final JComponent comp, final EmbeddedSceneInterface embeddedScene) {
 
         comp.addMouseListener(new MouseAdapter() {
-
             @Override
             public void mouseClicked(MouseEvent me) {
                 storeMouseEvent(me);
             }
-
             @Override
             public void mouseDragged(MouseEvent me) {
                 storeMouseEvent(me);
             }
-
             @Override
             public void mousePressed(MouseEvent me) {
                 storeMouseEvent(me);
             }
-
             @Override
             public void mouseReleased(MouseEvent me) {
                 storeMouseEvent(me);
             }
         });
 
+        dragSource = new DragSource();
         dragSourceListener = new DragSourceAdapter() {
-
             @Override
             public void dragDropEnd(final DragSourceDropEvent dsde) {
-                // Fix for RT-21836
-                if (fxDragSource == null) {
-                    return;
-                }
-
-                assert hasFxScene();
-
+                assert fxDragSource != null;
                 try {
-                    fxDragSource.dragDropEnd(dropActionToTransferMode(dsde.
-                            getDropAction()));
+                    fxDragSource.dragDropEnd(dropActionToTransferMode(dsde.getDropAction()));
                 } finally {
                     fxDragSource = null;
                 }
             }
         };
 
-        new DropTarget(comp, DnDConstants.ACTION_COPY | DnDConstants.ACTION_MOVE |
-                DnDConstants.ACTION_LINK, new DropTargetAdapter() {
-
+        DropTargetListener dtl = new DropTargetAdapter() {
             @Override
             public void dragEnter(final DropTargetDragEvent e) {
-                if (!hasFxScene()) {
-                    e.rejectDrag();
+                // This is a temporary workaround for JDK-8027913
+                if ((swingDragSource != null) || (fxDropTarget != null)) {
                     return;
                 }
 
-                if (fxDragSource == null) {
-                    // There is no FX drag source, create wrapper for external
-                    // drag source.
-                    assert swingDragSource == null;
-                    swingDragSource = new SwingDragSource(e);
-                }
+                assert swingDragSource == null;
+                swingDragSource = new SwingDragSource();
+                swingDragSource.updateContents(e);
+
+                assert fxDropTarget == null;
+                // Cache the Transferable data in advance, as it cannot be
+                // queried from drop(). See comments in dragOver() and in
+                // drop() below
+                fxDropTarget = embeddedScene.createDropTarget();
 
                 final Point orig = e.getLocation();
                 final Point screen = new Point(orig);
                 SwingUtilities.convertPointToScreen(screen, comp);
-                applyDragResult(getDropTarget().handleDragEnter(orig.x, orig.y,
-                                                                screen.x,
-                                                                screen.y,
-                                                                dropActionToTransferMode(e.
-                        getDropAction()), getDragSource()), e);
+                final TransferMode dr = fxDropTarget.handleDragEnter(
+                        orig.x, orig.y, screen.x, screen.y,
+                        dropActionToTransferMode(e.getDropAction()), swingDragSource);
+                applyDragResult(dr, e);
             }
 
             @Override
             public void dragExit(final DropTargetEvent e) {
-                if (!hasFxScene()) {
-                    // The drag has been already rejected in dragEnter(), but it doesn't
-                    // prevent dragExit(), dragOver() and drop() from being called
-                    return;
-                }
-                
+                assert swingDragSource != null;
+                assert fxDropTarget != null;
                 try {
-                    dropTarget.handleDragLeave();
+                    fxDropTarget.handleDragLeave();
                 } finally {
                     endDnD();
                 }
@@ -174,91 +162,90 @@ final class SwingDnD {
 
             @Override
             public void dragOver(final DropTargetDragEvent e) {
-                if (!hasFxScene()) {
-                    // The drag has been already rejected in dragEnter(), but it doesn't
-                    // prevent dragExit(), dragOver() and drop() from being called
-                    return;
-                }
+                assert swingDragSource != null;
+                // We cache Transferable data in advance, as we can't fetch
+                // it from drop(), see comments in drop() below. However,
+                // caching in every dragOver() is too expensive and also for
+                // some reason has a weird side-effect: e.acceptDrag() is
+                // ignored, and no drops are possible. So the workaround is
+                // to cache all the data in dragEnter() only
+                //
+                // swingDragSource.updateContents(e);
 
-                if (swingDragSource != null) {
-                    swingDragSource.updateContents(e);
-                }
-
+                assert fxDropTarget != null;
                 final Point orig = e.getLocation();
                 final Point screen = new Point(orig);
                 SwingUtilities.convertPointToScreen(screen, comp);
-                applyDragResult(dropTarget.handleDragOver(orig.x, orig.y,
-                                                          screen.x, screen.y,
-                                                          dropActionToTransferMode(e.
-                        getDropAction())), e);
+                final TransferMode dr = fxDropTarget.handleDragOver(
+                        orig.x, orig.y, screen.x, screen.y,
+                        dropActionToTransferMode(e.getDropAction()));
+                applyDragResult(dr, e);
             }
 
             @Override
             public void drop(final DropTargetDropEvent e) {
-                if (!hasFxScene()) {
-                    // The drag has been already rejected in dragEnter(), but it doesn't
-                    // prevent dragExit(), dragOver() and drop() from being called
-                    return;
-                }
+                assert swingDragSource != null;
+                // Don't call updateContents() from drop(). In AWT, it is possible to
+                // get data from the Transferable object in drop() only after the drop
+                // has been accepted. Here we first let FX handle drop(), then accept
+                // or reject AWT drop based the result. So instead of querying the
+                // Transferable object, we use data from swingDragSource, which was
+                // cached in dragEnter(), but not in dragOver(), see comments in
+                // dragOver() above
+                //
+                // swingDragSource.updateContents(e);
 
                 final Point orig = e.getLocation();
                 final Point screen = new Point(orig);
                 SwingUtilities.convertPointToScreen(screen, comp);
 
+                assert fxDropTarget != null;
                 try {
-                    final TransferMode dropResult =
-                            dropTarget.handleDragDrop(orig.x, orig.y, screen.x,
-                                                      screen.y,
-                                                      dropActionToTransferMode(e.
-                            getDropAction()));
+                    final TransferMode dropResult = fxDropTarget.handleDragDrop(
+                            orig.x, orig.y, screen.x, screen.y,
+                            dropActionToTransferMode(e.getDropAction()));
                     applyDropResult(dropResult, e);
-
                     e.dropComplete(dropResult != null);
                 } finally {
                     endDnD();
                 }
             }
-        });
+        };
+        comp.setDropTarget(new DropTarget(comp,
+                DnDConstants.ACTION_COPY | DnDConstants.ACTION_MOVE | DnDConstants.ACTION_LINK, dtl));
+
     }
 
     void addNotify() {
-        DragSource.getDefaultDragSource().addDragSourceListener(
-                dragSourceListener);
+        dragSource.addDragSourceListener(dragSourceListener);
     }
 
     void removeNotify() {
         // RT-22049: Multi-JFrame/JFXPanel app leaks JFXPanels
         // Don't forget to unregister drag source listener!
-        DragSource.getDefaultDragSource().removeDragSourceListener(
-                dragSourceListener);
+        dragSource.removeDragSourceListener(dragSourceListener);
     }
 
-    EmbeddedSceneDragStartListenerInterface getDragStartListener() {
-        return new EmbeddedSceneDragStartListenerInterface() {
-
+    HostDragStartListener getDragStartListener() {
+        return new HostDragStartListener() {
             @Override
-            public void dragStarted(
-                    final EmbeddedSceneDragSourceInterface dragSource,
-                    final TransferMode dragAction) {
+            public void dragStarted(final EmbeddedSceneDSInterface dragSource,
+                                    final TransferMode dragAction)
+            {
                 assert Toolkit.getToolkit().isFxUserThread();
                 assert dragSource != null;
                 
-                //
                 // The method is called from FX Scene just before entering
                 // nested event loop servicing DnD events.
                 // It should initialize DnD in AWT EDT.
-                //
-
                 SwingUtilities.invokeLater(new Runnable() {
-
                     @Override
                     public void run() {
                         assert fxDragSource == null;
                         assert swingDragSource == null;
-                        assert dropTarget == null;
+                        assert fxDropTarget == null;
                         
                         fxDragSource = dragSource;
-
                         startDrag(me, dndTransferable, dragSource.
                                 getSupportedActions(), dragAction);
                     }
@@ -267,93 +254,50 @@ final class SwingDnD {
         };
     }
 
-    private static void startDrag(final MouseEvent e, final Transferable t,
+    private void startDrag(final MouseEvent e, final Transferable t,
                                   final Set<TransferMode> sa,
-                                  final TransferMode dragAction) {
-
+                                  final TransferMode dragAction)
+    {
         assert sa.contains(dragAction);
-
-        //
         // This is a replacement for the default AWT drag gesture recognizer.
         // Not sure DragGestureRecognizer was ever supposed to be used this way.
-        //
-
         final class StubDragGestureRecognizer extends DragGestureRecognizer {
-
-            StubDragGestureRecognizer() {
-                super(DragSource.getDefaultDragSource(), e.getComponent());
-                super.setSourceActions(transferModesToDropActions(sa));
-                super.appendEvent(e);
+            StubDragGestureRecognizer(DragSource ds) {
+                super(ds, e.getComponent());
+                setSourceActions(transferModesToDropActions(sa));
+                appendEvent(e);
             }
-
             @Override
             protected void registerListeners() {
             }
-
             @Override
             protected void unregisterListeners() {
             }
         }
 
         final Point pt = new Point(e.getX(), e.getY());
-
         final int action = transferModeToDropAction(dragAction);
-
-        final DragGestureRecognizer dgs = new StubDragGestureRecognizer();
-
-        final List<InputEvent> events = Arrays.asList(new InputEvent[]{dgs.
-                    getTriggerEvent()});
-
-        final DragGestureEvent dse = new DragGestureEvent(dgs, action, pt,
-                                                          events);
-
+        final DragGestureRecognizer dgs = new StubDragGestureRecognizer(dragSource);
+        final List<InputEvent> events =
+                Arrays.asList(new InputEvent[] { dgs.getTriggerEvent() });
+        final DragGestureEvent dse = new DragGestureEvent(dgs, action, pt, events);
         dse.startDrag(null, t);
     }
 
-    private boolean hasFxScene() {
-        assert SwingUtilities.isEventDispatchThread();
-        return getFxScene() != null;
-    }
-
-    private EmbeddedSceneInterface getFxScene() {
-        return facade.getScene();
-    }
-
-    private EmbeddedSceneDragSourceInterface getDragSource() {
-        assert hasFxScene();
-
-        assert (swingDragSource == null) != (fxDragSource == null);
-
-        if (swingDragSource != null) {
-            return swingDragSource;
-        }
-        return fxDragSource;
-    }
-
-    private EmbeddedSceneDropTargetInterface getDropTarget() {
-        assert hasFxScene();
-
-        if (dropTarget == null) {
-            dropTarget = getFxScene().createDropTarget();
-        }
-        return dropTarget;
-    }
-    
     private void endDnD() {
-        assert dropTarget != null;
-        
-        dropTarget = null;
-        if (swingDragSource != null) {
-            swingDragSource = null;
-        }
+        assert swingDragSource != null;
+        assert fxDropTarget != null;
+        fxDropTarget = null;
+        swingDragSource = null;
     }
 
     private void storeMouseEvent(final MouseEvent me) {
         this.me = me;
     }
 
-    private static void applyDragResult(final TransferMode dragResult,
-                                        final DropTargetDragEvent e) {
+    private void applyDragResult(final TransferMode dragResult,
+                                 final DropTargetDragEvent e)
+    {
         if (dragResult == null) {
             e.rejectDrag();
         } else {
@@ -361,8 +305,9 @@ final class SwingDnD {
         }
     }
 
-    private static void applyDropResult(final TransferMode dropResult,
-                                        final DropTargetDropEvent e) {
+    private void applyDropResult(final TransferMode dropResult,
+                                 final DropTargetDropEvent e)
+    {
         if (dropResult == null) {
             e.rejectDrop();
         } else {
@@ -399,7 +344,8 @@ final class SwingDnD {
     }
 
     static Set<TransferMode> dropActionsToTransferModes(
-            final int dropActions) {
+            final int dropActions)
+    {
         final Set<TransferMode> tms = EnumSet.noneOf(TransferMode.class);
         if ((dropActions & DnDConstants.ACTION_COPY) != 0) {
             tms.add(TransferMode.COPY);
@@ -421,35 +367,28 @@ final class SwingDnD {
         return dropActions;
     }
 
-    //
-    // This is facade to export data from FX to outer world.
-    //
+    // Transferable wrapper over FX dragboard. All the calls are
+    // forwarded to FX and executed on the FX event thread.
     private final class DnDTransferable implements Transferable {
 
         @Override
-        public Object getTransferData(final DataFlavor flavor) throws
-                UnsupportedFlavorException, IOException {
-            checkSwingEventDispatchThread();
+        public Object getTransferData(final DataFlavor flavor)
+                throws UnsupportedEncodingException
+        {
+            assert fxDragSource != null;
+            assert SwingUtilities.isEventDispatchThread();
 
-            if (!hasFxScene()) {
-                return null;
-            }
-
-            final String mimeType = DataFlavorUtils.getFxMimeType(flavor);
-
-            return DataFlavorUtils.adjustFxData(flavor, getDragSource().getData(
-                    mimeType));
+            String mimeType = DataFlavorUtils.getFxMimeType(flavor);
+            return DataFlavorUtils.adjustFxData(
+                    flavor, fxDragSource.getData(mimeType));
         }
 
         @Override
         public DataFlavor[] getTransferDataFlavors() {
-            checkSwingEventDispatchThread();
+            assert fxDragSource != null;
+            assert SwingUtilities.isEventDispatchThread();
 
-            if (!hasFxScene()) {
-                return null;
-            }
-
-            final String mimeTypes[] = getDragSource().getMimeTypes();
+            final String mimeTypes[] = fxDragSource.getMimeTypes();
 
             final ArrayList<DataFlavor> flavors =
                     new ArrayList<DataFlavor>(mimeTypes.length);
@@ -468,20 +407,11 @@ final class SwingDnD {
 
         @Override
         public boolean isDataFlavorSupported(final DataFlavor flavor) {
-            checkSwingEventDispatchThread();
+            assert fxDragSource != null;
+            assert SwingUtilities.isEventDispatchThread();
 
-            if (!hasFxScene()) {
-                return false;
-            }
-
-            return getDragSource().isMimeTypeAvailable(DataFlavorUtils.
-                    getFxMimeType(flavor));
-        }
-    };
-
-    private static void checkSwingEventDispatchThread() {
-        if (!SwingUtilities.isEventDispatchThread()) {
-            throw new IllegalStateException();
+            return fxDragSource.isMimeTypeAvailable(
+                    DataFlavorUtils.getFxMimeType(flavor));
         }
     }
 }

@@ -30,6 +30,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import java.text.Bidi;
 import java.text.BreakIterator;
 
 import static javafx.scene.control.OverrunStyle.*;
@@ -210,7 +211,7 @@ public class Utils {
                 // RT-23458: Use a faster algorithm for the most common case
                 // where truncation happens at the end, i.e. for ELLIPSIS and
                 // CLIP, but not for other cases such as WORD_ELLIPSIS, etc.
-                if (style == ELLIPSIS) {
+                if (style == ELLIPSIS && !new Bidi(text, Bidi.DIRECTION_LEFT_TO_RIGHT).isMixed()) {
                     int hit = computeTruncationIndex(font, text, width - ellipsisWidth);
                     if (hit < 0 || hit >= text.length()) {
                         return text;

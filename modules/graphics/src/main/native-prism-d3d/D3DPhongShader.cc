@@ -24,8 +24,8 @@
  */
 
 #include <iostream>
-#include "D3DPhongShader.h"
 #include "D3DContext.h"
+#include "D3DPhongShader.h"
 
 using std::cout;
 using std::cerr;

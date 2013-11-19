@@ -1083,4 +1083,23 @@ public class ComboBoxTest {
             fail("Stack overflow should not happen here");
         }
     }
+
+    @Test public void test_rt21186() {
+        final ComboBox<String> comboBox = new ComboBox<>();
+        comboBox.setEditable(true);
+
+        new StageLoader(comboBox);
+
+        assertNull(comboBox.getTooltip());
+        assertNull(comboBox.getEditor().getTooltip());
+
+        Tooltip tooltip = new Tooltip("Tooltip");
+        comboBox.setTooltip(tooltip);
+        assertEquals(tooltip, comboBox.getTooltip());
+        assertEquals(tooltip, comboBox.getEditor().getTooltip());
+
+        comboBox.setTooltip(null);
+        assertNull(comboBox.getTooltip());
+        assertNull(comboBox.getEditor().getTooltip());
+    }
 }

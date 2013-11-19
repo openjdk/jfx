@@ -304,10 +304,9 @@ IOS.fontT2K.variants = ["arm", "x86"];
 IOS.fontT2K.arm = [:]
 IOS.fontT2K.arm.nativeSource = [
         file("$closedDir/javafx-font-t2k-native/src"),
-        file("$closedDir/javafx-font-t2k-native/src/layout"),
-        file("$closedDir/javafx-font-t2k-native/src/layoutfx")]
+        file("$closedDir/javafx-font-t2k-native/src/layout")]
 IOS.fontT2K.arm.compiler = compiler
-IOS.fontT2K.arm.ccFlags = ["-DJFXFONT_PLUS", ccFlags, "-arch", archArm, "-isysroot", sdkPath(iPhoneOS)].flatten()
+IOS.fontT2K.arm.ccFlags = ["-DJFXFONT_PLUS", "-DLE_STANDALONE", ccFlags, "-arch", archArm, "-isysroot", sdkPath(iPhoneOS)].flatten()
 IOS.fontT2K.arm.linker = linker
 IOS.fontT2K.arm.linkFlags = ["-arch_only", archArm, "-syslibroot", sdkPath(iPhoneOS), linkFlags].flatten()
 IOS.fontT2K.arm.lib = "javafx_font_t2k_${archArm}"
@@ -315,7 +314,7 @@ IOS.fontT2K.arm.lib = "javafx_font_t2k_${archArm}"
 IOS.fontT2K.x86 = [:]
 IOS.fontT2K.x86.nativeSource = [IOS.fontT2K.arm.nativeSource].flatten()
 IOS.fontT2K.x86.compiler = compiler
-IOS.fontT2K.x86.ccFlags = ["-DJFXFONT_PLUS", ccFlags, "-arch", archX86, "-isysroot", sdkPath(iPhoneSim)].flatten()
+IOS.fontT2K.x86.ccFlags = ["-DJFXFONT_PLUS", "-DLE_STANDALONE", ccFlags, "-arch", archX86, "-isysroot", sdkPath(iPhoneSim)].flatten()
 IOS.fontT2K.x86.linker = linker
 IOS.fontT2K.x86.linkFlags = ["-arch_only", archX86, "-syslibroot", sdkPath(iPhoneSim), linkFlags].flatten()
 IOS.fontT2K.x86.lib = "javafx_font_t2k_${archX86}"

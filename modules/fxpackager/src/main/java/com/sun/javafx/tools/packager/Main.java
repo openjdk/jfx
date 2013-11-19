@@ -193,7 +193,7 @@ public class Main {
                         } else if (arg.equalsIgnoreCase("-manifestAttrs")) {
                             createJarParams.setManifestAttrs(createAttrMap(nextArg(args, i++)));
                         } else if (arg.equalsIgnoreCase("-noembedlauncher")) {
-                            createJarParams.setEmbedLauncher(false);
+                            System.out.println("-noembedlauncher is deprecated");
                         } else if (arg.equalsIgnoreCase("-nocss2bin")) {
                             createJarParams.setCss2bin(false);
                         } else if (arg.equalsIgnoreCase("-runtimeVersion")) {

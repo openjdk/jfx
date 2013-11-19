@@ -381,10 +381,9 @@ X86EGL.fontT2K = [:]
 X86EGL.fontT2K.javahInclude = ["com/sun/javafx/font/t2k/**/*"]
 X86EGL.fontT2K.nativeSource = [
         file("$closedDir/javafx-font-t2k-native/src"),
-        file("$closedDir/javafx-font-t2k-native/src/layout"),
-        file("$closedDir/javafx-font-t2k-native/src/layoutfx")]
+        file("$closedDir/javafx-font-t2k-native/src/layout")]
 X86EGL.fontT2K.compiler = compiler
-X86EGL.fontT2K.ccFlags = fontCFlags
+X86EGL.fontT2K.ccFlags = [fontCFlags, "-DLE_STANDALONE"].flatten()
 X86EGL.fontT2K.linker = linker
 X86EGL.fontT2K.linkFlags = fontLFlags
 X86EGL.fontT2K.lib = "javafx_font_t2k"

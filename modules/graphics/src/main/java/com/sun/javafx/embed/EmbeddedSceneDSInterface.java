@@ -30,9 +30,11 @@ import java.util.Set;
 import javafx.scene.input.TransferMode;
 
 /**
- * Embedded FX drag source.
+ * Drag source interface. There are two implementations:
+ *   - EmbeddedSceneDS, which is used, when FX scene inside JFXPanel/FXCanvas is a drag source
+ *   - SwingDragSource, which is used for external drag sources
  */
-public interface EmbeddedSceneDragSourceInterface {
+public interface EmbeddedSceneDSInterface {
 
     public Set<TransferMode> getSupportedActions();
 

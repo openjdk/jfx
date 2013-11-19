@@ -25,9 +25,6 @@
 
 #ifndef D3DPHONGSHADER_H
 #define D3DPHONGSHADER_H
-#include <windows.h>
-#include <d3d9.h>
-#include <stddef.h>
 
 // VSR implies Vertex Shader Registers
 #define VSR_VIEWPROJMATRIX  0  // 4 total

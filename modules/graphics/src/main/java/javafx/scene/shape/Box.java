@@ -411,8 +411,9 @@ public class Box extends Shape3D {
 
         float texCoords[] = {0, 0, 1, 0, 1, 1, 0, 1};
 
+        // Specifies hard edges.
         int faceSmoothingGroups[] = {
-            1, 1, 1, 1, 2, 2, 2, 2, 4, 4, 4, 4
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
         };
 
         int faces[] = {

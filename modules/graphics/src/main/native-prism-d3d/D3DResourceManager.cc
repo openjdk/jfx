@@ -106,6 +106,7 @@ D3DResource::Release()
     SAFE_PRINTLN(pSurface);
     SAFE_PRINTLN(pTexture);
     SAFE_PRINTLN(pSwapChain);
+    SAFE_PRINTLN(pDepthSurface);
 
     // note that it is normal for the SAFE_RELEASE here to complain about
     // remaining references (with debug build and tracing enabled) as long as
@@ -117,6 +118,7 @@ D3DResource::Release()
     SAFE_RELEASE(pTexture);
     SAFE_RELEASE(pResource);
     SAFE_RELEASE(pSwapChain);
+    SAFE_RELEASE(pDepthSurface);
 }
 
 D3DPixelShaderResource::D3DPixelShaderResource(IDirect3DPixelShader9 *pShader)

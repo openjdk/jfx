@@ -194,7 +194,7 @@ void D3DContext::stretchRect(IDirect3DSurface9* pSrcSurface,
     RECT dstRect = {dstX0, dstY0, dstX1, dstY1};
     res = pd3dDevice->StretchRect(pSrcSurface, &srcRect, pDst, &dstRect, D3DTEXF_NONE);
     if (FAILED(res)) {
-        DebugPrintD3DError(res, "D3DContext::strechRect: error StretchRect");
+        DebugPrintD3DError(res, "D3DContext::stretchRect: error StretchRect");
     }
 }
 

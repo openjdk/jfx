@@ -442,10 +442,9 @@ ARMV6HF.fontT2K = [:]
 ARMV6HF.fontT2K.javahInclude = ["com/sun/javafx/font/t2k/**/*"]
 ARMV6HF.fontT2K.nativeSource = [
         file("$closedDir/javafx-font-t2k-native/src"),
-        file("$closedDir/javafx-font-t2k-native/src/layout"),
-        file("$closedDir/javafx-font-t2k-native/src/layoutfx")]
+        file("$closedDir/javafx-font-t2k-native/src/layout")]
 ARMV6HF.fontT2K.compiler = compiler
-ARMV6HF.fontT2K.ccFlags = fontCFlags
+ARMV6HF.fontT2K.ccFlags = [fontCFlags, "-DLE_STANDALONE"].flatten()
 ARMV6HF.fontT2K.linker = linker
 ARMV6HF.fontT2K.linkFlags = fontLFlags
 ARMV6HF.fontT2K.lib = "javafx_font_t2k"

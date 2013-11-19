@@ -271,9 +271,12 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             @Override public void requestLayout() {
                 // if scrollNode requested layout, will want to recompute
                 nodeSizeInvalid = true;
-                updateVerticalSB();
-                updateHorizontalSB();
+
                 super.requestLayout(); // add as layout root for next layout pass
+
+                // Need to layout the ScrollPane as well in case scrollbars
+                // appeared or disappeared.
+                ScrollPaneSkin.this.getSkinnable().requestLayout();
             }
             @Override protected void layoutChildren() {
                 if (nodeSizeInvalid) {
@@ -930,6 +933,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
                 nodeWidth = snapSize(scrollNode.getLayoutBounds().getWidth());
                 nodeHeight = snapSize(scrollNode.getLayoutBounds().getHeight());
             }
+            nodeSizeInvalid = false;
         }
     }
 

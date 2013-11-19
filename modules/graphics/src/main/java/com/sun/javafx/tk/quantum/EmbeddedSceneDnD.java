@@ -26,26 +26,31 @@
 package com.sun.javafx.tk.quantum;
 
 import com.sun.glass.ui.ClipboardAssistance;
-import com.sun.javafx.embed.EmbeddedSceneDragSourceInterface;
-import com.sun.javafx.embed.EmbeddedSceneDragStartListenerInterface;
-import com.sun.javafx.embed.EmbeddedSceneDropTargetInterface;
+import com.sun.javafx.embed.EmbeddedSceneDSInterface;
+import com.sun.javafx.embed.HostDragStartListener;
+import com.sun.javafx.embed.EmbeddedSceneDTInterface;
+
+import java.awt.EventQueue;
+import java.awt.SecondaryLoop;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.sun.javafx.tk.TKClipboard;
+
+import com.sun.javafx.tk.Toolkit;
 import javafx.application.Platform;
-import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 
 final class EmbeddedSceneDnD {
 
     private final GlassSceneDnDEventHandler dndHandler;
 
-    private EmbeddedSceneDragStartListenerInterface dragStartListener;
-    private EmbeddedSceneDragSourceInterface fxDragSource;
-    private EmbeddedSceneDropTargetInterface fxDropTarget;
-    
-    private ClipboardAssistance clipboardAssistant;
-    
+    private HostDragStartListener dragStartListener;
+    private EmbeddedSceneDSInterface fxDragSource;
+    private EmbeddedSceneDTInterface fxDropTarget;
+
     private Thread hostThread;
 
     public EmbeddedSceneDnD(final GlassScene scene) {
@@ -54,14 +59,9 @@ final class EmbeddedSceneDnD {
     
     private void startDrag() {
         assert Platform.isFxApplicationThread();
+        assert fxDragSource != null;
 
-        assert fxDragSource == null;
-
-        fxDragSource = new EmbeddedSceneDragSource(this, dndHandler);
-        
-        final TransferMode dragAction = TransferMode.COPY;
-        
-        dragStartListener.dragStarted(fxDragSource, dragAction);
+        dragStartListener.dragStarted(fxDragSource, TransferMode.COPY);
     }
 
     private void setHostThread() {
@@ -74,189 +74,89 @@ final class EmbeddedSceneDnD {
         return (Thread.currentThread() == hostThread);
     }
     
-    public boolean isValid(EmbeddedSceneDragSourceInterface ds) {
-        assert Platform.isFxApplicationThread();
-        assert ds != null;
+    public void onDragSourceReleased(final EmbeddedSceneDSInterface ds) {
         assert fxDragSource == ds;
-        assert clipboardAssistant != null;
-        return true;
-    }
-    
-    public boolean isValid(EmbeddedSceneDropTargetInterface dt) {
-        assert Platform.isFxApplicationThread();
-        assert dt != null;
-        assert fxDropTarget == dt;
-        return true;
-    }
-    
-    public boolean isFxDragSource() {
-        assert Platform.isFxApplicationThread();
-
-        return (fxDragSource != null);
-    }
-
-    public void onDragSourceReleased(final EmbeddedSceneDragSourceInterface ds) {
-        assert isValid(ds);
 
         fxDragSource = null;
-        clipboardAssistant = null;
-        
-        FxEventLoop.leaveNestedLoop();
+        Toolkit.getToolkit().exitNestedEventLoop(this, null);
     }
 
-    public void onDropTargetReleased(final EmbeddedSceneDropTargetInterface dt) {
-        assert isValid(dt);
+    public void onDropTargetReleased(final EmbeddedSceneDTInterface dt) {
+        assert fxDropTarget == dt;
 
         fxDropTarget = null;
-        if (!isFxDragSource()) {
-            clipboardAssistant = null;
-        }
     }
+
+    /*
+     * This is a helper method to execute code on FX event thread. It
+     * can be implemented using AWT nested event loop, however it just
+     * blocks the current thread. This is done by intention, because
+     * we need to handle Swing events one by one. If we enter a nested
+     * event loop, various weird side-effects are observed, e.g.
+     * dragOver() in SwingDnD is executed before dragEnter() is finished
+     */
+    <T> T executeOnFXThread(final Callable<T> r) {
+        assert !Platform.isFxApplicationThread();
+
+        final AtomicReference<T> result = new AtomicReference<>();
+        final CountDownLatch l = new CountDownLatch(1);
+
+        Platform.runLater(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    result.set(r.call());
+                } catch (Exception z) {
+                    // ignore
+                } finally {
+                    l.countDown();
+                }
+            }
+        });
+
+        try {
+            l.await();
+        } catch (Exception z) {
+            // ignore
+        }
+
+        return result.get();
+    }
+
     
     // Should be called from Scene.DnDGesture.createDragboard only!
-    public TKClipboard createDragboard() {
+    public TKClipboard createDragboard(boolean isDragSource) {
         assert Platform.isFxApplicationThread();
-        assert fxDropTarget == null;
-        assert clipboardAssistant == null;
         assert fxDragSource == null;
-        
-        clipboardAssistant = new ClipboardAssistanceImpl(null);
-        return QuantumClipboard.getDragboardInstance(clipboardAssistant);
+
+        assert isDragSource;
+        ClipboardAssistance assistant = new ClipboardAssistance("DND-Embedded") {
+            @Override
+            public void flush() {
+                super.flush();
+                startDrag(); // notify host
+                Toolkit.getToolkit().enterNestedEventLoop(EmbeddedSceneDnD.this); // block current thread
+            }
+        };
+        fxDragSource = new EmbeddedSceneDS(this, assistant, dndHandler);
+        return QuantumClipboard.getDragboardInstance(assistant, isDragSource);
     }
 
-    public void setDragStartListener(EmbeddedSceneDragStartListenerInterface l) {
+    public void setDragStartListener(HostDragStartListener l) {
         setHostThread();
-        
-        assert isHostThread();
-        
-        this.dragStartListener = l;
+        dragStartListener = l;
     }
     
-    public EmbeddedSceneDropTargetInterface createDropTarget() {
+    public EmbeddedSceneDTInterface createDropTarget() {
         setHostThread();
-
-        assert isHostThread();
-        assert fxDropTarget == null;
-
-        return FxEventLoop.sendEvent(new Callable<EmbeddedSceneDropTargetInterface>() {
-
+        return executeOnFXThread(new Callable<EmbeddedSceneDTInterface>() {
             @Override
-            public EmbeddedSceneDropTargetInterface call() {
-                fxDropTarget = new EmbeddedSceneDropTarget(EmbeddedSceneDnD.this,
-                                                           dndHandler);
-
+            public EmbeddedSceneDTInterface call() {
+                assert fxDropTarget == null;
+                fxDropTarget = new EmbeddedSceneDT(EmbeddedSceneDnD.this, dndHandler);
                 return fxDropTarget;
             }
         });
     }
-    
-    public ClipboardAssistance getClipboardAssistance(
-            final EmbeddedSceneDragSourceInterface source) {
-        assert Platform.isFxApplicationThread();
-        assert isFxDragSource() ? isValid(source) : true;
-        assert isFxDragSource() ? (clipboardAssistant != null) : true;
-        
-        if (clipboardAssistant == null) {
-            clipboardAssistant = new ClipboardAssistanceImpl(source);
-        }
-        return clipboardAssistant;
-    }
 
-    private class ClipboardAssistanceImpl extends ClipboardAssistance {
-        final EmbeddedSceneDragSourceInterface source;
-                
-        private boolean isValid() {
-            assert Platform.isFxApplicationThread();
-            assert EmbeddedSceneDnD.this.clipboardAssistant == this;
-            
-            return true;
-        }
-        
-        ClipboardAssistanceImpl(final EmbeddedSceneDragSourceInterface source) {
-            super("DND-Embedded");
-            
-            this.source = source;
-        }
-
-        @Override
-        public void flush() {
-            assert isValid();
-
-            super.flush();
-            
-            startDrag();
-
-            FxEventLoop.enterNestedLoop();
-        }
-
-        @Override
-        public void emptyCache() {
-            assert isValid();
-
-            super.emptyCache();
-        }
-
-        @Override
-        public Object getData(final String mimeType) {
-            assert isValid();
-
-            if (source == null) {
-                return super.getData(mimeType);
-            }
-
-            return source.getData(mimeType);
-        }
-
-        @Override
-        public void setData(final String mimeType, final Object data) {
-            assert isValid();
-            
-            if (source != null) {
-                return;
-            }
-
-            super.setData(mimeType, data);
-        }
-
-        @Override
-        public void setSupportedActions(final int supportedActions) {
-            assert isValid();
-            
-            if (source != null) {
-                return;
-            }
-
-            super.setSupportedActions(supportedActions);
-        }
-
-        @Override
-        public int getSupportedSourceActions() {
-            assert isValid();
-
-            if (source == null) {
-                return super.getSupportedSourceActions();
-            }
-
-            return QuantumClipboard.transferModesToClipboardActions(source.
-                    getSupportedActions());
-        }
-
-        @Override
-        public void setTargetAction(int actionDone) {
-            assert isValid();
-
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public String[] getMimeTypes() {
-            assert isValid();
-
-            if (source == null) {
-                return super.getMimeTypes();
-            }
-
-            return source.getMimeTypes();
-        }
-    }
 }

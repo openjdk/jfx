@@ -26,68 +26,50 @@
 package com.sun.javafx.tk.quantum;
 
 import com.sun.glass.ui.ClipboardAssistance;
-import com.sun.javafx.embed.EmbeddedSceneDragSourceInterface;
-import com.sun.javafx.embed.EmbeddedSceneDropTargetInterface;
+import com.sun.javafx.embed.EmbeddedSceneDSInterface;
+import com.sun.javafx.embed.EmbeddedSceneDTInterface;
 import java.util.concurrent.Callable;
 import javafx.application.Platform;
 import javafx.scene.input.TransferMode;
 
-final class EmbeddedSceneDropTarget implements EmbeddedSceneDropTargetInterface {
+final class EmbeddedSceneDT implements EmbeddedSceneDTInterface {
 
     private final EmbeddedSceneDnD dnd;
     private final GlassSceneDnDEventHandler dndHandler;
-    private EmbeddedSceneDragSourceInterface dragSource;
-    private int dndCounter;
+    private EmbeddedSceneDSInterface dragSource;
+    private ClipboardAssistance assistant;
 
-    public EmbeddedSceneDropTarget(final EmbeddedSceneDnD dnd,
-                                   final GlassSceneDnDEventHandler dndHandler) {
+    public EmbeddedSceneDT(final EmbeddedSceneDnD dnd,
+                           final GlassSceneDnDEventHandler dndHandler) {
         this.dnd = dnd;
         this.dndHandler = dndHandler;
     }
 
-    private boolean isDnDCounterValid() {
-        assert Platform.isFxApplicationThread();
-        assert dndCounter == 1;
-
-        return true;
-    }
-
-    private ClipboardAssistance getClipboardAssistance() {
-        assert isDnDCounterValid();
-        assert dnd.isValid(this);
-
-        return dnd.getClipboardAssistance(dragSource);
-    }
-
     private void close() {
-        assert isDnDCounterValid();
-
-        --dndCounter;
-
         dnd.onDropTargetReleased(this);
+        assistant = null;
     }
 
     @Override
     public TransferMode handleDragEnter(final int x, final int y, final int xAbs,
                                         final int yAbs,
                                         final TransferMode recommendedDropAction,
-                                        final EmbeddedSceneDragSourceInterface dragSource) {
+                                        final EmbeddedSceneDSInterface ds)
+    {
         assert dnd.isHostThread();
 
-        return FxEventLoop.sendEvent(new Callable<TransferMode>() {
-
+        return dnd.executeOnFXThread(new Callable<TransferMode>() {
             @Override
             public TransferMode call() {
-                ++dndCounter;
+                assert dragSource == null;
+                assert assistant == null;
 
-                assert dnd.isFxDragSource() ? true
-                        : EmbeddedSceneDropTarget.this.dragSource == null;
-
-                EmbeddedSceneDropTarget.this.dragSource = dragSource;
+                dragSource = ds;
+                assistant = new EmbeddedDTAssistant(dragSource);
 
                 return dndHandler.handleDragEnter(x, y, xAbs, yAbs,
                                                   recommendedDropAction,
-                                                  getClipboardAssistance());
+                                                  assistant);
             }
         });
     }
@@ -96,15 +78,16 @@ final class EmbeddedSceneDropTarget implements EmbeddedSceneDropTargetInterface 
     public void handleDragLeave() {
         assert dnd.isHostThread();
 
-        FxEventLoop.sendEvent(new Runnable() {
-
+        dnd.executeOnFXThread(new Callable<Void>() {
             @Override
-            public void run() {
+            public Void call() {
+                assert assistant != null;
                 try {
-                    dndHandler.handleDragLeave(getClipboardAssistance());
+                    dndHandler.handleDragLeave(assistant);
                 } finally {
                     close();
                 }
+                return null;
             }
         });
     }
@@ -115,14 +98,14 @@ final class EmbeddedSceneDropTarget implements EmbeddedSceneDropTargetInterface 
                                        final TransferMode recommendedDropAction) {
         assert dnd.isHostThread();
 
-        return FxEventLoop.sendEvent(new Callable<TransferMode>() {
-
+        return dnd.executeOnFXThread(new Callable<TransferMode>() {
             @Override
             public TransferMode call() {
+                assert assistant != null;
                 try {
                     return dndHandler.handleDragDrop(x, y, xAbs, yAbs,
                                                      recommendedDropAction,
-                                                     getClipboardAssistance());
+                                                     assistant);
                 } finally {
                     close();
                 }
@@ -136,14 +119,49 @@ final class EmbeddedSceneDropTarget implements EmbeddedSceneDropTargetInterface 
                                        final TransferMode recommendedDropAction) {
         assert dnd.isHostThread();
 
-        return FxEventLoop.sendEvent(new Callable<TransferMode>() {
-
+        return dnd.executeOnFXThread(new Callable<TransferMode>() {
             @Override
             public TransferMode call() {
+                assert assistant != null;
                 return dndHandler.handleDragOver(x, y, xAbs, yAbs,
                                                  recommendedDropAction,
-                                                 getClipboardAssistance());
+                                                 assistant);
             }
         });
+    }
+
+    private static class EmbeddedDTAssistant extends ClipboardAssistance {
+
+        private EmbeddedSceneDSInterface dragSource;
+
+        EmbeddedDTAssistant(EmbeddedSceneDSInterface source) {
+            super("DND-Embedded");
+            dragSource = source;
+        }
+
+        @Override
+        public void flush() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Object getData(final String mimeType) {
+            return dragSource.getData(mimeType);
+        }
+
+        @Override
+        public int getSupportedSourceActions() {
+            return QuantumClipboard.transferModesToClipboardActions(dragSource.getSupportedActions());
+        }
+
+        @Override
+        public void setTargetAction(int actionDone) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public String[] getMimeTypes() {
+            return dragSource.getMimeTypes();
+        }
     }
 }

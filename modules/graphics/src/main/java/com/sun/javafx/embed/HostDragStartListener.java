@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,20 +27,10 @@ package com.sun.javafx.embed;
 
 import javafx.scene.input.TransferMode;
 
-/**
- * Embedded FX drop target.
+/*
+ * Interface, which is implemented by the host UI toolkit to track,
+ * when DnD is started in embedded FX scene.
  */
-public interface EmbeddedSceneDropTargetInterface {
-
-    public TransferMode handleDragEnter(int x, int y, int xAbs, int yAbs,
-                                        TransferMode recommendedDropAction,
-                                        EmbeddedSceneDragSourceInterface dragSource);
-
-    public void handleDragLeave();
-
-    public TransferMode handleDragDrop(int x, int y, int xAbs, int yAbs,
-                                       TransferMode recommendedDropAction);
-
-    public TransferMode handleDragOver(int x, int y, int xAbs, int yAbs,
-                                       TransferMode recommendedDropAction);
+public interface HostDragStartListener {
+    public void dragStarted(EmbeddedSceneDSInterface dragSource, TransferMode dragAction);
 }

@@ -145,6 +145,9 @@ public class SwingNode extends Node {
                  activateLwFrame(newValue);
             }
         });
+
+        //Workaround for RT-34170
+        javafx.scene.text.Font.getFamilies();
     }
 
     /**

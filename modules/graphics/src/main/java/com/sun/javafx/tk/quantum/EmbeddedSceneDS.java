@@ -26,37 +26,35 @@
 package com.sun.javafx.tk.quantum;
 
 import com.sun.glass.ui.ClipboardAssistance;
-import com.sun.javafx.embed.EmbeddedSceneDragSourceInterface;
+import com.sun.javafx.embed.EmbeddedSceneDSInterface;
+
 import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import javafx.scene.input.TransferMode;
 
-final class EmbeddedSceneDragSource implements EmbeddedSceneDragSourceInterface {
+final class EmbeddedSceneDS implements EmbeddedSceneDSInterface {
 
     private final EmbeddedSceneDnD dnd;
+    private final ClipboardAssistance assistant;
     private final GlassSceneDnDEventHandler dndHandler;
 
-    public EmbeddedSceneDragSource(final EmbeddedSceneDnD dnd,
-                                   final GlassSceneDnDEventHandler dndHandler) {
+    public EmbeddedSceneDS(final EmbeddedSceneDnD dnd,
+                           final ClipboardAssistance assistant,
+                           final GlassSceneDnDEventHandler dndHandler) {
         this.dnd = dnd;
+        this.assistant = assistant;
         this.dndHandler = dndHandler;
-    }
-
-    private ClipboardAssistance getClipboardAssistance() {
-        assert dnd.isValid(this);
-        return dnd.getClipboardAssistance(this);
     }
 
     @Override
     public Set<TransferMode> getSupportedActions() {
         assert dnd.isHostThread();
-        return FxEventLoop.sendEvent(new Callable<Set<TransferMode>>() {
-
+        return dnd.executeOnFXThread(new Callable<Set<TransferMode>>() {
             @Override
             public Set<TransferMode> call() {
-                return QuantumClipboard.clipboardActionsToTransferModes(getClipboardAssistance().
-                        getSupportedSourceActions());
+                return QuantumClipboard.clipboardActionsToTransferModes(
+                        assistant.getSupportedSourceActions());
             }
         });
     }
@@ -64,11 +62,10 @@ final class EmbeddedSceneDragSource implements EmbeddedSceneDragSourceInterface 
     @Override
     public Object getData(final String mimeType) {
         assert dnd.isHostThread();
-        return FxEventLoop.sendEvent(new Callable() {
-
+        return dnd.executeOnFXThread(new Callable<Object>() {
             @Override
             public Object call() {
-                return getClipboardAssistance().getData(mimeType);
+                return assistant.getData(mimeType);
             }
         });
     }
@@ -76,11 +73,10 @@ final class EmbeddedSceneDragSource implements EmbeddedSceneDragSourceInterface 
     @Override
     public String[] getMimeTypes() {
         assert dnd.isHostThread();
-        return FxEventLoop.sendEvent(new Callable<String[]>() {
-
+        return dnd.executeOnFXThread(new Callable<String[]>() {
             @Override
             public String[] call() {
-                return getClipboardAssistance().getMimeTypes();
+                return assistant.getMimeTypes();
             }
         });
     }
@@ -88,12 +84,10 @@ final class EmbeddedSceneDragSource implements EmbeddedSceneDragSourceInterface 
     @Override
     public boolean isMimeTypeAvailable(final String mimeType) {
         assert dnd.isHostThread();
-        return (boolean) FxEventLoop.sendEvent(new Callable<Boolean>() {
-
+        return dnd.executeOnFXThread(new Callable<Boolean>() {
             @Override
             public Boolean call() {
-                return Arrays.asList(getClipboardAssistance().getMimeTypes()).
-                        contains(mimeType);
+                return Arrays.asList(assistant.getMimeTypes()).contains(mimeType);
             }
         });
     }
@@ -101,16 +95,15 @@ final class EmbeddedSceneDragSource implements EmbeddedSceneDragSourceInterface 
     @Override
     public void dragDropEnd(final TransferMode performedAction) {
         assert dnd.isHostThread();
-        FxEventLoop.sendEvent(new Runnable() {
-
+        dnd.executeOnFXThread(new Callable<Void>() {
             @Override
-            public void run() {
+            public Void call() {
                 try {
-                    dndHandler.handleDragEnd(performedAction,
-                                             getClipboardAssistance());
+                    dndHandler.handleDragEnd(performedAction, assistant);
                 } finally {
-                    dnd.onDragSourceReleased(EmbeddedSceneDragSource.this);
+                    dnd.onDragSourceReleased(EmbeddedSceneDS.this);
                 }
+                return null;
             }
         });
     }

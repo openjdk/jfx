@@ -175,14 +175,18 @@ public abstract class VisualTestBase {
     }
 
     protected void assertColorEquals(Color expected, Color actual, double delta) {
+        if (!testColorEquals(expected, actual, delta)) {
+            throw new AssertionFailedError("expected:" + colorToString(expected)
+                    + " but was:" + colorToString(actual));
+        }
+    }
+    
+    protected boolean testColorEquals(Color expected, Color actual, double delta) {
         double deltaRed = Math.abs(expected.getRed() - actual.getRed());
         double deltaGreen = Math.abs(expected.getGreen() - actual.getGreen());
         double deltaBlue = Math.abs(expected.getBlue() - actual.getBlue());
         double deltaOpacity = Math.abs(expected.getOpacity() - actual.getOpacity());
-        if (deltaRed > delta || deltaGreen > delta || deltaBlue > delta || deltaOpacity > delta) {
-            throw new AssertionFailedError("expected:" + colorToString(expected)
-                    + " but was:" + colorToString(actual));
-        }
+        return (deltaRed <= delta && deltaGreen <= delta && deltaBlue <= delta && deltaOpacity <= delta);
     }
 
     protected void assertColorDoesNotEqual(Color notExpected, Color actual, double delta) {

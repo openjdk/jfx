@@ -397,6 +397,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         textField = comboBox.getEditor();
         textField.setFocusTraversable(true);
         textField.promptTextProperty().bind(comboBox.promptTextProperty());
+        textField.tooltipProperty().bind(comboBox.tooltipProperty());
 
         // Fix for RT-21406: ComboBox do not show initial text value
         initialTextFieldValue = textField.getText();

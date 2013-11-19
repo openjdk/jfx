@@ -52,7 +52,6 @@ public final class PrismSettings {
     public static final boolean cacheComplexShapes;
     public static final boolean useNewImageLoader;
     public static final List<String> tryOrder;
-    public static final int numSamples;
     public static final int prismStatFrequency;
     public static final boolean doPiscesText;
     public static final boolean doOpenPiscesText;
@@ -214,14 +213,6 @@ public final class PrismSettings {
         }
 
         tryOrder = Collections.unmodifiableList(Arrays.asList(tryOrderArr));
-
-        /* Multisampling in the form -Dprism.multisample=<true|2|4|8> */
-        numSamples = getInt(systemProperties, "prism.multisample",
-                            0, 2, "Try -Dprism.multisample=<true|2|4|8>");
-        if (numSamples > 0) {
-            System.out.println("Enabling multisampling with " +
-                               numSamples + " samples per pixel");
-        }
 
         String npprop = systemProperties.getProperty("prism.nativepisces");
         if (npprop == null) {

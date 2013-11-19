@@ -64,19 +64,13 @@ class SWTEvents {
         return 0;
     }
 */
-    // NOTE: not tested (are masked needed?)
     static int mouseButtonToEmbedMouseButton(int button, int extModifiers) {
-        int embedMouseButton = AbstractEvents.MOUSEEVENT_NONE_BUTTON;
-        if ((button == 1) || (extModifiers & SWT.BUTTON1) != 0) {
-            embedMouseButton |= AbstractEvents.MOUSEEVENT_PRIMARY_BUTTON;
+        switch (button) {
+            case 1: return AbstractEvents.MOUSEEVENT_PRIMARY_BUTTON;
+            case 2: return AbstractEvents.MOUSEEVENT_MIDDLE_BUTTON;
+            case 3: return AbstractEvents.MOUSEEVENT_SECONDARY_BUTTON;
         }
-        if ((button == 2) || (extModifiers & SWT.BUTTON2) != 0) {
-            embedMouseButton |= AbstractEvents.MOUSEEVENT_MIDDLE_BUTTON;
-        }
-        if ((button == 3) || (extModifiers & SWT.BUTTON3) != 0) {
-            embedMouseButton |= AbstractEvents.MOUSEEVENT_SECONDARY_BUTTON;
-        }
-        return embedMouseButton;
+        return AbstractEvents.MOUSEEVENT_NONE_BUTTON;
     }
 
     static int getWheelRotation(MouseEvent e, int embedMouseType) {

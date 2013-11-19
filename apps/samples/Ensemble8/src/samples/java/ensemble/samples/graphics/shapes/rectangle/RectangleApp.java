@@ -31,14 +31,12 @@
  */
 package ensemble.samples.graphics.shapes.rectangle;
 
-import ensemble.samples.graphics.shapes.polygon.*;
 import javafx.application.Application;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Polygon;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 
@@ -71,7 +69,7 @@ public class RectangleApp extends Application {
 
     public Parent createContent() {
         Pane root = new Pane();
-        root.setPrefSize(245, 100);
+        root.setPrefSize(200, 100);
         root.setMinSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
         root.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
         // Make the simple rectangle red

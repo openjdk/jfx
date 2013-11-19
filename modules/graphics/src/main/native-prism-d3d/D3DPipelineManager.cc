@@ -75,31 +75,6 @@ D3DPipelineManager::D3DPipelineManager(IConfig &cfg)
 
     devType = SelectDeviceType();
 
-    // Partial fix to RT-5534
-    // Cache the value set to prism.multisample (in the Java land)
-
-    int numSamples = cfg.getInt("numSamples");
-
-    switch (numSamples) {
-        case 0:
-            userMultiSampleType = D3DMULTISAMPLE_NONE;
-            break;
-        case 2:
-            userMultiSampleType = D3DMULTISAMPLE_2_SAMPLES;
-            RlsTrace(NWT_TRACE_INFO, "Multisample == D3DMULTISAMPLE_2_SAMPLES\n");
-            break;
-        case 4:
-            userMultiSampleType = D3DMULTISAMPLE_4_SAMPLES;
-            RlsTrace(NWT_TRACE_INFO, "Multisample == D3DMULTISAMPLE_4_SAMPLES\n");
-            break;
-        case 8:
-            userMultiSampleType = D3DMULTISAMPLE_8_SAMPLES;
-            RlsTrace(NWT_TRACE_INFO, "Multisample == D3DMULTISAMPLE_8_SAMPLES\n");
-            break;
-        default:
-            userMultiSampleType = D3DMULTISAMPLE_NONE;
-            RlsTrace(NWT_TRACE_INFO, "Only support multisample value of 2|4|8, forcing to D3DMULTISAMPLE_0_SAMPLES\n");
-    }
 }
 
 HRESULT D3DPipelineManager::ReleaseD3D()
@@ -197,18 +172,14 @@ HRESULT D3DPipelineManager::InitAdapters(IConfig &cfg)
 HRESULT
 D3DPipelineManager::CheckOSVersion()
 {
-    // require Windows XP or newer client-class OS
-    if (OS::isWindowsXPorNewer() &&
-        !D3DPPLM_OsVersionMatches(OS_WINSERV_2008|OS_WINSERV_2003))
-    {
+    // require Windows XP or newer OS
+    if (OS::isWindowsXPorNewer()) {
         TraceLn(NWT_TRACE_INFO,
-                   "D3DPPLM::CheckOSVersion: Windows XP or newer client-classs"\
-                   " OS detected, passed");
+                   "D3DPPLM::CheckOSVersion: Windows XP or newer OS detected, passed");
         return S_OK;
     }
     RlsTraceLn(NWT_TRACE_ERROR,
-                  "D3DPPLM::CheckOSVersion: Windows 2000 or earlier (or a "\
-                  "server) OS detected, failed");
+                  "D3DPPLM::CheckOSVersion: Windows 2000 or earlier OS detected, failed");
     if (bNoHwCheck) {
         RlsTraceLn(NWT_TRACE_WARNING,
                       "  OS check overridden via NEWT_D3D_NO_HWCHECK");

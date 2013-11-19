@@ -78,9 +78,9 @@ public interface EmbeddedSceneInterface {
     
     public boolean traverseOut(Direction dir);
 
-    public void setDragStartListener(EmbeddedSceneDragStartListenerInterface l);
+    public void setDragStartListener(HostDragStartListener l);
 
-    public EmbeddedSceneDropTargetInterface createDropTarget();
+    public EmbeddedSceneDTInterface createDropTarget();
 
     public void inputMethodEvent(EventType<InputMethodEvent> type,
                                  ObservableList<InputMethodTextRun> composed, String committed,

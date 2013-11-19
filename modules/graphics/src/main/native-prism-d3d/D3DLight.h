@@ -26,9 +26,6 @@
 #ifndef D3DLIGHT_H
 #define D3DLIGHT_H
 
-#include <windows.h>
-#include <d3d9.h>
-#include <stddef.h>
 #include "D3DContext.h"
 
 // See     Light.h

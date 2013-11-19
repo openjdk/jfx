@@ -23,6 +23,7 @@
  * questions.
  */
 
+#include "D3DPipeline.h"
 #include "D3DPhongShader.h"
 
 #define shader(name) ShaderFunction name() { static

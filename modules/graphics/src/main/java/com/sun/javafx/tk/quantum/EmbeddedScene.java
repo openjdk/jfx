@@ -25,6 +25,7 @@
 
 package com.sun.javafx.tk.quantum;
 
+import com.sun.javafx.embed.HostDragStartListener;
 import javafx.application.Platform;
 import javafx.collections.ObservableList;
 import javafx.event.EventType;
@@ -38,8 +39,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.embed.AbstractEvents;
-import com.sun.javafx.embed.EmbeddedSceneDragStartListenerInterface;
-import com.sun.javafx.embed.EmbeddedSceneDropTargetInterface;
+import com.sun.javafx.embed.EmbeddedSceneDTInterface;
 import com.sun.javafx.embed.EmbeddedSceneInterface;
 import com.sun.javafx.embed.HostInterface;
 import com.sun.javafx.scene.input.KeyCodeMap;
@@ -59,7 +59,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     private UploadingPainter        painter;
     private PaintRenderJob          paintRenderJob;
     
-    private final EmbeddedSceneDnD dndDelegate;    
+    private final EmbeddedSceneDnD embeddedDnD;
 
     volatile IntBuffer  texBits;
     volatile int        texLineStride; // pre-scaled
@@ -70,7 +70,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
         sceneState = new EmbeddedState(this);
 
         this.host = host;
-        this.dndDelegate = new EmbeddedSceneDnD(this);
+        this.embeddedDnD = new EmbeddedSceneDnD(this);
 
         PaintCollector collector = PaintCollector.getInstance();
         painter = new UploadingPainter(this);
@@ -110,7 +110,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
 
     @Override
     public TKClipboard createDragboard(boolean isDragSource) {
-        return dndDelegate.createDragboard();
+        return embeddedDnD.createDragboard(isDragSource);
     }
 
     @Override
@@ -345,13 +345,13 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     }
 
     @Override
-    public void setDragStartListener(EmbeddedSceneDragStartListenerInterface l) {
-        dndDelegate.setDragStartListener(l);
+    public void setDragStartListener(HostDragStartListener l) {
+        embeddedDnD.setDragStartListener(l);
     }
 
     @Override
-    public EmbeddedSceneDropTargetInterface createDropTarget() {
-        return dndDelegate.createDropTarget();
+    public EmbeddedSceneDTInterface createDropTarget() {
+        return embeddedDnD.createDropTarget();
     }
 
     @Override

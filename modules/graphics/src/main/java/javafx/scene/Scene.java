@@ -3046,6 +3046,11 @@ public class Scene implements EventTarget {
         }
 
         private void processTargetExit(DragEvent de) {
+            if (dragboard == null) {
+                // dragboard should have been created in processTargetEnterOver()
+                throw new NullPointerException("dragboard is null in processTargetExit()");
+            }
+
             if (currentTargets.size() > 0) {
                 potentialTarget = null;
                 tmpTargetWrapper.clear();
@@ -3063,7 +3068,8 @@ public class Scene implements EventTarget {
                     acceptedTransferMode, source, potentialTarget, de.getPickResult());
 
             if (dragboard == null) {
-                dragboard = createDragboard(de, false);
+                // dragboard should have been created in processTargetEnterOver()
+                throw new NullPointerException("dragboard is null in processTargetDrop()");
             }
 
             handleExitEnter(de, tmpTargetWrapper);
@@ -5649,24 +5655,19 @@ public class Scene implements EventTarget {
     }
 
 
-    Dragboard startDragAndDrop(EventTarget source,
-            TransferMode... transferModes) {
-
-        if (dndGesture.dragDetected != DragDetectedState.PROCESSING) {
+    Dragboard startDragAndDrop(EventTarget source, TransferMode... transferModes) {
+        if (dndGesture == null ||
+            (dndGesture.dragDetected != DragDetectedState.PROCESSING))
+        {
             throw new IllegalStateException("Cannot start drag and drop " +
                     "outside of DRAG_DETECTED event handler");
         }
 
-        if (dndGesture != null) {
-            Set<TransferMode> set = EnumSet.noneOf(TransferMode.class);
-            for (TransferMode tm : InputEventUtils.safeTransferModes(transferModes)) {
-                set.add(tm);
-            }
-            return dndGesture.startDrag(source, set);
+        Set<TransferMode> set = EnumSet.noneOf(TransferMode.class);
+        for (TransferMode tm : InputEventUtils.safeTransferModes(transferModes)) {
+            set.add(tm);
         }
-
-        throw new IllegalStateException("Cannot start drag and drop when "
-                + "mouse button is not pressed");
+        return dndGesture.startDrag(source, set);
     }
 
     void startFullDrag(EventTarget source) {

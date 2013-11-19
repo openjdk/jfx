@@ -50,7 +50,6 @@ import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import com.sun.javafx.fxml.*;
 import javafx.beans.DefaultProperty;
 import javafx.beans.property.Property;
 import javafx.beans.value.ChangeListener;
@@ -75,6 +74,10 @@ import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.util.StreamReaderDelegate;
 
 import com.sun.javafx.beans.IDProperty;
+import com.sun.javafx.fxml.BeanAdapter;
+import com.sun.javafx.fxml.LoadListener;
+import com.sun.javafx.fxml.ParseTraceElement;
+import com.sun.javafx.fxml.PropertyNotFoundException;
 import com.sun.javafx.fxml.expression.Expression;
 import com.sun.javafx.fxml.expression.ExpressionValue;
 import com.sun.javafx.fxml.expression.KeyPath;

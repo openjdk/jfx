@@ -1286,7 +1286,7 @@ public class PrismTextLayout implements TextLayout {
                 layoutCache.lines = lines;
                 layoutCache.layoutWidth = layoutWidth;
                 layoutCache.layoutHeight = layoutHeight;
-                layoutCache.analysis = flags | ANALYSIS_MASK;
+                layoutCache.analysis = flags & ANALYSIS_MASK;
                 synchronized (CACHE_SIZE_LOCK) {
                     int charCount = chars.length;
                     if (cacheSize + charCount > MAX_CACHE_SIZE) {

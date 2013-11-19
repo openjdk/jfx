@@ -72,7 +72,7 @@ public class PolygonApp extends Application {
 
     public Parent createContent() {
         Pane root = new Pane();
-        root.setPrefSize(245, 100);
+        root.setPrefSize(180, 100);
         root.setMinSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
         root.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
         polygon1.setFill(Color.RED);

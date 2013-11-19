@@ -761,6 +761,7 @@ D3DContext::Clear(DWORD colorArgbPre, BOOL clearDepth, BOOL ignoreScissor)
         IDirect3DSurface9 *pCurrentDepth = NULL;
         pd3dDevice->GetDepthStencilSurface(&pCurrentDepth);
         clearDepth = pCurrentDepth == NULL ? FALSE : clearDepth;
+        SAFE_RELEASE(pCurrentDepth);
     }
     if (clearDepth) {
         flags |= D3DCLEAR_ZBUFFER;
@@ -919,7 +920,6 @@ D3DContext::SetRenderTarget(IDirect3DSurface9 *pSurface,
         }
         if (pCurrentDepth != (*ppTargetDepthSurface)) {
             res = pd3dDevice->SetDepthStencilSurface(*ppTargetDepthSurface);
-            SAFE_RELEASE(pCurrentDepth);
             if ((*ppTargetDepthSurface) != NULL && depthIsNew) {
                 // Depth buffer must be cleared after it is created, also
                 // if depth buffer was not attached when render target was
@@ -932,8 +932,10 @@ D3DContext::SetRenderTarget(IDirect3DSurface9 *pSurface,
                 }
             }
         } else if (!renderTargetChanged) {
+            SAFE_RELEASE(pCurrentDepth);
             return res; // Render target has not changed
         }
+        SAFE_RELEASE(pCurrentDepth);
         pd3dDevice->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, msaa);
     }
     // NOTE PRISM: changed to only recalculate the matrix if current target is

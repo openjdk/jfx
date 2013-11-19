@@ -1053,12 +1053,25 @@ public abstract class Parent extends Node {
 
     /**
      * Executes a top-down layout pass on the scene graph under this parent.
+     * 
+     * Calling this method while the Parent is doing layout is a no-op.
      */
     public final void layout() {
         switch(layoutFlag) {
             case CLEAN:
                 break;
             case NEEDS_LAYOUT:
+                if (performingLayout) {
+                    /* This code is here mainly to avoid infinite loops as layout() is public and the call might be (indirectly) invoked accidentally
+                     * while doing the layout.
+                     * One example might be an invocation from Group layout bounds recalculation
+                     *  (e.g. during the localToScene/localToParent calculation).
+                     * The layout bounds will thus return layout bounds that are "old" (i.e. before the layout changes, that are just being done), 
+                     * which is likely what the code would expect.
+                     * The changes will invalidate the layout bounds again however, so the layout bounds query after layout pass will return correct answer.
+                     */
+                    break;
+                }
                 performingLayout = true;
                 layoutChildren();
                 // Intended fall-through

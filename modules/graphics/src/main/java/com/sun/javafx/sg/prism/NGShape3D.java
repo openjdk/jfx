@@ -130,28 +130,40 @@ public abstract class NGShape3D extends NGNode {
                     // The array of lights can have nulls
                     break;
                 } else if (lightBase.affects(this)) {
+                    float rL = lightBase.getColor().getRed();
+                    float gL = lightBase.getColor().getGreen();
+                    float bL = lightBase.getColor().getBlue();
+                    /* TODO: 3D
+                     * There is a limit on the number of lights that can affect
+                     * a 3D shape. (Currently we simply select the first 3)
+                     * Thus it is important to select the most relevant lights.
+                     * 
+                     * One such way would be to sort lights according to
+                     * intensity, which becomes especially relevant when lights
+                     * are attenuated. Only the most intense set of lights
+                     * would be set.
+                     * The approximate intesity a light will have on a given
+                     * shape, could be defined by:
+                     */
+//                    // Where d is distance from point light
+//                    float attenuationFactor = 1/(c + cL * d + cQ * d * d);
+//                    float intensity = rL * 0.299f + gL * 0.587f + bL * 0.114f;
+//                    intensity *= attenuationFactor;
                     if (lightBase instanceof NGPointLight) {
-                        NGPointLight light = (NGPointLight) lightBase;
-                        float intensity = light.getColor().getAlpha();
-                        if (intensity == 0.0f) {
-                            continue;
+                        NGPointLight light = (NGPointLight)lightBase;
+                        if (rL != 0.0f || gL != 0.0f || bL != 0.0f) {
+                            Affine3D lightWT = light.getWorldTransform();
+                            meshView.setPointLight(pointLightIdx++,
+                                    (float)lightWT.getMxt(),
+                                    (float)lightWT.getMyt(),
+                                    (float)lightWT.getMzt(),
+                                    rL, gL, bL, 1.0f);
                         }
-                        Affine3D lightWT = light.getWorldTransform();
-                        meshView.setPointLight(pointLightIdx++,
-                                (float)lightWT.getMxt(),
-                                (float)lightWT.getMyt(),
-                                (float)lightWT.getMzt(),
-                                light.getColor().getRed(),
-                                light.getColor().getGreen(),
-                                light.getColor().getBlue(),
-                                intensity);
                     } else if (lightBase instanceof NGAmbientLight) {
                         // Accumulate ambient lights
-                        ambientRed   += lightBase.getColor().getRedPremult();
-                        ambientGreen += lightBase.getColor().getGreenPremult();
-                        ambientBlue  += lightBase.getColor().getBluePremult();
-                    } else {
-                        // Unknown light type
+                        ambientRed   += rL;
+                        ambientGreen += gL;
+                        ambientBlue  += bL;
                     }
                 }
             }
@@ -162,8 +174,8 @@ public abstract class NGShape3D extends NGNode {
         }
         // TODO: 3D Required for D3D implementation of lights, which is limited to 3
         while (pointLightIdx < 3) {
-            // Reset any previously set lights
-            meshView.setPointLight(pointLightIdx++, 0, 0, 0, 0, 0, 0, 0);
+                // Reset any previously set lights
+                meshView.setPointLight(pointLightIdx++, 0, 0, 0, 0, 0, 0, 0);
         }
 
         meshView.render(g);

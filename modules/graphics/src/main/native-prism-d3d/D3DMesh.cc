@@ -105,14 +105,16 @@ boolean D3DMesh::buildBuffers(float *vb, UINT vbSize, USHORT *ib, UINT ibSize) {
 //            << ", indexBufferSize = " << ibSize << endl;
 
     IDirect3DDevice9 *device = context->Get3DDevice();
-    UINT size = vbSize * sizeof (float);
+    D3DPOOL pool = context->getResourcePool();
+    UINT size = vbSize * sizeof (float); // in bytes
+    UINT vbCount = size / PRIMITIVE_VERTEX_SIZE; // in vertices
     HRESULT result = D3D_OK;
 
-    if (numVertices != vbSize) {
+    if (numVertices != vbCount) {
         releaseVertexBuffer();
         result = device->CreateVertexBuffer(size, D3DUSAGE_WRITEONLY, fvf,
-                D3DPOOL_DEFAULT, &vertexBuffer, NULL);
-        numVertices = vbSize;
+                pool, &vertexBuffer, NULL);
+        numVertices = vbCount;
     }
 
     if (SUCCEEDED(result) && (vertexBuffer != NULL)) {
@@ -129,7 +131,7 @@ boolean D3DMesh::buildBuffers(float *vb, UINT vbSize, USHORT *ib, UINT ibSize) {
     if (SUCCEEDED(result) && (numIndices != ibSize)) {
         releaseIndexBuffer();
         result = device->CreateIndexBuffer(size, D3DUSAGE_WRITEONLY,
-                D3DFMT_INDEX16, D3DPOOL_DEFAULT, &indexBuffer, NULL);
+                D3DFMT_INDEX16, pool, &indexBuffer, NULL);
         numIndices = ibSize;
     }
 
@@ -151,14 +153,16 @@ boolean D3DMesh::buildBuffers(float *vb, UINT vbSize, UINT *ib, UINT ibSize) {
 //            << ", indexBufferSize = " << ibSize << endl;
 
     IDirect3DDevice9 *device = context->Get3DDevice();
-    UINT size = vbSize * sizeof (float);
+    D3DPOOL pool = context->getResourcePool();
+    UINT size = vbSize * sizeof (float); // in bytes
+    UINT vbCount = size / PRIMITIVE_VERTEX_SIZE; // in vertices
     HRESULT result = D3D_OK;
 
-    if (numVertices != vbSize) {
+    if (numVertices != vbCount) {
         releaseVertexBuffer();
         result = device->CreateVertexBuffer(size, D3DUSAGE_WRITEONLY, fvf,
-                D3DPOOL_DEFAULT, &vertexBuffer, NULL);
-        numVertices = vbSize;
+                pool, &vertexBuffer, NULL);
+        numVertices = vbCount;
     }
 
     if (SUCCEEDED(result) && (vertexBuffer != NULL)) {
@@ -175,7 +179,7 @@ boolean D3DMesh::buildBuffers(float *vb, UINT vbSize, UINT *ib, UINT ibSize) {
     if (SUCCEEDED(result) && (numIndices != ibSize)) {
         releaseIndexBuffer();
         result = device->CreateIndexBuffer(size, D3DUSAGE_WRITEONLY,
-                D3DFMT_INDEX32, D3DPOOL_DEFAULT, &indexBuffer, NULL);
+                D3DFMT_INDEX32, pool, &indexBuffer, NULL);
         numIndices = ibSize;
     }
 

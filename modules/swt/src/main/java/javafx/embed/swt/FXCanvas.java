@@ -39,15 +39,15 @@ import com.sun.glass.ui.Application;
 import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.cursor.CursorType;
 
+import com.sun.javafx.embed.EmbeddedSceneDSInterface;
+import com.sun.javafx.embed.HostDragStartListener;
 import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.input.TransferMode;
 
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.embed.AbstractEvents;
-import com.sun.javafx.embed.EmbeddedSceneDragSourceInterface;
-import com.sun.javafx.embed.EmbeddedSceneDragStartListenerInterface;
-import com.sun.javafx.embed.EmbeddedSceneDropTargetInterface;
+import com.sun.javafx.embed.EmbeddedSceneDTInterface;
 import com.sun.javafx.embed.EmbeddedSceneInterface;
 import com.sun.javafx.embed.EmbeddedStageInterface;
 import com.sun.javafx.embed.HostInterface;
@@ -730,7 +730,7 @@ public class FXCanvas extends Canvas {
         }
 
         // Consider using dragAction
-        private DragSource createDragSource(final EmbeddedSceneDragSourceInterface fxDragSource, TransferMode dragAction) {
+        private DragSource createDragSource(final EmbeddedSceneDSInterface fxDragSource, TransferMode dragAction) {
             Transfer [] transfers = getTransferTypes(fxDragSource.getMimeTypes());
             if (transfers.length == 0) return null;
             int dragOperation = getDragActions(fxDragSource.getSupportedActions());
@@ -836,7 +836,7 @@ public class FXCanvas extends Canvas {
 
         DropTarget createDropTarget(EmbeddedSceneInterface embeddedScene) {
             final DropTarget dropTarget = new DropTarget(FXCanvas.this, DND.DROP_COPY | DND.DROP_LINK | DND.DROP_MOVE);
-            final EmbeddedSceneDropTargetInterface fxDropTarget = embeddedScene.createDropTarget();
+            final EmbeddedSceneDTInterface fxDropTarget = embeddedScene.createDropTarget();
             dropTarget.setTransfer(getAllTransfers());
             dropTarget.addDropListener(new DropTargetListener() {
                 Object data;
@@ -849,7 +849,7 @@ public class FXCanvas extends Canvas {
                 TransferData currentTransferData;
                 boolean ignoreLeave;
                 int detail = DND.DROP_NONE, operations = DND.DROP_NONE;
-                EmbeddedSceneDragSourceInterface fxDragSource = new EmbeddedSceneDragSourceInterface() {
+                EmbeddedSceneDSInterface fxDragSource = new EmbeddedSceneDSInterface() {
                     public Set<TransferMode> getSupportedActions() {
                         return getTransferModes(operations);
                     }
@@ -944,9 +944,9 @@ public class FXCanvas extends Canvas {
             if (pWidth > 0 && pHeight > 0) {
                 scenePeer.setSize(pWidth, pHeight);
             }
-            scenePeer.setDragStartListener(new EmbeddedSceneDragStartListenerInterface() {
+            scenePeer.setDragStartListener(new HostDragStartListener() {
                 @Override
-                public void dragStarted(final EmbeddedSceneDragSourceInterface fxDragSource, final TransferMode dragAction) {
+                public void dragStarted(final EmbeddedSceneDSInterface fxDragSource, final TransferMode dragAction) {
                     Platform.runLater(new Runnable ()  {
                         public void run () {
                             DragSource dragSource = createDragSource(fxDragSource, dragAction);

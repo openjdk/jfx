@@ -1237,19 +1237,19 @@ public class TreeTableView<S> extends Control {
      * order list contains the columns that have been added to it either programmatically
      * or via a user clicking on the headers themselves.
      */
-    private ReadOnlyObjectWrapper<Comparator<S>> comparator;
-    private void setComparator(Comparator<S> value) {
+    private ReadOnlyObjectWrapper<Comparator<TreeItem<S>>> comparator;
+    private void setComparator(Comparator<TreeItem<S>> value) {
         comparatorPropertyImpl().set(value);
     }
-    public final Comparator<S> getComparator() {
+    public final Comparator<TreeItem<S>> getComparator() {
         return comparator == null ? null : comparator.get();
     }
-    public final ReadOnlyObjectProperty<Comparator<S>> comparatorProperty() {
+    public final ReadOnlyObjectProperty<Comparator<TreeItem<S>>> comparatorProperty() {
         return comparatorPropertyImpl().getReadOnlyProperty();
     }
-    private ReadOnlyObjectWrapper<Comparator<S>> comparatorPropertyImpl() {
+    private ReadOnlyObjectWrapper<Comparator<TreeItem<S>>> comparatorPropertyImpl() {
         if (comparator == null) {
-            comparator = new ReadOnlyObjectWrapper<Comparator<S>>(this, "comparator");
+            comparator = new ReadOnlyObjectWrapper<>(this, "comparator");
         }
         return comparator;
     }
@@ -1596,11 +1596,11 @@ public class TreeTableView<S> extends Control {
         final ObservableList<TreeTableColumn<S,?>> sortOrder = getSortOrder();
         
         // update the Comparator property
-        final Comparator<S> oldComparator = getComparator();
+        final Comparator<TreeItem<S>> oldComparator = getComparator();
         if (sortOrder.isEmpty()) {
             setComparator(null);
         } else {
-            Comparator<S> newComparator = new TableColumnComparatorBase.TreeTableColumnComparator(sortOrder);
+            Comparator<TreeItem<S>> newComparator = new TableColumnComparatorBase.TreeTableColumnComparator(sortOrder);
             setComparator(newComparator);
         }
         

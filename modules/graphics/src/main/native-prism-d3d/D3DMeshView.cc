@@ -87,23 +87,10 @@ void D3DMeshView::setPointLight(int index, float x, float y, float z,
     }
 }
 
-void D3DMeshView::sortLights() {
+void D3DMeshView::computeNumLights() {
     if (!lightsDirty)
         return;
     lightsDirty = false;
-
-    lightsOrder[0] = 0;
-    lightsOrder[1] = 1;
-    lightsOrder[2] = 2;
-
-    // bubble sort ;)
-    for (int i = 0; i < 2; ++i)
-        for (int j = 2; j > i; --j)
-            if (lights[lightsOrder[j - 1]].w < lights[lightsOrder[j]].w) {
-                int t = lightsOrder[j - 1];
-                lightsOrder[j - 1] = lightsOrder[j];
-                lightsOrder[j] = t;
-            }
 
     int n = 0;
     for (int i = 0; i != 3; ++i)
@@ -143,11 +130,10 @@ void D3DMeshView::render() {
         return;
     }
 
-    // TODO: 3D - Use Java layer sorting instead of the local sort.
-    sortLights();
+    computeNumLights();
     // We only support up to 3 point lights at the present
     for (int i = 0; i < 3; i++) {
-            status = SUCCEEDED(device->SetVertexShaderConstantF(VSR_LIGHTS + i*2, lights[lightsOrder[i]].position, 1));
+        status = SUCCEEDED(device->SetVertexShaderConstantF(VSR_LIGHTS + i*2, lights[i].position, 1));
     }
 
     status = SUCCEEDED(device->SetVertexShaderConstantF(VSR_AMBIENTCOLOR, ambientLightColor, 1));

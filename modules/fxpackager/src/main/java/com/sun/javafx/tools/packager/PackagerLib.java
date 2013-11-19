@@ -105,15 +105,8 @@ public class PackagerLib {
     private File bssTmpDir;
     private boolean isSignedJNLP;
 
-    private enum Filter {ALL, CLASSES_ONLY, RESOURCES};
 
-    private static String[] launcherFiles = {
-        "com/javafx/main/Main.class",
-        "com/javafx/main/Main$1.class",
-        "com/javafx/main/Main$2.class",
-        "com/javafx/main/NoJavaFXFallback.class"
-    };
-    private static String prefix_in_antjar = "/resources/classes/";
+    private enum Filter {ALL, CLASSES_ONLY, RESOURCES};
 
     private ClassLoader classLoader;
 
@@ -251,59 +244,45 @@ public class PackagerLib {
                 attr.put(new Attributes.Name(e.getKey()), e.getValue());
             }
         }
-        if (createJarParams.embedLauncher) {
-            //Reset Classpath (make sense if we are updating jar)
-            attr.remove(Attributes.Name.CLASS_PATH);
 
-            attr.put(Attributes.Name.MAIN_CLASS, "com/javafx/main/Main");
-            attr.put(new Attributes.Name(MANIFEST_JAVAFX_MAIN), createJarParams.applicationClass);
-            attr.put(new Attributes.Name("JavaFX-Version"), createJarParams.fxVersion);
+        attr.put(Attributes.Name.MAIN_CLASS, createJarParams.applicationClass);
+        if (createJarParams.classpath != null) {
+            // Allow comma or semicolon as delimeter (turn them into spaces)
+            String cp = createJarParams.classpath;
+            cp = cp.replace(';', ' ').replace(',', ' ');
+            attr.put(new Attributes.Name("Class-Path"), cp);
+        }
 
-            if (createJarParams.preloader != null) {
-                attr.put(new Attributes.Name("JavaFX-Preloader-Class"), createJarParams.preloader);
+        attr.put(new Attributes.Name("JavaFX-Version"), createJarParams.fxVersion);
+
+        if (createJarParams.preloader != null) {
+            attr.put(new Attributes.Name("JavaFX-Preloader-Class"), createJarParams.preloader);
+        }
+
+
+        if (createJarParams.arguments != null) {
+            int idx = 1;
+            for (String arg: createJarParams.arguments) {
+                attr.put(new Attributes.Name("JavaFX-Argument-"+idx),
+                        encodeAsBase64(arg.getBytes()));
+                idx++;
             }
-
-            if (createJarParams.classpath != null) {
-                // Allow comma or semicolon as delimeter (turn them into spaces)
-                String cp = createJarParams.classpath;
-                cp = cp.replace(';', ' ').replace(',', ' ');
-                attr.put(new Attributes.Name("JavaFX-Class-Path"), cp);
-            }
-            //Default fallback class uses "private" interface to
-            // get additional error paramters. Do not add it to manifest
-            // explicitly to avoid treating it as custom
-            if (createJarParams.fallbackClass != null &&
-                    !createJarParams.defaultFallbackApp.equals(
-                    createJarParams.fallbackClass)) {
-                attr.put(new Attributes.Name("JavaFX-Fallback-Class"),
-                        createJarParams.fallbackClass);
-            }
-
-            if (createJarParams.arguments != null) {
-                int idx = 1;
-                for (String arg: createJarParams.arguments) {
-                    attr.put(new Attributes.Name("JavaFX-Argument-"+idx),
-                            encodeAsBase64(arg.getBytes()));
+        }
+        if (createJarParams.params != null) {
+            int idx = 1;
+            for (Param p : createJarParams.params) {
+                if (p.name != null) { //otherwise it is something weird and we skip it
+                    attr.put(new Attributes.Name("JavaFX-Parameter-Name-" + idx),
+                            encodeAsBase64(p.name.getBytes()));
+                    if (p.value != null) { //legal, means not value specified
+                        attr.put(new Attributes.Name("JavaFX-Parameter-Value-" + idx),
+                                encodeAsBase64(p.value.getBytes()));
+                    }
                     idx++;
                 }
             }
-            if (createJarParams.params != null) {
-                int idx = 1;
-                for (Param p : createJarParams.params) {
-                    if (p.name != null) { //otherwise it is something weird and we skip it
-                        attr.put(new Attributes.Name("JavaFX-Parameter-Name-" + idx),
-                                encodeAsBase64(p.name.getBytes()));
-                        if (p.value != null) { //legal, means not value specified
-                            attr.put(new Attributes.Name("JavaFX-Parameter-Value-" + idx),
-                                    encodeAsBase64(p.value.getBytes()));
-                        }
-                        idx++;
-                    }
-                }
-            }
-        } else {
-            attr.put(Attributes.Name.MAIN_CLASS, createJarParams.applicationClass);
         }
+
 
         if (createJarParams.css2bin) {
             try {
@@ -1404,9 +1383,6 @@ public class PackagerLib {
                             pr.getBaseDir().getAbsolutePath().length() + 1);
                 }
             }
-            if (createJarParams.embedLauncher) {
-                addEmbeddedLauncher(jar);
-            }
         } finally {
             jar.close();
             alreadyAddedEntries.clear();
@@ -1426,30 +1402,6 @@ public class PackagerLib {
                 jar.closeEntry();
             }
             alreadyAddedEntries.add(pathSB.toString());
-        }
-    }
-
-    private void addEmbeddedLauncher(JarOutputStream jar) throws IOException {
-        for (String cls : launcherFiles) {
-            String nm = prefix_in_antjar + cls;
-            InputStream in = PackagerLib.class.getResourceAsStream(nm);
-            if (in == null) {
-                System.err.println(
-                        "Internal error. Missing embedded resource [" + cls + "]");
-            }
-            jar.putNextEntry(new JarEntry(cls));
-
-            byte b[] = new byte[65000];
-            int i;
-            try {
-                while ((i = in.read(b)) > 0) {
-                    jar.write(b, 0, i);
-                }
-            } finally {
-                in.close();
-            }
-
-            jar.closeEntry();
         }
     }
 

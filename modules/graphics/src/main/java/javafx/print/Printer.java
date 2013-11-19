@@ -348,6 +348,11 @@ public final class Printer {
         double ptm = imgArea.getMinY();
         double prm = width - imgArea.getMaxX();
         double pbm = height - imgArea.getMaxY();
+        
+        lMargin /= 72.0;
+        rMargin /= 72.0;
+        tMargin /= 72.0;
+        bMargin /= 72.0;
 
         // Check if the requested margins exceed the paper and
         // if they do, ignore them.
@@ -379,10 +384,15 @@ public final class Printer {
         default: lm = plm; rm = prm; tm = ptm; bm = pbm;
         }
 
-        lm = (lMargin <= lm) ? lMargin : lm;
-        rm = (rMargin <= rm) ? rMargin : rm;
-        tm = (tMargin <= tm) ? tMargin : tm;
-        bm = (bMargin <= bm) ? bMargin : bm;
+        lm = (lMargin >= lm) ? lMargin : lm;
+        rm = (rMargin >= rm) ? rMargin : rm;
+        tm = (tMargin >= tm) ? tMargin : tm;
+        bm = (bMargin >= bm) ? bMargin : bm;
+
+        lm *= 72;
+        rm *= 72;
+        tm *= 72;
+        bm *= 72;
 
         return new PageLayout(paper, orient, lm, rm, tm, bm);
     }
