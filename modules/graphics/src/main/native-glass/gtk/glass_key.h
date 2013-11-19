@@ -30,6 +30,7 @@
 #include <gtk/gtk.h>
 
 jint gdk_keyval_to_glass(guint keyval);
+jint get_glass_key(GdkEventKey* e);
 jint glass_key_to_modifier(jint glassKey);
 jint gdk_modifier_mask_to_glass(guint mask);
 gint find_gdk_keyval_for_glass_keycode(jint code);

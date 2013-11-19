@@ -391,13 +391,7 @@ void WindowContextBase::process_mouse_cross(GdkEventCrossing* event) {
 
 void WindowContextBase::process_key(GdkEventKey* event) {
     bool press = event->type == GDK_KEY_PRESS;
-    guint keyValue;
-    gint state = 0;
-    state |= event->state & GDK_MOD2_MASK; //NumLock test
-    gdk_keymap_translate_keyboard_state(gdk_keymap_get_default(),
-            event->hardware_keycode, static_cast<GdkModifierType>(state), event->group,
-            &keyValue, NULL, NULL, NULL);
-    jint glassKey = gdk_keyval_to_glass(keyValue);
+    jint glassKey = get_glass_key(event);
     jint glassModifier = gdk_modifier_mask_to_glass(event->state);
     if (press) {
         glassModifier |= glass_key_to_modifier(glassKey);
