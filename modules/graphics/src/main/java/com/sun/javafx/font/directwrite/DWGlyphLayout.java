@@ -141,11 +141,11 @@ public class DWGlyphLayout extends GlyphLayout {
         boolean missingGlyph = false;
         i = 0; j = rtl ? glyphCount - 1 : 0;
         while (i < glyphCount) {
-            iglyphs[i] = glyphs[j] | slotMask;
-            if (iglyphs[i] == 0) {
+            if (glyphs[i] == 0) {
                 missingGlyph = true;
-                break;
+                if (composite) break;
             }
+            iglyphs[i] = glyphs[j] | slotMask;
             i++;
             j+=step;
         }
