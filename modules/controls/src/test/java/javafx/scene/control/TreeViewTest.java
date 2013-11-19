@@ -1219,4 +1219,32 @@ public class TreeViewTest {
         root.setExpanded(true);
         assertEquals(0, rt_33559_count);
     }
+
+    @Test public void test_rt34103() {
+        treeView.setRoot(new TreeItem("Root"));
+        treeView.getRoot().setExpanded(true);
+
+        for (int i = 0; i < 4; i++) {
+            TreeItem parent = new TreeItem("item - " + i);
+            treeView.getRoot().getChildren().add(parent);
+
+            for (int j = 0; j < 4; j++) {
+                TreeItem child = new TreeItem("item - " + i + " " + j);
+                parent.getChildren().add(child);
+            }
+        }
+
+        treeView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        TreeItem item0 = treeView.getTreeItem(1);
+        assertEquals("item - 0", item0.getValue());
+        item0.setExpanded(true);
+
+        treeView.getSelectionModel().selectIndices(1,2,3);
+        assertEquals(3, treeView.getSelectionModel().getSelectedIndices().size());
+
+        item0.setExpanded(false);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(1, treeView.getSelectionModel().getSelectedIndices().size());
+    }
 }

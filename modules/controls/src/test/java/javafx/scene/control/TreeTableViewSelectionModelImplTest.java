@@ -25,9 +25,13 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.tk.Toolkit;
+import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.TreeTableView.TreeTableViewSelectionModel;
+import javafx.util.Callback;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -705,5 +709,81 @@ public class TreeTableViewSelectionModelImplTest {
                 assertFalse(model.isSelected(row, tableView.getVisibleLeafColumn(column)));
             }
         }
+    }
+
+    @Test public void test_rt34103_cellSelection() {
+        tableView.setRoot(new TreeItem("Root"));
+        tableView.getRoot().setExpanded(true);
+
+        for (int i = 0; i < 4; i++) {
+            TreeItem parent = new TreeItem("item - " + i);
+            tableView.getRoot().getChildren().add(parent);
+
+            for (int j = 0; j < 4; j++) {
+                TreeItem child = new TreeItem("item - " + i + " " + j);
+                parent.getChildren().add(child);
+            }
+        }
+
+        TreeTableColumn name = new TreeTableColumn("Name");
+        name.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures, ObservableValue>() {
+            @Override
+            public ObservableValue call(TreeTableColumn.CellDataFeatures p) {
+                return new ReadOnlyStringWrapper((String)p.getValue().getValue());
+            }
+        });
+
+        tableView.getColumns().addAll(name);
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.setCellSelectionEnabled(true);
+
+        TreeItem item0 = tableView.getTreeItem(1);
+        assertEquals("item - 0", item0.getValue());
+        item0.setExpanded(true);
+
+        model.selectRange(1, name, 3, name);
+        assertEquals(3, model.getSelectedCells().size());
+
+        item0.setExpanded(false);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(1, model.getSelectedCells().size());
+    }
+
+    @Test public void test_rt34103_rowSelection() {
+        tableView.setRoot(new TreeItem("Root"));
+        tableView.getRoot().setExpanded(true);
+
+        for (int i = 0; i < 4; i++) {
+            TreeItem parent = new TreeItem("item - " + i);
+            tableView.getRoot().getChildren().add(parent);
+
+            for (int j = 0; j < 4; j++) {
+                TreeItem child = new TreeItem("item - " + i + " " + j);
+                parent.getChildren().add(child);
+            }
+        }
+
+        TreeTableColumn name = new TreeTableColumn("Name");
+        name.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures, ObservableValue>() {
+            @Override
+            public ObservableValue call(TreeTableColumn.CellDataFeatures p) {
+                return new ReadOnlyStringWrapper((String)p.getValue().getValue());
+            }
+        });
+
+        tableView.getColumns().addAll(name);
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.setCellSelectionEnabled(false);
+
+        TreeItem item0 = tableView.getTreeItem(1);
+        assertEquals("item - 0", item0.getValue());
+        item0.setExpanded(true);
+
+        model.selectIndices(1,2,3);
+        assertEquals(3, model.getSelectedCells().size());
+
+        item0.setExpanded(false);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(1, model.getSelectedCells().size());
     }
 }
