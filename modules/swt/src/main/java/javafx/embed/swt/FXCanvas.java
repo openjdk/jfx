@@ -228,7 +228,7 @@ public class FXCanvas extends Canvas {
                 backingScaleFactorMethod = nsScreenClass.getDeclaredMethod("backingScaleFactor");
                 backingScaleFactorMethod.setAccessible(true);
             } catch (Exception e) {
-                e.printStackTrace();
+                //Fail silently.  If we can't get the methods, then the current version of SWT has no retina support
             }
         }
     }
@@ -548,14 +548,15 @@ public class FXCanvas extends Canvas {
     private double getScaleFactor(GC gc) {
         double scale = 1.0;
         if (SWT.getPlatform().equals("cocoa")) {
-            try {
-                Object nsWindow = windowMethod.invoke(viewField.get(gc.getGCData()));
-                Object nsScreen = screenMethod.invoke(nsWindow);
-                Object bsFactor = backingScaleFactorMethod.invoke(nsScreen);
-
-                scale = ((Double)bsFactor).doubleValue();
-            } catch (Exception e) {
-                e.printStackTrace();
+            if (viewField != null && windowMethod != null && screenMethod != null && backingScaleFactorMethod != null) {
+                try {
+                    Object nsWindow = windowMethod.invoke(viewField.get(gc.getGCData()));
+                    Object nsScreen = screenMethod.invoke(nsWindow);
+                    Object bsFactor = backingScaleFactorMethod.invoke(nsScreen);
+                    scale = ((Double)bsFactor).doubleValue();
+                } catch (Exception e) {
+                    //Fail silently.  If we can't get the methods, then the current version of SWT has no retina support
+                }
             }
         }
         return scale;
