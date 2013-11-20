@@ -722,7 +722,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
             text.setText(this.chars);
             altText.setText(this.altChars);
             if (vkLookup) {
-                setId(id != null ? id : chars);
+                setId((id != null ? id : chars).replaceAll("\\.", ""));
             }
 
             handleSecondaryVK(letter, alt, moreChars);
