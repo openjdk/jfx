@@ -261,15 +261,16 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         }
         
         // This ensure that the selection remains accurate when a shift occurs.
-        if (getFocusedIndex() >= position && getFocusedIndex() > -1 && getFocusedIndex() + shift > -1) {
-            final int newFocus = getFocusedIndex() + shift;
-            setSelectedIndex(newFocus);
+        final int selectedIndex = getSelectedIndex();
+        if (selectedIndex >= position && selectedIndex > -1 && selectedIndex + shift > -1) {
+            final int newSelectionLead = selectedIndex + shift;
+            setSelectedIndex(newSelectionLead);
 
             // added for RT-30356
-            selectedIndices.set(newFocus, true);
+            selectedIndices.set(newSelectionLead, true);
  
             // removed due to RT-27185
-            // focus(newFocus);
+//            focus(newSelectionLead);
         }
 
         if (hasPermutated) {

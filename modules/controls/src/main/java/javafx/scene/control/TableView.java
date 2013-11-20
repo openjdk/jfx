@@ -2411,8 +2411,8 @@ public class TableView<S> extends Control {
                 if ((! csMode && pos.getRow() == row) || (csMode && pos.equals(tp))) {
                     selectedCellsMap.remove(pos);
 
-                    // give focus to this cell index
-                    focus(row);
+//                    // give focus to this cell index
+//                    focus(row);
 
                     return;
                 }

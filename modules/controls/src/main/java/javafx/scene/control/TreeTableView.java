@@ -2162,7 +2162,13 @@ public class TreeTableView<S> extends Control {
                     // if any child item was selected (in which case the parent
                     // takes the selection on collapse)
                     treeItem.getExpandedDescendentCount(false);
-                    int count = treeItem.previousExpandedDescendentCount;
+                    final int count = treeItem.previousExpandedDescendentCount;
+
+                    final int selectedIndex = getSelectedIndex();
+                    final boolean wasPrimarySelectionInChild =
+                            selectedIndex >= (startRow + 1) &&
+                            selectedIndex < (startRow + count);
+
                     boolean wasAnyChildSelected = false;
                     final boolean isCellSelectionMode = isCellSelectionEnabled();
                     ObservableList<TreeTableColumn<S,?>> columns = getTreeTableView().getVisibleLeafColumns();
@@ -2190,7 +2196,7 @@ public class TreeTableView<S> extends Control {
                     }
 
                     // put selection onto the newly-collapsed tree item
-                    if (wasAnyChildSelected) {
+                    if (wasPrimarySelectionInChild && wasAnyChildSelected) {
                         select(startRow);
                     }
 
@@ -2601,7 +2607,7 @@ public class TreeTableView<S> extends Control {
                     selectedCellsMap.remove(pos);
 
                     // give focus to this cell index
-                    focus(row);
+//                    focus(row);
 
                     return;
                 }

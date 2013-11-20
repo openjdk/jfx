@@ -1188,7 +1188,13 @@ public class TreeView<T> extends Control {
                     // if any child item was selected (in which case the parent
                     // takes the selection on collapse)
                     treeItem.getExpandedDescendentCount(false);
-                    int count = treeItem.previousExpandedDescendentCount;
+                    final int count = treeItem.previousExpandedDescendentCount;
+
+                    final int selectedIndex = getSelectedIndex();
+                    final boolean wasPrimarySelectionInChild =
+                            selectedIndex >= (startRow + 1) &&
+                            selectedIndex < (startRow + count);
+
                     boolean wasAnyChildSelected = false;
                     for (int i = startRow + 1; i < startRow + count; i++) {
                         if (isSelected(i)) {
@@ -1198,7 +1204,7 @@ public class TreeView<T> extends Control {
                     }
 
                     // put selection onto the newly-collapsed tree item
-                    if (wasAnyChildSelected) {
+                    if (wasPrimarySelectionInChild && wasAnyChildSelected) {
                         select(startRow);
                     }
 
