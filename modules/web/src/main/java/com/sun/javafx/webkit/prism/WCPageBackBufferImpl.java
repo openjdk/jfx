@@ -43,6 +43,7 @@ final class WCPageBackBufferImpl extends WCPageBackBuffer implements ResourceFac
     public void flush(final WCGraphicsContext gc, int x, int y, final int w, final int h) {
         ((Graphics) gc.getPlatformGraphics()).drawTexture(texture, x, y, w, h,
                 x * pixelScale, y * pixelScale, w * pixelScale, h * pixelScale);
+        texture.unlock();
     }
 
     protected void copyArea(int x, int y, int w, int h, int dx, int dy) {
@@ -62,10 +63,16 @@ final class WCPageBackBufferImpl extends WCPageBackBuffer implements ResourceFac
     public boolean validate(int width, int height) {
         width = (int) Math.ceil(width * pixelScale);
         height = (int) Math.ceil(height * pixelScale);
+        if (texture != null) {
+            texture.lock();
+            if (texture.isSurfaceLost()) {
+                texture.dispose();
+                texture = null;
+            }
+        }
         if (texture == null) {
             texture = createTexture(width, height);
             texture.contentsUseful();
-            texture.makePermanent();
             if (! listenerAdded) {
                 // this is the very first time validate() is called. We assume
                 // full repaint is already happening, so we don't return false
@@ -74,6 +81,7 @@ final class WCPageBackBufferImpl extends WCPageBackBuffer implements ResourceFac
             } else {
                 // texture must have been nullified in factoryReset().
                 // Backbuffer is lost, so we request full repaint.
+                texture.unlock();
                 return false;
             }
         } else {
@@ -83,7 +91,6 @@ final class WCPageBackBufferImpl extends WCPageBackBuffer implements ResourceFac
                 // Change the texture size
                 RTTexture newTexture = createTexture(width, height);
                 newTexture.contentsUseful();
-                newTexture.makePermanent();
                 newTexture.createGraphics().drawTexture(texture, 0, 0,
                         Math.min(width, tw), Math.min(height, th));
                 texture.dispose();
