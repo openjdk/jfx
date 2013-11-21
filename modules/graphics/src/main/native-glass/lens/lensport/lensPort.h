@@ -46,7 +46,7 @@ typedef struct _lens_native_port {
     // Cursor Specific Entries
     void (*createCursor)(jbyte *cursorImage, int width, int height, int bpp);
     void (*setNativeCursor)(jlong nativeCursorPointer);
-    void (*cursorInitialize)(int screenWidth, int screenHeight);
+    void (*cursorInitialize)(int screenWidth, int screenHeight, int screenDepth);
     void (*cursorSetPosition)(int x, int y);
     void (*cursorClose)();
     void (*cursorTerminate)();

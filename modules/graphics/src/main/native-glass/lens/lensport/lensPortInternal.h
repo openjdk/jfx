@@ -34,7 +34,13 @@
 #define FB_CURSOR_DEVICE "/dev/fb1"
 #endif
 
-#define LENSFB_CURSOR_COLOR_KEY 0xABABABAB
+#define LENSFB_32_CURSOR_COLOR_KEY 0xABABABAB
+#define LENSFB_16_CURSOR_COLOR_KEY 0xABAB
+
+#define RGB565TOCOLORKEY(rgb)                              \
+      ( ((rgb & 0xf800)<<8)  |  ((rgb & 0xe000)<<3)  |     \
+        ((rgb & 0x07e0)<<5)  |  ((rgb & 0x0600)>>1)  |     \
+        ((rgb & 0x001f)<<3)  |  ((rgb & 0x001c)>>2)  )
 
 /**
  * The bellow macros will convert pointers to long

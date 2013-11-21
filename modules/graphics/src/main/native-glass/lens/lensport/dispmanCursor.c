@@ -156,7 +156,7 @@ static void fbDispmanRemoveDispmanxElement(void) {
     }
 }
 
-static void fbDispmanCursorInitialize(int screenWidth, int screenHeight) {
+static void fbDispmanCursorInitialize(int screenWidth, int screenHeight, int screenDepth) {
 
     // Init cursor fields
     cursor.element = 0;

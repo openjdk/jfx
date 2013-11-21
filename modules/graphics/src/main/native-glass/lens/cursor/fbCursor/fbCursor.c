@@ -40,9 +40,9 @@ static void fbCreateCursor(jbyte *cursorImage, int width, int height, int bpp) {
     (*lensPort.createCursor)(cursorImage, width, height, bpp);
 }
 
-void fbCursorInitialize(int screenWidth, int screenHeight) {
+void fbCursorInitialize(int screenWidth, int screenHeight, int screenDepth) {
     assert (lensPort.cursorInitialize);
-    (*lensPort.cursorInitialize)(screenWidth, screenHeight);
+    (*lensPort.cursorInitialize)(screenWidth, screenHeight, screenDepth);
 }
 
 void fbCursorSetPosition(int x, int y) {
