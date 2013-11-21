@@ -885,12 +885,11 @@ public class J2DPrinterJob implements PrinterJobImpl {
             currPageInfo = newPageInfo;
             newPageInfo = null;
             currPageIndex = pageIndex;
-            currPageFormat = getPageFormatFromLayout();
+            currPageFormat = getPageFormatFromLayout(currPageInfo.getPageLayout());
             return true;
         }
 
-        private PageFormat getPageFormatFromLayout() {
-            PageLayout layout = settings.getPageLayout();
+        private PageFormat getPageFormatFromLayout(PageLayout layout) {
             java.awt.print.Paper paper = new java.awt.print.Paper();
             double pWid = layout.getPaper().getWidth();
             double pHgt = layout.getPaper().getHeight();
