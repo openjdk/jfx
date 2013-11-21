@@ -592,9 +592,10 @@ HRESULT D3DContext::setDeviceParametersFor3D() {
         SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE)) &&
         SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE)) &&
         SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_LIGHTING, TRUE)) &&
+        // TODO: 3D - RT-34415: [D3D 3D] Need a robust 3D states management for texture 
         // Set texture unit 0 to its default texture addressing mode for Prism
-        SUCCEEDED(res = pd3dDevice->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP)) &&
-        SUCCEEDED(res = pd3dDevice->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP)) &&
+        SUCCEEDED(res = pd3dDevice->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP)) &&
+        SUCCEEDED(res = pd3dDevice->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP)) &&
         // Set texture filter to bilinear for 3D rendering
         SUCCEEDED(res = pd3dDevice->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR)) &&
         SUCCEEDED(res = pd3dDevice->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR));
