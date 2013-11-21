@@ -214,7 +214,7 @@ public class ScrollPaneBehavior extends BehaviorBase<ScrollPane> {
         case TRAVERSE_NEXT:
         case TRAVERSE_PREVIOUS:
             // Is there any focusable node in the ScrollPane content
-            if (getControl().getImpl_traversalEngine().registeredNodes.isEmpty() ||
+            if (!getControl().getImpl_traversalEngine().registeredNodes.isEmpty() ||
                 TabPaneBehavior.getFirstPopulatedInnerTraversalEngine(getControl().getChildrenUnmodifiable()) != null) {
                 /**
                  * if we have the focus owner then traverse from it, otherwise
@@ -223,8 +223,8 @@ public class ScrollPaneBehavior extends BehaviorBase<ScrollPane> {
                 List<Node> children = getControl().getChildrenUnmodifiable();
                 Node focusNode = getControl().getScene().getFocusOwner();
                 if (focusNode != null && isChildFocused(focusNode, children)) {
-                    // TODO: Can this happen? Explain how we got this
-                    // action if it was a child that had focus.
+                    // This happens if the child doesn't have the key binding
+                    // for traversal and the event bubbled up to this class.
                     focusNode.impl_traverse("TraverseNext".equals(name) ? Direction.NEXT : Direction.PREVIOUS);
                 } else if ("TraverseNext".equals(name)) {
                     focusFirstChild(children);
