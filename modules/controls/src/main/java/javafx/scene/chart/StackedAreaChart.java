@@ -222,10 +222,20 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
             boolean animate = false;
             if (itemIndex > 0 && itemIndex < series.getDataSize()) {
                 animate = true;
-                int index=0; Data<X,Y> d;
-                for (d = series.begin; d != null && index != itemIndex - 1; d=d.next) index++;
+                int index=0;
+                Data<X,Y> d;
+
+                for (d = series.begin; d != null && index != itemIndex - 1; d = d.next) {
+                    index++;
+                }
+
                 Data<X,Y> p1 = d;
-                Data<X,Y> p2 = (d.next).next;
+                Data<X,Y> p2 = d.next.next;
+
+                if (p2 == null) {
+                    return;
+                }
+
                 double x1 = getXAxis().toNumericValue(p1.getXValue());
                 double y1 = getYAxis().toNumericValue(p1.getYValue());
                 double x3 = getXAxis().toNumericValue(p2.getXValue());
