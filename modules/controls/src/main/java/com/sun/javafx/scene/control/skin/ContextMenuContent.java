@@ -53,14 +53,7 @@ import javafx.geometry.Side;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.control.CheckMenuItem;
-import javafx.scene.control.ContextMenu;
-import javafx.scene.control.Label;
-import javafx.scene.control.Menu;
-import javafx.scene.control.MenuItem;
-import javafx.scene.control.CustomMenuItem;
-import javafx.scene.control.RadioMenuItem;
-import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.*;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
@@ -81,10 +74,8 @@ import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.css.Styleable;
 
 /**
- * This is a the SkinBase for PopupMenu based controls so that the CSS parts
+ * This is a the SkinBase for ContextMenu based controls so that the CSS parts
  * work right, because otherwise we would have to copy the Keys from there to here.
- * {@link PopupControlSkin} should be changed to use SkinBase instead of Resizable
- * for its content and popup content.
  */
 public class ContextMenuContent extends Region {
 
@@ -521,9 +512,13 @@ public class ContextMenuContent extends Region {
 
 //        // FIXME For some reason getSkinnable()Behavior traversal functions don't
 //        // get called as expected, so I've just put the important code below.
-        addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
-            @Override
-            public void handle(KeyEvent ke) {
+        // We use setOnKeyPressed here as we are not adding a listener to a public
+        // event type (ContextMenuContent is not public API), and without this
+        // we get the issue shown in RT-34429
+        setOnKeyPressed(new EventHandler<KeyEvent>() {
+            @Override public void handle(KeyEvent ke) {
+                final Node ownerNode = contextMenu.getOwnerNode();
+
                 switch (ke.getCode()) {
                     case LEFT:
                         if (getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
@@ -543,8 +538,15 @@ public class ContextMenuContent extends Region {
                         ke.consume();
                         break;
                     case ESCAPE:
-                        // event not consumed for ESCAPE to let the Popup hide
-                        // on it
+                        // if the owner is not a menubar button, just close the
+                        // menu - this will move focus up to the parent menu
+                        // as required. In the case of the parent being a
+                        // menubar button we special case in the conditional code
+                        // beneath this switch statement. See RT-34429 for more context.
+                        if (! (ownerNode instanceof MenuBarSkin.MenuBarButton)) {
+                            contextMenu.hide();
+                            ke.consume();
+                        }
                         break;
                     case DOWN:
                         // move to the next sibling
@@ -567,7 +569,6 @@ public class ContextMenuContent extends Region {
                 }
 
                 if (!ke.isConsumed()) {
-                    Node ownerNode = contextMenu.getOwnerNode();
                     if (ownerNode instanceof MenuItemContainer) {
                         // Forward to parent menu
                         Parent parent = ownerNode.getParent();
@@ -575,7 +576,7 @@ public class ContextMenuContent extends Region {
                             parent = parent.getParent();
                         }
                         if (parent instanceof ContextMenuContent) {
-                            ((ContextMenuContent)parent).getOnKeyPressed().handle(ke);
+                            parent.getOnKeyPressed().handle(ke);
                         }
                     } else if (ownerNode instanceof MenuBarSkin.MenuBarButton) {
                         // This is a top-level MenuBar Menu, so forward event to MenuBar
