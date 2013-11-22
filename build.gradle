@@ -376,7 +376,15 @@ defineProperty("NUM_COMPILE_THREADS", "${Runtime.runtime.availableProcessors()}"
 defineProperty("HUDSON_JOB_NAME", "not_hudson")
 defineProperty("HUDSON_BUILD_NUMBER","0000")
 defineProperty("PROMOTED_BUILD_NUMBER", "00")
-defineProperty("PRODUCT_NAME", "OpenJFX")
+if (BUILD_CLOSED) {
+    defineProperty("PRODUCT_NAME", "Java(TM)")
+    defineProperty("COMPANY_NAME", "Oracle Corporation")
+    defineProperty("PLATFORM_NAME", "Platform SE")
+} else {
+    defineProperty("PRODUCT_NAME", "OpenJFX")
+    defineProperty("COMPANY_NAME", "N/A")
+    defineProperty("PLATFORM_NAME", "Platform")
+}
 // TODO: set the values of RAW_VERSION, RELEASE_NAME, and RELEASE_MILESTONE based on the
 // settings in build.properties
 defineProperty("RAW_VERSION", "8.0.0")
@@ -812,11 +820,12 @@ void addNative(Project project, String name, List<String> includeTargets) {
                 def rcTask = project.task("rc$capitalName$capitalVariant", type: CompileResourceTask, dependsOn: javahTask, group: "Build") {
                     description = "Compiles native sources for $name"
                     matches = ".*\\.rc"
-                    compiler = variantProperties.resourcesCompiler
-                    def rcOutput = variant == "" ? nativeDir : file("$nativeDir/$variant")
-                    output(rcOutput)
-                    source(variantProperties.nativeSource)
-                    cleanTask.delete rcOutput
+                    compiler = variantProperties.rcCompiler
+                    source(variantProperties.rcSource)
+                    if (variantProperties.rcFlags) {
+                        rcParams.addAll(variantProperties.rcFlags)
+                    }
+                    output(ccOutput)
                 }
                 linkTask.dependsOn rcTask;
             }
@@ -1269,6 +1278,7 @@ project(":graphics") {
         def capitalTarget = t.capital
         def properties = rootProject.ext[upperTarget];
         def library = properties.library
+        def ccOutput = file("$nativeRootDir/$target");
 
         def ccTask = task("compileDecoraNativeShaders$capitalTarget", type: CCTask, dependsOn: generateDecoraNativeHeaders) {
             description = "Compiles Decora SSE natives"
@@ -1277,9 +1287,9 @@ project(":graphics") {
             source file("modules/graphics/src/main/native-decora")
             headers = headerDir
             params.addAll(properties.decora.ccFlags)
-            output(file("$nativeRootDir/$target"))
+            output(ccOutput)
             compiler = properties.decora.compiler
-            cleanNativeDecora.delete file("$nativeRootDir/$target")
+            cleanNativeDecora.delete ccOutput
         }
 
         def linkTask = task("linkDecoraNativeShaders$capitalTarget", type: LinkTask, dependsOn: ccTask) {
@@ -1289,6 +1299,20 @@ project(":graphics") {
             lib = file("$libRootDir/$t.name/${library(properties.decora.lib)}")
             linker = properties.decora.linker
             cleanNativeDecora.delete "$libRootDir/$t.name/"
+        }
+
+        if (IS_WINDOWS && target == "win") {
+            def rcTask = project.task("rcDecoraNativeShaders$capitalTarget", type: CompileResourceTask, dependsOn: generateDecoraNativeHeaders) {
+                description = "Compiles native sources for Decora SSE"
+                matches = ".*\\.rc"
+                compiler = properties.decora.rcCompiler
+                source(properties.decora.rcSource)
+                if (properties.decora.rcFlags) {
+                    rcParams.addAll(properties.decora.rcFlags)
+                }
+                output(ccOutput)
+            }
+            linkTask.dependsOn rcTask;
         }
 
         nativeDecora.dependsOn(linkTask)

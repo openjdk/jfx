@@ -23,6 +23,8 @@
  * questions.
  */
 
+#include "version.rc"
+
 IDC_OPEN_HAND    CURSOR "Hand-Open.cur"
 IDC_CLOSED_HAND  CURSOR "Hand-Closed.cur"
 

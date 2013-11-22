@@ -132,11 +132,25 @@ String msvcBinDir = (IS_64
 def compiler = IS_COMPILE_PARFAIT ? "cl.exe" : cygpath("$msvcBinDir/cl.exe")
 def linker = IS_COMPILE_PARFAIT ? "link.exe" : cygpath("$msvcBinDir/link.exe")
 ext.RC = cygpath("$WINDOWS_SDK_DIR/Bin/RC.Exe")
-def resourcesCompiler = cygpath("$WINDOWS_SDK_DIR/Bin/RC.Exe")
+def rcCompiler = cygpath("$WINDOWS_SDK_DIR/Bin/RC.Exe")
 ext.FXC = cygpath("$WINDOWS_DXSDK_DIR/utilities/bin/x86/fxc.exe")
 ext.MC = cygpath("$WINDOWS_SDK_DIR/Bin/mt.exe")
 // This next line is based on a line in the ant build scripts, but doesn't seem to point to the right place
 //ext.MSVCR = cygpath("${WINDOWS_VS_MSVCDIR}/redist/${IS_64 ? 'x64' : 'x86'}/Microsoft.VC${WINDOWS_VS_VER}.CRT/msvcr${WINDOWS_VS_VER}.dll")
+
+def rcFlags = [
+    "/d", "\"JFX_COMPANY=${COMPANY_NAME}\"",
+    "/d", "\"JFX_COMPONENT=${PRODUCT_NAME} ${PLATFORM_NAME} binary\"",
+    "/d", "\"JFX_NAME=${PRODUCT_NAME} ${PLATFORM_NAME} ${jfxReleaseMajorVersion}\"",
+    "/d", "\"JFX_VER=${jfxReleaseMajorVersion}.${jfxReleaseMinorVersion}.${jfxReleaseMicroVersion}.${PROMOTED_BUILD_NUMBER}\"",
+    "/d", "\"JFX_BUILD_ID=${RAW_VERSION}-${RELEASE_MILESTONE}-b${PROMOTED_BUILD_NUMBER}\"",
+    "/d", "\"JFX_COPYRIGHT=Copyright \u00A9 ${Calendar.getInstance().get(Calendar.YEAR)}\"",
+    "/d", "\"JFX_FVER=${jfxReleaseMajorVersion},${jfxReleaseMinorVersion},${jfxReleaseMicroVersion},${PROMOTED_BUILD_NUMBER}\"",
+    "/d", "\"JFX_FTYPE=0x2L\"",
+    "/nologo"
+];
+
+def defaultRcSource = file("modules/graphics/src/main/resources/version.rc");
 
 WIN.glass = [:]
 WIN.glass.javahInclude = [
@@ -146,7 +160,13 @@ WIN.glass.javahInclude = [
     "com/sun/glass/ui/accessible/win/*"]
 WIN.glass.nativeSource = file("modules/graphics/src/main/native-glass/win")
 WIN.glass.compiler = compiler
-WIN.glass.resourcesCompiler = resourcesCompiler;
+WIN.glass.rcCompiler = rcCompiler;
+WIN.glass.rcSource = file("modules/graphics/src/main/native-glass/win/GlassResources.rc");
+WIN.glass.rcFlags = [
+    "/I", file("modules/graphics/src/main/resources"),
+    "/d", "JFX_FNAME=glass.dll",
+    "/d", "JFX_INTERNAL_NAME=glass",
+    rcFlags].flatten();
 WIN.glass.ccFlags = [ccFlags, "/WX"].flatten()
 WIN.glass.linker = linker
 WIN.glass.linkFlags = [linkFlags, "delayimp.lib", "gdi32.lib", "urlmon.lib", "Comdlg32.lib",
@@ -161,6 +181,9 @@ WIN.decora.ccFlags = ["/arch:SSE", "/fp:fast", ccFlags].flatten()
 WIN.decora.linker = linker
 WIN.decora.linkFlags = [linkFlags].flatten()
 WIN.decora.lib = "decora_sse"
+WIN.decora.rcCompiler = rcCompiler;
+WIN.decora.rcSource = defaultRcSource
+WIN.decora.rcFlags = ["/d", "JFX_FNAME=decora_sse.dll", "/d", "JFX_INTERNAL_NAME=decora", rcFlags].flatten()
 
 WIN.prism = [:]
 WIN.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
@@ -170,6 +193,9 @@ WIN.prism.ccFlags = [ccFlags].flatten()
 WIN.prism.linker = linker
 WIN.prism.linkFlags = [linkFlags].flatten()
 WIN.prism.lib = "prism_common"
+WIN.prism.rcCompiler = rcCompiler;
+WIN.prism.rcSource = defaultRcSource
+WIN.prism.rcFlags = ["/d", "JFX_FNAME=prism_common.dll", "/d", "JFX_INTERNAL_NAME=prism", rcFlags].flatten()
 
 WIN.prismSW = [:]
 WIN.prismSW.javahInclude = ["com/sun/pisces/**/*"]
@@ -179,6 +205,9 @@ WIN.prismSW.ccFlags = [ccFlags].flatten()
 WIN.prismSW.linker = linker
 WIN.prismSW.linkFlags = [linkFlags].flatten()
 WIN.prismSW.lib = "prism_sw"
+WIN.prismSW.rcCompiler = rcCompiler;
+WIN.prismSW.rcSource = defaultRcSource
+WIN.prismSW.rcFlags = ["/d", "JFX_FNAME=prism_sw.dll", "/d", "JFX_INTERNAL_NAME=prismSW", rcFlags].flatten()
 
 WIN.prismD3D = [:]
 WIN.prismD3D.javahInclude = ["com/sun/prism/d3d/**/*"]
@@ -190,6 +219,9 @@ WIN.prismD3D.ccFlags = [ccFlags, "/Ibuild/headers/PrismD3D"].flatten()
 WIN.prismD3D.linker = linker
 WIN.prismD3D.linkFlags = [linkFlags, "user32.lib"].flatten()
 WIN.prismD3D.lib = "prism_d3d"
+WIN.prismD3D.rcCompiler = rcCompiler;
+WIN.prismD3D.rcSource = defaultRcSource
+WIN.prismD3D.rcFlags = ["/d", "JFX_FNAME=prism_d3d.dll", "/d", "JFX_INTERNAL_NAME=prismD3D", rcFlags].flatten();
 
 WIN.launcher = [:]
 WIN.launcher.compiler = compiler
@@ -227,6 +259,9 @@ WIN.iio.ccFlags = [ccFlags].flatten()
 WIN.iio.linker = linker
 WIN.iio.linkFlags = [linkFlags].flatten()
 WIN.iio.lib = "javafx_iio"
+WIN.iio.rcCompiler = rcCompiler;
+WIN.iio.rcSource = defaultRcSource
+WIN.iio.rcFlags = ["/d", "JFX_FNAME=javafx_iio.dll", "/d", "JFX_INTERNAL_NAME=iio", rcFlags].flatten();
 
 WIN.prismES2 = [:]
 WIN.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
@@ -240,6 +275,9 @@ WIN.prismES2.ccFlags = ["/Ob1", "/GF", "/Gy", "/GS", "/DWIN32", ccFlags].flatten
 WIN.prismES2.linker = linker
 WIN.prismES2.linkFlags = [linkFlags, "/SUBSYSTEM:WINDOWS", "opengl32.lib", "gdi32.lib", "user32.lib", "kernel32.lib"].flatten()
 WIN.prismES2.lib = "prism_es2"
+WIN.prismES2.rcCompiler = rcCompiler;
+WIN.prismES2.rcSource = defaultRcSource
+WIN.prismES2.rcFlags = ["/d", "JFX_FNAME=prism_es2.dll", "/d", "JFX_INTERNAL_NAME=prismES2", rcFlags].flatten();
 
 def closedDir = file("$projectDir/../rt-closed")
 WIN.font = [:]
@@ -253,6 +291,9 @@ WIN.font.ccFlags -= ["/DUNICODE", "/D_UNICODE"]
 WIN.font.linker = linker
 WIN.font.linkFlags = [linkFlags, "advapi32.lib", "gdi32.lib", "user32.lib", "dwrite.lib", "d2d1.lib", "windowscodecs.lib", "ole32.lib"].flatten()
 WIN.font.lib = "javafx_font"
+WIN.font.rcCompiler = rcCompiler;
+WIN.font.rcSource = defaultRcSource
+WIN.font.rcFlags = ["/d", "JFX_FNAME=javafx_font.dll", "/d", "JFX_INTERNAL_NAME=font", rcFlags].flatten();
 
 WIN.fontT2K = [:]
 WIN.fontT2K.javahInclude = ["com/sun/javafx/font/t2k/**/*"]
@@ -264,3 +305,6 @@ WIN.fontT2K.ccFlags = ["/DJFXFONT_PLUS", "/DLE_STANDALONE", ccFlags].flatten()
 WIN.fontT2K.linker = linker
 WIN.fontT2K.linkFlags = [linkFlags, "advapi32.lib", "gdi32.lib", "user32.lib"].flatten()
 WIN.fontT2K.lib = "javafx_font_t2k"
+WIN.fontT2K.rcCompiler = rcCompiler;
+WIN.fontT2K.rcSource = defaultRcSource
+WIN.fontT2K.rcFlags = ["/d", "JFX_FNAME=javafx_font_t2k.dll", "/d", "JFX_INTERNAL_NAME=fontT2K", rcFlags].flatten();
