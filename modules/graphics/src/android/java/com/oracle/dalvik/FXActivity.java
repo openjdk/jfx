@@ -58,7 +58,7 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
     private static FrameLayout  mViewGroup;
     private static SurfaceView  mView;
 
-    private String              appDataDir;
+    private static String       appDataDir;
     private InputMethodManager  imm;   
 
     @Override
@@ -79,6 +79,7 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
         mViewGroup.addView(mView);
         setContentView(mViewGroup);
         instance = this;     
+        appDataDir = getApplicationInfo().dataDir;
         Log.v(TAG, "Loading glass native library.");
         System.loadLibrary(GLASS_LENS_ANDROID_LIB);        
     }
@@ -119,10 +120,7 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
         return instance;
     }
 
-    public String getDataDir() {
-        if (appDataDir == null) {
-            appDataDir = this.getApplicationInfo().dataDir;
-        }        
+    public static String getDataDir() {
         return appDataDir;
     }
     

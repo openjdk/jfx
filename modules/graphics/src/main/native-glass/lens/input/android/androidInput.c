@@ -34,6 +34,7 @@ static ANativeWindow* (*_ANDROID_getNativeWindow)();
 static void (*_ANDROID_showIME)();
 static void (*_ANDROID_hideIME)();
 static void (*_ANDROID_shutdown)();
+static const char *(*_ANDROID_getDataDir)();
 
 
 void init_functions(JNIEnv *env) {
@@ -45,6 +46,7 @@ void init_functions(JNIEnv *env) {
     _ANDROID_showIME = GET_SYMBOL(env, libglass, "ANDROID_showIME");
     _ANDROID_hideIME = GET_SYMBOL(env, libglass, "ANDROID_hideIME");
     _ANDROID_shutdown = GET_SYMBOL(env, libglass, "ANDROID_shutdown");
+    _ANDROID_getDataDir = GET_SYMBOL(env, libglass, "ANDROID_getDataDir");
 }
 
 ANativeWindow *getAndroidNativeWindow() {
@@ -83,6 +85,14 @@ void android_shutdown() {
     }
     GLASS_LOG_FINE("Send shutdown");
     (*_ANDROID_shutdown)();
+}
+
+const char *android_getDataDir() {
+    if (!_ANDROID_getDataDir) {
+        init_functions(NULL);
+    }
+    GLASS_LOG_FINE("Ask for application data dir.");
+    return (*_ANDROID_getDataDir)();
 }
 
 #endif /* ANDROID_NDK */
