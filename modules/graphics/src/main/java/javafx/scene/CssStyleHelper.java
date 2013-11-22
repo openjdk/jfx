@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -449,12 +450,6 @@ final class CssStyleHelper {
         return cacheContainer.getStyleMap(styleable);
     }
 
-    private Map<String, List<CascadingStyle>> getCascadingStyles(final Styleable styleable) {
-        final StyleMap styleMap = getStyleMap(styleable);
-        // code looks for null return to indicate that the cache was blown away
-        return (styleMap != null) ? styleMap.getCascadingStyles() : null;
-    }
-
     /**
      * A Set of all the pseudo-class states which, if they change, need to
      * cause the Node to be set to UPDATE its CSS styles on the next pulse.
@@ -799,7 +794,8 @@ final class CssStyleHelper {
                 }
 
                 if (observableStyleMap != null) {
-                    List<Style> styleList = getMatchingStyles(node, cssMetaData);
+
+                    List<Style> styleList = getMatchingStyles(node, cssMetaData, true);
                     observableStyleMap.put(styleableProperty, styleList);
                 }
 
@@ -1966,16 +1962,20 @@ final class CssStyleHelper {
      * @return
      */
     List<Style> getMatchingStyles(final Styleable node, final CssMetaData styleableProperty) {
+        return getMatchingStyles(node, styleableProperty, false);
+    }
+
+    List<Style> getMatchingStyles(final Styleable node, final CssMetaData styleableProperty, boolean matchState) {
 
         final List<CascadingStyle> styleList = new ArrayList<CascadingStyle>();
 
-        getMatchingStyles(node, styleableProperty, styleList);
+        getMatchingStyles(node, styleableProperty, styleList, matchState);
 
         List<CssMetaData<? extends Styleable, ?>> subProperties = styleableProperty.getSubProperties();
         if (subProperties != null) {
             for (int n=0,nMax=subProperties.size(); n<nMax; n++) {
                 final CssMetaData subProperty = subProperties.get(n);
-                getMatchingStyles(node, subProperty, styleList);
+                getMatchingStyles(node, subProperty, styleList, matchState);
             }
         }
 
@@ -1990,23 +1990,34 @@ final class CssStyleHelper {
         return matchingStyles;
     }
 
-    private void getMatchingStyles(final Styleable node, final CssMetaData styleableProperty, final List<CascadingStyle> styleList) {
+    private void getMatchingStyles(final Styleable node, final CssMetaData styleableProperty, final List<CascadingStyle> styleList, boolean matchState) {
 
         if (node != null) {
 
             String property = styleableProperty.getProperty();
             Node _node = node instanceof Node ? (Node)node : null;
-            final Map<String, List<CascadingStyle>> smap = getCascadingStyles(_node);
+            final StyleMap smap = getStyleMap(_node);
             if (smap == null) return;
 
-             List<CascadingStyle> styles = smap.get(property);
+            if (matchState) {
+                CascadingStyle cascadingStyle = getStyle(node, styleableProperty.getProperty(), smap, _node.pseudoClassStates);
+                if (cascadingStyle != null) {
+                    styleList.add(cascadingStyle);
+                    final ParsedValueImpl parsedValue = cascadingStyle.getParsedValueImpl();
+                    getMatchingLookupStyles(node, parsedValue, styleList, matchState);
+                }
+            }  else {
 
-            if (styles != null) {
-                styleList.addAll(styles);
-                for (int n=0, nMax=styles.size(); n<nMax; n++) {
-                    final CascadingStyle style = styles.get(n);
-                    final ParsedValueImpl parsedValue = style.getParsedValueImpl();
-                    getMatchingLookupStyles(node, parsedValue, styleList);
+                Map<String, List<CascadingStyle>> cascadingStyleMap = smap.getCascadingStyles();
+                // StyleMap.getCascadingStyles() does not return null
+                List<CascadingStyle> styles = cascadingStyleMap.get(property);
+
+                if (styles != null) {
+                    for (int n=0, nMax=styles.size(); n<nMax; n++) {
+                        final CascadingStyle style = styles.get(n);
+                        final ParsedValueImpl parsedValue = style.getParsedValueImpl();
+                        getMatchingLookupStyles(node, parsedValue, styleList, matchState);
+                    }
                 }
             }
 
@@ -2017,7 +2028,7 @@ final class CssStyleHelper {
                             ? ((Node)parent).styleHelper
                             : null;
                     if (parentHelper != null) {
-                        parentHelper.getMatchingStyles(parent, styleableProperty, styleList);
+                        parentHelper.getMatchingStyles(parent, styleableProperty, styleList, matchState);
                     }
                     parent = parent.getStyleableParent();
                 }
@@ -2028,7 +2039,7 @@ final class CssStyleHelper {
     }
 
     // Pretty much a duplicate of resolveLookups, but without the state
-    private void getMatchingLookupStyles(final Styleable node, final ParsedValueImpl parsedValue, final List<CascadingStyle> styleList) {
+    private void getMatchingLookupStyles(final Styleable node, final ParsedValueImpl parsedValue, final List<CascadingStyle> styleList, boolean matchState) {
 
         if (parsedValue.isLookup()) {
 
@@ -2040,6 +2051,10 @@ final class CssStyleHelper {
                 // gather up any and all styles that contain this value as a property
                 Styleable parent = node;
                 do {
+
+                    StyleMap styleMap = getStyleMap(parent);
+                    if (styleMap == null || styleMap.isEmpty()) continue;
+
                     final Node _parent = parent instanceof Node ? (Node)parent : null;
                     final CssStyleHelper helper = _parent != null
                             ? _parent.styleHelper
@@ -2048,9 +2063,14 @@ final class CssStyleHelper {
 
                         final int start = styleList.size();
 
-                        final Map<String, List<CascadingStyle>> smap = helper.getCascadingStyles(_parent);
-                        if (smap != null) {
-
+                        if (matchState) {
+                            CascadingStyle cascadingStyle = helper.resolveRef(_parent, property, styleMap, _parent.pseudoClassStates);
+                            if (cascadingStyle != null) {
+                                styleList.add(cascadingStyle);
+                            }
+                        } else {
+                            final Map<String, List<CascadingStyle>> smap = styleMap.getCascadingStyles();
+                            // getCascadingStyles does not return null
                             List<CascadingStyle> styles = smap.get(property);
 
                             if (styles != null) {
@@ -2063,7 +2083,7 @@ final class CssStyleHelper {
 
                         for (int index=start; index<end; index++) {
                             final CascadingStyle style = styleList.get(index);
-                            getMatchingLookupStyles(parent, style.getParsedValueImpl(), styleList);
+                            getMatchingLookupStyles(parent, style.getParsedValueImpl(), styleList, matchState);
                         }
                     }
 
@@ -2084,7 +2104,7 @@ final class CssStyleHelper {
             for (int l=0; l<layers.length; l++) {
                 for (int ll=0; ll<layers[l].length; ll++) {
                     if (layers[l][ll] == null) continue;
-                        getMatchingLookupStyles(node, layers[l][ll], styleList);
+                        getMatchingLookupStyles(node, layers[l][ll], styleList, matchState);
                 }
             }
 
@@ -2093,7 +2113,7 @@ final class CssStyleHelper {
             final ParsedValueImpl[] layer = (ParsedValueImpl[])val;
             for (int l=0; l<layer.length; l++) {
                 if (layer[l] == null) continue;
-                    getMatchingLookupStyles(node, layer[l], styleList);
+                    getMatchingLookupStyles(node, layer[l], styleList, matchState);
             }
         }
 

@@ -97,7 +97,6 @@ public class Node_cssStyleMap_Test {
         return smap;
     }
     
-    @Ignore("RT-33919")
     @Test
     public void testStyleMapTracksChanges() {
                 
