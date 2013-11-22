@@ -652,9 +652,9 @@ if (Integer.parseInt(NUM_COMPILE_THREADS.toString()) < 1) {
     NUM_COMPILE_THREADS = 1
 }
 
-// Check that Gradle 1.4 is in use. We haven't tried any other versions.
-if (gradle.gradleVersion != "1.4") {
-    logger.warn("Unsupported gradle version $gradle.gradleVersion in use. Only 1.4 is supported")
+// Check that Gradle 1.8 is in use.
+if (gradle.gradleVersion != "1.8") {
+    logger.warn("Unsupported gradle version $gradle.gradleVersion in use. Only 1.8 is supported")
 }
 
 /******************************************************************************
