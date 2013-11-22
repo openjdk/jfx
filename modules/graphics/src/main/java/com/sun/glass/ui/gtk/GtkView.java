@@ -103,15 +103,23 @@ final class GtkView extends View {
     @Override
     protected native void _exitFullscreen(long ptr, boolean animate);
     
-        
+    @Override
+    protected void _finishInputMethodComposition(long ptr) {
+        if (imEnabled) {
+            // Discard any pre-edited text
+            preedit.setLength(0);
+            notifyInputMethod(preedit.toString(), null, null, null, 0, 0, 0);
+        }
+    }
+
     protected void notifyInputMethodDraw(String text, int first, int length, int caret) {
         if (text != null) {
             preedit.replace(first, first + length, text);
-            notifyInputMethod(preedit.toString(), null, null, null, 0, caret, 0);
-            lastCaret = caret;
         } else {
             preedit.setLength(0);
         }
+        notifyInputMethod(preedit.toString(), null, null, null, 0, caret, 0);
+        lastCaret = caret;
     }
     
     protected void notifyInputMethodCaret(int pos, int direction, int style) {
