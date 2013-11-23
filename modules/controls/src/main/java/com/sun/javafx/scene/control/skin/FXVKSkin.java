@@ -174,6 +174,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
     double keyHeight = PREF_KEY_HEIGHT;
 
     static boolean vkAdjustWindow = false;
+    static boolean vkLookup = false;
 
     static {
         AccessController.doPrivileged(new PrivilegedAction<Void>() {
@@ -181,6 +182,10 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
                 String s = System.getProperty("com.sun.javafx.vk.adjustwindow");
                 if (s != null) {
                     vkAdjustWindow = Boolean.valueOf(s);
+                }
+                s = System.getProperty("com.sun.javafx.sqe.vk.lookup");
+                if (s != null) {
+                    vkLookup = Boolean.valueOf(s);
                 }
                 return null;
             }
@@ -708,8 +713,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
         private final String altChars;
         private final String[] moreChars;
 
-        private CharKey(String letter, String alt, String[] moreChars) {
-            setId(letter);
+        private CharKey(String letter, String alt, String[] moreChars, String id) {
             this.letterChars = letter;
             this.altChars = alt;
             this.moreChars = moreChars;
@@ -717,8 +721,15 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
 
             text.setText(this.chars);
             altText.setText(this.altChars);
+            if (vkLookup) {
+                setId((id != null ? id : chars).replaceAll("\\.", ""));
+            }
 
             handleSecondaryVK(letter, alt, moreChars);
+        }
+
+        private CharKey(String letter, String alt, String[] moreChars) {
+            this(letter, alt, moreChars, null);
         }
 
 
@@ -774,7 +785,9 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
             this.chars = code;
             text.setText(letter);
             getStyleClass().add("special");
-            setId(letter);
+            if (vkLookup) {
+                setId(letter);
+            }
         }
     }
 
@@ -788,7 +801,9 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
         private KeyCodeKey(String letter, String c, KeyCode code) {
             super(letter, c);
             this.code = code;
-            setId(letter);
+            if (vkLookup) {
+                setId(letter);
+            }
         }
 
         protected void sendKeyEvents() {
@@ -810,11 +825,13 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
         private final String defaultText;
         private final String toggledText;
 
-        private KeyboardStateKey(String defaultText, String toggledText) {
+        private KeyboardStateKey(String defaultText, String toggledText, String id) {
             this.defaultText = defaultText;
             this.toggledText = toggledText;
             text.setText(this.defaultText);
-            setId(this.defaultText);
+            if (vkLookup && id != null) {
+                setId(id);
+            }
             getStyleClass().add("special");
         }
 
@@ -823,10 +840,8 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
             
             if (isSymbol) {
                 text.setText(this.toggledText);
-                setId(this.toggledText);
             } else {
                 text.setText(this.defaultText);
-                setId(this.defaultText);
             }
         }
     }
@@ -1008,7 +1023,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
                         Key key;
                         if (identifier) {
                             if ("$shift".equals(chars)) {
-                                key = new KeyboardStateKey("", null) {
+                                key = new KeyboardStateKey("", null, "shift") {
                                     @Override protected void release() {
                                         pressShift();
                                     }
@@ -1033,7 +1048,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
                                 key.getStyleClass().add("shift");
 
                             } else if ("$SymbolABC".equals(chars)) {
-                                key = new KeyboardStateKey("!#123", "ABC") {
+                                key = new KeyboardStateKey("!#123", "ABC", "symbol") {
                                     @Override protected void release() {
                                         pressSymbolABC();
                                     }
@@ -1048,7 +1063,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
                             } else if ("$tab".equals(chars)) {
                                 key = new KeyCodeKey("tab", "\t", KeyCode.TAB);
                             } else if ("$space".equals(chars)) {
-                                key = new CharKey(" ", " ", null);
+                                key = new CharKey(" ", " ", null, "space");
                             } else if ("$clear".equals(chars)) {
                                 key = new SuperKey("clear", "");
                             } else if ("$.org".equals(chars)) {
@@ -1062,7 +1077,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
                             } else if ("$gmail.com".equals(chars)) {
                                 key = new SuperKey("gmail.com", "gmail.com");
                             } else if ("$hide".equals(chars)) {
-                                key = new KeyboardStateKey("Hide", null) {
+                                key = new KeyboardStateKey("hide", null, "hide") {
                                     @Override protected void release() {
                                         isVKHidden = true;
                                         startSlideOut();

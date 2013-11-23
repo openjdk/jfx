@@ -68,6 +68,8 @@ extern "C" {
 ANativeWindow *getAndroidNativeWindow();
 
 void android_shutdown();
+
+const char *android_getDataDir();
     
 #ifdef	__cplusplus
 }

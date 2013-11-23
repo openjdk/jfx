@@ -2965,4 +2965,82 @@ public class TreeTableViewKeyInputTest {
         assertEquals(4, sm.getSelectedItems().size());
         assertTrue(fm.isFocused(3));
     }
+
+    @Test public void test_rt34200() {
+        final int items = 100;
+        root.getChildren().clear();
+        root.setExpanded(true);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        final TableFocusModel fm = tableView.getFocusModel();
+        final TableSelectionModel sm = tableView.getSelectionModel();
+
+        new StageLoader(tableView);
+
+        sm.clearAndSelect(99);
+        tableView.scrollTo(99);
+        assertEquals(99, getAnchor().getRow());
+        assertEquals(99, fm.getFocusedIndex());
+
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(99, getAnchor().getRow());
+        assertTrue(fm.getFocusedIndex() < 99);
+    }
+
+    @Test public void test_rt34369_cellSelection() {
+        final int items = 100;
+        root.getChildren().clear();
+        root.setExpanded(true);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        final TableFocusModel fm = tableView.getFocusModel();
+        final TableSelectionModel sm = tableView.getSelectionModel();
+
+        sm.setCellSelectionEnabled(true);
+
+        new StageLoader(tableView);
+
+        sm.clearAndSelect(99, col0);
+        tableView.scrollTo(99);
+        assertEquals(99, getAnchor().getRow());
+        assertEquals(col0, getAnchor().getTableColumn());
+        assertEquals(99, fm.getFocusedIndex());
+
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(99, getAnchor().getRow());
+        assertEquals(col0, getAnchor().getTableColumn());
+        assertTrue(fm.getFocusedIndex() < 99);
+    }
+
+    @Test public void test_rt34369_rowSelection() {
+        final int items = 100;
+        root.getChildren().clear();
+        root.setExpanded(true);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        final TableFocusModel fm = tableView.getFocusModel();
+        final TableSelectionModel sm = tableView.getSelectionModel();
+
+        sm.setCellSelectionEnabled(false);
+
+        new StageLoader(tableView);
+
+        sm.clearAndSelect(99);
+        tableView.scrollTo(99);
+        assertEquals(99, getAnchor().getRow());
+        assertEquals(99, fm.getFocusedIndex());
+
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(99, getAnchor().getRow());
+        assertTrue(fm.getFocusedIndex() < 99);
+    }
 }

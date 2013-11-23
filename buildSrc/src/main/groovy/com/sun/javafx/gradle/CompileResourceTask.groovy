@@ -24,6 +24,7 @@
  */
 
 class CompileResourceTask extends NativeCompileTask {
+    List<String> rcParams = new ArrayList<String>();
     String compiler;
 
     protected File outputFile(File sourceFile) {
@@ -33,7 +34,9 @@ class CompileResourceTask extends NativeCompileTask {
 
     protected void doCompile(File sourceFile, File outputFile){
         project.exec({
-            commandLine(compiler, "/nologo", "/Fo$outputFile", "$sourceFile");
+            commandLine(compiler);
+            if (rcParams) args(rcParams);
+            args("/Fo$outputFile", "$sourceFile");
             environment(project.WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
         });
     }

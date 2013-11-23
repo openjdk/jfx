@@ -97,6 +97,29 @@ JNIEXPORT jstring JNICALL Java_com_sun_javafx_font_MacFontFinder_getFont
     return jfamily;
 }
 
+CFIndex addCTFontDescriptor(CTFontDescriptorRef fd, JNIEnv *env, jobjectArray result, CFIndex index)
+{
+    if (fd) {
+        CFStringRef name = CTFontDescriptorCopyAttribute(fd, kCTFontDisplayNameAttribute);
+        CFStringRef family = CTFontDescriptorCopyAttribute(fd, kCTFontFamilyNameAttribute);
+        CFURLRef url = CTFontDescriptorCopyAttribute(fd, kCTFontURLAttribute);
+        CFStringRef file = url ? CFURLCopyFileSystemPath(url, kCFURLPOSIXPathStyle) : NULL;
+        if (name && family && file) {
+            jstring jname = createJavaString(env, name);
+            jstring jfamily = createJavaString(env, family);
+            jstring jfile = createJavaString(env, file);
+            (*env)->SetObjectArrayElement(env, result, index++, jname);
+            (*env)->SetObjectArrayElement(env, result, index++, jfamily);
+            (*env)->SetObjectArrayElement(env, result, index++, jfile);
+        }
+        if (name) CFRelease(name);
+        if (family) CFRelease(family);
+        if (url) CFRelease(url);
+        if (file) CFRelease(file);
+    }
+    return index;
+}
+
 /*
  * Class:     com_sun_javafx_font_MacFontFinder
  * Method:    getFontData
@@ -113,32 +136,8 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_javafx_font_MacFontFinder_getFontDat
     CFArrayRef fonts = CTFontCollectionCreateMatchingFontDescriptors(collection);
     CFRelease(collection);
 
-#if TARGET_OS_IPHONE /* iOS */
-    /* Sometimes a font name starting with dot (internal font, e.g. ".Helvetica NeueUI")
-     * is returned as a system UI font, but such font is not available in the colection
-     * of available fonts, thus this font has to be added to the array, otherwise
-     * first font from the array is returned if default font is requested from JFX
-     */
-    CTFontRef font = CTFontCreateUIFontForLanguage(kCTFontSystemFontType, 0, NULL);
-    CFStringRef fullName = CTFontCopyFullName(font);
-    CFStringRef dot = CFSTR(".");
-    CFComparisonResult res = CFStringCompareWithOptions(fullName, dot, CFRangeMake(0, 1), 0);
-    // if font name starts with dot
-    if (res == kCFCompareEqualTo) {
-        CTFontDescriptorRef fd = CTFontCopyFontDescriptor(font);
-        CFMutableArrayRef fontsMutableArray =
-            CFArrayCreateMutableCopy(kCFAllocatorDefault, CFArrayGetCount(fonts) + 1, fonts);
-        CFArrayAppendValue(fontsMutableArray, fd);
-        CFRelease(fd);
-        CFRelease(fonts);
-        fonts = fontsMutableArray;
-    }
-    CFRelease(font);
-    CFRelease(fullName);
-#endif
-
     CFIndex count = CFArrayGetCount(fonts);
-    jobjectArray result = (*env)->NewObjectArray(env, count * 3, jStringClass, NULL);
+    jobjectArray result = (*env)->NewObjectArray(env, (count + 2) * 3, jStringClass, NULL);
     if (result == NULL) {
         /* out of memory */
         CFRelease(fonts);
@@ -148,26 +147,31 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_javafx_font_MacFontFinder_getFontDat
     CFIndex i = 0, j = 0;
     while (i < count) {
         CTFontDescriptorRef fd = (CTFontDescriptorRef)CFArrayGetValueAtIndex(fonts, i++);
-        if (fd) {
-            CFStringRef name = CTFontDescriptorCopyAttribute(fd, kCTFontDisplayNameAttribute);
-            CFStringRef family = CTFontDescriptorCopyAttribute(fd, kCTFontFamilyNameAttribute);
-            CFURLRef url = CTFontDescriptorCopyAttribute(fd, kCTFontURLAttribute);
-            CFStringRef file = url ? CFURLCopyFileSystemPath(url, kCFURLPOSIXPathStyle) : NULL;
-            if (name && family && file) {
-                jstring jname = createJavaString(env, name);
-                jstring jfamily = createJavaString(env, family);
-                jstring jfile = createJavaString(env, file);
-                (*env)->SetObjectArrayElement(env, result, j++, jname);
-                (*env)->SetObjectArrayElement(env, result, j++, jfamily);
-                (*env)->SetObjectArrayElement(env, result, j++, jfile);
-            }
-            if (name) CFRelease(name);
-            if (family) CFRelease(family);
-            if (url) CFRelease(url);
-            if (file) CFRelease(file);
-        }
+        j = addCTFontDescriptor(fd, env, result, j);
     }
     CFRelease(fonts);
+
+    /* Sometimes a font name starting with dot (internal font, e.g. ".Helvetica NeueUI")
+     * is returned as a system UI font, but such font is not available in the collection
+     * of available fonts. Thus, it is safer to always add the system font manually
+     * to the list so JavaFX can find it. If the UI font is added twice it gets
+     * handled in Java.
+     */
+    CTFontRef font = CTFontCreateUIFontForLanguage(kCTFontSystemFontType, 0, NULL);
+    CTFontDescriptorRef fd = CTFontCopyFontDescriptor(font);
+    j = addCTFontDescriptor(fd, env, result, j);
+    CFRelease(fd);
+    CFRelease(font);
+
+    /* Also add the EmphasizedSystemFont as it might make the bold version
+     * for the system font available to JavaFX.
+     */
+    font = CTFontCreateUIFontForLanguage(kCTFontEmphasizedSystemFontType, 0, NULL);
+    fd = CTFontCopyFontDescriptor(font);
+    j = addCTFontDescriptor(fd, env, result, j);
+    CFRelease(fd);
+    CFRelease(font);
+
     return result;
 }
 

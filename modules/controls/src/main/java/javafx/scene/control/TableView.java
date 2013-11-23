@@ -2148,6 +2148,12 @@ public class TableView<S> extends Control {
                 return;
             }
 
+            // if I'm in cell selection mode but the column is null, I don't want
+            // to select the whole row instead...
+            if (isCellSelectionEnabled() && column == null) {
+                return;
+            }
+
             // RT-32411 We used to call quietClearSelection() here, but this
             // resulted in the selectedItems and selectedIndices lists never
             // reporting that they were empty.
@@ -2161,7 +2167,7 @@ public class TableView<S> extends Control {
             // then clear the current selection
             clearSelection();
 
-            // and select the new row
+            // and select the new cell
             select(row, column);
 
             makeAtomic = false;
@@ -2358,7 +2364,10 @@ public class TableView<S> extends Control {
             final int _minColumnIndex = Math.min(minColumnIndex, maxColumnIndex);
             final int _maxColumnIndex = Math.max(minColumnIndex, maxColumnIndex);
 
-            for (int _row = minRow; _row <= maxRow; _row++) {
+            final int _minRow = Math.min(minRow, maxRow);
+            final int _maxRow = Math.max(minRow, maxRow);
+
+            for (int _row = _minRow; _row <= _maxRow; _row++) {
                 for (int _col = _minColumnIndex; _col <= _maxColumnIndex; _col++) {
                     // begin copy/paste of select(int, column) method (with some
                     // slight modifications)
@@ -2378,7 +2387,8 @@ public class TableView<S> extends Control {
             }
             makeAtomic = false;
 
-            // fire off events
+            // fire off events.
+            // Note that focus and selection always goes to maxRow, not _maxRow.
             updateSelectedIndex(maxRow);
             focus(maxRow, (TableColumn<S,?>)maxColumn);
 
@@ -2401,8 +2411,8 @@ public class TableView<S> extends Control {
                 if ((! csMode && pos.getRow() == row) || (csMode && pos.equals(tp))) {
                     selectedCellsMap.remove(pos);
 
-                    // give focus to this cell index
-                    focus(row);
+//                    // give focus to this cell index
+//                    focus(row);
 
                     return;
                 }

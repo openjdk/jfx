@@ -87,8 +87,8 @@ public class TitledPaneBehavior extends BehaviorBase<TitledPane> {
                 Node focusNode = titledPane.getScene().getFocusOwner();
                     
                 if (focusNode != null && isChildFocused(focusNode, children)) {
-                    // TODO: Can this happen? Explain how we got this
-                    // action if it was a child that had focus.
+                    // This happens if the child doesn't have the key binding
+                    // for traversal and the event bubbled up to this class.
                     focusNode.impl_traverse("TraverseNext".equals(name) ? Direction.NEXT : Direction.PREVIOUS);
                 } else if ("TraverseNext".equals(name)) {
                     focusFirstChild(children);

@@ -49,6 +49,8 @@ import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.security.CodeSigner;
 import java.security.InvalidKeyException;
 import java.security.KeyStore;
@@ -218,8 +220,8 @@ public class PackagerLib {
                 applicationJar.getAbsoluteFile().equals(jarToUpdate.getAbsoluteFile())) {
             try {
                 File newInputJar = File.createTempFile("tempcopy", ".jar");
-                newInputJar.delete();
-                jarToUpdate.renameTo(newInputJar);
+                Files.move(jarToUpdate.toPath(), newInputJar.toPath(),
+                           StandardCopyOption.REPLACE_EXISTING);
                 jarToUpdate = newInputJar;
             } catch (IOException ioe) {
                 throw new PackagerException(

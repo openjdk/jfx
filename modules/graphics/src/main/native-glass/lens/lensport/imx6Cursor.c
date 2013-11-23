@@ -43,15 +43,7 @@
 #include "lensPortInternal.h"
 #include "lensPortLogger.h"
 
-
-#define RGB565TOCOLORKEY(rgb)                              \
-      ( ((rgb & 0xf800)<<8)  |  ((rgb & 0xe000)<<3)  |     \
-        ((rgb & 0x07e0)<<5)  |  ((rgb & 0x0600)>>1)  |     \
-        ((rgb & 0x001f)<<3)  |  ((rgb & 0x001c)>>2)  )  
-
-
 #define LENSFB_IMX6_CURSOR_DEVICE "/dev/fb1"
-#define LENSFB_IMX6_CURSOR_COLOR_KEY 0xABAB
 #define LENSFB_IMX6_CURSOR_SIZE 16
 
 typedef struct {
@@ -91,7 +83,7 @@ static void fbImx6BlankCursor(){
      int bytesToWrite;
 
      // Set buffer to be transparent
-     memset((void*)buffer, use32bit ? 0 : LENSFB_IMX6_CURSOR_COLOR_KEY, sizeof(buffer));
+     memset((void*)buffer, use32bit ? 0 : LENSFB_16_CURSOR_COLOR_KEY, sizeof(buffer));
 
      if (lseek(cursor.fd, 0, SEEK_SET) == -1) {
          GLASS_LOG_SEVERE("Cannot rewrite cursor image");
@@ -143,7 +135,7 @@ static void fbImx6WriteCursor(int fd, jbyte *cursorImage, int bpp) {
     }
 
     // Set buffer to be transparent
-    memset((void*)buffer, use32bit ? 0 : LENSFB_IMX6_CURSOR_COLOR_KEY, sizeof(buffer));
+    memset((void*)buffer, use32bit ? 0 : LENSFB_16_CURSOR_COLOR_KEY, sizeof(buffer));
 
     // fill the y-shift rectangular area
     for (i = 0; i < yShift; i++) {
@@ -214,7 +206,7 @@ static int fbImx6ChangeCursorSize(int width, int height) {
 
 
 
-static void fbImx6CursorInitialize(int screenWidth, int screenHeight) {
+static void fbImx6CursorInitialize(int screenWidth, int screenHeight, int screenDepth) {
 
     struct fb_var_screeninfo screenInfo;
     int rc;
@@ -313,7 +305,7 @@ static void fbImx6CursorInitialize(int screenWidth, int screenHeight) {
 
     } else {
         struct mxcfb_color_key color_key;
-        color_key.color_key = RGB565TOCOLORKEY(LENSFB_IMX6_CURSOR_COLOR_KEY);
+        color_key.color_key = RGB565TOCOLORKEY(LENSFB_16_CURSOR_COLOR_KEY);
         color_key.enable = 1;
         if ( ioctl(cursor.fd, MXCFB_SET_CLR_KEY, &color_key) < 0) {
             GLASS_LOG_SEVERE("Error %s in setting 16 bits color key", strerror(errno));
@@ -361,7 +353,7 @@ static jlong fbImx6CreateNativeCursor(JNIEnv *env, jint x, jint y,  jbyte *srcAr
                          | ((pixel >> 5) & 0x7e0)
                          | ((pixel >> 3) & 0x1f);
             } else {
-                *dst++ = LENSFB_IMX6_CURSOR_COLOR_KEY;
+                *dst++ = LENSFB_16_CURSOR_COLOR_KEY;
             }
         }
     }

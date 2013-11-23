@@ -142,7 +142,7 @@ void init_ids(JNIEnv *env) {
     jFXActivity = (*env)->CallStaticObjectMethod(env, jFXActivityClass, jFXActivity_getInstance);
     CHECK_EXCEPTION(env);
 
-    jFXActivity_getDataDir = (*env)->GetMethodID(env, jFXActivityClass,
+    jFXActivity_getDataDir = (*env)->GetStaticMethodID(env, jFXActivityClass,
             "getDataDir", "()Ljava/lang/String;");
     CHECK_EXCEPTION(env);
 }
@@ -152,20 +152,16 @@ void init_ids(JNIEnv *env) {
 
 void init_functions(JNIEnv *env) {
     const char *libglass_name = "libglass_lens_eglfb.so";
-    jstring jdatadir = (*env)->CallObjectMethod(env, jFXActivity, jFXActivity_getDataDir);
-    
-    const char *cpath = (*env)->GetStringUTFChars(env, jdatadir, 0);
-    int cpath_len = (*env)->GetStringUTFLength(env, jdatadir);
+    const char *path = ANDROID_getDataDir();
+    char *libpath = (char *) calloc(strlen(path) + strlen(libglass_name) + 
+                                     2*strlen(PATH_SEP) + strlen(LIB_DIR) + 1, 1);
+    strcpy(libpath, path);
+    strcat(libpath, PATH_SEP);
+    strcat(libpath, LIB_DIR);
+    strcat(libpath, PATH_SEP);
+    strcat(libpath, libglass_name);
 
-    char *fullpath = (char *) calloc(cpath_len + strlen(libglass_name) + 
-                                     2 * strlen(PATH_SEP) + strlen(LIB_DIR) + 1, 1);
-    strcpy(fullpath, cpath);
-    strcat(fullpath, PATH_SEP);
-    strcat(fullpath, LIB_DIR);
-    strcat(fullpath, PATH_SEP);
-    strcat(fullpath, libglass_name);
-
-    void *libglass = dlopen(fullpath, RTLD_LAZY | RTLD_GLOBAL);
+    void *libglass = dlopen(libpath, RTLD_LAZY | RTLD_GLOBAL);
     if (!libglass) {
         THROW_RUNTIME_EXCEPTION(env, "dlopen failed with error: %s", dlerror());
         return;
@@ -179,7 +175,8 @@ void init_functions(JNIEnv *env) {
     _glass_inputEvents_getJavaKeycodeFromPlatformKeyCode = GET_SYMBOL(env, libglass,
             "glass_inputEvents_getJavaKeycodeFromPlatformKeyCode");
 
-    free(fullpath);
+    free(path);
+    free(libpath);
 }
 
 /*
@@ -267,6 +264,20 @@ int *getIntArray(JNIEnv *env, int *len, jintArray arr) {
 
 ANativeWindow *ANDROID_getNativeWindow() {
     return window;
+}
+
+
+const char *ANDROID_getDataDir() {
+    JNIEnv *env;
+    (*dalvikVM)->AttachCurrentThread(dalvikVM, (JNIEnv **) &env, NULL);
+    jstring jdatadir = (*env)->CallStaticObjectMethod(env, jFXActivityClass, jFXActivity_getDataDir);    
+    const char *path = (*env)->GetStringUTFChars(env, jdatadir, 0);
+    const char *datadir = (char *)calloc(strlen(path), 1);
+    strcpy(datadir, path);
+    (*env)->ReleaseStringUTFChars(env, jdatadir, path);
+//   (*dalvikVM)->DetachCurrentThread(dalvikVM);
+    LOGV("GLASS", "Use data dir: %s", datadir);
+    return datadir;
 }
 
 void ANDROID_showIME() {

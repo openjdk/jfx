@@ -30,6 +30,8 @@
 #include <linux/fb.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
+#include <stdint.h>
+#include <string.h>
 
 #include "lensPort.h"
 #include "lensPortInternal.h"
@@ -48,6 +50,7 @@ typedef struct {
     int height;
     int screenWidth;
     int screenHeight;
+    int screenDepth;
     jlong currentCursor;
     jboolean isVisible;
     // When the cursor is at the extreme right or bottom of the screen, it
@@ -66,7 +69,7 @@ typedef struct {
 
 
 FBCursor cursor = { .fd = -1, .x = 0, .y = 0,
-                    .width = 0, .height = 0,
+                    .width = 0, .height = 0, .screenDepth = 0,
                     .currentCursor = 0, .isVisible = 0,
                     .xShift = 0, .yShift = 0 };
 
@@ -137,7 +140,12 @@ void fbOmapCreateCursor(jbyte *cursorImage, int width, int height, int bpp) {
     }
 
     color_key.key_type = OMAPFB_COLOR_KEY_VID_SRC;
-    color_key.trans_key = LENSFB_CURSOR_COLOR_KEY;
+    if (cursor.screenDepth == 32) {
+        color_key.trans_key = LENSFB_32_CURSOR_COLOR_KEY;
+    } else { //16 bit cursor
+        color_key.trans_key = LENSFB_16_CURSOR_COLOR_KEY;
+    }
+
     if (ioctl(cursor.fd, OMAPFB_SET_COLOR_KEY, &color_key)) {
         GLASS_LOG_SEVERE("OMAPFB_SET_COLOR_KEY");
         return;
@@ -162,18 +170,16 @@ static void fbOmapWriteCursor(int fd, jbyte *cursorImage, int bpp) {
         }
         return;
     }
+
+    // Set buffer to be transparent
+    memset((void*)buffer, (cursor.screenDepth == 32) ? LENSFB_32_CURSOR_COLOR_KEY : LENSFB_16_CURSOR_COLOR_KEY,
+            sizeof(buffer));
+
     for (i = 0; i < yShift; i++) {
         for (j = 0; j < (unsigned) cursor.width * bpp; j += sizeof(buffer)) {
             size_t n = cursor.width * bpp - j;
             if (n > sizeof(buffer)) {
                 n = sizeof(buffer);
-            }
-            for (k = 0; k < n; k += bpp) {
-                // 171 == 0xAB of the color key.
-                buffer[k] = 171;
-                buffer[k + 1] = 171;
-                buffer[k + 2] = 171;
-                buffer[k + 3] = 171;
             }
             GLASS_LOG_FINEST("write(fd, .. %u)", n);
             if (write(fd, buffer, n) < (int) n) {
@@ -187,13 +193,6 @@ static void fbOmapWriteCursor(int fd, jbyte *cursorImage, int bpp) {
             size_t n = xShift * bpp;
             if (n > sizeof(buffer)) {
                 n = sizeof(buffer);
-            }
-            for (k = 0; k < n; k += bpp) {
-                // 171 == 0xAB of the color key.
-                buffer[k] = 171;
-                buffer[k + 1] = 171;
-                buffer[k + 2] = 171;
-                buffer[k + 3] = 171;
             }
             GLASS_LOG_FINEST("write(fd, .. %u)", n);
             if (write(fd, buffer, n) < (int) n) {
@@ -212,37 +211,48 @@ static void fbOmapWriteCursor(int fd, jbyte *cursorImage, int bpp) {
 
 jlong fbOmapCreateNativeCursor(JNIEnv *env, jint x, jint y,  jbyte *srcArray, jint width, jint height) {
     FBCursorImage *cursorImage;
-    int imageSize = width * height * 4;
+    int imageSize = width * height * cursor.screenDepth;
     cursorImage = (FBCursorImage *)malloc(sizeof(FBCursorImage) + imageSize);
 
     cursorImage->width = width;
     cursorImage->height = height;
-    cursorImage->bpp = 4;
+    cursorImage->bpp = cursor.screenDepth/8;
     cursorImage->buffer = (jbyte *)(cursorImage + 1);
 
-    {
-        int i;
-        for (i = 0; (i + 3) < imageSize; i += 4) {
-            if (srcArray[i + 3] != 0) {
-                cursorImage->buffer[i] = srcArray[i];
-                cursorImage->buffer[i + 1] = srcArray[i + 1];
-                cursorImage->buffer[i + 2] = srcArray[i + 2];
-                cursorImage->buffer[i + 3] = srcArray[i + 3];
+    int i;
+    int pixel;
+    if (cursor.screenDepth == 16) {
+        uint16_t* dst = (uint16_t*)(cursorImage->buffer);
+        uint32_t* src = (uint32_t*)srcArray;
+        for (i = 0; i < imageSize; i += 2) {
+            pixel = *src++;
+            if ((pixel & 0xff000000) != 0) {
+             *dst++ = ((pixel >> 8) & 0xf800)
+                       | ((pixel >> 5) & 0x7e0)
+                      | ((pixel >> 3) & 0x1f);
+             } else {
+                *dst++ = LENSFB_16_CURSOR_COLOR_KEY;
+             }
+        }
+    } else { // 32 bit screen depth
+        uint32_t* dst = (uint32_t*)(cursorImage->buffer);
+        uint32_t* src = (uint32_t*)srcArray;
+        for (i = 0; (i + 3) < imageSize; i += cursorImage->bpp) {
+            pixel = *src++;
+            if ((pixel & 0xff000000) != 0) {
+                *dst++ = pixel;
             } else {
-                // 171 == 0xAB of the color key.
-                cursorImage->buffer[i] = 171;
-                cursorImage->buffer[i + 1] = 171;
-                cursorImage->buffer[i + 2] = 171;
-                cursorImage->buffer[i + 3] = 171;
+                *dst++ = LENSFB_32_CURSOR_COLOR_KEY;
             }
         }
     }
     return ptr_to_jlong(cursorImage);
 }
 
-void fbOmapCursorInitialize(int screenWidth, int screenHeight) {
+void fbOmapCursorInitialize(int screenWidth, int screenHeight, int screenDepth) {
     cursor.screenWidth = screenWidth;
     cursor.screenHeight = screenHeight;
+    cursor.screenDepth = screenDepth;
 }
 
 void fbOmapAdjustShift() {

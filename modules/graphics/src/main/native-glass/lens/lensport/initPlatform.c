@@ -67,7 +67,7 @@ jboolean lens_platform_initialize(LensNativePort* lensPort) {
 
     // report the version we actually are
     lensPort->version = NATIVE_LENS_PORT_VERSION;
-    lensPort->setLogger = &setPlatformLogging;
+    lensPort->setLogger = &setPlatformLogging;    
 
 #ifdef USE_DISPMAN
     if (select_dispman_cursor(lensPort)) {
@@ -90,6 +90,10 @@ jboolean lens_platform_initialize(LensNativePort* lensPort) {
     }
 #endif //OMAP3
 
+#ifdef ANDROID_NDK
+    return JNI_TRUE;
+#endif //Android
+    
     // Fatal Error
     fprintf(stderr,"Fatal error loading native porting layer in Lens\n");
     exit(-1);

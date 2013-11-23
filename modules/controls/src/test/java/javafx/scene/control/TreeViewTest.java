@@ -1219,4 +1219,73 @@ public class TreeViewTest {
         root.setExpanded(true);
         assertEquals(0, rt_33559_count);
     }
+
+    @Test public void test_rt34103() {
+        treeView.setRoot(new TreeItem("Root"));
+        treeView.getRoot().setExpanded(true);
+
+        for (int i = 0; i < 4; i++) {
+            TreeItem parent = new TreeItem("item - " + i);
+            treeView.getRoot().getChildren().add(parent);
+
+            for (int j = 0; j < 4; j++) {
+                TreeItem child = new TreeItem("item - " + i + " " + j);
+                parent.getChildren().add(child);
+            }
+        }
+
+        treeView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        TreeItem item0 = treeView.getTreeItem(1);
+        assertEquals("item - 0", item0.getValue());
+        item0.setExpanded(true);
+
+        treeView.getSelectionModel().selectIndices(1,2,3);
+        assertEquals(3, treeView.getSelectionModel().getSelectedIndices().size());
+
+        item0.setExpanded(false);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(1, treeView.getSelectionModel().getSelectedIndices().size());
+    }
+
+    @Test public void test_rt26718() {
+        treeView.setRoot(new TreeItem("Root"));
+        treeView.getRoot().setExpanded(true);
+
+        for (int i = 0; i < 4; i++) {
+            TreeItem parent = new TreeItem("item - " + i);
+            treeView.getRoot().getChildren().add(parent);
+
+            for (int j = 0; j < 4; j++) {
+                TreeItem child = new TreeItem("item - " + i + " " + j);
+                parent.getChildren().add(child);
+            }
+        }
+
+        treeView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        final TreeItem item0 = treeView.getTreeItem(1);
+        final TreeItem item1 = treeView.getTreeItem(2);
+
+        assertEquals("item - 0", item0.getValue());
+        assertEquals("item - 1", item1.getValue());
+
+        item0.setExpanded(true);
+        item1.setExpanded(true);
+        Toolkit.getToolkit().firePulse();
+
+        treeView.getSelectionModel().selectRange(0, 8);
+        assertEquals(8, treeView.getSelectionModel().getSelectedIndices().size());
+        assertEquals(7, treeView.getSelectionModel().getSelectedIndex());
+        assertEquals(7, treeView.getFocusModel().getFocusedIndex());
+
+        // collapse item0 - but because the selected and focused indices are
+        // not children of item 0, they should remain where they are (but of
+        // course be shifted up). The bug was that focus was moving up to item0,
+        // which makes no sense
+        item0.setExpanded(false);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(3, treeView.getSelectionModel().getSelectedIndex());
+        assertEquals(3, treeView.getFocusModel().getFocusedIndex());
+    }
 }

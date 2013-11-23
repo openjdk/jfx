@@ -568,7 +568,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
             sm.select(leadSelectedIndex);
         } else {
             sm.clearSelection();
-            sm.selectRange(leadSelectedIndex, leadIndex + 1);
+            sm.selectRange(leadIndex, leadSelectedIndex - 1);
         }
         selectionChanging = false;
     }
@@ -801,7 +801,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
 
         int leadIndex = fm.getFocusedIndex();
         int leadSelectedIndex = onScrollPageUp.call(getAnchor());
-        sm.selectRange(leadSelectedIndex, leadIndex + 1);
+        sm.selectRange(leadIndex, leadSelectedIndex - 1);
     }
     
     private void discontinuousSelectPageDown() {

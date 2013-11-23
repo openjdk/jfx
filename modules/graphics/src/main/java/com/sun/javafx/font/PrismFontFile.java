@@ -427,8 +427,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
 
             filesize = (int)filereader.getLength();
             int headerOffset = 0;
-            switch (sfntTag) {
-            case ttcfTag:
+            if (sfntTag == ttcfTag) {
                 buffer.getInt(); // skip TTC version ID
                 directoryCount = buffer.getInt();
                 if (fIndex >= directoryCount) {
@@ -437,8 +436,11 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
                 fontIndex = fIndex;
                 buffer = filereader.readBlock(TTCHEADERSIZE+4*fIndex, 4);
                 headerOffset = buffer.getInt();
-                break;
+                buffer = filereader.readBlock(headerOffset, 4);
+                sfntTag = buffer.getInt();
+            }
 
+            switch (sfntTag) {
             case v1ttTag:
             case trueTag:
                 break;

@@ -78,9 +78,7 @@ public abstract class NGShape3D extends NGNode {
 
         if (meshView == null && mesh != null) {
             meshView = rf.createMeshView(mesh.createMesh(rf));
-            setMaterial(material);
-            setDrawMode(drawMode);
-            setCullFace(cullFace);
+            materialDirty = drawModeDirty = true;
         }
 
         if (meshView == null || !mesh.validate()) {

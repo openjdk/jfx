@@ -2158,19 +2158,45 @@ public class TreeTableView<S> extends Control {
                     shift = treeItem.getExpandedDescendentCount(false) - 1;
                     startRow++;
                 } else if (e.wasCollapsed()) {
-                    // remove selection from any child treeItem
+                    // remove selection from any child treeItem, and also determine
+                    // if any child item was selected (in which case the parent
+                    // takes the selection on collapse)
                     treeItem.getExpandedDescendentCount(false);
-                    int count = treeItem.previousExpandedDescendentCount;
+                    final int count = treeItem.previousExpandedDescendentCount;
+
+                    final int selectedIndex = getSelectedIndex();
+                    final boolean wasPrimarySelectionInChild =
+                            selectedIndex >= (startRow + 1) &&
+                            selectedIndex < (startRow + count);
+
                     boolean wasAnyChildSelected = false;
-                    for (int i = startRow; i < startRow + count; i++) {
-                        if (isSelected(i)) {
-                            wasAnyChildSelected = true;
-                            break;
+                    final boolean isCellSelectionMode = isCellSelectionEnabled();
+                    ObservableList<TreeTableColumn<S,?>> columns = getTreeTableView().getVisibleLeafColumns();
+                    for (int i = startRow + 1; i < startRow + count; i++) {
+                        // we have to handle cell selection mode differently than
+                        // row selection mode. Refer to RT-34103 for the bug report
+                        // that drove this change, but in short the issue was that
+                        // when collapsing a branch that had selection, we were
+                        // always calling isSelected(row), but that always returns
+                        // false in cell selection mode.
+                        if (isCellSelectionMode) {
+                            for (int column = 0; column < columns.size(); column++) {
+                                final TreeTableColumn<S,?> col = columns.get(column);
+                                if (isSelected(i, col)) {
+                                    wasAnyChildSelected = true;
+                                }
+                                clearSelection(i, col);
+                            }
+                        } else {
+                            if (isSelected(i)) {
+                                wasAnyChildSelected = true;
+                            }
+                            clearSelection(i);
                         }
                     }
 
                     // put selection onto the newly-collapsed tree item
-                    if (wasAnyChildSelected) {
+                    if (wasPrimarySelectionInChild && wasAnyChildSelected) {
                         select(startRow);
                     }
 
@@ -2314,6 +2340,12 @@ public class TreeTableView<S> extends Control {
                 return;
             }
 
+            // if I'm in cell selection mode but the column is null, I don't want
+            // to select the whole row instead...
+            if (isCellSelectionEnabled() && column == null) {
+                return;
+            }
+
             // RT-32411: We used to call quietClearSelection() here, but this
             // resulted in the selectedItems and selectedIndices lists never
             // reporting that they were empty.
@@ -2327,8 +2359,9 @@ public class TreeTableView<S> extends Control {
             // then clear the current selection
             clearSelection();
 
-            // and select the new row
+            // and select the new cell
             select(row, column);
+
             makeAtomic = false;
 
             // fire off a single add/remove/replace notification (rather than
@@ -2527,7 +2560,10 @@ public class TreeTableView<S> extends Control {
             final int _minColumnIndex = Math.min(minColumnIndex, maxColumnIndex);
             final int _maxColumnIndex = Math.max(minColumnIndex, maxColumnIndex);
 
-            for (int _row = minRow; _row <= maxRow; _row++) {
+            final int _minRow = Math.min(minRow, maxRow);
+            final int _maxRow = Math.max(minRow, maxRow);
+
+            for (int _row = _minRow; _row <= _maxRow; _row++) {
                 for (int _col = _minColumnIndex; _col <= _maxColumnIndex; _col++) {
                     // begin copy/paste of select(int, column) method (with some
                     // slight modifications)
@@ -2548,6 +2584,7 @@ public class TreeTableView<S> extends Control {
             makeAtomic = false;
 
             // fire off events
+            // Note that focus and selection always goes to maxRow, not _maxRow.
             updateSelectedIndex(maxRow);
             focus(maxRow, (TreeTableColumn<S,?>)maxColumn);
 
@@ -2570,7 +2607,7 @@ public class TreeTableView<S> extends Control {
                     selectedCellsMap.remove(pos);
 
                     // give focus to this cell index
-                    focus(row);
+//                    focus(row);
 
                     return;
                 }
@@ -2596,20 +2633,12 @@ public class TreeTableView<S> extends Control {
 
         @Override public boolean isSelected(int row, TableColumnBase<TreeItem<S>,?> column) {
             // When in cell selection mode, we currently do NOT support selecting
-            // entire rows, so a isSelected(row, null) 
-            // should always return false.
-            if (isCellSelectionEnabled() && (column == null)) return false;
-            
-            for (TreeTablePosition<S,?> tp : getSelectedCells()) {
-                boolean columnMatch = ! isCellSelectionEnabled() || 
-                        (column == null && tp.getTableColumn() == null) || 
-                        (column != null && column.equals(tp.getTableColumn()));
-                
-                if (tp.getRow() == row && columnMatch) {
-                    return true;
-                }
-            }
-            return false;
+            // entire rows, so isSelected(row, null) should always return false.
+            final boolean isCellSelectionEnabled = isCellSelectionEnabled();
+            if (isCellSelectionEnabled && column == null) return false;
+
+            int columnIndex = treeTableView.getVisibleLeafIndex((TreeTableColumn<S,?>) column);
+            return selectedCellsMap.isSelected(row, columnIndex);
         }
 
         @Override public boolean isEmpty() {

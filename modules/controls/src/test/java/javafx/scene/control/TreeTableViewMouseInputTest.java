@@ -550,4 +550,46 @@ public class TreeTableViewMouseInputTest {
         VirtualFlowTestUtils.clickOnRow(tableView, 1);
         assertEquals(1, rt_30626_count);
     }
+
+    @Test public void test_rt_33897_rowSelection() {
+        final int items = 8;
+        root.getChildren().clear();
+        root.setExpanded(true);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+        tableView.setRoot(root);
+
+        final TreeTableView.TreeTableViewSelectionModel<String> sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(false);
+
+        VirtualFlowTestUtils.clickOnRow(tableView, 1);
+        assertEquals(1, sm.getSelectedCells().size());
+
+        TreeTablePosition pos = sm.getSelectedCells().get(0);
+        assertEquals(1, pos.getRow());
+        assertNull(pos.getTableColumn());
+    }
+
+    @Test public void test_rt_33897_cellSelection() {
+        final int items = 8;
+        root.getChildren().clear();
+        root.setExpanded(true);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+        tableView.setRoot(root);
+
+        final TreeTableView.TreeTableViewSelectionModel<String> sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+
+        VirtualFlowTestUtils.clickOnRow(tableView, 1);
+        assertEquals(1, sm.getSelectedCells().size());
+
+        TreeTablePosition pos = sm.getSelectedCells().get(0);
+        assertEquals(1, pos.getRow());
+        assertNotNull(pos.getTableColumn());
+    }
 }

@@ -372,6 +372,7 @@ android.prism.allowhidpi=false
 android.prism.maxTextureSize=2048
 android.prism.dirtyopts=true
 android.prism.vsync=false
+android.log.lens=FINE
 android.use.egl=true
 android.com.sun.javafx.isEmbedded=true
 """
@@ -467,12 +468,26 @@ ANDROID.dvkwebview.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
 ANDROID.dvkwebview.linkFlags = [linkFlags, "-ldl", "-llog"].flatten()
 
 ANDROID.glass = [:]
-ANDROID.glass.variants = ["eglfb"]
+ANDROID.glass.variants = ["eglfb", "lensport"]
 ANDROID.glass.javahInclude = [
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*",
     "com/sun/glass/ui/android/*",
     "com/sun/glass/ui/lens/*"]
+
+ANDROID.glass.lensport = [:]
+ANDROID.glass.lensport.nativeSource = [
+    file("modules/graphics/src/main/native-glass/lens/lensport"),
+    file("modules/graphics/src/main/native-glass/lens/lensport/initPlatform.c"),
+    file("modules/graphics/src/main/native-glass/lens/lensport/wrapped_functions.c")    
+]
+ANDROID.glass.lensport.compiler = compiler
+ANDROID.glass.lensport.linker = linker
+ANDROID.glass.lensport.lib = "lens_porting"
+ANDROID.glass.lensport.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
+    ccDebugFlags, ccDefaultIncludeFlags, "-DISEGLFB", "-DLENSPORT",
+    "-I", file("modules/graphics/src/main/native-glass/lens")].flatten()
+ANDROID.glass.lensport.linkFlags = [linkFlags, "-ldl", "-llog"].flatten()
 
 ANDROID.glass.eglfb = [:]
 ANDROID.glass.eglfb.nativeSource = [
@@ -480,8 +495,8 @@ ANDROID.glass.eglfb.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/wm"),
     file("modules/graphics/src/main/native-glass/lens/cursor/nullCursor"),
     file("modules/graphics/src/main/native-glass/lens/input/android"),
-    file("modules/graphics/src/main/native-glass/lens/wm/screen/androidScreen.c"),
-    file("modules/graphics/src/main/native-glass/lens/lensport")]
+    file("modules/graphics/src/main/native-glass/lens/wm/screen/androidScreen.c")
+]
 ANDROID.glass.eglfb.compiler = compiler
 ANDROID.glass.eglfb.linker = linker
 ANDROID.glass.eglfb.lib = "glass_lens_eglfb"

@@ -78,7 +78,7 @@ class ES2PhongMaterial extends BaseGraphicsResource implements PhongMaterial {
     private Texture setupTexture(TextureMap map) {
         Image image = map.getImage();
         Texture texture = (image == null) ? null
-                : context.getResourceFactory().getCachedTexture(image, Texture.WrapMode.CLAMP_TO_EDGE);
+                : context.getResourceFactory().getCachedTexture(image, Texture.WrapMode.REPEAT);
         switch (map.getType()) {
             case SPECULAR:
                 isSpecularAlpha = texture == null ? false : !texture.getPixelFormat().isOpaque();

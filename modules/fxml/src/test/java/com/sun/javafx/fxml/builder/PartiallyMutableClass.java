@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,39 +23,42 @@
  * questions.
  */
 
-#import <Foundation/Foundation.h>
-#import <MediaPlayer/MediaPlayer.h>
+package com.sun.javafx.fxml.builder;
 
-#include "jni.h"
+import javafx.beans.NamedArg;
 
+public class PartiallyMutableClass {
+    public int a;
+    public int b;
+    public int intValue;
+    public double doubleValue;
+    public String stringValue;
 
-#define CLASS_MEDIA_ITEM    "javafx/ext/ios/ipod/MediaItem"
+    public PartiallyMutableClass(@NamedArg("a")int a, @NamedArg("b") int b) {
+        this.a = a;
+        this.b = b;
+    }
 
+    public PartiallyMutableClass(@NamedArg("a") String a, @NamedArg("b") String b) {
+        this.a = Integer.valueOf(a);
+        this.b = Integer.valueOf(b);
+    }
 
-@interface IPodAccess : NSObject
+    public PartiallyMutableClass(@NamedArg("a") int a, @NamedArg("b") int b, @NamedArg("stringValue") String stringValue) {
+        this.a = a;
+        this.b = b;
+        this.stringValue = stringValue;
+    }
 
+    public void setIntValue(int i) {
+        this.intValue = i;
+    }
 
-@property (retain) MPMediaQuery *query;
+    public void setDoubleValue(double d) {
+        this.doubleValue = d;
+    }
 
-
-- (void) createQuery;
-
-- (void) addNumberPredicateForKey: (int) predicateKey
-                            value: (int) predicateValue;
-
-- (void) addStringPredicateForKey: (int) predicateKey
-                            value: (NSString *) predicateValue;
-
-- (void) fillItemListOfMediaQuery: (jobject) obj
-                           jniEnv: (JNIEnv *) env;
-
-- (void) fillCollectionsOfMediaQuery: (jobject) obj
-                              jniEnv: (JNIEnv *) env;
-
-- (void) setGroupingType: (int) type;
-
-
-- (void) disposeQuery;
-
-
-@end
+    public void setStringValue(String s) {
+        this.stringValue = s;
+    }
+}

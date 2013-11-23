@@ -35,10 +35,13 @@
 #ifndef __USE_GNU // required for dladdr() & Dl_info
 #define __USE_GNU
 #endif
+#endif
 #include <dlfcn.h>
 #include <signal.h>
-#endif
- 
+
+#ifdef ANDROID_SDK
+  #include "androidInput.h"
+#endif 
 //********************************************************
 
 // JNI handles ******************************************
@@ -197,10 +200,34 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensApplication__1initIDs
 }
 
 static void load_porting_library() {
-#if ! ((defined(ANDROID_NDK) || defined(EGL_X11_FB_CONTAINER)))
+#if ! defined(EGL_X11_FB_CONTAINER)
 
     jboolean (*lens_platform_init)(LensNativePort*) = 0;
+    const char* liblens_porting = "liblens_porting.so";
 
+#ifdef ANDROID_NDK    
+    //Get the data path. All .so are installed in lib.
+    const char *path = android_getDataDir();
+    char *libpath = (char *) calloc(strlen(path) + strlen(liblens_porting) + 
+                                    + strlen("/lib/") + 1, 1);
+    strcpy(libpath, path);
+    strcat(libpath, "/lib/");
+    strcat(libpath, liblens_porting);
+    
+    void *dlhand = dlopen(libpath, RTLD_LAZY | RTLD_GLOBAL);
+    if (!dlhand) {
+        LOGE("GLASS", "dlopen failed. %s", dlerror());
+        exit(-1);
+    } else {
+        lens_platform_init = dlsym(dlhand, "lens_platform_initialize");
+        if (!lens_platform_init) {
+            LOGE("GLASS", "lens_platform_initialize missing. %s", dlerror());
+            exit(-1);
+        }    
+    }
+    free(path);
+    free(libpath);
+#else    
     Dl_info dlinfo;
     if (dladdr(&lens_wm_initialize, &dlinfo)) {
 
@@ -209,7 +236,7 @@ static void load_porting_library() {
             char *b = (char *) alloca(strlen(dlinfo.dli_fname)+20);
             rslash = rslash + 1 - (size_t)dlinfo.dli_fname;
             strncpy(b, dlinfo.dli_fname,rslash);
-            strcpy(b + rslash, "liblens_porting.so");
+            strcpy(b + rslash, liblens_porting);
 
             void *dlhand = dlopen(b,RTLD_NOW); 
             if (dlhand) {
@@ -228,7 +255,7 @@ static void load_porting_library() {
         fprintf(stderr,"Did not get DLINFO\n");
         exit(-1);
     }
-
+#endif
     lensPort.version = NATIVE_LENS_PORT_VERSION;
     (*lens_platform_init)(&lensPort);
 

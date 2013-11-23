@@ -64,7 +64,7 @@ bool WindowContextBase::im_filter_keypress(GdkEventKey* event) {
     if (XFilterEvent((XEvent*) & xevent, GDK_WINDOW_XID(gdk_window))) {
         return TRUE;
     }
-    
+
     if (event->type == GDK_KEY_RELEASE) {
         process_key(event);
         return TRUE;
@@ -72,7 +72,7 @@ bool WindowContextBase::im_filter_keypress(GdkEventKey* event) {
 
     int len = Xutf8LookupString(xim.ic, &xevent, buffer, buf_len - 1, &keysym, &status);
     if (status == XBufferOverflow) {
-        buf_len = len;
+        buf_len = len + 1;
         buffer = (char*)realloc(buffer, buf_len * sizeof (char));
         len = Xutf8LookupString(xim.ic, &xevent, buffer, buf_len - 1,
                 &keysym, &status);

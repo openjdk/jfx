@@ -98,7 +98,7 @@ jboolean lens_wm_initialize(JNIEnv *env) {
             lens_wm_clearScreen();
 
             GLASS_LOG_FINE("Cursor init");
-            fbCursorInitialize(mainScreen->width, mainScreen->height);
+            fbCursorInitialize(mainScreen->width, mainScreen->height, mainScreen->depth);
 
             lens_wm_initRFB(env);
             GLASS_LOG_FINE("Init input devices");

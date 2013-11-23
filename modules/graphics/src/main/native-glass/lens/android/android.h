@@ -98,6 +98,8 @@ void ANDROID_showIME();
 
 void ANDROID_hideIME();
 
+const char *ANDROID_getDataDir();
+
 typedef struct {
     int32_t androidKC;
     int32_t linuxKC;

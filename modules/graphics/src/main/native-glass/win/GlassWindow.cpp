@@ -1346,6 +1346,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1setBounds
 {
     ENTER_MAIN_THREAD()
     {
+        if (!::IsWindow(hWnd)) return;
         GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
 
         pWindow->UpdateInsets();

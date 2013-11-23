@@ -359,6 +359,7 @@ project(":web") {
                 project(":base").sourceSets.main.output.classesDir
             )
             destinationDir = file("modules/web/build/classes/ios")
+            sourceSets.main.output.classesDir = destinationDir
             dependencyCacheDir = file("modules/web/build/dependency-cache")
             source file("modules/web/src/ios/java")
             doLast {

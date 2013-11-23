@@ -74,7 +74,7 @@ class D3DPhongMaterial extends BaseGraphicsResource implements PhongMaterial {
         boolean isBumpAlpha = false;
         Image image = map.getImage();
         Texture texture = (image == null) ? null
-                : context.getResourceFactory().getCachedTexture(image, Texture.WrapMode.CLAMP_TO_EDGE);
+                : context.getResourceFactory().getCachedTexture(image, Texture.WrapMode.REPEAT);
         switch (map.getType()) {
             case SPECULAR:
                 isSpecularAlpha = texture == null ? false : !texture.getPixelFormat().isOpaque();
