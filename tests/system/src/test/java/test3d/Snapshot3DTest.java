@@ -27,6 +27,7 @@ package test3d;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.scene.AmbientLight;
@@ -153,16 +154,21 @@ public class Snapshot3DTest extends VisualTestBase {
 
     @Test(timeout=5000)
     public void testSnapshot3D() {
+        final AtomicBoolean scene3dSupported = new AtomicBoolean();
         runAndWait(new Runnable() {
-            @Override
-            public void run() {
-                if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
-                    System.out.println("*************************************************************");
-                    System.out.println("*      Platform isn't SCENE3D capable, skipping 3D test.    *");
-                    System.out.println("*************************************************************");
-                    return;
-                }
+            @Override public void run() {
+                scene3dSupported.set(Platform.isSupported(ConditionalFeature.SCENE3D));
+            }
+        });
+        if (!scene3dSupported.get()) {
+            System.out.println("*************************************************************");
+            System.out.println("*      Platform isn't SCENE3D capable, skipping 3D test.    *");
+            System.out.println("*************************************************************");
+            return;
+        }
 
+        runAndWait(new Runnable() {
+            @Override public void run() {
                 testStage = getStage();
                 testStage.setTitle("Snapshot 3D Test");
 
