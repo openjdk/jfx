@@ -85,6 +85,7 @@ import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.text.HitInfo;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.sg.prism.NGCamera;
+import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.scenario.DelayedRunnable;
 import com.sun.scenario.animation.AbstractMasterTimer;
@@ -688,6 +689,7 @@ public abstract class Toolkit {
         public boolean depthBuffer;
         public Object platformPaint;
         public NGCamera camera;
+        public NGLightBase[] lights;
 
         // PlatformImage into which to render or null
         public Object platformImage;

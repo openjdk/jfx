@@ -1203,6 +1203,15 @@ public class Scene implements EventTarget {
             context.camera = null;
         }
 
+        // Grab the lights from the scene
+        context.lights = null;
+        if (scene != null && !scene.lights.isEmpty()) {
+            context.lights = new NGLightBase[scene.lights.size()];
+            for (int i = 0; i < scene.lights.size(); i++) {
+                context.lights[i] = scene.lights.get(i).impl_getPeer();
+            }
+        }
+
         Toolkit.WritableImageAccessor accessor = Toolkit.getWritableImageAccessor();
         context.platformImage = accessor.getTkImageLoader(wimg);
         impl_setAllowPGAccess(false);
