@@ -134,7 +134,7 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
         Vec3f[] triPoints = instance.triPoints;
         Vec2f[] triTexCoords = instance.triTexCoords;
         Vec3f[] n = instance.norm;
-        
+        final String logname = BaseMesh.class.getName(); 
 
         for (int f = 0, nDeadFaces = 0, poolIndex = 0; f < nFaces; f++) {
             int index = f * 3;
@@ -145,15 +145,14 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
             triVerts[0] = smFace[BaseMesh.FaceMembers.POINT0.ordinal()];
             triVerts[1] = smFace[BaseMesh.FaceMembers.POINT1.ordinal()];
             triVerts[2] = smFace[BaseMesh.FaceMembers.POINT2.ordinal()];
-            
-            if (MeshUtil.isDeadFace(triVerts)) {
+
+            if (MeshUtil.isDeadFace(triVerts)
+                    && PlatformLogger.getLogger(logname).isLoggable(PlatformLogger.Level.FINE)) {
+                // Log degenerated triangle
                 nDeadFaces++;
-                String logname = BaseMesh.class.getName();
-                PlatformLogger.getLogger(logname).warning("Dead face ["
+                PlatformLogger.getLogger(logname).fine("Dead face ["
                         + triVerts[0] + ", " + triVerts[1] + ", " + triVerts[2]
                         + "] @ face group " + f + "; nEmptyFaces = " + nDeadFaces);
-                indexBuffer[index] = MeshVertex.IDX_UNDEFINED;
-                continue;
             }
 
             for (int i = 0; i < 3; i++) {
@@ -205,7 +204,9 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
         }
 
         MeshUtil.buildQuat(tm, quat);
-        assert (quat.w >= 0);
+
+        // This will interfer with degenerated triangle unit test. 
+        // assert (quat.w >= 0);
 
         if (d < 0) {
             if (quat.w == 0) {

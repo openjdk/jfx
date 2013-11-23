@@ -586,6 +586,157 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         });
     }
 
+    @Test(timeout = 5000)
+    public void testDegeneratedMeshUpdateFaces() {
+        runAndWait(new Runnable() {
+            @Override
+            public void run() {
+                testStage = getStage();
+                testStage.setTitle("TriangleMesh Validation Test");
+
+                // Intentionally set depth buffer to false to reduce test complexity
+                testScene = new Scene(buildScene(), 800, 800, true);
+                testScene.setFill(bgColor);
+                addCamera(testScene);
+                buildSquare();
+                testStage.setScene(testScene);
+                testStage.show();
+            }
+        });
+        waitFirstFrame();
+        runAndWait(new Runnable() {
+            @Override
+            public void run() {
+
+                if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
+                    System.out.println("*************************************************************");
+                    System.out.println("*      Platform isn't SCENE3D capable, skipping 3D test.    *");
+                    System.out.println("*************************************************************");
+                    return;
+                }
+                // Rendering 2 Triangles that form a square
+                Color color = getColor(testScene, WIDTH / 3, WIDTH / 3);
+                assertColorEquals(Color.RED, color, TOLERANCE);
+
+                color = getColor(testScene, WIDTH / 2 + 10, WIDTH / 2 + 10);
+                assertColorEquals(Color.RED, color, TOLERANCE);
+                // set faces with degenerated triangle
+                triMesh.getFaces().setAll(
+                        2, 0, 1, 0, 3, 0,
+                        2, 0, 1, 0, 1, 0);
+            }
+        });
+        waitFirstFrame();
+        runAndWait(new Runnable() {
+            @Override
+            public void run() {
+                if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
+                    System.out.println("*************************************************************");
+                    System.out.println("*      Platform isn't SCENE3D capable, skipping 3D test.    *");
+                    System.out.println("*************************************************************");
+                    return;
+                }
+
+                // Should render 1 Triangle
+                Color color = getColor(testScene, WIDTH / 3, WIDTH / 3);
+                assertColorEquals(Color.RED, color, TOLERANCE);
+                color = getColor(testScene, WIDTH / 2 + 10, WIDTH / 2 + 10);
+                assertColorEquals(bgColor, color, TOLERANCE);
+
+            }
+        });
+    }
+
+    @Test(timeout = 5000)
+    public void testDegeneratedMeshUpdatePoints() {
+        runAndWait(new Runnable() {
+            @Override
+            public void run() {
+                testStage = getStage();
+                testStage.setTitle("TriangleMesh Validation Test");
+
+                // Intentionally set depth buffer to false to reduce test complexity
+                testScene = new Scene(buildScene(), 800, 800, true);
+                testScene.setFill(bgColor);
+                addCamera(testScene);
+                buildSquare();
+                testStage.setScene(testScene);
+                testStage.show();
+            }
+        });
+        waitFirstFrame();
+        runAndWait(new Runnable() {
+            @Override
+            public void run() {
+
+                if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
+                    System.out.println("*************************************************************");
+                    System.out.println("*      Platform isn't SCENE3D capable, skipping 3D test.    *");
+                    System.out.println("*************************************************************");
+                    return;
+                }
+                // Rendering 2 Triangles that form a square
+                Color color = getColor(testScene, WIDTH / 3, WIDTH / 3);
+                assertColorEquals(Color.RED, color, TOLERANCE);
+
+                color = getColor(testScene, WIDTH / 2 + 10, WIDTH / 2 + 10);
+                assertColorEquals(Color.RED, color, TOLERANCE);
+                // set points that casuses a degenerated triangle
+                triMesh.getPoints().setAll(
+                        1.5f, -1.5f, 0f,
+                        1.5f, -1.5f, 0f,
+                        -1.5f, 1.5f, 0f,
+                        -1.5f, -1.5f, 0f);
+            }
+        });
+        waitFirstFrame();
+        runAndWait(new Runnable() {
+            @Override
+            public void run() {
+                if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
+                    System.out.println("*************************************************************");
+                    System.out.println("*      Platform isn't SCENE3D capable, skipping 3D test.    *");
+                    System.out.println("*************************************************************");
+                    return;
+                }
+
+                // Should render 1 Triangle
+                Color color = getColor(testScene, WIDTH / 3, WIDTH / 3);
+                assertColorEquals(Color.RED, color, TOLERANCE);
+                color = getColor(testScene, WIDTH / 2 + 10, WIDTH / 2 + 10);
+                assertColorEquals(bgColor, color, TOLERANCE);
+
+            }
+        });
+    }
+
+    void buildSquare() {
+
+        float points[] = {
+            1.5f, 1.5f, 0f,
+            1.5f, -1.5f, 0f,
+            -1.5f, 1.5f, 0f,
+            -1.5f, -1.5f, 0f
+        };
+
+        float texCoords[] = {0, 0
+        };
+
+        int faceSmoothingGroups[] = {
+            1, 1
+        };
+
+        int faces[] = {
+            2, 0, 1, 0, 3, 0,
+            2, 0, 0, 0, 1, 0
+        };
+
+        triMesh.getPoints().setAll(points);
+        triMesh.getTexCoords().setAll(texCoords);
+        triMesh.getFaces().setAll(faces);
+        triMesh.getFaceSmoothingGroups().setAll(faceSmoothingGroups);
+    }
+
     void buildBox() {
 
         float points[] = {

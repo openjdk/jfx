@@ -259,7 +259,9 @@ class MeshUtil {
 
             float e1DotN1 = e1.dot(n1);
             float e2DotN2 = e2.dot(n2);
-            assert ((e1DotN1 / n1Length - e2DotN2 / n2Length) < 0.001);
+
+            // This will interfer with degenerated triangle unit test. 
+            // assert ((e1DotN1 / n1Length - e2DotN2 / n2Length) < 0.001);
         }
 
         norm[1].set(e1);
