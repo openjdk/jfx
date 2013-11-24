@@ -1681,7 +1681,7 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
                             //delta is smaller then threshold -report as STILL and clamp values
                             states[count] = com_sun_glass_events_TouchEvent_TOUCH_STILL;
                             xs[count] = oldX;
-                            xs[count] = oldY;
+                            ys[count] = oldY;
                             mouseState->pendingTouchXs[j] = oldX;
                             mouseState->pendingTouchYs[j] = oldY;
                             GLASS_LOG_FINEST("point %d sensitivity check -> STILL", count+1);
