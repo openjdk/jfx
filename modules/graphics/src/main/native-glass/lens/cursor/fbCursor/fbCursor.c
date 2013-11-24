@@ -89,7 +89,7 @@ void glass_cursor_terminate(void) {
 
 #else /* #if defined(OMAP3) || defined(IMX6_PLATFORM) */
 
-void fbCursorInitialize(int screenWidth, int screenHeight) { }
+void fbCursorInitialize(int screenWidth, int screenHeight, int screenDepth) { }
 void fbCursorSetPosition(int x, int y) { }
 void fbCursorClose() { }
 
