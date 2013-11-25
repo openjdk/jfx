@@ -1934,4 +1934,34 @@ public class TableViewTest {
         // test post conditions - last column should not be visible
         VirtualFlowTestUtils.assertTableHeaderColumnExists(table, last, false);
     }
+
+    @Test public void test_rt_34493() {
+        TableView<Person> table = new TableView<>();
+        table.setItems(FXCollections.observableArrayList(
+                new Person("John", "Smith", "jacob.smith@example.com")
+        ));
+
+        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        first.setCellValueFactory(new PropertyValueFactory("firstName"));
+        TableColumn<Person,String> last = new TableColumn<Person,String>("last");
+        first.setCellValueFactory(new PropertyValueFactory("lastName"));
+        TableColumn<Person,String> email = new TableColumn<Person,String>("email");
+        first.setCellValueFactory(new PropertyValueFactory("email"));
+        table.getColumns().addAll(first, last, email);
+
+        // load the table
+        new StageLoader(table);
+
+        // resize the last column
+        last.impl_setWidth(400);
+        assertEquals(400, last.getWidth(), 0.0);
+
+        // hide the first column
+        table.getColumns().remove(first);
+        Toolkit.getToolkit().firePulse();
+
+        // the last column should still be 400px, not the default width or any
+        // other value (based on the width of the content in that column)
+        assertEquals(400, last.getWidth(), 0.0);
+    }
 }

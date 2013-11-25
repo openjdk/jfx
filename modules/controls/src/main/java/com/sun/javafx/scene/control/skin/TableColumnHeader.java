@@ -475,7 +475,7 @@ public class TableColumnHeader extends Region {
         // width will be suitable for most values in the column
         final int n = 30;
         if (! autoSizeComplete) {
-            if (getTableColumn() == null || getTableColumn().getPrefWidth() != DEFAULT_WIDTH || getScene() == null) {
+            if (getTableColumn() == null || getTableColumn().getWidth() != DEFAULT_WIDTH || getScene() == null) {
                 return;
             }
             getTableViewSkin().resizeColumnToFitContent(getTableColumn(), n);

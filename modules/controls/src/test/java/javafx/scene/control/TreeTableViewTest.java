@@ -2746,4 +2746,44 @@ public class TreeTableViewTest {
         assertEquals(3, treeTableView.getSelectionModel().getSelectedIndex());
         assertEquals(3, treeTableView.getFocusModel().getFocusedIndex());
     }
+
+    @Test public void test_rt_34493() {
+        ObservableList<TreeItem<Person>> persons = FXCollections.observableArrayList(
+            new TreeItem<Person>(new Person("Jacob", "Smith", "jacob.smith@example.com"))
+        );
+
+        TreeTableView<Person> table = new TreeTableView<>();
+
+        TreeItem<Person> root = new TreeItem<Person>(new Person("Root", null, null));
+        root.setExpanded(true);
+        table.setRoot(root);
+        table.setShowRoot(false);
+        root.getChildren().setAll(persons);
+
+        TreeTableColumn first = new TreeTableColumn("First Name");
+        first.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+
+        TreeTableColumn last = new TreeTableColumn("Last Name");
+        last.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("lastName"));
+
+        TreeTableColumn email = new TreeTableColumn("Email");
+        email.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("email"));
+
+        table.getColumns().addAll(first, last, email);
+
+        // load the table
+        new StageLoader(table);
+
+        // resize the last column
+        last.impl_setWidth(400);
+        assertEquals(400, last.getWidth(), 0.0);
+
+        // hide the first column
+        table.getColumns().remove(first);
+        Toolkit.getToolkit().firePulse();
+
+        // the last column should still be 400px, not the default width or any
+        // other value (based on the width of the content in that column)
+        assertEquals(400, last.getWidth(), 0.0);
+    }
 }
