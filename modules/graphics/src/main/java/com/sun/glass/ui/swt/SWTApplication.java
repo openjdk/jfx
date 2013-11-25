@@ -67,6 +67,7 @@ import org.eclipse.swt.opengl.*;
 
 public final class SWTApplication extends Application {
     Object loopReturn;
+    static final String IS_EVENTTHREAD_KEY = "javafx.embed.isEventThread";
     
     //TODO - Prism on Mac uses exactly two GL contexts and does not destroy them
     //TODO - use a context per top level window to better match the platform
@@ -164,6 +165,12 @@ public final class SWTApplication extends Application {
     
     @Override
     protected void runLoop(final Runnable launchable) {
+        if ("true".equals(System.getProperty(IS_EVENTTHREAD_KEY, "false"))) {
+            Display display = Display.getDefault();
+            setEventThread(display.getThread());
+            launchable.run();
+            return;
+        }
         if (SWT.getPlatform().equals("cocoa")) {
             runCocoaLoop(launchable);
         } else {
@@ -178,6 +185,9 @@ public final class SWTApplication extends Application {
 
     @Override
     protected void finishTerminating() {
+        if ("true".equals(System.getProperty(IS_EVENTTHREAD_KEY, "false"))) {
+            return;
+        }
         Display.getDefault().dispose();
     }
 
