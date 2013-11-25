@@ -171,7 +171,7 @@ class ViewScene extends GlassScene {
                 warning.impl_updatePeer();
             }
         } finally {
-            releaseSynchronization();
+            releaseSynchronization(true);
             entireSceneNeedsRepaint();
         }
     }

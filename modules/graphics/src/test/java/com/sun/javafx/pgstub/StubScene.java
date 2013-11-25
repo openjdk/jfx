@@ -55,7 +55,7 @@ public class StubScene implements TKScene {
         //ignore
     }
 
-    public void releaseSynchronization() {
+    public void releaseSynchronization(boolean updateState) {
         // ignore
     }
 

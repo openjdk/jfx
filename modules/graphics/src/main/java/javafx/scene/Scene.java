@@ -1152,7 +1152,18 @@ public class Scene implements EventTarget {
 
         if (!paused) {
             getRoot().updateBounds();
-            scenePulseListener.synchronizeSceneNodes();
+            if (impl_peer != null) {
+                impl_peer.waitForRenderingToComplete();
+                impl_peer.waitForSynchronization();
+                try {
+                    // Run the synchronizer while holding the render lock
+                    scenePulseListener.synchronizeSceneNodes();
+                } finally {
+                    impl_peer.releaseSynchronization(false);
+                }
+            } else {
+                scenePulseListener.synchronizeSceneNodes();
+            }
         }
 
     }
@@ -2375,7 +2386,7 @@ public class Scene implements EventTarget {
                             PULSE_LOGGER.fxMessage(start, System.currentTimeMillis(), "Copy state to render graph");
                         }
                     } finally {
-                        impl_peer.releaseSynchronization();
+                        impl_peer.releaseSynchronization(true);
                     }
                 } else {
                     long start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;

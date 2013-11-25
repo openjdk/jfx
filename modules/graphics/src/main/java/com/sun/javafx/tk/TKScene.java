@@ -51,9 +51,11 @@ public interface TKScene {
     public void waitForSynchronization();
 
     /**
-     * Releases the synchronization lock previously held.
+     * Releases the synchronization lock previously held. If the updateState
+     * flag is set then the glass scene state is updated prior to releasing
+     * the lock.
      */
-    public void releaseSynchronization();
+    public void releaseSynchronization(boolean updateState);
 
     public void setTKSceneListener(TKSceneListener listener);
     public void setTKScenePaintListener(final TKScenePaintListener listener);

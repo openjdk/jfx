@@ -127,13 +127,15 @@ abstract class GlassScene implements TKScene {
     }
 
     @Override
-    public void releaseSynchronization() {
+    public void releaseSynchronization(boolean updateState) {
         // The UI thread has just synchronized the render tree and
         // is about to release the lock so that the render thread
         // can process the new tree.  Capture the current state of
         // the view (such as the width and height) so that the view
         // state matches the state in the render tree
-        updateSceneState();
+        if (updateState) {
+            updateSceneState();
+        }
         ViewPainter.renderLock.unlock();
     }
 
