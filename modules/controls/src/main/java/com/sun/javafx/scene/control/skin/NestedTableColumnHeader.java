@@ -28,6 +28,8 @@ package com.sun.javafx.scene.control.skin;
 import javafx.collections.WeakListChangeListener;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -36,10 +38,7 @@ import javafx.event.EventHandler;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
-import javafx.scene.control.ResizeFeaturesBase;
-import javafx.scene.control.TableColumnBase;
-import javafx.scene.control.TableView;
-import javafx.scene.control.TreeTableView;
+import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -89,7 +88,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     private double dragAnchorX = 0.0;
 
     // drag rectangle overlays
-    private List<Rectangle> dragRects = new ArrayList<Rectangle>();
+    private Map<TableColumnBase<?,?>, Rectangle> dragRects = new WeakHashMap<>();
 
     boolean updateColumns = true;
 
@@ -335,7 +334,6 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     }
 
     @Override protected void layoutChildren() {
-
         double w = getWidth() - snappedLeftInset() - snappedRightInset();
         double h = getHeight() - snappedTopInset() - snappedBottomInset();
 
@@ -374,8 +372,8 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             x += prefWidth;
 
             // position drag overlay to intercept column resize requests
-            if (dragRects != null && i < dragRects.size()) {
-                Rectangle dragRect = dragRects.get(pos++);
+            Rectangle dragRect = dragRects.get(n.getTableColumn());
+            if (dragRect != null) {
                 dragRect.setHeight(getHeight() - label.getHeight());
                 dragRect.relocate(x - DRAG_RECT_WIDTH / 2, snappedTopInset() + labelHeight);
             }
@@ -457,7 +455,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         // column to intercept user drag gestures to enable column resizing.
         if (isColumnResizingEnabled()) {
             rebuildDragRects();
-            content.addAll(dragRects);
+            content.addAll(dragRects.values());
         }
 
         getChildren().setAll(content);
@@ -466,10 +464,9 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     private void rebuildDragRects() {
         if (! isColumnResizingEnabled()) return;
         
-        getChildren().removeAll(dragRects);
+        getChildren().removeAll(dragRects.values());
         
-        for (int i = 0, max = dragRects.size(); i < max; i++) {
-            Rectangle rect = dragRects.get(i);
+        for (Rectangle rect : dragRects.values()) {
             rect.visibleProperty().unbind();
         }
         dragRects.clear();
@@ -513,7 +510,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             rect.setOnMouseEntered(rectCursorChangeListener);
             rect.setOnMouseExited(rectCursorChangeListener);
 
-            dragRects.add(rect);
+            dragRects.put(c, rect);
         }
     }
 
