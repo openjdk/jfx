@@ -330,14 +330,22 @@ public abstract class BaseGraphics implements RectShadowGraphics {
     public void fill(Shape shape) {
         float bx = 0f, by = 0f, bw = 0f, bh = 0f;
         if (paint.isProportional()) {
-            RectBounds shapeBounds = nodeBounds;
-            if (shapeBounds == null) {
-                shapeBounds = shape.getBounds();
+            if (nodeBounds != null) {
+                bx = nodeBounds.getMinX();
+                by = nodeBounds.getMinY();
+                bw = nodeBounds.getWidth();
+                bh = nodeBounds.getHeight();
+            } else {
+                float[] bbox = {
+                    Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY,
+                    Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY,
+                };
+                Shape.accumulate(bbox, shape, BaseTransform.IDENTITY_TRANSFORM);
+                bx = bbox[0];
+                by = bbox[1];
+                bw = bbox[2] - bx;
+                bh = bbox[3] - by;
             }
-            bx = shapeBounds.getMinX();
-            by = shapeBounds.getMinY();
-            bw = shapeBounds.getWidth();
-            bh = shapeBounds.getHeight();
         }
         renderShape(shape, null, bx, by, bw, bh);
     }
@@ -345,14 +353,22 @@ public abstract class BaseGraphics implements RectShadowGraphics {
     public void draw(Shape shape) {
         float bx = 0f, by = 0f, bw = 0f, bh = 0f;
         if (paint.isProportional()) {
-            RectBounds shapeBounds = nodeBounds;
-            if (shapeBounds == null) {
-                shapeBounds = shape.getBounds();
+            if (nodeBounds != null) {
+                bx = nodeBounds.getMinX();
+                by = nodeBounds.getMinY();
+                bw = nodeBounds.getWidth();
+                bh = nodeBounds.getHeight();
+            } else {
+                float[] bbox = {
+                    Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY,
+                    Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY,
+                };
+                Shape.accumulate(bbox, shape, BaseTransform.IDENTITY_TRANSFORM);
+                bx = bbox[0];
+                by = bbox[1];
+                bw = bbox[2] - bx;
+                bh = bbox[3] - by;
             }
-            bx = shapeBounds.getMinX();
-            by = shapeBounds.getMinY();
-            bw = shapeBounds.getWidth();
-            bh = shapeBounds.getHeight();
         }
         renderShape(shape, stroke, bx, by, bw, bh);
     }

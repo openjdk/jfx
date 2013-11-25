@@ -35,7 +35,6 @@ import com.sun.prism.Texture;
 import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.paint.Paint;
 import com.sun.prism.shape.ShapeRep;
-import com.sun.prism.shape.ShapeRep.InvalidationType;
 import com.sun.prism.impl.Disposer;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.impl.VertexBuffer;
@@ -387,6 +386,7 @@ class CachingShapeRepState {
     private Boolean tryCache;
     private BaseTransform lastXform;
     private final MaskTexData texData;
+    private float[] bbox;
 
     private final Object disposerReferent = new Object();
     private final Disposer.Record disposerRecord;
@@ -414,6 +414,7 @@ class CachingShapeRepState {
         renderCount = 0;
         tryCache = null;
         lastXform = null;
+        bbox = null;
     }
 
     private void invalidateMaskTexData() {
@@ -521,10 +522,17 @@ class CachingShapeRepState {
         Paint paint = bsg.getPaint();
         float bx = 0f, by = 0f, bw = 0f, bh = 0f;
         if (paint.isProportional()) {
-            bx = shapeBounds.getMinX();
-            by = shapeBounds.getMinY();
-            bw = shapeBounds.getWidth();
-            bh = shapeBounds.getHeight();
+            if (bbox == null) {
+                bbox = new float[] {
+                    Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY,
+                    Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY,
+                };
+                Shape.accumulate(bbox, shape, BaseTransform.IDENTITY_TRANSFORM);
+            }
+            bx = bbox[0];
+            by = bbox[1];
+            bw = bbox[2] - bx;
+            bh = bbox[3] - by;
         }
 
         int mw = texData.maskW;
