@@ -25,8 +25,10 @@
 
 package javafx.scene.layout;
 
+import java.util.EnumSet;
 import javafx.geometry.Insets;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -512,5 +514,120 @@ public class RegionPickTest {
      *                                                                        *
      *************************************************************************/
 
-    // TODO implement along with fix for RT-27775
+    
+    private void setupRegionShapeWith(double finalShapeSize, double insets, double centerPos) {
+        region.setShape(new Circle(centerPos, centerPos, finalShapeSize + insets));
+        region.setBackground(new Background(new BackgroundFill(Color.RED, CornerRadii.EMPTY, 
+                new Insets(insets))));
+        
+    }
+    
+    
+    @Test public void pickingSimpleShape() {
+        region.setPickOnBounds(false);
+        region.setScaleShape(false);
+        region.setCenterShape(false);
+        
+        double variants[][] = new double[][]{new double[]{30, 0, 50}, new double[]{30, 10, 50}};
+
+        for (double[] v : variants) {
+            setupRegionShapeWith(v[0], v[1], v[2]);
+
+            assertFalse(region.contains(X + 50, Y + 81));
+            assertFalse(region.contains(X + 50, Y + 19));
+            assertFalse(region.contains(X + 81, Y + 50));
+            assertFalse(region.contains(X + 19, Y + 50));
+            assertTrue(region.contains(X + 50, Y + 79));
+            assertTrue(region.contains(X + 50, Y + 21));
+            assertTrue(region.contains(X + 79, Y + 50));
+            assertTrue(region.contains(X + 21, Y + 50));
+        }
+        
+    }
+    
+    @Test public void pickingCenteredShape() {
+        region.setPickOnBounds(false);
+        region.setScaleShape(false);
+        region.setCenterShape(true);
+
+        double variants[][] = new double[][]{new double[]{30, 0, 50}, new double[]{30, 10, 50},
+        new double[] {30, 0, 0}, new double[] { 30, 10, 0}};
+
+        for (double[] v : variants) {
+            setupRegionShapeWith(v[0], v[1], v[2]);
+
+            assertFalse(region.contains(X + 50, Y + 81));
+            assertFalse(region.contains(X + 50, Y + 19));
+            assertFalse(region.contains(X + 81, Y + 50));
+            assertFalse(region.contains(X + 19, Y + 50));
+            assertTrue(region.contains(X + 50, Y + 79));
+            assertTrue(region.contains(X + 50, Y + 21));
+            assertTrue(region.contains(X + 79, Y + 50));
+            assertTrue(region.contains(X + 21, Y + 50));
+        }
+        
+    }
+    
+    @Test public void pickingScaledShape() {
+        region.setPickOnBounds(false);
+        region.setScaleShape(true);
+        region.setCenterShape(false);
+
+        double variants[][] = new double[][]{new double[]{30, 0, 0}, new double[]{30, 10, 0}};
+
+        for (double[] v : variants) {
+            setupRegionShapeWith(v[0], v[1], v[2]);
+            
+             // insets are still valid after scale
+            double shapeWidth = WIDTH - 2* v[1];
+            double shapeHeight = HEIGHT - 2 * v[1];
+            //Shape is moved by insets
+            double shapeX = X + v[1];
+            double shapeY = Y + v[1];
+
+            assertFalse(region.contains(shapeX, shapeY + shapeHeight / 2 + 1));
+            assertFalse(region.contains(shapeX, shapeY - shapeHeight / 2 - 1));
+            assertFalse(region.contains(shapeX + shapeWidth / 2 + 1, shapeY));
+            assertFalse(region.contains(shapeX - shapeWidth / 2 - 1, shapeY));
+
+            assertTrue(region.contains(shapeX + 1, shapeY + shapeHeight / 2 - 1));
+            assertTrue(region.contains(shapeX + shapeWidth / 2 - 1, shapeY));
+
+            // Even though the shape is there, these points are outside of region's bounds, so it wouldn't be really picked.
+            assertFalse(region.contains(shapeX + 1, shapeY - shapeHeight / 2 + 1));
+            assertFalse(region.contains(shapeX - shapeWidth / 2 + 1, shapeY));
+        }
+        
+    }
+    
+    @Test public void pickingScaledAndCenteredShape() {
+        region.setPickOnBounds(false);
+        region.setScaleShape(true);
+        region.setCenterShape(true);
+
+        double variants[][] = new double[][]{new double[]{30, 0, 50}, new double[]{30, 10, 50},
+        new double[] {30, 0, 0}, new double[] { 30, 10, 0}};
+
+        for (double[] v : variants) {
+            setupRegionShapeWith(v[0], v[1], v[2]);
+            
+            // insets are still valid after scale
+            double shapeWidth = WIDTH - 2* v[1];
+            double shapeHeight = HEIGHT - 2 * v[1];
+           
+            double shapeX = X + v[1];
+            double shapeY = Y + v[1];
+
+            assertFalse(region.contains(X + WIDTH / 2, shapeY + shapeHeight + 1));
+            assertFalse(region.contains(X + WIDTH / 2, shapeY - 1));
+            assertFalse(region.contains(shapeX + shapeWidth + 1, Y + HEIGHT / 2));
+            assertFalse(region.contains(shapeX - 1, Y + HEIGHT / 2));
+
+            assertTrue(region.contains(X + WIDTH / 2, shapeY + shapeHeight - 1));
+            assertTrue(region.contains(X + WIDTH / 2, shapeY + 1));
+            assertTrue(region.contains(shapeX + shapeWidth - 1, Y + HEIGHT / 2));
+            assertTrue(region.contains(shapeX + 1, Y + HEIGHT / 2));
+        }
+    }
+    
 }

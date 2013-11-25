@@ -66,8 +66,12 @@ import com.sun.javafx.css.converters.ShapeConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
+import com.sun.javafx.geom.Point2D;
+import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Vec2d;
+import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.sg.prism.NGNode;
@@ -2457,7 +2461,89 @@ public class Region extends Parent {
     @Override public NGNode impl_createPeer() {
         return new NGRegion();
     }
-
+    
+    /**
+     * Transform x, y in local Region coordinates to local coordinates of scaled/centered shape and
+     * check if the shape contains the coordinates.
+     * The transformations here are basically an inversion of transformations being done in NGShape#resizeShape.
+     */
+    private boolean shapeContains(com.sun.javafx.geom.Shape shape,
+            final double x, final double y,
+            double topOffset, double rightOffset, double bottomOffset, double leftOffset) {
+        double resX = x;
+        double resY = y;
+        // The bounds of the shape, before any centering / scaling takes place
+        final RectBounds bounds = shape.getBounds();
+        if (isScaleShape()) {
+            // Modify the transform to scale the shape so that it will fit
+            // within the insets.
+            resX -= leftOffset;
+            resY -= topOffset;
+            
+            //denominator represents the width and height of the box within which the new shape must fit.
+            resX *= bounds.getWidth() / (getWidth() - leftOffset - rightOffset);
+            resY *= bounds.getHeight() / (getHeight() - topOffset - bottomOffset);
+            
+            // If we also need to center it, we need to adjust the transform so as to place
+            // the shape in the center of the bounds
+            if (isCenterShape()) {
+                resX += bounds.getMinX();
+                resY += bounds.getMinY();
+            }
+        } else if (isCenterShape()) {
+            // We are only centering. In this case, what we want is for the
+            // original shape to be centered. If there are offsets (insets)
+            // then we must pre-scale about the center to account for it.
+            
+            double boundsWidth = bounds.getWidth();
+            double boundsHeight = bounds.getHeight();
+            
+            double scaleFactorX = boundsWidth / (boundsWidth - leftOffset - rightOffset);
+            double scaleFactorY = boundsHeight / (boundsHeight - topOffset - bottomOffset);
+            
+            //This is equivalent to:
+            // translate(bounds.getMinX(), bounds.getMinY())
+            // scale(scaleFactorX, scaleFactorY)
+            // translate(-bounds.getMinX(), -bounds.getMinY())
+            // translate(-leftOffset - (getWidth() - boundsWidth)/2 + bounds.getMinX(),
+            //                            -topOffset - (getHeight() - boundsHeight)/2 + bounds.getMinY());
+            // which is an inversion of an transformation done to the shape
+            // This gives us
+            //
+            //resX = resX * scaleFactorX - scaleFactorX * bounds.getMinX() - scaleFactorX * (leftOffset + (getWidth() - boundsWidth) / 2 - bounds.getMinX()) + bounds.getMinX();
+            //resY = resY * scaleFactorY - scaleFactorY * bounds.getMinY() - scaleFactorY * (topOffset + (getHeight() - boundsHeight) / 2 - bounds.getMinY()) + bounds.getMinY();
+            //
+            // which can further reduced to 
+            
+            resX = scaleFactorX * (resX -(leftOffset + (getWidth() - boundsWidth) / 2)) + bounds.getMinX();
+            resY = scaleFactorY * (resY -(topOffset + (getHeight() - boundsHeight) / 2)) + bounds.getMinY();
+            
+        } else if (topOffset != 0 || rightOffset != 0 || bottomOffset != 0 || leftOffset != 0) {
+            // We are neither centering nor scaling, but we still have to resize the
+            // shape because we have to fit within the bounds defined by the offsets
+            double scaleFactorX = bounds.getWidth() / (bounds.getWidth() - leftOffset - rightOffset);
+            double scaleFactorY = bounds.getHeight() / (bounds.getHeight() - topOffset - bottomOffset);
+            
+            // This is equivalent to: 
+            // translate(bounds.getMinX(), bounds.getMinY())
+            // scale(scaleFactorX, scaleFactorY)
+            // translate(-bounds.getMinX(), -bounds.getMinY())
+            // translate(-leftOffset, -topOffset)
+            // 
+            // which is an inversion of an transformation done to the shape
+            // This gives us
+            // 
+            //resX = resX * scaleFactorX - scaleFactorX * leftOffset - scaleFactorX * bounds.getMinX() + bounds.getMinX();
+            //resY = resY * scaleFactorY - scaleFactorY * topOffset - scaleFactorY * bounds.getMinY() + bounds.getMinY();
+            //
+            // which can be further reduceD to
+            resX = scaleFactorX * (resX - leftOffset - bounds.getMinX()) + bounds.getMinX();
+            resY = scaleFactorY * (resY - topOffset - bounds.getMinY()) + bounds.getMinY();
+            
+        }
+        return shape.contains((float)resX, (float)resY);
+    }
+    
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -2476,22 +2562,30 @@ public class Region extends Parent {
         // Figure out what the maximum possible radius value is.
         final double maxRadius = Math.min(x2 / 2.0, y2 / 2.0);
 
+        final Background background = getBackground();
         // First check the shape. Shape could be impacted by scaleShape & positionShape properties.
-        // This is going to be ugly! The problem is that basically all the scale / position operations
-        // have to be implemented here in Region, whereas right now they are all implemented in
-        // NGRegion. Drat. Basically I can't implement this properly until I have a way to get the
-        // geometry backing an arbitrary FX shape. For example, in this case I need an NGShape peer
-        // of this shape so that I can resize it as appropriate for these picking tests.
-        // Lacking that, for now, I will simply check the shape (so that picking works for pie charts)
-        // Bug is filed as RT-27775.
         if (_shape != null) {
-            return _shape.contains(localX, localY);
+            if (background != null && !background.getFills().isEmpty()) {
+                final List<BackgroundFill> fills = background.getFills();
+                double topO = Double.MAX_VALUE;
+                double leftO = Double.MAX_VALUE;
+                double bottomO = Double.MAX_VALUE;
+                double rightO = Double.MAX_VALUE;
+                for (int i = 0, max = fills.size(); i < max; i++) {
+                    BackgroundFill bf = fills.get(0);
+                    topO = Math.min(topO, bf.getInsets().getTop());
+                    leftO = Math.min(leftO, bf.getInsets().getLeft());
+                    bottomO = Math.min(bottomO, bf.getInsets().getBottom());
+                    rightO = Math.min(rightO, bf.getInsets().getRight());
+                }
+                return shapeContains(_shape.impl_configShape(), localX, localY, topO, leftO, bottomO, rightO);
+            }
+            return false;
         }
 
         // OK, there was no background shape, so I'm going to work on the principle of
         // nested rounded rectangles. We'll start by checking the backgrounds. The
         // first background which passes the test is good enough for us!
-        final Background background = getBackground();
         if (background != null) {
             final List<BackgroundFill> fills = background.getFills();
             for (int i = 0, max = fills.size(); i < max; i++) {
