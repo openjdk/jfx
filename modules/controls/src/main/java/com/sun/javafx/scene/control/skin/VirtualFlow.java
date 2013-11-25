@@ -882,6 +882,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             lastHeight = -1;
         }
 
+        final boolean hasSizeChange = sizeChanged;
         boolean recreatedOrRebuilt = needsRebuildCells || needsRecreateCells || sizeChanged;
        
         needsRecreateCells = false;
@@ -1032,12 +1033,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
          * so that one will be executed every time.
          */
         boolean needTrailingCells = false;
-        boolean rebuild = cellNeedsLayout ||
+        boolean rebuild = cellNeedsLayout  ||
                 isVertical != lastVertical ||
-                cells.isEmpty() ||
-                getMaxPrefBreadth() == -1 ||
-                position != lastPosition ||
-                cellCount != lastCellCount;
+                cells.isEmpty()            ||
+                getMaxPrefBreadth() == -1  ||
+                position != lastPosition   ||
+                cellCount != lastCellCount ||
+                hasSizeChange;
 
         if (! rebuild) {
             if ((isVertical && height < lastHeight) || (! isVertical && width < lastWidth)) {
