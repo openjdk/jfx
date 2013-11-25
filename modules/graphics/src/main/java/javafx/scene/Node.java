@@ -151,6 +151,7 @@ import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.impl.PrismSettings;
+import javafx.scene.shape.Shape3D;
 import sun.util.logging.PlatformLogger;
 import sun.util.logging.PlatformLogger.Level;
 
@@ -3542,9 +3543,11 @@ public abstract class Node implements EventTarget, Styleable {
         }
         // intersect with the clip. Take care with "bounds" as it may
         // actually be TEMP_BOUNDS, so we save off state
-        if (getClip() != null) {
-            //TODO: For 3D case the intersecting transformed bounds and
-            //      transformed clip will not produce the correct bounds.
+        if (getClip() != null
+                // FIXME: All 3D picking is currently ignored by rendering.
+                // Until this is fixed or defined differently (RT-28510),
+                // we follow this behavior.
+                && !(this instanceof Shape3D) && !(getClip() instanceof Shape3D)) {
             double x1 = bounds.getMinX();
             double y1 = bounds.getMinY();
             double x2 = bounds.getMaxX();
@@ -4913,7 +4916,11 @@ public abstract class Node implements EventTarget, Styleable {
         // if there is an intersection with the clip node. We don't consider
         // clip node distance.
         Node clip = getClip();
-        if (clip != null) {
+        if (clip != null
+                // FIXME: All 3D picking is currently ignored by rendering.
+                // Until this is fixed or defined differently (RT-28510),
+                // we follow this behavior.
+                && !(this instanceof Shape3D) && !(clip instanceof Shape3D)) {
             final double dirX = dir.x;
             final double dirY = dir.y;
             final double dirZ = dir.z;
