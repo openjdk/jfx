@@ -221,6 +221,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
                 contentHeight = (prefHeightFromAccordion - headerHeight) * getTransition();
             }
         }
+        contentHeight = snapSize(contentHeight);
 
         y += snapSize(headerHeight);
         contentContainer.resize(w, contentHeight);
@@ -303,7 +304,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
                         contentRegion.getContent().setCache(false);
                     }
                 },
-                new KeyValue(transitionProperty(), 1, Interpolator.EASE_OUT)
+                new KeyValue(transitionProperty(), 1, Interpolator.LINEAR)
 
             );
         } else {
@@ -327,7 +328,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
                         contentRegion.getContent().setCache(false);
                     }
                 },
-                new KeyValue(transitionProperty(), 0, Interpolator.EASE_IN)
+                new KeyValue(transitionProperty(), 0, Interpolator.LINEAR)
             );
         }
 
