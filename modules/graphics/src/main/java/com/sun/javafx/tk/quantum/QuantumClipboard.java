@@ -158,7 +158,7 @@ final class QuantumClipboard implements TKClipboard {
     }
 
     static void releaseCurrentDragboard() {
-        assert currentDragboard != null;
+        // RT-34510: assert currentDragboard != null;
         currentDragboard = null;
     }
 
