@@ -74,7 +74,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "SelectAllPageDown").shift());
         
         TREE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "SelectAllToFocus").shift());
-        TREE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "SelectAllToFocus").shortcut().shift());
+        TREE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "SelectAllToFocusAndSetAnchor").shortcut().shift());
         
         TREE_VIEW_BINDINGS.add(new KeyBinding(HOME, "FocusFirstRow").shortcut());
         TREE_VIEW_BINDINGS.add(new KeyBinding(END, "FocusLastRow").shortcut());
@@ -148,7 +148,10 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         else if ("FocusFirstRow".equals(name)) focusFirstRow();
         else if ("FocusLastRow".equals(name)) focusLastRow();
         else if ("toggleFocusOwnerSelection".equals(name)) toggleFocusOwnerSelection();
-        else if ("SelectAllToFocus".equals(name)) selectAllToFocus();
+
+        else if ("SelectAllToFocus".equals(name)) selectAllToFocus(false);
+        else if ("SelectAllToFocusAndSetAnchor".equals(name)) selectAllToFocus(true);
+
         else if ("FocusPageUp".equals(name)) focusPageUp();
         else if ("FocusPageDown".equals(name)) focusPageDown();
         else if ("FocusPreviousRow".equals(name)) focusPreviousRow();
@@ -598,7 +601,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         selectionChanging = false;
     }
     
-    private void selectAllToFocus() {
+    private void selectAllToFocus(boolean setAnchorToFocusIndex) {
         // Fix for RT-31241
         final TreeView treeView = getControl();
         if (treeView.getEditingItem() != null) return;
@@ -616,7 +619,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         int startPos = anchor;
         int endPos = anchor > focusIndex ? focusIndex - 1 : focusIndex + 1;
         sm.selectRange(startPos, endPos);
-        setAnchor(anchor);
+        setAnchor(setAnchorToFocusIndex ? focusIndex : anchor);
     }
     
     private void expandRow() {

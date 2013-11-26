@@ -180,11 +180,11 @@ public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableVie
      *************************************************************************/
 
     /** {@inheritDoc} */
-    @Override protected void selectAllToFocus() {
+    @Override protected void selectAllToFocus(boolean setAnchorToFocusIndex) {
         // Fix for RT-31241
         if (getControl().getEditingCell() != null) return;
 
-        super.selectAllToFocus();
+        super.selectAllToFocus(setAnchorToFocusIndex);
     }
 
     /**************************************************************************

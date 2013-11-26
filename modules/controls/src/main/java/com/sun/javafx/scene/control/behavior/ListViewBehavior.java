@@ -81,7 +81,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         LIST_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "SelectAllPageDown").shift());
         
         LIST_VIEW_BINDINGS.add(new KeyBinding(SPACE, "SelectAllToFocus").shift());
-        LIST_VIEW_BINDINGS.add(new KeyBinding(SPACE, "SelectAllToFocus").shortcut().shift());
+        LIST_VIEW_BINDINGS.add(new KeyBinding(SPACE, "SelectAllToFocusAndSetAnchor").shortcut().shift());
         
         LIST_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "ScrollUp"));
         LIST_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "ScrollDown"));
@@ -201,7 +201,10 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         else if ("FocusFirstRow".equals(name)) focusFirstRow();
         else if ("FocusLastRow".equals(name)) focusLastRow();
         else if ("toggleFocusOwnerSelection".equals(name)) toggleFocusOwnerSelection();
-        else if ("SelectAllToFocus".equals(name)) selectAllToFocus();
+
+        else if ("SelectAllToFocus".equals(name)) selectAllToFocus(false);
+        else if ("SelectAllToFocusAndSetAnchor".equals(name)) selectAllToFocus(true);
+
         else if ("DiscontinuousSelectNextRow".equals(name)) discontinuousSelectNextRow();
         else if ("DiscontinuousSelectPreviousRow".equals(name)) discontinuousSelectPreviousRow();
         else if ("DiscontinuousSelectPageUp".equals(name)) discontinuousSelectPageUp();
@@ -689,7 +692,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         sm.selectAll();
     }
     
-    private void selectAllToFocus() {
+    private void selectAllToFocus(boolean setAnchorToFocusIndex) {
         // Fix for RT-31241
         final ListView listView = getControl();
         if (listView.getEditingIndex() >= 0) return;
@@ -707,7 +710,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         int startPos = anchor;
         int endPos = anchor > focusIndex ? focusIndex - 1 : focusIndex + 1;
         sm.selectRange(startPos, endPos);
-        setAnchor(anchor);
+        setAnchor(setAnchorToFocusIndex ? focusIndex : anchor);
     }
     
     private void cancelEdit() {

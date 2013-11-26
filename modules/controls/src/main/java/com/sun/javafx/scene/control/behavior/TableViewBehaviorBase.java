@@ -103,7 +103,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_DOWN, "AlsoSelectNext").shift());
         
         TABLE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "SelectAllToFocus").shift());
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "SelectAllToFocus").shortcut().shift());
+        TABLE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "SelectAllToFocusAndSetAnchor").shortcut().shift());
 
 //        TABLE_VIEW_BINDINGS.add(new KeyBinding(UP, "AlsoSelectPreviousCell").shift());
 //        TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_UP, "AlsoSelectPreviousCell").shift());
@@ -177,7 +177,10 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         else if ("FocusFirstRow".equals(name)) focusFirstRow();
         else if ("FocusLastRow".equals(name)) focusLastRow();
         else if ("toggleFocusOwnerSelection".equals(name)) toggleFocusOwnerSelection();
-        else if ("SelectAllToFocus".equals(name)) selectAllToFocus();
+
+        else if ("SelectAllToFocus".equals(name)) selectAllToFocus(false);
+        else if ("SelectAllToFocusAndSetAnchor".equals(name)) selectAllToFocus(true);
+
         else if ("FocusPageUp".equals(name)) focusPageUp();
         else if ("FocusPageDown".equals(name)) focusPageDown();
         else if ("DiscontinuousSelectNextRow".equals(name)) discontinuousSelectNextRow();
@@ -840,7 +843,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         }
     }
     
-    protected void selectAllToFocus() {
+    protected void selectAllToFocus(boolean setAnchorToFocusIndex) {
         TableSelectionModel sm = getSelectionModel();
         if (sm == null) return;
 
@@ -881,7 +884,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
             }
         }
         
-        setAnchor(anchor);
+        setAnchor(setAnchorToFocusIndex ? focusedCell : anchor);
     }
     
     protected void selectAll() {
