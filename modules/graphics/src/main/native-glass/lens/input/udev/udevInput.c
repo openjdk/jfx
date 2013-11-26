@@ -1645,6 +1645,7 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
     jlong ids[LENS_MAX_TOUCH_POINTS];
     int xs[LENS_MAX_TOUCH_POINTS];
     int ys[LENS_MAX_TOUCH_POINTS];
+    jboolean needToSavePendingPoints = JNI_TRUE;
 
     if (mouseState->pendingTouchPointCount) {
         // have touch event(s)
@@ -1755,6 +1756,9 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
             ys[i] = mouseState->touchYs[i];
             states[i] = com_sun_glass_events_TouchEvent_TOUCH_RELEASED;
             mouseState->touchIsDragging[i] = JNI_FALSE;
+            //as all points are released there is no need to save them for next
+            //event processing
+            needToSavePendingPoints = JNI_FALSE;
             
         }
     }
@@ -1827,6 +1831,9 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
             if (primaryPointIndex == -1) {
                  GLASS_LOG_FINEST("primary point not found - release");
                  mouseState->touchPrimaryPointID = -1; //mark as not set
+                 //as all points are released there is no need to save them for next
+                 //event processing
+                 needToSavePendingPoints = JNI_FALSE;
 
             }
 
@@ -1929,16 +1936,24 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
     }
     mouseState->pendingInputEventCount = 0;
 
-    // recording pending touch points as existing touch points
-    mouseState->touchPointCount = mouseState->pendingTouchPointCount;
-    GLASS_LOG_FINEST("%i touch points", mouseState->touchPointCount);
-    for (i = 0; i < mouseState->pendingTouchPointCount; i++) {
-        mouseState->touchIDs[i] = mouseState->pendingTouchIDs[i];
-        mouseState->touchXs[i] = mouseState->pendingTouchXs[i];
-        mouseState->touchYs[i] = mouseState->pendingTouchYs[i];
-        GLASS_LOG_FINEST("Touch point %i at %i, %i (id=%i)", i,
-                         mouseState->touchXs[i], mouseState->touchYs[i],
-                         mouseState->touchIDs[i]);
+    if (needToSavePendingPoints) {
+        // recording pending touch points as existing touch points
+        mouseState->touchPointCount = count;
+        GLASS_LOG_FINEST("[store points] saving %i touch points",
+                         count);
+        for (i = 0; i < count; i++) {
+            mouseState->touchIDs[i] = ids[i];
+            mouseState->touchXs[i] = xs[i];
+            mouseState->touchYs[i] = ys[i];
+            GLASS_LOG_FINEST("[store points] Touch point %i at %i, %i (id=%i)",
+                             i,
+                             mouseState->touchXs[i], mouseState->touchYs[i],
+                             mouseState->touchIDs[i]);
+        }
+    } else {
+        //all points are released, no need to save
+        mouseState->touchPointCount = 0;
+        GLASS_LOG_FINEST("[store points] no need to save, no points");
     }
 }
 
