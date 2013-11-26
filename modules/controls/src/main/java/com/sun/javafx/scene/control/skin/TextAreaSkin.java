@@ -888,7 +888,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         int pos = Utils.getHitInsertionIndex(hit, getSkinnable().getText());
         boolean isNewLine =
                (pos > 0 &&
-                pos < getSkinnable().getLength() &&
+                pos <= getSkinnable().getLength() &&
                 getSkinnable().getText().codePointAt(pos-1) == 0x0a);
 
         // special handling for a new line
@@ -1185,27 +1185,59 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         }
     }
 
+    /** A shared helper object, used only by downLines(). */
+    private static final Path tmpCaretPath = new Path();
+
     protected void downLines(int nLines, boolean select, boolean extendSelection) {
         Text textNode = getTextNode();
         Bounds caretBounds = caretPath.getLayoutBounds();
-        double midY = (caretBounds.getMinY() + caretBounds.getMaxY()) / 2 + nLines * lineHeight;
-        if (midY < 0) {
-            midY = 0;
+
+        // The middle y coordinate of the the line we want to go to.
+        double targetLineMidY = (caretBounds.getMinY() + caretBounds.getMaxY()) / 2 + nLines * lineHeight;
+        if (targetLineMidY < 0) {
+            targetLineMidY = 0;
         }
-        double x = (targetCaretX >= 0) ? targetCaretX : (caretBounds.getMaxX() + getTextTranslateX());
-        HitInfo hit = textNode.impl_hitTestChar(translateCaretPosition(new Point2D(x, midY)));
+
+        // The target x for the caret. This may have been set during a
+        // previous call.
+        double x = (targetCaretX >= 0) ? targetCaretX : (caretBounds.getMaxX());
+
+        // Find a text position for the target x,y.
+        HitInfo hit = textNode.impl_hitTestChar(translateCaretPosition(new Point2D(x, targetLineMidY)));
         int pos = hit.getCharIndex();
+
+        // Save the old pos temporarily while testing the new one.
+        int oldPos = textNode.getImpl_caretPosition();
+        boolean oldBias = textNode.isImpl_caretBias();
+        textNode.setImpl_caretBias(hit.isLeading());
+        textNode.setImpl_caretPosition(pos);
+        tmpCaretPath.getElements().clear();
+        tmpCaretPath.getElements().addAll(textNode.getImpl_caretShape());
+        tmpCaretPath.setLayoutX(textNode.getLayoutX());
+        tmpCaretPath.setLayoutY(textNode.getLayoutY());
+        Bounds tmpCaretBounds = tmpCaretPath.getLayoutBounds();
+        // The y for the middle of the row we found.
+        double foundLineMidY = (tmpCaretBounds.getMinY() + tmpCaretBounds.getMaxY()) / 2;
+        textNode.setImpl_caretBias(oldBias);
+        textNode.setImpl_caretPosition(oldPos);
+
         if (pos > 0) {
-            textNode.setImpl_caretPosition(pos);
-            PathElement element = textNode.getImpl_caretShape()[0];
-            if (element instanceof MoveTo && ((MoveTo)element).getY() > midY) {
+            if (nLines > 0 && foundLineMidY > targetLineMidY) {
+                // We went too far and ended up after a newline.
                 hit.setCharIndex(pos - 1);
             }
+
+            if (pos >= textArea.getLength() && getCharacter(pos - 1) == '\n') {
+                // Special case for newline at end of text.
+                hit.setLeading(true);
+            }
         }
-        Path charShape = new Path(textNode.impl_getRangeShape(hit.getCharIndex(), hit.getCharIndex() + 1));
+
+        // Test if the found line is in the correct direction and move
+        // the caret.
         if (nLines == 0 ||
-            (nLines > 0 && charShape.getLayoutBounds().getMaxY() > caretBounds.getMaxY()) ||
-            (nLines < 0 && charShape.getLayoutBounds().getMinY() < caretBounds.getMinY())) {
+            (nLines > 0 && foundLineMidY > caretBounds.getMaxY()) ||
+            (nLines < 0 && foundLineMidY < caretBounds.getMinY())) {
 
             positionCaret(hit, select, extendSelection);
             targetCaretX = x;
