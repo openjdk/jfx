@@ -30,6 +30,7 @@ import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -95,6 +96,7 @@ import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.graphics.GCData;
 import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.ControlListener;
 import org.eclipse.swt.events.FocusListener;
@@ -675,9 +677,11 @@ public class FXCanvas extends Canvas {
             pixelsBuf = null;
         } else {
             pixelsBuf = IntBuffer.allocate((int)Math.round(pWidth * newScaleFactor) *
-                                           (int)Math.round(pHeight * newScaleFactor));
-            // TODO: render old pixels to the new buffer, see JFXPanel.resizePixelBuffer
-        }        
+                                           (int)Math.round(pHeight * newScaleFactor));            
+            // The bg color may show through on resize. See RT-34380.
+            RGB rgb = getBackground().getRGB();
+            Arrays.fill(pixelsBuf.array(), rgb.red << 16 | rgb.green << 8 | rgb.blue);
+        }
     }
 
     private void sendFocusEventToFX(FocusEvent fe, boolean focused) {
