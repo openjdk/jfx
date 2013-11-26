@@ -913,6 +913,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // any of this work. In particular, this can happen during startup
         if (width <= 0 || height <= 0) {
             addAllToPile();
+            lastWidth = width;
+            lastHeight = height;
             hbar.setVisible(false);
             vbar.setVisible(false);
             corner.setVisible(false);
