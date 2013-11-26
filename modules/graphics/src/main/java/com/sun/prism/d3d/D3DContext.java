@@ -49,6 +49,7 @@ class D3DContext extends BaseShaderContext {
     public static final int E_FAIL                  = 0x80004005;
     public static final int D3DERR_OUTOFVIDEOMEMORY = 0x8876017c;
     public static final int D3D_OK                  = 0x0;
+    public static final int S_FALSE                 = 0x1;
 
     public static final int D3DCOMPMODE_CLEAR           = 0;
     public static final int D3DCOMPMODE_SRC             = 1;
@@ -192,7 +193,9 @@ class D3DContext extends BaseShaderContext {
         long resourceHandle = ((D3DRenderTarget)target).getResourceHandle();
         int res = nSetRenderTarget(pContext, resourceHandle, depthTest, target.isAntiAliasing());
         validate(res);
-        resetLastClip(state);
+        if (res != S_FALSE) { // render target was changed
+            resetLastClip(state);
+        }
 
         this.camera = camera;
         targetWidth = target.getPhysicalWidth();

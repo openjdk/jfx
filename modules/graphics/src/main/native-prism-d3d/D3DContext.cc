@@ -934,7 +934,7 @@ D3DContext::SetRenderTarget(IDirect3DSurface9 *pSurface,
             }
         } else if (!renderTargetChanged) {
             SAFE_RELEASE(pCurrentDepth);
-            return res; // Render target has not changed
+            return S_FALSE; // Indicates that call succeeded, but render target was not changed
         }
         SAFE_RELEASE(pCurrentDepth);
         pd3dDevice->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, msaa);
@@ -959,6 +959,8 @@ D3DContext::SetRenderTarget(IDirect3DSurface9 *pSurface,
     pixadjusty = +1.0f / descNew.Height;
     TraceLn1(NWT_TRACE_VERBOSE, "  current render target=0x%x", pSurface);
     TraceLn2(NWT_TRACE_VERBOSE, "      pixel adjustments=%f, %f", pixadjustx, pixadjusty);
+    if (SUCCEEDED(res) && !renderTargetChanged)
+        return S_FALSE; // Indicates that call succeeded, but render target was not changed
     return res;
 }
 
