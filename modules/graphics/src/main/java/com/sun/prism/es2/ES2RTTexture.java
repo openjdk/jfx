@@ -96,7 +96,7 @@ class ES2RTTexture extends ES2Texture<ES2RTTextureData>
         rbID = glContext.createRenderBuffer(getPhysicalWidth(), 
                 getPhysicalHeight(), glContext.getSampleSize());
 
-        // TODO: 3D - Add to disposer record so that we can cleanup the
+        // Add to disposer record so that we can cleanup the MSAA
         // render buffer when this RTT is destroyed.
         texData.setMSAARenderBufferID(rbID);
     }

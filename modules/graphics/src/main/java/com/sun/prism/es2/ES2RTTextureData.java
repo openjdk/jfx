@@ -76,6 +76,10 @@ class ES2RTTextureData extends ES2TextureData {
                 context.getGLContext().deleteRenderBuffer(dbID);
                 dbID = 0;
             }
+            if (rbID != 0) {
+                context.getGLContext().deleteRenderBuffer(rbID);
+                rbID = 0;
+            }
             fboID = 0;
         }
     }
