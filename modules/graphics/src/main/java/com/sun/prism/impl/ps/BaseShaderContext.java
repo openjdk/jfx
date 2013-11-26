@@ -450,6 +450,8 @@ public abstract class BaseShaderContext extends BaseContext {
                     paintTex = PaintHelper.getGradientTexture(g, (Gradient)paint);
                 }
             } else if (paint.getType() == Paint.Type.IMAGE_PATTERN) {
+                // We need to flush here. See comment above about paint parameters changing.
+                flushVertexBuffer();
                 ImagePattern texPaint = (ImagePattern)paint;
                 ResourceFactory rf = g.getResourceFactory();
                 paintTex = rf.getCachedTexture(texPaint.getImage(), Texture.WrapMode.REPEAT);

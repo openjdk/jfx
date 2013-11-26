@@ -1519,6 +1519,7 @@ project(":systemTests") {
             exclude("**/javafx/embed/swing/*.*");
             exclude("**/javafx/scene/layout/*.*");
             exclude("**/test3d/*.*");
+            exclude("**/painttest/*.*");
         }
         if (!IS_AWT_TEST) {
             // Disable all AWT-based tests
