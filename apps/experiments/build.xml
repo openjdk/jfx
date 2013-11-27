@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project default="jar" basedir=".">
+
+    <target name="jar">
+        <ant dir="3DViewer" target="jar" inheritAll="true"/>
+        <ant dir="Modena" target="jar" inheritAll="true"/>
+    </target>
+
+    <target name="clean">
+        <ant dir="3DViewer" target="clean" inheritAll="true"/>
+        <ant dir="Modena" target="clean" inheritAll="true"/>
+    </target>
+
+</project>
+
+

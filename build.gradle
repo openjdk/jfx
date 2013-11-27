@@ -974,7 +974,14 @@ void addJCov(p, test) {
 allprojects {
     // We want to configure all projects as java projects and use the same compile settings
     // etc, except for the root project which we just want to ignore (and for now media)
-    if (project == rootProject) return
+    if (project == rootProject) {
+       return
+    }
+    if (project.path.startsWith(":apps")) {
+        // Lets handle the apps tree differently, as it is a collection of ant builds,
+        // and the ant importer collides with the 'apply plugin:java'
+        return
+    }
     // All of our projects are java projects
     apply plugin: "java"
     sourceCompatibility = 1.8
@@ -2269,12 +2276,20 @@ task sdk() {
     dependsOn(checkJfxrtJar)
 }
 
-// this is empty, allowing us to depend on the task, which may have other
-// real intances added later.
-task copyAppsArtifacts() 
+task appsjar() {
+    dependsOn(sdk)
+    // Note: the jar dependacies get added elsewhere see project(":apps")
+}
+
+// these are empty tasks, allowing us to depend on the task, which may have other
+// real work items added later.
+task copyAppsArtifacts() {
+    dependsOn(appsjar)
+}
 
 task apps() {
     dependsOn(sdk)
+    dependsOn(appsjar)
     dependsOn(copyAppsArtifacts)
 }
 
@@ -2637,32 +2652,22 @@ if (BINARY_STUB != null) {
     JFXRT_CP += BINARY_STUB
 }
 
-childProjects["apps"].subprojects {
-    afterEvaluate { project ->
-        // this check is to make sure we are using a java or application plugin
-        // in our child projects of ./apps
-        if (project.hasProperty("jar") && project.hasProperty("compileJava")) {
-            def srcdir = new File ("$project.projectDir/src");
+project(":apps") {
+    // The apps build is Ant based, and gradle lets us "import" ant build.xml
+    // into our configuration.
 
-            if (srcdir.exists()) {
-                // augment the classpath with our build system classpath
-                // which will include our local jfxrt.jar
-                project.compileJava {
-                    // TODO: don't know how to do this correctly
-                    //dependsOn project(":graphics").classes, project(":controls").classes, project(":base").classes
-                    doFirst {
-                        classpath = rootProject.JFXRT_CP + sourceSets.main.compileClasspath
-                    }
-                }
-                test.exclude("**/*");
-            } else {
-                // no source, but still a 'java' plugin, so just disable it
-                project.tasks.all {
-                    it.enabled = false
-                }
-            }
-        }
-    }
+    // override the apps build.xml with an explicit pointer to our jar.
+    def jfxrt = "${rootProject.buildDir}/${defaultHostTarget}-sdk/rt/lib/ext/jfxrt.jar"
+
+    // set properties the Ant build will need
+    ant.properties['file.reference.jfxrt.jar'] = "${jfxrt}"
+    ant.properties['platforms.JDK_1.8.home'] = "${rootProject.ext.JDK_HOME}"
+
+    ant.importBuild 'build.xml'
+
+    // wire the ant targets to gradle tasks
+    rootProject.appsjar.dependsOn("${path}:jar")
+    rootProject.clean.dependsOn("${path}:clean")
 }
 
 /******************************************************************************
