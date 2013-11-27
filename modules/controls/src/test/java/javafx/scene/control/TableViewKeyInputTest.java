@@ -2582,4 +2582,34 @@ public class TableViewKeyInputTest {
         assertEquals(0, sm.getSelectedIndex());
         assertTrue(isSelected(0, 1, 2));
     }
+
+    @Test public void test_rt34425() {
+        final int items = 5;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        new StageLoader(tableView);
+        final FocusModel fm = tableView.getFocusModel();
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+
+        sm.clearAndSelect(1);
+        assertEquals(1, getAnchor().getRow());
+        assertEquals(1, fm.getFocusedIndex());
+        assertEquals(1, sm.getSelectedIndex());
+
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
+        Toolkit.getToolkit().firePulse();
+        assertEquals(1, getAnchor().getRow());
+        assertEquals(2, fm.getFocusedIndex());
+        assertEquals(1, sm.getSelectedIndex());
+
+        keyboard.doKeyPress(KeyCode.SPACE);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(2, getAnchor().getRow());
+        assertEquals(2, fm.getFocusedIndex());
+        assertEquals(2, sm.getSelectedIndex());
+        assertTrue(isSelected(1, 2));
+    }
 }

@@ -836,6 +836,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
 
         TablePositionBase<TC> cell = getFocusedCell();
         sm.select(cell.getRow(), cell.getTableColumn());
+        setAnchor(cell);
 
         // edit this row also
         if (cell.getRow() >= 0) {
