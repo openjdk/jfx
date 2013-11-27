@@ -1938,18 +1938,23 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
 
     if (needToSavePendingPoints) {
         // recording pending touch points as existing touch points
-        mouseState->touchPointCount = count;
-        GLASS_LOG_FINEST("[store points] saving %i touch points",
-                         count);
+        int activeTouchPointsCount = 0;
+                       
         for (i = 0; i < count; i++) {
-            mouseState->touchIDs[i] = ids[i];
-            mouseState->touchXs[i] = xs[i];
-            mouseState->touchYs[i] = ys[i];
-            GLASS_LOG_FINEST("[store points] Touch point %i at %i, %i (id=%i)",
-                             i,
-                             mouseState->touchXs[i], mouseState->touchYs[i],
-                             mouseState->touchIDs[i]);
+            if (states[i] != com_sun_glass_events_TouchEvent_TOUCH_RELEASED) {
+                mouseState->touchIDs[activeTouchPointsCount] = ids[i];
+                mouseState->touchXs[activeTouchPointsCount] = xs[i];
+                mouseState->touchYs[activeTouchPointsCount] = ys[i];
+                GLASS_LOG_FINEST("[store points] Touch point %i at %i, %i (id=%i)",
+                                 i,
+                                 mouseState->touchXs[activeTouchPointsCount],
+                                 mouseState->touchYs[activeTouchPointsCount],
+                                 mouseState->touchIDs[activeTouchPointsCount]);
+                activeTouchPointsCount++;
+
+            }
         }
+        mouseState->touchPointCount = activeTouchPointsCount;
     } else {
         //all points are released, no need to save
         mouseState->touchPointCount = 0;
