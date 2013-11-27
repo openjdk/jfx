@@ -30,11 +30,8 @@ import com.sun.javafx.embed.EmbeddedSceneDSInterface;
 import com.sun.javafx.embed.HostDragStartListener;
 import com.sun.javafx.embed.EmbeddedSceneDTInterface;
 
-import java.awt.EventQueue;
-import java.awt.SecondaryLoop;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.sun.javafx.tk.TKClipboard;
