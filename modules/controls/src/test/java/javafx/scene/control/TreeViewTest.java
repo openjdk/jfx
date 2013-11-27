@@ -1288,4 +1288,122 @@ public class TreeViewTest {
         assertEquals(3, treeView.getSelectionModel().getSelectedIndex());
         assertEquals(3, treeView.getFocusModel().getFocusedIndex());
     }
+
+    @Test public void test_rt26721_collapseParent_firstRootChild() {
+        treeView.setRoot(new TreeItem("Root"));
+        treeView.getRoot().setExpanded(true);
+
+        for (int i = 0; i < 4; i++) {
+            TreeItem parent = new TreeItem("item - " + i);
+            treeView.getRoot().getChildren().add(parent);
+
+            for (int j = 0; j < 4; j++) {
+                TreeItem child = new TreeItem("item - " + i + " " + j);
+                parent.getChildren().add(child);
+            }
+        }
+
+        treeView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        final TreeItem<String> item0 = treeView.getTreeItem(1);
+        final TreeItem<String> item0child0 = item0.getChildren().get(0);
+        final TreeItem<String> item1 = treeView.getTreeItem(2);
+
+        assertEquals("item - 0", item0.getValue());
+        assertEquals("item - 1", item1.getValue());
+
+        item0.setExpanded(true);
+        item1.setExpanded(true);
+        Toolkit.getToolkit().firePulse();
+
+        // select the first child of item0
+        treeView.getSelectionModel().select(item0child0);
+
+        assertEquals(item0child0, treeView.getSelectionModel().getSelectedItem());
+        assertEquals(item0child0, treeView.getFocusModel().getFocusedItem());
+
+        // collapse item0 - we expect the selection / focus to move up to item0
+        item0.setExpanded(false);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(item0, treeView.getSelectionModel().getSelectedItem());
+        assertEquals(item0, treeView.getFocusModel().getFocusedItem());
+    }
+
+    @Test public void test_rt26721_collapseParent_lastRootChild() {
+        treeView.setRoot(new TreeItem("Root"));
+        treeView.getRoot().setExpanded(true);
+
+        for (int i = 0; i < 4; i++) {
+            TreeItem parent = new TreeItem("item - " + i);
+            treeView.getRoot().getChildren().add(parent);
+
+            for (int j = 0; j < 4; j++) {
+                TreeItem child = new TreeItem("item - " + i + " " + j);
+                parent.getChildren().add(child);
+            }
+        }
+
+        treeView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        final TreeItem<String> item3 = treeView.getTreeItem(4);
+        final TreeItem<String> item3child0 = item3.getChildren().get(0);
+
+        assertEquals("item - 3", item3.getValue());
+        assertEquals("item - 3 0", item3child0.getValue());
+
+        item3.setExpanded(true);
+        Toolkit.getToolkit().firePulse();
+
+        // select the first child of item0
+        treeView.getSelectionModel().select(item3child0);
+
+        assertEquals(item3child0, treeView.getSelectionModel().getSelectedItem());
+        assertEquals(item3child0, treeView.getFocusModel().getFocusedItem());
+
+        // collapse item3 - we expect the selection / focus to move up to item3
+        item3.setExpanded(false);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(item3, treeView.getSelectionModel().getSelectedItem());
+        assertEquals(item3, treeView.getFocusModel().getFocusedItem());
+    }
+
+    @Test public void test_rt26721_collapseGrandParent() {
+        treeView.setRoot(new TreeItem("Root"));
+        treeView.getRoot().setExpanded(true);
+
+        for (int i = 0; i < 4; i++) {
+            TreeItem parent = new TreeItem("item - " + i);
+            treeView.getRoot().getChildren().add(parent);
+
+            for (int j = 0; j < 4; j++) {
+                TreeItem child = new TreeItem("item - " + i + " " + j);
+                parent.getChildren().add(child);
+            }
+        }
+
+        treeView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        final TreeItem<String> item0 = treeView.getTreeItem(1);
+        final TreeItem<String> item0child0 = item0.getChildren().get(0);
+        final TreeItem<String> item1 = treeView.getTreeItem(2);
+
+        assertEquals("item - 0", item0.getValue());
+        assertEquals("item - 1", item1.getValue());
+
+        item0.setExpanded(true);
+        item1.setExpanded(true);
+        Toolkit.getToolkit().firePulse();
+
+        // select the first child of item0
+        treeView.getSelectionModel().select(item0child0);
+
+        assertEquals(item0child0, treeView.getSelectionModel().getSelectedItem());
+        assertEquals(item0child0, treeView.getFocusModel().getFocusedItem());
+
+        // collapse root - we expect the selection / focus to move up to root
+        treeView.getRoot().setExpanded(false);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(treeView.getRoot(), treeView.getSelectionModel().getSelectedItem());
+        assertEquals(treeView.getRoot(), treeView.getFocusModel().getFocusedItem());
+    }
 }

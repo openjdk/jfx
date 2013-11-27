@@ -2184,14 +2184,14 @@ public class TreeTableView<S> extends Control {
                                 final TreeTableColumn<S,?> col = columns.get(column);
                                 if (isSelected(i, col)) {
                                     wasAnyChildSelected = true;
+                                    clearSelection(i, col);
                                 }
-                                clearSelection(i, col);
                             }
                         } else {
                             if (isSelected(i)) {
                                 wasAnyChildSelected = true;
+                                clearSelection(i);
                             }
-                            clearSelection(i);
                         }
                     }
 

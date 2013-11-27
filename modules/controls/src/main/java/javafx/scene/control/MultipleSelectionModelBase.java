@@ -634,7 +634,14 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
     }
 
     @Override public boolean isSelected(int index) {
-        if (index >= 0 && index < getItemCount()) {
+        // Note the change in semantics here - we used to check to ensure that
+        // the index is less than the item count, but now simply ensure that
+        // it is less than the length of the selectedIndices bitset. This helps
+        // to resolve issues such as RT-26721, where isSelected(int) was being
+        // called for indices that exceeded the item count, as a TreeItem (e.g.
+        // the root) was being collapsed.
+//        if (index >= 0 && index < getItemCount()) {
+        if (index >= 0 && index < selectedIndices.length()) {
             return selectedIndices.get(index);
         }
 

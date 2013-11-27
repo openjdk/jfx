@@ -2786,4 +2786,125 @@ public class TreeTableViewTest {
         // other value (based on the width of the content in that column)
         assertEquals(400, last.getWidth(), 0.0);
     }
+
+    @Test public void test_rt26721_collapseParent_firstRootChild() {
+        TreeTableView<String> table = new TreeTableView<>();
+        table.setRoot(new TreeItem("Root"));
+        table.getRoot().setExpanded(true);
+
+        for (int i = 0; i < 4; i++) {
+            TreeItem parent = new TreeItem("item - " + i);
+            table.getRoot().getChildren().add(parent);
+
+            for (int j = 0; j < 4; j++) {
+                TreeItem child = new TreeItem("item - " + i + " " + j);
+                parent.getChildren().add(child);
+            }
+        }
+
+        table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        final TreeItem<String> item0 = table.getTreeItem(1);
+        final TreeItem<String> item0child0 = item0.getChildren().get(0);
+        final TreeItem<String> item1 = table.getTreeItem(2);
+
+        assertEquals("item - 0", item0.getValue());
+        assertEquals("item - 1", item1.getValue());
+
+        item0.setExpanded(true);
+        item1.setExpanded(true);
+        Toolkit.getToolkit().firePulse();
+
+        // select the first child of item0
+        table.getSelectionModel().select(item0child0);
+
+        assertEquals(item0child0, table.getSelectionModel().getSelectedItem());
+        assertEquals(item0child0, table.getFocusModel().getFocusedItem());
+
+        // collapse item0 - we expect the selection / focus to move up to item0
+        item0.setExpanded(false);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(item0, table.getSelectionModel().getSelectedItem());
+        assertEquals(item0, table.getFocusModel().getFocusedItem());
+    }
+
+    @Test public void test_rt26721_collapseParent_lastRootChild() {
+        TreeTableView<String> table = new TreeTableView<>();
+        table.setRoot(new TreeItem("Root"));
+        table.getRoot().setExpanded(true);
+
+        for (int i = 0; i < 4; i++) {
+            TreeItem parent = new TreeItem("item - " + i);
+            table.getRoot().getChildren().add(parent);
+
+            for (int j = 0; j < 4; j++) {
+                TreeItem child = new TreeItem("item - " + i + " " + j);
+                parent.getChildren().add(child);
+            }
+        }
+
+        table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        final TreeItem<String> item3 = table.getTreeItem(4);
+        final TreeItem<String> item3child0 = item3.getChildren().get(0);
+
+        assertEquals("item - 3", item3.getValue());
+        assertEquals("item - 3 0", item3child0.getValue());
+
+        item3.setExpanded(true);
+        Toolkit.getToolkit().firePulse();
+
+        // select the first child of item0
+        table.getSelectionModel().select(item3child0);
+
+        assertEquals(item3child0, table.getSelectionModel().getSelectedItem());
+        assertEquals(item3child0, table.getFocusModel().getFocusedItem());
+
+        // collapse item3 - we expect the selection / focus to move up to item3
+        item3.setExpanded(false);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(item3, table.getSelectionModel().getSelectedItem());
+        assertEquals(item3, table.getFocusModel().getFocusedItem());
+    }
+
+    @Test public void test_rt26721_collapseGrandParent() {
+        TreeTableView<String> table = new TreeTableView<>();
+        table.setRoot(new TreeItem("Root"));
+        table.getRoot().setExpanded(true);
+
+        for (int i = 0; i < 4; i++) {
+            TreeItem parent = new TreeItem("item - " + i);
+            table.getRoot().getChildren().add(parent);
+
+            for (int j = 0; j < 4; j++) {
+                TreeItem child = new TreeItem("item - " + i + " " + j);
+                parent.getChildren().add(child);
+            }
+        }
+
+        table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        final TreeItem<String> item0 = table.getTreeItem(1);
+        final TreeItem<String> item0child0 = item0.getChildren().get(0);
+        final TreeItem<String> item1 = table.getTreeItem(2);
+
+        assertEquals("item - 0", item0.getValue());
+        assertEquals("item - 1", item1.getValue());
+
+        item0.setExpanded(true);
+        item1.setExpanded(true);
+        Toolkit.getToolkit().firePulse();
+
+        // select the first child of item0
+        table.getSelectionModel().select(item0child0);
+
+        assertEquals(item0child0, table.getSelectionModel().getSelectedItem());
+        assertEquals(item0child0, table.getFocusModel().getFocusedItem());
+
+        // collapse root - we expect the selection / focus to move up to root
+        table.getRoot().setExpanded(false);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(table.getRoot(), table.getSelectionModel().getSelectedItem());
+        assertEquals(table.getRoot(), table.getFocusModel().getFocusedItem());
+    }
 }
