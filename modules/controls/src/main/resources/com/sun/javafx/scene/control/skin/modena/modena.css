@@ -2253,10 +2253,10 @@ is being used to size a border should also be in pixels.
 /* focused cell (keyboard navigation) */
 .list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:focused,
 .tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:focused,
-.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:focused,
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:focused,
-.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell > .table-cell:focused,
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell:focused {
+.table-view:focused:row-selection > .virtual-flow > .clipped-container > .sheet > .table-row-cell:focused,
+.tree-table-view:focused:row-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:focused,
+.table-view:focused:cell-selection > .virtual-flow > .clipped-container > .sheet > .table-row-cell > .table-cell:focused,
+.tree-table-view:focused:cell-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell:focused {
     -fx-background-color: -fx-background, -fx-cell-focus-inner-border, -fx-background;
     -fx-background-insets: 0, 1, 2;
 }
