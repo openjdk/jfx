@@ -28,13 +28,98 @@ import javafx.stage.Stage;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGSubScene;
 import com.sun.javafx.tk.Toolkit;
+import javafx.application.Platform;
 import javafx.scene.layout.Pane;
-import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import org.junit.Test;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class SubSceneTest {
+
+    @Test
+    public void isOnFxAppThread() {
+        assertTrue(Platform.isFxApplicationThread());
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void testNullRoot() {
+        SubScene subScene = new SubScene(null, 10, 10);
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void testSetNullRoot() {
+        SubScene subScene = new SubScene(new Group(), 10, 10);
+        subScene.setRoot(null);
+    }
+
+    @Test
+    public void testRootInitializedInConstructor() {
+        Group g = new Group();
+        SubScene subScene = new SubScene(g, 10, 10);
+
+        assertEquals(g, subScene.getRoot());
+        assertEquals(subScene, g.getSubScene());
+    }
+
+    @Test
+    public void testWidthHeightInitializedInConstructor() {
+        int width = 600;
+        int height = 400;
+        SubScene subScene = new SubScene(new Group(), width, height);
+
+        assertTrue(subScene.getWidth() == width);
+        assertTrue(subScene.getHeight() == height);
+    }
+
+    @Test
+    public void testDepthBufferInitializedInConstructor() {
+        Group g = new Group();
+        SubScene subScene = new SubScene(g, 10, 10, true, SceneAntialiasing.DISABLED);
+
+        assertTrue(subScene.isDepthBuffer());
+    }
+
+   @Test
+       public void testNullAntiAliasingInitializedInConstructor() {
+        Group g = new Group();
+        SubScene subScene = new SubScene(g, 10, 10, false, null);
+
+        assertTrue(subScene.getAntiAliasing() == null);
+    }
+
+   @Test
+    public void testAntiAliasingInitializedInConstructor() {
+        Group g = new Group();
+        SubScene subScene = new SubScene(g, 10, 10, false, SceneAntialiasing.BALANCED);
+
+        assertTrue(subScene.getAntiAliasing() == SceneAntialiasing.BALANCED);
+    }
+   
+    @Test
+    public void testRootUpdatedWhenAddedToSubScene() {
+        SubScene subScene = new SubScene(new Group(), 10, 10);
+
+        Group g = new Group();
+        subScene.setRoot(g);
+
+        assertEquals(g, subScene.getRoot());
+        assertEquals(subScene, g.getSubScene());
+    }
+
+    @Test
+    public void testRootUpdatedWhenChangedInSubScene() {
+        Group g = new Group();
+        SubScene subScene = new SubScene(g, 10, 10);
+
+        Group g2 = new Group();
+        subScene.setRoot(g2);
+
+        assertNull(g.getSubScene());
+        assertEquals(g2, subScene.getRoot());
+        assertEquals(subScene, g2.getSubScene());
+    }
 
     @Test
     public void testSetCamera() {
