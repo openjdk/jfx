@@ -61,6 +61,16 @@ final class LensTouchInputSupport {
     private static final int touchMoveSensitivity;
 
     /**
+     * This property enables or disables input device pruning. When input
+     * device pruning is enabled, only the first device input node of a
+     * device is captured. So if an input device driver registers nodes
+     * /dev/input/event2 and /dev/input/event3 for the same devices, only
+     * the first node reported by udev is used.
+     * Input device pruning is off by default.
+     */
+    private static final boolean pruneInputDevices;
+
+    /**
      * This property enable/disable multi touch support by the input driver.
      * When the property is disabled and a multitouch screen is connected, the
      * input driver will 'downgrade' the screen events to a single touch 
@@ -83,6 +93,14 @@ final class LensTouchInputSupport {
             @Override
             public Integer run() {
                 return Integer.getInteger("lens.input.touch.MoveSensitivity", 20);
+            }
+        });
+
+        pruneInputDevices = AccessController.doPrivileged(
+        new PrivilegedAction<Boolean>() {
+            @Override
+            public Boolean run() {
+                return Boolean.getBoolean("lens.input.pruneDevices");
             }
         });
 

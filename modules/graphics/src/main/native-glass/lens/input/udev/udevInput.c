@@ -237,6 +237,7 @@ static int gTapRadius = 20;//pixels
 static int gTouchMoveSensitivity = 20; //pixels
 
 static jboolean gUseMultiTouch = JNI_FALSE;
+static jboolean gPruneInputDevices = JNI_FALSE;
 
 
 //JNI
@@ -344,11 +345,17 @@ jboolean lens_input_initialize(JNIEnv *env) {
                                                            lensTouchInputSupport,
                                                            "touchMoveSensitivity",
                                                            "I");
+        jfieldID pruneVar = (*env)->GetStaticFieldID(env,
+                                                     lensTouchInputSupport,
+                                                     "pruneInputDevices",
+                                                     "Z");
 
         jfieldID useMultiVar = (*env)->GetStaticFieldID(env,
                                                            lensTouchInputSupport,
                                                            "useMultiTouch",
                                                            "Z");
+        assert(pruneVar);
+
         //try to set tap radius
         if (radiusVar != NULL) {
             int confRadius = (*env)->GetStaticIntField(env,
@@ -394,6 +401,14 @@ jboolean lens_input_initialize(JNIEnv *env) {
         } else {
             GLASS_LOG_SEVERE("Could not find static touchMoveSensitivity filed in %s",
                              className);
+        }
+
+        if (pruneVar) {
+            gPruneInputDevices = (*env)->GetStaticBooleanField(env,
+                    lensTouchInputSupport,
+                    pruneVar);
+            GLASS_LOG_CONFIG("%s input devices",
+                             gPruneInputDevices ? "Prune" : "Don't prune");
         }
 
         //try to set multi-touch enabled property
@@ -466,15 +481,14 @@ static void lens_input_udevFindDevices(JNIEnv *env) {
 
         //check that device support input events
         if (udev_device_get_property_value(udev_device, "ID_INPUT")) {
-            //add device if not exists
-            if (!lens_input_isUdevDeviceExists(udev_device, NULL)) {
+            if (gPruneInputDevices && lens_input_isUdevDeviceExists(udev_device, NULL)) {
+                GLASS_LOG_FINE("Device %s already registered",
+                               udev_device_get_devpath(udev_device));
+            } else {
                 device = lens_input_deviceAllocateAndInit(env, udev_device);
                 if (device) {
                     lens_input_listAdd(device);
                 }
-            } else {
-                GLASS_LOG_FINE("Device %s allready registered",
-                               udev_device_get_devpath(udev_device));
             }
         } else {
             GLASS_LOG_FINE("ignoring device without input capabilities [device path %s]",
@@ -589,7 +603,8 @@ static jboolean lens_input_deviceCheckProperties(LensInputDevice *device,
         device->isPointer = JNI_TRUE;
         isValidDevice = JNI_TRUE;
         GLASS_LOG_FINE("Device is a pointer");
-    } else if (!strcmp(key, "ID_INPUT_TOUCHSCREEN")) {
+    } else if (!strcmp(key, "ID_INPUT_TOUCHSCREEN")
+               || !strcmp(key, "ID_INPUT_TABLET")) {
         device->isTouch = JNI_TRUE;
         //default touch protocol to ST (single touch), which is always supported 
         //by touch devices. multi touch support protocol is checked in 
