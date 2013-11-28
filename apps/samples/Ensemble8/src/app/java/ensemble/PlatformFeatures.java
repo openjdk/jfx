@@ -31,6 +31,11 @@
  */
 package ensemble;
 
+
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
+
+
 public class PlatformFeatures {
     private static final String os = System.getProperty("os.name");
     private static final String arch = System.getProperty("os.arch");
@@ -46,6 +51,7 @@ public class PlatformFeatures {
     public static final boolean USE_IOS_THEME = IOS;
     public static final boolean START_FULL_SCREEN = ARM;
     public static final boolean EMBEDDED = ARM || IOS;
+    public static final boolean WEB_SUPPORTED = Platform.isSupported(ConditionalFeature.WEB);
         
     private PlatformFeatures(){}
 }
