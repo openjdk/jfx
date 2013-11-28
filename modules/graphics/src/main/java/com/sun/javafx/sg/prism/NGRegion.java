@@ -906,16 +906,14 @@ public class NGRegion extends NGGroup {
         final float dstHeight = outsetsTop + height + outsetsBottom;
         final boolean sameWidth = textureWidth == dstWidth;
         final boolean sameHeight = textureHeight == dstHeight;
-
-        // Enlarge all edges by 0.5f for proper rendering at subpixel locations
-        final float dstX1 = -outsetsLeft - 0.5f;
-        final float dstY1 = -outsetsTop - 0.5f;
-        final float dstX2 = width + outsetsRight + 0.5f;
-        final float dstY2 = height + outsetsBottom + 0.5f;
-        final float srcX1 = rect.x - 0.5f;
-        final float srcY1 = rect.y - 0.5f;
-        final float srcX2 = rect.x + textureWidth + 0.5f;
-        final float srcY2 = rect.y + textureHeight + 0.5f;
+        final float dstX1 = -outsetsLeft;
+        final float dstY1 = -outsetsTop;
+        final float dstX2 = width + outsetsRight;
+        final float dstY2 = height + outsetsBottom;
+        final float srcX1 = rect.x;
+        final float srcY1 = rect.y;
+        final float srcX2 = srcX1 + textureWidth;
+        final float srcY2 = srcY1 + textureHeight;
 
         // If total destination width is < the source width, then we need to start
         // shrinking the left and right sides to accommodate. Likewise in the other dimension.
