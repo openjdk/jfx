@@ -375,10 +375,12 @@ class D3DContext extends BaseShaderContext {
             float[] vertexBuffer, int vertexBufferLength, int[] indexBuffer, int indexBufferLength);
     private static native long nCreateD3DPhongMaterial(long pContext);
     private static native void nReleaseD3DPhongMaterial(long pContext, long nativeHandle);
-    private static native void nSetSolidColor(long pContext, long nativePhongMaterial,
+    private static native void nSetDiffuseColor(long pContext, long nativePhongMaterial,
             float r, float g, float b, float a);
+    private static native void nSetSpecularColor(long pContext, long nativePhongMaterial,
+            boolean set, float r, float g, float b, float a);
     private static native void nSetMap(long pContext, long nativePhongMaterial,
-            int mapType, long texID, boolean isSpecularAlpha, boolean isBumpAlpha);
+            int mapType, long texID);
     private static native long nCreateD3DMeshView(long pContext, long nativeMesh);
     private static native void nReleaseD3DMeshView(long pContext, long nativeHandle);
     private static native void nSetCullingMode(long pContext, long nativeMeshView,
@@ -466,14 +468,16 @@ class D3DContext extends BaseShaderContext {
         nReleaseD3DPhongMaterial(pContext, nativeHandle);
     }
 
-    void setSolidColor(long nativePhongMaterial, float r, float g, float b, float a) {
-        nSetSolidColor(pContext, nativePhongMaterial, r, g, b, a);
+    void setDiffuseColor(long nativePhongMaterial, float r, float g, float b, float a) {
+        nSetDiffuseColor(pContext, nativePhongMaterial, r, g, b, a);
     }
 
-    void setMap(long nativePhongMaterial, int mapType, long nativeTexture,
-            boolean isSpecularAlpha, boolean isBumpAlpha) {
-        nSetMap(pContext, nativePhongMaterial, mapType, nativeTexture,
-                isSpecularAlpha, isBumpAlpha);
+    void setSpecularColor(long nativePhongMaterial, boolean set, float r, float g, float b, float a) {
+        nSetSpecularColor(pContext, nativePhongMaterial, set, r, g, b, a);
+    }
+
+    void setMap(long nativePhongMaterial, int mapType, long nativeTexture) {
+        nSetMap(pContext, nativePhongMaterial, mapType, nativeTexture);
     }
 
     long createD3DMeshView(long nativeMesh) {

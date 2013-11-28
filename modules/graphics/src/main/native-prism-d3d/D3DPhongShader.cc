@@ -66,24 +66,28 @@ D3DPhongShader::D3DPhongShader(IDirect3DDevice9 *dev) {
         {
             {
                 { psMtl1_s1n, psMtl1_s2n, psMtl1_s3n},
-                { psMtl1_s1a, psMtl1_s2a, psMtl1_s3a},
-                { psMtl1_s1s, psMtl1_s2s, psMtl1_s3s}
+                { psMtl1_s1t, psMtl1_s2t, psMtl1_s3t},
+                { psMtl1_s1c, psMtl1_s2c, psMtl1_s3c},
+                { psMtl1_s1m, psMtl1_s2m, psMtl1_s3m}
             },
             {
                 { psMtl1_b1n, psMtl1_b2n, psMtl1_b3n},
-                { psMtl1_b1a, psMtl1_b2a, psMtl1_b3a},
-                { psMtl1_b1s, psMtl1_b2s, psMtl1_b3s}
+                { psMtl1_b1t, psMtl1_b2t, psMtl1_b3t},
+                { psMtl1_b1c, psMtl1_b2c, psMtl1_b3c},
+                { psMtl1_b1m, psMtl1_b2m, psMtl1_b3m}
             }},
         {
             {
                 { psMtl1_s1ni, psMtl1_s2ni, psMtl1_s3ni},
-                { psMtl1_s1ai, psMtl1_s2ai, psMtl1_s3ai},
-                { psMtl1_s1si, psMtl1_s2si, psMtl1_s3si}
+                { psMtl1_s1ti, psMtl1_s2ti, psMtl1_s3ti},
+                { psMtl1_s1ci, psMtl1_s2ci, psMtl1_s3ci},
+                { psMtl1_s1mi, psMtl1_s2mi, psMtl1_s3mi}
             },
             {
                 { psMtl1_b1ni, psMtl1_b2ni, psMtl1_b3ni},
-                { psMtl1_b1ai, psMtl1_b2ai, psMtl1_b3ai},
-                { psMtl1_b1si, psMtl1_b2si, psMtl1_b3si}
+                { psMtl1_b1ti, psMtl1_b2ti, psMtl1_b3ti},
+                { psMtl1_b1ci, psMtl1_b2ci, psMtl1_b3ci},
+                { psMtl1_b1mi, psMtl1_b2mi, psMtl1_b3mi}
             }}
     };
 
@@ -108,12 +112,14 @@ IDirect3DVertexShader9 * D3DPhongShader::getVertexShader() {
 }
 
 int D3DPhongShader::getBumpMode(bool isBumpMap) {
-    return isBumpMap ? BUMP_SPECIFIED : BUMP_NONE;
+    return isBumpMap ? BumpSpecified : BumpNone;
 }
 
-int D3DPhongShader::getSpecularMode(bool isSpecularMap, bool isSpecularAlpha){
-        return isSpecularMap ?
-            isSpecularAlpha ? SPECULAR_SPECIFIED : SPECULAR_AUTO : SPECULAR_NONE;
+int D3DPhongShader::getSpecularMode(bool isSpecularMap, bool isSpecularColor) {
+    if (isSpecularMap) {
+        return isSpecularColor ? SpecMix : SpecTexture;
+    }
+    return isSpecularColor ? SpecColor : SpecNone;
 }
 
 HRESULT D3DPhongShader::setPixelShader(int numLights, int specularMode,

@@ -421,9 +421,8 @@ class ES2Context extends BaseShaderContext {
         glContext.setSolidColor(nativeHandle, r, g, b, a);
     }
 
-    void setMap(long nativeHandle, int mapType, int texID,
-            boolean isSpecularAlpha, boolean isBumpAlpha) {
-        glContext.setMap(nativeHandle, mapType, texID, isSpecularAlpha, isBumpAlpha);
+    void setMap(long nativeHandle, int mapType, int texID) {
+        glContext.setMap(nativeHandle, mapType, texID);
     }
 
     long createES2MeshView(ES2Mesh mesh) {

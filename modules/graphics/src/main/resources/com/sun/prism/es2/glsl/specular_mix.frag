@@ -23,38 +23,17 @@
  * questions.
  */
 
-#ifndef D3DPHONGMATERIAL_H
-#define D3DPHONGMATERIAL_H
+// specular mix fragment shader
+//#version 120
 
-#include "D3DContext.h"
+uniform vec4 specularColor;
+uniform sampler2D specularMap;
 
-// See MaterialPhong.h, MaterialPhongShaders.h
-
-#define DIFFUSE 0
-#define SPECULAR 1
-#define BUMP 2
-#define SELFILLUMINATION 3
-
-class D3DPhongMaterial {
-public:
-    D3DPhongMaterial(D3DContext *pCtx);
-    virtual ~D3DPhongMaterial();
-    void setDiffuseColor(float r, float g, float b, float a);
-    float *getDiffuseColor();
-    void setSpecularColor(bool set, float r, float g, float b, float a);
-    float *getSpecularColor();
-    void setMap(int mapID, IDirect3DBaseTexture9 *texMap);
-    bool isBumpMap();
-    bool isSpecularMap();
-    bool isSpecularColor();
-    bool isSelfIllumMap();
-    IDirect3DBaseTexture9 * getMap(int type);
-
-private:
-    D3DContext *context;
-    float diffuseColor[4], specularColor[4];
-    IDirect3DBaseTexture9 *map[4];
-    bool specularColorSet;
-};
-
-#endif  /* D3DPHONGMATERIAL_H */
+vec4 apply_specular()
+{
+    vec3 tSpec = texture2D(specularMap, oTexCoords).rgb;
+    tSpec *= specularColor.rgb;
+    float sPower = specularColor.a;
+    sPower *= dot(tSpec, vec3(0.299, 0.587, 0.114)); // Rec. 601 luma conversion
+    return vec4(tSpec, sPower);
+}

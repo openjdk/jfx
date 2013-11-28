@@ -48,7 +48,6 @@ public class NGPhongMaterial {
     private boolean specularColorDirty = true;
     private float specularPower;
     private boolean specularPowerDirty = true;
-    private boolean hasSpecularMap = false;
     private TextureMap specularMap = new TextureMap(PhongMaterial.MapType.SPECULAR);
 
     private TextureMap bumpMap = new TextureMap(PhongMaterial.MapType.BUMP);
@@ -67,11 +66,11 @@ public class NGPhongMaterial {
 
         if (diffuseColorDirty) {
             if (diffuseColor != null) {
-                material.setSolidColor(
+                material.setDiffuseColor(
                         diffuseColor.getRed(), diffuseColor.getGreen(),
                         diffuseColor.getBlue(), diffuseColor.getAlpha());
             } else {
-                material.setSolidColor(0, 0, 0, 0);
+                material.setDiffuseColor(0, 0, 0, 0);
             }
             diffuseColorDirty = false;
         }
@@ -88,24 +87,18 @@ public class NGPhongMaterial {
         if (selfIllumMap.isDirty()) {
             material.setTextureMap(selfIllumMap);
         }
-        if (specularMap.isDirty() || specularColorDirty || specularPowerDirty) {
-            Image specular = specularMap.getImage();
-            if (!hasSpecularMap && specularColor != null) {
-                int ia = (int) (255.0 * specularPower);
-                int ir = (int) (255.0 * specularColor.getRed());
-                int ig = (int) (255.0 * specularColor.getGreen());
-                int ib = (int) (255.0 * specularColor.getBlue());
-                int pixel = (ia << 24) | (ir << 16) | (ig << 8) | (ib << 0);
-
-                if (ir != 0 || ig != 0 || ib != 0) {
-                    specular = Image.fromIntArgbPreData(new int[]{pixel}, 1, 1);
-                    // NOTE: Need to manually mark specularMap dirty when it is
-                    // a color so that native texture can be updated.
-                    specularMap.setDirty(true);
-                }
-            }
-            specularMap.setImage(specular);
+        if (specularMap.isDirty()) {
             material.setTextureMap(specularMap);
+        }
+        if (specularColorDirty || specularPowerDirty) {
+            if (specularColor != null) {
+                float r = specularColor.getRed();
+                float g = specularColor.getGreen();
+                float b = specularColor.getBlue();
+                material.setSpecularColor(true, r, g, b, specularPower);
+            } else {
+                material.setSpecularColor(false, 1, 1, 1, specularPower);
+            }
             specularColorDirty = false;
             specularPowerDirty = false;
         }
@@ -134,7 +127,6 @@ public class NGPhongMaterial {
     public void setSpecularMap(Object specularMap) {
         this.specularMap.setImage((Image)specularMap);
         this.specularMap.setDirty(true);
-        hasSpecularMap = specularMap != null ? true : false;
     }
 
     public void setBumpMap(Object bumpMap) {

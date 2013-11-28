@@ -24,16 +24,27 @@
  */
 package fx83dfeatures;
 
+import java.util.ArrayList;
+import java.util.List;
 import javafx.application.Application;
-import javafx.beans.value.ChangeListener;
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.ObjectBinding;
 import javafx.beans.value.ObservableValue;
+import javafx.geometry.Insets;
 import javafx.scene.Group;
+import javafx.scene.Node;
 import javafx.scene.PerspectiveCamera;
+import javafx.scene.PointLight;
 import javafx.scene.Scene;
+import javafx.scene.SubScene;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ColorPicker;
+import javafx.scene.control.Label;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
@@ -44,70 +55,200 @@ public class SpecularColorTestApp extends Application {
 
     private ScrollBar specularPowerScroll;
     private ColorPicker specularColorPicker;
-    private CheckBox specularMapCheckBox;
+    private CheckBox specularColorCheckBox, specularMapCheckBox;
+
+    Image diffuseMap = new Image("resources/cup_diffuseMap_1024.png");
+    Image specularGrayMap = new Image("resources/spec.png");
+    Image specularColorMap = new Image("resources/spec_color.png");
+    //Image bumpMap = new Image("resources/bump.png");
+
+    private List<PhongMaterial> materials;
+
+    private void addSphere(Group g, int x, int y, PhongMaterial material) {
+        Sphere s = new Sphere(10);
+        s.setMaterial(material);
+        s.setTranslateX(x);
+        s.setTranslateY(y);
+        g.getChildren().add(s);
+    }
+
+    interface MaterialModifier {
+        public void modify(PhongMaterial mat);
+    }
+
+    private void addMaterials(MaterialModifier modifier) {
+        PhongMaterial mat = new PhongMaterial(Color.ANTIQUEWHITE);
+        modifier.modify(mat);
+        materials.add(mat);
+
+        mat = new PhongMaterial();
+        mat.setDiffuseMap(diffuseMap);
+        modifier.modify(mat);
+        materials.add(mat);
+
+        mat = new PhongMaterial(Color.RED);
+        mat.setDiffuseMap(diffuseMap);
+        modifier.modify(mat);
+        materials.add(mat);
+/*
+        mat = new PhongMaterial();
+        mat.setDiffuseMap(diffuseMap);
+        mat.setBumpMap(bumpMap);
+        modifier.modify(mat);
+        materials.add(mat);
+*/
+    }
+
+    private void bindMaterial(PhongMaterial m, ObservableValue color, ObservableValue map) {
+        if (color != null) {
+            m.specularColorProperty().bind(color);
+        }
+        if (map != null) {
+            m.specularMapProperty().bind(map);
+        }
+        m.specularPowerProperty().bind(specularPowerScroll.valueProperty());
+    }
+
+    private void addSpheres(Group g) {
+        materials = new ArrayList();
+
+        // no specular
+        addMaterials(m -> {});
+
+        // specular power with default color (null)
+        addMaterials(m -> m.setSpecularPower(100));
+
+        // specular color with default power
+        addMaterials(m -> m.setSpecularColor(Color.WHITE));
+
+        ObjectBinding specularColorBind = Bindings.createObjectBinding(
+                () -> specularColorCheckBox.isSelected() ?
+                        specularColorPicker.getValue() : null,
+                specularColorPicker.valueProperty(),
+                specularColorCheckBox.selectedProperty()
+        );
+
+        ObjectBinding specularGrayMapBind = Bindings.createObjectBinding(
+                () -> specularMapCheckBox.isSelected() ?
+                        specularGrayMap : null,
+                specularMapCheckBox.selectedProperty()
+        );
+
+        ObjectBinding specularColorMapBind = Bindings.createObjectBinding(
+                () -> specularMapCheckBox.isSelected() ?
+                        specularColorMap : null,
+                specularMapCheckBox.selectedProperty()
+        );
+
+        // specular power with color
+        addMaterials(m -> bindMaterial(m, specularColorBind, null));
+
+        // gray specular map
+        addMaterials(m -> m.specularMapProperty().bind(specularGrayMapBind));
+
+        // color specular map
+        addMaterials(m -> m.specularMapProperty().bind(specularColorMapBind));
+
+        // gray specular map with power
+        addMaterials(m -> bindMaterial(m, null, specularGrayMapBind));
+
+        // color specular map with power
+        addMaterials(m -> bindMaterial(m, null, specularColorMapBind));
+
+        // gray specular map with power and color
+        addMaterials(m -> bindMaterial(m, specularColorBind, specularGrayMapBind));
+
+        // color specular map with power and color
+        addMaterials(m -> bindMaterial(m, specularColorBind, specularColorMapBind));
+
+        int numX = 6, numY = ( materials.size() + numX - 1 ) / numX;
+        for (int y = 0; y < numY; y++) {
+            for (int x = 0; x < numX; x++) {
+                int idx = y * numX + x;
+                if (idx < materials.size()) {
+                    int xPos = -50 + x * 100 / (numX - 1);
+                    int yPos = -40 + y * 80 / (numY - 1);
+                    addSphere(g, xPos, yPos, materials.get(idx));
+                }
+            }
+        }
+    }
+
+    private Node createControls() {
+        specularPowerScroll = new ScrollBar();
+        specularPowerScroll.setValue(new PhongMaterial().getSpecularPower());
+        specularPowerScroll.setMin(1);
+        specularPowerScroll.setMax(100);
+
+        specularColorCheckBox = new CheckBox("Specular Color");
+        specularColorCheckBox.setSelected(true);
+        specularColorPicker = new ColorPicker(Color.color(0.5, 1, 0));
+
+        ImageView diffView = createImageView(diffuseMap);
+        specularMapCheckBox = new CheckBox("Specular Map");
+        specularMapCheckBox.setSelected(true);
+        ImageView specGrayView = createImageView(specularGrayMap);
+        ImageView specColorView = createImageView(specularColorMap);
+        VBox controls = new VBox(15);
+        controls.setPadding(new Insets(15));
+        GridPane grid = new GridPane();
+        grid.setHgap(5);
+        grid.setVgap(5);
+        grid.addRow(0, new Label("Diffuse"), new Label("Specuar power only"));
+        grid.addRow(1, new Label("White specular color"), new Label("Specular color and power"));
+        grid.addRow(3, new Label("Gray map"), new Label("Color map"));
+        grid.addRow(4, new Label("Gray map and power"), new Label("Color map and power"));
+        grid.addRow(5, new Label("Gray map with color"), new Label("Color map with color"));
+        controls.getChildren().addAll(specularColorCheckBox, specularColorPicker, specularPowerScroll,
+                grid, diffView, specularMapCheckBox, new HBox(15, specGrayView, specColorView));
+        
+        return controls;
+    }
+
+    private ImageView createImageView(Image image) {
+        ImageView diffView = new ImageView(image);
+        diffView.setFitWidth(100);
+        diffView.setPreserveRatio(true);
+        diffView.setSmooth(true);
+        diffView.setCache(true);
+        return diffView;
+    }
 
     @Override
     public void start(Stage stage) throws Exception {
-        final Image diffuseMap = new Image("resources/cup_diffuseMap_1024.png");
-        final PhongMaterial material = new PhongMaterial(Color.ANTIQUEWHITE);
+        Node controls = createControls();
+        PointLight pointLight = new PointLight(Color.ANTIQUEWHITE);
+        pointLight.setTranslateZ(-200);
 
-        final Sphere s = new Sphere();
-        s.setScaleX(100);
-        s.setScaleY(100);
-        s.setScaleZ(100);
-        s.setMaterial(material);
-        s.setTranslateX(150);
-        s.setTranslateY(250);
+        PointLight pointLight2 = new PointLight(Color.ANTIQUEWHITE);
+        pointLight2.setTranslateX(-250);
+        pointLight2.setTranslateY(300);
+        pointLight2.setTranslateZ(-1500);
 
-        final Sphere s1 = new Sphere(2);
-        s1.setScaleX(100);
-        s1.setScaleY(100);
-        s1.setScaleZ(100);
-        s1.setMaterial(material);
-        s1.setTranslateX(500);
-        s1.setTranslateY(250);
+        PointLight pointLight3 = new PointLight(Color.ANTIQUEWHITE);
+        pointLight3.setTranslateX(250);
+        pointLight3.setTranslateY(100);
+        pointLight3.setTranslateZ(500);
 
-        Group root1 = new Group(s, s1);
-        specularPowerScroll = new ScrollBar();
-        specularPowerScroll.setValue(material.getSpecularPower());
-        specularPowerScroll.setMin(0);
-        specularPowerScroll.setMax(1);
-        specularPowerScroll.valueProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
-                material.setSpecularPower(t1.doubleValue());
-                System.out.println("power changed " + t1.doubleValue());
-            }
-        });
+        Group root1 = new Group(pointLight/*, pointLight2, pointLight3*/);
+        addSpheres(root1);
 
-        specularColorPicker = new ColorPicker(material.getSpecularColor());
-        specularColorPicker.valueProperty().addListener(new ChangeListener<Color>() {
-            @Override
-            public void changed(ObservableValue<? extends Color> ov, Color t, Color t1) {
-                material.setSpecularColor(t1);
-                System.out.println("color changed " + t1);
-            }
-        });
-
-        specularMapCheckBox = new CheckBox("Specular Map");
-        specularMapCheckBox.setSelected(false);
-        specularMapCheckBox.selectedProperty().addListener(new ChangeListener<Boolean>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                material.setSpecularMap(t1 ? diffuseMap : null);
-            }
-        });
-        VBox controls = new VBox(15);
-        controls.getChildren().addAll(specularColorPicker, specularPowerScroll, specularMapCheckBox);
-
-        Group root = new Group(root1, controls);
-        Scene scene = new Scene(root, 800, 500, true);
-
+        SubScene scene3D = new SubScene(root1, 1024, 768, true, null);
+        final Camera3D cam3d = new Camera3D();
+        cam3d.setPosZ(-200);
+        cam3d.setFarClip(10000);
+        scene3D.setCamera(cam3d);
+        control = new CameraController(cam3d, scene3D);
+        scene3D.setFill(Color.DARKGRAY);
+        HBox root = new HBox(scene3D, controls);
+        Scene scene = new Scene(root, 1324, 768, true);
+        scene3D.requestFocus();
+     
         scene.setCamera(new PerspectiveCamera());
         stage.setScene(scene);
         stage.show();
     }
+    private CameraController control;
 
     public static void main(String[] args) {
         launch(args);

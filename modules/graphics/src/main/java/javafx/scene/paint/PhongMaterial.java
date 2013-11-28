@@ -135,7 +135,7 @@ public class PhongMaterial extends Material {
     /**
      * The specular power of this {@code PhongMaterial}.
      *
-     * @defaultValue 1.0
+     * @defaultValue 32.0
      */
     private DoubleProperty specularPower;
 
@@ -144,13 +144,13 @@ public class PhongMaterial extends Material {
     }
 
     public final double getSpecularPower() {
-        return specularPower == null ? 1 : specularPower.get();
+        return specularPower == null ? 32 : specularPower.get();
     }
 
     public final DoubleProperty specularPowerProperty() {
         if (specularPower == null) {
             specularPower = new SimpleDoubleProperty(PhongMaterial.this, 
-                    "specularPower", 1.0) {
+                    "specularPower", 32.0) {
                 @Override
                 public void invalidated() {
                     specularPowerDirty = true;

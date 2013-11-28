@@ -53,7 +53,7 @@ void main()
 
     vec3 refl = reflect(normalize(eyePos), n);
     vec4 specular = apply_specular();
-    float power = specular.a * 32.0 + 1.0;
+    float power = specular.a;
 
     vec3 l = normalize(lightTangentSpacePositions[0].xyz);
     d = clamp(dot(n,l), 0.0, 1.0)*(lights[0].color).rgb;

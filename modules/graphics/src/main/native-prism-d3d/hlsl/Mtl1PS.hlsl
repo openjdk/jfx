@@ -30,8 +30,9 @@
 #endif
 
 #define SpecNone 0
-#define SpecAuto 1
-#define SpecAlpha 2
+#define SpecTexture 1
+#define SpecColor 2
+#define SpecMix 3
 
 static const int specType = SType;
 
@@ -40,10 +41,6 @@ sampler mapDiffuse    : register(s0);
 sampler mapSpecular   : register(s1);
 sampler mapBumpHeight : register(s2);
 sampler mapSelfIllum  : register(s3);
-
-float autoSpecular (float3 diffuseRGB, float3 specRGB) {
-    return NTSC_Gray(specRGB);
-}
 
 float4 debug() {
     return float4(0,0,1,1);
@@ -66,23 +63,31 @@ float4 main(ObjectPsIn objAttr, LocalBump  lSpace) : color {
     float4 ambColor = objAttr.ambient;
 
     float4 tDiff = tex2D(mapDiffuse, objAttr.texD);
-    tDiff = tDiff * gConstantColor;
+    tDiff = tDiff * gDiffuseColor;
 
-    // return gConstantColor.aaaa;
+    // return gDiffuseColor.aaaa;
 
     float4 tSpec = float4(0,0,0,0);
-    float sLevel = 0;
+    float sPower = 0;
 
     if ( specType > 0 ) {
-        tSpec = tex2D(mapSpecular, objAttr.texD);
-        sLevel = (specType==SpecAuto) ? autoSpecular(tDiff.xyz, tSpec.rgb) : tSpec.a;
+        sPower = gSpecularColor.a;
+        if (specType != SpecColor) { // Texture or Mix
+            tSpec = tex2D(mapSpecular, objAttr.texD);
+            sPower *= NTSC_Gray(tSpec.rgb);
+        } else { // Color
+            tSpec.rgb = gSpecularColor.rgb;
+        }
+        if (specType == SpecMix) {
+            tSpec.rgb *= gSpecularColor.rgb;
+        }
     }
-    // return sLevel.xxxx;
+    // return sPower.xxxx;
 
     float3 diff = 0;
     float3 spec = 0;
 
-    phong(n, nEye, sLevel, lSpace.lights, diff, spec, 0, nSpecular);
+    phong(n, nEye, sPower, lSpace.lights, diff, spec, 0, nSpecular);
 
     float3 rez = (ambColor.xyz+diff)*tDiff.xyz + spec*tSpec.rgb;
 
@@ -91,4 +96,3 @@ float4 main(ObjectPsIn objAttr, LocalBump  lSpace) : color {
 
     return float4( saturate(rez), tDiff.a);
 }
-

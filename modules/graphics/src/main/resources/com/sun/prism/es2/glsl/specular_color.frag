@@ -23,14 +23,13 @@
  * questions.
  */
 
-//specular auto fragment shader
+// specular color fragment shader
 //#version 120
 
+uniform vec4 specularColor;
 uniform sampler2D specularMap;
 
 vec4 apply_specular()
 {
-    vec3 tSpec = texture2D(specularMap, oTexCoords).rgb;
-    float sLevel = dot(tSpec, vec3(0.299, 0.587, 0.114));
-    return vec4(tSpec, sLevel);
+    return specularColor;
 }

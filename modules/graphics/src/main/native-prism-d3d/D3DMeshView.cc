@@ -142,9 +142,15 @@ void D3DMeshView::render() {
         return;
     }
 
-    status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_CONSTANTCOLOR, material->getSolidColor(), 1));
+    status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_DIFFUSECOLOR, material->getDiffuseColor(), 1));
     if (!status) {
-        cout << "D3DMeshView.render() - SetPixelShaderConstantF (PSR_CONSTANTCOLOR) failed !!!" << endl;
+        cout << "D3DMeshView.render() - SetPixelShaderConstantF (PSR_DIFFUSECOLOR) failed !!!" << endl;
+        return;
+    }
+
+    status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_SPECULARCOLOR, material->getSpecularColor(), 1));
+    if (!status) {
+        cout << "D3DMeshView.render() - SetPixelShaderConstantF (PSR_SPECULARCOLOR) failed !!!" << endl;
         return;
     }
 
@@ -163,8 +169,7 @@ void D3DMeshView::render() {
     }
 
     int bm = pShader->getBumpMode(material->isBumpMap());
-    int sm = pShader->getSpecularMode(material->isSpecularMap(),
-            material->isSpecularAlpha());
+    int sm = pShader->getSpecularMode(material->isSpecularMap(), material->isSpecularColor());
     int im = material->isSelfIllumMap() ? 1 : 0;
 
     status = pShader->setPixelShader(numLights, sm, bm, im);
