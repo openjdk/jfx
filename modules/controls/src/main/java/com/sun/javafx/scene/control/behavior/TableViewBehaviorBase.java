@@ -864,25 +864,10 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
             sm.selectRange(startPos, endPos);
         } else {
             // we add all cells/rows between the current selection focus and
-            // the acnhor (inclusive) to the current selection.
-
-            // and then determine all row and columns which must be selected
-            int minRow = Math.min(focusedCell.getRow(), anchorRow);
-            int maxRow = Math.max(focusedCell.getRow(), anchorRow);
-            final int focusedCellColumnPos = getVisibleLeafIndex(focusedCell.getTableColumn());
-            final int anchorColumnPos = getVisibleLeafIndex(anchor.getTableColumn());
-            int minColumn = Math.min(focusedCellColumnPos, anchorColumnPos);
-            int maxColumn = Math.max(focusedCellColumnPos, anchorColumnPos);
-
-            // clear selection
-            sm.clearSelection();
-
-            // and then perform the selection
-            for (int _row = minRow; _row <= maxRow; _row++) {
-                for (int _col = minColumn; _col <= maxColumn; _col++) {
-                    sm.select(_row, getVisibleLeafColumn(_col));
-                }
-            }
+            // the anchor (inclusive) to the current selection.
+            // We want focus to end up on the current focus position.
+            sm.selectRange(anchor.getRow(), anchor.getTableColumn(),
+                           focusedCell.getRow(), focusedCell.getTableColumn());
         }
         
         setAnchor(setAnchorToFocusIndex ? focusedCell : anchor);
