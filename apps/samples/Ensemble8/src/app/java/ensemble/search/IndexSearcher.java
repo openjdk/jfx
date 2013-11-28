@@ -109,16 +109,19 @@ public class IndexSearcher {
                         * just 5 results, but we search for 10 and filter out unsupported
                         * samples and show just 5.
                         */
-                        // If result is a sample, check if supported sample exists before adding so it's
-                        // either not sample or it is a supported sample
-                        if (!result.getDocumentType().name().equals(DocumentType.SAMPLE.name())
-                                || Samples.ROOT.sampleForPath(result.getEnsemblePath().substring(9).trim()) != null) {
-                            results.add(result);
+                        if (docType == DocumentType.SAMPLE) {
+                            if (Samples.ROOT.sampleForPath(result.getEnsemblePath().substring(9).trim()) == null) {
+                                
+                                // Skip unsupported (not existing) samples
+                                continue;
+                            }
                             if (results.size() == 5) {
+                                
                                 // 5 samples is enough
                                 break;
                             }
                         }
+                        results.add(result);
                     } 
                 }
                 resultMap.put(docType, results);
