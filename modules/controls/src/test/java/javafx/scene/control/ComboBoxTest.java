@@ -1102,4 +1102,27 @@ public class ComboBoxTest {
         assertNull(comboBox.getTooltip());
         assertNull(comboBox.getEditor().getTooltip());
     }
+
+    @Test public void test_rt34573() {
+        final ComboBox<String> comboBox = new ComboBox<>();
+
+        final ListCell<String> customCell = new ListCell<String>() {
+            @Override protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(item);
+            }
+        };
+        comboBox.setButtonCell(customCell);
+
+        new StageLoader(comboBox);
+
+        comboBox.setItems(FXCollections.observableArrayList("A","B","C","D"));
+        comboBox.setValue("B");
+        assertEquals("B", comboBox.getButtonCell().getText());
+        assertEquals(1, comboBox.getButtonCell().getIndex());
+
+        comboBox.setItems(FXCollections.observableArrayList("1","2","3","4"));
+        assertTrue(comboBox.getButtonCell().getText().isEmpty());
+        assertEquals(-1, comboBox.getButtonCell().getIndex());
+    }
 }
