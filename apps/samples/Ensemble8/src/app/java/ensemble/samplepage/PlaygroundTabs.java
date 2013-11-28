@@ -84,6 +84,8 @@ import javafx.util.StringConverter;
 class PlaygroundTabs extends TabPane {
     private final SamplePage samplePage;
     private final GridPane grid;
+    private final Tab propertiesTab;
+    private final Tab dataTab;
 
     PlaygroundTabs(final SamplePage samplePage) {
         this.samplePage = samplePage;
@@ -91,6 +93,15 @@ class PlaygroundTabs extends TabPane {
         grid.setHgap(SamplePage.INDENT);
         grid.setVgap(SamplePage.INDENT);
         grid.setPadding(new Insets(SamplePage.INDENT));
+        getStyleClass().add("floating");
+        ScrollPane scrollPane = new ScrollPane(grid);
+        scrollPane.getStyleClass().clear();
+        setTabClosingPolicy(TabClosingPolicy.UNAVAILABLE);
+        propertiesTab = new Tab("Properties");
+        propertiesTab.setContent(scrollPane);
+        dataTab = new Tab("Data");
+        getTabs().addAll(propertiesTab, dataTab);
+        setMinSize(100, 100);
         samplePage.registerSampleInfoUpdater(new Callback<SampleInfo, Void>() {
 
             @Override
@@ -99,13 +110,6 @@ class PlaygroundTabs extends TabPane {
                 return null;
             }
         });
-        getStyleClass().add("floating");
-        ScrollPane scrollPane = new ScrollPane(grid);
-        scrollPane.getStyleClass().clear();
-        Tab tab = new Tab("Properties");
-        tab.setContent(scrollPane);
-        getTabs().add(tab);
-        setMinSize(100, 100);
     }
 
     private PropertyController newPropertyController(PlaygroundProperty playgroundProperty, Object object, Object property) {
@@ -142,6 +146,7 @@ class PlaygroundTabs extends TabPane {
     private void update(SampleInfo sampleInfo) {
         grid.getChildren().clear();
         int rowIndex = 0;
+        boolean needsDataTab = false;
         for (PlaygroundProperty prop : sampleInfo.playgroundProperties) {
             try {
                 Object object = samplePage.sampleRuntimeInfoProperty.get().getApp();
@@ -181,13 +186,11 @@ class PlaygroundTabs extends TabPane {
                     }
                 }
                 if (object instanceof XYChart && prop.propertyName.equals("data")) {
-                    Tab tab = new Tab("Data");
-                    tab.setContent(new XYDataVisualizer((XYChart) object));
-                    getTabs().add(tab);
+                    needsDataTab = true;
+                    dataTab.setContent(new XYDataVisualizer((XYChart) object));
                 } else if (object instanceof PieChart && prop.propertyName.equals("data")) {
-                    Tab tab = new Tab("Data");
-                    tab.setContent(new PieChartDataVisualizer((PieChart) object));
-                    getTabs().add(tab);
+                    needsDataTab = true;
+                    dataTab.setContent(new PieChartDataVisualizer((PieChart) object));
                 } else {
                     PropertyController controller = newPropertyController(prop, object, property);
                     if (controller != null) {
@@ -207,6 +210,12 @@ class PlaygroundTabs extends TabPane {
                 Logger.getLogger(SamplePage.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
+        if (needsDataTab && !getTabs().contains(dataTab)) {
+            getTabs().add(dataTab);
+        }
+        if (!needsDataTab) {
+            getTabs().remove(dataTab);
+        }
     }
 
     private class PropertyController {
@@ -220,7 +229,7 @@ class PlaygroundTabs extends TabPane {
         public PropertyController(PlaygroundProperty playgroundProperty) {
             this(playgroundProperty, playgroundProperty.propertyName);
         }
-        
+
         public PropertyController(PlaygroundProperty playgroundProperty, String name) {
             if (playgroundProperty.properties.containsKey("name")) {
                 this.name = playgroundProperty.properties.get("name");
@@ -240,15 +249,15 @@ class PlaygroundTabs extends TabPane {
             }
             return label;
         }
-        
+
         protected void setController(Region controller) {
             this.controller = controller;
         }
-        
+
         protected void setPreview(Node preview) {
             this.preview = preview;
         }
-        
+
         public Region getController() {
             if (controller == null) {
                 controller = new Region();
@@ -287,7 +296,7 @@ class PlaygroundTabs extends TabPane {
             }
             slider.valueProperty().bindBidirectional(prop);
             setController(slider);
-            
+
             TextField preview = new TextField();
             preview.setPrefWidth(30);
             preview.textProperty().bindBidirectional(prop, new StringConverter<Number>() {
@@ -321,7 +330,7 @@ class PlaygroundTabs extends TabPane {
             slider.setMajorTickUnit(1);
             slider.valueProperty().bindBidirectional(prop);
             setController(slider);
-            
+
             TextField preview = new TextField();
             preview.setPrefWidth(30);
             preview.textProperty().bindBidirectional(prop, new StringConverter<Number>() {
@@ -355,7 +364,7 @@ class PlaygroundTabs extends TabPane {
     }
 
     private class StringPropertyController extends PropertyController {
-        
+
         public StringPropertyController(PlaygroundProperty playgroundProperty, Object object, Property<String> prop) {
             super(playgroundProperty);
             TextField textField = new TextField();
@@ -368,14 +377,14 @@ class PlaygroundTabs extends TabPane {
 
         public ColorPropertyController(PlaygroundProperty playgroundProperty, Object object, final Property<Paint> prop) {
             super(playgroundProperty);
-            
+
             final Rectangle colorRect = new Rectangle(20, 20, (Color) prop.getValue());
             colorRect.setStroke(Color.GRAY);
             final Label valueLabel = new Label(formatWebColor((Color) prop.getValue()));
             valueLabel.setGraphic(colorRect);
             valueLabel.setContentDisplay(ContentDisplay.LEFT);
             setPreview(valueLabel);
-            
+
             final SimpleHSBColorPicker colorPicker = new SimpleHSBColorPicker();
             colorPicker.getColor().addListener(new InvalidationListener() {
                 @Override
@@ -388,7 +397,7 @@ class PlaygroundTabs extends TabPane {
             });
             setController(colorPicker);
         }
-    
+
         private String formatWebColor(Color c) {
             String r = Integer.toHexString((int) (c.getRed() * 255));
             if (r.length() == 1) {
@@ -405,12 +414,12 @@ class PlaygroundTabs extends TabPane {
             return "#" + r + g + b;
         }
     }
-    
+
     private class EnumPropertyController extends PropertyController {
-        
+
         public EnumPropertyController(PlaygroundProperty playgroundProperty, Object object, Property prop, final Enum enumeration) {
             super(playgroundProperty);
-            
+
             final ChoiceBox choiceBox = new ChoiceBox();
             choiceBox.setItems(FXCollections.observableArrayList(enumeration.getClass().getEnumConstants()));
             choiceBox.getSelectionModel().select(prop.getValue());
@@ -423,7 +432,7 @@ class PlaygroundTabs extends TabPane {
 
         public StrokeDashArrayPropertyController(final PlaygroundProperty playgroundProperty, Object object, final ObservableList<Double> list) {
             super(playgroundProperty, "strokeDashArray");
-            
+
             final ComboBox<ObservableList<Double>> comboBox = new ComboBox<>();
             comboBox.setEditable(true);
             comboBox.setItems(FXCollections.observableArrayList(
@@ -431,7 +440,7 @@ class PlaygroundTabs extends TabPane {
                     FXCollections.<Double>observableArrayList(0d, 20d),
                     FXCollections.<Double>observableArrayList(20d, 20d),
                     FXCollections.<Double>observableArrayList(30d, 15d, 0d, 15d)
-                    ));
+            ));
             comboBox.setConverter(new StringConverter<ObservableList<Double>>() {
                 @Override public String toString(ObservableList<Double> t) {
                     if (t == null || t.isEmpty()) {
@@ -473,7 +482,7 @@ class PlaygroundTabs extends TabPane {
                 @Override public void changed(ObservableValue ov, Object t, Object key) {
                     ObservableList<Double> value = comboBox.getValue();
                     list.setAll(value);
-                    
+
                     if (value != null && !value.isEmpty() && comboBox.getItems().indexOf(value) == -1) {
                         comboBox.getItems().add(value);
                     }
