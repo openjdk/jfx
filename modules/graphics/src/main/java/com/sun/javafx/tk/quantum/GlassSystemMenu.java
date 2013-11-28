@@ -317,8 +317,10 @@ class GlassSystemMenu implements TKSystemMenu {
 
     private Pixels getPixels(MenuItemBase menuItem) {
         if (menuItem.getGraphic() instanceof ImageView) {
-            ImageView iv           = (ImageView)menuItem.getGraphic();
-            Image     im           = iv.getImage();
+            ImageView iv = (ImageView)menuItem.getGraphic();
+            Image     im = iv.getImage();
+            if (im == null) return null;
+            
             String    url          = im.impl_getUrl();
 
             if (url == null || PixelUtils.supportedFormatType(url)) {
