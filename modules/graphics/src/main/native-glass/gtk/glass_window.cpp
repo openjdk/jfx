@@ -456,7 +456,7 @@ void WindowContextBase::paint(void* data, jint width, jint height)
             CAIRO_FORMAT_ARGB32,
             width, height, width * 4);
 
-    applyShapeMask(cairo_surface, width, height);
+    applyShapeMask(data, width, height);
 
     cairo_set_source_surface(context, cairo_surface, 0, 0);
     cairo_set_operator (context, CAIRO_OPERATOR_SOURCE);
@@ -619,7 +619,6 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
             geometry(),
             stale_config_notifications(),
             resizable(),
-            xshape(),
             frame_extents_initialized(),
             map_received(false),
             location_assigned(false),
@@ -1194,58 +1193,26 @@ void WindowContextTop::window_configure(XWindowChanges *windowChanges,
             windowChanges);
 }
 
-void WindowContextTop::applyShapeMask(cairo_surface_t* cairo_surface, uint width, uint height)
+void WindowContextTop::applyShapeMask(void* data, uint width, uint height)
 {
     if (frame_type != TRANSPARENT) {
         return;
     }
-    Display *display = GDK_DISPLAY_XDISPLAY(glass_gdk_window_get_display(gdk_window));
-    Screen *screen = GDK_SCREEN_XSCREEN(glass_gdk_window_get_screen(gdk_window));
 
-    if (xshape.surface == NULL || width != xshape.width || height != xshape.height) {
-        if (xshape.surface != NULL) {
-            cairo_surface_destroy(xshape.surface);
-            XFreePixmap(display,
-                    xshape.pixmap);
+    GdkPixbuf* pixbuf = gdk_pixbuf_new_from_data((guchar *) data,
+            GDK_COLORSPACE_RGB, TRUE, 8, width, height, width * 4, NULL, NULL);
+
+    if (GDK_IS_PIXBUF(pixbuf)) {
+        GdkBitmap* mask = NULL;
+        gdk_pixbuf_render_pixmap_and_mask(pixbuf, NULL, &mask, 128);
+
+        gdk_window_input_shape_combine_mask(gdk_window, mask, 0, 0);
+
+        g_object_unref(pixbuf);
+        if (mask) {
+            g_object_unref(mask);
         }
-        xshape.pixmap = XCreatePixmap(
-                display,
-                GDK_WINDOW_XID(gdk_window),
-                width, height, 1
-                );
-        xshape.surface = cairo_xlib_surface_create_for_bitmap(
-                display,
-                xshape.pixmap,
-                screen,
-                width,
-                height
-                );
-        xshape.width = width;
-        xshape.height = height;
     }
-
-    cairo_t *xshape_context = cairo_create(xshape.surface);
-
-    cairo_set_operator(xshape_context, CAIRO_OPERATOR_SOURCE);
-    cairo_set_source_surface(xshape_context, cairo_surface, 0, 0);
-
-    cairo_paint(xshape_context);
-
-    int type;
-    if (gdk_display_supports_composite(glass_gdk_window_get_display(gdk_window))
-            && gdk_screen_is_composited(glass_gdk_window_get_screen(gdk_window))) {
-        type = ShapeInput;
-    } else {
-        type = ShapeBounding;
-    }
-
-    XShapeCombineMask(display,
-            GDK_WINDOW_XID(gdk_window),
-            type,
-            0, 0, xshape.pixmap, ShapeSet
-            );
-
-    cairo_destroy(xshape_context);
 }
 
 void WindowContextTop::set_minimized(bool minimize) {
@@ -1369,13 +1336,6 @@ void WindowContextTop::process_destroy() {
     }
 
     WindowContextBase::process_destroy();
-}
-
-WindowContextTop::~WindowContextTop() {
-    if (xshape.surface) {
-        cairo_surface_destroy(xshape.surface);
-        XFreePixmap(GDK_DISPLAY_XDISPLAY(gdk_display_get_default()), xshape.pixmap);
-    }
 }
 
 ////////////////////////////// WindowContextPlug ////////////////////////////////
