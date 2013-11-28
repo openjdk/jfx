@@ -531,7 +531,9 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
                 [myMenu release];
 
                 [app setDelegate:self];
-                [app activateIgnoringOtherApps:YES];
+
+                // [app activateIgnoringOtherApps:YES] won't activate the menu bar on OS X 10.9, so instead we do this:
+                [[NSRunningApplication currentApplication] activateWithOptions:NSApplicationActivateIgnoringOtherApps];
             }
             else
             {
