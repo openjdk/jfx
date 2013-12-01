@@ -2673,18 +2673,41 @@ project(":apps") {
     // The apps build is Ant based, and gradle lets us "import" ant build.xml
     // into our configuration.
 
-    // override the apps build.xml with an explicit pointer to our jar.
-    def jfxrt = "${rootProject.buildDir}/${defaultHostTarget}-sdk/rt/lib/ext/jfxrt.jar"
-
-    // set properties the Ant build will need
-    ant.properties['file.reference.jfxrt.jar'] = "${jfxrt}"
-    ant.properties['platforms.JDK_1.8.home'] = "${rootProject.ext.JDK_HOME}"
-
     ant.importBuild 'build.xml'
 
-    // wire the ant targets to gradle tasks
-    rootProject.appsjar.dependsOn("${path}:jar")
-    rootProject.clean.dependsOn("${path}:clean")
+    compileTargets { t ->
+        // The apps build is Ant based, and gradle lets us "import" ant build.xml
+        // into our configuration.
+
+        //THIS IS A HACK until we figure out how to fix Ensemble which
+        //relies on elements outside the core JFX.
+        if ("${defaultHostTarget}" != "${t.name}") {
+            println "Warning not building APPS as is a non-hosted build"
+            return // Currently non-hosted builds fail in Ensmble.
+        }
+
+        // override the apps build.xml with an explicit pointer to our jar.
+        def jfxrtJar = "${rootProject.buildDir}/${t.name}-sdk/rt/lib/ext/jfxrt.jar"
+
+        def appsJar = project.task("appsJar${t.capital}") {
+            doLast() {
+              ant.properties['targetBld'] = "$t.name"
+              ant.properties['file.reference.jfxrt.jar'] = jfxrtJar
+              ant.properties['platforms.JDK_1.8.home'] = "${rootProject.ext.JDK_HOME}"
+              ant.project.executeTarget("sampleAppsJar")
+            }
+        }
+        rootProject.appsjar.dependsOn(appsJar)
+
+        def appsClean = project.task("appsClean${t.capital}") {
+            doLast() {
+              ant.properties['targetBld'] = "$t.name"
+              ant.properties['platforms.JDK_1.8.home'] = "${rootProject.ext.JDK_HOME}"
+              ant.project.executeTarget("sampleAppsClean")
+            }
+        }
+        rootProject.clean.dependsOn(appsClean)
+    }
 }
 
 /******************************************************************************
