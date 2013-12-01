@@ -1145,6 +1145,11 @@ project(":graphics") {
         task generateD3DHeaders(group: "Build") {
             enabled = IS_WINDOWS
             dependsOn javahWinPrismD3D
+            inputs.file "src/main/native-prism-d3d/hlsl/Mtl1PS.hlsl"
+            inputs.file "src/main/native-prism-d3d/hlsl/Mtl1VS.hlsl"
+            inputs.file "src/main/native-prism-d3d/PassThroughVS.hlsl"
+            outputs.dir "$buildDir/headers/PrismD3D/"
+            outputs.dir "$buildDir/headers/PrismD3D/hlsl/"
             description = "Generate headers by compiling hlsl files"
             doLast {
                 mkdir file("$buildDir/headers/PrismD3D/hlsl")

@@ -42,12 +42,8 @@ class NativeCompileTask extends DefaultTask {
     List<String> params = new ArrayList<String>();
     List sourceRoots = new ArrayList();
     @OutputDirectory File output;
+    @InputFiles List<File> allFiles = [];
     private final PatternFilterable patternSet = new PatternSet();
-
-    @InputFiles public void setSource(Object source) {
-        sourceRoots.clear();
-        sourceRoots.add(source);
-    }
 
     public NativeCompileTask source(Object... sources) {
         for (Object source : sources) {
@@ -57,6 +53,7 @@ class NativeCompileTask extends DefaultTask {
                 sourceRoots.add(source);
             }
         }
+        updateFiles();
         return this;
     }
 
@@ -68,6 +65,17 @@ class NativeCompileTask extends DefaultTask {
     public NativeCompileTask include(Iterable<String> includes) {
         patternSet.include(includes);
         return this;
+    }
+
+    private void updateFiles() {
+        // Combine the different source roots into a single List<File> based on all files in each source root
+        allFiles.clear();
+        sourceRoots.each {
+            def file = project.file(it);
+            if (file && file.exists()) {
+                allFiles += file.isDirectory() ? file.listFiles() : file;
+            }
+        }
     }
 
     @TaskAction void compile() {
@@ -87,17 +95,50 @@ class NativeCompileTask extends DefaultTask {
         }
 
         project.mkdir(output);
-        // Combine the different source roots into a single FileCollection based on all files in each source root
-        def allFiles = [];
-        sourceRoots.each {
-            def dir = project.file(it);
-            allFiles += dir.isDirectory() ? dir.listFiles() : dir;
-        }
+
+        // Recompute the allFiles list as the input can come from auto-generated
+        // content (HSLS files, for example) which might have changed since
+        // the task was configured (i.e. when source() was called).
+        updateFiles();
         def source = project.files(allFiles);
-        final Set<File> files = matches == null ? new HashSet<File>(source.files) : source.filter{it.name.matches(matches)}.files;
+        boolean forceCompile = false;
+        final Set<File> files = new HashSet<File>();
+        source.each { File file ->
+            final Map fileData = dependencies.get(file.toString());
+            final boolean isModified = fileData == null ||
+                                       !fileData["DATE"].equals(file.lastModified()) ||
+                                       !fileData["SIZE"].equals(file.length());
+
+            if (matches == null || file.name.matches(matches)) {
+                // If the source file is not listed in dependencies, then we must compile it.
+                // If the target file(s) (.rc or .cur in the case of resources, .pdb or .obj for sources)
+                //    do not exist, then compile.
+                // If the source file date or size differs from dependencies, then compile it.
+                if (isModified) {
+                    files += file;
+                } else {
+                    final File outputFile = outputFile(file);
+                    if (!outputFile.exists()) {
+                        files += file;
+                    }
+                }
+            } else {
+                // This file can be header file or some other type of resource file.
+                // Force all source files to be compile.
+                if (isModified) {
+                    forceCompile = true;
+                    //let the iterator finish to update dependencies map
+                }
+            }
+            if (isModified) {
+                dependencies.put(file.toString(), ["DATE":file.lastModified(), "SIZE":file.length()]);
+            }
+        }
+        if (forceCompile) {
+            files +=  matches == null ? source.files : source.filter{it.name.matches(matches)}.files;
+        }
+
         project.logger.info("Compiling native files: $files");
-        boolean shouldCompileAnyway = false;
-        final boolean forceCompile = shouldCompileAnyway;
         final ExecutorService executor = Executors.newFixedThreadPool(Integer.parseInt(project.NUM_COMPILE_THREADS.toString()));
         final CountDownLatch latch = new CountDownLatch(files.size());
         List futures = new ArrayList<Future>();
@@ -106,18 +147,7 @@ class NativeCompileTask extends DefaultTask {
                 @Override public void run() {
                     try {
                         final File outputFile = outputFile(sourceFile);
-                        // If the source file is not listed in dependencies, then we must compile it.
-                        // If the target file(s) (.rc or .cur in the case of resources, .pdb or .obj for sources)
-                        //    do not exist, then compile.
-                        // If the source file date or size differs from dependencies, then compile it.
-                        final Map sourceFileData = dependencies.get(sourceFile.toString());
-                        if (forceCompile || sourceFileData == null || !outputFile.exists() ||
-                                !sourceFileData["DATE"].equals(sourceFile.lastModified()) ||
-                                !sourceFileData["SIZE"].equals(sourceFile.length()))
-                        {
-                            doCompile(sourceFile, outputFile)
-                        }
-                        dependencies.put(sourceFile.toString(), ["DATE":sourceFile.lastModified(), "SIZE":sourceFile.length()]);
+                        doCompile(sourceFile, outputFile)
                     } finally {
                         latch.countDown();
                     }
