@@ -90,6 +90,23 @@
 // The environment variable used to set the test input device
 #define LENS_TEST_INPUT "LENS_TEST_INPUT"
 
+//used for tracing low level events, udev and udev monitor events
+static struct timeval tv_start;
+static jboolean isTraceTimeInit = JNI_FALSE;
+#define TRACE(format, ...) {                                        \
+    if (gEnableDeviceTrace) {                                       \
+        struct timeval tv;                                          \
+        if (!isTraceTimeInit) {                                     \
+            gettimeofday(&tv_start,NULL);                           \
+            isTraceTimeInit = JNI_TRUE;                             \
+        }                                                           \
+        gettimeofday(&tv,NULL);                                     \
+        printf("lens.input.trace: %lu.%lu " format,                 \
+              (tv.tv_sec-tv_start.tv_sec),                          \
+              (tv.tv_usec - tv_start.tv_usec), ##__VA_ARGS__);      \
+        fflush(stdout);                                             \
+    }                                                               \
+}//end TRACE
 
 ////// data structures
 
@@ -229,6 +246,7 @@ static int mousePosY = 0;
 static int newMousePosX = 0;
 static int newMousePosY = 0;
 
+/** properties */
 // Touch
 #define LENS_MAX_TAP_RADIUS 1000
 static int gTapRadius = 20;//pixels
@@ -239,6 +257,8 @@ static int gTouchMoveSensitivity = 20; //pixels
 static jboolean gUseMultiTouch = JNI_FALSE;
 static jboolean gPruneInputDevices = JNI_FALSE;
 
+//Trace
+static jboolean gEnableDeviceTrace = JNI_FALSE;
 
 //JNI
 static JNIEnv *gJNIEnv = NULL;
@@ -354,6 +374,11 @@ jboolean lens_input_initialize(JNIEnv *env) {
                                                            lensTouchInputSupport,
                                                            "useMultiTouch",
                                                            "Z");
+
+        jfieldID deviceTraceVar = (*env)->GetStaticFieldID(env,
+                                                           lensTouchInputSupport,
+                                                           "enableDeviceTrace",
+                                                           "Z");
         assert(pruneVar);
 
         //try to set tap radius
@@ -425,6 +450,17 @@ jboolean lens_input_initialize(JNIEnv *env) {
             gUseMultiTouch = JNI_FALSE;
         }
 
+        //try to set device trace property
+        if (deviceTraceVar != NULL) {
+            gEnableDeviceTrace = (*env)->GetStaticBooleanField(env,
+                                                                lensTouchInputSupport,
+                                                                deviceTraceVar);
+            GLASS_LOG_CONFIG("Tracing device raw information is %s",
+                             gEnableDeviceTrace? "enabled" : "disabled");
+        } else {
+            gEnableDeviceTrace = JNI_FALSE;
+        }
+
     } else {
         GLASS_LOG_SEVERE("Could not find %s", className);
     }
@@ -457,7 +493,7 @@ static void lens_input_udevFindDevices(JNIEnv *env) {
         exit(-1);
     }
 
-    GLASS_LOG_CONFIG("Enumerating input devices... start");
+    TRACE("[device discovery] Enumerating input devices... start");
 
     enumerate = udev_enumerate_new(udev);
     /* Create a list of the devices in the 'input' subsystem. */
@@ -472,30 +508,38 @@ static void lens_input_udevFindDevices(JNIEnv *env) {
         const char *syspath = udev_list_entry_get_name(udev_device);
         struct udev_device *udev_device = udev_device_new_from_syspath(udev, syspath);
 
-        GLASS_LOG_FINER("Device syspath = %s", syspath);
-
         if (!udev_device) {
-            GLASS_LOG_FINER("No udev_device, continue");
+            TRACE("[device discovery] No udev_device, for %s continue", syspath);
             continue;
         }
 
+        TRACE("[device discovery] Found device on syspath = %s", syspath);
+
         //check that device support input events
+        GLASS_LOG_CONFIG("[device discovery] Searching for 'ID_INPUT' property to see if device is a valid input device");
         if (udev_device_get_property_value(udev_device, "ID_INPUT")) {
+            //add device if not exists
+            TRACE("[device discovery] 'ID_INPUT' property found");
             if (gPruneInputDevices && lens_input_isUdevDeviceExists(udev_device, NULL)) {
-                GLASS_LOG_FINE("Device %s already registered",
+                TRACE("[device discovery] Device %s allready registered - skipping",
                                udev_device_get_devpath(udev_device));
             } else {
                 device = lens_input_deviceAllocateAndInit(env, udev_device);
                 if (device) {
                     lens_input_listAdd(device);
+                    TRACE("[device discovery] devices added");
+                } else {
+                    TRACE("[device discovery] Device is not valid");
                 }
+
             }
         } else {
-            GLASS_LOG_FINE("ignoring device without input capabilities [device path %s]",
-                           udev_device_get_devpath(udev_device));
+            TRACE("[device discovery] 'ID_INPUT' property wasn't found  - ignoring device without input capabilities [device path %s]",
+                  udev_device_get_devpath(udev_device));
         }
         //Free device object
         udev_device_unref(udev_device);
+        TRACE("[device discovery] Finished processing %s\n", syspath);
     }
 
     /* Free the enumerator object */
@@ -552,18 +596,18 @@ static LensInputDevice *lens_input_deviceAllocateAndInit(JNIEnv *env,
 
     info = lens_input_deviceInfoAllocateAndInit(udev_device, device);
     if (!info) {
-        GLASS_LOG_FINE("Failed to allocate LensInputDeviceInfo");
+        GLASS_LOG_FINE("Device is not valid or failed to allocate LensInputDeviceInfo");
         lens_input_deviceRelease(env, device);
         return NULL;
     }
 
-    GLASS_LOG_CONFIG("Trying to register %s [%s] as an input device", info->name, info->devNode);
+    TRACE("[device init] Trying to create %s [%s] as a Lens input device", info->name, info->devNode);
 
     device->info = info;
 
     //traverse the device properties
     set = udev_device_get_properties_list_entry(udev_device);
-
+     TRACE("[device init] scanning properties to check device validity");
     udev_list_entry_foreach(entry, set) {
 
 
@@ -577,7 +621,7 @@ static LensInputDevice *lens_input_deviceAllocateAndInit(JNIEnv *env,
     }
 
     if (!isValidDevice) {
-        GLASS_LOG_CONFIG("Device is not a valid input device (not a keyboard/mouse/touch), skipping");
+        TRACE("[device init] Device is not a valid input device (not a keyboard/mouse/touch), skipping");
         lens_input_deviceRelease(env, device);
         return NULL;
     }
@@ -585,7 +629,7 @@ static LensInputDevice *lens_input_deviceAllocateAndInit(JNIEnv *env,
     if (lens_input_deviceOpen(env, device)) {
         return NULL;
     }
-
+    TRACE("[device init] device was successufuly created");
     return device;
 }
 
@@ -611,7 +655,8 @@ static jboolean lens_input_deviceCheckProperties(LensInputDevice *device,
         //lens_input_deviceInitCapabilities()
         device->touchProtocolType = TOUCH_PROTOCOL_ST;
         isValidDevice = JNI_TRUE;
-        GLASS_LOG_FINE("Device is a touch screen");
+        TRACE("[properties check] Device is marked as touch",
+              device->info->name);
     }
     return isValidDevice;
 }
@@ -659,7 +704,7 @@ static LensInputDeviceInfo *lens_input_deviceInfoAllocateAndInit(struct udev_dev
     sysPath = udev_device_get_syspath(udev_device);
     //all devices must have a /sys path
     if (!sysPath || !strcmp(sysPath, "")) {
-        GLASS_LOG_FINE("Device dosen't have a valid sys path - skipping");
+        TRACE("[Device info init] Device dosen't have a valid sys path - skipping");
         return NULL;
     }
 
@@ -667,7 +712,7 @@ static LensInputDeviceInfo *lens_input_deviceInfoAllocateAndInit(struct udev_dev
 
     //Some devices don't have a /dev node,but the ones we are instrested in do
     if (!devNode || !strcmp(devNode, "")) {
-        GLASS_LOG_FINE("Device %s dosen't have a valid dev node - skipping", sysPath);
+        TRACE("[Device info init] Device %s dosen't have a valid dev node - skipping", sysPath);
         return NULL;
     }
 
@@ -716,17 +761,17 @@ static LensResult lens_input_mouseStateAllocateAndInit(LensInputDevice *device) 
     LensInputMouseState *state;
 
     if (device->state) {
-        GLASS_LOG_FINE("Pointer is already initialized for this device [%s]",
+        GLASS_LOG_FINE("[Mouse State] Pointer is already initialized for this device [%s]",
                        device->info->name);
         return LENS_OK;
     }
 
-    GLASS_LOG_CONFIG("Setting up mouse for %s", device->info->name);
+    GLASS_LOG_FINE("[Mouse State] Setting up mouse for %s", device->info->name);
     device->state = calloc(1, sizeof(LensInputMouseState));
-    GLASS_LOG_FINE("Allocated device pointer state %p", device->state);
+    GLASS_LOG_FINE("[Mouse State] Allocated device pointer state %p", device->state);
 
     if (!device->state) {
-        GLASS_LOG_SEVERE("Failed to allocate LensInputMouseState");
+        GLASS_LOG_SEVERE("[Mouse State] Failed to allocate LensInputMouseState");
         return LENS_FAILED;
     }
 
@@ -744,7 +789,7 @@ static LensResult lens_input_deviceOpen(JNIEnv *env, LensInputDevice *device) {
     GLASS_LOG_FINE("open(%s) returned %i", device->info->devNode, device->fd);
 
     if (device->fd == -1) {
-        GLASS_LOG_SEVERE("Failed to open %s [%s], %s",
+        GLASS_LOG_SEVERE("[device open] Failed to open %s [%s], %s",
                          device->info->name, device->info->devNode,
                          strerror(errno));
         lens_input_deviceRelease(env, device);
@@ -755,19 +800,19 @@ static LensResult lens_input_deviceOpen(JNIEnv *env, LensInputDevice *device) {
     }
     if (device->isPointer || device->isTouch) {
         if (lens_input_mouseStateAllocateAndInit(device) != LENS_OK) {
-            GLASS_LOG_SEVERE("Failed to setup pointer device");
+            GLASS_LOG_SEVERE("[device open] Failed to setup pointer device");
             lens_input_deviceRelease(env, device);
             return LENS_FAILED;
         }
     }
 
     if (lens_input_deviceGrab(device, 1)) {
-        GLASS_LOG_SEVERE("Failed to grab pointer device");
+        GLASS_LOG_SEVERE("[device open] Failed to grab pointer device");
         lens_input_deviceRelease(env, device);
         return LENS_FAILED;
     }
 
-    GLASS_LOG_CONFIG("Device %s registered for inputs", device->info->name);
+    TRACE("[device open] Device %s opened successfully", device->info->name);
     lens_input_deviceNotify(env, device, JNI_TRUE);
     return LENS_OK;
 }
@@ -798,7 +843,7 @@ static void lens_input_deviceNotify(JNIEnv *env,
         int key = KEYBITS_ARROWS[i];
         if (!IS_BITSET(keybits, key)) {
             is5Way = JNI_FALSE;
-            GLASS_LOG_CONFIG("Not a 5-way, missing key %i", key);
+            TRACE("[device notify] Device is not a 5-way (missing key %i)", key);
             break;
         }
     }
@@ -807,13 +852,13 @@ static void lens_input_deviceNotify(JNIEnv *env,
         for (i = 0; KEYBITS_SELECT[i] != 0; i++) {
             int key = KEYBITS_SELECT[i];
             if (IS_BITSET(keybits, key)) {
-                GLASS_LOG_CONFIG("Is a 5-way, has arrow keys and key %i", key);
+                TRACE("[device notify] Device is a 5-way (has arrow keys and key %i)", key);
                 hasSelect = JNI_TRUE;
                 break;
             }
         }
         if (!hasSelect) {
-            GLASS_LOG_CONFIG("Not a 5-way, has arrow keys but no select key");
+            TRACE("[device notify] Deviec is not a 5-way (has arrow keys but no select key)");
         }
         is5Way = hasSelect;
     }
@@ -825,12 +870,12 @@ static void lens_input_deviceNotify(JNIEnv *env,
             int key = KEYBITS_PC[i];
             if (!IS_BITSET(keybits, key)) {
                 isPCKeyboard = JNI_FALSE;
-                GLASS_LOG_CONFIG("Not a PC keyboard, missing key %i", key);
+                TRACE("[device notify] Device is not a PC keyboard, missing key %i", key);
                 break;
             }
         }
         if (isPCKeyboard) {
-            GLASS_LOG_CONFIG("Is a PC keyboard");
+            TRACE("[device notify] Device is a PC keyboard");
             flags |= 1 << com_sun_glass_ui_lens_LensApplication_DEVICE_PC_KEYBOARD;
         }
     }
@@ -920,18 +965,19 @@ static LensResult lens_input_deviceInitCapabilities(LensInputDevice *device) {
                       sizeof(caps->eventMask), &caps->eventMask)) {
             return LENS_FAILED;
         }
-        if (IS_BITSET(caps->eventMask, EV_KEY)) {
-            GLASS_LOG_CONFIG("Init keybits");
+        if (IS_BITSET(caps->eventMask, EV_KEY)) {            
             if (eviocgbit(device, EV_KEY,
                           sizeof(caps->keybits), &caps->keybits)) {
                 return LENS_FAILED;
             }
+            TRACE("[init capabilities] Device have keys events (EV_KEY)");
         }
         if (IS_BITSET(caps->eventMask, EV_REL)) {
             if (eviocgbit(device, EV_REL,
                           sizeof(caps->relbits), &caps->relbits)) {
                 return LENS_FAILED;
             }
+            TRACE("[init capabilities] Device have Relative events (EV_REL)");
         }
         if (IS_BITSET(caps->eventMask, EV_ABS)) {
             int axis;
@@ -939,6 +985,7 @@ static LensResult lens_input_deviceInitCapabilities(LensInputDevice *device) {
                           sizeof(caps->absbits), &caps->absbits)) {
                 return LENS_FAILED;
             }
+            TRACE("[init capabilities] Device have Absolute events (EV_ABS)");
             //used to determine which multi touch protocol supported by the device
             jboolean isProtocol_A_Supported = JNI_FALSE;
             jboolean isProtocol_B_Supported = JNI_FALSE;
@@ -964,9 +1011,10 @@ static LensResult lens_input_deviceInitCapabilities(LensInputDevice *device) {
                         isProtocol_A_Supported = JNI_TRUE;
                     }
 
-                    GLASS_LOG_CONFIG("Range for axis 0x%02x is %i..%i", axis,
-                                     caps->absinfo[axis].minimum,
-                                     caps->absinfo[axis].maximum);
+                    TRACE("[init capabilities] Range for axis 0x%02x is %i..%i",
+                          axis,
+                          caps->absinfo[axis].minimum,
+                          caps->absinfo[axis].maximum);
                 }
             }
 
@@ -986,8 +1034,9 @@ static LensResult lens_input_deviceInitCapabilities(LensInputDevice *device) {
 
                 if (device->touchProtocolType == TOUCH_PROTOCOL_MT_A || 
                     device->touchProtocolType == TOUCH_PROTOCOL_MT_B) {
-                    GLASS_LOG_CONFIG("device %s is multi touch",
-                                     device->info->name);
+                    TRACE("[init capabilities] device %s is multi touch (supporting protocol %s events)",
+                          device->info->name,
+                          (isProtocol_B_Supported)? "B" : "A");
                 }
 
             }
@@ -1012,6 +1061,7 @@ void lens_input_epollRemoveDevice(LensInputDevice *device) {
     int ret;
 
     if (device) {
+        TRACE("[epoll] removing device %s from epoll list", device->info->name);
 
         //remove from epoll list
 
@@ -1055,6 +1105,7 @@ void lens_input_epolladdDevice(LensInputDevice *device) {
                               device->info->name, errno, strerror(errno));
         } else {
             device->isEnabled = JNI_TRUE;
+            TRACE("[epoll] adding device %s to epoll list", device->info->name);
         }
     }
 }
@@ -1223,8 +1274,10 @@ void lens_input_eventLoop(JNIEnv *env, void *handle) {
 
                 numOfEvents = device->readOffset / (int)sizeof(struct input_event);
 
-                    GLASS_LOG_FINEST("Got event on %s, count=%i",
-                                     device->info->name, numOfEvents);
+                TRACE("[event] read %i events on %s[%s]",
+                      numOfEvents,
+                      device->info->devNode,
+                      device->info->name);
 
 
                 for (eventIndex = 0; eventIndex < numOfEvents; eventIndex ++) {
@@ -2145,7 +2198,7 @@ void lens_input_udevMonitorLoop(JNIEnv *env, void *handle) {
         return;
     }
 
-    GLASS_LOG_FINE("Starting hot plug thread monitoring on fd[%i]\n", monitorFD);
+    TRACE("[udev monitor] Starting hot plug thread monitoring on fd[%i]\n", monitorFD);
 
     FD_ZERO(&readFdSet);
     while (1) {
@@ -2190,11 +2243,15 @@ static void lens_input_udevMonitorHandleEvent(JNIEnv *env) {
 
     GLASS_LOG_CONFIG("Got udev event - action = %s", action);
     if (action) {
+        TRACE("[udev monitor] got event with action %s", action);
+
         if (!strcmp(action, "add") || !strcmp(action, "change")) {
 
             lens_input_isUdevDeviceExists(udev_device, &device);
             //remove the device on change action
             if (!strcmp(action, "change") && device) {
+                TRACE("[udev monitor] Removing device %s and add it later (update)",
+                      device->info->name);
                 lens_input_deviceRemove(env, device);
                 device = NULL;
             }
@@ -2203,6 +2260,8 @@ static void lens_input_udevMonitorHandleEvent(JNIEnv *env) {
                 //add the device
                 device = lens_input_deviceAllocateAndInit(env, udev_device);
                 if (device) {
+                    TRACE("[udev monitor] adding device %s to the list",
+                          device->info->name);
                     lens_input_listAdd(device);
                     lens_input_epolladdDevice(device);
                     lens_input_printDevices();
@@ -2214,17 +2273,18 @@ static void lens_input_udevMonitorHandleEvent(JNIEnv *env) {
                 //Device was removed, so fd is closed and not valid.
                 //mark it to avoid problem when releasing the device
                 device->fd = -1;
+                TRACE("[udev monitor] Removing device %s", device->info->name);
                 lens_input_deviceRemove(env, device);
                 lens_input_printDevices();
             } else {
-                GLASS_LOG_CONFIG("Device not in the list, skipping remove");
+                TRACE("[udev monitor] Device not in the list, skipping remove event");
             }
         }
     } else {
-        GLASS_LOG_CONFIG("Taking no action on udev event");
+        TRACE("[udev monitor] Taking no action on udev event");
     }
     udev_device_unref(udev_device);
-    GLASS_LOG_CONFIG("udev event action processing done");
+    TRACE("[udev monitor] udev event action processing done");
 }
 
 //// memory management
@@ -2511,7 +2571,7 @@ static void lens_input_printDevices() {
 
     GLASS_IF_LOG_CONFIG {
 
-        GLASS_LOG_CONFIG("Input devices list:");
+        GLASS_LOG_CONFIG("Registered input devices list:");
 
         if (!device) {
             GLASS_LOG_CONFIG("Device count = 0");
@@ -2552,233 +2612,234 @@ static void lens_input_printDevices() {
  */
 static void lens_input_printEvent(struct input_event event) {
     char *tmp;
-    
-     GLASS_IF_LOG_FINEST {
 
-        switch (event.type) {
-            case EV_SYN:
-                switch (event.code){
-                    case SYN_REPORT:
-                        tmp = "SYN_REPORT";
-                        break;
-                    case SYN_CONFIG:
-                        tmp = "SYN_CONFIG";
-                        break;
-                    case SYN_MT_REPORT:
-                        tmp = "SYN_MT_REPORT";
-                        break;
-                    case SYN_DROPPED:
-                        tmp = "SYN_DROPPED";
-                        break;
-                    default:
-                        tmp = NULL;
-                        break;
-                }
-                if (tmp != NULL) {
-                    GLASS_LOG_FINEST("EV_SYN %s %i", tmp, event.value);
-                } else {
-                    GLASS_LOG_FINEST("EV_SYN 0x%x %i", event.code, event.value);
-                }
-                break;
-            case EV_KEY:
-                switch (event.code){
-                    case BTN_TOUCH:
-                        tmp = "BTN_TOUCH";
-                        break;
-                    case BTN_TOOL_DOUBLETAP:
-                        tmp = "BTN_TOOL_DOUBLETAP";
-                        break;
-                    case BTN_TOOL_TRIPLETAP:
-                        tmp = "BTN_TOOL_TRIPLETAP";
-                        break;
-                    case BTN_TOOL_QUADTAP:
-                        tmp = "BTN_TOOL_QUADTAP";
-                        break;
-                    default:
-                        tmp = NULL;
-                        break;
-                }
-                if (tmp != NULL) {
-                    GLASS_LOG_FINEST("EV_KEY %s %i", tmp, event.value);
-                } else {
-                    GLASS_LOG_FINEST("EV_KEY 0x%x %i", event.code, event.value);
-                }
-                break;
-            case EV_REL:
-                switch (event.code) {
-                    case REL_X:
-                        tmp = "REL_X";
-                        break;
-                    case REL_Y:
-                        tmp = "REL_Y";
-                        break;
-                    case REL_HWHEEL:
-                        tmp = "REL_HWHEEL";
-                        break;
-                    case REL_DIAL:
-                        tmp = "REL_DIAL";
-                        break;
-                    case REL_WHEEL:
-                        tmp = "REL_WHEEL";
-                        break;
-                    case REL_MISC:
-                        tmp = "REL_MISC";
-                        break;
-                    default:
-                        tmp = NULL;
-                        break;
-                }
-                if (tmp != NULL) {
-                    GLASS_LOG_FINEST("EV_REL %s %i", tmp, event.value);
-                } else {
-                    GLASS_LOG_FINEST("EV_REL 0x%x %i", event.code, event.value);
-                }
-                break;
-            case EV_ABS:
-                switch (event.code) {
-                    case ABS_X:
-                        tmp = "ABS_X";
-                        break;
-                    case ABS_Y:
-                        tmp = "ABS_Y";
-                        break;
-                    case ABS_Z:
-                        tmp = "ABS_Z";
-                        break;
-                    case ABS_RX:
-                        tmp = "ABS_RX";
-                        break;
-                    case ABS_RY:
-                        tmp = "ABS_RY";
-                        break;
-                    case ABS_RZ:
-                        tmp = "ABS_RZ";
-                        break;
-                    case ABS_THROTTLE:
-                        tmp = "ABS_THROTTLE";
-                        break;
-                    case ABS_RUDDER:
-                        tmp = "ABS_RUDDER";
-                        break;
-                    case ABS_WHEEL:
-                        tmp = "ABS_WHEEL";
-                        break;
-                    case ABS_GAS:
-                        tmp = "ABS_GAS";
-                        break;
-                    case ABS_BRAKE:
-                        tmp = "ABS_BRAKE";
-                        break;
-                    case ABS_HAT0X:
-                        tmp = "ABS_HAT0X";
-                        break;
-                    case ABS_HAT0Y:
-                        tmp = "ABS_HAT0Y";
-                        break;
-                    case ABS_HAT1X:
-                        tmp = "ABS_HAT1X";
-                        break;
-                    case ABS_HAT1Y:
-                        tmp = "ABS_HAT1Y";
-                        break;
-                    case ABS_HAT2X:
-                        tmp = "ABS_HAT2X";
-                        break;
-                    case ABS_HAT2Y:
-                        tmp = "ABS_HAT2Y";
-                        break;
-                    case ABS_HAT3X:
-                        tmp = "ABS_HAT3X";
-                        break;
-                    case ABS_HAT3Y:
-                        tmp = "ABS_HAT3Y";
-                        break;
-                    case ABS_PRESSURE:
-                        tmp = "ABS_PRESSURE";
-                        break;
-                    case ABS_DISTANCE:
-                        tmp = "ABS_DISTANCE";
-                        break;
-                    case ABS_TILT_X:
-                        tmp = "ABS_TILT_X";
-                        break;
-                    case ABS_TILT_Y:
-                        tmp = "ABS_TILT_Y";
-                        break;
-                    case ABS_MISC:
-                        tmp = "ABS_MISC";
-                        break;
-                    case ABS_MT_SLOT:
-                        tmp = "ABS_MT_SLOT";
-                        break;
-                    case ABS_MT_TOUCH_MAJOR:
-                        tmp = "ABS_MT_TOUCH_MAJOR";
-                        break;
-                    case ABS_MT_TOUCH_MINOR:
-                        tmp = "ABS_MT_TOUCH_MINOR";
-                        break;
-                    case ABS_MT_WIDTH_MAJOR:
-                        tmp = "ABS_MT_WIDTH_MAJOR";
-                        break;
-                    case ABS_MT_WIDTH_MINOR:
-                        tmp = "ABS_MT_WIDTH_MINOR";
-                        break;
-                    case ABS_MT_ORIENTATION:
-                        tmp = "ABS_MT_ORIENTATION";
-                        break;
-                    case ABS_MT_POSITION_X:
-                        tmp = "ABS_MT_POSITION_X";
-                        break;
-                    case ABS_MT_POSITION_Y:
-                        tmp = "ABS_MT_POSITION_Y";
-                        break;
-                    case ABS_MT_TOOL_TYPE:
-                        tmp = "ABS_MT_TOOL_TYPE";
-                        break;
-                    case ABS_MT_BLOB_ID:
-                        tmp = "ABS_MT_BLOB_ID";
-                        break;
-                    case ABS_MT_TRACKING_ID:
-                        tmp = "ABS_MT_TRACKING_ID";
-                        break;
-                    case ABS_MT_PRESSURE:
-                        tmp = "ABS_MT_PRESSURE";
-                        break;
-                    case ABS_MT_DISTANCE:
-                        tmp = "ABS_MT_DISTANCE";
-                        break;
 
-                    default:
-                        tmp = NULL;
-                        break;
-                }
-                if (tmp != NULL) {
-                    GLASS_LOG_FINEST("EV_ABS %s %i", tmp, event.value);
-                } else {
-                    GLASS_LOG_FINEST("EV_ABS 0x%x %i", event.code, event.value);
-                }
-                break;
-            case EV_MSC:
-                GLASS_LOG_FINEST("Misc");
-                break;
-            case EV_LED:
-                GLASS_LOG_FINEST("Led");
-                break;
-            case EV_SND:
-                GLASS_LOG_FINEST("Snd");
-                break;
-            case EV_REP:
-                GLASS_LOG_FINEST("Rep");
-                break;
-            case EV_FF:
-                GLASS_LOG_FINEST("FF");
-                break;
-            default:
-                GLASS_LOG_FINEST("Event type=0x%x code=%i value=%i", event.type, event.code, event.value);
-                break;
-        }
+    switch (event.type) {
+        case EV_SYN:
+            switch (event.code) {
+                case SYN_REPORT:
+                    tmp = "SYN_REPORT";
+                    break;
+                case SYN_CONFIG:
+                    tmp = "SYN_CONFIG";
+                    break;
+                case SYN_MT_REPORT:
+                    tmp = "SYN_MT_REPORT";
+                    break;
+                case SYN_DROPPED:
+                    tmp = "SYN_DROPPED";
+                    break;
+                default:
+                    tmp = NULL;
+                    break;
+            }
+            if (tmp != NULL) {
+                TRACE("EV_SYN %s %i", tmp, event.value);
+            } else {
+                TRACE("EV_SYN 0x%x %i", event.code, event.value);
+            }
+            if (event.code == SYN_REPORT) {
+                TRACE("");
+            }
+            break;
+        case EV_KEY:
+            switch (event.code) {
+                case BTN_TOUCH:
+                    tmp = "BTN_TOUCH";
+                    break;
+                case BTN_TOOL_DOUBLETAP:
+                    tmp = "BTN_TOOL_DOUBLETAP";
+                    break;
+                case BTN_TOOL_TRIPLETAP:
+                    tmp = "BTN_TOOL_TRIPLETAP";
+                    break;
+                case BTN_TOOL_QUADTAP:
+                    tmp = "BTN_TOOL_QUADTAP";
+                    break;
+                default:
+                    tmp = NULL;
+                    break;
+            }
+            if (tmp != NULL) {
+                TRACE("EV_KEY %s %i", tmp, event.value);
+            } else {
+                TRACE("EV_KEY 0x%x %i", event.code, event.value);
+            }
+            break;
+        case EV_REL:
+            switch (event.code) {
+                case REL_X:
+                    tmp = "REL_X";
+                    break;
+                case REL_Y:
+                    tmp = "REL_Y";
+                    break;
+                case REL_HWHEEL:
+                    tmp = "REL_HWHEEL";
+                    break;
+                case REL_DIAL:
+                    tmp = "REL_DIAL";
+                    break;
+                case REL_WHEEL:
+                    tmp = "REL_WHEEL";
+                    break;
+                case REL_MISC:
+                    tmp = "REL_MISC";
+                    break;
+                default:
+                    tmp = NULL;
+                    break;
+            }
+            if (tmp != NULL) {
+                TRACE("EV_REL %s %i", tmp, event.value);
+            } else {
+                TRACE("EV_REL 0x%x %i", event.code, event.value);
+            }
+            break;
+        case EV_ABS:
+            switch (event.code) {
+                case ABS_X:
+                    tmp = "ABS_X";
+                    break;
+                case ABS_Y:
+                    tmp = "ABS_Y";
+                    break;
+                case ABS_Z:
+                    tmp = "ABS_Z";
+                    break;
+                case ABS_RX:
+                    tmp = "ABS_RX";
+                    break;
+                case ABS_RY:
+                    tmp = "ABS_RY";
+                    break;
+                case ABS_RZ:
+                    tmp = "ABS_RZ";
+                    break;
+                case ABS_THROTTLE:
+                    tmp = "ABS_THROTTLE";
+                    break;
+                case ABS_RUDDER:
+                    tmp = "ABS_RUDDER";
+                    break;
+                case ABS_WHEEL:
+                    tmp = "ABS_WHEEL";
+                    break;
+                case ABS_GAS:
+                    tmp = "ABS_GAS";
+                    break;
+                case ABS_BRAKE:
+                    tmp = "ABS_BRAKE";
+                    break;
+                case ABS_HAT0X:
+                    tmp = "ABS_HAT0X";
+                    break;
+                case ABS_HAT0Y:
+                    tmp = "ABS_HAT0Y";
+                    break;
+                case ABS_HAT1X:
+                    tmp = "ABS_HAT1X";
+                    break;
+                case ABS_HAT1Y:
+                    tmp = "ABS_HAT1Y";
+                    break;
+                case ABS_HAT2X:
+                    tmp = "ABS_HAT2X";
+                    break;
+                case ABS_HAT2Y:
+                    tmp = "ABS_HAT2Y";
+                    break;
+                case ABS_HAT3X:
+                    tmp = "ABS_HAT3X";
+                    break;
+                case ABS_HAT3Y:
+                    tmp = "ABS_HAT3Y";
+                    break;
+                case ABS_PRESSURE:
+                    tmp = "ABS_PRESSURE";
+                    break;
+                case ABS_DISTANCE:
+                    tmp = "ABS_DISTANCE";
+                    break;
+                case ABS_TILT_X:
+                    tmp = "ABS_TILT_X";
+                    break;
+                case ABS_TILT_Y:
+                    tmp = "ABS_TILT_Y";
+                    break;
+                case ABS_MISC:
+                    tmp = "ABS_MISC";
+                    break;
+                case ABS_MT_SLOT:
+                    tmp = "ABS_MT_SLOT";
+                    break;
+                case ABS_MT_TOUCH_MAJOR:
+                    tmp = "ABS_MT_TOUCH_MAJOR";
+                    break;
+                case ABS_MT_TOUCH_MINOR:
+                    tmp = "ABS_MT_TOUCH_MINOR";
+                    break;
+                case ABS_MT_WIDTH_MAJOR:
+                    tmp = "ABS_MT_WIDTH_MAJOR";
+                    break;
+                case ABS_MT_WIDTH_MINOR:
+                    tmp = "ABS_MT_WIDTH_MINOR";
+                    break;
+                case ABS_MT_ORIENTATION:
+                    tmp = "ABS_MT_ORIENTATION";
+                    break;
+                case ABS_MT_POSITION_X:
+                    tmp = "ABS_MT_POSITION_X";
+                    break;
+                case ABS_MT_POSITION_Y:
+                    tmp = "ABS_MT_POSITION_Y";
+                    break;
+                case ABS_MT_TOOL_TYPE:
+                    tmp = "ABS_MT_TOOL_TYPE";
+                    break;
+                case ABS_MT_BLOB_ID:
+                    tmp = "ABS_MT_BLOB_ID";
+                    break;
+                case ABS_MT_TRACKING_ID:
+                    tmp = "ABS_MT_TRACKING_ID";
+                    break;
+                case ABS_MT_PRESSURE:
+                    tmp = "ABS_MT_PRESSURE";
+                    break;
+                case ABS_MT_DISTANCE:
+                    tmp = "ABS_MT_DISTANCE";
+                    break;
 
+                default:
+                    tmp = NULL;
+                    break;
+            }
+            if (tmp != NULL) {
+                TRACE("EV_ABS %s %i", tmp, event.value);
+            } else {
+                TRACE("EV_ABS 0x%x %i", event.code, event.value);
+            }
+            break;
+        case EV_MSC:
+            TRACE("Misc");
+            break;
+        case EV_LED:
+            TRACE("Led");
+            break;
+        case EV_SND:
+            TRACE("Snd");
+            break;
+        case EV_REP:
+            TRACE("Rep");
+            break;
+        case EV_FF:
+            TRACE("FF");
+            break;
+        default:
+            TRACE("0x%x 0x%x %i", event.type, event.code, event.value);
+            break;
     }
+
 }
 
 /**

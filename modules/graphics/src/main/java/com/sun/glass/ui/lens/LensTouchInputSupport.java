@@ -79,6 +79,14 @@ final class LensTouchInputSupport {
      */
     private static final boolean useMultiTouch;
 
+    /**
+     * This property is used for printing raw events, device properties, device 
+     * attach / detach, low level Lens input driver decisions etc. Useful for 
+     * debugging a new input device that is not recognized or behave wrongly by 
+     * the Lens input driver. Property is disabled by default 
+                                        */
+    private static final boolean enableDeviceTrace;
+
     static {
         touchTapRadius = AccessController.doPrivileged(
         new PrivilegedAction<Integer>() {
@@ -111,6 +119,15 @@ final class LensTouchInputSupport {
                 return Boolean.getBoolean("com.sun.javafx.experimental.embedded.multiTouch");
             }
         });
+
+        enableDeviceTrace = AccessController.doPrivileged(
+        new PrivilegedAction<Boolean>() {
+            @Override
+            public Boolean run() {
+                return Boolean.getBoolean("lens.input.trace");
+            }
+        });
+
     }
 
 
