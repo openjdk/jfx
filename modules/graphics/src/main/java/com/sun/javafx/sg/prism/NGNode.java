@@ -2375,7 +2375,12 @@ public abstract class NGNode {
      **************************************************************************/
 
     static FilterContext getFilterContext(Graphics g) {
-        return PrFilterContext.getInstance(g.getAssociatedScreen());
+        Screen s = g.getAssociatedScreen();
+        if (s == null) {
+            return PrFilterContext.getPrinterContext(g.getResourceFactory());
+        } else {
+            return PrFilterContext.getInstance(s);
+        }
     }
 
     /**
