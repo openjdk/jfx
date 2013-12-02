@@ -72,6 +72,13 @@
 
     -->
 
+    <target name="-pre-init">
+        <!-- exclude samples that are not part of the base JavaFX -->
+        <condition property="excludes" value="com/javafx/experiments/height2normal/Height2NormalApp.java">
+            <isset property="JFX_CORE_ONLY"/>
+        </condition>
+    </target>
+
     <target name="install-to-maven-repo" depends="jar">
         <property name="maven.home" location="${ant.home}\..\maven"/>
         <macrodef name="maven">

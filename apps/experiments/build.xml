@@ -1,9 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project default="jar" basedir=".">
 
-    <target name="jar">
-        <ant dir="3DViewer" target="jar" inheritAll="true"/>
+    <target name="swingJar" unless="JFX_CORE_ONLY">
+         <!-- 
+          these apps have dependencies on Swing which is not part of the 
+          JFX_CORE, so we should not try to build them
+          -->
         <ant dir="Modena" target="jar" inheritAll="true"/>
+    </target>
+
+    <target name="jar" depends="swingJar">
+        <ant dir="3DViewer" target="jar" inheritAll="true"/>
     </target>
 
     <target name="clean">

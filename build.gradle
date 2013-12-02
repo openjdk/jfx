@@ -2349,7 +2349,7 @@ task sdk() {
 
 task appsjar() {
     dependsOn(sdk)
-    // Note: the jar dependacies get added elsewhere see project(":apps")
+    // Note: the jar dependencies get added elsewhere see project(":apps")
 }
 
 // these are empty tasks, allowing us to depend on the task, which may have other
@@ -2730,15 +2730,8 @@ project(":apps") {
     ant.importBuild 'build.xml'
 
     compileTargets { t ->
-        // The apps build is Ant based, and gradle lets us "import" ant build.xml
+        // The apps build is Ant based, and gradle lets us "import" ant apps/build.xml
         // into our configuration.
-
-        //THIS IS A HACK until we figure out how to fix Ensemble which
-        //relies on elements outside the core JFX.
-        if ("${defaultHostTarget}" != "${t.name}") {
-            println "Warning not building APPS as is a non-hosted build"
-            return // Currently non-hosted builds fail in Ensmble.
-        }
 
         // override the apps build.xml with an explicit pointer to our jar.
         def jfxrtJar = "${rootProject.buildDir}/${t.name}-sdk/rt/lib/ext/jfxrt.jar"
@@ -2746,6 +2739,9 @@ project(":apps") {
         def appsJar = project.task("appsJar${t.capital}") {
             doLast() {
               ant.properties['targetBld'] = "$t.name"
+              if (!rootProject.ext[t.upper].compileSwing) {
+                ant.properties['JFX_CORE_ONLY'] = 'true'
+              }
               ant.properties['file.reference.jfxrt.jar'] = jfxrtJar
               ant.properties['platforms.JDK_1.8.home'] = "${rootProject.ext.JDK_HOME}"
               ant.project.executeTarget("sampleAppsJar")
