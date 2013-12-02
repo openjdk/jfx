@@ -142,7 +142,7 @@ default: $(MODULES)
 	$(MAKE) $(TARGET)
 
 $(TARGET): $(OBJECTS) $(LIBS)
-	$(LINK) $(LDFLAGS) $(foreach object,$(OBJECTS),$(shell cygpath -ma $(object))) $(foreach lib,$(LIBS),$(shell cygpath -ma $(lib)))
+	$(LINK) $(LDFLAGS) $(shell cygpath -ma $(RESOURCE)) $(foreach object,$(OBJECTS),$(shell cygpath -ma $(object))) $(foreach lib,$(LIBS),$(shell cygpath -ma $(lib)))
 
 $(OBJECTS): | $(DEP_DIRS)
 

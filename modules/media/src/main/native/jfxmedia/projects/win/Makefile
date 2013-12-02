@@ -145,7 +145,7 @@ OBJECTS = $(patsubst %.cpp,$(OBJBASE_DIR)/%.obj,$(CPP_SOURCES)) $(patsubst %.c,$
 default: $(TARGET)
 
 $(TARGET): $(DEPFILE) $(OBJECTS) 
-	$(LINK) $(LDFLAGS) $(foreach object,$(OBJECTS),$(shell cygpath -ma $(object)))
+	$(LINK) $(LDFLAGS) $(shell cygpath -ma $(RESOURCE)) $(foreach object,$(OBJECTS),$(shell cygpath -ma $(object)))
 
 $(DEPFILE): | $(DEP_DIRS)
 	@echo $(DEPTOKEN) > $(DEPFILE)

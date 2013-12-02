@@ -54,7 +54,7 @@ default: $(MODULES)
 	$(MAKE) $(TARGET)
 
 $(TARGET): $(LIBS)
-	$(LINK) $(LDFLAGS) $(foreach lib,$(LIBS),$(shell cygpath -ma $(lib)))
+	$(LINK) $(LDFLAGS) $(shell cygpath -ma $(RESOURCE)) $(foreach lib,$(LIBS),$(shell cygpath -ma $(lib)))
 
 $(GSTREAMER_TARGET):
 	$(MAKE) TARGET=$(BUILD_DIR)/$(GSTREAMER_TARGET) -f Makefile.gstreamer

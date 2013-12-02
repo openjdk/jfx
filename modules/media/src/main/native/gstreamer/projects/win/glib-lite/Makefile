@@ -51,7 +51,7 @@ LIBS = $(addprefix $(BUILD_DIR)/,$(MODULES))
 default: $(TARGET)
 
 $(TARGET): $(LIBS)
-	$(LINK) $(LDFLAGS) $(foreach lib,$(LIBS),$(shell cygpath -ma $(lib))) 
+	$(LINK) $(LDFLAGS) $(shell cygpath -ma $(RESOURCE)) $(foreach lib,$(LIBS),$(shell cygpath -ma $(lib))) 
 
 $(BUILD_DIR)/$(GLIB_TARGET):
 	$(MAKE) TARGET=$(BUILD_DIR)/$(GLIB_TARGET) -f Makefile.glib
