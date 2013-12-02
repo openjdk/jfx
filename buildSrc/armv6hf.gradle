@@ -275,7 +275,7 @@ def compiler = file("$compilerHome/bin/arm-linux-gnueabihf-gcc").getAbsolutePath
 def linker = file("$compilerHome/bin/arm-linux-gnueabihf-g++").getAbsolutePath()
 
 ARMV6HF.glass = [:]
-ARMV6HF.glass.variants = ["eglfb", "directfb", "fb", "eglx11", "gtk", "lensport" ]
+ARMV6HF.glass.variants = ["eglfb", "directfb", "fb", "gtk", "lensport" ]
 ARMV6HF.glass.javahInclude = [
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*",
@@ -399,7 +399,7 @@ ARMV6HF.iio.linkFlags = iioLFlags
 ARMV6HF.iio.lib = "javafx_iio"
 
 ARMV6HF.prismES2 = [:]
-ARMV6HF.prismES2.variants = ["eglfb", "eglx11"]
+ARMV6HF.prismES2.variants = ["eglfb"]
 ARMV6HF.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
 
 ARMV6HF.prismES2.eglfb = [:]

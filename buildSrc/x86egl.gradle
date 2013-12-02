@@ -210,7 +210,7 @@ def compiler = "gcc"
 def linker = "g++"
 
 X86EGL.glass = [:]
-X86EGL.glass.variants = ["eglfb", "directfb", "fb", "eglx11", "gtk", "lensport"]
+X86EGL.glass.variants = ["eglfb", "directfb", "fb", "gtk", "lensport"]
 X86EGL.glass.javahInclude = [
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*",
@@ -338,7 +338,7 @@ X86EGL.iio.linkFlags = iioLFlags
 X86EGL.iio.lib = "javafx_iio"
 
 X86EGL.prismES2 = [:]
-X86EGL.prismES2.variants = ["eglfb", "eglx11"]
+X86EGL.prismES2.variants = ["eglfb"]
 X86EGL.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
 
 X86EGL.prismES2.eglfb = [:]
