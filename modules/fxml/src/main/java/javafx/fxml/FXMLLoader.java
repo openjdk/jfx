@@ -1338,24 +1338,24 @@ public class FXMLLoader {
                     throw constructLoadException("\"" + name + "\" is not a valid element name.");
                 }
 
-            Map<String, Object> parentProperties = parent.getProperties();
+                Map<String, Object> parentProperties = parent.getProperties();
 
-            if (parent.isTyped()) {
-                readOnly = parent.getValueAdapter().isReadOnly(name);
-            } else {
+                if (parent.isTyped()) {
+                    readOnly = parent.getValueAdapter().isReadOnly(name);
+                } else {
                 // If the map already defines a value for the property, assume
-                // that it is read-only
-                readOnly = parentProperties.containsKey(name);
-            }
-
-            if (readOnly) {
-                Object value = parentProperties.get(name);
-                if (value == null) {
-                    throw constructLoadException("Invalid property.");
+                    // that it is read-only
+                    readOnly = parentProperties.containsKey(name);
                 }
 
-                updateValue(value);
-            }
+                if (readOnly) {
+                    Object value = parentProperties.get(name);
+                    if (value == null) {
+                        throw constructLoadException("Invalid property.");
+                    }
+
+                    updateValue(value);
+                }
             } else {
                 // The element represents a static property
                 readOnly = false;
@@ -1420,13 +1420,17 @@ public class FXMLLoader {
 
         @Override
         public void processCharacters() throws IOException {
-            if (!readOnly) {
-                String text = xmlStreamReader.getText();
-                text = extraneousWhitespacePattern.matcher(text).replaceAll(" ");
-
-                set(text.trim());
+            String text = xmlStreamReader.getText();
+            text = extraneousWhitespacePattern.matcher(text).replaceAll(" ").trim();
+            
+            if (readOnly) {
+                if (isCollection()) {
+                    add(text);
+                } else {
+                    super.processCharacters();
+                }
             } else {
-                super.processCharacters();
+                set(text);
             }
         }
     }
