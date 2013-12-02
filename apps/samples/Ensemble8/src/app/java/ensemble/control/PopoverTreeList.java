@@ -42,7 +42,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.util.Callback;
 
 /**
- * Special ListView designed to look like "Text... >" tree list. Perhaps we ought to have customized
+ * Special ListView designed to look like "Text... &gt;" tree list. Perhaps we ought to have customized
  * a TreeView instead of a ListView (as the TreeView already has the data model all defined).
  *
  * This implementation minimizes classes by just having the PopoverTreeList implementing everything
