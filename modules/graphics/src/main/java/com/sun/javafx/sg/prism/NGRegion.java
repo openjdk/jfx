@@ -128,6 +128,18 @@ public class NGRegion extends NGGroup {
     private Border border = Border.EMPTY;
 
     /**
+     * The normalized list of CornerRadii have been precomputed at the FX layer to
+     * properly account for percentages, insets and radii scaling to prevent
+     * the radii from overflowing the dimensions of the region.
+     * The List objects are shared with the FX layer and are therefore
+     * unmodifiable.  If the normalized list is null then it means that all
+     * of the raw radii in the list were already absolute and non-overflowing
+     * and so the originals can be used from the arrays of strokes and fills.
+     */
+    private List<CornerRadii> normalizedFillCorners;
+    private List<CornerRadii> normalizedStrokeCorners;
+
+    /**
      * The shape of the region. Usually this will be null (except for things like check box
      * checks, scroll bar down arrows / up arrows, etc). If this is not null, it determines
      * the shape of the region to draw. If it is null, then the assumed shape of the region is
@@ -278,6 +290,38 @@ public class NGRegion extends NGGroup {
     }
 
     /**
+     * Called by the Region when any parameters are changed.
+     * It is only technically needed when a parameter that affects the size
+     * of any percentage or overflowing corner radii is changed, but since
+     * the data is not processed here in NGRegion, it is set on every update
+     * of the peers for any reason.
+     * A null value means that the raw radii in the BorderStroke objects
+     * themselves were already absolute and non-overflowing.
+     * 
+     * @param normalizedStrokeCorners a precomputed copy of the radii in the
+     *        BorderStroke objects that are not percentages and do not overflow
+     */
+    public void updateStrokeCorners(List<CornerRadii> normalizedStrokeCorners) {
+        this.normalizedStrokeCorners = normalizedStrokeCorners;
+    }
+
+    /**
+     * Returns the normalized (non-percentage, non-overflowing) radii for the
+     * selected index into the BorderStroke objects.
+     * If a List was synchronized from the Region object, the value from that
+     * List, otherwise the raw radii are fetched from the indicated BorderStroke
+     * object.
+     * 
+     * @param index the index of the BorderStroke object being processed
+     * @return the normalized radii for the indicated BorderStroke object
+     */
+    private CornerRadii getNormalizedStrokeRadii(int index) {
+        return (normalizedStrokeCorners == null
+                ? border.getStrokes().get(index).getRadii()
+                : normalizedStrokeCorners.get(index));
+    }
+
+    /**
      * Called by the Region when the Background has changed. The Region *must* only call
      * this method if the background object has actually changed, or excessive work may be done.
      *
@@ -333,6 +377,38 @@ public class NGRegion extends NGGroup {
         } else {
             visualsChanged();
         }
+    }
+
+    /**
+     * Called by the Region when any parameters are changed.
+     * It is only technically needed when a parameter that affects the size
+     * of any percentage or overflowing corner radii is changed, but since
+     * the data is not processed here in NGRegion, it is set on every update
+     * of the peers for any reason.
+     * A null value means that the raw radii in the BackgroundFill objects
+     * themselves were already absolute and non-overflowing.
+     * 
+     * @param normalizedStrokeCorners a precomputed copy of the radii in the
+     *        BackgroundFill objects that are not percentages and do not overflow
+     */
+    public void updateFillCorners(List<CornerRadii> normalizedFillCorners) {
+        this.normalizedFillCorners = normalizedFillCorners;
+    }
+
+    /**
+     * Returns the normalized (non-percentage, non-overflowing) radii for the
+     * selected index into the BackgroundFill objects.
+     * If a List was synchronized from the Region object, the value from that
+     * List, otherwise the raw radii are fetched from the indicated BackgroundFill
+     * object.
+     * 
+     * @param index the index of the BackgroundFill object being processed
+     * @return the normalized radii for the indicated BackgroundFill object
+     */
+    private CornerRadii getNormalizedFillRadii(int index) {
+        return (normalizedFillCorners == null
+                ? background.getFills().get(index).getRadii()
+                : normalizedFillCorners.get(index));
     }
 
     /**
@@ -1009,7 +1085,7 @@ public class NGRegion extends NGGroup {
                 // Could optimize this such that if paint is transparent then we go no further.
                 final Paint paint = getPlatformPaint(fill.getFill());
                 g.setPaint(paint);
-                final CornerRadii radii = fill.getRadii();
+                final CornerRadii radii = getNormalizedFillRadii(i);
                 // This is a workaround for RT-28435 so we use path rasterizer for small radius's We are
                 // keeping old rendering. We do not apply workaround when using Caspian or Embedded
                 if (radii.isUniform() &&
@@ -1022,9 +1098,6 @@ public class NGRegion extends NGGroup {
                         // The edges are square, so we can do a simple fill rect
                         g.fillRect(l, t, w, h);
                     } else {
-                        // Fix the horizontal and vertical radii if they are percentage based
-                        if (radii.isTopLeftHorizontalRadiusAsPercentage()) tlhr = tlhr * width;
-                        if (radii.isTopLeftVerticalRadiusAsPercentage()) tlvr = tlvr * height;
                         // The edges are rounded, so we need to compute the arc width and arc height
                         // and fill a round rect
                         float arcWidth = tlhr + tlhr;
@@ -1045,7 +1118,7 @@ public class NGRegion extends NGGroup {
                     // TODO document the issue number which will give us a fast path for rendering
                     // non-uniform corners, and that we want to implement that instead of createPath2
                     // below in such cases. (RT-26979)
-                    g.fill(createPath(width, height, t, l, b, r, normalize(radii)));
+                    g.fill(createPath(width, height, t, l, b, r, radii));
                 }
             }
         }
@@ -1057,7 +1130,7 @@ public class NGRegion extends NGGroup {
         for (int i = 0, max = strokes.size(); i < max; i++) {
             final BorderStroke stroke = strokes.get(i);
             final BorderWidths widths = stroke.getWidths();
-            final CornerRadii radii = normalize(stroke.getRadii());
+            final CornerRadii radii = getNormalizedStrokeRadii(i);
             final Insets insets = stroke.getInsets();
 
             final javafx.scene.paint.Paint topStroke = stroke.getTopStroke();
@@ -1357,7 +1430,7 @@ public class NGRegion extends NGGroup {
     }
 
     /**
-     * Visits each of the background fills and takes their raddi into account to determine the insets.
+     * Visits each of the background fills and takes their radii into account to determine the insets.
      * The backgroundInsets variable is cleared whenever the fills change, or whenever the size of the
      * region has changed (because if the size of the region changed and a radius is percentage based
      * then we need to recompute the insets).
@@ -1372,7 +1445,7 @@ public class NGRegion extends NGGroup {
             // (well, only deadly to a shape if it turns out to be a writable image).
             final BackgroundFill fill = fills.get(i);
             final Insets insets = fill.getInsets();
-            final CornerRadii radii = normalize(fill.getRadii());
+            final CornerRadii radii = getNormalizedFillRadii(i);
             top = (float) Math.max(top, insets.getTop() + Math.max(radii.getTopLeftVerticalRadius(), radii.getTopRightVerticalRadius()));
             right = (float) Math.max(right, insets.getRight() + Math.max(radii.getTopRightHorizontalRadius(), radii.getBottomRightHorizontalRadius()));
             bottom = (float) Math.max(bottom, insets.getBottom() + Math.max(radii.getBottomRightVerticalRadius(), radii.getBottomLeftVerticalRadius()));
@@ -1394,18 +1467,6 @@ public class NGRegion extends NGGroup {
 
     private int roundUp(double d) {
         return (d - (int)d) == 0 ? (int) d : (int) (d + 1);
-    }
-
-    private CornerRadii normalize(CornerRadii radii) {
-        final double tlvr = radii.isTopLeftVerticalRadiusAsPercentage() ? height * radii.getTopLeftVerticalRadius() : radii.getTopLeftVerticalRadius();
-        final double tlhr = radii.isTopLeftHorizontalRadiusAsPercentage() ? width * radii.getTopLeftHorizontalRadius() : radii.getTopLeftHorizontalRadius();
-        final double trvr = radii.isTopRightVerticalRadiusAsPercentage() ? height * radii.getTopRightVerticalRadius() : radii.getTopRightVerticalRadius();
-        final double trhr = radii.isTopRightHorizontalRadiusAsPercentage() ? width * radii.getTopRightHorizontalRadius() : radii.getTopRightHorizontalRadius();
-        final double brvr = radii.isBottomRightVerticalRadiusAsPercentage() ? height * radii.getBottomRightVerticalRadius() : radii.getBottomRightVerticalRadius();
-        final double brhr = radii.isBottomRightHorizontalRadiusAsPercentage() ? width * radii.getBottomRightHorizontalRadius() : radii.getBottomRightHorizontalRadius();
-        final double blvr = radii.isBottomLeftVerticalRadiusAsPercentage() ? height * radii.getBottomLeftVerticalRadius() : radii.getBottomLeftVerticalRadius();
-        final double blhr = radii.isBottomLeftHorizontalRadiusAsPercentage() ? width * radii.getBottomLeftHorizontalRadius() : radii.getBottomLeftHorizontalRadius();
-        return new CornerRadii(tlhr, tlvr, trvr, trhr, brhr, brvr, blvr, blhr, false, false, false, false, false, false, false, false);
     }
 
     /**
@@ -1541,52 +1602,79 @@ public class NGRegion extends NGGroup {
         g.setPaint(sbFill);
     }
 
-    // If we generate the coordinates for the "start point, corner, end point"
-    // triplets for each corner arc on the border going clockwise from the
-    // upper left, we get the following pattern (X, Y == corner coords):
-    //
-    // 0 - Top Left:      X + 0, Y + R,      X, Y,      X + R, Y + 0
-    // 1 - Top Right:     X - R, Y + 0,      X, Y,      X + 0, Y + R
-    // 2 - Bottom Right:  X + 0, Y - R,      X, Y,      X - R, Y + 0
-    // 3 - Bottom Left:   X + R, Y + 0,      X, Y,      X + 0, Y - R
-    //
-    // The start and end points are just the corner coordinate + {-R, 0, +R}.
-    // If we view these four lines as the following line with appropriate
-    // values for A, B, C, D:
-    //
-    //     General form:  X + A, Y + B,      X, Y,      X + C, Y + D
-    //
-    // We see that C == B and D == -A in every case so we really only have
-    // 2 constants and the following reduced general form:
-    //
-    //     Reduced form:  X + A, Y + B,      X, Y,      X + B, Y - A
-    //
-    // You might note that these values are actually related to the sin
-    // and cos of 90 degree angles and the relationship between (A,B) and (C,D)
-    // is just that of a 90 degree rotation.  We can thus use the following
-    // trigonometric "quick lookup" array and the relationships:
-    //
-    // 1. cos(quadrant) == sin(quadrant + 1)
-    // 2. dx,dy for the end point
-    //      == dx,dy for the start point + 90 degrees
-    //      == dy,-dx
-    //
-    // Note that the array goes through 6 quadrants to allow us to look
-    // 2 quadrants past a complete circle.  We need to go one quadrant past
-    // so that we can compute cos(4th quadrant) == sin(5th quadrant) and we
-    // also need to allow one more quadrant because the makeRoundedEdge
-    // method always computes 2 consecutive rounded corners at a time.
-    private static final float SIN_VALUES[] = { 1f, 0f, -1f, 0f, 1f, 0f};
-
-    private void doCorner(Path2D path, float x, float y, float r, int quadrant) {
-        if (r > 0) {
-            float dx = r * SIN_VALUES[quadrant + 1]; // cos(quadrant)
-            float dy = r * SIN_VALUES[quadrant];
-            path.appendOvalQuadrant(x + dx, y + dy, x, y, x + dy, y - dx, 0f, 1f,
-                                    (quadrant == 0)
+    /**
+     * Inserts geometry into the specified Path2D object for the specified
+     * corner of a general rounded rectangle.
+     * 
+     * The corner drawn is specified by the quadrant parameter, whose least
+     * significant 2 bits specify the following corners and the associated
+     * start, corner, and end points (which are always drawn clockwise):
+     * 
+     * 0 - Top Left:      X + 0 , Y + VR,      X, Y,      X + HR, Y + 0
+     * 1 - Top Right:     X - HR, Y + 0 ,      X, Y,      X + 0 , Y + VR
+     * 2 - Bottom Right:  X + 0 , Y - VR,      X, Y,      X - HR, Y + 0
+     * 3 - Bottom Left:   X + HR, Y + 0 ,      X, Y,      X + 0 , Y - VR
+     * 
+     * The associated horizontal and vertical radii are fetched from the
+     * indicated CornerRadii object which is assumed to be absolute (not
+     * percentage based) and already scaled so that no pair of radii are
+     * larger than the indicated width/height of the rounded rectangle being
+     * expressed.
+     * 
+     * The tstart and tend parameters specify what portion of the rounded
+     * corner should be drawn with 0f => 1f being the entire rounded corner.
+     * 
+     * The newPath parameter indicates whether the path should reach the
+     * starting point with a moveTo() command or a lineTo() segment.
+     * 
+     * @param path
+     * @param radii
+     * @param x
+     * @param y
+     * @param quadrant
+     * @param tstart
+     * @param tend
+     * @param newPath 
+     */
+    private void doCorner(Path2D path, CornerRadii radii,
+                          float x, float y, int quadrant,
+                          float tstart, float tend, boolean newPath)
+    {
+        float dx0, dy0, dx1, dy1;
+        float hr, vr;
+        switch (quadrant & 0x3) {
+            case 0:
+                hr = (float) radii.getTopLeftHorizontalRadius();
+                vr = (float) radii.getTopLeftVerticalRadius();
+                // 0 - Top Left:      X + 0 , Y + VR,      X, Y,      X + HR, Y + 0
+                dx0 =  0f;  dy0 =  vr;    dx1 =  hr;  dy1 =  0f;
+                break;
+            case 1:
+                hr = (float) radii.getTopRightHorizontalRadius();
+                vr = (float) radii.getTopRightVerticalRadius();
+                // 1 - Top Right:     X - HR, Y + 0 ,      X, Y,      X + 0 , Y + VR
+                dx0 = -hr;  dy0 =  0f;    dx1 =  0f;  dy1 =  vr;
+                break;
+            case 2:
+                hr = (float) radii.getBottomRightHorizontalRadius();
+                vr = (float) radii.getBottomRightVerticalRadius();
+                // 2 - Bottom Right:  X + 0 , Y - VR,      X, Y,      X - HR, Y + 0
+                dx0 =  0f;  dy0 = -vr;    dx1 = -hr;  dy1 = 0f;
+                break;
+            case 3:
+                hr = (float) radii.getBottomLeftHorizontalRadius();
+                vr = (float) radii.getBottomLeftVerticalRadius();
+                // 3 - Bottom Left:   X + HR, Y + 0 ,      X, Y,      X + 0 , Y - VR
+                dx0 =  hr;  dy0 =  0f;    dx1 =  0f;  dy1 = -vr;
+                break;
+            default: return; // Can never happen
+        }
+        if (hr > 0 && vr > 0) {
+            path.appendOvalQuadrant(x + dx0, y + dy0, x, y, x + dx1, y + dy1, tstart, tend,
+                                    (newPath)
                                         ? Path2D.CornerPrefix.MOVE_THEN_CORNER
                                         : Path2D.CornerPrefix.LINE_THEN_CORNER);
-        } else if (quadrant == 0) {
+        } else if (newPath) {
             path.moveTo(x, y);
         } else {
             path.lineTo(x, y);
@@ -1600,47 +1688,22 @@ public class NGRegion extends NGGroup {
     private Path2D createPath(float width, float height, float t, float l, float bo, float ro, CornerRadii radii) {
         float r = width - ro;
         float b = height - bo;
-        // TODO have to teach this method how to handle vertical radii (RT-26941)
-        float tlr = (float) radii.getTopLeftHorizontalRadius();
-        float trr = (float) radii.getTopRightHorizontalRadius();
-        float blr = (float) radii.getBottomLeftHorizontalRadius();
-        float brr = (float) radii.getBottomRightHorizontalRadius();
-        float ratio = getReducingRatio(r - l, b - t, tlr, trr, blr, brr);
-        if (ratio < 1.0f) {
-            tlr *= ratio;
-            trr *= ratio;
-            blr *= ratio;
-            brr *= ratio;
-        }
         Path2D path = new Path2D();
-        doCorner(path, l, t, tlr, 0);
-        doCorner(path, r, t, trr, 1);
-        doCorner(path, r, b, brr, 2);
-        doCorner(path, l, b, blr, 3);
+        doCorner(path, radii, l, t, 0, 0f, 1f, true);
+        doCorner(path, radii, r, t, 1, 0f, 1f, false);
+        doCorner(path, radii, r, b, 2, 0f, 1f, false);
+        doCorner(path, radii, l, b, 3, 0f, 1f, false);
         path.closePath();
         return path;
     }
 
-    private Path2D makeRoundedEdge(float x0, float y0, float x1, float y1,
-                                   float r0, float r1, int quadrant)
+    private Path2D makeRoundedEdge(CornerRadii radii,
+                                   float x0, float y0, float x1, float y1,
+                                   int quadrant)
     {
         Path2D path = new Path2D();
-        if (r0 > 0) {
-            float dx = r0 * SIN_VALUES[quadrant + 1];  // cos(quadrant)
-            float dy = r0 * SIN_VALUES[quadrant];
-            path.appendOvalQuadrant(x0 + dx, y0 + dy, x0, y0, x0 + dy, y0 - dx,
-                                    0.5f, 1f, Path2D.CornerPrefix.MOVE_THEN_CORNER);
-        } else {
-            path.moveTo(x0, y0);
-        }
-        if (r1 > 0) {
-            float dx = r1 * SIN_VALUES[quadrant + 2];  // cos(quadrant + 1)
-            float dy = r1 * SIN_VALUES[quadrant + 1];
-            path.appendOvalQuadrant(x1 + dx, y1 + dy, x1, y1, x1 + dy, y1 - dx,
-                                    0f, 0.5f, Path2D.CornerPrefix.LINE_THEN_CORNER);
-        } else {
-            path.lineTo(x1, y1);
-        }
+        doCorner(path, radii, x0, y0, quadrant,   0.5f, 1.0f, true);
+        doCorner(path, radii, x1, y1, quadrant+1, 0.0f, 0.5f, false);
         return path;
     }
 
@@ -1651,25 +1714,13 @@ public class NGRegion extends NGGroup {
      */
     private Path2D[] createPaths(float t, float l, float bo, float ro, CornerRadii radii)
     {
-        // TODO have to teach how to handle the other 4 radii (RT-26941)
-        float tlr = (float) radii.getTopLeftHorizontalRadius(),
-            trr = (float) radii.getTopRightHorizontalRadius(),
-            blr = (float) radii.getBottomLeftHorizontalRadius(),
-            brr = (float) radii.getBottomRightHorizontalRadius();
         float r = width - ro;
         float b = height - bo;
-        float ratio = getReducingRatio(r - l, b - t, tlr, trr, blr, brr);
-        if (ratio < 1.0f) {
-            tlr *= ratio;
-            trr *= ratio;
-            blr *= ratio;
-            brr *= ratio;
-        }
         return new Path2D[] {
-            makeRoundedEdge(l, t, r, t, tlr, trr, 0), // top
-            makeRoundedEdge(r, t, r, b, trr, brr, 1), // right
-            makeRoundedEdge(r, b, l, b, brr, blr, 2), // bottom
-            makeRoundedEdge(l, b, l, t, blr, tlr, 3), // left
+            makeRoundedEdge(radii, l, t, r, t, 0), // top
+            makeRoundedEdge(radii, r, t, r, b, 1), // right
+            makeRoundedEdge(radii, r, b, l, b, 2), // bottom
+            makeRoundedEdge(radii, l, b, l, t, 3), // left
         };
     }
 
@@ -1924,26 +1975,4 @@ public class NGRegion extends NGGroup {
             texture.unlock();
         }
     }
-
-    private float getReducingRatio(float w, float h,
-                                   float tlr, float trr,
-                                   float blr, float brr)
-    {
-        float ratio = 1.0f;
-        // working clockwise TRBL
-        if (tlr + trr > w) { // top radii
-            ratio = Math.min(ratio, w / (tlr + trr));
-        }
-        if (trr + brr > h) { // right radii
-            ratio = Math.min(ratio, h / (trr + brr));
-        }
-        if (brr + blr > w) { // bottom radii
-            ratio = Math.min(ratio, w / (brr + blr));
-        }
-        if (blr + tlr > h) { // left radii
-            ratio = Math.min(ratio, h / (blr + tlr));
-        }
-        return ratio;
-    }
-
 }
