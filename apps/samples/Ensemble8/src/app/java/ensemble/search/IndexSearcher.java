@@ -134,6 +134,8 @@ public class IndexSearcher {
 
     /**
      * Simple command line test application
+     * @param args command line arguments
+     * @throws Exception for maps errors
      */
     public static void main(String[] args) throws Exception {
         BufferedReader in = new BufferedReader(new InputStreamReader(System.in, "UTF-8"));

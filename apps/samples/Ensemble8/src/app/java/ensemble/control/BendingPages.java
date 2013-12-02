@@ -119,7 +119,7 @@ public class BendingPages extends Region {
     /**
      * Offset is subtracted from right bottom corner. (0, 0) is fully closed
      * (100, 200) is opened by (-100, -200).
-     * @return 
+     * @return offset point property
      */
     public ObjectProperty<Point2D> closedOffsetProperty() {
         return closedOffset;
@@ -138,7 +138,7 @@ public class BendingPages extends Region {
     /**
      * Offset is added to top left corner of maximum opened corner. (0, 0) is
      * fully opened. (2 * width - 100, 2 * height - 200) is opened by (-100, -200).
-     * @return 
+     * @return offset point property
      */
     public ObjectProperty<Point2D> openedOffsetProperty() {
         return openedOffset;
@@ -390,9 +390,9 @@ public class BendingPages extends Region {
     
     /**
      * Sets colors for path gradient. Values are used on next update().
-     * @param pathColor
-     * @param bendStartColor
-     * @param bendEndColor 
+     * @param pathColor Color for path
+     * @param bendStartColor Start color for path
+     * @param bendEndColor  End color for path
      */
     public void setColors(Color pathColor, Color bendStartColor, Color bendEndColor) {
         bookBend.setColors(pathColor, bendStartColor, bendEndColor);

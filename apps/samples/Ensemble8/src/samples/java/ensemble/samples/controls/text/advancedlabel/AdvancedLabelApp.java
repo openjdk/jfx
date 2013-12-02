@@ -94,6 +94,7 @@ private static final Image ICON_48 = new Image(AdvancedLabelApp.class.getResourc
 
     /**
      * Java main for when running without JavaFX launcher
+     * @param args command line arguments
      */
     public static void main(String[] args) {
         launch(args);

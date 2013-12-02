@@ -141,9 +141,9 @@ public class BookBend {
 
     /**
      * Sets colors for path gradient. Values are used on next update().
-     * @param pathColor
-     * @param bendStartColor
-     * @param bendEndColor 
+     * @param pathColor Path Color
+     * @param bendStartColor Starting path color
+     * @param bendEndColor  Ending path color
      */
     public void setColors(Color pathColor, Color bendStartColor, Color bendEndColor) {
         this.pathColor = pathColor;
@@ -184,8 +184,8 @@ public class BookBend {
     
     /**
      * Updates DisplacementMap and path to target coordinates.
-     * @param targetX
-     * @param targetY 
+     * @param targetX target X
+     * @param targetY  target Y
      */
     public void update(double targetX, double targetY) {
         this.targetX = targetX;

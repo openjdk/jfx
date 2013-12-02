@@ -112,6 +112,7 @@ public class CurveFittedAreaChart extends AreaChart<Number, Number> {
      * Calculate open-ended Bezier Spline Control Points.
      *
      * @param dataPoints Input data Bezier spline points.
+     * @return The spline points
      */
     public static Pair<Point2D[], Point2D[]> calcCurveControlPoints(Point2D[] dataPoints) {
         Point2D[] firstControlPoints;
