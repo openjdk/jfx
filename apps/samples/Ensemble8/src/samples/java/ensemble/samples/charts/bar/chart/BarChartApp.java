@@ -68,7 +68,6 @@ import javafx.stage.Stage;
  * @playground xAxis.endMargin
  * 
  * @playground xAxis.animated
- * @playground xAxis.label
  * @playground xAxis.side
  * @playground xAxis.tickLabelFill
  * @playground xAxis.tickLabelGap

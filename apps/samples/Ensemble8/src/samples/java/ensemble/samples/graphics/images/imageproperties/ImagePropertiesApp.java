@@ -51,6 +51,7 @@ import javafx.stage.Stage;
  * @related /Graphics/Images/Image Creation
  * @see javafx.scene.image.Image
  * @see javafx.scene.image.ImageView
+ * @embedded
  */
 public class ImagePropertiesApp extends Application {
 

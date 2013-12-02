@@ -51,6 +51,7 @@ import javafx.stage.Stage;
  * @see javafx.scene.paint.Paint
  * @related /Graphics/Paints/Radial Gradient
  * @related /Graphics/Paints/Linear Gradient
+ * @embedded
  */
 public class ColorApp extends Application {
 

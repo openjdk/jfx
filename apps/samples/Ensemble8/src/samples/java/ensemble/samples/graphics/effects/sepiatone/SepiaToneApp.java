@@ -49,6 +49,7 @@ import javafx.stage.Stage;
  * 
  * @see javafx.scene.effect.SepiaTone
  * @see javafx.scene.effect.Effect
+ * @embedded
  */
 public class SepiaToneApp extends Application {
 

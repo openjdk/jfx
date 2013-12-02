@@ -106,7 +106,7 @@ import javafx.stage.Stage;
  * @playground chart.legendVisible
  * @playground chart.title
  * @playground chart.titleSide
- * @embedded
+ * @highlight
  */
 public class StackedAreaChartApp extends Application {
     

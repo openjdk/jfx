@@ -61,6 +61,7 @@ import javafx.stage.Stage;
  * @see javafx.collections.FXCollections
  * @see javafx.collections.ListChangeListener
  * @see javafx.collections.ObservableList
+ * @embedded
  */
 public class ObservableListApp extends Application {
 

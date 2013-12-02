@@ -79,6 +79,7 @@ import javafx.stage.Stage;
  * @playground textWorld.translateX (name="World translateX")
  * @playground textWorld.translateY (name="World translateY")
  * @embedded
+ * @highlight
  */
 public class TextFlowApp extends Application {
 

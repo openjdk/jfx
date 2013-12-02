@@ -53,6 +53,7 @@ import javafx.stage.Stage;
  *
  * @see javafx.scene.effect.Reflection
  * @see javafx.scene.effect.Effect
+ * @embedded
  */
 public class ReflectionApp extends Application {
 

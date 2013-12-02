@@ -107,7 +107,6 @@ import javafx.stage.Stage;
  * @playground chart.legendVisible
  * @playground chart.title
  * @playground chart.titleSide
- * @embedded
  */
 public class CandleStickChartApp extends Application {
     

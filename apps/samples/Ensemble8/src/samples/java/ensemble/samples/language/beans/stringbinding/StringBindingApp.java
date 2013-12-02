@@ -55,6 +55,7 @@ import javafx.stage.Stage;
  * @see javafx.beans.binding.StringBinding
  * @see javafx.scene.control.TextField
  * @see javafx.scene.control.Label
+ * @embedded
  */
 public class StringBindingApp extends Application {
 
