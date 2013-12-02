@@ -2178,6 +2178,19 @@ load(qt_config)""")
             }
         }
     
+        if (IS_WINDOWS && t.name == "win") {
+            def webkitProperties = project.rootProject.ext[t.upper].webkit
+            def rcTask = project.task("rc${t.capital}", type: CompileResourceTask) {
+                compiler = webkitProperties.rcCompiler
+                source(webkitProperties.rcSource)
+                if (webkitProperties.rcFlags) {
+                    rcParams.addAll(webkitProperties.rcFlags)
+                }
+                output(file("$webkitOutputDir/$webkitConfig/WebCore/obj"))
+            }
+            compileNativeTask.dependsOn rcTask
+        }
+        
         def compileGeneratedTask = task("compileGenerated${t.capital}", type: JavaCompile, dependsOn: compileNativeTask) {
             def gensrcDir = "$webkitOutputDir/$webkitConfig/WebCore/generated/java"
             doFirst {

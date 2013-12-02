@@ -320,3 +320,8 @@ WIN.media.glibRcFlags = ["/d", "JFX_FNAME=glib-lite.dll", "/d", "JFX_INTERNAL_NA
 WIN.media.gstreamerRcFlags = ["/d", "JFX_FNAME=gstreamer-lite.dll", "/d", "JFX_INTERNAL_NAME=gstreamer", rcFlags].flatten()
 WIN.media.fxpluginsRcFlags = ["/d", "JFX_FNAME=fxplugins.dll", "/d", "JFX_INTERNAL_NAME=fxplugins", rcFlags].flatten()
 WIN.media.jfxmediaRcFlags = ["/d", "JFX_FNAME=jfxmedia.dll", "/d", "JFX_INTERNAL_NAME=jfxmedia", rcFlags].flatten()
+
+WIN.webkit = [:]
+WIN.webkit.rcCompiler = rcCompiler
+WIN.webkit.rcSource = defaultRcSource
+WIN.webkit.rcFlags = ["/d", "JFX_FNAME=jfxwebkit.dll", "/d", "JFX_INTERNAL_NAME=webkit", rcFlags].flatten();
