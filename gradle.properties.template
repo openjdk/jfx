@@ -104,8 +104,8 @@
 
 # The JDK_HOME must either be specified or will be inferred based on the JDK / JRE used to
 # execute Gradle. From the JDK_HOME are derived the JAVA, JAVAC, JAVAH, JAVADOC, and STUB_RUNTIME
-# properties, although each of these may be specified individually. In addition the LIBRARY_STUB and
-# BINARY_STUB properties are derived from STUB_RUNTIME. Normally the gradle build
+# properties, although each of these may be specified individually. In addition, the LIBRARY_STUB
+# property is derived from STUB_RUNTIME. Normally the gradle build
 # will work based on whatever "java" is being used to run gradle. It does this by looking for
 # a JDK relative to the bin/java location. However if you want to build with a different JDK than
 # what is used to execute Gradle, or to fix a failed attempt by the build script to locate the
@@ -117,8 +117,7 @@
 #JAVAH = /path/to/the/jdk/bin/javah
 #JAVADOC = /path/to/the/jdk/bin/javadoc
 #STUB_RUNTIME = /path/to/the/jdk/jre
-#BINARY_STUB = /path/to/the/jdk/jre/lib/ext/jfxrt.jar
-#LIBRARY_STUB = /path/to/the/jdk/jre/lib (different location depending on platform)
+#LIBRARY_STUB = /path/to/the/jdk/jre/xxx (different location depending on platform)
 
 # The generated JavaDocs contain many references to core JDK classes such as java.lang.String
 # and java.util.concurrent.Executor. These references are resolved via the JDK_DOCS property,

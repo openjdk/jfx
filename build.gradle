@@ -253,7 +253,7 @@ ext.IS_WINDOWS = OS_NAME.contains("windows")
 ext.IS_LINUX = OS_NAME.contains("linux")
 
 // Get the JDK_HOME automatically based on the version of Java used to execute gradle. Or, if specified,
-// use a user supplied JDK_HOME, BINARY_STUB, JAVAC, and/or JAVAH, all of which may be specified
+// use a user supplied JDK_HOME, STUB_RUNTIME, JAVAC, and/or JAVAH, all of which may be specified
 // independently (or we'll try to get the right one based on other supplied info). Sometimes the
 // JRE might be the thing that is being used instead of the JRE embedded in the JDK, such as:
 //    c:\Program Files (x86)\Java\jdk1.8.0\jre
@@ -285,11 +285,9 @@ loadProperties("$projectDir/build.properties")
 
 def String closedCacheStubRuntime = cygpath("$projectDir") + "/../caches/sdk/rt"
 defineProperty("STUB_RUNTIME", BUILD_CLOSED ? closedCacheStubRuntime : cygpath("$JDK_HOME/jre"))
-defineProperty("BINARY_STUB", "$STUB_RUNTIME/lib/ext/jfxrt.jar")
 defineProperty("LIBRARY_STUB", IS_MAC ? "$STUB_RUNTIME/lib" :
                                IS_WINDOWS ? "$STUB_RUNTIME/bin" :
                                "$STUB_RUNTIME/lib/$OS_ARCH")
-ext.BINARY_STUB = "".equals(BINARY_STUB) ? null : files(BINARY_STUB)
 defineProperty("UPDATE_STUB_CACHE", (STUB_RUNTIME.equals(closedCacheStubRuntime) ? 'true' : 'false'))
 
 def supplementalPreBuildFile = file("$closedDir/closed-pre-build.gradle");
@@ -625,7 +623,6 @@ if (!file(JAVA).exists()) throw new Exception("Missing or incorrect path to 'jav
 if (!file(JAVAC).exists()) throw new Exception("Missing or incorrect path to 'javac': '$JAVAC'. Perhaps bad JDK_HOME? $JDK_HOME")
 if (!file(JAVAH).exists()) throw new Exception("Missing or incorrect path to 'javah': '$JAVAH'. Perhaps bad JDK_HOME? $JDK_HOME")
 if (!file(JAVADOC).exists()) throw new Exception("Missing or incorrect path to 'javadoc': '$JAVADOC'. Perhaps bad JDK_HOME? $JDK_HOME")
-if (BINARY_STUB != null && !BINARY_STUB.getSingleFile().exists()) logger.warn("Missing or incorrect path to 'jfxrt.jar': '${BINARY_STUB.asPath}'. Perhaps bad JDK_HOME? $JDK_HOME")
 
 
 // Determine the verion of Java in JDK_HOME. It looks like this:
@@ -695,7 +692,6 @@ logger.quiet("jdk build number: ${jdkBuildNumber}")
 logger.quiet("minimum java build number: ${jfxBuildJdkBuildnumMin}")
 logger.quiet("COMPILE_TARGETS: $COMPILE_TARGETS")
 logger.quiet("COMPILE_FLAGS_FILES: $COMPILE_FLAGS_FILES")
-logger.quiet("BINARY_STUB: ${BINARY_STUB == null ? '' : BINARY_STUB.asPath}")
 logger.quiet("HUDSON_JOB_NAME: $HUDSON_JOB_NAME")
 logger.quiet("HUDSON_BUILD_NUMBER: $HUDSON_BUILD_NUMBER")
 logger.quiet("PROMOTED_BUILD_NUMBER: $PROMOTED_BUILD_NUMBER")
@@ -795,7 +791,6 @@ void addNative(Project project, String name, List<String> includeTargets) {
             } else {
                 classpath = project.files(properties.javahClasspath)
             }
-            if (rootProject.BINARY_STUB != null) classpath += rootProject.BINARY_STUB
             output = headerDir
             include(properties.javahInclude)
         }
@@ -1022,6 +1017,10 @@ allprojects {
         }
     }
 
+    // Compile and run tests against the jfxrt.jar in the built sdk of the host machine
+    def sdkDir = "${rootProject.buildDir}/${defaultHostTarget}-sdk"
+    def jfxrtJar = "$sdkDir/rt/lib/ext/jfxrt.jar"
+
     // At the moment the ASM library shipped with Gradle that is used to
     // discover the different test classes fails on Java 8, so in order
     // to have sourceCompatibility set to 1.8 I have to also turn scanForClasses off
@@ -1030,7 +1029,6 @@ allprojects {
     // we start building with Java 9.
     test {
         jvmArgs("-Djava.ext.dirs=");
-        if (rootProject.BINARY_STUB != null) classpath += rootProject.BINARY_STUB;
         executable = JAVA;
         enableAssertions = true;
         testLogging.exceptionFormat = "full";
@@ -1039,6 +1037,11 @@ allprojects {
         if (BUILD_CLOSED && DO_JCOV) {
             addJCov(project, test)
         }
+        classpath = files("$jfxrtJar") + classpath
+    }
+
+    compileTestJava {
+        classpath = files("$jfxrtJar") + classpath
     }
 
     // Exclude any non-public-API classes from having javadoc generated. This block is used
@@ -1542,7 +1545,6 @@ project(":jmx") {
 // not pop up any windows or use audio). As such, they are only enabled
 // when FULL_TEST is specified, and each test runs in its own JVM
 project(":systemTests") {
-    def sdkDir = "${rootProject.buildDir}/${defaultHostTarget}-sdk"
     test {
         enabled = IS_FULL_TEST
         if (!IS_USE_ROBOT) {
@@ -1559,7 +1561,6 @@ project(":systemTests") {
             exclude("**/com/sun/javafx/application/Swing*.*");
         }
         forkEvery = 1
-        classpath = files("$sdkDir/rt/lib/ext/jfxrt.jar") + classpath
     }
 }
 
@@ -2227,11 +2228,6 @@ load(qt_config)""")
     if (IS_COMPILE_WEBKIT) {
         jar.dependsOn compileGenerated, drtJar
     }
-
-    test {
-        def sdkDir = "${rootProject.buildDir}/${defaultHostTarget}-sdk"
-        classpath = files("$sdkDir/rt/lib/ext/jfxrt.jar") + classpath
-    }
 }
 
 allprojects {
@@ -2242,8 +2238,6 @@ allprojects {
     // compiler with the right settings.
     //
     // Also, we need to remove jfxrt.jar from the ext classpath (if it is there)
-    // and instead each module that depends on closed bits is going to need to
-    // add BINARY_STUB to its list of dependencies.
     tasks.withType(Compile) { compile ->
         // It looks like we have to use ant to compile instead of the built-in gradle
         // compiler stuff because otherwise it won't compile on CYGWIN
@@ -2262,20 +2256,6 @@ allprojects {
             LINT.split("[, ]").each { s ->
                 compile.options.compilerArgs += "-Xlint:$s"
             }
-        }
-
-        // Somewhat dangerous in case there is a java source set other than "test" or "stub" or "main"!
-        // Note that the compileFooJava task is automatically created whenever a source set is
-        // defined. So the "test" source set automatically creates a "compileTestJava" task (among others).
-        if (name == "compileTestJava") {
-            classpath = sourceSets.test.compileClasspath
-            if (rootProject.BINARY_STUB != null) classpath += rootProject.BINARY_STUB
-        } else if (name == "compileJava") {
-            // Not everything needs the builder processor
-            classpath = sourceSets.main.compileClasspath
-            if (rootProject.BINARY_STUB != null) classpath += rootProject.BINARY_STUB
-        } else {
-            logger.info("Not using BINARY_STUB in compilation: $name")
         }
     }
 }
@@ -2342,17 +2322,17 @@ task javadoc(type: Javadoc) {
 }
 
 task jfxrt() {
-    def t = project(":systemTests").test
-    if (t.enabled) t.dependsOn(jfxrt)
-
-    // We need jfxrt.jar on classpath for :web:test in order for
-    // NativeLibLoader to calculate path to jfxwebkit library properly.
-    def wt = project(":web").test
-    if (wt.enabled) wt.dependsOn(jfxrt)
+    rootProject.getTasksByName("compileTestJava", true).each { t ->
+        if (t.enabled) t.dependsOn(jfxrt)
+    }
 }
 
 task sdk() {
     dependsOn(checkJfxrtJar)
+
+    rootProject.getTasksByName("test", true).each { t ->
+        if (t.enabled) t.dependsOn(sdk)
+    }
 }
 
 task appsjar() {
@@ -2726,10 +2706,6 @@ ext.JFXRT_CP =
             "modules/media/build/classes/main",
             "modules/web/build/classes/main",
     )
-
-if (BINARY_STUB != null) {
-    JFXRT_CP += BINARY_STUB
-}
 
 project(":apps") {
     // The apps build is Ant based, and gradle lets us "import" ant build.xml
