@@ -130,11 +130,9 @@ public class NearAndFarClipTest extends VisualTestBase {
                 }
 
                 Color color;
-                // Enable Near Clip test once RT-32880 is fixed.
-                // D3D: Near clip appears to clip further (away from viewer) than the specified near value 
-//                // Verify Near Clip
-//                Color color = getColor(testScene, WIDTH / 2, HEIGHT / 2);
-//                assertColorEquals(Color.BLUE, color, TOLERANCE);
+                // Verify Near Clip
+                color = getColor(testScene, WIDTH / 2, HEIGHT / 2);
+                assertColorEquals(Color.BLUE, color, TOLERANCE);
 
                 // Verify Inside Rect
                 color = getColor(testScene, (WIDTH / 3), HEIGHT / 2);

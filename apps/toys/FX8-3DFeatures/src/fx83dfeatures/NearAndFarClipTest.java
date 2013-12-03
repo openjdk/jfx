@@ -29,7 +29,9 @@ import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
+import javafx.scene.control.Slider;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
@@ -72,9 +74,9 @@ public class NearAndFarClipTest extends Application {
         insideNearClip.setTranslateZ(nearClipDistance + nearClipDistanceOffset);
         insideNearClip.setId("Blue");
 
-        Rectangle outsideNearClip = new Rectangle(16, 16, Color.YELLOW);
-        outsideNearClip.setLayoutX(242);
-        outsideNearClip.setLayoutY(242);
+        Rectangle outsideNearClip = new Rectangle(8, 8, Color.YELLOW);
+        outsideNearClip.setLayoutX(246);
+        outsideNearClip.setLayoutY(246);
         outsideNearClip.setTranslateZ(nearClipDistance - nearClipDistanceOffset);
         outsideNearClip.setId("Yellow");
 
@@ -94,6 +96,9 @@ public class NearAndFarClipTest extends Application {
 
         // Render in painter order (far to near)
         root.getChildren().addAll(outsideFarClip, insideFarClip, insideRect, insideNearClip, outsideNearClip);
+        Slider near = new Slider(NEAR*0.9, NEAR*1.1, NEAR);
+        Slider far = new Slider(FAR*0.9, FAR*1.1, FAR);
+        root.getChildren().addAll(new VBox(near, far));
 
         // Intentionally set depth buffer to false to reduce test complexity
         Scene scene = new Scene(root, WIDTH, HEIGHT, false);
@@ -106,8 +111,8 @@ public class NearAndFarClipTest extends Application {
 
         PerspectiveCamera camera = new PerspectiveCamera();
         camera.setFieldOfView(FOV);
-        camera.setNearClip(NEAR);
-        camera.setFarClip(FAR);
+        camera.nearClipProperty().bind(near.valueProperty());
+        camera.farClipProperty().bind(far.valueProperty());
         scene.setCamera(camera);
         return scene;
     }
@@ -120,7 +125,7 @@ public class NearAndFarClipTest extends Application {
         stage.setResizable(false);
         stage.show();
         System.out.println("You should expect to see 3 overlapping squares in"
-                + " the order of Blue is on top of Green and Green is on top Red.");;
+                + " the order of Blue is on top of Green and Green is on top Red.");
     }
 
     public static void main(String[] args) {
