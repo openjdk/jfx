@@ -1096,7 +1096,7 @@ void lens_wm_notifyMultiTouchEvent(JNIEnv *env,
 
     int i;
     int dx, dy, relX, relY, absX, absY;
-    jboolean allReleased;    
+    jboolean allReleased;
 
     //set the touch window on first touch event
     if (touchWindow == NULL && primaryPointIndex >= 0 && !_onDraggingAction) {
@@ -1156,9 +1156,16 @@ void lens_wm_notifyMultiTouchEvent(JNIEnv *env,
         absY = yabs[primaryPointIndex];
         switch (states[primaryPointIndex]) {
             case com_sun_glass_events_TouchEvent_TOUCH_PRESSED:
+                
+                if (absX != _mousePosX  || absY != _mousePosY) {
+                    //RT-34624 - need to report move before press (if not already reported)
+                    lens_wm_notifyMotionEvent(env,
+                                          absX,
+                                          absY);
+                }
+
                 //send button pressed
                 GLASS_LOG_FINEST("touch -> mouse - pressed");
-
                 lens_wm_notifyButtonEvent(env,
                                           JNI_TRUE, //preseed
                                           com_sun_glass_events_MouseEvent_BUTTON_LEFT,
@@ -1179,6 +1186,10 @@ void lens_wm_notifyMultiTouchEvent(JNIEnv *env,
                 GLASS_LOG_FINEST("touch -> mouse - still, ignoring");
                 break;
             case com_sun_glass_events_TouchEvent_TOUCH_RELEASED:
+                //if more then one fingers is used, then a new primary point will
+                //be assigned and we will not get TOUCH_RELEASED , if a single 
+                //point is used then then all points will be released
+                //primaryPointIndex will be -1 and we shouldn't got here
                 GLASS_LOG_WARNING("touch -> mouse - release, illegal state");
                 break;
         }

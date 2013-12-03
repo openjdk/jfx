@@ -655,8 +655,7 @@ static jboolean lens_input_deviceCheckProperties(LensInputDevice *device,
         //lens_input_deviceInitCapabilities()
         device->touchProtocolType = TOUCH_PROTOCOL_ST;
         isValidDevice = JNI_TRUE;
-        TRACE("[properties check] Device is marked as touch",
-              device->info->name);
+        TRACE("[properties check] Device is marked as touch");
     }
     return isValidDevice;
 }
