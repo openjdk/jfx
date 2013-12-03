@@ -930,7 +930,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         boolean cellNeedsLayout = false;
 
         if (BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
-            if ((tempVisibility == true && (hbar.isVisible() == false || vbar.isVisible() == false)) ||
+            if ((tempVisibility == true && (needBreadthBar && hbar.isVisible() == false || needLengthBar && vbar.isVisible() == false)) ||
                 (tempVisibility == false && (hbar.isVisible() == true || vbar.isVisible() == true))) {
                 cellNeedsLayout = true;
             }
@@ -1321,8 +1321,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // we need the breadth bar and the length bar.
         // The last condition here (viewportLength >= getHeight()) was added to
         // resolve the edge-case identified in RT-14350.
-        boolean needLengthBar = getPosition() > 0 && (cellCount >= cells.size() || viewportLength >= height);
-        boolean needBreadthBar = maxPrefBreadth > viewportBreadth || (needLengthBar && maxPrefBreadth > (viewportBreadth - lengthBarBreadth));
+        needLengthBar = getPosition() > 0 && (cellCount >= cells.size() || viewportLength >= height);
+        needBreadthBar = maxPrefBreadth > viewportBreadth || (needLengthBar && maxPrefBreadth > (viewportBreadth - lengthBarBreadth));
 
         // Start by optimistically deciding whether the length bar and
         // breadth bar are needed and adjust the viewport dimensions
@@ -2108,7 +2108,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         if (delta == 0) return 0;
 
         final boolean isVertical = isVertical();
-        if ((isVertical && ! vbar.isVisible()) || (! isVertical && ! hbar.isVisible())) return 0;
+        if (!tempVisibility && ((isVertical && ! vbar.isVisible()) || (! isVertical && ! hbar.isVisible()))) return 0;
         
         double pos = getPosition();
         if (pos == 0.0f && delta < 0) return 0;
@@ -2634,6 +2634,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     KeyFrame sbTouchKF1;
     KeyFrame sbTouchKF2;
 
+    private boolean needBreadthBar;
+    private boolean needLengthBar;
     private boolean tempVisibility = false;
 
     protected void startSBReleasedAnimation() {
