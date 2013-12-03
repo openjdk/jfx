@@ -23,5 +23,4 @@
   <classpathentry kind="src" exported="true" path="build/resources/jsl-decora"/>
   <classpathentry kind="src" exported="true" path="build/resources/jsl-prism"/>
   <classpathentry kind="src" exported="true" path="/base"/>
-  <classpathentry kind="src" exported="true" path="/builders"/>
 </classpath>
