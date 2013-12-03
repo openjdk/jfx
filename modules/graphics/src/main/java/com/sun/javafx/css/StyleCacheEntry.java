@@ -78,11 +78,16 @@ public final class StyleCacheEntry {
             return Arrays.toString(pseudoClassStates) + ", " + fontSize;
         }
 
+        public static int hashCode(double value) {
+            long bits = Double.doubleToLongBits(value);
+            return (int)(bits ^ (bits >>> 32));
+        }
+        
         @Override
         public int hashCode() {
             if (hash == Integer.MIN_VALUE) {
 
-                hash = Double.hashCode(fontSize);
+                hash = hashCode(fontSize);
 
                 final int iMax = pseudoClassStates != null ? pseudoClassStates.length : 0;
 

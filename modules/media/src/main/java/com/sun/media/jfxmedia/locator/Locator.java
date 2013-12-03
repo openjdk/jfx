@@ -32,6 +32,7 @@ import com.sun.media.jfxmediaimpl.MediaUtils;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.JarURLConnection;
 import java.net.MalformedURLException;
@@ -154,6 +155,17 @@ public class Locator {
         }
         return locatorConnection;
     }
+    
+    private static long getContentLengthLong(URLConnection connection) {
+        try {
+            Method method = connection.getClass().getMethod("getContentLengthLong");
+            return (long) method.invoke(connection);
+        } catch (NoSuchMethodException e) {
+            return connection.getContentLength();
+        } catch (Exception ex) {
+            return -1;
+        }
+    }
 
     /**
      * Constructs an object representing a media source.
@@ -236,7 +248,7 @@ public class Locator {
         }
 
         InputStream inputStream = url.openStream();
-        contentLength = connection.getContentLengthLong();
+        contentLength = getContentLengthLong(connection);
         return inputStream;
     }
 
@@ -374,7 +386,7 @@ public class Locator {
 
                                 // Get content type.
                                 contentType = locatorConnection.connection.getContentType();
-                                contentLength = locatorConnection.connection.getContentLengthLong();
+                                contentLength = getContentLengthLong(locatorConnection.connection);
 
                                 // Disconnect.
                                 closeConnection(locatorConnection.connection);
