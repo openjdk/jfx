@@ -253,7 +253,7 @@ public final class PrismSettings {
         allowHiDPIScaling = getBoolean(systemProperties, "prism.allowhidpi", true);
 
         maxVram = getLong(systemProperties, "prism.maxvram", 256 * 1024 * 1024, null);
-        targetVram = getLong(systemProperties, "prism.targetvram", maxVram / 2, null);
+        targetVram = getLong(systemProperties, "prism.targetvram", maxVram * 3 / 4, null);
         poolStats = getBoolean(systemProperties, "prism.poolstats", false);
         poolDebug = getBoolean(systemProperties, "prism.pooldebug", false);
 
