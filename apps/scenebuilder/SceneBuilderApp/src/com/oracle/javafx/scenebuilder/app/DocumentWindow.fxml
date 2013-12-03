@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+  All rights reserved. Use is subject to license terms.
+
+  This file is available and licensed under the following license:
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions
+  are met:
+
+  - Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+  - Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in
+    the documentation and/or other materials provided with the distribution.
+  - Neither the name of Oracle Corporation nor the names of its
+    contributors may be used to endorse or promote products derived
+    from this software without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+
+<?import java.lang.*?>
+<?import java.net.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?scenebuilder-preview-i18n-resource i18n/SceneBuilderApp.properties?>
+
+<VBox id="DocumentWindow" alignment="CENTER" prefHeight="800.0" prefWidth="1200.0" spacing="0.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+  <children>
+    <SplitPane fx:id="mainSplitPane" dividerPositions="0.656641604010025" focusTraversable="true" orientation="VERTICAL" prefHeight="200.0" prefWidth="160.0" VBox.vgrow="ALWAYS">
+      <items>
+        <SplitPane fx:id="leftRightSplitPane" dividerPositions="0.11036789297658862, 0.8963210702341137" focusTraversable="true" prefHeight="-1.0" prefWidth="-1.0">
+          <items>
+            <SplitPane fx:id="libraryDocumentSplitPane" dividerPositions="0.4990328820116054" focusTraversable="true" maxWidth="450.0" orientation="VERTICAL" prefHeight="200.0" prefWidth="160.0">
+              <items>
+                <VBox id="leftPanelHost" minHeight="50.0" prefHeight="200.0" prefWidth="100.0">
+                  <children>
+                    <HBox id="HBox" alignment="CENTER" spacing="0.0" styleClass="panelHeader">
+                      <children>
+                        <Label maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" styleClass="panelTitle" text="Library" HBox.hgrow="NEVER" />
+                        <StackPane fx:id="librarySearchPanelHost" maxHeight="-1.0" maxWidth="-1.0" minHeight="-1.0" minWidth="-1.0" prefHeight="-1.0" prefWidth="-1.0" style="" HBox.hgrow="ALWAYS" />
+                        <MenuButton fx:id="LibraryMenu" mnemonicParsing="false" styleClass="panelMenuButton" text="" HBox.hgrow="NEVER">
+                          <items>
+                            <CheckMenuItem fx:id="libraryViewAsList" mnemonicParsing="false" onAction="#onLibraryViewAsList" text="%library.panel.menu.view.list" />
+                            <CheckMenuItem fx:id="libraryViewAsSections" mnemonicParsing="false" onAction="#onLibraryViewAsSections" selected="true" text="%library.panel.menu.view.sections" />
+                            <SeparatorMenuItem mnemonicParsing="false" />
+                            <MenuItem mnemonicParsing="false" onAction="#onLibraryImportJarFxml" text="%library.panel.menu.import.jar.fxml" />
+                          </items>
+                        </MenuButton>
+                      </children>
+                    </HBox>
+                    <StackPane fx:id="libraryPanelHost" prefHeight="-1.0" prefWidth="-1.0" />
+                  </children>
+                </VBox>
+                <VBox minHeight="50.0" prefHeight="200.0" prefWidth="100.0">
+                  <children>
+                    <HBox id="HBox" alignment="CENTER" spacing="0.0" VBox.vgrow="NEVER">
+                      <children>
+                        <Label maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" styleClass="panelTitle" text="Document" HBox.hgrow="NEVER" />
+                        <Pane maxWidth="1.7976931348623157E308" prefHeight="-1.0" prefWidth="-1.0" HBox.hgrow="ALWAYS" />
+                        <MenuButton fx:id="HierarchyMenu" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" styleClass="panelMenuButton" text="">
+                          <items>
+                            <RadioMenuItem mnemonicParsing="false" onAction="#onHierarchyShowInfo" selected="true" text="Show Info">
+                              <toggleGroup>
+                                <ToggleGroup fx:id="hierarchyDisplayOptionTG" />
+                              </toggleGroup>
+                            </RadioMenuItem>
+                            <RadioMenuItem mnemonicParsing="false" onAction="#onHierarchyShowFxId" text="Show fx:id" toggleGroup="$hierarchyDisplayOptionTG" />
+                            <RadioMenuItem mnemonicParsing="false" onAction="#onHierarchyShowNodeId" text="Show Node Id" toggleGroup="$hierarchyDisplayOptionTG" />
+                          </items>
+                        </MenuButton>
+                      </children>
+                    </HBox>
+                    <Accordion fx:id="documentAccordion" maxHeight="-1.0" VBox.vgrow="ALWAYS">
+                      <panes>
+                        <TitledPane fx:id="Hierarchy" animated="true" text="Hierarchy">
+                          <content>
+                            <StackPane fx:id="hierarchyPanelHost" maxHeight="-1.0" style="-fx-padding: 0;" />
+                          </content>
+                        </TitledPane>
+                        <TitledPane fx:id="Info" animated="true" text="Controller">
+                          <content>
+                            <StackPane fx:id="infoPanelHost" maxHeight="-1.0" />
+                          </content>
+                        </TitledPane>
+                      </panes>
+                    </Accordion>
+                  </children>
+                </VBox>
+              </items>
+            </SplitPane>
+            <StackPane id="StackPane" minWidth="0.0">
+              <children>
+                <StackPane fx:id="contentPanelHost" style="" />
+                <StackPane fx:id="messageBarHost" maxHeight="-Infinity" minHeight="10.0" minWidth="0.0" style="" styleClass="info-bar" StackPane.alignment="TOP_CENTER" />
+              </children>
+            </StackPane>
+            <VBox id="rightPanelHost">
+              <children>
+                <HBox id="HBox" alignment="CENTER" spacing="0.0" VBox.vgrow="NEVER">
+                  <children>
+                    <Label maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" styleClass="panelTitle" text="Inspector" HBox.hgrow="NEVER" />
+                    <StackPane fx:id="inspectorSearchPanelHost" prefHeight="-1.0" prefWidth="-1.0" HBox.hgrow="ALWAYS" />
+                    <MenuButton fx:id="InspectorMenu" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" styleClass="panelMenuButton" text="" HBox.hgrow="NEVER">
+                      <items>
+                        <RadioMenuItem mnemonicParsing="false" onAction="#onInspectorShowAllAction" selected="true" text="Show All">
+                          <toggleGroup>
+                            <ToggleGroup fx:id="showTg" />
+                          </toggleGroup>
+                        </RadioMenuItem>
+                        <RadioMenuItem disable="false" mnemonicParsing="false" onAction="#onInspectorShowEditedAction" text="Show Edited" toggleGroup="$showTg" />
+                        <SeparatorMenuItem mnemonicParsing="false" />
+                        <RadioMenuItem mnemonicParsing="false" onAction="#onInspectorViewSectionsAction" selected="true" text="View Sections">
+                          <toggleGroup>
+                            <ToggleGroup fx:id="viewTg" />
+                          </toggleGroup>
+                        </RadioMenuItem>
+                        <RadioMenuItem mnemonicParsing="false" onAction="#onInspectorViewByPropertyNameAction" text="View by property name" toggleGroup="$viewTg" />
+                        <RadioMenuItem mnemonicParsing="false" onAction="#onInspectorViewByPropertyTypeAction" text="View by property type" toggleGroup="$viewTg" />
+                      </items>
+                    </MenuButton>
+                  </children>
+                </HBox>
+                <StackPane fx:id="inspectorPanelHost" VBox.vgrow="ALWAYS" />
+              </children>
+            </VBox>
+          </items>
+        </SplitPane>
+        <VBox maxWidth="-1.0" prefHeight="200.0" prefWidth="-1.0">
+          <children>
+            <AnchorPane>
+              <children>
+                <Label layoutX="0.0" layoutY="6.0" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" styleClass="panelTitle" text="CSS Analyzer" />
+                <HBox id="HBox" alignment="CENTER" layoutY="0.0" spacing="5.0" AnchorPane.rightAnchor="0.0">
+                  <children>
+                    <StackPane fx:id="cssPanelSearchPanelHost" prefHeight="-1.0" prefWidth="-1.0" />
+                    <MenuButton id="cssPanelMenu" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" styleClass="panelMenuButton" text="">
+                      <items>
+                        <Menu mnemonicParsing="false" text="%csspanel.view.as">
+                          <items>
+                            <RadioMenuItem mnemonicParsing="false" onAction="#onCssPanelViewTableAction" text="%csspanel.table">
+                              <toggleGroup>
+                                <ToggleGroup fx:id="cssTableTg" />
+                              </toggleGroup>
+                            </RadioMenuItem>
+                            <RadioMenuItem mnemonicParsing="false" onAction="#onCssPanelViewRulesAction" text="%csspanel.rules" toggleGroup="$cssTableTg" />
+                            <RadioMenuItem mnemonicParsing="false" onAction="#onCssPanelViewTextAction" text="%csspanel.text" toggleGroup="$cssTableTg" />
+                          </items>
+                        </Menu>
+                        <SeparatorMenuItem mnemonicParsing="false" />
+                        <MenuItem mnemonicParsing="false" onAction="#onCssPanelCopyStyleablePathAction" text="%csspanel.copy.path" />
+                        <MenuItem fx:id="cssPanelShowStyledOnlyMi" mnemonicParsing="false" onAction="#onCssPanelShowStyledOnlyAction" text="%csspanel.hide.default.values" />
+                        <MenuItem fx:id="cssPanelSplitDefaultsMi" mnemonicParsing="false" onAction="#onCssPanelSplitDefaultsAction" text="%csspanel.defaults.split" />
+                      </items>
+                    </MenuButton>
+                  </children>
+                </HBox>
+              </children>
+            </AnchorPane>
+            <Separator prefWidth="200.0" />
+            <StackPane fx:id="cssPanelHost" prefHeight="150.0" prefWidth="200.0" VBox.vgrow="ALWAYS" />
+          </children>
+        </VBox>
+      </items>
+    </SplitPane>
+  </children>
+  <stylesheets>
+    <URL value="@DocumentWindow.css" />
+  </stylesheets>
+</VBox>

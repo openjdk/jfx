@@ -24,7 +24,6 @@ dist/
 test.keystore
 ^webrev*
 nbproject/private/
-target/
 ^.*~$
 syntax: glob
 *.vcxproj.user

@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+  All rights reserved. Use is subject to license terms.
+
+  This file is available and licensed under the following license:
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions
+  are met:
+
+  - Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+  - Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in
+    the documentation and/or other materials provided with the distribution.
+  - Neither the name of Oracle Corporation nor the names of its
+    contributors may be used to endorse or promote products derived
+    from this software without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+
+<?import java.lang.*?>
+<?import java.net.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<SplitPane fx:id="inspectorRoot" dividerPositions="0.36447166921898927" focusTraversable="true" minWidth="262.0" orientation="VERTICAL" prefHeight="655.0" prefWidth="262.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+  <items>
+    <ScrollPane fx:id="searchScrollPane" fitToWidth="true" minHeight="200.0">
+      <content>
+        <GridPane fx:id="searchContent" gridLinesVisible="false" hgap="5.0" maxWidth="-1.0" minHeight="0.0" minWidth="-1.0" prefHeight="-1.0" prefWidth="-1.0" style="" vgap="5.0">
+          <children>
+            <Label minWidth="-1.0" text="Label1 Label2 Label3 Label4" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+            <TextField maxWidth="1.7976931348623157E308" minWidth="0.0" prefWidth="-1.0" text="Value1 Value2 Value3 Value4 Value5 Value6" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.rowIndex="0" />
+            <MenuButton graphicTextGap="0.0" minWidth="-Infinity" mnemonicParsing="false" prefWidth="17.0" text="MenuButton" GridPane.columnIndex="2" GridPane.rowIndex="0">
+              <items>
+                <MenuItem mnemonicParsing="false" text="Action 1" />
+                <MenuItem mnemonicParsing="false" text="Action 2" />
+              </items>
+            </MenuButton>
+          </children>
+          <columnConstraints>
+            <ColumnConstraints halignment="RIGHT" hgrow="ALWAYS" maxWidth="150.0" minWidth="30.0" prefWidth="100.0" />
+            <ColumnConstraints hgrow="ALWAYS" maxWidth="1.7976931348623157E308" minWidth="60.0" prefWidth="153.0" />
+            <ColumnConstraints hgrow="NEVER" maxWidth="15.0" minWidth="15.0" prefWidth="15.0" />
+          </columnConstraints>
+          <padding>
+            <Insets bottom="5.0" left="15.0" top="5.0" />
+          </padding>
+          <rowConstraints>
+            <RowConstraints maxHeight="30.0" minHeight="10.0" prefHeight="30.0" vgrow="ALWAYS" />
+            <RowConstraints maxHeight="30.0" minHeight="10.0" prefHeight="30.0" vgrow="ALWAYS" />
+          </rowConstraints>
+        </GridPane>
+      </content>
+    </ScrollPane>
+    <Accordion fx:id="accordion">
+      <panes>
+        <TitledPane fx:id="propertiesTitledPane" animated="true" contentDisplay="RIGHT" text="Properties">
+          <content>
+            <ScrollPane fx:id="propertiesScroll" fitToWidth="true" prefViewportHeight="320.0" prefViewportWidth="251.0">
+              <content>
+                <GridPane fx:id="propertiesSection" gridLinesVisible="false" hgap="2.0" maxWidth="-1.0" minWidth="-1.0" prefHeight="-1.0" prefWidth="-1.0" style="" vgap="5.0">
+                  <children>
+                    <Label text="Label" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                    <TextField maxWidth="1.7976931348623157E308" minWidth="0.0" prefWidth="-1.0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.rowIndex="0" />
+                    <MenuButton graphicTextGap="0.0" minWidth="17.0" mnemonicParsing="false" prefWidth="10.0" text="MenuButton" GridPane.columnIndex="2" GridPane.rowIndex="0">
+                      <items>
+                        <MenuItem mnemonicParsing="false" text="Action 1" />
+                        <MenuItem mnemonicParsing="false" text="Action 2" />
+                      </items>
+                    </MenuButton>
+                  </children>
+                  <columnConstraints>
+                    <ColumnConstraints halignment="RIGHT" hgrow="ALWAYS" maxWidth="150.0" minWidth="30.0" prefWidth="100.0" />
+                    <ColumnConstraints hgrow="ALWAYS" maxWidth="1.7976931348623157E308" minWidth="60.0" prefWidth="153.0" />
+                    <ColumnConstraints hgrow="NEVER" maxWidth="-1.0" minWidth="-1.0" prefWidth="-1.0" />
+                  </columnConstraints>
+                  <padding>
+                    <Insets bottom="5.0" left="15.0" top="5.0" />
+                  </padding>
+                  <rowConstraints>
+                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                  </rowConstraints>
+                </GridPane>
+              </content>
+            </ScrollPane>
+          </content>
+          <graphic>
+            <Label text=": &lt;className&gt;" />
+          </graphic>
+        </TitledPane>
+        <TitledPane fx:id="layoutTitledPane" animated="true" contentDisplay="RIGHT" text="Layout">
+          <content>
+            <ScrollPane fx:id="layoutScroll" fitToWidth="true" prefViewportHeight="320.0" prefViewportWidth="254.0">
+              <content>
+                <GridPane fx:id="layoutSection" gridLinesVisible="false" hgap="2.0" maxWidth="-1.0" minWidth="-1.0" prefHeight="-1.0" prefWidth="-1.0" style="" vgap="5.0">
+                  <children>
+                    <Label text="Label" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                    <TextField maxWidth="1.7976931348623157E308" minWidth="0.0" prefWidth="-1.0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.rowIndex="0" />
+                    <MenuButton graphicTextGap="0.0" minWidth="17.0" mnemonicParsing="false" prefWidth="10.0" text="MenuButton" GridPane.columnIndex="2" GridPane.rowIndex="0">
+                      <items>
+                        <MenuItem mnemonicParsing="false" text="Action 1" />
+                        <MenuItem mnemonicParsing="false" text="Action 2" />
+                      </items>
+                    </MenuButton>
+                  </children>
+                  <columnConstraints>
+                    <ColumnConstraints halignment="RIGHT" hgrow="ALWAYS" maxWidth="150.0" minWidth="30.0" prefWidth="100.0" />
+                    <ColumnConstraints hgrow="ALWAYS" maxWidth="1.7976931348623157E308" minWidth="60.0" prefWidth="153.0" />
+                    <ColumnConstraints hgrow="NEVER" maxWidth="-1.0" minWidth="-1.0" prefWidth="-1.0" />
+                  </columnConstraints>
+                  <padding>
+                    <Insets bottom="5.0" left="15.0" top="5.0" />
+                  </padding>
+                  <rowConstraints>
+                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                  </rowConstraints>
+                </GridPane>
+              </content>
+            </ScrollPane>
+          </content>
+          <graphic>
+            <Label text=": &lt;className&gt;" />
+          </graphic>
+        </TitledPane>
+        <TitledPane fx:id="codeTitledPane" animated="true" contentDisplay="RIGHT" expanded="true" text="Code">
+          <content>
+            <ScrollPane fx:id="codeScroll" fitToWidth="true" prefViewportHeight="320.0" prefViewportWidth="257.0">
+              <content>
+                <GridPane fx:id="codeSection" gridLinesVisible="false" hgap="2.0" maxWidth="-1.0" minWidth="-1.0" prefHeight="-1.0" prefWidth="-1.0" style="" vgap="5.0">
+                  <children>
+                    <Label text="Label" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                    <TextField maxWidth="1.7976931348623157E308" minWidth="0.0" prefWidth="-1.0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.rowIndex="0" />
+                    <MenuButton graphicTextGap="0.0" minWidth="17.0" mnemonicParsing="false" prefWidth="10.0" text="MenuButton" GridPane.columnIndex="2" GridPane.rowIndex="0">
+                      <items>
+                        <MenuItem mnemonicParsing="false" text="Action 1" />
+                        <MenuItem mnemonicParsing="false" text="Action 2" />
+                      </items>
+                    </MenuButton>
+                  </children>
+                  <columnConstraints>
+                    <ColumnConstraints halignment="RIGHT" hgrow="ALWAYS" maxWidth="150.0" minWidth="30.0" prefWidth="100.0" />
+                    <ColumnConstraints hgrow="ALWAYS" maxWidth="1.7976931348623157E308" minWidth="60.0" prefWidth="153.0" />
+                    <ColumnConstraints hgrow="NEVER" maxWidth="-1.0" minWidth="-1.0" prefWidth="-1.0" />
+                  </columnConstraints>
+                  <padding>
+                    <Insets bottom="5.0" left="15.0" top="5.0" />
+                  </padding>
+                  <rowConstraints>
+                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                  </rowConstraints>
+                </GridPane>
+              </content>
+            </ScrollPane>
+          </content>
+          <graphic>
+            <Label text=": &lt;className&gt;" />
+          </graphic>
+        </TitledPane>
+        <TitledPane fx:id="allTitledPane" animated="true" contentDisplay="RIGHT" expanded="false" text="&lt;all&gt;">
+          <content>
+            <ScrollPane fx:id="allScroll" fitToWidth="true" prefViewportHeight="320.0" prefViewportWidth="260.0">
+              <content>
+                <GridPane fx:id="allContent" gridLinesVisible="false" hgap="5.0" maxWidth="-1.0" minWidth="-1.0" prefHeight="-1.0" prefWidth="-1.0" style="" vgap="5.0">
+                  <children>
+                    <Label text="Label" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                    <TextField maxWidth="1.7976931348623157E308" minWidth="0.0" prefWidth="-1.0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.rowIndex="0" />
+                  </children>
+                  <columnConstraints>
+                    <ColumnConstraints halignment="RIGHT" hgrow="ALWAYS" maxWidth="150.0" minWidth="30.0" prefWidth="100.0" />
+                    <ColumnConstraints hgrow="ALWAYS" maxWidth="1.7976931348623157E308" minWidth="60.0" prefWidth="153.0" />
+                    <ColumnConstraints hgrow="NEVER" maxWidth="15.0" minWidth="15.0" prefWidth="15.0" />
+                  </columnConstraints>
+                  <padding>
+                    <Insets bottom="5.0" left="15.0" top="5.0" />
+                  </padding>
+                  <rowConstraints>
+                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                  </rowConstraints>
+                </GridPane>
+              </content>
+            </ScrollPane>
+          </content>
+          <graphic>
+            <Label text=": &lt;className&gt;" />
+          </graphic>
+        </TitledPane>
+      </panes>
+    </Accordion>
+  </items>
+  <stylesheets>
+    <URL value="@Inspector.css" />
+  </stylesheets>
+</SplitPane>

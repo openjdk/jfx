@@ -1,0 +1,94 @@
+/*
+ * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * All rights reserved. Use is subject to license terms.
+ *
+ * This file is available and licensed under the following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *  - Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  - Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the distribution.
+ *  - Neither the name of Oracle Corporation nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+/*******************************************************************************
+ *                                                                             *
+ * Library panel                                                               *
+ *                                                                             *
+ ******************************************************************************/
+.list-view, .list-view:focused {
+    -fx-background-color: null;
+    -fx-padding: 0px;
+}
+
+.list-view .list-cell {
+    -fx-background-color: null;
+    -fx-cell-size: 1.7em;
+}
+
+.list-view .list-cell:filled:hover {
+    -fx-background-color: null; /* no hover effect on list view */
+}
+
+.list-view:focused .list-cell:filled:selected {
+    SB-list-item-selected-color: #c6e6f0; /* should be defined in some SB theme */
+    -fx-background-color: SB-list-item-selected-color;
+}
+
+/* When the ListView is _not_ focused, we show alternate selection colors */
+.list-view .list-cell:filled:selected {
+    -fx-background-color: null;
+}
+
+.list-view .scroll-bar {    
+    /* Cursor may dynamically change when working in library / hierarchy.
+       Set back the cursor to its default. */
+    -fx-cursor: default;
+}
+
+/* ListCell graphic is an HBox */
+.list-cell-graphic {
+    -fx-alignment: center-left;
+    -fx-padding: 0 2 0 2;
+    -fx-spacing: 4;
+}
+
+.library-classname-label {
+    -fx-text-fill: black;
+}
+
+.library-qualifier-label {
+    -fx-text-fill: lightslategray;
+}
+
+.library-section-label {
+    -fx-text-fill: black;
+    -fx-font-weight: bold;
+}
+
+/* Used to have a horizontal line just below search area when lib displays search results.
+NOTE Find a better way because the look is not symetric with Inspector side
+when lib is in accordion mode (line is bigger lib side), I guess because
+the accordion comes with its own one. */
+.library-stack-pane {
+    -fx-border-color: lightgrey;
+    -fx-border-width: 1 0 0 0;
+}

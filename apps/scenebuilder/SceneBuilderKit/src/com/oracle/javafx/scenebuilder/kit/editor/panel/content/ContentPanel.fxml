@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+  All rights reserved. Use is subject to license terms.
+
+  This file is available and licensed under the following license:
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions
+  are met:
+
+  - Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+  - Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in
+    the documentation and/or other materials provided with the distribution.
+  - Neither the name of Oracle Corporation nor the names of its
+    contributors may be used to endorse or promote products derived
+    from this software without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+<?import java.lang.*?>
+<?import java.net.*?>
+<?import java.util.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.paint.*?>
+<?import javafx.scene.shape.*?>
+<?import javafx.scene.text.*?>
+
+<ScrollPane fx:id="scrollPane" fitToHeight="true" fitToWidth="true" hvalue="0.5" minWidth="300.0" prefHeight="500.0" prefWidth="700.0" vvalue="0.5" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
+  <content>
+    <StackPane fx:id="workspacePane" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" style="" styleClass="background1">
+      <children>
+        <Group id="Group">
+          <children>
+            <Group fx:id="scalingGroup" layoutX="-30.0" layoutY="-50.0">
+              <children>
+                <Rectangle fx:id="extensionRect" arcHeight="5.0" arcWidth="5.0" fill="#ffc0cb00" height="200.0" layoutX="0.0" layoutY="0.0" mouseTransparent="false" stroke="TRANSPARENT" strokeType="INSIDE" width="200.0" />
+                <Label fx:id="backgroundPane" alignment="CENTER" layoutX="0.0" layoutY="0.0" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="-1.0" prefWidth="-1.0" style="" styleClass="stage-prompt" text="Label" textAlignment="CENTER" textFill="#9f9f9f" wrapText="true">
+                  <font>
+                    <Font size="16.0" />
+                  </font>
+                </Label>
+                <Group fx:id="contentGroup" layoutX="0.0" layoutY="0.0">
+                  <children>
+                    <Ellipse fill="DODGERBLUE" layoutX="0.0" layoutY="0.0" radiusX="140.0" radiusY="100.0" stroke="BLACK" strokeType="INSIDE" />
+                  </children>
+                </Group>
+              </children>
+            </Group>
+          </children>
+        </Group>
+        <Pane fx:id="glassLayer" focusTraversable="true">
+          <children>
+            <Group fx:id="pringLayer" />
+            <Group fx:id="handleLayer" />
+            <Group fx:id="rudderLayer" mouseTransparent="true" />
+          </children>
+        </Pane>
+      </children>
+      <padding>
+        <Insets />
+      </padding>
+    </StackPane>
+  </content>
+  <stylesheets>
+    <URL value="@ContentPanel.css" />
+  </stylesheets>
+</ScrollPane>

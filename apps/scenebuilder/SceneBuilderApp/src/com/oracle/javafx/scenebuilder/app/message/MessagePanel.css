@@ -1,0 +1,82 @@
+/*
+ * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * All rights reserved. Use is subject to license terms.
+ *
+ * This file is available and licensed under the following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *  - Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  - Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the distribution.
+ *  - Neither the name of Oracle Corporation nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+.message-panel {
+    -fx-background-color: linear-gradient( to bottom, #efecb8 0%, #d9d59d 100% );
+}
+
+/* Used for dismiss buttons we put into the grid of messages */
+.message-panel .button {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0, 1;
+    -fx-padding: 3 9 3 9;
+}
+
+/* Used for the 3 buttons at the bottom, for taking clearing actions */
+.message-panel-clear .button {
+    -fx-text-fill: -fx-text-background-color;
+    -fx-border-width: 0 0 0 1;
+    -fx-border-color: derive(grey, -60%);
+    -fx-background-color: transparent;
+}
+
+.message-panel-clear .button:hover {
+    -fx-background-color: linear-gradient( to bottom, #efecb8 0%, #d9d59d 50% );
+}
+
+.message-panel-clear .button:pressed {
+    -fx-background-color: linear-gradient( to bottom, #efecb8 0%, #d9d59d 10% );
+}
+
+.message-panel .label {
+    -fx-label-padding: 3 9 3 9;
+}
+
+.timestamp {
+    -fx-label-padding: 3 9 3 0;
+    -fx-font-size: 0.7em;
+    -fx-text-fill: lightslategray;
+}
+
+.message-info {
+    -fx-background-color: linear-gradient( to bottom, #cfe3ef 0%, #badcef 100% );
+}
+
+/*
+Set the focused state to be the same as the normal state: we do not want
+the focus ring when one clicks the message panel.
+*/
+.message-panel .scroll-pane:focused {
+    -fx-background-color: -fx-box-border, -fx-background;
+    -fx-background-insets: 0, 1;
+    -fx-padding: 1;
+}

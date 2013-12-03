@@ -1,0 +1,140 @@
+/*
+ * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * All rights reserved. Use is subject to license terms.
+ *
+ * This file is available and licensed under the following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *  - Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  - Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the distribution.
+ *  - Neither the name of Oracle Corporation nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+.tree-view {
+    -fx-padding: 0;
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+}
+
+.hierarchy-tree-cell {
+    -fx-border-color: transparent;
+    -fx-border-width: 2;
+    -fx-padding: 0;
+    -fx-indent: 8;
+}
+
+.hierarchy-prompt-label {
+    -fx-font-size: 1.231em; /* 16px (base pixel size of 13px) */
+    -fx-text-fill: lightgray;
+    -fx-text-alignment: center;
+    -fx-alignment: center;
+    -fx-wrap-text: true;
+    -fx-label-padding: 16;
+    -fx-background-color: white;
+    -fx-border-color: lightgray;
+    -fx-border-radius: 8;
+    -fx-border-width: 2;
+    -fx-border-style: segments(0.166667em, 0.3em);
+}
+
+/*******************************************************************************
+ *                                                                             *
+ * TreeCell graphic                                                            *
+ *                                                                             *
+ ******************************************************************************/
+/* TreeCell graphic is an HBox */
+.tree-cell-graphic {
+    -fx-alignment: center-left;
+    -fx-padding: 0 2 0 2;
+    -fx-spacing: 2;
+}
+
+/* Place holder labels */
+.hierarchy-place-holder-label {
+    -fx-text-fill: orange;
+    -fx-border-color: orange;
+}
+
+/* editable label on node in hierarchy (info / node id / fx:id) */
+.hierarchy-readwrite-label {
+    -fx-border-color: transparent;
+    -fx-cursor: default;
+    -fx-text-fill: grey;
+}
+
+.hierarchy-readwrite-label:hover {
+    -fx-border-color: grey;
+    -fx-cursor: text;
+    -fx-text-fill: grey;
+}
+
+/* non-editable label on node in hierarchy */
+.hierarchy-readonly-label {
+    -fx-background-color: transparent;
+    -fx-text-fill: black;
+}
+
+/*******************************************************************************
+ *                                                                             *
+ * Border and stroke color style classes :                                     *
+ * Used for cells (either TreeCells or TreeTableRows) when DND in hierarchy    *
+ * or when updating parent ring in hierarchy.                                  *
+ *                                                                             *
+ ******************************************************************************/
+.cell-border-top-right-bottom-left {
+    -fx-border-color: orange;
+}
+
+.cell-border-top-right-left {
+    -fx-border-color: orange orange transparent orange;
+}
+
+.cell-border-right-left {
+    -fx-border-color: transparent orange transparent orange;
+}
+
+.cell-border-right-bottom-left {
+    -fx-border-color: transparent orange orange orange;
+}
+
+.cell-border-bottom {
+    -fx-border-color: transparent transparent orange transparent;
+}
+
+.insert-line-indicator {
+    -fx-stroke: orange;
+    -fx-stroke-width: 2;
+}
+
+/*******************************************************************************
+ *                                                                             *
+ * Inline editing                                                              *
+ *                                                                             *
+ ******************************************************************************/
+.inline-editor, .inline-editor:focused {
+    -fx-background-color: white;
+    -fx-background-insets: 0;
+    -fx-border-color: rgb(25, 164, 255);
+    -fx-text-fill: black;
+    -fx-padding: 0 1 0 1;
+}

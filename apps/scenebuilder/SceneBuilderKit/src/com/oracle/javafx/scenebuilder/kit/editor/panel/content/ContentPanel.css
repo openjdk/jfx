@@ -1,0 +1,213 @@
+/*
+ * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * All rights reserved. Use is subject to license terms.
+ *
+ * This file is available and licensed under the following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *  - Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  - Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the distribution.
+ *  - Neither the name of Oracle Corporation nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+.background1 {
+    -fx-background-color: rgb(75, 75, 75);
+}
+
+.selection-handles {
+    -fx-fill: white;
+    -fx-stroke: blue;
+    -fx-stroke-width: 1;
+    -fx-stroke-type: inside;
+}
+
+.selection-rect {
+    -fx-stroke: null; 
+    -fx-fill: rgba(0, 0, 0, 0.05);
+}
+
+.selection-wire {
+    -fx-stroke: rgb(25, 164, 255);
+    -fx-stroke-width: 1;
+    -fx-fill: null;
+}
+
+.selection-gap {
+    -fx-stroke: null;
+    -fx-fill: lightgrey;
+    -fx-opacity: 0.5;
+}
+
+.parent-ring {
+    /* -fx-stroke is setup from user preferences */
+    -fx-stroke-width: 7;
+    -fx-stroke-type: outside;
+    -fx-opacity: 0.5;
+    -fx-fill: null;
+}
+
+.target-ring {
+    /* -fx-stroke is setup from user preferences */
+    -fx-stroke-width: 7;
+    -fx-stroke-type: inside;
+    -fx-opacity: 0.9;
+    -fx-fill: null;
+}
+
+.target-crack {
+    -fx-stroke-width: 5;
+    -fx-stroke-type: centered;
+    -fx-stroke-line-cap: butt;
+    -fx-stroke: black;
+    -fx-opacity: 0.5;
+    -fx-fill: null;
+}
+
+.resize-rudder {
+    -fx-stroke-width: 1;
+    -fx-opacity: 0.3;
+    -fx-stroke-dash-array: 8 8;
+}
+
+.stage-prompt {
+    -fx-font-size: 1.231em; /* 16px (base pixel size of 13px) */
+    -fx-text-fill: lightgray;
+    -fx-text-alignment: center;
+    -fx-alignment: center;
+    -fx-wrap-text: true;
+    -fx-label-padding: 16;
+    -fx-background-color: transparent;
+    -fx-border-color: lightgray;
+    -fx-border-radius: 8;
+    -fx-border-width: 2;
+    -fx-border-style: segments(0.166667em, 0.3em);
+}
+
+.stage-prompt-default {
+    -fx-font-size: 1.231em; /* 16px (base pixel size of 13px) */
+    -fx-text-fill: lightgray;
+    -fx-text-alignment: center;
+    -fx-alignment: center;
+    -fx-wrap-text: true;
+    -fx-label-padding: 16;
+    -fx-background-color: white;
+    -fx-effect: dropshadow( gaussian, rgba(0, 0, 0, 0.3), 15, 0.0, 0, 10 );
+}
+
+/*******************************************************************************
+ *                                                                             *
+ * GridPane Chrome #0 : common properties                                      *
+ *                                                                             *
+ ******************************************************************************/
+
+.tray {
+    -fx-border-color: rgba(255, 255, 255, 0.4), rgba(0, 0, 0, 0.5), rgba(255, 255, 255, 0.5);
+    -fx-border-insets: 0, 1, 2;
+    -fx-border-radius: 5 5 0 0, 4 4 0 0, 3 3 0 0;
+    -fx-background-color: #bbddff; /* Can be overwritten by user preferences */
+    -fx-background-radius: 2 2 0 0;
+    -fx-background-insets: 3;
+    -fx-alignment: center;
+}
+
+.tray.south {
+    -fx-border-radius: 0 0 5 5, 0 0 4 4, 0 0 3 3;
+    -fx-background-radius: 0 0 2 2;
+}
+
+.tray.text {
+    -fx-text-fill: black;
+    -fx-text-overrun: leading-word-ellipsis;
+    -fx-font-size: 0.769em; /* 10px (base pixel size of 13px) */
+}
+
+.tray.west .text {
+   -fx-rotate: +90;
+}
+
+.tray.east .text {
+   -fx-rotate: -90;
+}
+
+
+/*******************************************************************************
+ *                                                                             *
+ * GridPane Chrome #1 : trays and cells of a selected grid pane                *
+ *                                                                             *
+ ******************************************************************************/
+
+.gap {
+    -fx-stroke: transparent;
+    -fx-fill: rgba(0,0,0,0.2);
+}
+
+.gap.selected {
+    -fx-fill: rgba(0,0,0,0.4);
+}
+
+.tray.selected {
+    -fx-border-color: rgba(255, 255, 255, 0.4), rgba(0, 0, 0, 1), rgba(255, 255, 255, 0.5);
+    -fx-background-color: yellow;
+}
+
+.tray.selected .text {
+    -fx-text-fill: rgba(0,0,0,0.8);
+}
+
+/*******************************************************************************
+ *                                                                             *
+ * SplitPane                                                                   *
+ *                                                                             *
+ ******************************************************************************/
+
+.divider-grip {
+    -fx-stroke: rgba(0,0,0,0.4);
+    -fx-stroke-width: 7;
+}
+
+/*******************************************************************************
+ *                                                                             *
+ * Marquee Chrome                                             *
+ *                                                                             *
+ ******************************************************************************/
+
+.marquee {
+/*    -fx-fill: rgba(178, 178, 229, 0.2);*/
+    -fx-fill: rgba(150, 150, 150, 0.2);
+    -fx-stroke: rgba(0, 0, 0, 0.3);
+    -fx-stroke-type: inside;
+}
+
+
+/*******************************************************************************
+ *                                                                             *
+ * Resize Shadow                                                               *
+ *                                                                             *
+ ******************************************************************************/
+
+.resize-shadow {
+    -fx-background-color: rgba(255, 255, 0.0, 0.5);
+    -fx-border-width: 1;
+    -fx-border-style: dotted;
+    -fx-border-color: black;
+}

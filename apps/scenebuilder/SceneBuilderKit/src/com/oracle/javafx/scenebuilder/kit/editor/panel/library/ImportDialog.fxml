@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+  All rights reserved. Use is subject to license terms.
+
+  This file is available and licensed under the following license:
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions
+  are met:
+
+  - Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+  - Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in
+    the documentation and/or other materials provided with the distribution.
+  - Neither the name of Oracle Corporation nor the names of its
+    contributors may be used to endorse or promote products derived
+    from this software without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+<?import java.lang.*?>
+<?import java.net.*?>
+<?import java.util.*?>
+<?import javafx.collections.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.paint.*?>
+<?import javafx.scene.shape.*?>
+
+<AnchorPane id="ImportDialog" maxHeight="-1.0" maxWidth="-1.0" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="640.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
+  <children>
+    <HBox id="HBox" alignment="CENTER" fillHeight="false" maxHeight="-1.0" maxWidth="-1.0" minHeight="-1.0" minWidth="-1.0" prefHeight="400.0" prefWidth="640.0" spacing="50.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+      <children>
+        <ProgressIndicator fx:id="processingProgressIndicator" prefHeight="-1.0" progress="0.0" HBox.hgrow="NEVER" />
+        <Label fx:id="processingLabel" text="%import.welcome.processing" />
+      </children>
+    </HBox>
+    <SplitPane fx:id="topSplitPane" dividerPositions="0.45297805642633227" focusTraversable="true" minWidth="-1.0" prefHeight="-1.0" prefWidth="-1.0" visible="false" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+      <items>
+        <VBox fx:id="leftHandSidePart" alignment="CENTER" minWidth="-1.0" spacing="5.0">
+          <children>
+            <ListView fx:id="importList" maxWidth="-1.0" minWidth="-1.0" prefHeight="-1.0" prefWidth="-1.0" visible="true" VBox.vgrow="ALWAYS" />
+            <Separator prefWidth="-1.0" VBox.vgrow="NEVER" />
+            <GridPane id="GridPane" gridLinesVisible="false" hgap="20.0" VBox.vgrow="NEVER">
+              <children>
+                <Label fx:id="numOfItemsLabel" alignment="CENTER_LEFT" contentDisplay="LEFT" disable="false" focusTraversable="false" maxWidth="-1.0" prefWidth="-1.0" styleClass="import-num-of-items-label" text="%import.items.processing" textAlignment="LEFT" wrapText="false" GridPane.columnIndex="0" GridPane.halignment="LEFT" GridPane.hgrow="SOMETIMES" GridPane.rowIndex="0" GridPane.valignment="TOP">
+                  <GridPane.margin>
+                    <Insets />
+                  </GridPane.margin>
+                </Label>
+                <ToggleButton fx:id="checkAllUncheckAllToggle" disable="true" mnemonicParsing="false" styleClass="import-select-toggle" text="%import.toggle.uncheckall" GridPane.columnIndex="1" GridPane.halignment="RIGHT" GridPane.rowIndex="0" GridPane.valignment="TOP" />
+              </children>
+              <columnConstraints>
+                <ColumnConstraints halignment="LEFT" hgrow="SOMETIMES" maxWidth="1.7976931348623157E308" minWidth="-Infinity" prefWidth="-1.0" />
+                <ColumnConstraints halignment="RIGHT" hgrow="SOMETIMES" maxWidth="1.7976931348623157E308" minWidth="-Infinity" prefWidth="-1.0" />
+              </columnConstraints>
+              <padding>
+                <Insets left="10.0" right="4.0" />
+              </padding>
+              <rowConstraints>
+                <RowConstraints minHeight="21.0" vgrow="SOMETIMES" />
+              </rowConstraints>
+              <VBox.margin>
+                <Insets bottom="10.0" />
+              </VBox.margin>
+            </GridPane>
+          </children>
+        </VBox>
+        <VBox minWidth="-1.0" prefHeight="-1.0" prefWidth="-1.0" spacing="5.0">
+          <children>
+            <ScrollPane id="importScrollPane" fitToHeight="true" fitToWidth="true" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" prefHeight="-1.0" prefWidth="-1.0" visible="true" VBox.vgrow="ALWAYS">
+              <content>
+                <StackPane id="importPreviewArea" minWidth="-1.0" prefHeight="-1.0" prefWidth="-1.0" styleClass="import-preview">
+                  <children>
+                    <Group fx:id="previewGroup">
+                      <children>
+                        <Label fx:id="previewHintLabel" layoutX="-41.0" layoutY="-8.0" styleClass="import-preview-label" text="%import.preview.select" />
+                      </children>
+                    </Group>
+                  </children>
+                  <padding>
+                    <Insets bottom="13.0" left="13.0" right="13.0" top="13.0" fx:id="x1" />
+                  </padding>
+                </StackPane>
+              </content>
+            </ScrollPane>
+            <Label fx:id="classNameLabel" alignment="CENTER" maxWidth="1.7976931348623157E308" styleClass="import-class-name-label" text="" textAlignment="LEFT" textOverrun="LEADING_ELLIPSIS" wrapText="false">
+              <VBox.margin>
+                <Insets left="5.0" right="5.0" />
+              </VBox.margin>
+            </Label>
+            <GridPane hgap="7.0" minWidth="-1.0" prefHeight="-1.0" prefWidth="-1.0" vgap="1.0" visible="true" VBox.vgrow="NEVER">
+              <children>
+                <Label text="%import.preview.width.height" GridPane.columnIndex="0" GridPane.halignment="RIGHT" GridPane.hgrow="SOMETIMES" GridPane.rowIndex="0" />
+                <Label text="%import.preview.width.height.default" GridPane.columnIndex="0" GridPane.halignment="RIGHT" GridPane.hgrow="SOMETIMES" GridPane.rowIndex="1" />
+                <Label fx:id="sizeLabel" disable="false" text="" wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                <ChoiceBox fx:id="defSizeChoice" disable="true" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                  <items>
+                    <FXCollections fx:factory="observableArrayList">
+                      <String fx:value="Item 1" />
+                      <String fx:value="Item 2" />
+                      <String fx:value="Item 3" />
+                    </FXCollections>
+                  </items>
+                </ChoiceBox>
+              </children>
+              <columnConstraints>
+                <ColumnConstraints hgrow="SOMETIMES" minWidth="50.0" prefWidth="100.0" />
+                <ColumnConstraints hgrow="SOMETIMES" minWidth="50.0" prefWidth="100.0" />
+              </columnConstraints>
+              <padding>
+                <Insets bottom="2.0" left="4.0" right="4.0" top="4.0" />
+              </padding>
+              <rowConstraints>
+                <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+              </rowConstraints>
+            </GridPane>
+          </children>
+        </VBox>
+      </items>
+    </SplitPane>
+  </children>
+  <stylesheets>
+    <URL value="@ImportDialog.css" />
+  </stylesheets>
+</AnchorPane>

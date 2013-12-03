@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+  All rights reserved. Use is subject to license terms.
+
+  This file is available and licensed under the following license:
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions
+  are met:
+
+  - Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+  - Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in
+    the documentation and/or other materials provided with the distribution.
+  - Neither the name of Oracle Corporation nor the names of its
+    contributors may be used to endorse or promote products derived
+    from this software without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+
+<?import com.oracle.javafx.scenebuilder.kit.editor.panel.css.*?>
+<?import java.lang.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.web.*?>
+<?scenebuilder-classpath-element ../../../../../../../../../../dist/SceneBuilderKit.jar?>
+<?scenebuilder-preview-i18n-resource ../../../i18n/SceneBuilderKit.properties?>
+
+<VBox fx:id="root" prefHeight="507.0" prefWidth="689.0" spacing="5.0" stylesheets="@CssPanel.css" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+  <children>
+    <VBox fx:id="header" alignment="CENTER" spacing="5.0">
+      <children>
+        <HBox alignment="CENTER" prefHeight="-1.0" prefWidth="-1.0">
+          <children>
+            <Label styleClass="selection-label" text="%csspanel.styleable.path" />
+            <SelectionPath fx:id="selectionPath" alignment="BOTTOM_LEFT" styleClass="selection-path" HBox.hgrow="ALWAYS" />
+            <ToggleButton fx:id="edit" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#onSelectionModeSwitchAction" styleClass="toggle-button-left" textAlignment="JUSTIFY">
+              <tooltip>
+                <Tooltip text="%csspanel.selection.tooltip" />
+              </tooltip>
+              <graphic>
+                <ImageView fitHeight="16.0" fitWidth="16.0" mouseTransparent="true" pickOnBounds="true" preserveRatio="true">
+                  <image>
+                    <Image preserveRatio="false" smooth="false" url="@../images/ui/css-button-arrow.png" />
+                  </image>
+                </ImageView>
+              </graphic>
+              <toggleGroup>
+                <ToggleGroup fx:id="modes" />
+              </toggleGroup>
+            </ToggleButton>
+            <ToggleButton fx:id="picking" contentDisplay="GRAPHIC_ONLY" graphicTextGap="2.0" mnemonicParsing="false" onAction="#onSelectionModeSwitchAction" styleClass="toggle-button-right" toggleGroup="$modes">
+              <tooltip>
+                <Tooltip text="%csspanel.picking.tooltip" />
+              </tooltip>
+              <graphic>
+                <ImageView fitHeight="20.0" fitWidth="20.0" mouseTransparent="true" pickOnBounds="true" preserveRatio="true">
+                  <image>
+                    <Image preserveRatio="false" smooth="false" url="@../images/cursors/css-cursor.png" />
+                  </image>
+                </ImageView>
+              </graphic>
+              <HBox.margin>
+                <Insets right="5.0" />
+              </HBox.margin>
+            </ToggleButton>
+          </children>
+        </HBox>
+      </children>
+    </VBox>
+    <TableView fx:id="table" prefHeight="200.0" prefWidth="200.0" styleClass="css-table-view" VBox.vgrow="ALWAYS">
+      <columns>
+        <TableColumn fx:id="propertiesColumn" editable="false" minWidth="150.0" prefWidth="200.0" resizable="false" sortable="false" text="%csspanel.col.properties" />
+        <TableColumn fx:id="defaultColumn" editable="false" minWidth="100.0" prefWidth="100.0" sortable="false" text="%csspanel.col.defaults" visible="true" />
+        <TableColumn fx:id="builtinColumn" editable="false" minWidth="100.0" prefWidth="100.0" sortable="false" text="%csspanel.col.api.defaults" visible="false" />
+        <TableColumn fx:id="caspianColumn" editable="false" minWidth="120.0" prefWidth="120.0" sortable="false" text="%csspanel.col.theme.defaults" visible="false" />
+        <TableColumn fx:id="beanApiColumn" editable="false" minWidth="100.0" prefWidth="100.0" sortable="false" text="%csspanel.col.inspector" visible="true" />
+        <TableColumn fx:id="stylesheetsColumn" editable="false" minWidth="100.0" prefWidth="100.0" sortable="false" text="%csspanel.col.stylesheets" />
+        <TableColumn fx:id="inlineColumn" editable="false" minWidth="100.0" prefWidth="100.0" sortable="false" text="%csspanel.col.inline" />
+      </columns>
+    </TableView>
+    <ScrollPane fx:id="rulesPane" fitToWidth="true" hbarPolicy="NEVER" prefHeight="200.0" prefWidth="200.0" vbarPolicy="AS_NEEDED" VBox.vgrow="ALWAYS">
+      <content>
+        <VBox fx:id="rulesBox" prefHeight="-1.0" prefWidth="-1.0" />
+      </content>
+    </ScrollPane>
+    <WebView fx:id="textPane" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS" />
+  </children>
+</VBox>
