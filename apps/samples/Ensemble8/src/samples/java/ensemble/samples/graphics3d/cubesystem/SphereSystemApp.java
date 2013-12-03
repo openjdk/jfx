@@ -51,8 +51,18 @@ import javafx.util.Duration;
  *
  * @sampleName 3D Sphere System
  * @preview preview.png
+ * @see javafx.scene.shape.Sphere
+ * @see javafx.scene.paint.PhongMaterial
  * @see javafx.scene.transform.Rotate
+ * @see javafx.scene.transform.Translate
  * @see javafx.scene.paint.Color
+ * @see javafx.scene.PerspectiveCamera
+ * @see javafx.scene.SubScene
+ * @see javafx.scene.SceneAntialiasing
+ * @see javafx.animation.KeyFrame
+ * @see javafx.animation.KeyValue
+ * @see javafx.animation.Timeline
+ * @see javafx.util.Duration
  * @conditionalFeatures SCENE3D
  */
 public class SphereSystemApp extends Application {
