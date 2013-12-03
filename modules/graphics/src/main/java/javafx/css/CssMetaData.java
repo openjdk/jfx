@@ -38,10 +38,11 @@ import javafx.scene.Node;
  * CssMetaData is the bridge between a value that can be represented 
  * syntactically in a .css file, and a {@link StyleableProperty}. There is 
  * a one-to-one correspondence between a CssMetaData and a StyleableProperty.
- * Typically, the CssMetaData of a will include the CssMetaData of its ancestors. 
+ * Typically, the CssMetaData of a Node will include the CssMetaData of its ancestors.
+ * For example, the CssMetaData of a Rectangle includes the CssMetaData of Shape and also of Node.
  * During CSS processing, the CSS engine iterates over the Node's CssMetaData, 
- * looks up the parsed value of each, converts the parsed value, and 
- * sets the value on the StyleableProperty. 
+ * looks up the parsed value of each {@link javafx.css.CssMetaData#getProperty() property},
+ * converts the parsed value, and sets the value on the StyleableProperty.
  * <p>
  * The method {@link Node#getCssMetaData()} is called to obtain the 
  * List&lt;CssMetaData&gt;. This method is called frequently and it is prudent
@@ -213,7 +214,7 @@ public abstract class CssMetaData<S extends Styleable, V> {
      * Construct a CssMetaData with the given parameters and no sub-properties.
      * @param property the CSS property
      * @param converter the StyleConverter used to convert the CSS parsed value to a Java object.
-     * @param initalValue the CSS string 
+     * @param initialValue The initial or default value of the corresponding StyleableProperty
      * @param inherits true if this property uses CSS inheritance
      * @param subProperties the sub-properties of this property. For example,
      * the -fx-font property has the sub-properties -fx-font-family, 
@@ -241,7 +242,7 @@ public abstract class CssMetaData<S extends Styleable, V> {
      * Construct a CssMetaData with the given parameters and no sub-properties.
      * @param property the CSS property
      * @param converter the StyleConverter used to convert the CSS parsed value to a Java object.
-     * @param initalValue the CSS string 
+     * @param initialValue The initial or default value of the corresponding StyleableProperty
      * @param inherits true if this property uses CSS inheritance
      */
     protected CssMetaData(
@@ -257,7 +258,7 @@ public abstract class CssMetaData<S extends Styleable, V> {
      * false and no sub-properties.
      * @param property the CSS property
      * @param converter the StyleConverter used to convert the CSS parsed value to a Java object.
-     * @param initalValue the CSS string 
+     * @param initialValue The initial or default value of the corresponding StyleableProperty
      */
     protected CssMetaData(
             final String property, 
@@ -271,7 +272,6 @@ public abstract class CssMetaData<S extends Styleable, V> {
      * null, inherit is set to false, and no sub-properties.
      * @param property the CSS property
      * @param converter the StyleConverter used to convert the CSS parsed value to a Java object.
-     * @param initalValue the CSS string 
      */
     protected CssMetaData(
             final String property, 
@@ -279,6 +279,9 @@ public abstract class CssMetaData<S extends Styleable, V> {
         this(property, converter, null, false, null);
     }
 
+    /**
+     * Two CssMetaData objects are considered to be equal if their {@link #getProperty() property} values are equal.
+     */
     @Override
     public boolean equals(Object obj) {
         if (obj == null) {

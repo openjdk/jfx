@@ -138,7 +138,8 @@ import sun.util.logging.PlatformLogger.Level;
  * adjustments and animation.
  * @since JavaFX 2.0
  */
-public class Region extends Parent {
+public class
+        Region extends Parent {
 
     /**
      * Sentinel value which can be passed to a region's
