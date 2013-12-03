@@ -30,6 +30,7 @@ import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
+import javafx.event.EventType;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -53,7 +54,9 @@ import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -723,6 +726,8 @@ public class SwingNode extends Node {
     }
 
     private class SwingMouseEventHandler implements EventHandler<MouseEvent> {
+        private final Set<MouseButton> mouseClickedAllowed = new HashSet<>();
+
         @Override
         public void handle(MouseEvent event) {
             JLightweightFrame frame = lwFrame;
@@ -732,6 +737,23 @@ public class SwingNode extends Node {
             int swingID = SwingEvents.fxMouseEventTypeToMouseID(event);
             if (swingID < 0) {
                 return;
+            }
+            final EventType<?> type = event.getEventType();
+            if (type == MouseEvent.MOUSE_PRESSED) {
+                mouseClickedAllowed.add(event.getButton());
+            } else if (type == MouseEvent.MOUSE_RELEASED) {
+                // RELEASED comes before CLICKED, so we don't remove the button from the set
+                //mouseClickedAllowed.remove(event.getButton());
+            } else if (type == MouseEvent.MOUSE_DRAGGED) {
+                // This is what AWT/Swing do
+                mouseClickedAllowed.clear();
+            } else if (type == MouseEvent.MOUSE_CLICKED) {
+                if (event.getClickCount() == 1 && !mouseClickedAllowed.contains(event.getButton())) {
+                    // RT-34610: In FX, CLICKED events are generated even after dragging the mouse pointer
+                    // Note that this is only relevant for single clicks. Double clicks use a smudge factor.
+                    return;
+                }
+                mouseClickedAllowed.remove(event.getButton());
             }
             int swingModifiers = SwingEvents.fxMouseModsToMouseMods(event);
             // TODO: popupTrigger
