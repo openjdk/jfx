@@ -548,6 +548,19 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
 
         window->isSizeAssigned = NO;
         window->isLocationAssigned = NO;
+
+        if (jIsChild == JNI_TRUE && jOwnerPtr != 0L && jOwnerPtr != BROWSER_PARENT_ID
+            && [window->nsWindow isKindOfClass:[GlassEmbeddedWindow class]])
+        {
+            GlassEmbeddedWindow* parent = ((GlassEmbeddedWindow*)window->nsWindow)->parent;
+            if ([GlassEmbeddedWindow exists:parent])
+            {
+                window->isLocationAssigned = YES;
+                [window _setBounds:(int)round(parent.frame.origin.x)
+                                 y:(int)round(parent.frame.origin.y)
+                              xSet:YES ySet:YES w:0 h:0 cw:0 ch:0];
+            }
+        }
     }
     [pool drain];
     
