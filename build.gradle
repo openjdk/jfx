@@ -369,13 +369,18 @@ ext.DO_JCOV = Boolean.parseBoolean(JCOV)
 // Define the number of threads to use when compiling (specifically for native compilation)
 defineProperty("NUM_COMPILE_THREADS", "${Runtime.runtime.availableProcessors()}")
 
-// Define settings used when creating the VersionInfo. These settings are generally left alone
-// by developers and set only from Hudson. We have to manually rev this version number from
-// release to release.
 //
+// The next three sections of properties are used to generate the
+// VersionInfo class, and the Windows DLL manifest.
+//
+
+// The following properties should be left alone by developers and set only from Hudson.
 defineProperty("HUDSON_JOB_NAME", "not_hudson")
 defineProperty("HUDSON_BUILD_NUMBER","0000")
 defineProperty("PROMOTED_BUILD_NUMBER", "00")
+
+// The following properties define the product name for Oracle JDK and OpenJDK
+// for VersionInfo and the DLL manifest.
 if (BUILD_CLOSED) {
     defineProperty("PRODUCT_NAME", "Java(TM)")
     defineProperty("COMPANY_NAME", "Oracle Corporation")
@@ -385,11 +390,14 @@ if (BUILD_CLOSED) {
     defineProperty("COMPANY_NAME", "N/A")
     defineProperty("PLATFORM_NAME", "Platform")
 }
-// TODO: set the values of RAW_VERSION, RELEASE_NAME, and RELEASE_MILESTONE based on the
-// settings in build.properties
-defineProperty("RAW_VERSION", "8.0.0")
-defineProperty("RELEASE_NAME", "8.0")
-defineProperty("RELEASE_MILESTONE", "ea")
+
+// The following properties are set based on properties defined in
+// build.properties. The release number or milestone number should be updated
+// in that file.
+def jfxReleaseVersion = "${jfxReleaseMajorVersion}.${jfxReleaseMinorVersion}.${jfxReleaseMicroVersion}"
+defineProperty("RAW_VERSION", jfxReleaseVersion)
+defineProperty("RELEASE_NAME", jfxReleaseName)
+defineProperty("RELEASE_MILESTONE", jfxReleaseMilestone)
 
 // Check whether the COMPILE_TARGETS property has been specified (if so, it was done by
 // the user and not by this script). If it has not been defined then default

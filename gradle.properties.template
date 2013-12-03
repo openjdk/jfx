@@ -222,16 +222,12 @@
 #COMPILE_FLAGS_FILES = path/to/flags/file.gradle, path/to/flags/file2.gradle
 
 # Define settings used when creating the VersionInfo. These settings are generally left alone
-# by developers and set only from Hudson. We have to manually rev this version number from
-# release to release.
+# by developers and set only from Hudson.
 
 #HUDSON_JOB_NAME = not_hudson
 #HUDSON_BUILD_NUMBER = 0000
 #PROMOTED_BUILD_NUMBER = 00
 #PRODUCT_NAME = OpenJFX
-#RAW_VERSION = 8.0.0
-#RELEASE_NAME = 8.0
-#RELEASE_MILESTONE = ea
 
 # Variables used when building on the Mac. These should need to be rarely, if ever set. The
 # default value for MACOSX_SDK_PATH is based on the MACOSX_MIN_VERSION, so if you wanted to
