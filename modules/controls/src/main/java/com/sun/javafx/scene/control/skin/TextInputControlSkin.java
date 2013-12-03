@@ -89,11 +89,29 @@ import com.sun.javafx.tk.FontMetrics;
 import com.sun.javafx.tk.Toolkit;
 import static com.sun.javafx.PlatformUtil.isWindows;
 import static com.sun.javafx.scene.control.skin.resources.ControlResources.getString;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 
 /**
  * Abstract base class for text input skins.
  */
 public abstract class TextInputControlSkin<T extends TextInputControl, B extends TextInputControlBehavior<T>> extends BehaviorSkinBase<T, B> {
+
+    static boolean preload = false;
+    static {
+        AccessController.doPrivileged(new PrivilegedAction<Void>() {
+            @Override public Void run() {
+                String s = System.getProperty("com.sun.javafx.virtualKeyboard.preload");
+                if (s != null) {
+                    if (s.equalsIgnoreCase("PRERENDER")) {
+                        preload = true;
+                    }
+                }
+                return null;
+            }
+        });
+    }    
+
     /**
      * Specifies whether we ought to show handles. We should do it on touch platforms, but not
      * iOS (and maybe not Android either?)
@@ -334,6 +352,15 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
         }
 
         if (IS_FXVK_SUPPORTED) {
+            if (preload) {
+                Scene scene = textInput.getScene();
+                if (scene != null) {
+                    Window window = scene.getWindow();
+                    if (window != null) {
+                        FXVK.init(textInput);
+                    }
+                }
+            }
             textInput.focusedProperty().addListener(new InvalidationListener() {
                 @Override public void invalidated(Observable observable) {
                     if (USE_FXVK) {

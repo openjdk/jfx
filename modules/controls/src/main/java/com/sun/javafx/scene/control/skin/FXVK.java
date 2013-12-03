@@ -83,6 +83,14 @@ public class FXVK extends Control {
     final Node getAttachedNode() { return attachedNode == null ? null : attachedNode.getValue(); }
     static FXVK vk;
 
+    public static void init(Node textInput) {
+        if (vk != null) return;
+        vk = new FXVK();
+        FXVKSkin vkskin = new FXVKSkin(vk);
+        vk.setSkin(vkskin);
+        vkskin.prerender(textInput);
+    }
+ 
     public static void attach(final Node textInput) {
 
         if (vk == null) {

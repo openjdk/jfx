@@ -66,6 +66,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.HashMap;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import static javafx.scene.input.MouseEvent.MOUSE_PRESSED;
@@ -79,7 +80,8 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
 
     private static final int GAP = 6;
 
-    private List<List<Key>> board;
+    private List<List<Key>> currentBoard;
+    private static HashMap<String, List<List<Key>>> boardMap = new HashMap<String, List<List<Key>>>();
     private int numCols;
 
     private boolean capsDown = false;
@@ -132,19 +134,21 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
         updateKeys();
     }
 
+    void clearStateKeys() {
+        capsDown = false;
+        shiftDown = false;
+        isSymbol = false;
+        lastTime = -1L;
+        updateKeys();
+    }
 
     private void updateKeys() {
-        for (List<Key> row : board) {
+        for (List<Key> row : currentBoard) {
             for (Key key : row) {
                 key.update(capsDown, shiftDown, isSymbol);
             }
         }
     }
-
-    private final static boolean USE_SECONDARY_POPUP = false;
-
-    private static Region oldRoot;
-    private static Timeline slideRootTimeline;
 
     private static Popup vkPopup;
     private static Popup secondaryPopup;
@@ -152,26 +156,21 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
 
     private static Timeline slideInTimeline = new Timeline();
     private static Timeline slideOutTimeline = new Timeline();
+    private static boolean hideAfterSlideOut = false;
 
     private static FXVK secondaryVK;
     private static Timeline secondaryVKDelay;
     private static CharKey secondaryVKKey;
 
     private Node attachedNode;
-    private String vkType;
+    private String vkType = null;
 
     FXVK fxvk;
 
-    static final double VK_WIDTH = 640;
     static final double VK_HEIGHT = 243;
-    static final double VK_PORTRAIT_HEIGHT = 326;
     static final double VK_SLIDE_MILLIS = 250;
-    static final double PREF_KEY_WIDTH = 56;
     static final double PREF_PORTRAIT_KEY_WIDTH = 40;
     static final double PREF_KEY_HEIGHT = 56;
-
-    double keyWidth = PREF_KEY_WIDTH;
-    double keyHeight = PREF_KEY_HEIGHT;
 
     static boolean vkAdjustWindow = false;
     static boolean vkLookup = false;
@@ -206,13 +205,12 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
 
     private static void startSlideIn() {
         slideOutTimeline.stop();
-        winY.set(vkPopup.getY());
         slideInTimeline.playFromStart();
     }
 
-    private static void startSlideOut() {
+    private static void startSlideOut(boolean doHide) {
+        hideAfterSlideOut = doHide;
         slideInTimeline.stop();
-        winY.set(vkPopup.getY());
         slideOutTimeline.playFromStart();
     }
 
@@ -332,247 +330,255 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
         }
     }
 
-    private void updateKeyboardType() {
-        String oldType = vkType;
-        int typeIndex = 0;
-        Object typeValue = attachedNode.getProperties().get(FXVK.VK_TYPE_PROP_KEY);
+    private String getNodeVKType(Node node) {
+        Object typeValue = node.getProperties().get(FXVK.VK_TYPE_PROP_KEY);
         String typeStr = null;
         if (typeValue instanceof String) {
             typeStr = ((String)typeValue).toLowerCase(Locale.ROOT);
         }
-        vkType = (typeStr != null ? typeStr : "text");
-        
+        return (typeStr != null ? typeStr : "text");
+    }
+
+    private void updateKeyboardType(Node node) {
+        String oldType = vkType;
+        vkType = getNodeVKType(node);
         //VK type changed, rebuild
         if ( oldType == null || !vkType.equals(oldType) ) {
-            rebuild();
+            rebuildPrimaryVK(vkType);
         }
+    }
+
+    private void closeSecondaryVK() {
+        if (secondaryVK != null) {
+            secondaryVK.setAttachedNode(null);
+            secondaryPopup.hide();
+        }
+    }
+
+    private void setupPrimaryVK() {
+        fxvk.setFocusTraversable(false);
+        fxvk.setVisible(true);
+
+        // init popup window and slide animations
+        if (vkPopup == null) {
+            vkPopup = new Popup();
+            vkPopup.setAutoFix(false);
+        }
+
+        double screenHeight =
+            com.sun.javafx.Utils.getScreen(fxvk).getBounds().getHeight();
+
+        //Setup VK slide animations
+        slideInTimeline.getKeyFrames().setAll(
+            new KeyFrame(Duration.millis(VK_SLIDE_MILLIS),
+                         new KeyValue(winY, screenHeight - VK_HEIGHT,
+                                      Interpolator.EASE_BOTH)));
+        slideOutTimeline.getKeyFrames().setAll(
+            new KeyFrame(Duration.millis(VK_SLIDE_MILLIS),
+                new EventHandler<ActionEvent>() {
+                    @Override public void handle(ActionEvent event) {
+                        if (hideAfterSlideOut && vkPopup.isShowing()) {
+                            vkPopup.hide();
+                        }
+                    }
+                },
+                new KeyValue(winY, screenHeight, Interpolator.EASE_BOTH)));
+
+        //Set VK size
+        double width = com.sun.javafx.Utils.getScreen(fxvk).getBounds().getWidth();
+        fxvk.setPrefWidth(width);
+        fxvk.setMinWidth(USE_PREF_SIZE);
+        fxvk.setMaxWidth(USE_PREF_SIZE);
+        
+        fxvk.setPrefHeight(VK_HEIGHT);
+        fxvk.setMinHeight(USE_PREF_SIZE);
+
+        vkPopup.getContent().setAll(fxvk);
+
+        //set up long-press triger for secondary VK
+        if (secondaryVKDelay == null) {
+            secondaryVKDelay = new Timeline();
+        }
+        KeyFrame kf = new KeyFrame(Duration.millis(500), new EventHandler<ActionEvent>() {
+            @Override public void handle(ActionEvent event) {
+                if (secondaryVKKey != null) {
+                    showSecondaryVK(secondaryVKKey);
+                }
+            }
+        });
+        secondaryVKDelay.getKeyFrames().setAll(kf);
+    }
+
+    void prerender(Node node) {
+        if (fxvk != primaryVK) {
+            return;
+        }
+        
+        //Preload all boards
+        loadBoard("text");
+        loadBoard("numeric");
+        loadBoard("url");
+        loadBoard("email");
+
+        updateKeyboardType(node);
+        fxvk.setVisible(true);
+
+        if (!vkPopup.isShowing()) {
+            Rectangle2D screenBounds =
+                com.sun.javafx.Utils.getScreen(node).getBounds();
+
+            vkPopup.setX((screenBounds.getWidth() - fxvk.prefWidth(-1)) / 2);
+            winY.set(screenBounds.getHeight());
+            vkPopup.show(node.getScene().getWindow());
+        }             
     }
 
     public FXVKSkin(final FXVK fxvk) {
         super(fxvk, new BehaviorBase<>(fxvk, Collections.EMPTY_LIST));
         this.fxvk = fxvk;
-
-        fxvk.setFocusTraversable(false);
-
-        if (fxvk != secondaryVK) {
-            //init secondary VK delay animation
-            if (secondaryVKDelay == null) {
-                secondaryVKDelay = new Timeline();
-            }
-            KeyFrame kf = new KeyFrame(Duration.millis(500), new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent event) {
-                    if (secondaryVKKey != null) {
-                        showSecondaryVK(secondaryVKKey);
-                    }
-                }
-            });
-            secondaryVKDelay.getKeyFrames().setAll(kf);
+        if (fxvk == FXVK.vk) {
+            primaryVK = fxvk;
         }
 
+        if (fxvk == primaryVK) {
+            setupPrimaryVK();
+        }
 
         fxvk.attachedNodeProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable valueModel) {
                 Node oldNode = attachedNode;
                 attachedNode = fxvk.getAttachedNode();
-                isVKHidden = false;
-                if (fxvk != FXVK.vk) {
-                    // This is not the current vk, so nothing more to do
-                    return;
-                }
-                if (fxvk == secondaryVK) {
+                if (fxvk != primaryVK) {
                     return;
                 }
                 
-                //close secondary VK if open
-                if (secondaryVK != null) {
-                    secondaryVK.setAttachedNode(null);
-                    secondaryPopup.hide();
-                }
+                closeSecondaryVK();
                 
                 if (attachedNode != null) {
                     if (oldNode != null) {
                         unRegisterUnhideHandler(oldNode);
                     }
                     registerUnhideHandler(attachedNode);
-                    updateKeyboardType();
-                    
-                    fxvk.setVisible(true);
+                    updateKeyboardType(attachedNode);
 
-                    if (fxvk != secondaryVK) {
-                        // init popup window and slide animations
-                        if (vkPopup == null) {
-                            vkPopup = new Popup();
-                            vkPopup.setAutoFix(false);
-
-                            double screenHeight =
-                                com.sun.javafx.Utils.getScreen(attachedNode).getBounds().getHeight();
-                            double screenVisualHeight =
-                                com.sun.javafx.Utils.getScreen(attachedNode).getVisualBounds().getHeight();
-
-                            screenVisualHeight = Math.min(screenHeight, screenVisualHeight + 4 /*??*/);
-
-                            slideInTimeline.getKeyFrames().setAll(
-                                new KeyFrame(Duration.millis(VK_SLIDE_MILLIS),
-                                             new KeyValue(winY, screenHeight - VK_HEIGHT,
-                                                          Interpolator.EASE_BOTH)));
-                            slideOutTimeline.getKeyFrames().setAll(
-                                new KeyFrame(Duration.millis(VK_SLIDE_MILLIS),
-                                             new KeyValue(winY, screenHeight, Interpolator.EASE_BOTH)));
+                    //owner window has changed so hide VK and show with new owner
+                    if (oldNode == null || oldNode.getScene() == null || oldNode.getScene().getWindow() != attachedNode.getScene().getWindow()) {
+                        if (vkPopup.isShowing()) {
+                            vkPopup.hide();
+                        } else {
                         }
+                    }
 
-                        vkPopup.getContent().setAll(fxvk);
+                    if (!vkPopup.isShowing()) {
+                        Rectangle2D screenBounds =
+                            com.sun.javafx.Utils.getScreen(attachedNode).getBounds();
 
-                        //owner window has changed so hide VK and show with new owner
-                        if (oldNode == null || oldNode.getScene() == null || oldNode.getScene().getWindow() != attachedNode.getScene().getWindow()) {
-                            if (vkPopup.isShowing()) {
-                                vkPopup.hide();
-                            }
+                        vkPopup.setX((screenBounds.getWidth() - fxvk.prefWidth(-1)) / 2);
+                        if (oldNode == null || isVKHidden) {
+                            //position off screen
+                            winY.set(screenBounds.getHeight());
+                        } else {
+                            //position on screen (no slide in)
+                            winY.set(screenBounds.getHeight() - VK_HEIGHT);
                         }
+                        vkPopup.show(attachedNode.getScene().getWindow());
+                    }             
+
+                    if (oldNode == null || isVKHidden) {
+                        startSlideIn();
+                    }
                         
-                        if (!vkPopup.isShowing()) {
-                            Platform.runLater(new Runnable() {
-                                public void run() {
-                                    Rectangle2D screenBounds =
-                                        com.sun.javafx.Utils.getScreen(attachedNode).getBounds();
-
-                                    vkPopup.show(attachedNode.getScene().getWindow(),
-                                                 (screenBounds.getWidth() - fxvk.prefWidth(-1)) / 2,
-                                                 screenBounds.getHeight() - fxvk.prefHeight(-1));
-                                }
-                            });
-                        }
-
-                        if (oldNode == null || oldNode.getScene() != attachedNode.getScene()) {
-                            double width = com.sun.javafx.Utils.getScreen(attachedNode).getBounds().getWidth();
-                            fxvk.setPrefWidth(width);
-                            fxvk.setMinWidth(USE_PREF_SIZE);
-                            fxvk.setMaxWidth(USE_PREF_SIZE);
-                            
-                            fxvk.setPrefHeight(VK_HEIGHT);
-                            fxvk.setMinHeight(USE_PREF_SIZE);
-                        }
-
-                        if (fxvk.getHeight() > 0 &&
-                                (fxvk.getLayoutY() == 0 || fxvk.getLayoutY() > attachedNode.getScene().getHeight() - fxvk.getHeight())) {
-                            startSlideIn();
-                        }
-                        
+                    if (vkAdjustWindow) {
                         //update previous window position only if moving from non-input control node or window has changed.
-                        if (vkAdjustWindow) {
-                            if (oldNode == null || oldNode.getScene() == null 
-                                || oldNode.getScene().getWindow() != attachedNode.getScene().getWindow()) {
-                                saveWindowPosition(attachedNode);
-                            }
+                        if (oldNode == null || oldNode.getScene() == null 
+                            || oldNode.getScene().getWindow() != attachedNode.getScene().getWindow()) {
+                            saveWindowPosition(attachedNode);
                         }
-
                         // Move window containing input node
-                        if (vkAdjustWindow) {
-                            adjustWindowPosition(attachedNode);
-                        }
+                        adjustWindowPosition(attachedNode);
                     }
-                } else {
-                    if (fxvk != secondaryVK) {
-                        if (oldNode != null) {
-                            unRegisterUnhideHandler(oldNode);
-                        }
-                        startSlideOut();
-                        // Restore window position
-                        if (vkAdjustWindow) {
-                            restoreWindowPosition(oldNode);
-                        }
+                } else { // attachedNode == null
+                    if (oldNode != null) {
+                        unRegisterUnhideHandler(oldNode);
                     }
-
-                    if (secondaryVK != null) {
-                        secondaryVK.setAttachedNode(null);
-                        secondaryPopup.hide();
+                    startSlideOut(true);
+                    // Restore window position
+                    if (vkAdjustWindow) {
+                        restoreWindowPosition(oldNode);
                     }
-                    return;
                 }
+                isVKHidden = false;
             }
         });
     }
 
     /**
-     * Replaces all children of this VirtualKeyboardSkin based on the keyboard
-     * type set on the VirtualKeyboard.
+     * builds secondary (long-press) VK
      */
-    private void rebuild() {
-        if (fxvk == secondaryVK) {
-            //build secondary VK
-            if (secondaryVK.chars == null) {
-            } else {
-                int nKeys = secondaryVK.chars.length;
-                int nRows = (int)Math.floor(Math.sqrt(Math.max(1, nKeys - 2)));
-                int nKeysPerRow = (int)Math.ceil(nKeys / (double)nRows);
-
-                Key tmpKey;
-                List<List<Key>> rows = new ArrayList<List<Key>>(2);
-
-                for (int i = 0; i < nRows; i++) {
-                    int start = i * nKeysPerRow;
-                    int end = Math.min(start + nKeysPerRow, nKeys);
-                    if (start >= end) 
-                        break;
-                        
-                    List<Key> keys = new ArrayList<Key>(nKeysPerRow);
-                    for (int j = start; j < end; j++) {
-                        tmpKey = new CharKey(secondaryVK.chars[j], null, null);
-                        tmpKey.col= (j - start) * 2;
-                        tmpKey.colSpan = 2;
-                        for (String sc : tmpKey.getStyleClass()) {
-                            tmpKey.text.getStyleClass().add(sc + "-text");
-                            tmpKey.altText.getStyleClass().add(sc + "-alttext");
-                            tmpKey.icon.getStyleClass().add(sc + "-icon");
-                        }
-                        if (secondaryVK.chars[j] != null && secondaryVK.chars[j].length() > 1) {
-                            tmpKey.text.getStyleClass().add("multi-char-text");
-                        }
-                        keys.add(tmpKey);
-                    }
-                    rows.add(keys);
-                }
-                board = rows;
-                
-                getChildren().clear();
-                numCols = 0;
-                for (List<Key> row : board) {
-                    for (Key key : row) {
-                        numCols = Math.max(numCols, key.col + key.colSpan);
-                    }
-                    getChildren().addAll(row);
-                }
-            }
+    private void rebuildSecondaryVK() {
+        if (secondaryVK.chars == null) {
         } else {
-            String boardName;
+            int nKeys = secondaryVK.chars.length;
+            int nRows = (int)Math.floor(Math.sqrt(Math.max(1, nKeys - 2)));
+            int nKeysPerRow = (int)Math.ceil(nKeys / (double)nRows);
 
-            switch (vkType) {
-                case "text":
-                    boardName = "TextBoard";
+            Key tmpKey;
+            List<List<Key>> rows = new ArrayList<List<Key>>(2);
+
+            for (int i = 0; i < nRows; i++) {
+                int start = i * nKeysPerRow;
+                int end = Math.min(start + nKeysPerRow, nKeys);
+                if (start >= end) 
                     break;
-                case "numeric":
-                    boardName = "NumericBoard";
-                    break;
-                case "url":
-                    boardName = "UrlBoard";
-                    break;
-                case "email":
-                    boardName = "EmailBoard";
-                    break;
-                default:
-                    boardName = "TextBoard";
+                    
+                List<Key> keys = new ArrayList<Key>(nKeysPerRow);
+                for (int j = start; j < end; j++) {
+                    tmpKey = new CharKey(secondaryVK.chars[j], null, null);
+                    tmpKey.col= (j - start) * 2;
+                    tmpKey.colSpan = 2;
+                    for (String sc : tmpKey.getStyleClass()) {
+                        tmpKey.text.getStyleClass().add(sc + "-text");
+                        tmpKey.altText.getStyleClass().add(sc + "-alttext");
+                        tmpKey.icon.getStyleClass().add(sc + "-icon");
+                    }
+                    if (secondaryVK.chars[j] != null && secondaryVK.chars[j].length() > 1) {
+                        tmpKey.text.getStyleClass().add("multi-char-text");
+                    }
+                    keys.add(tmpKey);
+                }
+                rows.add(keys);
             }
+            currentBoard = rows;
             
-            board = loadBoard(boardName);
             getChildren().clear();
             numCols = 0;
-            for (List<Key> row : board) {
+            for (List<Key> row : currentBoard) {
                 for (Key key : row) {
                     numCols = Math.max(numCols, key.col + key.colSpan);
                 }
                 getChildren().addAll(row);
             }
         }
+    }
 
+    /**
+     * builds primary VK based on the keyboard
+     * type set on the VirtualKeyboard.
+     */
+    private void rebuildPrimaryVK(String type) {
+        currentBoard = loadBoard(type);
+
+        //Clear all state keys and updates current board
+        clearStateKeys();
+        
+        getChildren().clear();
+        numCols = 0;
+        for (List<Key> row : currentBoard) {
+            for (Key key : row) {
+                numCols = Math.max(numCols, key.col + key.colSpan);
+            }
+            getChildren().addAll(row);
+        }
     }
 
     // This skin is designed such that it gives equal widths to all columns. So
@@ -591,11 +597,11 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
     @Override
     protected void layoutChildren(double contentX, double contentY, double contentWidth, double contentHeight) {
         // I have fixed width columns, all the same.
-        int numRows = board.size();
+        int numRows = currentBoard.size();
         final double colWidth = ((contentWidth - ((numCols - 1) * GAP)) / numCols);
         double rowHeight = ((contentHeight - ((numRows - 1) * GAP)) / numRows);
         double rowY = contentY;
-        for (List<Key> row : board) {
+        for (List<Key> row : currentBoard) {
             for (Key key : row) {
                 double startX = contentX + (key.col * (colWidth + GAP));
                 double width = (key.colSpan * (colWidth + GAP)) - GAP;
@@ -848,7 +854,6 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
 
     private void showSecondaryVK(final CharKey key) {
         if (key != null) {
-            primaryVK = fxvk;
             final Node textInput = primaryVK.getAttachedNode();
 
             if (secondaryVK == null) {
@@ -918,7 +923,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
 
             if (secondaryVK.chars.length > 1) {
                 if (secondaryVK.getSkin() != null) {
-                    ((FXVKSkin)secondaryVK.getSkin()).rebuild();
+                    ((FXVKSkin)secondaryVK.getSkin()).rebuildSecondaryVK();
                 }
 
                 secondaryVK.setAttachedNode(textInput);
@@ -953,21 +958,23 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
                 });
             }
         } else {
-            if (secondaryVK != null) {
-                secondaryVK.setAttachedNode(null);
-                secondaryPopup.hide();
-            }
+            closeSecondaryVK();
         }
     }
 
 
+    private List<List<Key>> loadBoard(String type) {
+        List<List<Key>> tmpBoard = boardMap.get(type);
+        if (tmpBoard != null) {
+            return tmpBoard;
+        }
 
-    private List<List<Key>> loadBoard(String boardName) {
+        String boardFileName = type.substring(0,1).toUpperCase() + type.substring(1).toLowerCase() + "Board.txt";
         try {
-            List<List<Key>> rows = new ArrayList<List<Key>>(5);
+            tmpBoard = new ArrayList<List<Key>>(5);
             List<Key> keys = new ArrayList<Key>(20);
 
-            InputStream boardFile = FXVKSkin.class.getResourceAsStream(boardName + ".txt");
+            InputStream boardFile = FXVKSkin.class.getResourceAsStream(boardFileName);
             BufferedReader reader = new BufferedReader(new InputStreamReader(boardFile));
             String line;
             // A pointer to the current column. This will be incremented for every string
@@ -1056,7 +1063,6 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
                             } else if ("$backspace".equals(chars)) {
                                 key = new KeyCodeKey("backspace", "\b", KeyCode.BACK_SPACE);
                                 key.getStyleClass().add("backspace");
-
                             } else if ("$enter".equals(chars)) {
                                 key = new KeyCodeKey("enter", "\n", KeyCode.ENTER);
                                 key.getStyleClass().add("enter");
@@ -1080,7 +1086,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
                                 key = new KeyboardStateKey("hide", null, "hide") {
                                     @Override protected void release() {
                                         isVKHidden = true;
-                                        startSlideOut();
+                                        startSlideOut(false);
                                         // Restore window position
                                         if (vkAdjustWindow) {
                                             restoreWindowPosition(attachedNode);
@@ -1148,11 +1154,12 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
 
                 c = 0;
                 col = 0;
-                rows.add(keys);
+                tmpBoard.add(keys);
                 keys = new ArrayList<Key>(20);
             }
-            reader.close(); 
-            return rows;
+            reader.close();
+            boardMap.put(type, tmpBoard);
+            return tmpBoard;
         } catch (Exception e) {
             e.printStackTrace();
             return Collections.emptyList();
