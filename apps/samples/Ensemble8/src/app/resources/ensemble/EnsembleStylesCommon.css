@@ -97,7 +97,7 @@
    * POPOVERS
    ****************************************************************************/
 .popover {
-    -fx-padding: 44 7 7 7;
+    -fx-padding: 43 7 7 7;
 }
 .popover-frame {
     -fx-border-image-source: url("images/popover-empty.png");
@@ -129,9 +129,9 @@
  /*   -fx-font-weight: bold; */
     -fx-text-fill: #363636;
 }
-/* #PopoverBackground {
-    -fx-background-color: grey;
-} */
+#PopoverBackground {
+    -fx-background-color: white;
+}
 .search-result-cell {
     -fx-background-color: white;
     -fx-padding: 4 30 4 45;

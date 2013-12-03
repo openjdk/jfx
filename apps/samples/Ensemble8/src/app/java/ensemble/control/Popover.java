@@ -86,7 +86,6 @@ public class Popover extends Region implements EventHandler<Event>{
     private final Button leftButton = new Button("Left");
     private final Button rightButton = new Button("Right");
     private final LinkedList<Page> pages = new LinkedList<Page>();
-    private final Region backgroundRectangle = new Region();
     private final Pane pagesPane = new Pane();
     private final Rectangle pagesClipRect = new Rectangle();
     private final Pane titlesPane = new Pane();
@@ -110,7 +109,6 @@ public class Popover extends Region implements EventHandler<Event>{
         getStyleClass().setAll("popover");
         frameBorder.getStyleClass().setAll("popover-frame");
         frameBorder.setMouseTransparent(true);
-        backgroundRectangle.setId("PopoverBackground");
         // setup buttons
         leftButton.setOnMouseClicked(this);
         leftButton.getStyleClass().add("popover-left-button");
@@ -122,7 +120,7 @@ public class Popover extends Region implements EventHandler<Event>{
         pagesPane.setClip(pagesClipRect);
         titlesClipRect.setSmooth(false);
         titlesPane.setClip(titlesClipRect);
-        getChildren().addAll(backgroundRectangle, pagesPane, frameBorder, titlesPane, leftButton, rightButton);
+        getChildren().addAll(pagesPane, frameBorder, titlesPane, leftButton, rightButton);
         // always hide to start with
         setVisible(false);
         setOpacity(0);
@@ -243,7 +241,6 @@ public class Popover extends Region implements EventHandler<Event>{
         int pageWidth = width - left - right;
         int pageHeight = height - top - bottom;
         
-        backgroundRectangle.resizeRelocate(left, top, pageWidth, pageHeight);
         frameBorder.resize(width, height);
 
         pagesPane.resizeRelocate(left, top, pageWidth, pageHeight);

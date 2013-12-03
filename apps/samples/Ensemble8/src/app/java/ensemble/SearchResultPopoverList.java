@@ -66,12 +66,15 @@ public class SearchResultPopoverList extends PopoverTreeList<SearchResult> imple
     private PageBrowser pageBrowser;
     private Rectangle leftLine = new Rectangle(0,0,1,1);
     private IconPane iconPane = new IconPane();
+    private final Pane backgroundRectangle = new Pane();
 
     public SearchResultPopoverList(PageBrowser pageBrowser) {
         this.pageBrowser = pageBrowser;
         leftLine.setFill(Color.web("#dfdfdf"));
         iconPane.setManaged(false);
         setFocusTraversable(false);
+        backgroundRectangle.setId("PopoverBackground");
+        setPlaceholder(backgroundRectangle);
     }
 
     @Override protected void layoutChildren() {
@@ -84,6 +87,7 @@ public class SearchResultPopoverList extends PopoverTreeList<SearchResult> imple
         iconPane.setLayoutX(0);
         iconPane.setLayoutY(0);
         iconPane.resize(getWidth(), getHeight());
+        backgroundRectangle.resize(getWidth(), getHeight());
     }
 
     @Override public void itemClicked(SearchResult item) {
