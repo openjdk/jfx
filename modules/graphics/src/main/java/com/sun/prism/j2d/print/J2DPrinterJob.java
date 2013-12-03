@@ -614,11 +614,33 @@ public class J2DPrinterJob implements PrinterJobImpl {
     }
 
     private void syncPrintResolution() {
+        /* An unsupported resolution results in incorrect scaling by J2D, so
+         * remove any unsupported value, and only replace with a supported value.
+         */
+        PrintService ps = pJob2D.getPrintService();
+        if (!ps.isAttributeCategorySupported(PrinterResolution.class)) {
+            printReqAttrSet.remove(PrinterResolution.class);
+            return;
+        }
+        PrinterResolution pres =
+            (PrinterResolution)printReqAttrSet.get(PrinterResolution.class);
+        if (pres != null && !ps.isAttributeValueSupported(pres, null, null)) {
+            printReqAttrSet.remove(PrinterResolution.class);
+        };
+
+        // Any resolution is now at least known to be supported for this device.
         PrintResolution res = settings.getPrintResolution();
+        if (res == null) {
+            return;
+        }
         int cfRes = res.getCrossFeedResolution();
         int fRes = res.getFeedResolution();
-        printReqAttrSet.add(new PrinterResolution(cfRes, fRes,
-                                                  ResolutionSyntax.DPI));
+        pres = new PrinterResolution(cfRes, fRes, ResolutionSyntax.DPI);
+        if (!ps.isAttributeValueSupported(pres, null, null)) {
+            return;
+        }
+        // We have validated its a supported value, so add it.
+        printReqAttrSet.add(pres);
     }
 
     public PageLayout validatePageLayout(PageLayout pageLayout) {
@@ -683,12 +705,15 @@ public class J2DPrinterJob implements PrinterJobImpl {
         try {
             j2dPageable.implPrintPage(pageLayout, node);
         } catch (Throwable t) {
+            if (com.sun.prism.impl.PrismSettings.debug) {
+                System.err.println("printPage caught exception.");
+                t.printStackTrace();
+            }
             jobError = true;
             jobDone = true;
         }
         return !jobError;
     }
-
 
     private class PrintJobRunnable implements Runnable {
 
@@ -697,6 +722,10 @@ public class J2DPrinterJob implements PrinterJobImpl {
             try {
                 pJob2D.print(printReqAttrSet);
             } catch (Throwable t) { /* subsumes declared PrinterException */
+                if (com.sun.prism.impl.PrismSettings.debug) {
+                    System.err.println("print caught exception.");
+                    t.printStackTrace();
+                }
                 jobError = true;
                 jobDone = true;
             }
