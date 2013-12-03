@@ -123,6 +123,11 @@ class D3DResourceFactory extends BaseShaderFactory {
     }
 
     @Override
+    public boolean isCompatibleTexture(Texture tex) {
+        return tex instanceof D3DTexture;
+    }
+  
+    @Override
     public D3DTexture createTexture(PixelFormat format, Usage usagehint,
                                     WrapMode wrapMode, int w, int h)
     {

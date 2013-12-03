@@ -179,6 +179,7 @@ public class TestGraphics extends BaseGraphics {
         @Override public Texture createTexture(Image image, Texture.Usage usageHint, Texture.WrapMode wrapMode) { return null; }
         @Override public Texture createTexture(PixelFormat formatHint, Texture.Usage usageHint, Texture.WrapMode wrapMode, int w, int h) { return null; }
         @Override public Texture createTexture(MediaFrame frame) { return null; }
+        @Override public boolean isCompatibleTexture(Texture tex) { return true; }
         @Override public Texture getCachedTexture(Image image, WrapMode wrapMode) { return null; }
         @Override public boolean isFormatSupported(PixelFormat format) { return false; }
         @Override public int getMaximumTextureSize() { return 0; }

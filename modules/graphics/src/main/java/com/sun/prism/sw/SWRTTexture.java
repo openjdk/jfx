@@ -104,6 +104,7 @@ class SWRTTexture extends SWArgbPreTexture implements RTTexture {
         } else {
             return false;
         }
+        pixels.rewind();
         return true;
     }
 

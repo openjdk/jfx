@@ -91,6 +91,7 @@ class J2DRTTexture extends J2DTexture implements RTTexture {
                 ((ByteBuffer)pixels).put((byte)a);
             }
         }
+        pixels.rewind();
         return true;
     }
 

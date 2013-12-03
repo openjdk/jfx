@@ -113,6 +113,11 @@ final class SWResourceFactory
         return h;
     }
 
+    @Override
+    public boolean isCompatibleTexture(Texture tex) {
+        return tex instanceof SWTexture;
+    }
+
     @Override public RTTexture createRTTexture(int width, int height, WrapMode wrapMode, boolean antiAliasing) {
         return createRTTexture(width, height, wrapMode);
     }

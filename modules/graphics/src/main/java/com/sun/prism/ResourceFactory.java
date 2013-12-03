@@ -156,6 +156,14 @@ public interface ResourceFactory extends GraphicsResource {
     public Texture createFloatTexture(int width, int height);
     public RTTexture createRTTexture(int width, int height, Texture.WrapMode wrapMode);
     public RTTexture createRTTexture(int width, int height, Texture.WrapMode wrapMode, boolean antiAliasing);
+    
+    /**
+     * A Texture may have been obtained from a different resource factory.
+     * @param tex the texture to check.
+     * @return whether this texture is compatible.
+     */
+    public boolean isCompatibleTexture(Texture tex);
+
     public Presentable createPresentable(PresentableState pState);
     public VertexBuffer createVertexBuffer(int maxQuads);
 

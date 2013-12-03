@@ -28,6 +28,8 @@ package com.sun.javafx.sg.prism;
 import javafx.geometry.VPos;
 import javafx.scene.text.Font;
 import java.nio.IntBuffer;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
 import java.util.LinkedList;
 import com.sun.javafx.font.PGFont;
 import com.sun.javafx.geom.Arc2D;
@@ -43,10 +45,13 @@ import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.text.PrismTextLayout;
+import com.sun.javafx.tk.RenderJob;
+import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.Graphics;
 import com.sun.prism.Image;
+import com.sun.prism.PrinterGraphics;
 import com.sun.prism.RTTexture;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture;
@@ -196,7 +201,7 @@ public class NGCanvas extends NGNode {
                 if (oldtex != null) {
                     if (init_type == InitType.PRESERVE_UPPER_LEFT) {
                         g.setCompositeMode(CompositeMode.SRC);
-                        if (oldtex.createGraphics() == null) {
+                        if (oldtex.isSurfaceLost()) {
                             if (savedPixelData != null) {
                                 savedPixelData.restore(g, cw, ch);
                             }
@@ -242,12 +247,12 @@ public class NGCanvas extends NGNode {
             return false;
         }
 
-        private void save(Graphics g, int tw, int th) {
+        private void save(int tw, int th) {
             if (tex.isVolatile()) {
                 if (savedPixelData == null) {
-                    savedPixelData = new PixelData(g, tw, th);
+                    savedPixelData = new PixelData(tw, th);
                 }
-                savedPixelData.save(g, tex);
+                savedPixelData.save(tex);
             }
         }
     }
@@ -259,13 +264,13 @@ public class NGCanvas extends NGNode {
         private boolean validPixels = false;
         private int cw, ch;
 
-        private PixelData(Graphics g, int cw, int ch) {
+        private PixelData(int cw, int ch) {
             this.cw = cw;
             this.ch = ch;
             pixels = IntBuffer.allocate(cw*ch);
         }
 
-        private void save(Graphics g, RTTexture tex) {
+        private void save(RTTexture tex) {
             int tw = tex.getContentWidth();
             int th = tex.getContentHeight();
             if (cw < tw || ch < th) {
@@ -288,7 +293,6 @@ public class NGCanvas extends NGNode {
                                           Texture.WrapMode.CLAMP_TO_EDGE);
                 g.drawTexture(tempTex, 0, 0, tw, th);
                 tempTex.dispose();
-                validPixels = false;
             }
         }
     }
@@ -513,8 +517,61 @@ public class NGCanvas extends NGNode {
                             TEMP_COORDS[2], TEMP_COORDS[3]);
     }
 
+    private static void runOnRenderThread(final Runnable r) {
+        // We really need a standard mechanism to detect the render thread !
+        if (Thread.currentThread().getName().startsWith("QuantumRenderer")) {
+            r.run();
+        } else {
+            FutureTask<Void> f = new FutureTask<Void>(r, null);
+            Toolkit.getToolkit().addRenderJob(new RenderJob(f));
+            try {
+                // block until job is complete
+                f.get();
+            } catch (ExecutionException ex) {
+                throw new AssertionError(ex);
+            } catch (InterruptedException ex) {
+                // ignore; recovery is impossible
+            }
+        }
+    }
+
+    private boolean printedCanvas(Graphics g) {
+       final RTTexture localTex = cv.tex;
+       if (!(g instanceof PrinterGraphics) || localTex  == null) {
+          return false;
+        }
+        ResourceFactory factory = g.getResourceFactory();
+        boolean isCompatTex = factory.isCompatibleTexture(localTex);
+        if (isCompatTex) {
+            return false;
+        }
+
+        final int tw = localTex.getContentWidth();
+        final int th = localTex.getContentHeight();
+        final RTTexture tmpTex =
+              factory.createRTTexture(tw, th, WrapMode.CLAMP_TO_ZERO);
+        final Graphics texg = tmpTex.createGraphics();
+        texg.setCompositeMode(CompositeMode.SRC);
+        if (cv.savedPixelData == null) {
+            final PixelData pd = new PixelData(cw, ch);
+            runOnRenderThread(new Runnable() {
+                public void run() {
+                  pd.save(localTex);
+                  pd.restore(texg, tw, th);
+                }
+            });
+        } else {
+            cv.savedPixelData.restore(texg, tw, th);
+        }
+        g.drawTexture(tmpTex, 0, 0, tw, th);
+        tmpTex.unlock();
+        tmpTex.dispose();
+        return true;        
+    }
+
     @Override
     protected void renderContent(Graphics g) {
+        if (printedCanvas(g)) return;
         initCanvas(g);
         if (cv.tex != null) {
             if (thebuf != null) {
@@ -528,7 +585,7 @@ public class NGCanvas extends NGNode {
                           0, 0, dw, dh,
                           0, 0, tw, th);
             // Must save the pixels every frame if RTT is volatile.
-            cv.save(g, tw, th);
+            cv.save(tw, th);
         }
         this.temp.g = this.clip.g = this.cv.g = null;
     }

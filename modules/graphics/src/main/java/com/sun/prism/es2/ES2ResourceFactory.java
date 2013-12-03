@@ -73,6 +73,11 @@ public class ES2ResourceFactory extends BaseShaderFactory {
         return new ES2SwapChain(context, pState);
     }
 
+    @Override
+    public boolean isCompatibleTexture(Texture tex) {
+        return tex instanceof ES2Texture;
+    }
+
     public Texture createTexture(PixelFormat formatHint,
                                  Usage usageHint,
                                  WrapMode wrapMode,
