@@ -2,8 +2,14 @@
 <module type="JAVA_MODULE" version="4">
   <component name="NewModuleRootManager" inherit-compiler-output="true">
     <exclude-output />
-    <content url="file://$MODULE_DIR$/modules/media" />
+    <content url="file://$MODULE_DIR$/modules/media">
+      <sourceFolder url="file://$MODULE_DIR$/modules/media/src/main/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/modules/media/src/tools/java" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/modules/media/src/main/resources" isTestSource="true" />
+      <excludeFolder url="file://$MODULE_DIR$/modules/media/build" />
+    </content>
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module" module-name="graphics" exported="" />
     <orderEntry type="inheritedJdk" />
   </component>
 </module>

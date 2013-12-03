@@ -13,7 +13,7 @@
     <orderEntry type="module" module-name="swing" exported="" />
     <orderEntry type="module" module-name="media" exported="" />
     <orderEntry type="module" module-name="web" exported="" />
-    <orderEntry type="library" name="gradle-1.4" level="application" />
+    <orderEntry type="module" module-name="builders" exported="" />
     <orderEntry type="inheritedJdk" />
   </component>
 </module>

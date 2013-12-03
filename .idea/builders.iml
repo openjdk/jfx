@@ -23,6 +23,12 @@
         </SOURCES>
       </library>
     </orderEntry>
+    <orderEntry type="module" module-name="fxml" />
+    <orderEntry type="module" module-name="fxpackager" />
+    <orderEntry type="module" module-name="media" />
+    <orderEntry type="module" module-name="swing" />
+    <orderEntry type="module" module-name="swt" />
+    <orderEntry type="module" module-name="web" />
     <orderEntry type="inheritedJdk" />
   </component>
 </module>
