@@ -29,21 +29,21 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package ensemble.samples.graphics3d.cube;
+package ensemble.samples.graphics3d.cubesystem;
 
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
-import javafx.scene.shape.Box;
+import javafx.scene.shape.Sphere;
 import javafx.scene.transform.Rotate;
 
-public class Cube extends Box {
+public class Xsphere extends Sphere {
 
     final Rotate rx = new Rotate(0, Rotate.X_AXIS);
     final Rotate ry = new Rotate(0, Rotate.Y_AXIS);
     final Rotate rz = new Rotate(0, Rotate.Z_AXIS);
 
-    public Cube(double size, Color color) {
-        super(size, size, size);
+    public Xsphere(double size, Color color) {
+        super(size);
         setMaterial(new PhongMaterial(color));
         getTransforms().addAll(rz, ry, rx);
     }

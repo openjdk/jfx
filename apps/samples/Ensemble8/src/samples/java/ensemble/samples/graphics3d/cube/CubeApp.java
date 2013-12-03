@@ -36,7 +36,6 @@ import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.application.Application;
-import javafx.application.ConditionalFeature;
 import javafx.scene.Group;
 import javafx.scene.Parent;
 import javafx.scene.PerspectiveCamera;
@@ -64,15 +63,15 @@ public class CubeApp extends Application {
     private Timeline animation;
 
     public Parent createContent() {
-        Cube c = new Cube(1, Color.RED, 1);
+        Cube c = new Cube(1, Color.RED);
         c.rx.setAngle(45);
         c.ry.setAngle(45);
-        Cube c2 = new Cube(1, Color.GREEN, 1);
+        Cube c2 = new Cube(1, Color.GREEN);
         c2.setTranslateX(2);
         c2.rx.setAngle(45);
         c2.ry.setAngle(45);
 
-        Cube c3 = new Cube(1, Color.ORANGE, 1);
+        Cube c3 = new Cube(1, Color.ORANGE);
         c3.setTranslateX(-2);
         c3.rx.setAngle(45);
         c3.ry.setAngle(45);
@@ -90,16 +89,15 @@ public class CubeApp extends Application {
         animation.setCycleCount(Animation.INDEFINITE);
 
         PerspectiveCamera camera = new PerspectiveCamera(true);
-        camera.getTransforms().add(new Translate(0, 0, -15));
+        camera.getTransforms().add(new Translate(0, 0, -10));
 
         Group root = new Group();
         root.getChildren().addAll(c, c2, c3);
-        SubScene subScene = new SubScene(root, 300, 300);
+        
+        SubScene subScene = new SubScene(root, 640, 480);
         subScene.setCamera(camera);
-        Group group = new Group();
-        group.getChildren().add(subScene);
-
-        return group;
+        
+        return new Group(subScene);
     }
 
     public void play() {

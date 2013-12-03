@@ -216,10 +216,7 @@ public class XylophoneApp extends Application {
         sceneRoot.translateXProperty().bind(subScene.widthProperty().divide(2.2));
         sceneRoot.translateYProperty().bind(subScene.heightProperty().divide(1.6));
 
-        Group group = new Group();
-        group.getChildren().add(subScene);       
-        
-        return group;
+        return new Group(subScene);
     }
 
     public void play() {
