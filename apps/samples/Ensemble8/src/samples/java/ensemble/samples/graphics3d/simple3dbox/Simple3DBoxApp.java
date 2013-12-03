@@ -36,11 +36,11 @@ import javafx.scene.Group;
 import javafx.scene.Parent;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
+import javafx.scene.SceneAntialiasing;
 import javafx.scene.SubScene;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Box;
-import javafx.scene.shape.DrawMode;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Translate;
 import javafx.stage.Stage;
@@ -48,30 +48,42 @@ import javafx.stage.Stage;
 /**
  * A sample that shows a 3D box and uses a perspective camera for rendering the 
  * scene.
+ * Hint: Switch to Line draw mode to see how cullFace property works.
  *
  * @sampleName 3D Box
  * @preview preview.png
+ * @see javafx.scene.shape.Box
+ * @see javafx.scene.PerspectiveCamera
+ * @see javafx.scene.paint.PhongMaterial
  * @see javafx.scene.paint.Color
  * @see javafx.scene.transform.Rotate
  * @see javafx.scene.transform.Translate
+ * @see javafx.scene.SceneAntialiasing
+ * @see javafx.scene.SubScene
+ * @playground testBox.drawMode
+ * @playground testBox.cullFace
+ * @playground material.diffuseColor
  * @conditionalFeatures SCENE3D
  */
 public class Simple3DBoxApp extends Application {
+    
+    private Box testBox;
+    private PhongMaterial material;
    
     public Parent createContent() throws Exception {
                
         // Box
-        Box testBox = new Box(5, 5, 5);
-        testBox.setMaterial(new PhongMaterial(Color.RED));
-        testBox.setDrawMode(DrawMode.LINE);
+        testBox = new Box(5, 5, 5);
+        
+        material = new PhongMaterial(Color.RED);
+        testBox.setMaterial(material);
         
         // Create and position camera
         PerspectiveCamera camera = new PerspectiveCamera(true);
         camera.getTransforms().addAll(
-              //  new Translate(5, -5, -15),
                 new Rotate(-20, Rotate.Y_AXIS),
                 new Rotate(-20, Rotate.X_AXIS),
-                 new Translate(0, 0, -15));
+                new Translate(0, 0, -15));
         
         // Build the Scene Graph
         Group root = new Group();       
@@ -79,12 +91,11 @@ public class Simple3DBoxApp extends Application {
         root.getChildren().add(testBox);
         
         // Use a SubScene       
-        SubScene subScene = new SubScene(root, 300,300);
-        subScene.setFill(Color.ALICEBLUE);
+        SubScene subScene = new SubScene(root, 300, 300, true, SceneAntialiasing.BALANCED);
+        subScene.setFill(Color.TRANSPARENT);
         subScene.setCamera(camera);
-        Group group = new Group();
-        group.getChildren().add(subScene);
-        return group;
+        
+        return new Group(subScene);
     }
 
     @Override
@@ -97,6 +108,7 @@ public class Simple3DBoxApp extends Application {
 
     /**
      * Java main for when running without JavaFX launcher
+     * @param args command line arguments
      */
     public static void main(String[] args) {
         launch(args);

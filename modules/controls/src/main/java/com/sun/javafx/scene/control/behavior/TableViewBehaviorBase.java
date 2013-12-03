@@ -389,11 +389,11 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         setAnchor(row == -1 && col == null ? null : getTablePosition(row, col));
     }
     
-    private Callback<Void, Integer> onScrollPageUp;
-    public void setOnScrollPageUp(Callback<Void, Integer> c) { onScrollPageUp = c; }
+    private Callback<Boolean, Integer> onScrollPageUp;
+    public void setOnScrollPageUp(Callback<Boolean, Integer> c) { onScrollPageUp = c; }
 
-    private Callback<Void, Integer> onScrollPageDown;
-    public void setOnScrollPageDown(Callback<Void, Integer> c) { onScrollPageDown = c; }
+    private Callback<Boolean, Integer> onScrollPageDown;
+    public void setOnScrollPageDown(Callback<Boolean, Integer> c) { onScrollPageDown = c; }
 
     private Runnable onFocusPreviousRow;
     public void setOnFocusPreviousRow(Runnable r) { onFocusPreviousRow = r; }
@@ -447,7 +447,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         
         int newSelectedIndex = -1;
         if (onScrollPageUp != null) {
-            newSelectedIndex = onScrollPageUp.call(null);
+            newSelectedIndex = onScrollPageUp.call(false);
         }
         if (newSelectedIndex == -1) return;
         
@@ -462,7 +462,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         
         int newSelectedIndex = -1;
         if (onScrollPageDown != null) {
-            newSelectedIndex = onScrollPageDown.call(null);
+            newSelectedIndex = onScrollPageDown.call(false);
         }
         if (newSelectedIndex == -1) return;
         
@@ -552,7 +552,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
     }
     
     protected void focusPageUp() {
-        int newFocusIndex = onScrollPageUp.call(null);
+        int newFocusIndex = onScrollPageUp.call(true);
         
         TableFocusModel fm = getFocusModel();
         if (fm == null) return;
@@ -561,7 +561,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
     }
     
     protected void focusPageDown() {
-        int newFocusIndex = onScrollPageDown.call(null);
+        int newFocusIndex = onScrollPageDown.call(true);
         
         TableFocusModel fm = getFocusModel();
         if (fm == null) return;
@@ -810,10 +810,12 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         TablePositionBase<TC> focusedCell = getFocusedCell();
         int currentRow = focusedCell.getRow();
         int currentColumn = getVisibleLeafIndex(focusedCell.getTableColumn());
-        if (rowDiff < 0 && currentRow == 0) return;
-        else if (rowDiff > 0 && currentRow == getItemCount() - 1) return;
-        else if (columnDiff < 0 && currentColumn == 0) return;
-        else if (columnDiff > 0 && currentColumn == getVisibleLeafColumns().size() - 1) return;
+
+        if (rowDiff < 0 && currentRow <= 0) return;
+        else if (rowDiff > 0 && currentRow >= getItemCount() - 1) return;
+        else if (columnDiff < 0 && currentColumn <= 0) return;
+        else if (columnDiff > 0 && currentColumn >= getVisibleLeafColumns().size() - 1) return;
+        else if (columnDiff > 0 && currentColumn == -1) return;
 
         TableColumnBase tc = focusedCell.getTableColumn();
         tc = getColumn(tc, columnDiff);
@@ -836,6 +838,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
 
         TablePositionBase<TC> cell = getFocusedCell();
         sm.select(cell.getRow(), cell.getTableColumn());
+        setAnchor(cell);
 
         // edit this row also
         if (cell.getRow() >= 0) {
@@ -863,25 +866,10 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
             sm.selectRange(startPos, endPos);
         } else {
             // we add all cells/rows between the current selection focus and
-            // the acnhor (inclusive) to the current selection.
-
-            // and then determine all row and columns which must be selected
-            int minRow = Math.min(focusedCell.getRow(), anchorRow);
-            int maxRow = Math.max(focusedCell.getRow(), anchorRow);
-            final int focusedCellColumnPos = getVisibleLeafIndex(focusedCell.getTableColumn());
-            final int anchorColumnPos = getVisibleLeafIndex(anchor.getTableColumn());
-            int minColumn = Math.min(focusedCellColumnPos, anchorColumnPos);
-            int maxColumn = Math.max(focusedCellColumnPos, anchorColumnPos);
-
-            // clear selection
-            sm.clearSelection();
-
-            // and then perform the selection
-            for (int _row = minRow; _row <= maxRow; _row++) {
-                for (int _col = minColumn; _col <= maxColumn; _col++) {
-                    sm.select(_row, getVisibleLeafColumn(_col));
-                }
-            }
+            // the anchor (inclusive) to the current selection.
+            // We want focus to end up on the current focus position.
+            sm.selectRange(anchor.getRow(), anchor.getTableColumn(),
+                           focusedCell.getRow(), focusedCell.getTableColumn());
         }
         
         setAnchor(setAnchorToFocusIndex ? focusedCell : anchor);
@@ -971,7 +959,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
             setAnchor(leadIndex, col);
         }
         
-        int leadSelectedIndex = onScrollPageUp.call(null);
+        int leadSelectedIndex = onScrollPageUp.call(false);
         
         selectionChanging = true;
         if (sm.getSelectionMode() == null || sm.getSelectionMode() == SelectionMode.SINGLE) {
@@ -1005,7 +993,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
             setAnchor(leadIndex, col);
         }
         
-        int leadSelectedIndex = onScrollPageDown.call(null);
+        int leadSelectedIndex = onScrollPageDown.call(false);
         
         selectionChanging = true;
         if (sm.getSelectionMode() == null || sm.getSelectionMode() == SelectionMode.SINGLE) {
@@ -1190,7 +1178,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         if (fm == null) return;
 
         int leadIndex = fm.getFocusedIndex();
-        int leadSelectedIndex = onScrollPageUp.call(null);
+        int leadSelectedIndex = onScrollPageUp.call(false);
         
         if (! sm.isCellSelectionEnabled()) {
             sm.selectRange(leadIndex, leadSelectedIndex - 1);
@@ -1205,7 +1193,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         if (fm == null) return;
         
         int leadIndex = fm.getFocusedIndex();
-        int leadSelectedIndex = onScrollPageDown.call(null);
+        int leadSelectedIndex = onScrollPageDown.call(false);
         
         if (! sm.isCellSelectionEnabled()) {
             sm.selectRange(leadIndex, leadSelectedIndex + 1);

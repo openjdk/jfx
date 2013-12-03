@@ -51,6 +51,7 @@ import javafx.stage.Stage;
  * @related /Graphics/Images/Image Creation
  * @see javafx.scene.image.Image
  * @see javafx.scene.image.ImageView
+ * @embedded
  */
 public class ImagePropertiesApp extends Application {
 
@@ -105,6 +106,7 @@ public class ImagePropertiesApp extends Application {
 
     /**
      * Java main for when running without JavaFX launcher
+     * @param args command line arguments
      */
     public static void main(String[] args) {
         launch(args);

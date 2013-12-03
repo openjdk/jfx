@@ -39,12 +39,12 @@ public interface PhongMaterial extends Material {
     public static final int SELF_ILLUM = MapType.SELF_ILLUM.ordinal();
     public static final int MAX_MAP_TYPE = MapType.values().length; 
 
-    public void setSolidColor(float r, float g, float b, float a);
+    public void setDiffuseColor(float r, float g, float b, float a);
+    public void setSpecularColor(boolean set, float r, float g, float b, float a);
 
     public void setTextureMap(TextureMap map);
-    
+
     public void lockTextureMaps();
 
     public void unlockTextureMaps();
-
 }

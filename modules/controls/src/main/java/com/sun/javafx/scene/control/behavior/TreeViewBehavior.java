@@ -72,7 +72,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         TREE_VIEW_BINDINGS.add(new KeyBinding(END, "SelectAllToLastRow").shift());
         TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "SelectAllPageUp").shift());
         TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "SelectAllPageDown").shift());
-        
+
         TREE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "SelectAllToFocus").shift());
         TREE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "SelectAllToFocusAndSetAnchor").shortcut().shift());
         
@@ -81,7 +81,8 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
 
         TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "ScrollUp"));
         TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "ScrollDown"));
-        
+
+        TREE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection"));
         if (PlatformUtil.isMac()) {
             TREE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").ctrl().shortcut());
         } else {

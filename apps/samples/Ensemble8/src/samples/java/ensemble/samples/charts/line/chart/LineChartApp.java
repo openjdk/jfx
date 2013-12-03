@@ -147,6 +147,7 @@ public class LineChartApp extends Application {
 
     /**
      * Java main for when running without JavaFX launcher
+     * @param args command line arguments
      */
     public static void main(String[] args) {
         launch(args);

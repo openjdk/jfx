@@ -31,16 +31,15 @@
  */
 package ensemble.samples.graphics3d.cube;
 
-import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.application.Application;
-import javafx.application.ConditionalFeature;
 import javafx.scene.Group;
 import javafx.scene.Parent;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
+import javafx.scene.SceneAntialiasing;
 import javafx.scene.SubScene;
 import javafx.scene.paint.Color;
 import javafx.scene.transform.Translate;
@@ -52,11 +51,18 @@ import javafx.util.Duration;
  *
  * @sampleName 3D Cubes
  * @preview preview.png
+ * @see javafx.scene.shape.Box
+ * @see javafx.scene.paint.PhongMaterial
  * @see javafx.scene.PerspectiveCamera
  * @see javafx.scene.SubScene
+ * @see javafx.scene.SceneAntialiasing
  * @see javafx.scene.paint.Color
  * @see javafx.scene.transform.Rotate
  * @see javafx.scene.transform.Translate
+ * @see javafx.animation.KeyFrame
+ * @see javafx.animation.KeyValue
+ * @see javafx.animation.Timeline
+ * @see javafx.util.Duration
  * @conditionalFeatures SCENE3D
  */
 public class CubeApp extends Application {
@@ -64,15 +70,15 @@ public class CubeApp extends Application {
     private Timeline animation;
 
     public Parent createContent() {
-        Cube c = new Cube(1, Color.RED, 1);
+        Cube c = new Cube(1, Color.RED);
         c.rx.setAngle(45);
         c.ry.setAngle(45);
-        Cube c2 = new Cube(1, Color.GREEN, 1);
+        Cube c2 = new Cube(1, Color.GREEN);
         c2.setTranslateX(2);
         c2.rx.setAngle(45);
         c2.ry.setAngle(45);
 
-        Cube c3 = new Cube(1, Color.ORANGE, 1);
+        Cube c3 = new Cube(1, Color.ORANGE);
         c3.setTranslateX(-2);
         c3.rx.setAngle(45);
         c3.ry.setAngle(45);
@@ -87,19 +93,18 @@ public class CubeApp extends Application {
                 new KeyValue(c.ry.angleProperty(), 360d),
                 new KeyValue(c2.rx.angleProperty(), 360d),
                 new KeyValue(c3.rz.angleProperty(), 360d)));
-        animation.setCycleCount(Animation.INDEFINITE);
+        animation.setCycleCount(Timeline.INDEFINITE);
 
         PerspectiveCamera camera = new PerspectiveCamera(true);
-        camera.getTransforms().add(new Translate(0, 0, -15));
+        camera.getTransforms().add(new Translate(0, 0, -10));
 
         Group root = new Group();
         root.getChildren().addAll(c, c2, c3);
-        SubScene subScene = new SubScene(root, 300, 300);
+        
+        SubScene subScene = new SubScene(root, 640, 480, true, SceneAntialiasing.BALANCED);
         subScene.setCamera(camera);
-        Group group = new Group();
-        group.getChildren().add(subScene);
-
-        return group;
+        
+        return new Group(subScene);
     }
 
     public void play() {
@@ -120,6 +125,7 @@ public class CubeApp extends Application {
 
     /**
      * Java main for when running without JavaFX launcher
+     * @param args command line arguments
      */
     public static void main(String[] args) {
         launch(args);

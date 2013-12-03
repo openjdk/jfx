@@ -1951,7 +1951,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         if (cells.isEmpty() || getViewportLength() <= 0) return null;
 
         T cell;
-        final double max = isVertical() ? getHeight() : getWidth();
+        final double max = getViewportLength();
         for (int i = cells.size() - 1; i >= 0; i--) {
             cell = cells.get(i);
             if (cell.isEmpty()) continue;

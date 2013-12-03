@@ -75,7 +75,7 @@ import javafx.geometry.Insets;
  * @see javafx.animation.KeyFrame
  * @see javafx.animation.KeyValue
  * @see javafx.animation.Timeline
- * @see javafx.animation.Animation$Status
+ * @see javafx.animation.Animation
  * @see javafx.event.EventHandler
  * @see javafx.event.ActionEvent
  * @see javafx.scene.input.MouseEvent 
@@ -114,6 +114,7 @@ public class BouncingBallsApp extends Application {
 
     /**
      * Java main for when running without JavaFX launcher
+     * @param args command line arguments
      */
     public static void main(String[] args) {
         launch(args);

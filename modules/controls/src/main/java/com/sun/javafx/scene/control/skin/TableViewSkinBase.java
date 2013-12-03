@@ -432,7 +432,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
      * Function used to scroll the container down by one 'page', although
      * if this is a horizontal container, then the scrolling will be to the right.
      */
-    public int onScrollPageDown() {
+    public int onScrollPageDown(boolean isFocusDriven) {
         final int itemCount = getItemCount();
 
         I lastVisibleCell = flow.getLastVisibleCellWithinViewPort();
@@ -445,10 +445,13 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
         // in this method also). See RT-19053 for more information.
         lastVisibleCellIndex = lastVisibleCellIndex >= itemCount ? itemCount - 1 : lastVisibleCellIndex;
         
-        boolean isSelected = lastVisibleCell.isSelected() || 
-                lastVisibleCell.isFocused() || 
-                isCellSelected(lastVisibleCellIndex) ||
-                isCellFocused(lastVisibleCellIndex);
+        // isSelected represents focus OR selection
+        boolean isSelected = false;
+        if (isFocusDriven) {
+            isSelected = lastVisibleCell.isFocused() || isCellFocused(lastVisibleCellIndex);
+        } else {
+            isSelected = lastVisibleCell.isSelected() || isCellSelected(lastVisibleCellIndex);
+        }
         
         if (isSelected) {
             // if the last visible cell is selected, we want to shift that cell up
@@ -469,17 +472,20 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
      * Function used to scroll the container up by one 'page', although
      * if this is a horizontal container, then the scrolling will be to the left.
      */
-    public int onScrollPageUp() {
+    public int onScrollPageUp(boolean isFocusDriven) {
         I firstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
         if (firstVisibleCell == null) return -1;
         
         int firstVisibleCellIndex = firstVisibleCell.getIndex();
-        
-        boolean isSelected = firstVisibleCell.isSelected() || 
-                firstVisibleCell.isFocused() || 
-                isCellSelected(firstVisibleCellIndex) ||
-                isCellFocused(firstVisibleCellIndex);
-        
+
+        // isSelected represents focus OR selection
+        boolean isSelected = false;
+        if (isFocusDriven) {
+            isSelected = firstVisibleCell.isFocused() || isCellFocused(firstVisibleCellIndex);
+        } else {
+            isSelected = firstVisibleCell.isSelected() || isCellSelected(firstVisibleCellIndex);
+        }
+
         if (isSelected) {
             // if the first visible cell is selected, we want to shift that cell down
             // to be the bottom-most cell, or at least as far to the bottom as we can go.

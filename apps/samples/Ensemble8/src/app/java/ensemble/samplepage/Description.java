@@ -133,7 +133,7 @@ public class Description extends VBox {
     }
 
     private void update(SampleInfo sampleInfo) {
-        if (Platform.isSupported(ConditionalFeature.WEB)) {
+        if (PlatformFeatures.WEB_SUPPORTED) {
             relatedDocumentsList.getChildren().clear();
             for (final URL docUrl : sampleInfo.getDocURLs()) {
                 Hyperlink link = new Hyperlink(docUrl.getName());

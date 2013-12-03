@@ -226,7 +226,7 @@ abstract class GLContext {
     private static native void nSetSolidColor(long nativeCtxInfo, long nativePhongMaterial,
             float r, float g, float b, float a);
     private static native void nSetMap(long nativeCtxInfo, long nativePhongMaterial,
-            int mapType, int texID, boolean isSpecularAlpha, boolean isBumpAlpha);
+            int mapType, int texID);
     private static native long nCreateES2MeshView(long nativeCtxInfo, long nativeMeshInfo);
     private static native void nReleaseES2MeshView(long nativeCtxInfo, long nativeHandle);
     private static native void nSetCullingMode(long nativeCtxInfo, long nativeMeshViewInfo,
@@ -752,10 +752,8 @@ abstract class GLContext {
         nSetSolidColor(nativeCtxInfo, nativePhongMaterial, r, g, b, a);
     }
 
-    void setMap(long nativePhongMaterial, int mapType, int texID,
-            boolean isSpecularAlpha, boolean isBumpAlpha) {
-        nSetMap(nativeCtxInfo, nativePhongMaterial, mapType, texID,
-                isSpecularAlpha, isBumpAlpha);
+    void setMap(long nativePhongMaterial, int mapType, int texID) {
+        nSetMap(nativeCtxInfo, nativePhongMaterial, mapType, texID);
     }
 
     long createES2MeshView(long nativeMeshInfo) {

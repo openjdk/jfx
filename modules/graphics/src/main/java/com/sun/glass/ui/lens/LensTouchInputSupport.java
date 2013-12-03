@@ -61,6 +61,16 @@ final class LensTouchInputSupport {
     private static final int touchMoveSensitivity;
 
     /**
+     * This property enables or disables input device pruning. When input
+     * device pruning is enabled, only the first device input node of a
+     * device is captured. So if an input device driver registers nodes
+     * /dev/input/event2 and /dev/input/event3 for the same devices, only
+     * the first node reported by udev is used.
+     * Input device pruning is off by default.
+     */
+    private static final boolean pruneInputDevices;
+
+    /**
      * This property enable/disable multi touch support by the input driver.
      * When the property is disabled and a multitouch screen is connected, the
      * input driver will 'downgrade' the screen events to a single touch 
@@ -68,6 +78,14 @@ final class LensTouchInputSupport {
      * 
      */
     private static final boolean useMultiTouch;
+
+    /**
+     * This property is used for printing raw events, device properties, device 
+     * attach / detach, low level Lens input driver decisions etc. Useful for 
+     * debugging a new input device that is not recognized or behave wrongly by 
+     * the Lens input driver. Property is disabled by default 
+                                        */
+    private static final boolean enableDeviceTrace;
 
     static {
         touchTapRadius = AccessController.doPrivileged(
@@ -86,6 +104,14 @@ final class LensTouchInputSupport {
             }
         });
 
+        pruneInputDevices = AccessController.doPrivileged(
+        new PrivilegedAction<Boolean>() {
+            @Override
+            public Boolean run() {
+                return Boolean.getBoolean("lens.input.pruneDevices");
+            }
+        });
+
         useMultiTouch = AccessController.doPrivileged(
         new PrivilegedAction<Boolean>() {
             @Override
@@ -93,6 +119,15 @@ final class LensTouchInputSupport {
                 return Boolean.getBoolean("com.sun.javafx.experimental.embedded.multiTouch");
             }
         });
+
+        enableDeviceTrace = AccessController.doPrivileged(
+        new PrivilegedAction<Boolean>() {
+            @Override
+            public Boolean run() {
+                return Boolean.getBoolean("lens.input.trace");
+            }
+        });
+
     }
 
 

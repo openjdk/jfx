@@ -2253,10 +2253,10 @@ is being used to size a border should also be in pixels.
 /* focused cell (keyboard navigation) */
 .list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:focused,
 .tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:focused,
-.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:focused,
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:focused,
-.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell > .table-cell:focused,
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell:focused {
+.table-view:focused:row-selection > .virtual-flow > .clipped-container > .sheet > .table-row-cell:focused,
+.tree-table-view:focused:row-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:focused,
+.table-view:focused:cell-selection > .virtual-flow > .clipped-container > .sheet > .table-row-cell > .table-cell:focused,
+.tree-table-view:focused:cell-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell:focused {
     -fx-background-color: -fx-background, -fx-cell-focus-inner-border, -fx-background;
     -fx-background-insets: 0, 1, 2;
 }
@@ -2483,7 +2483,7 @@ is being used to size a border should also be in pixels.
  * TreeTableView                                                               *
  *                                                                             *
  * Note: A lot of the CSS for TreeTableView is included with the TreeView and  *
- * TableView CSS styles elsewhere in caspian.css (as they are the same, just   *
+ * TableView CSS styles elsewhere in modena.css (as they are the same, just   *
  * targeting different CSS style classes).                                     *
  ******************************************************************************/
 
@@ -2502,35 +2502,6 @@ is being used to size a border should also be in pixels.
     -fx-border-color: transparent -fx-table-cell-border-color transparent transparent;
     -fx-cell-size: 2.0em; /* 24 */
     -fx-text-fill: -fx-text-background-color;
-}
-
-/*******************************************************************************
- *                                                                             *
- * TreeTableView cell spanning                                                 *
- *                                                                             *
- ******************************************************************************/
-
-.cell-span-tree-table-view > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell {
-    -fx-background-color: transparent;
-} 
-/* All table-row-cells - we don't care if they are even or odd */
-.cell-span-tree-table-view > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell {
-    -fx-background-color: -fx-table-cell-border-color, -fx-control-inner-background;
-    -fx-background-insets: 0, 0 1 0 0;
-    -fx-alignment: center;
-}
-/** Selection styles */
-/*.cell-span-table-view > .virtual-flow > .clipped-container > .sheet > .table-row-cell > .table-cell:focused:selected, */
-.cell-span-tree-table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:selected > .tree-table-cell,
-.cell-span-tree-table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:focused:selected > .tree-table-cell,
-.cell-span-tree-table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:focused:selected:hover > .tree-table-cell,
-.cell-span-tree-table-view:cell-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell:filled:selected,
-.cell-span-tree-table-view:cell-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell:filled:focused:selected,
-.cell-span-tree-table-view:cell-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell:filled:focused:selected:hover{
-    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
-    -fx-background-insets: 0 1 0 0, 1 2 1 1, 2 3 2 2;
-    -fx-background: -fx-accent;
-    -fx-text-fill: -fx-selection-bar-text;
 }
 
 /*******************************************************************************

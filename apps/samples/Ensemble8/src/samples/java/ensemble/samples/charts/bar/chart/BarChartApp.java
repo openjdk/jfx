@@ -1,4 +1,5 @@
 /*
+     * @param args command line arguments
  * Copyright (c) 2008, 2013 Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
@@ -67,7 +68,6 @@ import javafx.stage.Stage;
  * @playground xAxis.endMargin
  * 
  * @playground xAxis.animated
- * @playground xAxis.label
  * @playground xAxis.side
  * @playground xAxis.tickLabelFill
  * @playground xAxis.tickLabelGap
@@ -150,6 +150,7 @@ public class BarChartApp extends Application {
 
     /**
      * Java main for when running without JavaFX launcher
+     * @param args command line arguments
      */
     public static void main(String[] args) {
         launch(args);

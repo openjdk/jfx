@@ -39,21 +39,22 @@ class D3DPhongMaterial {
 public:
     D3DPhongMaterial(D3DContext *pCtx);
     virtual ~D3DPhongMaterial();
-    void setSolidColor(float r, float g, float b, float a);
-    float *getSolidColor();
-    void setMap(int mapID, IDirect3DBaseTexture9 *texMap, bool isSA, bool isBA);
+    void setDiffuseColor(float r, float g, float b, float a);
+    float *getDiffuseColor();
+    void setSpecularColor(bool set, float r, float g, float b, float a);
+    float *getSpecularColor();
+    void setMap(int mapID, IDirect3DBaseTexture9 *texMap);
     bool isBumpMap();
     bool isSpecularMap();
+    bool isSpecularColor();
     bool isSelfIllumMap();
-    bool isSpecularAlpha();
     IDirect3DBaseTexture9 * getMap(int type);
 
 private:
     D3DContext *context;
-    float diffuseColor[4];
+    float diffuseColor[4], specularColor[4];
     IDirect3DBaseTexture9 *map[4];
-    bool specularAlpha, bumpAlpha;
-
+    bool specularColorSet;
 };
 
 #endif  /* D3DPHONGMATERIAL_H */

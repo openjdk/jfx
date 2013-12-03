@@ -59,11 +59,10 @@ float4 retNormal(float3 n) { return float4( n*0.5+0.5,1); }
 float4 retr(float x) { return float4(x.xxx,1); }
 
 void phong(
-    float3 n, float3 e, float sLevel, in float4 L[LocalBump::nLights],
+    float3 n, float3 e, float power, in float4 L[LocalBump::nLights],
     in out float3 d, in out float3 s, int _s, int _e)
 {
     float3 refl = reflect(e, n);
-    float power = sLevel*32+1;
     for (int i=_s; i<_e; i++) {
         float3 l = normalize(L[i].xyz);
         d += saturate(dot(n,l))*gLightColor[i].xyz;

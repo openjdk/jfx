@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project default="sampleAppsJar" basedir=".">
+
+    <!-- 
+       Note: this build.xml will be pulled into the
+       Gradle namespace, so lets use long names...
+    -->
+
+    <target name="sampleAppsJar">
+        <condition property="jfxrt.jar.exists">
+            <available file="${file.reference.jfxrt.jar}" type="file"/>
+        </condition>
+        <fail unless="jfxrt.jar.exists"/>
+
+        <ant dir="samples" target="jar" inheritAll="true"/>
+        <ant dir="experiments" target="jar" inheritAll="true"/>
+        <ant dir="performance" target="jar" inheritAll="true"/>
+        <ant dir="toys" target="jar" inheritAll="true"/>
+    </target>
+
+    <target name="sampleAppsClean">
+        <ant dir="samples" target="clean" inheritAll="true"/>
+        <ant dir="experiments" target="clean" inheritAll="true"/>
+        <ant dir="performance" target="clean" inheritAll="true"/>
+        <ant dir="toys" target="clean" inheritAll="true"/>
+    </target>
+
+</project>
+
+

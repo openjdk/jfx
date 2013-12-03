@@ -61,7 +61,6 @@ import javafx.stage.Stage;
  * @playground xAxis.endMargin
  * 
  * @playground xAxis.animated
- * @playground xAxis.label
  * @playground xAxis.side
  * @playground xAxis.tickLabelFill
  * @playground xAxis.tickLabelGap
@@ -81,7 +80,6 @@ import javafx.stage.Stage;
  * @playground yAxis.minorTickVisible
  * 
  * @playground yAxis.animated
- * @playground yAxis.label
  * @playground yAxis.side
  * @playground yAxis.tickLabelFill
  * @playground yAxis.tickLabelGap
@@ -139,6 +137,7 @@ public class ImageBarChartApp extends Application {
 
     /**
      * Java main for when running without JavaFX launcher
+     * @param args command line arguments
      */
     public static void main(String[] args) {
         launch(args);

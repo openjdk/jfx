@@ -53,6 +53,7 @@ import javafx.stage.Stage;
  *
  * @see javafx.scene.effect.Reflection
  * @see javafx.scene.effect.Effect
+ * @embedded
  */
 public class ReflectionApp extends Application {
 
@@ -77,6 +78,7 @@ public class ReflectionApp extends Application {
 
     /**
      * Java main for when running without JavaFX launcher
+     * @param args command line arguments
      */
     public static void main(String[] args) {
         launch(args);

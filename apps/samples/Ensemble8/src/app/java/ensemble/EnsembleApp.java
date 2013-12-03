@@ -36,6 +36,7 @@ import ensemble.control.Popover;
 import ensemble.control.SearchBox;
 import ensemble.control.TitledToolBar;
 import ensemble.generated.Samples;
+import java.util.logging.Logger;
 import javafx.application.Application;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -80,18 +81,19 @@ public class EnsembleApp extends Application {
     private Button homeButton;
     private ToggleButton listButton;
     private ToggleButton searchButton;
-    private SearchBox searchBox = new SearchBox();
+    private final SearchBox searchBox = new SearchBox();
     private PageBrowser pageBrowser;
     private Popover sampleListPopover;
     private SearchPopover searchPopover;
     private MenuBar menuBar;
     
     static {
-        System.out.println("IS_IPHONE = " + IS_IPHONE);
-        System.out.println("IS_MAC = " + IS_MAC);
-        System.out.println("IS_IOS = " + IS_IOS);
-        System.out.println("IS_EMBEDDED = " + IS_EMBEDDED);
-        System.out.println("IS_DESKTOP = " + IS_DESKTOP);
+        System.setProperty("java.net.useSystemProxies", "true");
+        Logger.getLogger(EnsembleApp.class.getName()).finer("IS_IPHONE = " + IS_IPHONE);
+        Logger.getLogger(EnsembleApp.class.getName()).finer("IS_MAC = " + IS_MAC);
+        Logger.getLogger(EnsembleApp.class.getName()).finer("IS_IOS = " + IS_IOS);
+        Logger.getLogger(EnsembleApp.class.getName()).finer("IS_EMBEDDED = " + IS_EMBEDDED);
+        Logger.getLogger(EnsembleApp.class.getName()).finer("IS_DESKTOP = " + IS_DESKTOP);
     }
 
     @Override public void init() throws Exception {

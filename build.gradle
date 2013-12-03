@@ -369,13 +369,18 @@ ext.DO_JCOV = Boolean.parseBoolean(JCOV)
 // Define the number of threads to use when compiling (specifically for native compilation)
 defineProperty("NUM_COMPILE_THREADS", "${Runtime.runtime.availableProcessors()}")
 
-// Define settings used when creating the VersionInfo. These settings are generally left alone
-// by developers and set only from Hudson. We have to manually rev this version number from
-// release to release.
 //
+// The next three sections of properties are used to generate the
+// VersionInfo class, and the Windows DLL manifest.
+//
+
+// The following properties should be left alone by developers and set only from Hudson.
 defineProperty("HUDSON_JOB_NAME", "not_hudson")
 defineProperty("HUDSON_BUILD_NUMBER","0000")
 defineProperty("PROMOTED_BUILD_NUMBER", "00")
+
+// The following properties define the product name for Oracle JDK and OpenJDK
+// for VersionInfo and the DLL manifest.
 if (BUILD_CLOSED) {
     defineProperty("PRODUCT_NAME", "Java(TM)")
     defineProperty("COMPANY_NAME", "Oracle Corporation")
@@ -385,11 +390,14 @@ if (BUILD_CLOSED) {
     defineProperty("COMPANY_NAME", "N/A")
     defineProperty("PLATFORM_NAME", "Platform")
 }
-// TODO: set the values of RAW_VERSION, RELEASE_NAME, and RELEASE_MILESTONE based on the
-// settings in build.properties
-defineProperty("RAW_VERSION", "8.0.0")
-defineProperty("RELEASE_NAME", "8.0")
-defineProperty("RELEASE_MILESTONE", "ea")
+
+// The following properties are set based on properties defined in
+// build.properties. The release number or milestone number should be updated
+// in that file.
+def jfxReleaseVersion = "${jfxReleaseMajorVersion}.${jfxReleaseMinorVersion}.${jfxReleaseMicroVersion}"
+defineProperty("RAW_VERSION", jfxReleaseVersion)
+defineProperty("RELEASE_NAME", jfxReleaseName)
+defineProperty("RELEASE_MILESTONE", jfxReleaseMilestone)
 
 // Check whether the COMPILE_TARGETS property has been specified (if so, it was done by
 // the user and not by this script). If it has not been defined then default
@@ -974,7 +982,14 @@ void addJCov(p, test) {
 allprojects {
     // We want to configure all projects as java projects and use the same compile settings
     // etc, except for the root project which we just want to ignore (and for now media)
-    if (project == rootProject) return
+    if (project == rootProject) {
+       return
+    }
+    if (project.path.startsWith(":apps")) {
+        // Lets handle the apps tree differently, as it is a collection of ant builds,
+        // and the ant importer collides with the 'apply plugin:java'
+        return
+    }
     // All of our projects are java projects
     apply plugin: "java"
     sourceCompatibility = 1.8
@@ -1138,6 +1153,11 @@ project(":graphics") {
         task generateD3DHeaders(group: "Build") {
             enabled = IS_WINDOWS
             dependsOn javahWinPrismD3D
+            inputs.file "src/main/native-prism-d3d/hlsl/Mtl1PS.hlsl"
+            inputs.file "src/main/native-prism-d3d/hlsl/Mtl1VS.hlsl"
+            inputs.file "src/main/native-prism-d3d/PassThroughVS.hlsl"
+            outputs.dir "$buildDir/headers/PrismD3D/"
+            outputs.dir "$buildDir/headers/PrismD3D/hlsl/"
             description = "Generate headers by compiling hlsl files"
             doLast {
                 mkdir file("$buildDir/headers/PrismD3D/hlsl")
@@ -1151,39 +1171,51 @@ project(":graphics") {
                         ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s1n.h", "/DSpec=1", "/DSType=0", "$PS_3D_SRC"],
                         ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s2n.h", "/DSpec=2", "/DSType=0", "$PS_3D_SRC"],
                         ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s3n.h", "/DSpec=3", "/DSType=0", "$PS_3D_SRC"],
-                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s1a.h", "/DSpec=1", "/DSType=1", "$PS_3D_SRC"],
-                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s2a.h", "/DSpec=2", "/DSType=1", "$PS_3D_SRC"],
-                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s3a.h", "/DSpec=3", "/DSType=1", "$PS_3D_SRC"],
-                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s1s.h", "/DSpec=1", "/DSType=2", "$PS_3D_SRC"],
-                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s2s.h", "/DSpec=2", "/DSType=2", "$PS_3D_SRC"],
-                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s3s.h", "/DSpec=3", "/DSType=2", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s1t.h", "/DSpec=1", "/DSType=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s2t.h", "/DSpec=2", "/DSType=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s3t.h", "/DSpec=3", "/DSType=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s1c.h", "/DSpec=1", "/DSType=2", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s2c.h", "/DSpec=2", "/DSType=2", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s3c.h", "/DSpec=3", "/DSType=2", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s1m.h", "/DSpec=1", "/DSType=3", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s2m.h", "/DSpec=2", "/DSType=3", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s3m.h", "/DSpec=3", "/DSType=3", "$PS_3D_SRC"],
                         ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b1n.h", "/DSpec=1", "/DSType=0", "/DBump=1", "$PS_3D_SRC"],
                         ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b2n.h", "/DSpec=2", "/DSType=0", "/DBump=1", "$PS_3D_SRC"],
                         ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b3n.h", "/DSpec=3", "/DSType=0", "/DBump=1", "$PS_3D_SRC"],
-                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b1a.h", "/DSpec=1", "/DSType=1", "/DBump=1", "$PS_3D_SRC"],
-                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b2a.h", "/DSpec=2", "/DSType=1", "/DBump=1", "$PS_3D_SRC"],
-                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b3a.h", "/DSpec=3", "/DSType=1", "/DBump=1", "$PS_3D_SRC"],
-                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b1s.h", "/DSpec=1", "/DSType=2", "/DBump=1", "$PS_3D_SRC"],
-                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b2s.h", "/DSpec=2", "/DSType=2", "/DBump=1", "$PS_3D_SRC"],
-                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b3s.h", "/DSpec=3", "/DSType=2", "/DBump=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b1t.h", "/DSpec=1", "/DSType=1", "/DBump=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b2t.h", "/DSpec=2", "/DSType=1", "/DBump=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b3t.h", "/DSpec=3", "/DSType=1", "/DBump=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b1c.h", "/DSpec=1", "/DSType=2", "/DBump=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b2c.h", "/DSpec=2", "/DSType=2", "/DBump=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b3c.h", "/DSpec=3", "/DSType=2", "/DBump=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b1m.h", "/DSpec=1", "/DSType=3", "/DBump=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b2m.h", "/DSpec=2", "/DSType=3", "/DBump=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b3m.h", "/DSpec=3", "/DSType=3", "/DBump=1", "$PS_3D_SRC"],
                         ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s1ni.h", "/DSpec=1", "/DSType=0", "/DIllumMap=1", "$PS_3D_SRC"],
                         ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s2ni.h", "/DSpec=2", "/DSType=0", "/DIllumMap=1", "$PS_3D_SRC"],
                         ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s3ni.h", "/DSpec=3", "/DSType=0", "/DIllumMap=1", "$PS_3D_SRC"],
-                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s1ai.h", "/DSpec=1", "/DSType=1", "/DIllumMap=1", "$PS_3D_SRC"],
-                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s2ai.h", "/DSpec=2", "/DSType=1", "/DIllumMap=1", "$PS_3D_SRC"],
-                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s3ai.h", "/DSpec=3", "/DSType=1", "/DIllumMap=1", "$PS_3D_SRC"],
-                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s1si.h", "/DSpec=1", "/DSType=2", "/DIllumMap=1", "$PS_3D_SRC"],
-                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s2si.h", "/DSpec=2", "/DSType=2", "/DIllumMap=1", "$PS_3D_SRC"],
-                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s3si.h", "/DSpec=3", "/DSType=2", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s1ti.h", "/DSpec=1", "/DSType=1", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s2ti.h", "/DSpec=2", "/DSType=1", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s3ti.h", "/DSpec=3", "/DSType=1", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s1ci.h", "/DSpec=1", "/DSType=2", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s2ci.h", "/DSpec=2", "/DSType=2", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s3ci.h", "/DSpec=3", "/DSType=2", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s1mi.h", "/DSpec=1", "/DSType=3", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s2mi.h", "/DSpec=2", "/DSType=3", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s3mi.h", "/DSpec=3", "/DSType=3", "/DIllumMap=1", "$PS_3D_SRC"],
                         ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b1ni.h", "/DSpec=1", "/DSType=0", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
                         ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b2ni.h", "/DSpec=2", "/DSType=0", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
                         ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b3ni.h", "/DSpec=3", "/DSType=0", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
-                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b1ai.h", "/DSpec=1", "/DSType=1", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
-                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b2ai.h", "/DSpec=2", "/DSType=1", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
-                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b3ai.h", "/DSpec=3", "/DSType=1", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
-                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b1si.h", "/DSpec=1", "/DSType=2", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
-                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b2si.h", "/DSpec=2", "/DSType=2", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
-                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b3si.h", "/DSpec=3", "/DSType=2", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b1ti.h", "/DSpec=1", "/DSType=1", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b2ti.h", "/DSpec=2", "/DSType=1", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b3ti.h", "/DSpec=3", "/DSType=1", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b1ci.h", "/DSpec=1", "/DSType=2", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b2ci.h", "/DSpec=2", "/DSType=2", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b3ci.h", "/DSpec=3", "/DSType=2", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b1mi.h", "/DSpec=1", "/DSType=3", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b2mi.h", "/DSpec=2", "/DSType=3", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b3mi.h", "/DSpec=3", "/DSType=3", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
                         ["$FXC", "/nologo", "/T", "vs_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1VS_Obj.h", "/DVertexType=ObjVertex", "$VS_3D_SRC"]
                 ]
                 final ExecutorService executor = Executors.newFixedThreadPool(Integer.parseInt(project.NUM_COMPILE_THREADS.toString()));
@@ -1825,7 +1857,7 @@ project(":media") {
 
                     if (t.name == "win") {
                         environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
-                        args(IS_64 ? "ARCH=x64" : "ARCH=x32")
+                        args(IS_64 ? "ARCH=x64" : "ARCH=x32", "RESOURCE=${nativeOutputDir}/${buildType}/${WIN.media.jfxmediaRcFile}")
                     } else {
                         args ("CC=${mediaProperties.compiler}", "LINK=${mediaProperties.linker}", "LIB=${mediaProperties.lib}")
 
@@ -1849,7 +1881,7 @@ project(":media") {
 
                         if (t.name == "win") {
                             environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
-                            args(IS_64 ? "ARCH=x64" : "ARCH=x32")
+                            args(IS_64 ? "ARCH=x64" : "ARCH=x32", "RESOURCE=${nativeOutputDir}/${buildType}/${WIN.media.gstreamerRcFile}")
                         } else
                             args ("CC=${mediaProperties.compiler}", "LINK=${mediaProperties.linker}", "LIB=${mediaProperties.lib}")
                     }
@@ -1882,7 +1914,7 @@ project(":media") {
                             }
                             environment(winEnv)
 
-                            args(IS_64 ? "ARCH=x64" : "ARCH=x32")
+                            args(IS_64 ? "ARCH=x64" : "ARCH=x32", "RESOURCE=${nativeOutputDir}/${buildType}/${WIN.media.fxpluginsRcFile}")
                         } else
                             args ("CC=${mediaProperties.compiler}", "LINK=${mediaProperties.linker}", "LIB=${mediaProperties.lib}")
                     }
@@ -1910,19 +1942,60 @@ project(":media") {
                 buildNative.dependsOn buildAVPlugin
             }
 
-            if (t.name == "win" || t.name == "mac") {
+            if (t.name == "win") {
+                def buildResources = task("buildResources") << {
+                    def rcOutputDir = "${nativeOutputDir}/${buildType}"
+                    mkdir rcOutputDir
+                    exec {
+                        environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
+                        commandLine (WIN.media.rcCompiler)
+                        args(WIN.media.glibRcFlags)
+                        args("/Fo${rcOutputDir}/${WIN.media.glibRcFile}", WIN.media.rcSource)
+                    }
+
+                    exec {
+                        environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
+                        commandLine (WIN.media.rcCompiler)
+                        args(WIN.media.gstreamerRcFlags)
+                        args("/Fo${rcOutputDir}/${WIN.media.gstreamerRcFile}", WIN.media.rcSource)
+                    }
+
+                    exec {
+                        environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
+                        commandLine (WIN.media.rcCompiler)
+                        args(WIN.media.fxpluginsRcFlags)
+                        args("/Fo${rcOutputDir}/${WIN.media.fxpluginsRcFile}", WIN.media.rcSource)
+                    }
+
+                    exec {
+                        environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
+                        commandLine (WIN.media.rcCompiler)
+                        args(WIN.media.jfxmediaRcFlags)
+                        args("/Fo${rcOutputDir}/${WIN.media.jfxmediaRcFile}", WIN.media.rcSource)
+                    }
+                }
+                
+                def buildGlib = task("build${t.capital}Glib", dependsOn: [buildResources]) {
+                    enabled = IS_COMPILE_MEDIA
+                    doLast {
+                        exec {
+                            environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
+                            commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/${projectDir}/glib-lite")
+                            args("OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=glib-lite",
+                                 IS_64 ? "ARCH=x64" : "ARCH=x32", "RESOURCE=${nativeOutputDir}/${buildType}/${WIN.media.glibRcFile}")
+                        }
+                    }
+                }
+                buildGStreamer.dependsOn buildGlib
+                
+            } else if (t.name == "mac") {
                 def buildGlib = task("build${t.capital}Glib") {
                     enabled = IS_COMPILE_MEDIA
                     doLast {
                         exec {
                             commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/${projectDir}/glib-lite")
                             args("OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=glib-lite")
-
-                            if (t.name == "win") {
-                                environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
-                                args(IS_64 ? "ARCH=x64" : "ARCH=x32")
-                            } else
-                                args ("CC=${mediaProperties.compiler}", "LINK=${mediaProperties.linker}", "LIB=${mediaProperties.lib}")
+                            args ("CC=${mediaProperties.compiler}", "LINK=${mediaProperties.linker}", "LIB=${mediaProperties.lib}")
                         }
                     }
                 }
@@ -2113,6 +2186,19 @@ load(qt_config)""")
             }
         }
     
+        if (IS_WINDOWS && t.name == "win") {
+            def webkitProperties = project.rootProject.ext[t.upper].webkit
+            def rcTask = project.task("rc${t.capital}", type: CompileResourceTask) {
+                compiler = webkitProperties.rcCompiler
+                source(webkitProperties.rcSource)
+                if (webkitProperties.rcFlags) {
+                    rcParams.addAll(webkitProperties.rcFlags)
+                }
+                output(file("$webkitOutputDir/$webkitConfig/WebCore/obj"))
+            }
+            compileNativeTask.dependsOn rcTask
+        }
+        
         def compileGeneratedTask = task("compileGenerated${t.capital}", type: JavaCompile, dependsOn: compileNativeTask) {
             def gensrcDir = "$webkitOutputDir/$webkitConfig/WebCore/generated/java"
             doFirst {
@@ -2269,12 +2355,20 @@ task sdk() {
     dependsOn(checkJfxrtJar)
 }
 
-// this is empty, allowing us to depend on the task, which may have other
-// real intances added later.
-task copyAppsArtifacts() 
+task appsjar() {
+    dependsOn(sdk)
+    // Note: the jar dependencies get added elsewhere see project(":apps")
+}
+
+// these are empty tasks, allowing us to depend on the task, which may have other
+// real work items added later.
+task copyAppsArtifacts() {
+    dependsOn(appsjar)
+}
 
 task apps() {
     dependsOn(sdk)
+    dependsOn(appsjar)
     dependsOn(copyAppsArtifacts)
 }
 
@@ -2637,31 +2731,40 @@ if (BINARY_STUB != null) {
     JFXRT_CP += BINARY_STUB
 }
 
-childProjects["apps"].subprojects {
-    afterEvaluate { project ->
-        // this check is to make sure we are using a java or application plugin
-        // in our child projects of ./apps
-        if (project.hasProperty("jar") && project.hasProperty("compileJava")) {
-            def srcdir = new File ("$project.projectDir/src");
+project(":apps") {
+    // The apps build is Ant based, and gradle lets us "import" ant build.xml
+    // into our configuration.
 
-            if (srcdir.exists()) {
-                // augment the classpath with our build system classpath
-                // which will include our local jfxrt.jar
-                project.compileJava {
-                    // TODO: don't know how to do this correctly
-                    //dependsOn project(":graphics").classes, project(":controls").classes, project(":base").classes
-                    doFirst {
-                        classpath = rootProject.JFXRT_CP + sourceSets.main.compileClasspath
-                    }
-                }
-                test.exclude("**/*");
-            } else {
-                // no source, but still a 'java' plugin, so just disable it
-                project.tasks.all {
-                    it.enabled = false
-                }
+    ant.importBuild 'build.xml'
+
+    compileTargets { t ->
+        // The apps build is Ant based, and gradle lets us "import" ant apps/build.xml
+        // into our configuration.
+
+        // override the apps build.xml with an explicit pointer to our jar.
+        def jfxrtJar = "${rootProject.buildDir}/${t.name}-sdk/rt/lib/ext/jfxrt.jar"
+
+        def appsJar = project.task("appsJar${t.capital}") {
+            doLast() {
+              ant.properties['targetBld'] = "$t.name"
+              if (!rootProject.ext[t.upper].compileSwing) {
+                ant.properties['JFX_CORE_ONLY'] = 'true'
+              }
+              ant.properties['file.reference.jfxrt.jar'] = jfxrtJar
+              ant.properties['platforms.JDK_1.8.home'] = "${rootProject.ext.JDK_HOME}"
+              ant.project.executeTarget("sampleAppsJar")
             }
         }
+        rootProject.appsjar.dependsOn(appsJar)
+
+        def appsClean = project.task("appsClean${t.capital}") {
+            doLast() {
+              ant.properties['targetBld'] = "$t.name"
+              ant.properties['platforms.JDK_1.8.home'] = "${rootProject.ext.JDK_HOME}"
+              ant.project.executeTarget("sampleAppsClean")
+            }
+        }
+        rootProject.clean.dependsOn(appsClean)
     }
 }
 

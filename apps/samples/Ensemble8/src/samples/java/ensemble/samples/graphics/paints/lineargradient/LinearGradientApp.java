@@ -55,6 +55,7 @@ import javafx.stage.Stage;
  * @see javafx.scene.paint.Color
  * @related /Graphics/Paints/Color
  * @related /Graphics/Paints/Radial Gradient
+ * @embedded
  */
 public class LinearGradientApp extends Application {
 
@@ -107,6 +108,7 @@ public class LinearGradientApp extends Application {
 
     /**
      * Java main for when running without JavaFX launcher
+     * @param args command line arguments
      */
     public static void main(String[] args) {
         launch(args);

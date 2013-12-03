@@ -1199,8 +1199,8 @@ public class TreeView<T> extends Control {
                     for (int i = startRow + 1; i < startRow + count; i++) {
                         if (isSelected(i)) {
                             wasAnyChildSelected = true;
+                            clearSelection(i);
                         }
-                        clearSelection(i);
                     }
 
                     // put selection onto the newly-collapsed tree item

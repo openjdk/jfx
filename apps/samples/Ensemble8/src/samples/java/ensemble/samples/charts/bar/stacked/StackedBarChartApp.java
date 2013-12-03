@@ -61,7 +61,6 @@ import javafx.stage.Stage;
  * @playground xAxis.endMargin
  * 
  * @playground xAxis.animated
- * @playground xAxis.label
  * @playground xAxis.side
  * @playground xAxis.tickLabelFill
  * @playground xAxis.tickLabelGap
@@ -103,7 +102,6 @@ import javafx.stage.Stage;
  * @playground chart.legendVisible
  * @playground chart.title
  * @playground chart.titleSide
- * @embedded
  */
 public class StackedBarChartApp extends Application {
     
@@ -153,6 +151,7 @@ public class StackedBarChartApp extends Application {
 
     /**
      * Java main for when running without JavaFX launcher
+     * @param args command line arguments
      */
     public static void main(String[] args) {
         launch(args);

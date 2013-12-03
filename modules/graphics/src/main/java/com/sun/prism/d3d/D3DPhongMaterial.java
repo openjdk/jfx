@@ -43,7 +43,7 @@ class D3DPhongMaterial extends BaseGraphicsResource implements PhongMaterial {
     private final D3DContext context;
     private final long nativeHandle;
     private TextureMap maps[] = new TextureMap[MAX_MAP_TYPE];
-    
+
     private D3DPhongMaterial(D3DContext context, long nativeHandle,
             Disposer.Record disposerRecord) {
         super(disposerRecord);
@@ -61,8 +61,14 @@ class D3DPhongMaterial extends BaseGraphicsResource implements PhongMaterial {
         return nativeHandle;
     }
 
-    public void setSolidColor(float r, float g, float b, float a) {
-        context.setSolidColor(nativeHandle, r, g, b, a);
+    @Override
+    public void setDiffuseColor(float r, float g, float b, float a) {
+        context.setDiffuseColor(nativeHandle, r, g, b, a);
+    }
+
+    @Override
+    public void setSpecularColor(boolean set, float r, float g, float b, float a) {
+        context.setSpecularColor(nativeHandle, set, r, g, b, a);
     }
 
     public void setTextureMap(TextureMap map) {
@@ -70,28 +76,11 @@ class D3DPhongMaterial extends BaseGraphicsResource implements PhongMaterial {
     }
 
     private Texture setupTexture(TextureMap map) {
-        boolean isSpecularAlpha = false;
-        boolean isBumpAlpha = false;
         Image image = map.getImage();
         Texture texture = (image == null) ? null
                 : context.getResourceFactory().getCachedTexture(image, Texture.WrapMode.REPEAT);
-        switch (map.getType()) {
-            case SPECULAR:
-                isSpecularAlpha = texture == null ? false : !texture.getPixelFormat().isOpaque();
-                break;
-            case BUMP:
-                isBumpAlpha = texture == null ? false : !texture.getPixelFormat().isOpaque();
-                break;
-            case DIFFUSE:
-                break;
-            case SELF_ILLUM:
-                break;
-            default:
-            // NOP
-        }
         long hTexture = (texture != null) ? ((D3DTexture) texture).getNativeTextureObject() : 0;
-        context.setMap(nativeHandle, map.getType().ordinal(),
-                hTexture, isSpecularAlpha, isBumpAlpha);
+        context.setMap(nativeHandle, map.getType().ordinal(), hTexture);
         return texture;
     }
 

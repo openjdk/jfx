@@ -106,7 +106,7 @@ import javafx.stage.Stage;
  * @playground chart.legendVisible
  * @playground chart.title
  * @playground chart.titleSide
- * @embedded
+ * @highlight
  */
 public class StackedAreaChartApp extends Application {
     
@@ -155,6 +155,7 @@ public class StackedAreaChartApp extends Application {
 
     /**
      * Java main for when running without JavaFX launcher
+     * @param args command line arguments
      */
     public static void main(String[] args) {
         launch(args);

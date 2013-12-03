@@ -465,12 +465,11 @@ class CachingShapeRepState {
             tryCache = !xformBounds.isEmpty() && maskCache.hasRoom(xformBounds);
         }
 
-        BaseShaderGraphics bsg = (BaseShaderGraphics)g;
-        BaseShaderContext context = bsg.getContext();
         renderCount++;
         if (tryCache == Boolean.FALSE ||
             renderCount <= 1 ||
-            bsg.isComplexPaint())
+            (!(g instanceof BaseShaderGraphics)) ||
+            ((BaseShaderGraphics)g).isComplexPaint())
         {
             // render the slow way if:
             //   - the shape size exceeds the threshold, or
@@ -488,6 +487,8 @@ class CachingShapeRepState {
             return;
         }
 
+        BaseShaderGraphics bsg = (BaseShaderGraphics)g;
+        BaseShaderContext context = bsg.getContext();
         if (lastXform == null || !lastXform.equals(xform)) {
             // need to create a new mask texture, or reuse an existing one
             if (xformBounds == null) {

@@ -1991,4 +1991,35 @@ public class TreeViewKeyInputTest {
         assertEquals(0, sm.getSelectedIndex());
         assertTrue(isSelected(0, 1, 2));
     }
+
+    @Test public void test_rt34425() {
+        final int items = 5;
+        root.getChildren().clear();
+        root.setExpanded(true);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        new StageLoader(treeView);
+        final FocusModel fm = treeView.getFocusModel();
+        final MultipleSelectionModel sm = treeView.getSelectionModel();
+
+        sm.clearAndSelect(1);
+        assertEquals(1, getAnchor());
+        assertEquals(1, fm.getFocusedIndex());
+        assertEquals(1, sm.getSelectedIndex());
+
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
+        Toolkit.getToolkit().firePulse();
+        assertEquals(1, getAnchor());
+        assertEquals(2, fm.getFocusedIndex());
+        assertEquals(1, sm.getSelectedIndex());
+
+        keyboard.doKeyPress(KeyCode.SPACE);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(2, getAnchor());
+        assertEquals(2, fm.getFocusedIndex());
+        assertEquals(2, sm.getSelectedIndex());
+        assertTrue(isSelected(1, 2));
+    }
 }

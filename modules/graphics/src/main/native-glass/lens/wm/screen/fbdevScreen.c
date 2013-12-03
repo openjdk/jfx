@@ -50,6 +50,7 @@ static int fbScanLineSize = 0;
 #define FB_DEVICE "/dev/fb0"
 static int windowIndex = 1;
 
+void do_screen_clear();
 
 jboolean glass_application_initialize(JNIEnv *env) {
     //nothing to do
@@ -169,6 +170,11 @@ void glass_screen_clear() {
     //noop for eglfb as screen is managed in prism
     return;
 #else
+    do_screen_clear();
+#endif
+}
+
+void do_screen_clear() {
     FILE *fb;
     int y;
     NativeScreen fbScreen = glass_screen_getMainScreen();
@@ -200,15 +206,13 @@ void glass_screen_clear() {
         default:
             GLASS_LOG_SEVERE("Cannot write to screen of depth %i", fbScreen->depth);
     }
-
     GLASS_LOG_FINE("fclose(%s)", FB_DEVICE);
     fclose(fb);
-#endif
 }
 
 
 void lens_platform_shutdown(JNIEnv *env) {
-    //nothing to do;
+    do_screen_clear();
 }
 
 

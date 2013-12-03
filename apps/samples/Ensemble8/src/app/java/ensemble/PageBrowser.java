@@ -31,6 +31,7 @@
  */
 package ensemble;
 
+import static ensemble.PlatformFeatures.WEB_SUPPORTED;
 import ensemble.samplepage.SourcePage;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
@@ -54,6 +55,7 @@ public class PageBrowser extends Region {
     private HomePage homePage;
     private Page currentPage;
     private SamplePage samplePage;
+    private SourcePage sourcePage;
     private String currentPageUrl;
     private DocsPage docsPage;
     private LinkedList<String> pastHistory = new LinkedList<>();
@@ -98,7 +100,7 @@ public class PageBrowser extends Region {
     public void goHome() {
         goToPage(HOME_URL, null, true);
     }
-    
+
     /**
      * This is called when a inner url has changed inside of a page and we want 
      * to update the history.
@@ -114,33 +116,18 @@ public class PageBrowser extends Region {
     }
     
     private void goToPage(String url, SampleInfo sample, boolean updateHistory) {
-        // update history
-        if (updateHistory) {
-            if (currentPageUrl != null) {
-                pastHistory.push(getCurrentPageUrl());
-            }
-            futureHistory.clear();
-        }
-        currentPageUrl = url;
-        // remove old page
-        if (currentPage != null) {
-            getChildren().remove((Node) currentPage);
-        }
+        Page nextPage = null;
         // get node for page
         if (url.equals(HOME_URL)) {
-            if (homePage == null) {
-                homePage = new HomePage(this);
-            }
-            currentPage = homePage;
-            getChildren().add(currentPage.getNode());
+            nextPage = getHomePage();
         } else if (url.startsWith("http://") || url.startsWith("https://")) {
-            if (docsPage == null) docsPage = new DocsPage(this);
-            currentPage = docsPage;
-            docsPage.goToUrl(url);
-            getChildren().add(currentPage.getNode());
+            if (WEB_SUPPORTED) {
+                nextPage = updateDocsPage(url);
+            } else {
+                System.err.println("Web pages are not supported and links to them should be disabled!");
+            }
         } else if (sample != null) {
-            currentPage = updateSamplePage(sample, url);
-            getChildren().add(currentPage.getNode());
+            nextPage = updateSamplePage(sample, url);
         } else if (url.startsWith("sample://")) {
             String samplePath = url.substring("sample://".length());
             if (samplePath.contains("?")) {
@@ -148,8 +135,7 @@ public class PageBrowser extends Region {
             }
             sample = Samples.ROOT.sampleForPath(samplePath);
             if (sample != null) {
-                currentPage = updateSamplePage(sample, url);
-                getChildren().add(currentPage.getNode());
+                nextPage = updateSamplePage(sample, url);
             } else {
                 throw new UnsupportedOperationException("Unknown sample url ["+url+"]");
             }
@@ -160,21 +146,34 @@ public class PageBrowser extends Region {
             }
             sample = Samples.ROOT.sampleForPath(samplePath);
             if (sample != null) {
-                SourcePage sourcePage = new SourcePage();
-                sourcePage.setSampleInfo(sample);
-                currentPage = sourcePage;
-                getChildren().add(currentPage.getNode());
+                nextPage = updateSourcePage(sample);
             } else {
-                throw new UnsupportedOperationException("Unknown sample url ["+url+"]");
+                System.err.println("Unknown sample url [" + url + "]");
             }
         } else {
-            throw new UnsupportedOperationException("Unknown ensemble page url ["+url+"]");
+            System.err.println("Unknown ensemble page url [" + url + "]");
         }
-        // update properties
-        atHome.set(url.equals(HOME_URL));
-        forwardPossible.set(!futureHistory.isEmpty());
-        backPossible.set(!pastHistory.isEmpty());
-        currentPageTitle.bind(currentPage.titleProperty());
+        if (nextPage != null) {
+            // update history
+            if (updateHistory) {
+                if (currentPageUrl != null) {
+                    pastHistory.push(getCurrentPageUrl());
+                }
+                futureHistory.clear();
+            }
+            currentPageUrl = url;
+            // remove old page
+            if (currentPage != null) {
+                getChildren().remove((Node) currentPage);
+            }
+            currentPage = nextPage;
+            getChildren().add(currentPage.getNode());
+            // update properties
+            atHome.set(url.equals(HOME_URL));
+            forwardPossible.set(!futureHistory.isEmpty());
+            backPossible.set(!pastHistory.isEmpty());
+            currentPageTitle.bind(currentPage.titleProperty());
+        }
     }
 
     @Override protected void layoutChildren() {
@@ -194,5 +193,28 @@ public class PageBrowser extends Region {
             samplePage.update(sample, url);
         }
         return samplePage;
+    }
+
+    private SourcePage updateSourcePage(SampleInfo sample) {
+        if (sourcePage == null) {
+            sourcePage = new SourcePage();
+        }
+        sourcePage.setSampleInfo(sample);
+        return sourcePage;
+    }
+
+    private Page getHomePage() {
+        if (homePage == null) {
+            homePage = new HomePage(this);
+        }
+        return homePage;
+    }
+
+    private DocsPage updateDocsPage(String url) {
+        if (docsPage == null) {
+            docsPage = new DocsPage(this);
+        }
+        docsPage.goToUrl(url);
+        return docsPage;
     }
 }

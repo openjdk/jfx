@@ -303,35 +303,50 @@ JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nReleaseD3DPhongMateria
 
 /*
  * Class:     com_sun_prism_d3d_D3DContext
- * Method:    nSetSolidColor
+ * Method:    nSetDiffuseColor
  * Signature: (JJFFFF)V
  */
-JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetSolidColor
+JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetDiffuseColor
   (JNIEnv *env, jclass, jlong ctx, jlong nativePhongMaterial,
         jfloat r, jfloat g, jfloat b, jfloat a)
 {
-    TraceLn(NWT_TRACE_INFO, "D3DContext_nSetSolidColor");
+    TraceLn(NWT_TRACE_INFO, "D3DContext_nSetDiffuseColor");
     D3DPhongMaterial *phongMaterial = (D3DPhongMaterial *) jlong_to_ptr(nativePhongMaterial);
     RETURN_IF_NULL(phongMaterial);
 
-    phongMaterial->setSolidColor(r, g, b, a);
+    phongMaterial->setDiffuseColor(r, g, b, a);
 }
 
 /*
  * Class:     com_sun_prism_d3d_D3DContext
+ * Method:    nSetSpecularColor
+ * Signature: (JJZFFFF)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetSpecularColor
+  (JNIEnv *env, jclass, jlong ctx, jlong nativePhongMaterial,
+        jboolean set, jfloat r, jfloat g, jfloat b, jfloat a)
+{
+    TraceLn(NWT_TRACE_INFO, "D3DContext_nSetSpecularColor");
+    D3DPhongMaterial *phongMaterial = (D3DPhongMaterial *) jlong_to_ptr(nativePhongMaterial);
+    RETURN_IF_NULL(phongMaterial);
+
+    phongMaterial->setSpecularColor(set ? true : false, r, g, b, a);
+}
+/*
+ * Class:     com_sun_prism_d3d_D3DContext
  * Method:    nSetMap
- * Signature: (JJIJZZ)V
+ * Signature: (JJIJ)V
  */
 JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetMap
   (JNIEnv *env, jclass, jlong ctx, jlong nativePhongMaterial,
-        jint mapType, jlong nativeTexture, jboolean isSpecularAlpha, jboolean isBumpAlpha)
+        jint mapType, jlong nativeTexture)
 {
     TraceLn(NWT_TRACE_INFO, "D3DContext_nSetMap");
     D3DPhongMaterial *phongMaterial = (D3DPhongMaterial *) jlong_to_ptr(nativePhongMaterial);
     IDirect3DBaseTexture9 *texMap = (IDirect3DBaseTexture9 *)  jlong_to_ptr(nativeTexture);
     RETURN_IF_NULL(phongMaterial);
 
-    phongMaterial->setMap(mapType, texMap, isSpecularAlpha ? true : false, isBumpAlpha ? true : false);
+    phongMaterial->setMap(mapType, texMap);
 }
 
 /*

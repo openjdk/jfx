@@ -264,7 +264,7 @@ public:
 
     ~WindowContextBase();
 protected:
-    virtual void applyShapeMask(cairo_surface_t*, uint width, uint height) = 0;
+    virtual void applyShapeMask(void*, uint width, uint height) = 0;
 private:
     bool im_filter_keypress(GdkEventKey*);
 };
@@ -297,7 +297,7 @@ public:
     void process_configure(GdkEventConfigure*);
     void process_gtk_configure(GdkEventConfigure*);
 
-    void applyShapeMask(cairo_surface_t*, uint width, uint height) {}
+    void applyShapeMask(void*, uint width, uint height) {}
     GtkWindow *get_gtk_window(); // TODO, get window from parent
 
     WindowContextPlug(jobject, void*);
@@ -345,7 +345,7 @@ public:
     int getEmbeddedX();
     int getEmbeddedY();
 
-    void applyShapeMask(cairo_surface_t*, uint width, uint height) {}
+    void applyShapeMask(void*, uint width, uint height) {}
     GtkWindow *get_gtk_window(); // TODO, get window from parent
 
     WindowContextChild(jobject, void*, GtkWidget *parent_widget, WindowContextPlug *parent_context);
@@ -368,11 +368,6 @@ class WindowContextTop: public WindowContextBase {
         bool prev; //former resizable value (used in setEnabled for parents of modal window)
         int minw, minh, maxw, maxh; //minimum and maximum window width/height;
     } resizable;
-    struct {
-        Pixmap pixmap; //Pixmap for the xshape mask
-        cairo_surface_t *surface; //surface for the pixmap
-        uint width, height; //bounds of the pixmap
-    } xshape;
 
     bool frame_extents_initialized;
     bool map_received;
@@ -413,9 +408,8 @@ public:
 
     GtkWindow *get_gtk_window();
     void detach_from_java();
-    ~WindowContextTop();
 protected:
-    void applyShapeMask(cairo_surface_t*, uint width, uint height);
+    void applyShapeMask(void*, uint width, uint height);
 private:
     bool get_frame_extents_property(int *, int *, int *, int *);
     void request_frame_extents();

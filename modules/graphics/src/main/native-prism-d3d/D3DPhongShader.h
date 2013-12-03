@@ -40,7 +40,8 @@
 
 // PSR implies Pixel Shader Registers
 // we have 32 constants for ps 2.0
-#define PSR_CONSTANTCOLOR 0
+#define PSR_DIFFUSECOLOR 0
+#define PSR_SPECULARCOLOR 1
 #define PSR_LIGHTCOLOR 4
 
 // SR implies Sampler Registers
@@ -49,31 +50,42 @@
 #define SR_BUMPHEIGHTMAP 2
 #define SR_SELFILLUMMAP 3
 
-#define SPECULAR_NONE 0
-#define SPECULAR_AUTO 1
-#define SPECULAR_SPECIFIED 2
+enum SpecType {
+    SpecNone,
+    SpecTexture, // map only w/o alpha
+    SpecColor,   // color w/o map
+    SpecMix,     // map & color
+    SpecTotal
+};
 
-#define BUMP_NONE 0
-#define BUMP_SPECIFIED 1
+enum BumpType {
+    BumpNone,
+    BumpSpecified,
+    BumpTotal
+};
 
 typedef const DWORD * ShaderFunction;
 ShaderFunction vsMtl1_Obj();
 ShaderFunction psMtl1(), psMtl1_i(),
 psMtl1_s1n(), psMtl1_s2n(), psMtl1_s3n(),
-psMtl1_s1a(), psMtl1_s2a(), psMtl1_s3a(),
-psMtl1_s1s(), psMtl1_s2s(), psMtl1_s3s(),
+psMtl1_s1t(), psMtl1_s2t(), psMtl1_s3t(),
+psMtl1_s1c(), psMtl1_s2c(), psMtl1_s3c(),
+psMtl1_s1m(), psMtl1_s2m(), psMtl1_s3m(),
 
 psMtl1_b1n(), psMtl1_b2n(), psMtl1_b3n(),
-psMtl1_b1a(), psMtl1_b2a(), psMtl1_b3a(),
-psMtl1_b1s(), psMtl1_b2s(), psMtl1_b3s(),
+psMtl1_b1t(), psMtl1_b2t(), psMtl1_b3t(),
+psMtl1_b1c(), psMtl1_b2c(), psMtl1_b3c(),
+psMtl1_b1m(), psMtl1_b2m(), psMtl1_b3m(),
 
 psMtl1_s1ni(), psMtl1_s2ni(), psMtl1_s3ni(),
-psMtl1_s1ai(), psMtl1_s2ai(), psMtl1_s3ai(),
-psMtl1_s1si(), psMtl1_s2si(), psMtl1_s3si(),
+psMtl1_s1ti(), psMtl1_s2ti(), psMtl1_s3ti(),
+psMtl1_s1ci(), psMtl1_s2ci(), psMtl1_s3ci(),
+psMtl1_s1mi(), psMtl1_s2mi(), psMtl1_s3mi(),
 
 psMtl1_b1ni(), psMtl1_b2ni(), psMtl1_b3ni(),
-psMtl1_b1ai(), psMtl1_b2ai(), psMtl1_b3ai(),
-psMtl1_b1si(), psMtl1_b2si(), psMtl1_b3si();
+psMtl1_b1ti(), psMtl1_b2ti(), psMtl1_b3ti(),
+psMtl1_b1ci(), psMtl1_b2ci(), psMtl1_b3ci(),
+psMtl1_b1mi(), psMtl1_b2mi(), psMtl1_b3mi();
 
 class D3DPhongShader {
 public:
@@ -81,11 +93,9 @@ public:
     virtual ~D3DPhongShader();
     IDirect3DVertexShader9 *getVertexShader();
     int getBumpMode(bool isBumpMap);
-    int getSpecularMode(bool isSpecularMap, bool isSpecularAlpha);
+    int getSpecularMode(bool isSpecularMap, bool isSpecularColor);
     HRESULT setPixelShader(int numLights, int specularMode, int bumpMode, int selfIllumMode);
 
-static const int BumpTotal = 2;
-static const int SpecTotal = 3;
 static const int SelfIlllumTotal = 2;
 static const int maxLights = 3;
 

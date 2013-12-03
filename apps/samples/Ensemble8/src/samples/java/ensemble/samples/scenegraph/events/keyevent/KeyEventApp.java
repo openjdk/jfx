@@ -53,6 +53,7 @@ import javafx.stage.Stage;
  * @see javafx.scene.input.KeyCode
  * @see javafx.scene.input.KeyEvent
  * @see javafx.event.EventHandler
+ * @embedded
  */
 public class KeyEventApp extends Application {
 
@@ -123,6 +124,7 @@ public class KeyEventApp extends Application {
 
     /**
      * Java main for when running without JavaFX launcher
+     * @param args command line arguments
      */
     public static void main(String[] args) {
         launch(args);

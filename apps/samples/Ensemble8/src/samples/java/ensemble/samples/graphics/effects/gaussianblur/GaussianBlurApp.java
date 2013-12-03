@@ -50,6 +50,7 @@ import javafx.stage.Stage;
  * @playground gaussianBlur.radius (name="Gaussian Blur Level", min=0, max=15)
  * @see javafx.scene.effect.GaussianBlur
  * @see javafx.scene.effect.Effect
+ * @embedded
  */
 public class GaussianBlurApp extends Application {
 
@@ -74,6 +75,7 @@ public class GaussianBlurApp extends Application {
 
     /**
      * Java main for when running without JavaFX launcher
+     * @param args command line arguments
      */
     public static void main(String[] args) {
         launch(args);

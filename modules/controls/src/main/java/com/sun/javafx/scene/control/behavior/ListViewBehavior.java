@@ -720,6 +720,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     private void activate() {
         int focusedIndex = getControl().getFocusModel().getFocusedIndex();
         getControl().getSelectionModel().select(focusedIndex);
+        setAnchor(focusedIndex);
 
         // edit this row also
         if (focusedIndex >= 0) {

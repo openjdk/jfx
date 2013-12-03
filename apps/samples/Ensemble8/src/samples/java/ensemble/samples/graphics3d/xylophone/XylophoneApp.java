@@ -31,34 +31,45 @@
  */
 package ensemble.samples.graphics3d.xylophone;
 
-import javafx.animation.Animation;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.application.Application;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.SceneAntialiasing;
 import javafx.scene.Parent;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
 import javafx.scene.SubScene;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.media.AudioClip;
 import javafx.scene.paint.Color;
-import javafx.scene.transform.Rotate;
+import javafx.scene.paint.PhongMaterial;
+import javafx.scene.shape.Box;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
 /**
- * A sample that demonstrates a xylophone made of 3D cubes.
+ * A sample that demonstrates a xylophone made of 3D cubes. It is animated and
+ * plays sounds when clicked.
  *
  * @sampleName Xylophone
  * @preview preview.png
- * @see javafx.scene.transform.Rotate
- * @see javafx.scene.paint.Color
+ * @see javafx.scene.shape.Box
+ * @see javafx.scene.paint.PhongMaterial
+ * @see javafx.scene.media.AudioClip
  * @see javafx.scene.PerspectiveCamera
+ * @see javafx.scene.transform.Rotate
+ * @see javafx.scene.transform.Scale
+ * @see javafx.animation.Timeline
+ * @see javafx.animation.KeyFrame
+ * @see javafx.animation.KeyValue
+ * @see javafx.animation.Interpolator
+ * @see javafx.scene.input.MouseEvent
+ * @see javafx.event.EventHandler
+ * @see javafx.util.Duration
+ * @see javafx.scene.Group
+ * @see javafx.scene.SceneAntialiasing
  * @see javafx.scene.SubScene
  * @conditionalFeatures SCENE3D
  */
@@ -69,9 +80,9 @@ public class XylophoneApp extends Application {
 
     public Parent createContent() {
         Xform sceneRoot = new Xform();
-        sceneRoot.rx.setAngle(225.0);
+        sceneRoot.rx.setAngle(45.0);
         sceneRoot.ry.setAngle(30.0);
-        sceneRoot.setScale(1.2);
+        sceneRoot.setScale(2 * 1.5);
 
         final AudioClip bar1Note =
                 new AudioClip(XylophoneApp.class.getResource("/ensemble/samples/shared-resources/Note1.wav").toString());
@@ -95,140 +106,79 @@ public class XylophoneApp extends Application {
         double xStart = -110.0;
         double xOffset = 30.0;
         double yPos = 25.0;
-        double zPos = 0.0;
         double barWidth = 22.0;
         double barDepth = 7.0;
 
         // Base1
-        Cube base1Cube = new Cube(1.0, new Color(0.2, 0.12, 0.1, 1.0), 1.0);
+        Box base1Cube = new Box(barWidth * 11.5, barDepth * 2.0, 10.0);
+        base1Cube.setMaterial(new PhongMaterial(new Color(0.2, 0.12, 0.1, 1.0)));
         base1Cube.setTranslateX(xStart + 128);
         base1Cube.setTranslateZ(yPos + 20.0);
         base1Cube.setTranslateY(11.0);
-        base1Cube.setScaleX(barWidth * 11.5);
-        base1Cube.setScaleZ(10.0);
-        base1Cube.setScaleY(barDepth * 2.0);
 
         // Base2
-        Cube base2Cube = new Cube(1.0, new Color(0.2, 0.12, 0.1, 1.0), 1.0);
+        Box base2Cube = new Box(barWidth * 11.5, barDepth * 2.0, 10.0);
+        base2Cube.setMaterial(new PhongMaterial(new Color(0.2, 0.12, 0.1, 1.0)));
         base2Cube.setTranslateX(xStart + 128);
         base2Cube.setTranslateZ(yPos - 20.0);
         base2Cube.setTranslateY(11.0);
-        base2Cube.setScaleX(barWidth * 11.5);
-        base2Cube.setScaleZ(10.0);
-        base2Cube.setScaleY(barDepth * 2.0);
 
         // Bar1
-        Cube bar1Cube = new Cube(1.0, Color.PURPLE, 1.0);
+        Box bar1Cube = new Box(barWidth, barDepth, 100.0);
+        bar1Cube.setMaterial(new PhongMaterial(Color.PURPLE));
         bar1Cube.setTranslateX(xStart + 1 * xOffset);
         bar1Cube.setTranslateZ(yPos);
-        bar1Cube.setScaleX(barWidth);
-        bar1Cube.setScaleZ(100.0);
-        bar1Cube.setScaleY(barDepth);
 
         // Bar2
-        Cube bar2Cube = new Cube(1.0, Color.BLUEVIOLET, 1.0);
+        Box bar2Cube = new Box(barWidth, barDepth, 95);
+        bar2Cube.setMaterial(new PhongMaterial(Color.BLUEVIOLET));
         bar2Cube.setTranslateX(xStart + 2 * xOffset);
         bar2Cube.setTranslateZ(yPos);
-        bar2Cube.setScaleX(barWidth);
-        bar2Cube.setScaleZ(95.0);
-        bar2Cube.setScaleY(barDepth);
 
         // Bar3
-        Cube bar3Cube = new Cube(1.0, Color.BLUE, 1.0);
+        Box bar3Cube = new Box(barWidth, barDepth, 90);
+        bar3Cube.setMaterial(new PhongMaterial(Color.BLUE));
         bar3Cube.setTranslateX(xStart + 3 * xOffset);
         bar3Cube.setTranslateZ(yPos);
-        bar3Cube.setScaleX(barWidth);
-        bar3Cube.setScaleZ(90.0);
-        bar3Cube.setScaleY(barDepth);
 
         // Bar4
-        Cube bar4Cube = new Cube(1.0, Color.GREEN, 1.0);
+        Box bar4Cube = new Box(barWidth, barDepth, 85);
+        bar4Cube.setMaterial(new PhongMaterial(Color.GREEN));
         bar4Cube.setTranslateX(xStart + 4 * xOffset);
         bar4Cube.setTranslateZ(yPos);
-        bar4Cube.setScaleX(barWidth);
-        bar4Cube.setScaleZ(85.0);
-        bar4Cube.setScaleY(barDepth);
 
         // Bar5
-        Cube bar5Cube = new Cube(1.0, Color.GREENYELLOW, 1.0);
+        Box bar5Cube = new Box(barWidth, barDepth, 80);
+        bar5Cube.setMaterial(new PhongMaterial(Color.GREENYELLOW));
         bar5Cube.setTranslateX(xStart + 5 * xOffset);
         bar5Cube.setTranslateZ(yPos);
-        bar5Cube.setScaleX(barWidth);
-        bar5Cube.setScaleZ(80.0);
-        bar5Cube.setScaleY(barDepth);
 
         // Bar6
-        Cube bar6Cube = new Cube(1.0, Color.YELLOW, 1.0);
+        Box bar6Cube = new Box(barWidth, barDepth, 75);
+        bar6Cube.setMaterial(new PhongMaterial(Color.YELLOW));
         bar6Cube.setTranslateX(xStart + 6 * xOffset);
         bar6Cube.setTranslateZ(yPos);
-        bar6Cube.setScaleX(barWidth);
-        bar6Cube.setScaleZ(75.0);
-        bar6Cube.setScaleY(barDepth);
 
         // Bar7
-        Cube bar7Cube = new Cube(1.0, Color.ORANGE, 1.0);
+        Box bar7Cube = new Box(barWidth, barDepth, 70);
+        bar7Cube.setMaterial(new PhongMaterial(Color.ORANGE));
         bar7Cube.setTranslateX(xStart + 7 * xOffset);
         bar7Cube.setTranslateZ(yPos);
-        bar7Cube.setScaleX(barWidth);
-        bar7Cube.setScaleZ(70.0);
-        bar7Cube.setScaleY(barDepth);
 
         // Bar8
-        Cube bar8Cube = new Cube(1.0, Color.RED, 1.0);
+        Box bar8Cube = new Box(barWidth, barDepth, 65);
+        bar8Cube.setMaterial(new PhongMaterial(Color.RED));
         bar8Cube.setTranslateX(xStart + 8 * xOffset);
         bar8Cube.setTranslateZ(yPos);
-        bar8Cube.setScaleX(barWidth);
-        bar8Cube.setScaleZ(65.0);
-        bar8Cube.setScaleY(barDepth);
 
-        bar1Cube.setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent me) {
-                bar1Note.play();
-            }
-        });
-        bar2Cube.setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent me) {
-                bar2Note.play();
-            }
-        });
-        bar3Cube.setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent me) {
-                bar3Note.play();
-            }
-        });
-        bar4Cube.setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent me) {
-                bar4Note.play();
-            }
-        });
-        bar5Cube.setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent me) {
-                bar5Note.play();
-            }
-        });
-        bar6Cube.setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent me) {
-                bar6Note.play();
-            }
-        });
-        bar7Cube.setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent me) {
-                bar7Note.play();
-            }
-        });
-        bar8Cube.setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent me) {
-                bar8Note.play();
-            }
-        });
+        bar1Cube.setOnMousePressed(t -> bar1Note.play());
+        bar2Cube.setOnMousePressed(t -> bar2Note.play());
+        bar3Cube.setOnMousePressed(t -> bar3Note.play());
+        bar4Cube.setOnMousePressed(t -> bar4Note.play());
+        bar5Cube.setOnMousePressed(t -> bar5Note.play());
+        bar6Cube.setOnMousePressed(t -> bar6Note.play());
+        bar7Cube.setOnMousePressed(t -> bar7Note.play());
+        bar8Cube.setOnMousePressed(t -> bar8Note.play());
 
         rectangleGroup.getChildren().addAll(base1Cube, base2Cube,
                 bar1Cube, bar2Cube, bar3Cube,
@@ -248,32 +198,25 @@ public class XylophoneApp extends Application {
 
         animation2 = new Timeline();
         animation2.getKeyFrames().addAll(new KeyFrame(Duration.ZERO,
-                new KeyValue(sceneRoot.rx.angleProperty(), 200d,
-                Interpolator.TANGENT(Duration.seconds(1.0), 200d,
-                Duration.seconds(1.0), 200d))),
+                new KeyValue(sceneRoot.rx.angleProperty(), 60d,
+                Interpolator.TANGENT(Duration.seconds(1.0), 60d))),
                 new KeyFrame(Duration.seconds(4),
-                new KeyValue(sceneRoot.rx.angleProperty(), 250d,
-                Interpolator.TANGENT(Duration.seconds(1.0), 250d,
-                Duration.seconds(1.0), 250d))),
+                new KeyValue(sceneRoot.rx.angleProperty(), 80d,
+                Interpolator.TANGENT(Duration.seconds(1.0), 80d))),
                 new KeyFrame(Duration.seconds(8),
-                new KeyValue(sceneRoot.rx.angleProperty(), 200d,
-                Interpolator.TANGENT(Duration.seconds(1.0), 200d,
-                Duration.seconds(1.0), 200d))));
-        animation2.setCycleCount(Animation.INDEFINITE);
+                new KeyValue(sceneRoot.rx.angleProperty(), 60d,
+                Interpolator.TANGENT(Duration.seconds(1.0), 60d))));
+        animation2.setCycleCount(Timeline.INDEFINITE);
 
         PerspectiveCamera camera = new PerspectiveCamera();
 
-        SubScene subScene = new SubScene(sceneRoot, 460, 240, true, SceneAntialiasing.BALANCED); 
+        SubScene subScene = new SubScene(sceneRoot, 780 * 1.5, 380 * 1.5, true, SceneAntialiasing.BALANCED);
         subScene.setCamera(camera);
         
         sceneRoot.translateXProperty().bind(subScene.widthProperty().divide(2.2));
-        sceneRoot.translateYProperty().bind(subScene.heightProperty().divide(2));
-        sceneRoot.getTransforms().addAll(new Rotate(180, Rotate.X_AXIS));
+        sceneRoot.translateYProperty().bind(subScene.heightProperty().divide(1.6));
 
-        Group group = new Group();
-        group.getChildren().add(subScene);       
-        
-        return group;
+        return new Group(subScene);
     }
 
     public void play() {
@@ -296,6 +239,7 @@ public class XylophoneApp extends Application {
 
     /**
      * Java main for when running without JavaFX launcher
+     * @param args command line arguments
      */
     public static void main(String[] args) {
         launch(args);

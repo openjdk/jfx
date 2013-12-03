@@ -79,6 +79,7 @@ import javafx.stage.Stage;
  * @playground textWorld.translateX (name="World translateX")
  * @playground textWorld.translateY (name="World translateY")
  * @embedded
+ * @highlight
  */
 public class TextFlowApp extends Application {
 
@@ -136,6 +137,7 @@ public class TextFlowApp extends Application {
 
     /**
      * Java main for when running without JavaFX launcher
+     * @param args command line arguments
      */
     public static void main(String[] args) {
         launch(args);

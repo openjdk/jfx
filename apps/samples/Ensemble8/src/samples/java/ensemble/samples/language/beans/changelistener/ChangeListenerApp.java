@@ -62,6 +62,7 @@ import javafx.stage.Stage;
  * @see javafx.beans.value.ChangeListener
  * @see javafx.beans.InvalidationListener
  * @see javafx.beans.value.ObservableValue
+ * @embedded
  */
 public class ChangeListenerApp extends Application {
     // Simple filled rectangle
@@ -132,6 +133,7 @@ public class ChangeListenerApp extends Application {
 
     /**
      * Java main for when running without JavaFX launcher
+     * @param args command line arguments
      */
     public static void main(String[] args) {
         launch(args);

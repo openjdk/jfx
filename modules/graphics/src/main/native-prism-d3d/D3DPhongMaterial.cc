@@ -46,23 +46,38 @@ D3DPhongMaterial::D3DPhongMaterial(D3DContext *ctx) {
     diffuseColor[1] = 0;
     diffuseColor[2] = 0;
     diffuseColor[3] = 0;
+    specularColorSet = false;
+    specularColor[0] = 1;
+    specularColor[1] = 1;
+    specularColor[2] = 1;
+    specularColor[3] = 32;
     map[DIFFUSE] = NULL;
     map[SPECULAR] = NULL;
     map[BUMP] = NULL;
     map[SELFILLUMINATION] = NULL;
-    specularAlpha = false;
-    bumpAlpha = false;
 }
 
-void D3DPhongMaterial::setSolidColor(float r, float g, float b, float a) {
+void D3DPhongMaterial::setDiffuseColor(float r, float g, float b, float a) {
     diffuseColor[0] = r;
     diffuseColor[1] = g;
     diffuseColor[2] = b;
     diffuseColor[3] = a;
 }
 
-float * D3DPhongMaterial::getSolidColor() {
+float * D3DPhongMaterial::getDiffuseColor() {
     return diffuseColor;
+}
+
+void D3DPhongMaterial::setSpecularColor(bool set, float r, float g, float b, float a) {
+    specularColorSet = set;
+    specularColor[0] = r;
+    specularColor[1] = g;
+    specularColor[2] = b;
+    specularColor[3] = a;
+}
+
+float * D3DPhongMaterial::getSpecularColor() {
+    return specularColor;
 }
 
 bool D3DPhongMaterial::isBumpMap() {
@@ -77,8 +92,8 @@ bool D3DPhongMaterial::isSelfIllumMap() {
     return map[SELFILLUMINATION] ? true : false;
 }
 
-bool D3DPhongMaterial::isSpecularAlpha() {
-    return specularAlpha;
+bool D3DPhongMaterial::isSpecularColor() {
+    return specularColorSet;
 }
 
 IDirect3DBaseTexture9 * D3DPhongMaterial::getMap(int type) {
@@ -90,13 +105,10 @@ IDirect3DBaseTexture9 * D3DPhongMaterial::getMap(int type) {
     return NULL;
 }
 
-void D3DPhongMaterial::setMap(int mapID, IDirect3DBaseTexture9 *texMap,
-        bool isSA, bool isBA) {
+void D3DPhongMaterial::setMap(int mapID, IDirect3DBaseTexture9 *texMap) {
     // Within the range of DIFFUSE, SPECULAR, BUMP, SELFILLUMINATION
     if (mapID >= 0 && mapID <= 3) {
         map[mapID] = texMap;
-        specularAlpha = isSA;
-        bumpAlpha = isBA;
     } else {
         cerr << "D3DPhongMaterial::getMap -- mapID is out of range - mapID = " << mapID << endl;
     }

@@ -107,7 +107,6 @@ import javafx.stage.Stage;
  * @playground chart.legendVisible
  * @playground chart.title
  * @playground chart.titleSide
- * @embedded
  */
 public class CandleStickChartApp extends Application {
     
@@ -181,6 +180,9 @@ public class CandleStickChartApp extends Application {
         primaryStage.show();
     }
     
-    /** Java main for when running without JavaFX launcher */
+    /** 
+     * Java main for when running without JavaFX launcher 
+     * @param args command line arguments
+     */
     public static void main(String[] args) { launch(args); }
 }

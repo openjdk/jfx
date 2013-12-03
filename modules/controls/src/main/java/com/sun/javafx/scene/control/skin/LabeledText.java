@@ -34,6 +34,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.value.ObservableValue;
 import javafx.css.*;
 import javafx.scene.control.Labeled;
 import javafx.scene.paint.Color;
@@ -106,10 +110,11 @@ public class LabeledText extends Text {
    // the Labeled is styled,
    //
 
-    private StyleableProperty<Font> fontMirror = null;
+    private StyleablePropertyMirror<Font> fontMirror = null;
     private StyleableProperty<Font> fontMirror() {
         if (fontMirror == null) {
             fontMirror = new StyleablePropertyMirror<Font>(FONT, "fontMirror", Font.getDefault(), (StyleableProperty<Font>)labeled.fontProperty());
+            fontProperty().addListener(fontMirror);
         }
         return fontMirror;
     }
@@ -128,10 +133,11 @@ public class LabeledText extends Text {
         }
     };
 
-    private StyleableProperty<Paint> fillMirror;
+    private StyleablePropertyMirror<Paint> fillMirror;
     private StyleableProperty<Paint> fillMirror() {
         if (fillMirror == null) {
             fillMirror = new StyleablePropertyMirror<Paint>(FILL, "fillMirror", Color.BLACK, (StyleableProperty<Paint>)labeled.textFillProperty());
+            fillProperty().addListener(fillMirror);
         }
         return fillMirror;        
     }
@@ -151,10 +157,11 @@ public class LabeledText extends Text {
             }
         };
 
-    private StyleableProperty<TextAlignment> textAlignmentMirror;
+    private StyleablePropertyMirror<TextAlignment> textAlignmentMirror;
     private StyleableProperty<TextAlignment> textAlignmentMirror() {
         if (textAlignmentMirror == null) {
             textAlignmentMirror = new StyleablePropertyMirror<TextAlignment>(TEXT_ALIGNMENT, "textAlignmentMirror", TextAlignment.LEFT, (StyleableProperty<TextAlignment>)labeled.textAlignmentProperty());
+            textAlignmentProperty().addListener(textAlignmentMirror);
         }
         return textAlignmentMirror;        
     }
@@ -175,10 +182,11 @@ public class LabeledText extends Text {
             }
         };
 
-    private StyleableProperty<Boolean> underlineMirror;
+    private StyleablePropertyMirror<Boolean> underlineMirror;
     private StyleableProperty<Boolean> underlineMirror() {
         if (underlineMirror == null) {
             underlineMirror = new StyleablePropertyMirror<Boolean>(UNDERLINE, "underLineMirror", Boolean.FALSE, (StyleableProperty<Boolean>)labeled.underlineProperty());
+            underlineProperty().addListener(underlineMirror);
         }
         return underlineMirror;        
     }
@@ -199,10 +207,11 @@ public class LabeledText extends Text {
             }
         };
 
-    private StyleableProperty<Number> lineSpacingMirror;
+    private StyleablePropertyMirror<Number> lineSpacingMirror;
     private StyleableProperty<Number> lineSpacingMirror() {
         if (lineSpacingMirror == null) {
             lineSpacingMirror = new StyleablePropertyMirror<Number>(LINE_SPACING, "lineSpacingMirror", 0d, (StyleableProperty<Number>)labeled.lineSpacingProperty());
+            lineSpacingProperty().addListener(lineSpacingMirror);
         }
         return lineSpacingMirror;        
     }
@@ -247,17 +256,30 @@ public class LabeledText extends Text {
 
        STYLEABLES = Collections.unmodifiableList(styleables);
     }       
-    
-    private class StyleablePropertyMirror<T> extends SimpleStyleableObjectProperty<T> {
+
+    private class StyleablePropertyMirror<T> extends SimpleStyleableObjectProperty<T> implements InvalidationListener {
         
         private StyleablePropertyMirror(CssMetaData<LabeledText, T> cssMetaData, String name, T initialValue, StyleableProperty<T> property) {
             super(cssMetaData, LabeledText.this, name, initialValue);
             this.property = property;
+            this.applying = false;
         }
-        
+
+        @Override
+        public void invalidated(Observable observable) {
+            // if Text's property is changing but not because a style is being applied,
+            // then it's either because the set method was called on the Labeled's property or
+            // because CSS is resetting Labeled's property to its initial value
+            // (see CssStyleHelper#resetToInitialValues(Styleable))
+            if (applying == false) {
+                super.applyStyle(null, ((ObservableValue<T>)observable).getValue());
+            }
+        }
+
         @Override
         public void applyStyle(StyleOrigin newOrigin, T value) {
 
+            applying = true;
             //
             // In the case where the Labeled's property was set by an
             // inline style, this inline style should override values
@@ -275,17 +297,16 @@ public class LabeledText extends Text {
                    (newOrigin != null &&
                     propOrigin.compareTo(newOrigin) <= 0)) {
                 super.applyStyle(newOrigin, value);
+                property.applyStyle(newOrigin, value);
             }
-        }
-        
-        @Override protected void invalidated() {
-            property.applyStyle(this.getStyleOrigin(), this.get());
+            applying = false;
         }
 
         @Override public StyleOrigin getStyleOrigin() {
             return property.getStyleOrigin();
         }
 
+        boolean applying;
         private final StyleableProperty<T> property;
     } 
        

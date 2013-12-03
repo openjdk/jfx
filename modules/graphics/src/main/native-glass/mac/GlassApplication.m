@@ -531,7 +531,9 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
                 [myMenu release];
 
                 [app setDelegate:self];
-                [app activateIgnoringOtherApps:YES];
+
+                // [app activateIgnoringOtherApps:YES] won't activate the menu bar on OS X 10.9, so instead we do this:
+                [[NSRunningApplication currentApplication] activateWithOptions:NSApplicationActivateIgnoringOtherApps];
             }
             else
             {
@@ -790,9 +792,22 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1finishTerminat
 
     NSAutoreleasePool *glasspool = [[NSAutoreleasePool alloc] init];
     {
-        [[NSApplication sharedApplication] performSelectorOnMainThread:@selector(stop:) withObject:nil waitUntilDone:NO];
-        // wake up the runloop one last time
-        [[NSApplication sharedApplication] performSelectorOnMainThread:@selector(hide:) withObject:nil waitUntilDone:NO];
+        [NSApp stop:nil];
+        [NSApp hide:nil];
+
+        // wake up the runloop one last time so that it can process the stop:
+        // request, even if the app is inactive currently
+        NSTimeInterval dummyEventTimestamp = [NSProcessInfo processInfo].systemUptime;
+        NSEvent* event = [NSEvent otherEventWithType: NSApplicationDefined
+                                            location: NSMakePoint(0,0)
+                                       modifierFlags: 0
+                                           timestamp: dummyEventTimestamp
+                                        windowNumber: 0
+                                             context: nil
+                                             subtype: 0
+                                               data1: 0
+                                               data2: 0];
+        [NSApp postEvent: event atStart: NO];
     }
     [glasspool drain]; glasspool=nil;
     GLASS_CHECK_EXCEPTION(env);

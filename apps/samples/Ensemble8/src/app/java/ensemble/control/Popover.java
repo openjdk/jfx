@@ -472,6 +472,7 @@ public class Popover extends Region implements EventHandler<Event>{
 
         /**
          * The text for left button, if null then button will be hidden.
+         * @return The button text
          */
         public String leftButtonText();
 
@@ -482,6 +483,7 @@ public class Popover extends Region implements EventHandler<Event>{
 
         /**
          * The text for right button, if null then button will be hidden.
+         * @return The button text
          */
         public String rightButtonText();
 

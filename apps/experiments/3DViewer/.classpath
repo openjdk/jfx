@@ -4,7 +4,6 @@
 	<classpathentry kind="src" path="src/test/java"/>
 	<classpathentry kind="src" path="src/main/resources"/>
 	<classpathentry kind="src" path="src/test/resources"/>
-	<classpathentry kind="lib" path="build/libs/3DViewer.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/rt">
 	<attributes>
 		<attribute name="optional" value="true"/>

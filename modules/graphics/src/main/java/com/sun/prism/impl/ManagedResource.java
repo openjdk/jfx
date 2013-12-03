@@ -242,7 +242,9 @@ public abstract class ManagedResource<T> implements GraphicsResource {
         }
 
         if (PrismSettings.poolStats || anyLockedResources) {
-            System.err.println("Outstanding resource locks detected:");
+            if (anyLockedResources) {
+                System.err.println("Outstanding resource locks detected:");
+            }
             ManagedResource.printSummary();
         }
     }

@@ -50,7 +50,7 @@ public class SampleCategory {
         this.name = name;
         this.samples = FeatureChecker.filterSamples(samples);
         this.samplesAll = FeatureChecker.filterSamples(samplesAll);
-        this.subCategories = subCategories;
+        this.subCategories = FeatureChecker.filterEmptyCategories(subCategories);
     }
     
     public SampleInfo sampleForPath(String path) {

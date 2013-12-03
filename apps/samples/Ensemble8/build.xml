@@ -71,6 +71,12 @@
     nbproject/build-impl.xml file. 
 
     -->
+    <target name="-pre-init">
+        <!-- exclude samples that are not part of the base JavaFX -->
+        <condition property="excludes" value="ensemble/samples/swing/**">
+            <isset property="JFX_CORE_ONLY"/>
+        </condition>
+    </target>
     
     <!-- COPY SAMPLE SRC TO BUILD DIR -->
     <target name="-pre-compile">

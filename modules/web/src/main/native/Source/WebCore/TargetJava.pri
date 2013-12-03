@@ -143,6 +143,8 @@ QMAKE_CXXFLAGS += -D__STDC_FORMAT_MACROS
 
 win32-* {
     QMAKE_CXXFLAGS += -DLIBXML_STATIC
+    # Adds version information created by Gradle build, see RT-27943
+    OBJECTS += $$OBJECTS_DIR/*.res
     LIBS += -llibxml2_a -lole32 -ladvapi32 -luser32
     contains(DEFINES, ENABLE_XSLT=1) {
         QMAKE_CXXFLAGS += -DLIBXSLT_STATIC

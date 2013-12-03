@@ -46,9 +46,7 @@ class ES2PhongMaterial extends BaseGraphicsResource implements PhongMaterial {
 
     Color diffuseColor = Color.WHITE;
     Color specularColor = Color.WHITE;
-
-    boolean isSpecularAlpha = false;
-    boolean isBumpAlpha = false;
+    boolean specularColorSet = false;
 
     private ES2PhongMaterial(ES2Context context, long nativeHandle,
             Disposer.Record disposerRecord) {
@@ -67,8 +65,15 @@ class ES2PhongMaterial extends BaseGraphicsResource implements PhongMaterial {
         return nativeHandle;
     }
 
-    public void setSolidColor(float r, float g, float b, float a) {
+    @Override
+    public void setDiffuseColor(float r, float g, float b, float a) {
         diffuseColor = new Color(r,g,b,a);
+    }
+
+    @Override
+    public void setSpecularColor(boolean set, float r, float g, float b, float a) {
+        specularColorSet = set;
+        specularColor = new Color(r,g,b,a);
     }
 
     public void setTextureMap(TextureMap map) {
@@ -79,20 +84,6 @@ class ES2PhongMaterial extends BaseGraphicsResource implements PhongMaterial {
         Image image = map.getImage();
         Texture texture = (image == null) ? null
                 : context.getResourceFactory().getCachedTexture(image, Texture.WrapMode.REPEAT);
-        switch (map.getType()) {
-            case SPECULAR:
-                isSpecularAlpha = texture == null ? false : !texture.getPixelFormat().isOpaque();
-                break;
-            case BUMP:
-                isBumpAlpha = texture == null ? false : !texture.getPixelFormat().isOpaque();
-                break;
-            case DIFFUSE:
-                break;
-            case SELF_ILLUM:
-                break;
-            default:
-            // NOP
-        }
         return texture;
     }
 

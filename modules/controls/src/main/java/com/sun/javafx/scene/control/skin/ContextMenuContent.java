@@ -629,17 +629,6 @@ public class ContextMenuContent extends Region {
             }
         });
 
-        addEventFilter(MouseEvent.MOUSE_EXITED, new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent event) {
-                // RT-15050 : if a submenu is open then don't do request focus
-                // on this StackPane, do nothing so that focus continues to stay
-                // on the Menu whose submenu is open.
-                if (submenu != null && submenu.isShowing()) return;
-                  
-                requestFocus();
-            }
-        });
 //        addEventFilter(MouseEvent.MOUSE_MOVED, new EventHandler<MouseEvent>() {
 //            @Override
 //            public void handle(MouseEvent event) {

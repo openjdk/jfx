@@ -48,23 +48,5 @@ if (buildClosed) {
     apply from: supplementalSettingsFile
 }
 
-/*************** Applications ******************/
-
 include 'apps'
 
-// The following defines the "active" ./apps to be built
-def JFXApplications = [ 
-    "samples:Ensemble8",
-
-    "experiments:3DViewer",
-    //"experiments:ConferenceScheduleApp",
-    "experiments:Modena",
-    "performance:GraphicsPerformance",
-  ]
-
-JFXApplications.each { app-> 
-   logger.info "Adding Application Project $app"
-   include ":apps:$app"
-}
-
-/***********************************************/

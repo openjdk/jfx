@@ -919,6 +919,11 @@ final class LensApplication extends Application {
         }, "Lens Event Thread");
         setEventThread(toolkitThread);
         toolkitThread.start();
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            @Override public void run() {
+                shutdown();
+            }
+        });
     }
 
     private static int nativeThreadCounter = 0;

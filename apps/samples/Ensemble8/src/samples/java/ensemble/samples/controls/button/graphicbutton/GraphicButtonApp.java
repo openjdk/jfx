@@ -64,6 +64,8 @@ public class GraphicButtonApp extends Application {
         primaryStage.show();
     }
     
-    /** Java main for when running without JavaFX launcher */
+    /** Java main for when running without JavaFX launcher 
+     * @param args command line arguments
+     */
     public static void main(String[] args) { launch(args); }
 }

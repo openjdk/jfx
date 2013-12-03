@@ -65,7 +65,11 @@ class JS2JavaBridge {
         Random ranGen = new SecureRandom();
         byte[] aesKey = new byte[16]; // 16 bytes = 128 bits
         ranGen.nextBytes(aesKey);
-        TOKEN = UUID.nameUUIDFromBytes(aesKey).toString();
+        try {
+            TOKEN = UUID.nameUUIDFromBytes(aesKey).toString();
+        } catch (Error ex) {
+            TOKEN = null;
+        }
         javaBridge = "window.mustek('"+TOKEN+"')";
     }
 
@@ -215,7 +219,7 @@ class JS2JavaBridge {
             String uuid = splitted[1];
             String callbackID = splitted[2];
             try {
-                if (!TOKEN.equals(uuid)) {
+                if (TOKEN != null && !TOKEN.equals(uuid)) {
                     throw new SecurityException("Wrong javacall arguments.");
                 }
                 String objId = splitted[3];

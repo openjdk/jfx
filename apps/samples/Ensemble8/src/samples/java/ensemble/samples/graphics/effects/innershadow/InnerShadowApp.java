@@ -55,6 +55,7 @@ import javafx.stage.Stage;
  * @playground innerShadow.color (name="Inner Shadow Color")
  * @see javafx.scene.effect.InnerShadow
  * @see javafx.scene.effect.Effect
+ * @embedded
  */
 public class InnerShadowApp extends Application {
 
@@ -82,6 +83,7 @@ public class InnerShadowApp extends Application {
 
     /**
      * Java main for when running without JavaFX launcher
+     * @param args command line arguments
      */
     public static void main(String[] args) {
         launch(args);

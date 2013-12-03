@@ -55,6 +55,7 @@ import javafx.scene.shape.Shape;
 import javafx.util.Callback;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
 import com.sun.javafx.Logging;
@@ -66,12 +67,9 @@ import com.sun.javafx.css.converters.ShapeConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
-import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Vec2d;
-import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.sg.prism.NGNode;
@@ -422,7 +420,6 @@ public class Region extends Parent {
         return array;
     }
 
-
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
@@ -616,6 +613,7 @@ public class Region extends Parent {
 
                 // No matter what, the fill has changed, so we have to update it
                 impl_markDirty(DirtyBits.SHAPE_FILL);
+                cornersValid = false;
                 old = b;
             }
         }
@@ -672,6 +670,7 @@ public class Region extends Parent {
 
                 // No matter what, the fill has changed, so we have to update it
                 impl_markDirty(DirtyBits.SHAPE_STROKE);
+                cornersValid = false;
                 old = b;
             }
         }
@@ -870,6 +869,7 @@ public class Region extends Parent {
         // unnecessary bounds changes, however, is relatively high.
         if (value != _width) {
             _width = value;
+            cornersValid = false;
             boundingBox = null;
             impl_layoutBoundsChanged();
             impl_geomChanged();
@@ -923,6 +923,7 @@ public class Region extends Parent {
     private void heightChanged(double value) {
         if (_height != value) {
             _height = value;
+            cornersValid = false;
             // It is possible that somebody sets the height of the region to a value which
             // it previously held. If this is the case, we want to avoid excessive layouts.
             // Note that I have biased this for layout over binding, because the heightProperty
@@ -2370,6 +2371,10 @@ public class Region extends Parent {
         if (_shape != null) _shape.impl_syncPeer();
         NGRegion pg = impl_getPeer();
 
+        if (!cornersValid) {
+            validateCorners();
+        }
+
         final boolean sizeChanged = impl_isDirty(DirtyBits.NODE_GEOMETRY);
         if (sizeChanged) {
             pg.setSize((float)getWidth(), (float)getHeight());
@@ -2383,6 +2388,9 @@ public class Region extends Parent {
             pg.updateShape(_shape, isScaleShape(), isCenterShape(), isCacheShape());
         }
 
+        // The normalized corners can always be updated since they require no
+        // processing at the NG layer.
+        pg.updateFillCorners(normalizedFillCorners);
         final boolean backgroundChanged = impl_isDirty(DirtyBits.SHAPE_FILL);
         final Background bg = getBackground();
         if (backgroundChanged) {
@@ -2395,6 +2403,9 @@ public class Region extends Parent {
             pg.imagesUpdated();
         }
 
+        // The normalized corners can always be updated since they require no
+        // processing at the NG layer.
+        pg.updateStrokeCorners(normalizedStrokeCorners);
         if (impl_isDirty(DirtyBits.SHAPE_STROKE)) {
             pg.updateBorder(getBorder());
         }
@@ -2461,7 +2472,7 @@ public class Region extends Parent {
     @Override public NGNode impl_createPeer() {
         return new NGRegion();
     }
-    
+
     /**
      * Transform x, y in local Region coordinates to local coordinates of scaled/centered shape and
      * check if the shape contains the coordinates.
@@ -2559,8 +2570,6 @@ public class Region extends Parent {
 
         final double x2 = getWidth();
         final double y2 = getHeight();
-        // Figure out what the maximum possible radius value is.
-        final double maxRadius = Math.min(x2 / 2.0, y2 / 2.0);
 
         final Background background = getBackground();
         // First check the shape. Shape could be impacted by scaleShape & positionShape properties.
@@ -2590,7 +2599,7 @@ public class Region extends Parent {
             final List<BackgroundFill> fills = background.getFills();
             for (int i = 0, max = fills.size(); i < max; i++) {
                 final BackgroundFill bgFill = fills.get(i);
-                if (contains(localX, localY, 0, 0, x2, y2, bgFill.getInsets(), bgFill.getRadii(), maxRadius)) {
+                if (contains(localX, localY, 0, 0, x2, y2, bgFill.getInsets(), getNormalizedFillCorner(i))) {
                     return true;
                 }
             }
@@ -2607,7 +2616,7 @@ public class Region extends Parent {
             for (int i=0, max=strokes.size(); i<max; i++) {
                 final BorderStroke strokeBorder = strokes.get(i);
                 if (contains(localX, localY, 0, 0, x2, y2, strokeBorder.getWidths(), false, strokeBorder.getInsets(),
-                             strokeBorder.getRadii(), maxRadius)) {
+                             getNormalizedStrokeCorner(i))) {
                     return true;
                 }
             }
@@ -2617,7 +2626,7 @@ public class Region extends Parent {
             for (int i = 0, max = images.size(); i < max; i++) {
                 final BorderImage borderImage = images.get(i);
                 if (contains(localX, localY, 0, 0, x2, y2, borderImage.getWidths(), borderImage.isFilled(),
-                             borderImage.getInsets(), CornerRadii.EMPTY, maxRadius)) {
+                             borderImage.getInsets(), CornerRadii.EMPTY)) {
                     return true;
                 }
             }
@@ -2646,20 +2655,20 @@ public class Region extends Parent {
     private boolean contains(final double px, final double py,
                              final double x1, final double y1, final double x2, final double y2,
                              BorderWidths widths, boolean filled,
-                             final Insets insets, final CornerRadii rad, final double maxRadius) {
+                             final Insets insets, final CornerRadii rad) {
         if (filled) {
-            if (contains(px, py, x1, y1, x2, y2, insets, rad, maxRadius)) {
+            if (contains(px, py, x1, y1, x2, y2, insets, rad)) {
                 return true;
             }
         } else {
-            boolean insideOuterEdge = contains(px, py, x1, y1, x2, y2, insets, rad, maxRadius);
+            boolean insideOuterEdge = contains(px, py, x1, y1, x2, y2, insets, rad);
             if (insideOuterEdge) {
                 boolean outsideInnerEdge = !contains(px, py,
                     x1 + (widths.isLeftAsPercentage() ? getWidth() * widths.getLeft() : widths.getLeft()),
                     y1 + (widths.isTopAsPercentage() ? getHeight() * widths.getTop() : widths.getTop()),
                     x2 - (widths.isRightAsPercentage() ? getWidth() * widths.getRight() : widths.getRight()),
                     y2 - (widths.isBottomAsPercentage() ? getHeight() * widths.getBottom() : widths.getBottom()),
-                    insets, rad, maxRadius);
+                    insets, rad);
                 if (outsideInnerEdge) return true;
             }
         }
@@ -2683,7 +2692,7 @@ public class Region extends Parent {
      */
     private boolean contains(final double px, final double py,
                              final double x1, final double y1, final double x2, final double y2,
-                             final Insets insets, CornerRadii rad, final double maxRadius) {
+                             final Insets insets, CornerRadii rad) {
         // These four values are the x0, y0, x1, y1 bounding box after
         // having taken into account the insets of this particular
         // background fill.
@@ -2692,27 +2701,26 @@ public class Region extends Parent {
         final double rrx1 = x2 - insets.getRight();
         final double rry1 = y2 - insets.getBottom();
 
-        // Adjust based on whether it is % based radii
-        rad = normalize(rad);
+//        assert rad.hasPercentBasedRadii == false;
 
         // Check for trivial rejection - point is inside bounding rectangle
         if (px >= rrx0 && py >= rry0 && px <= rrx1 && py <= rry1) {
             // The point was within the index bounding box. Now we need to analyze the
             // corner radii to see if the point lies within the corners or not. If the
             // point is within a corner then we reject this one.
-            final double tlhr = Math.min(rad.getTopLeftHorizontalRadius(), maxRadius);
+            final double tlhr = rad.getTopLeftHorizontalRadius();
             if (rad.isUniform() && tlhr == 0) {
                 // This is a simple square! Since we know the point is already within
                 // the insets of this fill, we can simply return true.
                 return true;
             } else {
-                final double tlvr = Math.min(rad.getTopLeftVerticalRadius(), maxRadius);
-                final double trhr = Math.min(rad.getTopRightHorizontalRadius(), maxRadius);
-                final double trvr = Math.min(rad.getTopRightVerticalRadius(), maxRadius);
-                final double blhr = Math.min(rad.getBottomLeftHorizontalRadius(), maxRadius);
-                final double blvr = Math.min(rad.getBottomLeftVerticalRadius(), maxRadius);
-                final double brhr = Math.min(rad.getBottomRightHorizontalRadius(), maxRadius);
-                final double brvr = Math.min(rad.getBottomRightVerticalRadius(), maxRadius);
+                final double tlvr = rad.getTopLeftVerticalRadius();
+                final double trhr = rad.getTopRightHorizontalRadius();
+                final double trvr = rad.getTopRightVerticalRadius();
+                final double blhr = rad.getBottomLeftHorizontalRadius();
+                final double blvr = rad.getBottomLeftVerticalRadius();
+                final double brhr = rad.getBottomRightHorizontalRadius();
+                final double brvr = rad.getBottomRightVerticalRadius();
 
                 // The four corners can each be described as a quarter of an ellipse
                 double centerX, centerY, a, b;
@@ -2756,25 +2764,162 @@ public class Region extends Parent {
         return false;
     }
 
-    /**
-     * Direct copy of a method in NGRegion. If NGRegion were part of the core graphics module (coming!)
-     * then this method could be removed.
-     *
-     * @param radii    The radii.
-     * @return Normalized radii.
+    /*
+     * The normalized corner radii are unmodifiable List objects shared between
+     * the NG layer and the FX layer.  As cached shadow copies of the objects
+     * in the BackgroundFill and BorderStroke objects they should be considered
+     * read-only and will only be updated by replacing the original objects
+     * when validation is needed.
      */
-    private CornerRadii normalize(CornerRadii radii) {
+    private boolean cornersValid; // = false
+    private List<CornerRadii> normalizedFillCorners; // = null
+    private List<CornerRadii> normalizedStrokeCorners; // = null
+
+    /**
+     * Returns the normalized absolute radii for the indicated BackgroundFill,
+     * taking the current size of the region into account to eliminate any
+     * percentage-based measurements and to scale the radii to prevent
+     * overflowing the width or height.
+     * 
+     * @param i the index of the BackgroundFill whose radii will be normalized.
+     * @return the normalized (non-percentage, non-overflowing) radii
+     */
+    private CornerRadii getNormalizedFillCorner(int i) {
+        if (!cornersValid) {
+            validateCorners();
+        }
+        return (normalizedFillCorners == null
+                ? getBackground().getFills().get(i).getRadii()
+                : normalizedFillCorners.get(i));
+    }
+
+    /**
+     * Returns the normalized absolute radii for the indicated BorderStroke,
+     * taking the current size of the region into account to eliminate any
+     * percentage-based measurements and to scale the radii to prevent
+     * overflowing the width or height.
+     * 
+     * @param i the index of the BorderStroke whose radii will be normalized.
+     * @return the normalized (non-percentage, non-overflowing) radii
+     */
+    private CornerRadii getNormalizedStrokeCorner(int i) {
+        if (!cornersValid) {
+            validateCorners();
+        }
+        return (normalizedStrokeCorners == null
+                ? getBorder().getStrokes().get(i).getRadii()
+                : normalizedStrokeCorners.get(i));
+    }
+
+    /**
+     * This method validates all CornerRadii objects in both the set of
+     * BackgroundFills and BorderStrokes and saves the normalized values
+     * into the private fields above.
+     */
+    private void validateCorners() {
         final double width = getWidth();
         final double height = getHeight();
-        final double tlvr = radii.isTopLeftVerticalRadiusAsPercentage() ? height * radii.getTopLeftVerticalRadius() : radii.getTopLeftVerticalRadius();
-        final double tlhr = radii.isTopLeftHorizontalRadiusAsPercentage() ? width * radii.getTopLeftHorizontalRadius() : radii.getTopLeftHorizontalRadius();
-        final double trvr = radii.isTopRightVerticalRadiusAsPercentage() ? height * radii.getTopRightVerticalRadius() : radii.getTopRightVerticalRadius();
-        final double trhr = radii.isTopRightHorizontalRadiusAsPercentage() ? width * radii.getTopRightHorizontalRadius() : radii.getTopRightHorizontalRadius();
-        final double brvr = radii.isBottomRightVerticalRadiusAsPercentage() ? height * radii.getBottomRightVerticalRadius() : radii.getBottomRightVerticalRadius();
-        final double brhr = radii.isBottomRightHorizontalRadiusAsPercentage() ? width * radii.getBottomRightHorizontalRadius() : radii.getBottomRightHorizontalRadius();
-        final double blvr = radii.isBottomLeftVerticalRadiusAsPercentage() ? height * radii.getBottomLeftVerticalRadius() : radii.getBottomLeftVerticalRadius();
-        final double blhr = radii.isBottomLeftHorizontalRadiusAsPercentage() ? width * radii.getBottomLeftHorizontalRadius() : radii.getBottomLeftHorizontalRadius();
-        return new CornerRadii(tlhr, tlvr, trvr, trhr, brhr, brvr, blvr, blhr, false, false, false, false, false, false, false, false);
+        List<CornerRadii> newFillCorners = null;
+        List<CornerRadii> newStrokeCorners = null;
+        final Background background = getBackground();
+        final List<BackgroundFill> fills = background == null ? Collections.EMPTY_LIST : background.getFills();
+        for (int i = 0; i < fills.size(); i++) {
+            final BackgroundFill fill = fills.get(i);
+            final CornerRadii origRadii = fill.getRadii();
+            final Insets origInsets = fill.getInsets();
+            final CornerRadii newRadii = normalize(origRadii, origInsets, width, height);
+            if (origRadii != newRadii) {
+                if (newFillCorners == null) {
+                    newFillCorners = Arrays.asList(new CornerRadii[fills.size()]);
+                }
+                newFillCorners.set(i, newRadii);
+            }
+        }
+        final Border border = getBorder();
+        final List<BorderStroke> strokes = (border == null ? Collections.EMPTY_LIST : border.getStrokes());
+        for (int i = 0; i < strokes.size(); i++) {
+            final BorderStroke stroke = strokes.get(i);
+            final CornerRadii origRadii = stroke.getRadii();
+            final Insets origInsets = stroke.getInsets();
+            final CornerRadii newRadii = normalize(origRadii, origInsets, width, height);
+            if (origRadii != newRadii) {
+                if (newStrokeCorners == null) {
+                    newStrokeCorners = Arrays.asList(new CornerRadii[strokes.size()]);
+                }
+                newStrokeCorners.set(i, newRadii);
+            }
+        }
+        if (newFillCorners != null) {
+            for (int i = 0; i < fills.size(); i++) {
+                if (newFillCorners.get(i) == null) {
+                    newFillCorners.set(i, fills.get(i).getRadii());
+                }
+            }
+            newFillCorners = Collections.unmodifiableList(newFillCorners);
+        }
+        if (newStrokeCorners != null) {
+            for (int i = 0; i < strokes.size(); i++) {
+                if (newStrokeCorners.get(i) == null) {
+                    newStrokeCorners.set(i, strokes.get(i).getRadii());
+                }
+            }
+            newStrokeCorners = Collections.unmodifiableList(newStrokeCorners);
+        }
+        normalizedFillCorners = newFillCorners;
+        normalizedStrokeCorners = newStrokeCorners;
+        cornersValid = true;
+    }
+
+    /**
+     * Return a version of the radii that is not percentage based and is scaled to
+     * fit the indicated inset rectangle without overflow.
+     * This method may return the original CornerRadii if none of the radii
+     * values in the given object are percentages or require scaling.
+     *
+     * @param radii    The radii.
+     * @param insets   The insets for the associated background or stroke.
+     * @param width    The width of the region before insets are applied.
+     * @param height   The height of the region before insets are applied.
+     * @return Normalized radii.
+     */
+    private static CornerRadii normalize(CornerRadii radii, Insets insets, double width, double height) {
+        width  -= insets.getLeft() + insets.getRight();
+        height -= insets.getTop() + insets.getBottom();
+        if (width <= 0 || height <= 0) return CornerRadii.EMPTY;
+        double tlvr = radii.getTopLeftVerticalRadius();
+        double tlhr = radii.getTopLeftHorizontalRadius();
+        double trvr = radii.getTopRightVerticalRadius();
+        double trhr = radii.getTopRightHorizontalRadius();
+        double brvr = radii.getBottomRightVerticalRadius();
+        double brhr = radii.getBottomRightHorizontalRadius();
+        double blvr = radii.getBottomLeftVerticalRadius();
+        double blhr = radii.getBottomLeftHorizontalRadius();
+        if (radii.hasPercentBasedRadii) {
+            if (radii.isTopLeftVerticalRadiusAsPercentage())       tlvr *= height;
+            if (radii.isTopLeftHorizontalRadiusAsPercentage())     tlhr *= width;
+            if (radii.isTopRightVerticalRadiusAsPercentage())      trvr *= height;
+            if (radii.isTopRightHorizontalRadiusAsPercentage())    trhr *= width;
+            if (radii.isBottomRightVerticalRadiusAsPercentage())   brvr *= height;
+            if (radii.isBottomRightHorizontalRadiusAsPercentage()) brhr *= width;
+            if (radii.isBottomLeftVerticalRadiusAsPercentage())    blvr *= height;
+            if (radii.isBottomLeftHorizontalRadiusAsPercentage())  blhr *= width;
+        }
+        double scale = 1.0;
+        if (tlhr + trhr > width)  { scale = Math.min(scale, width  / (tlhr + trhr)); }
+        if (blhr + brhr > width)  { scale = Math.min(scale, width  / (blhr + brhr)); }
+        if (tlvr + blvr > height) { scale = Math.min(scale, height / (tlvr + blvr)); }
+        if (trvr + brvr > height) { scale = Math.min(scale, height / (trvr + brvr)); }
+        if (scale < 1.0) {
+            tlvr *= scale;  tlhr *= scale;
+            trvr *= scale;  trhr *= scale;
+            brvr *= scale;  brhr *= scale;
+            blvr *= scale;  blhr *= scale;
+        }
+        if (radii.hasPercentBasedRadii || scale < 1.0) {
+            return new CornerRadii(tlhr,  tlvr,  trvr,  trhr,  brhr,  brvr,  blvr,  blhr,
+                                   false, false, false, false, false, false, false, false);
+        }
+        return radii;
     }
 
     /**

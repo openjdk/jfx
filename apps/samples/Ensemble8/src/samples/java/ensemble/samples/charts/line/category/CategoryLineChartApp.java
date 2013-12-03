@@ -102,7 +102,6 @@ import javafx.stage.Stage;
  * @playground chart.legendVisible
  * @playground chart.title
  * @playground chart.titleSide
- * @embedded
  */
 public class CategoryLineChartApp extends Application {
 
@@ -139,6 +138,7 @@ public class CategoryLineChartApp extends Application {
 
     /**
      * Java main for when running without JavaFX launcher
+     * @param args command line arguments
      */
     public static void main(String[] args) {
         launch(args);

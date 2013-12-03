@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project default="jar" basedir=".">
+
+    <target name="jar">
+        <!--
+        <ant dir="GraphicsPerformance" target="jar" inheritAll="true"/>
+        -->
+    </target>
+
+    <target name="clean">
+        <!--
+        <ant dir="GraphicsPerformance" target="clean" inheritAll="true"/>
+        -->
+    </target>
+
+</project>
+
+

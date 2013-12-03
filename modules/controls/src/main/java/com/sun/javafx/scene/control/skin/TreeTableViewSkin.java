@@ -106,11 +106,11 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeItem<S>, Tree
         behavior.setOnMoveToLastCell(new Runnable() {
             @Override public void run() { onMoveToLastCell(); }
         });
-        behavior.setOnScrollPageDown(new Callback<Void, Integer>() {
-            @Override public Integer call(Void param) { return onScrollPageDown(); }
+        behavior.setOnScrollPageDown(new Callback<Boolean, Integer>() {
+            @Override public Integer call(Boolean isFocusDriven) { return onScrollPageDown(isFocusDriven); }
         });
-        behavior.setOnScrollPageUp(new Callback<Void, Integer>() {
-            @Override public Integer call(Void param) { return onScrollPageUp(); }
+        behavior.setOnScrollPageUp(new Callback<Boolean, Integer>() {
+            @Override public Integer call(Boolean isFocusDriven) { return onScrollPageUp(isFocusDriven); }
         });
         behavior.setOnSelectPreviousRow(new Runnable() {
             @Override public void run() { onSelectPreviousCell(); }

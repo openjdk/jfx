@@ -61,6 +61,7 @@ import javafx.stage.Stage;
  * @see javafx.collections.FXCollections
  * @see javafx.collections.ListChangeListener
  * @see javafx.collections.ObservableList
+ * @embedded
  */
 public class ObservableListApp extends Application {
 
@@ -156,6 +157,7 @@ public class ObservableListApp extends Application {
 
     /**
      * Java main for when running without JavaFX launcher
+     * @param args command line arguments
      */
     public static void main(String[] args) {
         launch(args);

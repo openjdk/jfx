@@ -308,3 +308,20 @@ WIN.fontT2K.lib = "javafx_font_t2k"
 WIN.fontT2K.rcCompiler = rcCompiler;
 WIN.fontT2K.rcSource = defaultRcSource
 WIN.fontT2K.rcFlags = ["/d", "JFX_FNAME=javafx_font_t2k.dll", "/d", "JFX_INTERNAL_NAME=fontT2K", rcFlags].flatten();
+
+WIN.media = [:]
+WIN.media.rcCompiler = rcCompiler
+WIN.media.rcSource = defaultRcSource
+WIN.media.glibRcFile = "glib-lite.res"
+WIN.media.gstreamerRcFile = "gstreamer-lite.res"
+WIN.media.fxpluginsRcFile = "fxplugins.res"
+WIN.media.jfxmediaRcFile = "jfxmedia.res"
+WIN.media.glibRcFlags = ["/d", "JFX_FNAME=glib-lite.dll", "/d", "JFX_INTERNAL_NAME=glib", rcFlags].flatten()
+WIN.media.gstreamerRcFlags = ["/d", "JFX_FNAME=gstreamer-lite.dll", "/d", "JFX_INTERNAL_NAME=gstreamer", rcFlags].flatten()
+WIN.media.fxpluginsRcFlags = ["/d", "JFX_FNAME=fxplugins.dll", "/d", "JFX_INTERNAL_NAME=fxplugins", rcFlags].flatten()
+WIN.media.jfxmediaRcFlags = ["/d", "JFX_FNAME=jfxmedia.dll", "/d", "JFX_INTERNAL_NAME=jfxmedia", rcFlags].flatten()
+
+WIN.webkit = [:]
+WIN.webkit.rcCompiler = rcCompiler
+WIN.webkit.rcSource = defaultRcSource
+WIN.webkit.rcFlags = ["/d", "JFX_FNAME=jfxwebkit.dll", "/d", "JFX_INTERNAL_NAME=webkit", rcFlags].flatten();

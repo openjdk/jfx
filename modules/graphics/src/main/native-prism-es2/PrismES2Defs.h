@@ -368,8 +368,6 @@ struct MeshInfoRec {
 typedef struct PhongMaterialInfoRec PhongMaterialInfo;
 struct PhongMaterialInfoRec {
    GLfloat diffuseColor[4]; // in the order of rgba
-   GLboolean isSpecularAlpha;
-   GLboolean isBumpAlpha;
    GLuint maps[4];
 };
 

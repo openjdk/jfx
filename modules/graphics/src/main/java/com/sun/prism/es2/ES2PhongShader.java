@@ -48,8 +48,9 @@ class ES2PhongShader {
     enum SpecularState {
 
         NONE,
-        SPECULARCOLOR,
-        TEXTURE
+        TEXTURE,
+        COLOR,
+        MIX
     }
 
     enum SelfIllumState {
@@ -65,7 +66,7 @@ class ES2PhongShader {
     }
     static final int lightStateCount = 4;
     private static String diffuseShaderParts[] = new String[DiffuseState.values().length];
-    private static String SpecularShaderParts[] = new String[SpecularState.values().length];
+    private static String specularShaderParts[] = new String[SpecularState.values().length];
     private static String selfIllumShaderParts[] = new String[SelfIllumState.values().length];
     private static String normalMapShaderParts[] = new String[BumpMapState.values().length];
     private static String lightingShaderParts[] = new String[lightStateCount];
@@ -82,12 +83,14 @@ class ES2PhongShader {
         diffuseShaderParts[DiffuseState.TEXTURE.ordinal()] =
                 ES2Shader.readStreamIntoString(ES2ResourceFactory.class.getResourceAsStream("glsl/diffuse_texture.frag"));
 
-        SpecularShaderParts[SpecularState.NONE.ordinal()] =
+        specularShaderParts[SpecularState.NONE.ordinal()] =
                 ES2Shader.readStreamIntoString(ES2ResourceFactory.class.getResourceAsStream("glsl/specular_none.frag"));
-        SpecularShaderParts[SpecularState.SPECULARCOLOR.ordinal()] =
-                ES2Shader.readStreamIntoString(ES2ResourceFactory.class.getResourceAsStream("glsl/specular_color.frag"));
-        SpecularShaderParts[SpecularState.TEXTURE.ordinal()] =
+        specularShaderParts[SpecularState.TEXTURE.ordinal()] =
                 ES2Shader.readStreamIntoString(ES2ResourceFactory.class.getResourceAsStream("glsl/specular_texture.frag"));
+        specularShaderParts[SpecularState.COLOR.ordinal()] =
+                ES2Shader.readStreamIntoString(ES2ResourceFactory.class.getResourceAsStream("glsl/specular_color.frag"));
+        specularShaderParts[SpecularState.MIX.ordinal()] =
+                ES2Shader.readStreamIntoString(ES2ResourceFactory.class.getResourceAsStream("glsl/specular_mix.frag"));
 
         selfIllumShaderParts[SelfIllumState.NONE.ordinal()] =
                 ES2Shader.readStreamIntoString(ES2ResourceFactory.class.getResourceAsStream("glsl/selfIllum_none.frag"));
@@ -112,6 +115,15 @@ class ES2PhongShader {
 
     }
 
+    static SpecularState getSpecularState(ES2PhongMaterial material) {
+        if (material.maps[ES2PhongMaterial.SPECULAR].getTexture() != null) {
+            return material.specularColorSet ?
+                    SpecularState.MIX : SpecularState.TEXTURE;
+        }
+        return material.specularColorSet ?
+                SpecularState.COLOR : SpecularState.NONE;
+    }
+
     static ES2Shader getShader(ES2MeshView meshView, ES2Context context) {
 
         ES2PhongMaterial material = meshView.getMaterial();
@@ -121,19 +133,7 @@ class ES2PhongShader {
             diffuseState = DiffuseState.TEXTURE;
         }
 
-        SpecularState specularState = SpecularState.NONE;
-        //TODO: 3D - determine proper check (does a TEXTURE override a color?)
-        if (material.specularColor != null) {
-            specularState = SpecularState.SPECULARCOLOR;
-        }
-
-        if (material.maps[ES2PhongMaterial.SPECULAR].getTexture() != null) {
-            if (material.isSpecularAlpha) {
-                specularState = SpecularState.TEXTURE;
-            } else {
-                specularState = SpecularState.SPECULARCOLOR;
-            }
-        }
+        SpecularState specularState = getSpecularState(material);
 
         BumpMapState bumpState = BumpMapState.NONE;
         if (material.maps[ES2PhongMaterial.BUMP].getTexture() != null) {
@@ -154,10 +154,10 @@ class ES2PhongShader {
                 [selfIllumState.ordinal()][bumpState.ordinal()][numLights];
         if (shader == null) {
             String fragShader = lightingShaderParts[numLights].replace("vec4 apply_diffuse();", diffuseShaderParts[diffuseState.ordinal()]);
-            fragShader = fragShader.replace("vec4 apply_specular();", SpecularShaderParts[specularState.ordinal()]);
+            fragShader = fragShader.replace("vec4 apply_specular();", specularShaderParts[specularState.ordinal()]);
             fragShader = fragShader.replace("vec3 apply_normal();", normalMapShaderParts[bumpState.ordinal()]);
             fragShader = fragShader.replace("vec4 apply_selfIllum();", selfIllumShaderParts[selfIllumState.ordinal()]);
-                  
+
             String[] pixelShaders = new String[]{
                 fragShader
             };
@@ -190,6 +190,10 @@ class ES2PhongShader {
         shader.setConstant("diffuseColor", material.diffuseColor.getRed(),
                 material.diffuseColor.getGreen(), material.diffuseColor.getBlue(),
                 material.diffuseColor.getAlpha());
+
+        shader.setConstant("specularColor", material.specularColor.getRed(),
+                material.specularColor.getGreen(), material.specularColor.getBlue(),
+                material.specularColor.getAlpha());
 
         context.updateTexture(0, material.maps[ES2PhongMaterial.DIFFUSE].getTexture());
         context.updateTexture(1, material.maps[ES2PhongMaterial.SPECULAR].getTexture());

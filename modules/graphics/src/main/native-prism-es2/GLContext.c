@@ -2000,8 +2000,6 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_GLContext_nCreateES2PhongMaterial
     pmInfo->diffuseColor[1] = 0.0f;
     pmInfo->diffuseColor[2] = 0.0f;
     pmInfo->diffuseColor[3] = 0.0f;
-    pmInfo->isBumpAlpha = GL_FALSE;
-    pmInfo->isSpecularAlpha = GL_FALSE;
     pmInfo->maps[0] = 0;
     pmInfo->maps[1] = 0;
     pmInfo->maps[2] = 0;
@@ -2053,11 +2051,11 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetSolidColor
 /*
  * Class:     com_sun_prism_es2_GLContext
  * Method:    nSetMap
- * Signature: (JJIIZZ)V
+ * Signature: (JJII)V
  */
 JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetMap
   (JNIEnv *env, jclass class, jlong nativeCtxInfo, jlong nativePhongMaterialInfo,
-        jint mapType, jint texID, jboolean isSpecularAlpha, jboolean isBumpAlpha)
+        jint mapType, jint texID)
 {
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
     PhongMaterialInfo *pmInfo = (PhongMaterialInfo *) jlong_to_ptr(nativePhongMaterialInfo);
@@ -2072,8 +2070,6 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetMap
     }
     
     pmInfo->maps[mapType] = texID;
-    pmInfo->isSpecularAlpha = isSpecularAlpha;
-    pmInfo->isBumpAlpha = isBumpAlpha;
 }
 
 /*
