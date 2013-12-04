@@ -31,18 +31,13 @@
  */
 package ensemble.samples.controls.datepicker;
 
+
 import java.time.LocalDate;
-import java.util.Iterator;
 import java.util.Locale;
 import javafx.application.Application;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Pos;
-import javafx.scene.Group;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.CheckMenuItem;
@@ -52,8 +47,6 @@ import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioMenuItem;
-import javafx.scene.control.Toggle;
-import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
@@ -62,9 +55,10 @@ import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 
+
 /**
- * A sample that demonstrates the DatePicker. The sample uses a new Stage for
- * the DatePicker to allow changing of locales. 
+ * A sample that demonstrates the DatePicker. There is an option to switch
+ * locales and see how DatePicker control picks it up.
  *
  * @sampleName DatePicker
  * @preview preview.png
@@ -78,9 +72,8 @@ public class DatePickerApp extends Application {
     private MenuBar datePickerMenuBar;
     private final LocalDate today = LocalDate.now();
     private final LocalDate tomorrow = today.plusDays(1);
-    private Locale originalDefault;
-    private Stage myStage;
-    private Stage primStage;
+    private Locale originalLocale;
+    private HBox hbox;
     static {
         locales.addAll("en-US",
                 "ar-SA",
@@ -103,54 +96,27 @@ public class DatePickerApp extends Application {
     }
 
     public Parent createContent() {
-        VBox buttonVbox = new VBox(8);
-        buttonVbox.setAlignment(Pos.CENTER);               
-        // Use a Button to create a new Stage that gives us an environment to switch Locales
-        final ToggleButton button = new ToggleButton("Open a  new Stage for DatePicker");
-        button.setPrefWidth(290);
-        button.setMaxWidth(ToggleButton.USE_PREF_SIZE);
-        button.setMinWidth(ToggleButton.USE_PREF_SIZE);
-        final ToggleButton closeButton = new ToggleButton("Close DatePicker Stage");
-        closeButton.setPrefWidth(290);
-        closeButton.setMaxWidth(ToggleButton.USE_PREF_SIZE);
-        closeButton.setMinWidth(ToggleButton.USE_PREF_SIZE);
-        
-        ToggleGroup group = new ToggleGroup();
-        button.setToggleGroup(group);
-        closeButton.setToggleGroup(group);
-
-        group.selectedToggleProperty().addListener((observable, oldValue, selectedToggle) -> {
-            if (selectedToggle != null) {
-                if (((ToggleButton) selectedToggle).getText().equals("Open a  new Stage for DatePicker")) {
-                    if (myStage == null) {
-                        myStage = new Stage();
-                        Group rootGroup = new Group();
-                        Scene scene = new Scene(rootGroup, 300, 200);
-                        myStage.setScene(scene);
-                        myStage.centerOnScreen();
-                        myStage.initOwner(primStage);
-                        myStage.show();
-                        rootGroup.getChildren().add(createDatePickerSceneContent(myStage));
-                    }
-                } else {
-                    if (myStage != null) {
-                        myStage.close();
-                        myStage = null;
-                        if (originalDefault != null) {
-                            Locale.setDefault(originalDefault);
-                        }
-                        button.setDisable(false);
-                    }
-                }
-            }
-        });
-
-        buttonVbox.getChildren().addAll(button, closeButton);
-        return buttonVbox;
-    }
-    
-    private Parent createDatePickerSceneContent(Stage inStage) {
         Text datePickerText = new Text("Date:");
+        
+        hbox = new HBox(18);
+        hbox.setAlignment(Pos.CENTER);
+        hbox.getChildren().add(datePickerText);
+        
+        createDatePicker();
+        
+        VBox vbox = new VBox(22);
+        vbox.getChildren().addAll(datePickerMenuBar, hbox);
+        vbox.setPrefSize(300, 200);
+        vbox.setMinSize(VBox.USE_PREF_SIZE, VBox.USE_PREF_SIZE);
+        return vbox;
+    }
+
+    private void createDatePicker() {
+        hbox.getChildren().remove(datePicker);
+        LocalDate value = null;
+        if (datePicker != null) {
+            value = datePicker.getValue();
+        }
         datePicker = new DatePicker();       
         // day cell factory
         final Callback<DatePicker, DateCell> dayCellFactory = new Callback<DatePicker, DateCell>() {
@@ -172,7 +138,7 @@ public class DatePickerApp extends Application {
             }
         };
         //Create the menubar to experiment with the DatePicker
-        datePickerMenuBar = createMenuBar(inStage, dayCellFactory);
+        datePickerMenuBar = createMenuBar(dayCellFactory);
         // Listen for DatePicker actions
         datePicker.setOnAction(t -> {
             LocalDate isoDate = datePicker.getValue();
@@ -190,21 +156,13 @@ public class DatePickerApp extends Application {
                 }
             }
         });
-
-
-        
-        HBox hbox = new HBox(18);
-        hbox.setAlignment(Pos.CENTER);
-        hbox.getChildren().addAll(datePickerText, datePicker);
-        
-        VBox vbox = new VBox(22);
-        vbox.getChildren().addAll(datePickerMenuBar, hbox);
-        vbox.setPrefSize(300, 200);
-        vbox.setMinSize(VBox.USE_PREF_SIZE, VBox.USE_PREF_SIZE);
-        return vbox;
+        hbox.getChildren().add(datePicker);
+        if (value != null) {
+            datePicker.setValue(value);
+        }
     }
 
-    private MenuBar createMenuBar(final Stage inStage, final Callback<DatePicker, DateCell> dayCellFac) {
+    private MenuBar createMenuBar(final Callback<DatePicker, DateCell> dayCellFac) {
         final MenuBar menuBar = new MenuBar();
         final ToggleGroup localeToggleGroup = new ToggleGroup();
         // Locales
@@ -245,13 +203,8 @@ public class DatePickerApp extends Application {
             if (localeToggleGroup.getSelectedToggle() != null) {
                 String selectedLocale = ((RadioMenuItem) localeToggleGroup.getSelectedToggle()).getText();
                 Locale locale = Locale.forLanguageTag(selectedLocale.replace('_', '-'));
-                if (originalDefault == null) { //save original default Locale for restoration later
-                    originalDefault = Locale.getDefault();
-                }
                 Locale.setDefault(locale);
-               // sampleContent = createDatePickerSceneContent(inStage);
-                inStage.setScene(new Scene(createDatePickerSceneContent(inStage)));
-                inStage.show();
+                createDatePicker();
             }
         });
 
@@ -259,17 +212,20 @@ public class DatePickerApp extends Application {
         return menuBar;
     }    
  
+    public void play() {
+        originalLocale = Locale.getDefault();
+    }
+    
     @Override
     public void stop() {
-        if (originalDefault != null) {
-            Locale.setDefault(originalDefault);
-        }
+        Locale.setDefault(originalLocale);
     }
+    
     @Override
     public void start(Stage primaryStage) throws Exception { 
-        primStage = primaryStage;
         primaryStage.setScene(new Scene(createContent()));      
         primaryStage.show();
+        play();
     }
     
     /**
