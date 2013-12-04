@@ -137,57 +137,81 @@ public class MediaControl extends BorderPane {
         playButton.setMinWidth(Control.USE_PREF_SIZE);
 
         playButton.setGraphic(imageViewPlay);
-        playButton.setOnAction(e -> {
-            updateValues();
-            MediaPlayer.Status status = mp.getStatus();
-            if (status == MediaPlayer.Status.UNKNOWN
-                    || status == MediaPlayer.Status.HALTED) {
-                // don't do anything in these states
-                return;
-            }
-
-            if (status == MediaPlayer.Status.PAUSED
-                    || status == MediaPlayer.Status.READY
-                    || status == MediaPlayer.Status.STOPPED) {
-                // rewind the movie if we're sitting at the end
-                if (atEndOfMedia) {
-                    mp.seek(mp.getStartTime());
-                    atEndOfMedia = false;
-                    playButton.setGraphic(imageViewPlay);
-                    //playButton.setText(">");
-                    updateValues();
+        playButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent e) {
+                updateValues();
+                MediaPlayer.Status status = mp.getStatus();
+                if (status == MediaPlayer.Status.UNKNOWN
+                        || status == MediaPlayer.Status.HALTED) {
+                    // don't do anything in these states
+                    return;
                 }
-                mp.play();
-                playButton.setGraphic(imageViewPause);
-                //playButton.setText("||");
-            } else {
-                mp.pause();
-            }
-        });
-        mp.currentTimeProperty().addListener((observable, oldValue, newValue) -> updateValues());
-        mp.setOnPlaying(() -> {
 
-            if (stopRequested) {
-                mp.pause();
-                stopRequested = false;
-            } else {
-                playButton.setGraphic(imageViewPause);
+                if (status == MediaPlayer.Status.PAUSED
+                        || status == MediaPlayer.Status.READY
+                        || status == MediaPlayer.Status.STOPPED) {
+                    // rewind the movie if we're sitting at the end
+                    if (atEndOfMedia) {
+                        mp.seek(mp.getStartTime());
+                        atEndOfMedia = false;
+                        playButton.setGraphic(imageViewPlay);
+                        //playButton.setText(">");
+                        updateValues();
+                    }
+                    mp.play();
+                    playButton.setGraphic(imageViewPause);
+                    //playButton.setText("||");
+                } else {
+                    mp.pause();
+                }
+            }
+        });
+        mp.currentTimeProperty().addListener(new ChangeListener<Duration>() {
+            @Override
+            public void changed(ObservableValue<? extends Duration> observable, Duration oldValue, Duration newValue) {
+                updateValues();
+            }
+        });
+        mp.setOnPlaying(new Runnable() {
+            @Override
+            public void run() {
+
+                if (stopRequested) {
+                    mp.pause();
+                    stopRequested = false;
+                } else {
+                    playButton.setGraphic(imageViewPause);
+                    //playButton.setText("||");
+                }
+            }
+        });
+        mp.setOnPaused(new Runnable() {
+            @Override
+            public void run() {
+
+                playButton.setGraphic(imageViewPlay);
                 //playButton.setText("||");
             }
         });
-        mp.setOnPaused(() -> playButton.setGraphic(imageViewPlay));
-        mp.setOnReady(() -> {
-            duration = mp.getMedia().getDuration();
-            updateValues();
+        mp.setOnReady(new Runnable() {
+            @Override
+            public void run() {
+                duration = mp.getMedia().getDuration();
+                updateValues();
+            }
         });
 
         mp.setCycleCount(repeat ? MediaPlayer.INDEFINITE : 1);
-        mp.setOnEndOfMedia(() -> {
-            if (!repeat) {
-                playButton.setGraphic(imageViewPlay);
-                //playButton.setText(">");
-                stopRequested = true;
-                atEndOfMedia = true;
+        mp.setOnEndOfMedia(new Runnable() {
+            @Override
+            public void run() {
+                if (!repeat) {
+                    playButton.setGraphic(imageViewPlay);
+                    //playButton.setText(">");
+                    stopRequested = true;
+                    atEndOfMedia = true;
+                }
             }
         });
         mediaBar.getChildren().add(playButton);
@@ -204,14 +228,17 @@ public class MediaControl extends BorderPane {
         timeSlider.setMaxWidth(Double.MAX_VALUE);
         
         HBox.setHgrow(timeSlider, Priority.ALWAYS);
-        timeSlider.valueProperty().addListener(ov -> {
-            if (timeSlider.isValueChanging()) {
-                // multiply duration by percentage calculated by slider position
-                if (duration != null) {
-                    mp.seek(duration.multiply(timeSlider.getValue() / 100.0));
-                }
-                updateValues();
+        timeSlider.valueProperty().addListener(new InvalidationListener() {
+            @Override
+            public void invalidated(Observable ov) {
+                if (timeSlider.isValueChanging()) {
+                    // multiply duration by percentage calculated by slider position
+                    if (duration != null) {
+                        mp.seek(duration.multiply(timeSlider.getValue() / 100.0));
+                    }
+                    updateValues();
 
+                }
             }
         });
         mediaBar.getChildren().add(timeSlider);
@@ -232,7 +259,12 @@ public class MediaControl extends BorderPane {
             public void handle(ActionEvent event) {
                 if (!fullScreen) {
                     newStage = new Stage();
-                    newStage.fullScreenProperty().addListener((ov, t, t1) -> onFullScreen());
+                    newStage.fullScreenProperty().addListener(new ChangeListener<Boolean>() {
+                        @Override
+                        public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
+                            onFullScreen();
+                        }
+                    });
                     final BorderPane borderPane = new BorderPane() {
                         @Override
                         protected void layoutChildren() {
@@ -285,11 +317,17 @@ public class MediaControl extends BorderPane {
         volumeSlider.setPrefWidth(70);
         volumeSlider.setMinWidth(30);
         volumeSlider.setMaxWidth(Region.USE_PREF_SIZE);
-        volumeSlider.valueProperty().addListener(ov -> {
+        volumeSlider.valueProperty().addListener(new InvalidationListener() {
+            @Override
+            public void invalidated(Observable ov) {
+            }
         });
-        volumeSlider.valueProperty().addListener((observable, oldValue, newValue) -> {
-            if (volumeSlider.isValueChanging()) {
-                mp.setVolume(volumeSlider.getValue() / 100.0);
+        volumeSlider.valueProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
+                if (volumeSlider.isValueChanging()) {
+                    mp.setVolume(volumeSlider.getValue() / 100.0);
+                }
             }
         });
         mediaBar.getChildren().add(volumeSlider);
@@ -308,22 +346,30 @@ public class MediaControl extends BorderPane {
             
             smallBP.setBottom(null);
             setBottom(mediaBar);
-            Platform.runLater(newStage::close);
+            Platform.runLater(new Runnable() {
+                @Override
+                public void run() {
+                    newStage.close();
+                }
+            });
 
         }
     }
 
     protected void updateValues() {
         if (playTime != null && timeSlider != null && volumeSlider != null && duration != null) {
-            Platform.runLater(() -> {
-                Duration currentTime = mp.getCurrentTime();
-                playTime.setText(formatTime(currentTime, duration));
-                timeSlider.setDisable(duration.isUnknown());
-                if (!timeSlider.isDisabled() && duration.greaterThan(Duration.ZERO) && !timeSlider.isValueChanging()) {
-                    timeSlider.setValue(currentTime.toMillis() / duration.toMillis() * 100.0);
-                }
-                if (!volumeSlider.isValueChanging()) {
-                    volumeSlider.setValue((int) Math.round(mp.getVolume() * 100));
+            Platform.runLater(new Runnable() {
+                @Override
+                public void run() {
+                    Duration currentTime = mp.getCurrentTime();
+                    playTime.setText(formatTime(currentTime, duration));
+                    timeSlider.setDisable(duration.isUnknown());
+                    if (!timeSlider.isDisabled() && duration.greaterThan(Duration.ZERO) && !timeSlider.isValueChanging()) {
+                        timeSlider.setValue(currentTime.divide(duration).toMillis() * 100.0);
+                    }
+                    if (!volumeSlider.isValueChanging()) {
+                        volumeSlider.setValue((int) Math.round(mp.getVolume() * 100));
+                    }
                 }
             });
         }

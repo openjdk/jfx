@@ -86,11 +86,14 @@ public class DisplayShelf extends Region {
             final PerspectiveImage item =
                     items[i] = new PerspectiveImage(images[i]);
             final double index = i;
-            item.setOnMouseClicked(me -> {
-                localChange = true;
-                scrollBar.setValue(index);
-                localChange = false;
-                shiftToCenter(item);
+            item.setOnMouseClicked(new EventHandler<MouseEvent>() {
+                @Override
+                public void handle(MouseEvent me) {
+                    localChange = true;
+                    scrollBar.setValue(index);
+                    localChange = false;
+                    shiftToCenter(item);
+                }
             });
         }
         // setup scroll bar
@@ -98,9 +101,12 @@ public class DisplayShelf extends Region {
         scrollBar.setVisibleAmount(1);
         scrollBar.setUnitIncrement(1);
         scrollBar.setBlockIncrement(1);
-        scrollBar.valueProperty().addListener(ov -> {
-            if (!localChange) {
-                shiftToCenter(items[(int) Math.round(scrollBar.getValue())]);
+        scrollBar.valueProperty().addListener(new InvalidationListener() {
+            @Override
+            public void invalidated(Observable ov) {
+                if (!localChange) {
+                    shiftToCenter(items[(int) Math.round(scrollBar.getValue())]);
+                }
             }
         });
         // create content
@@ -108,17 +114,20 @@ public class DisplayShelf extends Region {
         getChildren().addAll(centered, scrollBar);
         // listen for keyboard events
         setFocusTraversable(true);
-        setOnKeyPressed(ke -> {
-            if (ke.getCode() == KeyCode.LEFT) {
-                shift(1);
-                localChange = true;
-                scrollBar.setValue(centerIndex);
-                localChange = false;
-            } else if (ke.getCode() == KeyCode.RIGHT) {
-                shift(-1);
-                localChange = true;
-                scrollBar.setValue(centerIndex);
-                localChange = false;
+        setOnKeyPressed(new EventHandler<KeyEvent>() {
+            @Override
+            public void handle(KeyEvent ke) {
+                if (ke.getCode() == KeyCode.LEFT) {
+                    shift(1);
+                    localChange = true;
+                    scrollBar.setValue(centerIndex);
+                    localChange = false;
+                } else if (ke.getCode() == KeyCode.RIGHT) {
+                    shift(-1);
+                    localChange = true;
+                    scrollBar.setValue(centerIndex);
+                    localChange = false;
+                }
             }
         });
         // update

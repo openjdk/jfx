@@ -86,28 +86,37 @@ public class ChangeListenerApp extends Application {
         text.setTextOrigin(VPos.TOP);
         text.setTextAlignment(TextAlignment.CENTER);
         // create listener
-        final InvalidationListener hoverListener = ov -> {
-            if (rect.isHover()) {
-                text.setText("hovered");
-            } else {
-                text.setText("not hovered");
+        final InvalidationListener hoverListener = new InvalidationListener() {
+            @Override
+            public void invalidated(Observable ov) {
+                if (rect.isHover()) {
+                    text.setText("hovered");
+                } else {
+                    text.setText("not hovered");
+                }
             }
         };
         //create button for adding listener
         Button buttonAdd = new Button("Add listener");
         buttonAdd.setPrefSize(140, 18);
-        buttonAdd.setOnAction(t -> {
-            //add the listener on property hover
-            rect.hoverProperty().addListener(hoverListener);
-            text.setText("listener added");
+        buttonAdd.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent t) {
+                //add the listener on property hover
+                rect.hoverProperty().addListener(hoverListener);
+                text.setText("listener added");
+            }
         });
         //create a button for removing the listener
         Button buttonRemove = new Button("Remove listener");
         buttonRemove.setPrefSize(140, 18);
-        buttonRemove.setOnAction(t -> {
-            //remove the listener
-            rect.hoverProperty().removeListener(hoverListener);
-            text.setText("listener removed");
+        buttonRemove.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent t) {
+                //remove the listener
+                rect.hoverProperty().removeListener(hoverListener);
+                text.setText("listener removed");
+            }
         });
         // show all nodes
         vbox.getChildren().addAll(text, buttonAdd, buttonRemove);

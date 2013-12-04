@@ -78,14 +78,24 @@ public class ScrollBarApp extends Application {
         //create horizontal scrollbar
         xscrollBar = horizontalScrollBar(-1,-1,xBarWidth,xBarHeight,xBarWidth,xBarHeight);
         xscrollBar.setUnitIncrement(20.0);
-        xscrollBar.valueProperty().addListener((observable, oldValue, newValue) 
-                -> setScrollValueX(xscrollBar.getValue(), circle));
+        xscrollBar.valueProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
+                //changes the x position of the circle
+                setScrollValueX(xscrollBar.getValue(), circle);
+            }
+        });
 
         //create vertical scrollbar
         yscrollBar = verticalScrollBar(-1,-1,yBarWidth,yBarHeight,yBarWidth,yBarHeight);
         yscrollBar.setUnitIncrement(20.0);
-        yscrollBar.valueProperty().addListener((observable, oldValue, newValue) 
-                -> setScrollValueY(yscrollBar.getValue(), circle));
+        yscrollBar.valueProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
+                //changes the y position of the circle
+                setScrollValueY(yscrollBar.getValue(), circle);
+            }
+        });
 
         //shift position of vertical scrollbar to right side of scene
         yscrollBar.setTranslateX(yBarHeight);

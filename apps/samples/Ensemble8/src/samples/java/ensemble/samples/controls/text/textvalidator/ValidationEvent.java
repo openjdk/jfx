@@ -36,7 +36,7 @@ import javafx.event.EventType;
  
 public class ValidationEvent extends Event{
     public static final EventType<ValidationEvent> ANY_EVENT =
-            new EventType<>(Event.ANY, "VALIDATION");
+            new EventType<ValidationEvent>(Event.ANY, "VALIDATION");
 
     private final ValidationResult result;
 

@@ -64,10 +64,10 @@ public class LinearGradientApp extends Application {
         Rectangle rect1 = new Rectangle(0,0,80,80);
 
         //create simple linear gradient
-        LinearGradient gradient1 = new LinearGradient(0, 0, 1, 0, true, 
-                CycleMethod.NO_CYCLE, 
-                new Stop(0, Color.DODGERBLUE),
-                new Stop(1, Color.BLACK));
+        LinearGradient gradient1 = new LinearGradient(0, 0, 1, 0, true, CycleMethod.NO_CYCLE, new Stop[] {
+            new Stop(0, Color.DODGERBLUE),
+            new Stop(1, Color.BLACK)
+        });
 
         //set rectangle fill
         rect1.setFill(gradient1);
@@ -76,11 +76,11 @@ public class LinearGradientApp extends Application {
         Rectangle rect2 = new Rectangle(0,0,80,80);
 
         //create complex linear gradient
-        LinearGradient gradient2 = new LinearGradient(0, 0, 0, 0.5,  true, 
-                CycleMethod.REFLECT, 
-                new Stop(0, Color.DODGERBLUE),
-                new Stop(0.1, Color.BLACK),
-                new Stop(1, Color.DODGERBLUE));
+        LinearGradient gradient2 = new LinearGradient(0, 0, 0, 0.5,  true, CycleMethod.REFLECT, new Stop[] {
+            new Stop(0, Color.DODGERBLUE),
+            new Stop(0.1, Color.BLACK),
+            new Stop(1, Color.DODGERBLUE)
+        });
 
         //set rectangle fill
         rect2.setFill(gradient2);

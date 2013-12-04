@@ -86,34 +86,33 @@ public class Brick extends Parent {
     
 
     public static int getBrickType(String s) {
-        switch (s) {
-            case "L":
-                return TYPE_BLUE;
-            case "2":
-                return TYPE_BROKEN1;
-            case "B":
-                return TYPE_BROWN;
-            case "C":
-                return TYPE_CYAN;
-            case "G":
-                return TYPE_GREEN;
-            case "0":
-                return TYPE_GREY;
-            case "M":
-                return TYPE_MAGENTA;
-            case "O":
-                return TYPE_ORANGE;
-            case "R":
-                return TYPE_RED;
-            case "V":
-                return TYPE_VIOLET;
-            case "W":
-                return TYPE_WHITE;
-            case "Y":
-                return TYPE_YELLOW;
-            default:
-                System.out.println("Unknown brick type '{s}'");
-                return TYPE_WHITE;
+        if (s.equals("L")) {
+            return TYPE_BLUE;
+        } else if (s.equals("2")) {
+            return TYPE_BROKEN1;
+        } else if (s.equals("B")) {
+            return TYPE_BROWN;
+        } else if (s.equals("C")) {
+            return TYPE_CYAN;
+        } else if (s.equals("G")) {
+            return TYPE_GREEN;
+        } else if (s.equals("0")) {
+            return TYPE_GREY;
+        } else if (s.equals("M")) {
+            return TYPE_MAGENTA;
+        } else if (s.equals("O")) {
+            return TYPE_ORANGE;
+        } else if (s.equals("R")) {
+            return TYPE_RED;
+        } else if (s.equals("V")) {
+            return TYPE_VIOLET;
+        } else if (s.equals("W")) {
+            return TYPE_WHITE;
+        } else if (s.equals("Y")) {
+            return TYPE_YELLOW;
+        } else {
+            System.out.println("Unknown brick type '{s}'");
+            return TYPE_WHITE;
         }
     }
 

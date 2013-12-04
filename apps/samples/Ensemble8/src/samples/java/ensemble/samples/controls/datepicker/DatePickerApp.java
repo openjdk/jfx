@@ -31,12 +31,16 @@
  */
 package ensemble.samples.controls.datepicker;
 
-
 import java.time.LocalDate;
+import java.util.Iterator;
 import java.util.Locale;
 import javafx.application.Application;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -47,6 +51,7 @@ import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioMenuItem;
+import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
@@ -75,24 +80,26 @@ public class DatePickerApp extends Application {
     private Locale originalLocale;
     private HBox hbox;
     static {
-        locales.addAll("en-US",
-                "ar-SA",
-                "en-GB",
-                "cs-CZ",
-                "el-GR",
-                "he-IL",
-                "hi-IN",
-                "ja-JP",
-                "ja-JP-u-ca-japanese",
-                "ru-RU",
-                "sv-SE",
-                "th-TH",
-                "th-TH-u-ca-buddhist",
-                "th-TH-u-ca-buddhist-nu-thai",
-                "zh-CN",
-                "en-US-u-ca-islamic-umalqura",
-                "ar-SA-u-ca-islamic-umalqura",
-                "en-u-ca-japanese-nu-thai");
+        locales.addAll(new String[]{
+            "en-US",
+            "ar-SA",
+            "en-GB",
+            "cs-CZ",
+            "el-GR",
+            "he-IL",
+            "hi-IN",
+            "ja-JP",
+            "ja-JP-u-ca-japanese",
+            "ru-RU",
+            "sv-SE",
+            "th-TH",
+            "th-TH-u-ca-buddhist",
+            "th-TH-u-ca-buddhist-nu-thai",
+            "zh-CN",
+            "en-US-u-ca-islamic-umalqura",
+            "ar-SA-u-ca-islamic-umalqura",
+            "en-u-ca-japanese-nu-thai"
+        });
     }
 
     public Parent createContent() {
@@ -140,15 +147,18 @@ public class DatePickerApp extends Application {
         //Create the menubar to experiment with the DatePicker
         datePickerMenuBar = createMenuBar(dayCellFactory);
         // Listen for DatePicker actions
-        datePicker.setOnAction(t -> {
-            LocalDate isoDate = datePicker.getValue();
-            if ((isoDate != null) && (!isoDate.equals(LocalDate.now()))) {
-                for (Menu menu : datePickerMenuBar.getMenus()) {
-                    if (menu.getText().equals("Options for Locale")) {
-                        for (MenuItem menuItem : menu.getItems()) {
-                            if (menuItem.getText().equals("Set date to today")) {
-                                if ((menuItem instanceof CheckMenuItem) && ((CheckMenuItem) menuItem).isSelected()) {
-                                    ((CheckMenuItem) menuItem).setSelected(false);
+        datePicker.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent t) {
+                LocalDate isoDate = datePicker.getValue();
+                if ((isoDate != null) && (!isoDate.equals(LocalDate.now()))) {
+                    for (Menu menu : datePickerMenuBar.getMenus()) {
+                        if (menu.getText().equals("Options for Locale")) {
+                            for (MenuItem menuItem : menu.getItems()) {
+                                if (menuItem.getText().equals("Set date to today")) {
+                                    if ((menuItem instanceof CheckMenuItem) && ((CheckMenuItem) menuItem).isSelected()) {
+                                        ((CheckMenuItem) menuItem).setSelected(false);
+                                    }
                                 }
                             }
                         }
@@ -167,8 +177,9 @@ public class DatePickerApp extends Application {
         final ToggleGroup localeToggleGroup = new ToggleGroup();
         // Locales
         Menu localeMenu = new Menu("Locales");
-        for (String locale1 : locales) {
-            RadioMenuItem localeMenuItem = new RadioMenuItem(locale1);
+        Iterator<String> localeIterator = locales.iterator();
+        while (localeIterator.hasNext()) {
+            RadioMenuItem localeMenuItem = new RadioMenuItem(localeIterator.next());
             localeMenuItem.setToggleGroup(localeToggleGroup);
             localeMenu.getItems().add(localeMenuItem);
         }
@@ -177,36 +188,50 @@ public class DatePickerApp extends Application {
         //Style DatePicker with cell factory
         final CheckMenuItem cellFactoryMenuItem = new CheckMenuItem("Use cell factory to color past days and add tooltip to tomorrow");
         optionsMenu.getItems().add(cellFactoryMenuItem);
-        cellFactoryMenuItem.setOnAction(t -> {
-            if (cellFactoryMenuItem.isSelected()) {
-                datePicker.setDayCellFactory(dayCellFac);
-            } else {
-                datePicker.setDayCellFactory(null);
+        cellFactoryMenuItem.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent t) {
+                if (cellFactoryMenuItem.isSelected()) {
+                    datePicker.setDayCellFactory(dayCellFac);
+                } else {
+                    datePicker.setDayCellFactory(null);
+                }
             }
         });
                        
         //Set date to today
         final CheckMenuItem todayMenuItem = new CheckMenuItem("Set date to today");
         optionsMenu.getItems().add(todayMenuItem);
-        todayMenuItem.setOnAction(t -> {
-            if (todayMenuItem.isSelected()) {
-                datePicker.setValue(today);
+        todayMenuItem.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent t) {
+                if (todayMenuItem.isSelected()) {
+                    datePicker.setValue(today);
+                }
             }
         });
 
         //Set date to today
         final CheckMenuItem showWeekNumMenuItem = new CheckMenuItem("Show week numbers");
         optionsMenu.getItems().add(showWeekNumMenuItem);
-        showWeekNumMenuItem.setOnAction(t -> datePicker.setShowWeekNumbers(showWeekNumMenuItem.isSelected()));
-        
-        localeToggleGroup.selectedToggleProperty().addListener((ov, oldToggle, newToggle) -> {
-            if (localeToggleGroup.getSelectedToggle() != null) {
-                String selectedLocale = ((RadioMenuItem) localeToggleGroup.getSelectedToggle()).getText();
-                Locale locale = Locale.forLanguageTag(selectedLocale.replace('_', '-'));
-                Locale.setDefault(locale);
-                createDatePicker();
+        showWeekNumMenuItem.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent t) {
+                datePicker.setShowWeekNumbers(showWeekNumMenuItem.isSelected());
             }
-        });
+        });        
+        
+        localeToggleGroup.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
+            @Override
+            public void changed(ObservableValue<? extends Toggle> ov, Toggle oldToggle, Toggle newToggle) {
+                if (localeToggleGroup.getSelectedToggle() != null) {
+                    String selectedLocale = ((RadioMenuItem) localeToggleGroup.getSelectedToggle()).getText();
+                    Locale locale = Locale.forLanguageTag(selectedLocale.replace('_', '-'));
+                    Locale.setDefault(locale);
+                    createDatePicker();
+                }
+            }
+        });       
 
         menuBar.getMenus().addAll(localeMenu, optionsMenu);
         return menuBar;

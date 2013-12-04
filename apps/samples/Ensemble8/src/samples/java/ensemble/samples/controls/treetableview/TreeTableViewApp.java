@@ -79,21 +79,27 @@ public class TreeTableViewApp extends Application {
         nameColumn.setEditable(false);
         nameColumn.setMinWidth(130);
         nameColumn.setCellValueFactory(
-                p -> {
-                    Inventory inv = p.getValue().getValue();
-                    return new ReadOnlyObjectWrapper(inv.nameProperty().getValue());
-                });
+                new Callback<TreeTableColumn.CellDataFeatures<Inventory, String>, ObservableValue<String>>() {
+            @Override
+            public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Inventory, String> p) {
+                Inventory inv = p.getValue().getValue();
+                return new ReadOnlyObjectWrapper(inv.nameProperty().getValue());
+            }
+        });
 
         // Data column
         final TreeTableColumn<Inventory, String> dataColumn = new TreeTableColumn<>("Data");
         dataColumn.setEditable(true);
         dataColumn.setMinWidth(150);
-        dataColumn.setCellValueFactory(p -> {
-            final Inventory value = p.getValue().getValue();
-            if (value.equals(rootItem.getValue())) {
-                return new ReadOnlyStringWrapper(" ");
-            } else {
-                return new ReadOnlyStringWrapper(value.ob1Property().getValue().dataProperty().getValue());
+        dataColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<Inventory, String>, ObservableValue<String>>() {
+            @Override
+            public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Inventory, String> p) {
+                final Inventory value = p.getValue().getValue();
+                if (value.equals(rootItem.getValue())) {
+                    return new ReadOnlyStringWrapper(" ");
+                } else {
+                    return new ReadOnlyStringWrapper(value.ob1Property().getValue().dataProperty().getValue());
+                }
             }
         });
 
@@ -101,16 +107,29 @@ public class TreeTableViewApp extends Application {
         final TreeTableColumn<Inventory, String> noteColumn = new TreeTableColumn<>("Notes (editable)");
         noteColumn.setEditable(true);
         noteColumn.setMinWidth(150);
-        noteColumn.setCellValueFactory(p -> {
-            final Inventory value = p.getValue().getValue();
-            if (value.equals(rootItem.getValue())) {
-                return new ReadOnlyStringWrapper(" ");
-            } else {
-                return new ReadOnlyStringWrapper(value.p2Property().getValue());
+        noteColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<Inventory, String>, ObservableValue<String>>() {
+            @Override
+            public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Inventory, String> p) {
+                final Inventory value = p.getValue().getValue();
+                if (value.equals(rootItem.getValue())) {
+                    return new ReadOnlyStringWrapper(" ");
+                } else {
+                    return new ReadOnlyStringWrapper(value.p2Property().getValue());
+                }
             }
         });
-        noteColumn.setOnEditCommit(t -> System.out.println("Note column entry was edited. Old value = " + t.getOldValue() + " New value = " + t.getNewValue()));
-        noteColumn.setCellFactory(p -> new TextFieldTreeTableCell(new DefaultStringConverter()));
+        noteColumn.setOnEditCommit(new EventHandler<TreeTableColumn.CellEditEvent<Inventory, String>>() {
+            @Override
+            public void handle(TreeTableColumn.CellEditEvent<Inventory, String> t) {
+                System.out.println("Note column entry was edited. Old value = " + t.getOldValue() + " New value = " + t.getNewValue());
+            }
+        });
+        noteColumn.setCellFactory(new Callback<TreeTableColumn<Inventory, String>, TreeTableCell<Inventory, String>>() {
+            @Override
+            public TreeTableCell<Inventory, String> call(TreeTableColumn<Inventory, String> p) {
+                return new TextFieldTreeTableCell(new DefaultStringConverter());
+            }
+        });
 
         final TreeTableView treeTableView = new TreeTableView(rootItem);
         treeTableView.setEditable(true);

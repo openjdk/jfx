@@ -131,21 +131,35 @@ public class PlayerPane extends BorderPane {
         BorderPane.setAlignment(mediaTopBar, Pos.CENTER);
 
 
-        mp.currentTimeProperty().addListener((observable, oldValue, newValue) -> updateValues());
-        mp.setOnPlaying(() -> {
-            if (stopRequested) {
-                mp.pause();
-                stopRequested = false;
+        mp.currentTimeProperty().addListener(new ChangeListener<Duration>() {
+            @Override
+            public void changed(ObservableValue<? extends Duration> observable, Duration oldValue, Duration newValue) {
+                updateValues();
             }
         });
-        mp.setOnReady(() -> {
-            duration = mp.getMedia().getDuration();
-            updateValues();
+        mp.setOnPlaying(new Runnable() {
+            @Override
+            public void run() {
+                if (stopRequested) {
+                    mp.pause();
+                    stopRequested = false;
+                }
+            }
         });
-        mp.setOnEndOfMedia(() -> {
-            if (!repeat) {
-                stopRequested = true;
-                atEndOfMedia = true;
+        mp.setOnReady(new Runnable() {
+            @Override
+            public void run() {
+                duration = mp.getMedia().getDuration();
+                updateValues();
+            }
+        });
+        mp.setOnEndOfMedia(new Runnable() {
+            @Override
+            public void run() {
+                if (!repeat) {
+                    stopRequested = true;
+                    atEndOfMedia = true;
+                }
             }
         });
         mp.setCycleCount(repeat ? MediaPlayer.INDEFINITE : 1);
@@ -161,14 +175,17 @@ public class PlayerPane extends BorderPane {
         timeSlider.setId("media-slider");
         timeSlider.setMinWidth(240);
         timeSlider.setMaxWidth(Double.MAX_VALUE);
-        timeSlider.valueProperty().addListener(ov -> {
-            if (timeSlider.isValueChanging()) {
-                // multiply duration by percentage calculated by slider position
-                if (duration != null) {
-                    mp.seek(duration.multiply(timeSlider.getValue() / 100.0));
-                }
-                updateValues();
+        timeSlider.valueProperty().addListener(new InvalidationListener() {
+            @Override
+            public void invalidated(Observable ov) {
+                if (timeSlider.isValueChanging()) {
+                    // multiply duration by percentage calculated by slider position
+                    if (duration != null) {
+                        mp.seek(duration.multiply(timeSlider.getValue() / 100.0));
+                    }
+                    updateValues();
 
+                }
             }
         });
         HBox.setHgrow(timeSlider, Priority.ALWAYS);
@@ -193,24 +210,53 @@ public class PlayerPane extends BorderPane {
         volumeSlider.setPrefWidth(120);
         volumeSlider.setMinWidth(30);
         volumeSlider.setMaxWidth(Region.USE_PREF_SIZE);
-        volumeSlider.valueProperty().addListener(ov -> {
+        volumeSlider.valueProperty().addListener(new InvalidationListener() {
+            @Override
+            public void invalidated(Observable ov) {
+            }
         });
-        volumeSlider.valueProperty().addListener((observable, oldValue, newValue) -> {
-            if (volumeSlider.isValueChanging()) {
-                mp.setVolume(volumeSlider.getValue() / 100.0);
+        volumeSlider.valueProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
+                if (volumeSlider.isValueChanging()) {
+                    mp.setVolume(volumeSlider.getValue() / 100.0);
+                }
             }
         });
         mediaTopBar.getChildren().add(volumeSlider);
 
         setTop(mediaTopBar);
 
-        final EventHandler<ActionEvent> backAction = e -> mp.seek(Duration.ZERO);
-        final EventHandler<ActionEvent> stopAction = e -> mp.stop();
-        final EventHandler<ActionEvent> playAction = e -> mp.play();
-        final EventHandler<ActionEvent> pauseAction = e -> mp.pause();
-        final EventHandler<ActionEvent> forwardAction = e -> {
-            Duration currentTime = mp.getCurrentTime();
-            mp.seek(Duration.seconds(currentTime.toSeconds() + 5.0));
+        final EventHandler<ActionEvent> backAction = new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent e) {
+                mp.seek(Duration.ZERO);
+            }
+        };
+        final EventHandler<ActionEvent> stopAction = new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent e) {
+                mp.stop();
+            }
+        };
+        final EventHandler<ActionEvent> playAction = new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent e) {
+                mp.play();
+            }
+        };
+        final EventHandler<ActionEvent> pauseAction = new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent e) {
+                mp.pause();
+            }
+        };
+        final EventHandler<ActionEvent> forwardAction = new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent e) {
+                Duration currentTime = mp.getCurrentTime();
+                mp.seek(Duration.seconds(currentTime.toSeconds() + 5.0));
+            }
         };
 
         Button backButton = new Button("Back");
@@ -244,15 +290,18 @@ public class PlayerPane extends BorderPane {
 
     protected void updateValues() {
         if (playTime != null && timeSlider != null && volumeSlider != null && duration != null) {
-            Platform.runLater(() -> {
-                Duration currentTime = mp.getCurrentTime();
-                playTime.setText(formatTime(currentTime, duration));
-                timeSlider.setDisable(duration.isUnknown());
-                if (!timeSlider.isDisabled() && duration.greaterThan(Duration.ZERO) && !timeSlider.isValueChanging()) {
-                    timeSlider.setValue(currentTime.toMillis() / duration.toMillis() * 100.0);
-                }
-                if (!volumeSlider.isValueChanging()) {
-                    volumeSlider.setValue((int) Math.round(mp.getVolume() * 100));
+            Platform.runLater(new Runnable() {
+                @Override
+                public void run() {
+                    Duration currentTime = mp.getCurrentTime();
+                    playTime.setText(formatTime(currentTime, duration));
+                    timeSlider.setDisable(duration.isUnknown());
+                    if (!timeSlider.isDisabled() && duration.greaterThan(Duration.ZERO) && !timeSlider.isValueChanging()) {
+                        timeSlider.setValue(currentTime.divide(duration).toMillis() * 100.0);
+                    }
+                    if (!volumeSlider.isValueChanging()) {
+                        volumeSlider.setValue((int) Math.round(mp.getVolume() * 100));
+                    }
                 }
             });
         }
@@ -274,6 +323,7 @@ public class PlayerPane extends BorderPane {
                 intDuration -= durationHours * 60 * 60;
             }
             int durationMinutes = intDuration / 60;
+            int durationSeconds = intDuration - durationHours * 60 * 60 - durationMinutes * 60;
 
             if (durationHours > 0) {
                 return String.format("%d:%02d:%02d",

@@ -76,13 +76,34 @@ public class AlphaMediaPlayerApp extends Application {
         fierPlayer = new MediaPlayer(new Media(FIER_URL));
         fierPlayer.setAutoPlay(true);
 
-        arthPos.addListener(observable -> planetaryPlayerPane.setTranslate1(arthPos.doubleValue()));
+        arthPos.addListener(new InvalidationListener() {
+            @Override
+            public void invalidated(Observable observable) {
+                planetaryPlayerPane.setTranslate1(arthPos.doubleValue());
+            }
+        });
 
-        fierPos.addListener(observable -> planetaryPlayerPane.setTranslate2(fierPos.doubleValue()));
+        fierPos.addListener(new InvalidationListener() {
+            @Override
+            public void invalidated(Observable observable) {
+                planetaryPlayerPane.setTranslate2(fierPos.doubleValue());
 
-        arthRate.addListener(observable -> arthPlayer.setRate(arthRate.doubleValue()));
+            }
+        });
 
-        fierRate.addListener(observable -> fierPlayer.setRate(fierRate.doubleValue()));
+        arthRate.addListener(new InvalidationListener() {
+            @Override
+            public void invalidated(Observable observable) {
+                arthPlayer.setRate(arthRate.doubleValue());
+            }
+        });
+
+        fierRate.addListener(new InvalidationListener() {
+            @Override
+            public void invalidated(Observable observable) {
+                fierPlayer.setRate(fierRate.doubleValue());
+            }
+        });
 
         planetaryPlayerPane = new PlanetaryPlayerPane(arthPlayer, fierPlayer);
 

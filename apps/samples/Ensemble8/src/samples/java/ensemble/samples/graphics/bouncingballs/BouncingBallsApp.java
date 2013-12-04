@@ -93,7 +93,11 @@ public class BouncingBallsApp extends Application {
         final BallsPane pane = ballsscreen.getPane();
 
         Button resetButton = new Button("Reset");
-        resetButton.setOnAction(event -> pane.resetBalls());
+        resetButton.setOnAction(new EventHandler<ActionEvent>() {
+            public void handle(ActionEvent event) {
+                pane.resetBalls();
+            }
+        });
         VBox vb = new VBox(10);
         vb.getChildren().addAll(resetButton, ballsscreen);
         vb.setPadding(new Insets(15, 24, 15, 24));

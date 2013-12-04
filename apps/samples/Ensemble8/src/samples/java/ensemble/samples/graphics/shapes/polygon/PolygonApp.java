@@ -55,18 +55,20 @@ import javafx.stage.Stage;
 public class PolygonApp extends Application {
 
     // Will be a simple red-filled triangle         
-    private Polygon polygon1 = new Polygon(
-            45, 10,
-            10, 80,
-            80, 80);
+    private Polygon polygon1 = new Polygon(new double[]{
+            45 , 10 ,
+            10 , 80 ,
+            80 , 80 ,
+        });
     // Will be a blue stroked polygon
-    private Polygon polygon2 = new Polygon(
+    private Polygon polygon2 = new Polygon(new double[]{
             135, 15,
             160, 30,
             160, 60,
             135, 75,
             110, 60,
-            110, 30);
+            110, 30
+        });
 
     public Parent createContent() {
         Pane root = new Pane();

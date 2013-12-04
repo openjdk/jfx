@@ -74,11 +74,14 @@ public class ToggleButtonApp extends Application {
         tb1.setToggleGroup(group);
         tb2.setToggleGroup(group);
         tb3.setToggleGroup(group);
-        group.selectedToggleProperty().addListener((observable, oldValue, selectedToggle) -> {
-            if (selectedToggle != null) {
-                label.setText(((ToggleButton) selectedToggle).getText());
-            } else {
-                label.setText("...");
+        group.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
+            @Override
+            public void changed(ObservableValue<? extends Toggle> observable, Toggle oldValue, Toggle selectedToggle) {
+                if (selectedToggle != null) {
+                    label.setText(((ToggleButton) selectedToggle).getText());
+                } else {
+                    label.setText("...");
+                }
             }
         });
         // select the first button to start with

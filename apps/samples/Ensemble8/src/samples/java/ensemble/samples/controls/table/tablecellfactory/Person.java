@@ -52,7 +52,11 @@ public class Person {
             this.email = new SimpleStringProperty(email);
             this.invited = new SimpleBooleanProperty(invited);
 
-            this.invited.addListener((ov, t, t1) -> System.out.println(firstNameProperty().get() + " invited: " + t1));
+            this.invited.addListener(new ChangeListener<Boolean>() {
+                public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
+                    System.out.println(firstNameProperty().get() + " invited: " + t1);
+                }
+            });
         }
 
         public BooleanProperty invitedProperty() { return invited; }

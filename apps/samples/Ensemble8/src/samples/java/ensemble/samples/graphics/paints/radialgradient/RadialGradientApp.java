@@ -62,20 +62,20 @@ public class RadialGradientApp extends Application {
 
     public Parent createContent() {
         //create simple radial gradient
-        RadialGradient gradient1 = new RadialGradient(0, 0, 0.5, 0.5, 1, true, 
-                CycleMethod.NO_CYCLE, 
-                new Stop(0, Color.DODGERBLUE),
-                new Stop(1, Color.BLACK));
+        RadialGradient gradient1 = new RadialGradient(0, 0, 0.5, 0.5, 1, true, CycleMethod.NO_CYCLE, new Stop[]{
+                    new Stop(0, Color.DODGERBLUE),
+                    new Stop(1, Color.BLACK)
+                });
         Circle circle1 = new Circle(45, 45, 40, gradient1);
 
         //create complex radial gradient
-        RadialGradient gradient2 = new RadialGradient(20, 1, 0.5, 0.5, 0.6, true, 
-                CycleMethod.NO_CYCLE, 
-                new Stop(0, Color.TRANSPARENT),
-                new Stop(0.5, Color.DARKGRAY),
-                new Stop(0.64, Color.WHITESMOKE),
-                new Stop(0.65, Color.YELLOW),
-                new Stop(1, Color.GOLD));
+        RadialGradient gradient2 = new RadialGradient(20, 1, 0.5, 0.5, 0.6, true, CycleMethod.NO_CYCLE, new Stop[]{
+                    new Stop(0, Color.TRANSPARENT),
+                    new Stop(0.5, Color.DARKGRAY),
+                    new Stop(0.64, Color.WHITESMOKE),
+                    new Stop(0.65, Color.YELLOW),
+                    new Stop(1, Color.GOLD)
+                });
         Circle circle2 = new Circle(145, 45, 40, gradient2);
         
         HBox hb = new HBox(10);

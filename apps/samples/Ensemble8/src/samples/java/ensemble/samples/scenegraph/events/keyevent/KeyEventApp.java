@@ -59,12 +59,15 @@ public class KeyEventApp extends Application {
 
     public Parent createContent() {
         //create a console for logging key events
-        final ListView<String> console = new ListView<>(FXCollections.<String>observableArrayList());
+        final ListView<String> console = new ListView<String>(FXCollections.<String>observableArrayList());
         // listen on the console items and remove old ones when we get over 20 items
-        console.getItems().addListener((ListChangeListener.Change<? extends String> change) -> {
-            while (change.next()) {
-                if (change.getList().size() > 20.0) {
-                    change.getList().remove(0);
+        console.getItems().addListener(new ListChangeListener<String>() {
+            @Override
+            public void onChanged(ListChangeListener.Change<? extends String> change) {
+                while (change.next()) {
+                    if (change.getList().size() > 20.0) {
+                        change.getList().remove(0);
+                    }
                 }
             }
         });
@@ -76,27 +79,36 @@ public class KeyEventApp extends Application {
         textBox.setPromptText("Write here");
         textBox.setStyle("-fx-font-size: 34;");
         //add a key listeners
-        textBox.setOnKeyPressed(ke -> {
-            console.getItems().add("Key Pressed: " + ke.getText());
+        textBox.setOnKeyPressed(new EventHandler<KeyEvent>() {
+            @Override
+            public void handle(KeyEvent ke) {
+                console.getItems().add("Key Pressed: " + ke.getText());
+            }
         });
-        textBox.setOnKeyReleased(ke -> {
-            console.getItems().add("Key Released: " + ke.getText());
+        textBox.setOnKeyReleased(new EventHandler<KeyEvent>() {
+            @Override
+            public void handle(KeyEvent ke) {
+                console.getItems().add("Key Released: " + ke.getText());
+            }
         });
-        textBox.setOnKeyTyped(ke -> {
-            String text = "Key Typed: " + ke.getCharacter();
-            if (ke.isAltDown()) {
-                text += " , alt down";
+        textBox.setOnKeyTyped(new EventHandler<KeyEvent>() {
+            @Override
+            public void handle(KeyEvent ke) {
+                String text = "Key Typed: " + ke.getCharacter();
+                if (ke.isAltDown()) {
+                    text += " , alt down";
+                }
+                if (ke.isControlDown()) {
+                    text += " , ctrl down";
+                }
+                if (ke.isMetaDown()) {
+                    text += " , meta down";
+                }
+                if (ke.isShiftDown()) {
+                    text += " , shift down";
+                }
+                console.getItems().add(text);
             }
-            if (ke.isControlDown()) {
-                text += " , ctrl down";
-            }
-            if (ke.isMetaDown()) {
-                text += " , meta down";
-            }
-            if (ke.isShiftDown()) {
-                text += " , shift down";
-            }
-            console.getItems().add(text);
         });
 
         VBox vb = new VBox(10);

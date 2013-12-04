@@ -213,7 +213,7 @@ public class LevelData {
 
     private static void initLevelsOffsets() {
         if (levelsOffsets == null) {
-            levelsOffsets = javafx.collections.FXCollections.observableArrayList();
+            levelsOffsets = javafx.collections.FXCollections.<Integer>observableArrayList();
             levelsOffsets.add(-1);
             for (int i = 0; i < LEVELS_DATA.length; i++) {
                 if (LEVELS_DATA[i].equals(NEXT_LEVEL)) {

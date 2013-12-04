@@ -64,10 +64,12 @@ public class ColorPickerApp extends Application {
         coloredText.setTextFill(c);
         coloredButton.setStyle(createRGBString(c));
 
-        colorPicker.setOnAction(t -> {
-            Color newColor = colorPicker.getValue();
-            coloredText.setTextFill(newColor);
-            coloredButton.setStyle(createRGBString(newColor));
+        colorPicker.setOnAction(new EventHandler() {            
+            @Override public void handle(Event t) {
+                Color newColor = colorPicker.getValue();
+                coloredText.setTextFill(newColor);
+                coloredButton.setStyle(createRGBString(newColor));
+            }
         });
 
         VBox outerVBox = new VBox(coloredText, coloredButton, colorPicker);

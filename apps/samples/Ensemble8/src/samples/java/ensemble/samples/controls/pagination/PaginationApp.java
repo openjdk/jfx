@@ -73,14 +73,22 @@ public class PaginationApp extends Application {
         images[6] = new Image(PaginationApp.class.getResource("/ensemble/samples/shared-resources/Animal7.jpg").toExternalForm(), false);
 
         pagination = new Pagination(7);
-        pagination.setPageFactory(this::createAnimalPage);
+        pagination.setPageFactory(new Callback<Integer, Node>() {
+            @Override
+            public Node call(Integer pageIndex) {
+                return createAnimalPage(pageIndex);
+            }
+        });
         //Style can be numeric page indicators or bullet indicators
         Button styleButton = new Button("Toggle pagination style");
-        styleButton.setOnAction(me -> {
-            if (!pagination.getStyleClass().contains(Pagination.STYLE_CLASS_BULLET)) {
-                pagination.getStyleClass().add(Pagination.STYLE_CLASS_BULLET);
-            } else {
-                pagination.getStyleClass().remove(Pagination.STYLE_CLASS_BULLET);
+        styleButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent me) {
+                if (!pagination.getStyleClass().contains(Pagination.STYLE_CLASS_BULLET)) {
+                    pagination.getStyleClass().add(Pagination.STYLE_CLASS_BULLET);
+                } else {
+                    pagination.getStyleClass().remove(Pagination.STYLE_CLASS_BULLET);
+                }
             }
         });
 

@@ -48,7 +48,7 @@ public class BallsPane extends Parent{
     }
 
     private void init(){
-        balls = new ArrayList<>();
+        balls = new ArrayList<Ball>();
         for (int i = 0; i < NR_OF_BALLS; i++) {
             balls.add(new Ball(i));
         }

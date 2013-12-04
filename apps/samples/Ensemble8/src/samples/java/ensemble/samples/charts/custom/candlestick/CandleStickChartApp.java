@@ -158,10 +158,11 @@ public class CandleStickChartApp extends Application {
         xAxis.setLabel("Day");
         yAxis.setLabel("Price");
         // add starting data
-        XYChart.Series<Number,Number> series = new XYChart.Series<>();
-        for (double[] day : data) {
+        XYChart.Series<Number,Number> series = new XYChart.Series<Number,Number>();
+        for (int i=0; i< data.length; i++) {
+            double[] day = data[i];
             series.getData().add(
-                    new XYChart.Data<Number, Number>(day[0], day[1], new CandleStickExtraValues(day[2], day[3], day[4], day[5]))
+                new XYChart.Data<Number,Number>(day[0],day[1],new CandleStickExtraValues(day[2],day[3],day[4],day[5]))
             );
         }
         ObservableList<XYChart.Series<Number,Number>> data = chart.getData();

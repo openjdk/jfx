@@ -78,13 +78,16 @@ public class ProgressIndicatorApp extends Application {
         // styled ProgressIndicator
         final ProgressIndicator p5 = new ProgressIndicator();
         p5.setPrefSize(100, 100);
-        p5.progressProperty().addListener((ov, oldVal, newVal) -> {
-            if (p5.getProgress() < 0.25) {
-                p5.setStyle("-fx-progress-color: red;");
-            } else if (p5.getProgress() < 0.5) {
-                p5.setStyle("-fx-progress-color: orange;");
-            } else {
-                p5.setStyle("-fx-progress-color: green;");
+        p5.progressProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue ov, Number oldVal, Number newVal) {
+                if (p5.getProgress() < 0.25) {
+                    p5.setStyle("-fx-progress-color: red;");
+                } else if (p5.getProgress() < 0.5) {
+                    p5.setStyle("-fx-progress-color: orange;");
+                } else {
+                    p5.setStyle("-fx-progress-color: green;");
+                }
             }
         });
         // animate the styled ProgressIndicator

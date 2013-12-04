@@ -68,44 +68,46 @@ public class Splash extends Parent {
     private void initTimeline() {
         timeline = new Timeline();
         timeline.setCycleCount(Timeline.INDEFINITE);
-        KeyFrame kf = new KeyFrame(Duration.millis(40), event -> {
-            if (state == STATE_SHOW_TITLE) {
-                stateArg++;
-                int center = Config.SCREEN_WIDTH / 2;
-                int offset = (int)(Math.cos(stateArg / 4.0) * (40 - stateArg) / 40 * center);
-                brick.setTranslateX(center - brick.getImage().getWidth() / 2 + offset);
-                breaker.setTranslateX(center - breaker.getImage().getWidth() / 2 - offset);
-                if (stateArg == 40) {
-                    stateArg = 0;
-                    state = STATE_SHOW_STRIKE;
+        KeyFrame kf = new KeyFrame(Duration.millis(40), new EventHandler<ActionEvent>() {
+            public void handle(ActionEvent event) {
+                if (state == STATE_SHOW_TITLE) {
+                    stateArg++;
+                    int center = Config.SCREEN_WIDTH / 2;
+                    int offset = (int)(Math.cos(stateArg / 4.0) * (40 - stateArg) / 40 * center);
+                    brick.setTranslateX(center - brick.getImage().getWidth() / 2 + offset);
+                    breaker.setTranslateX(center - breaker.getImage().getWidth() / 2 - offset);
+                    if (stateArg == 40) {
+                        stateArg = 0;
+                        state = STATE_SHOW_STRIKE;
+                    }
+                    return;
                 }
-                return;
-            }
-            if (state == STATE_SHOW_STRIKE) {
-                if (stateArg == 0) {
-                    strike.setTranslateX(breaker.getTranslateX() + brick.getImage().getWidth());
-                    strike.setScaleX(0);
-                    strike.setScaleY(0);
-                    strike.setVisible(true);
+                if (state == STATE_SHOW_STRIKE) {
+                    if (stateArg == 0) {
+                        strike.setTranslateX(breaker.getTranslateX() + brick.getImage().getWidth());
+                        strike.setScaleX(0);
+                        strike.setScaleY(0);
+                        strike.setVisible(true);
+                    }
+                    stateArg++;
+                    double coef = stateArg / 30f;
+                    brick.setTranslateX(breaker.getTranslateX() +
+                        (breaker.getImage().getWidth() - brick.getImage().getWidth()) / 2f * (1 - coef));
+                    strike.setScaleX(coef);
+                    strike.setScaleY(coef);
+                    strike.setRotate((30 - stateArg) * 2);
+                    if (stateArg == 30) {
+                        stateArg = 0;
+                        state = STATE_SUN;
+                    }
+                    return;
                 }
-                stateArg++;
-                double coef = stateArg / 30f;
-                brick.setTranslateX(breaker.getTranslateX() +
-                    (breaker.getImage().getWidth() - brick.getImage().getWidth()) / 2f * (1 - coef));
-                strike.setScaleX(coef);
-                strike.setScaleY(coef);
-                strike.setRotate((30 - stateArg) * 2);
-                if (stateArg == 30) {
-                    stateArg = 0;
-                    state = STATE_SUN;
+                // Here state == STATE_SUN
+                if (pressanykey.getOpacity() < 1) {
+                    pressanykey.setOpacity(pressanykey.getOpacity() + 0.05f);
                 }
-                return;
+                stateArg--;
             }
-            // Here state == STATE_SUN
-            if (pressanykey.getOpacity() < 1) {
-                pressanykey.setOpacity(pressanykey.getOpacity() + 0.05f);
-            }
-            stateArg--;
         });
         timeline.getKeyFrames().add(kf);
     }
@@ -128,8 +130,16 @@ public class Splash extends Parent {
         background.setImage(Config.getImages().get(Config.IMAGE_BACKGROUND));
         background.setFitWidth(Config.SCREEN_WIDTH);
         background.setFitHeight(Config.SCREEN_HEIGHT);
-        background.setOnMousePressed(me -> mainFrame.startGame());
-        background.setOnKeyPressed(ke -> mainFrame.startGame());
+        background.setOnMousePressed(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent me) {
+                mainFrame.startGame();
+            }
+        });
+        background.setOnKeyPressed(new EventHandler<KeyEvent>() {
+            @Override public void handle(KeyEvent ke) {
+                mainFrame.startGame();
+            }
+        });
         brick = new ImageView();
         brick.setImage(Config.getImages().get(Config.IMAGE_SPLASH_BRICK));
         brick.setTranslateX(-1000);

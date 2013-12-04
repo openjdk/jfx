@@ -64,7 +64,12 @@ public class SwingInteropApp extends Application {
 
     public Parent createContent() {
         button.setPrefSize(180, 45);
-        button.setOnAction(t -> service.restart());
+        button.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent t) {
+                service.restart();
+            }
+        });
         button.disableProperty().bind(service.bp);
         return button;
     }

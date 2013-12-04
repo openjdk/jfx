@@ -51,18 +51,18 @@ import javafx.stage.Stage;
 public class TreeViewApp extends Application {
 
     public Parent createContent() {
-        final TreeItem<String> treeRoot = new TreeItem<>("Root node");
+        final TreeItem<String> treeRoot = new TreeItem<String>("Root node");
         treeRoot.getChildren().addAll(Arrays.asList(
-                new TreeItem<>("Child Node 1"),
-                new TreeItem<>("Child Node 2"),
-                new TreeItem<>("Child Node 3")));
+                new TreeItem<String>("Child Node 1"),
+                new TreeItem<String>("Child Node 2"),
+                new TreeItem<String>("Child Node 3")));
 
         treeRoot.getChildren().get(2).getChildren().addAll(Arrays.asList(
-                new TreeItem<>("Child Node 4"),
-                new TreeItem<>("Child Node 5"),
-                new TreeItem<>("Child Node 6"),
-                new TreeItem<>("Child Node 7"),
-                new TreeItem<>("Child Node 8")));
+                new TreeItem<String>("Child Node 4"),
+                new TreeItem<String>("Child Node 5"),
+                new TreeItem<String>("Child Node 6"),
+                new TreeItem<String>("Child Node 7"),
+                new TreeItem<String>("Child Node 8")));
 
         final TreeView treeView = new TreeView();
         treeView.setShowRoot(true);

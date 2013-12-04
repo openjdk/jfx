@@ -47,9 +47,9 @@ public class SampleTableModel extends AbstractTableModel {
     private static ObservableList<BarChart.Series> bcData;
     private final String[] names = {"2007", "2008", "2009"};
     private Object[][] data = {
-        {(double) 567, (double) 956, (double) 1154},
-        {(double) 1292, (double) 1665, (double) 1927},
-        {(double) 1292, (double) 2559, (double) 2774}
+        {new Double(567), new Double(956), new Double(1154)},
+        {new Double(1292), new Double(1665), new Double(1927)},
+        {new Double(1292), new Double(2559), new Double(2774)}
     };
 
     public double getTickUnit() {
@@ -93,7 +93,7 @@ public class SampleTableModel extends AbstractTableModel {
     @Override
     public void setValueAt(Object value, int row, int column) {
         if (value instanceof Double) {
-            data[row][column] = value;
+            data[row][column] = (Double) value;
         }
 
         fireTableCellUpdated(row, column);
@@ -101,9 +101,9 @@ public class SampleTableModel extends AbstractTableModel {
 
     public ObservableList<BarChart.Series> getBarChartData() {
         if (bcData == null) {
-            bcData = FXCollections.observableArrayList();
+            bcData = FXCollections.<BarChart.Series>observableArrayList();
             for (int row = 0; row < getRowCount(); row++) {
-                ObservableList<BarChart.Data> series = FXCollections.observableArrayList();
+                ObservableList<BarChart.Data> series = FXCollections.<BarChart.Data>observableArrayList();
                 for (int column = 0; column < getColumnCount(); column++) {
                     series.add(new BarChart.Data(getColumnName(column), getValueAt(row, column)));
                 }

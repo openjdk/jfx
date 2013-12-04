@@ -95,7 +95,13 @@ public class Calculator extends Parent {
     }
 
     private void addKeyListener() {
-        setOnKeyPressed(this::processKeyEvent);
+        setOnKeyPressed(new EventHandler<KeyEvent>() {
+
+            @Override
+            public void handle(KeyEvent ke) {
+                processKeyEvent(ke);
+            }
+        });
         setFocusTraversable(true);
         requestFocus();
     }
@@ -158,7 +164,12 @@ public class Calculator extends Parent {
                 final Key key = new Key(Util.KEY_CODES[i][j]);
                 key.setTranslateX(background.getX() + (Key.WIDTH + 1) * j + BORDER);
                 key.setTranslateY(background.getY() + (Key.HEIGHT + 1) * i + BORDER + TR_Y);
-                key.setOnMousePressed(me -> onKey(key));
+                key.setOnMousePressed(new EventHandler<MouseEvent>() {
+
+                    @Override public void handle(MouseEvent me) {
+                        onKey(key);
+                    }
+                });
                 keys[i * Util.KEY_CODES[0].length + j] = key;
                 
             }
@@ -313,7 +324,7 @@ public class Calculator extends Parent {
     }
 
     private void onNewOperation() {
-        operationText.setText(operation);
+        operationText.setText(operation.toString());
     }
 
     private void onNewNumber() {
@@ -352,55 +363,38 @@ public class Calculator extends Parent {
 
     private void processKeyEvent(KeyEvent e) {
         String text = e.getText();
-        switch (text) {
-            case "0":
-                onDigit(Code.DIGIT_0);
-                break;
-            case "1":
-                onDigit(Code.DIGIT_1);
-                break;
-            case "2":
-                onDigit(Code.DIGIT_2);
-                break;
-            case "3":
-                onDigit(Code.DIGIT_3);
-                break;
-            case "4":
-                onDigit(Code.DIGIT_4);
-                break;
-            case "5":
-                onDigit(Code.DIGIT_5);
-                break;
-            case "6":
-                onDigit(Code.DIGIT_6);
-                break;
-            case "7":
-                onDigit(Code.DIGIT_7);
-                break;
-            case "8":
-                onDigit(Code.DIGIT_8);
-                break;
-            case "9":
-                onDigit(Code.DIGIT_9);
-                break;
-            case "+":
-                onOperations(Code.ADD);
-                break;
-            case "-":
-                onOperations(Code.SUBTRACT);
-                break;
-            case "*":
-                onOperations(Code.MULTIPLY);
-                break;
-            case "/":
-                onOperations(Code.DIVIDE);
-                break;
-            case ".":
-                onDecimal();
-                break;
-            case "=":
-                onEquals();
-                break;
+        if(text.equals("0")){
+            onDigit(Code.DIGIT_0);
+        } else if(text.equals("1")){
+            onDigit(Code.DIGIT_1);
+        } else if(text.equals("2")){
+            onDigit(Code.DIGIT_2);
+        } else if(text.equals("3")){
+            onDigit(Code.DIGIT_3);
+        } else if(text.equals("4")){
+            onDigit(Code.DIGIT_4);
+        } else if(text.equals("5")){
+            onDigit(Code.DIGIT_5);
+        } else if(text.equals("6")){
+            onDigit(Code.DIGIT_6);
+        } else if(text.equals("7")){
+            onDigit(Code.DIGIT_7);
+        } else if(text.equals("8")){
+            onDigit(Code.DIGIT_8);
+        } else if(text.equals("9")){
+            onDigit(Code.DIGIT_9);
+        } else if(text.equals("+")){
+            onOperations(Code.ADD);
+        } else if(text.equals("-")){
+            onOperations(Code.SUBTRACT);
+        } else if(text.equals("*")){
+            onOperations(Code.MULTIPLY);
+        } else if(text.equals("/")){
+            onOperations(Code.DIVIDE);
+        } else if(text.equals(".")){
+            onDecimal();
+        } else if(text.equals("=")){
+            onEquals();
         }
         
         switch (e.getCode()) {

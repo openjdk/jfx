@@ -65,12 +65,12 @@ public class AnchorPaneApp extends Application {
 
         anchorPane.getChildren().addAll(label1, imageView, button1);
 
-        AnchorPane.setTopAnchor(label1, (double) 2);
-        AnchorPane.setLeftAnchor(label1, (double) 20);
-        AnchorPane.setTopAnchor(button1, (double) 40);
-        AnchorPane.setLeftAnchor(button1, (double) 20);
-        AnchorPane.setTopAnchor(imageView, (double) 75);
-        AnchorPane.setLeftAnchor(imageView, (double) 20);
+        AnchorPane.setTopAnchor(label1, Double.valueOf(2));
+        AnchorPane.setLeftAnchor(label1, Double.valueOf(20));
+        AnchorPane.setTopAnchor(button1, Double.valueOf(40));
+        AnchorPane.setLeftAnchor(button1, Double.valueOf(20));
+        AnchorPane.setTopAnchor(imageView, Double.valueOf(75));
+        AnchorPane.setLeftAnchor(imageView, Double.valueOf(20));
         return anchorPane;
     }
 

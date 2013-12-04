@@ -61,7 +61,7 @@ public class SwingInteropTask extends Task<Process> {
         proc = pb.start();
         //Assuming there is little output to stdout, stderr
         pListener.setProcess(proc);
-        proc.waitFor();
+        int exitVal = proc.waitFor();
         pListener.setProcess(null);
 
         return proc;

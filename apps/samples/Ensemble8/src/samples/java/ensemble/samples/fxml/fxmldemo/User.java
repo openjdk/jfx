@@ -37,7 +37,7 @@ import java.util.Map;
 
 public class User {
 
-    private static final Map<String, User> USERS = new HashMap<>();
+    private static final Map<String, User> USERS = new HashMap<String, User>();
 
     public static User of(String id) {
         User user = USERS.get(id);

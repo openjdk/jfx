@@ -56,16 +56,16 @@ import javafx.stage.Stage;
 public class PolylineApp extends Application {
     // Unclosed triangle
 
-    Polyline polyline1 = new Polyline(
-            45, 10,
-            10, 80,
-            80, 80);
+    Polyline polyline1 = new Polyline(new double[]{
+                45, 10,
+                10, 80,
+                80, 80,});
     // Closed triangle
-    Polyline polyline2 = new Polyline(
-            135, 10,
-            100, 80,
-            170, 80,
-            135, 10);
+    Polyline polyline2 = new Polyline(new double[]{
+                135, 10,
+                100, 80,
+                170, 80,
+                135, 10,});
 
     public Parent createContent() {
         Pane root = new Pane();

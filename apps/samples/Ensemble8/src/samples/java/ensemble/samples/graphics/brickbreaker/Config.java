@@ -67,13 +67,13 @@ public final class Config {
     public static final int FIELD_HEIGHT = FIELD_WIDTH;
     public static final int FIELD_Y = SCREEN_HEIGHT - FIELD_HEIGHT;
 
-    private static ObservableList<Image> bricksImages = javafx.collections.FXCollections.observableArrayList();
+    private static ObservableList<Image> bricksImages = javafx.collections.FXCollections.<Image>observableArrayList();
 
     public static ObservableList<Image> getBricksImages() {
         return bricksImages;
     }
 
-    private static ObservableList<Image> bonusesImages = javafx.collections.FXCollections.observableArrayList();
+    private static ObservableList<Image> bonusesImages = javafx.collections.FXCollections.<Image>observableArrayList();
 
     public static ObservableList<Image> getBonusesImages() {
         return bonusesImages;
@@ -102,7 +102,7 @@ public final class Config {
     public static final int IMAGE_READY = 20;
     public static final int IMAGE_GAMEOVER = 21;
 
-    private static ObservableList<Image> images = javafx.collections.FXCollections.observableArrayList();
+    private static ObservableList<Image> images = javafx.collections.FXCollections.<Image>observableArrayList();
 
     public static ObservableList<Image> getImages() {
         return images;

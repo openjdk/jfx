@@ -100,8 +100,10 @@ public class GestureEventApp extends Application {
 
         Rectangle border = new Rectangle(400, BORDER_HEIGHT);
         border.setStroke(Color.GRAY);
-        border.setFill(new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE, new Stop(1, Color.rgb(156, 216, 255)),
-                new Stop(0, Color.rgb(156, 216, 255, 0.5))));
+        border.setFill(new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE, new Stop[]{
+                    new Stop(1, Color.rgb(156, 216, 255)),
+                    new Stop(0, Color.rgb(156, 216, 255, 0.5))
+                }));
 
         final Rectangle smallRec = createRectangle();
         smallRec.setTranslateX(SMALL_REC_X);
@@ -116,8 +118,10 @@ public class GestureEventApp extends Application {
 
     private Rectangle createRectangle() {
         final Rectangle smallRec = new Rectangle(100, 100, 100, 100);
-        LinearGradient gradient1 = new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE, new Stop(0, Color.ANTIQUEWHITE),
-                new Stop(1, Color.CORAL));
+        LinearGradient gradient1 = new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE, new Stop[]{
+                    new Stop(0, Color.ANTIQUEWHITE),
+                    new Stop(1, Color.CORAL)
+                });
         smallRec.setFill(gradient1);
         smallRec.setStroke(Color.BLACK);
         smallRec.setCursor(Cursor.HAND);
@@ -135,67 +139,97 @@ public class GestureEventApp extends Application {
     }
 
     private void setEventListeners(final Node listeningNode, final Rectangle rec, final String msgPrefix) {
-        listeningNode.setOnSwipeDown(se -> {
-            //log scroll to console, method listed below
-            showOnConsole(msgPrefix + "SwipeDown event x: " + se.getX() + ", y: " + se.getY());
-            se.consume();
-        });
-
-        listeningNode.setOnScroll(event -> {
-            double translateX = event.getDeltaX(); //horizontal scroll amount
-            double translateY = event.getDeltaY();
-
-            if ((rec.getTranslateX() + translateX > 0) && (rec.getTranslateX() + translateX < 300)) {
-                rec.setTranslateX(listeningNode.getTranslateX() + translateX);
+        listeningNode.setOnSwipeDown(new EventHandler<SwipeEvent>() {
+            @Override
+            public void handle(SwipeEvent se) {
+                //log scroll to console, method listed below              
+                showOnConsole(msgPrefix + "SwipeDown event x: " + se.getX() + ", y: " + se.getY());
+                se.consume();
             }
-            if ((rec.getTranslateY() + translateY > SMALL_REC_Y - 20) && (rec.getTranslateY() + translateY < 180 + SMALL_REC_Y)) {
-                rec.setTranslateY(rec.getTranslateY() + translateY);
+        });
+
+        listeningNode.setOnScroll(new EventHandler<ScrollEvent>() {
+            @Override
+            public void handle(ScrollEvent event) {
+                double translateX = event.getDeltaX(); //horizontal scroll amount
+                double translateY = event.getDeltaY();
+
+                if ((rec.getTranslateX() + translateX > 0) && (rec.getTranslateX() + translateX < 300)) {
+                    rec.setTranslateX(listeningNode.getTranslateX() + translateX);
+                }
+                if ((rec.getTranslateY() + translateY > SMALL_REC_Y - 20) && (rec.getTranslateY() + translateY < 180 + SMALL_REC_Y)) {
+                    rec.setTranslateY(rec.getTranslateY() + translateY);
+                }
+                showOnConsole(msgPrefix + "Scroll event, deltaX: " + event.getDeltaX() + " deltaY: " + event.getDeltaY());
+                event.consume();
             }
-            showOnConsole(msgPrefix + "Scroll event, deltaX: " + event.getDeltaX() + " deltaY: " + event.getDeltaY());
-            event.consume();
         });
 
-        listeningNode.setOnZoom(event -> {
-            rec.setScaleX(rec.getScaleX() * event.getZoomFactor());
-            rec.setScaleY(rec.getScaleY() * event.getZoomFactor());
-            showOnConsole(msgPrefix + "Zoom event, zoom factor: " + event.getZoomFactor());
-            event.consume();
+        listeningNode.setOnZoom(new EventHandler<ZoomEvent>() {
+            @Override
+            public void handle(ZoomEvent event) {
+                rec.setScaleX(rec.getScaleX() * event.getZoomFactor());
+                rec.setScaleY(rec.getScaleY() * event.getZoomFactor());
+                showOnConsole(msgPrefix + "Zoom event, zoom factor: " + event.getZoomFactor());
+                event.consume();
+            }
         });
 
-        listeningNode.setOnRotate(event -> {
-            rec.setRotate(listeningNode.getRotate() + event.getAngle());
-            showOnConsole(msgPrefix + "Rotate event, angle: " + event.getAngle());
-            event.consume();
+        listeningNode.setOnRotate(new EventHandler<RotateEvent>() {
+            @Override
+            public void handle(RotateEvent event) {
+                rec.setRotate(listeningNode.getRotate() + event.getAngle());
+                showOnConsole(msgPrefix + "Rotate event, angle: " + event.getAngle());
+                event.consume();
+            }
         });
 
-        listeningNode.setOnScrollStarted(event -> {
-            showOnConsole(msgPrefix + "Scroll started");
-            event.consume();
+        listeningNode.setOnScrollStarted(new EventHandler<ScrollEvent>() {
+            @Override
+            public void handle(ScrollEvent event) {
+                showOnConsole(msgPrefix + "Scroll started");
+                event.consume();
+            }
         });
 
-        listeningNode.setOnScrollFinished(event -> {
-            showOnConsole(msgPrefix + "Scroll finished");
-            event.consume();
+        listeningNode.setOnScrollFinished(new EventHandler<ScrollEvent>() {
+            @Override
+            public void handle(ScrollEvent event) {
+                showOnConsole(msgPrefix + "Scroll finished");
+                event.consume();
+            }
         });
 
-        listeningNode.setOnZoomStarted(event -> {
-            showOnConsole(msgPrefix + "Zoom started");
-            event.consume();
+        listeningNode.setOnZoomStarted(new EventHandler<ZoomEvent>() {
+            @Override
+            public void handle(ZoomEvent event) {
+                showOnConsole(msgPrefix + "Zoom started");
+                event.consume();
+            }
         });
 
-        listeningNode.setOnZoomFinished(event -> {
-            showOnConsole(msgPrefix + "Zoom finished");
-            event.consume();
+        listeningNode.setOnZoomFinished(new EventHandler<ZoomEvent>() {
+            @Override
+            public void handle(ZoomEvent event) {
+                showOnConsole(msgPrefix + "Zoom finished");
+                event.consume();
+            }
         });
 
-        listeningNode.setOnRotationStarted(event -> {
-            showOnConsole(msgPrefix + "Rotation started");
-            event.consume();
+        listeningNode.setOnRotationStarted(new EventHandler<RotateEvent>() {
+            @Override
+            public void handle(RotateEvent event) {
+                showOnConsole(msgPrefix + "Rotation started");
+                event.consume();
+            }
         });
 
-        listeningNode.setOnRotationFinished(event -> {
-            showOnConsole(msgPrefix + "Rotation finished");
-            event.consume();
+        listeningNode.setOnRotationFinished(new EventHandler<RotateEvent>() {
+            @Override
+            public void handle(RotateEvent event) {
+                showOnConsole(msgPrefix + "Rotation finished");
+                event.consume();
+            }
         });
     }
 

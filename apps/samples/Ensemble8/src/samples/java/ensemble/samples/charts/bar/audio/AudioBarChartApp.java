@@ -71,9 +71,13 @@ public class AudioBarChartApp extends Application {
             System.getProperty("demo.play.audio", "true"));
 
     public AudioBarChartApp() {
-        audioSpectrumListener = (timestamp, duration, magnitudes, phases) -> {
-            for (int i = 0; i < series1Data.length; i++) {
-                series1Data[i].setYValue(magnitudes[i] + 60);
+        audioSpectrumListener = new AudioSpectrumListener() {
+            @Override
+            public void spectrumDataUpdate(double timestamp, double duration,
+                    float[] magnitudes, float[] phases) {
+                for (int i = 0; i < series1Data.length; i++) {
+                    series1Data[i].setYValue(magnitudes[i] + 60);
+                }
             }
         };
     }

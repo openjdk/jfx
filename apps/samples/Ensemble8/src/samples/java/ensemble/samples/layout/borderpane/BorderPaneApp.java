@@ -91,10 +91,10 @@ public class BorderPaneApp extends Application {
 
         //Using AnchorPane only to position items in the center
         AnchorPane centerAP = new AnchorPane();
-        AnchorPane.setTopAnchor(centerLabel, (double) 5);
-        AnchorPane.setLeftAnchor(centerLabel, (double) 20);
-        AnchorPane.setTopAnchor(imageView, (double) 40);
-        AnchorPane.setLeftAnchor(imageView, (double) 30);
+        AnchorPane.setTopAnchor(centerLabel, Double.valueOf(5));
+        AnchorPane.setLeftAnchor(centerLabel, Double.valueOf(20));
+        AnchorPane.setTopAnchor(imageView, Double.valueOf(40));
+        AnchorPane.setLeftAnchor(imageView, Double.valueOf(30));
         centerAP.getChildren().addAll(centerLabel, imageView);
         borderPane.setCenter(centerAP);
 

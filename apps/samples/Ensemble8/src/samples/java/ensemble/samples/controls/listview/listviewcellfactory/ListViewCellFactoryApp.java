@@ -65,7 +65,11 @@ public class ListViewCellFactoryApp extends Application {
 
         ));
         
-        listView.setCellFactory(list -> new MoneyFormatCell());
+        listView.setCellFactory(new Callback<ListView<java.lang.Number>, ListCell<java.lang.Number>>() {
+            @Override public ListCell<Number> call(ListView<java.lang.Number> list) {
+                return new MoneyFormatCell();
+            }
+        });        
         
         listView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         return listView;

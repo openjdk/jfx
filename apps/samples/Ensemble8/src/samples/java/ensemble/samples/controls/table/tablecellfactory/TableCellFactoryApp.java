@@ -34,9 +34,12 @@ package ensemble.samples.controls.table.tablecellfactory;
 import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.EventHandler;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableColumn.CellEditEvent;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.CheckBoxTableCell;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -125,18 +128,31 @@ public class TableCellFactoryApp extends Application {
         launch(args);
     }
 
-    private void updateObservableListProperties(
-            TableColumn<Person, String> emailCol, 
-            TableColumn<Person, String> firstNameCol,
-            TableColumn<Person, String> lastNameCol) {
+    private void updateObservableListProperties(TableColumn emailCol, TableColumn firstNameCol,
+            TableColumn lastNameCol) {
         //Modifying the email property in the ObservableList
-        emailCol.setOnEditCommit(t -> ((Person) t.getTableView().getItems().get(
-                t.getTablePosition().getRow())).setEmail(t.getNewValue()));
+        emailCol.setOnEditCommit(new EventHandler<CellEditEvent<Person, String>>() {
+            @Override
+            public void handle(CellEditEvent<Person, String> t) {
+                ((Person) t.getTableView().getItems().get(
+                        t.getTablePosition().getRow())).setEmail(t.getNewValue());
+            }
+        });
         //Modifying the firstName property in the ObservableList
-        firstNameCol.setOnEditCommit(t -> ((Person) t.getTableView().getItems().get(
-                t.getTablePosition().getRow())).setFirstName(t.getNewValue()));
+        firstNameCol.setOnEditCommit(new EventHandler<CellEditEvent<Person, String>>() {
+            @Override
+            public void handle(CellEditEvent<Person, String> t) {
+                ((Person) t.getTableView().getItems().get(
+                        t.getTablePosition().getRow())).setFirstName(t.getNewValue());
+            }
+        });
         //Modifying the lastName property in the ObservableList
-        lastNameCol.setOnEditCommit(t -> ((Person) t.getTableView().getItems().get(
-                t.getTablePosition().getRow())).setLastName(t.getNewValue()));
+        lastNameCol.setOnEditCommit(new EventHandler<CellEditEvent<Person, String>>() {
+            @Override
+            public void handle(CellEditEvent<Person, String> t) {
+                ((Person) t.getTableView().getItems().get(
+                        t.getTablePosition().getRow())).setLastName(t.getNewValue());
+            }
+        });
     }
 }

@@ -73,13 +73,15 @@ public class CustomNodeApp extends Application {
     }
 
     public static Polygon createUMLArrow() {
-        Polygon polygon = new Polygon(7.5, 0,
-                15, 15,
-                7.51, 15,
-                7.51, 40,
-                7.49, 40,
-                7.49, 15,
-                0, 15);
+        Polygon polygon = new Polygon(new double[]{
+                    7.5, 0,
+                    15, 15,
+                    7.51, 15,
+                    7.51, 40,
+                    7.49, 40,
+                    7.49, 15,
+                    0, 15
+                });
         polygon.setFill(Color.WHITE);
         polygon.setStroke(Color.BLACK);
         return polygon;

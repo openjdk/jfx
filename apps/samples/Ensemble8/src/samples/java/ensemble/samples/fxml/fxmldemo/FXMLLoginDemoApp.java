@@ -124,14 +124,17 @@ public class FXMLLoginDemoApp extends Application {
 
     private Initializable replaceSceneContent(String fxml) throws Exception {
         FXMLLoader loader = new FXMLLoader();
+        InputStream in = FXMLLoginDemoApp.class.getResourceAsStream(fxml);
         loader.setBuilderFactory(new JavaFXBuilderFactory());
         loader.setLocation(FXMLLoginDemoApp.class.getResource(fxml));
         AnchorPane page;
-        try (InputStream in = FXMLLoginDemoApp.class.getResourceAsStream(fxml)) {
+        try {
             page = (AnchorPane) loader.load(in);
+        } finally {
+            in.close();
         }
         root.getChildren().removeAll();
         root.getChildren().addAll(page);
-        return loader.getController();
+        return (Initializable) loader.getController();
     }    
 }

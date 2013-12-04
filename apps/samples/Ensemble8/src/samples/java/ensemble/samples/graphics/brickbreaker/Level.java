@@ -105,26 +105,30 @@ public class Level extends Parent {
 
     private void initStartingTimeline() {
         startingTimeline = new Timeline();
-        KeyFrame kf1 = new KeyFrame(Duration.millis(500), event -> {
-            message.setVisible(true);
-            state = STARTING_LEVEL;
-            bat.setVisible(false);
-            ball.setVisible(false);
+        KeyFrame kf1 = new KeyFrame(Duration.millis(500), new EventHandler<ActionEvent>() {
+            public void handle(ActionEvent event) {
+                message.setVisible(true);
+                state = STARTING_LEVEL;
+                bat.setVisible(false);
+                ball.setVisible(false);
+            }
         }, new KeyValue(message.opacityProperty(), 0));
         KeyFrame kf2 = new KeyFrame(Duration.millis(1500), new KeyValue(message.opacityProperty(), 1));
         KeyFrame kf3 = new KeyFrame(Duration.millis(3000), new KeyValue(message.opacityProperty(), 1));
-        KeyFrame kf4 = new KeyFrame(Duration.millis(4000), event -> {
-            message.setVisible(false);
+        KeyFrame kf4 = new KeyFrame(Duration.millis(4000), new EventHandler<ActionEvent>() {
+            public void handle(ActionEvent event) {
+                message.setVisible(false);
 
-            bat.setTranslateX((Config.FIELD_WIDTH - bat.getWidth()) / 2.0);
-            ball.setTranslateX((Config.FIELD_WIDTH - ball.getDiameter()) / 2.0);
-            ball.setTranslateY(Config.BAT_Y - ball.getDiameter());
-            ballDirX = (Utils.random(2) * 2 - 1) * Config.BALL_MIN_COORD_SPEED;
-            ballDirY = -Config.BALL_MIN_SPEED;
+                bat.setTranslateX((Config.FIELD_WIDTH - bat.getWidth()) / 2.0);
+                ball.setTranslateX((Config.FIELD_WIDTH - ball.getDiameter()) / 2.0);
+                ball.setTranslateY(Config.BAT_Y - ball.getDiameter());
+                ballDirX = (Utils.random(2) * 2 - 1) * Config.BALL_MIN_COORD_SPEED;
+                ballDirY = -Config.BALL_MIN_SPEED;
 
-            bat.setVisible(true);
-            ball.setVisible(true);
-            state = BALL_CATCHED;
+                bat.setVisible(true);
+                ball.setVisible(true);
+                state = BALL_CATCHED;
+            }
         }, new KeyValue(message.opacityProperty(), 0));
 
         startingTimeline.getKeyFrames().addAll(kf1, kf2, kf3, kf4);
@@ -570,10 +574,10 @@ public class Level extends Parent {
         state = STARTING_LEVEL;
         batDirection = 0;
         levelNumber = level;
-        lives = new ArrayList<>();
-        bricks = new ArrayList<>();
-        fadeBricks = new ArrayList<>();
-        bonuses = new ArrayList<>();
+        lives = new ArrayList<Bonus>();
+        bricks = new ArrayList<Brick>();
+        fadeBricks = new ArrayList<Brick>();
+        bonuses = new ArrayList<Bonus>();
         ball = new Ball();
         ball.setVisible(false);
         bat = new Bat();
@@ -594,47 +598,62 @@ public class Level extends Parent {
         background.setImage(Config.getImages().get(Config.IMAGE_BACKGROUND));
         background.setFitWidth(Config.SCREEN_WIDTH);
         background.setFitHeight(Config.SCREEN_HEIGHT);
-        background.setOnMouseMoved(me -> moveBat(me.getX() - bat.getWidth() / 2));
-        background.setOnMouseDragged(me -> moveBat(me.getX() - bat.getWidth() / 2));
-        background.setOnMousePressed(me -> {
-            if (state == PLAYING) {
+        background.setOnMouseMoved(new EventHandler<MouseEvent>() {
+            public void handle(MouseEvent me) {
+                moveBat(me.getX() - bat.getWidth() / 2);
+            }
+        });
+        background.setOnMouseDragged(new EventHandler<MouseEvent>() {
+            public void handle(MouseEvent me) {
                 // Support touch-only devices like some mobile phones
                 moveBat(me.getX() - bat.getWidth() / 2);
             }
-            if (state == BALL_CATCHED) {
-                state = PLAYING;
-            }
-            if (state == GAME_OVER) {
-                mainFrame.changeState(MainFrame.SPLASH);
+        });
+        background.setOnMousePressed(new EventHandler<MouseEvent>() {
+            public void handle(MouseEvent me) {
+                if (state == PLAYING) {
+                    // Support touch-only devices like some mobile phones
+                    moveBat(me.getX() - bat.getWidth() / 2);
+                }
+                if (state == BALL_CATCHED) {
+                    state = PLAYING;
+                }
+                if (state == GAME_OVER) {
+                    mainFrame.changeState(MainFrame.SPLASH);
+                }
             }
         });
-        background.setOnKeyPressed(ke -> {
-            if ((ke.getCode() == KeyCode.POWER) || (ke.getCode() == KeyCode.X)) {
-                Platform.exit();
-            }
-            if (state == BALL_CATCHED && (ke.getCode() == KeyCode.SPACE ||
-                    ke.getCode() == KeyCode.ENTER || ke.getCode() == KeyCode.PLAY)) {
-                state = PLAYING;
-            }
-            if (state == GAME_OVER) {
-                mainFrame.changeState(MainFrame.SPLASH);
-            }
-            if (state == PLAYING && ke.getCode() == KeyCode.Q) {
-                // Lost life
-                lostLife();
-                return;
-            }
-            if ((ke.getCode() == KeyCode.LEFT || ke.getCode() == KeyCode.TRACK_PREV)) {
-                batDirection = - Config.BAT_SPEED;
-            }
-            if ((ke.getCode() == KeyCode.RIGHT || ke.getCode() == KeyCode.TRACK_NEXT)) {
-                batDirection = Config.BAT_SPEED;
+        background.setOnKeyPressed(new EventHandler<KeyEvent>() {
+            public void handle(KeyEvent ke) {
+                if ((ke.getCode() == KeyCode.POWER) || (ke.getCode() == KeyCode.X)) {
+                    Platform.exit();
+                }
+                if (state == BALL_CATCHED && (ke.getCode() == KeyCode.SPACE ||
+                        ke.getCode() == KeyCode.ENTER || ke.getCode() == KeyCode.PLAY)) {
+                    state = PLAYING;
+                }
+                if (state == GAME_OVER) {
+                    mainFrame.changeState(MainFrame.SPLASH);
+                }
+                if (state == PLAYING && ke.getCode() == KeyCode.Q) {
+                    // Lost life
+                    lostLife();
+                    return;
+                }
+                if ((ke.getCode() == KeyCode.LEFT || ke.getCode() == KeyCode.TRACK_PREV)) {
+                    batDirection = - Config.BAT_SPEED;
+                }
+                if ((ke.getCode() == KeyCode.RIGHT || ke.getCode() == KeyCode.TRACK_NEXT)) {
+                    batDirection = Config.BAT_SPEED;
+                }
             }
         });
-        background.setOnKeyReleased(ke -> {
-            if (ke.getCode() == KeyCode.LEFT || ke.getCode() == KeyCode.RIGHT ||
-                ke.getCode() == KeyCode.TRACK_PREV || ke.getCode() == KeyCode.TRACK_NEXT) {
-                batDirection = 0;
+        background.setOnKeyReleased(new EventHandler<KeyEvent>() {
+            public void handle(KeyEvent ke) {
+                if (ke.getCode() == KeyCode.LEFT || ke.getCode() == KeyCode.RIGHT ||
+                    ke.getCode() == KeyCode.TRACK_PREV || ke.getCode() == KeyCode.TRACK_NEXT) {
+                    batDirection = 0;
+                }
             }
         });
         group.getChildren().add(background);

@@ -79,12 +79,17 @@ public class DrilldownPieChartApp extends Application {
     }
 
     private void setDrilldownData(final PieChart pie, PieChart.Data data, final String labelPrefix) {
-        data.getNode().setOnMouseClicked(t -> pie.setData(FXCollections.observableArrayList(
-                new Data(labelPrefix + "-1", 7),
-                new Data(labelPrefix + "-2", 2),
-                new Data(labelPrefix + "-3", 5),
-                new Data(labelPrefix + "-4", 3),
-                new Data(labelPrefix + "-5", 2))));
+        data.getNode().setOnMouseClicked(new EventHandler<MouseEvent>() {
+            
+            @Override public void handle(MouseEvent t) {
+                pie.setData(FXCollections.observableArrayList(
+                        new PieChart.Data(labelPrefix + "-1", 7),
+                        new PieChart.Data(labelPrefix + "-2", 2),
+                        new PieChart.Data(labelPrefix + "-3", 5),
+                        new PieChart.Data(labelPrefix + "-4", 3),
+                        new PieChart.Data(labelPrefix + "-5", 2)));
+            }
+        });
     }
     
     @Override public void start(Stage primaryStage) throws Exception {

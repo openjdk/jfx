@@ -86,8 +86,10 @@ public class MouseEventApp extends Application {
         console.setPrefSize(CONSOLE_WIDTH, CONSOLE_HEIGHT);
     }
     //create a rectangle in which our circles can move
-    final Rectangle rectangle = new Rectangle(RECT_WIDTH, RECT_HEIGHT, new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE, new Stop(1, Color.rgb(156, 216, 255)),
-            new Stop(0, Color.rgb(156, 216, 255, 0.5))));
+    final Rectangle rectangle = new Rectangle(RECT_WIDTH, RECT_HEIGHT, new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE, new Stop[]{
+                new Stop(1, Color.rgb(156, 216, 255)),
+                new Stop(0, Color.rgb(156, 216, 255, 0.5))
+            }));
     //variables for storing initial position before drag of circle
     private double initX;
     private double initY;
@@ -104,81 +106,112 @@ public class MouseEventApp extends Application {
         circleBig.setTranslateX(BIG_CIRCLE_STARTX);
         circleBig.setTranslateY(BIG_CIRCLE_STARTY);
         // we can set mouse event to any node, also on the rectangle
-        rectangle.setOnMouseMoved(me -> showOnConsole("Mouse moved, x: " + me.getX() + ", y: " + me.getY()));
+        rectangle.setOnMouseMoved(new EventHandler<MouseEvent>() {
+            public void handle(MouseEvent me) {
+                //log mouse move to console, method listed below
+                showOnConsole("Mouse moved, x: " + me.getX() + ", y: " + me.getY());
+            }
+        });
 
-        rectangle.setOnScroll(event -> {
-            double translateX = event.getDeltaX();
-            double translateY = event.getDeltaY();
-            // reduce the deltas for the circles to stay in the screen
-            for (Circle c : new Circle[]{circleSmall, circleBig}) {
-                if (c.getTranslateX() + translateX + c.getRadius() > RECT_WIDTH) {
-                    translateX = RECT_WIDTH - c.getTranslateX() - c.getRadius();
+        rectangle.setOnScroll(new EventHandler<ScrollEvent>() {
+            @Override
+            public void handle(ScrollEvent event) {
+                double translateX = event.getDeltaX();
+                double translateY = event.getDeltaY();
+                // reduce the deltas for the circles to stay in the screen
+                for (Circle c : new Circle[]{circleSmall, circleBig}) {
+                    if (c.getTranslateX() + translateX + c.getRadius() > RECT_WIDTH) {
+                        translateX = RECT_WIDTH - c.getTranslateX() - c.getRadius();
+                    }
+                    if (c.getTranslateX() + translateX - c.getRadius() < 0) {
+                        translateX = -c.getTranslateX() + c.getRadius();
+                    }
+                    if (c.getTranslateY() + translateY + c.getRadius() > RECT_HEIGHT) {
+                        translateY = RECT_HEIGHT - c.getTranslateY() - c.getRadius();
+                    }
+                    if (c.getTranslateY() + translateY - c.getRadius() < 0) {
+                        translateY = -c.getTranslateY() + c.getRadius();
+                    }
                 }
-                if (c.getTranslateX() + translateX - c.getRadius() < 0) {
-                    translateX = -c.getTranslateX() + c.getRadius();
+                // move the circles
+                for (Circle c : new Circle[]{circleSmall, circleBig}) {
+                    c.setTranslateX(c.getTranslateX() + translateX);
+                    c.setTranslateY(c.getTranslateY() + translateY);
                 }
-                if (c.getTranslateY() + translateY + c.getRadius() > RECT_HEIGHT) {
-                    translateY = RECT_HEIGHT - c.getTranslateY() - c.getRadius();
-                }
-                if (c.getTranslateY() + translateY - c.getRadius() < 0) {
-                    translateY = -c.getTranslateY() + c.getRadius();
-                }
+                // log event
+                showOnConsole("Scrolled, deltaX: " + event.getDeltaX()
+                        + ", deltaY: " + event.getDeltaY());
             }
-            // move the circles
-            for (Circle c : new Circle[]{circleSmall, circleBig}) {
-                c.setTranslateX(c.getTranslateX() + translateX);
-                c.setTranslateY(c.getTranslateY() + translateY);
-            }
-            // log event
-            showOnConsole("Scrolled, deltaX: " + event.getDeltaX()
-                    + ", deltaY: " + event.getDeltaY());
         });
         return new Group(rectangle, circleBig, circleSmall, console);
     }
 
     private Circle createCircle(final String name, final Color color, int radius) {
         //create a circle with desired name,  color and radius
-        final Circle circle = new Circle(radius, new RadialGradient(0, 0, 0.2, 0.3, 1, true, CycleMethod.NO_CYCLE, new Stop(0, Color.rgb(250, 250, 255)),
-                new Stop(1, color)));
+        final Circle circle = new Circle(radius, new RadialGradient(0, 0, 0.2, 0.3, 1, true, CycleMethod.NO_CYCLE, new Stop[]{
+                    new Stop(0, Color.rgb(250, 250, 255)),
+                    new Stop(1, color)
+                }));
         //add a shadow effect
         circle.setEffect(new InnerShadow(7, color.darker().darker()));
         //change a cursor when it is over circle
         circle.setCursor(Cursor.HAND);
         //add a mouse listeners
-        circle.setOnMouseClicked(me -> {
-            showOnConsole("Clicked on" + name + ", " + me.getClickCount() + "times");
-            //the event will be passed only to the circle which is on front
-            me.consume();
-        });
-        circle.setOnMouseDragged(me -> {
-            double dragX = me.getSceneX() - dragAnchor.getX();
-            double dragY = me.getSceneY() - dragAnchor.getY();
-            //calculate new position of the circle
-            double newXPosition = initX + dragX;
-            double newYPosition = initY + dragY;
-            //if new position do not exceeds borders of the rectangle, translate to this position
-            if ((newXPosition >= circle.getRadius()) && (newXPosition <= RECT_WIDTH - circle.getRadius())) {
-                circle.setTranslateX(newXPosition);
+        circle.setOnMouseClicked(new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent me) {
+                showOnConsole("Clicked on" + name + ", " + me.getClickCount() + "times");
+                //the event will be passed only to the circle which is on front
+                me.consume();
             }
-            if ((newYPosition >= circle.getRadius()) && (newYPosition <= RECT_HEIGHT - circle.getRadius())) {
-                circle.setTranslateY(newYPosition);
+        });
+        circle.setOnMouseDragged(new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent me) {
+                double dragX = me.getSceneX() - dragAnchor.getX();
+                double dragY = me.getSceneY() - dragAnchor.getY();
+                //calculate new position of the circle
+                double newXPosition = initX + dragX;
+                double newYPosition = initY + dragY;
+                //if new position do not exceeds borders of the rectangle, translate to this position
+                if ((newXPosition >= circle.getRadius()) && (newXPosition <= RECT_WIDTH - circle.getRadius())) {
+                    circle.setTranslateX(newXPosition);
+                }
+                if ((newYPosition >= circle.getRadius()) && (newYPosition <= RECT_HEIGHT - circle.getRadius())) {
+                    circle.setTranslateY(newYPosition);
+                }
+                showOnConsole(name + " was dragged (x:" + dragX + ", y:" + dragY + ")");
             }
-            showOnConsole(name + " was dragged (x:" + dragX + ", y:" + dragY + ")");
         });
-        circle.setOnMouseEntered(me -> {
-            //change the z-coordinate of the circle
-            circle.toFront();
-            showOnConsole("Mouse entered " + name);
+        circle.setOnMouseEntered(new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent me) {
+                //change the z-coordinate of the circle
+                circle.toFront();
+                showOnConsole("Mouse entered " + name);
+            }
         });
-        circle.setOnMouseExited(me -> showOnConsole("Mouse exited " + name));
-        circle.setOnMousePressed(me -> {
-            //when mouse is pressed, store initial position
-            initX = circle.getTranslateX();
-            initY = circle.getTranslateY();
-            dragAnchor = new Point2D(me.getSceneX(), me.getSceneY());
-            showOnConsole("Mouse pressed above " + name);
+        circle.setOnMouseExited(new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent me) {
+                showOnConsole("Mouse exited " + name);
+            }
         });
-        circle.setOnMouseReleased(me -> showOnConsole("Mouse released above " + name));
+        circle.setOnMousePressed(new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent me) {
+                //when mouse is pressed, store initial position
+                initX = circle.getTranslateX();
+                initY = circle.getTranslateY();
+                dragAnchor = new Point2D(me.getSceneX(), me.getSceneY());
+                showOnConsole("Mouse pressed above " + name);
+            }
+        });
+        circle.setOnMouseReleased(new EventHandler<MouseEvent>() {
+            public void handle(MouseEvent me) {
+                showOnConsole("Mouse released above " + name);
+            }
+        });
 
         return circle;
     }

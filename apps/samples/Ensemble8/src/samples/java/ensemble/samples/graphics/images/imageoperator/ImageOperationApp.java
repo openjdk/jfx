@@ -66,9 +66,9 @@ public class ImageOperationApp extends Application {
         PixelWriter pw = img.getPixelWriter();
         double w = img.getWidth();
         double h = img.getHeight();
-        double xRatio;
-        double yRatio;
-        double hue;
+        double xRatio = 0.0;
+        double yRatio = 0.0;
+        double hue = 0.0;
 
         for (int y = 0; y < h; y++) {
             for (int x = 0; x < w; x++) {
@@ -83,9 +83,24 @@ public class ImageOperationApp extends Application {
     public Parent createContent() {
          StackPane root = new StackPane();
         final WritableImage img = new WritableImage(200, 200);
-        gridSize.addListener(observable -> renderImage(img, gridSize.doubleValue(), hueFactor.doubleValue(), hueOffset.doubleValue()));
-        hueFactor.addListener(observable -> renderImage(img, gridSize.doubleValue(), hueFactor.doubleValue(), hueOffset.doubleValue()));
-        hueOffset.addListener(observable -> renderImage(img, gridSize.doubleValue(), hueFactor.doubleValue(), hueOffset.doubleValue()));
+        gridSize.addListener(new InvalidationListener() {
+            @Override
+            public void invalidated(Observable observable) {
+                renderImage(img, gridSize.doubleValue(), hueFactor.doubleValue(), hueOffset.doubleValue());
+            }
+        });
+        hueFactor.addListener(new InvalidationListener() {
+            @Override
+            public void invalidated(Observable observable) {
+                renderImage(img, gridSize.doubleValue(), hueFactor.doubleValue(), hueOffset.doubleValue());
+            }
+        });
+        hueOffset.addListener(new InvalidationListener() {
+            @Override
+            public void invalidated(Observable observable) {
+                renderImage(img, gridSize.doubleValue(), hueFactor.doubleValue(), hueOffset.doubleValue());
+            }
+        });
         renderImage(img, 3.0, 12.0, 240.0);
 
         ImageView view = new ImageView(img);
