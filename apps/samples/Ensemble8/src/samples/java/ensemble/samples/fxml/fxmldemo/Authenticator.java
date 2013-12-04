@@ -35,7 +35,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class Authenticator {
-    private static final Map<String, String> USERS = new HashMap<String, String>();
+    private static final Map<String, String> USERS = new HashMap<>();
     static {
         USERS.put("demo", "demo");
     }

@@ -58,25 +58,22 @@ public class TextValidatorApp extends Application {
         dateField.setPromptText("Enter a Large Number");
         dateField.setMaxHeight(TextField.USE_PREF_SIZE);
 
-        TextInputValidatorPane<TextField> pane = new TextInputValidatorPane<TextField>();
+        TextInputValidatorPane<TextField> pane = new TextInputValidatorPane<>();
         pane.setContent(dateField);
-        pane.setValidator(new Validator<TextField>() {
-            @Override
-            public ValidationResult validate(TextField control) {
-                try {
-                    String text = control.getText();
-                    if (text == null || text.trim().equals("")) {
-                        return null;
-                    }
-                    double d = Double.parseDouble(text);
-                    if (d < 1000) {
-                        return new ValidationResult("Should be > 1000", ValidationResult.Type.WARNING);
-                    }
-                    return null; // succeeded
-                } catch (Exception e) {
-                    // failed
-                    return new ValidationResult("Bad number", ValidationResult.Type.ERROR);
+        pane.setValidator(control -> {
+            try {
+                String text = control.getText();
+                if (text == null || text.trim().equals("")) {
+                    return null;
                 }
+                double d = Double.parseDouble(text);
+                if (d < 1000) {
+                    return new ValidationResult("Should be > 1000", ValidationResult.Type.WARNING);
+                }
+                return null; // succeeded
+            } catch (Exception e) {
+                // failed
+                return new ValidationResult("Bad number", ValidationResult.Type.ERROR);
             }
         });
 

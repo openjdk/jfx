@@ -80,7 +80,7 @@ public class PuzzlePiecesApp extends Application {
         // create desk
         final Desk desk = new Desk(numOfColumns, numOfRows);
         // create puzzle pieces
-        final List<Piece> pieces = new ArrayList<Piece>();
+        final List<Piece> pieces = new ArrayList<>();
         for (int col = 0; col < numOfColumns; col++) {
             for (int row = 0; row < numOfRows; row++) {
                 int x = col * Piece.SIZE;
@@ -95,45 +95,41 @@ public class PuzzlePiecesApp extends Application {
         // create button box
         Button shuffleButton = new Button("Shuffle");
         shuffleButton.setStyle("-fx-font-size: 2em;");
-        shuffleButton.setOnAction(new EventHandler<ActionEvent>() {           
-            @Override public void handle(ActionEvent actionEvent) {
-                if (timeline != null) {
-                    timeline.stop();
-                }
-                timeline = new Timeline();
-                for (final Piece piece : pieces) {
-                    piece.setActive();
-                    double shuffleX = Math.random()
-                            * (desk.getWidth() - Piece.SIZE + 48f)
-                            - 24f - piece.getCorrectX();
-                    double shuffleY = Math.random()
-                            * (desk.getHeight() - Piece.SIZE + 30f)
-                            - 15f - piece.getCorrectY();
-                    timeline.getKeyFrames().add(
-                            new KeyFrame(Duration.seconds(1),
-                            new KeyValue(piece.translateXProperty(), shuffleX),
-                            new KeyValue(piece.translateYProperty(), shuffleY)));
-                }
-                timeline.playFromStart();
+        shuffleButton.setOnAction(actionEvent -> {
+            if (timeline != null) {
+                timeline.stop();
             }
+            timeline = new Timeline();
+            for (final Piece piece : pieces) {
+                piece.setActive();
+                double shuffleX = Math.random()
+                        * (desk.getWidth() - Piece.SIZE + 48f)
+                        - 24f - piece.getCorrectX();
+                double shuffleY = Math.random()
+                        * (desk.getHeight() - Piece.SIZE + 30f)
+                        - 15f - piece.getCorrectY();
+                timeline.getKeyFrames().add(
+                        new KeyFrame(Duration.seconds(1),
+                        new KeyValue(piece.translateXProperty(), shuffleX),
+                        new KeyValue(piece.translateYProperty(), shuffleY)));
+            }
+            timeline.playFromStart();
         });
         Button solveButton = new Button("Solve");
         solveButton.setStyle("-fx-font-size: 2em;");
-        solveButton.setOnAction(new EventHandler<ActionEvent>() {            
-            @Override public void handle(ActionEvent actionEvent) {
-                if (timeline != null) {
-                    timeline.stop();
-                }
-                timeline = new Timeline();
-                for (final Piece piece : pieces) {
-                    piece.setInactive();
-                    timeline.getKeyFrames().add(
-                            new KeyFrame(Duration.seconds(1),
-                            new KeyValue(piece.translateXProperty(), 0),
-                            new KeyValue(piece.translateYProperty(), 0)));
-                }
-                timeline.playFromStart();
+        solveButton.setOnAction(actionEvent -> {
+            if (timeline != null) {
+                timeline.stop();
             }
+            timeline = new Timeline();
+            for (final Piece piece : pieces) {
+                piece.setInactive();
+                timeline.getKeyFrames().add(
+                        new KeyFrame(Duration.seconds(1),
+                        new KeyValue(piece.translateXProperty(), 0),
+                        new KeyValue(piece.translateYProperty(), 0)));
+            }
+            timeline.playFromStart();
         });
         HBox buttonBox = new HBox(8);
         buttonBox.getChildren().addAll(shuffleButton, solveButton);

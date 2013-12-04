@@ -39,7 +39,6 @@ import java.awt.Dimension;
 import java.text.DecimalFormat;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.embed.swing.JFXPanel;
 import javafx.event.ActionEvent;
@@ -64,7 +63,6 @@ import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import javax.swing.*;
 import javax.swing.event.TableModelEvent;
-import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableCellRenderer;
 
 /**
@@ -129,36 +127,29 @@ public class SwingInterop extends JApplet {
         add(tabbedPane, BorderLayout.CENTER);
         
         // create JavaFX scene
-        Platform.runLater(new Runnable() {
-            public void run() {
-                createScene();
-            }
-        });
+        Platform.runLater(this::createScene);
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(new Runnable() {
+        System.setProperty("java.net.useSystemProxies", "true");
+        SwingUtilities.invokeLater(() -> {
+            try {
+                UIManager.setLookAndFeel("com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel");
+            } catch (Exception e) {}
 
-            @Override
-            public void run() {
-                try {
-                    UIManager.setLookAndFeel("com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel");
-                } catch (Exception e) {}
-                
-                JFrame frame = new JFrame("JavaFX in Swing");
-                frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            JFrame frame = new JFrame("JavaFX in Swing");
+            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-                JApplet applet = new SwingInterop();
-                applet.init();
+            JApplet applet = new SwingInterop();
+            applet.init();
 
-                frame.setContentPane(applet.getContentPane());
+            frame.setContentPane(applet.getContentPane());
 
-                frame.pack();
-                frame.setLocationRelativeTo(null);
-                frame.setVisible(true);
+            frame.pack();
+            frame.setLocationRelativeTo(null);
+            frame.setVisible(true);
 
-                applet.start();
-            }
+            applet.start();
         });
     }
 
@@ -181,23 +172,16 @@ public class SwingInterop extends JApplet {
         yAxis.setLabel("Units Sold");
 
         final BarChart bChart = new BarChart(xAxis, yAxis, tableModel.getBarChartData());
-        tableModel.addTableModelListener(new TableModelListener() {
-
-            @Override
-            public void tableChanged(TableModelEvent e) {
-                if (e.getType() == TableModelEvent.UPDATE) {
-                    final int row = e.getFirstRow();
-                    final int column = e.getColumn();
-                    final Object value = ((SampleTableModel) e.getSource()).getValueAt(row, column);
-                    Platform.runLater(new Runnable() {
-                        @Override
-                        public void run() {
-                            XYChart.Series<String, Number> s = (XYChart.Series<String, Number>) bChart.getData().get(row);
-                            BarChart.Data data = s.getData().get(column);
-                            data.setYValue(value);
-                        }
-                    });
-                }
+        tableModel.addTableModelListener(e -> {
+            if (e.getType() == TableModelEvent.UPDATE) {
+                final int row = e.getFirstRow();
+                final int column = e.getColumn();
+                final Object value = ((SampleTableModel) e.getSource()).getValueAt(row, column);
+                Platform.runLater(() -> {
+                    XYChart.Series<String, Number> s = (XYChart.Series<String, Number>) bChart.getData().get(row);
+                    BarChart.Data data = s.getData().get(column);
+                    data.setYValue(value);
+                });
             }
         });
         return bChart;
@@ -213,11 +197,9 @@ public class SwingInterop extends JApplet {
         final Label warningLabel = new Label("Do you need to specify web proxy information?");
         eng.load("http://www.oracle.com/us/index.html");
 
-        ChangeListener handler = new ChangeListener<Number>() {
-            @Override public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                if (warningLabel.isVisible()) {
-                    warningLabel.setVisible(false);
-                }
+        ChangeListener handler = (observable, oldValue, newValue) -> {
+            if (warningLabel.isVisible()) {
+                warningLabel.setVisible(false);
             }
         };
         eng.getLoadWorker().progressProperty().addListener(handler);
@@ -227,19 +209,11 @@ public class SwingInterop extends JApplet {
         Button goButton = new Button("Go");
         goButton.setMinWidth(Button.USE_PREF_SIZE);
         goButton.setDefaultButton(true);
-        EventHandler<ActionEvent> goAction = new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent event) {
-                eng.load(locationField.getText().startsWith("http://") ? locationField.getText()
-                        : "http://" + locationField.getText());
-            }
-        };
+        EventHandler<ActionEvent> goAction = event -> eng.load(locationField.getText().startsWith("http://") ? locationField.getText()
+                : "http://" + locationField.getText());
         goButton.setOnAction(goAction);
         locationField.setOnAction(goAction);
-        eng.locationProperty().addListener(new ChangeListener<String>() {
-            @Override public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
-                locationField.setText(newValue);
-            }
-        });
+        eng.locationProperty().addListener((observable, oldValue, newValue) -> locationField.setText(newValue));
         GridPane grid = new GridPane();
         grid.setPadding(new Insets(5));
         grid.setVgap(5);
@@ -260,7 +234,7 @@ public class SwingInterop extends JApplet {
 
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-            value = formatter.format((Number) value);
+            value = formatter.format(value);
             return super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
         }
     }

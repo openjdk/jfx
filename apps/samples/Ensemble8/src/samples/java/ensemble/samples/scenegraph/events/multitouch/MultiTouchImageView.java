@@ -54,15 +54,12 @@ public class MultiTouchImageView extends StackPane {
         imageView.setSmooth(true);
         getChildren().add(imageView);
 
-        setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent event) {
+        setOnMousePressed(event -> {
 
-                lastX = event.getX();
-                lastY = event.getY();
-                toFront();
-                //  postView.toFront();
-            }
+            lastX = event.getX();
+            lastY = event.getY();
+            toFront();
+            //  postView.toFront();
         });
         setOnMouseDragged(new EventHandler<MouseEvent>() {
             @Override
@@ -84,31 +81,17 @@ public class MultiTouchImageView extends StackPane {
                 }
             }
         });
-        addEventHandler(ZoomEvent.ZOOM_STARTED, new EventHandler<ZoomEvent>() {
-            @Override
-            public void handle(ZoomEvent event) {
-                startScale = getScaleX();
-            }
+        addEventHandler(ZoomEvent.ZOOM_STARTED, event -> {
+            startScale = getScaleX();
         });
-        addEventHandler(ZoomEvent.ZOOM, new EventHandler<ZoomEvent>() {
-            @Override
-            public void handle(ZoomEvent event) {
-                setScaleX(event.getTotalZoomFactor());
-                setScaleY(event.getTotalZoomFactor());
-            }
+        addEventHandler(ZoomEvent.ZOOM, event -> {
+            setScaleX(event.getTotalZoomFactor());
+            setScaleY(event.getTotalZoomFactor());
         });
-        addEventHandler(RotateEvent.ROTATION_STARTED, new EventHandler<RotateEvent>() {
-            @Override
-            public void handle(RotateEvent event) {
-                startRotate = getRotate();
-            }
+        addEventHandler(RotateEvent.ROTATION_STARTED, event -> {
+            startRotate = getRotate();
         });
-        addEventHandler(RotateEvent.ROTATE, new EventHandler<RotateEvent>() {
-            @Override
-            public void handle(RotateEvent event) {
-                setRotate(event.getTotalAngle());
-            }
-        });
+        addEventHandler(RotateEvent.ROTATE, event -> setRotate(event.getTotalAngle()));
 
     }
 }

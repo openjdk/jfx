@@ -90,11 +90,7 @@ public class Watch extends Parent {
 
     private void configureTimeline() {
         time.setCycleCount(Timeline.INDEFINITE);
-        KeyFrame keyFrame = new KeyFrame(Duration.millis(47), new EventHandler<ActionEvent>() {
-            public void handle(ActionEvent event) {
-                calculate();
-            }
-        });
+        KeyFrame keyFrame = new KeyFrame(Duration.millis(47), event -> calculate());
         time.getKeyFrames().add(keyFrame);
     }
 
@@ -164,47 +160,31 @@ public class Watch extends Parent {
     }
 
     private void configureListeners() {
-        startButton.setOnMousePressed(new EventHandler<MouseEvent>() {          
-            @Override public void handle(MouseEvent me) {
-                startButton.moveDown();
-                me.consume();
-            }
+        startButton.setOnMousePressed(me -> {
+            startButton.moveDown();
+            me.consume();
         });
 
-        stopButton.setOnMousePressed(new EventHandler<MouseEvent>() {          
-            @Override public void handle(MouseEvent me) {
-                stopButton.moveDown();
-                me.consume();
-            }
+        stopButton.setOnMousePressed(me -> {
+            stopButton.moveDown();
+            me.consume();
         });
 
-        startButton.setOnMouseReleased(new EventHandler<MouseEvent>() {           
-            @Override public void handle(MouseEvent me) {
-                startButton.moveUp();
-                startStop();
-                me.consume();
-            }
+        startButton.setOnMouseReleased(me -> {
+            startButton.moveUp();
+            startStop();
+            me.consume();
         });
 
-        stopButton.setOnMouseReleased(new EventHandler<MouseEvent>() {           
-            @Override public void handle(MouseEvent me) {
-                stopButton.moveUp();
-                stopReset();
-                me.consume();
-            }
+        stopButton.setOnMouseReleased(me -> {
+            stopButton.moveUp();
+            stopReset();
+            me.consume();
         });
 
-        startButton.setOnMouseDragged(new EventHandler<MouseEvent>() {           
-            @Override public void handle(MouseEvent me) {
-                me.consume();
-            }
-        });
+        startButton.setOnMouseDragged(MouseEvent::consume);
 
-        stopButton.setOnMouseDragged(new EventHandler<MouseEvent>() {          
-            @Override public void handle(MouseEvent me) {
-                me.consume();
-            }
-        });
+        stopButton.setOnMouseDragged(MouseEvent::consume);
     }
 
     //MODEL
