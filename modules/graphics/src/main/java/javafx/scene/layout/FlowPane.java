@@ -698,7 +698,7 @@ public class FlowPane extends Pane {
         return runs;
     }
 
-    private void normalizeRun(Run run, double runOffset) {
+    private void normalizeRun(final Run run, double runOffset) {
         if (getOrientation() == HORIZONTAL) {
             // horizontal
             ArrayList<Node> rownodes = new ArrayList();
@@ -713,7 +713,7 @@ public class FlowPane extends Pane {
             run.baselineOffset = getRowValignment() == VPos.BASELINE?
                     getAreaBaselineOffset(rownodes, marginAccessor, new Function<Integer, Double>() {
 
-                public Double apply(Integer i) {
+                public Double apply(final Integer i) {
                     return run.rects.get(i).width;
                 }
             }, run.height, true) : 0;

@@ -180,7 +180,7 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
         if (invokeLaterDispatcher != null) {
             invokeLaterDispatcher.invokeAndWait(runnable);
         } else {
-            CountDownLatch latch = new CountDownLatch(1);
+            final CountDownLatch latch = new CountDownLatch(1);
             submitForLaterInvocation(new Runnable() {
                 public void run() {
                     if (runnable != null) runnable.run();

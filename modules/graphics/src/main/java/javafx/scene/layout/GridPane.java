@@ -1664,7 +1664,7 @@ public class GridPane extends Pane {
 
         Orientation contentBias = getContentBias();
         CompositeSize heights;
-        CompositeSize widths;
+        final CompositeSize widths;
         if (contentBias == null) {
             heights = (CompositeSize) computePrefHeights(null).clone();
             widths = (CompositeSize) computePrefWidths(null).clone();
@@ -1689,8 +1689,8 @@ public class GridPane extends Pane {
         double[] baselineOffsets = createDoubleArray(numRows, -1);
 
         for (int i = 0, size = managed.size(); i < size; i++) {
-            Node child = managed.get(i);
-            int rowIndex = getNodeRowIndex(child);
+            final Node child = managed.get(i);
+            final int rowIndex = getNodeRowIndex(child);
             int columnIndex = getNodeColumnIndex(child);
             int colspan = getNodeColumnSpan(child);
             if (colspan == REMAINING) {

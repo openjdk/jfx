@@ -329,7 +329,7 @@ public class StackPane extends Pane {
         Pos align = getAlignmentInternal();
         HPos alignHpos = align.getHpos();
         VPos alignVpos = align.getVpos();
-        double width = getWidth();
+        final double width = getWidth();
         double height = getHeight();
         double top = getInsets().getTop();
         double right = getInsets().getRight();
