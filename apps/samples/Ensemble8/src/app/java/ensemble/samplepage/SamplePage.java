@@ -106,7 +106,7 @@ public class SamplePage extends StackPane implements Page {
     }
     
     String apiClassToUrl(String classname) {
-        String urlEnd = classname.replace('.', '/').replace('$', '.');
+        String urlEnd = classname.replaceAll("\\.([a-z])", "/$1").replaceFirst("\\.([A-Z])", "/$1");
         if (classname.startsWith("javafx")) {
             return "http://download.java.net/jdk8/jfxdocs/"+urlEnd+".html";
         } else {

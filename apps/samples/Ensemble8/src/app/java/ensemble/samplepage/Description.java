@@ -150,7 +150,7 @@ public class Description extends VBox {
                 relatedDocumentsList.getChildren().add(link);
             }
             for (final String classpath : sampleInfo.apiClasspaths) {
-                Hyperlink link = new Hyperlink(classpath.replace('$', '.'));
+                Hyperlink link = new Hyperlink(classpath);
                 link.setOnAction(new EventHandler<ActionEvent>() {
                     @Override public void handle(ActionEvent ev) {
                         samplePage.pageBrowser.goToPage(samplePage.apiClassToUrl(classpath));
