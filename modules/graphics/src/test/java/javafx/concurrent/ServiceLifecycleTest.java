@@ -41,6 +41,7 @@ import org.junit.After;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
@@ -153,8 +154,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
      ***********************************************************************/
 
     @Test public void callingStartInReadyStateSchedulesJob() {
+        assertNull(executor.scheduled);
         service.start();
-        assertSame(factory.getCurrentTask(), executor.scheduled);
+        assertNotNull(executor.scheduled);
     }
 
     @Test public void callingStartInReadyMovesToScheduledState() {
@@ -164,8 +166,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     }
 
     @Test public void callingRestartInReadyStateSchedulesJob() {
+        assertNull(executor.scheduled);
         service.restart();
-        assertSame(factory.getCurrentTask(), executor.scheduled);
+        assertNotNull(executor.scheduled);
     }
 
     @Test public void callingRestartInReadyMovesToScheduledState() {

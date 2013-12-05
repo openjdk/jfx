@@ -25,8 +25,10 @@
 
 package javafx.scene.input;
 
+import java.security.AllPermission;
 import java.util.Set;
 
+import com.sun.javafx.scene.input.DragboardHelper;
 import com.sun.javafx.tk.TKClipboard;
 import com.sun.javafx.tk.TKScene;
 import javafx.scene.image.Image;
@@ -37,8 +39,24 @@ import javafx.scene.image.Image;
  */
 public final class Dragboard extends Clipboard {
 
+    /**
+     * Whether access to the data requires a permission.
+     */
+    private boolean dataAccessRestricted = true;
+
     Dragboard(TKClipboard peer) {
         super(peer);
+    }
+
+    @Override
+    Object getContentImpl(DataFormat dataFormat) {
+        if (dataAccessRestricted) {
+            final SecurityManager securityManager = System.getSecurityManager();
+            if (securityManager != null) {
+                securityManager.checkPermission(new AllPermission());
+            }
+        }
+        return super.getContentImpl(dataFormat);
     }
 
     /**
@@ -155,5 +173,16 @@ public final class Dragboard extends Clipboard {
      */
     public double getDragViewOffsetY() {
         return peer.getDragViewOffsetY();
+    }
+
+    static {
+        // This is used by classes in different packages to get access to
+        // private and package private methods.
+        DragboardHelper.setDragboardAccessor(new DragboardHelper.DragboardAccessor() {
+            @Override
+            public void setDataAccessRestriction(Dragboard dragboard, boolean restricted) {
+                dragboard.dataAccessRestricted = restricted;
+            }
+        });
     }
 }
