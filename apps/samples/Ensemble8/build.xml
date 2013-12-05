@@ -103,7 +103,7 @@
     </target>
     
     <target name="ensemble-generate-samples-class" depends="init,compile" description="Ensemble: Generate source for all samples data class.">
-       <java classname="ensemble.compiletime.EnsembleCompiletimeMain" dir="${basedir}">
+       <java classname="ensemble.compiletime.EnsembleCompiletimeMain" fork="true">
          <arg value="samples"/>
          <classpath>
            <pathelement location="${build.classes.dir}"/>
@@ -114,7 +114,7 @@
     
     <target name="ensemble-generate-search-index" depends="init,compile" description="Ensemble: Generate search index.">
        <delete dir="${basedir}/src/generated/ensemble/search/index"/>
-       <java classname="ensemble.compiletime.EnsembleCompiletimeMain" dir="${basedir}">
+       <java classname="ensemble.compiletime.EnsembleCompiletimeMain" fork="true">
          <arg value="index"/>
          <classpath>
            <pathelement location="${build.classes.dir}"/>

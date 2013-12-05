@@ -61,6 +61,7 @@ import javafx.scene.Parent;
  * @see javafx.fxml.Initializable
  * @see javafx.fxml.JavaFXBuilderFactory
  * @see javafx.stage.Stage 
+ * @embedded
  */
 
 public class FXMLLoginDemoApp extends Application {

@@ -44,10 +44,7 @@ import org.xml.sax.helpers.XMLReaderFactory;
 
 public class DocumentationIndexer {
     static {
-        System.setProperty("http.proxyHost", "www-proxy.us.oracle.com");
-        System.setProperty("http.proxyPort", "80");
-        System.setProperty("https.proxyHost", "www-proxy.us.oracle.com");
-        System.setProperty("https.proxyPort", "80");
+        System.setProperty("java.net.useSystemProxies", "true");
     }
     
     private enum State {DEFAULT, BOOK_TITLE, CHAPTER, SECT1, SECT_H1_H2};
@@ -95,12 +92,12 @@ public class DocumentationIndexer {
 //        content = content.replaceAll("<span class=red>", "<span class=\"red\">");
         
         try {
-        DocHandler handler = new DocHandler(url);
-        XMLReader xmlParser = XMLReaderFactory.createXMLReader();
-        xmlParser.setContentHandler(handler);
-        xmlParser.setEntityResolver(handler);
-        xmlParser.parse(new InputSource(new StringReader(content)));
-        return handler.getDocPage();
+            DocHandler handler = new DocHandler(url);
+            XMLReader xmlParser = XMLReaderFactory.createXMLReader();
+            xmlParser.setContentHandler(handler);
+            xmlParser.setEntityResolver(handler);
+            xmlParser.parse(new InputSource(new StringReader(content)));
+            return handler.getDocPage();
         } catch (Exception e) {
             System.out.println("----------------------------------------------------------------------");
             System.out.println("url = "+url);

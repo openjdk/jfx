@@ -32,7 +32,6 @@
 package ensemble.samples.graphics.stopwatch;
 
 import javafx.application.Application;
-import javafx.scene.Group;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
@@ -59,6 +58,7 @@ import javafx.stage.Stage;
  * @see javafx.scene.text.TextBoundsType
  * @see javafx.scene.transform.Rotate
  * @see javafx.util.Duration
+ * @embedded
  */
 public class StopWatchApp extends Application {
     private Watch watch;
