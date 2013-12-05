@@ -171,13 +171,11 @@ public class EnsembleApp extends Application {
         searchButton.setId("search");
         searchButton.setPrefSize(TOOL_BAR_BUTTON_SIZE, TOOL_BAR_BUTTON_SIZE);
         searchBox.setPrefWidth(200);
-        if (!IS_IOS) {
-            backButton.setGraphic(new Region());
-            forwardButton.setGraphic(new Region());
-            homeButton.setGraphic(new Region());
-            listButton.setGraphic(new Region());
-            searchButton.setGraphic(new Region());
-        }
+        backButton.setGraphic(new Region());
+        forwardButton.setGraphic(new Region());
+        homeButton.setGraphic(new Region());
+        listButton.setGraphic(new Region());
+        searchButton.setGraphic(new Region());
         toolBar.addLeftItems(navButtons,listButton);
         toolBar.addRightItems(searchBox);
 
