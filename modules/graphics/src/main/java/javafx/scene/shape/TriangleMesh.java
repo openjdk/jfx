@@ -78,6 +78,13 @@ import sun.util.logging.PlatformLogger;
  * and t3 are indices into the texCoords array.
  * 
  * <p>
+ * A triangle has a front and back face. The winding order of a triangle's vertices
+ * determines which side is the front face. JavaFX chooses the counter-clockwise
+ * (or right-hand rule) winding order as the front face. By default, only the
+ * front face of a triangle is rendered. See {@code CullFace} for more
+ * information.
+ *
+ * <p>
  * The length of {@code points}, {@code texCoords}, and {@code faces} must be
  * divisible by 3, 2, and 6 respectively.
  * The values in the faces array must be within the range of the number of vertices
@@ -162,10 +169,9 @@ public class TriangleMesh extends Mesh {
     }
 
     /**
-     * Gets the {@code ObservableFloatArray} of points of this
-     * {@code TriangleMesh}.
+     * Gets the {@code points} array of this {@code TriangleMesh}.
      *
-     * @return {@code ObservableFloatArray} of points where each point is
+     * @return {@code points} array where each point is
      * represented by 3 float values x, y and z, in that order.
      */
     public final ObservableFloatArray getPoints() {
@@ -173,41 +179,39 @@ public class TriangleMesh extends Mesh {
     }
 
     /**
-     * Gets the {@code ObservableFloatArray} of texture coordinates of this {@code TriangleMesh}.
+     * Gets the  {@code texCoords} array of this {@code TriangleMesh}.
      * The coordinates are proportional, so texture's top-left corner
      * is at [0, 0] and bottom-right corner is at [1, 1].
      *
-     * @return {@code ObservableFloatArray} array of texture coordinates
-     * where each texture coordinate is represented by 2 float values: u and v,
-     * in that order
+     * @return {@code texCoord} array where each texture coordinate is represented
+     * by 2 float values: u and v, in that order.
      */    
     public final ObservableFloatArray getTexCoords() {
         return texCoords;
     }
  
     /**
-     * Gets the {@code ObservableFaceArray} of faces, indices into the points 
-     * and texCoords arrays, of this  {@code TriangleMesh}
+     * Gets the {@code faces} array, indices into the {@code points} 
+     * and {@code texCoords} arrays, of this  {@code TriangleMesh}
      *
-     * @return {@code ObservableFaceArray} of faces where each face is
+     * @return {@code faces} array where each face is
      * 6 integers p0, t0, p1, t1, p3, t3, where p0, p1 and p2 are indices of 
-     * points in points {@code ObservableFloatArray} and t0, t1 and t2 are 
-     * indices of texture coordinates in texCoords {@code ObservableFloatArray}.
-     * Both indices are in terms of vertices (points or texCoords), not individual
-     * floats.
+     * points in {@code points} and t0, t1 and t2 are 
+     * indices of texture coordinates in {@code texCoords}.
+     * Both indices are in terms of vertices (points or texture coordinates),
+     * not individual floats.
      */    
     public final ObservableFaceArray getFaces() {
         return faces;
     }
 
     /**
-     * Gets the {@code ObservableIntegerArray} of face smoothing groups 
-     * of this {@code TriangleMesh}.
+     * Gets the {@code faceSmoothingGroups} array of this {@code TriangleMesh}.
      * Smoothing affects how a mesh is rendered but it does not effect its
      * geometry. The face smoothing group value is used to control the smoothing
      * between adjacent faces.
      *
-     * <p> The face smoothing group is represented by an array of bits and up to
+     * <p> The face smoothing group value is represented by an array of bits and up to
      * 32 unique groups is possible; (1 << 0) to (1 << 31). The face smoothing
      * group value can range from 0 (no smoothing group) to all 32 groups. A face
      * can belong to zero or more smoothing groups. A face is a member of group
