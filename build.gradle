@@ -2726,7 +2726,7 @@ project(":apps") {
               if (!rootProject.ext[t.upper].compileSwing) {
                 ant.properties['JFX_CORE_ONLY'] = 'true'
               }
-              ant.properties['file.reference.jfxrt.jar'] = jfxrtJar
+              ant.properties['jfxbuild.jfxrt.jar'] = jfxrtJar
               ant.properties['platforms.JDK_1.8.home'] = "${rootProject.ext.JDK_HOME}"
               ant.project.executeTarget("sampleAppsJar")
             }

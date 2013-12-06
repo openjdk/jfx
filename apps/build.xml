@@ -7,11 +7,6 @@
     -->
 
     <target name="sampleAppsJar">
-        <condition property="jfxrt.jar.exists">
-            <available file="${file.reference.jfxrt.jar}" type="file"/>
-        </condition>
-        <fail unless="jfxrt.jar.exists"/>
-
         <ant dir="samples" target="jar" inheritAll="true"/>
         <ant dir="experiments" target="jar" inheritAll="true"/>
         <ant dir="performance" target="jar" inheritAll="true"/>
