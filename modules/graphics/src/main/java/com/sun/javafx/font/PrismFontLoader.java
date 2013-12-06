@@ -163,14 +163,17 @@ public class PrismFontLoader extends FontLoader {
      */
     @Override public Font font(String family, FontWeight weight,
                                FontPosture posture, float size) {
-        loadEmbeddedFonts();
+
+        FontFactory fontFactory = getFontFactoryFromPipeline();
+        if (!embeddedFontsLoaded && !fontFactory.isPlatformFont(family)) {
+            loadEmbeddedFonts();
+        }
 
         // REMIND. Some day need to have better granularity.
 
         boolean bold = weight != null &&
                        weight.ordinal() >= FontWeight.BOLD.ordinal();
         boolean italic = posture == FontPosture.ITALIC;
-        FontFactory fontFactory = getFontFactoryFromPipeline();;
         PGFont prismFont = fontFactory.createFont(family, bold, italic, size);
 
         // Create Font and set implementation
@@ -184,13 +187,16 @@ public class PrismFontLoader extends FontLoader {
      * @param font
      */
     @Override public void loadFont(Font font) {
-        loadEmbeddedFonts();
+        FontFactory fontFactory = getFontFactoryFromPipeline();
+        String fullName = font.getName();
+        if (!embeddedFontsLoaded && !fontFactory.isPlatformFont(fullName)) {
+            loadEmbeddedFonts();
+        }
+
         // find the native Prism Font object based on this JavaFX font. At the
         // conclusion of this method, be sure to set the name, family, and
         // style on the Font object via the setNativeFont method.
 
-        FontFactory fontFactory = getFontFactoryFromPipeline();
-        String fullName = font.getName();
         // the Prism font we're trying to find
         PGFont prismFont = fontFactory.createFont(fullName, (float)font.getSize());
 

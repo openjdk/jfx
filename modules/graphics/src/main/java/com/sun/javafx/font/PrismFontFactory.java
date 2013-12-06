@@ -1338,6 +1338,18 @@ public abstract class PrismFontFactory implements FontFactory {
         return lcdEnabled;
     }
 
+    @Override
+    public boolean isPlatformFont(String name) {
+        if (name == null) return false;
+        /* Using String#startsWith as name can be either a fullName or a family name */
+        String lcName = name.toLowerCase();
+        if (LogicalFont.isLogicalFont(lcName)) return true;
+        if (lcName.startsWith("lucida sans")) return true;
+        String systemFamily = getSystemFont(LogicalFont.SYSTEM).toLowerCase();
+        if (lcName.startsWith(systemFamily)) return true;
+        return false;
+    }
+
     public static boolean isJreFont(FontResource fr) {
         String file = fr.getFileName();
         return file.startsWith(jreFontDir);

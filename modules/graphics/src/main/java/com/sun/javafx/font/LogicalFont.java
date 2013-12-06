@@ -67,6 +67,12 @@ public class LogicalFont implements CompositeFontResource {
         canonicalFamilyMap.put("dialoginput", MONOSPACED);
     }
 
+    static boolean isLogicalFont(String name) {
+        int spaceIndex = name.indexOf(' ');
+        if (spaceIndex != -1) name = name.substring(0, spaceIndex);
+        return canonicalFamilyMap.get(name) != null;
+    }
+
     private static String getCanonicalFamilyName(String name) {
          if (name == null) {
              return SANS_SERIF;

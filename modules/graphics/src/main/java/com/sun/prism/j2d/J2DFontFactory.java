@@ -81,6 +81,10 @@ final class J2DFontFactory implements FontFactory {
         return prismFontFactory.getFontFullNames(family);
     }
 
+    public boolean isPlatformFont(String name) {
+        return prismFontFactory.isPlatformFont(name);
+    }
+
     /* This is an important but tricky one. We need to copy the
      * stream. I don't want to have to manage the temp file deletion here,
      * so although its non-optimal I will create a temp file, provide
