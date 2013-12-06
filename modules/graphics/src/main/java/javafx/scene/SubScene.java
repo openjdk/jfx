@@ -62,6 +62,11 @@ import sun.util.logging.PlatformLogger;
 /**
  * The {@code SubScene} class is the container for content in a scene graph.
  *
+ * <p>
+ * A default headlight will be added to a scene that contains one or more
+ * {@code Shape3D} nodes, but no light nodes. This light source is a 
+ * {@code Color.WHITE} {@code PointLight} placed at the camera position.
+ *
  * @since JavaFX 8.0
  */
 public class SubScene extends Node {

@@ -30,7 +30,7 @@ import com.sun.javafx.sg.prism.NGPointLight;
 import javafx.scene.paint.Color;
 
 /**
- * Defines a point light source object. An attenuated light source that has a
+ * Defines a point light source object. A light source that has a
  * fixed point in space and radiates light equally in all directions
  * away from itself.
  *
