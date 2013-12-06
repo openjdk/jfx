@@ -86,7 +86,7 @@ public class EnsembleCompiletimeMain {
             System.out.println("==================================================================");
             System.out.println("                     Building Search Index");
             System.out.println("==================================================================");
-            File indexDir = new File(ensembleDir,"src/generated/ensemble/search/index");
+            File indexDir = new File(ensembleDir,"src/generated/resources/ensemble/search/index");
             indexDir.mkdirs();
             BuildEnsembleSearchIndex.buildSearchIndex(
                 allSamples, 
