@@ -63,7 +63,7 @@ import sun.util.logging.PlatformLogger;
  * The {@code SubScene} class is the container for content in a scene graph.
  *
  * <p>
- * A default headlight will be added to a scene that contains one or more
+ * A default headlight will be added to a {@SubScene} that contains one or more
  * {@code Shape3D} nodes, but no light nodes. This light source is a 
  * {@code Color.WHITE} {@code PointLight} placed at the camera position.
  *
@@ -72,11 +72,11 @@ import sun.util.logging.PlatformLogger;
 public class SubScene extends Node {
 
     /**
-     * Creates a SubScene for a specific root Node with a specific size.
+     * Creates a {@code SubScene} for a specific root Node with a specific size.
      *
      * @param root The root node of the scene graph
-     * @param width The width of the scene
-     * @param height The height of the scene
+     * @param width The width of the sub-scene
+     * @param height The height of the sub-scene
      *
      * @throws IllegalStateException if this constructor is called on a thread
      * other than the JavaFX Application Thread.
@@ -87,13 +87,13 @@ public class SubScene extends Node {
     }
 
     /**
-     * Constructs a SubScene consisting of a root, with a dimension of width and
+     * Constructs a {@code SubScene} consisting of a root, with a dimension of width and
      * height, specifies whether a depth buffer is created for this scene and
      * specifies whether scene anti-aliasing is requested.
      *
      * @param root The root node of the scene graph
-     * @param width The width of the scene
-     * @param height The height of the scene
+     * @param width The width of the sub-scene
+     * @param height The height of the sub-scene
      * @param depthBuffer The depth buffer flag
      * @param antiAliasing The sub-scene anti-aliasing attribute. A value of
      * {@code null} is treated as DISABLED.
@@ -152,7 +152,7 @@ public class SubScene extends Node {
     private final boolean depthBuffer;
 
     /**
-     * Retrieves the depth buffer attribute for this SubScene.
+     * Retrieves the depth buffer attribute for this {@code SubScene}.
      * @return the depth buffer attribute.
      */
     public final boolean isDepthBuffer() {
@@ -164,11 +164,11 @@ public class SubScene extends Node {
     }
 
     /**
-     * Defines the root {@code Node} of the SubScene scene graph.
+     * Defines the root {@code Node} of the {@code SubScene} scene graph.
      * If a {@code Group} is used as the root, the
-     * contents of the scene graph will be clipped by the SubScene's width and height.
+     * contents of the scene graph will be clipped by the {@code SubScene}'s width and height.
      *
-     * SubScene doesn't accept null root.
+     * {@code SubScene} doesn't accept null root.
      *
      */
     private ObjectProperty<Parent> root;
@@ -685,12 +685,12 @@ public class SubScene extends Node {
     }
 
     /**
-     * Determines whether subScene contains the given point.
-     * It does not consider the contained nodes, only subScene's
+     * Determines whether {@code SubScene} contains the given point.
+     * It does not consider the contained nodes, only {@code SubScene}'s
      * size and fills.
-     * @param localX horizontal coordinate in the local space of the subScene node
-     * @param localY vertical coordinate in the local space of the subScene node
-     * @return true if the point is inside subScene's area covered by its fill
+     * @param localX horizontal coordinate in the local space of the {@code SubScene} node
+     * @param localY vertical coordinate in the local space of the {@code SubScene} node
+     * @return true if the point is inside {@code SubScene}'s area covered by its fill
      */
     private boolean subSceneComputeContains(double localX, double localY) {
         if (localX < 0 || localY < 0 || localX > getWidth() || localY > getHeight()) {
