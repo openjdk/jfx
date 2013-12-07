@@ -134,21 +134,26 @@ public class BuildEnsembleSearchIndex {
 //        System.out.println("baseUrl = " + baseUrl);
         // parse page finding all docs pages
         Matcher matcher = docsHomeLink.matcher(content);
+        System.out.println("Building a list of documentation to index");
         while (matcher.find()) {
             String foundUrl = matcher.group(1);
+//            System.out.println("foundUrl = " + foundUrl);
             final String docPageUrl = (foundUrl.startsWith("http") ? foundUrl : baseUrl + foundUrl);
             if ("http://docs.oracle.com/javafx/2/api/javafx/scene/doc-files/cssref.html".equals(docPageUrl) || 
                     "http://docs.oracle.com/javafx/2/api/index.html".equals(docPageUrl) ||
                     "http://www.oracle.com/technetwork/java/javafx/downloads/supportedconfigurations-1506746.html".equals(docPageUrl) ||
+                    "http://www.oracle.com/technetwork/java/javase/downloads/".equals(docPageUrl) ||
                     "http://docs.oracle.com/javafx/2/api/javafx/fxml/doc-files/introduction_to_fxml.html".equals(docPageUrl)) {
                 continue;
             }
+            System.out.println(docPageUrl);
             tasks.add(new Callable<List<Document>>() {
                 @Override public List<Document> call() throws Exception {
                     return indexDocumentationPage(docPageUrl);
                 }
             });
         }
+        System.out.println(" --- end of list ---");
         return tasks;
     }
     

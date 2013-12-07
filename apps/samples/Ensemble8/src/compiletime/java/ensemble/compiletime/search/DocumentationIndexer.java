@@ -31,10 +31,14 @@
  */
 package ensemble.compiletime.search;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
+import javafx.collections.FXCollections;
 import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
@@ -79,18 +83,53 @@ public class DocumentationIndexer {
         }
     }
     
-    public static DocPage parseDocsPage(final String url, String content) throws Exception {
-        // fix links like <a href=init-window-big.gif> to <a href="init-window-big.gif">
-        content = content.replaceAll("<a href=([^\">]+)>", "<a href=\"$1\">");
-//        content = content.replaceAll("type=\"text/css\" media=\"screen\"", "");
-//        content = content.replaceAll("<meta [^>]+>", "");
-//        content = content.replaceAll("<input [^>]+>", "");
-//        content = content.replaceAll("target=_top", "");
-//        content = content.replaceAll("xWebsiteObjectType <Matches> `Data File`", "");
-//        content = content.replaceAll("<hr>", "<hr/>");
-//        content = content.replaceAll("&", "&amp;");
-//        content = content.replaceAll("<span class=red>", "<span class=\"red\">");
+    private static int tmpIndex = 0;
+    
+    private static final String[][] REPLACEMENTS = {
         
+        // Remove any comments
+        { "(?s)<!--.*?-->", "" }, 
+        
+        // Remove scripts and styles
+        { "(?s)<(script|style).*?</\\1>", "" }, 
+        
+        // Remove unnecessary tags
+        { "(?i)</?(?!html\\b|div\\b|h1\\b|h2\\b|a\\b|img\\b)(\\w+\\b)[^>]*>", "" }, 
+        
+        // Remove malformed garbage from links
+        { "(?x) <a (?:\\s+ (?: (href \\s* = \\s* \\\"[^\\\"]*\\\") "
+            + "| (name \\s* = \\s* \\\"[^\\\"]*\\\") "
+            + "| \\w+\\s*=\\s*\\\"[^\\\"]*\\\" "
+            + "| \\w+\\s*=\\s*[^\\s\\\">]+))* \\s* >", "<a $1 $2>" }, 
+        
+//        { "(?i)</?[a-z]+\b(<!div|h1|h2|a|img)[^>]*>", "" }, // Remove unnecessary tags
+//        { "</?(?:p|br)[^>]*>", "" }, // Remove unnecessary tags
+//        { "<meta [^>]+>", "" },
+//        { "[ \\t\\x0B\\f\\r]+", " " },
+//        { "[ \\t\\x0B\\f\\r\\n]+", "\\n" },
+//        // fix links like <a href=init-window-big.gif> to <a href="init-window-big.gif">
+//        { "<a href=([^\">]+)>", "<a href=\"$1\">" },
+//        { "type=\"text/css\" media=\"screen\"", "" },
+//        { "<input [^>]+>", "" },
+//        { "target=_top", "" },
+//        { "xWebsiteObjectType <Matches> `Data File`", "" },
+//        { "<hr>", "<hr/>" },
+//        { "&", "&amp;" },
+//        { "<span class=red>", "<span class=\"red\">" },
+    };
+    private static final Pattern[] COMPILED_PATTERNS = new Pattern[REPLACEMENTS.length];
+    
+    static {
+        for (int i = 0; i < REPLACEMENTS.length; i++) {
+            COMPILED_PATTERNS[i] = Pattern.compile(REPLACEMENTS[i][0]);
+        }
+    }
+    
+    public static DocPage parseDocsPage(final String url, String content) throws Exception {
+        
+        for (int i = 0; i < REPLACEMENTS.length; i++) {
+            content = COMPILED_PATTERNS[i].matcher(content).replaceAll(REPLACEMENTS[i][1]);
+        }
         try {
             DocHandler handler = new DocHandler(url);
             XMLReader xmlParser = XMLReaderFactory.createXMLReader();
@@ -98,14 +137,10 @@ public class DocumentationIndexer {
             xmlParser.setEntityResolver(handler);
             xmlParser.parse(new InputSource(new StringReader(content)));
             return handler.getDocPage();
-        } catch (Exception e) {
-            System.out.println("----------------------------------------------------------------------");
-            System.out.println("url = "+url);
-            System.out.println("content = \n" + content);
-            System.out.println("----------");
-            e.printStackTrace(System.out);
-            System.out.println("----------------------------------------------------------------------");
-            throw e;
+        } catch (SAXException | IOException e) {
+            String filename = "tmp" + tmpIndex++ + ".txt";
+            Files.write(new File(filename).toPath(), FXCollections.observableArrayList(content));
+            throw new RuntimeException("\"Failed to parse '" + url + "', see content in " + filename + ".", e);
         }
     }
     
@@ -119,7 +154,7 @@ public class DocumentationIndexer {
         private final String url;
         private State state = State.DEFAULT;
         private int divDepth = 0;
-        private StringBuilder buf;
+        private StringBuilder buf = new StringBuilder();
         private String bookTitle;
         private String chapter;
         private String sectName;
@@ -148,10 +183,10 @@ public class DocumentationIndexer {
                         String classSt = attributes.getValue("class");
                         if ("bookTitle".equals(id)) {
                             state = State.BOOK_TITLE;
-                            buf = new StringBuilder();
+                            buf.setLength(0);
                         } else if ("sect1".equals(classSt) || "refsect1".equals(classSt)) {
                             state = State.SECT1;
-                            buf = new StringBuilder();
+                            buf.setLength(0);
                             divDepth = 0;
                         }
                     } else if ("h1".equals(localName)) {
@@ -159,7 +194,7 @@ public class DocumentationIndexer {
 
                         if ("chapter".equals(classSt)) {
                             state = State.CHAPTER;
-                            buf = new StringBuilder();
+                            buf.setLength(0);
                         }
                     } else if ("a".equals(localName)) {
                         currentLink = attributes.getValue("href");
@@ -173,7 +208,7 @@ public class DocumentationIndexer {
                         divDepth ++;
                     } else if ("h1".equals(localName) || "h2".equals(localName)) {
                         state = State.SECT_H1_H2;
-                        buf = new StringBuilder();
+                        buf.setLength(0);
                     }
                     break;
             }       
@@ -199,7 +234,7 @@ public class DocumentationIndexer {
                     if ("h1".equals(localName) || "h2".equals(localName)) {
                         state = State.SECT1;
                         sectName = buf.toString().trim();
-                        buf = new StringBuilder();
+                        buf.setLength(0);
                     }
                 case BOOK_TITLE:
                     if ("div".equals(localName)) {
