@@ -214,7 +214,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
     
     protected boolean isShortcutDown = false;
     protected boolean isShiftDown = false;
-    protected boolean selectionPathDeviated = false;
+    private boolean selectionPathDeviated = false;
     protected boolean selectionChanging = false;
 
     protected final ListChangeListener<TablePositionBase> selectedCellsListener = new ListChangeListener<TablePositionBase>() {
@@ -235,13 +235,13 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
                     setAnchor(tp);
                 }
                 
-                if (!hasAnchor() && cellSelectionEnabled && ! selectionPathDeviated) {
+                if (anchor != null && cellSelectionEnabled && ! selectionPathDeviated) {
                     // check if the selection is on the same row or column, 
                     // otherwise set selectionPathDeviated to true
                     for (int i = 0; i < addedSize; i++) {
                         TablePositionBase tp = addedSubList.get(i);
                         if (anchor.getRow() != -1 && tp.getRow() != anchor.getRow() && tp.getColumn() != anchor.getColumn()) {
-                            selectionPathDeviated = true;
+                            setSelectionPathDeviated(true);
                             break;
                         }
                     }
@@ -278,7 +278,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
      */
     protected void setAnchor(TablePositionBase tp) {
         TableCellBehaviorBase.setAnchor(getControl(), tp);
-        selectionPathDeviated = false;
+        setSelectionPathDeviated(false);
     }
     
     /**
@@ -437,7 +437,11 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
      *                                                                        *
      * Private implementation                                                 *
      *                                                                        *  
-     *************************************************************************/ 
+     *************************************************************************/
+
+    private void setSelectionPathDeviated(boolean selectionPathDeviated) {
+        this.selectionPathDeviated = selectionPathDeviated;
+    }
     
     protected void scrollUp() {
         TableSelectionModel<T> sm = getSelectionModel();
@@ -691,10 +695,28 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         TableFocusModel fm = getFocusModel();
         if (fm == null) return;
         
-        TablePositionBase focusedCell = getFocusedCell();
-        if (isShiftDown && sm.isSelected(focusedCell.getRow() + delta, focusedCell.getTableColumn())) {
-            int newFocusOwner = focusedCell.getRow() + delta;
-            sm.clearSelection(selectionPathDeviated ? newFocusOwner : focusedCell.getRow(), focusedCell.getTableColumn());
+        final TablePositionBase focusedCell = getFocusedCell();
+        final int focusedCellRow = focusedCell.getRow();
+
+        if (isShiftDown && sm.isSelected(focusedCellRow + delta, focusedCell.getTableColumn())) {
+            int newFocusOwner = focusedCellRow + delta;
+
+            // work out if we're backtracking
+            boolean backtracking = false;
+            ObservableList<? extends TablePositionBase> selectedCells = getSelectedCells();
+            if (selectedCells.size() >= 2) {
+                TablePositionBase<TC> secondToLastSelectedCell = selectedCells.get(selectedCells.size() - 2);
+                backtracking = secondToLastSelectedCell.getRow() == newFocusOwner &&
+                        secondToLastSelectedCell.getColumn() == focusedCell.getColumn();
+            }
+
+            // if the selection path has deviated from the anchor row / column, then we need to see if we're moving
+            // backwards to the previous selection or not (as it determines what cell row we clear out)
+            int cellRowToClear = selectionPathDeviated ?
+                    (backtracking ? focusedCellRow : newFocusOwner) :
+                    focusedCellRow;
+
+            sm.clearSelection(cellRowToClear, focusedCell.getTableColumn());
             fm.focus(newFocusOwner, focusedCell.getTableColumn());
         } else if (isShiftDown && getAnchor() != null && ! selectionPathDeviated) {
             int newRow = fm.getFocusedIndex() + delta;
@@ -724,17 +746,32 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         TableFocusModel fm = getFocusModel();
         if (fm == null) return;
         
-        TablePositionBase focusedCell = getFocusedCell();
+        final TablePositionBase focusedCell = getFocusedCell();
         if (focusedCell == null || focusedCell.getTableColumn() == null) return;
         
         TableColumnBase adjacentColumn = getColumn(focusedCell.getTableColumn(), delta);
         if (adjacentColumn == null) return;
-        
-        if (isShiftDown && getAnchor() != null && 
-            sm.isSelected(focusedCell.getRow(), adjacentColumn) &&
-            ! (focusedCell.getRow() == getAnchor().getRow() && focusedCell.getTableColumn().equals(adjacentColumn))) {
-                sm.clearSelection(focusedCell.getRow(),selectionPathDeviated ? adjacentColumn : focusedCell.getTableColumn());
-                fm.focus(focusedCell.getRow(), adjacentColumn);
+
+        final int focusedCellRow = focusedCell.getRow();
+
+        if (isShiftDown && sm.isSelected(focusedCellRow, adjacentColumn)) {
+            // work out if we're backtracking
+            boolean backtracking = false;
+            ObservableList<? extends TablePositionBase> selectedCells = getSelectedCells();
+            if (selectedCells.size() >= 2) {
+                TablePositionBase<TC> secondToLastSelectedCell = selectedCells.get(selectedCells.size() - 2);
+                backtracking = secondToLastSelectedCell.getRow() == focusedCellRow &&
+                        secondToLastSelectedCell.getTableColumn().equals(adjacentColumn);
+            }
+
+            // if the selection path has deviated from the anchor row / column, then we need to see if we're moving
+            // backwards to the previous selection or not (as it determines what cell column we clear out)
+            TableColumnBase<?,?> cellColumnToClear = selectionPathDeviated ?
+                    (backtracking ? focusedCell.getTableColumn() : adjacentColumn) :
+                    focusedCell.getTableColumn();
+
+            sm.clearSelection(focusedCellRow, cellColumnToClear);
+            fm.focus(focusedCellRow, adjacentColumn);
         } else if (isShiftDown && getAnchor() != null && ! selectionPathDeviated) {
             final int columnPos = getVisibleLeafIndex(focusedCell.getTableColumn());
             final int newColumn = columnPos + delta;
