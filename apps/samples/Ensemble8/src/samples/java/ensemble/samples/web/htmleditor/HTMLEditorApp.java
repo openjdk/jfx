@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013 Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2013, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -34,7 +34,6 @@ package ensemble.samples.web.htmleditor;
 import javafx.application.Application;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -53,34 +52,38 @@ import javafx.stage.Stage;
  * @sampleName HTML Editor
  * @preview preview.png
  * @see javafx.scene.web.HTMLEditor
+ * @see javafx.scene.control.ScrollPane
+ * @see javafx.scene.control.ScrollPane.ScrollBarPolicy
+ * @see javafx.scene.control.Button
+ * @see javafx.event.ActionEvent
+ * @see javafx.event.EventHandler
+ * @see javafx.geometry.Pos
+ * @see javafx.scene.control.Label
+ * @see javafx.scene.layout.VBox
  * @related controls/text/SimpleLabel
  * @conditionalFeatures WEB
  */
 public class HTMLEditorApp extends Application {
 
-   private HTMLEditor htmlEditor = null;
-    private final String INITIAL_TEXT = "<html><body>Lorem ipsum dolor sit amet, consectetur adipiscing elit."
-            +"Nam tortor felis, pulvinar in scelerisque cursus, pulvinar at ante. Nulla consequat "
+    private HTMLEditor htmlEditor = null;
+    private final String INITIAL_TEXT = "<html><body>Lorem ipsum dolor sit "
+            + "amet, consectetur adipiscing elit."
+            + "Nam tortor felis, pulvinar in scelerisque cursus, pulvinar "
+            + "at ante. Nulla consequat "
             + "congue lectus in sodales. </body></html> ";
 
     public Parent createContent() {
 
-        VBox vRoot = new VBox();
-        vRoot.setPrefWidth(300);
-        vRoot.setSpacing(5);
-
         htmlEditor = new HTMLEditor();
-        htmlEditor.setPrefHeight(245);
         htmlEditor.setHtmlText(INITIAL_TEXT);
 
         ScrollPane htmlSP = new ScrollPane();
         htmlSP.setFitToWidth(true);
+        htmlSP.setPrefWidth(htmlEditor.prefWidth(-1)); // Workaround of RT-21495
         htmlSP.setPrefHeight(245);
         htmlSP.setVbarPolicy(ScrollBarPolicy.NEVER);
         htmlSP.setContent(htmlEditor);
-                      
-        vRoot.getChildren().add(htmlSP);        
-        
+
         final Label htmlLabel = new Label();
         htmlLabel.setWrapText(true);
 
@@ -90,7 +93,6 @@ public class HTMLEditorApp extends Application {
         scrollPane.setFitToWidth(true);
 
         Button showHTMLButton = new Button("Show the HTML below");
-        vRoot.setAlignment(Pos.CENTER);
         showHTMLButton.setOnAction(new EventHandler<ActionEvent>() {
 
             @Override
@@ -99,8 +101,11 @@ public class HTMLEditorApp extends Application {
             }
         });
 
-        vRoot.getChildren().addAll(showHTMLButton, scrollPane);
-      
+        VBox vRoot = new VBox();
+        vRoot.setAlignment(Pos.CENTER);
+        vRoot.setSpacing(5);
+        vRoot.getChildren().addAll(htmlSP, showHTMLButton, scrollPane);
+
         return vRoot;
     }
 
