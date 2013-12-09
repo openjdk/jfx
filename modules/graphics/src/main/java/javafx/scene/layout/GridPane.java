@@ -1005,7 +1005,10 @@ public class GridPane extends Pane {
         final List<Node> managed = getManagedChildren();
         for (int i = 0, size = managed.size(); i < size; i++) {
             Node child = managed.get(i);
-            if (rowIndex == getNodeRowIndex(child)) {
+            final int nodeRowIndex = getNodeRowIndex(child); 
+            final int nodeRowEnd = getNodeRowEnd(child);
+            if (rowIndex >= nodeRowIndex && 
+                    (rowIndex <= nodeRowEnd || nodeRowEnd == REMAINING)) {
                 int index = getNodeColumnIndex(child);
                 int end = getNodeColumnEnd(child);
                 columnIndex = Math.max(columnIndex, (end != REMAINING? end : index) + 1);
@@ -1031,7 +1034,10 @@ public class GridPane extends Pane {
         final List<Node> managed = getManagedChildren();
         for (int i = 0, size = managed.size(); i < size; i++) {
             Node child = managed.get(i);
-            if (columnIndex == getNodeColumnIndex(child)) {
+            final int nodeColumnIndex = getNodeColumnIndex(child);
+            final int nodeColumnEnd = getNodeColumnEnd(child);
+            if (columnIndex >= nodeColumnIndex
+                    && (columnIndex <= nodeColumnEnd || nodeColumnEnd == REMAINING)) {
                 int index = getNodeRowIndex(child);
                 int end = getNodeRowEnd(child);
                 rowIndex = Math.max(rowIndex, (end != REMAINING? end : index) + 1);
