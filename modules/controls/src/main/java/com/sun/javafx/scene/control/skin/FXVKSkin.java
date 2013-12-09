@@ -161,6 +161,20 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
     private static FXVK secondaryVK;
     private static Timeline secondaryVKDelay;
     private static CharKey secondaryVKKey;
+    private static TextInputKey repeatKey;
+
+    private static Timeline repeatInitialDelay;
+    private static Timeline repeatSubsequentDelay;
+
+    // key repeat initial delay (ms)
+    private static double KEY_REPEAT_DELAY = 400;
+    private static double KEY_REPEAT_DELAY_MIN = 100;
+    private static double KEY_REPEAT_DELAY_MAX = 1000;
+
+    // key repeat rate (cps)
+    private static double KEY_REPEAT_RATE = 25;
+    private static double KEY_REPEAT_RATE_MIN = 2;
+    private static double KEY_REPEAT_RATE_MAX = 50;
 
     private Node attachedNode;
     private String vkType = null;
@@ -185,6 +199,21 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
                 s = System.getProperty("com.sun.javafx.sqe.vk.lookup");
                 if (s != null) {
                     vkLookup = Boolean.valueOf(s);
+                }
+                s = System.getProperty("com.sun.javafx.virtualKeyboard.backspaceRepeatDelay");
+                if (s != null) {
+                    Double delay = Double.valueOf(s);
+                    KEY_REPEAT_DELAY = Math.min(Math.max(delay, KEY_REPEAT_DELAY_MIN), KEY_REPEAT_DELAY_MAX);
+                }
+                s = System.getProperty("com.sun.javafx.virtualKeyboard.backspaceRepeatRate");
+                if (s != null) {
+                    Double rate = Double.valueOf(s);
+                    if (rate <= 0) {
+                        //disable key repeat
+                        KEY_REPEAT_RATE = 0;
+                    } else {
+                        KEY_REPEAT_RATE = Math.min(Math.max(rate, KEY_REPEAT_RATE_MIN), KEY_REPEAT_RATE_MAX);
+                    }
                 }
                 return null;
             }
@@ -407,6 +436,29 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
             }
         });
         secondaryVKDelay.getKeyFrames().setAll(kf);
+
+        //Setup key repeat animations
+        if (KEY_REPEAT_RATE > 0) {
+            repeatInitialDelay = new Timeline(new KeyFrame(
+                    Duration.millis(KEY_REPEAT_DELAY), 
+                    new EventHandler<ActionEvent>() {
+                        @Override public void handle(ActionEvent event) {
+                            //fire current key
+                            repeatKey.sendKeyEvents();
+                            //Start repeat animation
+                            repeatSubsequentDelay.playFromStart();
+                        }
+                    }));
+            repeatSubsequentDelay = new Timeline(new KeyFrame(
+                    Duration.millis(1000.0 / KEY_REPEAT_RATE), 
+                    new EventHandler<ActionEvent>() {
+                        @Override public void handle(ActionEvent event) {
+                            //fire current key
+                            repeatKey.sendKeyEvents();
+                        }
+                    }));
+            repeatSubsequentDelay.setCycleCount(Animation.INDEFINITE);
+        }
     }
 
     void prerender(Node node) {
@@ -730,36 +782,31 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
             if (vkLookup) {
                 setId((id != null ? id : chars).replaceAll("\\.", ""));
             }
-
-            handleSecondaryVK(letter, alt, moreChars);
         }
 
         private CharKey(String letter, String alt, String[] moreChars) {
             this(letter, alt, moreChars, null);
         }
 
-
-        private void handleSecondaryVK(String letter, String alt, String[] moreChars) {
-            // If key has only one char (alternative char is the same, and it has no more chars),
-            // secondaryVK will not pop-up
-            if (letter.equals(alt) && moreChars == null) {
+        protected void press() {
+            super.press();
+            if (letterChars.equals(altChars) && moreChars == null) {
                 return;
-            } else {
-                if (fxvk != secondaryVK) {
-                    setOnMousePressed(new EventHandler<MouseEvent>() {
-                        @Override public void handle(MouseEvent event) {
-                            showSecondaryVK(null);
-                            secondaryVKKey = CharKey.this;
-                            secondaryVKDelay.playFromStart();
-                        }
-                    });
+            }
+            if (fxvk == primaryVK) {
+                showSecondaryVK(null);
+                secondaryVKKey = CharKey.this;
+                secondaryVKDelay.playFromStart();
+            }
+        }
 
-                    setOnMouseReleased(new EventHandler<MouseEvent>() {
-                        @Override public void handle(MouseEvent event) {
-                            secondaryVKDelay.stop();
-                        }
-                    });
-                }
+        protected void release() {
+            super.release();
+            if (letterChars.equals(altChars) && moreChars == null) {
+                return;
+            }
+            if (fxvk == primaryVK) {
+                secondaryVKDelay.stop();
             }
         }
 
@@ -1061,7 +1108,26 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
                                     }
                                 };
                             } else if ("$backspace".equals(chars)) {
-                                key = new KeyCodeKey("backspace", "\b", KeyCode.BACK_SPACE);
+                                key = new KeyCodeKey("backspace", "\b", KeyCode.BACK_SPACE) {
+                                    @Override protected void press() {
+                                        if (KEY_REPEAT_RATE > 0) {
+                                            clearShift();
+                                            sendKeyEvents();
+                                            repeatKey = this;
+                                            repeatInitialDelay.playFromStart();
+                                        } else {
+                                            super.press();
+                                        }
+                                    }
+                                    @Override protected void release() {
+                                        if (KEY_REPEAT_RATE > 0) {
+                                            repeatInitialDelay.stop();
+                                            repeatSubsequentDelay.stop();
+                                        } else {
+                                            super.release();
+                                        }
+                                    }
+                                };
                                 key.getStyleClass().add("backspace");
                             } else if ("$enter".equals(chars)) {
                                 key = new KeyCodeKey("enter", "\n", KeyCode.ENTER);
