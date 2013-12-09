@@ -297,4 +297,26 @@ public class ListViewMouseInputTest {
         VirtualFlowTestUtils.clickOnRow(listView, 1);
         assertEquals(1, rt_30626_count);
     }
+
+    @Test public void test_rt_34649() {
+        final int items = 8;
+        listView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        final MultipleSelectionModel sm = listView.getSelectionModel();
+        final FocusModel fm = listView.getFocusModel();
+        sm.setSelectionMode(SelectionMode.SINGLE);
+
+        assertFalse(sm.isSelected(4));
+        assertFalse(fm.isFocused(4));
+        VirtualFlowTestUtils.clickOnRow(listView, 4, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(4));
+        assertTrue(fm.isFocused(4));
+
+        VirtualFlowTestUtils.clickOnRow(listView, 4, KeyModifier.getShortcutKey());
+        assertFalse(sm.isSelected(4));
+        assertTrue(fm.isFocused(4));
+    }
 }
