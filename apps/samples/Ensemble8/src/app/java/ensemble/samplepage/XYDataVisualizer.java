@@ -42,6 +42,8 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.beans.WeakListener;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
@@ -151,10 +153,12 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
                                         return (X) new Integer(string);
                                     }
                                 } catch (NumberFormatException ex) {
-                                    new IllegalArgumentException("Failed to parse " + string + " to type " + clzX, ex).printStackTrace(System.err);
+                                    Logger.getLogger(XYDataVisualizer.class.getName()).log(Level.FINE, 
+                                            "Failed to parse {0} to type {1}", new Object[]{string, clzX});
                                     return getItem();
                                 }
-                                new IllegalStateException("This valueX type is not supported: " + clzX).printStackTrace(System.err);
+                                Logger.getLogger(XYDataVisualizer.class.getName()).log(Level.FINE, 
+                                        "This valueX type is not supported: {0}", clzX);
                                 return getItem();
                             }
                         });
