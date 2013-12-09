@@ -34,24 +34,20 @@ package ensemble.samples.controls.treetableview;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 
-public class Part {
-        private StringProperty data;
-        private StringProperty part1;
-        private StringProperty part2;
+public class Data {
 
-        public Part(String data, String part1, String part2) {
-            this.data = new SimpleStringProperty(data);
-            this.part1 = new SimpleStringProperty(part1);
-            this.part2 = new SimpleStringProperty(part2);           
-        }
+    private final StringProperty data;
 
-        public StringProperty dataProperty() { return data; }
-        
-        public StringProperty part1Property() { return part1; }
+    public Data(String data) {
+        this.data = new SimpleStringProperty(data);
+    }
 
-        public StringProperty part2Property() { return part2; }
+    public StringProperty dataProperty() {
+        return data;
+    }
 
-        public void setPart1(String part1) { this.part1.set(part1); }
-
-        public void setpart2(String part2) { this.part2.set(part2); }
+    @Override
+    public String toString() {
+        return data.get();
+    }
 }

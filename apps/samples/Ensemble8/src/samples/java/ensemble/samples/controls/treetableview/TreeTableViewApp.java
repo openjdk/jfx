@@ -32,21 +32,14 @@
 package ensemble.samples.controls.treetableview;
 
 import javafx.application.Application;
-import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.property.ReadOnlyStringWrapper;
-import javafx.beans.value.ObservableValue;
-import javafx.event.EventHandler;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TreeItem;
-import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.control.cell.TextFieldTreeTableCell;
+import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 import javafx.stage.Stage;
-import javafx.util.Callback;
-import javafx.util.converter.DefaultStringConverter;
 
 /**
  * A simple implementation of TreeTableView. The Notes column is editable.
@@ -54,96 +47,63 @@ import javafx.util.converter.DefaultStringConverter;
  * @sampleName TreeTableView
  * @preview preview.png
  * @see javafx.scene.control.cell.TextFieldTreeTableCell
+ * @see javafx.scene.control.cell.TreeItemPropertyValueFactory
  * @see javafx.scene.control.TreeItem
  * @see javafx.scene.control.TreeTableCell
  * @see javafx.scene.control.TreeTableColumn
  * @see javafx.scene.control.TreeTableView
+ * @see javafx.beans.property.SimpleStringProperty
+ * @see javafx.beans.property.StringProperty
+ * @see javafx.beans.property.ObjectProperty
+ * @see javafx.beans.property.SimpleObjectProperty
  * @embedded
  */
 public class TreeTableViewApp extends Application {
 
-    public Parent createContent() {
-
-        final TreeItem<Inventory> rootItem = new TreeItem<>(new Inventory(false, "Root", "Data", "Data2", new Part("data 1", "part 1", "part 2")));
-
-        final TreeItem<Inventory> child1Item = new TreeItem<>(new Inventory(true, "Child 1", "Data 1", "My notes", new Part("my data", "part 1", "part 2")));
-        final TreeItem<Inventory> child2Item = new TreeItem<>(new Inventory(false, "Child 2", "Data", "Notes", new Part("no, my data", "part 3", "part 4")));
-        TreeItem<Inventory> child3Item = new TreeItem<>(new Inventory(false, "Child 3", "Data 3", "Observations", new Part("even I have data", "part 3", "part 4")));
-
+    private TreeItem<Inventory> getData() {
+        final TreeItem<Inventory> rootItem = new TreeItem<>(
+                new Inventory("Root", new Data("Root data"), ""));
+        final TreeItem<Inventory> child1Item = new TreeItem<>(
+                new Inventory("Child 1", new Data("Child 1 data"), "My notes"));
+        final TreeItem<Inventory> child2Item = new TreeItem<>(
+                new Inventory("Child 2", new Data("Child 2 data"), "Notes"));
+        TreeItem<Inventory> child3Item = new TreeItem<>(
+                new Inventory("Child 3", new Data("Child 3 data"), "Observations"));
         rootItem.setExpanded(true);
         rootItem.getChildren().addAll(child1Item, child2Item);
         child1Item.getChildren().add(child3Item);
+        return rootItem;
+    }
 
-        // Name column
+    public Parent createContent() {
+        
         final TreeTableColumn<Inventory, String> nameColumn = new TreeTableColumn<>("Name");
         nameColumn.setEditable(false);
         nameColumn.setMinWidth(130);
-        nameColumn.setCellValueFactory(
-                new Callback<TreeTableColumn.CellDataFeatures<Inventory, String>, ObservableValue<String>>() {
-            @Override
-            public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Inventory, String> p) {
-                Inventory inv = p.getValue().getValue();
-                return new ReadOnlyObjectWrapper(inv.nameProperty().getValue());
-            }
-        });
+        nameColumn.setCellValueFactory(new TreeItemPropertyValueFactory("name"));
 
-        // Data column
         final TreeTableColumn<Inventory, String> dataColumn = new TreeTableColumn<>("Data");
-        dataColumn.setEditable(true);
+        dataColumn.setEditable(false);
         dataColumn.setMinWidth(150);
-        dataColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<Inventory, String>, ObservableValue<String>>() {
-            @Override
-            public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Inventory, String> p) {
-                final Inventory value = p.getValue().getValue();
-                if (value.equals(rootItem.getValue())) {
-                    return new ReadOnlyStringWrapper(" ");
-                } else {
-                    return new ReadOnlyStringWrapper(value.ob1Property().getValue().dataProperty().getValue());
-                }
-            }
-        });
+        dataColumn.setCellValueFactory(new TreeItemPropertyValueFactory("data"));
 
-        // Note column
-        final TreeTableColumn<Inventory, String> noteColumn = new TreeTableColumn<>("Notes (editable)");
-        noteColumn.setEditable(true);
-        noteColumn.setMinWidth(150);
-        noteColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<Inventory, String>, ObservableValue<String>>() {
-            @Override
-            public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Inventory, String> p) {
-                final Inventory value = p.getValue().getValue();
-                if (value.equals(rootItem.getValue())) {
-                    return new ReadOnlyStringWrapper(" ");
-                } else {
-                    return new ReadOnlyStringWrapper(value.p2Property().getValue());
-                }
-            }
-        });
-        noteColumn.setOnEditCommit(new EventHandler<TreeTableColumn.CellEditEvent<Inventory, String>>() {
-            @Override
-            public void handle(TreeTableColumn.CellEditEvent<Inventory, String> t) {
-                System.out.println("Note column entry was edited. Old value = " + t.getOldValue() + " New value = " + t.getNewValue());
-            }
-        });
-        noteColumn.setCellFactory(new Callback<TreeTableColumn<Inventory, String>, TreeTableCell<Inventory, String>>() {
-            @Override
-            public TreeTableCell<Inventory, String> call(TreeTableColumn<Inventory, String> p) {
-                return new TextFieldTreeTableCell(new DefaultStringConverter());
-            }
-        });
+        final TreeTableColumn<Inventory, String> notesColumn = new TreeTableColumn<>("Notes (editable)");
+        notesColumn.setEditable(true);
+        notesColumn.setMinWidth(150);
+        notesColumn.setCellValueFactory(new TreeItemPropertyValueFactory("notes"));
+        notesColumn.setCellFactory(TextFieldTreeTableCell.<Inventory>forTreeTableColumn());
 
-        final TreeTableView treeTableView = new TreeTableView(rootItem);
+        final TreeTableView treeTableView = new TreeTableView(getData());
         treeTableView.setEditable(true);
-        treeTableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         treeTableView.setPrefSize(430, 200);
-        treeTableView.setLayoutX(10);
-        treeTableView.setLayoutY(10);
-        treeTableView.getColumns().setAll(nameColumn, dataColumn, noteColumn);
+        treeTableView.getColumns().setAll(nameColumn, dataColumn, notesColumn);
 
         return treeTableView;
     }
 
     @Override
     public void start(Stage primaryStage) throws Exception {
+        primaryStage.setTitle("TreeTableViewApp");
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();
     }

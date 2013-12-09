@@ -31,44 +31,26 @@
  */
 package ensemble.samples.controls.treetableview;
 
-import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 
 public class Inventory {
 
-        private BooleanProperty ordered;
-        private StringProperty name;
-        private ObjectProperty ob1;
-        private StringProperty d1;
-        private StringProperty d2;
+        private final StringProperty name;
+        private final ObjectProperty data;
+        private final StringProperty notes;
 
-        public Inventory(boolean ordered, String name, String d1, String d2, Part bigPart) {
-            this.ordered = new SimpleBooleanProperty(ordered);
+        public Inventory(String name, Data data, String notes) {
             this.name = new SimpleStringProperty(name);
-            this.ob1 = new SimpleObjectProperty<>(bigPart);
-            this.d1 = new SimpleStringProperty(d1);
-            this.d2 = new SimpleStringProperty(d2);
+            this.data = new SimpleObjectProperty<>(data);
+            this.notes = new SimpleStringProperty(notes);
         }
-
-        public BooleanProperty orderedProperty() { return ordered; }
 
         public StringProperty nameProperty() { return name; }
 
-        public StringProperty p1Property() { return d1; }
-
-        public StringProperty p2Property() { return d2; }
+        public StringProperty notesProperty() { return notes; }
         
-        public ObjectProperty<Part> ob1Property() { return ob1; }
-
-        public void setName(String name) { this.name.set(name); }
-
-        public void setP1(String d1) { this.d1.set(d1); }
-
-        public void setP2(String d2) { this.d2.set(d2); }
-        
-        public void setBigPart(Part bigPart) {this.ob1.set(bigPart);}
+        public ObjectProperty<Data> dataProperty() { return data; }
 }
