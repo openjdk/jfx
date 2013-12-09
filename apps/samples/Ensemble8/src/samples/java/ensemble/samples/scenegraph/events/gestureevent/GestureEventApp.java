@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013 Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2013, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -36,7 +36,6 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.scene.Cursor;
-import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -44,7 +43,9 @@ import javafx.scene.control.ListView;
 import javafx.scene.input.RotateEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.input.SwipeEvent;
+import javafx.scene.input.TouchEvent;
 import javafx.scene.input.ZoomEvent;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
@@ -54,22 +55,32 @@ import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 
 /**
- * A sample that demonstrates various gesture events and their usage.
- * Scroll the rectangle or the background behind the rectangle to move the rectangle 
- * itself. Similarly, rotate, zoom in, or zoom out the rectangle.
- * All events are logged to the console.
+ * A sample that demonstrates various multi-touch gesture events and their usage.
+ * Tap, scroll and pan to move the rectangle. Use pinch close and open zoom
+ * gestures to resize it. User rotate touch gesture to rotate it. 
+ * Swipe events are reported but not wired to any other behavior.
+ * All events are logged to the console. You can also observe inertia scrolling.
  *
  * @sampleName Gesture Event
  * @preview preview.png
  * @related /Scenegraph/Events/MouseEvent
- * @see javafx.collections.ObservableList
- * @see javafx.scene.Cursor
- * @see javafx.scene.input.GestureEvent
  * @see javafx.scene.input.RotateEvent
  * @see javafx.scene.input.ScrollEvent
  * @see javafx.scene.input.SwipeEvent
+ * @see javafx.scene.input.TouchEvent
  * @see javafx.scene.input.ZoomEvent
+ * @see javafx.scene.Cursor
+ * @see javafx.collections.FXCollections
+ * @see javafx.collections.ObservableList
  * @see javafx.event.EventHandler
+ * @see javafx.scene.control.ListView
+ * @see javafx.scene.layout.VBox
+ * @see javafx.scene.paint.Color
+ * @see javafx.scene.paint.CycleMethod
+ * @see javafx.scene.paint.LinearGradient
+ * @see javafx.scene.paint.Stop
+ * @see javafx.scene.shape.Rectangle
+ * @see javafx.scene.layout.Pane
  * @embedded
  */
 public class GestureEventApp extends Application {
@@ -79,12 +90,21 @@ public class GestureEventApp extends Application {
     private final static int CONSOLE_WIDTH = 400;
     private final static int CONSOLE_HEIGHT = 80;
     private final static int BORDER_HEIGHT = SAMPLE_SCREEN_HEIGHT - CONSOLE_HEIGHT;
-    private final static int SMALL_REC_Y = 20 - BORDER_HEIGHT; // some offset minus BORDER_HEIGHT so it's not off in the corner
-    private final static int SMALL_REC_X = 30; //some offset so it's not off in the corner
+    
+    // some offset minus BORDER_HEIGHT so it's not off in the corner
+    private final static int SMALL_REC_Y = 20 - BORDER_HEIGHT; 
+    
+    //some offset so it's not off in the corner
+    private final static int SMALL_REC_X = 30; 
+
     //create a console for logging mouse events
     final ListView<String> console = new ListView<>();
+    
     //create a observableArrayList of logged events that will be listed in console
     final ObservableList<String> consoleObservableList = FXCollections.observableArrayList();
+    
+    private String lastEvent = "";
+    private int lastEventCount = 0;
 
     public Parent createContent() {
         //set up the console
@@ -108,7 +128,7 @@ public class GestureEventApp extends Application {
         final Rectangle smallRec = createRectangle();
         smallRec.setTranslateX(SMALL_REC_X);
         smallRec.setTranslateY(SMALL_REC_Y);
-        Group box = new Group();
+        Pane box = new Pane();
         box.getChildren().addAll(border, smallRec);
         setEventListeners(root, smallRec, "From background--");
         root.getChildren().addAll(console, border, smallRec);
@@ -129,21 +149,60 @@ public class GestureEventApp extends Application {
 
         return smallRec;
     }
-
+    
     private void showOnConsole(String text) {
-        //if there is 8 items in list, delete first log message, shift other logs and  add a new one to end position
-        if (consoleObservableList.size() == 3) {
-            consoleObservableList.remove(0);
+        if (lastEvent.equals(text)) {
+            lastEventCount++;
+            consoleObservableList.set(consoleObservableList.size() - 1, 
+                    text + " (" + lastEventCount + " times)");
+        } else {
+            if (consoleObservableList.size() == 500) {
+                consoleObservableList.remove(0);
+            }
+            consoleObservableList.add(text);
+            console.scrollTo(consoleObservableList.size());
+            lastEvent = text;
+            lastEventCount = 1;
         }
-        consoleObservableList.add(text);
     }
 
     private void setEventListeners(final Node listeningNode, final Rectangle rec, final String msgPrefix) {
         listeningNode.setOnSwipeDown(new EventHandler<SwipeEvent>() {
-            @Override
+            @Override 
             public void handle(SwipeEvent se) {
-                //log scroll to console, method listed below              
-                showOnConsole(msgPrefix + "SwipeDown event x: " + se.getX() + ", y: " + se.getY());
+                showOnConsole(msgPrefix + "SwipeDown event");
+                se.consume();
+            }
+        });
+
+        listeningNode.setOnSwipeUp(new EventHandler<SwipeEvent>() {
+            @Override 
+            public void handle(SwipeEvent se) {
+                showOnConsole(msgPrefix + "SwipeUp event");
+                se.consume();
+            }
+        });
+
+        listeningNode.setOnSwipeLeft(new EventHandler<SwipeEvent>() {
+            @Override 
+            public void handle(SwipeEvent se) {
+                showOnConsole(msgPrefix + "SwipeLeft event");
+                se.consume();
+            }
+        });
+
+        listeningNode.setOnSwipeRight(new EventHandler<SwipeEvent>() {
+            @Override 
+            public void handle(SwipeEvent se) {
+                showOnConsole(msgPrefix + "SwipeRight event");
+                se.consume();
+            }
+        });
+        
+        listeningNode.setOnTouchStationary(new EventHandler<TouchEvent>() {
+            @Override 
+            public void handle(TouchEvent se) {
+                showOnConsole(msgPrefix + "TouchStationary event");
                 se.consume();
             }
         });
@@ -151,16 +210,18 @@ public class GestureEventApp extends Application {
         listeningNode.setOnScroll(new EventHandler<ScrollEvent>() {
             @Override
             public void handle(ScrollEvent event) {
-                double translateX = event.getDeltaX(); //horizontal scroll amount
+                
+                // scroll amount
+                double translateX = event.getDeltaX();
                 double translateY = event.getDeltaY();
 
                 if ((rec.getTranslateX() + translateX > 0) && (rec.getTranslateX() + translateX < 300)) {
-                    rec.setTranslateX(listeningNode.getTranslateX() + translateX);
+                    rec.setTranslateX(rec.getTranslateX() + translateX);
                 }
                 if ((rec.getTranslateY() + translateY > SMALL_REC_Y - 20) && (rec.getTranslateY() + translateY < 180 + SMALL_REC_Y)) {
                     rec.setTranslateY(rec.getTranslateY() + translateY);
                 }
-                showOnConsole(msgPrefix + "Scroll event, deltaX: " + event.getDeltaX() + " deltaY: " + event.getDeltaY());
+                showOnConsole(msgPrefix + "Scroll event");
                 event.consume();
             }
         });
@@ -170,7 +231,7 @@ public class GestureEventApp extends Application {
             public void handle(ZoomEvent event) {
                 rec.setScaleX(rec.getScaleX() * event.getZoomFactor());
                 rec.setScaleY(rec.getScaleY() * event.getZoomFactor());
-                showOnConsole(msgPrefix + "Zoom event, zoom factor: " + event.getZoomFactor());
+                showOnConsole(msgPrefix + "Zoom event");
                 event.consume();
             }
         });
@@ -179,7 +240,7 @@ public class GestureEventApp extends Application {
             @Override
             public void handle(RotateEvent event) {
                 rec.setRotate(listeningNode.getRotate() + event.getAngle());
-                showOnConsole(msgPrefix + "Rotate event, angle: " + event.getAngle());
+                showOnConsole(msgPrefix + "Rotate event");
                 event.consume();
             }
         });
