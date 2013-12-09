@@ -1638,7 +1638,10 @@ public class GridPane extends Pane {
         // If metricsDirty is set true during a layout pass the next call to computeGridMetrics()
         // will clear all the cell bounds resulting in out of date info until the
         // next layout pass.
-        if (performingLayout || metricsDirty) {
+        if (performingLayout) {
+            return;
+        } else if (metricsDirty) {
+            super.requestLayout();
             return;
         }
         metricsDirty = true;
