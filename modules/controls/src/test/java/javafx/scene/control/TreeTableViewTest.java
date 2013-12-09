@@ -2907,4 +2907,38 @@ public class TreeTableViewTest {
         assertEquals(table.getRoot(), table.getSelectionModel().getSelectedItem());
         assertEquals(table.getRoot(), table.getFocusModel().getFocusedItem());
     }
+
+    @Test public void test_rt34694() {
+        TreeItem treeNode = new TreeItem("Controls");
+        treeNode.getChildren().addAll(
+                new TreeItem("Button"),
+                new TreeItem("ButtonBar"),
+                new TreeItem("LinkBar"),
+                new TreeItem("LinkButton"),
+                new TreeItem("PopUpButton"),
+                new TreeItem("ToggleButtonBar")
+        );
+
+        final TreeTableView<String> table = new TreeTableView<>();
+        table.setRoot(treeNode);
+        treeNode.setExpanded(true);
+
+        table.getSelectionModel().select(0);
+        assertTrue(table.getSelectionModel().isSelected(0));
+        assertTrue(table.getFocusModel().isFocused(0));
+
+        treeNode.getChildren().clear();
+        treeNode.getChildren().addAll(
+                new TreeItem("Button1"),
+                new TreeItem("ButtonBar1"),
+                new TreeItem("LinkBar1"),
+                new TreeItem("LinkButton1"),
+                new TreeItem("PopUpButton1"),
+                new TreeItem("ToggleButtonBar1")
+        );
+        Toolkit.getToolkit().firePulse();
+
+        assertTrue(table.getSelectionModel().isSelected(0));
+        assertTrue(table.getFocusModel().isFocused(0));
+    }
 }
