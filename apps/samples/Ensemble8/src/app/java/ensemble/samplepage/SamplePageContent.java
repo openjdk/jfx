@@ -127,9 +127,9 @@ class SamplePageContent extends Region {
             needsPlayground = sampleInfo.needsPlayground();
         }
         if (needsPlayground) {
-            getChildren().setAll(playground, description, sampleContainer);
+            getChildren().setAll(sampleContainer, playground, description);
         } else {
-            getChildren().setAll(description, sampleContainer);
+            getChildren().setAll(sampleContainer, description);
         }
     }
 }
