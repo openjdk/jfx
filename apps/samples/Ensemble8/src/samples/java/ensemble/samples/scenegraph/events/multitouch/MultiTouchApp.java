@@ -46,14 +46,19 @@ import javafx.stage.Stage;
  * @see javafx.event.EventHandler
  * @see javafx.scene.input.RotateEvent
  * @see javafx.scene.input.ZoomEvent
- * @conditionalFeatures INPUT_MULTITOUCH
+ * @see javafx.scene.effect.BlurType
+ * @see javafx.scene.effect.DropShadow
+ * @see javafx.scene.image.Image
+ * @see javafx.scene.image.ImageView
+ * @see javafx.scene.layout.Region
+ * @see javafx.scene.layout.StackPane
+ * @see javafx.scene.paint.Color
+ * @see javafx.scene.shape.Rectangle
  * @embedded
  */
 public class MultiTouchApp extends Application {
 
-  //  static final int IMAGEVIEW_WIDTH = 200;
-  //  static final int IMAGEVIEW_HEIGHT = 200;
- private MultiTouchPane multiTouchPane;
+    private MultiTouchPane multiTouchPane;
     
     public Parent createContent() {
         multiTouchPane = new MultiTouchPane();
@@ -62,7 +67,6 @@ public class MultiTouchApp extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        primaryStage.setResizable(false);
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();
     }
