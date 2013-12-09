@@ -34,12 +34,9 @@ package ensemble.samples.controls.table.tablecellfactory;
 import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.event.EventHandler;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableColumn.CellEditEvent;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.CheckBoxTableCell;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -48,17 +45,24 @@ import javafx.stage.Stage;
 import javafx.util.StringConverter;
 
 /**
- * A simple table that uses cell factories to add a checkbox to a table column
- * and to add textfields to table columns. The latter enables editing of first 
- * name, last name, and email.
+ * A simple table that uses cell factories to enable editing of boolean and
+ * String values in the table.
  *
  * @sampleName TableCellFactory
  * @preview preview.png
  * @see javafx.scene.control.TableCell
  * @see javafx.scene.control.TableColumn
- * @see javafx.scene.control.TablePosition
- * @see javafx.scene.control.TableRow
  * @see javafx.scene.control.TableView
+ * @see javafx.scene.control.cell.CheckBoxTableCell
+ * @see javafx.scene.control.cell.PropertyValueFactory
+ * @see javafx.scene.control.cell.TextFieldTableCell
+ * @see javafx.util.StringConverter
+ * @see javafx.collections.FXCollections
+ * @see javafx.collections.ObservableList
+ * @see javafx.beans.property.BooleanProperty
+ * @see javafx.beans.property.SimpleBooleanProperty
+ * @see javafx.beans.property.SimpleStringProperty
+ * @see javafx.beans.property.StringProperty
  * @embedded
  */
 public class TableCellFactoryApp extends Application {
@@ -81,34 +85,31 @@ public class TableCellFactoryApp extends Application {
                 return string;
             }
         };
-        //"Invited" column
+
         TableColumn invitedCol = new TableColumn<>();
         invitedCol.setText("Invited");
         invitedCol.setMinWidth(70);
         invitedCol.setCellValueFactory(new PropertyValueFactory("invited"));
         invitedCol.setCellFactory(CheckBoxTableCell.forTableColumn(invitedCol));
-        //"First Name" column
+
         TableColumn firstNameCol = new TableColumn();
         firstNameCol.setText("First");
         firstNameCol.setCellValueFactory(new PropertyValueFactory("firstName"));
         firstNameCol.setCellFactory(TextFieldTableCell.forTableColumn(sc));
-        //"Last Name" column
+
         TableColumn lastNameCol = new TableColumn();
         lastNameCol.setText("Last");
         lastNameCol.setCellValueFactory(new PropertyValueFactory("lastName"));
         lastNameCol.setCellFactory(TextFieldTableCell.forTableColumn(sc));
-        //"Email" column
+
         TableColumn emailCol = new TableColumn();
         emailCol.setText("Email");
         emailCol.setMinWidth(200);
         emailCol.setCellValueFactory(new PropertyValueFactory("email"));
         emailCol.setCellFactory(TextFieldTableCell.forTableColumn(sc));
-        //Set handler to update ObservableList properties. Applicable if cell is edited
-        updateObservableListProperties(emailCol, firstNameCol, lastNameCol);
 
         TableView tableView = new TableView();
         tableView.setItems(data);
-        //Enabling editing
         tableView.setEditable(true);
         tableView.getColumns().addAll(invitedCol, firstNameCol, lastNameCol, emailCol);
         return tableView;
@@ -126,33 +127,5 @@ public class TableCellFactoryApp extends Application {
      */
     public static void main(String[] args) {
         launch(args);
-    }
-
-    private void updateObservableListProperties(TableColumn emailCol, TableColumn firstNameCol,
-            TableColumn lastNameCol) {
-        //Modifying the email property in the ObservableList
-        emailCol.setOnEditCommit(new EventHandler<CellEditEvent<Person, String>>() {
-            @Override
-            public void handle(CellEditEvent<Person, String> t) {
-                ((Person) t.getTableView().getItems().get(
-                        t.getTablePosition().getRow())).setEmail(t.getNewValue());
-            }
-        });
-        //Modifying the firstName property in the ObservableList
-        firstNameCol.setOnEditCommit(new EventHandler<CellEditEvent<Person, String>>() {
-            @Override
-            public void handle(CellEditEvent<Person, String> t) {
-                ((Person) t.getTableView().getItems().get(
-                        t.getTablePosition().getRow())).setFirstName(t.getNewValue());
-            }
-        });
-        //Modifying the lastName property in the ObservableList
-        lastNameCol.setOnEditCommit(new EventHandler<CellEditEvent<Person, String>>() {
-            @Override
-            public void handle(CellEditEvent<Person, String> t) {
-                ((Person) t.getTableView().getItems().get(
-                        t.getTablePosition().getRow())).setLastName(t.getNewValue());
-            }
-        });
     }
 }
