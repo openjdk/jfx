@@ -47,6 +47,16 @@ public final class Platform {
      * executed before any Runnable passed into a subsequent call to runLater.
      *
      * <p>
+     * NOTE: applications should avoid flooding JavaFX with too many
+     * pending Runnables. Otherwise, the application may become unresponsive.
+     * Applications are encouraged to batch up multiple operations into fewer
+     * runLater calls.
+     * Additionally, long-running operations should be done on a background
+     * thread where possible, freeing up the JavaFX Application Thread for GUI
+     * operations.
+     * </p>
+     *
+     * <p>
      * This method must not be called before the FX runtime has been
      * initialized. For standard JavaFX applications that extend
      * {@see Application}, and use either the Java launcher or one of the
