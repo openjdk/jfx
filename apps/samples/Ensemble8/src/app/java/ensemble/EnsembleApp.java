@@ -36,8 +36,17 @@ import ensemble.control.Popover;
 import ensemble.control.SearchBox;
 import ensemble.control.TitledToolBar;
 import ensemble.generated.Samples;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.Reader;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
@@ -265,11 +274,42 @@ public class EnsembleApp extends Application {
                 .build();
     }
 
-    private void setStylesheets(boolean isIOsSelected) {
-        scene.getStylesheets().setAll(
-            "http://fonts.googleapis.com/css?family=Source+Sans+Pro:200,300,400,600",
-            "/ensemble/EnsembleStylesCommon.css"
-        );
+    private void setStylesheets() {
+        final String EXTERNAL_STYLESHEET = "http://fonts.googleapis.com/css?family=Source+Sans+Pro:200,300,400,600";
+        scene.getStylesheets().setAll("/ensemble/EnsembleStylesCommon.css");
+        Thread backgroundThread = new Thread(new Runnable() {
+            
+            @Override
+            public void run() {
+                try {
+                    URL url = new URL(EXTERNAL_STYLESHEET);
+                    try (
+                            ReadableByteChannel rbc = Channels.newChannel(url.openStream());
+                            Reader newReader = Channels.newReader(rbc, "ISO-8859-1");
+                            BufferedReader bufferedReader = new BufferedReader(newReader)
+                            ) {
+                        // Checking whether we can read a line from this url
+                        // without exception
+                        bufferedReader.readLine();
+                    }
+                    Platform.runLater(new Runnable() {
+
+                        @Override
+                        public void run() {
+                            
+                            // when succeeded add this stylesheet to the scene
+                            scene.getStylesheets().add(EXTERNAL_STYLESHEET);
+                        }
+                    });
+                } catch (MalformedURLException ex) {
+                    Logger.getLogger(EnsembleApp.class.getName()).log(Level.FINE, "Failed to load external stylesheet", ex);
+                } catch (IOException ex) {
+                    Logger.getLogger(EnsembleApp.class.getName()).log(Level.FINE, "Failed to load external stylesheet", ex);
+                }
+            }
+        }, "Trying to reach external styleshet");
+        backgroundThread.setDaemon(true);
+        backgroundThread.start();
     }    
     
     @Override public void start(final Stage stage) throws Exception {
@@ -278,7 +318,7 @@ public class EnsembleApp extends Application {
         if (IS_EMBEDDED) {
             new ScrollEventSynthesizer(scene);
         }
-        setStylesheets(SELECT_IOS_THEME);
+        setStylesheets();
         stage.setScene(scene);
         // START FULL SCREEN IF WANTED
         if (PlatformFeatures.START_FULL_SCREEN) {
