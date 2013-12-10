@@ -63,6 +63,7 @@ public class MultiTouchApp extends Application {
     
     public Parent createContent() {
         multiTouchPane = new MultiTouchPane();
+        multiTouchPane.setPrefSize(800, 400);
         return multiTouchPane;
     }
 
