@@ -55,6 +55,11 @@ public class Picker {
      * Returns the list of nodes below (sceneX, sceneY).
      * Topmost node is at index 0.
      * Search starts from startNode.
+     * 
+     * @param startNode
+     * @param sceneX
+     * @param sceneY
+     * @return the list of nodes below (sceneX, sceneY).
      */
     public List<Node> pick(Node startNode, double sceneX, double sceneY) {
         assert startNode != null;
@@ -62,11 +67,18 @@ public class Picker {
         assert Double.isNaN(sceneX) == false;
         assert Double.isNaN(sceneY) == false;
         
-        this.matches.clear();
         final Point2D localXY = startNode.sceneToLocal(sceneX, sceneY);
+        return pickInLocal(startNode, localXY.getX(), localXY.getY());
+    }
+    
+    public List<Node> pickInLocal(Node startNode, double localX, double localY) {
+        assert startNode != null;
+        assert startNode.getScene() != null;
+        assert Double.isNaN(localX) == false;
+        assert Double.isNaN(localY) == false;
         
-        pickInLocal(startNode, localXY.getX(), localXY.getY());
-        
+        this.matches.clear();
+        performPick(startNode, localX, localY);
         return matches.isEmpty() ? null : Collections.unmodifiableList(matches);
     }
 
@@ -75,7 +87,7 @@ public class Picker {
     }
     
 
-    private void pickInLocal(Node startNode, double localX, double localY) {
+    private void performPick(Node startNode, double localX, double localY) {
 
         if (excludes.contains(startNode) == false) {
             if (startNode.getLayoutBounds().contains(localX, localY)) {
@@ -89,7 +101,7 @@ public class Picker {
                     // Note : childLocalXY may be null.
                     // For example, child is a Button with scaleX == 0.
                     if (childLocalXY != null) {
-                        pickInLocal(child, childLocalXY.getX(), childLocalXY.getY());
+                        performPick(child, childLocalXY.getX(), childLocalXY.getY());
                     }
                 }
             }

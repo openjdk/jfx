@@ -57,6 +57,9 @@ public abstract class AbstractDragSource {
     }
     
     public abstract List<FXOMObject> getDraggedObjects();
+    public abstract FXOMObject getHitObject();
+    public abstract double getHitX();
+    public abstract double getHitY();
     public abstract ClipboardContent makeClipboardContent();
     public abstract Image makeDragView();
     public abstract Node makeShadow();

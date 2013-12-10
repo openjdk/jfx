@@ -39,7 +39,6 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 /**
  *
@@ -47,15 +46,32 @@ import java.util.Objects;
  */
 public class EnumerationPropertyMetadata extends ValuePropertyMetadata {
     
+    public static final String EQUIV_NONE = "NONE"; //NOI18N
+    public static final String EQUIV_AUTOMATIC = "AUTOMATIC"; //NOI18N
+    public static final String EQUIV_INHERITED = "INHERIT"; //NOI18N
+    
     private final Class<?> enumClass;
     private final Enum<?> defaultValue;
+    private final String nullEquivalent;
 
     public EnumerationPropertyMetadata(PropertyName name, Class<?> enumClass,
             boolean readWrite, Enum<?> defaultValue, InspectorPath inspectorPath) {
         super(name, readWrite, inspectorPath);
         assert enumClass.isEnum();
+        assert (readWrite == false) || (defaultValue != null);
         this.enumClass = enumClass;
         this.defaultValue = defaultValue;
+        this.nullEquivalent = null;
+    }
+    
+    public EnumerationPropertyMetadata(PropertyName name, Class<?> enumClass,
+            String nullEquivalent, boolean readWrite, InspectorPath inspectorPath) {
+        super(name, readWrite, inspectorPath);
+        assert enumClass.isEnum();
+        assert nullEquivalent != null;
+        this.enumClass = enumClass;
+        this.defaultValue = null;
+        this.nullEquivalent = nullEquivalent;
     }
     
     public String getValue(FXOMInstance fxomInstance) {
@@ -67,11 +83,7 @@ public class EnumerationPropertyMetadata extends ValuePropertyMetadata {
                 // propertyName is not specified in the fxom instance.
                 // We return the default value specified in the metadata of the
                 // property
-                if (defaultValue == null) {
-                    result = getValueClass().getEnumConstants()[0].toString();
-                } else {
-                    result = defaultValue.toString();
-                }
+                result = getDefaultValue();
             } else {
                 assert fxomProperty instanceof FXOMPropertyT;
                 final FXOMPropertyT fxomPropertyT = (FXOMPropertyT) fxomProperty;
@@ -80,7 +92,7 @@ public class EnumerationPropertyMetadata extends ValuePropertyMetadata {
         } else {
             final Object o = getName().getValue(fxomInstance.getSceneGraphObject());
             if (o == null) {
-                result = getValueClass().getEnumConstants()[0].toString();
+                result = getDefaultValue();
             } else {
                 assert o.getClass() == enumClass;
                 result = o.toString();
@@ -92,11 +104,12 @@ public class EnumerationPropertyMetadata extends ValuePropertyMetadata {
 
     public void setValue(FXOMInstance fxomInstance, String value) {
         assert isReadWrite();
+        assert value != null;
         
         final FXOMProperty fxomProperty = fxomInstance.getProperties().get(getName());
         if (fxomProperty == null) {
             // propertyName is not specified in the fxom instance.
-            if (value != null) {
+            if (value.equals(getDefaultValue()) == false) {
                 // We insert a new fxom property
                 final FXOMPropertyT newProperty 
                         = new FXOMPropertyT(fxomInstance.getFxomDocument(),
@@ -106,13 +119,23 @@ public class EnumerationPropertyMetadata extends ValuePropertyMetadata {
         } else {
             assert fxomProperty instanceof FXOMPropertyT;
             final FXOMPropertyT fxomPropertyT = (FXOMPropertyT) fxomProperty;
-            if (value != null) {
-                fxomPropertyT.setValue(value);
-            } else {
-                assert defaultValue == null;
+            if (value.equals(getDefaultValue())) {
                 fxomPropertyT.removeFromParentInstance();
+            } else {
+                fxomPropertyT.setValue(value);
             }
         }
+    }
+    
+    public String getDefaultValue() {
+        final String result;
+        if (isReadWrite()) {
+            assert (defaultValue == null) == (nullEquivalent != null);
+            result = (defaultValue == null) ? nullEquivalent : defaultValue.toString();
+        } else {
+            result = null;
+        }
+        return result;
     }
     
     public List<String> getValidValues() {
@@ -120,6 +143,12 @@ public class EnumerationPropertyMetadata extends ValuePropertyMetadata {
         
         for (Object e : enumClass.getEnumConstants()) {
             result.add(e.toString());
+        }
+        if (nullEquivalent != null) {
+            assert defaultValue == null;
+            if (result.contains(nullEquivalent) == false) {
+                result.add(0, nullEquivalent);
+            }
         }
         
         return result;
@@ -136,7 +165,7 @@ public class EnumerationPropertyMetadata extends ValuePropertyMetadata {
 
     @Override
     public Object getDefaultValueObject() {
-        return (defaultValue == null) ? null : defaultValue.toString();
+        return getDefaultValue();
     }
 
     @Override

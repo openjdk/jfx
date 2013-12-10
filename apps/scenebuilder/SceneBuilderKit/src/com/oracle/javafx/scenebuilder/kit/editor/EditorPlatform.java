@@ -63,6 +63,11 @@ public class EditorPlatform {
      * True if current platform is running Windows.
      */
     public static final boolean IS_WINDOWS = osName.contains("windows"); //NOI18N
+    
+    /**
+     * This URL is where you go when the user takes Scene Builder Help action (shortcut F1)
+     */
+    public static final String DOCUMENTATION_URL = "http://docs.oracle.com/javafx/index.html"; //NOI18N
 
     /**
      * Themes supported by Scene Builder Kit.

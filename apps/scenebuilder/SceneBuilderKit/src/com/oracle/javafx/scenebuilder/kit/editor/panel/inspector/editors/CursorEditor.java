@@ -35,6 +35,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import static com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.PropertyEditor.handleIndeterminate;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.CursorPropertyMetadata;
+import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 import java.io.File;
 import java.net.MalformedURLException;
 import java.util.Arrays;
@@ -59,7 +60,7 @@ import javafx.stage.FileChooser;
 /**
  * Insets editor (for top/right/bottom/left fields).
  *
- * 
+ *
  */
 public class CursorEditor extends PropertyEditor {
 
@@ -83,10 +84,16 @@ public class CursorEditor extends PropertyEditor {
     public CursorEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
         root = EditorUtils.loadFxml("CursorEditor.fxml", this); //NOI18N
-        
+
         EventHandler<ActionEvent> valueListener = new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
+                try {
+                    cursor = new ImageCursor(new Image(imagePathTf.getText()));
+                } catch (NullPointerException  | IllegalArgumentException ex) {
+                    handleInvalidValue(imagePathTf.getText());
+                    return;
+                }
                 userUpdateValueProperty(getValue());
             }
         };
@@ -139,7 +146,6 @@ public class CursorEditor extends PropertyEditor {
     }
 
     @Override
-    @SuppressWarnings("deprecation")
     public void setValue(Object value) {
         setValueGeneric(value);
         if (isSetValueDone()) {
@@ -156,7 +162,7 @@ public class CursorEditor extends PropertyEditor {
                 // Custom cursor
                 ImageCursor imageCursor = (ImageCursor) value;
                 imagePathTfEnabled(true);
-                imagePathTf.setText(imageCursor.getImage().impl_getUrl());
+                imagePathTf.setText(Deprecation.getUrl(imageCursor.getImage()));
                 selectCursor(""); //NOI18N
                 cursorMb.setText(""); //NOI18N
             } else {
@@ -170,9 +176,8 @@ public class CursorEditor extends PropertyEditor {
     @Override
     public void reset(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super.reset(propMeta, selectedClasses);
-        setLayoutFormat(PropertyEditor.LayoutFormat.SIMPLE_LINE_BOTTOM);
         imagePathTf.setPromptText(null);
-   }
+    }
 
     @Override
     protected void valueIsIndeterminate() {
@@ -188,13 +193,12 @@ public class CursorEditor extends PropertyEditor {
         selectCursor(inheritedParentText);
         userUpdateValueProperty(getValue());
     }
-    
+
     @FXML
     void chooseImage(ActionEvent event) {
         imagePathTfEnabled(true);
 
         String[] extensions = {"*.jpg", "*.jpeg", "*.png", "*.gif"}; //NOI18N
-        // !! Do we need a wrapper, as we had in SB 1.1, to allow tests to bypass the dialog ?
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle(I18N.getString("inspector.select.image"));
         fileChooser.getExtensionFilters().add(
@@ -237,9 +241,9 @@ public class CursorEditor extends PropertyEditor {
                 // set the menu button text
                 if (cursorStr.equals(inheritedParentText)) {
                     // change the menu button text to be shorter in this case...
-                    cursorMb.setText(inheritedText);                    
+                    cursorMb.setText(inheritedText);
                 } else {
-                    cursorMb.setText(cursorStr);                    
+                    cursorMb.setText(cursorStr);
                 }
                 cursor = checkMenuItem.getGraphic().getCursor();
             } else {
@@ -249,11 +253,17 @@ public class CursorEditor extends PropertyEditor {
     }
 
     @Override
-    protected void requestFocus() {
-        if (imagePathTf.isVisible()) {
-         imagePathTf.requestFocus();
-        } else {
-            cursorMb.requestFocus();
-        }
+    public void requestFocus() {
+        EditorUtils.doNextFrame(new Runnable() {
+
+            @Override
+            public void run() {
+                if (imagePathTf.isVisible()) {
+                    imagePathTf.requestFocus();
+                } else {
+                    cursorMb.requestFocus();
+                }
+            }
+        });
     }
 }

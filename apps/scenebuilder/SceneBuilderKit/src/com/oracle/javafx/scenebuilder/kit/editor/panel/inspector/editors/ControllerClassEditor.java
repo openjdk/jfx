@@ -37,17 +37,18 @@ import javafx.event.EventHandler;
 
 /**
  * Controller class editor.
- * 
- * 
+ *
+ *
  */
 public class ControllerClassEditor extends AutoSuggestEditor {
+
     private static final String PROPERTY_NAME = "Controller class";
     private static final String DEFAULT_VALUE = "";
-    
+
     @SuppressWarnings("LeakingThisInConstructor")
     public ControllerClassEditor(List<String> suggestedClasses) {
         super(PROPERTY_NAME, DEFAULT_VALUE, suggestedClasses); //NOI18N
-                
+
         // text field events handling
         EventHandler<ActionEvent> onActionListener = new EventHandler<ActionEvent>() {
             @Override
@@ -59,13 +60,19 @@ public class ControllerClassEditor extends AutoSuggestEditor {
         };
         setTextEditorBehavior(this, textField, onActionListener);
     }
-    
+
     public void reset(List<String> suggestedClasses) {
         super.reset(PROPERTY_NAME, DEFAULT_VALUE, suggestedClasses);
     }
 
     @Override
-    protected void requestFocus() {
-        textField.requestFocus();
+    public void requestFocus() {
+        EditorUtils.doNextFrame(new Runnable() {
+
+            @Override
+            public void run() {
+                textField.requestFocus();
+            }
+        });
     }
 }

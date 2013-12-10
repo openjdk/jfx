@@ -50,7 +50,10 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.css.SelectionPath.Path;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
-import com.oracle.javafx.scenebuilder.kit.metadata.property.PropertyMetadata;
+import com.oracle.javafx.scenebuilder.kit.metadata.Metadata;
+import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
+import com.oracle.javafx.scenebuilder.kit.util.CssInternal;
 import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 import com.sun.javafx.css.ParsedValueImpl;
 import com.sun.javafx.css.Rule;
@@ -77,6 +80,7 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.geometry.Orientation;
+import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
@@ -115,7 +119,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
     @FXML
     private TableColumn<CssProperty, CssProperty> builtinColumn;
     @FXML
-    private TableColumn<CssProperty, CssProperty> caspianColumn;
+    private TableColumn<CssProperty, CssProperty> fxThemeColumn;
     @FXML
     private TableColumn<CssProperty, CssProperty> inlineColumn;
     @FXML
@@ -123,7 +127,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
     @FXML
     private TableColumn<CssProperty, CssProperty> defaultColumn;
     @FXML
-    private ToggleButton picking;
+    private ToggleButton pick;
     @FXML
     private ToggleButton edit;
     @FXML
@@ -161,7 +165,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
             InspectorPanelController.class.getResource("images/cog.png").toExternalForm()); //NOI18N
     private static final Image lookups = new Image(
             CssPanelController.class.getResource("images/css-lookup-icon.png").toExternalForm()); //NOI18N
-    private static final Image pickingImg = new Image(
+    private static final Image pickImg = new Image(
             CssPanelController.class.getResource("images/css-cursor.png").toExternalForm()); //NOI18N
     private static final Image editImg = new Image(
             CssPanelController.class.getResource("images/css-button-arrow.png").toExternalForm()); //NOI18N
@@ -173,13 +177,21 @@ public class CssPanelController extends AbstractFxmlPanelController {
         TABLE, RULES, TEXT;
     }
 
-    private PropertyNavigator navigator = new PropertyNavigator();
-    private Object selectedObject; // Can be either an FXOMObject (selection mode), or a Node (picking mode)
+    private Object selectedObject; // Can be either an FXOMObject (selection mode), or a Node (pick mode)
     private Selection selection;
     @SuppressWarnings("rawtypes")
     private Callable onSelectionModeSwitch;
     private final EditorController editorController;
+    private final Delegate applicationDelegate;
     private final ObjectProperty<NodeCssState> cssStateProperty = new SimpleObjectProperty<>();
+
+    /*
+     * Should be implemented by the application
+     */
+    public static abstract class Delegate {
+
+        public abstract void revealInspectorEditor(ValuePropertyMetadata propMeta);
+    }
 
     /*
      * AbstractPanelController
@@ -212,7 +224,11 @@ public class CssPanelController extends AbstractFxmlPanelController {
         if (isCssPanelLoaded() && hasFxomDocument()) {
             selection = editorController.getSelection();
             if (!isMultipleSelection()) {
-                selectedObject = getFXOMInstance(selection);
+                if (isPickMode()) {
+                    selectedObject = selection.findHitNode();
+                } else {
+                    selectedObject = getFXOMInstance(selection);
+                }
             }
             refresh();
         }
@@ -227,13 +243,25 @@ public class CssPanelController extends AbstractFxmlPanelController {
         root.getChildren().remove(rulesPane);
         root.getChildren().remove(textPane);
         root.getChildren().remove(table);
-//        initializeMenu();
 
-        picking.setGraphic(new ImageView(pickingImg));
-        // TODO : implement picking. In the meantime, disable the menu buttons.
-        picking.setDisable(true);
+        pick.setGraphic(new ImageView(pickImg));
+        pick.setOnAction(new EventHandler<ActionEvent>() {
+
+            @Override
+            public void handle(ActionEvent t) {
+                editorController.setPickModeEnabled(true);
+            }
+        });
         edit.setGraphic(new ImageView(editImg));
-        edit.setDisable(true);
+        edit.setSelected(true);
+        editorController.pickModeEnabledProperty().addListener(new ChangeListener<Boolean>() {
+
+            @Override
+            public void changed(ObservableValue<? extends Boolean> ov, Boolean oldVal, Boolean newVal) {
+                setPickMode(newVal);
+            }
+        });
+        
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         initialOrder = FXCollections.observableArrayList(table.getColumns());
         reversedOrder = FXCollections.observableArrayList(table.getColumns());
@@ -249,8 +277,8 @@ public class CssPanelController extends AbstractFxmlPanelController {
         builtinColumn.setCellValueFactory(valueFactory);
         builtinColumn.setCellFactory(new BuiltinCellFactory());
 
-        caspianColumn.setCellValueFactory(valueFactory);
-        caspianColumn.setCellFactory(new CaspianCellFactory());
+        fxThemeColumn.setCellValueFactory(valueFactory);
+        fxThemeColumn.setCellFactory(new FxThemeCellFactory());
 
         beanApiColumn.setCellValueFactory(valueFactory);
         beanApiColumn.setCellFactory(new ModelCellFactory());
@@ -278,7 +306,10 @@ public class CssPanelController extends AbstractFxmlPanelController {
                     Node selectedSubNode = CssUtils.getNode(newValue.getItem());
                     selectedObject = selectedSubNode;
                     refresh();
-                    // TODO: update the (SB) selection
+                    // TODO: use the hit point method from Eric
+                    selection.select(getFXOMInstance(selection), Point2D.ZERO);
+                    // Switch to pick mode
+                    setPickMode(true);
                 }
             }
         };
@@ -317,11 +348,11 @@ public class CssPanelController extends AbstractFxmlPanelController {
         }
     }
 
-    private class CaspianCellFactory implements Callback<TableColumn<CssProperty, CssProperty>, TableCell<CssProperty, CssProperty>> {
+    private class FxThemeCellFactory implements Callback<TableColumn<CssProperty, CssProperty>, TableCell<CssProperty, CssProperty>> {
 
         @Override
         public TableCell<CssProperty, CssProperty> call(TableColumn<CssProperty, CssProperty> param) {
-            return new CaspianValueTableCell();
+            return new FxThemeValueTableCell();
         }
     }
 
@@ -362,9 +393,10 @@ public class CssPanelController extends AbstractFxmlPanelController {
      * Public
      *
      */
-    public CssPanelController(EditorController c) {
-        super(CssPanelController.class.getResource("CssPanel.fxml"), c);
+    public CssPanelController(EditorController c, Delegate delegate) {
+        super(CssPanelController.class.getResource("CssPanel.fxml"), I18N.getBundle(), c);
         this.editorController = c;
+        this.applicationDelegate = delegate;
     }
 
     public String getSearchPattern() {
@@ -391,14 +423,6 @@ public class CssPanelController extends AbstractFxmlPanelController {
         message = new StackPane();
         message.getChildren().add(new Label(mess));
         root.getChildren().add(message);
-    }
-
-    public void stageViewModeDidChange() {
-        /// TODO : check with Eric
-
-//        final boolean pickingEnabled = frame.getStageView().getMode() == StageView.Mode.CSS_PICK;
-//        edit.setSelected(!pickingEnabled);
-//        picking.setSelected(pickingEnabled);
     }
 
     public final Node getRulesPane() {
@@ -443,18 +467,6 @@ public class CssPanelController extends AbstractFxmlPanelController {
             parent.getChildren().add(item);
         } else {
             attachStylePropertyNoLookup(component, parent, cssProp, style, applied);
-        }
-    }
-
-    public static class PropertyNavigator {
-
-        public void navigate(Object component, PropertyMetadata propertyMeta) {
-            // TODO
-
-//            AreaPanel ap = frame.getRight();
-//            InspectorPanel ip = ap.getInspectorPanel();
-//            ip.setFocusToProp(prop);
-            throw new UnsupportedOperationException("Navigation to inspector property is not yet supported!");
         }
     }
 
@@ -591,6 +603,14 @@ public class CssPanelController extends AbstractFxmlPanelController {
         // TODO : non-node handling
         assert selObject instanceof Node;
         return (Node) selObject;
+    }
+    
+    private boolean isPickMode() {
+        return pick.isSelected();
+    }
+
+    private void setPickMode(boolean pickMode) {
+        pick.setSelected(pickMode);
     }
 
     private void fillSelectionContent() {
@@ -787,13 +807,9 @@ public class CssPanelController extends AbstractFxmlPanelController {
         selectionPath.selected().removeListener(selectionListener);
     }
 
-    void setPropertyNavigator(PropertyNavigator navigator) {
-        this.navigator = navigator;
-    }
-
     private void unmerge() {
         defaultColumn.setVisible(!advanced);
-        caspianColumn.setVisible(advanced);
+        fxThemeColumn.setVisible(advanced);
         builtinColumn.setVisible(advanced);
     }
 
@@ -1036,9 +1052,9 @@ public class CssPanelController extends AbstractFxmlPanelController {
                     }
                 }
             }
-            // Case where an API call has been made, not applied caspian (if any) are hidden
+            // Case where an API call has been made, not applied fxTheme (if any) are hidden
             if (getOrigin(item) == StyleOrigin.USER_AGENT) {
-                List<CssPropertyState.CssStyle> styles = item.getCaspianHiddenByModel();
+                List<CssPropertyState.CssStyle> styles = item.getFxThemeHiddenByModel();
                 for (CssPropertyState.CssStyle style : styles) {
                     Node n = createValueUI(item, style);
                     if (n == null) {
@@ -1068,7 +1084,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
             if (nav != null) {
                 Label navigationLabel = new Label(nav);
                 navigationLabel.getStyleClass().add("note-label");//NOI18N
-                if (origin != null && origin != StyleOrigin.USER_AGENT) {// No arrow for builtin and caspian
+                if (origin != null && origin != StyleOrigin.USER_AGENT) {// No arrow for builtin and fxTheme
                     createNavigationMenuButton();
                     openStylesheetMenuItem
                             = new MenuItem(MessageFormat.format(I18N.getString("csspanel.open.stylesheet"), nav));
@@ -1081,7 +1097,10 @@ public class CssPanelController extends AbstractFxmlPanelController {
                                 navigate(item, getPropertyState(item), style, origin);
                             }
                         });
-                        revealInInspectorMenuItem.setDisable(true); // Until this is supported
+                        if (CssPanelController.this.applicationDelegate == null) {
+                            // disable the menu item in this case
+                            revealInInspectorMenuItem.setDisable(true);
+                        }
                     } else if (origin == StyleOrigin.AUTHOR) {
                         // Stylesheets column
                         navigationMenuButton.getItems().add(openStylesheetMenuItem);
@@ -1144,16 +1163,16 @@ public class CssPanelController extends AbstractFxmlPanelController {
     }
 
     // "FX Theme defaults" column
-    private class CaspianValueTableCell extends CssValueTableCell {
+    private class FxThemeValueTableCell extends CssValueTableCell {
 
         @Override
         protected PropertyState getPropertyState(CssProperty item) {
-            return item.caspianState().get();
+            return item.fxThemeState().get();
         }
 
         @Override
         protected boolean isWinner(CssProperty item) {
-            return item.isCaspianSource();
+            return item.isFxThemeSource();
         }
 
         @Override
@@ -1163,7 +1182,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
 
         @Override
         protected CssStyle getStyle(CssProperty item) {
-            CssPropertyState ps = item.caspianState().get();
+            CssPropertyState ps = item.fxThemeState().get();
             return ps == null ? null : ps.getStyle();
         }
     }
@@ -1243,16 +1262,16 @@ public class CssPanelController extends AbstractFxmlPanelController {
     }
 
     /**
-     * XXX jfdenise, handle case where the Caspian is not the winning style. The
+     * XXX jfdenise, handle case where the Fx Theme is not the winning style. The
      * complex case is that we need to return a propertyState BUT we don't know
-     * if caspian has been overriden, then we do return null.
+     * if Fx Theme has been overriden, then we do return null.
      */
     // "Defaults" column
     private class DefaultValueTableCell extends CssValueTableCell {
 
         @Override
         protected PropertyState getPropertyState(CssProperty item) {
-            PropertyState ret = item.caspianState().get();
+            PropertyState ret = item.fxThemeState().get();
             if (ret == null) {
                 // Do we have an override
                 boolean foundNotApplied = false;
@@ -1276,8 +1295,8 @@ public class CssPanelController extends AbstractFxmlPanelController {
         @Override
         protected CssStyle getStyle(CssProperty item) {
             CssStyle style = null;
-            CssPropertyState caspian = item.caspianState().get();
-            if (caspian == null) {
+            CssPropertyState fxTheme = item.fxThemeState().get();
+            if (fxTheme == null) {
                 // Do we have an override
                 PropertyState winner = item.getWinner();
                 if (winner != null) {
@@ -1291,20 +1310,20 @@ public class CssPanelController extends AbstractFxmlPanelController {
                 }
 
             } else {
-                style = caspian.getStyle();
+                style = fxTheme.getStyle();
             }
             return style;
         }
 
         @Override
         protected boolean isWinner(CssProperty item) {
-            return item.isCaspianSource() || item.isBuiltinSource();
+            return item.isFxThemeSource() || item.isBuiltinSource();
         }
 
         @Override
         protected StyleOrigin getOrigin(CssProperty item) {
             PropertyState state = getPropertyState(item);
-            // If null is returned, means that there is a not applied for caspian
+            // If null is returned, means that there is a not applied for fxTheme
             if (state instanceof CssPropertyState || state == null) {
                 return StyleOrigin.USER_AGENT;
             } else {
@@ -1317,8 +1336,8 @@ public class CssPanelController extends AbstractFxmlPanelController {
         protected String getNavigation(CssProperty item, CssStyle style) {
             PropertyState ps = getPropertyState(item);
             if (ps == null || ps instanceof CssPropertyState) {
-                return I18N.getString("csspanel.caspian.defaults.navigation")
-                        + " (caspian.css)";//NOI18N
+                return I18N.getString("csspanel.fxtheme.defaults.navigation")
+                        + " (" + CssInternal.getThemeName(style.getStyle()) + ".css)";//NOI18N
             } else {
                 return I18N.getString("csspanel.api.defaults.navigation");
             }
@@ -1343,9 +1362,11 @@ public class CssPanelController extends AbstractFxmlPanelController {
     private void navigate(CssProperty item, PropertyState state, CssStyle style, StyleOrigin origin, boolean open) {
 
         if (origin == StyleOrigin.USER) {// Navigate to property
-            BeanPropertyState bp = (BeanPropertyState) state;
-            // XXX TODO, define a Navigation manager in the SB
-            navigator.navigate(item.getTarget(), bp.getPropertyMeta());
+            PropertyName propName = ((BeanPropertyState) state).getPropertyMeta().getName();
+            // Navigate to inspector property
+            if (applicationDelegate != null) {
+                applicationDelegate.revealInspectorEditor(getValuePropertyMeta(propName));
+            }
         }
         if (style != null) {
             if (style.getOrigin() == StyleOrigin.AUTHOR) {// Navigate to file
@@ -1366,9 +1387,10 @@ public class CssPanelController extends AbstractFxmlPanelController {
             } else {
                 if (style.getOrigin() == StyleOrigin.INLINE) {
                     // Navigate to inspector style property
-                    // TODO
-                    throw new UnsupportedOperationException("Navigation to inspector style is not yet supported!");
-//                    navigator.navigate(item.getTarget(), "style"); //NOI18N
+                    if (applicationDelegate != null) {
+                        applicationDelegate.revealInspectorEditor(
+                                getValuePropertyMeta(new PropertyName("style"))); //NOI18N
+                    }
                 }
             }
         }
@@ -1377,7 +1399,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
     private static String getNavigationInfo(
             CssProperty item, CssStyle cssStyle, StyleOrigin origin) {
         if (origin == StyleOrigin.USER_AGENT) {
-            return "caspian.css"; //NOI18N
+             return CssInternal.getThemeName(cssStyle.getStyle()) + ".css"; //NOI18N
         }
         if (origin == StyleOrigin.USER) {
             BeanPropertyState state = (BeanPropertyState) item.modelState().get();
@@ -1419,14 +1441,6 @@ public class CssPanelController extends AbstractFxmlPanelController {
      *
      */
     private static FXOMInstance getFXOMInstance(Selection selection) {
-        // TODO
-        //        SelectionContext context = frame.getProject().getSelection();
-        //        Node pNode = context.getFXOMInstance();
-        //        if(context.getPrimarySelection() != null && 
-        //                (pNode == null || frame.getStageView().getMode() != Mode.CSS_PICK)){
-        //            pNode = CssUtils.getNode(context.getPrimarySelection().getChildComponent());
-        //        }
-
         FXOMInstance fxomInstance = null;
         if (selection == null) {
             return null;
@@ -1443,6 +1457,15 @@ public class CssPanelController extends AbstractFxmlPanelController {
 
         // In case of GridSelectionGroup, nothing to show (?)
         return fxomInstance;
+    }
+
+    private ValuePropertyMetadata getValuePropertyMeta(PropertyName propName) {
+        ValuePropertyMetadata valuePropMeta = null;
+        if (selectedObject instanceof FXOMInstance) {
+            valuePropMeta = Metadata.getMetadata().queryValueProperty(
+                    (FXOMInstance) selectedObject, propName);
+        }
+        return valuePropMeta;
     }
 
     private static String getPseudoStates(Node node) {
@@ -1792,7 +1815,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
             } catch (MalformedURLException ex) {
                 System.out.println("Invalid URL: " + ex);
             }
-            origin = rule.getOrigin();
+            origin = CssInternal.getOrigin(rule);
         }
         return getSource(url, origin);
     }
@@ -1801,7 +1824,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
         String source = null;
         if (url != null) {
             if (origin == StyleOrigin.USER_AGENT) {
-                source = I18N.getString("csspanel.caspian.origin");
+                source = I18N.getString("csspanel.fxtheme.origin");
             } else {
                 if (origin == StyleOrigin.USER) {
                     source = I18N.getString("csspanel.api.origin")

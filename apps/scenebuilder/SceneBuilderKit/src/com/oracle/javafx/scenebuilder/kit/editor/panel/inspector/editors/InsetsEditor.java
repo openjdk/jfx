@@ -108,6 +108,9 @@ public class InsetsEditor extends PropertyEditor {
         int index = 0;
         for (TextField tf : textFields) {
             String val = tf.getText();
+            if (val == null || val.isEmpty()) {
+                val = "0"; //NOI18N
+            }
             try {
                 Double.parseDouble(val);
             } catch (NumberFormatException e) {
@@ -132,10 +135,7 @@ public class InsetsEditor extends PropertyEditor {
             return;
         }
 
-        // Should not be null once the metadata has been fixed
-//        assert value instanceof Insets;
         if (value == null) {
-            // TEMP waiting for metadata fix
             value = Insets.EMPTY;
         }
         Insets insets = (Insets) value;
@@ -182,7 +182,7 @@ public class InsetsEditor extends PropertyEditor {
     }
 
     @Override
-    protected void requestFocus() {
+    public void requestFocus() {
         EditorUtils.doNextFrame(new Runnable() {
 
             @Override

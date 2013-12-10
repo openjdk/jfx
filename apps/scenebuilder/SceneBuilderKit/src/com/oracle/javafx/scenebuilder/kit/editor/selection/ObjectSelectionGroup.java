@@ -31,9 +31,9 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.selection;
 
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.util.Picker;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMNodes;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import com.oracle.javafx.scenebuilder.kit.metadata.klass.ComponentClassMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyPath;
 import java.util.Collection;
 import java.util.Collections;
@@ -41,6 +41,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import javafx.geometry.Point2D;
+import javafx.scene.Node;
 
 /**
  *
@@ -49,20 +51,35 @@ import java.util.Set;
 public class ObjectSelectionGroup extends AbstractSelectionGroup {
     
     private final Set<FXOMObject> items = new HashSet<>();
+    private final FXOMObject hitItem;
+    private final Point2D hitPoint;
     
-    ObjectSelectionGroup(FXOMObject fxomObject) {
+    ObjectSelectionGroup(FXOMObject fxomObject, Point2D hitPoint) {
         assert fxomObject != null;
-        items.add(fxomObject);
+        this.items.add(fxomObject);
+        this.hitItem = fxomObject;
+        this.hitPoint = hitPoint;
     }
     
-    ObjectSelectionGroup(Collection<FXOMObject> fxomObjects) {
+    ObjectSelectionGroup(Collection<FXOMObject> fxomObjects, FXOMObject hitItem, Point2D hitPoint) {
         assert fxomObjects != null;
-        assert fxomObjects.isEmpty() == false;
-        items.addAll(fxomObjects);
+        assert hitItem != null;
+        assert fxomObjects.contains(hitItem);
+        this.items.addAll(fxomObjects);
+        this.hitItem = hitItem;
+        this.hitPoint = hitPoint;
     }
     
     public Set<FXOMObject> getItems() {
         return Collections.unmodifiableSet(items);
+    }
+
+    public FXOMObject getHitItem() {
+        return hitItem;
+    }
+
+    public Point2D getHitPoint() {
+        return hitPoint;
     }
     
     public Set<FXOMObject> getFlattenItems() {
@@ -88,7 +105,36 @@ public class ObjectSelectionGroup extends AbstractSelectionGroup {
         
         return result;
     }
+    
+    public Node findHitNode() {
+        final Node result;
         
+        if (hitPoint == null) {
+            if (hitItem.isNode()) {
+                result = (Node) hitItem.getSceneGraphObject();
+            } else {
+                result = null;
+            }
+        } else {
+            final FXOMObject nodeObject = hitItem.getClosestNode();
+            if (nodeObject == null) {
+                result = null;
+            } else {
+                final Node closestNode = (Node)nodeObject.getSceneGraphObject();
+                final Picker picker = new Picker();
+                final List<Node> pick = picker.pickInLocal(closestNode, hitPoint.getX(), hitPoint.getY());
+                if (pick == null) {
+                    result = null;
+                } else {
+                    assert pick.isEmpty() == false;
+                    result = pick.get(0);
+                }
+            }
+        }
+        
+        return result;
+    }
+    
     /*
      * AbstractSelectionGroup
      */
@@ -138,7 +184,7 @@ public class ObjectSelectionGroup extends AbstractSelectionGroup {
     public ObjectSelectionGroup clone() throws CloneNotSupportedException {
         return (ObjectSelectionGroup)super.clone();
     }
-    
+
     
     /*
      * Object
@@ -146,7 +192,9 @@ public class ObjectSelectionGroup extends AbstractSelectionGroup {
     @Override
     public int hashCode() {
         int hash = 3;
-        hash = 67 * hash + Objects.hashCode(this.items);
+        hash = 41 * hash + Objects.hashCode(this.items);
+        hash = 41 * hash + Objects.hashCode(this.hitItem);
+        hash = 41 * hash + Objects.hashCode(this.hitPoint);
         return hash;
     }
 
@@ -160,6 +208,12 @@ public class ObjectSelectionGroup extends AbstractSelectionGroup {
         }
         final ObjectSelectionGroup other = (ObjectSelectionGroup) obj;
         if (!Objects.equals(this.items, other.items)) {
+            return false;
+        }
+        if (!Objects.equals(this.hitItem, other.hitItem)) {
+            return false;
+        }
+        if (!Objects.equals(this.hitPoint, other.hitPoint)) {
             return false;
         }
         return true;

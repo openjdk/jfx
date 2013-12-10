@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.resizer;
 
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.util.BoundsUtils;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import com.oracle.javafx.scenebuilder.kit.util.MathUtils;
 import java.util.ArrayList;
@@ -59,8 +60,8 @@ public class ImageViewResizer extends AbstractResizer<ImageView> {
         originalFitHeight  = sceneGraphObject.getFitHeight();
         propertyNames.add(fitWidthName);
         propertyNames.add(fitHeightName);
-        assert sceneGraphObject.getLayoutBounds().equals(
-                computeBounds(originalFitWidth, originalFitHeight));
+//        assert BoundsUtils.equals(sceneGraphObject.getLayoutBounds(), 
+//                computeBounds(originalFitWidth, originalFitHeight));
     }
 
     /*

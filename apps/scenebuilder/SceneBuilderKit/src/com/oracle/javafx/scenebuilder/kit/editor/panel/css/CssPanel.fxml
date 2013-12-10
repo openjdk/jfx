@@ -65,7 +65,7 @@
                 <ToggleGroup fx:id="modes" />
               </toggleGroup>
             </ToggleButton>
-            <ToggleButton fx:id="picking" contentDisplay="GRAPHIC_ONLY" graphicTextGap="2.0" mnemonicParsing="false" onAction="#onSelectionModeSwitchAction" styleClass="toggle-button-right" toggleGroup="$modes">
+            <ToggleButton fx:id="pick" contentDisplay="GRAPHIC_ONLY" graphicTextGap="2.0" mnemonicParsing="false" onAction="#onSelectionModeSwitchAction" styleClass="toggle-button-right" toggleGroup="$modes">
               <tooltip>
                 <Tooltip text="%csspanel.picking.tooltip" />
               </tooltip>
@@ -89,7 +89,7 @@
         <TableColumn fx:id="propertiesColumn" editable="false" minWidth="150.0" prefWidth="200.0" resizable="false" sortable="false" text="%csspanel.col.properties" />
         <TableColumn fx:id="defaultColumn" editable="false" minWidth="100.0" prefWidth="100.0" sortable="false" text="%csspanel.col.defaults" visible="true" />
         <TableColumn fx:id="builtinColumn" editable="false" minWidth="100.0" prefWidth="100.0" sortable="false" text="%csspanel.col.api.defaults" visible="false" />
-        <TableColumn fx:id="caspianColumn" editable="false" minWidth="120.0" prefWidth="120.0" sortable="false" text="%csspanel.col.theme.defaults" visible="false" />
+        <TableColumn fx:id="fxThemeColumn" editable="false" minWidth="120.0" prefWidth="120.0" sortable="false" text="%csspanel.col.theme.defaults" visible="false" />
         <TableColumn fx:id="beanApiColumn" editable="false" minWidth="100.0" prefWidth="100.0" sortable="false" text="%csspanel.col.inspector" visible="true" />
         <TableColumn fx:id="stylesheetsColumn" editable="false" minWidth="100.0" prefWidth="100.0" sortable="false" text="%csspanel.col.stylesheets" />
         <TableColumn fx:id="inlineColumn" editable="false" minWidth="100.0" prefWidth="100.0" sortable="false" text="%csspanel.col.inline" />

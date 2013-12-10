@@ -38,23 +38,21 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.util.dialog.AbstractModal
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.dialog.AlertDialog;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
-import com.oracle.javafx.scenebuilder.kit.util.CssInternal;
 import com.oracle.javafx.scenebuilder.kit.util.CssInternal.CssPropAuthorInfo;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javafx.animation.FadeTransition;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableBooleanValue;
 import javafx.beans.value.ObservableValue;
-import javafx.css.StyleOrigin;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
@@ -109,6 +107,7 @@ public abstract class PropertyEditor extends Editor {
     private final Set<ChangeListener<Object>> valueListeners = new HashSet<>();
     private final Set<ChangeListener<Boolean>> editingListeners = new HashSet<>();
     private final Set<ChangeListener<Boolean>> indeterminateListeners = new HashSet<>();
+    private ChangeListener<String> navigateRequestListener = null;
     private EventHandler<?> commitListener;
     // State properties
     private final BooleanProperty disableProperty = new SimpleBooleanProperty(false);
@@ -121,6 +120,7 @@ public abstract class PropertyEditor extends Editor {
     private final ObjectProperty<Object> valueProperty = new SimpleObjectProperty<>();
     private final BooleanProperty editingProperty = new SimpleBooleanProperty(false);
     private final BooleanProperty invalidValueProperty = new SimpleBooleanProperty(false);
+    private final StringProperty navigateRequestProperty = new SimpleStringProperty();
     private boolean handlingError = false;
     private LayoutFormat layoutFormat = DEFAULT_LAYOUT_FORMAT;
 
@@ -160,7 +160,7 @@ public abstract class PropertyEditor extends Editor {
                         }
                     } else {
                         // Special case for non-properties (fx:id, ...)
-                        EditorPlatform.open("http://docs.oracle.com/javafx/2/api/javafx/fxml/doc-files/introduction_to_fxml.html");
+                        EditorPlatform.open("http://docs.oracle.com/javafx/2/api/javafx/fxml/doc-files/introduction_to_fxml.html"); //NOI18N
                     }
                     // Selection of multiple different classes ==> no link
                 } catch (IOException ex) {
@@ -168,7 +168,7 @@ public abstract class PropertyEditor extends Editor {
                 }
             }
         });
-        propName.getStyleClass().add("property-link");
+        propName.getStyleClass().add("property-link"); //NOI18N
         propName.setFocusTraversable(false);
 
         // The hyperlink is wrapped in an HBox so that the HBox grows in width, not the hyperlink
@@ -205,7 +205,7 @@ public abstract class PropertyEditor extends Editor {
             menu = new MenuButton();
             menu.disableProperty().bind(disableProperty);
             menu.setGraphic(new ImageView(cogIcon));
-            menu.getStyleClass().add("cog-button");
+            menu.getStyleClass().add("cog-button"); //NOI18N
             menu.setOpacity(0);
             if (fadeTransition == null) {
                 fadeTransition = new FadeTransition(Duration.millis(500), menu);
@@ -229,8 +229,9 @@ public abstract class PropertyEditor extends Editor {
                 @Override
                 public void handle(ActionEvent e) {
                     setValue(defaultValue);
-                    assert getCommitListener() != null;
-                    getCommitListener().handle(null);
+                    if (getCommitListener() != null) {
+                        getCommitListener().handle(null);
+                    }
                 }
             });
         }
@@ -241,13 +242,11 @@ public abstract class PropertyEditor extends Editor {
         this.propMeta = propMeta;
     }
 
-    public ValuePropertyMetadata getPropertyMetadata() {
-        return this.propMeta;
-    }
-
     public void addValueListener(ChangeListener<Object> listener) {
-        valueProperty().addListener(listener);
-        valueListeners.add(listener);
+        if (!valueListeners.contains(listener)) {
+            valueProperty().addListener(listener);
+            valueListeners.add(listener);
+        }
     }
 
     public void removeValueListener(ChangeListener<Object> listener) {
@@ -256,8 +255,10 @@ public abstract class PropertyEditor extends Editor {
     }
 
     public void addEditingListener(ChangeListener<Boolean> listener) {
-        editingProperty().addListener(listener);
-        editingListeners.add(listener);
+        if (!editingListeners.contains(listener)) {
+            editingProperty().addListener(listener);
+            editingListeners.add(listener);
+        }
     }
 
     public void removeEditingListener(ChangeListener<Boolean> listener) {
@@ -266,13 +267,28 @@ public abstract class PropertyEditor extends Editor {
     }
 
     public void addIndeterminateListener(ChangeListener<Boolean> listener) {
-        indeterminateProperty().addListener(listener);
-        indeterminateListeners.add(listener);
+        if (!indeterminateListeners.contains(listener)) {
+            indeterminateProperty().addListener(listener);
+            indeterminateListeners.add(listener);
+        }
     }
 
     public void removeIndeterminateListener(ChangeListener<Boolean> listener) {
         indeterminateProperty().removeListener(listener);
         indeterminateListeners.remove(listener);
+    }
+
+    public void addNavigateListener(ChangeListener<String> listener) {
+        // We should have a single listener here
+        if (navigateRequestListener == null) {
+            navigateRequestProperty.addListener(listener);
+            navigateRequestListener = listener;
+        }
+    }
+
+    public void removeNavigateListener(ChangeListener<String> listener) {
+        navigateRequestProperty.removeListener(listener);
+        navigateRequestListener = null;
     }
 
     @Override
@@ -289,6 +305,7 @@ public abstract class PropertyEditor extends Editor {
         for (ChangeListener<Boolean> listener : indetermListeners) {
             removeIndeterminateListener(listener);
         }
+        removeNavigateListener(navigateRequestListener);
     }
 
     /*
@@ -300,11 +317,11 @@ public abstract class PropertyEditor extends Editor {
 
     protected abstract void valueIsIndeterminate();
 
-    protected abstract void requestFocus();
+    public abstract void requestFocus();
 
     public void setValueGeneric(Object value) {
         // Should be called (first line) from editors setValue()
-
+//        System.out.println(getPropertyNameText() + " - setValue() to : " + value);
         if (!isUpdateFromModel()) {
             // User updated the value from this editor: nothing to do.
             return;
@@ -312,7 +329,12 @@ public abstract class PropertyEditor extends Editor {
         invalidValueProperty.setValue(false);
         valueProperty.setValue(value);
         resetMenuUpdate(value);
-        cssMenuUpdate();
+//        cssMenuUpdate();
+        if (isRuledByCss()) {
+            addCssVisual();
+        } else {
+            removeCssVisual();
+        }
         if (!(value instanceof String)) {
             return;
         }
@@ -335,9 +357,8 @@ public abstract class PropertyEditor extends Editor {
         } else {
             resetvalueMenuItem.setDisable(false);
         }
-
     }
-    
+
     private void cssMenuUpdate() {
         // "Show css" menu item update
         if (!isRuledByCss()) {
@@ -463,7 +484,7 @@ public abstract class PropertyEditor extends Editor {
             boolean changed = false;
             for (int ii = 0; ii < valueList.size(); ii++) {
                 assert valueProperty.getValue() instanceof List;
-                if (!EditorUtils.valAsStr(valueList.get(ii)).equals(EditorUtils.valAsStr(valuePropertyList.get(ii)))) {
+                if (!valueList.get(ii).equals(valuePropertyList.get(ii))) {
                     changed = true;
                 }
             }
@@ -473,10 +494,12 @@ public abstract class PropertyEditor extends Editor {
         }
     }
 
-    boolean isSimpleValueChanged(Object value) {
-        return ((isIndeterminate())
-                || (value == null) && (valueProperty.getValue() != null))
-                || ((value != null) && !EditorUtils.valAsStr(value).equals(EditorUtils.valAsStr(valueProperty.getValue())));
+    boolean isSimpleValueChanged(Object newVal) {
+        Object oldVal = valueProperty.getValue();
+        if (oldVal == null || newVal == null) {
+            return newVal != oldVal;
+        }
+        return isIndeterminate() || !newVal.equals(oldVal);
     }
 
     public BooleanProperty editingProperty() {
@@ -489,6 +512,10 @@ public abstract class PropertyEditor extends Editor {
 
     public BooleanProperty invalidValueProperty() {
         return invalidValueProperty;
+    }
+
+    public StringProperty navigateRequestProperty() {
+        return navigateRequestProperty;
     }
 
     protected static Node getBindingValueEditor(Node valueEditor, String bindingExp) {
@@ -507,23 +534,24 @@ public abstract class PropertyEditor extends Editor {
     }
 
     private void addCssVisual() {
-        if (!propNameNode.getStyleClass().contains("css-override")) {
+        if (!propNameNode.getStyleClass().contains("css-override")) { //NOI18N
             ImageView iv = new ImageView(cssIcon);
             propName.setGraphic(iv);
-            propName.getStyleClass().add("css-background");
-            propNameNode.getStyleClass().add("css-override");
+            propName.getStyleClass().add("css-background"); //NOI18N
+            propNameNode.getStyleClass().add("css-override"); //NOI18N
             setTooltipText();
 
             // menu
             if (showCssMenuItem == null) {
-                showCssMenuItem = new MenuItem(I18N.getString("inspector.css.showcss"));
+                showCssMenuItem = new MenuItem(I18N.getString("inspector.css.showcss")); //NOI18N
                 showCssMenuItem.setOnAction(new EventHandler<ActionEvent>() {
                     @Override
                     public void handle(ActionEvent e) {
                         assert cssInfo != null;
                         if (cssInfo.isInline()) {
                             // Jump to the "style" property
-                            // TBD
+                            navigateRequestProperty.setValue("style"); //NOI18N
+                            navigateRequestProperty.setValue(null);
                         } else {
                             // Open the css file
                             if (cssInfo.getMainUrl() != null) {
@@ -542,10 +570,10 @@ public abstract class PropertyEditor extends Editor {
     }
 
     private void removeCssVisual() {
-        if (propNameNode.getStyleClass().contains("css-override")) {
+        if (propNameNode.getStyleClass().contains("css-override")) { //NOI18N
             propName.setGraphic(null);
-            propName.getStyleClass().remove("css-background");
-            propNameNode.getStyleClass().remove("css-override");
+            propName.getStyleClass().remove("css-background"); //NOI18N
+            propNameNode.getStyleClass().remove("css-override"); //NOI18N
             setTooltipText();
         }
         cssMenuUpdate();
@@ -601,8 +629,8 @@ public abstract class PropertyEditor extends Editor {
         alertDialog.setShowDefaultButton(true);
         alertDialog.setCancelButtonTitle(I18N.getString("inspector.error.cancel"));
 
-        // Temp for debug
-        Thread.dumpStack();
+//        // Temp for debug
+//        Thread.dumpStack();
         ButtonID buttonClicked = alertDialog.showAndWait();
         if (buttonClicked == ButtonID.OK) {
             setValue(valueProperty().getValue());
@@ -652,22 +680,6 @@ public abstract class PropertyEditor extends Editor {
         } else {
             tooltip.setText(getPropertyName().getName()); //NOI18N
         }
-    }
-
-    public static void setEmptyPromptText(Control control) {
-        if (control instanceof TextInputControl) {
-            setEmptyPromptText((TextInputControl) control);
-        } else if (control instanceof ComboBoxBase) {
-            setEmptyPromptText((ComboBoxBase) control);
-        }
-    }
-
-    public static void setEmptyPromptText(TextInputControl tic) {
-        tic.setPromptText(I18N.getString("inspector.editors.prompttext.empty"));
-    }
-
-    public static void setEmptyPromptText(ComboBoxBase<?> cbb) {
-        cbb.setPromptText(I18N.getString("inspector.editors.prompttext.empty"));
     }
 
     protected static void handleIndeterminate(Node node) {

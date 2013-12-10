@@ -382,88 +382,93 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
                         } else {
                             final HierarchyItem item = treeItem.getValue();
                             assert item != null;
-                            assert item.isPlaceHolder() == false;
 
-                            // REORDERING :
-                            // To avoid visual movement of the horizontal border when
-                            // dragging from one cell to another,
-                            // we always set the border on the cell bottom location :
-                            // - if we handle REORDER BELOW gesture, just set the bottom 
-                            // border on the current cell
-                            // - if we handle REORDER ABOVE gesture, we set the bottom 
-                            // border on the previous cell
-                            //
-                            switch (location) {
+                            if (item.isPlaceHolder()) {
+                                // The place holder item is filled with a container
+                                // accepting sub components
+                                HierarchyTreeCell.this.getStyleClass().add(CELL_BORDER_TOP_RIGHT_BOTTOM_LEFT);
+                            } else {
+                                // REORDERING :
+                                // To avoid visual movement of the horizontal border when
+                                // dragging from one cell to another,
+                                // we always set the border on the cell bottom location :
+                                // - if we handle REORDER BELOW gesture, just set the bottom 
+                                // border on the current cell
+                                // - if we handle REORDER ABOVE gesture, we set the bottom 
+                                // border on the previous cell
+                                //
+                                switch (location) {
 
-                                // REORDER ABOVE gesture
-                                case TOP:
-                                    if (treeItem == rootTreeItem) {
-                                        HierarchyTreeCell.this.getStyleClass().add(CELL_BORDER_TOP_RIGHT_BOTTOM_LEFT);
-                                    } else {
-                                        final int index = getIndex();
+                                    // REORDER ABOVE gesture
+                                    case TOP:
+                                        if (treeItem == rootTreeItem) {
+                                            HierarchyTreeCell.this.getStyleClass().add(CELL_BORDER_TOP_RIGHT_BOTTOM_LEFT);
+                                        } else {
+                                            final int index = getIndex();
                                         // Retrieve the previous cell
-                                        // Note : we set the border on the bottom of the previous cell 
-                                        // instead of using the top of the current cell in order to avoid
-                                        // visual gap when DND from one cell to another
-                                        final TreeCell<?> previousCell
-                                                = HierarchyTreeViewUtils.getTreeCell(getTreeView(), index - 1);
-                                        // The previous cell is null when the item is not visible
-                                        if (previousCell != null) {
-                                            previousCell.getStyleClass().add(CELL_BORDER_BOTTOM);
+                                            // Note : we set the border on the bottom of the previous cell 
+                                            // instead of using the top of the current cell in order to avoid
+                                            // visual gap when DND from one cell to another
+                                            final TreeCell<?> previousCell
+                                                    = HierarchyTreeViewUtils.getTreeCell(getTreeView(), index - 1);
+                                            // The previous cell is null when the item is not visible
+                                            if (previousCell != null) {
+                                                previousCell.getStyleClass().add(CELL_BORDER_BOTTOM);
+                                            }
+
+                                            // Update vertical insert line
+                                            startTreeItem = panelController.lookupTreeItem(dropTarget.getTargetObject());
+                                            startCell = HierarchyTreeViewUtils.getTreeCell(getTreeView(), startTreeItem);
+                                            stopCell = previousCell;
+                                            updateInsertLineIndicator(startCell, stopCell);
+                                            panelController.addToPanelControlSkin(insertLineIndicator);
                                         }
+                                        break;
 
-                                        // Update vertical insert line
-                                        startTreeItem = panelController.lookupTreeItem(dropTarget.getTargetObject());
-                                        startCell = HierarchyTreeViewUtils.getTreeCell(getTreeView(), startTreeItem);
-                                        stopCell = previousCell;
-                                        updateInsertLineIndicator(startCell, stopCell);
-                                        panelController.addToPanelControlSkin(insertLineIndicator);
-                                    }
-                                    break;
+                                    // REPARENT gesture
+                                    case CENTER:
+                                        if (treeItem.isLeaf() || !treeItem.isExpanded()) {
+                                            HierarchyTreeCell.this.getStyleClass().add(CELL_BORDER_TOP_RIGHT_BOTTOM_LEFT);
+                                        } else {
+                                            // Reparent to the treeItem as last child
+                                            final TreeItem<?> lastTreeItem = panelController.getLastVisibleTreeItem(treeItem);
+                                            final TreeCell<?> lastCell = HierarchyTreeViewUtils.getTreeCell(getTreeView(), lastTreeItem);
+                                            // Last cell is null when the item is not visible
+                                            if (lastCell != null) {
+                                                lastCell.getStyleClass().add(CELL_BORDER_BOTTOM);
+                                            }
 
-                                // REPARENT gesture
-                                case CENTER:
-                                    if (treeItem.isLeaf() || !treeItem.isExpanded()) {
-                                        HierarchyTreeCell.this.getStyleClass().add(CELL_BORDER_TOP_RIGHT_BOTTOM_LEFT);
-                                    } else {
-                                        // Reparent to the treeItem as last child
-                                        final TreeItem<?> lastTreeItem = panelController.getLastVisibleTreeItem(treeItem);
-                                        final TreeCell<?> lastCell = HierarchyTreeViewUtils.getTreeCell(getTreeView(), lastTreeItem);
-                                        // Last cell is null when the item is not visible
-                                        if (lastCell != null) {
-                                            lastCell.getStyleClass().add(CELL_BORDER_BOTTOM);
+                                            // Update vertical insert line
+                                            startTreeItem = getTreeItem();
+                                            startCell = HierarchyTreeViewUtils.getTreeCell(getTreeView(), startTreeItem);
+                                            stopCell = lastCell;
+                                            updateInsertLineIndicator(startCell, stopCell);
+                                            panelController.addToPanelControlSkin(insertLineIndicator);
                                         }
+                                        break;
 
-                                        // Update vertical insert line
-                                        startTreeItem = getTreeItem();
-                                        startCell = HierarchyTreeViewUtils.getTreeCell(getTreeView(), startTreeItem);
-                                        stopCell = lastCell;
-                                        updateInsertLineIndicator(startCell, stopCell);
-                                        panelController.addToPanelControlSkin(insertLineIndicator);
-                                    }
-                                    break;
+                                    // REORDER BELOW gesture
+                                    case BOTTOM:
+                                        if (treeItem == rootTreeItem
+                                                && (treeItem.isLeaf() || !treeItem.isExpanded())) {
+                                            HierarchyTreeCell.this.getStyleClass().add(CELL_BORDER_TOP_RIGHT_BOTTOM_LEFT);
+                                        } else {
+                                            // Reparent to the treeItem as first child
+                                            HierarchyTreeCell.this.getStyleClass().add(CELL_BORDER_BOTTOM);
 
-                                // REORDER BELOW gesture
-                                case BOTTOM:
-                                    if (treeItem == rootTreeItem
-                                            && (treeItem.isLeaf() || !treeItem.isExpanded())) {
-                                        HierarchyTreeCell.this.getStyleClass().add(CELL_BORDER_TOP_RIGHT_BOTTOM_LEFT);
-                                    } else {
-                                        // Reparent to the treeItem as first child
-                                        HierarchyTreeCell.this.getStyleClass().add(CELL_BORDER_BOTTOM);
+                                            // Update vertical insert line
+                                            startTreeItem = panelController.lookupTreeItem(dropTarget.getTargetObject());
+                                            startCell = HierarchyTreeViewUtils.getTreeCell(getTreeView(), startTreeItem);
+                                            stopCell = HierarchyTreeCell.this;
+                                            updateInsertLineIndicator(startCell, stopCell);
+                                            panelController.addToPanelControlSkin(insertLineIndicator);
+                                        }
+                                        break;
 
-                                        // Update vertical insert line
-                                        startTreeItem = panelController.lookupTreeItem(dropTarget.getTargetObject());
-                                        startCell = HierarchyTreeViewUtils.getTreeCell(getTreeView(), startTreeItem);
-                                        stopCell = HierarchyTreeCell.this;
-                                        updateInsertLineIndicator(startCell, stopCell);
-                                        panelController.addToPanelControlSkin(insertLineIndicator);
-                                    }
-                                    break;
-
-                                default:
-                                    assert false;
-                                    break;
+                                    default:
+                                        assert false;
+                                        break;
+                                }
                             }
                         }
                     }

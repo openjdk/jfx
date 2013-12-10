@@ -194,7 +194,7 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
      * Public
      */
     public AbstractHierarchyPanelController(URL fxmlURL, EditorController editorController) {
-        super(fxmlURL, editorController);
+        super(fxmlURL, I18N.getBundle(), editorController);
         promptLabel.getStyleClass().add("hierarchy-prompt-label");
     }
 

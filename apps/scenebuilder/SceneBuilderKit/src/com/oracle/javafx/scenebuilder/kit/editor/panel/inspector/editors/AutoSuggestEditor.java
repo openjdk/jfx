@@ -53,6 +53,8 @@ import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 
 /**
  * Abstract editor that provide a text field with an auto-suggest popup.
@@ -110,18 +112,19 @@ public abstract class AutoSuggestEditor extends PropertyEditor {
     private void preInit(List<String> suggestedList) {
         this.suggestedList = suggestedList;
         if (type == Type.ALPHA) {
-            root = EditorUtils.loadFxml("StringAutoSuggestEditor.fxml", this);
+            root = EditorUtils.loadFxml("StringAutoSuggestEditor.fxml", this); //NOI18N
             assert textField != null;
             entryField = textField;
         } else if (type == Type.DOUBLE) {
-            root = EditorUtils.loadFxml("DoubleAutoSuggestEditor.fxml", this);
+            root = EditorUtils.loadFxml("DoubleAutoSuggestEditor.fxml", this); //NOI18N
             entryField = doubleField;
         } else {
             assert type == Type.INTEGER;
-            root = EditorUtils.loadFxml("IntegerAutoSuggestEditor.fxml", this);
+            root = EditorUtils.loadFxml("IntegerAutoSuggestEditor.fxml", this); //NOI18N
             entryField = integerField;
         }
 
+        HBox.setHgrow(root, Priority.ALWAYS);
         initialize();
     }
 
@@ -166,7 +169,7 @@ public abstract class AutoSuggestEditor extends PropertyEditor {
 
         if (value == null) {
             // Should be set to null, but need a global work on the "null handling"
-            entryField.setText("");
+            entryField.setText(""); //NOI18N
         } else {
             assert value instanceof String;
             entryField.setText((String) value); //NOI18N
@@ -179,7 +182,7 @@ public abstract class AutoSuggestEditor extends PropertyEditor {
     }
 
     @Override
-    protected void requestFocus() {
+    public void requestFocus() {
         EditorUtils.doNextFrame(new Runnable() {
 
             @Override

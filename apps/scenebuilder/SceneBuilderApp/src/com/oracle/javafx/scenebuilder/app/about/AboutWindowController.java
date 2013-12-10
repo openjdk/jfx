@@ -170,4 +170,12 @@ public final class AboutWindowController extends AbstractFxmlWindowController {
     public String getBuildJavaVersion() {
         return sbBuildJavaVersion;
     }
+    
+    /**
+     *
+     * @treatAsPrivate
+     */
+    public String getBuildInfo() {
+        return sbBuildInfo;
+    }
 }

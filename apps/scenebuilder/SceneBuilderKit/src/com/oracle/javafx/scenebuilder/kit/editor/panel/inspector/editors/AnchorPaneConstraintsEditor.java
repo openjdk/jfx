@@ -339,7 +339,7 @@ public class AnchorPaneConstraintsEditor extends PropertiesEditor {
         }
 
         @Override
-        protected void requestFocus() {
+        public void requestFocus() {
             EditorUtils.doNextFrame(new Runnable() {
 
                 @Override

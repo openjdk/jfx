@@ -35,7 +35,9 @@ import com.oracle.javafx.scenebuilder.app.DocumentWindowController.ActionStatus;
 import com.oracle.javafx.scenebuilder.app.about.AboutWindowController;
 import com.oracle.javafx.scenebuilder.app.i18n.I18N;
 import com.oracle.javafx.scenebuilder.app.menubar.MenuBarController;
-import com.oracle.javafx.scenebuilder.app.preferences.PreferencesDialogController;
+import com.oracle.javafx.scenebuilder.app.preferences.PreferencesController;
+import com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal;
+import com.oracle.javafx.scenebuilder.app.preferences.PreferencesWindowController;
 import com.oracle.javafx.scenebuilder.app.template.FxmlTemplates;
 import com.oracle.javafx.scenebuilder.app.template.TemplateDialogController;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
@@ -64,8 +66,9 @@ import javafx.stage.Stage;
  *
  */
 public class SceneBuilderApp extends Application implements AppPlatform.AppNotificationHandler {
-    
+
     public enum ApplicationControlAction {
+
         ABOUT,
         NEW_FILE,
         NEW_ALERT_DIALOG,
@@ -85,14 +88,14 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
 
     private static SceneBuilderApp singleton;
     private final List<DocumentWindowController> windowList = new ArrayList<>();
-    private final PreferencesDialogController preferencesDialogController
-            = new PreferencesDialogController();
-    private final AboutWindowController aboutWindowController 
+    private final PreferencesWindowController preferencesWindowController
+            = new PreferencesWindowController();
+    private final AboutWindowController aboutWindowController
             = new AboutWindowController();
     private UserLibrary userLibrary;
     private MenuBarController defaultSystemMenuBarController; // Mac only
     private File nextInitialDirectory;
-    
+
 
     /*
      * Public
@@ -102,11 +105,11 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
     }
 
     public void performControlAction(ApplicationControlAction a, DocumentWindowController source) {
-        switch(a) {
+        switch (a) {
             case ABOUT:
                 aboutWindowController.openWindow();
                 break;
-                
+
             case NEW_FILE:
                 final DocumentWindowController newWindow = makeNewWindow();
                 newWindow.loadWithDefaultContent();
@@ -131,21 +134,32 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
             case OPEN_FILE:
                 performOpenFile(source);
                 break;
-                
+
             case CLOSE_FRONT_WINDOW:
                 performCloseFrontWindow();
                 break;
-                
+
             case SHOW_PREFERENCES:
-                preferencesDialogController.showAndWait();
+                preferencesWindowController.openWindow();
                 break;
-            
+
             case EXIT:
                 performExit();
                 break;
         }
     }
-    
+
+    public void performOpenRecent(DocumentWindowController source, final File fxmlFile) {
+        assert fxmlFile != null && fxmlFile.exists();
+
+        final List<File> fxmlFiles = new ArrayList<>();
+        fxmlFiles.add(fxmlFile);
+        performOpenFiles(fxmlFiles, source);
+        // Update recent items
+        final PreferencesController pc = PreferencesController.getSingleton();
+        final PreferencesRecordGlobal recordGlobal = pc.getRecordGlobal();
+        recordGlobal.addRecentItems(fxmlFiles);
+    }
 
     public void documentWindowRequestClose(DocumentWindowController fromWindow) {
         closeWindow(fromWindow);
@@ -154,14 +168,14 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
     public UserLibrary getUserLibrary() {
         return userLibrary;
     }
-    
+
     public List<DocumentWindowController> getDocumentWindowControllers() {
         return Collections.unmodifiableList(windowList);
     }
-    
+
     public DocumentWindowController lookupDocumentWindowControllers(URL fxmlLocation) {
         assert fxmlLocation != null;
-        
+
         DocumentWindowController result = null;
         try {
             final URI fxmlURI = fxmlLocation.toURI();
@@ -172,47 +186,46 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
                     break;
                 }
             }
-        } catch(URISyntaxException x) {
+        } catch (URISyntaxException x) {
             // Should not happen
             throw new RuntimeException("Bug in " + getClass().getSimpleName(), x); //NOI18N
         }
-        
+
         return result;
     }
-    
+
     public void toggleDebugMenu() {
         final boolean visible;
-        
+
         if (windowList.isEmpty()) {
             visible = false;
         } else {
             final DocumentWindowController dwc = windowList.get(0);
             visible = dwc.getMenuBarController().isDebugMenuVisible();
         }
-        
-        for (DocumentWindowController dwc : windowList)  {
+
+        for (DocumentWindowController dwc : windowList) {
             dwc.getMenuBarController().setDebugMenuVisible(!visible);
         }
-        
+
         if (defaultSystemMenuBarController != null) {
             defaultSystemMenuBarController.setDebugMenuVisible(!visible);
         }
     }
-       
+
     public void updateNextInitialDirectory(File chosenFile) {
         assert chosenFile != null;
-        
+
         final Path chosenFolder = chosenFile.toPath().getParent();
         if (chosenFolder != null) {
             nextInitialDirectory = chosenFolder.toFile();
         }
     }
-    
+
     public File getNextInitialDirectory() {
         return nextInitialDirectory;
     }
-    
-    
+
     /*
      * Application
      */
@@ -220,7 +233,7 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
     public void start(Stage stage) throws Exception {
         assert singleton == null;
         singleton = this;
-        
+
         try {
             if (AppPlatform.requestStart(this, getParameters()) == false) {
                 // Start has been denied because another instance is running.
@@ -231,8 +244,8 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
             //      AppPlatform.requestStart() has/will invoke(d) handleLaunch().
             //      start() has now finished its job and should imply return.
             // }
-            
-        } catch(IOException x) {
+
+        } catch (IOException x) {
             final ErrorDialog errorDialog = new ErrorDialog(null);
             errorDialog.setTitle(I18N.getString("alert.title.start"));
             errorDialog.setMessage(I18N.getString("alert.start.failure.message"));
@@ -246,27 +259,26 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
     /*
      * AppPlatform.AppNotificationHandler
      */
-    
     @Override
     public void handleLaunch(List<String> files) {
-        
+
         // On Mac, AppPlatform disables implicit exit.
         // So we need to set a default system menu bar.
         if (Platform.isImplicitExit() == false) {
             defaultSystemMenuBarController = new MenuBarController(null);
             Deprecation.setDefaultSystemMenuBar(defaultSystemMenuBarController.getMenuBar());
         }
-        
+
         // Creates the user library
         userLibrary = new UserLibrary(AppPlatform.getUserLibraryFolder());
         userLibrary.startWatching();
-        
+
         if (files.isEmpty()) {
             // Creates an empty document
             final DocumentWindowController newWindow = makeNewWindow();
             newWindow.loadWithDefaultContent();
             newWindow.openWindow();
-        
+
             // Show ScenicView Tool when the JVM is started with option -Dscenic.
             // NetBeans: set it on [VM Options] line in [Run] category of project's Properties.
             if (System.getProperty("scenic") != null) { //NOI18N
@@ -276,19 +288,23 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
             // Open files passed as arguments by the platform
             handleOpenFilesAction(files);
         }
+
+        // Load java preferences at start time
+        final PreferencesController pc = PreferencesController.getSingleton();
+        final PreferencesRecordGlobal recordGlobal = pc.getRecordGlobal();
+        recordGlobal.readFromJavaPreferences();
     }
 
-    
     @Override
     public void handleOpenFilesAction(List<String> files) {
         assert files != null;
         assert files.isEmpty() == false;
-        
+
         final List<File> fileObjs = new ArrayList<>();
         for (String file : files) {
             fileObjs.add(new File(file));
         }
-        
+
         performOpenFiles(fileObjs, null);
     }
 
@@ -304,10 +320,32 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
 
     @Override
     public void handleQuitAction() {
-        performControlAction(ApplicationControlAction.EXIT, null);
+
+        /*
+         * Note : this callback is called on Mac OS X only when the user
+         * selects the 'Quit App' command in the Application menu.
+         * 
+         * Before calling this callback, FX automatically sends a close event
+         * to each open window ie DocumentWindowController.performCloseAction()
+         * is invoked for each open window.
+         * 
+         * When we arrive here, windowList is empty if the user has confirmed
+         * the close operation for each window : thus exit operation can
+         * be performed. If windowList is not empty,  this means the user has 
+         * cancelled at least one close operation : in that case, exit operation
+         * should be not be executed.
+         */
+        if (windowList.isEmpty()) {
+
+            // Write java preferences at quit time
+            final PreferencesController pc = PreferencesController.getSingleton();
+            final PreferencesRecordGlobal recordGlobal = pc.getRecordGlobal();
+            recordGlobal.writeToJavaPreferences();
+
+            Platform.exit();
+        }
     }
 
-    
     /**
      * Ignored in correctly deployed JavaFX application.
      */
@@ -318,7 +356,6 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
     /*
      * Private
      */
-    
     public DocumentWindowController makeNewWindow() {
         final DocumentWindowController result = new DocumentWindowController();
         windowList.add(result);
@@ -330,16 +367,14 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
         windowList.remove(w);
         w.closeWindow();
     }
-    
+
     private static String displayName(String pathString) {
         return Paths.get(pathString).getFileName().toString();
     }
-    
-    
+
     /*
      * Private (control actions)
      */
-    
     private void performOpenFile(DocumentWindowController fromWindow) {
         final FileChooser fileChooser = new FileChooser();
 
@@ -353,9 +388,13 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
             assert fxmlFiles.isEmpty() == false;
             updateNextInitialDirectory(fxmlFiles.get(0));
             performOpenFiles(fxmlFiles, fromWindow);
+            // Update recent items
+            final PreferencesController pc = PreferencesController.getSingleton();
+            final PreferencesRecordGlobal recordGlobal = pc.getRecordGlobal();
+            recordGlobal.addRecentItems(fxmlFiles);
         }
     }
-    
+
     private void performNewTemplate(ApplicationControlAction action) {
         final DocumentWindowController newTemplateWindow = makeNewWindow();
         final URL url = FxmlTemplates.getContentURL(action);
@@ -367,13 +406,12 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
         final TemplateDialogController tdc = new TemplateDialogController(action);
         tdc.openWindow();
     }
-    
+
     private void performCloseFrontWindow() {
-        if (preferencesDialogController != null 
-                && preferencesDialogController.getStage().isFocused()) {
-            preferencesDialogController.closeWindow();
-        }
-        else {
+        if (preferencesWindowController != null
+                && preferencesWindowController.getStage().isFocused()) {
+            preferencesWindowController.closeWindow();
+        } else {
             for (DocumentWindowController dwc : windowList) {
                 if (dwc.isFrontDocumentWindow()) {
                     dwc.performCloseFrontDocumentWindow();
@@ -382,13 +420,12 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
             }
         }
     }
-    
-    
-    private void performOpenFiles(List<File> fxmlFiles, 
+
+    private void performOpenFiles(List<File> fxmlFiles,
             DocumentWindowController fromWindow) {
         assert fxmlFiles != null;
         assert fxmlFiles.isEmpty() == false;
-        
+
         final Map<File, IOException> exceptions = new HashMap<>();
         for (File fxmlFile : fxmlFiles) {
             try {
@@ -412,8 +449,8 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
                 exceptions.put(fxmlFile, xx);
             }
         }
-        
-        switch(exceptions.size()) {
+
+        switch (exceptions.size()) {
             case 0: { // Good
                 break;
             }
@@ -446,10 +483,9 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
             }
         }
     }
-    
-    
+
     private void performExit() {
-        
+
         // Collects the documents with pending changes
         final List<DocumentWindowController> pendingDocs = new ArrayList<>();
         for (DocumentWindowController dwc : windowList) {
@@ -458,32 +494,32 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
                 pendingDocs.add(dwc);
             }
         }
-        
+
         // Notifies the user if some documents are dirty
         final boolean exitConfirmed;
-        switch(pendingDocs.size()) {
+        switch (pendingDocs.size()) {
             case 0: {
                 exitConfirmed = true;
                 break;
             }
-            
+
             case 1: {
                 final DocumentWindowController dwc0 = pendingDocs.get(0);
                 exitConfirmed = dwc0.performCloseAction() == ActionStatus.DONE;
                 break;
             }
-            
+
             default: {
                 assert pendingDocs.size() >= 2;
-                
+
                 final AlertDialog d = new AlertDialog(null);
                 d.setMessage(I18N.getString("alert.review.question.message", pendingDocs.size()));
                 d.setDetails(I18N.getString("alert.review.question.details"));
                 d.setOKButtonTitle(I18N.getString("label.review.changes"));
                 d.setActionButtonTitle(I18N.getString("label.discard.changes"));
                 d.setActionButtonVisible(true);
-            
-                switch(d.showAndWait()) {
+
+                switch (d.showAndWait()) {
                     default:
                     case OK: { // Review
                         int i = 0;
@@ -506,7 +542,7 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
                 break;
             }
         }
-        
+
         // Exit if confirmed
         if (exitConfirmed) {
             for (DocumentWindowController dwc : new ArrayList<>(windowList)) {

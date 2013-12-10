@@ -74,7 +74,7 @@ public class SelectionBarController extends AbstractFxmlPanelController {
     private final Image warningBadgeImage;
 
     public SelectionBarController(EditorController editorController) {
-        super(SelectionBarController.class.getResource("SelectionBar.fxml"), editorController); //NOI18N
+        super(SelectionBarController.class.getResource("SelectionBar.fxml"), I18N.getBundle(), editorController); //NOI18N
 
         // Initialize selection chevron image
         final URL selectionChevronURL = SelectionBarController.class.getResource("selection-chevron.png"); //NOI18N

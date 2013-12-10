@@ -33,7 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.popupeditors;
 
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.ColorEncoder;
-import com.oracle.javafx.scenebuilder.kit.util.control.painteditor.PaintEditor;
+import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker;
 import java.util.Set;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -49,25 +49,23 @@ import javafx.scene.shape.Rectangle;
  */
 public class PaintPopupEditor extends PopupEditor {
 
-    private final PaintEditor paintEditor = new PaintEditor();
+    private final PaintPicker paintEditor = new PaintPicker();
+    private final Rectangle graphic = new Rectangle(20, 10);
+
+    private final ChangeListener<Paint> paintChangeListener = new ChangeListener<Paint>() {
+        @Override
+        public void changed(ObservableValue<? extends Paint> ov, Paint oldValue, Paint newValue) {
+            commitValue(newValue, getValueAsString());
+            displayValueAsString(getValueAsString());
+            graphic.setFill(newValue);
+        }
+    };
 
     @SuppressWarnings("LeakingThisInConstructor")
     public PaintPopupEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
         plugEditor(this, paintEditor);
-        
-        final Rectangle graphic = new Rectangle(20, 10);
         popupMb.setGraphic(graphic);
-
-        paintEditor.paintProperty().addListener(new ChangeListener<Paint>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Paint> ov, Paint oldValue, Paint newValue) {
-                commitValue(newValue, getValueAsString());
-                displayValueAsString(getValueAsString());
-                graphic.setFill(newValue);
-            }
-        });
     }
 
     @Override
@@ -78,15 +76,20 @@ public class PaintPopupEditor extends PopupEditor {
 //            assert value instanceof Paint;
 //            paintEditor.setPaintProperty((Paint) value);
 //        }
-        paintEditor.setPaintProperty((Paint) value);
+        assert value instanceof Paint;
+        final Paint paint = (Paint) value;
+        paintEditor.paintProperty().removeListener(paintChangeListener);
+        paintEditor.setPaintProperty(paint);
+        paintEditor.paintProperty().addListener(paintChangeListener);
         // Update the menu button string
         displayValueAsString(getValueAsString());
+        graphic.setFill(paint);
     }
 
     @Override
     public void resetPopupContent() {
-//        paintEditor.setPaintProperty(Color.WHITE);
-        paintEditor.setPaintProperty(null);
+//        paintEditor.setPaintProperty(null);
+        paintEditor.reset();
     }
 
     private String getValueAsString() {

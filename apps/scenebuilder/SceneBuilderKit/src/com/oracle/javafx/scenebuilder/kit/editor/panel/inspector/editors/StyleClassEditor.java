@@ -142,7 +142,7 @@ public class StyleClassEditor extends InlineListEditor {
     }
 
     @Override
-    protected void requestFocus() {
+    public void requestFocus() {
         EditorItem firstItem = getEditorItems().get(0);
         assert firstItem instanceof StyleClassItem;
         ((StyleClassItem) firstItem).requestFocus();

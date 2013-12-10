@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.app.message;
 
+import com.oracle.javafx.scenebuilder.app.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.messagelog.MessageLogEntry;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractFxmlPanelController;
@@ -72,7 +73,7 @@ public class MessageBarController extends AbstractFxmlPanelController {
     private final ImageView alertImage;
 
     public MessageBarController(EditorController editorController) {
-        super(MessageBarController.class.getResource("MessageBar.fxml"), editorController); //NOI18N
+        super(MessageBarController.class.getResource("MessageBar.fxml"), I18N.getBundle(), editorController); //NOI18N
 
         // Initialize warning image
         final URL warningURL = MessageBarController.class.getResource("warning.png"); //NOI18N

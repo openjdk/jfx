@@ -31,30 +31,31 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
+
 <?import java.lang.*?>
+<?import java.net.*?>
 <?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox id="StackPane" spacing="7.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
+<VBox id="StackPane" spacing="7.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
   <children>
-    <VBox id="VBox" alignment="CENTER" spacing="0.0">
+    <VBox fx:id="controllerClassVBox" alignment="CENTER" spacing="0.0">
       <children>
-        <Label alignment="CENTER_LEFT" disable="true" maxHeight="-1.0" maxWidth="1.7976931348623157E308" text="Controller Class" />
-        <TextField disable="true" prefWidth="200.0" />
+        <HBox fx:id="controllerAndCogHBox" maxWidth="1.7976931348623157E308" prefHeight="-1.0" prefWidth="-1.0" />
       </children>
     </VBox>
-    <CheckBox disable="true" mnemonicParsing="false" text="Use fx:root" />
+    <CheckBox fx:id="fxrootCheckBox" mnemonicParsing="false" text="%info.label.use.fx.root" />
     <VBox id="VBox" alignment="CENTER" spacing="5.0">
       <children>
-        <Label maxWidth="1.7976931348623157E308" text="Assigned fx:ids" />
+        <Label maxWidth="1.7976931348623157E308" text="%info.label.assigned" />
         <TableView maxHeight="1.7976931348623157E308" VBox.vgrow="ALWAYS">
           <columnResizePolicy>
             <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
           </columnResizePolicy>
           <columns>
-            <TableColumn maxWidth="1.7976931348623157E308" minWidth="10.0" prefWidth="117.0" resizable="true" sortable="true" text="fx:id" fx:id="leftTableColumn" />
-            <TableColumn maxWidth="1.7976931348623157E308" minWidth="30.0" prefWidth="100.0" sortable="true" text="Component" fx:id="rightTableColumn" />
+            <TableColumn fx:id="leftTableColumn" maxWidth="1.7976931348623157E308" minWidth="30.0" prefWidth="-1.0" resizable="true" sortable="true" text="fx:id" />
+            <TableColumn fx:id="rightTableColumn" maxWidth="1.7976931348623157E308" minWidth="100.0" prefWidth="-1.0" sortable="true" text="%info.label.component" />
           </columns>
           <sortOrder>
             <fx:reference source="leftTableColumn" />
@@ -67,4 +68,7 @@
       </VBox.margin>
     </VBox>
   </children>
+  <stylesheets>
+    <URL value="@InfoPanel.css" />
+  </stylesheets>
 </VBox>

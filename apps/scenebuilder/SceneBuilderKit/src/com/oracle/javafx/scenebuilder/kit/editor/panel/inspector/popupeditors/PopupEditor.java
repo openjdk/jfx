@@ -49,18 +49,17 @@ public abstract class PopupEditor extends PropertyEditor implements PopupEditorV
 
     @FXML
     MenuButton popupMb;
-    
+
     @FXML
     Pane editorHost;
-    
+
     private PopupEditor editor;
-    private final Parent root;
     private Object value;
 
     @SuppressWarnings("LeakingThisInConstructor")
     public PopupEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
-        root = EditorUtils.loadPopupFxml("PopupEditor.fxml", this);
+        EditorUtils.loadPopupFxml("PopupEditor.fxml", this);
     }
 
     // Plug the concrete popup editor to the menu button.
@@ -81,6 +80,7 @@ public abstract class PopupEditor extends PropertyEditor implements PopupEditorV
 
     @Override
     public void setValue(Object value) {
+//        System.out.println(getPropertyNameText() + " - setValue() : " + value);
         setValueGeneric(value);
         if (isSetValueDone()) {
             return;
@@ -91,6 +91,7 @@ public abstract class PopupEditor extends PropertyEditor implements PopupEditorV
 
     @Override
     public void reset(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
+//        System.out.println(getPropertyNameText() + " : resetPopupContent()");
         super.reset(propMeta, selectedClasses);
 
         popupMb.setText(null);
@@ -103,8 +104,14 @@ public abstract class PopupEditor extends PropertyEditor implements PopupEditorV
     }
 
     @Override
-    protected void requestFocus() {
-        popupMb.requestFocus();
+    public void requestFocus() {
+        EditorUtils.doNextFrame(new Runnable() {
+
+            @Override
+            public void run() {
+                popupMb.requestFocus();
+            }
+        });
     }
 
     /*
@@ -125,7 +132,7 @@ public abstract class PopupEditor extends PropertyEditor implements PopupEditorV
         // In the meantime, commit it
         commitValue(value, null);
     }
-    
+
     @Override
     public void displayValueAsString(String strValue) {
         popupMb.setText(strValue);

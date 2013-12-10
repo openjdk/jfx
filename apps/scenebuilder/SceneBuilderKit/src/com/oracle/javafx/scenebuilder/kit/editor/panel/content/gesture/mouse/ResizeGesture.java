@@ -43,6 +43,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.resizer.Ab
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.rudder.ResizeRudder;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.guides.ResizingGuideController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.util.CardinalPoint;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.util.RegionRectangle;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.Metadata;
@@ -77,7 +78,7 @@ public class ResizeGesture extends AbstractMouseGesture {
     private AbstractResizer<?> resizer;
     private AbstractRelocater<?> relocater;
     private ResizingGuideController resizingGuideController;
-    private ResizeShadow shadow;
+    private RegionRectangle shadow;
     private boolean snapEnabled;
     private boolean guidesDisabled;
 
@@ -411,7 +412,8 @@ public class ResizeGesture extends AbstractMouseGesture {
     private void showShadow() {
         assert shadow == null;
         
-        shadow = new ResizeShadow();
+        shadow = new RegionRectangle();
+        shadow.getRegion().getStyleClass().add("resize-shadow");
         shadow.setMouseTransparent(true);
         contentPanelController.getRudderLayer().getChildren().add(shadow);
         

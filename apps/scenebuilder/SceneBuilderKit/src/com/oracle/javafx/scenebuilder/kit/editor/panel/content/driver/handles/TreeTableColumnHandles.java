@@ -77,11 +77,16 @@ public class TreeTableColumnHandles extends AbstractGenericHandles<Object> {
     }
 
     @Override
-    public Point2D sceneGraphObjectToDecoration(double x, double y) {
+    public Point2D sceneGraphObjectToScene(double x, double y) {
         final TreeTableView<?> tv = getTreeTableColumn().getTreeTableView();
-        return getRootNode().sceneToLocal(tv.localToScene(x, y));
+        return tv.localToScene(x, y);
     }
 
+    @Override
+    public Point2D sceneToSceneGraphObject(double x, double y) {
+        final TreeTableView<?> tv = getTreeTableColumn().getTreeTableView();
+        return tv.sceneToLocal(x, y);
+    }
 
     @Override
     protected void startListeningToSceneGraphObject() {

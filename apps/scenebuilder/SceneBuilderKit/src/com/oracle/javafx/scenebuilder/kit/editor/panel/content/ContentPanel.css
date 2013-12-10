@@ -165,6 +165,18 @@
     -fx-fill: rgba(0,0,0,0.4);
 }
 
+.gap.hilit {
+    -fx-stroke: rgba(0,0,0,0.4);
+    -fx-stroke-line-cap: butt;
+//  -fx-stroke-width is setup programmatically
+}
+
+.gap.empty {
+    -fx-stroke: rgba(0,0,0,0.4);
+    -fx-stroke-line-cap: butt;
+    -fx-stroke-dash-array: 3 3;
+}
+
 .tray.selected {
     -fx-border-color: rgba(255, 255, 255, 0.4), rgba(0, 0, 0, 1), rgba(255, 255, 255, 0.5);
     -fx-background-color: yellow;

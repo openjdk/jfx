@@ -426,6 +426,20 @@ public abstract class FXOMObject extends FXOMNode {
         return result;
     }
     
+    public boolean isNode() {
+        return sceneGraphObject instanceof Node;
+    }
+    
+    public FXOMObject getClosestNode() {
+        FXOMObject result;
+        
+        result = this;
+        while ((result.isNode() == false) && (result.getParentObject() != null)) {
+            result = result.getParentObject();
+        }
+        
+        return result.isNode() ? result : null;
+    }
     
     public String getFxId() {
         return glueElement.getAttributes().get("fx:id");

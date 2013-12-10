@@ -45,7 +45,9 @@ import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Region;
+import javafx.scene.shape.Line;
 import javafx.scene.shape.Path;
+import javafx.scene.shape.Rectangle;
 
 /**
  *
@@ -59,29 +61,70 @@ class GridPaneMosaic {
     
     private final Group topGroup = new Group();
     private final Path gridPath = new Path();
+    private final Group hgapLinesGroup = new Group();
+    private final Group vgapLinesGroup = new Group();
     private final Group northTrayGroup = new Group();
     private final Group southTrayGroup = new Group();
     private final Group westTrayGroup = new Group();
     private final Group eastTrayGroup = new Group();
+    private final Rectangle targetCellShadow = new Rectangle();
+    private final Line targetGapShadowV = new Line();
+    private final Line targetGapShadowH= new Line();
     
     private final Quad gridAreaQuad = new Quad();
     private final List<Quad> gridHoleQuads = new ArrayList<>();
 
+    private final String baseStyleClass;
+    private final boolean shouldShowTrays;
+    
     private GridPane gridPane;
+    private int columnCount;
+    private int rowCount;
+    private List<Bounds> cellBounds = new ArrayList<>();
     private final Set<Integer> selectedColumnIndexes = new HashSet<>();
     private final Set<Integer> selectedRowIndexes = new HashSet<>();
+    private int targetColumnIndex = -1;
+    private int targetRowIndex = -1;
+    private int targetGapColumnIndex = -1;
+    private int targetGapRowIndex = -1;
     
-    public GridPaneMosaic() {
+    public GridPaneMosaic(String baseStyleClass, boolean shouldShowTrays) {
+        assert baseStyleClass != null;
+        
+        this.baseStyleClass = baseStyleClass;
+        this.shouldShowTrays = shouldShowTrays;
+        
         final List<Node> topChildren = topGroup.getChildren();
         topChildren.add(gridPath);
+        topChildren.add(hgapLinesGroup);
+        topChildren.add(vgapLinesGroup);
         topChildren.add(northTrayGroup);
         topChildren.add(southTrayGroup);
         topChildren.add(westTrayGroup);
         topChildren.add(eastTrayGroup);
+        topChildren.add(targetCellShadow);
+        topChildren.add(targetGapShadowV);
+        topChildren.add(targetGapShadowH);
         gridAreaQuad.addToPath(gridPath);
         
         gridPath.setMouseTransparent(true);
         gridPath.getStyleClass().add("gap");
+        gridPath.getStyleClass().add(baseStyleClass);
+        
+        targetCellShadow.setMouseTransparent(true);
+        targetCellShadow.getStyleClass().add("gap");
+        targetCellShadow.getStyleClass().add("selected");
+        targetCellShadow.getStyleClass().add(baseStyleClass);
+        
+        targetGapShadowV.setMouseTransparent(true);
+        targetGapShadowV.getStyleClass().add("gap");
+        targetGapShadowV.getStyleClass().add("hilit");
+        targetGapShadowV.getStyleClass().add(baseStyleClass);
+        
+        targetGapShadowH.setMouseTransparent(true);
+        targetGapShadowH.getStyleClass().add("gap");
+        targetGapShadowH.getStyleClass().add("hilit");
+        targetGapShadowH.getStyleClass().add(baseStyleClass);
     }
 
     public Group getTopGroup() {
@@ -108,40 +151,73 @@ class GridPaneMosaic {
         selectedRowIndexes.addAll(indexes);
         update();
     }
+
+    public void setTargetCell(int targetColumnIndex, int targetRowIndex) {
+        assert (targetColumnIndex == -1) == (targetRowIndex == -1);
+        this.targetColumnIndex = targetColumnIndex;
+        this.targetRowIndex = targetRowIndex;
+        this.targetGapColumnIndex = -1;
+        this.targetGapRowIndex = -1;
+        update();
+    }
+    
+    public void setTargetGap(int targetGapColumnIndex, int targetGapRowIndex) {
+        assert (-1 <= targetGapColumnIndex) && (targetGapColumnIndex <= columnCount);
+        assert (-1 <= targetGapRowIndex) && (targetGapRowIndex <= rowCount);
+        
+        this.targetGapColumnIndex = targetGapColumnIndex;
+        this.targetGapRowIndex = targetGapRowIndex;
+        this.targetColumnIndex = -1;
+        this.targetRowIndex = -1;
+        update();
+    }
     
     public void update() {
-        final int columnCount = Deprecation.getGridPaneColumnCount(gridPane);
-        final int rowCount = Deprecation.getGridPaneRowCount(gridPane);
-
-        final int actualColumnCount, actualRowCount;
+        
+        columnCount = Deprecation.getGridPaneColumnCount(gridPane);
+        rowCount = Deprecation.getGridPaneRowCount(gridPane);
         if ((columnCount == 0) || (rowCount == 0)) {
-            actualColumnCount = 0;
-            actualRowCount = 0;
-        } else {
-            actualColumnCount = columnCount;
-            actualRowCount = rowCount;
+            columnCount = rowCount = 0;
+        }
+        this.cellBounds.clear();
+        for (int c = 0; c < columnCount; c++) {
+            for (int r = 0; r < rowCount; r++) {
+                this.cellBounds.add(Deprecation.getGridPaneCellBounds(gridPane, c, r));
+            }
         }
         
         gridAreaQuad.setBounds(gridPane.getLayoutBounds());
-        adjustHoleItems(actualColumnCount, actualRowCount);
-        adjustTrayItems(northTrayGroup.getChildren(), "north", actualColumnCount);
-        adjustTrayItems(southTrayGroup.getChildren(), "south", actualColumnCount);
-        adjustTrayItems(westTrayGroup.getChildren(), "west", actualRowCount);
-        adjustTrayItems(eastTrayGroup.getChildren(), "east", actualRowCount);
+        adjustHoleItems();
+        adjustHGapLines();
+        adjustVGapLines();
+        if (shouldShowTrays) {
+            adjustTrayItems(northTrayGroup.getChildren(), "north", columnCount);
+            adjustTrayItems(southTrayGroup.getChildren(), "south", columnCount);
+            adjustTrayItems(westTrayGroup.getChildren(), "west", rowCount);
+            adjustTrayItems(eastTrayGroup.getChildren(), "east", rowCount);
+        }
         
-        if (actualColumnCount >= 1) {
-            assert actualRowCount >= 1;
+        if (columnCount >= 1) {
+            assert rowCount >= 1;
             
             updateHoleBounds();
-            updateNorthTrayBounds();
-            updateSouthTrayBounds();
-            updateWestTrayBounds();
-            updateEastTrayBounds();
+            updateHGapLines();
+            updateVGapLines();
+            
+            if (shouldShowTrays) {
+                updateNorthTrayBounds();
+                updateSouthTrayBounds();
+                updateWestTrayBounds();
+                updateEastTrayBounds();
 
-            updateSelection(northTrayGroup.getChildren(), selectedColumnIndexes);
-            updateSelection(southTrayGroup.getChildren(), selectedColumnIndexes);
-            updateSelection(westTrayGroup.getChildren(), selectedRowIndexes);
-            updateSelection(eastTrayGroup.getChildren(), selectedRowIndexes);
+                updateSelection(northTrayGroup.getChildren(), selectedColumnIndexes);
+                updateSelection(southTrayGroup.getChildren(), selectedColumnIndexes);
+                updateSelection(westTrayGroup.getChildren(), selectedRowIndexes);
+                updateSelection(eastTrayGroup.getChildren(), selectedRowIndexes);
+            }
+            
+            updateTargetCell();
+            updateTargetGap();
         }
     }
     
@@ -168,8 +244,8 @@ class GridPaneMosaic {
      */
     
     
-    private void adjustHoleItems(int actualColumnCount, int actualRowCount) {
-        final int holeCount = actualColumnCount * actualRowCount;
+    private void adjustHoleItems() {
+        final int holeCount = columnCount * rowCount;
         
         while (gridHoleQuads.size() < holeCount) {
             final Quad holeQuad = new Quad(false /* clockwise */); // Counterclockwise !!
@@ -182,6 +258,48 @@ class GridPaneMosaic {
             gridHoleQuads.remove(cellIndex);
         }
     }
+    
+    
+    private void adjustHGapLines() {
+        final int hgapLineCount;
+        if (gridPane.getHgap() == 0) {
+            hgapLineCount = columnCount-1;
+        } else {
+            hgapLineCount = 0;
+        }
+        final List<Node> children = hgapLinesGroup.getChildren();
+        while (children.size() < hgapLineCount) {
+            children.add(makeGapLine());
+        }
+        while (children.size() > hgapLineCount) {
+            children.remove(0);
+        }
+    }
+    
+    private void adjustVGapLines() {
+        final int vgapLineCount;
+        if (gridPane.getVgap() == 0) {
+            vgapLineCount = rowCount-1;
+        } else {
+            vgapLineCount = 0;
+        }
+        final List<Node> children = vgapLinesGroup.getChildren();
+        while (children.size() < vgapLineCount) {
+            children.add(makeGapLine());
+        }
+        while (children.size() > vgapLineCount) {
+            children.remove(0);
+        }
+    }
+    
+    private Line makeGapLine() {
+        final Line result = new Line();
+        result.getStyleClass().add("gap");
+        result.getStyleClass().add("empty");
+        result.getStyleClass().add(baseStyleClass);
+        return result;
+    }
+    
     
     private void adjustTrayItems(List<Node> trayChildren, String direction, int targetCount) {
         
@@ -199,6 +317,7 @@ class GridPaneMosaic {
         final Label result = new Label();
         result.getStyleClass().add("tray");
         result.getStyleClass().add(direction);
+        result.getStyleClass().add(baseStyleClass);
         result.setText(String.valueOf(num));
         result.setMinWidth(Region.USE_PREF_SIZE);
         result.setMaxWidth(Region.USE_PREF_SIZE);
@@ -210,22 +329,57 @@ class GridPaneMosaic {
     
     
     private void updateHoleBounds() {
-        final int columnCount = Deprecation.getGridPaneColumnCount(gridPane);
-        final int rowCount = Deprecation.getGridPaneRowCount(gridPane);
-        
         for (int c = 0; c < columnCount; c++) {
             for (int r = 0; r < rowCount; r++) {
-                final int holeIndex = c * rowCount + r;
-                final Bounds cb = Deprecation.getGridPaneCellBounds(gridPane, c, r);
-                gridHoleQuads.get(holeIndex).setBounds(cb);
+                final Bounds cb = getCellBounds(c, r);
+                gridHoleQuads.get(getCellIndex(c, r)).setBounds(cb);
             }
+        }
+    }
+    
+    private void updateHGapLines() {
+        final List<Node> children = hgapLinesGroup.getChildren();
+        final int lineCount = children.size();
+        assert (lineCount == 0) || (lineCount == columnCount-1);
+        for (int i = 0; i < lineCount; i++) {
+            final Bounds topLeftCellBounds = getCellBounds(i, 0);
+            final Bounds topRightCellBounds = getCellBounds(i+1, 0);
+            final Bounds bottomLeftCellBounds = getCellBounds(i, rowCount-1);
+            final double startX = (topLeftCellBounds.getMaxX() + topRightCellBounds.getMinX()) / 2.0;
+            final double startY = topLeftCellBounds.getMinY();
+            final double endY = bottomLeftCellBounds.getMaxY();
+            final double snappedX = Math.round(startX) + 0.5;
+            final Line line = (Line) children.get(i);
+            line.setStartX(snappedX);
+            line.setStartY(startY);
+            line.setEndX(snappedX);
+            line.setEndY(endY);
+        }
+    }
+    
+    private void updateVGapLines() {
+        final List<Node> children = vgapLinesGroup.getChildren();
+        final int lineCount = children.size();
+        assert (lineCount == 0) || (lineCount == rowCount-1);
+        for (int i = 0; i < lineCount; i++) {
+            final Bounds topLeftCellBounds = getCellBounds(0, i);
+            final Bounds bottomLeftCellBounds = getCellBounds(0, i+1);
+            final Bounds topRightCellBounds = getCellBounds(columnCount-1, i);
+            final double startX = topLeftCellBounds.getMinX();
+            final double startY = (topLeftCellBounds.getMaxY() + bottomLeftCellBounds.getMinY()) / 2.0;
+            final double endX = topRightCellBounds.getMaxX();
+            final double snappedY = Math.round(startY) + 0.5;
+            final Line line = (Line) children.get(i);
+            line.setStartX(startX);
+            line.setStartY(snappedY);
+            line.setEndX(endX);
+            line.setEndY(snappedY);
         }
     }
     
     
     private void updateNorthTrayBounds() {
         final List<Node> northTrayChildren = northTrayGroup.getChildren();
-        final int columnCount = Deprecation.getGridPaneColumnCount(gridPane);
         assert northTrayChildren.size() == columnCount;
         
         for (int c = 0; c < columnCount; c++) {
@@ -236,7 +390,7 @@ class GridPaneMosaic {
     
     private void updateNorthTrayBounds(int column, Label label) {
         final Bounds gb = gridPane.getLayoutBounds();
-        final Bounds cb = Deprecation.getGridPaneCellBounds(gridPane, column, 0);
+        final Bounds cb = getCellBounds(column, 0);
 
 
         /*
@@ -269,7 +423,6 @@ class GridPaneMosaic {
     
     private void updateSouthTrayBounds() {
         final List<Node> trayChildren = southTrayGroup.getChildren();
-        final int columnCount = Deprecation.getGridPaneColumnCount(gridPane);
         assert trayChildren.size() == columnCount;
         
         for (int c = 0; c < columnCount; c++) {
@@ -280,7 +433,7 @@ class GridPaneMosaic {
     
     private void updateSouthTrayBounds(int column, Label label) {
         final Bounds gb = gridPane.getLayoutBounds();
-        final Bounds cb = Deprecation.getGridPaneCellBounds(gridPane, column, 0);
+        final Bounds cb = getCellBounds(column, 0);
 
 
         /*
@@ -313,7 +466,6 @@ class GridPaneMosaic {
     
     private void updateWestTrayBounds() {
         final List<Node> trayChildren = westTrayGroup.getChildren();
-        final int rowCount = Deprecation.getGridPaneRowCount(gridPane);
         assert trayChildren.size() == rowCount;
         
         for (int r = 0; r < rowCount; r++) {
@@ -324,7 +476,7 @@ class GridPaneMosaic {
     
     private void updateWestTrayBounds(int row, Label label) {
         final Bounds gb = gridPane.getLayoutBounds();
-        final Bounds cb = Deprecation.getGridPaneCellBounds(gridPane, 0,row);
+        final Bounds cb = getCellBounds(0,row);
 
 
         /*
@@ -372,7 +524,6 @@ class GridPaneMosaic {
     
     private void updateEastTrayBounds() {
         final List<Node> trayChildren = eastTrayGroup.getChildren();
-        final int rowCount = Deprecation.getGridPaneRowCount(gridPane);
         assert trayChildren.size() == rowCount;
         
         for (int r = 0; r < rowCount; r++) {
@@ -383,7 +534,7 @@ class GridPaneMosaic {
     
     private void updateEastTrayBounds(int row, Label label) {
         final Bounds gb = gridPane.getLayoutBounds();
-        final Bounds cb = Deprecation.getGridPaneCellBounds(gridPane, 0,row);
+        final Bounds cb = getCellBounds(0,row);
 
 
         /*
@@ -556,4 +707,112 @@ class GridPaneMosaic {
         }
     }
     
+    
+    private void updateTargetCell() {
+        if (targetColumnIndex == -1) {
+            assert targetRowIndex == -1;
+            targetCellShadow.setVisible(false);
+        } else {
+            targetCellShadow.setVisible(true);
+            final Bounds tb = getCellBounds(targetColumnIndex, targetRowIndex);
+            targetCellShadow.setX(tb.getMinX());
+            targetCellShadow.setY(tb.getMinY());
+            targetCellShadow.setWidth(tb.getWidth());
+            targetCellShadow.setHeight(tb.getHeight());
+        }
+    }
+    
+    
+    private Bounds getCellBounds(int c, int r) {
+        final int cellIndex = getCellIndex(c, r);
+        assert cellIndex < cellBounds.size();
+        return cellBounds.get(cellIndex);
+    }
+    
+    private int getCellIndex(int c, int r) {
+        return c * rowCount + r;
+    }
+    
+    
+    private static final double MIN_STROKE_WIDTH = 8;
+    
+    private void updateTargetGap() {
+        
+        /*
+         * targetGapShadowV
+         */
+        if (targetGapColumnIndex == -1) {
+            targetGapShadowV.setVisible(false);
+        } else {
+            targetGapShadowV.setVisible(true);
+            
+            final double startX, startY, endY, strokeWidth;
+            if (targetGapColumnIndex < columnCount) {
+                final Bounds topCellBounds = getCellBounds(targetGapColumnIndex, 0);
+                final Bounds bottomCellBounds = getCellBounds(targetGapColumnIndex, rowCount-1);
+                startY = topCellBounds.getMinY();
+                endY = bottomCellBounds.getMaxY();
+                if (targetGapColumnIndex == 0) {
+                    startX = topCellBounds.getMinX();
+                    strokeWidth = MIN_STROKE_WIDTH;
+                } else {
+                    assert targetGapColumnIndex >= 1;
+                    final Bounds leftTopCellBounds = getCellBounds(targetGapColumnIndex-1, 0);
+                    startX = (leftTopCellBounds.getMaxX() + topCellBounds.getMinX()) / 2.0;
+                    strokeWidth = Math.abs(leftTopCellBounds.getMaxX() - topCellBounds.getMinX());
+                }
+            } else {
+                final Bounds topCellBounds = getCellBounds(columnCount-1, 0);
+                final Bounds bottomCellBounds = getCellBounds(columnCount-1, rowCount-1);
+                startX = topCellBounds.getMaxX();
+                startY = topCellBounds.getMinY();
+                endY = bottomCellBounds.getMaxY();
+                strokeWidth = MIN_STROKE_WIDTH;
+            }
+            targetGapShadowV.setStartX(startX);
+            targetGapShadowV.setStartY(startY);
+            targetGapShadowV.setEndX(startX);
+            targetGapShadowV.setEndY(endY);
+            targetGapShadowV.setStrokeWidth(Math.max(strokeWidth, MIN_STROKE_WIDTH));
+        }
+        
+        /*
+         * targetGapShadowH
+         */
+        if (targetGapRowIndex == -1) {
+            targetGapShadowH.setVisible(false);
+        } else {
+            targetGapShadowH.setVisible(true);
+            
+            final double startX, endX, startY, strokeWidth;
+            if (targetGapRowIndex < rowCount) {
+                final Bounds leftCellBounds = getCellBounds(0, targetGapRowIndex);
+                final Bounds rightCellBounds = getCellBounds(columnCount-1, targetGapRowIndex);
+                startX = leftCellBounds.getMinX();
+                endX = rightCellBounds.getMaxX();
+                if (targetGapRowIndex == 0) {
+                    startY = leftCellBounds.getMinY();
+                    strokeWidth = MIN_STROKE_WIDTH;
+                } else {
+                    assert targetGapRowIndex >= 1;
+                    final Bounds aboveLeftCellBounds = getCellBounds(0, targetGapRowIndex-1);
+                    startY = (aboveLeftCellBounds.getMaxY() + leftCellBounds.getMinY()) / 2.0;
+                    strokeWidth = Math.abs(aboveLeftCellBounds.getMaxY() - leftCellBounds.getMinY());
+                }
+            } else {
+                final Bounds leftCellBounds = getCellBounds(0, rowCount-1);
+                final Bounds rightCellBounds = getCellBounds(columnCount-1, rowCount-1);
+                startX = leftCellBounds.getMinX();
+                endX = rightCellBounds.getMaxX();
+                startY = leftCellBounds.getMaxY();
+                strokeWidth = MIN_STROKE_WIDTH;
+            }
+            targetGapShadowH.setStartX(startX);
+            targetGapShadowH.setStartY(startY);
+            targetGapShadowH.setEndX(endX);
+            targetGapShadowH.setEndY(startY);
+            targetGapShadowH.setStrokeWidth(Math.max(strokeWidth, MIN_STROKE_WIDTH));
+        }
+        
+    }
 }

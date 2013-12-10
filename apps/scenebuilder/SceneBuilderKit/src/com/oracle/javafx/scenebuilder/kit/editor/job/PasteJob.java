@@ -42,6 +42,7 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.ClipboardDecoder;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
+import java.util.ArrayList;
 import java.util.List;
 import javafx.scene.input.Clipboard;
 
@@ -52,9 +53,17 @@ public class PasteJob extends CompositeJob {
 
     public PasteJob(EditorController editorController) {
         super(editorController);
+    }
+
+    /*
+     * CompositeJob
+     */
+    
+    @Override
+    protected List<Job> makeSubJobs() {
+        final List<Job> result = new ArrayList<>();
         
-        
-        final FXOMDocument fxomDocument = editorController.getFxomDocument();
+        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
         if (fxomDocument != null) {
 
             // Retrieve the FXOMObjects from the clipboard
@@ -91,8 +100,8 @@ public class PasteJob extends CompositeJob {
                     final SetDocumentRootJob subJob = new SetDocumentRootJob(
                             newObject0,
                             getEditorController());
-                    addSubJob(subJob);
-                    addSubJob(new UpdateSelectionJob(newObject0, editorController));
+                    result.add(subJob);
+                    result.add(new UpdateSelectionJob(newObject0, getEditorController()));
                 }
             } else {
                 // Build InsertAsSubComponent jobs
@@ -104,17 +113,16 @@ public class PasteJob extends CompositeJob {
                                 targetObject,
                                 targetMask.getSubComponentCount(),
                                 getEditorController());
-                        addSubJob(subJob);
+                        result.add(subJob);
                     }
-                    addSubJob(new UpdateSelectionJob(newObjects, editorController));
+                    result.add(new UpdateSelectionJob(newObjects, getEditorController()));
                 }
             }
         }
+        
+        return result;
     }
 
-    /*
-     * CompositeJob
-     */
     
     @Override
     protected String makeDescription() {

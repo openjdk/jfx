@@ -100,7 +100,13 @@ public class BooleanEditor extends PropertyEditor {
     }
 
     @Override
-    protected void requestFocus() {
-        checkBox.requestFocus();
+    public void requestFocus() {
+        EditorUtils.doNextFrame(new Runnable() {
+
+            @Override
+            public void run() {
+                checkBox.requestFocus();
+            }
+        });
     }
 }

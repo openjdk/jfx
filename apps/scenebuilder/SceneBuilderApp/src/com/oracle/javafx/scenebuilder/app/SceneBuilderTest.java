@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.app;
 
+import com.oracle.javafx.scenebuilder.app.about.AboutWindowController;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.handles.AbstractGenericHandles;
@@ -370,6 +371,19 @@ public class SceneBuilderTest {
         return result;
     }
     
+    /**
+     * Returns the version string.
+     * It has the format 'Version: [major].[minor]-b[ii], Changeset: [someValue]'.
+     * <br>A typical value is 'Version: 2.0-b07, Changeset: 8a5ccd834b5f'.
+     * 
+     * @return a version string. It is never null: in the case something weird
+     * would occur when constructing the proper value then what is returned is
+     * 'UNSET'.
+     */
+    public static String getVersionString() {
+        AboutWindowController awc = new AboutWindowController();
+        return awc.getBuildInfo();
+    }
     
     /*
      * Private
@@ -387,6 +401,7 @@ public class SceneBuilderTest {
         
         return result;
     }
+    
     private static DocumentWindowController lookupWindowController(Scene documentScene) {
         DocumentWindowController result = null;
         

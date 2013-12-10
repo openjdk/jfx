@@ -38,6 +38,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelContr
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import java.util.Objects;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.input.Dragboard;
@@ -58,7 +59,6 @@ public class SelectAndMoveGesture extends AbstractMouseDragGesture {
     private FXOMObject hitObject;
     private double hitSceneX;
     private double hitSceneY;
-    private Node hitNode;
 
     public FXOMObject getHitObject() {
         return hitObject;
@@ -74,10 +74,6 @@ public class SelectAndMoveGesture extends AbstractMouseDragGesture {
 
     public void setHitSceneY(double hitSceneY) {
         this.hitSceneY = hitSceneY;
-    }
-    
-    public void setHitNode(Node hitNode) {
-        this.hitNode = hitNode;
     }
     
     /*
@@ -113,22 +109,28 @@ public class SelectAndMoveGesture extends AbstractMouseDragGesture {
         final boolean extendKeyDown
                 = EditorPlatform.isContinuousSelectKeyDown(e) 
                 || EditorPlatform.isNonContinousSelectKeyDown(e);
+        final Point2D hitPoint
+                = computeHitPoint(hitObject);
         
         if (selection.isSelected(hitObject)) {
             if (extendKeyDown) { // Case C
-                selection.toggleSelection(hitObject);
-            } // else Case A
+                selection.toggleSelection(hitObject, hitPoint);
+            } else { // else Case A
+                if (Objects.equals(hitPoint, selection.getHitPoint()) == false) {
+                    selection.select(hitObject, hitPoint);
+                }
+            }
         } else {
             final FXOMObject ancestor = selection.lookupSelectedAncestor(hitObject);
             if (ancestor == null) {
                 if (extendKeyDown) { // Case D.1
-                    selection.toggleSelection(hitObject);
+                    selection.toggleSelection(hitObject, hitPoint);
                 } else { // Case B.1
-                    selection.select(hitObject);
+                    selection.select(hitObject, hitPoint);
                 }
             } else {
                 if (extendKeyDown) { // Case D.2
-                    selection.toggleSelection(ancestor);
+                    selection.toggleSelection(ancestor, hitPoint);
                 } // else Case B.2
             }
         }
@@ -197,16 +199,12 @@ public class SelectAndMoveGesture extends AbstractMouseDragGesture {
     }
     
     private Point2D computeHitPoint(FXOMObject fxomObject) {
-        final Point2D result;
         
-        if (fxomObject.getSceneGraphObject() instanceof Node) {
-            final Node sceneGraphNode = (Node) fxomObject.getSceneGraphObject();
-            result = sceneGraphNode.sceneToLocal(hitSceneX, hitSceneY);
-        } else {
-            result = Point2D.ZERO;
-        }
-        
-        return result;
+        final FXOMObject nodeObject = fxomObject.getClosestNode();
+        assert nodeObject != null; // At least the root is a Node
+        assert nodeObject.getSceneGraphObject() instanceof Node;
+        final Node sceneGraphNode = (Node) nodeObject.getSceneGraphObject();
+        return sceneGraphNode.sceneToLocal(hitSceneX, hitSceneY);
     }
 
     @Override
@@ -221,7 +219,7 @@ public class SelectAndMoveGesture extends AbstractMouseDragGesture {
                 = EditorPlatform.isContinuousSelectKeyDown(e) 
                 || EditorPlatform.isNonContinousSelectKeyDown(e);
         if (extendKeyDown == false) {
-            selection.select(hitObject);
+            selection.select(hitObject, computeHitPoint(hitObject));
         }
         
         /*

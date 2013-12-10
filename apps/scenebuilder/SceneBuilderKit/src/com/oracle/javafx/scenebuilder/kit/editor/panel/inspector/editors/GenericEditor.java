@@ -41,7 +41,7 @@ import javafx.scene.control.TextField;
 /**
  * Simple editor used when the property type is not (yet) supported.
  *
- * 
+ *
  */
 public class GenericEditor extends PropertyEditor {
 
@@ -89,6 +89,7 @@ public class GenericEditor extends PropertyEditor {
     public void reset(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super.reset(propMeta, selectedClasses);
         textField.setPromptText(null);
+        setDisable(true);
     }
 
     @Override
@@ -97,7 +98,13 @@ public class GenericEditor extends PropertyEditor {
     }
 
     @Override
-    protected void requestFocus() {
-        textField.requestFocus();
+    public void requestFocus() {
+        EditorUtils.doNextFrame(new Runnable() {
+
+            @Override
+            public void run() {
+                textField.requestFocus();
+            }
+        });
     }
 }

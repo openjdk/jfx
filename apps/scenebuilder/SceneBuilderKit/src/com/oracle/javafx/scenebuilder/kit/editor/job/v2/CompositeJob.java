@@ -35,7 +35,6 @@ import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -44,47 +43,36 @@ import java.util.List;
  */
 public abstract class CompositeJob extends Job {
 
-    private final List<Job> subJobs = new ArrayList<>();
-    private boolean shouldRefreshSceneGraph;
-    private boolean shouldUpdateSelection;
+    private final boolean shouldRefreshSceneGraph;
+    private final boolean shouldUpdateSelection;
+    private List<Job> subJobs;
     private String description;
 
     public CompositeJob(EditorController editorController) {
+        this(editorController, true ,true);
+    }
+    
+    public CompositeJob(EditorController editorController, 
+            boolean shouldRefreshSceneGraph, boolean shouldUpdateSelection) {
         super(editorController);
-        this.shouldRefreshSceneGraph = true;
-        this.shouldUpdateSelection = true;
-    }
-    
-    public List<Job> getSubJobs() {
-        return Collections.unmodifiableList(subJobs);
-    }
-    
-    /*
-     * For subclasses
-     */
-    
-    protected void addSubJob(Job subJob) {
-        assert subJob != null;
-        this.subJobs.add(subJob);
-    }
-
-    protected void addSubJobs(List<Job> subJobs) {
-        assert subJobs != null;
-        this.subJobs.addAll(subJobs);
-    }
-    
-    protected void clearSubJobs() {
-        this.subJobs.clear();
-    }
-    
-    protected void setShouldRefreshSceneGraph(boolean shouldRefreshSceneGraph) {
         this.shouldRefreshSceneGraph = shouldRefreshSceneGraph;
-    }
-    
-    protected void setShouldUpdateSelection(boolean shouldUpdateSelection) {
         this.shouldUpdateSelection = shouldUpdateSelection;
     }
     
+    public List<Job> getSubJobs() {
+        if (subJobs == null) {
+            subJobs = makeSubJobs();
+            assert subJobs != null;
+            subJobs = Collections.unmodifiableList(subJobs);
+        }
+        return subJobs;
+    }
+    
+    /*
+     * To be implemented by subclasses
+     */
+    
+    protected abstract List<Job> makeSubJobs();
     protected abstract String makeDescription();
     
     /*
@@ -93,7 +81,7 @@ public abstract class CompositeJob extends Job {
     
     @Override
     public boolean isExecutable() {
-        return subJobs.isEmpty() == false;
+        return getSubJobs().isEmpty() == false;
     }
 
     @Override
@@ -106,7 +94,7 @@ public abstract class CompositeJob extends Job {
         if (shouldRefreshSceneGraph) {
             fxomDocument.beginUpdate();
         }
-        for (Job subJob : subJobs) {
+        for (Job subJob : getSubJobs()) {
             subJob.execute();
         }
         if (shouldRefreshSceneGraph) {
@@ -127,8 +115,8 @@ public abstract class CompositeJob extends Job {
         if (shouldRefreshSceneGraph) {
             fxomDocument.beginUpdate();
         }
-        for (int i = subJobs.size()-1; i >= 0; i--) {
-            subJobs.get(i).undo();
+        for (int i = getSubJobs().size()-1; i >= 0; i--) {
+            getSubJobs().get(i).undo();
         }
         if (shouldRefreshSceneGraph) {
             fxomDocument.endUpdate();
@@ -149,7 +137,7 @@ public abstract class CompositeJob extends Job {
         if (shouldRefreshSceneGraph) {
             fxomDocument.beginUpdate();
         }
-        for (Job subJob : subJobs) {
+        for (Job subJob : getSubJobs()) {
             subJob.redo();
         }
         if (shouldRefreshSceneGraph) {

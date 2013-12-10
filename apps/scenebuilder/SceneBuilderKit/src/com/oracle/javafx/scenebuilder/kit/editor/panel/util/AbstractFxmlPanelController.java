@@ -32,9 +32,9 @@
 package com.oracle.javafx.scenebuilder.kit.editor.panel.util;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import java.io.IOException;
 import java.net.URL;
+import java.util.ResourceBundle;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 
@@ -51,6 +51,7 @@ import javafx.scene.Parent;
 public abstract class AbstractFxmlPanelController extends AbstractPanelController {
     
     private final URL fxmlURL;
+    private final ResourceBundle resources;
     
     /**
      * Base constructor for invocation by the subclasses.
@@ -58,9 +59,10 @@ public abstract class AbstractFxmlPanelController extends AbstractPanelControlle
      * @param fxmlURL the URL of the FXML file to be loaded (cannot be null)
      * @param editorController  the editor controller (cannot be null)
      */
-    protected AbstractFxmlPanelController(URL fxmlURL, EditorController editorController) {
+    protected AbstractFxmlPanelController(URL fxmlURL, ResourceBundle resources, EditorController editorController) {
         super(editorController);
         this.fxmlURL = fxmlURL;
+        this.resources = resources;
         assert fxmlURL != null : "Check the name of the FXML file used by " 
                 + getClass().getSimpleName();
     }
@@ -81,7 +83,7 @@ public abstract class AbstractFxmlPanelController extends AbstractPanelControlle
 
         loader.setController(this);
         loader.setLocation(fxmlURL);
-        loader.setResources(I18N.getBundle());
+        loader.setResources(resources);
         try {
             setPanelRoot((Parent)loader.load());
             controllerDidLoadFxml();

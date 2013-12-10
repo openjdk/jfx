@@ -32,8 +32,7 @@
 package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
-import java.util.Arrays;
-import java.util.List;
+import com.oracle.javafx.scenebuilder.kit.metadata.property.value.EnumerationPropertyMetadata;
 import java.util.Set;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -102,18 +101,24 @@ public class EnumEditor extends PropertyEditor {
     }
 
     private void updateItems() {
-        Class<?> enumClass = getPropertyMeta().getValueClass();
-        assert enumClass.isEnum();
-        List<? extends Object> values = Arrays.asList(enumClass.getEnumConstants());
+        assert getPropertyMeta() instanceof EnumerationPropertyMetadata;
+        final EnumerationPropertyMetadata enumPropMeta 
+                = (EnumerationPropertyMetadata) getPropertyMeta();
         choiceBox.getItems().clear();
-        for (Object val : values) {
+        for (Object val : enumPropMeta.getValidValues()) {
             choiceBox.getItems().add(val.toString());
         }
     }
 
     @Override
-    protected void requestFocus() {
-        choiceBox.requestFocus();
+    public void requestFocus() {
+        EditorUtils.doNextFrame(new Runnable() {
+
+            @Override
+            public void run() {
+                choiceBox.requestFocus();
+            }
+        });
     }
 
 }

@@ -61,7 +61,7 @@ import javafx.scene.layout.StackPane;
 public class StyleEditor extends InlineListEditor {
 
     private List<String> cssProperties;
-    private final Set<Class<?>> selectedClasses;
+    private Set<Class<?>> selectedClasses;
 
     @SuppressWarnings("LeakingThisInConstructor")
     public StyleEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
@@ -157,13 +157,14 @@ public class StyleEditor extends InlineListEditor {
     @Override
     public void reset(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super.reset(propMeta, selectedClasses);
+        this.selectedClasses = selectedClasses;
         cssProperties = null;
         // add an empty item
         addItem(getNewStyleItem());
     }
 
     @Override
-    protected void requestFocus() {
+    public void requestFocus() {
         EditorItem firstItem = getEditorItems().get(0);
         assert firstItem instanceof StyleItem;
         ((StyleItem) firstItem).requestFocus();

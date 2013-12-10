@@ -284,7 +284,7 @@ public class BuiltinLibrary extends Library {
         final StringBuilder sb = new StringBuilder();
         
         /*
-         * <?xml version="1.0" encoding="UTF-8"?>
+         * <?xml version="1.0" encoding="UTF-8"?> //NOI18N
          * 
          * <?import a.b.C?>
          * 
@@ -308,11 +308,11 @@ public class BuiltinLibrary extends Library {
         final StringBuilder sb = new StringBuilder();
         
         /*
-         * <?xml version="1.0" encoding="UTF-8"?>
+         * <?xml version="1.0" encoding="UTF-8"?> //NOI18N
          * 
          * <?import a.b.C?>
          * 
-         * <C prefWidth="pw" prefHeight="ph"/>
+         * <C prefWidth="pw" prefHeight="ph"/> //NOI18N
          */
         
         sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"); //NOI18N
