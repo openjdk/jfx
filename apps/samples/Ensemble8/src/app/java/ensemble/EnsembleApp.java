@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013 Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2013, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -79,7 +79,7 @@ public class EnsembleApp extends Application {
     public static final boolean IS_MAC = OS_NAME.startsWith("Mac");
     public static final boolean PRELOAD_PREVIEW_IMAGES = true;
     public static final boolean SHOW_HIGHLIGHTS = IS_DESKTOP;
-    public static final boolean SHOW_MENU = false;
+    public static final boolean SHOW_MENU = Boolean.getBoolean("ensemble.menu.show");
     public static final boolean SELECT_IOS_THEME = false;
     private static final int TOOL_BAR_BUTTON_SIZE = 30;
     private Scene scene;
@@ -135,23 +135,20 @@ public class EnsembleApp extends Application {
             menuBar = new MenuBar();
             menuBar.setUseSystemMenuBar(true);
             ToggleGroup screenSizeToggle = new ToggleGroup();
-            menuBar.getMenus().add(
-                    MenuBuilder.create()
-                        .text("Screen size")
-                        .items(
-                            screenSizeMenuItem("iPad Landscape", 1024, 768, false, screenSizeToggle),
-                            screenSizeMenuItem("iPad Portrait", 768, 1024, false, screenSizeToggle),
-                            screenSizeMenuItem("Beagleboard", 1024, 600, false, screenSizeToggle),
-                            screenSizeMenuItem("iPad Retina Landscape", 2048, 1536, true, screenSizeToggle),
-                            screenSizeMenuItem("iPad Retina Portrait", 1536, 2048, true, screenSizeToggle),
-                            screenSizeMenuItem("iPhone Landscape", 480, 320, false, screenSizeToggle),
-                            screenSizeMenuItem("iPhone Portrait", 320, 480, false, screenSizeToggle),
-                            screenSizeMenuItem("iPhone 4 Landscape", 960, 640, true, screenSizeToggle),
-                            screenSizeMenuItem("iPhone 4 Portrait", 640, 960, true, screenSizeToggle),
-                            screenSizeMenuItem("iPhone 5 Landscape", 1136, 640, true, screenSizeToggle),
-                            screenSizeMenuItem("iPhone 5 Portrait", 640, 1136, true, screenSizeToggle)
-                        )
-                        .build());
+            Menu menu = new Menu("Screen size");
+            menu.getItems().addAll(
+                    screenSizeMenuItem("iPad Landscape", 1024, 768, false, screenSizeToggle),
+                    screenSizeMenuItem("iPad Portrait", 768, 1024, false, screenSizeToggle),
+                    screenSizeMenuItem("Beagleboard", 1024, 600, false, screenSizeToggle),
+                    screenSizeMenuItem("iPad Retina Landscape", 2048, 1536, true, screenSizeToggle),
+                    screenSizeMenuItem("iPad Retina Portrait", 1536, 2048, true, screenSizeToggle),
+                    screenSizeMenuItem("iPhone Landscape", 480, 320, false, screenSizeToggle),
+                    screenSizeMenuItem("iPhone Portrait", 320, 480, false, screenSizeToggle),
+                    screenSizeMenuItem("iPhone 4 Landscape", 960, 640, true, screenSizeToggle),
+                    screenSizeMenuItem("iPhone 4 Portrait", 640, 960, true, screenSizeToggle),
+                    screenSizeMenuItem("iPhone 5 Landscape", 1136, 640, true, screenSizeToggle),
+                    screenSizeMenuItem("iPhone 5 Portrait", 640, 1136, true, screenSizeToggle));
+            menuBar.getMenus().add(menu);
             screenSizeToggle.selectToggle(screenSizeToggle.getToggles().get(0));
             
             root.getChildren().add(menuBar);
@@ -240,38 +237,37 @@ public class EnsembleApp extends Application {
     }
 
     private RadioMenuItem screenSizeMenuItem(String text, final int width, final int height, final boolean retina, ToggleGroup tg) {
-        return RadioMenuItemBuilder.create()
-                .toggleGroup(tg)
-                .text(text + " " + width + "x" + height)
-                .onAction(new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent t) {
-                        double menuHeight = IS_IOS || IS_MAC ? 0 : menuBar.prefHeight(width);
-                        scene.getWindow().setWidth(width + scene.getWindow().getWidth() - scene.getWidth());
-                        scene.getWindow().setHeight(height + menuHeight + scene.getWindow().getHeight() - scene.getHeight());
-                        if (retina) {
-                            Parent root = scene.getRoot();
-                            if (root instanceof Pane) {
-                                Group newRoot = new Group();
-                                newRoot.setAutoSizeChildren(false);
-                                scene.setRoot(newRoot);
-                                newRoot.getChildren().add(root);
-                                root.getTransforms().add(new Scale(2, 2, 0, 0));
-                                root.resize(width/2, height/2);
-                            } else {
-                                root.getChildrenUnmodifiable().get(0).resize(width/2, height/2);
-                            }
-                        } else {
-                            Parent root = scene.getRoot();
-                            if (root instanceof Group) {
-                                Pane oldRoot = (Pane)root.getChildrenUnmodifiable().get(0);
-                                ((Group)root).getChildren().clear();
-                                oldRoot.getTransforms().clear();
-                                scene.setRoot(oldRoot);
-                            }
-                        }
+        RadioMenuItem radioMenuItem = new RadioMenuItem(text + " " + width + "x" + height);
+        radioMenuItem.setToggleGroup(tg);
+        radioMenuItem.setOnAction(new EventHandler<ActionEvent>() {
+            @Override public void handle(ActionEvent t) {
+                double menuHeight = IS_IOS || IS_MAC ? 0 : menuBar.prefHeight(width);
+                scene.getWindow().setWidth(width + scene.getWindow().getWidth() - scene.getWidth());
+                scene.getWindow().setHeight(height + menuHeight + scene.getWindow().getHeight() - scene.getHeight());
+                if (retina) {
+                    Parent root = scene.getRoot();
+                    if (root instanceof Pane) {
+                        Group newRoot = new Group();
+                        newRoot.setAutoSizeChildren(false);
+                        scene.setRoot(newRoot);
+                        newRoot.getChildren().add(root);
+                        root.getTransforms().add(new Scale(2, 2, 0, 0));
+                        root.resize(width/2, height/2);
+                    } else {
+                        root.getChildrenUnmodifiable().get(0).resize(width/2, height/2);
                     }
-                })
-                .build();
+                } else {
+                    Parent root = scene.getRoot();
+                    if (root instanceof Group) {
+                        Pane oldRoot = (Pane)root.getChildrenUnmodifiable().get(0);
+                        ((Group)root).getChildren().clear();
+                        oldRoot.getTransforms().clear();
+                        scene.setRoot(oldRoot);
+                    }
+                }
+            }
+        });
+        return radioMenuItem;
     }
 
     private void setStylesheets() {
