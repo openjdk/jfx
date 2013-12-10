@@ -35,10 +35,12 @@ import java.util.List;
 import java.util.Map;
 import javafx.collections.FXCollections;
 import javafx.collections.MapChangeListener;
+import javafx.css.CssMetaData;
 import javafx.css.ParsedValue;
 import javafx.css.StyleOrigin;
 import javafx.css.StyleableProperty;
 import javafx.scene.Group;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -50,7 +52,6 @@ import static org.junit.Assert.*;
 import org.junit.Ignore;
 import org.junit.Test;
 
-@Ignore ("Pending RT-34463")
 public class Node_cssStyleMap_Test {
     
     public Node_cssStyleMap_Test() {
@@ -98,7 +99,7 @@ public class Node_cssStyleMap_Test {
         return smap;
     }
     
-    @Test
+    @Test @Ignore ("Pending RT-34463")
     public void testStyleMapTracksChanges() {
                 
         final List<Declaration> declsNoState = new ArrayList<Declaration>();
@@ -203,7 +204,7 @@ public class Node_cssStyleMap_Test {
         
     }
     
-    @Test
+    @Test @Ignore ("Pending RT-34463")
     public void testRT_21212() {
 
         final List<Declaration> rootDecls = new ArrayList<Declaration>();
@@ -293,6 +294,77 @@ public class Node_cssStyleMap_Test {
         assertEquals(18, text.getFont().getSize(),0);
         assertTrue(Integer.toString(expecteds.size()), expecteds.isEmpty());
 
-    } 
-    
+    }
+
+    boolean containsProperty(CssMetaData key, Map<String,List<CascadingStyle>> map) {
+
+        if (map.containsKey(key)) return true;
+        List<CssMetaData> subProperties = key.getSubProperties();
+        if (subProperties != null && !subProperties.isEmpty()) {
+            for (CssMetaData subKey: subProperties) {
+                if (map.containsKey(subKey)) return true;
+            }
+        }
+        return false;
+    }
+
+    @Test
+    public void testRT_34799() {
+
+        Stylesheet stylesheet = new Stylesheet("testRT_34799");
+        stylesheet.setOrigin(StyleOrigin.USER_AGENT);
+
+        final List<Declaration> txtDecls = new ArrayList<Declaration>();
+        Collections.addAll(txtDecls,
+                new Declaration("-fx-fill", new ParsedValueImpl<Color,Color>(Color.RED, null), false)
+        );
+
+        final List<Selector> textSels = new ArrayList<Selector>();
+        Collections.addAll(textSels,
+                Selector.createSelector(".rt-34799")
+        );
+
+        Rule txtRules = new Rule(textSels, txtDecls);
+        stylesheet.getRules().add(txtRules);
+
+        final List<Style> expectedStyles = new ArrayList<>();
+        for (Rule rule : stylesheet.getRules()) {
+            for (Selector selector : rule.getSelectors()) {
+                for (Declaration declaration : rule.getUnobservedDeclarationList()) {
+                    expectedStyles.add(
+                            new Style(selector, declaration)
+                    );
+                }
+            }
+        }
+
+        Text text = new Text("HelloWorld");
+        text.getStyleClass().add("rt-34799");
+
+        Group group = new Group();
+        group.getStyleClass().add("root");
+
+        group.getChildren().add(text);
+
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
+        Scene scene = new Scene(group);
+
+        group.applyCss(); // TODO: force StyleHelper to be created, remove pending RT-34812
+
+        int nExpected = expectedStyles.size();
+        assert(nExpected > 0);
+
+        for(CssMetaData cssMetaData : text.getCssMetaData()) {
+            List<Style> styles = Node.impl_getMatchingStyles(cssMetaData, text);
+            if (styles != null && !styles.isEmpty()) {
+                assertTrue(expectedStyles.containsAll(styles));
+                assertTrue(styles.containsAll(expectedStyles));
+                nExpected -= 1;
+            }
+        }
+
+        assertEquals(nExpected, 0);
+
+    }
+
 }

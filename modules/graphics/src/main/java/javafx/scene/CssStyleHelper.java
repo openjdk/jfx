@@ -2013,6 +2013,7 @@ final class CssStyleHelper {
                 List<CascadingStyle> styles = cascadingStyleMap.get(property);
 
                 if (styles != null) {
+                    styleList.addAll(styles);
                     for (int n=0, nMax=styles.size(); n<nMax; n++) {
                         final CascadingStyle style = styles.get(n);
                         final ParsedValueImpl parsedValue = style.getParsedValueImpl();
