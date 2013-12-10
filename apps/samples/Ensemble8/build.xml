@@ -98,7 +98,7 @@
     	</copy>
     	<replaceregexp
     		file="${build.cssref.dir}/cssref.html"
-    		match="http://download.oracle.com/javafx/2.0/api/license.html"
+    		match="http://docs.oracle.com/javase/7/docs/legal/cpyr.html"
     		replace="http://www.oracle.com/technetwork/java/javase/terms/license/oraclebsd-1603217.txt"
     		byline="true"/>
     </target>
