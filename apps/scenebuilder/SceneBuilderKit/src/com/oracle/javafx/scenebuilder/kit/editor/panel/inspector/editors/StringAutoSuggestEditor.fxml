@@ -41,7 +41,7 @@
 
 <HBox maxWidth="1.7976931348623157E308" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
 <children>
-    <TextField fx:id="textField" maxHeight="22.0" minHeight="22.0" onKeyReleased="#textFieldKeyReleased" onMouseClicked="#textFieldMouseClicked" prefHeight="22.0" prefWidth="300.0">
+    <TextField fx:id="textField" maxHeight="22.0" minHeight="22.0" onKeyReleased="#textFieldKeyReleased" onMouseClicked="#textFieldMouseClicked" prefHeight="22.0" minWidth="100.0" prefWidth="-1.0" maxWidth="1.7976931348623157E308">
       <contextMenu>
         <ContextMenu maxHeight="-1.0">
           <items>

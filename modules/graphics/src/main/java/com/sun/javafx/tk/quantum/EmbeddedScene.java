@@ -271,9 +271,9 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     }
 
     @Override
-    public void inputMethodEvent(EventType<InputMethodEvent> type,
-                                 ObservableList<InputMethodTextRun> composed, String committed,
-                                 int caretPosition) {
+    public void inputMethodEvent(final EventType<InputMethodEvent> type,
+                                 final ObservableList<InputMethodTextRun> composed, final String committed,
+                                 final int caretPosition) {
         Platform.runLater(new Runnable() {
             @Override
             public void run() {

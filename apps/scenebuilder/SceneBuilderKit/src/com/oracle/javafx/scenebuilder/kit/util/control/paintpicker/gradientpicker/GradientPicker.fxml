@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+  All rights reserved. Use is subject to license terms.
+
+  This file is available and licensed under the following license:
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions
+  are met:
+
+  - Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+  - Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in
+    the documentation and/or other materials provided with the distribution.
+  - Neither the name of Oracle Corporation nor the names of its
+    contributors may be used to endorse or promote products derived
+    from this software without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+<?import java.lang.*?>
+<?import java.net.*?>
+<?import java.util.*?>
+<?import javafx.collections.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.paint.*?>
+<?import javafx.scene.shape.*?>
+
+<fx:root type="javafx.scene.layout.VBox" alignment="TOP_CENTER" maxHeight="-1.0" prefHeight="-1.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
+  <children>
+    <StackPane fx:id="slider_container" minHeight="10.0" style="" styleClass="track-background">
+      <children>
+        <Label fx:id="stop_label" styleClass="small-label" text="Click to add stop" StackPane.alignment="TOP_CENTER">
+          <StackPane.margin>
+            <Insets top="2.0" />
+          </StackPane.margin>
+        </Label>
+        <Pane fx:id="track_pane" onMouseDragged="#sliderDragged" onMousePressed="#sliderPressed" style="" />
+      </children>
+      <VBox.margin>
+        <Insets bottom="8.0" fx:id="x2" />
+      </VBox.margin>
+    </StackPane>
+    <GridPane hgap="4.0" maxHeight="-Infinity" maxWidth="-Infinity" vgap="4.0">
+      <children>
+        <StackPane style="" styleClass="gradient-background" GridPane.columnIndex="1" GridPane.rowIndex="1">
+          <children>
+            <Rectangle fx:id="preview_rect" arcHeight="5.0" arcWidth="5.0" fill="DODGERBLUE" height="220.0" stroke="BLACK" strokeType="INSIDE" visible="true" width="220.0" />
+          </children>
+        </StackPane>
+        <StackPane GridPane.columnIndex="1" GridPane.rowIndex="0">
+          <children>
+            <Slider fx:id="centerX_slider" max="1.0" showTickLabels="false" value="0.5" visible="false">
+              <StackPane.margin>
+                <Insets left="15.0" right="15.0" />
+              </StackPane.margin>
+            </Slider>
+            <Slider fx:id="startX_slider" max="1.0" showTickLabels="false" visible="true">
+              <contextMenu>
+                <ContextMenu>
+                  <items>
+                    <CustomMenuItem hideOnClick="false" mnemonicParsing="false" text="">
+                      <content>
+                        <HBox alignment="CENTER_LEFT" spacing="0.0">
+                          <children>
+                            <Label text="startX" />
+                            <TextField prefColumnCount="3" />
+                          </children>
+                        </HBox>
+                      </content>
+                    </CustomMenuItem>
+                  </items>
+                </ContextMenu>
+              </contextMenu>
+            </Slider>
+          </children>
+        </StackPane>
+        <StackPane GridPane.columnIndex="0" GridPane.rowIndex="1">
+          <children>
+            <Slider fx:id="centerY_slider" max="1.0" orientation="VERTICAL" rotate="180.0" value="0.5" visible="false" />
+            <Slider fx:id="startY_slider" max="1.0" orientation="VERTICAL" rotate="180.0" />
+          </children>
+        </StackPane>
+        <Slider fx:id="endY_slider" max="1.0" orientation="VERTICAL" rotate="180.0" value="1.0" GridPane.columnIndex="2" GridPane.rowIndex="1" />
+        <Slider fx:id="endX_slider" max="1.0" value="1.0" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+      </children>
+      <columnConstraints>
+        <ColumnConstraints hgrow="ALWAYS" minWidth="-1.0" prefWidth="-1.0" />
+        <ColumnConstraints hgrow="NEVER" minWidth="-1.0" prefWidth="-1.0" />
+        <ColumnConstraints hgrow="ALWAYS" minWidth="-1.0" prefWidth="-1.0" />
+      </columnConstraints>
+      <rowConstraints>
+        <RowConstraints minHeight="-1.0" prefHeight="-1.0" vgrow="SOMETIMES" />
+        <RowConstraints minHeight="-1.0" prefHeight="-1.0" vgrow="SOMETIMES" />
+        <RowConstraints minHeight="-1.0" prefHeight="-1.0" vgrow="SOMETIMES" />
+      </rowConstraints>
+    </GridPane>
+    <VBox fx:id="shared_container" maxHeight="-1.0" minHeight="10.0" spacing="5.0" VBox.margin="$x2">
+      <children>
+        <GridPane id="GridPane" hgap="4.0" vgap="5.0">
+          <children>
+            <Label text="proportional" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+            <CheckBox fx:id="proportional_checkbox" mnemonicParsing="false" text="" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+            <Label text="cycleMethod" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+            <ChoiceBox fx:id="cycleMethod_choicebox" GridPane.columnIndex="1" GridPane.rowIndex="1">
+              <items>
+                <FXCollections fx:factory="observableArrayList">
+                  <String fx:value="Item 1" />
+                  <String fx:value="Item 2" />
+                  <String fx:value="Item 3" />
+                </FXCollections>
+              </items>
+            </ChoiceBox>
+          </children>
+          <columnConstraints>
+            <ColumnConstraints halignment="RIGHT" hgrow="ALWAYS" minWidth="10.0" percentWidth="40.0" />
+            <ColumnConstraints hgrow="SOMETIMES" minWidth="-1.0" />
+          </columnConstraints>
+          <rowConstraints>
+            <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+            <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+          </rowConstraints>
+        </GridPane>
+      </children>
+    </VBox>
+    <VBox fx:id="radial_container" maxHeight="-1.0" minHeight="10.0" spacing="5.0" />
+  </children>
+  <stylesheets>
+    <URL value="@GradientPicker.css" />
+  </stylesheets>
+</fx:root>

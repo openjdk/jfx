@@ -61,15 +61,15 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 
 /**
- * 
- * Utility classes using css internal classes (from com.sun package).
- * Note that the CSS Analyzer is also using extensively com.sun classes.
- * 
+ *
+ * Utility classes using css internal classes (from com.sun package). Note that
+ * the CSS Analyzer is also using extensively com.sun classes.
+ *
  */
 public class CssInternal {
 
-    private final static URL caspianThemeUrl = Deprecation.getModenaStylesheetURL();
-    private final static URL modenaThemeUrl = Deprecation.getCaspianStylesheetURL();
+    private final static URL caspianThemeUrl = Deprecation.getCaspianStylesheetURL();
+    private final static URL modenaThemeUrl = Deprecation.getModenaStylesheetURL();
 
     /**
      * Check if the input style is from a theme stylesheet (caspian or modena).
@@ -78,10 +78,32 @@ public class CssInternal {
      * @return true if the style is from a theme css.
      */
     public static boolean isThemeStyle(Style style) {
+        return isThemeRule(style.getDeclaration().getRule());
+    }
+
+    public static boolean isCaspianTheme(Style style) {
+        return style.getDeclaration().getRule().getStylesheet().getUrl()
+                .equals(caspianThemeUrl.toString());
+    }
+
+    public static boolean isModenaTheme(Style style) {
+        return style.getDeclaration().getRule().getStylesheet().getUrl()
+                .equals(modenaThemeUrl.toString());
+    }
+
+    public static String getThemeName(Style style) {
+        if (CssInternal.isCaspianTheme(style)) {
+            return "caspian";//NOI18N
+        } else {
+            return "modena";//NOI18N
+        }
+    }
+
+    public static boolean isThemeRule(Rule rule) {
         // With SB 2, we apply explicitly Modena/Caspian theme css.
         // So although their rules appear with an AUTHOR origin, we have to consider them as USER_AGENT.
-        if (style.getDeclaration().getRule().getOrigin() == StyleOrigin.AUTHOR) {
-            String stylePath = style.getDeclaration().getRule().getStylesheet().getUrl();
+        if (rule.getOrigin() == StyleOrigin.AUTHOR) {
+            String stylePath = rule.getStylesheet().getUrl();
             assert stylePath != null;
             if (stylePath.equals(caspianThemeUrl.toString())
                     || stylePath.equals(modenaThemeUrl.toString())) {
@@ -391,4 +413,25 @@ public class CssInternal {
         return ret;
     }
 
+    public static StyleOrigin getOrigin(Style style) {
+        if (style == null || style.getDeclaration() == null) {
+            return null;
+        }
+        return getOrigin(style.getDeclaration().getRule());
+    }
+
+    // Wrapper method that force the origin to be USER_AGENT if this is an Fx theme style.
+    public static StyleOrigin getOrigin(Rule rule) {
+        if (rule == null) {
+            return null;
+        }
+        if (isThemeRule(rule)) {
+            // Force the origin to be USER_AGENT if this is an Fx theme style.
+            return StyleOrigin.USER_AGENT;
+        } else {
+            // Are the 2 lines below equivalent ?
+            // styleOrigin = style.getDeclaration().getRule().getStylesheet().getOrigin();
+            return rule.getOrigin();
+        }
+    }
 }

@@ -47,7 +47,8 @@ import javafx.scene.layout.GridPane;
  */
 public class GridPaneHandles extends AbstractNodeHandles<GridPane> {
     
-    private final GridPaneMosaic mosaic = new GridPaneMosaic();
+    private final GridPaneMosaic mosaic 
+            = new GridPaneMosaic("handles", true /* shouldShowTray */); //NOI18N
     
     public GridPaneHandles(ContentPanelController contentPanelController,
             FXOMInstance fxomInstance) {

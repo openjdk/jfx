@@ -84,7 +84,7 @@ public class IndexSearcher {
         try {
             Query query = parser.parse(searchString);
             final SecondPassGroupingCollector collector = new SecondPassGroupingCollector("documentType", searchGroups,
-                    Sort.RELEVANCE, null, 10, true, false, true); 
+                    Sort.RELEVANCE, Sort.RELEVANCE, 10, true, false, true); 
             searcher.search(query, collector);
             final TopGroups groups = collector.getTopGroups(0);
             for (GroupDocs groupDocs : groups.groups) {

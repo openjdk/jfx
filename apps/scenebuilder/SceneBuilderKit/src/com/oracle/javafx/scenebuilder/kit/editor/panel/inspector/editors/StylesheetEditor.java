@@ -64,7 +64,7 @@ import javafx.stage.FileChooser;
  * Editor of the 'stylesheet' property. It may contain several stylesheets (css)
  * files, that are handled by an inline class (StylesheetItem).
  *
- * 
+ *
  */
 public class StylesheetEditor extends InlineListEditor {
 
@@ -156,10 +156,10 @@ public class StylesheetEditor extends InlineListEditor {
     }
 
     @Override
-    protected void requestFocus() {
+    public void requestFocus() {
         EditorItem firstItem = getEditorItems().get(0);
         assert firstItem instanceof StylesheetItem;
-        ((StylesheetItem)firstItem).requestFocus();
+        ((StylesheetItem) firstItem).requestFocus();
     }
 
     @Override
@@ -374,7 +374,13 @@ public class StylesheetEditor extends InlineListEditor {
         }
 
         protected void requestFocus() {
-            stylesheetTf.requestFocus();
+            EditorUtils.doNextFrame(new Runnable() {
+
+                @Override
+                public void run() {
+                    stylesheetTf.requestFocus();
+                }
+            });
         }
 
         @Override

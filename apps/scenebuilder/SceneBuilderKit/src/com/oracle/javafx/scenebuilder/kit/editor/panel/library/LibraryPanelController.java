@@ -121,7 +121,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
      * @param c the editor controller (never null).
      */
     public LibraryPanelController(EditorController c) {
-        super(LibraryPanelController.class.getResource("LibraryPanel.fxml"), c); //NOI18N
+        super(LibraryPanelController.class.getResource("LibraryPanel.fxml"), I18N.getBundle(), c); //NOI18N
         startListeningToLibrary();
     }
 

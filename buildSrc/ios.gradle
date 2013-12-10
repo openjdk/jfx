@@ -382,6 +382,9 @@ project(":web") {
 
         addNative(project, "webview")
         javahIosWebview.dependsOn(compileWebJavaIos)
+        javahIosWebview.classpath += files(project(":base").sourceSets.main.output.classesDir,
+                             project(":graphics").sourceSets.main.output.classesDir,
+                             project(":controls").sourceSets.main.output.classesDir)
 
         jfxrtIos {
             from ("modules/web/build/classes/ios", "modules/web/build/resources/main");
@@ -466,6 +469,8 @@ project(":extensions") {
     afterEvaluate {
 
         addNative(project, "extensions")
+        javahIosExtensions.classpath += files(project(":base").sourceSets.main.output.classesDir,
+                             project(":graphics").sourceSets.main.output.classesDir)
 
         sdkIos  {
             doLast {

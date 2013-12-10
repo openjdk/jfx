@@ -34,13 +34,14 @@ package com.oracle.javafx.scenebuilder.kit.editor.selection;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup.Type;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
+import javafx.geometry.Point2D;
+import javafx.scene.Node;
 import javafx.scene.layout.GridPane;
 
 /**
@@ -84,10 +85,23 @@ public class Selection {
      * @param fxomObject the object to be selected
      */
     public void select(FXOMObject fxomObject) {
+        assert fxomObject != null;
+        
+        select(fxomObject, null);
+    }
+    
+    /**
+     * Replaces the selected items by the specified fxom object and hit node.
+     * This routine adds +1 to the revision number.
+     * 
+     * @param fxomObject the object to be selected
+     * @param hitPoint null or the point hit by the mouse during selection
+     */
+    public void select(FXOMObject fxomObject, Point2D hitPoint) {
         
         assert fxomObject != null;
         
-        select(new ObjectSelectionGroup(fxomObject));
+        select(new ObjectSelectionGroup(fxomObject, hitPoint));
     }
     
     /**
@@ -97,6 +111,27 @@ public class Selection {
      * @param fxomObjects the objects to be selected
      */
     public void select(Collection<FXOMObject> fxomObjects) {
+        assert fxomObjects != null;
+        
+        final FXOMObject hitObject;
+        if (fxomObjects.isEmpty()) {
+            hitObject = null;
+        } else {
+            hitObject = fxomObjects.iterator().next();
+        }
+        
+        select(fxomObjects, hitObject, null);
+    }
+    
+    /**
+     * Replaces the selected items by the specified fxom objects.
+     * This routine adds +1 to the revision number.
+     * 
+     * @param fxomObjects the objects to be selected
+     * @param hitObject the object hit by the mouse during selection
+     * @param hitPoint null or the point hit by the mouse during selection
+     */
+    public void select(Collection<FXOMObject> fxomObjects, FXOMObject hitObject, Point2D hitPoint) {
         
         assert fxomObjects != null;
         
@@ -104,7 +139,7 @@ public class Selection {
         if (fxomObjects.isEmpty()) {
             newGroup = null;
         } else {
-            newGroup = new ObjectSelectionGroup(fxomObjects);
+            newGroup = new ObjectSelectionGroup(fxomObjects, hitObject, hitPoint);
         }
         select(newGroup);
     }
@@ -116,6 +151,17 @@ public class Selection {
      * @param fxomObject the object to be added/removed
      */
     public void toggleSelection(FXOMObject fxomObject) {
+        toggleSelection(fxomObject, null);
+    }
+    
+    /**
+     * Adds/removes the specified object from the selected items.
+     * This routine adds +1 to the revision number.
+     * 
+     * @param fxomObject the object to be added/removed
+     * @param hitPoint null or the point hit by the mouse during selection
+     */
+    public void toggleSelection(FXOMObject fxomObject, Point2D hitPoint) {
         
         assert fxomObject != null;
         
@@ -131,16 +177,17 @@ public class Selection {
                     final Set<FXOMObject> newItems = new HashSet<>();
                     newItems.addAll(currentItems);
                     newItems.remove(fxomObject);
-                    newGroup = new ObjectSelectionGroup(newItems);
+                    final FXOMObject newHitItem = newItems.iterator().next();
+                    newGroup = new ObjectSelectionGroup(newItems, newHitItem, null);
                 }
             } else {
                 final Set<FXOMObject> newItems = new HashSet<>();
                 newItems.addAll(currentItems);
                 newItems.add(fxomObject);
-                newGroup = new ObjectSelectionGroup(newItems);
+                newGroup = new ObjectSelectionGroup(newItems, fxomObject, hitPoint);
             }
         } else {
-            newGroup = new ObjectSelectionGroup(fxomObject);
+            newGroup = new ObjectSelectionGroup(fxomObject, hitPoint);
         }
         
         select(newGroup);
@@ -166,6 +213,34 @@ public class Selection {
             result = osg.getItems().contains(fxomObject);
         } else {
             result = false;
+        }
+        
+        return result;
+    }
+    
+    
+    public Point2D getHitPoint() {
+        final Point2D result;
+        
+        if (group instanceof ObjectSelectionGroup) {
+            final ObjectSelectionGroup osg = (ObjectSelectionGroup) group;
+            result = osg.getHitPoint();
+        } else {
+            result = null;
+        }
+        
+        return result;
+    }
+    
+    
+    public Node findHitNode() {
+        final Node result;
+        
+        if (group instanceof ObjectSelectionGroup) {
+            final ObjectSelectionGroup osg = (ObjectSelectionGroup) group;
+            result = osg.findHitNode();
+        } else {
+            result = null;
         }
         
         return result;
@@ -209,7 +284,7 @@ public class Selection {
                     if (indexes.size() == 1) {
                         // featureIndex is the last selected index
                         // GridSelectionGroup -> ObjectSelectionGroup
-                        newGroup = new ObjectSelectionGroup(gridPaneObject);
+                        newGroup = new ObjectSelectionGroup(gridPaneObject, null);
                     } else {
                         final Set<Integer> newIndexes = new HashSet<>();
                         newIndexes.addAll(indexes);

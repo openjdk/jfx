@@ -43,10 +43,7 @@ import java.util.List;
 public class EnsembleCompiletimeMain {
     
     static {
-        System.setProperty("http.proxyHost", "www-proxy.us.oracle.com");
-        System.setProperty("http.proxyPort", "80");
-        System.setProperty("https.proxyHost", "www-proxy.us.oracle.com");
-        System.setProperty("https.proxyPort", "80");
+        System.setProperty("java.net.useSystemProxies", "true");
     }
     
     public static void main(String[] args) {
@@ -86,11 +83,11 @@ public class EnsembleCompiletimeMain {
             System.out.println("==================================================================");
             System.out.println("                     Building Search Index");
             System.out.println("==================================================================");
-            File indexDir = new File(ensembleDir,"src/generated/ensemble/search/index");
+            File indexDir = new File(ensembleDir,"src/generated/resources/ensemble/search/index");
             indexDir.mkdirs();
             BuildEnsembleSearchIndex.buildSearchIndex(
                 allSamples, 
-                "http://getjfx.us.oracle.com/hudson/view/8.0/job/8.0-graphics-scrum/label=windows-i586-30/lastSuccessfulBuild/artifact/artifacts/sdk/docs/api/",
+                "http://download.java.net/jdk8/jfxdocs/",
                 "http://docs.oracle.com/javafx/index.html",
                 indexDir);
         }

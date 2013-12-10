@@ -628,7 +628,7 @@ public class HBox extends Pane {
         double space = snapSpace(getSpacing());
         boolean shouldFillHeight = shouldFillHeight();
 
-        double[][] actualAreaWidths = getAreaWidths(managed, height, false);
+        final double[][] actualAreaWidths = getAreaWidths(managed, height, false);
         double contentWidth = adjustAreaWidths(managed, actualAreaWidths, width, height);
         double contentHeight = height - top - bottom;
 

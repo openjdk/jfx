@@ -97,10 +97,10 @@ public class ResizingGuideRenderer {
             chromeMap.put(s, chrome);
         }
         
-        assert chromeMap.keySet().size() == segments.size()
-                : "chromeMap.keySet().size()=" + chromeMap.keySet().size()
-                + ", segments.size()=" + segments.size();
-        assert chromeMap.size() + reusableChromes.size() == guideGroup.getChildren().size();
+//        assert chromeMap.keySet().size() == segments.size()
+//                : "chromeMap.keySet().size()=" + chromeMap.keySet().size()
+//                + ", segments.size()=" + segments.size();
+//        assert chromeMap.size() + reusableChromes.size() == guideGroup.getChildren().size();
     }
     
     

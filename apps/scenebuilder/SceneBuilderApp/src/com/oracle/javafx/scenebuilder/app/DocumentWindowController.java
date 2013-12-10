@@ -35,6 +35,7 @@ import com.oracle.javafx.scenebuilder.app.i18n.I18N;
 import com.oracle.javafx.scenebuilder.app.info.InfoPanelController;
 import com.oracle.javafx.scenebuilder.app.menubar.MenuBarController;
 import com.oracle.javafx.scenebuilder.app.message.MessageBarController;
+import com.oracle.javafx.scenebuilder.app.preview.BackgroundColorDialogController;
 import com.oracle.javafx.scenebuilder.app.preview.PreviewWindowController;
 import com.oracle.javafx.scenebuilder.app.selectionbar.SelectionBarController;
 import com.oracle.javafx.scenebuilder.app.template.FxmlTemplates;
@@ -45,6 +46,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.css.CssPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.HierarchyPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.InspectorPanelController;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.InspectorPanelController.SectionId;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.library.LibraryPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractFxmlWindowController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.dialog.AbstractModalDialog.ButtonID;
@@ -78,6 +80,7 @@ import javafx.scene.control.SplitPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
+import javafx.stage.Window;
 import javafx.stage.WindowEvent;
 
 /**
@@ -104,12 +107,14 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         TOGGLE_RIGHT_PANEL,
         TOGGLE_GUIDES_VISIBILITY,
         SHOW_PREVIEW_WINDOW,
+        CHOOSE_BACKGROUND_COLOR,
         EDIT_INCLUDED_FILE,
         REVEAL_INCLUDED_FILE,
         ADD_SCENE_STYLE_SHEET,
         SET_RESOURCE,
         REMOVE_RESOURCE,
-        REVEAL_RESOURCE
+        REVEAL_RESOURCE,
+        HELP
     }
     
     public enum ActionStatus {
@@ -120,10 +125,11 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
     private final EditorController editorController = new EditorController();
     private final MenuBarController menuBarController = new MenuBarController(this);
     private final ContentPanelController contentPanelController = new ContentPanelController(editorController);
-    private final CssPanelController cssPanelController = new CssPanelController(editorController);
     private final AbstractHierarchyPanelController hierarchyPanelController = new HierarchyPanelController(editorController);
     private final InfoPanelController infoPanelController = new InfoPanelController(editorController);
     private final InspectorPanelController inspectorPanelController = new InspectorPanelController(editorController);
+    private final CssPanelDelegate cssPanelDelegate = new CssPanelDelegate(inspectorPanelController, this);
+    private final CssPanelController cssPanelController = new CssPanelController(editorController, cssPanelDelegate);
     private final LibraryPanelController libraryPanelController = new LibraryPanelController(editorController);
     private final SelectionBarController selectionBarController = new SelectionBarController(editorController);
     private final MessageBarController messageBarController = new MessageBarController(editorController);
@@ -276,6 +282,10 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 result = true;
                 break;
                 
+            case CHOOSE_BACKGROUND_COLOR:
+                result = false;
+                break;
+                
             case SAVE_FILE:
                 result = editorController.canUndo();
                 break;
@@ -300,7 +310,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
             case GOTO_PROPERTIES:
             case GOTO_LAYOUT:
             case GOTO_CODE:
-                result = false; // Should be true at the end
+                result = true;
                 break;
                 
             case EDIT_INCLUDED_FILE:
@@ -316,6 +326,10 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
             case SET_RESOURCE:
             case REMOVE_RESOURCE:
             case REVEAL_RESOURCE:
+                result = true;
+                break;
+                
+            case HELP:
                 result = true;
                 break;
                 
@@ -339,6 +353,10 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 previewWindowController.openWindow();
                 break;
                 
+            case CHOOSE_BACKGROUND_COLOR:
+                performChooseBackgroundColor(getStage());
+                break;
+                
             case SAVE_FILE:
                 performSaveOrSaveAsAction();
                 break;
@@ -360,9 +378,19 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 break;
                 
             case GOTO_CONTENT:
+                contentPanelController.getGlassLayer().requestFocus();
+                break;
+
             case GOTO_PROPERTIES:
+                performGoToSection(SectionId.PROPERTIES);
+                break;
+                
             case GOTO_LAYOUT:
+                performGoToSection(SectionId.LAYOUT);
+                break;
+                
             case GOTO_CODE:
+                performGoToSection(SectionId.CODE);
                 break;
                 
             case TOGGLE_LEFT_PANEL: 
@@ -427,6 +455,10 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 
             case REVEAL_RESOURCE:
                 resourceController.performRevealResource();
+                break;
+                
+            case HELP:
+                performHelp();
                 break;
                 
             default:
@@ -710,6 +742,11 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         getStage().setTitle(makeTitle(editorController.getFxomDocument()));
     }
     
+    private void performChooseBackgroundColor(Window owner) {
+        final BackgroundColorDialogController bcdc 
+                = new BackgroundColorDialogController(owner);
+        bcdc.openWindow();
+    }
     
     ActionStatus performSaveOrSaveAsAction() {
         final ActionStatus result;
@@ -731,6 +768,10 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 cssPanelController.setSearchPattern(newStr);
             }
         });
+    }
+    
+    private void performGoToSection(SectionId sectionId) {
+        inspectorPanelController.setExpandedSection(sectionId);
     }
     
     private ActionStatus performSaveAction() {
@@ -1023,5 +1064,18 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         }
         
         return result;
+    }
+    
+        
+    private void performHelp() {
+        try {
+            EditorPlatform.open(EditorPlatform.DOCUMENTATION_URL);
+        } catch (IOException ioe) {
+            final ErrorDialog errorDialog = new ErrorDialog(null);
+            errorDialog.setMessage(I18N.getString("alert.help.failure.message", EditorPlatform.DOCUMENTATION_URL));
+            errorDialog.setDetails(I18N.getString("alert.messagebox.failure.details"));
+            errorDialog.setDebugInfoWithThrowable(ioe);
+            errorDialog.showAndWait();
+        }
     }
 }

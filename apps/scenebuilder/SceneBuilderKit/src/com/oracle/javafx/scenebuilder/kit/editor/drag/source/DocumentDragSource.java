@@ -116,18 +116,6 @@ public class DocumentDragSource extends AbstractDragSource {
         return new Point2D(hitX,hitY);
     }
 
-    public FXOMObject getHitObject() {
-        return hitObject;
-    }
-
-    public double getHitX() {
-        return hitX;
-    }
-
-    public double getHitY() {
-        return hitY;
-    }
-
     /*
      * AbstractDragSource
      */
@@ -135,6 +123,21 @@ public class DocumentDragSource extends AbstractDragSource {
     @Override
     public List<FXOMObject> getDraggedObjects() {
         return draggedObjects;
+    }
+
+    @Override
+    public FXOMObject getHitObject() {
+        return hitObject;
+    }
+
+    @Override
+    public double getHitX() {
+        return hitX;
+    }
+
+    @Override
+    public double getHitY() {
+        return hitY;
     }
 
     @Override

@@ -43,6 +43,8 @@ import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
 import javafx.util.Callback;
@@ -104,7 +106,7 @@ public class SamplePage extends StackPane implements Page {
     }
     
     String apiClassToUrl(String classname) {
-        String urlEnd = classname.replace('.', '/').replace('$', '.');
+        String urlEnd = classname.replaceAll("\\.([a-z])", "/$1").replaceFirst("\\.([A-Z])", "/$1");
         if (classname.startsWith("javafx")) {
             return "http://download.java.net/jdk8/jfxdocs/"+urlEnd+".html";
         } else {
@@ -118,8 +120,10 @@ public class SamplePage extends StackPane implements Page {
      * @param updater a method that updates content for a given SampleInfo
      */
     void registerSampleInfoUpdater(final Callback<SampleInfo, Void> updater) {
-        sampleInfoProperty.addListener((ov, t, sampleInfo) -> {
-            updater.call(sampleInfo);
+        sampleInfoProperty.addListener(new ChangeListener<SampleInfo>() {
+            public void changed(ObservableValue<? extends SampleInfo> ov, SampleInfo t, SampleInfo sampleInfo) {
+                updater.call(sampleInfo);
+            }
         });
         updater.call(sampleInfoProperty.get());
     }

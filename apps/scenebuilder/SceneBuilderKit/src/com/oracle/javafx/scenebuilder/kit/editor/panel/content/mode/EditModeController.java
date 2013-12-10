@@ -35,12 +35,14 @@ import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController.EditAction;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.DragController;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.AbstractDropTarget;
+import com.oracle.javafx.scenebuilder.kit.editor.drag.target.GridPaneDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.RootDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.AbstractDecoration;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.AbstractDriver;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.gridpane.GridPaneHandles;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.gridpane.GridPaneTring;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.handles.AbstractHandles;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.pring.AbstractPring;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.tring.AbstractTring;
@@ -205,6 +207,9 @@ implements AbstractGesture.Observer {
         }
     }
     
+    /*
+     * Private (pring)
+     */
     private void updateParentRing() {
         final Selection selection = contentPanelController.getEditorController().getSelection();
         final AbstractPring<?> newPring;
@@ -245,13 +250,40 @@ implements AbstractGesture.Observer {
         }
     }
     
+    private AbstractPring<?> makePring(FXOMObject fxomObject) {
+        final AbstractDriver driver = contentPanelController.lookupDriver(fxomObject);
+        final AbstractPring<?> result;
+        
+        if (driver != null) {
+            result = driver.makePring(fxomObject);
+            if (result != null) {
+                result.changeStroke(contentPanelController.getPringColor());
+            }
+        } else {
+            result = null;
+        }
+        
+        return result;
+    }
+    
+
+    /*
+     * Private (tring)
+     */
     private void updateTring() {
         final DragController dragController
                 = contentPanelController.getEditorController().getDragController();
         final AbstractTring<?> newTring;
         
         if (dragController.isDropAccepted()) {
-            newTring = makeTring(dragController.getDropTarget());
+            final AbstractDropTarget dropTarget = dragController.getDropTarget();
+            if ((tring instanceof GridPaneTring) && (dropTarget instanceof GridPaneDropTarget)) {
+                // Let's reuse the GridPaneTring (because it's costly)
+                newTring = tring;
+                updateTring((GridPaneTring) tring, (GridPaneDropTarget) dropTarget);
+            } else {
+                newTring = makeTring(dragController.getDropTarget());
+            }
         } else {
             newTring = null;
         }
@@ -270,20 +302,11 @@ implements AbstractGesture.Observer {
         }
     }
     
-    private AbstractPring<?> makePring(FXOMObject fxomObject) {
-        final AbstractDriver driver = contentPanelController.lookupDriver(fxomObject);
-        final AbstractPring<?> result;
+    private void updateTring(GridPaneTring tring, GridPaneDropTarget dropTarget) {
+        assert tring != null;
+        assert dropTarget != null;
         
-        if (driver != null) {
-            result = driver.makePring(fxomObject);
-            if (result != null) {
-                result.changeStroke(contentPanelController.getPringColor());
-            }
-        } else {
-            result = null;
-        }
-        
-        return result;
+        tring.setupWithDropTarget(dropTarget);
     }
     
     private AbstractTring<?> makeTring(AbstractDropTarget dropTarget) {
@@ -628,7 +651,6 @@ implements AbstractGesture.Observer {
             selectAndMoveGesture.setHitObject(hitObject);
             selectAndMoveGesture.setHitSceneX(e.getSceneX());
             selectAndMoveGesture.setHitSceneY(e.getSceneY());
-            selectAndMoveGesture.setHitNode(contentPanelController.getLastHitNode());
             glassGesture = selectAndMoveGesture;
         }
     }

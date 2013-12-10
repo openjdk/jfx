@@ -92,10 +92,12 @@ public class DragController {
         if (committedDropTarget != null) {
             assert committedDropTarget.acceptDragSource(getDragSource());
             final Job dropJob = committedDropTarget.makeDropJob(getDragSource(), editorController);
+            editorController.getSelection().beginUpdate();
             editorController.getFxomDocument().beginUpdate(); // Required because dropJob may not do it
             editorController.getJobManager().push(dropJob);
             editorController.getFxomDocument().endUpdate();
             editorController.getSelection().select(getDragSource().getDraggedObjects());
+            editorController.getSelection().endUpdate();
         }
         
         /*

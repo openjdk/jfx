@@ -97,13 +97,15 @@ public class LineEquation {
     public double offsetAtPoint(double x, double y) {
         /*
          * offset is the dot product of:
-         *      - v1 : vector ((0, 0), (x, y))
+         *      - v1 : vector ((x0, y0), (x, y))
          *      - v2 : normalized vector ((x0, y0), (x1, y1))
          */
         
-        final double x01 = (x1 - x0) / distance;
-        final double y01 = (y1 - y0) / distance;
-        final double result = x * x01 + y * y01;
+        final double dx1 = x - x0;
+        final double dy1 = y - y0;
+        final double dx2 = (x1 - x0) / distance;
+        final double dy2 = (y1 - y0) / distance;
+        final double result = dx1 * dx2 + dy1 * dy2;
         
         return result;
     }

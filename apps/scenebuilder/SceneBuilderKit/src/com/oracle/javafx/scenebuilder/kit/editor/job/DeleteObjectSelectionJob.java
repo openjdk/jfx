@@ -38,6 +38,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -48,12 +49,21 @@ public class DeleteObjectSelectionJob extends CompositeJob {
     public DeleteObjectSelectionJob(EditorController editorController) {
         super(editorController);
         
+    }
+
+    /*
+     * CompositeJob
+     */
+
+    @Override
+    protected List<Job> makeSubJobs() {
         final Selection selection = getEditorController().getSelection();
         assert selection.getGroup() instanceof ObjectSelectionGroup;
         final ObjectSelectionGroup osg = (ObjectSelectionGroup) selection.getGroup();
+        final List<Job> result = new ArrayList<>();
         
         // First we clear the selection
-        addSubJob(new ClearSelectionJob(getEditorController()));
+        result.add(new ClearSelectionJob(getEditorController()));
         
         // Next we make one DeleteObjectJob for each selected objects
         int cannotDeleteCount = 0;
@@ -61,7 +71,7 @@ public class DeleteObjectSelectionJob extends CompositeJob {
             final DeleteObjectJob subJob
                     = new DeleteObjectJob(candidate, getEditorController());
             if (subJob.isExecutable()) {
-                addSubJob(subJob);
+                result.add(subJob);
             } else {
                 cannotDeleteCount++;
             }
@@ -70,13 +80,11 @@ public class DeleteObjectSelectionJob extends CompositeJob {
         // If some objects cannot be deleted, then we clear all to
         // make this job not executable.
         if (cannotDeleteCount >= 1) {
-            clearSubJobs();
+            result.clear();
         }
+        
+        return result;
     }
-
-    /*
-     * CompositeJob
-     */
 
     @Override
     protected String makeDescription() {

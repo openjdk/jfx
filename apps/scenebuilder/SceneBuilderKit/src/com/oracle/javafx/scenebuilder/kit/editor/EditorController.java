@@ -90,8 +90,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.ResourceBundle;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ListProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleListProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
@@ -208,6 +210,8 @@ public class EditorController {
             = new SimpleListProperty<>();
     private final ObjectProperty<File> resourceProperty
             = new SimpleObjectProperty<>(null);
+    private final BooleanProperty pickModeEnabledProperty
+            = new SimpleBooleanProperty(true);
     
     private Callback<Void, Boolean> requestTextEditingSessionEnd;
     
@@ -492,6 +496,32 @@ public class EditorController {
      */
     public ObservableValue<File> resourceProperty() {
         return resourceProperty;
+    }
+    
+    /**
+     * Returns true is 'pick mode' is enabled for this editor.
+     * @return true is 'pick mode' is enabled for this editor.
+     */
+    public boolean isPickModeEnabled() {
+        return pickModeEnabledProperty.getValue();
+    }
+    
+    /**
+     * Enables or disables 'pick mode' on this editor.
+     * 
+     * @param pickModeEnabled true if 'pick mode' should be enabled.
+     */
+    public void setPickModeEnabled(boolean pickModeEnabled) {
+        pickModeEnabledProperty.setValue(pickModeEnabled);
+    }
+    
+    /**
+     * The property indicating if 'pick mode' is enabled or not.
+     * 
+     * @return the property indicating if 'pick mode' is enabled or not.
+     */
+    public ObservableValue<Boolean> pickModeEnabledProperty() {
+        return pickModeEnabledProperty;
     }
     
     /**
@@ -1505,5 +1535,6 @@ public class EditorController {
     
     private void jobManagerRevisionDidChange() {
         errorReport.requestUpdate();
+//        setPickModeEnabled(false);
     }
 }

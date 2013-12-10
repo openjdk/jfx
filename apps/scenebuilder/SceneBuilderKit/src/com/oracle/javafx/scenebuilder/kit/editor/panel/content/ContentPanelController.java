@@ -35,6 +35,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform.Theme;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.AbstractDropTarget;
+import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.mode.AbstractModeController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.mode.EditModeController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.mode.PickModeController;
@@ -140,7 +141,6 @@ public class ContentPanelController extends AbstractFxmlPanelController
     private boolean tracingEvents; // For debugging purpose
     
     private final Picker picker = new Picker();
-    private Node lastHitNode; // Updated by pick()
     
     /*
      * Public
@@ -152,7 +152,7 @@ public class ContentPanelController extends AbstractFxmlPanelController
      * @param editorController the editor controller (never null).
      */
     public ContentPanelController(EditorController editorController) {
-        super(ContentPanelController.class.getResource("ContentPanel.fxml"), editorController);
+        super(ContentPanelController.class.getResource("ContentPanel.fxml"), I18N.getBundle(), editorController);
         this.editModeController = new EditModeController(this);
         this.pickModeController = new PickModeController(this);
         
@@ -432,13 +432,10 @@ public class ContentPanelController extends AbstractFxmlPanelController
             final Node startNode = (Node) startObject.getSceneGraphObject();
             final List<Node> hitNodes = picker.pick(startNode, sceneX, sceneY);
             if (hitNodes == null) {
-                lastHitNode = null;
                 result = null;
             } else {
                 assert hitNodes.isEmpty() == false;
                 
-                lastHitNode = hitNodes.get(0);
-
                 FXOMObject hitObject = null;
                 Node hitNode = null;
                 final Iterator<Node> it = hitNodes.iterator();
@@ -454,20 +451,10 @@ public class ContentPanelController extends AbstractFxmlPanelController
             }
             
         } else {
-            lastHitNode = null;
             result = null;
         }
         
         return result;
-    }
-    
-    /**
-     * Returns null or the last node picked by pick() method.
-     * 
-     * @return  null or the last node picked by pick() method.
-     */
-    public Node getLastHitNode() {
-        return lastHitNode;
     }
     
     /**

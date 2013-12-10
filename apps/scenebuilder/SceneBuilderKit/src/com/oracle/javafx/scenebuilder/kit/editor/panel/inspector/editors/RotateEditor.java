@@ -173,7 +173,7 @@ public class RotateEditor extends PropertyEditor {
     }
 
     @Override
-    protected void requestFocus() {
+    public void requestFocus() {
         EditorUtils.doNextFrame(new Runnable() {
 
             @Override

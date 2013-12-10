@@ -33,6 +33,8 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
+import java.util.Collections;
+import java.util.List;
 
 /**
  *
@@ -41,15 +43,19 @@ public class DuplicateSelectionJob extends CompositeJob {
 
     public DuplicateSelectionJob(EditorController editorController) {
         super(editorController);
-        
-        // TODO fix DTL-5649 : SB Kit: Menu commands
-        System.out.println("== DuplicateSelectionJob : "
-                + "build new FXOM Objects from selection ");
     }
 
     /*
      * CompositeJob
      */
+    @Override
+    protected List<Job> makeSubJobs() {
+        // TODO fix DTL-5649 : SB Kit: Menu commands
+        System.out.println("== DuplicateSelectionJob : "
+                + "build new FXOM Objects from selection ");
+        return Collections.emptyList();
+    }
+
     @Override
     protected String makeDescription() {
         return getClass().getSimpleName();

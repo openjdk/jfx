@@ -50,7 +50,7 @@ import javafx.stage.Stage;
  * @sampleName Toggle Button
  * @preview preview.png
  * @see javafx.scene.control.ToggleButton
- * @related /Controls/Choice Box
+ * @related /Controls/ChoiceBox
  * @related /Controls/Accordion
  * @related /Controls/Toolbar/Tool Bar
  * @embedded

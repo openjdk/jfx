@@ -36,12 +36,14 @@ import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.application.Application;
+import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.SceneAntialiasing;
 import javafx.scene.Parent;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
 import javafx.scene.SubScene;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.media.AudioClip;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
@@ -171,15 +173,46 @@ public class XylophoneApp extends Application {
         bar8Cube.setTranslateX(xStart + 8 * xOffset);
         bar8Cube.setTranslateZ(yPos);
 
-        bar1Cube.setOnMousePressed(t -> bar1Note.play());
-        bar2Cube.setOnMousePressed(t -> bar2Note.play());
-        bar3Cube.setOnMousePressed(t -> bar3Note.play());
-        bar4Cube.setOnMousePressed(t -> bar4Note.play());
-        bar5Cube.setOnMousePressed(t -> bar5Note.play());
-        bar6Cube.setOnMousePressed(t -> bar6Note.play());
-        bar7Cube.setOnMousePressed(t -> bar7Note.play());
-        bar8Cube.setOnMousePressed(t -> bar8Note.play());
-
+        bar1Cube.setOnMousePressed(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent me) {
+                bar1Note.play();
+            }
+        });
+        bar2Cube.setOnMousePressed(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent me) {
+                bar2Note.play();
+            }
+        });
+        bar3Cube.setOnMousePressed(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent me) {
+                bar3Note.play();
+            }
+        });
+        bar4Cube.setOnMousePressed(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent me) {
+                bar4Note.play();
+            }
+        });
+        bar5Cube.setOnMousePressed(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent me) {
+                bar5Note.play();
+            }
+        });
+        bar6Cube.setOnMousePressed(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent me) {
+                bar6Note.play();
+            }
+        });
+        bar7Cube.setOnMousePressed(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent me) {
+                bar7Note.play();
+            }
+        });
+        bar8Cube.setOnMousePressed(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent me) {
+                bar8Note.play();
+            }
+        });
         rectangleGroup.getChildren().addAll(base1Cube, base2Cube,
                 bar1Cube, bar2Cube, bar3Cube,
                 bar4Cube, bar5Cube, bar6Cube,

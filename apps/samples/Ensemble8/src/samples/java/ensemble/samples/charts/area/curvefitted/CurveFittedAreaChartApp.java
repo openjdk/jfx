@@ -60,7 +60,6 @@ import javafx.stage.Stage;
  * @playground xAxis.minorTickVisible
  * 
  * @playground xAxis.animated
- * @playground xAxis.label
  * @playground xAxis.side
  * @playground xAxis.tickLabelFill
  * @playground xAxis.tickLabelGap
@@ -80,7 +79,6 @@ import javafx.stage.Stage;
  * @playground yAxis.minorTickVisible
  * 
  * @playground yAxis.animated
- * @playground yAxis.label
  * @playground yAxis.side
  * @playground yAxis.tickLabelFill
  * @playground yAxis.tickLabelGap
@@ -90,8 +88,6 @@ import javafx.stage.Stage;
  * @playground yAxis.tickMarkVisible
  * 
  * @playground - (name="chart")
- * @playground chart.alternativeColumnFillVisible
- * @playground chart.alternativeRowFillVisible
  * @playground chart.horizontalGridLinesVisible
  * @playground chart.horizontalZeroLineVisible
  * @playground chart.verticalGridLinesVisible

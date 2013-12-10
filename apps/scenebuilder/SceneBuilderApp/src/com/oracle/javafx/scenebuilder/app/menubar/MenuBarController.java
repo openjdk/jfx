@@ -36,6 +36,8 @@ import com.oracle.javafx.scenebuilder.app.DocumentWindowController.DocumentContr
 import com.oracle.javafx.scenebuilder.app.SceneBuilderApp;
 import com.oracle.javafx.scenebuilder.app.SceneBuilderApp.ApplicationControlAction;
 import com.oracle.javafx.scenebuilder.app.i18n.I18N;
+import com.oracle.javafx.scenebuilder.app.preferences.PreferencesController;
+import com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController.ControlAction;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController.EditAction;
@@ -68,6 +70,7 @@ import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioMenuItem;
+import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.effect.Effect;
 import javafx.scene.input.KeyCharacterCombination;
 import javafx.scene.input.KeyCode;
@@ -76,7 +79,7 @@ import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.StackPane;
 
 /**
- * 
+ *
  */
 public class MenuBarController {
 
@@ -84,125 +87,225 @@ public class MenuBarController {
     private final DocumentWindowController documentWindowController;
     // This member is null when this MenuBarController is used for
     // managing the menu bar passed to MenuBarSkin.setDefaultSystemMenu().
-    
-    @FXML private MenuBar menuBar;
-    @FXML private Menu insertMenu;
-    @FXML private Menu addEffectMenu;
-    @FXML private Menu fileMenu; // Useless as soon as Preferences menu item is implemented
-    @FXML private Menu windowMenu;
-    
+
+    @FXML
+    private MenuBar menuBar;
+    @FXML
+    private Menu insertMenu;
+    @FXML
+    private Menu addEffectMenu;
+    @FXML
+    private Menu fileMenu; // Useless as soon as Preferences menu item is implemented
+    @FXML
+    private Menu windowMenu;
+
     // File
-    @FXML private MenuItem newMenuItem;
-    @FXML private MenuItem newAlertDialogMenuItem;
-    @FXML private MenuItem newAlertDialogCssMenuItem;
-    @FXML private MenuItem newAlertDialogI18nMenuItem;
-    @FXML private MenuItem newBasicAppMenuItem;
-    @FXML private MenuItem newBasicAppCssMenuItem;
-    @FXML private MenuItem newBasicAppI18nMenuItem;
-    @FXML private MenuItem newComplexAppMenuItem;
-    @FXML private MenuItem newComplexAppCssMenuItem;
-    @FXML private MenuItem newComplexAppI18nMenuItem;
-    @FXML private MenuItem openMenuItem;
-    @FXML private MenuItem saveMenuItem;
-    @FXML private MenuItem saveAsMenuItem;
-    @FXML private MenuItem revertMenuItem;
-    @FXML private MenuItem closeMenuItem;
-    @FXML private MenuItem revealMenuItem;
-    @FXML private MenuItem showPreferencesMenuItem;
-    @FXML private MenuItem separatorAbovePreferencesMenuItem; // Useless as soon as Preferences menu item is implemented
-    @FXML private MenuItem exitMenuItem;
-    
+    @FXML
+    private MenuItem newMenuItem;
+    @FXML
+    private MenuItem newAlertDialogMenuItem;
+    @FXML
+    private MenuItem newAlertDialogCssMenuItem;
+    @FXML
+    private MenuItem newAlertDialogI18nMenuItem;
+    @FXML
+    private MenuItem newBasicAppMenuItem;
+    @FXML
+    private MenuItem newBasicAppCssMenuItem;
+    @FXML
+    private MenuItem newBasicAppI18nMenuItem;
+    @FXML
+    private MenuItem newComplexAppMenuItem;
+    @FXML
+    private MenuItem newComplexAppCssMenuItem;
+    @FXML
+    private MenuItem newComplexAppI18nMenuItem;
+    @FXML
+    private MenuItem openMenuItem;
+    @FXML
+    private Menu openRecentMenu;
+    @FXML
+    private MenuItem saveMenuItem;
+    @FXML
+    private MenuItem saveAsMenuItem;
+    @FXML
+    private MenuItem revertMenuItem;
+    @FXML
+    private MenuItem closeMenuItem;
+    @FXML
+    private MenuItem revealMenuItem;
+    @FXML
+    private MenuItem showPreferencesMenuItem;
+    @FXML
+    private MenuItem separatorAbovePreferencesMenuItem; // Useless as soon as Preferences menu item is implemented
+    @FXML
+    private MenuItem exitMenuItem;
+
     // Edit
-    @FXML private MenuItem undoMenuItem;
-    @FXML private MenuItem redoMenuItem;
-    @FXML private MenuItem copyMenuItem;
-    @FXML private MenuItem cutMenuItem;
-    @FXML private MenuItem pasteMenuItem;
-    @FXML private MenuItem pasteIntoMenuItem;
-    @FXML private MenuItem duplicateMenuItem;
-    @FXML private MenuItem deleteMenuItem;
-    @FXML private MenuItem selectAllMenuItem;
-    @FXML private MenuItem selectNoneMenuItem;
-    @FXML private MenuItem selectParentMenuItem;
-    @FXML private MenuItem selectNextMenuItem;
-    @FXML private MenuItem selectPreviousMenuItem;
-    @FXML private MenuItem trimMenuItem;
-    
+    @FXML
+    private MenuItem undoMenuItem;
+    @FXML
+    private MenuItem redoMenuItem;
+    @FXML
+    private MenuItem copyMenuItem;
+    @FXML
+    private MenuItem cutMenuItem;
+    @FXML
+    private MenuItem pasteMenuItem;
+    @FXML
+    private MenuItem pasteIntoMenuItem;
+    @FXML
+    private MenuItem duplicateMenuItem;
+    @FXML
+    private MenuItem deleteMenuItem;
+    @FXML
+    private MenuItem selectAllMenuItem;
+    @FXML
+    private MenuItem selectNoneMenuItem;
+    @FXML
+    private MenuItem selectParentMenuItem;
+    @FXML
+    private MenuItem selectNextMenuItem;
+    @FXML
+    private MenuItem selectPreviousMenuItem;
+    @FXML
+    private MenuItem trimMenuItem;
+
     // View
-    @FXML private MenuItem gotoContentMenuItem;
-    @FXML private MenuItem gotoPropertiesMenuItem;
-    @FXML private MenuItem gotoLayoutMenuItem;
-    @FXML private MenuItem gotoCodeMenuItem;
-    @FXML private MenuItem toggleLibraryPanelMenuItem;
-    @FXML private MenuItem toggleHierarchyPanelMenuItem;
-    @FXML private MenuItem toggleCSSPanelMenuItem;
-    @FXML private MenuItem toggleLeftPanelMenuItem;
-    @FXML private MenuItem toggleRightPanelMenuItem;
-    @FXML private MenuItem toggleOutlinesMenuItem;
-    @FXML private MenuItem toggleSampleDataMenuItem;
-    @FXML private MenuItem toggleAlignmentGuidesMenuItem;
-    @FXML private MenuItem showSampleControllerMenuItem;
-    @FXML private Menu zoomMenu;
-    
+    @FXML
+    private MenuItem gotoContentMenuItem;
+    @FXML
+    private MenuItem gotoPropertiesMenuItem;
+    @FXML
+    private MenuItem gotoLayoutMenuItem;
+    @FXML
+    private MenuItem gotoCodeMenuItem;
+    @FXML
+    private MenuItem toggleLibraryPanelMenuItem;
+    @FXML
+    private MenuItem toggleHierarchyPanelMenuItem;
+    @FXML
+    private MenuItem toggleCSSPanelMenuItem;
+    @FXML
+    private MenuItem toggleLeftPanelMenuItem;
+    @FXML
+    private MenuItem toggleRightPanelMenuItem;
+    @FXML
+    private MenuItem toggleOutlinesMenuItem;
+    @FXML
+    private MenuItem toggleSampleDataMenuItem;
+    @FXML
+    private MenuItem toggleAlignmentGuidesMenuItem;
+    @FXML
+    private MenuItem showSampleControllerMenuItem;
+    @FXML
+    private Menu zoomMenu;
+
     // Modify
-    @FXML private MenuItem fitToParentMenuItem;
-    @FXML private MenuItem useComputedSizesMenuItem;
-    @FXML private MenuItem selectNextRowMenuItem;
-    @FXML private MenuItem selectNextColumnMenuItem;
-    @FXML private MenuItem moveRowAboveMenuItem;
-    @FXML private MenuItem moveRowBelowMenuItem;
-    @FXML private MenuItem moveColumnBeforeMenuItem;
-    @FXML private MenuItem moveColumnAfterMenuItem;
-    @FXML private MenuItem addRowAboveMenuItem;
-    @FXML private MenuItem addRowBelowMenuItem;
-    @FXML private MenuItem addColumnBeforeMenuItem;
-    @FXML private MenuItem addColumnAfterMenuItem;
-    @FXML private MenuItem increaseRowSpanMenuItem;
-    @FXML private MenuItem decreaseRowSpanMenuItem;
-    @FXML private MenuItem increaseColumnSpanMenuItem;
-    @FXML private MenuItem decreaseColumnSpanMenuItem;
-    @FXML private MenuItem editIncludedFileMenuItem;
-    @FXML private MenuItem revealIncludedFileMenuItem;
-    
+    @FXML
+    private MenuItem fitToParentMenuItem;
+    @FXML
+    private MenuItem useComputedSizesMenuItem;
+    @FXML
+    private MenuItem selectNextRowMenuItem;
+    @FXML
+    private MenuItem selectNextColumnMenuItem;
+    @FXML
+    private MenuItem moveRowAboveMenuItem;
+    @FXML
+    private MenuItem moveRowBelowMenuItem;
+    @FXML
+    private MenuItem moveColumnBeforeMenuItem;
+    @FXML
+    private MenuItem moveColumnAfterMenuItem;
+    @FXML
+    private MenuItem addRowAboveMenuItem;
+    @FXML
+    private MenuItem addRowBelowMenuItem;
+    @FXML
+    private MenuItem addColumnBeforeMenuItem;
+    @FXML
+    private MenuItem addColumnAfterMenuItem;
+    @FXML
+    private MenuItem increaseRowSpanMenuItem;
+    @FXML
+    private MenuItem decreaseRowSpanMenuItem;
+    @FXML
+    private MenuItem increaseColumnSpanMenuItem;
+    @FXML
+    private MenuItem decreaseColumnSpanMenuItem;
+    @FXML
+    private MenuItem editIncludedFileMenuItem;
+    @FXML
+    private MenuItem revealIncludedFileMenuItem;
+
     // Arrange
-    @FXML private MenuItem bringToFrontMenuItem;
-    @FXML private MenuItem sendToBackMenuItem;
-    @FXML private MenuItem bringForwardMenuItem;
-    @FXML private MenuItem sendBackwardMenuItem;
-    @FXML private MenuItem wrapInAnchorPaneMenuItem;
-    @FXML private MenuItem wrapInGridPaneMenuItem;
-    @FXML private MenuItem wrapInHBoxMenuItem;
-    @FXML private MenuItem wrapInPaneMenuItem;
-    @FXML private MenuItem wrapInScrollPaneMenuItem;
-    @FXML private MenuItem wrapInSplitPaneMenuItem;
-    @FXML private MenuItem wrapInStackPaneMenuItem;
-    @FXML private MenuItem wrapInTabPaneMenuItem;
-    @FXML private MenuItem wrapInTitledPaneMenuItem;
-    @FXML private MenuItem wrapInToolBarMenuItem;
-    @FXML private MenuItem wrapInVBoxMenuItem;
-    @FXML private MenuItem wrapInGroupMenuItem;
-    @FXML private MenuItem unwrapMenuItem;
+    @FXML
+    private MenuItem bringToFrontMenuItem;
+    @FXML
+    private MenuItem sendToBackMenuItem;
+    @FXML
+    private MenuItem bringForwardMenuItem;
+    @FXML
+    private MenuItem sendBackwardMenuItem;
+    @FXML
+    private MenuItem wrapInAnchorPaneMenuItem;
+    @FXML
+    private MenuItem wrapInGridPaneMenuItem;
+    @FXML
+    private MenuItem wrapInHBoxMenuItem;
+    @FXML
+    private MenuItem wrapInPaneMenuItem;
+    @FXML
+    private MenuItem wrapInScrollPaneMenuItem;
+    @FXML
+    private MenuItem wrapInSplitPaneMenuItem;
+    @FXML
+    private MenuItem wrapInStackPaneMenuItem;
+    @FXML
+    private MenuItem wrapInTabPaneMenuItem;
+    @FXML
+    private MenuItem wrapInTitledPaneMenuItem;
+    @FXML
+    private MenuItem wrapInToolBarMenuItem;
+    @FXML
+    private MenuItem wrapInVBoxMenuItem;
+    @FXML
+    private MenuItem wrapInGroupMenuItem;
+    @FXML
+    private MenuItem unwrapMenuItem;
 
     // Preview
-    @FXML private MenuItem showPreviewMenuItem;
-    @FXML private MenuItem modenaThemeMenuItem;
-    @FXML private MenuItem caspianThemeMenuItem;
-    @FXML private MenuItem chooseBackgroundColorMenuItem;
-    @FXML private MenuItem addSceneStyleSheetMenuItem;
-    @FXML private Menu removeSceneStyleSheetMenu;
-    @FXML private Menu openSceneStyleSheetMenu;
-    @FXML private MenuItem setResourceMenuItem;
-    @FXML private MenuItem removeResourceMenuItem;
-    @FXML private MenuItem revealResourceMenuItem;
-            
-    
+    @FXML
+    private MenuItem showPreviewMenuItem;
+    @FXML
+    private MenuItem modenaThemeMenuItem;
+    @FXML
+    private MenuItem caspianThemeMenuItem;
+    @FXML
+    private MenuItem chooseBackgroundColorMenuItem;
+    @FXML
+    private MenuItem addSceneStyleSheetMenuItem;
+    @FXML
+    private Menu removeSceneStyleSheetMenu;
+    @FXML
+    private Menu openSceneStyleSheetMenu;
+    @FXML
+    private MenuItem setResourceMenuItem;
+    @FXML
+    private MenuItem removeResourceMenuItem;
+    @FXML
+    private MenuItem revealResourceMenuItem;
+
     // Window
-    
     // Help
-    @FXML private MenuItem helpMenuItem;
-    @FXML private MenuItem aboutMenuItem;
-    
+    @FXML
+    private MenuItem helpMenuItem;
+    @FXML
+    private MenuItem aboutMenuItem;
+
     private static final KeyCombination.Modifier modifier;
+
     static {
         if (EditorPlatform.IS_MAC) {
             modifier = KeyCombination.META_DOWN;
@@ -216,10 +319,9 @@ public class MenuBarController {
         this.documentWindowController = documentWindowController;
         debugMenuController = new DebugMenuController(documentWindowController);
     }
-    
-    
+
     public MenuBar getMenuBar() {
-        
+
         if (menuBar == null) {
             final URL fxmlURL = MenuBarController.class.getResource("MenuBar.fxml"); //NOI18N
             final FXMLLoader loader = new FXMLLoader();
@@ -236,10 +338,10 @@ public class MenuBarController {
                 throw new RuntimeException("Failed to load " + fxmlURL.getFile(), x); //NOI18N
             }
         }
-        
+
         return menuBar;
     }
-    
+
     public void setDebugMenuVisible(boolean visible) {
         if (isDebugMenuVisible() != visible) {
             if (visible) {
@@ -249,25 +351,23 @@ public class MenuBarController {
             }
         }
     }
-    
+
     public boolean isDebugMenuVisible() {
         return menuBar.getMenus().contains(debugMenuController.getMenu());
     }
-    
+
     /*
      * Private
      */
-    
-    
     private void controllerDidLoadFxml() {
-        
+
         assert menuBar != null;
         assert menuBar.getParent() instanceof StackPane;
         assert insertMenu != null;
         assert addEffectMenu != null;
         assert fileMenu != null;
         assert windowMenu != null;
-       
+
         assert newMenuItem != null;
         assert newAlertDialogMenuItem != null;
         assert newAlertDialogCssMenuItem != null;
@@ -279,6 +379,7 @@ public class MenuBarController {
         assert newComplexAppCssMenuItem != null;
         assert newComplexAppI18nMenuItem != null;
         assert openMenuItem != null;
+        assert openRecentMenu != null;
         assert saveMenuItem != null;
         assert saveAsMenuItem != null;
         assert revertMenuItem != null;
@@ -302,7 +403,7 @@ public class MenuBarController {
         assert selectNextMenuItem != null;
         assert selectPreviousMenuItem != null;
         assert trimMenuItem != null;
-    
+
         assert gotoContentMenuItem != null;
         assert gotoPropertiesMenuItem != null;
         assert gotoLayoutMenuItem != null;
@@ -318,7 +419,7 @@ public class MenuBarController {
         assert showSampleControllerMenuItem != null;
         assert zoomMenu != null;
         assert zoomMenu.getItems().isEmpty();
-    
+
         assert fitToParentMenuItem != null;
         assert useComputedSizesMenuItem != null;
         assert selectNextRowMenuItem != null;
@@ -366,7 +467,7 @@ public class MenuBarController {
         assert setResourceMenuItem != null;
         assert removeResourceMenuItem != null;
         assert revealResourceMenuItem != null;
-       
+
         assert helpMenuItem != null;
         assert aboutMenuItem != null;
 
@@ -375,10 +476,9 @@ public class MenuBarController {
          * in a StackPane. This stack pane is useless now.
          * So we unwrap the menu bar and make it the panel root.
          */
-        final StackPane rootStackPane = (StackPane)menuBar.getParent();
+        final StackPane rootStackPane = (StackPane) menuBar.getParent();
         rootStackPane.getChildren().remove(menuBar);
-        
-        
+
         /*
          * On Mac, move the menu bar on the desktop and remove the Quit item
          * from the File menu
@@ -387,7 +487,7 @@ public class MenuBarController {
             menuBar.setUseSystemMenuBar(true);
             exitMenuItem.getParentMenu().getItems().remove(exitMenuItem);
         }
-        
+
         /*
          * Setup title of the Reveal menu item according the underlying o/s.
          */
@@ -401,7 +501,7 @@ public class MenuBarController {
             revealMenuKey = "menu.title.reveal.linux";
         }
         revealMenuItem.setText(I18N.getString(revealMenuKey));
-        
+
         /*
          * File menu
          */
@@ -418,6 +518,12 @@ public class MenuBarController {
         newComplexAppI18nMenuItem.setUserData(new ApplicationControlActionController(ApplicationControlAction.NEW_COMPLEX_APPLICATION_I18N));
         openMenuItem.setUserData(new ApplicationControlActionController(ApplicationControlAction.OPEN_FILE));
         openMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.O, modifier));
+        openRecentMenu.setOnShowing(new EventHandler<Event>() {
+            @Override
+            public void handle(Event t) {
+                updateOpenRecentMenuItems();
+            }
+        });
         saveMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.SAVE_FILE));
         saveMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.S, modifier));
         saveAsMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.SAVE_AS_FILE));
@@ -464,7 +570,7 @@ public class MenuBarController {
         selectNextMenuItem.setUserData(new ControlActionController(ControlAction.SELECT_NEXT));
         selectPreviousMenuItem.setUserData(new ControlActionController(ControlAction.SELECT_PREVIOUS));
         trimMenuItem.setUserData(new EditActionController(EditAction.TRIM));
-        
+
         /*
          * View menu
          */
@@ -476,22 +582,22 @@ public class MenuBarController {
         gotoLayoutMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.DIGIT2, modifier));
         gotoCodeMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.GOTO_CODE));
         gotoCodeMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.DIGIT3, modifier));
-       
+
         toggleLibraryPanelMenuItem.setUserData(
-        new DocumentControlActionController(DocumentControlAction.TOGGLE_LIBRARY_PANEL) {
-            @Override
-            public String getTitle() {
-                final String titleKey;
-                if (documentWindowController == null) {
-                    titleKey = "menu.title.hide.library.panel";
-                } else if (documentWindowController.isLibraryPanelVisible()) {
-                    titleKey = "menu.title.hide.library.panel";
-                } else {
-                    titleKey = "menu.title.show.library.panel";
-                }
-                return I18N.getString(titleKey);
-            }
-        });
+                new DocumentControlActionController(DocumentControlAction.TOGGLE_LIBRARY_PANEL) {
+                    @Override
+                    public String getTitle() {
+                        final String titleKey;
+                        if (documentWindowController == null) {
+                            titleKey = "menu.title.hide.library.panel";
+                        } else if (documentWindowController.isLibraryPanelVisible()) {
+                            titleKey = "menu.title.hide.library.panel";
+                        } else {
+                            titleKey = "menu.title.show.library.panel";
+                        }
+                        return I18N.getString(titleKey);
+                    }
+                });
         toggleLibraryPanelMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.DIGIT4, modifier));
         toggleHierarchyPanelMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.TOGGLE_HIERARCHY_PANEL) {
             @Override
@@ -576,22 +682,21 @@ public class MenuBarController {
         });
 //        showSampleControllerMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.GOTO_CONTENT));
         updateZoomMenu();
-        
+
         /*
          * Insert menu
          */
         updateInsertMenu();
         if (documentWindowController != null) {
             this.documentWindowController.getEditorController().libraryProperty().addListener(
-                new ChangeListener<Library>() {
-                    @Override
-                    public void changed(ObservableValue<? extends Library> ov, Library t, Library t1) {
-                        updateInsertMenu();
-                    }
-                });
+                    new ChangeListener<Library>() {
+                        @Override
+                        public void changed(ObservableValue<? extends Library> ov, Library t, Library t1) {
+                            updateInsertMenu();
+                        }
+                    });
         }
-        
-       
+
         /*
          * Modify menu
          */
@@ -614,10 +719,10 @@ public class MenuBarController {
         increaseColumnSpanMenuItem.setUserData(new EditActionController(EditAction.INCREASE_COLUMN_SPAN));
         decreaseColumnSpanMenuItem.setUserData(new EditActionController(EditAction.DECREASE_COLUMN_SPAN));
         editIncludedFileMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.EDIT_INCLUDED_FILE));
-        
+
         // Add Effect submenu
         updateAddEffectMenu();
-        
+
         /*
          * Arrange menu
          */
@@ -661,15 +766,17 @@ public class MenuBarController {
         unwrapMenuItem.setUserData(new EditActionController(EditAction.UNWRAP));
         unwrapMenuItem.setAccelerator(
                 new KeyCodeCombination(KeyCode.U, modifier));
-        
+
         /*
          * Preview menu
          */
         showPreviewMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.SHOW_PREVIEW_WINDOW));
         showPreviewMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.P, modifier));
+        chooseBackgroundColorMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.CHOOSE_BACKGROUND_COLOR));
+        chooseBackgroundColorMenuItem.setDisable(true);
         caspianThemeMenuItem.setUserData(new SetThemeActionController(EditorPlatform.Theme.CASPIAN));
         modenaThemeMenuItem.setUserData(new SetThemeActionController(EditorPlatform.Theme.MODENA));
-        
+
         addSceneStyleSheetMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.ADD_SCENE_STYLE_SHEET));
         updateOpenAndRemoveSceneStyleSheetMenus();
         if (documentWindowController != null) {
@@ -685,7 +792,7 @@ public class MenuBarController {
                 }
             });
         }
-        
+
         setResourceMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.SET_RESOURCE));
         removeResourceMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.REMOVE_RESOURCE) {
             @Override
@@ -694,10 +801,10 @@ public class MenuBarController {
                         || documentWindowController.getEditorController().getResource() == null) {
                     return false;
                 }
-                
+
                 return true;
             }
-            
+
             @Override
             public String getTitle() {
                 String title = I18N.getString("menu.title.remove.resource");
@@ -706,7 +813,7 @@ public class MenuBarController {
                     title = I18N.getString("menu.title.remove.resource.with.file",
                             documentWindowController.getEditorController().getResource().getName());
                 }
-                
+
                 return title;
             }
         });
@@ -717,10 +824,10 @@ public class MenuBarController {
                         || documentWindowController.getEditorController().getResource() == null) {
                     return false;
                 }
-                
+
                 return true;
             }
-            
+
             @Override
             public String getTitle() {
                 String title = I18N.getString("menu.title.reveal.resource");
@@ -729,22 +836,21 @@ public class MenuBarController {
                     title = I18N.getString("menu.title.reveal.resource.with.file",
                             documentWindowController.getEditorController().getResource().getName());
                 }
-                
+
                 return title;
             }
         });
 
-        
         /*
          * Window menu : it is setup after the other menus
          */
-        
         /*
          * Help menu
          */
         aboutMenuItem.setUserData(new ApplicationControlActionController(ApplicationControlAction.ABOUT));
-        
-        
+        helpMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.HELP));
+        helpMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.F1));
+
         /*
          * Put some generic handlers on each Menu and MenuItem.
          * For Window menu, they are overriden with specific handlers.
@@ -753,18 +859,11 @@ public class MenuBarController {
             setupMenuItemHandlers(m);
         }
         windowMenu.setOnMenuValidation(onWindowMenuValidationHandler);
-        
-        /*
-         * Until Preference menu is implemented, we remove it (see DTL-5854).
-         */
-        fileMenu.getItems().remove(separatorAbovePreferencesMenuItem);
-        fileMenu.getItems().remove(showPreferencesMenuItem);
     }
-    
+
     /*
      * Generic menu and item handlers
      */
-    
     private void setupMenuItemHandlers(MenuItem i) {
         if (i instanceof Menu) {
             final Menu m = (Menu) i;
@@ -776,23 +875,23 @@ public class MenuBarController {
             i.setOnAction(onActionEventHandler);
         }
     }
-    
-    private final EventHandler<Event> onMenuValidationEventHandler 
+
+    private final EventHandler<Event> onMenuValidationEventHandler
             = new EventHandler<Event>() {
                 @Override
                 public void handle(Event t) {
                     assert t.getSource() instanceof Menu;
-                    handleOnMenuValidation((Menu)t.getSource());
+                    handleOnMenuValidation((Menu) t.getSource());
                 }
             };
-    
+
     private void handleOnMenuValidation(Menu menu) {
         for (MenuItem i : menu.getItems()) {
             final boolean disable, selected;
             final String title;
             if (i.getUserData() instanceof MenuItemController) {
-                final MenuItemController c = (MenuItemController)i.getUserData();
-                disable = ! c.canPerform();
+                final MenuItemController c = (MenuItemController) i.getUserData();
+                disable = !c.canPerform();
                 title = c.getTitle();
                 selected = c.isSelected();
             } else {
@@ -811,43 +910,77 @@ public class MenuBarController {
                 i.setText(title);
             }
             if (i instanceof RadioMenuItem) {
-                final RadioMenuItem ri = (RadioMenuItem)i;
+                final RadioMenuItem ri = (RadioMenuItem) i;
                 ri.setSelected(selected);
             }
         }
     }
-    
-    private final EventHandler<ActionEvent> onActionEventHandler 
+
+    private final EventHandler<ActionEvent> onActionEventHandler
             = new EventHandler<ActionEvent>() {
                 @Override
                 public void handle(ActionEvent t) {
                     assert t.getSource() instanceof MenuItem;
-                    handleOnActionMenu((MenuItem)t.getSource());
+                    handleOnActionMenu((MenuItem) t.getSource());
                 }
             };
-    
+
     private void handleOnActionMenu(MenuItem i) {
         assert i.getUserData() instanceof MenuItemController;
-        final MenuItemController c = (MenuItemController)i.getUserData();
+        final MenuItemController c = (MenuItemController) i.getUserData();
         c.perform();
     }
-    
+
     /*
      * Private (zoom menu)
      */
-    
     private void updateZoomMenu() {
         final double[] scalingTable = {0.25, 0.50, 0.75, 1.00, 1.50, 2.0, 4.0};
-        
+
         for (int i = 0; i < scalingTable.length; i++) {
             final double scaling = scalingTable[i];
-            final String title = "%" + (int)(scaling * 100); //NOI18N
+            final String title = "%" + (int) (scaling * 100); //NOI18N
             final RadioMenuItem mi = new RadioMenuItem(title);
             mi.setUserData(new SetZoomActionController(scaling));
             zoomMenu.getItems().add(mi);
         }
     }
-    
+
+    private void updateOpenRecentMenuItems() {
+
+        final List<MenuItem> menuItems = new ArrayList<>();
+
+        final PreferencesController pc = PreferencesController.getSingleton();
+        final PreferencesRecordGlobal recordGlobal = pc.getRecordGlobal();
+        final List<String> recentItems = recordGlobal.getRecentItems();
+
+        final MenuItem clearMenuItem = new MenuItem(I18N.getString("menu.title.open.recent.clear"));
+        clearMenuItem.setOnAction(new ClearOpenRecentHandler());
+
+        if (recentItems.isEmpty()) {
+            clearMenuItem.setDisable(true);
+            menuItems.add(clearMenuItem);
+        } else {
+            clearMenuItem.setDisable(false);
+            for (String recentItem : recentItems) {
+                final MenuItem mi = new MenuItem(recentItem);
+                mi.setOnAction(new EventHandler<ActionEvent>() {
+
+                    @Override
+                    public void handle(ActionEvent t) {
+                        final File file = new File(recentItem);
+                        SceneBuilderApp.getSingleton().performOpenRecent(documentWindowController, file);
+                    }
+                });
+                menuItems.add(mi);
+            }
+            menuItems.add(new SeparatorMenuItem());
+            menuItems.add(clearMenuItem);
+        }
+
+        openRecentMenu.getItems().setAll(menuItems);
+    }
+
     private void updateOpenAndRemoveSceneStyleSheetMenus() {
         assert removeSceneStyleSheetMenu != null;
 
@@ -857,7 +990,7 @@ public class MenuBarController {
             if (sceneStyleSheets != null) {
                 removeSceneStyleSheetMenu.getItems().clear();
                 openSceneStyleSheetMenu.getItems().clear();
-                
+
                 if (sceneStyleSheets.size() == 0) {
                     MenuItem mi = new MenuItem(I18N.getString("scenestylesheet.none"));
                     mi.setDisable(true);
@@ -878,23 +1011,22 @@ public class MenuBarController {
             }
         }
     }
-    
+
     /*
      * Private (insert menu)
      */
-    
     private void updateInsertMenu() {
         assert insertMenu != null;
-        
+
         insertMenu.getItems().clear();
-        
+
         if (documentWindowController == null) {
             insertMenu.getItems().add(new MenuItem(I18N.getString("menubar.no.lib.item")));
         } else {
             final EditorController editorController = documentWindowController.getEditorController();
             assert editorController.getLibrary() != null;
 
-            final Map<String, Set<LibraryItem>> sectionMap 
+            final Map<String, Set<LibraryItem>> sectionMap
                     = new TreeMap<>(new BuiltinSectionComparator());
             for (LibraryItem li : editorController.getLibrary().getItems()) {
                 Set<LibraryItem> sectionItems = sectionMap.get(li.getSection());
@@ -905,7 +1037,7 @@ public class MenuBarController {
                 sectionItems.add(li);
             }
 
-            for (Map.Entry<String,Set<LibraryItem>> e : sectionMap.entrySet()) {
+            for (Map.Entry<String, Set<LibraryItem>> e : sectionMap.entrySet()) {
                 final Menu sectionMenu = makeMenuForLibrarySection(e.getKey());
                 insertMenu.getItems().add(sectionMenu);
                 for (LibraryItem li : e.getValue()) {
@@ -914,7 +1046,7 @@ public class MenuBarController {
             }
         }
     }
-    
+
     private Menu makeMenuForLibrarySection(String section) {
         final Menu result = new Menu();
         result.setText(section);
@@ -926,10 +1058,10 @@ public class MenuBarController {
         });
         return result;
     }
-    
+
     private MenuItem makeMenuItemForLibraryItem(final LibraryItem li) {
         final MenuItem result = new MenuItem();
-        
+
         result.setText(li.getName());
         result.setUserData(li);
         result.setOnAction(new EventHandler<ActionEvent>() {
@@ -940,46 +1072,43 @@ public class MenuBarController {
         });
         return result;
     }
-    
-    
+
     private void updateInsertMenuState(Menu sectionMenu) {
         final EditorController editorController = documentWindowController.getEditorController();
         for (MenuItem menuItem : sectionMenu.getItems()) {
             assert menuItem.getUserData() instanceof LibraryItem;
             final LibraryItem li = (LibraryItem) menuItem.getUserData();
             final boolean enabled = editorController.canPerformInsert(li);
-            menuItem.setDisable(! enabled);
+            menuItem.setDisable(!enabled);
         }
     }
-    
+
     private void handleInsertMenuAction(LibraryItem li) {
         final EditorController editorController = documentWindowController.getEditorController();
         editorController.performInsert(li);
     }
-    
+
     /*
      * Private (Add Effect menu)
      */
-
     private void updateAddEffectMenu() {
         addEffectMenu.getItems().clear();
         for (Class<? extends Effect> c : EditorController.getEffectsSupportingAddition()) {
             addEffectMenu.getItems().add(makeMenuItemForEffect(c));
         }
     }
-    
+
     private MenuItem makeMenuItemForEffect(Class<? extends Effect> effectClass) {
         final Menu result = new Menu();
         result.setText(effectClass.getSimpleName());
         result.setUserData(new AddEffectActionController(effectClass));
         return result;
     }
-    
+
     /*
      * Private (window menu)
      */
-    
-    private final EventHandler<Event> onWindowMenuValidationHandler 
+    private final EventHandler<Event> onWindowMenuValidationHandler
             = new EventHandler<Event>() {
                 @Override
                 public void handle(Event t) {
@@ -987,10 +1116,10 @@ public class MenuBarController {
                     handleOnWindowMenuValidation();
                 }
             };
-    
+
     private void handleOnWindowMenuValidation() {
         windowMenu.getItems().clear();
-        
+
         final List<DocumentWindowController> documentWindowControllers
                 = SceneBuilderApp.getSingleton().getDocumentWindowControllers();
         if (documentWindowControllers.isEmpty()) {
@@ -1000,7 +1129,7 @@ public class MenuBarController {
             final List<DocumentWindowController> sortedControllers
                     = new ArrayList<>(documentWindowControllers);
             Collections.sort(sortedControllers, new DocumentWindowController.TitleComparator());
-            
+
             for (DocumentWindowController dwc : sortedControllers) {
                 windowMenu.getItems().add(makeWindowMenuItem(dwc));
             }
@@ -1019,38 +1148,42 @@ public class MenuBarController {
             result.setDisable(true);
             result.setSelected(false);
         }
-        
+
         return result;
     }
-    
+
     private static class WindowMenuEventHandler implements EventHandler<ActionEvent> {
-        
+
         private final DocumentWindowController dwc;
-        
+
         public WindowMenuEventHandler(DocumentWindowController dwc) {
             this.dwc = dwc;
         }
-        
+
         @Override
         public void handle(ActionEvent t) {
             dwc.getStage().toFront();
         }
     }
-    
-    
+
     /*
      * Private (MenuItemController)
      */
-    
     abstract class MenuItemController {
 
         public abstract boolean canPerform();
+
         public abstract void perform();
 
-        public String getTitle() { return null; }
-        public boolean isSelected() { return false; }
+        public String getTitle() {
+            return null;
+        }
+
+        public boolean isSelected() {
+            return false;
+        }
     }
-    
+
     class UndoActionController extends MenuItemController {
 
         @Override
@@ -1083,7 +1216,7 @@ public class MenuBarController {
     }
 
     class RedoActionController extends MenuItemController {
-        
+
         @Override
         public boolean canPerform() {
             boolean result;
@@ -1100,7 +1233,7 @@ public class MenuBarController {
             assert canPerform();
             documentWindowController.getEditorController().redo();
         }
-        
+
         @Override
         public String getTitle() {
             final StringBuilder result = new StringBuilder();
@@ -1114,9 +1247,9 @@ public class MenuBarController {
     }
 
     class EditActionController extends MenuItemController {
-        
+
         private final EditAction editAction;
-        
+
         public EditActionController(EditAction editAction) {
             this.editAction = editAction;
         }
@@ -1139,12 +1272,11 @@ public class MenuBarController {
         }
 
     }
-    
-    
+
     class ControlActionController extends MenuItemController {
-        
+
         private final ControlAction controlAction;
-        
+
         public ControlActionController(ControlAction controlAction) {
             this.controlAction = controlAction;
         }
@@ -1167,12 +1299,11 @@ public class MenuBarController {
         }
 
     }
-    
-    
+
     class DocumentControlActionController extends MenuItemController {
-        
+
         private final DocumentControlAction controlAction;
-        
+
         public DocumentControlActionController(DocumentControlAction controlAction) {
             this.controlAction = controlAction;
         }
@@ -1193,14 +1324,13 @@ public class MenuBarController {
             assert canPerform() : "controlAction=" + controlAction;
             documentWindowController.performControlAction(controlAction);
         }
-        
+
     }
-    
-    
+
     class ApplicationControlActionController extends MenuItemController {
-        
+
         private final ApplicationControlAction controlAction;
-        
+
         public ApplicationControlActionController(ApplicationControlAction controlAction) {
             this.controlAction = controlAction;
         }
@@ -1216,14 +1346,13 @@ public class MenuBarController {
             SceneBuilderApp.getSingleton().performControlAction(controlAction,
                     documentWindowController);
         }
-        
+
     }
-    
-    
+
     class AddEffectActionController extends MenuItemController {
-        
+
         private final Class<? extends Effect> effectClass;
-        
+
         public AddEffectActionController(Class<? extends Effect> effectClass) {
             this.effectClass = effectClass;
         }
@@ -1238,15 +1367,13 @@ public class MenuBarController {
         public void perform() {
             throw new UnsupportedOperationException("Not supported yet: effectClass=" + effectClass);  //NOI18N
         }
-        
-        
+
     }
-    
-    
+
     class SetZoomActionController extends MenuItemController {
-        
+
         private final double scaling;
-        
+
         public SetZoomActionController(double scaling) {
             this.scaling = scaling;
         }
@@ -1266,30 +1393,28 @@ public class MenuBarController {
                 contentPanelController.setScaling(scaling);
             }
         }
-        
+
         @Override
         public boolean isSelected() {
             boolean result;
-            
+
             if (documentWindowController == null) {
                 result = false;
             } else {
                 final double currentScaling
                         = documentWindowController.getContentPanelController().getScaling();
-                result = MathUtils.equals(currentScaling, scaling); 
+                result = MathUtils.equals(currentScaling, scaling);
             }
-            
+
             return result;
         }
-        
-        
+
     }
-    
-    
+
     class SetThemeActionController extends MenuItemController {
-        
+
         private final EditorPlatform.Theme theme;
-        
+
         public SetThemeActionController(EditorPlatform.Theme theme) {
             this.theme = theme;
         }
@@ -1304,11 +1429,11 @@ public class MenuBarController {
             assert documentWindowController != null;
             documentWindowController.getEditorController().setTheme(theme);
         }
-        
+
         @Override
         public boolean isSelected() {
             boolean result;
-            
+
             if (documentWindowController == null) {
                 result = false;
             } else {
@@ -1316,12 +1441,11 @@ public class MenuBarController {
                         = documentWindowController.getEditorController().getTheme();
                 result = currentTheme == theme;
             }
-            
+
             return result;
         }
     }
 
-    
     class RemoveSceneStyleSheetActionController extends MenuItemController {
 
         private final File styleSheet;
@@ -1347,7 +1471,6 @@ public class MenuBarController {
         }
     }
 
-    
     class OpenSceneStyleSheetActionController extends MenuItemController {
 
         private final File styleSheet;
@@ -1370,6 +1493,21 @@ public class MenuBarController {
         @Override
         public String getTitle() {
             return styleSheet.getName();
+        }
+    }
+
+    /**
+     * *************************************************************************
+     * Static inner class
+     * *************************************************************************
+     */
+    private static class ClearOpenRecentHandler implements EventHandler<ActionEvent> {
+
+        @Override
+        public void handle(ActionEvent t) {
+            final PreferencesController pc = PreferencesController.getSingleton();
+            final PreferencesRecordGlobal recordGlobal = pc.getRecordGlobal();
+            recordGlobal.clearRecentItems();
         }
     }
 }

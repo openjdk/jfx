@@ -107,18 +107,9 @@ public class ContainerXYDropTarget extends AbstractDropTarget {
         
         
         final List<FXOMObject> draggedObjects = dragSource.getDraggedObjects();
-        final FXOMObject hitObject;
-        final double hitX, hitY;
-        if (dragSource instanceof DocumentDragSource) {
-            final DocumentDragSource dds = (DocumentDragSource)dragSource;
-            hitObject = dds.getHitObject();
-            hitX = dds.getHitX();
-            hitY = dds.getHitY();
-        } else {
-            hitObject = draggedObjects.get(0);
-            hitX = 0.0;
-            hitY = 0.0;
-        }
+        final FXOMObject hitObject = dragSource.getHitObject();
+        final double hitX = dragSource.getHitX();
+        final double hitY = dragSource.getHitY();
         final FXOMObject currentParent = hitObject.getParentObject();
         
         final BatchJob result;

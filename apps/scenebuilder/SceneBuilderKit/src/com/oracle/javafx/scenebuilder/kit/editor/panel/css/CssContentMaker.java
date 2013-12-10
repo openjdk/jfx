@@ -68,7 +68,7 @@ public class CssContentMaker {
     private static final List<StyleOrigin> ORDERED_ORIGIN = new ArrayList<>();
 
     static {
-        ORDERED_ORIGIN.add(StyleOrigin.USER_AGENT);// modena / caspian
+        ORDERED_ORIGIN.add(StyleOrigin.USER_AGENT);// fxTheme : modena/caspian
         ORDERED_ORIGIN.add(StyleOrigin.USER);//Bean API Call
 
         ORDERED_ORIGIN.add(StyleOrigin.AUTHOR);//CSS files
@@ -233,24 +233,6 @@ public class CssContentMaker {
      * Private methods
      *
      */
-    private static void clearStyledSubProperty(InitialPropertyState prop, Collection<CssPropertyState> styled) {
-        Iterator<CssPropertyState> it = styled.iterator();
-        while (it.hasNext()) {
-            CssPropertyState styledProp = it.next();
-            if (styledProp.getCssProperty().equals(prop.getCssProperty())) {
-                // If the styled property contains the initial sub property, remove it from the initial sub Properties
-                for (PropertyState sub : styledProp.getSubProperties()) {
-                    for (PropertyState initialSub : prop.getSubProperties()) {
-                        if (initialSub.getCssProperty().equals(sub.getCssProperty())) {
-                            prop.getSubProperties().remove(initialSub);
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     private static boolean containsInStyle(CssPropertyState prop, String style) {
         return style.contains(prop.getCssProperty());
     }
@@ -280,19 +262,6 @@ public class CssContentMaker {
                 node.setOpacity(current);
             }
         }
-    }
-
-    // XXX jfdenise, to remove, used for alternate view of Initial values.
-    private static <N extends Node> PropertyState computeCurrentValue(
-            N n, CssMetaData<N, ?> cssMeta, FXOMObject fxomObject) {
-        PropertyState val = modelValue(n, cssMeta, fxomObject);
-        if (val == null) {
-            val = initialValue(n, cssMeta);
-        }
-        assert val != null;
-        val.getNotAppliedStyles().addAll(
-                getNotAppliedStyles(Collections.<Style>emptyList(), n, cssMeta));
-        return val;
     }
 
     private static FXOMObject getFXOMObject(Object selectedObject) {
@@ -378,14 +347,14 @@ public class CssContentMaker {
         List<CssStyle> ret = new ArrayList<>();
 
         List<Style> allStyles = Deprecation.getMatchingStyles(cssMeta, node);
+//        System.out.println("===========================");
+//        System.out.println("getNotAppliedStyles() called!");
+//        System.out.println("===========================");
 //        System.out.println("\n\n");
 //        printStyles(allStyles);
         List<Style> notApplied = new ArrayList<>();
         for (Object obj : allStyles) {
             Style style = (Style) obj;
-            if (CssInternal.isThemeStyle(style)) {
-                continue;
-            }
             if (!appliedStyles.contains(style)) {
                 notApplied.add(style);
             }
@@ -406,7 +375,7 @@ public class CssContentMaker {
 //        }
 //
 //    }
-//
+
 //    private static void printStyle(Style style) {
 //        System.out.println(style.getDeclaration().getRule().getOrigin() + " ==> STYLE " + style.getDeclaration());
 //        System.out.println("--> css url = " + style.getDeclaration().getRule().getStylesheet().getUrl());
@@ -546,6 +515,10 @@ public class CssContentMaker {
                 return used;
             }
 
+            public Style getStyle() {
+                return style;
+            }
+
             public String getCssProperty() {
                 return style.getDeclaration().getProperty();
             }
@@ -556,11 +529,7 @@ public class CssContentMaker {
             }
 
             public StyleOrigin getOrigin() {
-                Rule rule = style.getDeclaration().getRule();
-                if (rule == null) {
-                    return null;
-                }
-                return rule.getOrigin();
+                return CssInternal.getOrigin(style);
             }
 
             public String getSelector() {
@@ -665,7 +634,6 @@ public class CssContentMaker {
         private Collection<CssPropertyState> author;
         private Collection<CssPropertyState> inline;
         private Collection<CssPropertyState> userAgent;
-        private Collection<PropertyState> initial;
         private Map<MatchingRule, List<MatchingDeclaration>> matchingRules;
         private List<MatchingRule> sortedMatchingRules = new ArrayList<>();
         private Collection<CssProperty> props;
@@ -678,7 +646,6 @@ public class CssContentMaker {
             getAuthorStyles();
             getInlineStyles();
             getUserAgentStyles();
-            getInitialStyles();
             getMatchingRules();
             getAllStyleables();
         }
@@ -692,12 +659,12 @@ public class CssContentMaker {
             private final List<CssProperty> sub = new ArrayList<>();
             private final ObjectProperty<String> name = new SimpleObjectProperty<>();
             private final ObjectProperty<PropertyState> builtin = new SimpleObjectProperty<>();
-            private final ObjectProperty<CssPropertyState> caspian = new SimpleObjectProperty<>();
+            private final ObjectProperty<CssPropertyState> fxTheme = new SimpleObjectProperty<>();
             private final ObjectProperty<CssPropertyState> authorCss = new SimpleObjectProperty<>();
             private final ObjectProperty<CssPropertyState> inlineCss = new SimpleObjectProperty<>();
             private final ObjectProperty<PropertyState> fxmlModel = new SimpleObjectProperty<>();
             private PropertyState currentState;
-            
+
             @SuppressWarnings("rawtypes")
             CssProperty(NodeCssState nodeCssState, CssMetaData cssMeta, Node target, FXOMObject fxomObject) {
                 this(nodeCssState, null, cssMeta, target, fxomObject);
@@ -717,9 +684,9 @@ public class CssContentMaker {
                 if (authorState != null) {
                     authorCss.setValue(authorState);
                 }
-                CssPropertyState caspianState = nodeCssState.retrieveCssStyle(cssMeta, nodeCssState.getUserAgentStyles());
-                if (caspianState != null) {
-                    caspian.setValue(caspianState);
+                CssPropertyState fxThemeState = nodeCssState.retrieveCssStyle(cssMeta, nodeCssState.getUserAgentStyles());
+                if (fxThemeState != null) {
+                    fxTheme.setValue(fxThemeState);
                 }
                 @SuppressWarnings("unchecked")
                 PropertyState builtinState = CssContentMaker.initialValue(target, mainProperty == null ? this : mainProperty, cssMeta);
@@ -740,8 +707,8 @@ public class CssContentMaker {
                 return fxmlModel;
             }
 
-            public ObjectProperty<CssPropertyState> caspianState() {
-                return caspian;
+            public ObjectProperty<CssPropertyState> fxThemeState() {
+                return fxTheme;
             }
 
             public ObjectProperty<CssPropertyState> authorState() {
@@ -803,11 +770,11 @@ public class CssContentMaker {
                 return inlineState().get() == null
                         && authorState().get() == null
                         && modelState().get() == null
-                        && caspianState().get() == null;
+                        && fxThemeState().get() == null;
             }
 
-            public boolean isCaspianSource() {
-                return caspianState().get() != null
+            public boolean isFxThemeSource() {
+                return fxThemeState().get() != null
                         && inlineState().get() == null
                         && authorState().get() == null
                         && modelState().get() == null;
@@ -836,7 +803,7 @@ public class CssContentMaker {
                 if (authorState().get() != null) {
                     return authorState().get();
                 }
-                return caspianState().get();
+                return fxThemeState().get();
             }
 
             public PropertyState getCurrentStyle() {
@@ -892,7 +859,7 @@ public class CssContentMaker {
                 return ret;
             }
 
-            public List<CssStyle> getCaspianHiddenByModel() {
+            public List<CssStyle> getFxThemeHiddenByModel() {
                 List<CssStyle> ret = new ArrayList<>();
                 CssPropertyState ps = getWinner();
                 List<CssStyle> notAppliedStyles = ps == null ? Collections.<CssStyle>emptyList() : ps.getNotAppliedStyles();
@@ -1000,27 +967,12 @@ public class CssContentMaker {
             return userAgent;
         }
 
-        public final Collection<PropertyState> getInitialStyles() {
-            if (initial == null) {
-                SortedSet<PropertyState> sorted = new TreeSet<>();
-                sorted.addAll(getAppliedIStyles(node));
-
-                // Not needed now that the skin.getNode() returns the control itself
-//                if (node instanceof Skinnable) {
-//                    Skin<?> skin = ((Skinnable) node).getSkin();
-//                    Node skinNode = skin.getNode();
-//                    sorted.addAll(getAppliedIStyles(skinNode));
-//                }
-                initial = sorted;
-            }
-            return initial;
-        }
-
         public static class RuleComparator implements Comparator<MatchingRule> {
 
-        @Override
+            @Override
             public int compare(MatchingRule t, MatchingRule t1) {
-                int originComparaison = compareOrigin(t.getRule().getOrigin(), t1.rule.getOrigin());
+                int originComparaison = compareOrigin(
+                        CssInternal.getOrigin(t.getRule()), CssInternal.getOrigin(t1.rule));
                 int tnotApplied = countNotApplied(t.declarations);
                 int t1notApplied = countNotApplied(t1.declarations);
                 int notAppliedComparaisons = tnotApplied - t1notApplied;
@@ -1177,7 +1129,7 @@ public class CssContentMaker {
                 for (Entry<MatchingRule, List<MatchingDeclaration>> entry : matchingRules.entrySet()) {
                     MatchingRule rule = entry.getKey();
                     // Filterout the Inline
-                    if (rule.getRule().getOrigin() != StyleOrigin.INLINE) {
+                    if (CssInternal.getOrigin(rule.getRule()) != StyleOrigin.INLINE) {
                         rule.addDeclarations(entry.getValue());
                         sortedMatchingRules.add(rule);
                     }
@@ -1240,21 +1192,8 @@ public class CssContentMaker {
 //                System.out.println("\nStyleable property: " + value);
                 assert entry.getValue() != null;
                 assert !entry.getValue().isEmpty();
-
-                Style st = null;
-                // Find the first style which is not a theme style.
-                for (Style style : entry.getValue()) {
-                    if (!CssInternal.isThemeStyle(style)) {
-                        st = style;
-                        break;
-                    }
-                }
-                if (st == null) {
-                    // No "real" style found for this property: continue with next property
-                    continue;
-                }
-
-                StyleOrigin o = st.getDeclaration().getRule().getOrigin();// Winning Style.
+                Style st = entry.getValue().get(0);
+                StyleOrigin o = CssInternal.getOrigin(st);
 //                printStyle(st);
                 /* If this origin is equals to the passed one, this is the nominal case.
                  * If this property contains sub properties (eg:background-fills), then we need to check
@@ -1264,7 +1203,6 @@ public class CssContentMaker {
                 if (o == origin || cssMetaList.getSubProperties() != null) {
                     // Need the first style to compute the value
                     // We have at least a style. The first one is the winner.
-
                     String cssValue = CssValueConverter.toCssString(cssMetaList.getProperty(),
                             st.getDeclaration().getRule(), value.getValue());
 
@@ -1273,16 +1211,16 @@ public class CssContentMaker {
                     /* 
                      * Each sub property can be ruled by a specific Origin, 
                      * we need to check if the sub property is in a rule of the passed origin.
-                     * For example, we can have background-radius set by caspian 
+                     * For example, we can have background-radius set by fxTheme 
                      * and background-color set by inline or author.
                      */
                     if (cssMetaList.getSubProperties() != null) {
                         for (CssMetaData sub : cssMetaList.getSubProperties()) {
                             List<CssStyle> notApplied = getNotAppliedStyles(entry.getValue(), node, sub);
                             for (Style style : entry.getValue()) {
+                                StyleOrigin styleOrigin = CssInternal.getOrigin(style);
                                 if (style.getDeclaration().getProperty().equals(sub.getProperty())
-                                        && (style.getDeclaration().getRule().getStylesheet().getOrigin() == origin)
-                                        && !CssInternal.isThemeStyle(style)) {
+                                        && (styleOrigin == origin)) {
                                     CssStyle cssStyle = retrieveStyle(entry.getValue(), style);
                                     String subCssValue = CssValueConverter.toCssString(sub.getProperty(), style.getDeclaration().getRule(), value.getValue());
                                     CssSubPropertyState subCss = new CssSubPropertyState(value, sub, subCssValue);
@@ -1318,51 +1256,5 @@ public class CssContentMaker {
             }
             return propertyStates;
         }
-
-        private Collection<PropertyState> getAppliedIStyles(Node node) {
-            SortedSet<PropertyState> sorted = new TreeSet<>();
-            List<CssMetaData<? extends Styleable, ?>> cssMetaList = node.getCssMetaData();
-            for (CssMetaData<?, ?> cssMeta : cssMetaList) {
-                @SuppressWarnings("unchecked")
-                final CssMetaData<Node, ?> s = (CssMetaData<Node, ?>) cssMeta;
-                StyleableProperty<?> val = s.getStyleableProperty(node);
-                List<Style> styles = map.get(val);
-                if (styles != null) {
-                    StyleOrigin o = val.getStyleOrigin();
-                    /*
-                     * If the origin is not null and the property has sub properties, 
-                     * it doesn't mean that the property is to be ignored.
-                     * Some sub properties can be un-styled. This was one of the root cause of
-                     * DTL-5064
-                     */
-                    if (o != null && cssMeta.getSubProperties() == null) {
-                        continue;
-                    }
-                }
-                PropertyState ps = computeCurrentValue(node, s, fxomObject);
-                if (ps instanceof InitialPropertyState) {
-                    /*
-                     * XXX jfdenise, this check could be done before computing the value.
-                     * In some cases, some sub properties are styled by INLINE/USER/AUTHOR
-                     * In such a case, the sub properties must be removed from the initial sub properties.
-                     */
-                    if (!ps.getSubProperties().isEmpty()) {
-                        clearStyledSubProperty(((InitialPropertyState) ps), getAuthorStyles());
-                        clearStyledSubProperty(((InitialPropertyState) ps), getInlineStyles());
-                        clearStyledSubProperty(((InitialPropertyState) ps), getUserAgentStyles());
-                        // If no more sub properties, then forget about this property.
-                        if (!ps.getSubProperties().isEmpty()) {
-                            sorted.add(ps);
-                        }
-                    } else {
-                        sorted.add(ps);
-                    }
-                }
-
-            }
-            return sorted;
-        }
-
     }
-
 }

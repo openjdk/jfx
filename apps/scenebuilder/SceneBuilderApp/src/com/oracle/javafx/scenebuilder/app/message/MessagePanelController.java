@@ -80,7 +80,7 @@ public class MessagePanelController extends AbstractFxmlPanelController {
     }
     
     public MessagePanelController(EditorController editorController) {
-        super(MessagePanelController.class.getResource("MessagePanel.fxml"), editorController); //NOI18N
+        super(MessagePanelController.class.getResource("MessagePanel.fxml"), I18N.getBundle(), editorController); //NOI18N
     }
     
     

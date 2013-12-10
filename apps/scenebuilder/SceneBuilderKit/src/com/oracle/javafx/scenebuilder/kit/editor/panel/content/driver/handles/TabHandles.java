@@ -35,8 +35,8 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelContr
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TabPaneDesignInfoX;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.AbstractGesture;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.mouse.DebugMouseGesture;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.util.BoundsUtils;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
-import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
@@ -74,7 +74,7 @@ public class TabHandles extends AbstractGenericHandles<Tab> {
         final TabPane tabPane = getSceneGraphObject().getTabPane();
         final Point2D min = tabPane.sceneToLocal(tabNode.localToScene(b.getMinX(), b.getMinY()));
         final Point2D max = tabPane.sceneToLocal(tabNode.localToScene(b.getMaxX(), b.getMaxY()));
-        return makeBoundingBox(min, max);
+        return BoundsUtils.makeBounds(min, max);
     }
 
     @Override
@@ -83,11 +83,16 @@ public class TabHandles extends AbstractGenericHandles<Tab> {
     }
 
     @Override
-    public Point2D sceneGraphObjectToDecoration(double x, double y) {
+    public Point2D sceneGraphObjectToScene(double x, double y) {
         final TabPane tabPane = getSceneGraphObject().getTabPane();
-        return getRootNode().sceneToLocal(tabPane.localToScene(x, y));
+        return tabPane.localToScene(x, y);
     }
 
+    @Override
+    public Point2D sceneToSceneGraphObject(double x, double y) {
+        final TabPane tabPane = getSceneGraphObject().getTabPane();
+        return tabPane.sceneToLocal(x, y);
+    }
 
     @Override
     protected void startListeningToSceneGraphObject() {
@@ -117,18 +122,5 @@ public class TabHandles extends AbstractGenericHandles<Tab> {
     @Override
     public AbstractGesture findGesture(Node node) {
         return new DebugMouseGesture(getContentPanelController(), "Resize gesture for Tab");
-    }
-    
-    
-    /*
-     * Private
-     */
-    
-    private static BoundingBox makeBoundingBox(Point2D p1, Point2D p2) {
-        return new BoundingBox(
-                Math.min(p1.getX(), p2.getX()),
-                Math.min(p1.getY(), p2.getY()),
-                Math.abs(p2.getX() - p1.getX()),
-                Math.abs(p2.getY() - p1.getY()));
     }
 }

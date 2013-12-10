@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <!--
   Copyright (c) 2012, 2013, Oracle and/or its affiliates.
   All rights reserved. Use is subject to license terms.
@@ -40,14 +41,14 @@
 <?import javafx.scene.paint.*?>
 <?scenebuilder-preview-i18n-resource ../i18n/SceneBuilderApp.properties?>
 
-<GridPane hgap="6.0" maxWidth="1.7976931348623157E308" vgap="10.0" xmlns:fx="http://javafx.com/fxml">
+<GridPane hgap="6.0" maxWidth="1.7976931348623157E308" vgap="10.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
   <children>
     <Label text="%prefs.doc.width" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-    <TextField fx:id="documentWidth" onAction="#onWidthChange" prefWidth="200.0" text="" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+    <TextField fx:id="documentWidth" prefWidth="200.0" text="" GridPane.columnIndex="1" GridPane.rowIndex="0" />
     <Label text="%prefs.doc.height" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-    <TextField fx:id="documentHeight" onAction="#onHeightChange" prefWidth="200.0" text="" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+    <TextField fx:id="documentHeight" prefWidth="200.0" text="" GridPane.columnIndex="1" GridPane.rowIndex="1" />
     <Label text="%prefs.background" GridPane.columnIndex="0" GridPane.rowIndex="3" />
-    <ChoiceBox fx:id="backgroundStyleClass" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+    <ChoiceBox fx:id="backgroundImage" GridPane.columnIndex="1" GridPane.rowIndex="3" />
     <Label text="%prefs.alignment.guides" GridPane.columnIndex="0" GridPane.rowIndex="4" />
     <VBox fx:id="alignmentGuides" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.rowIndex="4" />
     <Label text="%prefs.drop.ring" GridPane.columnIndex="0" GridPane.rowIndex="5" />
@@ -67,12 +68,27 @@
     <Separator prefWidth="-1.0" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="2" />
     <Separator prefWidth="-1.0" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="6" />
     <Separator prefWidth="-1.0" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="9" />
+    <Label text="%prefs.recent.items" GridPane.columnIndex="0" GridPane.rowIndex="10" />
+    <ChoiceBox fx:id="recentItemsSize" GridPane.columnIndex="1" GridPane.rowIndex="10">
+      <items>
+        <FXCollections fx:factory="observableArrayList">
+          <String fx:value="Item 1" />
+          <String fx:value="Item 2" />
+          <String fx:value="Item 3" />
+        </FXCollections>
+      </items>
+    </ChoiceBox>
   </children>
   <columnConstraints>
     <ColumnConstraints halignment="RIGHT" hgrow="SOMETIMES" maxWidth="-Infinity" minWidth="-Infinity" />
     <ColumnConstraints halignment="LEFT" hgrow="ALWAYS" maxWidth="177.0" minWidth="-Infinity" prefWidth="-1.0" />
   </columnConstraints>
+  <padding>
+    <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+  </padding>
   <rowConstraints>
+    <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="-1.0" vgrow="NEVER" />
+    <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="-1.0" vgrow="NEVER" />
     <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="-1.0" vgrow="NEVER" />
     <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="-1.0" vgrow="NEVER" />
     <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="-1.0" vgrow="NEVER" />

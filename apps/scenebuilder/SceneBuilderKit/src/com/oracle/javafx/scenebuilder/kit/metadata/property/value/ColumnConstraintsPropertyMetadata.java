@@ -69,10 +69,10 @@ public class ColumnConstraintsPropertyMetadata extends ComplexPropertyMetadata<C
                     DEFAULT.getPrefWidth(), InspectorPath.UNUSED);
     private final EnumerationPropertyMetadata halignmentMetadata
             = new EnumerationPropertyMetadata(new PropertyName("halignment"),
-            VPos.class, true, DEFAULT.getHalignment(), InspectorPath.UNUSED);
+            VPos.class, EnumerationPropertyMetadata.EQUIV_INHERITED, true, InspectorPath.UNUSED);
     private final EnumerationPropertyMetadata hgrowMetadata
             = new EnumerationPropertyMetadata(new PropertyName("hgrow"),
-            Priority.class, true, DEFAULT.getHgrow(), InspectorPath.UNUSED);
+            Priority.class, EnumerationPropertyMetadata.EQUIV_INHERITED, true, InspectorPath.UNUSED);
     
     public ColumnConstraintsPropertyMetadata(PropertyName name, boolean readWrite, 
             ColumnConstraints defaultValue, InspectorPath inspectorPath) {
@@ -121,14 +121,14 @@ public class ColumnConstraintsPropertyMetadata extends ComplexPropertyMetadata<C
         
         final HPos halignment = value.getHalignment();
         if (halignment == null) {
-            halignmentMetadata.setValue(valueInstance, null);
+            halignmentMetadata.setValue(valueInstance, halignmentMetadata.getDefaultValue());
         } else {
             halignmentMetadata.setValue(valueInstance, halignment.toString());
         }
         
         final Priority hgrow = value.getHgrow();
         if (hgrow == null) {
-            hgrowMetadata.setValue(valueInstance, null);
+            hgrowMetadata.setValue(valueInstance, hgrowMetadata.getDefaultValue());
         } else {
             hgrowMetadata.setValue(valueInstance, hgrow.toString());
         }

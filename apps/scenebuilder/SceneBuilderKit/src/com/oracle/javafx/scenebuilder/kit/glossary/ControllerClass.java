@@ -339,7 +339,8 @@ class ControllerClass {
         StringBuilder sb = new StringBuilder();
         String line;
 
-        try (BufferedReader bufReader = new BufferedReader(new InputStreamReader(new FileInputStream(file), Charset.forName("UTF-8")))) {
+        try (BufferedReader bufReader =
+                new BufferedReader(new InputStreamReader(new FileInputStream(file), Charset.forName("UTF-8")))) { //NOI18N
             while ((line = bufReader.readLine()) != null) {
                 sb.append(line).append("\n"); //NOI18N
             }

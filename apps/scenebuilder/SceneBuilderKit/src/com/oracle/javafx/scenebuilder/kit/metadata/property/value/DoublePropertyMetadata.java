@@ -59,6 +59,7 @@ public class DoublePropertyMetadata extends TextEncodablePropertyMetadata<java.l
     public DoublePropertyMetadata(PropertyName name, DoubleKind kind,
             boolean readWrite, Double defaultValue, InspectorPath inspectorPath) {
         super(name, Double.class, readWrite, defaultValue, inspectorPath);
+        assert (kind != DoubleKind.NULLABLE_COORDINATE) || (defaultValue == null);
         this.kind = kind;
     }
     

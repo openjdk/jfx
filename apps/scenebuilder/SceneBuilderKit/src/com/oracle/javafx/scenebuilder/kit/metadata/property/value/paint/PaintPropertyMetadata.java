@@ -40,7 +40,6 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyT;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.ComplexPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.ColorEncoder;
-import com.oracle.javafx.scenebuilder.kit.metadata.util.GradientEncoder;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import javafx.scene.paint.Color;
@@ -117,10 +116,10 @@ public class PaintPropertyMetadata extends ComplexPropertyMetadata<Paint> {
                 fxomPropertyT.setValue(ColorEncoder.encodeColor(color));
             } else if (value instanceof LinearGradient) {
                 final LinearGradient linear = (LinearGradient) value;
-                fxomPropertyT.setValue(GradientEncoder.encodeLinearGradient(linear));
+                fxomPropertyT.setValue(linear.toString());
             } else if (value instanceof RadialGradient) {
                 final RadialGradient radial = (RadialGradient) value;
-                fxomPropertyT.setValue(GradientEncoder.encodeRadialGradient(radial));
+                fxomPropertyT.setValue(radial.toString());
             }
         } else {
             assert fxomProperty instanceof FXOMPropertyC;

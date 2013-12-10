@@ -46,8 +46,33 @@ public final class Platform {
      * A runnable passed into the runLater method will be
      * executed before any Runnable passed into a subsequent call to runLater.
      *
+     * <p>
+     * NOTE: applications should avoid flooding JavaFX with too many
+     * pending Runnables. Otherwise, the application may become unresponsive.
+     * Applications are encouraged to batch up multiple operations into fewer
+     * runLater calls.
+     * Additionally, long-running operations should be done on a background
+     * thread where possible, freeing up the JavaFX Application Thread for GUI
+     * operations.
+     * </p>
+     *
+     * <p>
+     * This method must not be called before the FX runtime has been
+     * initialized. For standard JavaFX applications that extend
+     * {@see Application}, and use either the Java launcher or one of the
+     * launch methods in the Application class to launch the application,
+     * the FX runtime is initialized by the launcher before the Application
+     * class is loaded.
+     * For Swing applications that use JFXPanel to display FX content, the FX
+     * runtime is initialized when the first JFXPanel instance is constructed.
+     * For SWT application that use FXCanvas to display FX content, the FX
+     * runtime is initialized when the first FXCanvas instance is constructed.
+     * </p>
+     *
      * @param runnable the Runnable whose run method will be executed on the
      * JavaFX Application Thread
+     *
+     * @throws IllegalStateException if the FX runtime has not been initialized
      */
     public static void runLater(Runnable runnable) {
         PlatformImpl.runLater(runnable);

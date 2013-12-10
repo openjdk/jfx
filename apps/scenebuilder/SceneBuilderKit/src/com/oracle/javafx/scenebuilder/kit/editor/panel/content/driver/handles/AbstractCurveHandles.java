@@ -75,8 +75,13 @@ public abstract class AbstractCurveHandles<T extends Node> extends AbstractHandl
     }
 
     @Override
-    public Point2D sceneGraphObjectToDecoration(double x, double y) {
-        return getRootNode().sceneToLocal(getSceneGraphObject().localToScene(x,y));
+    public Point2D sceneGraphObjectToScene(double x, double y) {
+        return getSceneGraphObject().localToScene(x,y);
+    }
+
+    @Override
+    public Point2D sceneToSceneGraphObject(double x, double y) {
+        return getSceneGraphObject().sceneToLocal(x,y);
     }
 
     @Override

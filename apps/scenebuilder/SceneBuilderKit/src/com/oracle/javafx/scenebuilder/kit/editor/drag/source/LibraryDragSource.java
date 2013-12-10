@@ -116,6 +116,47 @@ public class LibraryDragSource extends AbstractDragSource {
     }
     
     @Override
+    public FXOMObject getHitObject() {
+        return getDraggedObjects().get(0);
+    }
+    
+    @Override
+    public double getHitX() {
+        final double result;
+        
+        final FXOMObject hitObject = getHitObject();
+        if (hitObject == null) {
+            result = Double.NaN;
+        } else if (hitObject.isNode()) {
+            final Node hitNode = (Node) hitObject.getSceneGraphObject();
+            final Bounds b = hitNode.getLayoutBounds();
+            result = (b.getMinX() + b.getMaxX()) / 2.0;
+        } else {
+            result = 0.0;
+        }
+        
+        return result;
+    }
+
+    @Override
+    public double getHitY() {
+        final double result;
+        
+        final FXOMObject hitObject = getHitObject();
+        if (hitObject == null) {
+            result = Double.NaN;
+        } else if (hitObject.isNode()) {
+            final Node hitNode = (Node) hitObject.getSceneGraphObject();
+            final Bounds b = hitNode.getLayoutBounds();
+            result = (b.getMinY() + b.getMaxY()) / 2.0;
+        } else {
+            result = 0.0;
+        }
+        
+        return result;
+    }
+
+    @Override
     public ClipboardContent makeClipboardContent() {
         final ClipboardContent result = new ClipboardContent();
         

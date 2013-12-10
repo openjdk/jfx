@@ -123,14 +123,14 @@ public class MovingGuideRenderer {
             chromeMap.put(s, chrome);
         }
         
-        assert chromeMap.keySet().size() == lines1.size() + lines2.size()
-                : "chromeMap.keySet().size()=" + chromeMap.keySet().size()
-                + ", lines1.size()=" + lines1.size()
-                + ", lines2.size()=" + lines2.size()
-                + ", currentLines.size()=" + currentLines.size()
-                + ", newLines.size()=" + newLines.size()
-                + ", obsoleteLines.size()=" + obsoleteLines.size();
-        assert chromeMap.size() + reusableChromes.size() == guideGroup.getChildren().size();
+//        assert chromeMap.keySet().size() == lines1.size() + lines2.size()
+//                : "chromeMap.keySet().size()=" + chromeMap.keySet().size()
+//                + ", lines1.size()=" + lines1.size()
+//                + ", lines2.size()=" + lines2.size()
+//                + ", currentLines.size()=" + currentLines.size()
+//                + ", newLines.size()=" + newLines.size()
+//                + ", obsoleteLines.size()=" + obsoleteLines.size();
+//        assert chromeMap.size() + reusableChromes.size() == guideGroup.getChildren().size();
     }
     
     

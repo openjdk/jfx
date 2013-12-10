@@ -173,7 +173,7 @@ public class JarExplorer {
             // We skip inner classes for now
             result = null;
         } else {
-            final int endIndex = entryName.length()-6; // ".class" -> 6
+            final int endIndex = entryName.length()-6; // ".class" -> 6 //NOI18N
             result = entryName.substring(0, endIndex).replace("/", "."); //NOI18N
         }
         

@@ -136,7 +136,7 @@ class GlassAppletWindow implements AppletWindow {
 
     @Override
     public int getPositionX() {
-        AtomicInteger x = new AtomicInteger(0);
+        final AtomicInteger x = new AtomicInteger(0);
         Application.invokeAndWait(new Runnable() {
             @Override
             public void run() {
@@ -148,7 +148,7 @@ class GlassAppletWindow implements AppletWindow {
 
     @Override
     public int getPositionY() {
-        AtomicInteger y = new AtomicInteger(0);
+        final AtomicInteger y = new AtomicInteger(0);
         Application.invokeAndWait(new Runnable() {
             @Override
             public void run() {
@@ -180,7 +180,7 @@ class GlassAppletWindow implements AppletWindow {
     
     @Override
     public int getRemoteLayerId() {
-        AtomicInteger id = new AtomicInteger(-1);
+        final AtomicInteger id = new AtomicInteger(-1);
         Application.invokeAndWait(new Runnable() {
             @Override
             public void run() {

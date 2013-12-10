@@ -87,8 +87,13 @@ public abstract class AbstractNodeHandles<T extends Node> extends AbstractGeneri
     }
 
     @Override
-    public Point2D sceneGraphObjectToDecoration(double x, double y) {
-        return getRootNode().sceneToLocal(getSceneGraphObject().localToScene(x,y));
+    public Point2D sceneGraphObjectToScene(double x, double y) {
+        return getSceneGraphObject().localToScene(x,y);
+    }
+
+    @Override
+    public Point2D sceneToSceneGraphObject(double x, double y) {
+        return getSceneGraphObject().sceneToLocal(x,y);
     }
 
     @Override

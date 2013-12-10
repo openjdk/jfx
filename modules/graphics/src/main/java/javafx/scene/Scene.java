@@ -164,6 +164,11 @@ import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
  * size based on the preferred size of its content. If only one dimension is specified,
  * the other dimension is computed using the specified dimension, respecting content bias
  * of a root.
+ * 
+ * <p>
+ * A default headlight will be added to a scene that contains one or more
+ * {@code Shape3D} nodes, but no light nodes. This light source is a 
+ * {@code Color.WHITE} {@code PointLight} placed at the camera position.
  *
  * <p>
  * Scene objects must be constructed and modified on the

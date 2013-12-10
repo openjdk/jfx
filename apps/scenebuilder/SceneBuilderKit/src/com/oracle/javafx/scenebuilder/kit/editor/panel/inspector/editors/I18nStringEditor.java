@@ -229,7 +229,13 @@ public class I18nStringEditor extends PropertyEditor {
     }
 
     @Override
-    protected void requestFocus() {
-        textNode.requestFocus();
+    public void requestFocus() {
+        EditorUtils.doNextFrame(new Runnable() {
+
+            @Override
+            public void run() {
+                textNode.requestFocus();
+            }
+        });
     }
 }
