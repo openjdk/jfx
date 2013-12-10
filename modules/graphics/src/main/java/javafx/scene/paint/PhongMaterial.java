@@ -33,12 +33,43 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.scene.AmbientLight;
+import javafx.scene.PointLight;
 import javafx.scene.image.Image;
 
 /**
  * The {@code PhongMaterial} class provides definitions of properties that 
- * represent a form of Phong shaded material.
+ * represent a Phong shaded material. It describes the interaction of
+ * light with the surface of the {@code Mesh} it is applied to. The {@code PhongMaterial}
+ * reflects light in terms of a diffuse and specular component together with 
+ * an ambient and a self illumination term. The color of a point on a geometric
+ * surface is mathematical function of these four components. 
+ * <p> 
+ * The color is computed by the following equation:
+ * <p>
+ * <ul><pre>
+ * for each ambient light source i {
+ *     ambient += lightColor[i]
+ * }
+ * 
+ * for each point light source i {
+ *     diffuse += (L[i] . N) * lightColor[i]
+ *     specular += ((R[i] . V) ^ (specularPower * intensity(specularMap))) * lightColor[i]
+ * }
  *
+ * color = (ambient + diffuse) * diffuseColor * diffuseMap
+ *             + specular * specularColor * specularMap
+ *             + selfIlluminationMap
+ * </pre></ul>
+ * where
+ * {@code lightColor[i]} is the color of light source i,<br>
+ * {@code L[i]} is the vector from the surface to light source i,<br>
+ * {@code N} is the normal vector (taking into the account the bumpMap if present),<br>
+ * {@code R[i]} is the normalized reflection vector for L[i] about the surface normal,<br>
+ * and {@code V} is the normalized view vector.
+ *
+ * @see AmbientLight
+ * @see PointLight
  * @since JavaFX 8.0
  */
 public class PhongMaterial extends Material {
@@ -52,19 +83,34 @@ public class PhongMaterial extends Material {
     private boolean selfIlluminationMapDirty = true;
 
     /**
-     * Creates a new instance of {@code PhongMaterial} class.
+     * Creates a new instance of {@code PhongMaterial} class with a default
+     * Color.WHITE {@code diffuseColor} property.
      */
     public PhongMaterial() {
-        // TODO: 3D - Need to document this ...
         setDiffuseColor(Color.WHITE);        
     }
 
-    // TODO: 3D - Need to document this ...
+    /**
+     * Creates a new instance of {@code PhongMaterial} class using the specified
+     * color for its {@code diffuseColor} property.
+     *
+     * @param diffuseColor the color of the diffuseColor property 
+     */
     public PhongMaterial(Color diffuseColor) {
         setDiffuseColor(diffuseColor);
     }
 
-    // TODO: 3D - Need to document this ...
+    /**
+     * Creates a new instance of {@code PhongMaterial} class using the specified
+     * colors and images for its {@code diffuseColor} properties.
+     *
+     * @param diffuseColor the color of the diffuseColor property
+     * @param diffuseMap the image of the diffuseMap property
+     * @param specularMap the image of the specularMap property
+     * @param bumpMap the image of the bumpMap property
+     * @param selfIlluminationMap the image of the selfIlluminationMap property
+     * 
+     */
     public PhongMaterial(Color diffuseColor, Image diffuseMap,
             Image specularMap, Image bumpMap, Image selfIlluminationMap) {
         setDiffuseColor(diffuseColor);

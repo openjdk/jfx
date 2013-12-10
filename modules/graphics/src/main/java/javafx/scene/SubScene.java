@@ -61,11 +61,26 @@ import sun.util.logging.PlatformLogger;
 
 /**
  * The {@code SubScene} class is the container for content in a scene graph.
+ * {@code SubScene} provides separation of different parts of a scene, each
+ * of which can be rendered with a different camera, depth buffer, or scene
+ * anti-aliasing. A {@code SubScene} is embedded into the main scene or another
+ * sub-scene.
+ * 
+ * <p>
+ * Possible use cases are:
+ * <ul>
+ * <li> Mixing 2D and 3D content </li>
+ * <li> Overlay for UI controls </li>
+ * <li> Underlay for background </li>
+ * <li> Heads-up display </li>
+ * </ul>
+ * </p>
  *
  * <p>
  * A default headlight will be added to a {@SubScene} that contains one or more
  * {@code Shape3D} nodes, but no light nodes. This light source is a 
  * {@code Color.WHITE} {@code PointLight} placed at the camera position.
+ * </p>
  *
  * @since JavaFX 8.0
  */
