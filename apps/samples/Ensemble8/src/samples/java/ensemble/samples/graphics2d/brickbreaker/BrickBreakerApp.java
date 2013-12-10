@@ -33,8 +33,8 @@ package ensemble.samples.graphics2d.brickbreaker;
 
 import javafx.application.Application;
 import javafx.scene.Parent;
-import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 
 /**
@@ -66,7 +66,10 @@ public class BrickBreakerApp extends Application {
     
     public Parent createContent() {
         Config.initialize();
-        Group root = new Group();
+        Pane root = new Pane();
+        root.setPrefSize(960, 720);
+        root.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
+        root.setMinSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
         mainFrame = new MainFrame(root);
         mainFrame.changeState(MainFrame.SPLASH);
         return root;
@@ -89,7 +92,7 @@ public class BrickBreakerApp extends Application {
 
     public class MainFrame {
         // Instance of scene root node
-        private Group root;
+        private Pane root;
 
         // Instance of splash (if exists)
         private Splash splash;
@@ -103,7 +106,7 @@ public class BrickBreakerApp extends Application {
         // Current score
         private int score;
 
-        private MainFrame(Group root) {
+        private MainFrame(Pane root) {
             this.root = root;
         }
 
