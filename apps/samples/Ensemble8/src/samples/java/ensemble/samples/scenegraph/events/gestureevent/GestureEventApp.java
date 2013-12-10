@@ -64,6 +64,7 @@ import javafx.stage.Stage;
  * @sampleName Gesture Event
  * @preview preview.png
  * @related /Scenegraph/Events/MouseEvent
+ * @related /Scenegraph/Events/Multi-Touch
  * @see javafx.scene.input.RotateEvent
  * @see javafx.scene.input.ScrollEvent
  * @see javafx.scene.input.SwipeEvent

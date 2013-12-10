@@ -51,7 +51,7 @@ import javafx.stage.Stage;
  * @sampleName Audio Clip
  * @preview preview.png
  * @see javafx.scene.media.AudioClip
- * @related /Graphics3d/Xylophone
+ * @related /Graphics 3d/Xylophone
  * @highlight
  * @conditionalFeatures WEB
  */

@@ -48,7 +48,7 @@ import javafx.stage.Stage;
  * @sampleName TilePane
  * @preview preview.png
  * @see javafx.scene.layout.TilePane
- * @related /Graphics/Images/Image Creation
+ * @related /Graphics 2d/Images/Image Creation
  * @embedded
  */
 public class TilePaneApp extends Application {
