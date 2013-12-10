@@ -97,8 +97,6 @@ import javafx.stage.Stage;
  * @playground yAxis.tickMarkVisible
  * 
  * @playground - (name="chart")
- * @playground chart.alternativeColumnFillVisible
- * @playground chart.alternativeRowFillVisible
  * @playground chart.horizontalGridLinesVisible
  * @playground chart.horizontalZeroLineVisible
  * @playground chart.verticalGridLinesVisible
