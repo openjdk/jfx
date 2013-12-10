@@ -97,6 +97,7 @@ public class WebViewApp extends Application {
 
         VBox vBox = new VBox(5);
         vBox.getChildren().setAll(hBox, webView);
+        vBox.setPrefSize(800, 400);
         VBox.setVgrow(webView, Priority.ALWAYS);
         return vBox;
     }
