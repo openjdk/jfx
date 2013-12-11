@@ -25,17 +25,44 @@
 
 ext.ARMV6HF = [:]
 
-fetchExternalTools('ARMV6HF', 
-  ["armhf-raspberry-pi-10.tgz",
-   "gcc-linaro-arm-linux-gnueabihf-raspbian-2012.09-20120921_linux.tgz" ], 
-  rootProject.CROSS_TOOLS_DIR, rootProject.IS_IMPORT_CROSS_TOOLS)
-
 // Define the location of the sdk and toolchain
 def sdk=file("${rootProject.CROSS_TOOLS_DIR}/armhf-raspberry-pi-10")
 def compilerHome=file("${rootProject.CROSS_TOOLS_DIR}/gcc-linaro-arm-linux-gnueabihf-raspbian-2012.09-20120921_linux")
+def compilerPrefix
+def jniPlatform
+if (IS_LINUX) {
+    fetchExternalTools('ARMV6HF',
+            ["armhf-raspberry-pi-10.tgz",
+             "gcc-linaro-arm-linux-gnueabihf-raspbian-2012.09-20120921_linux.tgz" ],
+            rootProject.CROSS_TOOLS_DIR, rootProject.IS_IMPORT_CROSS_TOOLS)
+
+    compilerHome=file("${rootProject.CROSS_TOOLS_DIR}/gcc-linaro-arm-linux-gnueabihf-raspbian-2012.09-20120921_linux")
+    compilerPrefix="arm-linux-gnueabihf-"
+    jniPlatform="linux"
+} else if (IS_MAC) {
+    fetchExternalTools('ARMV6HF',
+            ["armhf-raspberry-pi-10.tgz"],
+            rootProject.CROSS_TOOLS_DIR, rootProject.IS_IMPORT_CROSS_TOOLS)
+
+    compilerHome=file("/usr/local/arm-linux")
+    compilerPrefix="arm-linux-"
+    jniPlatform="darwin"
+} else {
+    println "ERROR: Cannot build on this platform"
+    return;
+}
+
+if (rootProject.hasProperty("ARMV6HF_COMPILER")) {
+    logger.quiet "Using alternate ARMV6HF_COMPILER $rootProject.ARMV6HF_COMPILER"
+    compilerHome=file(rootProject.ARMV6HF_COMPILER);
+}
+if (rootProject.hasProperty("ARMV6HF_COMPILER_PREFIX")) {
+    logger.quiet "Using alternate ARMV6HF_COMPILER_PREFIX $rootProject.ARMV6HF_COMPILER_PREFIX"
+    compilerPrefix="${rootProject.ARMV6HF_COMPILER_PREFIX}"
+}
 
 // Declare whether this particular target file applies to the current system
-ARMV6HF.canBuild = IS_LINUX && compilerHome.exists() && sdk.exists()
+ARMV6HF.canBuild = (IS_LINUX || IS_MAC) && compilerHome.exists() && sdk.exists()
 if (!ARMV6HF.canBuild) {
     if (!compilerHome.exists()) println "ERROR: Mising compiler $compilerHome"
     if (!sdk.exists()) println "ERROR: Mising sdk $sdk"
@@ -92,7 +119,7 @@ def commonFlags = [
         "-W", "-Wall", "-Wno-unused", "-Wno-parentheses", "-Werror=implicit-function-declaration"] // warning flags
 // Specify the compilation parameters and link parameters
 def ccFlags = [
-        commonFlags, "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux", "-c",
+        commonFlags, "-I$JDK_HOME/include", "-I$JDK_HOME/include/$jniPlatform", "-c",
         IS_DEBUG_NATIVE ? ["-ggdb", "-DVERBOSE"] : "-O2"].flatten()
 //ccFlags.addAll(["-Wnon-virtual-dtor", "-Woverloaded-virtual", "-std=c++0x"])
 def linkFlags = ["-shared", commonFlags].flatten()
@@ -275,8 +302,8 @@ setupTools("armv6hf_freetype_tools",
     }
 )
 
-def compiler = file("$compilerHome/bin/arm-linux-gnueabihf-gcc").getAbsolutePath()
-def linker = file("$compilerHome/bin/arm-linux-gnueabihf-g++").getAbsolutePath()
+def compiler = file("$compilerHome/bin/${compilerPrefix}gcc").getAbsolutePath()
+def linker = file("$compilerHome/bin/${compilerPrefix}g++").getAbsolutePath()
 
 ARMV6HF.glass = [:]
 ARMV6HF.glass.variants = ["eglfb", "directfb", "fb", "gtk", "lensport" ]
@@ -475,9 +502,9 @@ ARMV6HF.webkit = [:]
 ARMV6HF.webkit.binDir   = "$compilerHome/bin"
 ARMV6HF.webkit.compiler = compiler
 ARMV6HF.webkit.linker   = linker
-ARMV6HF.webkit.ar       = file("$compilerHome/bin/arm-linux-gnueabihf-ar").getAbsolutePath()
-ARMV6HF.webkit.objcopy  = file("$compilerHome/bin/arm-linux-gnueabihf-objcopy").getAbsolutePath()
-ARMV6HF.webkit.strip    = file("$compilerHome/bin/arm-linux-gnueabihf-strip").getAbsolutePath()
+ARMV6HF.webkit.ar       = file("$compilerHome/bin/${compilerPrefix}ar").getAbsolutePath()
+ARMV6HF.webkit.objcopy  = file("$compilerHome/bin/${compilerPrefix}objcopy").getAbsolutePath()
+ARMV6HF.webkit.strip    = file("$compilerHome/bin/${compilerPrefix}strip").getAbsolutePath()
 ARMV6HF.webkit.ccFlags  = extraCFlags.join(' ')
 ARMV6HF.webkit.linkFlags = extraLFlags.join(' ')
 
