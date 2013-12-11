@@ -28,6 +28,7 @@ package com.sun.javafx.scene.control.behavior;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
@@ -150,10 +151,12 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
     }
 
     @Override protected void callAction(String name) {
+        boolean rtl = (getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT);
+
         if ("SelectPreviousRow".equals(name)) selectPreviousRow();
         else if ("SelectNextRow".equals(name)) selectNextRow();
-        else if ("SelectLeftCell".equals(name)) selectLeftCell();
-        else if ("SelectRightCell".equals(name)) selectRightCell();
+        else if ("SelectLeftCell".equals(name)) { if (rtl) selectRightCell(); else selectLeftCell(); }
+        else if ("SelectRightCell".equals(name)) { if (rtl) selectLeftCell(); else selectRightCell(); }
         else if ("SelectFirstRow".equals(name)) selectFirstRow();
         else if ("SelectLastRow".equals(name)) selectLastRow();
         else if ("SelectAll".equals(name)) selectAll();
@@ -163,15 +166,15 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         else if ("SelectAllToLastRow".equals(name)) selectAllToLastRow();
         else if ("AlsoSelectNext".equals(name)) alsoSelectNext();
         else if ("AlsoSelectPrevious".equals(name)) alsoSelectPrevious();
-        else if ("AlsoSelectLeftCell".equals(name)) alsoSelectLeftCell();
-        else if ("AlsoSelectRightCell".equals(name)) alsoSelectRightCell();
+        else if ("AlsoSelectLeftCell".equals(name)) { if (rtl) alsoSelectRightCell(); else alsoSelectLeftCell(); }
+        else if ("AlsoSelectRightCell".equals(name)) { if (rtl) alsoSelectLeftCell(); else alsoSelectRightCell(); }
         else if ("ClearSelection".equals(name)) clearSelection();
         else if ("ScrollUp".equals(name)) scrollUp();
         else if ("ScrollDown".equals(name)) scrollDown();
         else if ("FocusPreviousRow".equals(name)) focusPreviousRow();
         else if ("FocusNextRow".equals(name)) focusNextRow();
-        else if ("FocusLeftCell".equals(name)) focusLeftCell();
-        else if ("FocusRightCell".equals(name)) focusRightCell();
+        else if ("FocusLeftCell".equals(name)) { if (rtl) focusRightCell(); else focusLeftCell(); }
+        else if ("FocusRightCell".equals(name)) { if (rtl) focusLeftCell(); else focusRightCell(); }
         else if ("Activate".equals(name)) activate();
         else if ("CancelEdit".equals(name)) cancelEdit();
         else if ("FocusFirstRow".equals(name)) focusFirstRow();
@@ -185,8 +188,8 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         else if ("FocusPageDown".equals(name)) focusPageDown();
         else if ("DiscontinuousSelectNextRow".equals(name)) discontinuousSelectNextRow();
         else if ("DiscontinuousSelectPreviousRow".equals(name)) discontinuousSelectPreviousRow();
-        else if ("DiscontinuousSelectNextColumn".equals(name)) discontinuousSelectNextColumn();
-        else if ("DiscontinuousSelectPreviousColumn".equals(name)) discontinuousSelectPreviousColumn();
+        else if ("DiscontinuousSelectNextColumn".equals(name)) { if (rtl) discontinuousSelectPreviousColumn(); else discontinuousSelectNextColumn(); }
+        else if ("DiscontinuousSelectPreviousColumn".equals(name)) { if (rtl) discontinuousSelectNextColumn(); else discontinuousSelectPreviousColumn(); }
         else if ("DiscontinuousSelectPageUp".equals(name)) discontinuousSelectPageUp();
         else if ("DiscontinuousSelectPageDown".equals(name)) discontinuousSelectPageDown();
         else if ("DiscontinuousSelectAllToLastRow".equals(name)) discontinuousSelectAllToLastRow();
