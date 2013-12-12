@@ -3132,4 +3132,90 @@ public class TableViewKeyInputTest {
         assertFalse(sm.isSelected(4, col2));
         assertFalse(sm.isSelected(4, col1));
     }
+
+    @Test public void test_rt34461_cellSelection() {
+        final int items = 10;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        new StageLoader(tableView);
+        final TableFocusModel fm = tableView.getFocusModel();
+        final TableSelectionModel sm = tableView.getSelectionModel();
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.clearAndSelect(0, col0);
+        assertEquals(0, getAnchor().getRow());
+        assertEquals(0, getAnchor().getColumn());
+        assertTrue(fm.isFocused(0, col0));
+        assertTrue(sm.isSelected(0, col0));
+        assertFalse(sm.isSelected(1, col0));
+
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
+        assertEquals(0, getAnchor().getRow());
+        assertEquals(0, getAnchor().getColumn());
+        assertTrue(fm.isFocused(1, col0));
+        assertTrue(sm.isSelected(0, col0));
+        assertFalse(sm.isSelected(1, col0));
+
+        keyboard.doKeyPress(KeyCode.SPACE);
+        assertEquals(1, getAnchor().getRow());      // new anchor point
+        assertEquals(0, getAnchor().getColumn());
+        assertTrue(fm.isFocused(1, col0));
+        assertTrue(sm.isSelected(0, col0));
+        assertTrue(sm.isSelected(1, col0));
+
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT);
+        assertEquals(1, getAnchor().getRow());
+        assertEquals(0, getAnchor().getColumn());
+        assertTrue(fm.isFocused(2, col0));
+        assertFalse(sm.isSelected(0, col0));    // selection moves off here as the anchor point moved with the space
+        assertTrue(sm.isSelected(1, col0));
+        assertTrue(sm.isSelected(2, col0));
+    }
+
+    @Test public void test_rt34461_rowSelection() {
+        final int items = 10;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        new StageLoader(tableView);
+        final TableFocusModel fm = tableView.getFocusModel();
+        final TableSelectionModel sm = tableView.getSelectionModel();
+        sm.setCellSelectionEnabled(false);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.clearAndSelect(0);
+        assertEquals(0, getAnchor().getRow());
+        assertEquals(-1, getAnchor().getColumn());
+        assertTrue(fm.isFocused(0));
+        assertTrue(sm.isSelected(0));
+        assertFalse(sm.isSelected(1));
+
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
+        assertEquals(0, getAnchor().getRow());
+        assertEquals(-1, getAnchor().getColumn());
+        assertTrue(fm.isFocused(1));
+        assertTrue(sm.isSelected(0));
+        assertFalse(sm.isSelected(1));
+
+        keyboard.doKeyPress(KeyCode.SPACE);
+        assertEquals(1, getAnchor().getRow());      // new anchor point
+        assertEquals(-1, getAnchor().getColumn());
+        assertTrue(fm.isFocused(1));
+        assertTrue(sm.isSelected(0));
+        assertTrue(sm.isSelected(1));
+
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT);
+        assertEquals(1, getAnchor().getRow());
+        assertEquals(-1, getAnchor().getColumn());
+        assertTrue(fm.isFocused(2));
+        assertFalse(sm.isSelected(0));    // selection moves off here as the anchor point moved with the space
+        assertTrue(sm.isSelected(1));
+        assertTrue(sm.isSelected(2));
+    }
 }

@@ -583,7 +583,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         sm.clearSelection();
     }
     
-    protected void clearSelectionOutsideRange(int start, int end) {
+    protected void clearSelectionOutsideRange(int start, int end, TableColumnBase<T,?> column) {
         TableSelectionModel<T> sm = getSelectionModel();
         if (sm == null) return;
         
@@ -596,7 +596,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         for (int i = 0; i < indices.size(); i++) {
             int index = indices.get(i);
             if (index < min || index >= max) {
-                sm.clearSelection(index);
+                sm.clearSelection(index, column);
             }
         }
         selectionChanging = false;
@@ -682,7 +682,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
             setAnchor(getFocusedCell());
         } 
 
-        clearSelectionOutsideRange(anchor.getRow(), newRow);
+        clearSelectionOutsideRange(anchor.getRow(), newRow, null);
 
         if (anchor.getRow() > newRow) {
             sm.selectRange(anchor.getRow(), newRow - 1);
@@ -729,6 +729,9 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
 
             int start = Math.min(getAnchor().getRow(), newRow);
             int end = Math.max(getAnchor().getRow(), newRow);
+
+            clearSelectionOutsideRange(start, end, focusedCell.getTableColumn());
+
             for (int _row = start; _row <= end; _row++) {
                 sm.select(_row, focusedCell.getTableColumn());
             }
