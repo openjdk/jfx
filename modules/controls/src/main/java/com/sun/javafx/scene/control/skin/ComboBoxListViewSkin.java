@@ -160,13 +160,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 // ever giving the event to the TextField.
                 if (ke.getCode() == KeyCode.ENTER) {
                     setTextFromTextFieldIntoComboBoxValue();
-                    /*
-                    ** don't consume this if we're on an embedded
-                    ** platform that supports 5-button navigation 
-                    */
-                    if (!Utils.isTwoLevelFocus()) {
-                        ke.consume();
-                    }
                     return;
                 } else if (ke.getCode() == KeyCode.F4 && ke.getEventType() == KeyEvent.KEY_RELEASED) {
                     if (comboBox.isShowing()) comboBox.hide();
