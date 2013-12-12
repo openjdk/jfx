@@ -51,21 +51,12 @@ public class ListViewMouseInputTest {
     private MultipleSelectionModel<String> sm;
     private FocusModel<String> fm;
     
-    private KeyEventFirer keyboard;
-    
-    private StageLoader stageLoader;
-    
     @Before public void setup() {
         listView = new ListView<String>();
         sm = listView.getSelectionModel();
         fm = listView.getFocusModel();
         
         sm.setSelectionMode(SelectionMode.MULTIPLE);
-        
-        keyboard = new KeyEventFirer(listView);
-        
-        stageLoader = new StageLoader(listView);
-        stageLoader.getStage().show();
 
         listView.getItems().setAll("1", "2", "3", "4", "5", "6", "7", "8", "9", "10");
         sm.clearAndSelect(0);
@@ -73,7 +64,6 @@ public class ListViewMouseInputTest {
     
     @After public void tearDown() {
         listView.getSkin().dispose();
-        stageLoader.dispose();
     }
     
     

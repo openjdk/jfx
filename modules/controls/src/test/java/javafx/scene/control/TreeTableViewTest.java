@@ -36,6 +36,8 @@ import java.util.List;
 import java.util.Random;
 
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
+import com.sun.javafx.scene.control.skin.TreeTableCellSkin;
 import com.sun.javafx.scene.control.test.Data;
 
 import javafx.beans.InvalidationListener;
@@ -2906,5 +2908,99 @@ public class TreeTableViewTest {
         Toolkit.getToolkit().firePulse();
         assertEquals(table.getRoot(), table.getSelectionModel().getSelectedItem());
         assertEquals(table.getRoot(), table.getFocusModel().getFocusedItem());
+    }
+
+    @Test public void test_rt_34685_directEditCall_cellSelectionMode() {
+        test_rt_34685_commitCount = 0;
+        test_rt_34685(false, true);
+    }
+
+    @Test public void test_rt_34685_directEditCall_rowSelectionMode() {
+        test_rt_34685_commitCount = 0;
+        test_rt_34685(false, false);
+    }
+
+    @Test public void test_rt_34685_mouseDoubleClick_cellSelectionMode() {
+        test_rt_34685_commitCount = 0;
+        test_rt_34685(true, true);
+    }
+
+    @Test public void test_rt_34685_mouseDoubleClick_rowSelectionMode() {
+        test_rt_34685_commitCount = 0;
+        test_rt_34685(true, false);
+    }
+
+    private int test_rt_34685_commitCount = 0;
+    private void test_rt_34685(boolean useMouseToInitiateEdit, boolean cellSelectionModeEnabled) {
+        assertEquals(0, test_rt_34685_commitCount);
+
+        Person person1;
+        ObservableList<TreeItem<Person>> persons = FXCollections.observableArrayList(
+            new TreeItem<>(person1 = new Person("John", "Smith", "john.smith@example.com"))
+        );
+
+        TreeTableView<Person> table = new TreeTableView<>();
+        table.getSelectionModel().setCellSelectionEnabled(cellSelectionModeEnabled);
+        table.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+        table.setEditable(true);
+
+        TreeItem<Person> root = new TreeItem<Person>(new Person("Root", null, null));
+        root.setExpanded(true);
+        table.setRoot(root);
+        table.setShowRoot(false);
+        root.getChildren().setAll(persons);
+
+        TreeTableColumn first = new TreeTableColumn("First Name");
+        first.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+        first.setCellFactory(TextFieldTreeTableCell.forTreeTableColumn());
+
+        EventHandler<TreeTableColumn.CellEditEvent<Person, String>> onEditCommit = first.getOnEditCommit();
+        first.setOnEditCommit(new EventHandler<TreeTableColumn.CellEditEvent<Person, String>>() {
+            @Override public void handle(TreeTableColumn.CellEditEvent<Person, String> event) {
+                test_rt_34685_commitCount++;
+                onEditCommit.handle(event);
+            }
+        });
+
+        table.getColumns().addAll(first);
+
+        // get the cell at (0,0) - we're hiding the root row
+        VirtualFlowTestUtils.BLOCK_STAGE_LOADER_DISPOSE = true;
+        TreeTableCell cell = (TreeTableCell) VirtualFlowTestUtils.getCell(table, 0, 0);
+        VirtualFlowTestUtils.BLOCK_STAGE_LOADER_DISPOSE = false;
+        assertTrue(cell.getSkin() instanceof TreeTableCellSkin);
+        assertNull(cell.getGraphic());
+        assertEquals("John", cell.getText());
+        assertEquals("John", person1.getFirstName());
+
+        // set the table to be editing the first cell at 0,0
+        if (useMouseToInitiateEdit) {
+            MouseEventFirer mouse = new MouseEventFirer(cell);
+            mouse.fireMousePressAndRelease(2, 10, 10);  // click 10 pixels in and 10 pixels down
+        } else {
+            table.edit(0,first);
+        }
+
+        Toolkit.getToolkit().firePulse();
+        assertNotNull(cell.getGraphic());
+        assertTrue(cell.getGraphic() instanceof TextField);
+
+        TextField textField = (TextField) cell.getGraphic();
+        assertEquals("John", textField.getText());
+
+        textField.setText("Andrew");
+        textField.requestFocus();
+        Toolkit.getToolkit().firePulse();
+
+        KeyEventFirer keyboard = new KeyEventFirer(textField);
+        keyboard.doKeyPress(KeyCode.ENTER);
+
+        VirtualFlowTestUtils.getVirtualFlow(table).requestLayout();
+        Toolkit.getToolkit().firePulse();
+
+        VirtualFlowTestUtils.assertTableCellTextEquals(table, 0, 0, "Andrew");
+        assertEquals("Andrew", cell.getText());
+        assertEquals("Andrew", person1.getFirstName());
+        assertEquals(1, test_rt_34685_commitCount);
     }
 }

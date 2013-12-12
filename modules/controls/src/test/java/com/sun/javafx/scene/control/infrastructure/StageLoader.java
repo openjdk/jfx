@@ -36,6 +36,9 @@ public class StageLoader {
     private Stage stage;
 
     public StageLoader(Node... content) {
+        if (content == null || content.length == 0) {
+            throw new IllegalArgumentException("Null / empty content not allowed");
+        }
         group = new Group();
         group.getChildren().setAll(content);
         scene = new Scene(group);
@@ -56,6 +59,7 @@ public class StageLoader {
     
     public void dispose() {
         stage.hide();
+        group.getChildren().clear();
         group = null;
         scene = null;
         stage = null;

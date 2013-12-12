@@ -35,10 +35,10 @@ import javafx.scene.Scene;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.PickResult;
-import javafx.stage.Stage;
+import javafx.stage.Window;
+
 import java.util.Arrays;
 import java.util.List;
-
 
 public final class MouseEventFirer {
     private final EventTarget target;
@@ -52,9 +52,17 @@ public final class MouseEventFirer {
         // Force the target node onto a stage so that it is accessible
         if (target instanceof Node) {
             Node n = (Node)target;
-            new StageLoader(n);
-            scene = n.getScene();
-            targetBounds = n.getLayoutBounds();
+            Scene s = n.getScene();
+            Window w = s == null ? null : s.getWindow();
+
+            if (w == null || w.getScene() == null) {
+                new StageLoader(n);
+                scene = n.getScene();
+                targetBounds = n.getLayoutBounds();
+            } else {
+                scene = w.getScene();
+                targetBounds = n.getLayoutBounds();
+            }
         } else if (target instanceof Scene) {
             scene = (Scene)target;
             new StageLoader(scene);
@@ -70,8 +78,12 @@ public final class MouseEventFirer {
     }
 
     public void fireMousePressAndRelease(int clickCount, KeyModifier... modifiers) {
-        fireMouseEvent(MouseEvent.MOUSE_PRESSED, MouseButton.PRIMARY, clickCount, 0, 0, modifiers);
-        fireMouseEvent(MouseEvent.MOUSE_RELEASED, MouseButton.PRIMARY, clickCount, 0, 0, modifiers);
+        fireMousePressAndRelease(clickCount, 0, 0, modifiers);
+    }
+
+    public void fireMousePressAndRelease(int clickCount, double deltaX, double deltaY, KeyModifier... modifiers) {
+        fireMouseEvent(MouseEvent.MOUSE_PRESSED, MouseButton.PRIMARY, clickCount, deltaX, deltaY, modifiers);
+        fireMouseEvent(MouseEvent.MOUSE_RELEASED, MouseButton.PRIMARY, clickCount, deltaX, deltaY, modifiers);
     }
     
     public void fireMouseClicked() {
@@ -140,7 +152,7 @@ public final class MouseEventFirer {
     
     private void fireMouseEvent(EventType<MouseEvent> evtType, MouseButton button, int clickCount, double deltaX, double deltaY, KeyModifier... modifiers) {
         // calculate bounds
-        final Stage stage = (Stage) scene.getWindow();
+        final Window window = scene.getWindow();
         
         // width / height of target node
         final double w = targetBounds.getWidth();
@@ -153,8 +165,8 @@ public final class MouseEventFirer {
         final double sceneX = x + scene.getX() + deltaX;
         final double sceneY = y + scene.getY() + deltaY;
         
-        final double screenX = sceneX + stage.getX();
-        final double screenY = sceneY + stage.getY();
+        final double screenX = sceneX + window.getX();
+        final double screenY = sceneY + window.getY();
         
         final List<KeyModifier> ml = Arrays.asList(modifiers);
         
