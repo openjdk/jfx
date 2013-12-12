@@ -28,9 +28,6 @@ package com.sun.javafx.scene.control.skin;
 import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
 import java.util.List;
 
-import com.sun.javafx.scene.control.behavior.TextFieldBehavior;
-import com.sun.javafx.scene.traversal.TraversalEngine;
-import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
@@ -388,7 +385,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         if (textField != null) return textField;
         
         textField = comboBox.getEditor();
-        textField.setFocusTraversable(true);
+        textField.focusTraversableProperty().bindBidirectional(comboBox.focusTraversableProperty());
         textField.promptTextProperty().bind(comboBox.promptTextProperty());
         textField.tooltipProperty().bind(comboBox.tooltipProperty());
 
@@ -579,6 +576,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         _listView.setId("list-view");
         _listView.placeholderProperty().bind(comboBox.placeholderProperty());
         _listView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+        _listView.setFocusTraversable(false);
 
         _listView.getSelectionModel().selectedIndexProperty().addListener(new InvalidationListener() {
              @Override public void invalidated(Observable o) {
