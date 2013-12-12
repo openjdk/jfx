@@ -168,7 +168,6 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
     private ObservableList<TabContentRegion> tabContentRegions;
     private Rectangle clipRect;
     private Rectangle tabHeaderAreaClipRect;
-    boolean focusTraversable = true;
     private Tab selectedTab;
     private Tab previousSelectedTab;
     private boolean isSelectingTab;
@@ -241,51 +240,35 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             clipRect.setHeight(getSkinnable().getHeight());
         }
     }
-    private void removeTabs(List<? extends Tab> removedList, final Map<Tab, Timeline> closedTab) {
+    private void removeTabs(List<? extends Tab> removedList) {
         for (final Tab tab : removedList) {
             // Animate the tab removal
             final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(tab);
-            Timeline closedTabTimeline = null;
             if (tabRegion != null) {
-                if( closeTabAnimation.get() == TabAnimation.GROW ) {
+                if (closeTabAnimation.get() == TabAnimation.GROW) {
                     tabRegion.animating = true;
-                    closedTabTimeline = createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED * 1.5F), 0.0F, new EventHandler<ActionEvent>() {
+                    Timeline closedTabTimeline = createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED), 0.0F, new EventHandler<ActionEvent>() {
                         @Override public void handle(ActionEvent event) {      
-                            handleClosedTab(tab, closedTab);
+                            handleClosedTab(tab);
                         }
                     });
                     closedTabTimeline.play();    
                 } else {
-                    handleClosedTab(tab, closedTab);
+                    handleClosedTab(tab);
                 }
             }
-            closedTab.put(tab, closedTabTimeline);
         }
     }
     
-    private void handleClosedTab(Tab tab, Map<Tab, Timeline> closedTab) {
+    private void handleClosedTab(Tab tab) {
         removeTab(tab);
-        closedTab.remove(tab);
         if (getSkinnable().getTabs().isEmpty()) {
             tabHeaderArea.setVisible(false);
         }
     }
-    private void addTabs(List<? extends Tab> addedList, int from, boolean handle, final Map<Tab, Timeline> closedTab) {
+    private void addTabs(List<? extends Tab> addedList, int from) {
         int i = 0;
         for (final Tab tab : addedList) {
-            // Handle the case where we are removing and adding the same tab.
-            Timeline closedTabTimeline = closedTab.get(tab);
-            if (closedTabTimeline != null) {
-                closedTabTimeline.stop();
-                Iterator<Tab> keys = closedTab.keySet().iterator();
-                while (keys.hasNext()) {
-                    Tab key = keys.next();
-                    if (tab.equals(key)) {
-                        removeTab(key);
-                        keys.remove();                                    
-                    }
-                }
-            }
             // A new tab was added - animate it out
             if (!tabHeaderArea.isVisible()) {
                 tabHeaderArea.setVisible(true);
@@ -319,13 +302,17 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
     }
     
     private void initializeTabListener() {
-        final Map<Tab, Timeline> closedTab = new HashMap<Tab, Timeline>();
         getSkinnable().getTabs().addListener(new ListChangeListener<Tab>() {
-            @Override public void onChanged(final Change<? extends Tab> c) {      
+            @Override public void onChanged(final Change<? extends Tab> c) {
+                List<Tab> tabsToRemove = new ArrayList<>();
+                List<Tab> tabsToAdd = new ArrayList<>();
+                int insertPos = -1;
+
                 while (c.next()) {
                     if (c.wasPermutated()) { 
                         TabPane tabPane = getSkinnable();
                         List<Tab> tabs = tabPane.getTabs();
+
                         // tabs sorted : create list of permutated tabs.
                         // clear selection, set tab animation to NONE
                         // remove permutated tabs, add them back in correct order.
@@ -334,6 +321,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                         Tab selTab = tabPane.getSelectionModel().getSelectedItem();
                         List<Tab> permutatedTabs = new ArrayList<Tab>(size);
                         getSkinnable().getSelectionModel().clearSelection();
+
                         // save and set tab animation to none - as it is not a good idea
                         // to animate on the same data for open and close. 
                         TabAnimation prevOpenAnimation = openTabAnimation.get();
@@ -343,19 +331,36 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                         for (int i = c.getFrom(); i < c.getTo(); i++) {
                             permutatedTabs.add(tabs.get(i));
                         }
-                        removeTabs(permutatedTabs, closedTab);
-                        addTabs(permutatedTabs, c.getFrom(), false, closedTab);
+
+                        removeTabs(permutatedTabs);
+                        addTabs(permutatedTabs, c.getFrom());
                         openTabAnimation.set(prevOpenAnimation);
                         closeTabAnimation.set(prevCloseAnimation);
                         getSkinnable().getSelectionModel().select(selTab);
                     }
-                    if (c.getRemovedSize() > 0) {
-                        removeTabs(c.getRemoved(), closedTab);
+
+                    if (c.wasRemoved()) {
+                        tabsToRemove.addAll(c.getRemoved());
                     }
-                    if (c.getAddedSize() > 0) {
-                        addTabs(c.getAddedSubList(), c.getFrom(), true, closedTab);
+
+                    if (c.wasAdded()) {
+                        tabsToAdd.addAll(c.getAddedSubList());
+                        insertPos = c.getFrom();
                     }
                 }
+
+                // now only remove the tabs that are not in the tabsToAdd list
+                tabsToRemove.removeAll(tabsToAdd);
+                removeTabs(tabsToRemove);
+
+                // and add in any new tabs (that we don't already have showing)
+                for (TabContentRegion tabContentRegion : tabContentRegions) {
+                    if (tabsToAdd.contains(tabContentRegion.getTab())) {
+                        tabsToAdd.remove(tabContentRegion.getTab());
+                    }
+                }
+
+                addTabs(tabsToAdd, insertPos == -1 ? tabContentRegions.size() : insertPos);
             }
         });
     }
@@ -381,11 +386,11 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 
     private void removeTab(Tab tab) {
         final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(tab);
+        tabRegion.removeListeners(tab);
         tabHeaderArea.removeTab(tab);
         removeTabContent(tab);
         tabRegion.animating = false;
         tabHeaderArea.requestLayout();
-        tab = null;
     }
 
     private void updateTabPosition() {
@@ -430,16 +435,6 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
     private boolean isFloatingStyleClass() {
         return getSkinnable().getStyleClass().contains(TabPane.STYLE_CLASS_FLOATING);
     }
-
-//    @Override protected void setWidth(double value) {
-//        super.setWidth(value);
-//        clipRect.setWidth(value);
-//    }
-//
-//    @Override protected void setHeight(double value) {
-//        super.setHeight(value);
-//        clipRect.setHeight(value);
-//    }
 
     private double maxw = 0.0d;
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
@@ -1093,7 +1088,6 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                     Tab tab = getTab();
                     TabPaneBehavior behavior = getBehavior();
                     if (behavior.canCloseTab(tab)) {
-                         removeListeners(tab);
                          behavior.closeTab(tab);
                          setOnMousePressed(null);    
                     }
