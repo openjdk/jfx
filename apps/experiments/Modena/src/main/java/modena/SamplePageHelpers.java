@@ -335,27 +335,19 @@ public class SamplePageHelpers {
     
     static MenuItem[] createMenuContents() {
         List<MenuItem> menuItems = new ArrayList<>();
-//        Menu menu11 = makeMenu("_New", new ImageView(new Image(getClass().getResourceAsStream("about_16.png"))));
-//        final Menu menu11 = new Menu("_New", new ImageView(new Image("helloworld/about_16.png")));
-//        MenuItem menu12 = new MenuItem("_Open", new ImageView(new Image("helloworld/folder_16.png")));
         final Menu menu11 = new Menu("_New");
         MenuItem menu12 = new MenuItem("_Open");
         menu12.getStyleClass().add("OpenMenuItem");
         menu12.setAccelerator(new KeyCharacterCombination("]", 
                 KeyCombination.SHIFT_DOWN, KeyCombination.META_DOWN));
         Menu menu13 = new Menu("_Submenu");
-//        CheckMenuItem showMessagesItem = new CheckMenuItem("Enable onShowing/onHiding _messages", 
-//                                             new ImageView(new Image("helloworld/about_16.png")));
-        CheckMenuItem showMessagesItem = new CheckMenuItem("Enable onShowing/onHiding _messages");
         MenuItem menu15 = new MenuItem("E_xit");
         final String change[] = {"Change Text", "Change Back"};
         final MenuItem menu16 = new MenuItem(change[0]);
-        final boolean toggle = false;
         menu16.setAccelerator(KeyCombination.keyCombination("Shortcut+C"));
         menuItems.add(menu11);
         menuItems.add(menu12);
         menuItems.add(menu13);
-//        menuItems.add(showMessagesItem);
         menuItems.add(menu16);
         menuItems.add(new SeparatorMenuItem());
         menuItems.add(CheckMenuItemBuilder.create().text("Check").build());
