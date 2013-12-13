@@ -2210,9 +2210,9 @@ public class TreeTableView<S> extends Control {
                     // in which the children were added, rather than from the
                     // actual position of the new child. This led to selection
                     // being moved off the parent TreeItem by mistake.
-                    if (e.getAddedSize() == 1) {
-                        startRow = treeTableView.getRow(e.getAddedChildren().get(0));
-                    }
+                    // The 'if (e.getAddedSize() == 1)' condition here was
+                    // subsequently commented out due to RT-33894.
+                    startRow = treeTableView.getRow(e.getAddedChildren().get(0));
                 } else if (e.wasRemoved()) {
                     // shuffle selection by the number of removed items
                     shift = treeItem.isExpanded() ? -e.getRemovedSize() : 0;
@@ -3018,11 +3018,13 @@ public class TreeTableView<S> extends Control {
                 
                 if(shift != 0) {
                     final int newFocus = getFocusedIndex() + shift;
-                    Platform.runLater(new Runnable() {
-                        @Override public void run() {
-                            focus(newFocus);
-                        }
-                    });
+                    if (newFocus >= 0) {
+                        Platform.runLater(new Runnable() {
+                            @Override public void run() {
+                                focus(newFocus);
+                            }
+                        });
+                    }
                 } 
             }
         };

@@ -306,13 +306,14 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
     }
 
     protected void simpleSelect(MouseEvent e) {
-        TableSelectionModel<S> sm = getSelectionModel();
-        int row = getControl().getIndex();
-        TableColumnBase<S,T> column = getTableColumn();
-        boolean isAlreadySelected = sm.isSelected(row, column);
+        final TableSelectionModel<S> sm = getSelectionModel();
+        final int row = getControl().getIndex();
+        final TableColumnBase<S,T> column = getTableColumn();
+        boolean isAlreadySelected = sm.isSelected(row, sm.isCellSelectionEnabled() ? column : null);
 
         if (isAlreadySelected && (e.isControlDown() || e.isMetaDown())) {
             sm.clearSelection(row, column);
+            getFocusModel().focus(row, (TC) (sm.isCellSelectionEnabled() ? column : null));
             isAlreadySelected = false;
         } else {
             // we check if cell selection is enabled to fix RT-33897

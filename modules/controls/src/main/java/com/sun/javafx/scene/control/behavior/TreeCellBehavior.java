@@ -279,6 +279,7 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
 
         if (isAlreadySelected && (e.isControlDown() || e.isMetaDown())) {
             sm.clearSelection(index);
+            tv.getFocusModel().focus(index);
             isAlreadySelected = false;
         } else {
             sm.clearAndSelect(index);

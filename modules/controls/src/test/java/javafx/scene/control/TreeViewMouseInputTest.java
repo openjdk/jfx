@@ -398,4 +398,28 @@ public class TreeViewMouseInputTest {
         VirtualFlowTestUtils.clickOnRow(treeView, 1);
         assertEquals(1, rt_30626_count);
     }
+
+    @Test public void test_rt_34649() {
+        final int items = 8;
+        root.getChildren().clear();
+        root.setExpanded(true);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+        treeView.setRoot(root);
+
+        final MultipleSelectionModel sm = treeView.getSelectionModel();
+        final FocusModel fm = treeView.getFocusModel();
+        sm.setSelectionMode(SelectionMode.SINGLE);
+
+        assertFalse(sm.isSelected(4));
+        assertFalse(fm.isFocused(4));
+        VirtualFlowTestUtils.clickOnRow(treeView, 4, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(4));
+        assertTrue(fm.isFocused(4));
+
+        VirtualFlowTestUtils.clickOnRow(treeView, 4, KeyModifier.getShortcutKey());
+        assertFalse(sm.isSelected(4));
+        assertTrue(fm.isFocused(4));
+    }
 }

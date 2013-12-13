@@ -50,6 +50,7 @@ import com.sun.javafx.pgstub.StubStage;
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import javafx.geometry.Bounds;
+import javafx.scene.Cursor;
 import javafx.scene.Parent;
 import junit.framework.Assert;
 import static org.junit.Assert.assertEquals;
@@ -667,6 +668,17 @@ public class PopupTest {
         Assert.assertFalse(oldRoot.getStyleClass().contains("popup"));
 
         System.out.println(javafx.scene.shape.Sphere.class.getResource("Sphere.class"));
+    }
+    
+    @Test
+    public void testCursorInheritance() {
+        stage.getScene().setCursor(Cursor.CLOSED_HAND);
+        
+        final Popup popup = new Popup();
+
+        popup.show(stage);
+        assertEquals(Cursor.CLOSED_HAND, popup.getScene().getCursor());
+
     }
 
     private static final class EventCounter implements EventHandler<Event> {

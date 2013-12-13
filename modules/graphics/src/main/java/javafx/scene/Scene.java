@@ -2315,6 +2315,10 @@ public class Scene implements EventTarget {
                 cam.impl_updatePeer();
                 impl_peer.setCamera((NGCamera) cam.impl_getPeer());
             }
+            
+            if (isDirty(DirtyBits.CURSOR_DIRTY)) {
+                mouseHandler.updateCursor(getCursor());
+            }
 
             clearDirty();
             inSynchronizer = false;
@@ -3708,13 +3712,14 @@ public class Scene implements EventTarget {
                 }
             }
 
+            if (e.getEventType() != MouseEvent.MOUSE_EXITED) {
+                if (cursor == null && hover) {
+                    cursor = Scene.this.getCursor();
+                }
 
-            if (cursor == null && hover) {
-                cursor = Scene.this.getCursor();
+                updateCursor(cursor);
+                updateCursorFrame();
             }
-
-            updateCursor(cursor);
-            updateCursorFrame();
 
             if (gestureStarted) {
                 pdrInProgress = true;
@@ -3808,7 +3813,7 @@ public class Scene implements EventTarget {
                 currCursor = newCursor;
             }
         }
-
+        
         public void updateCursorFrame() {
             final CursorFrame newCursorFrame =
                     (currCursor != null)

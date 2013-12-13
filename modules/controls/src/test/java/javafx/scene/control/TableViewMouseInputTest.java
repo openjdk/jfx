@@ -448,4 +448,26 @@ public class TableViewMouseInputTest {
         assertEquals(1, pos.getRow());
         assertNotNull(pos.getTableColumn());
     }
+
+    @Test public void test_rt_34649() {
+        final int items = 8;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        final FocusModel fm = tableView.getFocusModel();
+        sm.setSelectionMode(SelectionMode.SINGLE);
+
+        assertFalse(sm.isSelected(4));
+        assertFalse(fm.isFocused(4));
+        VirtualFlowTestUtils.clickOnRow(tableView, 4, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(4));
+        assertTrue(fm.isFocused(4));
+
+        VirtualFlowTestUtils.clickOnRow(tableView, 4, KeyModifier.getShortcutKey());
+        assertFalse(sm.isSelected(4));
+        assertTrue(fm.isFocused(4));
+    }
 }
