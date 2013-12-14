@@ -197,7 +197,14 @@ public class VirtualFlowTestUtils {
             @Override public Void call(IndexedCell<?> indexedCell) {
                 if (indexedCell.getIndex() != row) return null;
 
-                IndexedCell cell = (IndexedCell) indexedCell.getChildrenUnmodifiable().get(column);
+                int _column = column;
+
+                // we need to account for TreeTableView having LabeledText node in the TreeTableRow
+                if (indexedCell instanceof TreeTableRow) {
+                    _column++;
+                }
+
+                IndexedCell cell = (IndexedCell) indexedCell.getChildrenUnmodifiable().get(_column);
                 assertEquals(expected, cell.getText());
                 return null;
             }
@@ -320,16 +327,16 @@ public class VirtualFlowTestUtils {
             assertFalse(match);
         }
     }
+    
+    public static boolean BLOCK_STAGE_LOADER_DISPOSE = false;
 
     public static VirtualFlow<?> getVirtualFlow(Control control) {
-        Group group = new Group();
-        Scene scene = new Scene(group);
-
-        Stage stage = new Stage();
-        stage.setScene(scene);
-
-        group.getChildren().setAll(control);
-        stage.show();
+        StageLoader sl = null;
+        boolean stageLoaderCreated = false;
+        if (control.getScene() == null) {
+            sl = new StageLoader(control);
+            stageLoaderCreated = true;
+        }
 
         VirtualFlow<?> flow;
         if (control instanceof ComboBox) {
@@ -339,7 +346,10 @@ public class VirtualFlowTestUtils {
         }
 
         flow = (VirtualFlow<?>)control.lookup("#virtual-flow");
-        stage.close();
+        
+        if (stageLoaderCreated && sl != null && ! BLOCK_STAGE_LOADER_DISPOSE) {
+            sl.dispose();
+        }
 
         return flow;
     }

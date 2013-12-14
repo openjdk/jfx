@@ -34,7 +34,8 @@ import java.util.Map;
 final class GtkView extends View {
     
     private boolean imEnabled = false;
-    private StringBuilder preedit = new StringBuilder();
+    private boolean isInPreeditMode = false;
+    private final StringBuilder preedit = new StringBuilder();
     private int lastCaret;
 
     private native void enableInputMethodEventsImpl(long ptr, boolean enable);
@@ -105,11 +106,15 @@ final class GtkView extends View {
     
     @Override
     protected void _finishInputMethodComposition(long ptr) {
-        if (imEnabled) {
+        if (imEnabled && isInPreeditMode) {
             // Discard any pre-edited text
             preedit.setLength(0);
             notifyInputMethod(preedit.toString(), null, null, null, 0, 0, 0);
         }
+    }
+
+    private void notifyPreeditMode(boolean enabled){
+        isInPreeditMode = enabled;
     }
 
     protected void notifyInputMethodDraw(String text, int first, int length, int caret) {

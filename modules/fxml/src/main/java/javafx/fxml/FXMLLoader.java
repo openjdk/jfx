@@ -1300,7 +1300,22 @@ public class FXMLLoader {
 
             Object value;
             if (root == null) {
-                throw constructLoadException("Root hasn't been set. Use method setRoot() before load.");
+                if (staticLoad) {
+                    value = (builderFactory == null) ? null : builderFactory.getBuilder(type);
+
+                    if (value == null) {
+                        try {
+                            value = ReflectUtil.newInstance(type);
+                        } catch (InstantiationException exception) {
+                            throw constructLoadException(exception);
+                        } catch (IllegalAccessException exception) {
+                            throw constructLoadException(exception);
+                        }
+                    }
+                    root = value;
+                } else {
+                    throw constructLoadException("Root hasn't been set. Use method setRoot() before load.");
+                }
             } else {
                 if (!type.isAssignableFrom(root.getClass())) {
                     throw constructLoadException("Root is not an instance of "

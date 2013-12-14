@@ -315,8 +315,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
             sm.clearSelection(row, column);
             isAlreadySelected = false;
         } else {
-            // we check if cell selection is enabled to fix RT-33897
-            sm.clearAndSelect(row, sm.isCellSelectionEnabled() ? column : null);
+            sm.clearAndSelect(row, column);
         }
 
         // handle editing, which only occurs with the primary mouse button

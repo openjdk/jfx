@@ -121,4 +121,6 @@ public interface FontFactory {
      */
     public PGFont loadEmbeddedFont(String name, String path, 
                                    float size, boolean register);
+
+    public boolean isPlatformFont(String name);
 }

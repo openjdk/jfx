@@ -709,8 +709,10 @@
 - (void) unmarkText
 {
     IMLOG("unmarkText called\n");
-    self->nsAttrBuffer = [self->nsAttrBuffer initWithString:@""];
-    [self->_delegate notifyInputMethod:@"" attr:4 length:0 cursor:0 ];
+    if (self->nsAttrBuffer != nil && self->nsAttrBuffer.length != 0) {
+        self->nsAttrBuffer = [self->nsAttrBuffer initWithString:@""];
+        [self->_delegate notifyInputMethod:@"" attr:4 length:0 cursor:0 ];
+    }
     self->shouldProcessKeyEvent = YES;
 }
 

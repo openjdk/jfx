@@ -64,6 +64,7 @@ jmethodID jViewNotifyScroll;
 jmethodID jViewNotifyInputMethod;
 jmethodID jViewNotifyInputMethodDraw;
 jmethodID jViewNotifyInputMethodCaret;
+jmethodID jViewNotifyPreeditMode;
 jmethodID jViewNotifyMenu;
 jfieldID  jViewPtr;
 
@@ -165,6 +166,7 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
     clazz = env->FindClass("com/sun/glass/ui/gtk/GtkView");
     jViewNotifyInputMethodDraw = env->GetMethodID(clazz, "notifyInputMethodDraw", "(Ljava/lang/String;III)V");
     jViewNotifyInputMethodCaret = env->GetMethodID(clazz, "notifyInputMethodCaret", "(III)V");
+    jViewNotifyPreeditMode = env->GetMethodID(clazz, "notifyPreeditMode", "(Z)V");
 
     clazz = env->FindClass("com/sun/glass/ui/Window");
     jWindowNotifyResize = env->GetMethodID(clazz, "notifyResize", "(III)V");

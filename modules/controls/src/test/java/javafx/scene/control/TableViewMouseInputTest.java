@@ -51,11 +51,7 @@ public class TableViewMouseInputTest {
     private TableView<String> tableView;
     private TableView.TableViewSelectionModel<String> sm;
     private TableView.TableViewFocusModel<String> fm;
-    
-    private KeyEventFirer keyboard;
-    
-    private StageLoader stageLoader;
-    
+
     private final TableColumn<String, String> col0 = new TableColumn<String, String>("col0");
     private final TableColumn<String, String> col1 = new TableColumn<String, String>("col1");
     private final TableColumn<String, String> col2 = new TableColumn<String, String>("col2");
@@ -74,16 +70,10 @@ public class TableViewMouseInputTest {
         tableView.getColumns().setAll(col0, col1, col2, col3, col4);
         
         sm.clearAndSelect(0);
-        
-        keyboard = new KeyEventFirer(tableView);
-        
-        stageLoader = new StageLoader(tableView);
-        stageLoader.getStage().show();
     }
     
     @After public void tearDown() {
         tableView.getSkin().dispose();
-        stageLoader.dispose();
     }
     
     /***************************************************************************
@@ -364,6 +354,8 @@ public class TableViewMouseInputTest {
             tableView.getItems().add("Row " + i);
         }
 
+        new StageLoader(tableView);
+
         final MultipleSelectionModel sm = tableView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.clearAndSelect(0);
@@ -383,6 +375,7 @@ public class TableViewMouseInputTest {
     }
 
     private int rt_30626_count = 0;
+    @Ignore("This is now broken due to backing out RT-33897 (as it introduced RT-34685), so ignoring for now")
     @Test public void test_rt_30626() {
         final int items = 8;
         tableView.getItems().clear();
@@ -411,6 +404,7 @@ public class TableViewMouseInputTest {
         assertEquals(1, rt_30626_count);
     }
 
+    @Ignore("This is now broken due to backing out RT-33897 (as it introduced RT-34685), so ignoring for now")
     @Test public void test_rt_33897_rowSelection() {
         final int items = 8;
         tableView.getItems().clear();

@@ -57,10 +57,7 @@ public class TreeViewMouseInputTest {
     private TreeView<String> treeView;
     private MultipleSelectionModel<TreeItem<String>> sm;
     private FocusModel<TreeItem<String>> fm;
-    
-    private KeyEventFirer keyboard;
-    private StageLoader stageLoader;
-    
+
     private TreeItem<String> root;                  // 0
         private TreeItem<String> child1;            // 1
         private TreeItem<String> child2;            // 2
@@ -124,18 +121,10 @@ public class TreeViewMouseInputTest {
         sm = treeView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         fm = treeView.getFocusModel();
-
-        // set up keyboard event firer
-        keyboard = new KeyEventFirer(treeView);
-        
-        // create a simple UI that will be shown (to send the keyboard events to)
-        stageLoader = new StageLoader(treeView);
-        stageLoader.getStage().show();
     }
     
     @After public void tearDown() {
         treeView.getSkin().dispose();
-        stageLoader.dispose();
     }
     
     
