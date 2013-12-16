@@ -108,7 +108,6 @@ public class TableColumnHeader extends Region {
     private boolean isSortColumn;
 
     private boolean isSizeDirty = false;
-    private boolean sortOrderDotsDirty = false;
 
     boolean isLastVisibleColumn = false;
     private int columnIndex = -1;
@@ -376,9 +375,6 @@ public class TableColumnHeader extends Region {
         if (isSizeDirty) {
             resize(getTableColumn().getWidth(), getHeight());
             isSizeDirty = false;
-        } else if (sortOrderDotsDirty) {
-            updateSortOrderDots(sortPos);
-            sortOrderDotsDirty = false;
         }
 
         double sortWidth = 0;
@@ -612,7 +608,7 @@ public class TableColumnHeader extends Region {
                 GridPane.setHalignment(arrow, HPos.CENTER);
                 sortArrowGrid.add(sortOrderDots, 1, dotsRow);
 
-                sortOrderDotsDirty = true;
+                updateSortOrderDots(sortPos);
             } else {
                 // only show the arrow
                 sortArrowGrid.add(arrow, 1, 1);
