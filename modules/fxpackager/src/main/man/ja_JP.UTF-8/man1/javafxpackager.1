@@ -1,370 +1,559 @@
-." Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
-."
-.TH javafxpackager 1 "02 Jul 2012"
-
-.LP
-.SH "名前" 
-.LP
-javafxpackager — JavaFXアプリケーションのパッケージ化と署名に関連するタスクを実行するコマンドを備えたツール。   
-.SH "形式"  
+'\" t
+.\" Copyright (c) 1994, 2013, Oracle and/or its affiliates. All rights reserved.
+.\" Title: javafxpackager
+.\" Language: English
+.\" Date: 2013年8月
+.\" SectDesc: ユーザー・コマンド
+.\" Software: Oracle Java
+.\" Arch: 汎用
+.\"
+.pl 99999
+.TH "javafxpackager" "1" "2013年8月" "Oracle Java" "ユーザー・コマンド"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+javafxpackager \- JavaFXアプリケーションのパッケージ化と署名に関連するタスクを実行します。
+.SH "概要"
+.sp
+.if n \{\
+.RS 4
+.\}
 .nf
-\f3
-.fl
-javafxpackager \fP\f4\-taskcommand\fP\f3 \fP\f4[\-options]\fP\f3
-.fl
-\fP
+\fIjavafxpackager\fR \fIcommand\fR [\fIoptions\fR]
 .fi
-.LP
-ここで、\f2\-taskcommand\fPには、次のいずれかを指定します。  
-.RS 3
-.TP 3
-\-createjar 
-.LP
-他のパラメータに従ってJARアーカイブを作成します。  
-.TP 3
-\-deploy 
-.LP
-他のパラメータに従ってJNLPおよびHTMLファイルを生成します。  
-.TP 3
-\-createbss 
-.LP
-CSSファイルをバイナリ形式に変換します。  
-.TP 3
-\-signJar 
-.LP
-指定した証明書でJARファイルに署名します。  
-.TP 3
-\-makeall 
-.LP
-事前定義された引数の大半を使用して、コンパイル、createjar、deployのステップを1つの呼出しで実行します。ソース・ファイルはsrcというフォルダに配置する必要があり、生成されるファイル(JAR、JNLP、HTML)はdistというフォルダに出力されます。このコマンドでは最小限の構成のみが可能で、可能な限り自動化されています。  
+.if n \{\
 .RE
-.SH "createjarコマンドのオプション"  
-.RS 3
-.TP 3
-\-appclass <application class> 
-.LP
-実行するアプリケーション・クラスの修飾名。  
-.TP 3
-\-preloader <preloader class> 
-.LP
-実行するプリローダー・クラスの修飾名。  
-.TP 3
-\-paramfile <file> 
-.LP
-デフォルトの名前付きアプリケーション・パラメータが含まれるプロパティ・ファイル。  
-.TP 3
-\-argument arg 
-.LP
-<fx:argument>要素としてJNLPファイルに挿入される名前なし引数。  
-.TP 3
-\-classpath <files> 
-.LP
-依存するJARファイル名のリスト。  
-.TP 3
-\-manifestAttrs <manifest attributes> 
-.LP
-追加のマニフェスト属性のリスト。構文:  
+.\}
+.sp
+.if n \{\
+.RS 4
+.\}
 .nf
-\f3
-.fl
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+\fIcommand\fR
+.RS 4
+実行する必要のあるタスク。
+.RE
+.PP
+options
+.RS 4
+空白で区切られた1つ以上のコマンド・オプション。
+.RE
+.SH "コマンド"
+.PP
+次のいずれかのコマンドを指定できます。コマンドの後に、そのオプションを指定します。
+.PP
+\-createbss
+.RS 4
+CSSファイルをバイナリ形式に変換します。
+.RE
+.PP
+\-createjar
+.RS 4
+他のパラメータに従ってJARアーカイブを作成します。
+.RE
+.PP
+\-deploy
+.RS 4
+再配布用のアプリケーション・パッケージを組み立てます。デプロイ・タスクでは、デフォルトでベース・アプリケーション・パッケージが生成されますが、指定すれば自己完結型アプリケーション・パッケージも生成できます。
+.RE
+.PP
+\-makeall
+.RS 4
+大半は事前定義されている引数を使用して、コンパイル、\fIcreatejar\fR、\fIdeploy\fRのステップを1つの呼出しで実行します。デフォルトでは、該当する自己完結型アプリケーション・パッケージをすべて生成しようとします。ソース・ファイルはsrcというフォルダに配置する必要があり、生成されるファイル(JAR、JNLP、HTMLおよび自己完結型アプリケーション・パッケージ)はdistというフォルダに出力されます。このコマンドでは最小限の構成のみが可能で、可能な限り自動化されています。
+.RE
+.PP
+\-signjar
+.RS 4
+指定した証明書でJARファイルに署名します。
+.RE
+.SH "CREATEBSSコマンドのオプション"
+.PP
+\-outdir \fIdir\fR
+.RS 4
+生成された出力ファイルを受け取るディレクトリの名前。
+.RE
+.PP
+\-srcdir \fIdir\fR
+.RS 4
+パッケージ化するファイルのベース・ディレクトリ。
+.RE
+.PP
+\-srcfiles \fIfiles\fR
+.RS 4
+\fI\-srcdir\fRオプションで指定されたディレクトリ内のファイルのリスト。省略すると、ディレクトリ(この場合は必須の引数)にあるすべてのファイルが使用されます。リスト内のファイルはスペースで区切る必要があります。
+.RE
+.SH "CREATEJARコマンドのオプション"
+.PP
+\-appclass \fIapp\-class\fR
+.RS 4
+実行するアプリケーション・クラスの修飾名。
+.RE
+.PP
+\-argument \fIarg\fR
+.RS 4
+\fI<fx:argument>\fR要素としてJNLPファイルに挿入される名前なし引数。
+.RE
+.PP
+\-classpath \fIfiles\fR
+.RS 4
+依存するJARファイル名のリスト。
+.RE
+.PP
+\-manifestAttrs \fImanifest\-attributes\fR
+.RS 4
+追加のマニフェスト属性の名前と値のリスト。構文:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
 "name1=value1,name2=value2,name3=value3"
-.fl
-\fP
 .fi
-.TP 3
-\-noembedlauncher 
-.LP
-指定した場合、パッケージャはJARファイルにJavaFX起動クラスを追加しません。  
-.TP 3
-\-nocss2bin 
-.LP
-パッケージャはJARにコピーする前にCSSファイルをバイナリ形式に変換しません。  
-.TP 3
-\-runtimeversion <version> 
-.LP
-必要なJavaFXランタイムのバージョン。  
-.TP 3
-\-outdir <dir> 
-.LP
-生成された出力ファイルを受け取るディレクトリの名前。  
-.TP 3
-\-outfile <filename> 
-.LP
-生成されるファイルの名前(拡張子なし)。  
-.TP 3
-\-srcdir <dir> 
-.LP
-パッケージ化するファイルのベース・ディレクトリ。  
-.TP 3
-\-srcfiles <files> 
-.LP
-srcdir内のファイルのリスト。省略すると、srcdir内のすべてのファイルがパッケージ化されます。  
+.if n \{\
 .RE
-.SH "deployコマンドのオプション"  
-.RS 3
-.TP 3
-\-title <title> 
-.LP
-アプリケーションのタイトル。  
-.TP 3
-\-vendor <vendor> 
-.LP
-アプリケーションのベンダー。  
-.TP 3
-\-description <description> 
-.LP
-アプリケーションの説明。  
-.TP 3
-\-appclass <application class> 
-.LP
-実行するアプリケーション・クラスの修飾名。  
-.TP 3
-\-preloader <preloader class> 
-.LP
-実行するプリローダー・クラスの修飾名。  
-.TP 3
-\-paramfile <file> 
-.LP
-デフォルトの名前付きアプリケーション・パラメータが含まれるプロパティ・ファイル。  
-.TP 3
-\-htmlparamfile <file> 
-.LP
-生成されるアプリケーションをブラウザで実行する場合のパラメータが含まれるプロパティ・ファイル。  
-.TP 3
-\-width <width> 
-.LP
-アプリケーションの幅。  
-.TP 3
-\-height <height> 
-.LP
-アプリケーションの高さ。  
-.TP 3
-\-native <name> 
-.LP
-プラットフォーム固有のネイティブ・バンドルを生成します(可能な場合)。  
-.TP 3
-\-name <name> 
-.LP
-アプリケーションの名前。  
-.TP 3
-\-embedjnlp 
-.LP
-指定した場合、JNLPファイルがHTMLドキュメントに埋め込まれます。  
-.TP 3
-\-embedCertificates 
-.LP
-指定した場合、証明書がJNLPファイルに埋め込まれます。  
-.TP 3
-\-allpermissions 
-.LP
-指定した場合、JNLPファイル内のすべてのセキュリティ権限がアプリケーションに必要になります。  
-.TP 3
-\-updatemode <updatemode> 
-.LP
-JNLPファイルの更新モードを設定します。  
-.TP 3
-\-isExtension 
-.LP
-指定した場合、srcfilesは拡張ファイルとして処理されます。  
-.TP 3
-\-callbacks 
-.LP
-生成後のHTMLでのユーザー・コールバック方式を指定します。形式は次のとおりです。  
+.\}
+.RE
+.PP
+\-nocss2bin
+.RS 4
+パッケージャはJARにコピーする前にCSSファイルをバイナリ形式に変換しません。
+.RE
+.PP
+\-noembedlauncher
+.RS 4
+指定した場合、パッケージャはJARファイルにJavaFX起動クラスを追加しません。
+.RE
+.PP
+\-outdir \fIdir\fR
+.RS 4
+生成された出力ファイルを受け取るディレクトリの名前。
+.RE
+.PP
+\-outfile \fIfilename\fR
+.RS 4
+生成されるファイルの名前(拡張子なし)。
+.RE
+.PP
+\-paramfile \fIfile\fR
+.RS 4
+デフォルトの名前付きアプリケーション・パラメータが含まれるプロパティ・ファイル。
+.RE
+.PP
+\-preloader \fIpreloader\-class\fR
+.RS 4
+実行するプリローダー・クラスの修飾名。
+.RE
+.PP
+\-runtimeversion \fIversion\fR
+.RS 4
+必要なJavaFXランタイムのバージョン。
+.RE
+.PP
+\-srcdir \fIdir\fR
+.RS 4
+パッケージ化するファイルのベース・ディレクトリ。
+.RE
+.PP
+\-srcfiles \fIfiles\fR
+.RS 4
+\fI\-srcdir\fRオプションで指定されたディレクトリ内のファイルのリスト。省略すると、ディレクトリ(この場合は必須の引数)にあるすべてのファイルが使用されます。リスト内のファイルはスペースで区切る必要があります。
+.RE
+.SH "DEPLOYコマンドのオプション"
+.PP
+\-allpermissions
+.RS 4
+指定した場合、JNLPファイル内のすべてのセキュリティ権限がアプリケーションに必要になります。
+.RE
+.PP
+\-appclass \fIapp\-class\fR
+.RS 4
+実行するアプリケーション・クラスの修飾名。
+.RE
+.PP
+\-argument \fIarg\fR
+.RS 4
+JNLPファイルの\fI<fx:argument>\fR要素に挿入される名前なし引数。
+.RE
+.PP
+\-callbacks
+.RS 4
+生成後のHTMLでのユーザー・コールバック方式を指定します。形式は次のとおりです。
+.sp
+.if n \{\
+.RS 4
+.\}
 .nf
-\f3
-.fl
-"name1:value1,name2:value2,..."
-.fl
-\fP
+"name1:value1,name2:value2,\&.\&.\&."
 .fi
-.TP 3
-\-templateInFilename 
-.LP
-HTMLテンプレート・ファイルの名前。プレースホルダの形式は次のとおりです。  
+.if n \{\
+.RE
+.\}
+.RE
+.PP
+\-description \fIdescription\fR
+.RS 4
+アプリケーションの説明。
+.RE
+.PP
+\-embedCertificates
+.RS 4
+指定した場合、証明書がJNLPファイルに埋め込まれます。
+.RE
+.PP
+\-embedjnlp
+.RS 4
+指定した場合、JNLPファイルがHTMLドキュメントに埋め込まれます。
+.RE
+.PP
+\-height \fIheight\fR
+.RS 4
+アプリケーションの高さ。
+.RE
+.PP
+\-htmlparamfile \fIfile\fR
+.RS 4
+生成されるアプリケーションをブラウザで実行する場合のパラメータが含まれるプロパティ・ファイル。
+.RE
+.PP
+\-isExtension
+.RS 4
+指定した場合、\fIsrcfiles\fRは拡張ファイルとして処理されます。
+.RE
+.PP
+\-name \fIname\fR
+.RS 4
+アプリケーションの名前。
+.RE
+.PP
+\-native \fItype\fR
+.RS 4
+自己完結型アプリケーション・バンドルを生成します(可能な場合)。\fItype\fRを指定すると、このタイプのバンドルのみが作成されます。サポートされるタイプは、\fIinstaller\fR、\fIimage\fR、\fIexe\fR、\fImsi\fR、\fIdmg\fR、\fIrpm\fR、\fIdeb\fRです。
+.RE
+.PP
+\-outdir \fIdir\fR
+.RS 4
+生成された出力ファイルを受け取るディレクトリの名前。
+.RE
+.PP
+\-outfile \fIfilename\fR
+.RS 4
+生成されるファイルの名前(拡張子なし)。
+.RE
+.PP
+\-paramfile \fIfile\fR
+.RS 4
+デフォルトの名前付きアプリケーション・パラメータが含まれるプロパティ・ファイル。
+.RE
+.PP
+\-preloader \fIpreloader\-class\fR
+.RS 4
+実行するプリローダー・クラスの修飾名。
+.RE
+.PP
+\-srcdir \fIdir\fR
+.RS 4
+パッケージ化するファイルのベース・ディレクトリ。
+.RE
+.PP
+\-srcfiles \fIfiles\fR
+.RS 4
+\fI\-srcdir\fRオプションで指定されたディレクトリ内のファイルのリスト。省略すると、ディレクトリ(この場合は必須の引数)にあるすべてのファイルが使用されます。リスト内のファイルはスペースで区切る必要があります。
+.RE
+.PP
+\-templateId
+.RS 4
+テンプレート処理を行うアプリケーションのアプリケーションID。
+.RE
+.PP
+\-templateInFilename
+.RS 4
+HTMLテンプレート・ファイルの名前。プレースホルダの形式は次のとおりです。
+.sp
+.if n \{\
+.RS 4
+.\}
 .nf
-\f3
-.fl
-#XXXX.YYYY(APPID)#
-.fl
-\fP
+#XXXX\&.YYYY(APPID)#
 .fi
-.TP 3
-\-templateOutFilename 
-.LP
-テンプレートから生成されるHTMLファイルの名前。  
-.TP 3
-\-templateId 
-.LP
-テンプレート処理を行うアプリケーションのアプリケーションID。  
-.TP 3
-\-argument arg 
-.LP
-JNLPファイルの<fx:argument>要素に挿入される名前なし引数。  
-.TP 3
-\-outdir <dir> 
-.LP
-生成された出力ファイルを受け取るディレクトリの名前。  
-.TP 3
-\-outfile <filename> 
-.LP
-生成されるファイルの名前(拡張子なし)。  
-.TP 3
-\-srcdir <dir> 
-.LP
-パッケージ化するファイルのベース・ディレクトリ。  
-.TP 3
-\-srcfiles <files> 
-.LP
-srcdir内のファイルのリスト。省略すると、srcdir内のすべてのファイルがパッケージ化されます。  
+.if n \{\
 .RE
-.SH "createbssコマンドのオプション"  
-.RS 3
-.TP 3
-\-outdir <dir> 
-.LP
-生成された出力ファイルを受け取るディレクトリの名前。  
-.TP 3
-\-srcdir <dir> 
-.LP
-パッケージ化するファイルのベース・ディレクトリ。  
-.TP 3
-\-srcfiles <files> 
-.LP
-srcdir内のファイルのリスト。省略すると、srcdir内のすべてのファイルがパッケージ化されます。  
+.\}
+APPIDはアプリケーションの識別子であり、XXXは次のいずれかです。
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIDT\&.SCRIPT\&.URL\fR
+.sp
+Deployment Toolkitのdtjava\&.jsの場所。デフォルトでは、この場所は次のとおりです。
+.sp
+http://java\&.com/js/dtjava\&.js
 .RE
-.SH "signJarコマンドのオプション"  
-.RS 3
-.TP 3
-\-keyStore <file> 
-.LP
-キーストア・ファイル名。  
-.TP 3
-\-alias 
-.LP
-キーの別名。  
-.TP 3
-\-storePass 
-.LP
-キーストアの整合性を確認したり、ロックを解除するためのパスワード。  
-.TP 3
-\-keyPass 
-.LP
-キーを復元するためのパスワード。  
-.TP 3
-\-storeType 
-.LP
-キーストアのタイプ。デフォルト値は"jks"です。  
-.TP 3
-\-outdir <dir> 
-.LP
-生成された出力ファイルを受け取るディレクトリの名前。  
-.TP 3
-\-srcdir <dir> 
-.LP
-署名するファイルのベース・ディレクトリ。  
-.TP 3
-\-srcfiles <files> 
-.LP
-srcdir内のファイルのリスト。省略すると、srcdir内のすべてのファイルが署名されます。  
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIDT\&.SCRIPT\&.CODE\fR
+.sp
+Deployment Toolkitのdtjava\&.jsを含めるスクリプト要素。
 .RE
-.SH "makeAllコマンドのオプション"  
-.RS 3
-.TP 3
-\-appclass <application class> 
-.LP
-実行するアプリケーション・クラスの修飾名。  
-.TP 3
-\-preloader <preloader class> 
-.LP
-実行するプリローダー・クラスの修飾名。  
-.TP 3
-\-classpath <files> 
-.LP
-依存するJARファイル名のリスト。  
-.TP 3
-\-name <name> 
-.LP
-アプリケーションの名前。  
-.TP 3
-\-width <width> 
-.LP
-アプリケーションの幅。  
-.TP 3
-\-height <height> 
-.LP
-アプリケーションの高さ。  
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIDT\&.EMBED\&.CODE\&.DYNAMIC\fR
+.sp
+特定のプレースホルダにアプリケーションを埋め込むコード。コードは、\fIfunction()\fRメソッドにラップされることが予想されます。
 .RE
-.SH "注意"  
-.RS 3
-.TP 2
-o
-.LP
-タスク・コマンドとともに\-v オプションを使用すれば、詳細な出力が有効になります。  
-.TP 2
-o
-.LP
-\-srcdirオプションをコマンドで使用できる場合は、複数回使用できます。\-srcfilesオプションを指定すると、引数に指定されたファイル名が、その前に指定されているsrcdirオプションで指定された場所で検索されます。\-srcdirが\-srcfilesの前に指定されていない場合は、javafxpackagerコマンドが実行されるディレクトリが使用されます。  
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIDT\&.EMBED\&.CODE\&.ONLOAD\fR
+.sp
+\fIonload\fRフックを使用してWebページにアプリケーションを埋め込むために必要なすべてのコード(dtjava\&.jsのインクルードを除く)。
 .RE
-.SH "例"  
-.RS 3
-.TP 3
-例1: \-createjarコマンドの使用方法 
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIDT\&.LAUNCH\&.CODE\fR
+.sp
+アプリケーションの起動に必要なコード。コードは、\fIfunction()\fRメソッドにラップされることが予想されます。
+.RE
+.RE
+.PP
+\-templateOutFilename
+.RS 4
+テンプレートから生成されるHTMLファイルの名前。
+.RE
+.PP
+\-title \fItitle\fR
+.RS 4
+アプリケーションのタイトル。
+.RE
+.PP
+\-vendor \fIvendor\fR
+.RS 4
+アプリケーションのベンダー。
+.RE
+.PP
+\-width \fIwidth\fR
+.RS 4
+アプリケーションの幅。
+.RE
+.PP
+\-updatemode \fIupdate\-mode\fR
+.RS 4
+JNLPファイルの更新モードを設定します。
+.RE
+.SH "MAKEALLコマンドのオプション"
+.PP
+\-appclass \fIapp\-class\fR
+.RS 4
+実行するアプリケーション・クラスの修飾名。
+.RE
+.PP
+\-classpath \fIfiles\fR
+.RS 4
+依存するJARファイル名のリスト。
+.RE
+.PP
+\-height \fIheight\fR
+.RS 4
+アプリケーションの高さ。
+.RE
+.PP
+\-name \fIname\fR
+.RS 4
+アプリケーションの名前。
+.RE
+.PP
+\-preloader \fIpreloader\-class\fR
+.RS 4
+実行するプリローダー・クラスの修飾名。
+.RE
+.PP
+\-width \fIwidth\fR
+.RS 4
+アプリケーションの幅。
+.RE
+.SH "SIGNJARコマンドのオプション"
+.PP
+\-alias
+.RS 4
+キーの別名。
+.RE
+.PP
+\-keyPass
+.RS 4
+キーを復元するためのパスワード。
+.RE
+.PP
+\-keyStore \fIfile\fR
+.RS 4
+キーストア・ファイル名。
+.RE
+.PP
+\-outdir \fIdir\fR
+.RS 4
+生成された出力ファイルを受け取るディレクトリの名前。
+.RE
+.PP
+\-srcdir \fIdir\fR
+.RS 4
+署名するファイルのベース・ディレクトリ。
+.RE
+.PP
+\-srcfiles \fIfiles\fR
+.RS 4
+\fI\-srcdir\fRオプションで指定されたディレクトリ内のファイルのリスト。省略すると、ディレクトリ(この場合は必須の引数)にあるすべてのファイルが使用されます。リスト内のファイルはスペースで区切る必要があります。
+.RE
+.PP
+\-storePass
+.RS 4
+キーストアの整合性を確認したり、ロックを解除するためのパスワード。
+.RE
+.PP
+\-storeType
+.RS 4
+キーストアのタイプ。デフォルト値は"jks"です。
+.RE
+.SH "注意"
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+タスク・コマンドとともに\fI\-v \fRオプションを使用すれば、詳細な出力が有効になります。
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fI\-srcdir\fRオプションをコマンドで使用できる場合は、複数回使用できます。\fI\-srcfiles\fRオプションを指定すると、引数に指定されたファイル名が、その前に指定されている\fIsrcdir\fRオプションで指定された場所で検索されます。\fI\-srcdir\fRが\fI\-srcfiles\fRの前に指定されていない場合は、\fIjavafxpackager\fRコマンドが実行されるディレクトリが使用されます。
+.RE
+.SH "例"
+.PP
+\fBExample 1\fR, \-createjarコマンドの使用
+.RS 4
+.sp
+.if n \{\
+.RS 4
+.\}
 .nf
-\f3
-.fl
-javafxpackager \-createjar \-appclass package.class  
-.fl
+javafxpackager \-createjar \-appclass package\&.ClassName
   \-srcdir classes \-outdir out \-outfile outjar \-v
-.fl
-\fP
 .fi
-.LP
-classesディレクトリの内容をoutjar.jarにパッケージ化して、アプリケーション・クラスをpackage.classに設定します。  
-.TP 3
-例2: \-deployコマンドの使用方法 
-.nf
-\f3
-.fl
-javafxpackager \-deploy \-outdir outdir \-outfile outfile \-width 34 \-height 43 
-.fl
-  \-name AppName \-appclass package.class \-v \-srcdir compiled
-.fl
-\fP
-.fi
-.LP
-outfile.jnlpファイルおよび対応するoutfile.htmlファイルを、アプリケーションAppNameのoutdirに生成します。これは、package.classクラスで始まり、34 x 43の配列を持ちます。  
-.TP 3
-例: \-makeallコマンドの使用方法 
-.nf
-\f3
-.fl
-javafxpackager \-makeall \-appclass brickbreaker.Main \-name BrickBreaker
-.fl
-  \-width 600 \-height 600
-.fl
-\fP
-.fi
-.LP
-コンパイルを含むすべてのパッケージ化作業(コンパイル、Jarの作成、デプロイ)を実行します。  
-.TP 3
-例4: \-signJarコマンドの使用方法 
-.nf
-\f3
-.fl
-javafxpackager \-signJar \-\-outdir dist \-keyStore sampleKeystore.jks 
-.fl
-\fP
-.fi
-.nf
-\f3
-.fl
-    \-storePass **** \-alias javafx \-keypass **** \-srcdir dist
-.fl
-\fP
-.fi
-.LP
-distディレクトリにあるすべてのファイルに署名し、指定したalias、keyStoreおよびstorePassを指定して証明書を添付し、署名されたJARファイルをdistディレクトリに戻します。  
+.if n \{\
 .RE
-
-.LP
- 
+.\}
+\fIclasses\fRディレクトリの内容を\fIoutjar\&.jar\fRにパッケージ化して、アプリケーション・クラスを\fIpackage\&.ClassName\fRに設定します。
+.RE
+.PP
+\fBExample 2\fR, \-deployコマンドの使用
+.RS 4
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+javafxpackager \-deploy \-outdir outdir \-outfile outfile \-width 34 \-height 43 
+  \-name AppName \-appclass package\&.ClassName \-v \-srcdir compiled
+.fi
+.if n \{\
+.RE
+.\}
+\fIoutfile\&.jnlp\fRおよび対応する\fIoutfile\&.html\fRファイルをアプリケーション\fIAppName\fRの\fIoutdir\fRに生成します。これは\fIpackage\&.ClassName\fRで開始し、34 x 43ピクセルのサイズです。
+.RE
+.PP
+\fBExample 3\fR, \-makeallコマンドの使用
+.RS 4
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+javafxpackager \-makeall \-appclass brickbreaker\&.Main \-name BrickBreaker \-width 600
+\-height 600
+.fi
+.if n \{\
+.RE
+.\}
+コンパイルを含むすべてのパッケージ化作業(\fIcreatejar\fRおよび\fIdeploy\fR)を実行します。
+.RE
+.PP
+\fBExample 4\fR, \-signjarコマンドの使用
+.RS 4
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+javafxpackager \-signJar \-\-outdir dist \-keyStore sampleKeystore\&.jks \-storePass ****
+\-alias javafx \-keypass **** \-srcdir dist
+.fi
+.if n \{\
+.RE
+.\}
+\fIdist\fRディレクトリにあるすべてのJARファイルに署名し、alias、\fIkeyStore\fRおよび\fIstorePass\fRを指定して証明書を添付し、署名されたJARファイルを\fIdist\fRディレクトリに戻します。
+.RE
+.br
+'pl 8.5i
+'bp
