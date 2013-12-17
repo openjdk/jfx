@@ -31,15 +31,13 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
+
 <?import java.lang.*?>
 <?import java.net.*?>
-<?import java.util.*?>
-<?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.scene.paint.*?>
 
-<VBox alignment="CENTER_RIGHT" prefHeight="-1.0" prefWidth="-1.0" styleClass="message-panel" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
+<VBox alignment="CENTER_RIGHT" prefHeight="-1.0" prefWidth="-1.0" styleClass="message-panel" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
   <children>
     <ScrollPane fx:id="scrollPane" fitToHeight="false" fitToWidth="true" prefViewportHeight="120.0" prefViewportWidth="200.0">
       <content>
@@ -58,9 +56,7 @@
     </ScrollPane>
     <HBox alignment="CENTER_RIGHT" spacing="0.0" styleClass="message-panel-clear">
       <children>
-        <Button fx:id="clearWarningButton" mnemonicParsing="false" onAction="#onClearWarning" text="Button" />
-        <Button fx:id="clearInfoButton" mnemonicParsing="false" onAction="#onClearInfo" text="Button" />
-        <Button fx:id="clearAllButton" mnemonicParsing="false" onAction="#onClearAll" text="Button" />
+        <Button fx:id="clearButton" mnemonicParsing="false" onAction="#onClear" text="Button" />
       </children>
     </HBox>
   </children>

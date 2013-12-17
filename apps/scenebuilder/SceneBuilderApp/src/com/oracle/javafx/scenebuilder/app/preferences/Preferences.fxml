@@ -39,6 +39,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.paint.*?>
+<?import javafx.scene.shape.*?>
 <?scenebuilder-preview-i18n-resource ../i18n/SceneBuilderApp.properties?>
 
 <GridPane hgap="6.0" maxWidth="1.7976931348623157E308" vgap="10.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
@@ -50,9 +51,23 @@
     <Label text="%prefs.background" GridPane.columnIndex="0" GridPane.rowIndex="3" />
     <ChoiceBox fx:id="backgroundImage" GridPane.columnIndex="1" GridPane.rowIndex="3" />
     <Label text="%prefs.alignment.guides" GridPane.columnIndex="0" GridPane.rowIndex="4" />
-    <VBox fx:id="alignmentGuides" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.rowIndex="4" />
+    <MenuButton fx:id="alignmentGuidesButton" mnemonicParsing="false" text="" GridPane.columnIndex="1" GridPane.rowIndex="4">
+      <graphic>
+        <Rectangle fx:id="alignmentGuidesGraphic" arcHeight="5.0" arcWidth="5.0" fill="DODGERBLUE" height="10.0" stroke="BLACK" strokeType="INSIDE" width="20.0" />
+      </graphic>
+      <items>
+        <CustomMenuItem hideOnClick="false" mnemonicParsing="false" text="Unspecified Action" fx:id="alignmentGuidesMenuItem" />
+      </items>
+    </MenuButton>
     <Label text="%prefs.drop.ring" GridPane.columnIndex="0" GridPane.rowIndex="5" />
-    <VBox fx:id="dropTargetRing" GridPane.columnIndex="1" GridPane.rowIndex="5" />
+    <MenuButton fx:id="parentRingButton" mnemonicParsing="false" text="" GridPane.columnIndex="1" GridPane.rowIndex="5">
+      <graphic>
+        <Rectangle fx:id="parentRingGraphic" arcHeight="5.0" arcWidth="5.0" fill="DODGERBLUE" height="10.0" stroke="BLACK" strokeType="INSIDE" width="20.0" />
+      </graphic>
+      <items>
+        <CustomMenuItem hideOnClick="false" mnemonicParsing="false" text="Unspecified Action" fx:id="parentRingMenuItem" />
+      </items>
+    </MenuButton>
     <Label text="%prefs.hierarchy.displayoption" GridPane.columnIndex="0" GridPane.rowIndex="7" />
     <ChoiceBox fx:id="hierarchyDisplayOption" GridPane.columnIndex="1" GridPane.rowIndex="7" />
     <Label text="%prefs.cssanalyzer.columns.order" GridPane.columnIndex="0" GridPane.rowIndex="8" />

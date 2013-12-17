@@ -36,7 +36,7 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.paint.*?>
 
-<ToolBar xmlns:fx="http://javafx.com/fxml">
+<ToolBar prefWidth="200.0" xmlns:fx="http://javafx.com/fxml">
   <items>
     <Button mnemonicParsing="false" text="Button" />
   </items>

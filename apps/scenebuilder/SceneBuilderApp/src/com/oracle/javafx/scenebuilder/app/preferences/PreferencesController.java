@@ -31,18 +31,23 @@
  */
 package com.oracle.javafx.scenebuilder.app.preferences;
 
+import com.oracle.javafx.scenebuilder.app.DocumentWindowController;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 
 /**
- * Defines preferences for Scene Builder. Theses preferences are common to all
- * SB projects.
- *
+ * Defines preferences for Scene Builder.
  */
 public class PreferencesController {
 
     // JAVA PREFERENCES KEYS DEFINITIONS
     static final String SB_RELEASE_NODE = "SB_2.0"; //NOI18N
 
+    // GLOBAL PREFERENCES
     static final String DOCUMENT_HEIGHT = "DOCUMENT_HEIGHT"; //NOI18N
     static final String DOCUMENT_WIDTH = "DOCUMENT_WIDTH"; //NOI18N
 
@@ -56,17 +61,61 @@ public class PreferencesController {
     static final String RECENT_ITEMS = "RECENT_ITEMS"; //NOI18N
     static final String RECENT_ITEMS_SIZE = "RECENT_ITEMS_SIZE"; //NOI18N
 
+    // DOCUMENT SPECIFIC PREFERENCES
+    static final String DOCUMENTS = "DOCUMENTS"; //NOI18N
+    static final String PATH = "path"; //NOI18N
+    static final String X_POS = "X"; //NOI18N
+    static final String Y_POS = "Y"; //NOI18N
+    static final String HEIGHT = "height"; //NOI18N
+    static final String WIDTH = "width"; //NOI18N
+    static final String BOTTOM_VISIBLE = "bottomVisible";//NOI18N
+    static final String LEFT_VISIBLE = "leftVisible"; //NOI18N
+    static final String RIGHT_VISIBLE = "rightVisible"; //NOI18N
+    static final String LIBRARY_VISIBLE = "libraryVisible"; //NOI18N
+    static final String DOCUMENT_VISIBLE = "documentVisible"; //NOI18N
+    static final String INSPECTOR_SECTION_ID = "inspectorSectionId"; //NOI18N
+    static final String LEFT_DIVIDER_HPOS = "leftDividerHPos"; //NOI18N
+    static final String RIGHT_DIVIDER_HPOS = "rightDividerHPos"; //NOI18N
+    static final String BOTTOM_DIVIDER_VPOS = "bottomDividerVPos"; //NOI18N
+    static final String LEFT_DIVIDER_VPOS = "leftDividerVPos"; //NOI18N
+
     private static final PreferencesController singleton = new PreferencesController();
 
-    private final Preferences javaPreferences;
+    private final Preferences applicationRootPreferences;
+    private final Preferences documentsRootPreferences;
     private final PreferencesRecordGlobal recordGlobal;
+    private final Map<DocumentWindowController, PreferencesRecordDocument> recordDocuments = new HashMap<>();
 
     private PreferencesController() {
-        javaPreferences = Preferences.userNodeForPackage(
+        applicationRootPreferences = Preferences.userNodeForPackage(
                 PreferencesController.class).node(SB_RELEASE_NODE);
 
         // Preferences global to the SB application
-        recordGlobal = new PreferencesRecordGlobal(javaPreferences);
+        recordGlobal = new PreferencesRecordGlobal(applicationRootPreferences);
+
+        // Preferences specific to the document
+        // Create the root node for all documents preferences
+        documentsRootPreferences = applicationRootPreferences.node(DOCUMENTS);
+
+        // Cleanup document preferences at start time : 
+        // We keep only document preferences for the documents defined in RECENT_ITEMS
+        final String items = applicationRootPreferences.get(RECENT_ITEMS, ""); //NOI18N
+        // Remove document preferences node if needed
+        try {
+            final String[] childrenNames = documentsRootPreferences.childrenNames();
+            // Check among the document root chidlren if there is a child
+            // which path matches the specified one
+            for (String child : childrenNames) {
+                final Preferences documentPreferences = documentsRootPreferences.node(child);
+                final String nodePath = documentPreferences.get(PATH, null);
+                assert nodePath != null && nodePath.isEmpty() == false; // Each document node defines a path
+                if (items.contains(nodePath) == false) {
+                    documentPreferences.removeNode();
+                }
+            }
+        } catch (BackingStoreException ex) {
+            Logger.getLogger(PreferencesRecordGlobal.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     public static PreferencesController getSingleton() {
@@ -75,5 +124,16 @@ public class PreferencesController {
 
     public PreferencesRecordGlobal getRecordGlobal() {
         return recordGlobal;
+    }
+
+    public PreferencesRecordDocument getRecordDocument(final DocumentWindowController dwc) {
+        final PreferencesRecordDocument recordDocument;
+        if (recordDocuments.containsKey(dwc)) {
+            recordDocument = recordDocuments.get(dwc);
+        } else {
+            recordDocument = new PreferencesRecordDocument(documentsRootPreferences, dwc);
+            recordDocuments.put(dwc, recordDocument);
+        }
+        return recordDocument;
     }
 }

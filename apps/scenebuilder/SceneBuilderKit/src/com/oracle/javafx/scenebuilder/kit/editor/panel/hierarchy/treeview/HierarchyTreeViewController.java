@@ -211,7 +211,7 @@ public class HierarchyTreeViewController extends AbstractHierarchyPanelControlle
     @Override
     public void updateParentRing() {
         assert treeView != null;
-
+        
         // Do not update parent ring while performing some operations 
         // like DND within the hierarchy panel
         if (isParentRingEnabled() == false) {
@@ -241,7 +241,7 @@ public class HierarchyTreeViewController extends AbstractHierarchyPanelControlle
                         = HierarchyTreeViewUtils.getTreeCell(treeCells, treeItemRoot);
                 // TreeCell is null when hidden
                 if (treeCellRoot != null) {
-                    treeCellRoot.getStyleClass().add(CELL_BORDER_TOP_RIGHT_BOTTOM_LEFT);
+                    treeCellRoot.setBorder(getBorder(BorderSide.TOP_RIGHT_BOTTOM_LEFT));
                 }
                 return;
             }
@@ -254,7 +254,7 @@ public class HierarchyTreeViewController extends AbstractHierarchyPanelControlle
             final TreeCell<?> treeCellTop
                     = HierarchyTreeViewUtils.getTreeCell(treeCells, treeItemTop);
             if (treeCellTop != null) {
-                treeCellTop.getStyleClass().add(CELL_BORDER_TOP_RIGHT_LEFT);
+                treeCellTop.setBorder(getBorder(BorderSide.TOP_RIGHT_LEFT));
                 treeCellTopIndex = treeCellTop.getIndex();
             } else {
                 treeCellTopIndex = 0;
@@ -266,7 +266,7 @@ public class HierarchyTreeViewController extends AbstractHierarchyPanelControlle
             final TreeItem<HierarchyItem> treeItemBottom = treeItemTop.getChildren().get(size - 1);
             final TreeCell<?> treeCellBottom = HierarchyTreeViewUtils.getTreeCell(treeCells, treeItemBottom);
             if (treeCellBottom != null) {
-                treeCellBottom.getStyleClass().add(CELL_BORDER_RIGHT_BOTTOM_LEFT);
+                treeCellBottom.setBorder(getBorder(BorderSide.RIGHT_BOTTOM_LEFT));
                 treeCellBottomIndex = treeCellBottom.getIndex();
             } else {
                 treeCellBottomIndex = treeCells.size() - 1;
@@ -278,9 +278,21 @@ public class HierarchyTreeViewController extends AbstractHierarchyPanelControlle
                 final TreeCell<?> treeCell = (TreeCell) node;
                 final int index = treeCell.getIndex();
                 if (index > treeCellTopIndex && index < treeCellBottomIndex) {
-                    treeCell.getStyleClass().add(CELL_BORDER_RIGHT_LEFT);
+                    treeCell.setBorder(getBorder(BorderSide.RIGHT_LEFT));
                 }
             }
+        }
+    }
+
+    @Override
+    public void updatePlaceHolder() {
+        assert treeView != null;
+        final Set<Node> cells = HierarchyTreeViewUtils.getTreeCells(treeView);
+        assert cells != null;
+        for (Node node : cells) {
+            assert node instanceof HierarchyTreeCell;
+            final HierarchyTreeCell<?> cell = (HierarchyTreeCell) node;
+            cell.updatePlaceHolder();
         }
     }
 }

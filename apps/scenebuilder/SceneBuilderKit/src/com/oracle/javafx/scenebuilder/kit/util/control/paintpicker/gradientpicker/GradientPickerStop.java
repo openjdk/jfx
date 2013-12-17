@@ -68,7 +68,7 @@ public class GradientPickerStop extends VBox {
     @FXML
     private ImageView indicator_image;
     @FXML
-    private TextField value_textfield;
+    private TextField offset_textfield;
     @FXML
     private ContextMenu context_menu;
     @FXML
@@ -139,10 +139,10 @@ public class GradientPickerStop extends VBox {
             Logger.getLogger(GradientPicker.class.getName()).log(Level.SEVERE, null, ex);
         }
 
-        assert value_textfield != null;
+        assert offset_textfield != null;
         assert chip_rect != null;
 
-        value_textfield.setText("" + offset); //NOI18N
+        offset_textfield.setText("" + offset); //NOI18N
 
         chip_rect.setFill(color);
         gradientPicker.setSelectedStop(this);
@@ -161,7 +161,7 @@ public class GradientPickerStop extends VBox {
 
     @FXML
     void stopAction(ActionEvent event) {
-        double val = Double.valueOf(value_textfield.getText());
+        double val = Double.valueOf(offset_textfield.getText());
         setOffset(val);
         showHUD();
         // Called when moving a gradient stop :
@@ -240,7 +240,7 @@ public class GradientPickerStop extends VBox {
     private void showHUD() {
         final DecimalFormat df = new DecimalFormat("0.00"); //NOI18N
         final String valueString = String.valueOf(df.format(offset));
-        value_textfield.setText(valueString);
+        offset_textfield.setText(valueString);
         context_menu.show(this, Side.BOTTOM, 0, 5); // better way to center?
     }
 

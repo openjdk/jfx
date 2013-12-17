@@ -55,8 +55,9 @@ public class PaintPopupEditor extends PopupEditor {
     private final ChangeListener<Paint> paintChangeListener = new ChangeListener<Paint>() {
         @Override
         public void changed(ObservableValue<? extends Paint> ov, Paint oldValue, Paint newValue) {
-            commitValue(newValue, getValueAsString());
-            displayValueAsString(getValueAsString());
+            final String valueAsString = getValueAsString(newValue);
+            commitValue(newValue, valueAsString);
+            displayValueAsString(valueAsString);
             graphic.setFill(newValue);
         }
     };
@@ -76,14 +77,17 @@ public class PaintPopupEditor extends PopupEditor {
 //            assert value instanceof Paint;
 //            paintEditor.setPaintProperty((Paint) value);
 //        }
-        assert value instanceof Paint;
-        final Paint paint = (Paint) value;
+        assert value == null || value instanceof Paint;
         paintEditor.paintProperty().removeListener(paintChangeListener);
-        paintEditor.setPaintProperty(paint);
+        if (value != null) {
+            final Paint paint = (Paint) value;
+            paintEditor.setPaintProperty(paint);
+        }
         paintEditor.paintProperty().addListener(paintChangeListener);
+        graphic.setFill((Paint) value);
         // Update the menu button string
-        displayValueAsString(getValueAsString());
-        graphic.setFill(paint);
+        final String valueAsString = getValueAsString((Paint) value);
+        displayValueAsString(valueAsString);
     }
 
     @Override
@@ -92,8 +96,7 @@ public class PaintPopupEditor extends PopupEditor {
         paintEditor.reset();
     }
 
-    private String getValueAsString() {
-        final Paint paint = paintEditor.getPaintProperty();
+    private String getValueAsString(final Paint paint) {
         if (paint == null) {
             return null;
         }

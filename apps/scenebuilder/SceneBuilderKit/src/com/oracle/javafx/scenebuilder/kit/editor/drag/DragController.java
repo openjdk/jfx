@@ -89,6 +89,16 @@ public class DragController {
         
         liveUpdater.setDropTarget(null);
         
+        /*
+         * Note 1: we reset the drop target before performing the drop operation.
+         * This makes content panel hide the drop target ring before fxom update
+         * and scene graph refresh.
+         * Note 2: dropAccepted is reset before dropTargetProperty
+         * so that listeners can invoke isDropAccepted().
+         */
+        dropAccepted = false;
+        dropTargetProperty.set(null);
+
         if (committedDropTarget != null) {
             assert committedDropTarget.acceptDragSource(getDragSource());
             final Job dropJob = committedDropTarget.makeDropJob(getDragSource(), editorController);
@@ -100,19 +110,12 @@ public class DragController {
             editorController.getSelection().endUpdate();
         }
         
-        /*
-         * Note : dropAccepted is reset before dropTargetProperty
-         * so that listeners can invoke isDropAccepted().
-         */
-
         if (mouseTimer != null) {
             mouseTimer.cancel();
             mouseTimer = null;
         }
         liveUpdater = null;
-        dropAccepted = false;
         committedDropTarget = null;
-        dropTargetProperty.set(null);
         dragSourceProperty.set(null);
         
     }

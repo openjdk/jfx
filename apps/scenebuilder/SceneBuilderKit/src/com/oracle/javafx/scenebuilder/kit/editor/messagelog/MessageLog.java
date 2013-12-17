@@ -49,7 +49,7 @@ public class MessageLog {
     
     private final List<MessageLogEntry> entries = new ArrayList<>();
     private final SimpleIntegerProperty revision = new SimpleIntegerProperty();
-    private final SimpleIntegerProperty totalNumOfMessages = new SimpleIntegerProperty();
+    private final SimpleIntegerProperty numOfWarningMessages = new SimpleIntegerProperty();
     private final static String TIMESTAMP_PATTERN = "h:mm a EEEEEEEEE d MMM. yyyy"; //NOI18N
     private final static SimpleDateFormat TIMESTAMP_DATE_FORMAT = new SimpleDateFormat(TIMESTAMP_PATTERN);
     
@@ -78,8 +78,8 @@ public class MessageLog {
         return revision;
     }
     
-    public IntegerProperty totalNumOfMessagesProperty() {
-        return totalNumOfMessages;
+    public IntegerProperty numOfWarningMessagesProperty() {
+        return numOfWarningMessages;
     }
     
     public List<MessageLogEntry> getEntries() {
@@ -108,7 +108,7 @@ public class MessageLog {
         if (entries.isEmpty() == false) {
             entries.clear();
             incrementRevision();
-            resetTotalNumOfMessages();
+            resetNumOfWarningMessages();
         }
     }
     
@@ -117,25 +117,13 @@ public class MessageLog {
         assert entries.contains(entry);
         entries.remove(entry);
         incrementRevision();
-        decrementTotalNumOfMessages();
-    }
-    
-    public void clear(MessageLogEntry.Type type) {
-        final List<MessageLogEntry> entriesToRemove = new ArrayList<>();
         
-        for (MessageLogEntry entry : entries) {
-            if (entry.getType().equals(type)) {
-                entriesToRemove.add(entry);
-            }
-        }
-        
-        if (entriesToRemove.size() > 0) {
-            entries.removeAll(entriesToRemove);
-            incrementRevision();
-            decrementTotalNumOfMessagesBy(entriesToRemove.size());
+        if (entry.getType().equals(MessageLogEntry.Type.WARNING)) {
+            decrementNumOfWarningMessages();
         }
     }
     
+
     /*
      * Private
      */
@@ -149,27 +137,25 @@ public class MessageLog {
         final MessageLogEntry entry = new MessageLogEntry(messageType, messageText, getTimeStamp());
         entries.add(0, entry);
         incrementRevision();
-        incrementTotalNumOfMessages();
+        
+        if (messageType.equals(MessageLogEntry.Type.WARNING)) {
+            incrementNumOfWarningMessages();
+        }
     }
     
     private void incrementRevision() {
         revision.set(revision.get() + 1);
     }
     
-    private void incrementTotalNumOfMessages() {
-        totalNumOfMessages.set(totalNumOfMessages.get() + 1);
+    private void incrementNumOfWarningMessages() {
+        numOfWarningMessages.set(numOfWarningMessages.get() + 1);
     }
     
-    private void decrementTotalNumOfMessages() {
-        totalNumOfMessages.set(totalNumOfMessages.get() - 1);
+    private void decrementNumOfWarningMessages() {
+        numOfWarningMessages.set(numOfWarningMessages.get() - 1);
     }
     
-    private void decrementTotalNumOfMessagesBy(int amount) {
-        assert totalNumOfMessages.get() >= amount;
-        totalNumOfMessages.set(totalNumOfMessages.get() - amount);
-    }
-    
-    private void resetTotalNumOfMessages() {
-        totalNumOfMessages.set(0);
+    private void resetNumOfWarningMessages() {
+        numOfWarningMessages.set(0);
     }
 }

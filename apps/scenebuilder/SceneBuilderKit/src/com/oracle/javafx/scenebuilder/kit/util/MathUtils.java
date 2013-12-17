@@ -59,4 +59,19 @@ public class MathUtils {
         assert tolerance > 0.0;
         return Math.abs(v1 - v2) <= tolerance;
     }
+    
+    
+    /**
+     * Return the distance between two points.
+     * @param x1 x coordinate of the first point
+     * @param y1 y coordinate of the first point
+     * @param x2 x coordinate of the second point
+     * @param y2 x coordinate of the second point
+     * @return the distance between (x1, y1) and (x2, y2)
+     */
+    public static double distance(double x1, double y1, double x2, double y2) {
+        final double dx = x2 - x1;
+        final double dy = y2 - y1;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
 }

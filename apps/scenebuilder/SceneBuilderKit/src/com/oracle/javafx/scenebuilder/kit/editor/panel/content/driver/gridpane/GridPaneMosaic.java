@@ -33,6 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.gridpane;
 
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.tring.Quad;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.util.CardinalPoint;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.ColorEncoder;
 import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -40,11 +41,13 @@ import java.util.List;
 import java.util.Set;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
+import javafx.scene.Cursor;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Region;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.Rectangle;
@@ -70,12 +73,15 @@ class GridPaneMosaic {
     private final Rectangle targetCellShadow = new Rectangle();
     private final Line targetGapShadowV = new Line();
     private final Line targetGapShadowH= new Line();
+    private final Group hgapSensorsGroup = new Group();
+    private final Group vgapSensorsGroup = new Group();
     
     private final Quad gridAreaQuad = new Quad();
     private final List<Quad> gridHoleQuads = new ArrayList<>();
 
     private final String baseStyleClass;
     private final boolean shouldShowTrays;
+    private final boolean shouldCreateSensors;
     
     private GridPane gridPane;
     private int columnCount;
@@ -87,12 +93,14 @@ class GridPaneMosaic {
     private int targetRowIndex = -1;
     private int targetGapColumnIndex = -1;
     private int targetGapRowIndex = -1;
+    private Color trayColor;
     
-    public GridPaneMosaic(String baseStyleClass, boolean shouldShowTrays) {
+    public GridPaneMosaic(String baseStyleClass, boolean shouldShowTrays, boolean shouldCreateSensors) {
         assert baseStyleClass != null;
         
         this.baseStyleClass = baseStyleClass;
         this.shouldShowTrays = shouldShowTrays;
+        this.shouldCreateSensors = shouldCreateSensors;
         
         final List<Node> topChildren = topGroup.getChildren();
         topChildren.add(gridPath);
@@ -105,6 +113,8 @@ class GridPaneMosaic {
         topChildren.add(targetCellShadow);
         topChildren.add(targetGapShadowV);
         topChildren.add(targetGapShadowH);
+        topChildren.add(hgapSensorsGroup);
+        topChildren.add(vgapSensorsGroup);
         gridAreaQuad.addToPath(gridPath);
         
         gridPath.setMouseTransparent(true);
@@ -138,6 +148,13 @@ class GridPaneMosaic {
     public void setGridPane(GridPane gridPane) {
         this.gridPane = gridPane;
         update();
+    }
+    
+    public void setTrayColor(Color trayColor) {
+        this.trayColor = trayColor;
+        if (shouldShowTrays) {
+            updateTrayColor();
+        }
     }
     
     public void setSelectedColumnIndexes(Set<Integer> indexes) {
@@ -196,6 +213,10 @@ class GridPaneMosaic {
             adjustTrayItems(westTrayGroup.getChildren(), "west", rowCount);
             adjustTrayItems(eastTrayGroup.getChildren(), "east", rowCount);
         }
+        if (shouldCreateSensors) {
+            adjustGapSensors(hgapSensorsGroup.getChildren(), Cursor.H_RESIZE, columnCount-1);
+            adjustGapSensors(vgapSensorsGroup.getChildren(), Cursor.V_RESIZE, rowCount-1);
+        }
         
         if (columnCount >= 1) {
             assert rowCount >= 1;
@@ -214,7 +235,15 @@ class GridPaneMosaic {
                 updateSelection(southTrayGroup.getChildren(), selectedColumnIndexes);
                 updateSelection(westTrayGroup.getChildren(), selectedRowIndexes);
                 updateSelection(eastTrayGroup.getChildren(), selectedRowIndexes);
+                
+                updateTrayColor();
             }
+
+            if (shouldCreateSensors) {
+                updateHGapSensors();
+                updateVGapSensors();
+            }
+        
             
             updateTargetCell();
             updateTargetGap();
@@ -236,6 +265,14 @@ class GridPaneMosaic {
     
     public List<Node> getEastTrayNodes() {
         return eastTrayGroup.getChildren();
+    }
+
+    public List<Node> getHgapSensorNodes() {
+        return hgapSensorsGroup.getChildren();
+    }
+
+    public List<Node> getVgapSensorNodes() {
+        return vgapSensorsGroup.getChildren();
     }
     
     
@@ -323,10 +360,133 @@ class GridPaneMosaic {
         result.setMaxWidth(Region.USE_PREF_SIZE);
         result.setMinHeight(Region.USE_PREF_SIZE);
         result.setMaxHeight(Region.USE_PREF_SIZE);
+
+        if (trayColor != null) {
+            final String webColor = ColorEncoder.encodeColorToRGBA(trayColor);
+            final String style = "-fx-background-color:"+ webColor +";";//NOI18N
+            result.setStyle(style);
+        }
         
         return result;
     }
     
+    private void updateTrayColor() {
+        final String style;
+        
+        if (trayColor == null) {
+            style = "";//NOI18N
+        } else {
+            final String webColor = ColorEncoder.encodeColorToRGBA(trayColor);
+            style = "-fx-background-color:"+ webColor +";";//NOI18N
+        }
+
+        adjustTrayStyle(northTrayGroup.getChildren(), style);
+        adjustTrayStyle(southTrayGroup.getChildren(), style);
+        adjustTrayStyle(westTrayGroup.getChildren(), style);
+        adjustTrayStyle(eastTrayGroup.getChildren(), style);
+    }
+    
+    
+    private void adjustTrayStyle(List<Node> trayChildren, String style) {
+        
+        for (Node tray : trayChildren) {
+            assert tray instanceof Label;
+            final Label trayLabel = (Label) tray;
+            trayLabel.setStyle(style);
+        }
+    }
+    
+    
+    private void adjustGapSensors(List<Node> gapSensors, Cursor cursor, int targetCount) {
+        while (gapSensors.size() < targetCount) {
+            gapSensors.add(makeGapSensor(cursor));
+        }
+        while (targetCount < gapSensors.size()) {
+            final int gapIndex = gapSensors.size()-1;
+            gapSensors.remove(gapIndex);
+        }
+    }
+    
+    private Line makeGapSensor(Cursor cursor) {
+        final Line result = new Line();
+        result.setCursor(cursor);
+        result.setStroke(Color.TRANSPARENT);
+
+        return result;
+    }
+    
+    
+    
+    private void updateHGapSensors() {
+        final List<Node> children = hgapSensorsGroup.getChildren();
+        final int sensorCount = children.size();
+        assert (sensorCount == 0) || (sensorCount == columnCount-1);
+        for (int i = 0; i < sensorCount; i++) {
+            /*
+             *                       x0  xm   x1
+             *   y0  +----------------+       +-----------------+
+             *       |   topLeftCell  |       |   topRightCell  |
+             *       +----------------+       +-----------------+
+             * 
+             *       ...
+             * 
+             *       +----------------+       +-----------------+
+             *       | bottomLeftCell |       |                 |
+             *   y1  +----------------+       +-----------------+
+             */
+            
+            final Bounds topLeftCellBounds = getCellBounds(i, 0);
+            final Bounds topRightCellBounds = getCellBounds(i+1, 0);
+            final Bounds bottomLeftCellBounds = getCellBounds(i, rowCount-1);
+            final double x0 = topLeftCellBounds.getMaxX();
+            final double x1 = topRightCellBounds.getMinX();
+            final double xm = (x0 + x1) / 2.0;
+            final double y0 = topLeftCellBounds.getMinY();
+            final double y1 = bottomLeftCellBounds.getMaxY();
+            final double strokeWidth = Math.max(8.0, x1 - x0);
+            final Line line = (Line) children.get(i);
+            line.setStartX(xm);
+            line.setStartY(y0);
+            line.setEndX(xm);
+            line.setEndY(y1);
+            line.setStrokeWidth(strokeWidth);
+        }
+    }
+    
+    private void updateVGapSensors() {
+        final List<Node> children = vgapSensorsGroup.getChildren();
+        final int sensorCount = children.size();
+        assert (sensorCount == 0) || (sensorCount == rowCount-1);
+        for (int i = 0; i < sensorCount; i++) {
+            
+            /*
+             *       x0                                        x1
+             *       +----------------+       +-----------------+
+             *       |   topLeftCell  |  ...  |   topRightCell  |
+             *   y0  +----------------+       +-----------------+
+             *   ym 
+             *   y1  +----------------+       +-----------------+
+             *       | bottomLeftCell |  ...  |                 |
+             *       +----------------+       +-----------------+
+             */
+            
+            final Bounds topLeftCellBounds = getCellBounds(0, i);
+            final Bounds bottomLeftCellBounds = getCellBounds(0, i+1);
+            final Bounds topRightCellBounds = getCellBounds(columnCount-1, i);
+            final double x0 = topLeftCellBounds.getMinX();
+            final double x1 = topRightCellBounds.getMaxX();
+            final double y0 = topLeftCellBounds.getMaxY();
+            final double y1 = bottomLeftCellBounds.getMinY();
+            final double ym = (y0 + y1) / 2.0;
+            final double strokeWidth = Math.max(8.0, y1 - y0);
+            final Line line = (Line) children.get(i);
+            line.setStartX(x0);
+            line.setStartY(ym);
+            line.setEndX(x1);
+            line.setEndY(ym);
+            line.setStrokeWidth(strokeWidth);
+        }
+    }
     
     private void updateHoleBounds() {
         for (int c = 0; c < columnCount; c++) {

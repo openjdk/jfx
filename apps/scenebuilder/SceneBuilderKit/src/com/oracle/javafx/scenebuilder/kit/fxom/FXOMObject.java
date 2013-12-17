@@ -373,7 +373,7 @@ public abstract class FXOMObject extends FXOMNode {
     
     protected abstract void collectReferences(String source, List<FXOMIntrinsic> result);
 
-    public Map<String, FXOMObject> colletFxIds() {
+    public Map<String, FXOMObject> collectFxIds() {
         final Map<String, FXOMObject> result = new HashMap<>();
         
         collectFxIds(result);

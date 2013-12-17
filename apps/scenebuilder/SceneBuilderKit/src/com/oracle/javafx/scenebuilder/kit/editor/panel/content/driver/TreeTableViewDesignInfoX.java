@@ -54,11 +54,10 @@ import javafx.scene.control.TreeTableView;
 public class TreeTableViewDesignInfoX {
 
 
-    public Bounds getColumnBounds(TreeTableColumn<?,?> tableColumn) {
-        final TreeTableView<?> tv = tableColumn.getTreeTableView();
-        final Node hn = getColumnNode(tableColumn);
+    public Bounds getColumnBounds(TreeTableColumn<?,?> treeTableColumn) {
+        final TreeTableView<?> tv = treeTableColumn.getTreeTableView();
         final Bounds tb = tv.getLayoutBounds();
-        final Bounds hb = tv.sceneToLocal(hn.localToScene(hn.getLayoutBounds()));
+        final Bounds hb = getColumnHeaderBounds(treeTableColumn);
         
         //
         //           x0             x1          
@@ -80,6 +79,13 @@ public class TreeTableViewDesignInfoX {
         final double y1 = tb.getMaxY();
         
         return new BoundingBox(x0, y0, x1 - x0, y1 - y0);
+    }
+    
+    
+    public Bounds getColumnHeaderBounds(TreeTableColumn<?,?> treeTableColumn) {
+        final TreeTableView<?> tv = treeTableColumn.getTreeTableView();
+        final Node hn = getColumnNode(treeTableColumn);
+        return tv.sceneToLocal(hn.localToScene(hn.getLayoutBounds()));
     }
     
     

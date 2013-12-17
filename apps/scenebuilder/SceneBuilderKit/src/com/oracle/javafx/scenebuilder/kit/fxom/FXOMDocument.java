@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.fxom;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.sampledata.SampleDataGenerator;
 import com.oracle.javafx.scenebuilder.kit.fxom.glue.GlueDocument;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -54,6 +55,7 @@ public class FXOMDocument {
     private URL location;
     private ClassLoader classLoader;
     private ResourceBundle resources;
+    private SampleDataGenerator sampleDataGenerator;
     private FXOMObject fxomRoot;
     private Object sceneGraphRoot;
     private final SimpleIntegerProperty sceneGraphRevision = new SimpleIntegerProperty();
@@ -119,6 +121,35 @@ public class FXOMDocument {
         endUpdate();
     }
 
+    public boolean isSampleDataEnabled() {
+        return sampleDataGenerator != null;
+    }
+
+    public void setSampleDataEnabled(boolean sampleDataEnabled) {
+        assert isUpdateOnGoing() == false;
+        
+        final SampleDataGenerator newSampleDataGenerator;
+        if (sampleDataEnabled) {
+            if (sampleDataGenerator != null) {
+                newSampleDataGenerator = sampleDataGenerator;
+            } else {
+                newSampleDataGenerator = new SampleDataGenerator();
+            }
+        } else {
+            newSampleDataGenerator = null;
+        }
+        
+        if (newSampleDataGenerator != sampleDataGenerator) {
+            if (sampleDataGenerator != null) {
+                sampleDataGenerator.removeSampleData(fxomRoot);
+            }
+            sampleDataGenerator = newSampleDataGenerator;
+            if (sampleDataGenerator != null) {
+                sampleDataGenerator.assignSampleData(fxomRoot);
+            }
+        }
+    }    
+    
     public FXOMObject getFxomRoot() {
         return fxomRoot;
     }
@@ -194,7 +225,7 @@ public class FXOMDocument {
         if (fxomRoot == null) {
             result = Collections.emptyMap();
         } else {
-            result = fxomRoot.colletFxIds();
+            result = fxomRoot.collectFxIds();
         }
         
         return result;
@@ -223,6 +254,9 @@ public class FXOMDocument {
         }
         final FXOMRefresher fxomRefresher = new FXOMRefresher();
         fxomRefresher.refresh(this);
+        if (sampleDataGenerator != null) {
+            sampleDataGenerator.assignSampleData(fxomRoot);
+        }
         if (sceneGraphHolder != null) {
             sceneGraphHolder.fxomDocumentDidRefreshSceneGraph(this);
         }

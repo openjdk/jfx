@@ -35,6 +35,8 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelContr
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.handles.AbstractHandles;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.handles.AbstractNodeHandles;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.AbstractGesture;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.mouse.ResizeColumnGesture;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.mouse.ResizeRowGesture;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.mouse.SelectAndMoveInGridGesture;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
@@ -48,7 +50,9 @@ import javafx.scene.layout.GridPane;
 public class GridPaneHandles extends AbstractNodeHandles<GridPane> {
     
     private final GridPaneMosaic mosaic 
-            = new GridPaneMosaic("handles", true /* shouldShowTray */); //NOI18N
+            = new GridPaneMosaic("handles", //NOI18N
+                    true /* shouldShowTray */,
+                    true /* shouldCreateSensors */ );
     
     public GridPaneHandles(ContentPanelController contentPanelController,
             FXOMInstance fxomInstance) {
@@ -84,7 +88,7 @@ public class GridPaneHandles extends AbstractNodeHandles<GridPane> {
      * AbstractNodeHandles
      */
     @Override
-    protected void layoutDecoration() {
+    public void layoutDecoration() {
         super.layoutDecoration();
                 
         if (mosaic.getGridPane() != getSceneGraphObject()) {
@@ -93,7 +97,8 @@ public class GridPaneHandles extends AbstractNodeHandles<GridPane> {
             mosaic.update();
         }
         
-        // Mosaic update may have created new trays. Attach this handles to them.
+        // Mosaic update may have created new trays and new sensors. 
+        // Attach this handles to them.
         for (Node node : this.mosaic.getNorthTrayNodes()) {
             attachHandles(node);
         }
@@ -106,6 +111,12 @@ public class GridPaneHandles extends AbstractNodeHandles<GridPane> {
         for (Node node : this.mosaic.getWestTrayNodes()) {
             attachHandles(node);
         }
+        for (Node node : this.mosaic.getHgapSensorNodes()) {
+            attachHandles(node);
+        }
+        for (Node node : this.mosaic.getVgapSensorNodes()) {
+            attachHandles(node);
+        }
         
         // Update mosaic transform
         mosaic.getTopGroup().getTransforms().clear();
@@ -114,7 +125,16 @@ public class GridPaneHandles extends AbstractNodeHandles<GridPane> {
 
     @Override
     public AbstractGesture findGesture(Node node) {
+        AbstractGesture result = findGestureInTrays(node);
+        if (result == null) {
+            result = findGestureInSensors(node);
+        }
         
+        return result;
+    }
+    
+    
+    private AbstractGesture findGestureInTrays(Node node) {
         final GridSelectionGroup.Type feature;
         
         int trayIndex = mosaic.getNorthTrayNodes().indexOf(node);
@@ -141,6 +161,25 @@ public class GridPaneHandles extends AbstractNodeHandles<GridPane> {
         } else {
             result = new SelectAndMoveInGridGesture(getContentPanelController(),
                     getFxomInstance(), feature, trayIndex);
+        }
+        
+        return result;
+    }
+    
+    
+    private AbstractGesture findGestureInSensors(Node node) {
+        final AbstractGesture result;
+        
+        int sensorIndex = mosaic.getHgapSensorNodes().indexOf(node);
+        if (sensorIndex != -1) {
+            result = new ResizeColumnGesture(this, sensorIndex);
+        } else {
+            sensorIndex = mosaic.getVgapSensorNodes().indexOf(node);
+            if (sensorIndex != -1) {
+                result = new ResizeRowGesture(this, sensorIndex);
+            } else {
+                result = super.findGesture(node);
+            }
         }
         
         return result;

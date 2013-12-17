@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <!--
   Copyright (c) 2012, 2013, Oracle and/or its affiliates.
   All rights reserved. Use is subject to license terms.
@@ -30,25 +31,42 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
+
 <?import java.lang.*?>
 <?import java.net.*?>
-<?import java.util.*?>
 <?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.scene.paint.*?>
 
-<StackPane minHeight="30.0" prefHeight="-1.0" prefWidth="458.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
+<StackPane minHeight="30.0" prefHeight="-1.0" prefWidth="458.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
   <children>
     <HBox fx:id="messageBox" alignment="CENTER" spacing="5.0" styleClass="message-bar">
       <children>
         <StackPane fx:id="selectionBarHost" prefHeight="-1.0" prefWidth="-1.0" HBox.hgrow="ALWAYS" />
         <Label fx:id="messageLabel" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" mouseTransparent="true" style="&#10;" text="Message" HBox.hgrow="ALWAYS" />
-        <HBox id="messageBox" alignment="CENTER_RIGHT" fillHeight="true" prefHeight="-1.0" prefWidth="-1.0" spacing="0.0" HBox.hgrow="SOMETIMES">
+        <HBox id="messageBox" alignment="CENTER_RIGHT" fillHeight="true" prefHeight="-1.0" prefWidth="-1.0" spacing="0.0" HBox.hgrow="NEVER">
           <children>
-            <Label fx:id="statusLabel" maxHeight="1.7976931348623157E308" mouseTransparent="true" text="File Dirty" HBox.hgrow="ALWAYS" />
-            <Button fx:id="messageButton" alignment="CENTER" maxHeight="1.7976931348623157E308" minHeight="-1.0" minWidth="20.0" mnemonicParsing="false" onAction="#onOpenCloseAction" text="" HBox.hgrow="ALWAYS" />
+            <Button fx:id="messageButton" alignment="CENTER" maxHeight="1.7976931348623157E308" minHeight="-1.0" minWidth="20.0" mnemonicParsing="false" onAction="#onOpenCloseAction" text="" HBox.hgrow="ALWAYS">
+              <graphic>
+                <ImageView id="warning" pickOnBounds="true" visible="true">
+                  <image>
+                    <Image preserveRatio="true" smooth="true" url="@warning.png" />
+                  </image>
+                </ImageView>
+              </graphic>
+              <tooltip>
+                  <Tooltip text="%message.bar.details" />
+              </tooltip>
+            </Button>
+            <Label fx:id="statusLabel" contentDisplay="CENTER" focusTraversable="false" graphicTextGap="0.0" maxHeight="1.7976931348623157E308" minWidth="30.0" prefWidth="30.0" text="" HBox.hgrow="ALWAYS">
+              <tooltip>
+                <Tooltip text="%message.bar.file.dirty" />
+              </tooltip>
+              <HBox.margin>
+                <Insets />
+              </HBox.margin>
+            </Label>
           </children>
         </HBox>
       </children>

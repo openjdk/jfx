@@ -232,6 +232,22 @@ public class ColorEncoder {
     }
     
     
+    public static String encodeColorToRGBA(Color color) {
+        final String result;
+        if (color == null) {
+            result = "null";//NOI18N
+        } else {
+            final int red = (int) (color.getRed() * 255);
+            final int green = (int) (color.getGreen() * 255);
+            final int blue = (int) (color.getBlue() * 255);
+            result = "rgba("+red+","+green+","+blue +","+color.getOpacity()+")";//NOI18N
+        }
+        return result;    
+    }
+
+    /*
+     * Private
+     */
     private static String makeColorEncoding(Color c) {
         final int red, green, blue, alpha;
         final String result;
@@ -248,4 +264,5 @@ public class ColorEncoder {
         
         return result;
     }
+    
 }

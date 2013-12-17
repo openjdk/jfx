@@ -55,6 +55,7 @@ import javafx.scene.input.DragEvent;
 import javafx.scene.input.InputEvent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.BorderPane;
 import javafx.stage.Window;
 
 /**
@@ -218,7 +219,8 @@ public class DragGesture extends AbstractGesture {
             }
         } else {
             final DesignHierarchyMask m = new DesignHierarchyMask(hitObject);
-            if (m.isAcceptingSubComponent()) {
+            final boolean isBorderPane = hitObject.getSceneGraphObject() instanceof BorderPane;
+            if (m.isAcceptingSubComponent() || isBorderPane) {
                 assert hitObject instanceof FXOMInstance;
                 candidateParent = (FXOMInstance) hitObject;
             } else {

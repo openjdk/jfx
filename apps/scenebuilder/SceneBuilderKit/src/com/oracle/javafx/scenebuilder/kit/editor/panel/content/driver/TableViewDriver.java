@@ -32,8 +32,11 @@
 package com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver;
 
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.handles.AbstractHandles;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.handles.TableViewHandles;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.resizer.AbstractResizer;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.resizer.RegionResizer;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import javafx.scene.Node;
 import javafx.scene.control.TableColumn;
@@ -52,6 +55,15 @@ public class TableViewDriver extends AbstractNodeDriver {
     /*
      * AbstractDriver
      */
+    
+    @Override
+    public AbstractHandles<?> makeHandles(FXOMObject fxomObject) {
+        assert fxomObject != null;
+        assert fxomObject instanceof FXOMInstance;
+        assert fxomObject.getSceneGraphObject() instanceof TableView;
+        return new TableViewHandles(contentPanelController, (FXOMInstance) fxomObject);
+    }
+
     
     @Override
     public AbstractResizer<?> makeResizer(FXOMObject fxomObject) {

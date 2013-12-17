@@ -820,10 +820,15 @@ implements AbstractGesture.Observer {
         assert e.getTarget() instanceof Node;
         
         final Node target = (Node) e.getTarget();
-        final AbstractPring<?> hitPring = AbstractPring.lookupPring(target);
+        Node hitNode = target;
+        AbstractPring<?> hitPring = AbstractPring.lookupPring(target);
+        while ((hitPring == null) && (hitNode.getParent() != null)) {
+            hitNode = hitNode.getParent();
+            hitPring = AbstractPring.lookupPring(hitNode);
+        }
         
         if (hitPring != null) {
-            activateGesture(hitPring.findGesture(target), e);
+            activateGesture(hitPring.findGesture(hitNode), e);
         } else {
             // Emergency code
             assert false : "event target has no PRING property :" + target;

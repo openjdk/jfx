@@ -403,6 +403,7 @@ public class CssInternal {
         // Attached map may impact css performance, so remove it.
         detachMapToNode(node);
         // DEBUG
+//        System.out.println("collectCssState() for " + node);
 //        for (StyleableProperty s : ret.keySet()) {
 //            List<Style> styles = ret.get(s);
 //            for (Style style : styles) {

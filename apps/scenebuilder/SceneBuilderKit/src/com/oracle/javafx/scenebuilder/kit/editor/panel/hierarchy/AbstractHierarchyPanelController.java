@@ -60,6 +60,7 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
+import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -76,7 +77,14 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
+import javafx.scene.layout.Border;
+import javafx.scene.layout.BorderStroke;
+import javafx.scene.layout.BorderStrokeStyle;
+import javafx.scene.layout.BorderWidths;
+import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
 import javafx.stage.Window;
 
 /**
@@ -87,45 +95,16 @@ import javafx.stage.Window;
  */
 public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanelController {
 
-    // CSS style class definitions
-    //
-    // Style classes used for parent ring
-    /**
-     * @treatAsPrivate
-     */
-    public static final String CELL_BORDER_BOTTOM = "cell-border-bottom";
-    /**
-     * @treatAsPrivate
-     */
-    public static final String CELL_BORDER_RIGHT_BOTTOM_LEFT = "cell-border-right-bottom-left";
-    /**
-     * @treatAsPrivate
-     */
-    public static final String CELL_BORDER_RIGHT_LEFT = "cell-border-right-left";
-    /**
-     * @treatAsPrivate
-     */
-    public static final String CELL_BORDER_TOP_RIGHT_BOTTOM_LEFT = "cell-border-top-right-bottom-left";
-    /**
-     * @treatAsPrivate
-     */
-    public static final String CELL_BORDER_TOP_RIGHT_LEFT = "cell-border-top-right-left";
-    /**
-     * @treatAsPrivate
-     */
-    public static final String INSERT_LINE_INDICATOR = "insert-line-indicator";
-    /**
-     * @treatAsPrivate
-     */
+    public enum BorderSide {
+
+        BOTTOM, RIGHT_BOTTOM_LEFT, RIGHT_LEFT, TOP_RIGHT_BOTTOM_LEFT, TOP_RIGHT_LEFT
+    }
+
     // Style classes used for the TreeCell graphic part
     /**
      * @treatAsPrivate
      */
     public static final String TREE_CELL_GRAPHIC = "tree-cell-graphic";
-    /**
-     * @treatAsPrivate
-     */
-    public static final String HIERARCHY_PLACE_HOLDER_LABEL = "hierarchy-place-holder-label";
     /**
      * @treatAsPrivate
      */
@@ -144,6 +123,7 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
      */
     protected TreeItem<HierarchyItem> rootTreeItem;
     private boolean parentRingEnabled = true;
+    private Paint parentRingColor;
     private final Map<FXOMObject, Boolean> treeItemsExpandedMapProperty = new HashMap<>();
     private boolean shouldEndOnExit;
     protected final Label promptLabel = new Label();
@@ -151,6 +131,16 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
     // When DND few pixels of the top or bottom of the Hierarchy 
     // the user can cause it to auto-scroll until the desired target node
     private static final double AUTO_SCROLLING_ZONE_HEIGHT = 40.0;
+
+    private Border bottomBorder;
+    private Border rightBottomLeftBorder;
+    private Border rightLeftBorder;
+    private Border topRightBottomLeftBorder;
+    private Border topRightLeftBorder;
+    
+    private static final Color DEFAULT_PARENT_RING_COLOR = Color.rgb(238, 168, 47);
+    private final BorderWidths borderWidths = new BorderWidths(2);
+    private final Paint transparent = Color.TRANSPARENT;
 
     /**
      * @treatAsPrivate
@@ -264,6 +254,42 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
      */
     public void setParentRingEnabled(boolean enabled) {
         parentRingEnabled = enabled;
+    }
+
+    public Paint getParentRingColor() {
+        return parentRingColor;
+    }
+
+    public void setParentRingColor(Paint value) {
+        parentRingColor = value;
+        updateParentRingColor();
+    }
+
+    public Border getBorder(BorderSide side) {
+        final Border border;
+        switch (side) {
+            case BOTTOM:
+                border = bottomBorder;
+                break;
+            case RIGHT_BOTTOM_LEFT:
+                border = rightBottomLeftBorder;
+                break;
+            case RIGHT_LEFT:
+                border = rightLeftBorder;
+                break;
+            case TOP_RIGHT_BOTTOM_LEFT:
+                border = topRightBottomLeftBorder;
+                break;
+            case TOP_RIGHT_LEFT:
+                border = topRightLeftBorder;
+                break;
+            default:
+                border = null;
+                assert false;
+                break;
+        }
+        assert border != null;
+        return border;
     }
 
     /**
@@ -382,6 +408,11 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
     /**
      * @treatAsPrivate
      */
+    public abstract void updatePlaceHolder();
+
+    /**
+     * @treatAsPrivate
+     */
     public abstract void clearBorderColor();
 
     /**
@@ -390,11 +421,7 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
      */
     public void clearBorderColor(final Cell<?> cell) {
         assert cell != null;
-        cell.getStyleClass().removeAll(CELL_BORDER_BOTTOM);
-        cell.getStyleClass().removeAll(CELL_BORDER_RIGHT_BOTTOM_LEFT);
-        cell.getStyleClass().removeAll(CELL_BORDER_RIGHT_LEFT);
-        cell.getStyleClass().removeAll(CELL_BORDER_TOP_RIGHT_BOTTOM_LEFT);
-        cell.getStyleClass().removeAll(CELL_BORDER_TOP_RIGHT_LEFT);
+        cell.setBorder(Border.EMPTY);
     }
 
     /**
@@ -661,6 +688,38 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
             // Remove place holder from the parent
             ((Pane) parent).getChildren().remove(promptLabel);
         }
+    }
+    
+    protected void updateParentRingColor() {
+        // Update border items used to build the hierarchy parent ring
+        BorderStroke bs;
+        // bottom border
+        bs = new BorderStroke(transparent, transparent, parentRingColor, transparent,
+                BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID,
+                CornerRadii.EMPTY, borderWidths, Insets.EMPTY);
+        bottomBorder = new Border(bs);
+        // right bottom and left border
+        bs = new BorderStroke(transparent, parentRingColor, parentRingColor, parentRingColor,
+                BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID,
+                CornerRadii.EMPTY, borderWidths, Insets.EMPTY);
+        rightBottomLeftBorder = new Border(bs);
+        // right and left border
+        bs = new BorderStroke(transparent, parentRingColor, transparent, parentRingColor,
+                BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID,
+                CornerRadii.EMPTY, borderWidths, Insets.EMPTY);
+        rightLeftBorder = new Border(bs);
+        // top right bottom and left border
+        bs = new BorderStroke(parentRingColor, BorderStrokeStyle.SOLID,
+                CornerRadii.EMPTY, borderWidths);
+        topRightBottomLeftBorder = new Border(bs);
+        // top right and left border
+        bs = new BorderStroke(parentRingColor, parentRingColor, transparent, parentRingColor,
+                BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID,
+                CornerRadii.EMPTY, borderWidths, Insets.EMPTY);
+        topRightLeftBorder = new Border(bs);
+        
+        updateParentRing();
+        updatePlaceHolder();
     }
 
     private void updateTreeItem(final TreeItem<HierarchyItem> treeItem) {
@@ -933,6 +992,9 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
         final ContextMenuController contextMenuController
                 = getEditorController().getContextMenuController();
         getPanelControl().setContextMenu(contextMenuController.getContextMenu());
+
+        // Set default parent ring color
+        setParentRingColor(DEFAULT_PARENT_RING_COLOR);
     }
 
     private void handleOnDragDetected(final MouseEvent event) {

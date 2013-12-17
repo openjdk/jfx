@@ -31,14 +31,13 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
-
 <?import java.lang.*?>
 <?import java.net.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?scenebuilder-preview-i18n-resource i18n/SceneBuilderApp.properties?>
 
-<VBox id="DocumentWindow" alignment="CENTER" prefHeight="800.0" prefWidth="1200.0" spacing="0.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+<VBox id="DocumentWindow" alignment="CENTER" prefHeight="800.0" prefWidth="1200.0" spacing="0.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
   <children>
     <SplitPane fx:id="mainSplitPane" dividerPositions="0.656641604010025" focusTraversable="true" orientation="VERTICAL" prefHeight="200.0" prefWidth="160.0" VBox.vgrow="ALWAYS">
       <items>
@@ -54,8 +53,8 @@
                         <StackPane fx:id="librarySearchPanelHost" maxHeight="-1.0" maxWidth="-1.0" minHeight="-1.0" minWidth="-1.0" prefHeight="-1.0" prefWidth="-1.0" style="" HBox.hgrow="ALWAYS" />
                         <MenuButton fx:id="LibraryMenu" mnemonicParsing="false" styleClass="panelMenuButton" text="" HBox.hgrow="NEVER">
                           <items>
-                            <CheckMenuItem fx:id="libraryViewAsList" mnemonicParsing="false" onAction="#onLibraryViewAsList" text="%library.panel.menu.view.list" />
-                            <CheckMenuItem fx:id="libraryViewAsSections" mnemonicParsing="false" onAction="#onLibraryViewAsSections" selected="true" text="%library.panel.menu.view.sections" />
+                            <CheckMenuItem mnemonicParsing="false" onAction="#onLibraryViewAsList" text="%library.panel.menu.view.list" fx:id="libraryViewAsList" />
+                            <CheckMenuItem mnemonicParsing="false" onAction="#onLibraryViewAsSections" selected="true" text="%library.panel.menu.view.sections" fx:id="libraryViewAsSections" />
                             <SeparatorMenuItem mnemonicParsing="false" />
                             <MenuItem mnemonicParsing="false" onAction="#onLibraryImportJarFxml" text="%library.panel.menu.import.jar.fxml" />
                           </items>
@@ -73,13 +72,13 @@
                         <Pane maxWidth="1.7976931348623157E308" prefHeight="-1.0" prefWidth="-1.0" HBox.hgrow="ALWAYS" />
                         <MenuButton fx:id="HierarchyMenu" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" styleClass="panelMenuButton" text="">
                           <items>
-                            <RadioMenuItem mnemonicParsing="false" onAction="#onHierarchyShowInfo" selected="true" text="Show Info">
+                            <RadioMenuItem mnemonicParsing="false" onAction="#onHierarchyShowInfo" selected="true" text="Show Info" fx:id="showInfoMenuItem">
                               <toggleGroup>
                                 <ToggleGroup fx:id="hierarchyDisplayOptionTG" />
                               </toggleGroup>
                             </RadioMenuItem>
-                            <RadioMenuItem mnemonicParsing="false" onAction="#onHierarchyShowFxId" text="Show fx:id" toggleGroup="$hierarchyDisplayOptionTG" />
-                            <RadioMenuItem mnemonicParsing="false" onAction="#onHierarchyShowNodeId" text="Show Node Id" toggleGroup="$hierarchyDisplayOptionTG" />
+                            <RadioMenuItem mnemonicParsing="false" onAction="#onHierarchyShowFxId" text="Show fx:id" toggleGroup="$hierarchyDisplayOptionTG" fx:id="showFxIdMenuItem" />
+                            <RadioMenuItem mnemonicParsing="false" onAction="#onHierarchyShowNodeId" text="Show Node Id" toggleGroup="$hierarchyDisplayOptionTG" fx:id="showNodeIdMenuItem" />
                           </items>
                         </MenuButton>
                       </children>
@@ -162,8 +161,8 @@
                         </Menu>
                         <SeparatorMenuItem mnemonicParsing="false" />
                         <MenuItem mnemonicParsing="false" onAction="#onCssPanelCopyStyleablePathAction" text="%csspanel.copy.path" />
-                        <MenuItem fx:id="cssPanelShowStyledOnlyMi" mnemonicParsing="false" onAction="#onCssPanelShowStyledOnlyAction" text="%csspanel.hide.default.values" />
-                        <MenuItem fx:id="cssPanelSplitDefaultsMi" mnemonicParsing="false" onAction="#onCssPanelSplitDefaultsAction" text="%csspanel.defaults.split" />
+                        <MenuItem mnemonicParsing="false" onAction="#onCssPanelShowStyledOnlyAction" text="%csspanel.hide.default.values" fx:id="cssPanelShowStyledOnlyMi" />
+                        <MenuItem mnemonicParsing="false" onAction="#onCssPanelSplitDefaultsAction" text="%csspanel.defaults.split" fx:id="cssPanelSplitDefaultsMi" />
                       </items>
                     </MenuButton>
                   </children>

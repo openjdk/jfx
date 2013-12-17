@@ -40,6 +40,8 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.content.mode.AbstractMode
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.mode.EditModeController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.mode.PickModeController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.AbstractDriver;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.FlowPaneDriver;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.BorderPaneDriver;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.GenericDriver;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.GridPaneDriver;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.HBoxDriver;
@@ -49,6 +51,8 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TabDriver;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TabPaneDriver;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TableColumnDriver;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TableViewDriver;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TextFlowDriver;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.ToolBarDriver;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TreeTableColumnDriver;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TreeTableViewDriver;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.VBoxDriver;
@@ -89,10 +93,13 @@ import javafx.scene.control.TabPane;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TitledPane;
+import javafx.scene.control.ToolBar;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.input.InputEvent;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
@@ -102,6 +109,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.text.TextFlow;
 import javafx.scene.transform.NonInvertibleTransformException;
 import javafx.scene.transform.Transform;
 
@@ -835,8 +843,16 @@ public class ContentPanelController extends AbstractFxmlPanelController
             result = new VBoxDriver(this);
         } else if (sceneGraphObject instanceof GridPane) {
             result = new GridPaneDriver(this);
+        } else if (sceneGraphObject instanceof BorderPane) {
+            result = new BorderPaneDriver(this);
         } else if (sceneGraphObject instanceof Line) {
             result = new LineDriver(this);
+        } else if (sceneGraphObject instanceof FlowPane) {
+            result = new FlowPaneDriver(this);
+        } else if (sceneGraphObject instanceof TextFlow) {
+            result = new TextFlowDriver(this);
+        } else if (sceneGraphObject instanceof ToolBar) {
+            result = new ToolBarDriver(this);
         } else if (sceneGraphObject instanceof SplitPane) {
             result = new SplitPaneDriver(this);
         } else if (sceneGraphObject instanceof Tab) {

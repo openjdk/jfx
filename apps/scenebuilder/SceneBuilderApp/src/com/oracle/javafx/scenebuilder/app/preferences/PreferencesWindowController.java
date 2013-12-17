@@ -32,11 +32,22 @@
 package com.oracle.javafx.scenebuilder.app.preferences;
 
 import com.oracle.javafx.scenebuilder.app.i18n.I18N;
+import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.ALIGNMENT_GUIDES_COLOR;
+import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.BACKGROUND_IMAGE;
+import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.CSS_ANALYZER_COLUMN_ORDER;
+import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.DOCUMENT_HEIGHT;
+import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.DOCUMENT_WIDTH;
+import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.HIERARCHY_DISPLAY_OPTION;
+import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.PARENT_RING_COLOR;
+import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.RECENT_ITEMS;
+import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.RECENT_ITEMS_SIZE;
 import com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal.BackgroundImage;
 import com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal.CSSAnalyzerColumnsOrder;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal.recentItemsSizes;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController.DisplayOption;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractFxmlWindowController;
+import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker;
+import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPickerController.Mode;
 import java.util.Arrays;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -44,8 +55,12 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.control.ChoiceBox;
+import javafx.scene.control.CustomMenuItem;
+import javafx.scene.control.MenuButton;
 import javafx.scene.control.TextField;
-import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
+import javafx.scene.shape.Rectangle;
 import javafx.stage.WindowEvent;
 
 /**
@@ -64,9 +79,17 @@ public class PreferencesWindowController extends AbstractFxmlWindowController {
     @FXML
     private ChoiceBox<CSSAnalyzerColumnsOrder> cssAnalyzerColumnsOrder;
     @FXML
-    private VBox alignmentGuides;
+    private MenuButton alignmentGuidesButton;
     @FXML
-    private VBox dropTargetRing;
+    private MenuButton parentRingButton;
+    @FXML
+    private CustomMenuItem alignmentGuidesMenuItem;
+    @FXML
+    private CustomMenuItem parentRingMenuItem;
+    @FXML
+    private Rectangle alignmentGuidesGraphic;
+    @FXML
+    private Rectangle parentRingGraphic;
     @FXML
     private ChoiceBox<Integer> recentItemsSize;
 
@@ -96,6 +119,8 @@ public class PreferencesWindowController extends AbstractFxmlWindowController {
                 final String value = documentHeight.getText();
                 recordGlobal.setDocumentHeight(Double.valueOf(value));
                 documentHeight.selectAll();
+                // Update preferences
+                recordGlobal.writeToJavaPreferences(DOCUMENT_HEIGHT);
             }
         });
         documentWidth.setText(String.valueOf(recordGlobal.getDocumentWidth()));
@@ -106,6 +131,8 @@ public class PreferencesWindowController extends AbstractFxmlWindowController {
                 final String value = documentWidth.getText();
                 recordGlobal.setDocumentWidth(Double.valueOf(value));
                 documentWidth.selectAll();
+                // Update preferences
+                recordGlobal.writeToJavaPreferences(DOCUMENT_WIDTH);
             }
         });
 
@@ -113,6 +140,24 @@ public class PreferencesWindowController extends AbstractFxmlWindowController {
         backgroundImage.getItems().setAll(Arrays.asList(BackgroundImage.class.getEnumConstants()));
         backgroundImage.setValue(recordGlobal.getBackgroundImage());
         backgroundImage.getSelectionModel().selectedItemProperty().addListener(new BackgroundImageListener());
+
+        // Alignment guides color
+        final Color alignmentColor = recordGlobal.getAlignmentGuidesColor();
+        final PaintPicker alignmentColorPicker = new PaintPicker(Mode.COLOR);
+        alignmentGuidesGraphic.setFill(alignmentColor);
+        alignmentGuidesMenuItem.setContent(alignmentColorPicker);
+        alignmentColorPicker.setPaintProperty(alignmentColor);
+        alignmentColorPicker.paintProperty().addListener(
+                new AlignmentGuidesColorListener(alignmentGuidesGraphic));
+
+        // Parent ring color
+        final Color parentRingColor = recordGlobal.getParentRingColor();
+        final PaintPicker parentRingColorPicker = new PaintPicker(Mode.COLOR);
+        parentRingGraphic.setFill(parentRingColor);
+        parentRingMenuItem.setContent(parentRingColorPicker);
+        parentRingColorPicker.setPaintProperty(alignmentColor);
+        parentRingColorPicker.paintProperty().addListener(
+                new ParentRingColorListener(parentRingGraphic));
 
         // Hierarchy display option
         hierarchyDisplayOption.getItems().setAll(Arrays.asList(DisplayOption.class.getEnumConstants()));
@@ -162,7 +207,11 @@ public class PreferencesWindowController extends AbstractFxmlWindowController {
                     = PreferencesController.getSingleton();
             final PreferencesRecordGlobal recordGlobal
                     = preferencesController.getRecordGlobal();
+            // Update preferences
             recordGlobal.setBackgroundImage(newValue);
+            recordGlobal.writeToJavaPreferences(BACKGROUND_IMAGE);
+            // Update UI
+            recordGlobal.refreshBackgroundImage();
         }
     }
 
@@ -175,7 +224,11 @@ public class PreferencesWindowController extends AbstractFxmlWindowController {
                     = PreferencesController.getSingleton();
             final PreferencesRecordGlobal recordGlobal
                     = preferencesController.getRecordGlobal();
+            // Update preferences
             recordGlobal.setHierarchyDisplayOption(newValue);
+            recordGlobal.writeToJavaPreferences(HIERARCHY_DISPLAY_OPTION);
+            // Update UI
+            recordGlobal.refreshHierarchyDisplayOption();
         }
     }
 
@@ -188,7 +241,11 @@ public class PreferencesWindowController extends AbstractFxmlWindowController {
                     = PreferencesController.getSingleton();
             final PreferencesRecordGlobal recordGlobal
                     = preferencesController.getRecordGlobal();
+            // Update preferences
             recordGlobal.setCSSAnalyzerColumnsOrder(newValue);
+            recordGlobal.writeToJavaPreferences(CSS_ANALYZER_COLUMN_ORDER);
+            // Update UI
+            recordGlobal.refreshCSSAnalyzerColumnsOrder();
         }
     }
 
@@ -201,7 +258,58 @@ public class PreferencesWindowController extends AbstractFxmlWindowController {
                     = PreferencesController.getSingleton();
             final PreferencesRecordGlobal recordGlobal
                     = preferencesController.getRecordGlobal();
+            // Update preferences
             recordGlobal.setRecentItemsSize(newValue);
+            recordGlobal.writeToJavaPreferences(RECENT_ITEMS_SIZE);
+            recordGlobal.writeToJavaPreferences(RECENT_ITEMS);
+        }
+    }
+
+    private static class AlignmentGuidesColorListener implements ChangeListener<Paint> {
+
+        private final Rectangle graphic;
+
+        public AlignmentGuidesColorListener(Rectangle graphic) {
+            this.graphic = graphic;
+        }
+
+        @Override
+        public void changed(ObservableValue<? extends Paint> ov, Paint oldValue, Paint newValue) {
+            assert newValue instanceof Color;
+            final PreferencesController preferencesController
+                    = PreferencesController.getSingleton();
+            final PreferencesRecordGlobal recordGlobal
+                    = preferencesController.getRecordGlobal();
+            // Update preferences
+            recordGlobal.setAlignmentGuidesColor((Color) newValue);
+            recordGlobal.writeToJavaPreferences(ALIGNMENT_GUIDES_COLOR);
+            // Update UI
+            recordGlobal.refreshAlignmentGuidesColor();
+            graphic.setFill(newValue);
+        }
+    }
+
+    private static class ParentRingColorListener implements ChangeListener<Paint> {
+
+        private final Rectangle graphic;
+
+        public ParentRingColorListener(Rectangle graphic) {
+            this.graphic = graphic;
+        }
+
+        @Override
+        public void changed(ObservableValue<? extends Paint> ov, Paint oldValue, Paint newValue) {
+            assert newValue instanceof Color;
+            final PreferencesController preferencesController
+                    = PreferencesController.getSingleton();
+            final PreferencesRecordGlobal recordGlobal
+                    = preferencesController.getRecordGlobal();
+            // Update preferences
+            recordGlobal.setParentRingColor((Color) newValue);
+            recordGlobal.writeToJavaPreferences(PARENT_RING_COLOR);
+            // Update UI
+            recordGlobal.refreshParentRingColor();
+            graphic.setFill(newValue);
         }
     }
 }

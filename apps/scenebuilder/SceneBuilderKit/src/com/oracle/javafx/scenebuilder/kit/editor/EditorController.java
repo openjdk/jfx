@@ -67,6 +67,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.WrapInVBoxJob;
 import com.oracle.javafx.scenebuilder.kit.editor.messagelog.MessageLog;
 import com.oracle.javafx.scenebuilder.kit.editor.util.InlineEditController;
 import com.oracle.javafx.scenebuilder.kit.editor.report.ErrorReport;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
@@ -90,6 +91,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.ResourceBundle;
+import java.util.Set;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ListProperty;
 import javafx.beans.property.ObjectProperty;
@@ -181,6 +183,7 @@ public class EditorController {
         SELECT_NEXT,
         SELECT_PREVIOUS,
         TOGGLE_CSS_SELECTION,
+        TOGGLE_SAMPLE_DATA,
         // Candidates for Modify - GridPane
         SELECT_NEXT_ROW,
         SELECT_NEXT_COLUMN,
@@ -212,6 +215,8 @@ public class EditorController {
             = new SimpleObjectProperty<>(null);
     private final BooleanProperty pickModeEnabledProperty
             = new SimpleBooleanProperty(true);
+    private final BooleanProperty sampleDataEnabledProperty
+            = new SimpleBooleanProperty(false);
     
     private Callback<Void, Boolean> requestTextEditingSessionEnd;
     
@@ -499,8 +504,8 @@ public class EditorController {
     }
     
     /**
-     * Returns true is 'pick mode' is enabled for this editor.
-     * @return true is 'pick mode' is enabled for this editor.
+     * Returns true if 'pick mode' is enabled for this editor.
+     * @return true if 'pick mode' is enabled for this editor.
      */
     public boolean isPickModeEnabled() {
         return pickModeEnabledProperty.getValue();
@@ -523,6 +528,39 @@ public class EditorController {
     public ObservableValue<Boolean> pickModeEnabledProperty() {
         return pickModeEnabledProperty;
     }
+    
+    /**
+     * Returns true if content and preview panels attached to this editor
+     * should display sample data.
+     * 
+     * @return true if content and preview panels should display sample data.
+     */
+    public boolean isSampleDataEnabled() {
+        return sampleDataEnabledProperty.getValue();
+    }
+    
+    /**
+     * Enables or disables display of sample data in content and preview panels
+     * attached to this editor.
+     * 
+     * @param sampleDataEnabled true if sample data should be displayed
+     */
+    public void setSampleDataEnabled(boolean sampleDataEnabled) {
+        sampleDataEnabledProperty.setValue(sampleDataEnabled);
+        if (getFxomDocument() != null) {
+            getFxomDocument().setSampleDataEnabled(isSampleDataEnabled());
+        }
+    }
+    
+    /**
+     * The property indicating if sample data should be displayed or not.
+     * 
+     * @return the property indicating if sample data should be displayed or not.
+     */
+    public ObservableValue<Boolean> sampleDataEnabledProperty() {
+        return sampleDataEnabledProperty;
+    }
+    
     
     /**
      * Returns null or the location of the fxml being edited.
@@ -1092,6 +1130,18 @@ public class EditorController {
                 performSelectParent();
                 break;
             }
+            case SELECT_NEXT: {
+                performSelectNext();
+                break;
+            }
+            case SELECT_PREVIOUS: {
+                performSelectPrevious();
+                break;
+            }
+            case TOGGLE_SAMPLE_DATA: {
+                setSampleDataEnabled( ! isSampleDataEnabled());
+                break;
+            }
             default:
                 throw new UnsupportedOperationException("Not yet implemented"); //NOI18N
         }
@@ -1125,6 +1175,18 @@ public class EditorController {
             }
             case SELECT_PARENT: {
                 result = canPerformSelectParent();
+                break;
+            }
+            case SELECT_NEXT: {
+                result = canPerformSelectNext();
+                break;
+            }
+            case SELECT_PREVIOUS: {
+                result = canPerformSelectPrevious();
+                break;
+            }
+            case TOGGLE_SAMPLE_DATA: {
+                result = true;
                 break;
             }
             default:
@@ -1380,6 +1442,108 @@ public class EditorController {
         assert getFxomDocument() != null && getFxomDocument().getFxomRoot() != null;
         final FXOMObject rootObject = getFxomDocument().getFxomRoot();
         return !selection.isEmpty() && !selection.isSelected(rootObject);
+    }
+    
+    /**
+     * Performs the select next control action.
+     */
+    private void performSelectNext() {
+        assert canPerformSelectNext(); // (1)
+        
+        final AbstractSelectionGroup asg = selection.getGroup();
+        if (asg instanceof ObjectSelectionGroup) {
+            final ObjectSelectionGroup osg = (ObjectSelectionGroup) asg;
+            final Set<FXOMObject> items = osg.getItems();
+            assert items.size() == 1; // Because of (1)
+            final FXOMObject selectedObject = items.iterator().next();
+            final FXOMObject nextSibling = selectedObject.getNextSlibing();
+            assert nextSibling != null; // Because of (1)
+            selection.select(nextSibling);
+        } else {
+            assert asg instanceof GridSelectionGroup; // Because of (1)
+            // Map to the SELECT_NEXT_ROW/SELECT_NEXT_COLUMN control action
+        }
+    }
+
+    /**
+     * Returns true if the selection is single and the container of the selected
+     * object container contains a child next to the selected one.
+     *
+     * @return if the selection is single and the container of the selected
+     * object container contains a child next to the selected one.
+     */
+    private boolean canPerformSelectNext() {
+        assert getFxomDocument() != null && getFxomDocument().getFxomRoot() != null;
+        if (selection.isEmpty()) {
+            return false;
+        }
+        final AbstractSelectionGroup asg = selection.getGroup();
+        if (asg instanceof ObjectSelectionGroup) {
+            final ObjectSelectionGroup osg = (ObjectSelectionGroup) asg;
+            final Set<FXOMObject> items = osg.getItems();
+            if (items.size() != 1) {
+                return false;
+            }
+            final FXOMObject selectedObject = items.iterator().next();
+            return selectedObject.getNextSlibing() != null;
+        } else if (asg instanceof GridSelectionGroup) {
+            // Map to the SELECT_NEXT_ROW/SELECT_NEXT_COLUMN control action
+        } else {
+            assert selection.getGroup() == null :
+                    "Add implementation for " + selection.getGroup(); //NOI18N
+        }
+        return false;
+    }
+        
+    /**
+     * Performs the select previous control action.
+     */
+    private void performSelectPrevious() {
+        assert canPerformSelectPrevious(); // (1)
+        
+        final AbstractSelectionGroup asg = selection.getGroup();
+        if (asg instanceof ObjectSelectionGroup) {
+            final ObjectSelectionGroup osg = (ObjectSelectionGroup) asg;
+            final Set<FXOMObject> items = osg.getItems();
+            assert items.size() == 1; // Because of (1)
+            final FXOMObject selectedObject = items.iterator().next();
+            final FXOMObject previousSibling = selectedObject.getPreviousSlibing();
+            assert previousSibling != null; // Because of (1)
+            selection.select(previousSibling);
+        } else {
+            assert asg instanceof GridSelectionGroup; // Because of (1)
+            // Map to the SELECT_PREVIOUS_ROW/SELECT_PREVIOUS_COLUMN control action
+        }
+    }
+    
+    /**
+     * Returns true if the selection is single and the container of the selected
+     * object container contains a child previous to the selected one.
+     *
+     * @return if the selection is single and the container of the selected
+     * object container contains a child previous to the selected one.
+     */
+    private boolean canPerformSelectPrevious() {
+        assert getFxomDocument() != null && getFxomDocument().getFxomRoot() != null;
+        if (selection.isEmpty()) {
+            return false;
+        }
+        final AbstractSelectionGroup asg = selection.getGroup();
+        if (asg instanceof ObjectSelectionGroup) {
+            final ObjectSelectionGroup osg = (ObjectSelectionGroup) asg;
+            final Set<FXOMObject> items = osg.getItems();
+            if (items.size() != 1) {
+                return false;
+            }
+            final FXOMObject selectedObject = items.iterator().next();
+            return selectedObject.getPreviousSlibing() != null;
+        } else if (asg instanceof GridSelectionGroup) {
+            // Map to the SELECT_PREVIOUS_ROW/SELECT_PREVIOUS_COLUMN control action
+        } else {
+            assert selection.getGroup() == null :
+                    "Add implementation for " + selection.getGroup(); //NOI18N
+        }
+        return false;
     }
         
     /**

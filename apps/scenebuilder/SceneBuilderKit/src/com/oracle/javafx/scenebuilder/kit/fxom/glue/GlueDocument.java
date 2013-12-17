@@ -117,7 +117,7 @@ public class GlueDocument extends GlueNode {
     public String toString() {
         final String result;
         if (rootElement == null) {
-            result = "";
+            result = ""; //NOI18N
         } else {
             final GlueSerializer serializer = new GlueSerializer(this);
             result = serializer.toString();

@@ -43,6 +43,7 @@ import javafx.scene.Cursor;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.control.SplitPane;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 
 /**
@@ -119,7 +120,8 @@ public class SplitPaneHandles extends AbstractNodeHandles<SplitPane> {
     
     private Line makeGripLine() {
         final Line result = new Line();
-        result.getStyleClass().add("divider-grip"); //NOI18N
+        result.setStrokeWidth(SELECTION_HANDLES_SIZE);
+        result.setStroke(Color.TRANSPARENT);
         switch(getSceneGraphObject().getOrientation()) {
             default:
             case HORIZONTAL:

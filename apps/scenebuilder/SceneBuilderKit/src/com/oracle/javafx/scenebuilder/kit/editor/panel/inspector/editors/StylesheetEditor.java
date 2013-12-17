@@ -98,7 +98,12 @@ public class StylesheetEditor extends InlineListEditor {
             }
             value.add(itemValue);
         }
-        return value;
+        if (value.isEmpty()) {
+            // no stylesheet
+            return super.getPropertyMeta().getDefaultValueObject();
+        } else {
+            return value;
+        }
     }
 
     @SuppressWarnings("unchecked")

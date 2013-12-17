@@ -622,8 +622,6 @@ public class Metadata {
             new PropertyName("disabled");
     private final PropertyName dividerPositionsName = 
             new PropertyName("dividerPositions");
-    private final PropertyName dividersName = 
-            new PropertyName("dividers");
     private final PropertyName divisionsName = 
             new PropertyName("divisions");
     private final PropertyName drawModeName = 
@@ -1724,12 +1722,6 @@ public class Metadata {
                 true, /* readWrite */
                 Collections.emptyList(), /* defaultValue */
                 new InspectorPath("Properties", "Specific", 14));
-    private final ValuePropertyMetadata dividersPropertyMetadata =
-            new DividerListPropertyMetadata(
-                dividersName,
-                true, /* readWrite */
-                Collections.emptyList(), /* defaultValue */
-                new InspectorPath("Properties", "Specific", 13));
     private final ValuePropertyMetadata divisionsPropertyMetadata =
             new IntegerPropertyMetadata(
                 divisionsName,
@@ -5054,7 +5046,6 @@ public class Metadata {
         SplitMenuButtonMetadata.getProperties().add(styleClass_c2_PropertyMetadata);
 
         SplitPaneMetadata.getProperties().add(dividerPositionsPropertyMetadata);
-        SplitPaneMetadata.getProperties().add(dividersPropertyMetadata);
         SplitPaneMetadata.getProperties().add(items_Node_PropertyMetadata);
         SplitPaneMetadata.getProperties().add(orientation_HORIZONTAL_PropertyMetadata);
         SplitPaneMetadata.getProperties().add(styleClass_c14_PropertyMetadata);
@@ -5326,6 +5317,7 @@ public class Metadata {
         hiddenProperties.add(new PropertyName("customColors"));
         hiddenProperties.add(new PropertyName("data"));
         hiddenProperties.add(new PropertyName("dayCellFactory"));
+        hiddenProperties.add(new PropertyName("dividers"));
         hiddenProperties.add(new PropertyName("editingCell"));
         hiddenProperties.add(new PropertyName("editingIndex"));
         hiddenProperties.add(new PropertyName("editingItem"));

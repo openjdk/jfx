@@ -155,10 +155,6 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
         final List<File> fxmlFiles = new ArrayList<>();
         fxmlFiles.add(fxmlFile);
         performOpenFiles(fxmlFiles, source);
-        // Update recent items
-        final PreferencesController pc = PreferencesController.getSingleton();
-        final PreferencesRecordGlobal recordGlobal = pc.getRecordGlobal();
-        recordGlobal.addRecentItems(fxmlFiles);
     }
 
     public void documentWindowRequestClose(DocumentWindowController fromWindow) {
@@ -269,6 +265,11 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
             Deprecation.setDefaultSystemMenuBar(defaultSystemMenuBarController.getMenuBar());
         }
 
+        // Load global application preferences
+        final PreferencesController pc = PreferencesController.getSingleton();
+        final PreferencesRecordGlobal recordGlobal = pc.getRecordGlobal();
+        recordGlobal.readFromJavaPreferences();
+        
         // Creates the user library
         userLibrary = new UserLibrary(AppPlatform.getUserLibraryFolder());
         userLibrary.startWatching();
@@ -288,11 +289,6 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
             // Open files passed as arguments by the platform
             handleOpenFilesAction(files);
         }
-
-        // Load java preferences at start time
-        final PreferencesController pc = PreferencesController.getSingleton();
-        final PreferencesRecordGlobal recordGlobal = pc.getRecordGlobal();
-        recordGlobal.readFromJavaPreferences();
     }
 
     @Override
@@ -336,12 +332,6 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
          * should be not be executed.
          */
         if (windowList.isEmpty()) {
-
-            // Write java preferences at quit time
-            final PreferencesController pc = PreferencesController.getSingleton();
-            final PreferencesRecordGlobal recordGlobal = pc.getRecordGlobal();
-            recordGlobal.writeToJavaPreferences();
-
             Platform.exit();
         }
     }
@@ -388,10 +378,6 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
             assert fxmlFiles.isEmpty() == false;
             updateNextInitialDirectory(fxmlFiles.get(0));
             performOpenFiles(fxmlFiles, fromWindow);
-            // Update recent items
-            final PreferencesController pc = PreferencesController.getSingleton();
-            final PreferencesRecordGlobal recordGlobal = pc.getRecordGlobal();
-            recordGlobal.addRecentItems(fxmlFiles);
         }
     }
 
@@ -452,6 +438,10 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
 
         switch (exceptions.size()) {
             case 0: { // Good
+                // Update recent items with opened files
+                final PreferencesController pc = PreferencesController.getSingleton();
+                final PreferencesRecordGlobal recordGlobal = pc.getRecordGlobal();
+                recordGlobal.addRecentItems(fxmlFiles);
                 break;
             }
             case 1: {

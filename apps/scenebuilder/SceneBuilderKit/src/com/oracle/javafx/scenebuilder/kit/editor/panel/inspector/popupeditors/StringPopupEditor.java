@@ -56,7 +56,7 @@ public class StringPopupEditor extends PopupEditor {
         root = EditorUtils.loadPopupFxml("StringPopupEditor.fxml", this);
         initialize();
     }
-    
+
     // Method to please FindBugs
     private void initialize() {
         assert textField != null;
@@ -74,7 +74,13 @@ public class StringPopupEditor extends PopupEditor {
     }
 
     private String getValueAsString() {
-        return textField.getText();
+        String valueAsString;
+        if (isIndeterminate()) {
+            valueAsString = "-"; //NOI18N
+        } else {
+            valueAsString = textField.getText();
+        }
+        return valueAsString;
     }
 
     //
@@ -89,7 +95,7 @@ public class StringPopupEditor extends PopupEditor {
             assert value instanceof String;
             textField.setText((String) value);
         }
-        
+
         // Update the menu button string
         displayValueAsString(getValueAsString());
     }

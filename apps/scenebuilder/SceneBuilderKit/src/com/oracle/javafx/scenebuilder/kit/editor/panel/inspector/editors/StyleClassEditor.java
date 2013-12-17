@@ -93,7 +93,12 @@ public class StyleClassEditor extends InlineListEditor {
             }
             value.add(itemValue);
         }
-        return value;
+        if (value.isEmpty()) {
+            // no style class
+            return super.getPropertyMeta().getDefaultValueObject();
+        } else {
+            return value;
+        }
     }
 
     @SuppressWarnings("unchecked")

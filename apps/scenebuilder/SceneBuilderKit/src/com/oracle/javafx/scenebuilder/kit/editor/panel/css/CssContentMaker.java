@@ -238,9 +238,10 @@ public class CssContentMaker {
     }
 
     public static NodeCssState getCssState(Object selectedObject) {
-        Object sceneGraphObject = CssUtils.getSceneGraphObject(selectedObject);
-        assert sceneGraphObject instanceof Node;
-        Node node = (Node) sceneGraphObject;
+        Node node = CssUtils.getSelectedNode(selectedObject);
+        if (node == null) {
+            return null;
+        }
         Parent p = null;
         double current = 1;
         try {
@@ -249,6 +250,10 @@ public class CssContentMaker {
                 // A node MUST be in the scene to allow for CSS content collect,
                 // so we add it (temporarily) to the scene. 
                 Node inScene = CssUtils.getFirstAncestorWithNonNullScene(node);
+                if (inScene == null) {
+                    // May happen if the Content Panel is not present
+                    return null;
+                }
                 p = inScene.getParent();
                 current = node.getOpacity();
                 node.setOpacity(0);
@@ -375,7 +380,6 @@ public class CssContentMaker {
 //        }
 //
 //    }
-
 //    private static void printStyle(Style style) {
 //        System.out.println(style.getDeclaration().getRule().getOrigin() + " ==> STYLE " + style.getDeclaration());
 //        System.out.println("--> css url = " + style.getDeclaration().getRule().getStylesheet().getUrl());

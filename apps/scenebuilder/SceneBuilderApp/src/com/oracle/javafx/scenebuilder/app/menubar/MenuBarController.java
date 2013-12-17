@@ -568,7 +568,9 @@ public class MenuBarController {
         selectParentMenuItem.setUserData(new ControlActionController(ControlAction.SELECT_PARENT));
         selectParentMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.L, modifier));
         selectNextMenuItem.setUserData(new ControlActionController(ControlAction.SELECT_NEXT));
+        selectNextMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.RIGHT, modifier));
         selectPreviousMenuItem.setUserData(new ControlActionController(ControlAction.SELECT_PREVIOUS));
+        selectPreviousMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.LEFT, modifier));
         trimMenuItem.setUserData(new EditActionController(EditAction.TRIM));
 
         /*
@@ -599,7 +601,7 @@ public class MenuBarController {
                     }
                 });
         toggleLibraryPanelMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.DIGIT4, modifier));
-        toggleHierarchyPanelMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.TOGGLE_HIERARCHY_PANEL) {
+        toggleHierarchyPanelMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.TOGGLE_DOCUMENT_PANEL) {
             @Override
             public String getTitle() {
                 final String titleKey;
@@ -661,7 +663,20 @@ public class MenuBarController {
         toggleRightPanelMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.DIGIT8, modifier));
 //        toggleOutlinesMenuItem.setUserData(new ControlActionController(ControlAction.));
         toggleOutlinesMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.E, modifier));
-//        toggleSampleDataMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.GOTO_CONTENT));
+        toggleSampleDataMenuItem.setUserData(new ControlActionController(ControlAction.TOGGLE_SAMPLE_DATA) {
+            @Override
+            public String getTitle() {
+                final String titleKey;
+                if (documentWindowController == null) {
+                    titleKey = "menu.title.hide.sample.data";
+                } else if (documentWindowController.getEditorController().isSampleDataEnabled()) {
+                    titleKey = "menu.title.hide.sample.data";
+                } else {
+                    titleKey = "menu.title.show.sample.data";
+                }
+                return I18N.getString(titleKey);
+            }
+        });
         toggleAlignmentGuidesMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.TOGGLE_GUIDES_VISIBILITY) {
             @Override
             public String getTitle() {
@@ -680,7 +695,7 @@ public class MenuBarController {
                 return I18N.getString(titleKey);
             }
         });
-//        showSampleControllerMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.GOTO_CONTENT));
+        showSampleControllerMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.SHOW_SAMPLE_CONTROLLER));
         updateZoomMenu();
 
         /*
@@ -962,18 +977,32 @@ public class MenuBarController {
             menuItems.add(clearMenuItem);
         } else {
             clearMenuItem.setDisable(false);
+            
+            final List<File> recentItemsToRemove = new ArrayList<>();
             for (String recentItem : recentItems) {
-                final MenuItem mi = new MenuItem(recentItem);
-                mi.setOnAction(new EventHandler<ActionEvent>() {
 
-                    @Override
-                    public void handle(ActionEvent t) {
-                        final File file = new File(recentItem);
-                        SceneBuilderApp.getSingleton().performOpenRecent(documentWindowController, file);
-                    }
-                });
-                menuItems.add(mi);
+                final File recentItemFile = new File(recentItem);
+                if (recentItemFile.exists()) {
+                    final MenuItem mi = new MenuItem(recentItem);
+                    mi.setOnAction(new EventHandler<ActionEvent>() {
+
+                        @Override
+                        public void handle(ActionEvent t) {
+                            final File file = new File(recentItem);
+                            SceneBuilderApp.getSingleton().performOpenRecent(documentWindowController, file);
+                        }
+                    });
+                    menuItems.add(mi);
+                } else {
+                    // recent item file is still in preferences DB but has been removed from disk
+                    recentItemsToRemove.add(recentItemFile);
+                }
             }
+            // Cleanup recent items preferences if needed
+            if (recentItemsToRemove.isEmpty() == false) {
+                recordGlobal.removeRecentItems(recentItemsToRemove);
+            }
+
             menuItems.add(new SeparatorMenuItem());
             menuItems.add(clearMenuItem);
         }

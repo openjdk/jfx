@@ -42,6 +42,7 @@ import javafx.fxml.FXML;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.ImagePattern;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Paint;
@@ -72,6 +73,12 @@ public class PaintPickerController {
     private GradientPicker gradientPicker;
 
     private final ObjectProperty<Paint> paint = new SimpleObjectProperty<>();
+
+    public final static Color DEFAULT_COLOR = Color.BLACK;
+    public final static LinearGradient DEFAULT_LINEAR
+            = new LinearGradient(0.0, 0.0, 1.0, 1.0, true, CycleMethod.NO_CYCLE);
+    public final static RadialGradient DEFAULT_RADIAL
+            = new RadialGradient(0.0, 0.0, 0.5, 0.5, 0.5, true, CycleMethod.NO_CYCLE);
 
     public final ObjectProperty<Paint> paintProperty() {
         return paint;
@@ -130,6 +137,9 @@ public class PaintPickerController {
         colorPicker = new ColorPicker(this);
         gradientPicker = new GradientPicker(this);
 
+        // Default value
+        setPaintProperty(DEFAULT_COLOR);
+
         // Resize the window so it matches the selected editor size
         root_vbox.heightProperty().addListener(new ChangeListener<Number>() {
 
@@ -140,6 +150,34 @@ public class PaintPickerController {
             }
         });
         root_vbox.getChildren().add(colorPicker);
+    }
+
+    void setSingleMode(Mode mode) {
+        // First disable toggle buttons so we cannot switch from 1 mode to another
+        colorToggleButton.setManaged(false);
+        linearToggleButton.setManaged(false);
+        radialToggleButton.setManaged(false);
+
+        final Paint value;
+        switch (mode) {
+            case COLOR:
+                value = DEFAULT_COLOR;
+                break;
+            case LINEAR:
+                value = DEFAULT_LINEAR;
+                break;
+            case RADIAL:
+                value = DEFAULT_RADIAL;
+                break;
+            default:
+                value = null;
+                assert false;
+                break;
+        }
+        // Update model
+        setPaintProperty(value);
+        // Update UI
+        updateUI(value);
     }
 
     public VBox getRoot() {

@@ -100,8 +100,6 @@ public class ColorPicker extends VBox {
     private final PaintPickerController paintPickerController;
     private boolean updating = false;
 
-    private final static Color DEFAULT = Color.BLACK;
-
     public ColorPicker(PaintPickerController pe) {
         paintPickerController = pe;
         initialize();

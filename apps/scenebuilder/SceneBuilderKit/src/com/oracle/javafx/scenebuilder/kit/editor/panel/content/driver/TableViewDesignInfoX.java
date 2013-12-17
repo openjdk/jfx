@@ -56,9 +56,8 @@ public class TableViewDesignInfoX /* extends TableViewDesignInfo */ {
 
     public Bounds getColumnBounds(TableColumn<?,?> tableColumn) {
         final TableView<?> tv = tableColumn.getTableView();
-        final Node hn = getColumnNode(tableColumn);
         final Bounds tb = tv.getLayoutBounds();
-        final Bounds hb = tv.sceneToLocal(hn.localToScene(hn.getLayoutBounds()));
+        final Bounds hb = getColumnHeaderBounds(tableColumn);
         
         //
         //           x0             x1          
@@ -80,6 +79,13 @@ public class TableViewDesignInfoX /* extends TableViewDesignInfo */ {
         final double y1 = tb.getMaxY();
         
         return new BoundingBox(x0, y0, x1 - x0, y1 - y0);
+    }
+    
+    
+    public Bounds getColumnHeaderBounds(TableColumn<?,?> tableColumn) {
+        final TableView<?> tv = tableColumn.getTableView();
+        final Node hn = getColumnNode(tableColumn);
+        return tv.sceneToLocal(hn.localToScene(hn.getLayoutBounds()));
     }
     
     

@@ -36,23 +36,22 @@ import com.oracle.javafx.scenebuilder.kit.editor.drag.target.GridPaneDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.GridPaneDropTarget.ColumnArea;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.GridPaneDropTarget.RowArea;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.tring.AbstractGenericTring;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import javafx.geometry.Bounds;
-import javafx.geometry.Point2D;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.tring.AbstractNodeTring;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import javafx.scene.layout.GridPane;
-import javafx.scene.transform.Transform;
 
 /**
  *
  */
-public class GridPaneTring extends AbstractGenericTring<GridPane> {
+public class GridPaneTring extends AbstractNodeTring<GridPane> {
 
     private final GridPaneMosaic mosaic 
-            = new GridPaneMosaic("tring", false /* shouldShowTray */); //NOI18N
+            = new GridPaneMosaic("tring", //NOI18N
+                    false /* shouldShowTray */,
+                    false /* shouldCreateSensors */ );
     
     public GridPaneTring(ContentPanelController contentPanelController, 
-            FXOMObject fxomObject) {
+            FXOMInstance fxomObject) {
         super(contentPanelController, fxomObject, GridPane.class);
         getRootNode().getChildren().add(0, mosaic.getTopGroup()); // Below handles
     }
@@ -103,41 +102,9 @@ public class GridPaneTring extends AbstractGenericTring<GridPane> {
     }
     
     /*
-     * AbstractGenericPring
+     * AbstractGenericTring
      */
-    
-    @Override
-    public Bounds getSceneGraphObjectBounds() {
-        return getSceneGraphObject().getLayoutBounds();
-    }
-
-    @Override
-    public Transform getSceneGraphToSceneTransform() {
-        return getSceneGraphObject().getLocalToSceneTransform();
-    }
-
-    @Override
-    public Point2D sceneGraphObjectToScene(double x, double y) {
-        return getSceneGraphObject().localToScene(x, y);
-    }
-
-    @Override
-    public Point2D sceneToSceneGraphObject(double x, double y) {
-        return getSceneGraphObject().sceneToLocal(x, y);
-    }
-
-    @Override
-    protected void startListeningToSceneGraphObject() {
-        startListeningToLayoutBounds(getSceneGraphObject());
-        startListeningToLocalToSceneTransform(getSceneGraphObject());
-    }
-
-    @Override
-    protected void stopListeningToSceneGraphObject() {
-        stopListeningToLayoutBounds(getSceneGraphObject());
-        stopListeningToLocalToSceneTransform(getSceneGraphObject());
-    }
-    
+        
     @Override
     protected void layoutDecoration() {
         

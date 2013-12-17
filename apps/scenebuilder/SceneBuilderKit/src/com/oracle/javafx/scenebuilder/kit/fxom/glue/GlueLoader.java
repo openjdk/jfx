@@ -70,7 +70,7 @@ class GlueLoader implements ContentHandler, ErrorHandler, LexicalHandler {
         assert xmlText != null;
         assert GlueDocument.isEmptyXmlText(xmlText) == false;
         
-        final Charset utf8 = Charset.forName("UTF-8");
+        final Charset utf8 = Charset.forName("UTF-8"); //NOI18N
         try (final InputStream is = new ByteArrayInputStream(xmlText.getBytes(utf8))) {
             load(is);
         }
@@ -85,7 +85,7 @@ class GlueLoader implements ContentHandler, ErrorHandler, LexicalHandler {
             XMLReader xr = XMLReaderFactory.createXMLReader();
             xr.setContentHandler(this);
             xr.setErrorHandler(this);
-            xr.setProperty("http://xml.org/sax/properties/lexical-handler", this);
+            xr.setProperty("http://xml.org/sax/properties/lexical-handler", this); //NOI18N
             xr.parse(new InputSource(is));
         } catch(SAXException x) {
             throw new IOException(x);
@@ -142,9 +142,9 @@ class GlueLoader implements ContentHandler, ErrorHandler, LexicalHandler {
         }
         for (Map.Entry<String,String> e : prefixMappings.entrySet()) {
             if (e.getKey().isEmpty()) {
-                newElement.getAttributes().put("xmlns", e.getValue());
+                newElement.getAttributes().put("xmlns", e.getValue()); //NOI18N
             } else {
-                newElement.getAttributes().put("xmlns:" + e.getKey(), e.getValue());
+                newElement.getAttributes().put("xmlns:" + e.getKey(), e.getValue()); //NOI18N
             }
         }
         newElement.getFront().addAll(auxiliaries);
@@ -201,7 +201,7 @@ class GlueLoader implements ContentHandler, ErrorHandler, LexicalHandler {
 
     @Override
     public void skippedEntity(String name) throws SAXException {
-        throw new UnsupportedOperationException("name=" + name);
+        throw new UnsupportedOperationException("name=" + name); //NOI18N
     }
     
     /*
@@ -229,9 +229,9 @@ class GlueLoader implements ContentHandler, ErrorHandler, LexicalHandler {
      */
     @Override
     public void startDTD(String name, String publicId, String systemId) throws SAXException {
-        throw new UnsupportedOperationException("name=" + name 
-                + ", publicId=" + publicId
-                + ", systemId=" + systemId);
+        throw new UnsupportedOperationException("name=" + name  //NOI18N
+                + ", publicId=" + publicId //NOI18N
+                + ", systemId=" + systemId); //NOI18N
     }
 
     @Override
@@ -241,7 +241,7 @@ class GlueLoader implements ContentHandler, ErrorHandler, LexicalHandler {
 
     @Override
     public void startEntity(String name) throws SAXException {
-        throw new UnsupportedOperationException("name=" + name);
+        throw new UnsupportedOperationException("name=" + name); //NOI18N
     }
 
     @Override

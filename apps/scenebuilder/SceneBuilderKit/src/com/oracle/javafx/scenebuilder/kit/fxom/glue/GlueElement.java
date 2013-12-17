@@ -67,8 +67,8 @@ public class GlueElement extends GlueNode {
         this.document = document;
         this.tagName = tagName;
         if (preset) {
-            front.add(new GlueCharacters(document, GlueCharacters.Type.TEXT, "\n"));
-            tail.add(new GlueCharacters(document, GlueCharacters.Type.TEXT, "\n"));
+            front.add(new GlueCharacters(document, GlueCharacters.Type.TEXT, "\n")); //NOI18N
+            tail.add(new GlueCharacters(document, GlueCharacters.Type.TEXT, "\n")); //NOI18N
         }
     }
 
@@ -269,7 +269,7 @@ public class GlueElement extends GlueNode {
         final StringBuilder result = new StringBuilder();
         
         result.append(getClass().getSimpleName());
-        result.append(" - ");
+        result.append(" - "); //NOI18N
         result.append(tagName);
         
         return result.toString();
@@ -282,8 +282,8 @@ public class GlueElement extends GlueNode {
     
     private GlueCharacters getContentHolder() {
         /*
-         * The content holder is the last TEXT node of the "content".
-         * When "content" contains more than one node, it will be the one
+         * The content holder is the last TEXT node of the "content". //NOI18N
+         * When "content" contains more than one node, it will be the one //NOI18N
          * which is used to get/set the content text.
          * This matches FXMLLoader behavior.
          * 
@@ -293,12 +293,12 @@ public class GlueElement extends GlueNode {
          *     <text>Hello <!-- Disruptive comment -->World!</text>
          * </Label>
          * 
-         * FXMLLoader will produce a Label with text="World!".
+         * FXMLLoader will produce a Label with text="World!". //NOI18N
          * 
          * <text>                               -> GlueElement
-         *      "Hello "                        -> GlueCharacters
-         *      " Disruptive comment "          -> GlueCharacters
-         *      "World !"                       -> GlueCharacters (HOLDER)
+         *      "Hello "                        -> GlueCharacters //NOI18N
+         *      " Disruptive comment "          -> GlueCharacters //NOI18N
+         *      "World !"                       -> GlueCharacters (HOLDER) //NOI18N
          */
         
         GlueCharacters result = null;

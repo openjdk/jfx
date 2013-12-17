@@ -32,6 +32,7 @@
 package com.oracle.javafx.scenebuilder.app;
 
 import java.util.List;
+import javafx.beans.property.DoubleProperty;
 import javafx.scene.Node;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.SplitPane.Divider;
@@ -39,27 +40,48 @@ import javafx.scene.control.SplitPane.Divider;
 /**
  *
  */
-class SplitController {
-    
-    public enum Target { FIRST, LAST };
-    
+public class SplitController {
+
+    public enum Target {
+
+        FIRST, LAST
+    };
+
     private final SplitPane splitPane;
     private final Target target;
     private final Node targetNode;
     private double dividerPosition = -1.0;
-    
+
     public SplitController(SplitPane splitPane, Target target) {
         assert splitPane != null;
         assert splitPane.getItems().size() >= 1;
-        
+
         this.splitPane = splitPane;
         this.target = target;
-        
+
         final List<Node> children = splitPane.getItems();
-        final int targetIndex = (target == Target.FIRST) ? 0 : children.size()-1;
+        final int targetIndex = (target == Target.FIRST) ? 0 : children.size() - 1;
         this.targetNode = children.get(targetIndex);
     }
-    
+
+    public DoubleProperty position() {
+        final Divider divider = getDivider();
+        return divider == null ? null : divider.positionProperty();
+    }
+
+    public double getPosition() {
+        final Divider divider = getDivider();
+        return divider == null ? -1.0 : divider.getPosition();
+    }
+
+    public void setPosition(double value) {
+        final Divider divider = getDivider();
+        if (divider != null) {
+            divider.setPosition(value);
+        }
+        dividerPosition = value;
+    }
+
     public void showTarget() {
         if (isTargetVisible() == false) {
             // Put the target node back in the split pane items
@@ -71,34 +93,29 @@ class SplitController {
 
             // Restore the divider position (if any)
             final List<Divider> dividers = splitPane.getDividers();
-            if ((dividers.isEmpty() == false) && (dividerPosition != -1)) {
-                if (target == Target.FIRST) {
-                    dividers.get(0).setPosition(dividerPosition);
-                } else {
-                    dividers.get(dividers.size()-1).setPosition(dividerPosition);
-                }
+            if ((dividers.isEmpty() == false) && (dividerPosition != -1)) { // (1)
+                final Divider divider = getDivider();
+                assert divider != null; // Because of (1)
+                divider.setPosition(dividerPosition);
             }
-            dividerPosition = -1;
         }
+        dividerPosition = -1;
     }
-    
+
     public void hideTarget() {
         if (isTargetVisible()) {
             // Backup the divider position
             final List<Divider> dividers = splitPane.getDividers();
-            if (dividers.isEmpty() == false) {
-                if (target == Target.FIRST) {
-                    dividerPosition = dividers.get(0).getPosition();
-                } else {
-                    dividerPosition = dividers.get(dividers.size()-1).getPosition();
-                }
+            if (dividers.isEmpty() == false) { // (1)
+                final Divider divider = getDivider();
+                assert divider != null; // Because of (1)
+                dividerPosition = divider.getPosition();
             }
-
             // Removes the target node from the split pane items
             splitPane.getItems().remove(targetNode);
         }
     }
-    
+
     public void toggleTarget() {
         if (isTargetVisible()) {
             hideTarget();
@@ -106,8 +123,31 @@ class SplitController {
             showTarget();
         }
     }
-    
+
+    public void setTargetVisible(boolean visible) {
+        if (visible) {
+            showTarget();
+        } else {
+            hideTarget();
+        }
+    }
+
     public boolean isTargetVisible() {
         return splitPane.getItems().contains(targetNode);
+    }
+
+    private Divider getDivider() {
+        final Divider divider;
+        final List<Divider> dividers = splitPane.getDividers();
+        if (dividers.isEmpty() == false) {
+            if (target == Target.FIRST) {
+                divider = dividers.get(0);
+            } else {
+                divider = dividers.get(dividers.size() - 1);
+            }
+        } else {
+            divider = null;
+        }
+        return divider;
     }
 }

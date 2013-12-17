@@ -60,23 +60,11 @@ public class MessagePanelController extends AbstractFxmlPanelController {
     
     @FXML private ScrollPane scrollPane;
     @FXML private GridPane gridPane;
-    @FXML private Button clearAllButton;
-    @FXML private Button clearInfoButton;
-    @FXML private Button clearWarningButton;
+    @FXML private Button clearButton;
     
     @FXML
-    public void onClearAll(ActionEvent event) {
+    public void onClear(ActionEvent event) {
         getEditorController().getMessageLog().clear();
-    }
-    
-    @FXML
-    public void onClearInfo(ActionEvent event) {
-        getEditorController().getMessageLog().clear(MessageLogEntry.Type.INFO);
-    }
-    
-    @FXML
-    public void onClearWarning(ActionEvent event) {
-        getEditorController().getMessageLog().clear(MessageLogEntry.Type.WARNING);
     }
     
     public MessagePanelController(EditorController editorController) {
@@ -125,13 +113,9 @@ public class MessagePanelController extends AbstractFxmlPanelController {
         // Sanity checks
         assert scrollPane != null;
         assert gridPane != null;
-        assert clearAllButton != null;
-        assert clearInfoButton != null;
-        assert clearWarningButton != null;
+        assert clearButton != null;
         
-        clearAllButton.setText(I18N.getBundle().getString("message.panel.clear.all"));
-        clearInfoButton.setText(I18N.getBundle().getString("message.panel.clear.info"));
-        clearWarningButton.setText(I18N.getBundle().getString("message.panel.clear.warning"));
+        clearButton.setText(I18N.getBundle().getString("message.panel.clear"));
         
         // Listens to the message log 
         getEditorController().getMessageLog().revisionProperty().addListener(
@@ -179,13 +163,6 @@ public class MessagePanelController extends AbstractFxmlPanelController {
             StackPane paneForLabel = new StackPane();
             paneForLabel.getChildren().add(labelBox);
             paneForLabel.setAlignment(Pos.CENTER_LEFT);
-            
-            // There's no way to style the line of a GridPane hence the two StackPane
-            // used only to host the styling.
-            if (mle.getType().equals(MessageLogEntry.Type.INFO)) {
-                paneForButton.getStyleClass().add("message-info"); //NOI18N
-                paneForLabel.getStyleClass().add("message-info"); //NOI18N
-            }
 
             gridPane.add(paneForLabel, columnIndex, rowIndex);
             columnIndex++;

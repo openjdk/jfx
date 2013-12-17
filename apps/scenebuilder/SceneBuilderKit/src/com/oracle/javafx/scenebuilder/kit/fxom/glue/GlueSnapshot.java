@@ -81,7 +81,7 @@ public class GlueSnapshot {
         /*
          * characters.getData()
          * 
-         * "xxxxxxx\nbbbbbbxxxxxxx\nbbbbbbbbxxxxxxxxxx\nbbbbbxxxxx...."
+         * 'xxxxxxx\nbbbbbbxxxxxxx\nbbbbbbbbxxxxxxxxxx\nbbbbbxxxxx....'
          * 
          *  b : white space
          *  x : any other char

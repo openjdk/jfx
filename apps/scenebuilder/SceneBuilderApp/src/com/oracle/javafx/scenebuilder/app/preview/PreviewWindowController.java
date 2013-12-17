@@ -145,6 +145,13 @@ public final class PreviewWindowController extends AbstractWindowController {
                 requestUpdate();
             }
         });
+        this.editorController.sampleDataEnabledProperty().addListener(new ChangeListener<Boolean>() {
+
+            @Override
+            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
+                requestUpdate();
+            }
+        });
     }
     
     /*
@@ -233,6 +240,7 @@ public final class PreviewWindowController extends AbstractWindowController {
                                         fxomDocument.getLocation(),
                                         fxomDocument.getClassLoader(),
                                         resourceBundle);
+                                clone.setSampleDataEnabled(fxomDocument.isSampleDataEnabled());
                             } catch (IOException ex) {
                                 throw new RuntimeException("Bug in PreviewWindowController::requestUpdate", ex); //NOI18N
                             }

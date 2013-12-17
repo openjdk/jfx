@@ -52,6 +52,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.I18nStr
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.ImageEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.InsetsEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.IntegerEditor;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.Point3DEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.PropertiesEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.PropertyEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.PropertyEditor.LayoutFormat;
@@ -59,6 +60,9 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.RotateE
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.StyleClassEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.StyleEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.StylesheetEditor;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.DividerPositionsEditor;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.TextAlignmentEditor;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.popupeditors.BoundsPopupEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.popupeditors.PaintPopupEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractFxmlPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
@@ -71,7 +75,9 @@ import com.oracle.javafx.scenebuilder.kit.glossary.Glossary;
 import com.oracle.javafx.scenebuilder.kit.metadata.Metadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.BooleanPropertyMetadata;
+import com.oracle.javafx.scenebuilder.kit.metadata.property.value.BoundsPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.CursorPropertyMetadata;
+import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoubleArrayPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.EnumerationPropertyMetadata;
@@ -79,6 +85,7 @@ import com.oracle.javafx.scenebuilder.kit.metadata.property.value.EventHandlerPr
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.ImagePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.InsetsPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.IntegerPropertyMetadata;
+import com.oracle.javafx.scenebuilder.kit.metadata.property.value.Point3DPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.StringPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.list.ListValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.paint.PaintPropertyMetadata;
@@ -171,7 +178,8 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
 
         PROPERTIES,
         LAYOUT,
-        CODE
+        CODE,
+        NONE
     }
 
     public enum ViewMode {
@@ -211,6 +219,10 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     private final Stack<Editor> cursorEditorPool = new Stack<>();
     private final Stack<Editor> paintPopupEditorPool = new Stack<>();
     private final Stack<Editor> imageEditorPool = new Stack<>();
+    private final Stack<Editor> boundsPopupEditorPool = new Stack<>();
+    private final Stack<Editor> point3DEditorPool = new Stack<>();
+    private final Stack<Editor> dividerPositionsEditorPool = new Stack<>();
+    private final Stack<Editor> textAlignmentEditorPool = new Stack<>();
     // ...
     //
     // Subsection title pool
@@ -266,7 +278,15 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         editorPools.put(CursorEditor.class, cursorEditorPool);
         editorPools.put(PaintPopupEditor.class, paintPopupEditorPool);
         editorPools.put(ImageEditor.class, imageEditorPool);
+        editorPools.put(BoundsPopupEditor.class, boundsPopupEditorPool);
+        editorPools.put(Point3DEditor.class, point3DEditorPool);
+        editorPools.put(DividerPositionsEditor.class, dividerPositionsEditorPool);
+        editorPools.put(TextAlignmentEditor.class, textAlignmentEditorPool);
         // ...
+    }
+
+    public Accordion getAccordion() {
+        return accordion;
     }
 
     public SectionId getExpandedSectionId() {
@@ -278,9 +298,8 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
 
         if (expandedSection == null) {
             // all sections are collapsed
-            return null;
-        }
-        if (expandedSection == propertiesTitledPane) {
+            result = InspectorPanelController.SectionId.NONE;
+        } else if (expandedSection == propertiesTitledPane) {
             result = InspectorPanelController.SectionId.PROPERTIES;
         } else if (expandedSection == layoutTitledPane) {
             result = InspectorPanelController.SectionId.LAYOUT;
@@ -297,6 +316,9 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         final TitledPane tp;
 
         switch (sectionId) {
+            case NONE:
+                tp = null;
+                break;
             case PROPERTIES:
                 tp = propertiesTitledPane;
                 break;
@@ -308,8 +330,9 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
                 break;
             default:
                 throw new IllegalStateException("Unexpected section id " + sectionId); //NOI18N
-        }
-        tp.setExpanded(true);
+            }
+
+        accordion.setExpandedPane(tp);
     }
 
     public void setViewMode(ViewMode mode) {
@@ -579,7 +602,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     }
 
     private void buildSection(SectionId sectionId) {
-        if (sectionId == null) {
+        if (sectionId == SectionId.NONE) {
             return;
         }
 //        System.out.println("\nBuilding section " + sectionId + " - Selection : " + selection.getEntries());
@@ -649,6 +672,9 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
                 }
                 PropertiesEditor propertiesEditor
                         = getInitializedPropertiesEditor(propMeta.getName(), propMetaSection.values(), groupProperties);
+                if (propertiesEditor == null) {
+                    continue;
+                }
                 lineIndex = addInGridPane(gridPane, propertiesEditor, lineIndex);
             } else {
                 lineIndex = addInGridPane(gridPane, getInitializedPropertyEditor(propMeta), lineIndex);
@@ -660,6 +686,9 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
             Collection<ValuePropertyMetadata> propMetas, Set<PropertyName> groupProperties) {
         ValuePropertyMetadata[] propMetaGroup = getGroupedPropertiesMetadata(groupedPropName, propMetas, groupProperties);
         PropertiesEditor propertiesEditor = getPropertiesEditor(propMetaGroup);
+        if (propertiesEditor == null) {
+            return null;
+        }
         for (PropertyEditor propertyEditor : propertiesEditor.getPropertyEditors()) {
             setEditorValueFromSelection(propertyEditor);
             handlePropertyEditorChanges(propertyEditor);
@@ -864,6 +893,9 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
                 // Several properties are grouped in a single editor (e.g. AnchorPane constraints)
                 PropertiesEditor propertiesEditor
                         = getInitializedPropertiesEditor(propMeta.getName(), new HashSet<>(orderedPropMetadatas), groupProperties);
+                if (propertiesEditor == null) {
+                    continue;
+                }
                 lineIndex = addInGridPane(gridPane, propertiesEditor, lineIndex);
             } else {
                 lineIndex = addInGridPane(gridPane, getInitializedPropertyEditor(propMeta), lineIndex);
@@ -994,8 +1026,10 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         propertyEditor.addValueListener(new ChangeListener<Object>() {
             @Override
             public void changed(ObservableValue<? extends Object> ov, Object oldValue, Object newValue) {
-                lastPropertyEditorValueChanged = propertyEditor;
-                updateValueInModel(propertyEditor, oldValue, newValue);
+                if (!propertyEditor.isUpdateFromModel()) {
+                    lastPropertyEditorValueChanged = propertyEditor;
+                    updateValueInModel(propertyEditor, oldValue, newValue);
+                }
                 if (propertyEditor.isRuledByCss()) {
                     editorController.getMessageLog().logWarningMessage(
                             "inspector.css.overridden", propertyEditor.getPropertyNameText());
@@ -1230,7 +1264,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
                     break;
             }
         } else if (propMeta instanceof DoublePropertyMetadata) {
-            // Double editor
+            // Double editors
             DoublePropertyMetadata doublePropMeta = (DoublePropertyMetadata) propMeta;
             DoubleKind kind = doublePropMeta.getKind();
             if ((kind == DoubleKind.COORDINATE)
@@ -1247,6 +1281,17 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
                 // Use simple double editor for now
                 propertyEditor = makePropertyEditor(DoubleEditor.class, propMeta);
             }
+        } else if (propMeta instanceof DoubleArrayPropertyMetadata) {
+            // Double array editors
+            switch (propMeta.getName().getName()) {
+                case "dividerPositions": //NOI18N
+                    propertyEditor = makePropertyEditor(DividerPositionsEditor.class, propMeta);
+                    break;
+                default:
+                    // Generic editor
+                    propertyEditor = makePropertyEditor(GenericEditor.class, propMeta);
+                    break;
+            }
         } else if (propMeta instanceof IntegerPropertyMetadata) {
             // Integer editor
             propertyEditor = makePropertyEditor(IntegerEditor.class, propMeta);
@@ -1254,8 +1299,15 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
             // Boolean editor
             propertyEditor = makePropertyEditor(BooleanEditor.class, propMeta);
         } else if (propMeta instanceof EnumerationPropertyMetadata) {
-            // Enum editor
-            propertyEditor = makePropertyEditor(EnumEditor.class, propMeta);
+            switch (propMeta.getName().getName()) {
+                case "textAlignment": //NOI18N
+                    propertyEditor = makePropertyEditor(TextAlignmentEditor.class, propMeta);
+                    break;
+                default:
+                    // Enum editor
+                    propertyEditor = makePropertyEditor(EnumEditor.class, propMeta);
+                    break;
+            }
         } else if (propMeta instanceof InsetsPropertyMetadata) {
             // Insets editor
             propertyEditor = makePropertyEditor(InsetsEditor.class, propMeta);
@@ -1271,6 +1323,12 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         } else if (propMeta instanceof ImagePropertyMetadata) {
             // Image editor
             propertyEditor = makePropertyEditor(ImageEditor.class, propMeta);
+        } else if (propMeta instanceof BoundsPropertyMetadata) {
+            // Bounds editor
+            propertyEditor = makePropertyEditor(BoundsPopupEditor.class, propMeta);
+        } else if (propMeta instanceof Point3DPropertyMetadata) {
+            // Point3D editor
+            propertyEditor = makePropertyEditor(Point3DEditor.class, propMeta);
         } else {
             // Generic editor
             propertyEditor = makePropertyEditor(GenericEditor.class, propMeta);
@@ -1286,6 +1344,10 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     private PropertiesEditor getPropertiesEditor(ValuePropertyMetadata[] propMetas) {
         // AnchorPane only for now
         for (ValuePropertyMetadata propMeta : propMetas) {
+            if (propMeta == null) {
+                // may happen if search
+                return null;
+            }
             assert isAnchorConstraintsProp(propMeta.getName());
         }
         return makePropertiesEditor(AnchorPaneConstraintsEditor.class, propMetas);
@@ -1389,7 +1451,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     }
 
     private GridPane getSectionContent(SectionId sectionId) {
-        assert sectionId != null;
+        assert sectionId != SectionId.NONE;
         GridPane gp;
         switch (sectionId) {
             case PROPERTIES:
@@ -1558,6 +1620,30 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
                 ((ImageEditor) propertyEditor).reset(propMeta, selectedClasses);
             } else {
                 propertyEditor = new ImageEditor(propMeta, selectedClasses);
+            }
+        } else if (editorClass == BoundsPopupEditor.class) {
+            if (propertyEditor != null) {
+                ((BoundsPopupEditor) propertyEditor).reset(propMeta, selectedClasses);
+            } else {
+                propertyEditor = new BoundsPopupEditor(propMeta, selectedClasses);
+            }
+        } else if (editorClass == Point3DEditor.class) {
+            if (propertyEditor != null) {
+                ((Point3DEditor) propertyEditor).reset(propMeta, selectedClasses);
+            } else {
+                propertyEditor = new Point3DEditor(propMeta, selectedClasses);
+            }
+        } else if (editorClass == DividerPositionsEditor.class) {
+            if (propertyEditor != null) {
+                ((DividerPositionsEditor) propertyEditor).reset(propMeta, selectedClasses);
+            } else {
+                propertyEditor = new DividerPositionsEditor(propMeta, selectedClasses);
+            }
+        } else if (editorClass == TextAlignmentEditor.class) {
+            if (propertyEditor != null) {
+                ((TextAlignmentEditor) propertyEditor).reset(propMeta, selectedClasses);
+            } else {
+                propertyEditor = new TextAlignmentEditor(propMeta, selectedClasses);
             }
         } else {
             if (propertyEditor != null) {
@@ -1862,7 +1948,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         if (sp == null) {
             return;
         }
-        
+
         // Position the scrollBar such as the editor is centered in the TitledPane (when possible)
         final ScrollPane scrollPane = sp;
         double editorHeight = valueEditorNode.getLayoutBounds().getHeight();
@@ -1893,7 +1979,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         double scrollPos = selYVp / vpHeight;
         // Finally, set the scrollBar position
         scrollPane.setVvalue(scrollPos);
-        
+
         // Set the focus to the editor
         editorToFocus.requestFocus();
     }

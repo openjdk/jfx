@@ -38,7 +38,9 @@ import com.oracle.javafx.scenebuilder.kit.editor.drag.target.GridPaneDropTarget.
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.handles.AbstractHandles;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.gridpane.GridPaneHandles;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.gridpane.GridPanePring;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.gridpane.GridPaneTring;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.pring.AbstractPring;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.resizer.AbstractResizer;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.resizer.RegionResizer;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.tring.AbstractTring;
@@ -68,9 +70,16 @@ public class GridPaneDriver extends AbstractNodeDriver {
     
     @Override
     public AbstractHandles<?> makeHandles(FXOMObject fxomObject) {
-        assert fxomObject.getSceneGraphObject() instanceof GridPane;
         assert fxomObject instanceof FXOMInstance;
+        assert fxomObject.getSceneGraphObject() instanceof GridPane;
         return new GridPaneHandles(contentPanelController, (FXOMInstance)fxomObject);
+    }
+
+    @Override
+    public AbstractPring<?> makePring(FXOMObject fxomObject) {
+        assert fxomObject instanceof FXOMInstance;
+        assert fxomObject.getSceneGraphObject() instanceof GridPane;
+        return new GridPanePring(contentPanelController, (FXOMInstance) fxomObject);
     }
 
     @Override

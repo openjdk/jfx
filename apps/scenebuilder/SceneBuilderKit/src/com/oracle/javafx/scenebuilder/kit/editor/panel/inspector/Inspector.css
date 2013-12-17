@@ -288,3 +288,24 @@
 .suggested-list {
     -fx-font-size: 0.846em;  /* 11 */ 
  }
+
+/* -------------------------------------------------------------------------- */
+/*                             CustomMenuItem                                  */
+/* -------------------------------------------------------------------------- */
+.custom-menu-item:focused {
+     -fx-background: white;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                             ToggleButton                                   */
+/* -------------------------------------------------------------------------- */
+.toggle-button-left {
+    -fx-background-radius: 3 0 0 3;
+}
+.toggle-button-center {
+    -fx-background-radius: 0;
+}
+.toggle-button-right {
+    -fx-background-radius: 0 3 3 0;
+}
+

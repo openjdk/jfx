@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.util.control.paintpicker;
 
+import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPickerController.Mode;
 import java.io.IOException;
 import javafx.beans.property.ObjectProperty;
 import javafx.fxml.FXMLLoader;
@@ -65,6 +66,11 @@ public class PaintPicker extends Pane {
         }
     }
 
+    public PaintPicker(Mode mode) {
+        this();
+        controller.setSingleMode(mode);
+    }
+    
     public final ObjectProperty<Paint> paintProperty() {
         return controller.paintProperty();
     }

@@ -35,15 +35,21 @@ import com.oracle.javafx.scenebuilder.app.i18n.I18N;
 import com.oracle.javafx.scenebuilder.app.info.InfoPanelController;
 import com.oracle.javafx.scenebuilder.app.menubar.MenuBarController;
 import com.oracle.javafx.scenebuilder.app.message.MessageBarController;
+import com.oracle.javafx.scenebuilder.app.preferences.PreferencesController;
+import com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordDocument;
+import com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal;
 import com.oracle.javafx.scenebuilder.app.preview.BackgroundColorDialogController;
 import com.oracle.javafx.scenebuilder.app.preview.PreviewWindowController;
 import com.oracle.javafx.scenebuilder.app.selectionbar.SelectionBarController;
+import com.oracle.javafx.scenebuilder.app.skeleton.SkeletonWindowController;
 import com.oracle.javafx.scenebuilder.app.template.FxmlTemplates;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
+import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.css.CssPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController.DisplayOption;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.HierarchyPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.InspectorPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.InspectorPanelController.SectionId;
@@ -76,6 +82,7 @@ import javafx.geometry.Insets;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -101,7 +108,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         GOTO_LAYOUT,
         GOTO_CODE,
         TOGGLE_LIBRARY_PANEL,
-        TOGGLE_HIERARCHY_PANEL,
+        TOGGLE_DOCUMENT_PANEL,
         TOGGLE_CSS_PANEL,
         TOGGLE_LEFT_PANEL,
         TOGGLE_RIGHT_PANEL,
@@ -114,7 +121,8 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         SET_RESOURCE,
         REMOVE_RESOURCE,
         REVEAL_RESOURCE,
-        HELP
+        HELP,
+        SHOW_SAMPLE_CONTROLLER
     }
     
     public enum ActionStatus {
@@ -134,7 +142,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
     private final SelectionBarController selectionBarController = new SelectionBarController(editorController);
     private final MessageBarController messageBarController = new MessageBarController(editorController);
     // The PreviewWindowController is created lazily because it needs an owner
-    // but computing it here would be too costly (impact on start-up time).
+    // and computing it here would be too costly (impact on start-up time).
     private PreviewWindowController previewWindowController = null;
     private final SearchController librarySearchController = new SearchController(editorController);
     private final SearchController inspectorSearchController = new SearchController(editorController);
@@ -142,6 +150,9 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
     private final SceneStyleSheetMenuController sceneStyleSheetMenuController = new SceneStyleSheetMenuController(this);
     private final CssPanelMenuController cssPanelMenuController = new CssPanelMenuController(cssPanelController);
     private final ResourceController resourceController = new ResourceController((this));
+    // The SkeletonWindowController is created lazily because it needs an owner
+    // and computing it here would be too costly (impact on start-up time).
+    private SkeletonWindowController skeletonWindowController = null;
 
     @FXML private StackPane libraryPanelHost;
     @FXML private StackPane librarySearchPanelHost;
@@ -163,6 +174,10 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
     
     @FXML private MenuItem cssPanelShowStyledOnlyMi;
     @FXML private MenuItem cssPanelSplitDefaultsMi;
+    
+    @FXML private RadioMenuItem showInfoMenuItem;
+    @FXML private RadioMenuItem showFxIdMenuItem;
+    @FXML private RadioMenuItem showNodeIdMenuItem;
 
     private SplitController bottomSplitController;
     private SplitController leftSplitController;
@@ -171,6 +186,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
     private SplitController documentSplitController;
     
     private FileTime loadFileTime;
+    private Job saveJob;
     
     /*
      * DocumentWindowController
@@ -222,6 +238,26 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         return resourceController;
     }
     
+    public SplitController getBottomSplitController() {
+        return bottomSplitController;
+    }
+    
+    public SplitController getLeftSplitController() {
+        return leftSplitController;
+    }
+    
+    public SplitController getRightSplitController() {
+        return rightSplitController;
+    }
+    
+    public SplitController getLibrarySplitController() {
+        return librarySplitController;
+    }
+    
+    public SplitController getDocumentSplitController() {
+        return documentSplitController;
+    }
+    
     public void loadFromFile(File fxmlFile) throws IOException {
         final URL fxmlURL = fxmlFile.toURI().toURL();
         final String fxmlText = FXOMDocument.readContentFromURL(fxmlURL);
@@ -242,11 +278,43 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
 
     public void loadWithDefaultContent() {
         final URL fxmlURL = FxmlTemplates.getDefaultContentURL();
-        loadFromURL(fxmlURL);
+        assert fxmlURL != null;
+        try {
+            String fxmlText = FXOMDocument.readContentFromURL(fxmlURL);
+            // Update document size
+            final PreferencesController pc = PreferencesController.getSingleton();
+            final PreferencesRecordGlobal recordGlobal = pc.getRecordGlobal();
+            double height = recordGlobal.getDocumentHeight();
+            double width = recordGlobal.getDocumentWidth();
+            fxmlText = fxmlText.replace("DOCUMENT_HEIGHT", String.valueOf(height)); //NOI18N
+            fxmlText = fxmlText.replace("DOCUMENT_WIDTH", String.valueOf(width)); //NOI18N
+            editorController.setFxmlTextAndLocation(fxmlText, null);
+            updateLoadFileTime();
+        } catch (IOException x) {
+            throw new IllegalStateException(x);
+        }
     }
     
     public String getFxmlText() {
         return editorController.getFxmlText();
+    }
+    
+    public void refreshHierarchyDisplayOption(DisplayOption option) {
+        switch(option) {
+            case INFO:
+                showInfoMenuItem.setSelected(true);
+                break;
+            case FXID:
+                showFxIdMenuItem.setSelected(true);
+                break;
+            case NODEID:
+                showNodeIdMenuItem.setSelected(true);
+                break;
+            default:
+                assert false;
+                break;
+        }
+        hierarchyPanelController.setDisplayOption(option);
     }
     
     public static final String makeTitle(FXOMDocument fxomDocument) {
@@ -273,7 +341,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 break;
                 
             case TOGGLE_LIBRARY_PANEL:
-            case TOGGLE_HIERARCHY_PANEL:
+            case TOGGLE_DOCUMENT_PANEL:
             case TOGGLE_CSS_PANEL:
             case TOGGLE_LEFT_PANEL:
             case TOGGLE_RIGHT_PANEL:
@@ -333,6 +401,10 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 result = true;
                 break;
                 
+            case SHOW_SAMPLE_CONTROLLER:
+                result = true;
+                break;
+                
             default:
                 result = false;
                 assert false;
@@ -344,6 +416,9 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
     
     public void performControlAction(DocumentControlAction controlAction) {
         assert canPerformControlAction(controlAction);
+        
+        final PreferencesController pc = PreferencesController.getSingleton();
+        final PreferencesRecordDocument recordDocument = pc.getRecordDocument(this);
         
         switch(controlAction) {
             case SHOW_PREVIEW_WINDOW:
@@ -395,10 +470,14 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 
             case TOGGLE_LEFT_PANEL: 
                 leftSplitController.toggleTarget();
+                // Update preferences
+                recordDocument.setLeftVisible(leftSplitController.isTargetVisible());
                 break;
                 
             case TOGGLE_RIGHT_PANEL:
                 rightSplitController.toggleTarget();
+                // Update preferences
+                recordDocument.setRightVisible(rightSplitController.isTargetVisible());
                 break;
                 
             case TOGGLE_CSS_PANEL:
@@ -413,6 +492,8 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 }
 
                 bottomSplitController.toggleTarget();
+                // Update preferences
+                recordDocument.setBottomVisible(bottomSplitController.isTargetVisible());
                 break;
                 
             case TOGGLE_LIBRARY_PANEL:
@@ -421,14 +502,18 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                     // Make sure Hierarchy is visible
                     documentSplitController.showTarget();
                 }
+                // Update preferences
+                recordDocument.setLibraryVisible(librarySplitController.isTargetVisible());
                 break;
                 
-            case TOGGLE_HIERARCHY_PANEL:
+            case TOGGLE_DOCUMENT_PANEL:
                 documentSplitController.toggleTarget();
                 if (documentSplitController.isTargetVisible() == false) {
                     // Make sure Library is visible
                     librarySplitController.showTarget();
                 }
+                // Update preferences
+                recordDocument.setDocumentVisible(documentSplitController.isTargetVisible());
                 break;
                 
             case TOGGLE_GUIDES_VISIBILITY:
@@ -459,6 +544,13 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 
             case HELP:
                 performHelp();
+                break;
+                
+            case SHOW_SAMPLE_CONTROLLER:
+                if (skeletonWindowController == null) {
+                    skeletonWindowController = new SkeletonWindowController(editorController, getStage());
+                }
+                skeletonWindowController.openWindow();
                 break;
                 
             default:
@@ -585,7 +677,6 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         rightSplitController = new SplitController(leftRightSplitPane, SplitController.Target.LAST);
         librarySplitController = new SplitController(libraryDocumentSplitPane, SplitController.Target.FIRST);
         documentSplitController = new SplitController(libraryDocumentSplitPane, SplitController.Target.LAST);
-        bottomSplitController.hideTarget();
         
         messageBarHost.heightProperty().addListener(new InvalidationListener() {
             @Override
@@ -596,8 +687,29 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         });
         
         documentAccordion.setExpandedPane(documentAccordion.getPanes().get(0));
+        
+        // Refresh UI with preferences 
+        final PreferencesController pc = PreferencesController.getSingleton();
+        // Preferences global to the application
+        final PreferencesRecordGlobal recordGlobal = pc.getRecordGlobal();
+        recordGlobal.refresh(this);
+        // Preferences specific to the document
+        final PreferencesRecordDocument recordDocument = pc.getRecordDocument(this);
+        recordDocument.readFromJavaPreferences();
+        // Update UI accordingly
+        recordDocument.refresh();
+
+        // Monitor the status of the document to set status icon accordingly in message bar
+        getEditorController().getJobManager().revisionProperty().addListener(new ChangeListener<Number>() {
+
+            @Override
+            public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
+                Job currentJob = getEditorController().getJobManager().getCurrentJob();
+                messageBarController.setDocumentDirty(currentJob != saveJob);
+            }
+        });
     }
-    
+
     @Override
     protected void controllerDidCreateStage() {
         updateStageTitle();
@@ -609,19 +721,20 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
     }
 
     public boolean isFrontDocumentWindow() {
-        // Should add code skeleton window when available
         return getStage().isFocused()
-                || (previewWindowController != null
-                && previewWindowController.getStage().isFocused());
+                || (previewWindowController != null && previewWindowController.getStage().isFocused())
+                || (skeletonWindowController != null && skeletonWindowController.getStage().isFocused());
     }
 
     public void performCloseFrontDocumentWindow() {
-        // Should add code skeleton window when available
         if (getStage().isFocused()) {
             performCloseAction();
         } else if (previewWindowController != null
                 && previewWindowController.getStage().isFocused()) {
             previewWindowController.closeWindow();
+        } else if (skeletonWindowController != null
+                && skeletonWindowController.getStage().isFocused()) {
+            skeletonWindowController.closeWindow();
         }
     }
 
@@ -755,6 +868,11 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
             result = performSaveAsAction();
         } else {
             result = performSaveAction();
+        }
+        
+        if (result.equals(ActionStatus.DONE)) {
+            messageBarController.setDocumentDirty(false);
+            saveJob = getEditorController().getJobManager().getCurrentJob();
         }
         
         return result;
@@ -899,6 +1017,11 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                     
                     // Keep track of the user choice for next time
                     SceneBuilderApp.getSingleton().updateNextInitialDirectory(fxmlFile);
+
+                    // Update recent items with just saved file
+                    final PreferencesController pc = PreferencesController.getSingleton();
+                    final PreferencesRecordGlobal recordGlobal = pc.getRecordGlobal();
+                    recordGlobal.addRecentItem(fxmlFile);
                 }
             }
         } else {
@@ -977,8 +1100,13 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         // Closes if confirmed
         if (closeConfirmed) {
             SceneBuilderApp.getSingleton().documentWindowRequestClose(this);
+            
+            // Write java preferences at close time
+            final PreferencesController pc = PreferencesController.getSingleton();
+            final PreferencesRecordDocument recordDocument = pc.getRecordDocument(this);
+            recordDocument.writeToJavaPreferences();
         }
-        
+                
         return closeConfirmed ? ActionStatus.DONE : ActionStatus.CANCELLED;
     }
     

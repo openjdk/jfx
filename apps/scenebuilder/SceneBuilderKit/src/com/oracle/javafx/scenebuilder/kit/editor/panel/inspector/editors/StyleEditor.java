@@ -95,7 +95,12 @@ public class StyleEditor extends InlineListEditor {
         if (value != null) {
             value = value.trim();
         }
-        return value;
+        if (value == null) {
+            // no style
+            return super.getPropertyMeta().getDefaultValueObject();
+        } else {
+            return value;
+        }
     }
 
     @Override

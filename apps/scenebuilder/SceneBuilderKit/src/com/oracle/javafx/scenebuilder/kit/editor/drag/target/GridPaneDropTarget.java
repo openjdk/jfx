@@ -40,6 +40,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.InsertAsSubComponentJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.v2.GridSnapshot;
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.v2.InsertColumnJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.v2.InsertRowJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.v2.MoveCellContentJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.ClearSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.UpdateSelectionJob;
@@ -135,10 +136,14 @@ public class GridPaneDropTarget extends AbstractDropTarget {
                         = targetColumnIndex == currentColumnIndex;
                 final boolean sameRowIndex
                         = targetRowIndex == currentRowIndex;
+                final boolean sameArea
+                        = (targetColumnArea == ColumnArea.CENTER)
+                        && (targetRowArea == RowArea.CENTER);
                         
                 result = (sameContainer == false) 
                         || (sameColumnIndex == false)
-                        || (sameRowIndex == false);
+                        || (sameRowIndex == false)
+                        || (sameArea == false);
             } else {
                 result = false;
             }
@@ -227,6 +232,31 @@ public class GridPaneDropTarget extends AbstractDropTarget {
                 if (adjustedBounds.getMinColumnIndex() < 0) {
                     final int insertCount = -adjustedBounds.getMinColumnIndex();
                     result.addSubJob(new InsertColumnJob(targetGridPane, 
+                            0, insertCount, editorController));
+                }
+                break;
+            }
+        }
+        
+        // Step #4.2 : rows
+        switch(targetRowArea) {
+            case TOP: 
+            case BOTTOM: { // Insert rows at destRowIndex
+                final int insertCount = snapshotBounds.getRowSpan();
+                result.addSubJob(new InsertRowJob(targetGridPane, 
+                        destRowIndex, insertCount, editorController));
+                break;
+            }
+            case CENTER: { // Insert rows at bottom (first) and top ends if needed
+                final int targetRowCount = Deprecation.getGridPaneRowCount(gridPane);
+                if (adjustedBounds.getMaxRowIndex() > targetRowCount) {
+                    final int insertCount = adjustedBounds.getMaxRowIndex() - targetRowCount;
+                    result.addSubJob(new InsertRowJob(targetGridPane, 
+                            targetRowCount, insertCount, editorController));
+                }
+                if (adjustedBounds.getMinRowIndex() < 0) {
+                    final int insertCount = -adjustedBounds.getMinRowIndex();
+                    result.addSubJob(new InsertRowJob(targetGridPane, 
                             0, insertCount, editorController));
                 }
                 break;

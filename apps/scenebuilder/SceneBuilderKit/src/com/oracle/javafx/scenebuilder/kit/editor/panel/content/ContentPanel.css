@@ -30,10 +30,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-.background1 {
-    -fx-background-color: rgb(75, 75, 75);
-}
-
 .selection-handles {
     -fx-fill: white;
     -fx-stroke: blue;
@@ -188,13 +184,24 @@
 
 /*******************************************************************************
  *                                                                             *
- * SplitPane                                                                   *
+ * BorderPane                                                                  *
  *                                                                             *
  ******************************************************************************/
 
-.divider-grip {
-    -fx-stroke: rgba(0,0,0,0.4);
-    -fx-stroke-width: 7;
+.target-ring.BorderPane {
+    -fx-alignment: CENTER;
+    -fx-border-width: 1;
+    -fx-border-color: rgba(0,0,0,0.1);
+    -fx-background-color: rgba(0,0,0,0.1);
+    -fx-text-fill: grey;
+}
+
+.target-ring.selected.BorderPane {
+    -fx-alignment: CENTER;
+    -fx-border-width: 1;
+    -fx-border-color: rgba(0,0,0,0.1);
+    -fx-background-color: rgba(0,0,0,0.4);
+    -fx-text-fill: grey;
 }
 
 /*******************************************************************************

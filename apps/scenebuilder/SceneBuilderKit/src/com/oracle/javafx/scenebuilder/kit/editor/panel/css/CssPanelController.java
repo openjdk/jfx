@@ -80,7 +80,6 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.geometry.Orientation;
-import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
@@ -94,6 +93,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
@@ -206,6 +206,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
 
     @Override
     protected void sceneGraphRevisionDidChange() {
+        // System.out.println("CssPanelController.sceneGraphRevisionDidChange() called!");
         if (isCssPanelLoaded() && hasFxomDocument()) {
             refresh();
         }
@@ -261,7 +262,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
                 setPickMode(newVal);
             }
         });
-        
+
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         initialOrder = FXCollections.observableArrayList(table.getColumns());
         reversedOrder = FXCollections.observableArrayList(table.getColumns());
@@ -292,6 +293,14 @@ public class CssPanelController extends AbstractFxmlPanelController {
         defaultColumn.setCellValueFactory(valueFactory);
         defaultColumn.setCellFactory(new DefaultCellFactory());
 
+        editorController.themeProperty().addListener(new ChangeListener<EditorPlatform.Theme>() {
+
+            @Override
+            public void changed(ObservableValue<? extends EditorPlatform.Theme> ov, EditorPlatform.Theme t, EditorPlatform.Theme t1) {
+                refresh();
+            }
+        });
+
         cssStateProperty.addListener(new ChangeListener<NodeCssState>() {
             @Override
             public void changed(ObservableValue<? extends NodeCssState> arg0, NodeCssState oldValue, NodeCssState newValue) {
@@ -307,7 +316,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
                     selectedObject = selectedSubNode;
                     refresh();
                     // TODO: use the hit point method from Eric
-                    selection.select(getFXOMInstance(selection), Point2D.ZERO);
+//                    selection.select(getFXOMInstance(selection), Point2D.ZERO);
                     // Switch to pick mode
                     setPickMode(true);
                 }
@@ -416,6 +425,10 @@ public class CssPanelController extends AbstractFxmlPanelController {
         selectionPath.setSelectionPath(path);
     }
 
+    public void resetSelectionPath() {
+        selectionPath.setSelectionPath(new Path(new ArrayList<>()));
+    }
+
     public void viewMessage(String mess) {
         root.getChildren().removeAll(message, header, table, rulesPane, textPane);
 //        mainMenu.setDisable(true);
@@ -442,9 +455,13 @@ public class CssPanelController extends AbstractFxmlPanelController {
 
     public void clearContent() {
         table.getItems().clear();
+        resetSelectionPath();
     }
 
     public void filter(String pattern) {
+        if (model == null) {
+            return;
+        }
         ObservableList<CssProperty> filtered;
         if (pattern == null || pattern.trim().length() == 0) {
             filtered = model;
@@ -559,6 +576,9 @@ public class CssPanelController extends AbstractFxmlPanelController {
     private void collectCss() {
         if (selectedObject != null) {
             NodeCssState state = CssContentMaker.getCssState(selectedObject);
+            if (state == null) {
+                return;
+            }
             cssStateProperty.setValue(state);
         }
     }
@@ -598,13 +618,6 @@ public class CssPanelController extends AbstractFxmlPanelController {
         return getEditorController().getFxomDocument() != null;
     }
 
-    private Node getSelectedRootNode() {
-        Object selObject = getFXOMInstance(selection).getSceneGraphObject();
-        // TODO : non-node handling
-        assert selObject instanceof Node;
-        return (Node) selObject;
-    }
-    
     private boolean isPickMode() {
         return pick.isSelected();
     }
@@ -616,8 +629,11 @@ public class CssPanelController extends AbstractFxmlPanelController {
     private void fillSelectionContent() {
         assert selectedObject != null;
         // Start from the Component;
-        Node componentRootNode = getSelectedRootNode();
-        Item rootItem = new Item(componentRootNode, createItemName(componentRootNode), createOptional(componentRootNode));//NOI18N
+        Node selectedRootNode = CssUtils.getSelectedNode(getFXOMInstance(selection));
+        if (selectedRootNode == null) {
+            return;
+        }
+        Item rootItem = new Item(selectedRootNode, createItemName(selectedRootNode), createOptional(selectedRootNode));//NOI18N
 
         // Seems we can skip the skin now, which is not in the scene graph anymore.
 //        if (componentRootNode instanceof Skinnable) {
@@ -627,12 +643,12 @@ public class CssPanelController extends AbstractFxmlPanelController {
 //                addSubStructure(componentRootNode, rootItem, (Parent) skinNode);
 //            }
 //        } else {
-        if (componentRootNode instanceof Parent) {
-            addSubStructure(componentRootNode, rootItem, (Parent) componentRootNode);
+        if (selectedRootNode instanceof Parent) {
+            addSubStructure(selectedRootNode, rootItem, (Parent) selectedRootNode);
         }
 //        }
-        Object sceneGraphObject = CssUtils.getSceneGraphObject(selectedObject);
-        List<Item> items = SelectionPath.lookupPath(rootItem, sceneGraphObject);
+        Object selectedNode = CssUtils.getSelectedNode(selectedObject);
+        List<Item> items = SelectionPath.lookupPath(rootItem, selectedNode);
         setSelectionPath(new Path(items));
     }
 
@@ -677,6 +693,9 @@ public class CssPanelController extends AbstractFxmlPanelController {
 
     private void fillPropertiesTable() {
         NodeCssState state = cssStateProperty.getValue();
+        if (state == null) {
+            return;
+        }
         fillContent(state);
         filter(searchPattern);
     }
@@ -1262,9 +1281,9 @@ public class CssPanelController extends AbstractFxmlPanelController {
     }
 
     /**
-     * XXX jfdenise, handle case where the Fx Theme is not the winning style. The
-     * complex case is that we need to return a propertyState BUT we don't know
-     * if Fx Theme has been overriden, then we do return null.
+     * XXX jfdenise, handle case where the Fx Theme is not the winning style.
+     * The complex case is that we need to return a propertyState BUT we don't
+     * know if Fx Theme has been overriden, then we do return null.
      */
     // "Defaults" column
     private class DefaultValueTableCell extends CssValueTableCell {
@@ -1399,7 +1418,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
     private static String getNavigationInfo(
             CssProperty item, CssStyle cssStyle, StyleOrigin origin) {
         if (origin == StyleOrigin.USER_AGENT) {
-             return CssInternal.getThemeName(cssStyle.getStyle()) + ".css"; //NOI18N
+            return CssInternal.getThemeName(cssStyle.getStyle()) + ".css"; //NOI18N
         }
         if (origin == StyleOrigin.USER) {
             BeanPropertyState state = (BeanPropertyState) item.modelState().get();
@@ -2025,57 +2044,51 @@ public class CssPanelController extends AbstractFxmlPanelController {
         return new Label(l);
     }
 
-    private static Node createLookupUI(final CssProperty item, final PropertyState ps, final CssStyle style, final CssStyle lookupRoot, Node n) {
+    private static Node createLookupUI(
+            final CssProperty item, final PropertyState ps, final CssStyle style,
+            final CssStyle lookupRoot, Node n) {
 
-        // TODO: make an fxml file for this : ContextMenu with CustomMenuItem
-        return null;
+        // TODO: make an fxml file for this
+        // MenuButton
+        final HBox hbox = new HBox();
+        hbox.setMaxWidth(Region.USE_PREF_SIZE);
+        ImageView imgView = new ImageView();
+        imgView.setImage(lookups);
+        hbox.getChildren().addAll(n, imgView);
+        MenuButton lookupMb = new MenuButton();
+        lookupMb.setGraphic(hbox);
+        lookupMb.getStyleClass().add("lookup-button");
+        CustomMenuItem popupContentMi = new CustomMenuItem();
+        popupContentMi.setHideOnClick(false);
+        lookupMb.getItems().add(popupContentMi);
 
-//        final HBox lookupContainer = new HBox();
-//        lookupContainer.setMaxWidth(Region.USE_PREF_SIZE);
-//        ImageView imgView = new ImageView();
-//        imgView.setImage(lookups);
-//        lookupContainer.getChildren().addAll(n, imgView);
-//        final DropDownPopup popup = new DropDownPopup();
-//        popup.setAnchor(lookupContainer);
-//        popup.setContentMaker(new Callable<Node>() {
-//            @Override
-//            public Node call() throws Exception {
-//                TreeView<Node> tv = new TreeView<>();
-//                tv.setPrefSize(400, 100);
+        // Popup content
+        StackPane popupContent = new StackPane();
+        popupContentMi.setContent(popupContent);
+        TreeView<Node> lookupTv = new TreeView<>();
+        lookupTv.setPrefSize(400, 100);
 //                tv.getStylesheets().add(CssUtils.CSS_VIEWER_CSS);
-//                Object val = null;
-//                String cssVal = null;
-//                if (ps instanceof CssPropertyState) {
-//                    val = ((CssPropertyState) ps).getFxValue();
-//                    cssVal = ((CssPropertyState) ps).getCssValue();
-//                } else {
-//                    if (style != null) {
-//                        val = style.getParsedValue();
-//                        cssVal = CssValueConverter.toCssString(style.getCssProperty(), style.getCssRule(), style.getParsedValue());
-//                    }
-//                }
-//                assert val != null;
-//                TreeItem<Node> root = new TreeItem<>();
-//                tv.setRoot(root);
-//                tv.setShowRoot(false);
-//                if (ps != null) {
-//                    assert ps instanceof CssPropertyState;
-//                    attachLookupStyles(item.getTarget(), ((CssPropertyState) ps), lookupRoot, root);
-//                } else {
-//                    attachLookupStyles(item.getTarget(), null, lookupRoot, root);
-//                }
-//                return tv;
-//            }
-//        });
-//        lookupContainer.setOnMouseClicked(new EventHandler<MouseEvent>() {
-//            @Override
-//            public void handle(MouseEvent event) {
-//                if (!popup.isShowing()) {
-//                    popup.doShow();
-//                }
-//            }
-//        });
-//        return lookupContainer;
+        Object val = null;
+        if (ps instanceof CssPropertyState) {
+            val = ((CssPropertyState) ps).getFxValue();
+        } else {
+            if (style != null) {
+                val = style.getParsedValue();
+            }
+        }
+        assert val != null;
+        TreeItem<Node> root = new TreeItem<>();
+        lookupTv.setRoot(root);
+        lookupTv.setShowRoot(false);
+        if (ps != null) {
+            assert ps instanceof CssPropertyState;
+            attachLookupStyles(item.getTarget(), ((CssPropertyState) ps), lookupRoot, root);
+        } else {
+            attachLookupStyles(item.getTarget(), null, lookupRoot, root);
+        }
+
+        popupContent.getChildren().add(lookupTv);
+        return lookupMb;
     }
 
     private static Node getLeaf(Object value) {

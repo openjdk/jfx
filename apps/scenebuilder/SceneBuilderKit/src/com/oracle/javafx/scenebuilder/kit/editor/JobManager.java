@@ -60,7 +60,7 @@ public class JobManager {
         
         if (lock) {
             // Method is called from a revision property listener
-            throw new IllegalStateException("Pushing jobs from another job or a job manager listener is forbidden");
+            throw new IllegalStateException("Pushing jobs from another job or a job manager listener is forbidden"); //NOI18N
         }
         
         executeJob(job);
@@ -73,7 +73,7 @@ public class JobManager {
     public void clear() {
         if (lock) {
             // Method is called from a revision property listener
-            throw new IllegalStateException("Clearing job stack from another job or a job manager listener is forbidden");
+            throw new IllegalStateException("Clearing job stack from another job or a job manager listener is forbidden"); //NOI18N
         }
         
         undoStack.clear();
@@ -100,7 +100,7 @@ public class JobManager {
         
         if (lock) {
             // Method is called from a revision property listener
-            throw new IllegalStateException("Undoing jobs from another job or a job manager listener is forbidden");
+            throw new IllegalStateException("Undoing jobs from another job or a job manager listener is forbidden"); //NOI18N
         }
         
         final Job job = undoStack.get(0);
@@ -129,7 +129,7 @@ public class JobManager {
         
         if (lock) {
             // Method is called from a revision property listener
-            throw new IllegalStateException("Redoing jobs from another job or a job manager listener is forbidden");
+            throw new IllegalStateException("Redoing jobs from another job or a job manager listener is forbidden"); //NOI18N
         }
         
         final Job job = redoStack.get(0);
@@ -147,6 +147,20 @@ public class JobManager {
      */
     public ReadOnlyIntegerProperty revisionProperty() {
         return revision;
+    }
+    
+    /**
+     * Returns the job which has just been processed and which can be undone.
+     * 
+     * @return the current job, which is the one at index 0 in the undo stack.
+     * It can be null.
+     */
+    public Job getCurrentJob() {
+        if (undoStack.size() > 0) {
+            return undoStack.get(0);
+        } else {
+            return null;
+        }
     }
     
     

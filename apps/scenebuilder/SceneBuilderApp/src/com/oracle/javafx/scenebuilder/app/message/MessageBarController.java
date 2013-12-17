@@ -46,6 +46,7 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
@@ -70,15 +71,16 @@ public class MessageBarController extends AbstractFxmlPanelController {
     @FXML
     private StackPane selectionBarHost;
 
-    private final ImageView alertImage;
+    private final ImageView fileDirtyImage;
+    private Tooltip statusLabelTooltip = null;
 
     public MessageBarController(EditorController editorController) {
         super(MessageBarController.class.getResource("MessageBar.fxml"), I18N.getBundle(), editorController); //NOI18N
 
-        // Initialize warning image
-        final URL warningURL = MessageBarController.class.getResource("warning.png"); //NOI18N
-        assert warningURL != null;
-        alertImage = new ImageView(new Image(warningURL.toExternalForm()));
+        // Initialize file dirty image
+        final URL fileDirtyURL = MessageBarController.class.getResource("file-dirty.png"); //NOI18N
+        assert fileDirtyURL != null;
+        fileDirtyImage = new ImageView(new Image(fileDirtyURL.toExternalForm()));
     }
 
     public StackPane getSelectionBarHost() {
@@ -139,7 +141,7 @@ public class MessageBarController extends AbstractFxmlPanelController {
         messageLabel.setText(""); //NOI18N
         statusLabel.setText(""); //NOI18N
         messageButton.setVisible(false);
-
+        
         // Listens to the message log 
         getEditorController().getMessageLog().revisionProperty().addListener(
                 new ChangeListener<Number>() {
@@ -148,18 +150,19 @@ public class MessageBarController extends AbstractFxmlPanelController {
                         messageLogDidChange();
                     }
                 });
-        getEditorController().getMessageLog().totalNumOfMessagesProperty().addListener(
+        getEditorController().getMessageLog().numOfWarningMessagesProperty().addListener(
                 new ChangeListener<Number>() {
                     @Override
                     public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
-                        messageButton.setText("" + t1); //NOI18N
-                        if (getEditorController().getMessageLog().getWarningEntryCount() == 0) {
-                            messageButton.setGraphic(null);
-                        } else {
-                            messageButton.setGraphic(alertImage);
+                        String numberOfMessages = Integer.toString(t1.intValue());
+                        if (t1.intValue() > 9) {
+                            numberOfMessages = "*"; //NOI18N
                         }
+                        messageButton.setText(numberOfMessages);
                     }
                 });
+        
+        statusLabelTooltip = statusLabel.getTooltip();
         
         // Update output components
         messageLogDidChange();
@@ -168,9 +171,20 @@ public class MessageBarController extends AbstractFxmlPanelController {
     /*
      * Private
      */
+    public void setDocumentDirty(boolean isDirty) {
+        if (statusLabel != null) {
+            if (isDirty) {
+                statusLabel.setGraphic(fileDirtyImage);
+                statusLabel.setTooltip(statusLabelTooltip);
+            } else {
+                statusLabel.setGraphic(null);
+                statusLabel.setTooltip(null);
+            }
+        }
+    }
+    
     private void messageLogDidChange() {
         assert messageLabel != null;
-        assert statusLabel != null;
         
         final MessageLogEntry entry
                 = getEditorController().getMessageLog().getYoungestEntry();
@@ -183,46 +197,26 @@ public class MessageBarController extends AbstractFxmlPanelController {
             getSelectionBarHost().getChildren().get(0).setVisible(false);
             getSelectionBarHost().setManaged(false);
             messageLabel.setManaged(true);
-            statusLabel.setManaged(true);
             
             // Styling message area according severity
             setStyle(entry.getType());
-            
-            // TODO fix DTL-5838 for what is about File Dirty icon
-//            switch (entry.getType()) {
-//                case INFO:
-//                    statusLabel.setText("INFO"); //NOI18N
-//                    break;
-//                case WARNING:
-//                    statusLabel.setText("WARNING"); //NOI18N
-//                    break;
-//                default:
-//                    break;
-//            }
-            
+                        
             // If no message panel is defined nor in use we compute message bar
             // button. But as soon as a message panel is opened it means one or
             // more message is being displayed so we do not alter the message button.
             if (messageWindowController == null || ! messageWindowController.isWindowOpened()) {
-                if (getEditorController().getMessageLog().getEntryCount() == 0) {
+                if (getEditorController().getMessageLog().getWarningEntryCount() == 0) {
                     messageButton.setVisible(false);
                     messageButton.setManaged(false);
-                    messageButton.setGraphic(null);
                 } else {
                     messageButton.setVisible(true);
                     messageButton.setManaged(true);
-                    if (getEditorController().getMessageLog().getWarningEntryCount() == 0) {
-                        messageButton.setGraphic(null);
-                    } else {
-                        messageButton.setGraphic(alertImage);
-                    }
                 }
             }
             
             // Displaying the message
             messageLabel.setText(entry.getText());
             messageLabel.setVisible(true);
-            statusLabel.setVisible(true);
             
             // We go back to the host after a given time
             // The fading based code commented out below do not seem to be
@@ -244,15 +238,11 @@ public class MessageBarController extends AbstractFxmlPanelController {
                             messageLabel.setVisible(false);
                             messageLabel.setGraphic(null);
                             messageLabel.setManaged(false);
-                            statusLabel.setVisible(false);
-                            statusLabel.setManaged(false);
-                            if (getEditorController().getMessageLog().getEntryCount() == 0) {
+                            if (getEditorController().getMessageLog().getWarningEntryCount() == 0) {
                                 messageButton.setVisible(false);
-                                messageButton.setGraphic(null);
                                 messageButton.setManaged(false);
-                            } else {
-                                resetStyle();
                             }
+                                resetStyle();
                             getSelectionBarHost().setManaged(true);
                             getSelectionBarHost().getChildren().get(0).setOpacity(1.0);
                             getSelectionBarHost().getChildren().get(0).setVisible(true);
@@ -290,7 +280,6 @@ public class MessageBarController extends AbstractFxmlPanelController {
             if (messageWindowController != null && messageWindowController.isWindowOpened()) {
                 messageWindowController.closeWindow();
                 messageButton.setVisible(false);
-                messageButton.setGraphic(null);
                 messageButton.setManaged(false);
             }
         }

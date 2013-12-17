@@ -116,9 +116,8 @@ public class SelectAndMoveGesture extends AbstractMouseDragGesture {
             if (extendKeyDown) { // Case C
                 selection.toggleSelection(hitObject, hitPoint);
             } else { // else Case A
-                if (Objects.equals(hitPoint, selection.getHitPoint()) == false) {
-                    selection.select(hitObject, hitPoint);
-                }
+                assert selection.getGroup() instanceof ObjectSelectionGroup;
+                selection.updateHitObject(hitObject, hitPoint);
             }
         } else {
             final FXOMObject ancestor = selection.lookupSelectedAncestor(hitObject);

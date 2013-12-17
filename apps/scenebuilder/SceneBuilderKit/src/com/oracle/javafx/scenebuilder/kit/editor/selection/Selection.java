@@ -194,6 +194,22 @@ public class Selection {
     }
     
     /**
+     * Update the hit object and hit point of the current selection.
+     * 
+     * @param hitObject the object hit by the mouse during selection
+     * @param hitPoint null or the point hit by the mouse during selection
+     */
+    public void updateHitObject(FXOMObject hitObject, Point2D hitPoint) {
+        if (isSelected(hitObject)) {
+            assert group instanceof ObjectSelectionGroup;
+            final ObjectSelectionGroup osg = (ObjectSelectionGroup) group;
+            select(osg.getItems(), hitObject, hitPoint);
+        } else {
+            select(hitObject, hitPoint);
+        }
+    }
+    
+    /**
      * Returns true if the specified fxom object is part of this selection.
      * Conditions must be met:
      * 1) this selection should an ObjectSelectionGroup

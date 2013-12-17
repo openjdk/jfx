@@ -31,13 +31,14 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy;
 
-import static com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController.CELL_BORDER_TOP_RIGHT_BOTTOM_LEFT;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController.BorderSide;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import java.util.Timer;
 import java.util.TimerTask;
 import javafx.application.Platform;
 import javafx.scene.control.Cell;
 import javafx.scene.control.TreeItem;
+import javafx.scene.layout.Border;
 
 /**
  * Used to schedule :
@@ -89,7 +90,9 @@ public class HierarchyTaskScheduler {
                         treeItem.setExpanded(true);
                         final Cell<?> cell = panelController.getCell(treeItem);
                         assert cell != null;
-                        cell.getStyleClass().add(CELL_BORDER_TOP_RIGHT_BOTTOM_LEFT);
+                        final Border border = panelController.getBorder(
+                                BorderSide.TOP_RIGHT_BOTTOM_LEFT);
+                        cell.setBorder(border);
                         isAddEmptyGraphicTaskScheduled = false;
                     }
                 });

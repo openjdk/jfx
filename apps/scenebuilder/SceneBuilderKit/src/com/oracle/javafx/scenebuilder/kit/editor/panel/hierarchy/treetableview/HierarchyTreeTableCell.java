@@ -39,7 +39,6 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.HierarchyItem;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController.DisplayOption;
-import static com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController.HIERARCHY_PLACE_HOLDER_LABEL;
 import static com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController.HIERARCHY_READWRITE_LABEL;
 import static com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController.HIERARCHY_READONLY_LABEL;
 import static com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController.TREE_CELL_GRAPHIC;
@@ -73,9 +72,15 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.Border;
+import javafx.scene.layout.BorderStroke;
+import javafx.scene.layout.BorderStrokeStyle;
+import javafx.scene.layout.BorderWidths;
+import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
+import javafx.scene.paint.Paint;
 import javafx.util.Callback;
 
 /**
@@ -165,7 +170,7 @@ public class HierarchyTreeTableCell<T extends HierarchyItem, S extends Hierarchy
 
         // CSS
         graphic.getStyleClass().add(TREE_CELL_GRAPHIC);
-        placeHolderLabel.getStyleClass().add(HIERARCHY_PLACE_HOLDER_LABEL);
+        updatePlaceHolder();
         classNameInfoLabel.getStyleClass().add(HIERARCHY_READONLY_LABEL);
         displayInfoLabel.getStyleClass().add(HIERARCHY_READWRITE_LABEL);
         // Layout
@@ -225,6 +230,16 @@ public class HierarchyTreeTableCell<T extends HierarchyItem, S extends Hierarchy
             setGraphic(null);
             setText(null);
         }
+    }
+
+    public final void updatePlaceHolder() {
+        final Paint paint = panelController.getParentRingColor();
+        placeHolderLabel.setTextFill(paint);
+        final BorderWidths bw = new BorderWidths(1);
+        final BorderStroke bs = new BorderStroke(paint, BorderStrokeStyle.SOLID,
+                CornerRadii.EMPTY, bw);
+        final Border b = new Border(bs);
+        placeHolderLabel.setBorder(b);
     }
 
     private void filterKeyEvent(final KeyEvent ke) {

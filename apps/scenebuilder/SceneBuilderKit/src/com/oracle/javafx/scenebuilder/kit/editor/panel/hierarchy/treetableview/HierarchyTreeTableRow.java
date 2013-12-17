@@ -39,9 +39,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.drag.target.RootDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.HierarchyDNDController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.HierarchyItem;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController;
-import static com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController.CELL_BORDER_BOTTOM;
-import static com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController.CELL_BORDER_TOP_RIGHT_BOTTOM_LEFT;
-import static com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController.INSERT_LINE_INDICATOR;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController.BorderSide;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.HierarchyDNDController.DroppingMouseLocation;
 import static com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.HierarchyDNDController.DroppingMouseLocation.BOTTOM;
 import static com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.HierarchyDNDController.DroppingMouseLocation.CENTER;
@@ -61,6 +59,8 @@ import javafx.scene.control.TreeTableRow;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.Border;
+import javafx.scene.paint.Paint;
 import javafx.scene.shape.Line;
 
 /**
@@ -92,8 +92,8 @@ public class HierarchyTreeTableRow<T extends HierarchyItem> extends TreeTableRow
         // Add style class used when invoking lookupAll
         this.getStyleClass().add(HIERARCHY_TREE_TABLE_ROW);
 
-        // Add style class to the vertical insert line indicator
-        insertLineIndicator.getStyleClass().add(INSERT_LINE_INDICATOR);
+        // Update vertical insert line indicator stroke width
+        insertLineIndicator.setStrokeWidth(2.0);
 
         // Mouse events
         //----------------------------------------------------------------------
@@ -186,8 +186,10 @@ public class HierarchyTreeTableRow<T extends HierarchyItem> extends TreeTableRow
                 // Forward to the DND controller
                 dndController.handleOnDragOver(treeItem, event, location); // (1)
 
-                // CSS
                 panelController.clearBorderColor();
+                // Update vertical insert line indicator stroke color
+                final Paint paint = panelController.getParentRingColor();
+                insertLineIndicator.setStroke(paint);
                 // Remove insert line indicator
                 panelController.removeFromPanelControlSkin(insertLineIndicator);
 
@@ -244,7 +246,8 @@ public class HierarchyTreeTableRow<T extends HierarchyItem> extends TreeTableRow
                             }
                         }
 
-                        cell.getStyleClass().add(CELL_BORDER_TOP_RIGHT_BOTTOM_LEFT);
+                        final Border border = panelController.getBorder(BorderSide.TOP_RIGHT_BOTTOM_LEFT);
+                        cell.setBorder(border);
                     }//
                     //==========================================================
                     // SUB COMPONENTS :
@@ -261,13 +264,15 @@ public class HierarchyTreeTableRow<T extends HierarchyItem> extends TreeTableRow
                         if (treeItem == null) {
                             if (rootTreeItem.isLeaf() || !rootTreeItem.isExpanded()) {
                                 final TreeTableRow<?> rootCell = HierarchyTreeTableViewUtils.getTreeTableRow(getTreeTableView(), 0);
-                                rootCell.getStyleClass().add(CELL_BORDER_TOP_RIGHT_BOTTOM_LEFT);
+                                final Border border = panelController.getBorder(BorderSide.TOP_RIGHT_BOTTOM_LEFT);
+                                rootCell.setBorder(border);
                             } else {
                                 final TreeItem<?> lastTreeItem = panelController.getLastVisibleTreeItem(rootTreeItem);
                                 final TreeTableRow<?> lastCell = HierarchyTreeTableViewUtils.getTreeTableRow(getTreeTableView(), lastTreeItem);
                                 // As we are dropping below the datas, the last cell is visible
                                 assert lastCell != null;
-                                lastCell.getStyleClass().add(CELL_BORDER_BOTTOM);
+                                final Border border = panelController.getBorder(BorderSide.BOTTOM);
+                                lastCell.setBorder(border);
 
                                 // Update vertical insert line
                                 startTreeItem = rootTreeItem;
@@ -296,7 +301,8 @@ public class HierarchyTreeTableRow<T extends HierarchyItem> extends TreeTableRow
                                 // REORDER ABOVE gesture
                                 case TOP:
                                     if (treeItem == rootTreeItem) {
-                                        HierarchyTreeTableRow.this.getStyleClass().add(CELL_BORDER_TOP_RIGHT_BOTTOM_LEFT);
+                                        final Border border = panelController.getBorder(BorderSide.TOP_RIGHT_BOTTOM_LEFT);
+                                        HierarchyTreeTableRow.this.setBorder(border);
                                     } else {
                                         final int index = getIndex();
                                         // Retrieve the previous cell
@@ -307,7 +313,8 @@ public class HierarchyTreeTableRow<T extends HierarchyItem> extends TreeTableRow
                                                 = HierarchyTreeTableViewUtils.getTreeTableRow(getTreeTableView(), index - 1);
                                         // The previous cell is null when the item is not visible
                                         if (previousCell != null) {
-                                            previousCell.getStyleClass().add(CELL_BORDER_BOTTOM);
+                                            final Border border = panelController.getBorder(BorderSide.BOTTOM);
+                                            previousCell.setBorder(border);
                                         }
 
                                         // Update vertical insert line
@@ -322,14 +329,16 @@ public class HierarchyTreeTableRow<T extends HierarchyItem> extends TreeTableRow
                                 // REPARENT gesture
                                 case CENTER:
                                     if (treeItem.isLeaf() || !treeItem.isExpanded()) {
-                                        HierarchyTreeTableRow.this.getStyleClass().add(CELL_BORDER_TOP_RIGHT_BOTTOM_LEFT);
+                                        final Border border = panelController.getBorder(BorderSide.TOP_RIGHT_BOTTOM_LEFT);
+                                        HierarchyTreeTableRow.this.setBorder(border);
                                     } else {
                                         // Reparent to the treeItem as last child
                                         final TreeItem<?> lastTreeItem = panelController.getLastVisibleTreeItem(treeItem);
                                         final TreeTableRow<?> lastCell = HierarchyTreeTableViewUtils.getTreeTableRow(getTreeTableView(), lastTreeItem);
                                         // Last cell is null when the item is not visible
                                         if (lastCell != null) {
-                                            lastCell.getStyleClass().add(CELL_BORDER_BOTTOM);
+                                            final Border border = panelController.getBorder(BorderSide.BOTTOM);
+                                            lastCell.setBorder(border);
                                         }
 
                                         // Update vertical insert line
@@ -345,10 +354,12 @@ public class HierarchyTreeTableRow<T extends HierarchyItem> extends TreeTableRow
                                 case BOTTOM:
                                     if (treeItem == rootTreeItem
                                             && (treeItem.isLeaf() || !treeItem.isExpanded())) {
-                                        HierarchyTreeTableRow.this.getStyleClass().add(CELL_BORDER_TOP_RIGHT_BOTTOM_LEFT);
+                                        final Border border = panelController.getBorder(BorderSide.TOP_RIGHT_BOTTOM_LEFT);
+                                        HierarchyTreeTableRow.this.setBorder(border);
                                     } else {
                                         // Reparent to the treeItem as first child
-                                        HierarchyTreeTableRow.this.getStyleClass().add(CELL_BORDER_BOTTOM);
+                                        final Border border = panelController.getBorder(BorderSide.BOTTOM);
+                                        HierarchyTreeTableRow.this.setBorder(border);
 
                                         // Update vertical insert line
                                         startTreeItem = panelController.lookupTreeItem(dropTarget.getTargetObject());

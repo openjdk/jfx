@@ -56,11 +56,15 @@ public class DoubleField extends NumberField {
                     // but we don't want to accept them in the editor
                     return;
                 }
+                // Replace ',' by '.'
+                newText = newText.replace(',', '.');
                 Double.parseDouble(newText);
             } catch (NumberFormatException e) {
                 return;
             }
         }
+        // Replace ',' by '.'
+        text = text.replace(',', '.');
         super.replaceText(start, end, text);
     }
 

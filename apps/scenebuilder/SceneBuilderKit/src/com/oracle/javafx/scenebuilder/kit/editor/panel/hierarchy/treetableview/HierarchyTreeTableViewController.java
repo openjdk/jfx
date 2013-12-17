@@ -122,7 +122,7 @@ public class HierarchyTreeTableViewController extends AbstractHierarchyPanelCont
         // We do not use the platform editing feature because 
         // editing is started on selection + simple click instead of double click
         treeTableView.setEditable(false);
-        
+
         treeTableView.setPlaceholder(promptLabel);
     }
 
@@ -290,7 +290,7 @@ public class HierarchyTreeTableViewController extends AbstractHierarchyPanelCont
                 final TreeTableRow<?> treeTableRowRoot
                         = HierarchyTreeTableViewUtils.getTreeTableRow(treeTableRows, treeItemRoot);
                 if (treeTableRowRoot != null) {
-                    treeTableRowRoot.getStyleClass().add(CELL_BORDER_TOP_RIGHT_BOTTOM_LEFT);
+                    treeTableRowRoot.setBorder(getBorder(BorderSide.TOP_RIGHT_BOTTOM_LEFT));
                 }
                 return;
             }
@@ -303,7 +303,7 @@ public class HierarchyTreeTableViewController extends AbstractHierarchyPanelCont
             final TreeTableRow<?> treeTableRowTop
                     = HierarchyTreeTableViewUtils.getTreeTableRow(treeTableRows, treeItemTop);
             if (treeTableRowTop != null) {
-                treeTableRowTop.getStyleClass().add(CELL_BORDER_TOP_RIGHT_LEFT);
+                treeTableRowTop.setBorder(getBorder(BorderSide.TOP_RIGHT_LEFT));
                 treeTableRowTopIndex = treeTableRowTop.getIndex();
             } else {
                 treeTableRowTopIndex = 0;
@@ -315,7 +315,7 @@ public class HierarchyTreeTableViewController extends AbstractHierarchyPanelCont
             final TreeItem<HierarchyItem> treeItemBottom = treeItemTop.getChildren().get(size - 1);
             final TreeTableRow<?> treeTableRowBottom = HierarchyTreeTableViewUtils.getTreeTableRow(treeTableRows, treeItemBottom);
             if (treeTableRowBottom != null) {
-                treeTableRowBottom.getStyleClass().add(CELL_BORDER_RIGHT_BOTTOM_LEFT);
+                treeTableRowBottom.setBorder(getBorder(BorderSide.RIGHT_BOTTOM_LEFT));
                 treeTableRowBottomIndex = treeTableRowBottom.getIndex();
             } else {
                 treeTableRowBottomIndex = treeTableRows.size() - 1;
@@ -327,8 +327,27 @@ public class HierarchyTreeTableViewController extends AbstractHierarchyPanelCont
                 final TreeTableRow<?> treeTableRow = (TreeTableRow) node;
                 final int index = treeTableRow.getIndex();
                 if (index > treeTableRowTopIndex && index < treeTableRowBottomIndex) {
-                    treeTableRow.getStyleClass().add(CELL_BORDER_RIGHT_LEFT);
+                    treeTableRow.setBorder(getBorder(BorderSide.RIGHT_LEFT));
                 }
+            }
+        }
+    }
+
+    @Override
+    public void updatePlaceHolder() {
+        assert treeTableView != null;
+        final Set<Node> cells = HierarchyTreeTableViewUtils.getTreeTableRows(treeTableView);
+        assert cells != null;
+        for (Node node : cells) {
+            assert node instanceof HierarchyTreeTableRow;
+            final HierarchyTreeTableRow<?> row = (HierarchyTreeTableRow) node;
+            final TreeItem<?> treeItem = row.getTreeItem();
+            final TreeTableCell<?, ?> cell = HierarchyTreeTableViewUtils.getTreeTableCell(
+                    treeTableView, Column.CLASS_NAME, treeItem);
+            if (cell != null) {
+                assert cell instanceof HierarchyTreeTableCell;
+                final HierarchyTreeTableCell<?, ?> hcell = (HierarchyTreeTableCell) cell;
+                hcell.updatePlaceHolder();
             }
         }
     }

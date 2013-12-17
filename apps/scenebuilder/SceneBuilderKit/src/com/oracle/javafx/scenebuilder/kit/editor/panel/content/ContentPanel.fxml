@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <!--
   Copyright (c) 2012, 2013, Oracle and/or its affiliates.
   All rights reserved. Use is subject to license terms.
@@ -43,7 +44,7 @@
 
 <ScrollPane fx:id="scrollPane" fitToHeight="true" fitToWidth="true" hvalue="0.5" minWidth="300.0" prefHeight="500.0" prefWidth="700.0" vvalue="0.5" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
   <content>
-    <StackPane fx:id="workspacePane" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" style="" styleClass="background1">
+    <StackPane fx:id="workspacePane" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" style="">
       <children>
         <Group id="Group">
           <children>

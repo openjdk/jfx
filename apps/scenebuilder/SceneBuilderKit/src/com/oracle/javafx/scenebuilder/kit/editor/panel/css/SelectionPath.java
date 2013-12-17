@@ -91,10 +91,6 @@ public class SelectionPath extends HBox {
 
     public void setSelectionPath(Path selection) {
         assert selection != null;
-        if (selection.getItems().isEmpty()) {
-            // Selection items list can be empty (e.g. see DTL-5592)
-            return;
-        }
         currentPath = selection;
         getChildren().clear();
         final List<Item> iterationPath = new ArrayList<>();

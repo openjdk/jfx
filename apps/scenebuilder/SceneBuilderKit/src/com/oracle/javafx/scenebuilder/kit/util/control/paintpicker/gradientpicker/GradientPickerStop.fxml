@@ -48,7 +48,7 @@
           <items>
             <CustomMenuItem hideOnClick="false" mnemonicParsing="false" text="Unspecified Action" fx:id="custom_menu_item">
               <content>
-                <TextField fx:id="value_textfield" onAction="#stopAction" prefColumnCount="3" prefWidth="-1.0" />
+                <TextField fx:id="offset_textfield" onAction="#stopAction" prefColumnCount="3" prefWidth="-1.0" />
               </content>
             </CustomMenuItem>
           </items>

@@ -362,5 +362,22 @@
 }
 .cog-button .arrow {
     -fx-shape: null;  
-    -fx-padding:0;
+    -fx-padding: 0 0 0 0;
+}
+
+/*******************************************************************************
+ *                                                                             *
+ * Lookup menu button                                                    *
+ *                                                                             *
+ ******************************************************************************/
+.lookup-button {
+    -fx-background-color: transparent, transparent;
+    -fx-background-insets: 0 0 0 0;
+}
+
+.lookup-button .label {
+    -fx-padding: 0 0 0 0;
+}
+.lookup-button:hover {
+    -fx-background-color: derive(-fx-background, -25%), -fx-background;
 }

@@ -1363,5 +1363,9 @@ public class CssUtils {
             return selectedObject;
         }
     }
+    
+    public static Node getSelectedNode(Object selectedObject) {
+        return CssUtils.getNode(CssUtils.getSceneGraphObject(selectedObject));
+    }
 
 }

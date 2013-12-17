@@ -121,10 +121,6 @@ public class InsetsEditor extends PropertyEditor {
             values[index] = new Double(val);
             index++;
         }
-        if ((values[0] == 0.0) && (values[1] == 0.0) && (values[2] == 0.0) && (values[3] == 0.0)) {
-            // This is equivalent to null
-            return null;
-        }
         return new Insets(values[0], values[1], values[2], values[3]);
     }
 

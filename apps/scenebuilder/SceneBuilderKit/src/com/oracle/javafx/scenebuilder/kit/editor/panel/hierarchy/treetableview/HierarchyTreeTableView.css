@@ -37,8 +37,6 @@
 }
 
 .hierarchy-tree-table-row {
-    -fx-border-color: transparent;
-    -fx-border-width: 2;
     -fx-padding: 0;
     -fx-indent: 8;
 }
@@ -59,12 +57,6 @@
     -fx-spacing: 1;
 }
 
-/* Place holder labels */
-.hierarchy-place-holder-label {
-    -fx-text-fill: orange;
-    -fx-border-color: orange;
-}
-
 /* editable label on node in hierarchy (info / node id / fx:id) */
 .hierarchy-readwrite-label {
     -fx-border-color: transparent;
@@ -82,38 +74,6 @@
     -fx-background-color: transparent;
     -fx-cursor: default;
     -fx-text-fill: black;
-}
-
-/*******************************************************************************
- *                                                                             *
- * Border and stroke color style classes :                                     *
- * Used for cells (either TreeCells or TreeTableRows) when DND in hierarchy    *
- * or when updating parent ring in hierarchy.                                  *
- *                                                                             *
- ******************************************************************************/
-.cell-border-top-right-bottom-left {
-    -fx-border-color: orange;
-}
-
-.cell-border-top-right-left {
-    -fx-border-color: orange orange transparent orange;
-}
-
-.cell-border-right-left {
-    -fx-border-color: transparent orange transparent orange;
-}
-
-.cell-border-right-bottom-left {
-    -fx-border-color: transparent orange orange orange;
-}
-
-.cell-border-bottom {
-    -fx-border-color: transparent transparent orange transparent;
-}
-
-.insert-line-indicator {
-    -fx-stroke: orange;
-    -fx-stroke-width: 2;
 }
 
 /*******************************************************************************

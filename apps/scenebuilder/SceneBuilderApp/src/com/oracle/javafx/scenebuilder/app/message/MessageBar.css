@@ -35,21 +35,18 @@
     -fx-spacing: 0;
 }
 
-.message-bar .button {
+.message-bar .button, .message-bar .label {
     -fx-background-color: transparent;
     -fx-background-radius: 0;
-    -fx-font-size: 0.769em; /* 10px (base pixel size of 13px) */
-    -fx-label-padding: 0;
+    -fx-label-padding: 0 5 0 5;
     -fx-border-color: transparent;
     -fx-border-width: 0 0 0 0;
 }
 
 .message-bar .message-warning {
     -fx-background-color: linear-gradient( to bottom, #efecb8 0%, #d9d59d 100% );
-    -fx-label-padding: 0 0 0 9;
 }
 
 .message-bar .message-info {
     -fx-background-color: linear-gradient( to bottom, #cfe3ef 0%, #badcef 100% );
-    -fx-label-padding: 0 0 0 9;
 }

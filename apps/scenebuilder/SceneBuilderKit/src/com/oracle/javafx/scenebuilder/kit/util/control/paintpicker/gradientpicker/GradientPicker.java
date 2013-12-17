@@ -102,11 +102,6 @@ public class GradientPicker extends VBox {
     private GradientPickerStop selectedStop;
     private final int maxStops = 12; // the numbers of stops supported in platform
 
-    private final static LinearGradient DEFAULT_LINEAR
-            = new LinearGradient(0.0, 0.0, 1.0, 1.0, true, CycleMethod.NO_CYCLE);
-    private final static RadialGradient DEFAULT_RADIAL
-            = new RadialGradient(0.0, 0.0, 0.5, 0.5, 0.5, true, CycleMethod.NO_CYCLE);
-
     public GradientPicker(PaintPickerController pe) {
         paintPicker = pe;
         initialize();
