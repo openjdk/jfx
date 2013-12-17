@@ -25,40 +25,43 @@
 
 package hello;
 
+
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
 import javafx.application.Application;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
-public class HelloRectangle extends Application {
+public class HelloAnimation extends Application {
 
     @Override public void start(Stage stage) {
-        stage.setTitle("Hello Rectangle");
-
-        Group root = new Group();
-        Scene scene = new Scene(root, 600, 450);
+        stage.setTitle("Hello Animation");
+        final Scene scene = new Scene(new Group(), 600, 450);
         scene.setFill(Color.LIGHTGREEN);
-
-        Rectangle rect = new Rectangle();
+        final Rectangle rect = new Rectangle();
         rect.setX(25);
         rect.setY(40);
         rect.setWidth(100);
         rect.setHeight(50);
         rect.setFill(Color.RED);
-        rect.setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent e) {
-                System.out.println("Mouse Pressed:" + e);
-            }
-        });
-
-        root.getChildren().add(rect);
+        ((Group)scene.getRoot()).getChildren().add(rect);
         stage.setScene(scene);
         stage.show();
+        
+        final Timeline timeline = new Timeline();
+        timeline.setCycleCount(Timeline.INDEFINITE);
+        timeline.setAutoReverse(true);
+        final KeyValue kv = new KeyValue(rect.xProperty(), 200);
+        final KeyFrame kf = new KeyFrame(Duration.millis(500), kv);
+        timeline.getKeyFrames().add(kf);
+        timeline.play();
+
+        System.out.println(Double.POSITIVE_INFINITY * 2);
     }
 
     /**

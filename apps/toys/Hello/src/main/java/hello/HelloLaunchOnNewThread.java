@@ -26,18 +26,28 @@
 package hello;
 
 import javafx.application.Application;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 
-public class HelloRectangle extends Application {
+public class HelloLaunchOnNewThread extends Application {
+    public HelloLaunchOnNewThread() {
+        System.err.println("Constructor: currentThread="
+                + Thread.currentThread().getName());
+    }
+
+    @Override public void init() {
+        System.err.println("init: currentThread="
+                + Thread.currentThread().getName());
+    }
 
     @Override public void start(Stage stage) {
-        stage.setTitle("Hello Rectangle");
+        System.err.println("start: currentThread="
+                + Thread.currentThread().getName());
+
+        stage.setTitle("Launch from New Thread");
 
         Group root = new Group();
         Scene scene = new Scene(root, 600, 450);
@@ -49,22 +59,41 @@ public class HelloRectangle extends Application {
         rect.setWidth(100);
         rect.setHeight(50);
         rect.setFill(Color.RED);
-        rect.setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent e) {
-                System.out.println("Mouse Pressed:" + e);
-            }
-        });
 
         root.getChildren().add(rect);
         stage.setScene(scene);
         stage.show();
     }
 
+    @Override public void stop() {
+        System.err.println("cancel: currentThread="
+                + Thread.currentThread().getName());
+    }
+
     /**
      * @param args the command line arguments
      */
-    public static void main(String[] args) {
-        Application.launch(args);
+    public static void main(final String[] args) {
+        new Thread(new Runnable() {
+            public void run() {
+                // Sleep for a very short time to ensure main thread exits,
+                // since that will provoke RT-9824
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException ex) {}
+                System.err.println("Calling Application.launch from currentThread="
+                        + Thread.currentThread().getName());
+                System.err.print("LAUNCHING...");
+                System.err.flush();
+                long startTime = System.nanoTime();
+                Application.launch(HelloLaunchOnNewThread.class, args);
+                long endTime = System.nanoTime();
+                long elapsedMsec = (endTime - startTime + 500000) / 1000000;
+                System.err.println("DONE: elapsed time = " + elapsedMsec + " msec");
+                System.err.println("You should now see the 'HelloWorld' rectangle in the window");
+            }
+        }).start();
+        System.err.println("Main thread exiting: currentThread="
+                    + Thread.currentThread().getName());
     }
 }

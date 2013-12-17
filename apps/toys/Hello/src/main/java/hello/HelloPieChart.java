@@ -26,41 +26,36 @@
 package hello;
 
 import javafx.application.Application;
-import javafx.event.EventHandler;
-import javafx.scene.Group;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.scene.Scene;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
+import javafx.scene.chart.PieChart;
 import javafx.stage.Stage;
 
-public class HelloRectangle extends Application {
+public class HelloPieChart extends Application {
 
     @Override public void start(Stage stage) {
-        stage.setTitle("Hello Rectangle");
+        stage.setTitle("Hello PieChart");
+        final PieChart pc = new PieChart();
+         // setup chart
+        pc.setTitle("Pie Chart Example");
+        // add starting data
+        ObservableList<PieChart.Data> data = FXCollections.observableArrayList();
+//        for (int i=0; i<5; i++) data.add(new PieChart.Data("pie"+i, Math.random()*100));
+        data.add(new PieChart.Data("Sun", 20));
+         data.add(new PieChart.Data("IBM", 12));
+         data.add(new PieChart.Data("HP", 25));
+         data.add(new PieChart.Data("Dell", 22));
+         data.add(new PieChart.Data("Apple", 30));
+        pc.getData().addAll(data);
 
-        Group root = new Group();
-        Scene scene = new Scene(root, 600, 450);
-        scene.setFill(Color.LIGHTGREEN);
-
-        Rectangle rect = new Rectangle();
-        rect.setX(25);
-        rect.setY(40);
-        rect.setWidth(100);
-        rect.setHeight(50);
-        rect.setFill(Color.RED);
-        rect.setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent e) {
-                System.out.println("Mouse Pressed:" + e);
-            }
-        });
-
-        root.getChildren().add(rect);
+      
+        Scene scene = new Scene(pc, 500, 500);
         stage.setScene(scene);
         stage.show();
     }
 
+    
     /**
      * @param args the command line arguments
      */

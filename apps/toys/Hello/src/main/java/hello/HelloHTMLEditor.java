@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,46 +25,58 @@
 
 package hello;
 
+
 import javafx.application.Application;
+import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
 import javafx.scene.Group;
 import javafx.scene.Scene;
-import javafx.scene.input.MouseEvent;
+import javafx.scene.control.Button;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
+import javafx.scene.web.HTMLEditor;
 import javafx.stage.Stage;
 
-public class HelloRectangle extends Application {
+public class HelloHTMLEditor extends Application {
+    private HTMLEditor htmlEditor = null;
 
-    @Override public void start(Stage stage) {
-        stage.setTitle("Hello Rectangle");
+    @Override
+    public void start(Stage stage) {
+        stage.setTitle("Hello HTMLEditor");
+        stage.setWidth(800);
+        stage.setHeight(600);
+        Scene scene = new Scene(new Group());
+        scene.setFill(Color.GHOSTWHITE);
 
-        Group root = new Group();
-        Scene scene = new Scene(root, 600, 450);
-        scene.setFill(Color.LIGHTGREEN);
+        FlowPane root = new FlowPane();
+        root.setOrientation(Orientation.VERTICAL);
+        scene.setRoot(root);
 
-        Rectangle rect = new Rectangle();
-        rect.setX(25);
-        rect.setY(40);
-        rect.setWidth(100);
-        rect.setHeight(50);
-        rect.setFill(Color.RED);
-        rect.setOnMousePressed(new EventHandler<MouseEvent>() {
+        root.setPadding(new Insets(8, 8, 8, 8));
+        root.setVgap(8);
+
+        htmlEditor = new HTMLEditor();
+        root.getChildren().add(htmlEditor);
+
+        Button dumpHTMLButton = new Button("Dump HTML");
+        dumpHTMLButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override
-            public void handle(MouseEvent e) {
-                System.out.println("Mouse Pressed:" + e);
+            public void handle(ActionEvent arg0) {
+                System.out.println(htmlEditor.getHtmlText());
             }
         });
 
-        root.getChildren().add(rect);
+        root.getChildren().add(dumpHTMLButton);
+
+        htmlEditor.setHtmlText("<html><body>Hello, World!</body></html>");
+
         stage.setScene(scene);
         stage.show();
     }
 
-    /**
-     * @param args the command line arguments
-     */
     public static void main(String[] args) {
-        Application.launch(args);
+        Application.launch(HelloHTMLEditor.class, args);
     }
 }

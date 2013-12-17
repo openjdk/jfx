@@ -25,46 +25,59 @@
 
 package hello;
 
+
 import javafx.application.Application;
+import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
+import javafx.scene.control.Button;
+import javafx.scene.input.KeyEvent;
 import javafx.stage.Stage;
 
-public class HelloRectangle extends Application {
-
-    @Override public void start(Stage stage) {
-        stage.setTitle("Hello Rectangle");
-
-        Group root = new Group();
-        Scene scene = new Scene(root, 600, 450);
-        scene.setFill(Color.LIGHTGREEN);
-
-        Rectangle rect = new Rectangle();
-        rect.setX(25);
-        rect.setY(40);
-        rect.setWidth(100);
-        rect.setHeight(50);
-        rect.setFill(Color.RED);
-        rect.setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent e) {
-                System.out.println("Mouse Pressed:" + e);
-            }
-        });
-
-        root.getChildren().add(rect);
-        stage.setScene(scene);
-        stage.show();
-    }
-
+public class HelloButton extends Application {
     /**
      * @param args the command line arguments
      */
     public static void main(String[] args) {
         Application.launch(args);
+    }
+
+    @Override public void start(Stage stage) {
+        stage.setTitle("Hello Button");
+        Scene scene = new Scene(new Group(), 600, 450);
+        Button button = new Button();
+        button.setText("Click Me");
+        button.setLayoutX(25);
+        button.setLayoutY(40);
+
+        button.setOnAction(new EventHandler<ActionEvent>() {
+            @Override public void handle(ActionEvent e) {
+                System.out.println("Event: " + e);
+            }
+        });
+
+        button.addEventHandler(KeyEvent.KEY_RELEASED, new EventHandler<KeyEvent>() {
+            @Override public void handle(KeyEvent e) {
+                System.out.println("Event: " + e);
+            }
+        });
+
+        ((Group)scene.getRoot()).getChildren().add(button);
+
+        button = new Button();
+        button.setText("Click Me Too");
+        button.setLayoutX(25);
+        button.setLayoutY(70);
+        ((Group)scene.getRoot()).getChildren().add(button);
+
+        button = new Button();
+        button.setText("Click Me Three");
+        button.setLayoutX(25);
+        button.setLayoutY(100);
+        ((Group)scene.getRoot()).getChildren().add(button);
+
+        stage.setScene(scene);
+        stage.show();
     }
 }

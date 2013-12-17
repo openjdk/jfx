@@ -26,37 +26,36 @@
 package hello;
 
 import javafx.application.Application;
-import javafx.event.EventHandler;
-import javafx.scene.Group;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.scene.Scene;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
+import javafx.scene.chart.AreaChart;
+import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.XYChart;
 import javafx.stage.Stage;
 
-public class HelloRectangle extends Application {
+public class HelloAreaChart extends Application {
 
     @Override public void start(Stage stage) {
-        stage.setTitle("Hello Rectangle");
-
-        Group root = new Group();
-        Scene scene = new Scene(root, 600, 450);
-        scene.setFill(Color.LIGHTGREEN);
-
-        Rectangle rect = new Rectangle();
-        rect.setX(25);
-        rect.setY(40);
-        rect.setWidth(100);
-        rect.setHeight(50);
-        rect.setFill(Color.RED);
-        rect.setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent e) {
-                System.out.println("Mouse Pressed:" + e);
-            }
-        });
-
-        root.getChildren().add(rect);
+        stage.setTitle("Hello AreaChart");
+        final NumberAxis xAxis = new NumberAxis();
+        final NumberAxis yAxis = new NumberAxis();
+        final AreaChart<Number,Number> ac = new AreaChart<Number,Number>(xAxis,yAxis);
+         xAxis.setLabel("X Axis");
+        yAxis.setLabel("Y Axis");
+        ac.setTitle("HelloAreaChart");
+//      // add starting data
+        ObservableList<XYChart.Data> data = FXCollections.observableArrayList();
+        XYChart.Series series = new XYChart.Series();
+        series.setName("Data Series 1");
+//        for (int i=0; i<10; i++) series.getData().add(new XYChart.Data(Math.random()*100, Math.random()*100));
+        series.getData().add(new XYChart.Data(20d, 50d));
+        series.getData().add(new XYChart.Data(40d, 80d));
+        series.getData().add(new XYChart.Data(50d, 90d));
+        series.getData().add(new XYChart.Data(70d, 30d));
+        series.getData().add(new XYChart.Data(90d, 20d));
+        Scene scene  = new Scene(ac,800,600);
+        ac.getData().add(series);
         stage.setScene(scene);
         stage.show();
     }

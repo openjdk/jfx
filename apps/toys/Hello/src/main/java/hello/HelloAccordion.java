@@ -26,37 +26,48 @@
 package hello;
 
 import javafx.application.Application;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
-import javafx.scene.input.MouseEvent;
+import javafx.scene.control.Accordion;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.TitledPane;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 
-public class HelloRectangle extends Application {
+public class HelloAccordion extends Application {
 
     @Override public void start(Stage stage) {
-        stage.setTitle("Hello Rectangle");
+        stage.setTitle("Accordion Sample");
+        Scene scene = new Scene(new Group(), 500, 500);
+        scene.setFill(Color.GHOSTWHITE);
 
-        Group root = new Group();
-        Scene scene = new Scene(root, 600, 450);
-        scene.setFill(Color.LIGHTGREEN);
+        TitledPane t1 = new TitledPane();
+        t1.setId("Label 1");
+        t1.setText("Label 1");
+        t1.setContent(new Button("This is Button 1\n\nAnd there were a few empty lines just there!"));
 
-        Rectangle rect = new Rectangle();
-        rect.setX(25);
-        rect.setY(40);
-        rect.setWidth(100);
-        rect.setHeight(50);
-        rect.setFill(Color.RED);
-        rect.setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent e) {
-                System.out.println("Mouse Pressed:" + e);
-            }
-        });
+        TitledPane t2 = new TitledPane();
+        t2.setId("Label 2");
+        t2.setText("Label 2");
+        t2.setContent(new Label("This is Label 2\n\nAnd there were a few empty lines just there!"));
 
-        root.getChildren().add(rect);
+        TitledPane t3 = new TitledPane();
+        t3.setId("Label 3");
+        t3.setText("Label 3");
+        t3.setContent(new Button("This is Button 3\n\nAnd there were a few empty lines just there!"));
+
+        Accordion accordion = new Accordion();
+
+        accordion.getPanes().add(t1);
+        accordion.getPanes().add(t2);
+        accordion.getPanes().add(t3);
+
+        Group root = (Group)scene.getRoot();
+        root.setTranslateX(50);
+        root.setTranslateY(50);
+        root.getChildren().clear();
+        root.getChildren().add(accordion);
         stage.setScene(scene);
         stage.show();
     }
