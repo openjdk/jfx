@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2012 Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2013, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -593,7 +593,7 @@ public class Level extends Parent {
         initStartingTimeline();
         initTimeline();
         initInfoPanel();
-        ImageView background = new ImageView();
+        final ImageView background = new ImageView();
         background.setFocusTraversable(true);
         background.setImage(Config.getImages().get(Config.IMAGE_BACKGROUND));
         background.setFitWidth(Config.SCREEN_WIDTH);
@@ -601,16 +601,19 @@ public class Level extends Parent {
         background.setOnMouseMoved(new EventHandler<MouseEvent>() {
             public void handle(MouseEvent me) {
                 moveBat(me.getX() - bat.getWidth() / 2);
+                me.consume();
             }
         });
         background.setOnMouseDragged(new EventHandler<MouseEvent>() {
             public void handle(MouseEvent me) {
                 // Support touch-only devices like some mobile phones
                 moveBat(me.getX() - bat.getWidth() / 2);
+                me.consume();
             }
         });
         background.setOnMousePressed(new EventHandler<MouseEvent>() {
             public void handle(MouseEvent me) {
+                background.requestFocus();
                 if (state == PLAYING) {
                     // Support touch-only devices like some mobile phones
                     moveBat(me.getX() - bat.getWidth() / 2);
@@ -621,6 +624,7 @@ public class Level extends Parent {
                 if (state == GAME_OVER) {
                     mainFrame.changeState(MainFrame.SPLASH);
                 }
+                me.consume();
             }
         });
         background.setOnKeyPressed(new EventHandler<KeyEvent>() {
@@ -646,6 +650,9 @@ public class Level extends Parent {
                 if ((ke.getCode() == KeyCode.RIGHT || ke.getCode() == KeyCode.TRACK_NEXT)) {
                     batDirection = Config.BAT_SPEED;
                 }
+                if (ke.getCode() != KeyCode.TAB) {
+                    ke.consume();
+                }
             }
         });
         background.setOnKeyReleased(new EventHandler<KeyEvent>() {
@@ -653,6 +660,7 @@ public class Level extends Parent {
                 if (ke.getCode() == KeyCode.LEFT || ke.getCode() == KeyCode.RIGHT ||
                     ke.getCode() == KeyCode.TRACK_PREV || ke.getCode() == KeyCode.TRACK_NEXT) {
                     batDirection = 0;
+                    ke.consume();
                 }
             }
         });
