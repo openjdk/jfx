@@ -100,16 +100,7 @@ public class SamplePageHelpers {
         withState(node, state);
         Platform.runLater(new Runnable() {
             @Override public void run() {
-                if (node != null) {
-                    Node subNode = node.lookup(subNodeStyleClass);
-                    if (subNode != null) {
-                        withState(node.lookup(subNodeStyleClass), subNodeState);
-                    } else {
-                        System.err.println("node = " + node+" node.lookup("+subNodeStyleClass+") = " + subNode);
-                    }
-                } else {
-                    System.err.println("node = " + node);
-                }
+                withState(node.lookup(subNodeStyleClass), subNodeState);
             }
         });
         return node;
@@ -271,13 +262,9 @@ public class SamplePageHelpers {
             createMenu("View"),
             createMenu("Help")
         );
-//        mb.setMouseTransparent(true);
         Platform.runLater(new Runnable() {
             @Override public void run() {
-                // get second menu and force into hover state
-                try {
-                    new ArrayList<Node>(mb.lookupAll(".menu")).get(1).pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
-                } catch (Exception e) { e.printStackTrace(); }
+                new ArrayList<Node>(mb.lookupAll(".menu")).get(1).pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
             }
         });
         return  mb;
@@ -313,7 +300,7 @@ public class SamplePageHelpers {
                         menuContent.setMouseTransparent(true);
 //                        System.out.println("menuContent = " + menuContent);
 //                        System.out.println("menuContent.lookupAll(\".menu-item\") = " + menuContent.lookupAll(".menu-item"));
-                        
+
 //                        Platform.runLater(new Runnable() {
 //                            @Override public void run() {
 ////                        if (selectAll) {

@@ -450,6 +450,7 @@ public class Modena extends Application {
             if (retina) {
                 contentTabs.getTransforms().setAll(new Scale(2,2));
             }
+            root.applyCss();
             // update state
             Platform.runLater(new Runnable() {
                 @Override public void run() {
