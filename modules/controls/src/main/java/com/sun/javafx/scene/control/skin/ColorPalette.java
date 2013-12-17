@@ -365,8 +365,8 @@ public class ColorPalette extends VBox {
         }
         if (index == len) {
             ColorSquare cs = colorPickerGrid.getSquares().get(0);
-            focusedSquare.requestFocus();
             focusedSquare = cs;
+            focusedSquare.requestFocus();
         }
     }
     
