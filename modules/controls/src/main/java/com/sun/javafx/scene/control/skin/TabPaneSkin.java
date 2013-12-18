@@ -33,7 +33,6 @@ import javafx.animation.Timeline;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.FXCollections;
@@ -49,7 +48,6 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
-import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.geometry.VPos;
@@ -79,10 +77,8 @@ import javafx.util.Callback;
 import javafx.util.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import com.sun.javafx.scene.control.behavior.TabPaneBehavior;
@@ -561,11 +557,6 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             // see RT-29167
             tabContent.resize(contentWidth, contentHeight);
             tabContent.relocate(contentStartX, contentStartY);
-            
-            Node content = tabContent.getTab().getContent();
-            if (content != null) {
-                content.setVisible(tabContent.getTab().equals(selectedTab));
-            }
         }
     }
     
@@ -1438,7 +1429,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         private Direction direction = Direction.NEXT;
         //private Direction direction;
         private Tab tab;
-        private InvalidationListener tabListener;
+        private InvalidationListener tabContentListener;
 
         public Tab getTab() {
             return tab;
@@ -1450,30 +1441,14 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             this.tab = tab;
             updateContent();
 
-            tabListener = new InvalidationListener() {
-                @Override public void invalidated(Observable valueModel) {
-                    if (valueModel == getTab().selectedProperty()) {
-                        setVisible(getTab().isSelected());
-                    } else if (valueModel == getTab().contentProperty()) {
-                        getChildren().clear();
-                        updateContent();
-                    }
-                }
-            };
-            tab.selectedProperty().addListener(new InvalidationListener() {
-                @Override public void invalidated(Observable valueModel) {
-                    setVisible(getTab().isSelected());
-                }
-            });
-            tab.contentProperty().addListener(new InvalidationListener() {
+            visibleProperty().bind(tab.selectedProperty());
+
+            tab.contentProperty().addListener(tabContentListener = new InvalidationListener() {
                 @Override public void invalidated(Observable valueModel) {
                     getChildren().clear();
                     updateContent();
                 }
             });
-
-            tab.selectedProperty().addListener(tabListener);
-            tab.contentProperty().addListener(tabListener);
 
             engine = new TraversalEngine(this, false) {
                 @Override public void trav(Node owner, Direction dir) {
@@ -1483,18 +1458,19 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             };
             engine.addTraverseListener(this);
             setImpl_traversalEngine(engine);
-            setVisible(tab.isSelected());
         }
 
         private void updateContent() {
-            if (getTab().getContent() != null) {
-                getChildren().add(getTab().getContent());
+            if (getTab().getContent() == null) {
+                getChildren().clear();
+            } else {
+                getChildren().setAll(getTab().getContent());
             }
         }
 
         private void removeListeners(Tab tab) {
-            tab.selectedProperty().removeListener(tabListener);
-            tab.contentProperty().removeListener(tabListener);
+            visibleProperty().unbind();
+            tab.contentProperty().removeListener(tabContentListener);
             engine.removeTraverseListener(this);
         }
 
