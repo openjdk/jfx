@@ -38,49 +38,49 @@
 }
 
 #image-border {
-    -fx-border-image-source: url("resources/border.png");
+    -fx-border-image-source: url("border.png");
     -fx-border-image-slice: 28;
     -fx-border-image-width: 9;
 }
 
 /* Pending RT-29616
 #image-border-insets {
-    -fx-border-image-source: url("resources/red-rectangle.png");
+    -fx-border-image-source: url("red-rectangle.png");
     -fx-border-image-width: 10;
     -fx-border-image-insets: 1 5 10 15;
 }
 */
 
 #image-border-no-repeat {
-    -fx-border-image-source: url("resources/border.png");
+    -fx-border-image-source: url("border.png");
     -fx-border-image-repeat: no-repeat;
     -fx-border-image-slice: 28;
     -fx-border-image-width: 9;
 }
 
 #image-border-repeat-x {
-    -fx-border-image-source: url("resources/border.png");
+    -fx-border-image-source: url("border.png");
     -fx-border-image-repeat: repeat-x;
     -fx-border-image-slice: 28;
     -fx-border-image-width: 9;
 }
 
 #image-border-repeat-y {
-    -fx-border-image-source: url("resources/border.png");
+    -fx-border-image-source: url("border.png");
     -fx-border-image-repeat: repeat-y;
     -fx-border-image-slice: 28;
     -fx-border-image-width: 9;
 }
 
 #image-border-round {
-    -fx-border-image-source: url("resources/border.png");
+    -fx-border-image-source: url("border.png");
     -fx-border-image-repeat: round;
     -fx-border-image-slice: 28;
     -fx-border-image-width: 9;
 }
 
 #image-border-space {
-    -fx-border-image-source: url("resources/border.png");
+    -fx-border-image-source: url("border.png");
     -fx-border-image-repeat: space;
     -fx-border-image-slice: 28;
     -fx-border-image-width: 9;
