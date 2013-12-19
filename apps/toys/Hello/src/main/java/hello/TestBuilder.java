@@ -31,6 +31,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import javafx.animation.PathTransition;
 import javafx.animation.RotateTransition;
+import javafx.animation.TranslateTransition;
 import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -1346,7 +1347,7 @@ public class TestBuilder {
                 box.setAlignment(Pos.CENTER);
                 box.getChildren().addAll(l,BackBtn);
                 Group smallGroup = new Group();
-                Rectangle rec = new Rectangle(300, 150);
+                Rectangle rec = new Rectangle(400, 250);
                 rec.setFill(Color.LIGHTPINK);
                 smallGroup.getChildren().addAll(rec, box);
                 Scene s = new Scene(smallGroup);
@@ -1805,50 +1806,58 @@ public class TestBuilder {
         rect.setFill(Color.RED);
         rect.setOnSwipeLeft(new EventHandler<SwipeEvent>() {
             @Override public void handle(SwipeEvent event) {
-                rotate(event.getTouchCount(), Rotate.Y_AXIS, playing, rect);
+                rotate(-event.getTouchCount(), Rotate.Z_AXIS, rect, playing);
                 event.consume();
             }
         });
         rect.setOnSwipeRight(new EventHandler<SwipeEvent>() {
-            @Override public void handle(SwipeEvent event) {
-                rotate(-event.getTouchCount(), Rotate.Y_AXIS, playing, rect);
+            @Override public void handle(SwipeEvent event) {                
+                rotate(event.getTouchCount(), Rotate.Z_AXIS, rect, playing);
                 event.consume();
             }
         });
         rect.setOnSwipeUp(new EventHandler<SwipeEvent>() {
             @Override public void handle(SwipeEvent event) {
-                rotate(-event.getTouchCount(), Rotate.X_AXIS, playing, rect);
+                yTranslate(event.getTouchCount(), 0f, -100f, rect, playing);
                 event.consume();
             }
         });
         rect.setOnSwipeDown(new EventHandler<SwipeEvent>() {
             @Override public void handle(SwipeEvent event) {
-                rotate(event.getTouchCount(), Rotate.X_AXIS, playing, rect);
+                yTranslate(event.getTouchCount(), 0f, 100f, rect, playing);
                 event.consume();
             }
         });
-        PerspectiveCamera pc = new PerspectiveCamera();
-        pc.setFieldOfView(50);
-               
-        VBox vb = new VBox(40);
+		VBox vb = new VBox(40);
         vb.setAlignment(Pos.CENTER);
         vb.getChildren().addAll( l, rect, btn);
         globalScene.setRoot(vb);
-        globalScene.setCamera(pc);
     }
 
-    private void rotate(double count, Point3D axis, boolean playing, Rectangle localRec) {
-
+    private void rotate(double count, Point3D axis, Rectangle localRect, boolean playing) {
         if (playing) {
             return;
         }
         playing = true;
         RotateTransition rt = new RotateTransition(
-                Duration.millis(Math.abs(500 * count)), localRec);
+                Duration.millis(Math.abs(1000 * count)), localRect);
         rt.setAxis(axis);
         rt.setFromAngle(0);
         rt.setToAngle(count * 180);
         rt.play();
     }
-    
+
+    private void yTranslate(double count, double fromY, double toY, Rectangle localRect, boolean playing) {
+        if (playing) {
+            return;
+        }
+        playing = true;
+        TranslateTransition tt = new TranslateTransition(
+                Duration.millis(Math.abs(200 * count)), localRect);
+        tt.setFromY(fromY);
+        tt.setToY(toY);
+        tt.setCycleCount(2);
+        tt.setAutoReverse(true);
+        tt.play();
+    }   
 }
