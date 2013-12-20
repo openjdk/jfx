@@ -16,6 +16,7 @@ import javafx.event.EventHandler;
 import javafx.geometry.Rectangle2D;
 import javafx.util.Callback;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 
@@ -61,6 +62,7 @@ public class CallbackTest extends TestBase {
         popupUi.clear();
     }
 
+    @Ignore("RT-34508")
     @Test public void testDefaultPopup() {
         clear();
         executeScript(JS_OPEN_DEFAULT);

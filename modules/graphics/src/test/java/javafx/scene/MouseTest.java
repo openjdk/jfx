@@ -539,6 +539,24 @@ public class MouseTest {
         assertSame(Cursor.DEFAULT.getCurrentFrame(),
                    scene.getCursorFrame());
     }
+    
+    @Test
+    public void platformCursorShouldBeUpdatedOnPulse() {
+        
+        final StubToolkit toolkit = (StubToolkit) Toolkit.getToolkit();
+        SimpleTestScene scene = new SimpleTestScene();
+        MouseEventGenerator generator = new MouseEventGenerator();
+
+        scene.processEvent(generator.generateMouseEvent(
+                MouseEvent.MOUSE_MOVED, 250, 250));
+
+        assertSame(Cursor.HAND.getCurrentFrame(), scene.getCursorFrame());
+
+        scene.scene.setCursor(Cursor.TEXT);
+        toolkit.firePulse();
+        assertSame(Cursor.TEXT.getCurrentFrame(), scene.getCursorFrame());
+        
+    }
 
     @Test
     public void testHover() {

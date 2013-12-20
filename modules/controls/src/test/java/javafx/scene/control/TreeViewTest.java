@@ -67,6 +67,7 @@ import javafx.scene.control.cell.TextFieldTreeCell;
 import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
@@ -1405,5 +1406,39 @@ public class TreeViewTest {
         Toolkit.getToolkit().firePulse();
         assertEquals(treeView.getRoot(), treeView.getSelectionModel().getSelectedItem());
         assertEquals(treeView.getRoot(), treeView.getFocusModel().getFocusedItem());
+    }
+
+    @Test public void test_rt34694() {
+        TreeItem treeNode = new TreeItem("Controls");
+        treeNode.getChildren().addAll(
+            new TreeItem("Button"),
+            new TreeItem("ButtonBar"),
+            new TreeItem("LinkBar"),
+            new TreeItem("LinkButton"),
+            new TreeItem("PopUpButton"),
+            new TreeItem("ToggleButtonBar")
+        );
+
+        final TreeView treeView = new TreeView();
+        treeView.setRoot(treeNode);
+        treeNode.setExpanded(true);
+
+        treeView.getSelectionModel().select(0);
+        assertTrue(treeView.getSelectionModel().isSelected(0));
+        assertTrue(treeView.getFocusModel().isFocused(0));
+
+        treeNode.getChildren().clear();
+        treeNode.getChildren().addAll(
+                new TreeItem("Button1"),
+                new TreeItem("ButtonBar1"),
+                new TreeItem("LinkBar1"),
+                new TreeItem("LinkButton1"),
+                new TreeItem("PopUpButton1"),
+                new TreeItem("ToggleButtonBar1")
+        );
+        Toolkit.getToolkit().firePulse();
+
+        assertTrue(treeView.getSelectionModel().isSelected(0));
+        assertTrue(treeView.getFocusModel().isFocused(0));
     }
 }
