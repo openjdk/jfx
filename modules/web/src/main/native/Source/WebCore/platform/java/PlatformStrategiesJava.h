@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2031, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifndef PlatformStrategiesJava_h
