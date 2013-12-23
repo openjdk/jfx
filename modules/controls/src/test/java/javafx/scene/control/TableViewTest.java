@@ -2004,7 +2004,8 @@ public class TableViewTest {
 
         TableColumn<Person,String> first = new TableColumn<Person,String>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
-        first.setCellFactory(TextFieldTableCell.forTableColumn());       // note that only the first name col is editable
+        Callback<TableColumn<Person, String>, TableCell<Person, String>> factory = TextFieldTableCell.forTableColumn();
+        first.setCellFactory(factory);       // note that only the first name col is editable
 
         EventHandler<TableColumn.CellEditEvent<Person, String>> onEditCommit = first.getOnEditCommit();
         first.setOnEditCommit(new EventHandler<TableColumn.CellEditEvent<Person, String>>() {
