@@ -69,6 +69,7 @@ import javafx.scene.image.Image;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
+import javafx.scene.text.Text;
 
 /**
  *
@@ -550,6 +551,7 @@ public class DesignHierarchyMask {
                 || sceneGraphObject instanceof TableColumn
                 || sceneGraphObject instanceof TextInputControl
                 || sceneGraphObject instanceof TitledPane
+                || sceneGraphObject instanceof Text
                 || sceneGraphObject instanceof Tooltip) {
             propertyName = new PropertyName("text");
         }

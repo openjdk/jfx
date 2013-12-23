@@ -88,8 +88,6 @@ public class ContextMenuController {
     private final MenuItem wrapInGroupMenuItem;
     private final MenuItem unwrapMenuItem;
     private final Menu gridPaneMenu;
-    private final MenuItem selectNextRowMenuItem;
-    private final MenuItem selectNextColumnMenuItem;
     private final MenuItem moveRowAboveMenuItem;
     private final MenuItem moveRowBelowMenuItem;
     private final MenuItem moveColumnBeforeMenuItem;
@@ -230,16 +228,10 @@ public class ContextMenuController {
                 wrapInVBoxMenuItem,
                 wrapInGroupMenuItem);
         unwrapMenuItem = new MenuItem("Unwrap");
-        wrapInGroupMenuItem.setOnAction(onActionEventHandler);
+        unwrapMenuItem.setOnAction(onActionEventHandler);
         unwrapMenuItem.setUserData(new EditActionController(EditAction.UNWRAP));
         // GridPane specifics
         gridPaneMenu = new Menu("GridPane");
-        selectNextRowMenuItem = new MenuItem("Select Next Row");
-        selectNextRowMenuItem.setOnAction(onActionEventHandler);
-        selectNextRowMenuItem.setUserData(new ControlActionController(ControlAction.SELECT_NEXT_ROW));
-        selectNextColumnMenuItem = new MenuItem("Select Next Column");
-        selectNextColumnMenuItem.setOnAction(onActionEventHandler);
-        selectNextColumnMenuItem.setUserData(new ControlActionController(ControlAction.SELECT_NEXT_COLUMN));
         moveRowAboveMenuItem = new MenuItem("Move Row Above");
         moveRowAboveMenuItem.setOnAction(onActionEventHandler);
         moveRowAboveMenuItem.setUserData(new EditActionController(EditAction.MOVE_ROW_ABOVE));
@@ -336,9 +328,6 @@ public class ContextMenuController {
                 assert asg instanceof GridSelectionGroup;
                 contextMenu.getItems().addAll(
                         deleteMenuItem,
-                        new SeparatorMenuItem(),
-                        selectNextRowMenuItem,
-                        selectNextColumnMenuItem,
                         new SeparatorMenuItem(),
                         moveRowAboveMenuItem,
                         moveRowBelowMenuItem,
@@ -444,9 +433,6 @@ public class ContextMenuController {
         // Add actions on the GridPane rows/columns
         if (canPerformGridPaneActions()) {
             gridPaneMenu.getItems().addAll(
-                    selectNextRowMenuItem,
-                    selectNextColumnMenuItem,
-                    new SeparatorMenuItem(),
                     moveRowAboveMenuItem,
                     moveRowBelowMenuItem,
                     moveColumnBeforeMenuItem,

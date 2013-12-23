@@ -34,6 +34,8 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
+import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
+import com.sun.javafx.css.StyleManager;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -52,6 +54,7 @@ import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextField;
@@ -197,7 +200,6 @@ public class StylesheetEditor extends InlineListEditor {
     void chooseStylesheet(ActionEvent event) {
 
         String[] extensions = {"*.css"}; //NOI18N
-        // !! Do we need a wrapper, as we had in SB 1.1, to allow tests to bypass the dialog ?
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle(I18N.getString("inspector.select.css"));
         fileChooser.getExtensionFilters().add(
@@ -222,6 +224,12 @@ public class StylesheetEditor extends InlineListEditor {
         switchToItemList();
         // Add editor item
         addItem(new StylesheetItem(this, url));
+
+        // Workaround for RT-34863: Reload of an updated css file has no effect.
+        // This reset the whole CSS from top. Would need to be moved on the FXOM side.
+        Scene scene = root.getScene();
+        StyleManager.getInstance().forget(scene);
+        Deprecation.reapplyCSS(scene.getRoot());
 
         userUpdateValueProperty(getValue());
     }

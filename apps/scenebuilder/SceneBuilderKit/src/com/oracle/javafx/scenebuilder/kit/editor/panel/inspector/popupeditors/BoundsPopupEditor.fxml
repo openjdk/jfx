@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <!--
   Copyright (c) 2012, 2013, Oracle and/or its affiliates.
   All rights reserved. Use is subject to license terms.
@@ -30,87 +31,80 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
+
 <?import java.lang.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<GridPane hgap="10.0" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="171.0" prefWidth="181.0" stylesheets="file:/C:/wksfx/sb20/SceneBuilderKit/src/com/oracle/javafx/scenebuilder/kit/editor/panel/inspector/Inspector.css" vgap="5.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
-      <children>
-        <Label text="min:" />
-        <Label text="max:" GridPane.rowIndex="1" />
-        <Label text="size:" GridPane.rowIndex="2" />
-        <HBox spacing="10.0" GridPane.columnIndex="1" GridPane.halignment="LEFT" GridPane.hgrow="ALWAYS" GridPane.rowIndex="0">
-          <children>
-            <VBox alignment="CENTER" HBox.hgrow="ALWAYS">
-              <children>
+<GridPane hgap="7.0" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" stylesheets="@../Inspector.css" vgap="5.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+    <children>
+        <Label maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" text="min:" />
+        <Label maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" text="max:" GridPane.rowIndex="1" />
+        <Label maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" text="size:" GridPane.rowIndex="2" />
+        <VBox alignment="CENTER" GridPane.columnIndex="1" HBox.hgrow="ALWAYS">
+            <children>
                 <Label styleClass="label, small-label" text="X" />
                 <Label fx:id="minX" text="10" />
-              </children>
-            </VBox>
-            <VBox alignment="CENTER" HBox.hgrow="ALWAYS">
-              <children>
+            </children>
+        </VBox>
+        <VBox alignment="CENTER" GridPane.columnIndex="1" GridPane.rowIndex="1" HBox.hgrow="ALWAYS">
+            <children>
+                <Label styleClass="label, small-label" text="X" />
+                <Label fx:id="maxX" text="10" />
+            </children>
+        </VBox>
+        <VBox alignment="CENTER" GridPane.columnIndex="1" GridPane.rowIndex="2" HBox.hgrow="ALWAYS">
+            <children>
+                <Label styleClass="label, small-label" text="Width" />
+                <Label fx:id="width" text="10" />
+            </children>
+        </VBox>
+        <VBox alignment="CENTER" GridPane.columnIndex="2" HBox.hgrow="ALWAYS">
+            <children>
                 <Label styleClass="label, small-label" text="Y" />
                 <Label fx:id="minY" text="10" />
-              </children>
-            </VBox>
-            <VBox alignment="CENTER" HBox.hgrow="ALWAYS">
-              <children>
+            </children>
+        </VBox>
+        <VBox alignment="CENTER" GridPane.columnIndex="3" HBox.hgrow="ALWAYS">
+            <children>
                 <Label styleClass="label, small-label" text="Z" />
                 <Label fx:id="minZ" text="0" />
-              </children>
-            </VBox>
-          </children>
-        </HBox><HBox spacing="10.0" GridPane.columnIndex="1" GridPane.rowIndex="1" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
-<children>
-<VBox alignment="CENTER" HBox.hgrow="ALWAYS">
-<children>
-<Label styleClass="label, small-label" text="X" />
-<Label fx:id="maxX" text="10" />
-</children>
-</VBox>
-<VBox alignment="CENTER" HBox.hgrow="ALWAYS">
-<children>
-<Label styleClass="label, small-label" text="Y" />
-<Label fx:id="maxY" text="10" />
-</children>
-</VBox>
-<VBox alignment="CENTER" HBox.hgrow="ALWAYS">
-<children>
-<Label styleClass="label, small-label" text="Z" />
-<Label fx:id="maxZ" text="0" />
-</children>
-</VBox>
-</children>
-</HBox><HBox spacing="10.0" GridPane.columnIndex="1" GridPane.rowIndex="2" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
-<children>
-<VBox alignment="CENTER" HBox.hgrow="ALWAYS">
-<children>
-<Label styleClass="label, small-label" text="Width" />
-<Label fx:id="width" text="10" />
-</children>
-</VBox>
-<VBox alignment="CENTER" HBox.hgrow="ALWAYS">
-<children>
-<Label styleClass="label, small-label" text="Height" />
-<Label fx:id="height" text="10" />
-</children>
-</VBox>
-<VBox alignment="CENTER" HBox.hgrow="ALWAYS">
-<children>
-<Label styleClass="label, small-label" text="Depth" />
-<Label fx:id="depth" text="0" />
-</children>
-</VBox>
-</children>
-</HBox>
-      </children>
-      <columnConstraints>
-        <ColumnConstraints halignment="RIGHT" hgrow="SOMETIMES" maxWidth="110.0" minWidth="10.0" prefWidth="67.0" />
-        <ColumnConstraints hgrow="ALWAYS" maxWidth="152.0" minWidth="10.0" prefWidth="152.0" />
-      </columnConstraints>
-      <rowConstraints>
+            </children>
+        </VBox>
+        <VBox alignment="CENTER" GridPane.columnIndex="2" GridPane.rowIndex="1" HBox.hgrow="ALWAYS">
+            <children>
+                <Label styleClass="label, small-label" text="Y" />
+                <Label fx:id="maxY" text="10" />
+            </children>
+        </VBox>
+        <VBox alignment="CENTER" GridPane.columnIndex="3" GridPane.rowIndex="1" HBox.hgrow="ALWAYS">
+            <children>
+                <Label styleClass="label, small-label" text="Z" />
+                <Label fx:id="maxZ" text="0" />
+            </children>
+        </VBox>
+        <VBox alignment="CENTER" GridPane.columnIndex="2" GridPane.rowIndex="2" HBox.hgrow="ALWAYS">
+            <children>
+                <Label styleClass="label, small-label" text="Height" />
+                <Label fx:id="height" text="10" />
+            </children>
+        </VBox>
+        <VBox alignment="CENTER" GridPane.columnIndex="3" GridPane.rowIndex="2" HBox.hgrow="ALWAYS">
+            <children>
+                <Label styleClass="label, small-label" text="Depth" />
+                <Label fx:id="depth" text="0" />
+            </children>
+        </VBox>
+    </children>
+    <columnConstraints>
+        <ColumnConstraints halignment="RIGHT" hgrow="SOMETIMES" maxWidth="-Infinity" minWidth="-Infinity" />
+        <ColumnConstraints hgrow="ALWAYS" maxWidth="-Infinity" minWidth="-Infinity" />
+        <ColumnConstraints hgrow="ALWAYS" maxWidth="-Infinity" minWidth="-Infinity" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" />
+        <ColumnConstraints hgrow="ALWAYS" maxWidth="-Infinity" minWidth="-Infinity" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" />
+    </columnConstraints>
+    <rowConstraints>
         <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
         <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
         <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-      </rowConstraints>
-    </GridPane>
+    </rowConstraints>
+</GridPane>

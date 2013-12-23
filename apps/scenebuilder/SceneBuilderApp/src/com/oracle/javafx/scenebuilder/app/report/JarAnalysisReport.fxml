@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <!--
   Copyright (c) 2012, 2013, Oracle and/or its affiliates.
   All rights reserved. Use is subject to license terms.
@@ -30,11 +31,41 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
+
 <?import java.lang.*?>
-<?import java.util.*?>
-<?import javafx.collections.*?>
+<?import java.net.*?>
+<?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.scene.paint.*?>
+<?import javafx.scene.text.*?>
 
-<ComboBox xmlns:fx="http://javafx.com/fxml" prefWidth="150.0" />
+<StackPane xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+    <children>
+        <VBox prefHeight="400.0" prefWidth="600.0">
+            <children>
+                <Label fx:id="timestampLabel" text="%jar.analysis.report.timestamp">
+                <VBox.margin>
+                  <Insets bottom="7.0" />
+                </VBox.margin>
+                </Label>
+<ScrollPane prefViewportHeight="350.0" prefViewportWidth="600.0" VBox.vgrow="ALWAYS" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+<content><TextFlow fx:id="textFlow" focusTraversable="true" VBox.vgrow="ALWAYS" />
+</content>
+<VBox.margin>
+<Insets />
+</VBox.margin>
+</ScrollPane>
+                <Button defaultButton="true" mnemonicParsing="false" onAction="#onCopyAction" text="%label.copy">
+                <VBox.margin>
+                  <Insets top="7.0" />
+                </VBox.margin></Button>
+            </children>
+            <StackPane.margin>
+                <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+            </StackPane.margin>
+        </VBox>
+    </children>
+    <stylesheets>
+        <URL value="@JarAnalysisReport.css" />
+    </stylesheets>
+</StackPane>

@@ -33,6 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.content;
 
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
+import java.net.URL;
 import java.util.List;
 import javafx.animation.FadeTransition;
 import javafx.application.Platform;
@@ -140,24 +141,24 @@ class WorkspaceController {
         updateScalingGroup();
     }
     
-    public String getThemeStyleSheet() {
-        final String result;
+    public List<String> getThemeStyleSheets() {
+        final List<String> result;
         if (contentGroup.getStylesheets().isEmpty()) {
             result = null;
         } else {
-            result = contentGroup.getStylesheets().get(0);
+            result = contentGroup.getStylesheets();
         }
         return result;
     }
     
-    public void setThemeStyleSheet(String themeStyleSheet) {
+    public void setThemeStyleSheets(List<URL> themeStyleSheets) {
         assert contentGroup.getParent() instanceof Group;
         final Group isolationGroup = (Group) contentGroup.getParent();
         assert isolationGroup.getStyleClass().contains("root");
         
         isolationGroup.getStylesheets().clear();
-        if (themeStyleSheet != null) {
-            isolationGroup.getStylesheets().add(themeStyleSheet);
+        for (URL url : themeStyleSheets) {
+            isolationGroup.getStylesheets().add(url.toString());
         }
         isolationGroup.applyCss();
     }

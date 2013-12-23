@@ -56,7 +56,9 @@ class FXOMRefresher {
                                         document.getLocation(), 
                                         document.getClassLoader(),
                                         document.getResources());
+            final TransientStateBackup backup = new TransientStateBackup(document);
             refreshDocument(document, newDocument);
+            backup.restore();
         } catch(IOException x) {
             final StringBuilder sb = new StringBuilder();
             sb.append("Bug in ");
@@ -79,7 +81,9 @@ class FXOMRefresher {
         }
     }
     
-    
+    /*
+     * Private (stylesheet)
+     */
     
     private void refreshDocument(FXOMDocument currentDocument, FXOMDocument newDocument) {
 //        if (currentDocument.getSceneGraphRoot() instanceof Parent) {
@@ -167,25 +171,25 @@ class FXOMRefresher {
             refreshFxomObject(currentObject, newObject);
         }
     }
-    
-    
-    private void reloadStylesheets(final Parent p) {
-        assert p != null;
-        assert p.getScene() != null;
-        
-        if (p.getStylesheets().isEmpty() == false) {
-            final List<String> stylesheets = new ArrayList<>();
-            stylesheets.addAll(p.getStylesheets());
-//            p.getStylesheets().clear();
-//            p.impl_processCSS(true);
-            p.getStylesheets().setAll(stylesheets);
-//            p.impl_processCSS(true);
-        }
-        for (Node child : p.getChildrenUnmodifiable()) {
-            if (child instanceof Parent) {
-                reloadStylesheets((Parent)child);
-            }
-        }
-        
-    }
+//    
+//    
+//    private void reloadStylesheets(final Parent p) {
+//        assert p != null;
+//        assert p.getScene() != null;
+//        
+//        if (p.getStylesheets().isEmpty() == false) {
+//            final List<String> stylesheets = new ArrayList<>();
+//            stylesheets.addAll(p.getStylesheets());
+////            p.getStylesheets().clear();
+////            p.impl_processCSS(true);
+//            p.getStylesheets().setAll(stylesheets);
+////            p.impl_processCSS(true);
+//        }
+//        for (Node child : p.getChildrenUnmodifiable()) {
+//            if (child instanceof Parent) {
+//                reloadStylesheets((Parent)child);
+//            }
+//        }
+//        
+//    }
 }

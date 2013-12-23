@@ -119,6 +119,12 @@ public class FXOMCollection extends FXOMObject {
      */
 
     @Override
+    public List<FXOMObject> getChildObjects() {
+        return Collections.unmodifiableList(items);
+    }
+
+
+    @Override
     public FXOMObject searchWithSceneGraphObject(Object sceneGraphObject) {
         FXOMObject result;
         
@@ -207,6 +213,15 @@ public class FXOMCollection extends FXOMObject {
             }
             for (FXOMObject i : items) {
                 i.collectObjectWithSceneGraphObjectClass(sceneGraphObjectClass, result);
+            }
+        }
+    }
+
+    @Override
+    protected void collectEventHandlers(List<FXOMPropertyT> result) {
+        if (getSceneGraphObject() != null) {
+            for (FXOMObject i : items) {
+                i.collectEventHandlers(result);
             }
         }
     }

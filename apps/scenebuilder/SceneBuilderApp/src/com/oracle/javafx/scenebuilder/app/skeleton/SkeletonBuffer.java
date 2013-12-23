@@ -35,6 +35,7 @@ import com.oracle.javafx.scenebuilder.app.DocumentWindowController;
 import com.oracle.javafx.scenebuilder.app.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyT;
 import java.lang.reflect.TypeVariable;
 import java.net.URL;
 import java.util.Map;
@@ -59,6 +60,7 @@ class SkeletonBuffer {
     private final StringBuilder classLine = new StringBuilder();
     private final StringBuilder header = new StringBuilder();
     private final StringBuilder initialize = new StringBuilder();
+    private final StringBuilder handlers = new StringBuilder();
 
     enum TEXT_TYPE {
 
@@ -155,6 +157,7 @@ class SkeletonBuffer {
         constructClassLine();
         String documentName = DocumentWindowController.makeTitle(document);
 
+        // All that depends on fx:id
         Map<String, FXOMObject> fxids = document.collectFxIds();
 
         for (FXOMObject value : fxids.values()) {
@@ -199,6 +202,14 @@ class SkeletonBuffer {
         if (textFormat == FORMAT_TYPE.FULL) {
             addImportsFor(imports, URL.class, ResourceBundle.class);
         }
+        
+        // Event handlers
+        for (FXOMPropertyT property : document.getFxomRoot().collectEventHandlers()) {
+            handlers.append(INDENT).append("@FXML\n").append(INDENT).append("void "); //NOI18N
+            final String methodName = property.getValue().replace("#", ""); //NOI18N
+            handlers.append(methodName);
+            handlers.append("(ActionEvent event) {\n\n").append(INDENT).append("}\n\n"); //NOI18N
+        }
 
         // This method must be called once asserts has been populated.
         constructInitialize();
@@ -239,6 +250,7 @@ class SkeletonBuffer {
         }
 
         code.append(variables);
+        code.append(handlers);
         code.append(initialize);
         code.append("}\n"); //NOI18N
 

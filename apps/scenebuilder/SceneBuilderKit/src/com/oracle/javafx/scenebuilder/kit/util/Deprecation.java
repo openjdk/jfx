@@ -85,6 +85,10 @@ public class Deprecation {
     public static ObservableMap<StyleableProperty<?>, List<Style>> getStyleMap(Node node) {
         return node.impl_getStyleMap();
     }
+    
+    public static void reapplyCSS(Node node) {
+        node.impl_reapplyCSS();
+    }
 
     // Retrieve the node of the Styleable.
     public static Node getNode(Styleable styleable) {
@@ -196,8 +200,38 @@ public class Deprecation {
     }
     
     
+    public static URL getCaspianHighContrastStylesheetURL() {
+        final String resourceName = "com/sun/javafx/scene/control/skin/caspian/highcontrast.bss"; //NOI18N
+        return ClassLoader.getSystemResource(resourceName);
+    }
+    
+    
+    public static URL getCaspianVirtualKeyboardStylesheetURL() {
+        final String resourceName = "com/sun/javafx/scene/control/skin/caspian/fxvk.bss"; //NOI18N
+        return ClassLoader.getSystemResource(resourceName);
+    }
+    
+    
+    public static URL getCaspianEmbeddedStylesheetURL() {
+        final String resourceName = "com/sun/javafx/scene/control/skin/caspian/embedded.bss"; //NOI18N
+        return ClassLoader.getSystemResource(resourceName);
+    }
+    
+    
+    public static URL getCaspianEmbeddedQVGAStylesheetURL() {
+        final String resourceName = "com/sun/javafx/scene/control/skin/caspian/embedded-qvga.bss"; //NOI18N
+        return ClassLoader.getSystemResource(resourceName);
+    }
+    
+    
     public static URL getModenaStylesheetURL() {
         final String resourceName = "com/sun/javafx/scene/control/skin/modena/modena.bss"; //NOI18N
+        return ClassLoader.getSystemResource(resourceName);
+    }
+    
+    
+    public static URL getModenaTouchStylesheetURL() {
+        final String resourceName = "com/sun/javafx/scene/control/skin/modena/touch.bss"; //NOI18N
         return ClassLoader.getSystemResource(resourceName);
     }
 

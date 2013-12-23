@@ -393,6 +393,16 @@ public abstract class FXOMObject extends FXOMNode {
     
     protected abstract void collectObjectWithSceneGraphObjectClass(Class<?> sceneGraphObjectClass, List<FXOMObject> result);
     
+    public List<FXOMPropertyT> collectEventHandlers() {
+        final List<FXOMPropertyT> result = new ArrayList<>();
+        
+        collectEventHandlers(result);
+        
+        return result;
+    }
+    
+    protected abstract void collectEventHandlers(List<FXOMPropertyT> result);
+    
     /*
      * Utilities
      */
@@ -409,6 +419,8 @@ public abstract class FXOMObject extends FXOMNode {
         }
         return result;
     }
+    
+    public abstract List<FXOMObject> getChildObjects();
     
     public boolean isDescendantOf(FXOMObject other) {
         final boolean result;

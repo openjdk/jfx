@@ -44,29 +44,33 @@
     <HBox fx:id="messageBox" alignment="CENTER" spacing="5.0" styleClass="message-bar">
       <children>
         <StackPane fx:id="selectionBarHost" prefHeight="-1.0" prefWidth="-1.0" HBox.hgrow="ALWAYS" />
-        <Label fx:id="messageLabel" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" mouseTransparent="true" style="&#10;" text="Message" HBox.hgrow="ALWAYS" />
-        <HBox id="messageBox" alignment="CENTER_RIGHT" fillHeight="true" prefHeight="-1.0" prefWidth="-1.0" spacing="0.0" HBox.hgrow="NEVER">
+        <HBox fx:id="messagePart" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
           <children>
-            <Button fx:id="messageButton" alignment="CENTER" maxHeight="1.7976931348623157E308" minHeight="-1.0" minWidth="20.0" mnemonicParsing="false" onAction="#onOpenCloseAction" text="" HBox.hgrow="ALWAYS">
-              <graphic>
-                <ImageView id="warning" pickOnBounds="true" visible="true">
-                  <image>
-                    <Image preserveRatio="true" smooth="true" url="@warning.png" />
-                  </image>
-                </ImageView>
-              </graphic>
-              <tooltip>
-                  <Tooltip text="%message.bar.details" />
-              </tooltip>
-            </Button>
-            <Label fx:id="statusLabel" contentDisplay="CENTER" focusTraversable="false" graphicTextGap="0.0" maxHeight="1.7976931348623157E308" minWidth="30.0" prefWidth="30.0" text="" HBox.hgrow="ALWAYS">
-              <tooltip>
-                <Tooltip text="%message.bar.file.dirty" />
-              </tooltip>
-              <HBox.margin>
-                <Insets />
-              </HBox.margin>
-            </Label>
+            <Label fx:id="messageLabel" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" mouseTransparent="true" style="&#10;" text="Message" HBox.hgrow="ALWAYS" />
+            <HBox id="messageBox" alignment="CENTER_RIGHT" fillHeight="true" prefHeight="-1.0" prefWidth="-1.0" spacing="0.0" HBox.hgrow="NEVER">
+             <children>
+                <Button fx:id="messageButton" alignment="CENTER" maxHeight="1.7976931348623157E308" minHeight="-1.0" minWidth="20.0" mnemonicParsing="false" onAction="#onOpenCloseAction" text="">
+                  <graphic>
+                    <ImageView id="warning" pickOnBounds="true" visible="true">
+                      <image>
+                        <Image preserveRatio="true" smooth="true" url="@warning.png" />
+                      </image>
+                    </ImageView>
+                  </graphic>
+                  <tooltip>
+                      <Tooltip text="%message.bar.details" />
+                  </tooltip>
+                </Button>
+                <Label fx:id="statusLabel" contentDisplay="CENTER" focusTraversable="false" graphicTextGap="0.0" maxHeight="1.7976931348623157E308" minWidth="30.0" prefWidth="30.0" text="">
+                  <tooltip>
+                    <Tooltip text="%message.bar.file.dirty" />
+                  </tooltip>
+                  <HBox.margin>
+                    <Insets />
+                  </HBox.margin>
+                </Label>
+              </children>
+            </HBox>
           </children>
         </HBox>
       </children>

@@ -360,7 +360,9 @@ public abstract class AutoSuggestEditor extends PropertyEditor {
                 @Override
                 public void handle(ActionEvent t) {
                     entryField.setText(suggestItem);
-                    AutoSuggestEditor.this.getCommitListener().handle(null);
+                    if (AutoSuggestEditor.this.getCommitListener() != null) {
+                        AutoSuggestEditor.this.getCommitListener().handle(null);
+                    }
                 }
             });
             menuButton.getItems().add(menuItem);

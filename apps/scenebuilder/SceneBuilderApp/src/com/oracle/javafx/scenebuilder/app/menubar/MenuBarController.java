@@ -33,6 +33,7 @@ package com.oracle.javafx.scenebuilder.app.menubar;
 
 import com.oracle.javafx.scenebuilder.app.DocumentWindowController;
 import com.oracle.javafx.scenebuilder.app.DocumentWindowController.DocumentControlAction;
+import com.oracle.javafx.scenebuilder.app.DocumentWindowController.DocumentEditAction;
 import com.oracle.javafx.scenebuilder.app.SceneBuilderApp;
 import com.oracle.javafx.scenebuilder.app.SceneBuilderApp.ApplicationControlAction;
 import com.oracle.javafx.scenebuilder.app.i18n.I18N;
@@ -53,6 +54,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -66,6 +68,7 @@ import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
@@ -207,10 +210,6 @@ public class MenuBarController {
     @FXML
     private MenuItem useComputedSizesMenuItem;
     @FXML
-    private MenuItem selectNextRowMenuItem;
-    @FXML
-    private MenuItem selectNextColumnMenuItem;
-    @FXML
     private MenuItem moveRowAboveMenuItem;
     @FXML
     private MenuItem moveRowBelowMenuItem;
@@ -279,9 +278,17 @@ public class MenuBarController {
     @FXML
     private MenuItem showPreviewMenuItem;
     @FXML
-    private MenuItem modenaThemeMenuItem;
+    private RadioMenuItem modenaThemeMenuItem;
     @FXML
-    private MenuItem caspianThemeMenuItem;
+    private RadioMenuItem modenaTouchThemeMenuItem;
+    @FXML
+    private RadioMenuItem caspianThemeMenuItem;
+    @FXML
+    private CheckMenuItem caspianHighContrastThemeMenuItem;
+    @FXML
+    private RadioMenuItem caspianEmbeddedThemeMenuItem;
+    @FXML
+    private RadioMenuItem caspianEmbeddedQVGAThemeMenuItem;
     @FXML
     private MenuItem chooseBackgroundColorMenuItem;
     @FXML
@@ -305,6 +312,7 @@ public class MenuBarController {
     private MenuItem aboutMenuItem;
 
     private static final KeyCombination.Modifier modifier;
+    private final Map<KeyCombination, MenuItem> keyToMenu = new HashMap<>();
 
     static {
         if (EditorPlatform.IS_MAC) {
@@ -422,8 +430,6 @@ public class MenuBarController {
 
         assert fitToParentMenuItem != null;
         assert useComputedSizesMenuItem != null;
-        assert selectNextRowMenuItem != null;
-        assert selectNextColumnMenuItem != null;
         assert moveRowAboveMenuItem != null;
         assert moveRowBelowMenuItem != null;
         assert moveColumnBeforeMenuItem != null;
@@ -459,7 +465,11 @@ public class MenuBarController {
 
         assert showPreviewMenuItem != null;
         assert modenaThemeMenuItem != null;
+        assert modenaTouchThemeMenuItem != null;
         assert caspianThemeMenuItem != null;
+        assert caspianHighContrastThemeMenuItem != null;
+        assert caspianEmbeddedThemeMenuItem != null;
+        assert caspianEmbeddedQVGAThemeMenuItem != null;
         assert chooseBackgroundColorMenuItem != null;
         assert addSceneStyleSheetMenuItem != null;
         assert removeSceneStyleSheetMenu != null;
@@ -549,11 +559,11 @@ public class MenuBarController {
             // http://windows.microsoft.com/en-US/windows7/Keyboard-shortcuts
             redoMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.Y, modifier));
         }
-        copyMenuItem.setUserData(new ControlActionController(ControlAction.COPY));
+        copyMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.COPY));
         copyMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.C, modifier));
-        cutMenuItem.setUserData(new EditActionController(EditAction.CUT));
+        cutMenuItem.setUserData(new DocumentEditActionController(DocumentEditAction.CUT));
         cutMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.X, modifier));
-        pasteMenuItem.setUserData(new EditActionController(EditAction.PASTE));
+        pasteMenuItem.setUserData(new DocumentEditActionController(DocumentEditAction.PASTE));
         pasteMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.V, modifier));
         pasteIntoMenuItem.setUserData(new EditActionController(EditAction.PASTE_INTO));
         pasteIntoMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.V, KeyCombination.SHIFT_DOWN, modifier));
@@ -561,12 +571,12 @@ public class MenuBarController {
         duplicateMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.D, modifier));
         deleteMenuItem.setUserData(new EditActionController(EditAction.DELETE));
         deleteMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.DELETE));
-        selectAllMenuItem.setUserData(new ControlActionController(ControlAction.SELECT_ALL));
+        selectAllMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.SELECT_ALL));
         selectAllMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.A, modifier));
-        selectNoneMenuItem.setUserData(new ControlActionController(ControlAction.SELECT_NONE));
+        selectNoneMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.SELECT_NONE));
         selectNoneMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.A, KeyCombination.SHIFT_DOWN, modifier));
         selectParentMenuItem.setUserData(new ControlActionController(ControlAction.SELECT_PARENT));
-        selectParentMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.L, modifier));
+        selectParentMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.UP, modifier));
         selectNextMenuItem.setUserData(new ControlActionController(ControlAction.SELECT_NEXT));
         selectNextMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.RIGHT, modifier));
         selectPreviousMenuItem.setUserData(new ControlActionController(ControlAction.SELECT_PREVIOUS));
@@ -661,7 +671,20 @@ public class MenuBarController {
             }
         });
         toggleRightPanelMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.DIGIT8, modifier));
-//        toggleOutlinesMenuItem.setUserData(new ControlActionController(ControlAction.));
+        toggleOutlinesMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.TOGGLE_OUTLINES_VISIBILITY) {
+            @Override
+            public String getTitle() {
+                final String titleKey;
+                if (documentWindowController == null) {
+                    titleKey = "menu.title.hide.outlines";
+                } else if (documentWindowController.getContentPanelController().isOutlinesVisible()) {
+                    titleKey = "menu.title.hide.outlines";
+                } else {
+                    titleKey = "menu.title.show.outlines";
+                }
+                return I18N.getString(titleKey);
+            }
+        });
         toggleOutlinesMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.E, modifier));
         toggleSampleDataMenuItem.setUserData(new ControlActionController(ControlAction.TOGGLE_SAMPLE_DATA) {
             @Override
@@ -719,8 +742,6 @@ public class MenuBarController {
         fitToParentMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.K, modifier));
         useComputedSizesMenuItem.setUserData(new EditActionController(EditAction.USE_COMPUTED_SIZES));
         useComputedSizesMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.K, KeyCombination.SHIFT_DOWN, modifier));
-        selectNextRowMenuItem.setUserData(new ControlActionController(ControlAction.SELECT_NEXT_ROW));
-        selectNextColumnMenuItem.setUserData(new ControlActionController(ControlAction.SELECT_NEXT_COLUMN));
         moveRowAboveMenuItem.setUserData(new EditActionController(EditAction.MOVE_ROW_ABOVE));
         moveRowBelowMenuItem.setUserData(new EditActionController(EditAction.MOVE_ROW_BELOW));
         moveColumnBeforeMenuItem.setUserData(new EditActionController(EditAction.MOVE_COLUMN_BEFORE));
@@ -789,8 +810,12 @@ public class MenuBarController {
         showPreviewMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.P, modifier));
         chooseBackgroundColorMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.CHOOSE_BACKGROUND_COLOR));
         chooseBackgroundColorMenuItem.setDisable(true);
+        caspianHighContrastThemeMenuItem.setUserData(new SetThemeActionController(EditorPlatform.Theme.CASPIAN_HIGH_CONTRAST));
         caspianThemeMenuItem.setUserData(new SetThemeActionController(EditorPlatform.Theme.CASPIAN));
+        caspianEmbeddedThemeMenuItem.setUserData(new SetThemeActionController(EditorPlatform.Theme.CASPIAN_EMBEDDED));
+        caspianEmbeddedQVGAThemeMenuItem.setUserData(new SetThemeActionController(EditorPlatform.Theme.CASPIAN_EMBEDDED_QVGA));
         modenaThemeMenuItem.setUserData(new SetThemeActionController(EditorPlatform.Theme.MODENA));
+        modenaTouchThemeMenuItem.setUserData(new SetThemeActionController(EditorPlatform.Theme.MODENA_TOUCH));
 
         addSceneStyleSheetMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.ADD_SCENE_STYLE_SHEET));
         updateOpenAndRemoveSceneStyleSheetMenus();
@@ -888,6 +913,9 @@ public class MenuBarController {
             }
         } else {
             i.setOnAction(onActionEventHandler);
+            if (i.getAccelerator() != null) {
+                keyToMenu.put(i.getAccelerator(), i);
+            }
         }
     }
 
@@ -906,7 +934,20 @@ public class MenuBarController {
             final String title;
             if (i.getUserData() instanceof MenuItemController) {
                 final MenuItemController c = (MenuItemController) i.getUserData();
-                disable = !c.canPerform();
+                boolean canPerform;
+                try {
+                    canPerform = c.canPerform();
+                } catch(RuntimeException x) {
+                    // This catch is protection against a bug in canPerform().
+                    // It avoids to block all the items in the menu in case
+                    // of crash in canPerform() (see DTL-6164).
+                    canPerform = false;
+                    final Exception xx 
+                            = new Exception(c.getClass().getSimpleName() 
+                            + ".canPerform() did break for menu item " + i, x); //NOI18N
+                    xx.printStackTrace();
+                }
+                disable = !canPerform;
                 title = c.getTitle();
                 selected = c.isSelected();
             } else {
@@ -945,7 +986,7 @@ public class MenuBarController {
         final MenuItemController c = (MenuItemController) i.getUserData();
         c.perform();
     }
-
+    
     /*
      * Private (zoom menu)
      */
@@ -1329,6 +1370,33 @@ public class MenuBarController {
 
     }
 
+    class DocumentEditActionController extends MenuItemController {
+
+        private final DocumentEditAction editAction;
+
+        public DocumentEditActionController(DocumentEditAction editAction) {
+            this.editAction = editAction;
+        }
+
+        @Override
+        public boolean canPerform() {
+            boolean result;
+            if (documentWindowController == null) {
+                result = false;
+            } else {
+                result = documentWindowController.canPerformEditAction(editAction);
+            }
+            return result;
+        }
+
+        @Override
+        public void perform() {
+            assert canPerform() : "editAction=" + editAction;
+            documentWindowController.performEditAction(editAction);
+        }
+
+    }
+
     class DocumentControlActionController extends MenuItemController {
 
         private final DocumentControlAction controlAction;
@@ -1450,28 +1518,126 @@ public class MenuBarController {
 
         @Override
         public boolean canPerform() {
-            return (documentWindowController != null);
+            boolean res = documentWindowController != null;
+            final EditorPlatform.Theme currentTheme
+                    = documentWindowController.getEditorController().getTheme();
+            // CASPIAN_HIGH_CONTRAST can be selected only if another CASPIAN
+            // theme is active.
+            if (theme == EditorPlatform.Theme.CASPIAN_HIGH_CONTRAST
+                    && (currentTheme == EditorPlatform.Theme.MODENA || currentTheme == EditorPlatform.Theme.MODENA_TOUCH)) {
+                res = false;
+                caspianHighContrastThemeMenuItem.setSelected(false);
+            }
+            return res;
         }
 
         @Override
         public void perform() {
             assert documentWindowController != null;
-            documentWindowController.getEditorController().setTheme(theme);
+
+            EditorPlatform.Theme overiddingTheme = theme;
+
+            switch (theme) {
+                case CASPIAN:
+                    if (caspianHighContrastThemeMenuItem.isSelected()) {
+                        overiddingTheme = EditorPlatform.Theme.CASPIAN_HIGH_CONTRAST;
+                    }
+                    break;
+                case CASPIAN_EMBEDDED:
+                    if (caspianHighContrastThemeMenuItem.isSelected()) {
+                        overiddingTheme = EditorPlatform.Theme.CASPIAN_EMBEDDED_HIGH_CONTRAST;
+                    }
+                    break;
+                case CASPIAN_EMBEDDED_QVGA:
+                    if (caspianHighContrastThemeMenuItem.isSelected()) {
+                        overiddingTheme = EditorPlatform.Theme.CASPIAN_EMBEDDED_QVGA_HIGH_CONTRAST;
+                    }
+                    break;
+                case CASPIAN_HIGH_CONTRAST:
+                    final EditorPlatform.Theme currentTheme
+                            = documentWindowController.getEditorController().getTheme();
+                    switch (currentTheme) {
+                        case CASPIAN:
+                            if (caspianHighContrastThemeMenuItem.isSelected()) {
+                                overiddingTheme = EditorPlatform.Theme.CASPIAN_HIGH_CONTRAST;
+                            }
+                            break;
+                        case CASPIAN_EMBEDDED:
+                            if (caspianHighContrastThemeMenuItem.isSelected()) {
+                                overiddingTheme = EditorPlatform.Theme.CASPIAN_EMBEDDED_HIGH_CONTRAST;
+                            }
+                            break;
+                        case CASPIAN_EMBEDDED_QVGA:
+                            if (caspianHighContrastThemeMenuItem.isSelected()) {
+                                overiddingTheme = EditorPlatform.Theme.CASPIAN_EMBEDDED_QVGA_HIGH_CONTRAST;
+                            }
+                            break;
+                        case CASPIAN_HIGH_CONTRAST:
+                            if (!caspianHighContrastThemeMenuItem.isSelected()) {
+                                overiddingTheme = EditorPlatform.Theme.CASPIAN;
+                            }
+                            break;
+                        case CASPIAN_EMBEDDED_HIGH_CONTRAST:
+                            if (!caspianHighContrastThemeMenuItem.isSelected()) {
+                                overiddingTheme = EditorPlatform.Theme.CASPIAN_EMBEDDED;
+                            }
+                            break;
+                        case CASPIAN_EMBEDDED_QVGA_HIGH_CONTRAST:
+                            if (!caspianHighContrastThemeMenuItem.isSelected()) {
+                                overiddingTheme = EditorPlatform.Theme.CASPIAN_EMBEDDED_QVGA;
+                            }
+                            break;
+                        default:
+                            // All known 6 Caspian cases are already handled above.
+                            assert false;
+                            break;
+                    }
+                    break;
+                default:
+                    // Modena
+                    break;
+            }
+
+            documentWindowController.getEditorController().setTheme(overiddingTheme);
         }
 
         @Override
         public boolean isSelected() {
-            boolean result;
+            boolean res;
 
             if (documentWindowController == null) {
-                result = false;
+                res = false;
             } else {
                 final EditorPlatform.Theme currentTheme
                         = documentWindowController.getEditorController().getTheme();
-                result = currentTheme == theme;
+
+                switch (theme) {
+                    // CASPIAN_HIGH_CONTRAST can be selected only if another CASPIAN
+                    // theme is active.
+                    case CASPIAN_HIGH_CONTRAST:
+                        if (currentTheme == EditorPlatform.Theme.MODENA || currentTheme == EditorPlatform.Theme.MODENA_TOUCH) {
+                            res = false;
+                        } else {
+                            res = true;
+                        }
+                        break;
+                    case CASPIAN:
+                        res = (currentTheme == theme || currentTheme == EditorPlatform.Theme.CASPIAN_HIGH_CONTRAST);
+                        break;
+                    case CASPIAN_EMBEDDED:
+                        res = (currentTheme == theme || currentTheme == EditorPlatform.Theme.CASPIAN_EMBEDDED_HIGH_CONTRAST);
+                        break;
+                    case CASPIAN_EMBEDDED_QVGA:
+                        res = (currentTheme == theme || currentTheme == EditorPlatform.Theme.CASPIAN_EMBEDDED_QVGA_HIGH_CONTRAST);
+                        break;
+                    default:
+                        // Modena
+                        res = currentTheme == theme;
+                        break;
+                }
             }
 
-            return result;
+            return res;
         }
     }
 
@@ -1523,6 +1689,14 @@ public class MenuBarController {
         public String getTitle() {
             return styleSheet.getName();
         }
+    }
+
+    public MenuItem getMenuItem(KeyCombination key) {
+        return keyToMenu.get(key);
+    }
+
+    public Set<KeyCombination> getAccelerators() {
+        return keyToMenu.keySet();
     }
 
     /**

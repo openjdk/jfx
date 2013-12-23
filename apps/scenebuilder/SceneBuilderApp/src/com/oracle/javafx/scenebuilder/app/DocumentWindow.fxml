@@ -31,13 +31,14 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
+
 <?import java.lang.*?>
 <?import java.net.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?scenebuilder-preview-i18n-resource i18n/SceneBuilderApp.properties?>
 
-<VBox id="DocumentWindow" alignment="CENTER" prefHeight="800.0" prefWidth="1200.0" spacing="0.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
+<VBox id="DocumentWindow" alignment="CENTER" prefHeight="800.0" prefWidth="1200.0" spacing="0.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
   <children>
     <SplitPane fx:id="mainSplitPane" dividerPositions="0.656641604010025" focusTraversable="true" orientation="VERTICAL" prefHeight="200.0" prefWidth="160.0" VBox.vgrow="ALWAYS">
       <items>
@@ -49,14 +50,22 @@
                   <children>
                     <HBox id="HBox" alignment="CENTER" spacing="0.0" styleClass="panelHeader">
                       <children>
-                        <Label maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" styleClass="panelTitle" text="Library" HBox.hgrow="NEVER" />
+                        <Label maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" styleClass="panelTitle" text="%library" HBox.hgrow="NEVER" />
                         <StackPane fx:id="librarySearchPanelHost" maxHeight="-1.0" maxWidth="-1.0" minHeight="-1.0" minWidth="-1.0" prefHeight="-1.0" prefWidth="-1.0" style="" HBox.hgrow="ALWAYS" />
-                        <MenuButton fx:id="LibraryMenu" mnemonicParsing="false" styleClass="panelMenuButton" text="" HBox.hgrow="NEVER">
+                        <MenuButton fx:id="libraryMenuButton" mnemonicParsing="false" styleClass="panelMenuButton" text="" HBox.hgrow="NEVER">
                           <items>
-                            <CheckMenuItem mnemonicParsing="false" onAction="#onLibraryViewAsList" text="%library.panel.menu.view.list" fx:id="libraryViewAsList" />
-                            <CheckMenuItem mnemonicParsing="false" onAction="#onLibraryViewAsSections" selected="true" text="%library.panel.menu.view.sections" fx:id="libraryViewAsSections" />
+                            <CheckMenuItem fx:id="libraryViewAsList" mnemonicParsing="false" onAction="#onLibraryViewAsList" text="%library.panel.menu.view.list" />
+                            <CheckMenuItem fx:id="libraryViewAsSections" mnemonicParsing="false" onAction="#onLibraryViewAsSections" selected="true" text="%library.panel.menu.view.sections" />
                             <SeparatorMenuItem mnemonicParsing="false" />
                             <MenuItem mnemonicParsing="false" onAction="#onLibraryImportJarFxml" text="%library.panel.menu.import.jar.fxml" />
+                            <MenuItem fx:id="libraryImportSelection" mnemonicParsing="false" onAction="#onLibraryImportSelection" text="%library.panel.menu.import.selection" />
+                            <SeparatorMenuItem mnemonicParsing="false" />
+                            <Menu mnemonicParsing="false" text="%library.panel.menu.custom">
+                              <items>
+                                <MenuItem fx:id="libraryReveal" mnemonicParsing="false" onAction="#onLibraryRevealCustomFolder" text="Action 1" />
+                                <MenuItem fx:id="libraryReport" mnemonicParsing="false" onAction="#onLibraryShowJarAnalysisReport" text="%library.panel.menu.custom.report" />
+                              </items>
+                            </Menu>
                           </items>
                         </MenuButton>
                       </children>
@@ -68,29 +77,33 @@
                   <children>
                     <HBox id="HBox" alignment="CENTER" spacing="0.0" VBox.vgrow="NEVER">
                       <children>
-                        <Label maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" styleClass="panelTitle" text="Document" HBox.hgrow="NEVER" />
+                        <Label maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" styleClass="panelTitle" text="%document" HBox.hgrow="NEVER" />
                         <Pane maxWidth="1.7976931348623157E308" prefHeight="-1.0" prefWidth="-1.0" HBox.hgrow="ALWAYS" />
-                        <MenuButton fx:id="HierarchyMenu" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" styleClass="panelMenuButton" text="">
+                        <MenuButton fx:id="" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" styleClass="panelMenuButton" text="">
                           <items>
-                            <RadioMenuItem mnemonicParsing="false" onAction="#onHierarchyShowInfo" selected="true" text="Show Info" fx:id="showInfoMenuItem">
-                              <toggleGroup>
-                                <ToggleGroup fx:id="hierarchyDisplayOptionTG" />
-                              </toggleGroup>
-                            </RadioMenuItem>
-                            <RadioMenuItem mnemonicParsing="false" onAction="#onHierarchyShowFxId" text="Show fx:id" toggleGroup="$hierarchyDisplayOptionTG" fx:id="showFxIdMenuItem" />
-                            <RadioMenuItem mnemonicParsing="false" onAction="#onHierarchyShowNodeId" text="Show Node Id" toggleGroup="$hierarchyDisplayOptionTG" fx:id="showNodeIdMenuItem" />
+                            <Menu mnemonicParsing="false" text="%hierarchy.displays">
+                              <items>
+                                <RadioMenuItem fx:id="showInfoMenuItem" mnemonicParsing="false" onAction="#onHierarchyShowInfo" selected="true" text="%hierarchy.show.info">
+                                  <toggleGroup>
+                                    <ToggleGroup fx:id="hierarchyDisplayOptionTG" />
+                                  </toggleGroup>
+                                </RadioMenuItem>
+                                <RadioMenuItem fx:id="showFxIdMenuItem" mnemonicParsing="false" onAction="#onHierarchyShowFxId" text="%hierarchy.show.fxid" toggleGroup="$hierarchyDisplayOptionTG" />
+                                <RadioMenuItem fx:id="showNodeIdMenuItem" mnemonicParsing="false" onAction="#onHierarchyShowNodeId" text="%hierarchy.show.nodeid" toggleGroup="$hierarchyDisplayOptionTG" />
+                              </items>
+                            </Menu>
                           </items>
                         </MenuButton>
                       </children>
                     </HBox>
                     <Accordion fx:id="documentAccordion" maxHeight="-1.0" VBox.vgrow="ALWAYS">
                       <panes>
-                        <TitledPane fx:id="Hierarchy" animated="true" text="Hierarchy">
+                        <TitledPane fx:id="Hierarchy" animated="true" text="%hierarchy">
                           <content>
                             <StackPane fx:id="hierarchyPanelHost" maxHeight="-1.0" style="-fx-padding: 0;" />
                           </content>
                         </TitledPane>
-                        <TitledPane fx:id="Info" animated="true" text="Controller">
+                        <TitledPane fx:id="Info" animated="true" text="%controller">
                           <content>
                             <StackPane fx:id="infoPanelHost" maxHeight="-1.0" />
                           </content>
@@ -111,24 +124,24 @@
               <children>
                 <HBox id="HBox" alignment="CENTER" spacing="0.0" VBox.vgrow="NEVER">
                   <children>
-                    <Label maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" styleClass="panelTitle" text="Inspector" HBox.hgrow="NEVER" />
+                    <Label maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" styleClass="panelTitle" text="%inspector" HBox.hgrow="NEVER" />
                     <StackPane fx:id="inspectorSearchPanelHost" prefHeight="-1.0" prefWidth="-1.0" HBox.hgrow="ALWAYS" />
                     <MenuButton fx:id="InspectorMenu" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" styleClass="panelMenuButton" text="" HBox.hgrow="NEVER">
                       <items>
-                        <RadioMenuItem mnemonicParsing="false" onAction="#onInspectorShowAllAction" selected="true" text="Show All">
+                        <RadioMenuItem mnemonicParsing="false" onAction="#onInspectorShowAllAction" selected="true" text="%inspector.show.all">
                           <toggleGroup>
                             <ToggleGroup fx:id="showTg" />
                           </toggleGroup>
                         </RadioMenuItem>
-                        <RadioMenuItem disable="false" mnemonicParsing="false" onAction="#onInspectorShowEditedAction" text="Show Edited" toggleGroup="$showTg" />
+                        <RadioMenuItem disable="false" mnemonicParsing="false" onAction="#onInspectorShowEditedAction" text="%inspector.show.edited" toggleGroup="$showTg" />
                         <SeparatorMenuItem mnemonicParsing="false" />
-                        <RadioMenuItem mnemonicParsing="false" onAction="#onInspectorViewSectionsAction" selected="true" text="View Sections">
+                        <RadioMenuItem mnemonicParsing="false" onAction="#onInspectorViewSectionsAction" selected="true" text="%inspector.view.sections">
                           <toggleGroup>
                             <ToggleGroup fx:id="viewTg" />
                           </toggleGroup>
                         </RadioMenuItem>
-                        <RadioMenuItem mnemonicParsing="false" onAction="#onInspectorViewByPropertyNameAction" text="View by property name" toggleGroup="$viewTg" />
-                        <RadioMenuItem mnemonicParsing="false" onAction="#onInspectorViewByPropertyTypeAction" text="View by property type" toggleGroup="$viewTg" />
+                        <RadioMenuItem mnemonicParsing="false" onAction="#onInspectorViewByPropertyNameAction" text="%inspector.by.property.name" toggleGroup="$viewTg" />
+                        <RadioMenuItem mnemonicParsing="false" onAction="#onInspectorViewByPropertyTypeAction" text="%inspector.by.property.type" toggleGroup="$viewTg" />
                       </items>
                     </MenuButton>
                   </children>
@@ -142,7 +155,7 @@
           <children>
             <AnchorPane>
               <children>
-                <Label layoutX="0.0" layoutY="6.0" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" styleClass="panelTitle" text="CSS Analyzer" />
+                <Label layoutX="0.0" layoutY="6.0" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" styleClass="panelTitle" text="%csspanel" />
                 <HBox id="HBox" alignment="CENTER" layoutY="0.0" spacing="5.0" AnchorPane.rightAnchor="0.0">
                   <children>
                     <StackPane fx:id="cssPanelSearchPanelHost" prefHeight="-1.0" prefWidth="-1.0" />
@@ -161,8 +174,8 @@
                         </Menu>
                         <SeparatorMenuItem mnemonicParsing="false" />
                         <MenuItem mnemonicParsing="false" onAction="#onCssPanelCopyStyleablePathAction" text="%csspanel.copy.path" />
-                        <MenuItem mnemonicParsing="false" onAction="#onCssPanelShowStyledOnlyAction" text="%csspanel.hide.default.values" fx:id="cssPanelShowStyledOnlyMi" />
-                        <MenuItem mnemonicParsing="false" onAction="#onCssPanelSplitDefaultsAction" text="%csspanel.defaults.split" fx:id="cssPanelSplitDefaultsMi" />
+                        <MenuItem fx:id="cssPanelShowStyledOnlyMi" mnemonicParsing="false" onAction="#onCssPanelShowStyledOnlyAction" text="%csspanel.hide.default.values" />
+                        <MenuItem fx:id="cssPanelSplitDefaultsMi" mnemonicParsing="false" onAction="#onCssPanelSplitDefaultsAction" text="%csspanel.defaults.split" />
                       </items>
                     </MenuButton>
                   </children>

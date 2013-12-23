@@ -33,6 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.fxom;
 
 import com.oracle.javafx.scenebuilder.kit.fxom.glue.GlueElement;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -114,6 +115,13 @@ public class FXOMIntrinsic extends FXOMObject {
      */
 
     @Override
+    public List<FXOMObject> getChildObjects() {
+        // Intrinsics have not children
+        return Collections.emptyList();
+    }
+
+
+    @Override
     public FXOMObject searchWithSceneGraphObject(Object sceneGraphObject) {
         FXOMObject result;
         
@@ -177,6 +185,10 @@ public class FXOMIntrinsic extends FXOMObject {
         // Nothing to collect in this kind of object
     }
 
+    @Override
+    protected void collectEventHandlers(List<FXOMPropertyT> result) {
+        // Nothing to collect in this kind of object
+    }
 
 
     /*

@@ -37,12 +37,11 @@ import com.oracle.javafx.scenebuilder.kit.editor.messagelog.MessageLogEntry;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractFxmlPanelController;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import java.net.URL;
-import java.util.Timer;
-import java.util.TimerTask;
-import javafx.application.Platform;
+import javafx.animation.FadeTransition;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -50,7 +49,9 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
+import javafx.util.Duration;
 
 /**
  *
@@ -70,6 +71,8 @@ public class MessageBarController extends AbstractFxmlPanelController {
     private Label statusLabel;
     @FXML
     private StackPane selectionBarHost;
+    @FXML
+    private HBox messagePart;
 
     private final ImageView fileDirtyImage;
     private Tooltip statusLabelTooltip = null;
@@ -194,6 +197,7 @@ public class MessageBarController extends AbstractFxmlPanelController {
         // no need to display anything in the message bar.
         if (entry != null && logSize > previousTotalNumOfMessages) {
             // We mask the host
+            HBox.setHgrow(messagePart, Priority.ALWAYS);
             getSelectionBarHost().getChildren().get(0).setVisible(false);
             getSelectionBarHost().setManaged(false);
             messageLabel.setManaged(true);
@@ -218,64 +222,31 @@ public class MessageBarController extends AbstractFxmlPanelController {
             messageLabel.setText(entry.getText());
             messageLabel.setVisible(true);
             
-            // We go back to the host after a given time
-            // The fading based code commented out below do not seem to be
-            // reliable in the sense that when sending slowly 10 messages in a
-            // row you get 1 or 2 where the display time isn't correct, fading
-            // duration abrupt, ...
-            // For now we use a timer to switch back abruptly. But fact is the
-            // time the message remains visible do not seem more stable than
-            // with the fading transition.
-            final Timer timer = new Timer(true);
-            final TimerTask timerTask = new TimerTask() {
+            // We go back to the host after a given time            
+            FadeTransition showHost = new FadeTransition(Duration.seconds(1), messagePart);
+            showHost.setFromValue(1.0);
+            showHost.setToValue(0.0);
+            showHost.setDelay(Duration.seconds(2));
+            showHost.setOnFinished(new EventHandler<ActionEvent>() {
 
                 @Override
-                public void run() {
-                    Platform.runLater(new Runnable() {
-
-                        @Override
-                        public void run() {
-                            messageLabel.setVisible(false);
-                            messageLabel.setGraphic(null);
-                            messageLabel.setManaged(false);
-                            if (getEditorController().getMessageLog().getWarningEntryCount() == 0) {
-                                messageButton.setVisible(false);
-                                messageButton.setManaged(false);
-                            }
-                                resetStyle();
-                            getSelectionBarHost().setManaged(true);
-                            getSelectionBarHost().getChildren().get(0).setOpacity(1.0);
-                            getSelectionBarHost().getChildren().get(0).setVisible(true);
-                        }
-                    });
-                    // I don't need to use the timer later on so by cancelling
-                    // it here I free resources that otherwise would prevent
-                    // the JVM from exiting.
-                    timer.cancel();
+                public void handle(ActionEvent t) {
+                    messageLabel.setVisible(false);
+                    messageLabel.setGraphic(null);
+                    messageLabel.setManaged(false);
+                    if (getEditorController().getMessageLog().getWarningEntryCount() == 0) {
+                        messageButton.setVisible(false);
+                        messageButton.setManaged(false);
+                    }
+                    resetStyle();
+                    getSelectionBarHost().setManaged(true);
+                    getSelectionBarHost().getChildren().get(0).setOpacity(1.0);
+                    getSelectionBarHost().getChildren().get(0).setVisible(true);
+                    messagePart.setOpacity(1.0);
+                    HBox.setHgrow(messagePart, Priority.NEVER);
                 }
-            };
-            timer.schedule(timerTask, 2000); // milliseconds
-            
-//            FadeTransition showHost = new FadeTransition(Duration.seconds(1), messageLabel);
-//            showHost.setFromValue(1.0);
-//            showHost.setToValue(0.0);
-//            showHost.setDelay(Duration.seconds(3));
-//            showHost.setOnFinished(new EventHandler<ActionEvent>() {
-//
-//                @Override
-//                public void handle(ActionEvent t) {
-//                    messageLabel.setVisible(false);
-//                    messageButton.setVisible(false);
-//                    if (entry.getType() == MessageLogEntry.Type.INFO) {
-//                        messageLabel.getStyleClass().remove("message-label-info");
-//                    } else {
-//                        messageLabel.getStyleClass().remove("message-label-warning-and-error");
-//                    }
-//                    getSelectionBarHost().getChildren().get(0).setOpacity(1.0);
-//                    getSelectionBarHost().getChildren().get(0).setVisible(true);
-//                }
-//            });
-//            showHost.play();
+            });
+            showHost.play();
         } else if (getEditorController().getMessageLog().getEntryCount() == 0) {
             if (messageWindowController != null && messageWindowController.isWindowOpened()) {
                 messageWindowController.closeWindow();

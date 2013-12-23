@@ -357,9 +357,9 @@ public class CssContentMaker {
 //        System.out.println("===========================");
 //        System.out.println("\n\n");
 //        printStyles(allStyles);
+        List<Style> matchingStyles = removeUserAgentStyles(allStyles);
         List<Style> notApplied = new ArrayList<>();
-        for (Object obj : allStyles) {
-            Style style = (Style) obj;
+        for (Style style : matchingStyles) {
             if (!appliedStyles.contains(style)) {
                 notApplied.add(style);
             }
@@ -367,13 +367,27 @@ public class CssContentMaker {
         for (Style style : notApplied) {
             if (style.getDeclaration().getProperty().equals(cssMeta.getProperty())) {
                 // We need to retrieve from allStyles, in case a lookup is shared by appliedStyles and notApplied
-                CssStyle cssStyle = retrieveStyle(allStyles, style);
+                CssStyle cssStyle = retrieveStyle(matchingStyles, style);
                 ret.add(cssStyle);
             }
         }
         return ret;
     }
 
+    private static List<Style> removeUserAgentStyles(List<Style> allStyles) {
+        // With SB 2, we apply explicitly Modena/Caspian theme css on user scene graph.
+        // The rules that appear with an AUTHOR origin has already been considered as USER_AGENT.
+        // So when an internal css method (such as impl_getMatchingStyles()) is called,
+        // we need here to remove all USER_AGENT styles, to avoid doublons.
+        List<Style> matchingStyles = new ArrayList<>();
+        for (Style style : allStyles) {
+            if (!(style.getDeclaration().getRule().getOrigin() == StyleOrigin.USER_AGENT)) {
+                matchingStyles.add(style);
+            }
+        }
+        return matchingStyles;
+    }
+    
 //    private static void printStyles(List<Style> styles) {
 //        for (Style style : styles) {
 //            printStyle(style);
@@ -869,12 +883,13 @@ public class CssContentMaker {
                 List<CssStyle> notAppliedStyles = ps == null ? Collections.<CssStyle>emptyList() : ps.getNotAppliedStyles();
                 boolean hasModel = modelState().get() != null;
                 if (hasModel) {
-                    List<Style> styles = Deprecation.getMatchingStyles(getStyleable(), target);
-                    for (Style style : styles) {
+                    List<Style> allStyles = Deprecation.getMatchingStyles(getStyleable(), target);
+                    List<Style> matchingStyles = removeUserAgentStyles(allStyles);
+                    for (Style style : matchingStyles) {
                         CssStyle cssStyle = new CssStyle(style);
                         if (cssStyle.getOrigin() == StyleOrigin.USER_AGENT && !notAppliedStyles.contains(cssStyle)) {
                             if (getStyleable().getProperty().equals(cssStyle.getCssProperty())) {
-                                cssStyle = retrieveStyle(styles, style);
+                                cssStyle = retrieveStyle(matchingStyles, style);
                                 ret.add(cssStyle);
                             }
                         }

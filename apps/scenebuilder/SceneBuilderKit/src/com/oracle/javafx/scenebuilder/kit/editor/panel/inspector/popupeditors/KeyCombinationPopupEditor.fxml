@@ -31,10 +31,31 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
 <?import java.lang.*?>
-<?import java.util.*?>
 <?import javafx.collections.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.scene.paint.*?>
 
-<ComboBox xmlns:fx="http://javafx.com/fxml" prefWidth="150.0" />
+<GridPane hgap="10.0" vgap="5.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+  <columnConstraints>
+    <ColumnConstraints halignment="RIGHT" hgrow="ALWAYS" />
+    <ColumnConstraints halignment="LEFT" hgrow="ALWAYS" />
+  </columnConstraints>
+  <rowConstraints>
+    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="ALWAYS" />
+    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="ALWAYS" />
+    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="ALWAYS" />
+  </rowConstraints>
+<children>
+    <Label text="Main key" GridPane.rowIndex="1" />
+    <StackPane fx:id="mainKeySp" maxWidth="1.7976931348623157E308" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.rowIndex="1" />
+    <Button fx:id="clearAllBt" mnemonicParsing="false" text="Clear all" GridPane.columnIndex="1" GridPane.halignment="RIGHT" GridPane.rowIndex="2" /><Label text="Modifier 1" /><ChoiceBox prefHeight="25.0" prefWidth="94.0" GridPane.columnIndex="1" xmlns:fx="http://javafx.com/fxml">
+  <items>
+    <FXCollections fx:factory="observableArrayList">
+      <String fx:value="Item 1" />
+      <String fx:value="Item 2" />
+      <String fx:value="Item 3" />
+    </FXCollections>
+  </items>
+</ChoiceBox>
+</children>
+</GridPane>

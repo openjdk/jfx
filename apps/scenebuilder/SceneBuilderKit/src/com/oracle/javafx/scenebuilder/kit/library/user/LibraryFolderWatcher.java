@@ -54,6 +54,7 @@ import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -81,6 +82,7 @@ class LibraryFolderWatcher implements Runnable {
         
         try {
             library.updateExplorationCount(0);
+            library.updateExplorationDate(new Date());
             runDiscovery();
             runWatching();
         } catch(InterruptedException x) {
@@ -243,6 +245,7 @@ class LibraryFolderWatcher implements Runnable {
 
         library.addItems(newItems);
         library.updateExplorationCount(library.getExplorationCount()+1);
+        library.updateExplorationDate(new Date());
     }
     
     
@@ -300,6 +303,7 @@ class LibraryFolderWatcher implements Runnable {
         library.addItems(newItems);
         library.updateJarReports(new ArrayList<>(jarReports));
         library.updateExplorationCount(library.getExplorationCount()+1);
+        library.updateExplorationDate(new Date());
     }
     
     

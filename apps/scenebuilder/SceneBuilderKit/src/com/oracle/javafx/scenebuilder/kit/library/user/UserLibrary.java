@@ -50,11 +50,14 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 import java.util.TreeSet;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyIntegerProperty;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
@@ -73,7 +76,8 @@ public class UserLibrary extends Library {
     
     private final ObservableList<JarReport> jarReports = FXCollections.observableArrayList();
     private final SimpleIntegerProperty explorationCountProperty = new SimpleIntegerProperty();
-    
+    private final SimpleObjectProperty<Date> explorationDateProperty = new SimpleObjectProperty<>();
+
     private State state = State.READY;
     private Exception exception;
     private LibraryFolderWatcher watcher;
@@ -153,7 +157,15 @@ public class UserLibrary extends Library {
     public ReadOnlyIntegerProperty explorationCountProperty() {
         return explorationCountProperty;
     }
+    
+    public Object getExplorationDate() {
+        return explorationDateProperty.get();
+    }
 
+    public ReadOnlyObjectProperty<Date> explorationDateProperty() {
+        return explorationDateProperty;
+    }
+    
     public void setFilter(List<String> classnames) throws FileNotFoundException, IOException {
         if (classnames != null && classnames.size() > 0) {
             File filterFile = new File(getFilterFileName());
@@ -275,7 +287,6 @@ public class UserLibrary extends Library {
         }
     }
     
-    
     void updateExplorationCount(int count) {
         if (Platform.isFxApplicationThread()) {
             explorationCountProperty.set(count);
@@ -284,6 +295,19 @@ public class UserLibrary extends Library {
                 @Override
                 public void run() {
                     explorationCountProperty.set(count);
+                }
+            });
+        }
+    }
+    
+    void updateExplorationDate(Date date) {
+        if (Platform.isFxApplicationThread()) {
+            explorationDateProperty.set(date);
+        } else {
+            Platform.runLater(new Runnable() {
+                @Override
+                public void run() {
+                    explorationDateProperty.set(date);
                 }
             });
         }

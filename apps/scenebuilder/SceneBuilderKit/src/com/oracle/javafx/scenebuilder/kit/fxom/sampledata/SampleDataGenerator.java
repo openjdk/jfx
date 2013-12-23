@@ -40,6 +40,9 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
 import java.util.HashMap;
 import java.util.Map;
 import javafx.scene.chart.PieChart;
+import javafx.scene.chart.XYChart;
+import javafx.scene.control.ChoiceBox;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TreeTableView;
@@ -64,7 +67,29 @@ public class SampleDataGenerator {
             newData = null;
         } else {
             final Class<?> sceneGraphClass = sceneGraphObject.getClass();
-            if (sceneGraphClass == ListView.class) {
+            if (sceneGraphClass == ChoiceBox.class) {
+                final ChoiceBox<?> choiceBox = (ChoiceBox) sceneGraphObject;
+                if (choiceBox.getItems().isEmpty()) {
+                    if (currentData instanceof ChoiceBoxSampleData) {
+                        newData = currentData;
+                    } else {
+                        newData = new ChoiceBoxSampleData();
+                    }
+                } else {
+                    newData = null;
+                }
+            } else if (sceneGraphClass == ComboBox.class) {
+                final ComboBox<?> comboBox = (ComboBox) sceneGraphObject;
+                if (comboBox.getItems().isEmpty()) {
+                    if (currentData instanceof ComboBoxSampleData) {
+                        newData = currentData;
+                    } else {
+                        newData = new ComboBoxSampleData();
+                    }
+                } else {
+                    newData = null;
+                }
+            } else if (sceneGraphClass == ListView.class) {
                 final ListView<?> listView = (ListView) sceneGraphObject;
                 if (listView.getItems().isEmpty()) {
                     if (currentData instanceof ListViewSampleData) {
@@ -115,6 +140,17 @@ public class SampleDataGenerator {
                         newData = currentData;
                     } else {
                         newData = new PieChartSampleData();
+                    }
+                } else {
+                    newData = null;
+                }
+            } else if (XYChartSampleData.isKnownXYChart(sceneGraphObject)) {
+                final XYChart<?,?> xyChart = (XYChart) sceneGraphObject;
+                if (xyChart.getData().isEmpty()) {
+                    if (currentData instanceof XYChartSampleData) {
+                        newData = currentData;
+                    } else {
+                        newData = new XYChartSampleData();
                     }
                 } else {
                     newData = null;
@@ -186,12 +222,12 @@ public class SampleDataGenerator {
 //        
 //        if (obj instanceof ListView) {
 //            @SuppressWarnings("unchecked")
-//            final ListView<Object> pieChart = (ListView)obj;
-//            return visitList(pieChart);
+//            final ListView<Object> xyChart = (ListView)obj;
+//            return visitList(xyChart);
 //        } else if (obj instanceof TreeView) {
 //            @SuppressWarnings("unchecked")
-//            final TreeView<Object> pieChart = (TreeView)obj;
-//            return visitTree(pieChart);
+//            final TreeView<Object> xyChart = (TreeView)obj;
+//            return visitTree(xyChart);
 //        } else if (obj instanceof TableView) {
 //            @SuppressWarnings("unchecked")
 //            final TableView<Object> tableView = (TableView)obj;
