@@ -406,7 +406,7 @@ ARMV6HF.prism.nativeSource = file("modules/graphics/src/main/native-prism")
 ARMV6HF.prism.compiler = compiler
 ARMV6HF.prism.ccFlags = [extraCFlags].flatten()
 ARMV6HF.prism.linker = linker
-ARMV6HF.prism.linkFlags = [extraLFlags, "-lX11", "-lXext", "-lXdmcp", "-lXau"].flatten()
+ARMV6HF.prism.linkFlags = [extraLFlags].flatten()
 ARMV6HF.prism.lib = "prism_common"
 
 ARMV6HF.prismSW = [:]
