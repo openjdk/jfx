@@ -75,63 +75,63 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libnative-prism-sw.${CND_DLIB_EXT}: $
 
 ${OBJECTDIR}/_ext/9180873/JAbstractSurface.o: ../../modules/graphics/src/main/native-prism-sw/JAbstractSurface.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/9180873
-	${RM} $@.d
-	$(COMPILE.c) -g -I../../modules/graphics/build/generated-src/headers/prismSW/win  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/9180873/JAbstractSurface.o ../../modules/graphics/src/main/native-prism-sw/JAbstractSurface.c
+	${RM} "$@.d"
+	$(COMPILE.c) -g -I../../modules/graphics/build/generated-src/headers/prismSW/win  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/9180873/JAbstractSurface.o ../../modules/graphics/src/main/native-prism-sw/JAbstractSurface.c
 
 ${OBJECTDIR}/_ext/9180873/JJavaSurface.o: ../../modules/graphics/src/main/native-prism-sw/JJavaSurface.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/9180873
-	${RM} $@.d
-	$(COMPILE.c) -g -I../../modules/graphics/build/generated-src/headers/prismSW/win  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/9180873/JJavaSurface.o ../../modules/graphics/src/main/native-prism-sw/JJavaSurface.c
+	${RM} "$@.d"
+	$(COMPILE.c) -g -I../../modules/graphics/build/generated-src/headers/prismSW/win  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/9180873/JJavaSurface.o ../../modules/graphics/src/main/native-prism-sw/JJavaSurface.c
 
 ${OBJECTDIR}/_ext/9180873/JNIUtil.o: ../../modules/graphics/src/main/native-prism-sw/JNIUtil.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/9180873
-	${RM} $@.d
-	$(COMPILE.c) -g -I../../modules/graphics/build/generated-src/headers/prismSW/win  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/9180873/JNIUtil.o ../../modules/graphics/src/main/native-prism-sw/JNIUtil.c
+	${RM} "$@.d"
+	$(COMPILE.c) -g -I../../modules/graphics/build/generated-src/headers/prismSW/win  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/9180873/JNIUtil.o ../../modules/graphics/src/main/native-prism-sw/JNIUtil.c
 
 ${OBJECTDIR}/_ext/9180873/JNativeSurface.o: ../../modules/graphics/src/main/native-prism-sw/JNativeSurface.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/9180873
-	${RM} $@.d
-	$(COMPILE.c) -g -I../../modules/graphics/build/generated-src/headers/prismSW/win  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/9180873/JNativeSurface.o ../../modules/graphics/src/main/native-prism-sw/JNativeSurface.c
+	${RM} "$@.d"
+	$(COMPILE.c) -g -I../../modules/graphics/build/generated-src/headers/prismSW/win  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/9180873/JNativeSurface.o ../../modules/graphics/src/main/native-prism-sw/JNativeSurface.c
 
 ${OBJECTDIR}/_ext/9180873/JPiscesRenderer.o: ../../modules/graphics/src/main/native-prism-sw/JPiscesRenderer.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/9180873
-	${RM} $@.d
-	$(COMPILE.c) -g -I../../modules/graphics/build/generated-src/headers/prismSW/win  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/9180873/JPiscesRenderer.o ../../modules/graphics/src/main/native-prism-sw/JPiscesRenderer.c
+	${RM} "$@.d"
+	$(COMPILE.c) -g -I../../modules/graphics/build/generated-src/headers/prismSW/win  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/9180873/JPiscesRenderer.o ../../modules/graphics/src/main/native-prism-sw/JPiscesRenderer.c
 
 ${OBJECTDIR}/_ext/9180873/JTransform.o: ../../modules/graphics/src/main/native-prism-sw/JTransform.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/9180873
-	${RM} $@.d
-	$(COMPILE.c) -g -I../../modules/graphics/build/generated-src/headers/prismSW/win  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/9180873/JTransform.o ../../modules/graphics/src/main/native-prism-sw/JTransform.c
+	${RM} "$@.d"
+	$(COMPILE.c) -g -I../../modules/graphics/build/generated-src/headers/prismSW/win  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/9180873/JTransform.o ../../modules/graphics/src/main/native-prism-sw/JTransform.c
 
 ${OBJECTDIR}/_ext/9180873/PiscesBlit.o: ../../modules/graphics/src/main/native-prism-sw/PiscesBlit.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/9180873
-	${RM} $@.d
-	$(COMPILE.c) -g -I../../modules/graphics/build/generated-src/headers/prismSW/win  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/9180873/PiscesBlit.o ../../modules/graphics/src/main/native-prism-sw/PiscesBlit.c
+	${RM} "$@.d"
+	$(COMPILE.c) -g -I../../modules/graphics/build/generated-src/headers/prismSW/win  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/9180873/PiscesBlit.o ../../modules/graphics/src/main/native-prism-sw/PiscesBlit.c
 
 ${OBJECTDIR}/_ext/9180873/PiscesMath.o: ../../modules/graphics/src/main/native-prism-sw/PiscesMath.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/9180873
-	${RM} $@.d
-	$(COMPILE.c) -g -I../../modules/graphics/build/generated-src/headers/prismSW/win  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/9180873/PiscesMath.o ../../modules/graphics/src/main/native-prism-sw/PiscesMath.c
+	${RM} "$@.d"
+	$(COMPILE.c) -g -I../../modules/graphics/build/generated-src/headers/prismSW/win  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/9180873/PiscesMath.o ../../modules/graphics/src/main/native-prism-sw/PiscesMath.c
 
 ${OBJECTDIR}/_ext/9180873/PiscesPaint.o: ../../modules/graphics/src/main/native-prism-sw/PiscesPaint.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/9180873
-	${RM} $@.d
-	$(COMPILE.c) -g -I../../modules/graphics/build/generated-src/headers/prismSW/win  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/9180873/PiscesPaint.o ../../modules/graphics/src/main/native-prism-sw/PiscesPaint.c
+	${RM} "$@.d"
+	$(COMPILE.c) -g -I../../modules/graphics/build/generated-src/headers/prismSW/win  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/9180873/PiscesPaint.o ../../modules/graphics/src/main/native-prism-sw/PiscesPaint.c
 
 ${OBJECTDIR}/_ext/9180873/PiscesSysutils.o: ../../modules/graphics/src/main/native-prism-sw/PiscesSysutils.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/9180873
-	${RM} $@.d
-	$(COMPILE.c) -g -I../../modules/graphics/build/generated-src/headers/prismSW/win  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/9180873/PiscesSysutils.o ../../modules/graphics/src/main/native-prism-sw/PiscesSysutils.c
+	${RM} "$@.d"
+	$(COMPILE.c) -g -I../../modules/graphics/build/generated-src/headers/prismSW/win  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/9180873/PiscesSysutils.o ../../modules/graphics/src/main/native-prism-sw/PiscesSysutils.c
 
 ${OBJECTDIR}/_ext/9180873/PiscesTransform.o: ../../modules/graphics/src/main/native-prism-sw/PiscesTransform.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/9180873
-	${RM} $@.d
-	$(COMPILE.c) -g -I../../modules/graphics/build/generated-src/headers/prismSW/win  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/9180873/PiscesTransform.o ../../modules/graphics/src/main/native-prism-sw/PiscesTransform.c
+	${RM} "$@.d"
+	$(COMPILE.c) -g -I../../modules/graphics/build/generated-src/headers/prismSW/win  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/9180873/PiscesTransform.o ../../modules/graphics/src/main/native-prism-sw/PiscesTransform.c
 
 ${OBJECTDIR}/_ext/9180873/PiscesUtil.o: ../../modules/graphics/src/main/native-prism-sw/PiscesUtil.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/9180873
-	${RM} $@.d
-	$(COMPILE.c) -g -I../../modules/graphics/build/generated-src/headers/prismSW/win  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/9180873/PiscesUtil.o ../../modules/graphics/src/main/native-prism-sw/PiscesUtil.c
+	${RM} "$@.d"
+	$(COMPILE.c) -g -I../../modules/graphics/build/generated-src/headers/prismSW/win  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/9180873/PiscesUtil.o ../../modules/graphics/src/main/native-prism-sw/PiscesUtil.c
 
 # Subprojects
 .build-subprojects:
