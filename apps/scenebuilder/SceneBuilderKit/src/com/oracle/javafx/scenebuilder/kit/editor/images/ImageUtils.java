@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -44,15 +44,13 @@ import javafx.stage.Stage;
 /**
  *
  */
-public abstract class ImageUtils  extends ImageUtilsBase {
+public abstract class ImageUtils {
     
-    private static final Image WARNING_BADGE_IMAGE;
-    
-    static {
-        final URL url = ImageUtils.class.getResource(UI_DIR + "/" + WARNING_BADGE); //NOI18N
-        WARNING_BADGE_IMAGE = new Image(url.toExternalForm());
-    }
-
+    static final String NODE_ICONS_DIR = "nodeicons"; //NOI18N
+    static final String UI_DIR = "ui"; //NOI18N
+    static final String MISSING_ICON = "MissingIcon.png"; //NOI18N
+    static final String WARNING_BADGE = "WarningBadge.png"; //NOI18N
+    private static Image warning_badge_image;
     private static final WeakHashMap<String, Reference<Image>> imageCache = new WeakHashMap<>();
 
     public static Image getImage(URL resource) {
@@ -95,7 +93,21 @@ public abstract class ImageUtils  extends ImageUtilsBase {
         return contentImage;
     }
     
-    public static Image getWarningBadgeImage() {
-        return WARNING_BADGE_IMAGE;
+    public static synchronized Image getWarningBadgeImage() {
+        if (warning_badge_image == null) {
+            final URL url = ImageUtils.class.getResource(UI_DIR + "/" + WARNING_BADGE); //NOI18N
+            warning_badge_image = new Image(url.toExternalForm());
+        }
+        return warning_badge_image;
+    }
+    
+    /**
+     * Returns the URL corresponding to the specified name.
+     * The file MUST be located in the NODE_ICONS_DIR.
+     * @param name
+     * @return
+     */
+    public static URL getNodeIconURL(String name) {
+        return ImageUtils.class.getResource(NODE_ICONS_DIR + "/" + name); //NOI18N
     }
 }

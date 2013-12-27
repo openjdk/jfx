@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -40,13 +40,16 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyT;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
 import java.io.File;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.ResourceBundle;
 
 /**
  *
@@ -168,12 +171,18 @@ public class ErrorReport {
         assert fxomIntrinsic.getParentObject() != null;
         
         if (fxomIntrinsic.getType() == FXOMIntrinsic.Type.FX_INCLUDE) {
-            final String source = fxomIntrinsic.getSource();
-            final FXOMObject parentObject = fxomIntrinsic.getParentObject();
+            final PrefixedValue source = new PrefixedValue(fxomIntrinsic.getSource());
+            assert source.isInvalid() == false;
             
-            if (source.startsWith("@")) { //NOI18N
-                final URL location = parentObject.resolveLocation(source);
+            if (source.isDocumentRelativePath()) {
+                final URL location;
                 final boolean ok;
+                
+                if (fxomDocument.getLocation() != null) {
+                    location = source.resolveDocumentRelativePath(fxomDocument.getLocation());
+                } else {
+                    location = null;
+                }
 
                 if (location == null) {
                     ok = false;
@@ -191,6 +200,30 @@ public class ErrorReport {
                             = new ErrorReportEntry(fxomIntrinsic, ErrorReportEntry.Type.UNRESOLVED_LOCATION);
                     addEntry(fxomIntrinsic, newEntry);
                 }
+            } else if (source.isPlainString()) {
+                
+                boolean ok;
+                try {
+                    final URL url = new URL(source.getSuffix());
+                    final String path = url.getPath();
+                    if (path == null) {
+                        ok = false;
+                    } else {
+                        final File file = new File(path);
+                        ok = file.canRead();
+                    }
+                } catch(MalformedURLException x) {
+                    ok = false;
+                }
+                if (ok == false) {
+                    final ErrorReportEntry newEntry 
+                            = new ErrorReportEntry(fxomIntrinsic, ErrorReportEntry.Type.UNRESOLVED_LOCATION);
+                    addEntry(fxomIntrinsic, newEntry);
+                }
+            } else {
+                final ErrorReportEntry newEntry 
+                        = new ErrorReportEntry(fxomIntrinsic, ErrorReportEntry.Type.UNRESOLVED_LOCATION);
+                addEntry(fxomIntrinsic, newEntry);
             }
         }
     }
@@ -200,12 +233,18 @@ public class ErrorReport {
         assert fxomProperty != null;
         assert fxomProperty.getParentInstance() != null : "fxomProperty="+fxomProperty.getName(); //NOI18N
         
-        final String value = fxomProperty.getValue();
-        final FXOMInstance parentInstance = fxomProperty.getParentInstance();
+        final PrefixedValue value = new PrefixedValue(fxomProperty.getValue());
+        assert value.isInvalid() == false;
         
-        if (value.startsWith("@")) { //NOI18N
-            final URL location = parentInstance.resolveLocation(value);
+        if (value.isDocumentRelativePath()) {
+            final URL location;
             final boolean ok;
+            
+            if (fxomDocument.getLocation() != null) {
+                location = value.resolveDocumentRelativePath(fxomDocument.getLocation());
+            } else {
+                location = null;
+            }
             
             if (location == null) {
                 ok = false;
@@ -223,10 +262,50 @@ public class ErrorReport {
                         = new ErrorReportEntry(fxomProperty, ErrorReportEntry.Type.UNRESOLVED_LOCATION);
                 addEntry(fxomProperty, newEntry);
             }
-        }/* else if (value.startsWith("%")) {
-            // It's a "resource" expression
-            // TODO(elp)
-        }*/
+        } else if (value.isClassLoaderRelativePath()) {
+            final ClassLoader classLoader;
+            final boolean ok;
+            
+            if (fxomDocument.getClassLoader() != null) {
+                classLoader = fxomDocument.getClassLoader();
+            } else {
+                classLoader = ClassLoader.getSystemClassLoader();
+            }
+            
+            if (classLoader == null) {
+                ok = false;
+            } else {
+                final URL location = value.resolveClassLoaderRelativePath(classLoader);
+                ok = (location != null);
+            }
+            if (ok == false) {
+                final ErrorReportEntry newEntry 
+                        = new ErrorReportEntry(fxomProperty, ErrorReportEntry.Type.UNRESOLVED_LOCATION);
+                addEntry(fxomProperty, newEntry);
+            }
+        } else if (value.isResourceKey()) {
+            final ResourceBundle resources;
+            final boolean ok;
+            
+            if (fxomDocument.getResources() != null) {
+                resources = fxomDocument.getResources();
+            } else {
+                resources = null;
+            }
+            
+            if (resources == null) {
+                ok = true; // No need to pollute the user
+            } else {
+                final String resolvedString = value.resolveResourceKey(resources);
+                ok = (resolvedString != null);
+            }
+            
+            if (ok == false) {
+                final ErrorReportEntry newEntry 
+                        = new ErrorReportEntry(fxomProperty, ErrorReportEntry.Type.UNRESOLVED_RESOURCE);
+                addEntry(fxomProperty, newEntry);
+            }
+        }
     }
         
     private void addEntry(FXOMNode fxomNode, ErrorReportEntry newEntry) {

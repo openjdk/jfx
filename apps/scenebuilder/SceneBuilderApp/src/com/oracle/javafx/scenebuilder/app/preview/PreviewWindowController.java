@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -39,15 +39,11 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractWindowContro
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.util.MathUtils;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.PropertyResourceBundle;
 import java.util.ResourceBundle;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -80,7 +76,6 @@ public final class PreviewWindowController extends AbstractWindowController {
     private static final String NID_PREVIEW_ROOT = "previewRoot"; //NOI18N
     private EditorPlatform.Theme editorControllerTheme;
     private ObservableList<File> sceneStyleSheet;
-    private File resource;
     
     /**
      * The type of Camera used by the Preview panel.
@@ -139,12 +134,10 @@ public final class PreviewWindowController extends AbstractWindowController {
             }
         });
         
-        this.resource = editorController.getResource();
-        this.editorController.resourceProperty().addListener(new ChangeListener<File>() {
+        this.editorController.resourcesProperty().addListener(new ChangeListener<ResourceBundle>() {
 
             @Override
-            public void changed(ObservableValue<? extends File> ov, File t, File t1) {
-                resource = t1;
+            public void changed(ObservableValue<? extends ResourceBundle> ov, ResourceBundle t, ResourceBundle t1) {
                 requestUpdate();
             }
         });
@@ -228,21 +221,12 @@ public final class PreviewWindowController extends AbstractWindowController {
                         if (fxomDocument != null) {
                             // We clone the FXOMDocument
                             FXOMDocument clone;
-                            ResourceBundle resourceBundle = fxomDocument.getResources();
                             
-                            if (resource != null) {
-                                try {
-                                    resourceBundle = new PropertyResourceBundle(new InputStreamReader(new FileInputStream(resource), Charset.forName("UTF-8"))); //NOI18N
-                                } catch (IOException ex) {
-                                    resourceBundle = fxomDocument.getResources();
-                                }
-                            }
-
                             try {
                                 clone = new FXOMDocument(fxomDocument.getFxmlText(),
                                         fxomDocument.getLocation(),
                                         fxomDocument.getClassLoader(),
-                                        resourceBundle);
+                                        fxomDocument.getResources());
                                 clone.setSampleDataEnabled(fxomDocument.isSampleDataEnabled());
                             } catch (IOException ex) {
                                 throw new RuntimeException("Bug in PreviewWindowController::requestUpdate", ex); //NOI18N

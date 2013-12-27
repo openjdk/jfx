@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -53,18 +53,6 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.MoveColumnJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.MoveRowJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.AbstractWrapInJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.UnwrapJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.WrapInAnchorPaneJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.WrapInGridPaneJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.WrapInGroupJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.WrapInHBoxJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.WrapInPaneJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.WrapInScrollPaneJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.WrapInSplitPaneJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.WrapInStackPaneJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.WrapInTabPaneJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.WrapInTitledPaneJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.WrapInToolBarJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.WrapInVBoxJob;
 import com.oracle.javafx.scenebuilder.kit.editor.messagelog.MessageLog;
 import com.oracle.javafx.scenebuilder.kit.editor.util.InlineEditController;
 import com.oracle.javafx.scenebuilder.kit.editor.report.ErrorReport;
@@ -210,8 +198,6 @@ public class EditorController {
             = new SimpleObjectProperty<>(Theme.MODENA);
     private final ListProperty<File> sceneStyleSheetProperty
             = new SimpleListProperty<>();
-    private final ObjectProperty<File> resourceProperty
-            = new SimpleObjectProperty<>(null);
     private final BooleanProperty pickModeEnabledProperty
             = new SimpleBooleanProperty(true);
     private final BooleanProperty sampleDataEnabledProperty
@@ -473,33 +459,6 @@ public class EditorController {
      */
     public ObservableListValue<File> sceneStyleSheetProperty() {
         return sceneStyleSheetProperty;
-    }
-    
-    /**
-     * 
-     * @return the resource used by this editor.
-     */
-    public File getResource() {
-        return resourceProperty.getValue();
-    }
-    
-    /**
-     * The resource bundle is provided as a property file.
-     * 
-     * @param resource the resource bundle to be used by this editor.
-     */
-    public void setResource(File resource) {
-        resourceProperty.setValue(resource);
-    }
-    
-    /**
-     * The property holding the resource used by this editor.
-     * 
-     * @return the property holding the resource used by the editor,
-     * or null if has not been set.
-     */
-    public ObservableValue<File> resourceProperty() {
-        return resourceProperty;
     }
     
     /**

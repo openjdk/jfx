@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -33,7 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.library;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.source.LibraryDragSource;
-import com.oracle.javafx.scenebuilder.kit.editor.images.ImageUtilsBase;
+import com.oracle.javafx.scenebuilder.kit.editor.images.ImageUtils;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.library.LibraryItem;
 import java.net.URL;
@@ -65,7 +65,7 @@ class LibraryListCell extends ListCell<LibraryListItem> {
     private final Label classNameLabel = new Label();
     private final Label qualifierLabel = new Label();
     private final Label sectionLabel = new Label();
-    private final URL missingIconURL = ImageUtilsBase.getNodeIconURL("MissingIcon.png"); //NOI18N
+    private final URL missingIconURL = ImageUtils.getNodeIconURL("MissingIcon.png"); //NOI18N
     private static final String FX8_QUALIFIER = " (FX8)"; //NOI18N
     
     public LibraryListCell(final EditorController ec) {

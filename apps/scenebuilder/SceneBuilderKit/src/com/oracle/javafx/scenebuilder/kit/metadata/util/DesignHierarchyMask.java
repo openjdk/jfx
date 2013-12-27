@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -32,7 +32,6 @@
 package com.oracle.javafx.scenebuilder.kit.metadata.util;
 
 import com.oracle.javafx.scenebuilder.kit.editor.images.ImageUtils;
-import com.oracle.javafx.scenebuilder.kit.editor.images.ImageUtilsBase;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMCollection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
@@ -164,38 +163,38 @@ public class DesignHierarchyMask {
             // Separator orientation
             final Separator obj = (Separator) sceneGraphObject;
             if (Orientation.HORIZONTAL.equals(obj.getOrientation())) {
-                url = ImageUtilsBase.getNodeIconURL("Separator-h.png"); //NOI18N
+                url = ImageUtils.getNodeIconURL("Separator-h.png"); //NOI18N
             } else {
-                url = ImageUtilsBase.getNodeIconURL("Separator-v.png"); //NOI18N
+                url = ImageUtils.getNodeIconURL("Separator-v.png"); //NOI18N
             }
         } else if (sceneGraphObject instanceof ScrollBar) {
             // ScrollBar orientation
             final ScrollBar obj = (ScrollBar) sceneGraphObject;
             if (Orientation.HORIZONTAL.equals(obj.getOrientation())) {
-                url = ImageUtilsBase.getNodeIconURL("ScrollBar-h.png"); //NOI18N
+                url = ImageUtils.getNodeIconURL("ScrollBar-h.png"); //NOI18N
             } else {
-                url = ImageUtilsBase.getNodeIconURL("ScrollBar-v.png"); //NOI18N
+                url = ImageUtils.getNodeIconURL("ScrollBar-v.png"); //NOI18N
             }
         } else if (sceneGraphObject instanceof Slider) {
             // Slider orientation
             final Slider obj = (Slider) sceneGraphObject;
             if (Orientation.HORIZONTAL.equals(obj.getOrientation())) {
-                url = ImageUtilsBase.getNodeIconURL("Slider-h.png"); //NOI18N
+                url = ImageUtils.getNodeIconURL("Slider-h.png"); //NOI18N
             } else {
-                url = ImageUtilsBase.getNodeIconURL("Slider-v.png"); //NOI18N
+                url = ImageUtils.getNodeIconURL("Slider-v.png"); //NOI18N
             }
         } else if (sceneGraphObject instanceof SplitPane) {
             // SplitPane orientation
             final SplitPane obj = (SplitPane) sceneGraphObject;
             if (Orientation.HORIZONTAL.equals(obj.getOrientation())) {
-                url = ImageUtilsBase.getNodeIconURL("SplitPane-h.png"); //NOI18N
+                url = ImageUtils.getNodeIconURL("SplitPane-h.png"); //NOI18N
             } else {
-                url = ImageUtilsBase.getNodeIconURL("SplitPane-v.png"); //NOI18N
+                url = ImageUtils.getNodeIconURL("SplitPane-v.png"); //NOI18N
             }
         } else {
             // Default
             final String className = sceneGraphObject.getClass().getSimpleName();
-            url = ImageUtilsBase.getNodeIconURL(className + ".png"); //NOI18N
+            url = ImageUtils.getNodeIconURL(className + ".png"); //NOI18N
         }
         return url;
     }

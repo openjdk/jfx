@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -488,9 +488,12 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 break;
                 
             case SET_RESOURCE:
+                result = true;
+                break;
+                
             case REMOVE_RESOURCE:
             case REVEAL_RESOURCE:
-                result = true;
+                result = resourceController.getResourceFile() != null;
                 break;
                 
             case HELP:
@@ -735,6 +738,9 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         return librarySplitController.isTargetVisible();
     }
     
+    public File getResourceFile() {
+        return resourceController.getResourceFile();
+    }
     
     public static class TitleComparator implements Comparator<DocumentWindowController> {
 

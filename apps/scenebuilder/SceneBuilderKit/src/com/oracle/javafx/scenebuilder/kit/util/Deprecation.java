@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -202,12 +202,6 @@ public class Deprecation {
     
     public static URL getCaspianHighContrastStylesheetURL() {
         final String resourceName = "com/sun/javafx/scene/control/skin/caspian/highcontrast.bss"; //NOI18N
-        return ClassLoader.getSystemResource(resourceName);
-    }
-    
-    
-    public static URL getCaspianVirtualKeyboardStylesheetURL() {
-        final String resourceName = "com/sun/javafx/scene/control/skin/caspian/fxvk.bss"; //NOI18N
         return ClassLoader.getSystemResource(resourceName);
     }
     

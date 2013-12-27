@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -836,45 +836,26 @@ public class MenuBarController {
         setResourceMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.SET_RESOURCE));
         removeResourceMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.REMOVE_RESOURCE) {
             @Override
-            public boolean canPerform() {
-                if (documentWindowController == null
-                        || documentWindowController.getEditorController().getResource() == null) {
-                    return false;
-                }
-
-                return true;
-            }
-
-            @Override
             public String getTitle() {
                 String title = I18N.getString("menu.title.remove.resource");
                 if (documentWindowController != null
-                        && documentWindowController.getEditorController().getResource() != null) {
+                        && documentWindowController.getResourceFile() != null) {
                     title = I18N.getString("menu.title.remove.resource.with.file",
-                            documentWindowController.getEditorController().getResource().getName());
+                            documentWindowController.getResourceFile().getName());
                 }
 
                 return title;
             }
         });
         revealResourceMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.REVEAL_RESOURCE) {
-            @Override
-            public boolean canPerform() {
-                if (documentWindowController == null
-                        || documentWindowController.getEditorController().getResource() == null) {
-                    return false;
-                }
-
-                return true;
-            }
 
             @Override
             public String getTitle() {
                 String title = I18N.getString("menu.title.reveal.resource");
                 if (documentWindowController != null
-                        && documentWindowController.getEditorController().getResource() != null) {
+                        && documentWindowController.getResourceFile() != null) {
                     title = I18N.getString("menu.title.reveal.resource.with.file",
-                            documentWindowController.getEditorController().getResource().getName());
+                            documentWindowController.getResourceFile().getName());
                 }
 
                 return title;

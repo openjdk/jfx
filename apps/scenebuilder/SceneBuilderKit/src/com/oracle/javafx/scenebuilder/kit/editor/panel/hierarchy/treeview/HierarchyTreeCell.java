@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -38,7 +38,6 @@ import com.oracle.javafx.scenebuilder.kit.editor.drag.target.AccessoryDropTarget
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.ContainerZDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.RootDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.images.ImageUtils;
-import com.oracle.javafx.scenebuilder.kit.editor.images.ImageUtilsBase;
 import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyFxIdJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.HierarchyDNDController;
@@ -722,7 +721,7 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
         // Included file
         if (fxomObject instanceof FXOMIntrinsic
                 && ((FXOMIntrinsic) fxomObject).getType() == FXOMIntrinsic.Type.FX_INCLUDE) {
-            final URL resource = ImageUtilsBase.getNodeIconURL("Included.png"); //NOI18N
+            final URL resource = ImageUtils.getNodeIconURL("Included.png"); //NOI18N
             includedFileImageView.setImage(ImageUtils.getImage(resource));
             includedFileImageView.setManaged(true);
         } else {
