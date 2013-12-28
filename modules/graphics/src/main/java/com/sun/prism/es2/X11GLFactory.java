@@ -43,7 +43,9 @@ class X11GLFactory extends GLFactory {
         new GLGPUInfo("advanced micro devices", null),
         new GLGPUInfo("ati", null),
         new GLGPUInfo("intel open source technology center", null),
-        new GLGPUInfo("nvidia", null)
+        new GLGPUInfo("nvidia", null),
+        new GLGPUInfo("nouveau", null),
+        new GLGPUInfo("x.org", null)
     };
 
     private GLGPUInfo blackList[] = null;
