@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -186,6 +186,7 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
     public AbstractHierarchyPanelController(URL fxmlURL, EditorController editorController) {
         super(fxmlURL, I18N.getBundle(), editorController);
         promptLabel.getStyleClass().add("hierarchy-prompt-label");
+        promptLabel.setMouseTransparent(true);
     }
 
     /**
@@ -1074,6 +1075,9 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
         // Do not invoke dragController.end here because we always receive a
         // DRAG_EXITED event which will perform the termination
         event.setDropCompleted(true);
+        
+        // Give the focus to the hierarchy
+        getPanelControl().requestFocus();
     }
 
     private void handleOnDragEntered(final DragEvent event) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -229,4 +229,17 @@
     -fx-border-width: 1;
     -fx-border-style: dotted;
     -fx-border-color: black;
+}
+
+
+/*******************************************************************************
+ *                                                                             *
+ * Resize Shadow                                                               *
+ *                                                                             *
+ ******************************************************************************/
+
+.outline-ring {
+    -fx-stroke: rgba(0,0,0,0.2);
+    -fx-stroke-type: inside;
+    -fx-fill: rgba(0,0,0,0.01);
 }

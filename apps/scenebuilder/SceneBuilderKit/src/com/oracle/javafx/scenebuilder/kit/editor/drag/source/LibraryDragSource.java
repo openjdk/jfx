@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -34,11 +34,9 @@ package com.oracle.javafx.scenebuilder.kit.editor.drag.source;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.images.ImageUtils;
-import com.oracle.javafx.scenebuilder.kit.editor.images.ImageUtilsBase;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.library.LibraryItem;
-import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -177,7 +175,7 @@ public class LibraryDragSource extends AbstractDragSource {
         URL iconURL = libraryItem.getIconURL();
 
         if (iconURL == null) {
-            iconURL = ImageUtilsBase.getNodeIconURL("MissingIcon.png"); //NOI18N
+            iconURL = ImageUtils.getNodeIconURL("MissingIcon.png"); //NOI18N
         }
 
         final Image imageFromIcon = new Image(iconURL.toExternalForm());

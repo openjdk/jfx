@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -31,7 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.library.user;
 
-import com.oracle.javafx.scenebuilder.kit.editor.images.ImageUtilsBase;
+import com.oracle.javafx.scenebuilder.kit.editor.images.ImageUtils;
 import com.oracle.javafx.scenebuilder.kit.library.BuiltinLibrary;
 import com.oracle.javafx.scenebuilder.kit.library.LibraryItem;
 import com.oracle.javafx.scenebuilder.kit.library.util.JarExplorer;
@@ -54,6 +54,7 @@ import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -81,6 +82,7 @@ class LibraryFolderWatcher implements Runnable {
         
         try {
             library.updateExplorationCount(0);
+            library.updateExplorationDate(new Date());
             runDiscovery();
             runWatching();
         } catch(InterruptedException x) {
@@ -243,11 +245,12 @@ class LibraryFolderWatcher implements Runnable {
 
         library.addItems(newItems);
         library.updateExplorationCount(library.getExplorationCount()+1);
+        library.updateExplorationDate(new Date());
     }
     
     
     private LibraryItem makeLibraryItem(Path path) throws IOException {
-        final URL iconURL = ImageUtilsBase.getNodeIconURL(null);
+        final URL iconURL = ImageUtils.getNodeIconURL(null);
         String fileName = path.getFileName().toString();
         String itemName = fileName.substring(0, fileName.indexOf(".fxml")); //NOI18N
         String fxmlText = ""; //NOI18N
@@ -300,12 +303,13 @@ class LibraryFolderWatcher implements Runnable {
         library.addItems(newItems);
         library.updateJarReports(new ArrayList<>(jarReports));
         library.updateExplorationCount(library.getExplorationCount()+1);
+        library.updateExplorationDate(new Date());
     }
     
     
     private Collection<LibraryItem> makeLibraryItems(JarReport jarReport) throws IOException {
         final List<LibraryItem> result = new ArrayList<>();
-        final URL iconURL = ImageUtilsBase.getNodeIconURL(null);
+        final URL iconURL = ImageUtils.getNodeIconURL(null);
         final List<String> excludedItems = library.getFilter();
                 
         for (JarReportEntry e : jarReport.getEntries()) {

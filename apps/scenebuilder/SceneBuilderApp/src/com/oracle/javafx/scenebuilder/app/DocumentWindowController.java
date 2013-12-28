@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -40,10 +40,13 @@ import com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordDocument;
 import com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal;
 import com.oracle.javafx.scenebuilder.app.preview.BackgroundColorDialogController;
 import com.oracle.javafx.scenebuilder.app.preview.PreviewWindowController;
+import com.oracle.javafx.scenebuilder.app.report.JarAnalysisReportController;
 import com.oracle.javafx.scenebuilder.app.selectionbar.SelectionBarController;
 import com.oracle.javafx.scenebuilder.app.skeleton.SkeletonWindowController;
 import com.oracle.javafx.scenebuilder.app.template.FxmlTemplates;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
+import com.oracle.javafx.scenebuilder.kit.editor.EditorController.ControlAction;
+import com.oracle.javafx.scenebuilder.kit.editor.EditorController.EditAction;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
@@ -59,7 +62,12 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.util.dialog.AbstractModal
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.dialog.AlertDialog;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.dialog.ErrorDialog;
 import com.oracle.javafx.scenebuilder.kit.editor.search.SearchController;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import com.oracle.javafx.scenebuilder.kit.library.user.UserLibrary;
+import com.sun.javafx.scene.control.behavior.KeyBinding;
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -71,19 +79,30 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.FileTime;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
+import javafx.scene.Node;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.CheckMenuItem;
+import javafx.scene.control.MenuButton;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.SplitPane;
+import javafx.scene.control.TextInputControl;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCombination;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
@@ -97,6 +116,9 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
     
     
     public enum DocumentControlAction {
+        COPY,
+        SELECT_ALL,
+        SELECT_NONE,
         SAVE_FILE,
         SAVE_AS_FILE,
         REVERT_FILE,
@@ -112,6 +134,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         TOGGLE_CSS_PANEL,
         TOGGLE_LEFT_PANEL,
         TOGGLE_RIGHT_PANEL,
+        TOGGLE_OUTLINES_VISIBILITY,
         TOGGLE_GUIDES_VISIBILITY,
         SHOW_PREVIEW_WINDOW,
         CHOOSE_BACKGROUND_COLOR,
@@ -123,6 +146,11 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         REVEAL_RESOURCE,
         HELP,
         SHOW_SAMPLE_CONTROLLER
+    }
+    
+    public enum DocumentEditAction {
+        CUT,
+        PASTE
     }
     
     public enum ActionStatus {
@@ -141,18 +169,20 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
     private final LibraryPanelController libraryPanelController = new LibraryPanelController(editorController);
     private final SelectionBarController selectionBarController = new SelectionBarController(editorController);
     private final MessageBarController messageBarController = new MessageBarController(editorController);
-    // The PreviewWindowController is created lazily because it needs an owner
-    // and computing it here would be too costly (impact on start-up time).
-    private PreviewWindowController previewWindowController = null;
     private final SearchController librarySearchController = new SearchController(editorController);
     private final SearchController inspectorSearchController = new SearchController(editorController);
     private final SearchController cssPanelSearchController = new SearchController(editorController);;
     private final SceneStyleSheetMenuController sceneStyleSheetMenuController = new SceneStyleSheetMenuController(this);
     private final CssPanelMenuController cssPanelMenuController = new CssPanelMenuController(cssPanelController);
     private final ResourceController resourceController = new ResourceController((this));
-    // The SkeletonWindowController is created lazily because it needs an owner
-    // and computing it here would be too costly (impact on start-up time).
+    // The controller below are created lazily because they need an owner
+    // and computing them here would be too costly (impact on start-up time):
+    // - PreviewWindowController
+    // - SkeletonWindowController
+    // - JarAnalysisReportController
+    private PreviewWindowController previewWindowController = null;
     private SkeletonWindowController skeletonWindowController = null;
+    private JarAnalysisReportController jarAnalysisReportController = null;
 
     @FXML private StackPane libraryPanelHost;
     @FXML private StackPane librarySearchPanelHost;
@@ -169,8 +199,11 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
     @FXML private SplitPane leftRightSplitPane;
     @FXML private SplitPane libraryDocumentSplitPane;
     
+    @FXML private MenuButton libraryMenuButton;
+    @FXML private MenuItem libraryImportSelection;
     @FXML private CheckMenuItem libraryViewAsList;
     @FXML private CheckMenuItem libraryViewAsSections;
+    @FXML private MenuItem libraryReveal;
     
     @FXML private MenuItem cssPanelShowStyledOnlyMi;
     @FXML private MenuItem cssPanelSplitDefaultsMi;
@@ -187,6 +220,56 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
     
     private FileTime loadFileTime;
     private Job saveJob;
+    
+    private final EventHandler<KeyEvent> mainKeyEventFilter = new EventHandler<KeyEvent>() {
+
+        @Override
+        public void handle(KeyEvent event) {
+            //------------------------------------------------------------------
+            // TEXT INPUT CONTROL
+            //------------------------------------------------------------------
+            // Common editing actions handled natively and defined as application accelerators
+            // 
+            // The platform support is not mature/stable enough to rely on.
+            // Indeed, the behavior may differ :
+            // - when using system menu bar vs not using it
+            // - when using accelerators vs using menu items
+            // - depending on the focused control (TextField vs ComboBox)
+            // 
+            // On SB side, we decide for now to consume events that may be handled natively
+            // so ALL actions are defined in our ApplicationMenu class.
+            //
+            // This may be revisit when platform implementation will be more reliable.
+            //
+            final Node focusOwner = getScene().getFocusOwner();
+            final KeyCombination accelerator = getAccelerator(event);
+            if (isTextInputControlEditing(focusOwner) == true 
+                    && accelerator != null) {
+                for (KeyBinding binding : SBTextInputControlBindings.getBindings()) {
+                    // The event is handled natively
+                    if (binding.getSpecificity(null, event) > 0) {
+                        // 
+                        // When using system menu bar, the event is handled natively 
+                        // before the application receives it : we just consume the event 
+                        // so the editing action is not performed a second time by the app.
+                        if (menuBarController.getMenuBar().isUseSystemMenuBar()) {
+                            event.consume();
+                        }
+                        break;
+                    }
+                }
+            }
+            
+            // MenuItems define a single accelerator.
+            // BACK_SPACE key must be handled same way as DELETE key.
+            if (isTextInputControlEditing(focusOwner) == false 
+                    && KeyCode.BACK_SPACE.equals(event.getCode())) {
+                if (editorController.canPerformEditAction(EditAction.DELETE)) {
+                    editorController.performEditAction(EditAction.DELETE);
+                }
+            }
+        }
+    };
     
     /*
      * DocumentWindowController
@@ -336,6 +419,18 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         final boolean result;
         
         switch(controlAction) {
+            case COPY:
+                result = canPerformCopy();
+                break;
+                
+            case SELECT_ALL:
+                result = canPerformSelectAll();
+                break;
+                
+            case SELECT_NONE:
+                result = canPerformSelectNone();
+                break;
+                
             case PRINT_FILE:
                 result = editorController.getFxomDocument() != null;
                 break;
@@ -345,6 +440,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
             case TOGGLE_CSS_PANEL:
             case TOGGLE_LEFT_PANEL:
             case TOGGLE_RIGHT_PANEL:
+            case TOGGLE_OUTLINES_VISIBILITY:
             case TOGGLE_GUIDES_VISIBILITY:
             case SHOW_PREVIEW_WINDOW:
                 result = true;
@@ -392,9 +488,12 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 break;
                 
             case SET_RESOURCE:
+                result = true;
+                break;
+                
             case REMOVE_RESOURCE:
             case REVEAL_RESOURCE:
-                result = true;
+                result = resourceController.getResourceFile() != null;
                 break;
                 
             case HELP:
@@ -421,6 +520,18 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         final PreferencesRecordDocument recordDocument = pc.getRecordDocument(this);
         
         switch(controlAction) {
+            case COPY:
+                performCopy();
+                break;
+                
+            case SELECT_ALL:
+                performSelectAll();
+                break;
+                
+            case SELECT_NONE:
+                performSelectNone();
+                break;
+                
             case SHOW_PREVIEW_WINDOW:
                 if (previewWindowController == null) {
                     previewWindowController = new PreviewWindowController(editorController, getStage());
@@ -516,6 +627,11 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 recordDocument.setDocumentVisible(documentSplitController.isTargetVisible());
                 break;
                 
+            case TOGGLE_OUTLINES_VISIBILITY:
+                contentPanelController.setOutlinesVisible(
+                        ! contentPanelController.isOutlinesVisible());
+                break;
+                
             case TOGGLE_GUIDES_VISIBILITY:
                 contentPanelController.setGuidesVisible(
                         ! contentPanelController.isGuidesVisible());
@@ -559,7 +675,45 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         }
     }
     
+    public boolean canPerformEditAction(DocumentEditAction editAction) {
+        final boolean result;
+        
+        switch(editAction) {
+            case CUT:
+                result = canPerformCut();
+                break;
+                
+            case PASTE:
+                result = canPerformPaste();
+                break;
+                
+            default:
+                result = false;
+                assert false;
+                break;
+        }
+       
+        return result;
+    }
     
+    public void performEditAction(DocumentEditAction editAction) {
+        assert canPerformEditAction(editAction);
+        
+        switch(editAction) {
+            case CUT:
+                performCut();
+                break;
+                
+            case PASTE:
+                performPaste();
+                break;
+                
+            default:
+                assert false;
+                break;
+        }
+    }
+                
     public boolean isLeftPanelVisible() {
         return leftSplitController.isTargetVisible();
     }
@@ -584,6 +738,9 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         return librarySplitController.isTargetVisible();
     }
     
+    public File getResourceFile() {
+        return resourceController.getResourceFile();
+    }
     
     public static class TitleComparator implements Comparator<DocumentWindowController> {
 
@@ -632,6 +789,13 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         assert libraryDocumentSplitPane.getItems().size() == 2;
         assert documentAccordion != null;
         assert documentAccordion.getPanes().isEmpty() == false;
+        assert libraryViewAsList != null;
+        assert libraryViewAsSections != null;
+        assert libraryReveal != null;
+        assert libraryMenuButton != null;
+        assert libraryImportSelection != null;
+        
+        mainSplitPane.addEventFilter(KeyEvent.KEY_PRESSED, mainKeyEventFilter);
         
         // Insert the menu bar
         assert getRoot() instanceof VBox;
@@ -708,6 +872,37 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 messageBarController.setDocumentDirty(currentJob != saveJob);
             }
         });
+        
+        // Setup title of the Library Reveal menu item according the underlying o/s.
+        final String revealMenuKey;
+        if (EditorPlatform.IS_MAC) {
+            revealMenuKey = "menu.title.reveal.mac";
+        } else if (EditorPlatform.IS_WINDOWS) {
+            revealMenuKey = "menu.title.reveal.win";
+        } else {
+            assert EditorPlatform.IS_LINUX;
+            revealMenuKey = "menu.title.reveal.linux";
+        }
+        libraryReveal.setText(I18N.getString(revealMenuKey));
+        
+        // We need to tune the content of the library menu according if there's
+        // or not a selection likely to be dropped onto Library panel.
+        libraryMenuButton.showingProperty().addListener(new ChangeListener<Boolean>() {
+
+            @Override
+            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
+                if (t1) {
+                    AbstractSelectionGroup asg = getEditorController().getSelection().getGroup();
+                    libraryImportSelection.setDisable(true);
+
+                    if (asg != null && asg instanceof ObjectSelectionGroup) {
+                        if (((ObjectSelectionGroup)asg).getItems().size() >= 1) {
+                            libraryImportSelection.setDisable(false);
+                        }
+                    }
+                }
+            }
+        });
     }
 
     @Override
@@ -723,7 +918,8 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
     public boolean isFrontDocumentWindow() {
         return getStage().isFocused()
                 || (previewWindowController != null && previewWindowController.getStage().isFocused())
-                || (skeletonWindowController != null && skeletonWindowController.getStage().isFocused());
+                || (skeletonWindowController != null && skeletonWindowController.getStage().isFocused())
+                || (jarAnalysisReportController != null && jarAnalysisReportController.getStage().isFocused());
     }
 
     public void performCloseFrontDocumentWindow() {
@@ -735,6 +931,9 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         } else if (skeletonWindowController != null
                 && skeletonWindowController.getStage().isFocused()) {
             skeletonWindowController.closeWindow();
+        } else if (jarAnalysisReportController != null
+                && jarAnalysisReportController.getStage().isFocused()) {
+            jarAnalysisReportController.closeWindow();
         }
     }
 
@@ -807,17 +1006,19 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
     @FXML
     void onHierarchyShowInfo(ActionEvent event) {
         hierarchyPanelController.setDisplayOption(AbstractHierarchyPanelController.DisplayOption.INFO);
-        
+        documentAccordion.setExpandedPane(documentAccordion.getPanes().get(0));
     }
     
     @FXML
     void onHierarchyShowFxId(ActionEvent event) {
         hierarchyPanelController.setDisplayOption(AbstractHierarchyPanelController.DisplayOption.FXID);
+        documentAccordion.setExpandedPane(documentAccordion.getPanes().get(0));
     }
     
     @FXML
     void onHierarchyShowNodeId(ActionEvent event) {
         hierarchyPanelController.setDisplayOption(AbstractHierarchyPanelController.DisplayOption.NODEID);
+        documentAccordion.setExpandedPane(documentAccordion.getPanes().get(0));
     }
     
     //
@@ -842,15 +1043,195 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         libraryPanelController.setDisplayMode(LibraryPanelController.DISPLAY_MODE.SECTIONS);
     }
 
+    // This method cannot be called if there is not a valid selection, a selection
+    // eligible for being dropped onto Library panel.
     @FXML
     void onLibraryImportSelection(ActionEvent event) {
-        System.out.println("[DocumentWindowController::onLibraryImportSelection] Not yet available"); //NOI18N
+        AbstractSelectionGroup asg = getEditorController().getSelection().getGroup();
+
+        if (asg != null && asg instanceof ObjectSelectionGroup) {
+            ObjectSelectionGroup osg = (ObjectSelectionGroup)asg;
+            
+            if (osg.getItems().size() >= 1) {
+                List<FXOMObject> selection = new ArrayList<FXOMObject>(osg.getItems());
+                libraryPanelController.performImportSelection(selection);
+            }
+        }
+    }
+    
+    @FXML
+    void onLibraryRevealCustomFolder(ActionEvent event) {
+        String userLibraryPath = ((UserLibrary) getEditorController().getLibrary()).getPath();
+        try {
+            EditorPlatform.revealInFileBrowser(new File(userLibraryPath));
+        } catch(IOException x) {
+            final ErrorDialog errorDialog = new ErrorDialog(null);
+            errorDialog.setMessage(I18N.getString("alert.reveal.failure.message", getStage().getTitle()));
+            errorDialog.setDetails(I18N.getString("alert.reveal.failure.details"));
+            errorDialog.setDebugInfoWithThrowable(x);
+            errorDialog.showAndWait();
+        }
+    }
+    
+    @FXML
+    void onLibraryShowJarAnalysisReport(ActionEvent event) {
+        if (jarAnalysisReportController == null) {
+            jarAnalysisReportController = new JarAnalysisReportController(getEditorController(), getStage());
+        }
+        
+        jarAnalysisReportController.openWindow();
     }
     
     /*
      * Private
      */
+
+    private boolean canPerformCopy() {
+        boolean result;
+        final Node focusOwner = this.getScene().getFocusOwner();
+        if (isTextInputControlEditing(focusOwner)) {
+            final TextInputControl tic = getTextInputControl(focusOwner);
+            result = tic.getSelectedText() != null && tic.getSelectedText().isEmpty() == false;
+        } else {
+            result = getEditorController().canPerformControlAction(ControlAction.COPY);
+        }
+        return result;
+    }
+
+    private void performCopy() {
+        final Node focusOwner = this.getScene().getFocusOwner();
+        if (isTextInputControlEditing(focusOwner)) {
+            final TextInputControl tic = getTextInputControl(focusOwner);
+            tic.copy();
+        } else {
+            this.getEditorController().performControlAction(ControlAction.COPY);
+        }
+    }
+
+    private boolean canPerformSelectAll() {
+        boolean result;
+        final Node focusOwner = this.getScene().getFocusOwner();
+        if (isTextInputControlEditing(focusOwner)) {
+            final TextInputControl tic = getTextInputControl(focusOwner);
+            result = tic.getText() != null && tic.getText().isEmpty() == false;
+            final String selectedText = tic.getSelectedText();
+            // Check if the TextInputControl is not already ALL selected
+            if (selectedText != null && selectedText.length() == tic.getText().length()) {
+                result = false;
+            }
+        } else {
+            result = getEditorController().canPerformControlAction(ControlAction.SELECT_ALL);
+        }
+        return result;
+    }
+
+    private void performSelectAll() {
+        final Node focusOwner = this.getScene().getFocusOwner();
+        if (isTextInputControlEditing(focusOwner)) {
+            final TextInputControl tic = getTextInputControl(focusOwner);
+            tic.selectAll();
+        } else {
+            this.getEditorController().performControlAction(ControlAction.SELECT_ALL);
+        }
+    }
+
+    private boolean canPerformSelectNone() {
+        boolean result;
+        final Node focusOwner = this.getScene().getFocusOwner();
+        if (isTextInputControlEditing(focusOwner)) {
+            final TextInputControl tic = getTextInputControl(focusOwner);
+            result = tic.getSelectedText() != null && tic.getSelectedText().isEmpty() == false;
+        } else {
+            result = getEditorController().canPerformControlAction(ControlAction.SELECT_NONE);
+        }
+        return result;
+    }
+
+    private void performSelectNone() {
+        final Node focusOwner = this.getScene().getFocusOwner();
+        if (isTextInputControlEditing(focusOwner)) {
+            final TextInputControl tic = getTextInputControl(focusOwner);
+            tic.deselect();
+        } else {
+            this.getEditorController().performControlAction(ControlAction.SELECT_NONE);
+        }
+    }
     
+    private boolean canPerformCut() {
+        boolean result;
+        final Node focusOwner = this.getScene().getFocusOwner();
+        if (isTextInputControlEditing(focusOwner)) {
+            final TextInputControl tic = getTextInputControl(focusOwner);
+            result = tic.getSelectedText() != null && tic.getSelectedText().isEmpty() == false;
+        } else {
+            result = getEditorController().canPerformEditAction(EditAction.CUT);
+        }
+        return result;
+    }
+    
+    private void performCut() {
+        final Node focusOwner = this.getScene().getFocusOwner();
+        if (isTextInputControlEditing(focusOwner)) {
+            final TextInputControl tic = getTextInputControl(focusOwner);
+            tic.cut();
+        } else {
+            this.getEditorController().performEditAction(EditAction.CUT);
+        }
+    }
+
+    private boolean canPerformPaste() {
+        boolean result;
+        final Node focusOwner = this.getScene().getFocusOwner();
+        if (isTextInputControlEditing(focusOwner)) {
+            result = Clipboard.getSystemClipboard().hasString();
+        } else {
+            result = getEditorController().canPerformEditAction(EditAction.PASTE);
+        }
+        return result;
+    }
+    
+    private void performPaste() {
+        final Node focusOwner = this.getScene().getFocusOwner();
+        if (isTextInputControlEditing(focusOwner)) {
+            final TextInputControl tic = getTextInputControl(focusOwner);
+            tic.paste();
+        } else {
+            this.getEditorController().performEditAction(EditAction.PASTE);
+        }
+    }
+
+    /**
+     * Returns true if the specified node is either a TextInputControl or a ComboBox.
+     */
+    private boolean isTextInputControlEditing(Node node) {
+        return (node instanceof TextInputControl
+                || node instanceof ComboBox);
+    }
+
+    private TextInputControl getTextInputControl(Node node) {
+        assert isTextInputControlEditing(node);
+        final TextInputControl tic;
+        if (node instanceof TextInputControl) {
+            tic = (TextInputControl) node;
+        } else {
+            assert node instanceof ComboBox;
+            final ComboBox<?> cb = (ComboBox<?>) node;
+            tic = cb.getEditor();
+        }
+        return tic;
+    }
+    
+    private KeyCombination getAccelerator(final KeyEvent event) {
+        KeyCombination result = null;
+        for (KeyCombination kc : menuBarController.getAccelerators()) {
+            if (kc.match(event)) {
+                result = kc;
+                break;
+            }
+        }
+        return result;
+    }
+
     private void updateStageTitle() {
         getStage().setTitle(makeTitle(editorController.getFxomDocument()));
     }
@@ -1205,5 +1586,20 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
             errorDialog.setDebugInfoWithThrowable(ioe);
             errorDialog.showAndWait();
         }
+    }
+}
+
+/**
+ * This class setup key bindings for the TextInputControl type classes and
+ * provide a way to access the key binding list.
+ */
+class SBTextInputControlBindings extends com.sun.javafx.scene.control.behavior.TextInputControlBindings {
+
+    private SBTextInputControlBindings() {
+        assert false;
+    }
+
+    public static List<KeyBinding> getBindings() {
+        return BINDINGS;
     }
 }

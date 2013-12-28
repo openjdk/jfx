@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -103,16 +103,16 @@ class GridPaneMosaic {
         this.shouldCreateSensors = shouldCreateSensors;
         
         final List<Node> topChildren = topGroup.getChildren();
-        topChildren.add(gridPath);
-        topChildren.add(hgapLinesGroup);
-        topChildren.add(vgapLinesGroup);
+        topChildren.add(gridPath);              // Mouse transparent
+        topChildren.add(hgapLinesGroup);        // Mouse transparent
+        topChildren.add(vgapLinesGroup);        // Mouse transparent
         topChildren.add(northTrayGroup);
         topChildren.add(southTrayGroup);
         topChildren.add(westTrayGroup);
         topChildren.add(eastTrayGroup);
-        topChildren.add(targetCellShadow);
-        topChildren.add(targetGapShadowV);
-        topChildren.add(targetGapShadowH);
+        topChildren.add(targetCellShadow);      // Mouse transparent
+        topChildren.add(targetGapShadowV);      // Mouse transparent
+        topChildren.add(targetGapShadowH);      // Mouse transparent
         topChildren.add(hgapSensorsGroup);
         topChildren.add(vgapSensorsGroup);
         gridAreaQuad.addToPath(gridPath);
@@ -120,6 +120,9 @@ class GridPaneMosaic {
         gridPath.setMouseTransparent(true);
         gridPath.getStyleClass().add("gap");
         gridPath.getStyleClass().add(baseStyleClass);
+        
+        hgapLinesGroup.setMouseTransparent(true);
+        vgapLinesGroup.setMouseTransparent(true);
         
         targetCellShadow.setMouseTransparent(true);
         targetCellShadow.getStyleClass().add("gap");

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -73,49 +73,52 @@ public class PasteJob extends CompositeJob {
                     = clipboardDecoder.decode(fxomDocument);
             assert newObjects != null; // But possible empty
 
-            // Retrieve the target FXOMObject :
-            // If the document is empty (root object is null), then the target 
-            // object is null.
-            // If the selection is root or is empty, the target object is
-            // the root object.
-            // Otherwise, the target object is the selection common ancestor.
-            final FXOMObject targetObject;
-            if (fxomDocument.getFxomRoot() == null) {
-                targetObject = null;
-            } else {
-                final Selection selection = getEditorController().getSelection();
-                final FXOMObject rootObject = fxomDocument.getFxomRoot();
-                if (selection.isEmpty() || selection.isSelected(rootObject)) {
-                    targetObject = rootObject;
+            if (newObjects.isEmpty() == false) {
+                
+                // Retrieve the target FXOMObject :
+                // If the document is empty (root object is null), then the target 
+                // object is null.
+                // If the selection is root or is empty, the target object is
+                // the root object.
+                // Otherwise, the target object is the selection common ancestor.
+                final FXOMObject targetObject;
+                if (fxomDocument.getFxomRoot() == null) {
+                    targetObject = null;
                 } else {
-                    targetObject = selection.getAncestor();
+                    final Selection selection = getEditorController().getSelection();
+                    final FXOMObject rootObject = fxomDocument.getFxomRoot();
+                    if (selection.isEmpty() || selection.isSelected(rootObject)) {
+                        targetObject = rootObject;
+                    } else {
+                        targetObject = selection.getAncestor();
+                    }
                 }
-            }
-            assert (targetObject != null) || (fxomDocument.getFxomRoot() == null);
+                assert (targetObject != null) || (fxomDocument.getFxomRoot() == null);
 
-            if (targetObject == null) {
-                // Document is empty : only one object can be inserted
-                if (newObjects.size() == 1) {
-                    final FXOMObject newObject0 = newObjects.get(0);
-                    final SetDocumentRootJob subJob = new SetDocumentRootJob(
-                            newObject0,
-                            getEditorController());
-                    result.add(subJob);
-                    result.add(new UpdateSelectionJob(newObject0, getEditorController()));
-                }
-            } else {
-                // Build InsertAsSubComponent jobs
-                final DesignHierarchyMask targetMask = new DesignHierarchyMask(targetObject);
-                if (targetMask.isAcceptingSubComponent(newObjects)) {
-                    for (FXOMObject newObject : newObjects) {
-                        final InsertAsSubComponentJob subJob = new InsertAsSubComponentJob(
-                                newObject,
-                                targetObject,
-                                targetMask.getSubComponentCount(),
+                if (targetObject == null) {
+                    // Document is empty : only one object can be inserted
+                    if (newObjects.size() == 1) {
+                        final FXOMObject newObject0 = newObjects.get(0);
+                        final SetDocumentRootJob subJob = new SetDocumentRootJob(
+                                newObject0,
                                 getEditorController());
                         result.add(subJob);
+                        result.add(new UpdateSelectionJob(newObject0, getEditorController()));
                     }
-                    result.add(new UpdateSelectionJob(newObjects, getEditorController()));
+                } else {
+                    // Build InsertAsSubComponent jobs
+                    final DesignHierarchyMask targetMask = new DesignHierarchyMask(targetObject);
+                    if (targetMask.isAcceptingSubComponent(newObjects)) {
+                        for (FXOMObject newObject : newObjects) {
+                            final InsertAsSubComponentJob subJob = new InsertAsSubComponentJob(
+                                    newObject,
+                                    targetObject,
+                                    targetMask.getSubComponentCount(),
+                                    getEditorController());
+                            result.add(subJob);
+                        }
+                        result.add(new UpdateSelectionJob(newObjects, getEditorController()));
+                    }
                 }
             }
         }

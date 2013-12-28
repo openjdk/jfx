@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -63,6 +63,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.Stylesh
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.DividerPositionsEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.TextAlignmentEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.popupeditors.BoundsPopupEditor;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.popupeditors.KeyCombinationPopupEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.popupeditors.PaintPopupEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractFxmlPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
@@ -87,6 +88,7 @@ import com.oracle.javafx.scenebuilder.kit.metadata.property.value.InsetsProperty
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.IntegerPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.Point3DPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.StringPropertyMetadata;
+import com.oracle.javafx.scenebuilder.kit.metadata.property.value.keycombination.KeyCombinationPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.list.ListValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.paint.PaintPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
@@ -199,6 +201,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     private String searchPattern;
     private SectionId previousExpandedSection;
     private PropertyEditor lastPropertyEditorValueChanged = null;
+    private boolean resetInProgress = false;
     //
     // Editor pools
     private final Stack<Editor> i18nStringEditorPool = new Stack<>();
@@ -223,6 +226,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     private final Stack<Editor> point3DEditorPool = new Stack<>();
     private final Stack<Editor> dividerPositionsEditorPool = new Stack<>();
     private final Stack<Editor> textAlignmentEditorPool = new Stack<>();
+    private final Stack<Editor> keyCombinationPopupEditorPool = new Stack<>();
     // ...
     //
     // Subsection title pool
@@ -282,6 +286,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         editorPools.put(Point3DEditor.class, point3DEditorPool);
         editorPools.put(DividerPositionsEditor.class, dividerPositionsEditorPool);
         editorPools.put(TextAlignmentEditor.class, textAlignmentEditorPool);
+        editorPools.put(KeyCombinationPopupEditor.class, keyCombinationPopupEditorPool);
         // ...
     }
 
@@ -582,6 +587,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         // - reset the value
 //        System.out.println("Refresh all the editors in use...");
 
+        resetInProgress = true;
         for (Editor editor : editorsInUse) {
 
             if (editor instanceof PropertyEditor) {
@@ -595,6 +601,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
             }
             setEditorValueFromSelection(editor);
         }
+        resetInProgress = false;
     }
 
     private void buildExpandedSection() {
@@ -1094,6 +1101,9 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         propertyEditor.addIndeterminateListener(new ChangeListener<Boolean>() {
             @Override
             public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
+                if (resetInProgress) {
+                    return;
+                }
                 if (!newValue) {
                     // value is not anymore indeterminate: commit the current value
                     updateValueInModel(propertyEditor, null, propertyEditor.getValue());
@@ -1329,6 +1339,9 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         } else if (propMeta instanceof Point3DPropertyMetadata) {
             // Point3D editor
             propertyEditor = makePropertyEditor(Point3DEditor.class, propMeta);
+        } else if (propMeta instanceof KeyCombinationPropertyMetadata) {
+            // KeyCombination editor
+            propertyEditor = makePropertyEditor(KeyCombinationPopupEditor.class, propMeta);
         } else {
             // Generic editor
             propertyEditor = makePropertyEditor(GenericEditor.class, propMeta);
@@ -1644,6 +1657,12 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
                 ((TextAlignmentEditor) propertyEditor).reset(propMeta, selectedClasses);
             } else {
                 propertyEditor = new TextAlignmentEditor(propMeta, selectedClasses);
+            }
+        } else if (editorClass == KeyCombinationPopupEditor.class) {
+            if (propertyEditor != null) {
+                ((KeyCombinationPopupEditor) propertyEditor).reset(propMeta, selectedClasses);
+            } else {
+                propertyEditor = new KeyCombinationPopupEditor(propMeta, selectedClasses);
             }
         } else {
             if (propertyEditor != null) {

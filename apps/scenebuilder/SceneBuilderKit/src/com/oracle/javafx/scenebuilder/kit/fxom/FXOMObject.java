@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -393,6 +393,16 @@ public abstract class FXOMObject extends FXOMNode {
     
     protected abstract void collectObjectWithSceneGraphObjectClass(Class<?> sceneGraphObjectClass, List<FXOMObject> result);
     
+    public List<FXOMPropertyT> collectEventHandlers() {
+        final List<FXOMPropertyT> result = new ArrayList<>();
+        
+        collectEventHandlers(result);
+        
+        return result;
+    }
+    
+    protected abstract void collectEventHandlers(List<FXOMPropertyT> result);
+    
     /*
      * Utilities
      */
@@ -409,6 +419,8 @@ public abstract class FXOMObject extends FXOMNode {
         }
         return result;
     }
+    
+    public abstract List<FXOMObject> getChildObjects();
     
     public boolean isDescendantOf(FXOMObject other) {
         final boolean result;
@@ -530,55 +542,6 @@ public abstract class FXOMObject extends FXOMNode {
         } else {
             glueElement.getAttributes().put("xmlns:fx", nameSpace);
         }
-    }
-    
-    /**
-     * Resolve a location property value (eg "@my_image.png").
-     * 
-     * @param arobasValue a string which starts with "@"
-     * 
-     * @return null or the location url
-     */
-    public URL resolveLocation(String arobasValue) {
-        URL result;
-        
-        assert arobasValue != null;
-        assert arobasValue.startsWith("@");
-        
-        final String baseValue = arobasValue.substring(1);
-        
-        if (baseValue.startsWith("/")) {
-            // The value is relative to the classpath
-            if (getSceneGraphObject() == null) {
-                result = null;
-            } else {
-                result = getSceneGraphObject().getClass().getResource(baseValue);
-            }
-        } else {
-            // The value is relative to the document location
-            final URL documentLocation = getFxomDocument().getLocation();
-            if (documentLocation == null) {
-                // This document has not location yet
-                result = null;
-            } else {
-                // Construct the absolute URL with this.location and arobasValue
-                try {
-                    final URI uri = documentLocation.toURI();
-                    final URI resolvedURI = uri.resolve(baseValue);
-                    if (resolvedURI.isAbsolute()) {
-                        result = resolvedURI.toURL();
-                    } else {
-                        result = null;
-                    }
-                } catch(URISyntaxException x) {
-                    throw new IllegalStateException("Bug", x);
-                } catch(MalformedURLException x) {
-                    result = null;
-                }
-            }
-        }
-        
-        return result;
     }
 
     /*

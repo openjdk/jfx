@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -75,33 +75,70 @@ public class EditorPlatform {
     public enum Theme {
 
         MODENA,
-        CASPIAN
+        MODENA_TOUCH,
+        CASPIAN,
+        CASPIAN_HIGH_CONTRAST,
+        CASPIAN_EMBEDDED,
+        CASPIAN_EMBEDDED_HIGH_CONTRAST,
+        CASPIAN_EMBEDDED_QVGA,
+        CASPIAN_EMBEDDED_QVGA_HIGH_CONTRAST
     }
 
     private final static URL caspianThemeUrl = Deprecation.getCaspianStylesheetURL();
+    private final static URL caspianHighContrastThemeUrl = Deprecation.getCaspianHighContrastStylesheetURL();
+    private final static URL caspianEmbeddedThemeUrl = Deprecation.getCaspianEmbeddedStylesheetURL();
+    private final static URL caspianEmbeddedQVGAThemeUrl = Deprecation.getCaspianEmbeddedQVGAStylesheetURL();
     private final static URL modenaThemeUrl = Deprecation.getModenaStylesheetURL();
+    private final static URL modenaTouchThemeUrl = Deprecation.getModenaTouchStylesheetURL();
 
     /**
-     * Returns url for locating the specified stylesheet in jfxrt.jar.
+     * Returns the list of url for locating the specified set of stylesheet in jfxrt.jar.
      *
-     * @param theme theme for which url should be computed
-     * @return url for locating the specified stylesheet.
+     * @param theme theme for which list of url should be computed
+     * @return list of url for locating the specified stylesheet.
      */
-    public static URL getThemeStylesheetURL(Theme theme) {
-        final URL result;
+    public static List<URL> getThemeStylesheetURLs(Theme theme) {
+        final List<URL> result = new ArrayList<>();
 
         switch (theme) {
             default:
-                result = null;
                 break;
             case MODENA:
-                result = modenaThemeUrl;
+                result.add(modenaThemeUrl);
+                break;
+            case MODENA_TOUCH:
+                result.add(modenaThemeUrl);
+                result.add(modenaTouchThemeUrl);
                 break;
             case CASPIAN:
-                result = caspianThemeUrl;
+                result.add(caspianThemeUrl);
+                break;
+            case CASPIAN_HIGH_CONTRAST:
+                result.add(caspianThemeUrl);
+                result.add(caspianHighContrastThemeUrl);
+                break;
+            case CASPIAN_EMBEDDED:
+                result.add(caspianThemeUrl);
+                result.add(caspianEmbeddedThemeUrl);
+                break;
+            case CASPIAN_EMBEDDED_HIGH_CONTRAST:
+                result.add(caspianThemeUrl);
+                result.add(caspianEmbeddedThemeUrl);
+                result.add(caspianHighContrastThemeUrl);
+                break;
+            case CASPIAN_EMBEDDED_QVGA:
+                result.add(caspianThemeUrl);
+                result.add(caspianEmbeddedThemeUrl);
+                result.add(caspianEmbeddedQVGAThemeUrl);
+                break;
+            case CASPIAN_EMBEDDED_QVGA_HIGH_CONTRAST:
+                result.add(caspianThemeUrl);
+                result.add(caspianEmbeddedThemeUrl);
+                result.add(caspianEmbeddedQVGAThemeUrl);
+                result.add(caspianHighContrastThemeUrl);
                 break;
         }
-        assert result != null : "Missing logic for " + theme;
+        assert !result.isEmpty() : "Missing logic for " + theme;
 
         return result;
     }

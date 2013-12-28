@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  */
 #ifndef JSC_UNICODE_JAVA_H
 #define JSC_UNICODE_JAVA_H

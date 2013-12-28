@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -84,6 +84,10 @@ public class Deprecation {
 //    // RT-21096 : Promote impl_getStyleMap / impl_setStyleMap to public API
     public static ObservableMap<StyleableProperty<?>, List<Style>> getStyleMap(Node node) {
         return node.impl_getStyleMap();
+    }
+    
+    public static void reapplyCSS(Node node) {
+        node.impl_reapplyCSS();
     }
 
     // Retrieve the node of the Styleable.
@@ -196,8 +200,32 @@ public class Deprecation {
     }
     
     
+    public static URL getCaspianHighContrastStylesheetURL() {
+        final String resourceName = "com/sun/javafx/scene/control/skin/caspian/highcontrast.bss"; //NOI18N
+        return ClassLoader.getSystemResource(resourceName);
+    }
+    
+    
+    public static URL getCaspianEmbeddedStylesheetURL() {
+        final String resourceName = "com/sun/javafx/scene/control/skin/caspian/embedded.bss"; //NOI18N
+        return ClassLoader.getSystemResource(resourceName);
+    }
+    
+    
+    public static URL getCaspianEmbeddedQVGAStylesheetURL() {
+        final String resourceName = "com/sun/javafx/scene/control/skin/caspian/embedded-qvga.bss"; //NOI18N
+        return ClassLoader.getSystemResource(resourceName);
+    }
+    
+    
     public static URL getModenaStylesheetURL() {
         final String resourceName = "com/sun/javafx/scene/control/skin/modena/modena.bss"; //NOI18N
+        return ClassLoader.getSystemResource(resourceName);
+    }
+    
+    
+    public static URL getModenaTouchStylesheetURL() {
+        final String resourceName = "com/sun/javafx/scene/control/skin/modena/touch.bss"; //NOI18N
         return ClassLoader.getSystemResource(resourceName);
     }
 

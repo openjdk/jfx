@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -41,8 +41,10 @@ import com.oracle.javafx.scenebuilder.kit.metadata.klass.ComponentClassMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.PropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.ImagePropertyMetadata;
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -50,7 +52,6 @@ import java.util.ResourceBundle;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.Clipboard;
-import javafx.scene.input.DataFormat;
 
 /**
  *
@@ -100,18 +101,40 @@ public class ClipboardDecoder {
             }
         }
         
-        // DataFormat.IMAGE
-        if ((result == null) 
-                && clipboard.hasContent(DataFormat.IMAGE)) {
-            final Object content = clipboard.getContent(DataFormat.IMAGE);
-            if (content instanceof Image) {
-                final Image image = (Image) content;
-                try {
-                    final FXOMDocument transientDoc = 
-                            makeFxomDocumentFromImageURL(image, 200.0);
-                    result = Arrays.asList(transientDoc.getFxomRoot());
-                } catch(IOException x) {
-                    result = null;
+        // DataFormat.FILES
+        if ((result == null) && clipboard.hasFiles()) {
+            result = new ArrayList<>();
+            for (File f : clipboard.getFiles()) {
+                if (f.getAbsolutePath().endsWith(".fxml")) { //NOI18N
+                    try {
+                        final String fxmlText 
+                                = FXOMDocument.readContentFromURL(f.toURI().toURL());
+                        final FXOMDocument transientDoc = new FXOMDocument(
+                                fxmlText,
+                                targetDocument.getLocation(),
+                                targetDocument.getClassLoader(),
+                                targetDocument.getResources());
+                        final FXOMObject fxomObject = transientDoc.getFxomRoot();
+                        fxomObject.moveToFxomDocument(targetDocument);
+                        result.add(fxomObject);
+                    } catch(IOException x) {
+                        // Then we silently ignore this file
+                    }
+                } else {
+                    // Try load the file has an image
+                    try {
+                        final String fileURL = f.toURI().toURL().toString();
+                        final Image image = new Image(fileURL);
+                        if (image.isError() == false) {
+                            final FXOMDocument transientDoc = 
+                                    makeFxomDocumentFromImageURL(image, 200.0);
+                            final FXOMObject fxomObject = transientDoc.getFxomRoot();
+                            fxomObject.moveToFxomDocument(targetDocument);
+                            result.add(fxomObject);
+                       }
+                    } catch(IOException x) {
+                        // Then we silently ignore this file
+                    }
                 }
             }
         }

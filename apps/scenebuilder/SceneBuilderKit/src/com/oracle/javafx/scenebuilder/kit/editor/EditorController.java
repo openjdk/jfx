@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -51,19 +51,8 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.AddRowJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.GridPaneJobUtils.Position;
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.MoveColumnJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.MoveRowJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.AbstractWrapInJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.UnwrapJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.WrapInAnchorPaneJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.WrapInGridPaneJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.WrapInGroupJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.WrapInHBoxJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.WrapInPaneJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.WrapInScrollPaneJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.WrapInSplitPaneJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.WrapInStackPaneJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.WrapInTabPaneJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.WrapInTitledPaneJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.WrapInToolBarJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.WrapInVBoxJob;
 import com.oracle.javafx.scenebuilder.kit.editor.messagelog.MessageLog;
 import com.oracle.javafx.scenebuilder.kit.editor.util.InlineEditController;
 import com.oracle.javafx.scenebuilder.kit.editor.report.ErrorReport;
@@ -102,6 +91,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableListValue;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
+import javafx.scene.Parent;
 import javafx.scene.effect.Effect;
 import javafx.scene.input.Clipboard;
 import javafx.util.Callback;
@@ -183,10 +173,7 @@ public class EditorController {
         SELECT_NEXT,
         SELECT_PREVIOUS,
         TOGGLE_CSS_SELECTION,
-        TOGGLE_SAMPLE_DATA,
-        // Candidates for Modify - GridPane
-        SELECT_NEXT_ROW,
-        SELECT_NEXT_COLUMN,
+        TOGGLE_SAMPLE_DATA
     }
     
     private final Selection selection = new Selection();
@@ -211,8 +198,6 @@ public class EditorController {
             = new SimpleObjectProperty<>(Theme.MODENA);
     private final ListProperty<File> sceneStyleSheetProperty
             = new SimpleListProperty<>();
-    private final ObjectProperty<File> resourceProperty
-            = new SimpleObjectProperty<>(null);
     private final BooleanProperty pickModeEnabledProperty
             = new SimpleBooleanProperty(true);
     private final BooleanProperty sampleDataEnabledProperty
@@ -474,33 +459,6 @@ public class EditorController {
      */
     public ObservableListValue<File> sceneStyleSheetProperty() {
         return sceneStyleSheetProperty;
-    }
-    
-    /**
-     * 
-     * @return the resource used by this editor.
-     */
-    public File getResource() {
-        return resourceProperty.getValue();
-    }
-    
-    /**
-     * The resource bundle is provided as a property file.
-     * 
-     * @param resource the resource bundle to be used by this editor.
-     */
-    public void setResource(File resource) {
-        resourceProperty.setValue(resource);
-    }
-    
-    /**
-     * The property holding the resource used by this editor.
-     * 
-     * @return the property holding the resource used by the editor,
-     * or null if has not been set.
-     */
-    public ObservableValue<File> resourceProperty() {
-        return resourceProperty;
     }
     
     /**
@@ -858,63 +816,51 @@ public class EditorController {
                 break;
             }
             case WRAP_IN_ANCHOR_PANE: {
-                final WrapInAnchorPaneJob job = new WrapInAnchorPaneJob(this);
-                jobManager.push(job);
+                performWrap(javafx.scene.layout.AnchorPane.class);
                 break;
             }
             case WRAP_IN_GRID_PANE: {
-                final WrapInGridPaneJob job = new WrapInGridPaneJob(this);
-                jobManager.push(job);
+                performWrap(javafx.scene.layout.GridPane.class);
                 break;
             }
             case WRAP_IN_GROUP: {
-                final WrapInGroupJob job = new WrapInGroupJob(this);
-                jobManager.push(job);
+                performWrap(javafx.scene.Group.class);
                 break;
             }
             case WRAP_IN_HBOX: {
-                final WrapInHBoxJob job = new WrapInHBoxJob(this);
-                jobManager.push(job);
+                performWrap(javafx.scene.layout.HBox.class);
                 break;
             }
             case WRAP_IN_PANE: {
-                final WrapInPaneJob job = new WrapInPaneJob(this);
-                jobManager.push(job);
+                performWrap(javafx.scene.layout.Pane.class);
                 break;
             }
             case WRAP_IN_SCROLL_PANE: {
-                final WrapInScrollPaneJob job = new WrapInScrollPaneJob(this);
-                jobManager.push(job);
+                performWrap(javafx.scene.control.ScrollPane.class);
                 break;
             }
             case WRAP_IN_SPLIT_PANE: {
-                final WrapInSplitPaneJob job = new WrapInSplitPaneJob(this);
-                jobManager.push(job);
+                performWrap(javafx.scene.control.SplitPane.class);
                 break;
             }
             case WRAP_IN_STACK_PANE: {
-                final WrapInStackPaneJob job = new WrapInStackPaneJob(this);
-                jobManager.push(job);
+                performWrap(javafx.scene.layout.StackPane.class);
                 break;
             }
             case WRAP_IN_TAB_PANE: {
-                final WrapInTabPaneJob job = new WrapInTabPaneJob(this);
-                jobManager.push(job);
+                performWrap(javafx.scene.control.TabPane.class);
                 break;
             }
             case WRAP_IN_TITLED_PANE: {
-                final WrapInTitledPaneJob job = new WrapInTitledPaneJob(this);
-                jobManager.push(job);
+                performWrap(javafx.scene.control.TitledPane.class);
                 break;
             }
             case WRAP_IN_TOOL_BAR: {
-                final WrapInToolBarJob job = new WrapInToolBarJob(this);
-                jobManager.push(job);
+                performWrap(javafx.scene.control.ToolBar.class);
                 break;
             }
             case WRAP_IN_VBOX: {
-                final WrapInVBoxJob job = new WrapInVBoxJob(this);
-                jobManager.push(job);
+                performWrap(javafx.scene.layout.VBox.class);
                 break;
             }
             default:
@@ -1040,63 +986,51 @@ public class EditorController {
                 break;
             }
             case WRAP_IN_ANCHOR_PANE: {
-                final WrapInAnchorPaneJob job = new WrapInAnchorPaneJob(this);
-                result = job.isExecutable();
+                result = canPerformWrap(javafx.scene.layout.AnchorPane.class);
                 break;
             }
             case WRAP_IN_GRID_PANE: {
-                final WrapInGridPaneJob job = new WrapInGridPaneJob(this);
-                result = job.isExecutable();
+                result = canPerformWrap(javafx.scene.layout.GridPane.class);
                 break;
             }
             case WRAP_IN_GROUP: {
-                final WrapInGroupJob job = new WrapInGroupJob(this);
-                result = job.isExecutable();
+                result = canPerformWrap(javafx.scene.Group.class);
                 break;
             }
             case WRAP_IN_HBOX: {
-                final WrapInHBoxJob job = new WrapInHBoxJob(this);
-                result = job.isExecutable();
+                result = canPerformWrap(javafx.scene.layout.HBox.class);
                 break;
             }
             case WRAP_IN_PANE: {
-                final WrapInPaneJob job = new WrapInPaneJob(this);
-                result = job.isExecutable();
+                result = canPerformWrap(javafx.scene.layout.Pane.class);
                 break;
             }
             case WRAP_IN_SCROLL_PANE: {
-                final WrapInScrollPaneJob job = new WrapInScrollPaneJob(this);
-                result = job.isExecutable();
+                result = canPerformWrap(javafx.scene.control.ScrollPane.class);
                 break;
             }
             case WRAP_IN_SPLIT_PANE: {
-                final WrapInSplitPaneJob job = new WrapInSplitPaneJob(this);
-                result = job.isExecutable();
+                result = canPerformWrap(javafx.scene.control.SplitPane.class);
                 break;
             }
             case WRAP_IN_STACK_PANE: {
-                final WrapInStackPaneJob job = new WrapInStackPaneJob(this);
-                result = job.isExecutable();
+                result = canPerformWrap(javafx.scene.layout.StackPane.class);
                 break;
             }
             case WRAP_IN_TAB_PANE: {
-                final WrapInTabPaneJob job = new WrapInTabPaneJob(this);
-                result = job.isExecutable();
+                result = canPerformWrap(javafx.scene.control.TabPane.class);
                 break;
             }
             case WRAP_IN_TITLED_PANE: {
-                final WrapInTitledPaneJob job = new WrapInTitledPaneJob(this);
-                result = job.isExecutable();
+                result = canPerformWrap(javafx.scene.control.TitledPane.class);
                 break;
             }
             case WRAP_IN_TOOL_BAR: {
-                final WrapInToolBarJob job = new WrapInToolBarJob(this);
-                result = job.isExecutable();
+                result = canPerformWrap(javafx.scene.control.ToolBar.class);
                 break;
             }
             case WRAP_IN_VBOX: {
-                final WrapInVBoxJob job = new WrapInVBoxJob(this);
-                result = job.isExecutable();
+                result = canPerformWrap(javafx.scene.layout.VBox.class);
                 break;
             }
             default:
@@ -1287,26 +1221,60 @@ public class EditorController {
     
     /**
      * Performs the 'wrap' edit action. This action creates an object
-     * matching the specified library item and reparent all the selected objects
+     * matching the specified class and reparent all the selected objects
      * below this new object.
      * 
-     * @param wrappingLibraryItem the library item describing the wrapping object
+     * @param wrappingClass the wrapping class
      */
-    public void performWrap(Object wrappingLibraryItem) {
-        throw new UnsupportedOperationException("Not yet implemented"); //NOI18N
+    public void performWrap(Class<? extends Parent> wrappingClass) {
+        assert canPerformWrap(wrappingClass);
+        final AbstractWrapInJob job = AbstractWrapInJob.getWrapInJob(this, wrappingClass);
+        jobManager.push(job);
     }
     
     /**
-     * Returns true if the 'wrap' action is permitted with the specified 
-     * library item.
-     * 
-     * @param wrappingLibraryItem the item describing the wrapping object.
+     * Returns true if the 'wrap' action is permitted with the specified class.
+     *
+     * @param wrappingClass the wrapping class.
      * @return true if the 'wrap' action is permitted.
      */
-    public boolean canPerformWrap(Object wrappingLibraryItem) {
-        throw new UnsupportedOperationException("Not yet implemented"); //NOI18N
+    public boolean canPerformWrap(Class<? extends Parent> wrappingClass) {
+        if (getClassesSupportingWrapping().contains(wrappingClass) == false) {
+            return false;
+        }
+        final AbstractWrapInJob job = AbstractWrapInJob.getWrapInJob(this, wrappingClass);
+        return job.isExecutable();
     }
-    
+
+    private static List<Class<? extends Parent>> classesSupportingWrapping;
+
+    /**
+     * Return the list of classes that can be passed to 
+     * {@link EditorController#performWrap(java.lang.Class)}.
+     * 
+     * @return the list of classes.
+     */
+    public synchronized static Collection<Class<? extends Parent>> getClassesSupportingWrapping() {
+        if (classesSupportingWrapping == null) {
+            classesSupportingWrapping = new ArrayList<>();
+            classesSupportingWrapping.add(javafx.scene.layout.AnchorPane.class);
+            classesSupportingWrapping.add(javafx.scene.layout.GridPane.class);
+            classesSupportingWrapping.add(javafx.scene.Group.class);
+            classesSupportingWrapping.add(javafx.scene.layout.HBox.class);
+            classesSupportingWrapping.add(javafx.scene.layout.Pane.class);
+            classesSupportingWrapping.add(javafx.scene.control.ScrollPane.class);
+            classesSupportingWrapping.add(javafx.scene.control.SplitPane.class);
+            classesSupportingWrapping.add(javafx.scene.layout.StackPane.class);
+            classesSupportingWrapping.add(javafx.scene.control.TabPane.class);
+            classesSupportingWrapping.add(javafx.scene.control.TitledPane.class);
+            classesSupportingWrapping.add(javafx.scene.control.ToolBar.class);
+            classesSupportingWrapping.add(javafx.scene.layout.VBox.class);
+            classesSupportingWrapping = Collections.unmodifiableList(classesSupportingWrapping);
+        }
+        
+        return classesSupportingWrapping;
+    }
+
     /**
      * Performs the copy control action.
      */
@@ -1461,7 +1429,28 @@ public class EditorController {
             selection.select(nextSibling);
         } else {
             assert asg instanceof GridSelectionGroup; // Because of (1)
-            // Map to the SELECT_NEXT_ROW/SELECT_NEXT_COLUMN control action
+            final GridSelectionGroup gsg = (GridSelectionGroup) asg;
+            final FXOMObject gridPane = gsg.getParentObject();
+            final DesignHierarchyMask mask = new DesignHierarchyMask(gridPane);
+            assert gridPane instanceof FXOMInstance;
+            final Set<Integer> indexes = gsg.getIndexes();
+            assert indexes.size() == 1; // Because of (1)
+            int selectedIndex = indexes.iterator().next();
+            int nextIndex = selectedIndex + 1;
+            int size = 0;
+            switch (gsg.getType()) {
+                case ROW:
+                    size = mask.getRowsSize();
+                    break;
+                case COLUMN:
+                    size = mask.getColumnsSize();
+                    break;
+                default:
+                    assert false;
+                    break;
+            }
+            assert nextIndex < size; // Because of (1)
+            selection.select((FXOMInstance) gridPane, gsg.getType(), nextIndex);
         }
     }
 
@@ -1487,7 +1476,27 @@ public class EditorController {
             final FXOMObject selectedObject = items.iterator().next();
             return selectedObject.getNextSlibing() != null;
         } else if (asg instanceof GridSelectionGroup) {
-            // Map to the SELECT_NEXT_ROW/SELECT_NEXT_COLUMN control action
+            final GridSelectionGroup gsg = (GridSelectionGroup) asg;
+            final Set<Integer> indexes = gsg.getIndexes();
+            if (indexes.size() != 1) {
+                return false;
+            }
+            final FXOMObject gridPane = gsg.getParentObject();
+            final DesignHierarchyMask mask = new DesignHierarchyMask(gridPane);
+            int size = 0;
+            switch (gsg.getType()) {
+                case ROW:
+                    size = mask.getRowsSize();
+                    break;
+                case COLUMN:
+                    size = mask.getColumnsSize();
+                    break;
+                default:
+                    assert false;
+                    break;
+            }
+            final int index = indexes.iterator().next();
+            return index < size - 1;
         } else {
             assert selection.getGroup() == null :
                     "Add implementation for " + selection.getGroup(); //NOI18N
@@ -1512,7 +1521,15 @@ public class EditorController {
             selection.select(previousSibling);
         } else {
             assert asg instanceof GridSelectionGroup; // Because of (1)
-            // Map to the SELECT_PREVIOUS_ROW/SELECT_PREVIOUS_COLUMN control action
+            final GridSelectionGroup gsg = (GridSelectionGroup) asg;
+            final FXOMObject gridPane = gsg.getParentObject();
+            assert gridPane instanceof FXOMInstance;
+            final Set<Integer> indexes = gsg.getIndexes();
+            assert indexes.size() == 1; // Because of (1)
+            int selectedIndex = indexes.iterator().next();
+            int previousIndex = selectedIndex - 1;
+            assert previousIndex >= 0; // Because of (1)
+            selection.select((FXOMInstance) gridPane, gsg.getType(), previousIndex);
         }
     }
     
@@ -1538,7 +1555,13 @@ public class EditorController {
             final FXOMObject selectedObject = items.iterator().next();
             return selectedObject.getPreviousSlibing() != null;
         } else if (asg instanceof GridSelectionGroup) {
-            // Map to the SELECT_PREVIOUS_ROW/SELECT_PREVIOUS_COLUMN control action
+            final GridSelectionGroup gsg = (GridSelectionGroup) asg;
+            final Set<Integer> indexes = gsg.getIndexes();
+            if (indexes.size() != 1) {
+                return false;
+            }
+            final int index = indexes.iterator().next();
+            return index > 0;
         } else {
             assert selection.getGroup() == null :
                     "Add implementation for " + selection.getGroup(); //NOI18N

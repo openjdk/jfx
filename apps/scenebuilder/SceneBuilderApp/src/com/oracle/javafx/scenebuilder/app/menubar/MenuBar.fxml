@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <!--
-  Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+  Copyright (c) 2012, 2014, Oracle and/or its affiliates.
   All rights reserved. Use is subject to license terms.
 
   This file is available and licensed under the following license:
@@ -31,207 +31,209 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
-
 <?import java.lang.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?scenebuilder-preview-i18n-resource ../i18n/SceneBuilderApp.properties?>
 
-<StackPane xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
-    <children>
-        <MenuBar fx:id="menuBar">
-            <menus>
-                <Menu fx:id="fileMenu" mnemonicParsing="false" text="%menu.title.file">
-                    <items>
-                        <MenuItem fx:id="newMenuItem" mnemonicParsing="false" text="%menu.title.new" />
-                        <Menu fx:id="newTemplateMenuItem" mnemonicParsing="false" text="%menu.title.new.template">
-                            <items>
-                                <MenuItem fx:id="newAlertDialogMenuItem" mnemonicParsing="false" text="%menu.title.new.alert.dialog" />
-                                <MenuItem fx:id="newBasicAppMenuItem" mnemonicParsing="false" text="%menu.title.new.basic.app" />
-                                <MenuItem fx:id="newComplexAppMenuItem" mnemonicParsing="false" text="%menu.title.new.complex.app" />
-                                <SeparatorMenuItem mnemonicParsing="false" />
-                                <MenuItem fx:id="newAlertDialogCssMenuItem" mnemonicParsing="false" text="%menu.title.new.alert.dialog.css" />
-                                <MenuItem fx:id="newAlertDialogI18nMenuItem" mnemonicParsing="false" text="%menu.title.new.alert.dialog.i18n" />
-                                <MenuItem fx:id="newBasicAppCssMenuItem" mnemonicParsing="false" text="%menu.title.new.basic.app.css" />
-                                <MenuItem fx:id="newBasicAppI18nMenuItem" mnemonicParsing="false" text="%menu.title.new.basic.app.i18n" />
-                                <MenuItem fx:id="newComplexAppCssMenuItem" mnemonicParsing="false" text="%menu.title.new.complex.app.css" />
-                                <MenuItem fx:id="newComplexAppI18nMenuItem" mnemonicParsing="false" text="%menu.title.new.complex.app.i18n" />
-                            </items>
-                        </Menu>
-                        <SeparatorMenuItem mnemonicParsing="false" />
-                        <MenuItem fx:id="openMenuItem" mnemonicParsing="false" text="%menu.title.open" />
-                        <Menu fx:id="openRecentMenu" mnemonicParsing="false" text="%menu.title.open.recent" >              
-                            <items>
-                                <MenuItem mnemonicParsing="false" text="Action 1" />
-                            </items>
-                        </Menu>
-                        <SeparatorMenuItem mnemonicParsing="false" />
-                        <MenuItem fx:id="saveMenuItem" mnemonicParsing="false" text="%menu.title.save" />
-                        <MenuItem fx:id="saveAsMenuItem" mnemonicParsing="false" text="%menu.title.save.as" />
-                        <MenuItem fx:id="revertMenuItem" mnemonicParsing="false" text="%menu.title.revert" />
-                        <SeparatorMenuItem mnemonicParsing="false" />
-                        <MenuItem fx:id="revealMenuItem" mnemonicParsing="false" text="Reveal (setup at runtime)" />
-                        <SeparatorMenuItem mnemonicParsing="false" />
-                        <MenuItem fx:id="closeMenuItem" mnemonicParsing="false" text="%menu.title.close" />
-                        <SeparatorMenuItem fx:id="separatorAbovePreferencesMenuItem" mnemonicParsing="false" />
-                        <MenuItem fx:id="showPreferencesMenuItem" mnemonicParsing="false" text="%menu.title.preferences" />
-                        <MenuItem fx:id="exitMenuItem" mnemonicParsing="false" text="%menu.title.quit" />
-                    </items>
+<StackPane xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
+  <children>
+    <MenuBar fx:id="menuBar">
+      <menus>
+        <Menu mnemonicParsing="false" text="%menu.title.file" fx:id="fileMenu">
+          <items>
+            <MenuItem mnemonicParsing="false" text="%menu.title.new" fx:id="newMenuItem" />
+            <Menu mnemonicParsing="false" text="%menu.title.new.template" fx:id="newTemplateMenuItem">
+              <items>
+                <MenuItem mnemonicParsing="false" text="%menu.title.new.alert.dialog" fx:id="newAlertDialogMenuItem" />
+                <MenuItem mnemonicParsing="false" text="%menu.title.new.basic.app" fx:id="newBasicAppMenuItem" />
+                <MenuItem mnemonicParsing="false" text="%menu.title.new.complex.app" fx:id="newComplexAppMenuItem" />
+                <SeparatorMenuItem mnemonicParsing="false" />
+                <MenuItem mnemonicParsing="false" text="%menu.title.new.alert.dialog.css" fx:id="newAlertDialogCssMenuItem" />
+                <MenuItem mnemonicParsing="false" text="%menu.title.new.alert.dialog.i18n" fx:id="newAlertDialogI18nMenuItem" />
+                <MenuItem mnemonicParsing="false" text="%menu.title.new.basic.app.css" fx:id="newBasicAppCssMenuItem" />
+                <MenuItem mnemonicParsing="false" text="%menu.title.new.basic.app.i18n" fx:id="newBasicAppI18nMenuItem" />
+                <MenuItem mnemonicParsing="false" text="%menu.title.new.complex.app.css" fx:id="newComplexAppCssMenuItem" />
+                <MenuItem mnemonicParsing="false" text="%menu.title.new.complex.app.i18n" fx:id="newComplexAppI18nMenuItem" />
+              </items>
+            </Menu>
+            <SeparatorMenuItem mnemonicParsing="false" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.open" fx:id="openMenuItem" />
+            <Menu mnemonicParsing="false" text="%menu.title.open.recent" fx:id="openRecentMenu">
+              <items>
+                <MenuItem mnemonicParsing="false" text="Action 1" />
+              </items>
+            </Menu>
+            <SeparatorMenuItem mnemonicParsing="false" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.save" fx:id="saveMenuItem" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.save.as" fx:id="saveAsMenuItem" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.revert" fx:id="revertMenuItem" />
+            <SeparatorMenuItem mnemonicParsing="false" />
+            <MenuItem mnemonicParsing="false" text="Reveal (setup at runtime)" fx:id="revealMenuItem" />
+            <SeparatorMenuItem mnemonicParsing="false" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.close" fx:id="closeMenuItem" />
+            <SeparatorMenuItem mnemonicParsing="false" fx:id="separatorAbovePreferencesMenuItem" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.preferences" fx:id="showPreferencesMenuItem" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.quit" fx:id="exitMenuItem" />
+          </items>
+        </Menu>
+        <Menu mnemonicParsing="false" text="%menu.title.edit">
+          <items>
+            <MenuItem mnemonicParsing="false" text="%menu.title.undo" fx:id="undoMenuItem" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.redo" fx:id="redoMenuItem" />
+            <SeparatorMenuItem mnemonicParsing="false" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.cut" fx:id="cutMenuItem" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.copy" fx:id="copyMenuItem" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.paste" fx:id="pasteMenuItem" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.paste.into" fx:id="pasteIntoMenuItem" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.duplicate" fx:id="duplicateMenuItem" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.delete" fx:id="deleteMenuItem" />
+            <SeparatorMenuItem mnemonicParsing="false" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.select.all" fx:id="selectAllMenuItem" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.select.none" fx:id="selectNoneMenuItem" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.select.parent" fx:id="selectParentMenuItem" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.select.next" fx:id="selectNextMenuItem" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.select.previous" fx:id="selectPreviousMenuItem" />
+            <SeparatorMenuItem mnemonicParsing="false" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.trim" fx:id="trimMenuItem" />
+          </items>
+        </Menu>
+        <Menu mnemonicParsing="false" text="%menu.title.view">
+          <items>
+            <MenuItem mnemonicParsing="false" text="%menu.title.content" fx:id="gotoContentMenuItem" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.properties" fx:id="gotoPropertiesMenuItem" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.layout" fx:id="gotoLayoutMenuItem" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.code" fx:id="gotoCodeMenuItem" />
+            <SeparatorMenuItem mnemonicParsing="false" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.hide.library.panel" fx:id="toggleLibraryPanelMenuItem" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.hide.document.panel" fx:id="toggleHierarchyPanelMenuItem" />
+            <SeparatorMenuItem mnemonicParsing="false" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.show.bottom.panel" fx:id="toggleCSSPanelMenuItem" />
+            <SeparatorMenuItem mnemonicParsing="false" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.hide.left.panel" fx:id="toggleLeftPanelMenuItem" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.hide.right.panel" fx:id="toggleRightPanelMenuItem" />
+            <SeparatorMenuItem mnemonicParsing="false" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.show.outlines" fx:id="toggleOutlinesMenuItem" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.show.sample.data" fx:id="toggleSampleDataMenuItem" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.disable.guides" fx:id="toggleAlignmentGuidesMenuItem" />
+            <SeparatorMenuItem mnemonicParsing="false" />
+            <Menu mnemonicParsing="false" text="%menu.title.zoom" fx:id="zoomMenu" />
+            <SeparatorMenuItem mnemonicParsing="false" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.show.sample.controller.skeleton" fx:id="showSampleControllerMenuItem" />
+          </items>
+        </Menu>
+        <Menu mnemonicParsing="false" text="%menu.title.insert" fx:id="insertMenu" />
+        <Menu mnemonicParsing="false" text="%menu.title.modify">
+          <items>
+            <MenuItem mnemonicParsing="false" text="%menu.title.fit" fx:id="fitToParentMenuItem" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.use.computed.sizes" fx:id="useComputedSizesMenuItem" />
+            <SeparatorMenuItem mnemonicParsing="false" />
+            <Menu mnemonicParsing="false" text="%menu.title.grid">
+              <items>
+                <MenuItem mnemonicParsing="false" text="%menu.title.grid.move.row.above" fx:id="moveRowAboveMenuItem" />
+                <MenuItem mnemonicParsing="false" text="%menu.title.grid.move.row.below" fx:id="moveRowBelowMenuItem" />
+                <MenuItem mnemonicParsing="false" text="%menu.title.grid.move.column.before" fx:id="moveColumnBeforeMenuItem" />
+                <MenuItem mnemonicParsing="false" text="%menu.title.grid.move.column.after" fx:id="moveColumnAfterMenuItem" />
+                <SeparatorMenuItem mnemonicParsing="false" />
+                <MenuItem mnemonicParsing="false" text="%menu.title.grid.add.row.above" fx:id="addRowAboveMenuItem" />
+                <MenuItem mnemonicParsing="false" text="%menu.title.grid.add.row.below" fx:id="addRowBelowMenuItem" />
+                <MenuItem mnemonicParsing="false" text="%menu.title.grid.add.column.before" fx:id="addColumnBeforeMenuItem" />
+                <MenuItem mnemonicParsing="false" text="%menu.title.grid.add.column.after" fx:id="addColumnAfterMenuItem" />
+                <SeparatorMenuItem mnemonicParsing="false" />
+                <MenuItem mnemonicParsing="false" text="%menu.title.grid.increase.row.span" fx:id="increaseRowSpanMenuItem" />
+                <MenuItem mnemonicParsing="false" text="%menu.title.grid.decrease.row.span" fx:id="decreaseRowSpanMenuItem" />
+                <MenuItem mnemonicParsing="false" text="%menu.title.grid.increase.column.span" fx:id="increaseColumnSpanMenuItem" />
+                <MenuItem mnemonicParsing="false" text="%menu.title.grid.decrease.column.span" fx:id="decreaseColumnSpanMenuItem" />
+              </items>
+            </Menu>
+            <SeparatorMenuItem mnemonicParsing="false" />
+            <Menu mnemonicParsing="false" text="%menu.title.add.effect" fx:id="addEffectMenu" />
+            <Menu mnemonicParsing="false" text="%menu.title.add.popup" fx:id="addPopupControlMenu" />
+            <SeparatorMenuItem mnemonicParsing="false" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.edit.included.default" fx:id="editIncludedFileMenuItem" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.reveal.included.default" fx:id="revealIncludedFileMenuItem" />
+          </items>
+        </Menu>
+        <Menu mnemonicParsing="false" text="%menu.title.arrange">
+          <items>
+            <MenuItem mnemonicParsing="false" text="%menu.title.front" fx:id="bringToFrontMenuItem" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.back" fx:id="sendToBackMenuItem" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.forward" fx:id="bringForwardMenuItem" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.backward" fx:id="sendBackwardMenuItem" />
+            <SeparatorMenuItem mnemonicParsing="false" />
+            <Menu mnemonicParsing="false" text="%menu.title.wrap">
+              <items>
+                <MenuItem mnemonicParsing="false" text="AnchorPane" fx:id="wrapInAnchorPaneMenuItem" />
+                <MenuItem mnemonicParsing="false" text="GridPane" fx:id="wrapInGridPaneMenuItem" />
+                <MenuItem mnemonicParsing="false" text="HBox" fx:id="wrapInHBoxMenuItem" />
+                <MenuItem mnemonicParsing="false" text="Pane" fx:id="wrapInPaneMenuItem" />
+                <MenuItem mnemonicParsing="false" text="ScrollPane" fx:id="wrapInScrollPaneMenuItem" />
+                <MenuItem mnemonicParsing="false" text="SplitPane" fx:id="wrapInSplitPaneMenuItem" />
+                <MenuItem mnemonicParsing="false" text="StackPane" fx:id="wrapInStackPaneMenuItem" />
+                <MenuItem mnemonicParsing="false" text="TabPane" fx:id="wrapInTabPaneMenuItem" />
+                <MenuItem mnemonicParsing="false" text="TitledPane" fx:id="wrapInTitledPaneMenuItem" />
+                <MenuItem mnemonicParsing="false" text="ToolBar" fx:id="wrapInToolBarMenuItem" />
+                <MenuItem mnemonicParsing="false" text="VBox" fx:id="wrapInVBoxMenuItem" />
+                <MenuItem mnemonicParsing="false" text="Group" fx:id="wrapInGroupMenuItem" />
+              </items>
+            </Menu>
+            <MenuItem mnemonicParsing="false" text="%menu.title.unwrap" fx:id="unwrapMenuItem" />
+          </items>
+        </Menu>
+        <Menu mnemonicParsing="false" text="%menu.title.preview">
+          <items>
+            <MenuItem mnemonicParsing="false" text="%menu.title.show.preview" fx:id="showPreviewMenuItem" />
+            <SeparatorMenuItem mnemonicParsing="false" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.choose.background.color" fx:id="chooseBackgroundColorMenuItem" />
+            <SeparatorMenuItem mnemonicParsing="false" />
+            <Menu mnemonicParsing="false" text="%menu.title.theme">
+              <items>
+                <RadioMenuItem mnemonicParsing="false" text="%menu.title.theme.modena" fx:id="modenaThemeMenuItem" />
+                <RadioMenuItem mnemonicParsing="false" text="%menu.title.theme.modena.touch" fx:id="modenaTouchThemeMenuItem" />
+                <SeparatorMenuItem mnemonicParsing="false" />
+                <RadioMenuItem mnemonicParsing="false" text="%menu.title.theme.caspian" fx:id="caspianThemeMenuItem" />
+                <RadioMenuItem mnemonicParsing="false" text="%menu.title.theme.caspian.embedded" fx:id="caspianEmbeddedThemeMenuItem" />
+                <RadioMenuItem mnemonicParsing="false" text="%menu.title.theme.caspian.embedded.qvga" fx:id="caspianEmbeddedQVGAThemeMenuItem" />
+                <SeparatorMenuItem mnemonicParsing="false" />
+                <CheckMenuItem mnemonicParsing="false" text="%menu.title.theme.caspian.high.contrast" fx:id="caspianHighContrastThemeMenuItem"/>
+              </items>
+            </Menu>
+            <Menu mnemonicParsing="false" text="%menu.title.scene.stylesheets">
+              <items>
+                <MenuItem mnemonicParsing="false" text="%menu.title.add.stylesheet" fx:id="addSceneStyleSheetMenuItem" />
+                <Menu mnemonicParsing="false" text="%menu.title.remove.stylesheet" fx:id="removeSceneStyleSheetMenu">
+                  <items>
+                    <MenuItem disable="true" mnemonicParsing="false" text="%scenestylesheet.none" />
+                  </items>
                 </Menu>
-                <Menu mnemonicParsing="false" text="%menu.title.edit">
-                    <items>
-                        <MenuItem fx:id="undoMenuItem" mnemonicParsing="false" text="%menu.title.undo" />
-                        <MenuItem fx:id="redoMenuItem" mnemonicParsing="false" text="%menu.title.redo" />
-                        <SeparatorMenuItem mnemonicParsing="false" />
-                        <MenuItem fx:id="cutMenuItem" mnemonicParsing="false" text="%menu.title.cut" />
-                        <MenuItem fx:id="copyMenuItem" mnemonicParsing="false" text="%menu.title.copy" />
-                        <MenuItem fx:id="pasteMenuItem" mnemonicParsing="false" text="%menu.title.paste" />
-                        <MenuItem fx:id="pasteIntoMenuItem" mnemonicParsing="false" text="%menu.title.paste.into" />
-                        <MenuItem fx:id="duplicateMenuItem" mnemonicParsing="false" text="%menu.title.duplicate" />
-                        <MenuItem fx:id="deleteMenuItem" mnemonicParsing="false" text="%menu.title.delete" />
-                        <SeparatorMenuItem mnemonicParsing="false" />
-                        <MenuItem fx:id="selectAllMenuItem" mnemonicParsing="false" text="%menu.title.select.all" />
-                        <MenuItem fx:id="selectNoneMenuItem" mnemonicParsing="false" text="%menu.title.select.none" />
-                        <MenuItem fx:id="selectParentMenuItem" mnemonicParsing="false" text="%menu.title.select.parent" />
-                        <MenuItem fx:id="selectNextMenuItem" mnemonicParsing="false" text="%menu.title.select.next" />
-                        <MenuItem fx:id="selectPreviousMenuItem" mnemonicParsing="false" text="%menu.title.select.previous" />
-                        <SeparatorMenuItem mnemonicParsing="false" />
-                        <MenuItem fx:id="trimMenuItem" mnemonicParsing="false" text="%menu.title.trim" />
-                    </items>
+                <Menu mnemonicParsing="false" text="%menu.title.open.stylesheet" fx:id="openSceneStyleSheetMenu">
+                  <items>
+                    <MenuItem disable="true" mnemonicParsing="false" text="%scenestylesheet.none" />
+                  </items>
                 </Menu>
-                <Menu mnemonicParsing="false" text="%menu.title.view">
-                    <items>
-                        <MenuItem fx:id="gotoContentMenuItem" mnemonicParsing="false" text="%menu.title.content" />
-                        <MenuItem fx:id="gotoPropertiesMenuItem" mnemonicParsing="false" text="%menu.title.properties" />
-                        <MenuItem fx:id="gotoLayoutMenuItem" mnemonicParsing="false" text="%menu.title.layout" />
-                        <MenuItem fx:id="gotoCodeMenuItem" mnemonicParsing="false" text="%menu.title.code" />
-                        <SeparatorMenuItem mnemonicParsing="false" />
-                        <MenuItem fx:id="toggleLibraryPanelMenuItem" mnemonicParsing="false" text="%menu.title.hide.library.panel" />
-                        <MenuItem fx:id="toggleHierarchyPanelMenuItem" mnemonicParsing="false" text="%menu.title.hide.document.panel" />
-                        <SeparatorMenuItem mnemonicParsing="false" />
-                        <MenuItem fx:id="toggleCSSPanelMenuItem" mnemonicParsing="false" text="%menu.title.show.bottom.panel" />
-                        <SeparatorMenuItem mnemonicParsing="false" />
-                        <MenuItem fx:id="toggleLeftPanelMenuItem" mnemonicParsing="false" text="%menu.title.hide.left.panel" />
-                        <MenuItem fx:id="toggleRightPanelMenuItem" mnemonicParsing="false" text="%menu.title.hide.right.panel" />
-                        <SeparatorMenuItem mnemonicParsing="false" />
-                        <MenuItem fx:id="toggleOutlinesMenuItem" mnemonicParsing="false" text="%menu.title.show.outlines" />
-                        <MenuItem fx:id="toggleSampleDataMenuItem" mnemonicParsing="false" text="%menu.title.show.sample.data" />
-                        <MenuItem fx:id="toggleAlignmentGuidesMenuItem" mnemonicParsing="false" text="%menu.title.disable.guides" />
-                        <SeparatorMenuItem mnemonicParsing="false" />
-                        <Menu fx:id="zoomMenu" mnemonicParsing="false" text="%menu.title.zoom" />
-                        <SeparatorMenuItem mnemonicParsing="false" />
-                        <MenuItem fx:id="showSampleControllerMenuItem" mnemonicParsing="false" text="%menu.title.show.sample.controller.skeleton" />
-                    </items>
-                </Menu>
-                <Menu fx:id="insertMenu" mnemonicParsing="false" text="%menu.title.insert" />
-                <Menu mnemonicParsing="false" text="%menu.title.modify">
-                    <items>
-                        <MenuItem fx:id="fitToParentMenuItem" mnemonicParsing="false" text="%menu.title.fit" />
-                        <MenuItem fx:id="useComputedSizesMenuItem" mnemonicParsing="false" text="%menu.title.use.computed.sizes" />
-                        <SeparatorMenuItem mnemonicParsing="false" />
-                        <Menu mnemonicParsing="false" text="%menu.title.grid">
-                            <items>
-                                <MenuItem fx:id="selectNextRowMenuItem" mnemonicParsing="false" text="%menu.title.grid.select.next.row" />
-                                <MenuItem fx:id="selectNextColumnMenuItem" mnemonicParsing="false" text="%menu.title.grid.select.next.column" />
-                                <SeparatorMenuItem mnemonicParsing="false" />
-                                <MenuItem fx:id="moveRowAboveMenuItem" mnemonicParsing="false" text="%menu.title.grid.move.row.above" />
-                                <MenuItem fx:id="moveRowBelowMenuItem" mnemonicParsing="false" text="%menu.title.grid.move.row.below" />
-                                <MenuItem fx:id="moveColumnBeforeMenuItem" mnemonicParsing="false" text="%menu.title.grid.move.column.before" />
-                                <MenuItem fx:id="moveColumnAfterMenuItem" mnemonicParsing="false" text="%menu.title.grid.move.column.after" />
-                                <SeparatorMenuItem mnemonicParsing="false" />
-                                <MenuItem fx:id="addRowAboveMenuItem" mnemonicParsing="false" text="%menu.title.grid.add.row.above" />
-                                <MenuItem fx:id="addRowBelowMenuItem" mnemonicParsing="false" text="%menu.title.grid.add.row.below" />
-                                <MenuItem fx:id="addColumnBeforeMenuItem" mnemonicParsing="false" text="%menu.title.grid.add.column.before" />
-                                <MenuItem fx:id="addColumnAfterMenuItem" mnemonicParsing="false" text="%menu.title.grid.add.column.after" />
-                                <SeparatorMenuItem mnemonicParsing="false" />
-                                <MenuItem fx:id="increaseRowSpanMenuItem" mnemonicParsing="false" text="%menu.title.grid.increase.row.span" />
-                                <MenuItem fx:id="decreaseRowSpanMenuItem" mnemonicParsing="false" text="%menu.title.grid.decrease.row.span" />
-                                <MenuItem fx:id="increaseColumnSpanMenuItem" mnemonicParsing="false" text="%menu.title.grid.increase.column.span" />
-                                <MenuItem fx:id="decreaseColumnSpanMenuItem" mnemonicParsing="false" text="%menu.title.grid.decrease.column.span" />
-                            </items>
-                        </Menu>
-                        <SeparatorMenuItem mnemonicParsing="false" />
-                        <Menu fx:id="addEffectMenu" mnemonicParsing="false" text="%menu.title.add.effect" />
-                        <Menu fx:id="addPopupControlMenu" mnemonicParsing="false" text="%menu.title.add.popup" />
-                        <SeparatorMenuItem mnemonicParsing="false" />
-                        <MenuItem fx:id="editIncludedFileMenuItem" mnemonicParsing="false" text="%menu.title.edit.included.default" />
-                        <MenuItem fx:id="revealIncludedFileMenuItem" mnemonicParsing="false" text="%menu.title.reveal.included.default" />
-                    </items>
-                </Menu>
-                <Menu mnemonicParsing="false" text="%menu.title.arrange">
-                    <items>
-                        <MenuItem fx:id="bringToFrontMenuItem" mnemonicParsing="false" text="%menu.title.front" />
-                        <MenuItem fx:id="sendToBackMenuItem" mnemonicParsing="false" text="%menu.title.back" />
-                        <MenuItem fx:id="bringForwardMenuItem" mnemonicParsing="false" text="%menu.title.forward" />
-                        <MenuItem fx:id="sendBackwardMenuItem" mnemonicParsing="false" text="%menu.title.backward" />
-                        <SeparatorMenuItem mnemonicParsing="false" />
-                        <Menu mnemonicParsing="false" text="%menu.title.wrap">
-                            <items>
-                                <MenuItem fx:id="wrapInAnchorPaneMenuItem" mnemonicParsing="false" text="AnchorPane" />
-                                <MenuItem fx:id="wrapInGridPaneMenuItem" mnemonicParsing="false" text="GridPane" />
-                                <MenuItem fx:id="wrapInHBoxMenuItem" mnemonicParsing="false" text="HBox" />
-                                <MenuItem fx:id="wrapInPaneMenuItem" mnemonicParsing="false" text="Pane" />
-                                <MenuItem fx:id="wrapInScrollPaneMenuItem" mnemonicParsing="false" text="ScrollPane" />
-                                <MenuItem fx:id="wrapInSplitPaneMenuItem" mnemonicParsing="false" text="SplitPane" />
-                                <MenuItem fx:id="wrapInStackPaneMenuItem" mnemonicParsing="false" text="StackPane" />
-                                <MenuItem fx:id="wrapInTabPaneMenuItem" mnemonicParsing="false" text="TabPane" />
-                                <MenuItem fx:id="wrapInTitledPaneMenuItem" mnemonicParsing="false" text="TitledPane" />
-                                <MenuItem fx:id="wrapInToolBarMenuItem" mnemonicParsing="false" text="ToolBar" />
-                                <MenuItem fx:id="wrapInVBoxMenuItem" mnemonicParsing="false" text="VBox" />
-                                <MenuItem fx:id="wrapInGroupMenuItem" mnemonicParsing="false" text="Group" />
-                            </items>
-                        </Menu>
-                        <MenuItem fx:id="unwrapMenuItem" mnemonicParsing="false" text="%menu.title.unwrap" />
-                    </items>
-                </Menu>
-                <Menu mnemonicParsing="false" text="%menu.title.preview">
-                    <items>
-                        <MenuItem fx:id="showPreviewMenuItem" mnemonicParsing="false" text="%menu.title.show.preview" />
-                        <SeparatorMenuItem mnemonicParsing="false" />
-                        <MenuItem fx:id="chooseBackgroundColorMenuItem" mnemonicParsing="false" text="%menu.title.choose.background.color" />
-                        <SeparatorMenuItem mnemonicParsing="false" />
-                        <Menu mnemonicParsing="false" text="%menu.title.theme">
-                            <items>
-                                <RadioMenuItem fx:id="modenaThemeMenuItem" mnemonicParsing="false" text="%menu.title.theme.modena" />
-                                <RadioMenuItem fx:id="caspianThemeMenuItem" mnemonicParsing="false" text="%menu.title.theme.caspian" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" />
-                            </items>
-                        </Menu>
-                        <Menu mnemonicParsing="false" text="%menu.title.scene.stylesheets">
-                            <items>
-                                <MenuItem fx:id="addSceneStyleSheetMenuItem" mnemonicParsing="false" text="%menu.title.add.stylesheet" />
-                                <Menu fx:id="removeSceneStyleSheetMenu" mnemonicParsing="false" text="%menu.title.remove.stylesheet">
-                                    <items>
-                                        <MenuItem disable="true" mnemonicParsing="false" text="%scenestylesheet.none" />
-                                    </items>
-                                </Menu>
-                                <Menu fx:id="openSceneStyleSheetMenu" mnemonicParsing="false" text="%menu.title.open.stylesheet">
-                                    <items>
-                                        <MenuItem disable="true" mnemonicParsing="false" text="%scenestylesheet.none" />
-                                    </items>
-                                </Menu>
-                            </items>
-                        </Menu>
-                        <Menu mnemonicParsing="false" text="%menu.title.internationalization">
-                            <items>
-                                <MenuItem fx:id="setResourceMenuItem" mnemonicParsing="false" text="%menu.title.set.resource" />
-                                <MenuItem fx:id="removeResourceMenuItem" mnemonicParsing="false" text="%menu.title.remove.resource" />
-                                <MenuItem fx:id="revealResourceMenuItem" mnemonicParsing="false" text="%menu.title.reveal.resource" />
-                            </items>
-                        </Menu>
-                    </items>
-                </Menu>
-                <Menu fx:id="windowMenu" mnemonicParsing="false" text="%menu.title.window">
-                    <items>
-                        <SeparatorMenuItem mnemonicParsing="false" />
-                    </items>
-                </Menu>
-                <Menu mnemonicParsing="false" text="%menu.title.help">
-                    <items>
-                        <MenuItem fx:id="helpMenuItem" mnemonicParsing="false" text="%menu.title.scene.builder.help" />
-                        <MenuItem fx:id="aboutMenuItem" mnemonicParsing="false" text="%menu.title.about" />
-                    </items>
-                </Menu>
-            </menus>
-        </MenuBar>
-    </children>
+              </items>
+            </Menu>
+            <Menu mnemonicParsing="false" text="%menu.title.internationalization">
+              <items>
+                <MenuItem mnemonicParsing="false" text="%menu.title.set.resource" fx:id="setResourceMenuItem" />
+                <MenuItem mnemonicParsing="false" text="%menu.title.remove.resource" fx:id="removeResourceMenuItem" />
+                <MenuItem mnemonicParsing="false" text="%menu.title.reveal.resource" fx:id="revealResourceMenuItem" />
+              </items>
+            </Menu>
+          </items>
+        </Menu>
+        <Menu mnemonicParsing="false" text="%menu.title.window" fx:id="windowMenu">
+          <items>
+            <SeparatorMenuItem mnemonicParsing="false" />
+          </items>
+        </Menu>
+        <Menu mnemonicParsing="false" text="%menu.title.help">
+          <items>
+            <MenuItem mnemonicParsing="false" text="%menu.title.scene.builder.help" fx:id="helpMenuItem" />
+            <MenuItem mnemonicParsing="false" text="%menu.title.about" fx:id="aboutMenuItem" />
+          </items>
+        </Menu>
+      </menus>
+    </MenuBar>
+  </children>
 </StackPane>

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -33,6 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.fxom;
 
 import com.oracle.javafx.scenebuilder.kit.fxom.glue.GlueElement;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -128,6 +129,20 @@ public class FXOMInstance extends FXOMObject {
     /*
      * FXOMObject
      */
+
+    @Override
+    public List<FXOMObject> getChildObjects() {
+        final List<FXOMObject> result = new ArrayList<>();
+        
+        for (FXOMProperty p : properties.values()) {
+            if (p instanceof FXOMPropertyC) {
+                final FXOMPropertyC pc = (FXOMPropertyC) p;
+                result.addAll(pc.getValues());
+            }
+        }
+        return result;
+    }
+
 
     @Override
     public FXOMObject searchWithSceneGraphObject(Object sceneGraphObject) {
@@ -265,6 +280,27 @@ public class FXOMInstance extends FXOMObject {
                 if (p instanceof FXOMPropertyC) {
                     for (FXOMObject v : ((FXOMPropertyC)p).getValues()) {
                         v.collectObjectWithSceneGraphObjectClass(sceneGraphObjectClass, result);
+                    }
+                }
+            }
+        }
+    }
+
+    @Override
+    protected void collectEventHandlers(List<FXOMPropertyT> result) {
+        if (getSceneGraphObject() != null) {
+            for (FXOMProperty p : properties.values()) {
+                if (p instanceof FXOMPropertyT) {
+                    final FXOMPropertyT pt = (FXOMPropertyT) p;
+                    if (pt.getValue().startsWith("#")) {
+                        result.add(pt);
+                    }
+                }
+            }
+            for (FXOMProperty p : properties.values()) {
+                if (p instanceof FXOMPropertyC) {
+                    for (FXOMObject v : ((FXOMPropertyC)p).getValues()) {
+                        v.collectEventHandlers(result);
                     }
                 }
             }

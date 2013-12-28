@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -39,12 +39,11 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractWindowContro
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.util.MathUtils;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.MalformedURLException;
-import java.nio.charset.Charset;
-import java.util.PropertyResourceBundle;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.ResourceBundle;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -77,7 +76,6 @@ public final class PreviewWindowController extends AbstractWindowController {
     private static final String NID_PREVIEW_ROOT = "previewRoot"; //NOI18N
     private EditorPlatform.Theme editorControllerTheme;
     private ObservableList<File> sceneStyleSheet;
-    private File resource;
     
     /**
      * The type of Camera used by the Preview panel.
@@ -136,12 +134,10 @@ public final class PreviewWindowController extends AbstractWindowController {
             }
         });
         
-        this.resource = editorController.getResource();
-        this.editorController.resourceProperty().addListener(new ChangeListener<File>() {
+        this.editorController.resourcesProperty().addListener(new ChangeListener<ResourceBundle>() {
 
             @Override
-            public void changed(ObservableValue<? extends File> ov, File t, File t1) {
-                resource = t1;
+            public void changed(ObservableValue<? extends ResourceBundle> ov, ResourceBundle t, ResourceBundle t1) {
                 requestUpdate();
             }
         });
@@ -161,7 +157,7 @@ public final class PreviewWindowController extends AbstractWindowController {
     protected void makeRoot() {
         // Until the timer used in requestUpdate() expires, so that the root of
         // the scene is updated to the real content, we set a placeholder.
-        StackPane sp = new StackPane(new Label(I18N.getString("preview.constructing")));
+        StackPane sp = new StackPane();
         sp.setPrefSize(WIDTH_WHEN_EMPTY, HEIGHT_WHEN_EMPTY);
         setRoot(sp);
 
@@ -205,7 +201,7 @@ public final class PreviewWindowController extends AbstractWindowController {
 
     /**
      * There's a delay before the content of the preview is refreshed. If any
-     * further modification is brought to the layout before expiration of this
+     * further modification is brought to the layout before expiration of it
      * we restart the timer. The idea is to lower the resources used to refresh
      * the preview window content.
      */
@@ -225,37 +221,37 @@ public final class PreviewWindowController extends AbstractWindowController {
                         if (fxomDocument != null) {
                             // We clone the FXOMDocument
                             FXOMDocument clone;
-                            ResourceBundle resourceBundle = fxomDocument.getResources();
                             
-                            if (resource != null) {
-                                try {
-                                    resourceBundle = new PropertyResourceBundle(new InputStreamReader(new FileInputStream(resource), Charset.forName("UTF-8"))); //NOI18N
-                                } catch (IOException ex) {
-                                    resourceBundle = fxomDocument.getResources();
-                                }
-                            }
-
                             try {
                                 clone = new FXOMDocument(fxomDocument.getFxmlText(),
                                         fxomDocument.getLocation(),
                                         fxomDocument.getClassLoader(),
-                                        resourceBundle);
+                                        fxomDocument.getResources());
                                 clone.setSampleDataEnabled(fxomDocument.isSampleDataEnabled());
                             } catch (IOException ex) {
                                 throw new RuntimeException("Bug in PreviewWindowController::requestUpdate", ex); //NOI18N
                             }
 
                             Object sceneGraphRoot = clone.getSceneGraphRoot();
-                            final String themeStyleSheetString =
-                                    EditorPlatform.getThemeStylesheetURL(editorControllerTheme).toString();
+                            final List<String> themeStyleSheetStrings = new ArrayList<>();
+                            for (URL themeURL : EditorPlatform.getThemeStylesheetURLs(editorControllerTheme)) {
+                                themeStyleSheetStrings.add(themeURL.toString());
+                            }
 
                             if (sceneGraphRoot instanceof Parent) {
                                 ((Parent) sceneGraphRoot).setId(NID_PREVIEW_ROOT);
                                 setRoot((Parent) updateAutoResizeTransform((Parent) sceneGraphRoot));
                                 assert ((Parent) sceneGraphRoot).getScene() == null;
-                                ((Parent) sceneGraphRoot).getStylesheets().removeAll(themeStyleSheetString);
-                                ((Parent) sceneGraphRoot).getStylesheets().add(themeStyleSheetString);
                                 
+                                // At that stage current style sheets are the one defined within the FXML
+                                ObservableList<String> currentStyleSheets = ((Parent) sceneGraphRoot).getStylesheets();
+                                List<String> newStyleSheets = new ArrayList<>();
+                                
+                                for (String stylesheet : currentStyleSheets) {
+                                    newStyleSheets.add(stylesheet);
+                                }
+                                
+                                // Add style sheet set thanks Preview > Scene Style Sheets > Add a Style Sheet
                                 if (sceneStyleSheet != null) {
                                     for (File f : sceneStyleSheet) {
                                         String urlString = ""; //NOI18N
@@ -264,16 +260,21 @@ public final class PreviewWindowController extends AbstractWindowController {
                                         } catch (MalformedURLException ex) {
                                             throw new RuntimeException("Bug in PreviewWindowController", ex); //NOI18N
                                         }
-                                        ((Parent) sceneGraphRoot).getStylesheets().removeAll(urlString);
-                                        ((Parent) sceneGraphRoot).getStylesheets().add(urlString);
+                                        newStyleSheets.add(urlString);
                                     }
                                 }
-                                                                
-                                // Not proven necessary as per my testing
-//                                ((Parent) sceneGraphRoot).applyCss();
+                                
+                                // Clean all styling
+                                ((Parent) sceneGraphRoot).getStylesheets().removeAll();
+                                
+                                // Add theme style sheet; order is significant ==> theme one always first
+                                newStyleSheets.addAll(0, themeStyleSheetStrings);
+                                
+                                // Apply the whole styling
+                               ((Parent) sceneGraphRoot).getStylesheets().addAll(newStyleSheets);
                             } else if (sceneGraphRoot instanceof Node) {
                                 StackPane sp = new StackPane();
-                                sp.getStylesheets().add(themeStyleSheetString);
+                                sp.getStylesheets().addAll(0, themeStyleSheetStrings);
                                 
                                 if (sceneStyleSheet != null) {
                                     for (File f : sceneStyleSheet) {
@@ -314,11 +315,12 @@ public final class PreviewWindowController extends AbstractWindowController {
             }
         };
 
-        // If there is no opened document while Preview window is built we want
-        // it to come up immediately.
         long delay = 0;
 
-        if (editorController.getFxomDocument() != null) {
+        // A long delay makes sense only if we have a valid document and
+        // the preview window is already opened.
+        // When opening preview window we want it fast.
+        if (editorController.getFxomDocument() != null && getStage().isShowing()) {
             delay = 1000;
         }
 

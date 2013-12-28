@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -55,6 +55,7 @@ import java.util.Set;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.layout.Region;
 
 /**
@@ -69,6 +70,41 @@ public abstract class AbstractWrapInJob extends Job {
 
     public AbstractWrapInJob(EditorController editorController) {
         super(editorController);
+    }
+    
+    public static AbstractWrapInJob getWrapInJob(
+            EditorController editorController, 
+            Class<? extends Parent> wrappingClass) {
+        
+        assert EditorController.getClassesSupportingWrapping().contains(wrappingClass);
+        final AbstractWrapInJob job;
+        if (wrappingClass == javafx.scene.layout.AnchorPane.class) {
+            job = new WrapInAnchorPaneJob(editorController);
+        } else if (wrappingClass == javafx.scene.layout.GridPane.class) {
+            job = new WrapInGridPaneJob(editorController);
+        } else if (wrappingClass == javafx.scene.Group.class) {
+            job = new WrapInGroupJob(editorController);
+        } else if (wrappingClass == javafx.scene.layout.HBox.class) {
+            job = new WrapInHBoxJob(editorController);
+        } else if (wrappingClass == javafx.scene.layout.Pane.class) {
+            job = new WrapInPaneJob(editorController);
+        } else if (wrappingClass == javafx.scene.control.ScrollPane.class) {
+            job = new WrapInScrollPaneJob(editorController);
+        } else if (wrappingClass == javafx.scene.control.SplitPane.class) {
+            job = new WrapInSplitPaneJob(editorController);
+        } else if (wrappingClass == javafx.scene.layout.StackPane.class) {
+            job = new WrapInStackPaneJob(editorController);
+        } else if (wrappingClass == javafx.scene.control.TabPane.class) {
+            job = new WrapInTabPaneJob(editorController);
+        } else if (wrappingClass == javafx.scene.control.TitledPane.class) {
+            job = new WrapInTitledPaneJob(editorController);
+        } else if (wrappingClass == javafx.scene.control.ToolBar.class) {
+            job = new WrapInToolBarJob(editorController);
+        } else {
+            assert wrappingClass == javafx.scene.layout.VBox.class; // Because of (1)
+            job = new WrapInVBoxJob(editorController);
+        }
+        return job;
     }
 
     @Override

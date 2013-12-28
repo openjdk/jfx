@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <!--
-  Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+  Copyright (c) 2012, 2014, Oracle and/or its affiliates.
   All rights reserved. Use is subject to license terms.
 
   This file is available and licensed under the following license:
@@ -45,7 +45,7 @@
                 <TextArea fx:id="textArea" editable="false" focusTraversable="false" prefHeight="500.0" VBox.vgrow="ALWAYS" />
                 <HBox alignment="BASELINE_RIGHT" prefWidth="600.0" spacing="20.0">
                     <children>
-                        <Button fx:id="copyButton" mnemonicParsing="false" onAction="#onCopyAction" text="%label.copy" HBox.hgrow="ALWAYS" />
+                        <Button mnemonicParsing="false" onAction="#onCopyAction" text="%label.copy" HBox.hgrow="ALWAYS" />
                         <HBox alignment="BASELINE_RIGHT" spacing="5.0" HBox.hgrow="ALWAYS">
                             <children>
                                 <CheckBox fx:id="commentCheckBox" mnemonicParsing="false" text="%skeleton.add.comments">

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -153,6 +153,13 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
         // Open file chooser and get user selection
         final List<File> importedFiles = performSelectJarOrFxmlFile();
         processImportJarFxml(importedFiles);
+    }
+    
+    /**
+     * @treatAsPrivate Perform the import of the selection
+     */
+    public void performImportSelection(List<FXOMObject> objects) {
+        processInternalImport(objects);
     }
     
     /*
@@ -519,7 +526,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
 //                System.out.println("libPane onDragDropped");
                 AbstractDragSource dragSource = getEditorController().getDragController().getDragSource();
                 if (dragSource != null && dragSource instanceof DocumentDragSource) {
-                    processInternalImport((DocumentDragSource)dragSource);
+                    processInternalImport(((DocumentDragSource)dragSource).getDraggedObjects());
                 } else {
                     initiateImportDialog = false;
                     jarAndFxmlFiles.clear();
@@ -622,7 +629,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
     // SceneBuilder (from Content or Hierarchy).
     // We stop the watching thread to avoid potential parsing of a file that
     // would not yet be properly finalized on disk.
-    private void processInternalImport(DocumentDragSource source) {
+    private void processInternalImport(List<FXOMObject> objects) {
         String userLibraryPathString = ((UserLibrary) getEditorController().getLibrary()).getPath();
         Path libPath = Paths.get(userLibraryPathString);
         ((UserLibrary) getEditorController().getLibrary()).stopWatching();
@@ -631,7 +638,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
         try {
             // The selection can be multiple, in which case each asset is processed
             // separately. The handling of dependencies will be addressed later on.
-            for (FXOMObject asset : source.getDraggedObjects()) {
+            for (FXOMObject asset : objects) {
                 // Create an FXML layout as a String
                 ArrayList<FXOMObject> selection = new ArrayList<>();
                 selection.add(asset);

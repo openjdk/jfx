@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright (c) 2012, 2013, Oracle and/or its affiliates.
+  Copyright (c) 2012, 2014, Oracle and/or its affiliates.
   All rights reserved. Use is subject to license terms.
 
   This file is available and licensed under the following license:
@@ -37,12 +37,4 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.paint.*?>
 
-<ChoiceBox xmlns:fx="http://javafx.com/fxml">
-  <items>
-    <FXCollections fx:factory="observableArrayList">
-      <String fx:value="Item 1" />
-      <String fx:value="Item 2" />
-      <String fx:value="Item 3" />
-    </FXCollections>
-  </items>
-</ChoiceBox>
+<ChoiceBox xmlns:fx="http://javafx.com/fxml" prefWidth="150.0" />
