@@ -81,7 +81,7 @@ public class HelloMenu extends Application {
         final Menu menu1 = makeMenu("_Debug");
 
         final Menu menu11 = makeMenu("_New", new ImageView(new Image("hello/about_16.png")));
-        MenuItem menu12 = new MenuItem("_Open", new ImageView(new Image("src/hello/folder_16.png")));
+        MenuItem menu12 = new MenuItem("_Open", new ImageView(new Image("hello/folder_16.png")));
         menu12.setAccelerator(new KeyCharacterCombination("]", 
                 KeyCombination.SHIFT_DOWN, KeyCombination.META_DOWN));
         menu12.setOnAction(actionHandler);
