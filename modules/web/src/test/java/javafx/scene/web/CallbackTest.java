@@ -80,6 +80,7 @@ public class CallbackTest extends TestBase {
         popupUi.checkCalled(VISIBILITY_CHANGED, true);
     }
 
+    @Ignore("RT-34508")
     @Test public void testCustomPopup() {
         clear();
         executeScript(JS_OPEN);
