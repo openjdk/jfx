@@ -1795,4 +1795,86 @@ public class ListViewKeyInputTest {
         assertEquals(2, sm.getSelectedIndex());
         assertTrue(isSelected(1, 2));
     }
+
+    @Ignore("Bug not resolved yet")
+    @Test public void test_rt34407_down_down_up() {
+        final int items = 100;
+        listView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+        listView.setPrefHeight(130); // roughly room for four rows
+
+        new StageLoader(listView);
+        final FocusModel fm = listView.getFocusModel();
+        final MultipleSelectionModel sm = listView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.clearAndSelect(0);
+        fm.focus(0);
+        assertEquals(0, getAnchor());
+        assertTrue(fm.isFocused(0));
+        assertTrue(sm.isSelected(0));
+        assertFalse(sm.isSelected(1));
+
+        // we expect the final Page-up to return us back to this selected index and with the same number of selected indices
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        final int leadSelectedIndex = sm.getSelectedIndex();
+        final int selectedIndicesCount = sm.getSelectedIndices().size();
+        assertEquals(6, leadSelectedIndex);
+        assertEquals(6, fm.getFocusedIndex());
+        assertEquals(7, selectedIndicesCount);
+
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        assertEquals(leadSelectedIndex * 2, sm.getSelectedIndex());
+        assertEquals(leadSelectedIndex * 2, fm.getFocusedIndex());
+        assertEquals(selectedIndicesCount * 2 - 1, sm.getSelectedIndices().size());
+
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        assertEquals(leadSelectedIndex, sm.getSelectedIndex());
+        assertEquals(leadSelectedIndex, fm.getFocusedIndex());
+        assertEquals(selectedIndicesCount, sm.getSelectedIndices().size());
+    }
+
+    @Ignore("Bug not resolved yet")
+    @Test public void test_rt34407_up_up_down() {
+        final int items = 100;
+        listView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+        listView.setPrefHeight(130); // roughly room for four rows
+
+        new StageLoader(listView);
+        final FocusModel fm = listView.getFocusModel();
+        final MultipleSelectionModel sm = listView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.clearAndSelect(99);
+        fm.focus(99);
+        listView.scrollTo(99);
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(99, getAnchor());
+        assertTrue(fm.isFocused(99));
+        assertTrue(sm.isSelected(99));
+        assertFalse(sm.isSelected(98));
+
+        // we expect the final Page-down to return us back to this selected index and with the same number of selected indices
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        final int leadSelectedIndex = sm.getSelectedIndex();
+        final int selectedIndicesCount = sm.getSelectedIndices().size();
+        final int diff = 99 - leadSelectedIndex;
+        assertEquals(99 - diff, leadSelectedIndex);
+        assertEquals(99 - diff, fm.getFocusedIndex());
+        assertEquals(7, selectedIndicesCount);
+
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        assertEquals(99 - diff * 2, sm.getSelectedIndex());
+        assertEquals(selectedIndicesCount * 2 - 1, sm.getSelectedIndices().size());
+
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        assertEquals(leadSelectedIndex, sm.getSelectedIndex());
+        assertEquals(selectedIndicesCount, sm.getSelectedIndices().size());
+    }
 }
