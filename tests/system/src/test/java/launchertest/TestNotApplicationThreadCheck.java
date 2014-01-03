@@ -53,10 +53,7 @@ public class TestNotApplicationThreadCheck {
     }
 
     static {
-        System.err.println("class init: thread = " + Thread.currentThread());
-
         if (Platform.isFxApplicationThread()) {
-            System.err.println("ERROR: class init wrong thread: " + Thread.currentThread());
             System.exit(ERROR_CLASS_INIT_WRONG_THREAD);
         }
     }

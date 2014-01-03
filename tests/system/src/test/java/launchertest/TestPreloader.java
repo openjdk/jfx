@@ -38,31 +38,19 @@ import static launchertest.Constants.*;
 public class TestPreloader extends Preloader {
 
     public TestPreloader() {
-        System.err.println("preloader constructor: thread = " + Thread.currentThread());
-
         if (!Platform.isFxApplicationThread()) {
-            System.err.println("ERROR: preloader constructor called from wrong thread: "
-                    + Thread.currentThread());
             System.exit(ERROR_PRELOADER_CONSTRUCTOR_WRONG_THREAD);
         }
     }
 
     @Override public void init() {
-        System.err.println("preloader init: thread = " + Thread.currentThread());
-
         if (Platform.isFxApplicationThread()) {
-            System.err.println("ERROR: preloader init called from wrong thread: "
-                    + Thread.currentThread());
             System.exit(ERROR_PRELOADER_INIT_WRONG_THREAD);
         }
     }
 
     @Override public void start(Stage stage) throws Exception {
-        System.err.println("preloader start: thread = " + Thread.currentThread());
-
         if (!Platform.isFxApplicationThread()) {
-            System.err.println("ERROR: preloader start called from wrong thread: "
-                    + Thread.currentThread());
             System.exit(ERROR_PRELOADER_START_WRONG_THREAD);
         }
 
@@ -74,20 +62,13 @@ public class TestPreloader extends Preloader {
     }
 
     @Override public void stop() {
-        System.err.println("preloader stop: thread = " + Thread.currentThread());
-
         if (!Platform.isFxApplicationThread()) {
-            System.err.println("ERROR: preloader stop called from wrong thread: "
-                    + Thread.currentThread());
             System.exit(ERROR_PRELOADER_STOP_WRONG_THREAD);
         }
     }
 
     static {
-        System.err.println("preloader class init: thread = " + Thread.currentThread());
-
         if (!Platform.isFxApplicationThread()) {
-            System.err.println("ERROR: preloader class init wrong thread: " + Thread.currentThread());
             Thread.dumpStack();
             System.exit(ERROR_PRELOADER_CLASS_INIT_WRONG_THREAD);
         }
