@@ -580,12 +580,19 @@ public final class ParallelTransition extends Transition {
 
     private void jumpToEnd() {
         for (int i = 0 ; i < cachedChildren.length; ++i) {
+            if (forceChildSync[i]) {
+                // See explanation in SequentialTransition#jumpToEnd
+                cachedChildren[i].impl_sync(true);
+            }
             cachedChildren[i].impl_jumpTo(durations[i], durations[i], true);
         }
     }
 
     private void jumpToStart() {
         for (int i = cachedChildren.length - 1 ; i >= 0; --i) {
+            if (forceChildSync[i]) {
+                cachedChildren[i].impl_sync(true);
+            }
             cachedChildren[i].impl_jumpTo(0, durations[i], true);
         }
     }

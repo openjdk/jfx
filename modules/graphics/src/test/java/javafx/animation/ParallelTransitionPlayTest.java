@@ -47,6 +47,7 @@ public class ParallelTransitionPlayTest {
     Transition child1X;
     Transition child2X;
     Transition child1Y;
+    Transition childByX;
 
     @Before
     public void setUp() {
@@ -76,7 +77,31 @@ public class ParallelTransitionPlayTest {
                 yProperty.set(Math.round(d * 10000));
             }
         };
+        childByX = new Transition() {
+            {
+                setCycleDuration(Duration.seconds(1));
+                setInterpolator(Interpolator.LINEAR);
+            }
+
+            long lastX;
+
+            @Override
+            protected void interpolate(double frac) {
+                xProperty.set(Math.round(lastX + frac * 1000));
+            }
+
+            @Override
+            void impl_sync(boolean forceSync) {
+                super.impl_sync(forceSync);
+                if (forceSync) {
+                    lastX = xProperty.get();
+                }
+            }
+
+
+        };
     }
+    
 
     @Test
     public void testSimplePlay() {
@@ -894,6 +919,51 @@ public class ParallelTransitionPlayTest {
         assertEquals(Status.STOPPED, pt2.getStatus());
         assertEquals(Status.STOPPED, child1X.getStatus());
         assertEquals(Status.STOPPED, child1Y.getStatus());
+    }
+    
+    @Test
+    public void teptPlayFromStartSynchronization() {
+        pt.getChildren().addAll(child1Y, childByX);
+
+        pt.play();
+
+        assertEquals(0, yProperty.get());
+        assertEquals(0, xProperty.get());
+
+        pt.jumpTo(Duration.seconds(10));
+        amt.pulse();
+
+        pt.play();
+        assertEquals(0, yProperty.get());
+        assertEquals(1000, xProperty.get());
+
+        pt.jumpTo(Duration.seconds(10));
+        amt.pulse();
+
+        assertEquals(10000, yProperty.get());
+        assertEquals(2000, xProperty.get());
+
+    }
+    
+    @Test
+    public void teptCycleSynchronization() {
+        pt.setCycleCount(2);
+        pt.getChildren().addAll(childByX);
+
+        pt.play();
+
+        assertEquals(0, xProperty.get());
+
+        pt.jumpTo(Duration.seconds(1));
+        amt.pulse();
+
+        assertEquals(TICK_STEP, xProperty.get());
+
+        pt.jumpTo(Duration.seconds(2));
+        amt.pulse();
+
+        assertEquals(1000, xProperty.get());
+
     }
 
 }
