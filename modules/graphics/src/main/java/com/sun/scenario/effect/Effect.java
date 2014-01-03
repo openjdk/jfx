@@ -314,18 +314,6 @@ public abstract class Effect {
     }
 
     /**
-     * Returns the bounding box that will be affected by this filter
-     * operation, given the list of input {@code Effect}s.  Note that
-     * the returned bounds can be smaller or larger than one or more
-     * of the inputs.
-     *
-     * @return the bounding box of this filter
-     */
-    public final BaseBounds getBounds() {
-        return getBounds(null, null);
-    }
-    
-    /**
      * Returns the dirty region container containing dirty regions affected
      * by this filter operation.
      * 

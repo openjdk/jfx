@@ -51,7 +51,7 @@ public class PrFloodPeer extends EffectPeer {
     {
         FilterContext fctx = getFilterContext();
         Flood flood = (Flood)effect;
-        BaseBounds floodBounds = flood.getBounds();
+        BaseBounds floodBounds = flood.getFloodBounds();
         int fx = (int)floodBounds.getMinX();
         int fy = (int)floodBounds.getMinY();
         int fw = (int)floodBounds.getWidth();

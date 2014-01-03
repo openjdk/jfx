@@ -188,8 +188,7 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
     @Test public void anEffectShouldChangeTheTransformedBoundsOfAChild() {
         NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
         BaseBounds oldTransformedBounds = middleChild.getCompleteBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM);
-        NodeEffectInput input = new NodeEffectInput(middleChild);
-        DropShadow shadow = new DropShadow(input);
+        DropShadow shadow = new DropShadow();
         shadow.setGaussianWidth(21);
         shadow.setGaussianHeight(21);
         shadow.setOffsetX(2);
@@ -201,8 +200,7 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
 
     @Test public void whenAnEffectIsSetTheChildBecomesDirtyAndTheDirtyRegionIncludesTheEffectBounds() {
         NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
-        NodeEffectInput input = new NodeEffectInput(middleChild);
-        DropShadow shadow = new DropShadow(input);
+        DropShadow shadow = new DropShadow();
         shadow.setGaussianWidth(21);
         shadow.setGaussianHeight(21);
         shadow.setOffsetX(2);
@@ -216,8 +214,7 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
 
     @Test public void whenAnEffectIsChangedOnTheChildTheDirtyRegionIncludesTheOldAndNewEffectBounds() {
         NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
-        NodeEffectInput input = new NodeEffectInput(middleChild);
-        DropShadow shadow = new DropShadow(input);
+        DropShadow shadow = new DropShadow();
         shadow.setGaussianWidth(21);
         shadow.setGaussianHeight(21);
         shadow.setOffsetX(2);

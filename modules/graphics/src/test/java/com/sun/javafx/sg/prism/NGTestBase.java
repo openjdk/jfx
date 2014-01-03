@@ -31,6 +31,7 @@ import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.CornerRadii;
 import java.lang.reflect.Field;
 import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.BoxBounds;
 import com.sun.javafx.geom.DirtyRegionContainer;
 import com.sun.javafx.geom.DirtyRegionPool;
 import com.sun.javafx.geom.RectBounds;
@@ -69,7 +70,8 @@ public class NGTestBase {
     /** Set the given effect on the node. effect must not be null. */
     protected static <N extends NGNode> void setEffect(N node, Effect effect) {
         node.setEffect(null); // so that when we ask for the getEffectBounds, it won't include an old effect
-        BaseBounds effectBounds = effect.getBounds();
+        BaseBounds effectBounds = new RectBounds();
+        effectBounds = effectBounds.deriveWithNewBounds(effect.getBounds(BaseTransform.IDENTITY_TRANSFORM, new NodeEffectInput(node)));
         BaseBounds clippedBounds = node.getEffectBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM);
         node.setEffect(effect);
         // The new transformed bounds should be the union of the old effect bounds, new effect bounds, and
