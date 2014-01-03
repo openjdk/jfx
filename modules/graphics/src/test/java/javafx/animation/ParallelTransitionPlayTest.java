@@ -922,7 +922,7 @@ public class ParallelTransitionPlayTest {
     }
     
     @Test
-    public void teptPlayFromStartSynchronization() {
+    public void testPlayFromStartSynchronization() {
         pt.getChildren().addAll(child1Y, childByX);
 
         pt.play();
@@ -946,7 +946,7 @@ public class ParallelTransitionPlayTest {
     }
     
     @Test
-    public void teptCycleSynchronization() {
+    public void testCycleSynchronization() {
         pt.setCycleCount(2);
         pt.getChildren().addAll(childByX);
 
