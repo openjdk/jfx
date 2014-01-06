@@ -40,6 +40,10 @@ import javafx.scene.control.SelectionModel;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 import javafx.util.Callback;
+
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+
 import com.sun.javafx.scene.control.behavior.ListViewBehavior;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
 
@@ -58,6 +62,19 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
 //    private Label placeholderLabel;
     private static final String EMPTY_LIST_TEXT = ControlResources.getString("ListView.noContent");
 
+    // RT-34744 : IS_PANNABLE will be false unless
+    // com.sun.javafx.scene.control.skin.ListViewSkin.pannable
+    // is set to true. This is done in order to make ListView functional
+    // on embedded systems with touch screens which do not generate scroll
+    // events for touch drag gestures.
+    private static final boolean IS_PANNABLE =
+            AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
+                @Override
+                public Boolean run() {
+                    return Boolean.getBoolean("com.sun.javafx.scene.control.skin.ListViewSkin.pannable");
+                }
+            });
+
     private ObservableList<T> listViewItems;
 
     public ListViewSkin(final ListView<T> listView) {
@@ -67,7 +84,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
 
         // init the VirtualFlow
         flow.setId("virtual-flow");
-        flow.setPannable(false);
+        flow.setPannable(IS_PANNABLE);
         flow.setVertical(getSkinnable().getOrientation() == Orientation.VERTICAL);
         flow.setFocusTraversable(getSkinnable().isFocusTraversable());
         flow.setCreateCell(new Callback<VirtualFlow, ListCell<T>>() {

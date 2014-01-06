@@ -63,6 +63,9 @@ import javafx.scene.control.TableFocusModel;
 import javafx.scene.control.TablePositionBase;
 import javafx.scene.control.TableSelectionModel;
 
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+
 /**
  *
  * @param <M> The type of the item stored in the cell
@@ -137,7 +140,18 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
     private int itemCount = -1;
     protected boolean forceCellRecreate = false;
 
-
+    // RT-34744 : IS_PANNABLE will be false unless
+    // com.sun.javafx.scene.control.skin.TableViewSkin.pannable
+    // is set to true. This is done in order to make TableView functional
+    // on embedded systems with touch screens which do not generate scroll
+    // events for touch drag gestures.
+    private static final boolean IS_PANNABLE =
+            AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
+                @Override
+                public Boolean run() {
+                    return Boolean.getBoolean("com.sun.javafx.scene.control.skin.TableViewSkin.pannable");
+                }
+            });
 
     /***************************************************************************
      *                                                                         *
@@ -157,7 +171,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
     // init isn't a constructor, but it is part of the initialisation routine
     protected void init(final C control) {
         // init the VirtualFlow
-        flow.setPannable(false);
+        flow.setPannable(IS_PANNABLE);
         flow.setFocusTraversable(control.isFocusTraversable());
         flow.setCreateCell(new Callback<VirtualFlow, I>() {
             @Override public I call(VirtualFlow flow) {

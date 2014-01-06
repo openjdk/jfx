@@ -145,11 +145,17 @@ setupTools("x86egl_tools",
 )
 
 X86EGL.javafxPlatformProperties ="""javafx.platform=eglfb
+directfb.com.sun.javafx.scene.control.skin.ListViewSkin.pannable=true
+directfb.com.sun.javafx.scene.control.skin.TreeViewSkin.pannable=true
+directfb.com.sun.javafx.scene.control.skin.TableViewSkin.pannable=true
 directfb.glass.platform=Lens
 directfb.glass.lens=dfb
 directfb.prism.order=sw
 directfb.com.sun.javafx.isEmbedded=true
 directfb.com.sun.javafx.scene.control.skin.FXVK.cache=true
+eglfb.com.sun.javafx.scene.control.skin.ListViewSkin.pannable=true
+eglfb.com.sun.javafx.scene.control.skin.TreeViewSkin.pannable=true
+eglfb.com.sun.javafx.scene.control.skin.TableViewSkin.pannable=true
 eglfb.glass.platform=Lens
 eglfb.glass.lens=eglfb
 eglfb.prism.order=es2
@@ -161,12 +167,18 @@ eglfb.embedded=eglfb
 eglfb.com.sun.javafx.isEmbedded=true
 eglfb.doNativeComposite=true
 eglfb.com.sun.javafx.scene.control.skin.FXVK.cache=true
+fb.com.sun.javafx.scene.control.skin.ListViewSkin.pannable=true
+fb.com.sun.javafx.scene.control.skin.TreeViewSkin.pannable=true
+fb.com.sun.javafx.scene.control.skin.TableViewSkin.pannable=true
 fb.glass.platform=Lens
 fb.glass.lens=fb
 fb.prism.order=sw
 fb.com.sun.javafx.isEmbedded=true
 fb.glass.restrictWindowToScreen=true
 fb.com.sun.javafx.scene.control.skin.FXVK.cache=true
+eglx11.com.sun.javafx.scene.control.skin.ListViewSkin.pannable=true
+eglx11.com.sun.javafx.scene.control.skin.TreeViewSkin.pannable=true
+eglx11.com.sun.javafx.scene.control.skin.TableViewSkin.pannable=true
 eglx11.glass.platform=Lens
 eglx11.glass.lens=eglx11
 eglx11.prism.order=es2
@@ -177,6 +189,9 @@ eglx11.use.gles2=true
 eglx11.embedded=eglx11
 eglx11.com.sun.javafx.isEmbedded=true
 eglx11.com.sun.javafx.scene.control.skin.FXVK.cache=true
+gtk.com.sun.javafx.scene.control.skin.ListViewSkin.pannable=true
+gtk.com.sun.javafx.scene.control.skin.TreeViewSkin.pannable=true
+gtk.com.sun.javafx.scene.control.skin.TableViewSkin.pannable=true
 gtk.glass.platform=gtk
 gtk.prism.order=sw
 gtk.com.sun.javafx.isEmbedded=true

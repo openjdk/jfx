@@ -39,15 +39,32 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.util.Callback;
 import java.lang.ref.WeakReference;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+
 import com.sun.javafx.scene.control.behavior.TreeViewBehavior;
 
 public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewBehavior<T>, TreeCell<T>> {
+
+    // RT-34744 : IS_PANNABLE will be false unless
+    // com.sun.javafx.scene.control.skin.TreeViewSkin.pannable
+    // is set to true. This is done in order to make TreeView functional
+    // on embedded systems with touch screens which do not generate scroll
+    // events for touch drag gestures.
+    private static final boolean IS_PANNABLE =
+            AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
+                @Override
+                public Boolean run() {
+                    return Boolean.getBoolean("com.sun.javafx.scene.control.skin.TreeViewSkin.pannable");
+                }
+            });
+
 
     public TreeViewSkin(final TreeView treeView) {
         super(treeView, new TreeViewBehavior(treeView));
 
         // init the VirtualFlow
-        flow.setPannable(false);
+        flow.setPannable(IS_PANNABLE);
         flow.setFocusTraversable(getSkinnable().isFocusTraversable());
         flow.setCreateCell(new Callback<VirtualFlow, TreeCell<T>>() {
             @Override public TreeCell<T> call(VirtualFlow flow) {
