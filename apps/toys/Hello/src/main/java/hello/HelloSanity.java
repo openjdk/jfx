@@ -114,8 +114,15 @@ public class HelloSanity extends Application {
             }
         });
         
+        Button bquit = new Button("Quit");
+        bquit.setOnAction(new EventHandler<ActionEvent>() {
+            @Override public void handle(ActionEvent e) {
+                primaryStage.close();
+            }
+        });
+        
         mainBox.getChildren().addAll(welcome, bControls, bTabs, bWins, bRobot,  bAnim,
-                                                                        bEffs, bswipe);
+                                                                        bEffs, bswipe, bquit);
         globalScene.setRoot(mainBox);
         globalScene.getStylesheets().add("hello/HelloSanityStyles.css");
         primaryStage.setScene(globalScene);
