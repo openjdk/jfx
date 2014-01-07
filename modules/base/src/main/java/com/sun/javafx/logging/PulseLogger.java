@@ -79,6 +79,17 @@ public class PulseLogger {
             });
 
     /**
+     * Optionally exit after a given number of pulses
+     */
+    private static final int EXIT_ON_PULSE =
+            AccessController.doPrivileged(new PrivilegedAction<Integer>() {
+                @Override
+                public Integer run() {
+                    return Integer.getInteger("javafx.pulseLogger.exitOnPulse", 0);
+                }
+            });
+
+    /**
      * We have a simple counter that keeps track of the current pulse number.
      * INTER_PULSE_DATA is used to mark data that comes between pulses.
      */
@@ -442,6 +453,10 @@ public class PulseLogger {
             message.setLength(0);
             counters.clear();
             state = AVAILABLE;
+            if (EXIT_ON_PULSE > 0 && pulseCount >= EXIT_ON_PULSE) {
+                System.err.println("Exiting after pulse #" + pulseCount);
+                System.exit(0);
+            }
         }
     }
 }
