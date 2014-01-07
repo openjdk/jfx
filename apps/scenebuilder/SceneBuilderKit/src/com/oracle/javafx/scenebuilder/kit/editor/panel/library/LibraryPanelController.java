@@ -157,6 +157,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
     
     /**
      * @treatAsPrivate Perform the import of the selection
+     * @param objects the FXOM objects to import to customize the Library content.
      */
     public void performImportSelection(List<FXOMObject> objects) {
         processInternalImport(objects);

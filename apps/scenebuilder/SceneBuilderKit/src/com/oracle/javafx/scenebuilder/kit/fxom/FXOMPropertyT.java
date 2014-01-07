@@ -32,7 +32,10 @@
 package com.oracle.javafx.scenebuilder.kit.fxom;
 
 import com.oracle.javafx.scenebuilder.kit.fxom.glue.GlueElement;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Map;
 
 /**
@@ -225,6 +228,8 @@ public class FXOMPropertyT extends FXOMProperty {
         assert destination != null;
         assert destination != getFxomDocument();
         
+        documentLocationWillChange(destination.getLocation());
+        
         if (getParentInstance() != null) {
             assert getParentInstance().getFxomDocument() == getFxomDocument();
             removeFromParentInstance();
@@ -249,4 +254,51 @@ public class FXOMPropertyT extends FXOMProperty {
         
         super.changeFxomDocument(destination);
     }
+    
+    @Override
+    public void documentLocationWillChange(URL newLocation) {
+        final String currentValue = getValue();
+        final URL currentLocation = getFxomDocument().getLocation();
+        
+        final PrefixedValue pv = new PrefixedValue(currentValue);
+        if (pv.isDocumentRelativePath()) {
+            assert currentLocation != null;
+
+            /*
+             * currentValue is a path relative to currentLocation.
+             * We compute the absolute path and, if new location 
+             * is non null, we relativize the absolute path against
+             * newLocation.
+             */
+            final URL assetURL = pv.resolveDocumentRelativePath(currentLocation);
+            final String newValue;
+            if (newLocation == null) {
+                newValue = assetURL.toString();
+            } else {
+                final PrefixedValue pv2 
+                        = PrefixedValue.makePrefixedValue(assetURL, newLocation);
+                newValue = pv2.toString();
+            }
+            setValue(newValue);
+        } else if (pv.isPlainString() && (currentLocation == null)) {
+
+            /*
+             * currentValue is a plain string.
+             * We check if it is an URL.
+             * 
+             * Since currentLocation is null and newLocation non null,
+             * then all URLs should be converted to relative path.
+             */
+            assert newLocation != null;
+            try {
+                final URL assetURL = new URL(pv.getSuffix());
+                final PrefixedValue pv2 = PrefixedValue.makePrefixedValue(assetURL, newLocation);
+                setValue(pv2.toString());
+            } catch(MalformedURLException x) {
+                // p.getValue() is not an URL
+                // We keep currentValue unchanged.
+            }
+        }
+    }
+    
 }

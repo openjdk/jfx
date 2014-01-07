@@ -37,7 +37,7 @@ import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadat
 import java.util.Set;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
-import javafx.scene.Parent;
+import javafx.scene.control.CustomMenuItem;
 import javafx.scene.control.MenuButton;
 import javafx.scene.layout.Pane;
 
@@ -49,6 +49,9 @@ public abstract class PopupEditor extends PropertyEditor implements PopupEditorV
 
     @FXML
     MenuButton popupMb;
+
+    @FXML
+    CustomMenuItem popupMenuItem;
 
     @FXML
     Pane editorHost;

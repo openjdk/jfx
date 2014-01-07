@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <!--
   Copyright (c) 2012, 2014, Oracle and/or its affiliates.
   All rights reserved. Use is subject to license terms.
@@ -39,7 +40,7 @@
   <children>
     <MenuButton fx:id="popupMb" maxWidth="1.7976931348623157E308" mnemonicParsing="false" prefHeight="-1.0" prefWidth="-1.0" text="value">
       <items>
-        <CustomMenuItem hideOnClick="false" mnemonicParsing="false" text="Unspecified Action">
+        <CustomMenuItem hideOnClick="false" mnemonicParsing="false" text="Unspecified Action" fx:id="popupMenuItem">
           <content>
             <StackPane fx:id="editorHost" prefHeight="-1.0" prefWidth="-1.0" />
           </content>

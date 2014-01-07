@@ -34,6 +34,7 @@ package com.oracle.javafx.scenebuilder.app.preview;
 import com.oracle.javafx.scenebuilder.app.DocumentWindowController;
 import com.oracle.javafx.scenebuilder.app.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
+import com.oracle.javafx.scenebuilder.kit.editor.EditorController.Size;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractWindowController;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
@@ -52,11 +53,13 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.geometry.Bounds;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
+import javafx.scene.shape.MeshView;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
 import javafx.stage.Window;
@@ -76,6 +79,15 @@ public final class PreviewWindowController extends AbstractWindowController {
     private static final String NID_PREVIEW_ROOT = "previewRoot"; //NOI18N
     private EditorPlatform.Theme editorControllerTheme;
     private ObservableList<File> sceneStyleSheet;
+    private Size currentSize = Size.SIZE_PREFERRED;
+    private boolean sizeChangedFromMenu = false;
+    private static final double TARGET_SIZE_3D = 500;
+    
+    // These two one are used to host the width and height difference
+    // coming from the decoration of the window; this is something highly
+    // dependent on the operating system.
+    private double decorationX = 0;
+    private double decorationY = 0;
     
     /**
      * The type of Camera used by the Preview panel.
@@ -84,7 +96,6 @@ public final class PreviewWindowController extends AbstractWindowController {
 
         PARALLEL, PERSPECTIVE
     }
-
         
     public PreviewWindowController(EditorController editorController, Window owner) {
         super(owner);
@@ -240,53 +251,30 @@ public final class PreviewWindowController extends AbstractWindowController {
 
                             if (sceneGraphRoot instanceof Parent) {
                                 ((Parent) sceneGraphRoot).setId(NID_PREVIEW_ROOT);
-                                setRoot((Parent) updateAutoResizeTransform((Parent) sceneGraphRoot));
                                 assert ((Parent) sceneGraphRoot).getScene() == null;
-                                
-                                // At that stage current style sheets are the one defined within the FXML
-                                ObservableList<String> currentStyleSheets = ((Parent) sceneGraphRoot).getStylesheets();
+
+                                setRoot((Parent) updateAutoResizeTransform((Parent) sceneGraphRoot));
+
+                                // Compute the proper styling
                                 List<String> newStyleSheets = new ArrayList<>();
-                                
-                                for (String stylesheet : currentStyleSheets) {
-                                    newStyleSheets.add(stylesheet);
-                                }
-                                
-                                // Add style sheet set thanks Preview > Scene Style Sheets > Add a Style Sheet
-                                if (sceneStyleSheet != null) {
-                                    for (File f : sceneStyleSheet) {
-                                        String urlString = ""; //NOI18N
-                                        try {
-                                            urlString = f.toURI().toURL().toString();
-                                        } catch (MalformedURLException ex) {
-                                            throw new RuntimeException("Bug in PreviewWindowController", ex); //NOI18N
-                                        }
-                                        newStyleSheets.add(urlString);
-                                    }
-                                }
-                                
+                                computeStyleSheets(newStyleSheets, sceneGraphRoot, themeStyleSheetStrings);
+
                                 // Clean all styling
                                 ((Parent) sceneGraphRoot).getStylesheets().removeAll();
-                                
-                                // Add theme style sheet; order is significant ==> theme one always first
-                                newStyleSheets.addAll(0, themeStyleSheetStrings);
-                                
-                                // Apply the whole styling
+
+                                // Apply the new styling as a whole
                                ((Parent) sceneGraphRoot).getStylesheets().addAll(newStyleSheets);
                             } else if (sceneGraphRoot instanceof Node) {
                                 StackPane sp = new StackPane();
-                                sp.getStylesheets().addAll(0, themeStyleSheetStrings);
-                                
-                                if (sceneStyleSheet != null) {
-                                    for (File f : sceneStyleSheet) {
-                                        try {
-                                            ((Parent) sceneGraphRoot).getStylesheets().add(f.toURI().toURL().toString());
-                                        } catch (MalformedURLException ex) {
-                                            throw new RuntimeException("Bug in PreviewWindowController", ex); //NOI18N
-                                        }
-                                    }
-                                }
-                                
                                 sp.setId(NID_PREVIEW_ROOT);
+                                
+                                // Compute the proper styling
+                                List<String> newStyleSheets = new ArrayList<>();
+                                computeStyleSheets(newStyleSheets, sceneGraphRoot, themeStyleSheetStrings);
+
+                                // Apply the new styling as a whole
+                                sp.getStylesheets().addAll(newStyleSheets);
+                                
                                 // With some 3D assets such as TuxRotation the
                                 // rendering is wrong unless applyCSS is called.
                                 ((Node) sceneGraphRoot).applyCss();
@@ -294,6 +282,7 @@ public final class PreviewWindowController extends AbstractWindowController {
                                 setRoot(sp);
                             } else {
                                 setCameraType(CameraType.PARALLEL);
+                                sizeChangedFromMenu = false;
                                 StackPane sp = new StackPane(new Label(I18N.getString("preview.not.node")));
                                 sp.setId(NID_PREVIEW_ROOT);
                                 sp.setPrefSize(WIDTH_WHEN_EMPTY, HEIGHT_WHEN_EMPTY);
@@ -301,6 +290,7 @@ public final class PreviewWindowController extends AbstractWindowController {
                             }
                         } else {
                             setCameraType(CameraType.PARALLEL);
+                            sizeChangedFromMenu = false;
                             StackPane sp = new StackPane(new Label(I18N.getString("preview.no.document")));
                             sp.setId(NID_PREVIEW_ROOT);
                             sp.setPrefSize(WIDTH_WHEN_EMPTY, HEIGHT_WHEN_EMPTY);
@@ -318,9 +308,12 @@ public final class PreviewWindowController extends AbstractWindowController {
         long delay = 0;
 
         // A long delay makes sense only if we have a valid document and
-        // the preview window is already opened.
+        // the preview window is already opened, except when we change size thanks
+        // Scene Size menu.
         // When opening preview window we want it fast.
-        if (editorController.getFxomDocument() != null && getStage().isShowing()) {
+        if (editorController.getFxomDocument() != null
+                && getStage().isShowing()
+                && ! sizeChangedFromMenu) {
             delay = 1000;
         }
 
@@ -332,7 +325,7 @@ public final class PreviewWindowController extends AbstractWindowController {
         timer.schedule(timerTask, delay); // milliseconds
     }
     
-    private boolean userResizedPreviewWindow() {
+    public boolean userResizedPreviewWindow() {
         boolean res = false;
         double sceneHeight = getScene().getHeight();
         double sceneWidth = getScene().getWidth();
@@ -341,8 +334,13 @@ public final class PreviewWindowController extends AbstractWindowController {
             double prefHeight = getRoot().prefHeight(-1);
             double prefWidth = getRoot().prefWidth(-1);
             
-            if ((! MathUtils.equals(prefHeight, sceneHeight) && ! MathUtils.equals(sceneHeight, HEIGHT_WHEN_EMPTY))
-                    || (! MathUtils.equals(prefWidth, sceneWidth) && ! MathUtils.equals(sceneWidth, WIDTH_WHEN_EMPTY))) {
+            if ((! MathUtils.equals(prefHeight, sceneHeight)
+                    && ! MathUtils.equals(sceneHeight, HEIGHT_WHEN_EMPTY)
+                    && ! MathUtils.equals(sceneHeight, getHeightFromSize(getSize())))
+                    ||
+                    (! MathUtils.equals(prefWidth, sceneWidth)
+                    && ! MathUtils.equals(sceneWidth, WIDTH_WHEN_EMPTY)
+                    && ! MathUtils.equals(sceneWidth, getWidthFromSize(getSize())))) {
                 res = true;
             }
         }
@@ -350,15 +348,43 @@ public final class PreviewWindowController extends AbstractWindowController {
         return res;
     }
 
+    // With some 3D layout the preferred size can be ridiculous (< 1) hence a dot
+    // on screen, or it can be gigantic (several thousands). Do we want to put
+    // some bounds so that something is made visible ?
+    // In the same spirit some of the predefined sizes such as 1920x1080 or even
+    // 1280x800 may exceed the capability of the user screen: should we greyed
+    // relevant size values accordingly in Preview menu ?
     private void updateWindowSize() {
         final FXOMDocument fxomDocument = editorController.getFxomDocument();
 
         if (fxomDocument != null) {
-            // When we change the stylesheet (Modena, Caspian) we need to know
-            // if the user has resized the preview window: if yes we keep
-            // the user size, else we size the layout to the scene.
-            if ( ! userResizedPreviewWindow()) {
-                getStage().sizeToScene();
+            // A size setup action taken from menu bar has priority over a resize
+            // done directly on the Preview window.
+            if (sizeChangedFromMenu) {
+                sizeChangedFromMenu = false;
+                // We take into account size taken by decoration so that we are
+                // sure the area rendered has the exact size we want.
+                getStage().setWidth(getWidthFromSize(getSize()) + decorationX);
+                getStage().setHeight(getHeightFromSize(getSize()) + decorationY);
+            } else if ( ! userResizedPreviewWindow()) {
+                // Experience shows 3D layout defined so that top level item is
+                // a Group are rendered correctly on their own. The 3D case is
+                // something that deserves a closer look anyway.
+                if (fxomDocument.getSceneGraphRoot() instanceof MeshView) {
+                    getStage().setWidth(TARGET_SIZE_3D);
+                    getStage().setHeight(TARGET_SIZE_3D);
+                } else {
+                    // When we change the stylesheet (Modena, Caspian) we need to know
+                    // if the user has resized the preview window: if yes we keep
+                    // the user size, else we size the layout to the scene.
+                    getStage().sizeToScene();
+                }
+                
+                // The first time preview is rendered we always enter this case.
+                // The whole layout is made visible and size difference between
+                // Scene and Stage allows to compute size taken by decoration.
+                decorationX = getStage().getWidth() - getRoot().prefWidth(-1);
+                decorationY = getStage().getHeight() - getRoot().prefHeight(-1);
             }
         } else {
             getStage().setWidth(WIDTH_WHEN_EMPTY);
@@ -416,16 +442,15 @@ public final class PreviewWindowController extends AbstractWindowController {
         Node res = whatever;
 //        System.out.println("PreviewWindowController::updateAutoResizeTransform: Called");
         assert editorController.getFxomDocument() != null;
-        final Bounds rootBounds = res.getLayoutBounds();
 
-        if ((rootBounds.getDepth() > 0) && autoResize3DContent) {
+        if (editorController.is3D() && autoResize3DContent) {
             res.getTransforms().clear();
+            final Bounds rootBounds = res.getLayoutBounds();
             // Content is 3D.
-            // Zoom to get a 500 size.
-            final double targetSize = 500.0;
-            final double scaleX = targetSize / rootBounds.getWidth();
-            final double scaleY = targetSize / rootBounds.getHeight();
-            final double scaleZ = targetSize / rootBounds.getDepth();
+            // Zoom to get a TARGET_SIZE_3D size.
+            final double scaleX = TARGET_SIZE_3D / rootBounds.getWidth();
+            final double scaleY = TARGET_SIZE_3D / rootBounds.getHeight();
+            final double scaleZ = TARGET_SIZE_3D / rootBounds.getDepth();
             final double scale = Math.min(scaleX, Math.min(scaleY, scaleZ));
             final double tX = -rootBounds.getMinX();
             final double tY = -rootBounds.getMinY();
@@ -438,6 +463,114 @@ public final class PreviewWindowController extends AbstractWindowController {
             setCameraType(CameraType.PERSPECTIVE);
         } else {
             setCameraType(CameraType.PARALLEL);
+        }
+        
+        return res;
+    }
+
+    private double getWidthFromSize(Size size) {
+        double res = WIDTH_WHEN_EMPTY;
+        
+        switch (size) {
+            case SIZE_1280x800:
+                res = 1280.0;
+                break;
+            case SIZE_1920x1080:
+                res = 1920.0;
+                break;
+            case SIZE_320x240:
+                res = 320.0;
+                break;
+            case SIZE_640x480:
+                res = 640.0;
+                break;
+            case SIZE_PREFERRED:
+                res = getRoot().prefWidth(-1);
+                break;
+            default:
+                break;
+        }
+        
+        return res;
+    }
+
+    private double getHeightFromSize(Size size) {
+        double res = HEIGHT_WHEN_EMPTY;
+        
+        switch (size) {
+            case SIZE_1280x800:
+                res = 800.0;
+                break;
+            case SIZE_1920x1080:
+                res = 1080.0;
+                break;
+            case SIZE_320x240:
+                res = 240.0;
+                break;
+            case SIZE_640x480:
+                res = 480.0;
+                break;
+            case SIZE_PREFERRED:
+                res = getRoot().prefHeight(-1);
+                break;
+            default:
+                break;
+        }
+        
+        return res;
+    }
+    
+    /**
+     * 
+     * @return the current Size used for previewing.
+     */
+    public Size getSize() {
+        return currentSize;
+    }
+    
+    public void setSize(Size size) {
+        currentSize = size;
+        sizeChangedFromMenu = true;
+        requestUpdate();
+    }
+    
+    private void computeStyleSheets(List<String> newStyleSheets, Object sceneGraphRoot, List<String> themeStyleSheetStrings) {        
+        // Add theme style sheet; order is significant ==> theme one always first
+        newStyleSheets.addAll(0, themeStyleSheetStrings);
+
+        if (sceneGraphRoot instanceof Parent) {
+            // At that stage current style sheets are the one defined within the FXML
+            ObservableList<String> currentStyleSheets = ((Parent) sceneGraphRoot).getStylesheets();
+
+            for (String stylesheet : currentStyleSheets) {
+                newStyleSheets.add(stylesheet);
+            }
+        }
+
+        // Add style sheet set thanks Preview > Scene Style Sheets > Add a Style Sheet
+        if (sceneStyleSheet != null) {
+            for (File f : sceneStyleSheet) {
+                String urlString = ""; //NOI18N
+                try {
+                    urlString = f.toURI().toURL().toString();
+                } catch (MalformedURLException ex) {
+                    throw new RuntimeException("Bug in PreviewWindowController", ex); //NOI18N
+                }
+                newStyleSheets.add(urlString);
+            }
+        }
+    }
+    
+    public boolean sizeDoesFit(Size size) {
+        boolean res = false;
+        
+        if (getStage() != null) {
+            Rectangle2D frame = getBiggestViewableRectangle();
+            
+            if (getWidthFromSize(size) <= frame.getWidth()
+                    && getHeightFromSize(size) <= frame.getHeight()) {
+                res = true;
+            }
         }
         
         return res;

@@ -33,6 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import com.oracle.javafx.scenebuilder.kit.util.JavaLanguage;
 import java.util.Objects;
 
 /**
@@ -61,7 +62,8 @@ public class ModifyFxIdJob extends Job {
      */
     @Override
     public boolean isExecutable() {
-        return Objects.equals(oldValue, newValue) == false;
+        return Objects.equals(oldValue, newValue) == false
+                && ((newValue == null) || JavaLanguage.isIdentifier(newValue));
     }
 
     @Override

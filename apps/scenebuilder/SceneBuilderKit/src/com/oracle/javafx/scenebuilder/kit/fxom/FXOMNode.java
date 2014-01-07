@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.fxom;
 
+import java.net.URL;
 
 /**
  *
@@ -51,6 +52,7 @@ public abstract class FXOMNode {
     
     public abstract void moveToFxomDocument(FXOMDocument destination);
     
+    public abstract void documentLocationWillChange(URL newLocation);
     
     protected void changeFxomDocument(FXOMDocument destination) {
         assert destination != null;

@@ -247,23 +247,15 @@ public abstract class AbstractModalDialog extends AbstractFxmlWindowController {
     
     /*
      * To be subclassed #2
-     * 
-     * Those methods cannot be declared abstract else we fall in RT-34146.
      */
     @FXML
-    protected void okButtonPressed(ActionEvent e) {
-        
-    }
+    protected abstract void okButtonPressed(ActionEvent e);
     
     @FXML
-    protected void cancelButtonPressed(ActionEvent e) {
-        
-    }
+    protected abstract void cancelButtonPressed(ActionEvent e);
     
     @FXML
-    protected void actionButtonPressed(ActionEvent e) {
-        
-    }
+    protected abstract void actionButtonPressed(ActionEvent e);
     
     
     /*

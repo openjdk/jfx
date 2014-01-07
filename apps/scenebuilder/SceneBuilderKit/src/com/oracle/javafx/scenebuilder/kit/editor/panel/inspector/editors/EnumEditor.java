@@ -61,6 +61,10 @@ public class EnumEditor extends PropertyEditor {
                 }
             }
         });
+        initialize();
+    }
+    
+    private void initialize() {
         updateItems();
     }
 
@@ -100,7 +104,11 @@ public class EnumEditor extends PropertyEditor {
         handleIndeterminate(choiceBox);
     }
 
-    private void updateItems() {
+    protected ChoiceBox<String> getChoiceBox() {
+        return choiceBox;
+    }
+    
+    protected void updateItems() {
         assert getPropertyMeta() instanceof EnumerationPropertyMetadata;
         final EnumerationPropertyMetadata enumPropMeta 
                 = (EnumerationPropertyMetadata) getPropertyMeta();

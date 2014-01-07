@@ -33,6 +33,9 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata;
+import java.util.ArrayList;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -42,21 +45,22 @@ import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Slider;
-import javafx.scene.control.TextField;
+import javafx.scene.layout.StackPane;
 
 /**
  * Editor for bounded double properties. (e.g. 0 &lt;= opacity &lt;= 1)
  *
- * 
+ *
  */
-public class BoundedDoubleEditor extends PropertyEditor {
+public class BoundedDoubleEditor extends AutoSuggestEditor {
 
     @FXML
     private Slider slider;
     @FXML
-    private TextField textField;
+    private StackPane textSp;
 
     private final Parent root;
+    private Map<String, Object> constants;
     // default min and max
     double min = 0;
     double max = 100;
@@ -65,8 +69,9 @@ public class BoundedDoubleEditor extends PropertyEditor {
     private boolean updateFromSlider = false;
 
     @SuppressWarnings("LeakingThisInConstructor")
-    public BoundedDoubleEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
-        super(propMeta, selectedClasses);
+    public BoundedDoubleEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, Map<String, Object> constantsMap) {
+        super(propMeta, selectedClasses, new ArrayList<>(constantsMap.keySet()), AutoSuggestEditor.Type.DOUBLE);
+        this.constants = constantsMap;
         root = EditorUtils.loadFxml("BoundedDoubleEditor.fxml", this); //NOI18N
 
         //
@@ -83,29 +88,35 @@ public class BoundedDoubleEditor extends PropertyEditor {
                     // nothing to do
                     return;
                 }
-                String valStr = textField.getText();
-                double valDouble;
-                try {
-                    valDouble = Double.parseDouble(valStr);
-                } catch (NumberFormatException e) {
-                    handleInvalidValue(valStr);
-                    return;
+
+                Object value = getValue();
+                if ((value == null)
+                        || !((DoublePropertyMetadata) getPropertyMeta()).isValidValue((Double) value)) {
+                    handleInvalidValue(getTextField().getText());
                 }
-                if (!((DoublePropertyMetadata) getPropertyMeta()).isValidValue(valDouble)) {
-                    handleInvalidValue(valDouble);
-                    return;
+                assert value instanceof Double;
+                double valDouble = (Double) value;
+                // Check if the entered value is a constant string
+                boolean isConstant = constants.get(getTextField().getText().toUpperCase(Locale.ROOT)) != null;
+                // Check if the entered value is a constant value
+                for (Map.Entry<String, Object> entry : constants.entrySet()) {
+                    if (value.equals(entry.getValue())) {
+                        isConstant = true;
+                        break;
+                    }
                 }
-                // If the value is less than the minimum, or more than the maximum,
+                // If the value is not a constant,
+                // and is less than the minimum, or more than the maximum,
                 // set the value to min or max
-                if (valDouble < min || valDouble > max) {
+                if (!isConstant && (valDouble < min || valDouble > max)) {
                     if (valDouble < min) {
                         valDouble = min;
                     } else if (valDouble > max) {
                         valDouble = max;
                     }
-                    textField.setText(EditorUtils.valAsStr(valDouble));
+                    getTextField().setText(EditorUtils.valAsStr(valDouble));
                 }
-                textField.selectAll();
+                getTextField().selectAll();
                 updateFromTextField = true;
                 slider.setValue(valDouble);
                 updateFromTextField = false;
@@ -133,7 +144,7 @@ public class BoundedDoubleEditor extends PropertyEditor {
                 // since the Slider may returns many decimals.
                 double value = EditorUtils.round(slider.getValue(), roundingFactor);
                 updateFromSlider = true;
-                textField.setText(EditorUtils.valAsStr(value));
+                getTextField().setText(EditorUtils.valAsStr(value));
                 updateFromSlider = false;
                 userUpdateValueProperty(value);
             }
@@ -142,7 +153,9 @@ public class BoundedDoubleEditor extends PropertyEditor {
 
     // Method to please FindBugs
     private void initialize(EventHandler<ActionEvent> onActionListener) {
-        setTextEditorBehavior(this, textField, onActionListener, false);
+        // Add the AutoSuggest text field in the scene graph
+        textSp.getChildren().add(super.getRoot());
+        setTextEditorBehavior(this, getTextField(), onActionListener, false);
     }
 
     @Override
@@ -152,7 +165,21 @@ public class BoundedDoubleEditor extends PropertyEditor {
 
     @Override
     public Object getValue() {
-        return getValueFromTextField();
+        String val = getTextField().getText();
+        if (val.isEmpty()) {
+            val = "0"; //NOI18N
+            getTextField().setText(val);
+            return new Double(val);
+        }
+        Object constantValue = constants.get(val.toUpperCase(Locale.ROOT));
+        if (constantValue != null) {
+            val = EditorUtils.valAsStr(constantValue);
+        }
+        try {
+            return Double.parseDouble(val);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     @Override
@@ -164,29 +191,25 @@ public class BoundedDoubleEditor extends PropertyEditor {
 
         assert (value instanceof Double);
         slider.setValue((Double) value);
-        textField.setText(EditorUtils.valAsStr(value));
+        // Get the corresponding constant if any
+        for (Map.Entry<String, Object> entry : constants.entrySet()) {
+            if (value.equals(entry.getValue())) {
+                value = entry.getKey();
+            }
+        }
+        getTextField().setText(EditorUtils.valAsStr(value));
     }
 
-    @Override
-    public void reset(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
-        super.reset(propMeta, selectedClasses);
+    public void reset(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses,
+            Map<String, Object> constants) {
+        super.reset(propMeta, selectedClasses, new ArrayList<>(constants.keySet()));
+        this.constants = constants;
         configureSlider(propMeta);
     }
 
     @Override
     protected void valueIsIndeterminate() {
-        handleIndeterminate(textField);
-    }
-
-    private double getValueFromTextField() {
-        double valueTextField = 0;
-        try {
-            valueTextField = Double.parseDouble(textField.getText());
-        } catch (NumberFormatException e) {
-            // should not happen: already checked in text field listener
-            assert false;
-        }
-        return valueTextField;
+        handleIndeterminate(getTextField());
     }
 
     private void configureSlider(ValuePropertyMetadata propMeta) {
@@ -210,7 +233,7 @@ public class BoundedDoubleEditor extends PropertyEditor {
 
             @Override
             public void run() {
-                textField.requestFocus();
+                getTextField().requestFocus();
             }
         });
     }

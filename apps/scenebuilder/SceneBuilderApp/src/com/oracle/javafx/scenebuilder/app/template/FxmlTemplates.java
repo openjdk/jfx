@@ -126,7 +126,7 @@ public class FxmlTemplates {
                 names.add("ComplexApplication.css"); //NOI18N
                 break;
             case NEW_COMPLEX_APPLICATION_I18N:
-                names.add("AlertDialog.css"); //NOI18N
+                names.add("ComplexApplication.css"); //NOI18N
                 names.add("ComplexApplication_en.properties"); //NOI18N
                 names.add("ComplexApplication_fr.properties"); //NOI18N
                 break;

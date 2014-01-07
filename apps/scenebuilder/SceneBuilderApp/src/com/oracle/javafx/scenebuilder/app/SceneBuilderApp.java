@@ -340,6 +340,7 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
      * Ignored in correctly deployed JavaFX application.
      */
     public static void main(String[] args) {
+        AppPlatform.setLaunchedFromMainRoutine(true);
         launch(args);
     }
 

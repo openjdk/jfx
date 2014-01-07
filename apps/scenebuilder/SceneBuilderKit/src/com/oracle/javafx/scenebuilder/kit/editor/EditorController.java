@@ -46,6 +46,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.SendBackwardJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.SendToBackJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.TrimSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.UseComputedSizesSelectionJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.UsePredefinedSizeJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.AddColumnJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.AddRowJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.GridPaneJobUtils.Position;
@@ -91,6 +92,8 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableListValue;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
+import javafx.geometry.Bounds;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.effect.Effect;
 import javafx.scene.input.Clipboard;
@@ -127,6 +130,10 @@ public class EditorController {
         // Candidates for Modify menu
         FIT_TO_PARENT,
         USE_COMPUTED_SIZES,
+        SET_SIZE_320x240,
+        SET_SIZE_640x480,
+        SET_SIZE_1280x800,
+        SET_SIZE_1920x1080,
         // Candidates for Modify/GridPane menu
         MOVE_ROW_ABOVE,
         MOVE_ROW_BELOW,
@@ -174,6 +181,19 @@ public class EditorController {
         SELECT_PREVIOUS,
         TOGGLE_CSS_SELECTION,
         TOGGLE_SAMPLE_DATA
+    }
+    
+    /**
+     * Predefined sizes (width x height).
+     * Preferred one refers to the one explicitly set by the user: it is for
+     * use for previewing only.
+     */
+    public enum Size {
+        SIZE_320x240,
+        SIZE_640x480,
+        SIZE_1280x800,
+        SIZE_1920x1080,
+        SIZE_PREFERRED
     }
     
     private final Selection selection = new Selection();
@@ -310,6 +330,7 @@ public class EditorController {
         fxmlLocationProperty.setValue(fxmlLocation);
         if (getFxomDocument() != null) {
             getFxomDocument().setLocation(fxmlLocation);
+            clearUndoRedo(); // Because FXOMDocument.setLocation() mutates the document
         }
     }
     
@@ -799,6 +820,31 @@ public class EditorController {
                 jobManager.push(job);
                 break;
             }
+            case SET_SIZE_320x240: {
+                final UsePredefinedSizeJob job = new UsePredefinedSizeJob(this, Size.SIZE_320x240);
+                jobManager.push(job);
+                break;
+            }
+            case SET_SIZE_640x480: {
+                final UsePredefinedSizeJob job = new UsePredefinedSizeJob(this, Size.SIZE_640x480);
+                jobManager.push(job);
+                break;
+            }
+            case SET_SIZE_1280x800: {
+                final UsePredefinedSizeJob job = new UsePredefinedSizeJob(this, Size.SIZE_1280x800);
+                jobManager.push(job);
+                break;
+            }
+            case SET_SIZE_1920x1080: {
+                final UsePredefinedSizeJob job = new UsePredefinedSizeJob(this, Size.SIZE_1920x1080);
+                jobManager.push(job);
+                break;
+            }
+            case TRIM: {
+                final TrimSelectionJob job = new TrimSelectionJob(this);
+                jobManager.push(job);
+                break;
+            }
             case UNWRAP: {
                 final UnwrapJob job = new UnwrapJob(this);
                 jobManager.push(job);
@@ -807,11 +853,6 @@ public class EditorController {
             case USE_COMPUTED_SIZES: {
                 final UseComputedSizesSelectionJob job
                         = new UseComputedSizesSelectionJob(this);
-                jobManager.push(job);
-                break;
-            }
-            case TRIM: {
-                final TrimSelectionJob job = new TrimSelectionJob(this);
                 jobManager.push(job);
                 break;
             }
@@ -969,6 +1010,31 @@ public class EditorController {
                 result = job.isExecutable();
                 break;
             }
+            case SET_SIZE_320x240: {
+                final UsePredefinedSizeJob job = new UsePredefinedSizeJob(this, Size.SIZE_320x240);
+                result = job.isExecutable();
+                break;
+            }
+            case SET_SIZE_640x480: {
+                final UsePredefinedSizeJob job = new UsePredefinedSizeJob(this, Size.SIZE_640x480);
+                result = job.isExecutable();
+                break;
+            }
+            case SET_SIZE_1280x800: {
+                final UsePredefinedSizeJob job = new UsePredefinedSizeJob(this, Size.SIZE_1280x800);
+                result = job.isExecutable();
+                break;
+            }
+            case SET_SIZE_1920x1080: {
+                final UsePredefinedSizeJob job = new UsePredefinedSizeJob(this, Size.SIZE_1920x1080);
+                result = job.isExecutable();
+                break;
+            }
+            case TRIM: {
+                final TrimSelectionJob job = new TrimSelectionJob(this);
+                result = job.isExecutable();
+                break;
+            }
             case UNWRAP: {
                 final UnwrapJob job = new UnwrapJob(this);
                 result = job.isExecutable();
@@ -977,11 +1043,6 @@ public class EditorController {
             case USE_COMPUTED_SIZES: {
                 final UseComputedSizesSelectionJob job 
                         = new UseComputedSizesSelectionJob(this);
-                result = job.isExecutable();
-                break;
-            }
-            case TRIM: {
-                final TrimSelectionJob job = new TrimSelectionJob(this);
                 result = job.isExecutable();
                 break;
             }
@@ -1644,7 +1705,7 @@ public class EditorController {
     
     /**
      * Returns the list of library items that can be passed to
-     * {@link EditorController#performWrap(java.lang.Object)}.
+     * {@link EditorController#performWrap(java.lang.Class)}.
      * 
      * @return the list of library items usable for wrapping.
      */
@@ -1678,6 +1739,51 @@ public class EditorController {
         return stylesheet;
     }
     
+    
+    /**
+     * @treatAsPrivate
+     * 
+     * @return true if the current FXOM document represents a 3D layout, false
+     * otherwise.
+     */
+    public boolean is3D() {
+        boolean res = false;
+        FXOMDocument doc = getFxomDocument();
+        
+        if (doc != null) {
+            Object sgroot = doc.getSceneGraphRoot();
+            
+            if (sgroot instanceof Node) {
+                final Bounds rootBounds = ((Node)sgroot).getLayoutBounds();
+                res = (rootBounds.getDepth() > 0);
+            }
+        }
+        
+        return res;
+    }
+    
+    
+    /**
+     * @treatAsPrivate
+     * 
+     * @return true if the current FXOM document is an instance of a Node, false
+     * otherwise.
+     */
+    public boolean isNode() {
+        boolean res = false;
+        FXOMDocument doc = getFxomDocument();
+        
+        if (doc != null) {
+            Object sgroot = doc.getSceneGraphRoot();
+            
+            if (sgroot instanceof Node) {
+                res = true;
+            }
+        }
+        
+        return res;
+    }
+
     
     /*
      * Private

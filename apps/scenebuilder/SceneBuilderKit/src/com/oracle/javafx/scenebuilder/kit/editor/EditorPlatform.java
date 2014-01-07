@@ -76,6 +76,12 @@ public class EditorPlatform {
 
         MODENA,
         MODENA_TOUCH,
+        MODENA_HIGH_CONTRAST_BLACK_ON_WHITE,
+        MODENA_HIGH_CONTRAST_WHITE_ON_BLACK,
+        MODENA_HIGH_CONTRAST_YELLOW_ON_BLACK,
+        MODENA_TOUCH_HIGH_CONTRAST_BLACK_ON_WHITE,
+        MODENA_TOUCH_HIGH_CONTRAST_WHITE_ON_BLACK,
+        MODENA_TOUCH_HIGH_CONTRAST_YELLOW_ON_BLACK,
         CASPIAN,
         CASPIAN_HIGH_CONTRAST,
         CASPIAN_EMBEDDED,
@@ -90,6 +96,9 @@ public class EditorPlatform {
     private final static URL caspianEmbeddedQVGAThemeUrl = Deprecation.getCaspianEmbeddedQVGAStylesheetURL();
     private final static URL modenaThemeUrl = Deprecation.getModenaStylesheetURL();
     private final static URL modenaTouchThemeUrl = Deprecation.getModenaTouchStylesheetURL();
+    private final static URL modenaHighContrastBlackonwhiteThemeUrl = Deprecation.getModenaHighContrastBlackonwhiteStylesheetURL();
+    private final static URL modenaHighContrastWhiteonblackThemeUrl = Deprecation.getModenaHighContrastWhiteonblackStylesheetURL();
+    private final static URL modenaHighContrastYellowonblackThemeUrl = Deprecation.getModenaHighContrastYellowonblackStylesheetURL();
 
     /**
      * Returns the list of url for locating the specified set of stylesheet in jfxrt.jar.
@@ -109,6 +118,33 @@ public class EditorPlatform {
             case MODENA_TOUCH:
                 result.add(modenaThemeUrl);
                 result.add(modenaTouchThemeUrl);
+                break;
+            case MODENA_HIGH_CONTRAST_BLACK_ON_WHITE:
+                result.add(modenaThemeUrl);
+                result.add(modenaHighContrastBlackonwhiteThemeUrl);
+                break;
+            case MODENA_HIGH_CONTRAST_WHITE_ON_BLACK:
+                result.add(modenaThemeUrl);
+                result.add(modenaHighContrastWhiteonblackThemeUrl);
+                break;
+            case MODENA_HIGH_CONTRAST_YELLOW_ON_BLACK:
+                result.add(modenaThemeUrl);
+                result.add(modenaHighContrastYellowonblackThemeUrl);
+                break;
+            case MODENA_TOUCH_HIGH_CONTRAST_BLACK_ON_WHITE:
+                result.add(modenaThemeUrl);
+                result.add(modenaTouchThemeUrl);
+                result.add(modenaHighContrastBlackonwhiteThemeUrl);
+                break;
+            case MODENA_TOUCH_HIGH_CONTRAST_WHITE_ON_BLACK:
+                result.add(modenaThemeUrl);
+                result.add(modenaTouchThemeUrl);
+                result.add(modenaHighContrastWhiteonblackThemeUrl);
+                break;
+            case MODENA_TOUCH_HIGH_CONTRAST_YELLOW_ON_BLACK:
+                result.add(modenaThemeUrl);
+                result.add(modenaTouchThemeUrl);
+                result.add(modenaHighContrastYellowonblackThemeUrl);
                 break;
             case CASPIAN:
                 result.add(caspianThemeUrl);
@@ -141,6 +177,45 @@ public class EditorPlatform {
         assert !result.isEmpty() : "Missing logic for " + theme;
 
         return result;
+    }
+    
+    public static boolean isModena(Theme theme) {
+        return theme.toString().startsWith("MODENA");
+    }
+    
+    public static boolean isModenaBlackonwhite(Theme theme) {
+        return isModena(theme)
+                && theme.toString().indexOf("BLACK_ON_WHITE") != -1;
+    }
+    
+    public static boolean isModenaWhiteonblack(Theme theme) {
+        return isModena(theme)
+                && theme.toString().indexOf("WHITE_ON_BLACK") != -1;
+    }
+    
+    public static boolean isModenaYellowonblack(Theme theme) {
+        return isModena(theme)
+                && theme.toString().indexOf("YELLOW_ON_BLACK") != -1;
+    }
+    
+    public static boolean isModenaHighContrast(Theme theme) {
+        return isModena(theme)
+                && theme.toString().indexOf("HIGH_CONTRAST") != -1;
+    }
+    
+    public static boolean isModenaTouch(Theme theme) {
+        return isModena(theme)
+                && theme.toString().indexOf("TOUCH") != -1;
+    }
+    
+    public static boolean isModenaTouchHighContrast(Theme theme) {
+        return isModena(theme)
+                && theme.toString().indexOf("HIGH_CONTRAST") != -1
+                && theme.toString().indexOf("TOUCH") != -1;
+    }
+    
+    public static boolean isCaspian(Theme theme) {
+        return theme.toString().startsWith("CASPIAN");
     }
 
     /**

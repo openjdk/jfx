@@ -164,16 +164,6 @@ public class EditorUtils {
         }
     }
 
-    public static void replaceMenuItem(MenuItem item, MenuItem newItem) {
-        ContextMenu menu = item.getParentPopup();
-        if (menu == null) {
-            // menu item to replace is not in the menu : do nothing
-            return;
-        }
-        int index = menu.getItems().indexOf(item);
-        menu.getItems().set(index, newItem);
-    }
-
     public static String valAsStr(Object val) {
         if (val == null) {
             return null;

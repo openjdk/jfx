@@ -86,7 +86,7 @@ public class I18nStringEditor extends PropertyEditor {
             public void handle(ActionEvent e) {
                 setValue(PERCENT_STR + I18N.getString("inspector.i18n.dummykey"));
                 I18nStringEditor.this.getCommitListener().handle(null);
-                EditorUtils.replaceMenuItem(i18nOnMenuItem, i18nOffMenuItem);
+                replaceMenuItem(i18nOnMenuItem, i18nOffMenuItem);
                 multilineMenuItem.setDisable(true);
             }
         });
@@ -95,7 +95,7 @@ public class I18nStringEditor extends PropertyEditor {
             public void handle(ActionEvent e) {
                 setValue(""); //NOI18N
                 I18nStringEditor.this.getCommitListener().handle(null);
-                EditorUtils.replaceMenuItem(i18nOffMenuItem, i18nOnMenuItem);
+                replaceMenuItem(i18nOffMenuItem, i18nOnMenuItem);
                 multilineMenuItem.setDisable(false);
             }
         });
@@ -127,9 +127,8 @@ public class I18nStringEditor extends PropertyEditor {
         }
 
         if (value == null) {
-            // We consider a null string property as an empty string
-            // TBD: should not be defined here !
-            value = ""; //NOI18N
+            textNode.setText(null);
+            return;
         }
         assert value instanceof String;
         String val = (String) value;

@@ -42,6 +42,7 @@ import com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController.ControlAction;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController.EditAction;
+import com.oracle.javafx.scenebuilder.kit.editor.EditorController.Size;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
 import com.oracle.javafx.scenebuilder.kit.library.BuiltinSectionComparator;
@@ -237,6 +238,14 @@ public class MenuBarController {
     private MenuItem editIncludedFileMenuItem;
     @FXML
     private MenuItem revealIncludedFileMenuItem;
+    @FXML
+    private RadioMenuItem qvgaSetSizeMenuItem;
+    @FXML
+    private RadioMenuItem vgaSetSizeMenuItem;
+    @FXML
+    private RadioMenuItem touchSetSizeMenuItem;
+    @FXML
+    private RadioMenuItem hdSetSizeMenuItem;
 
     // Arrange
     @FXML
@@ -282,6 +291,12 @@ public class MenuBarController {
     @FXML
     private RadioMenuItem modenaTouchThemeMenuItem;
     @FXML
+    private RadioMenuItem modenaHighContrastBlackonwhiteThemeMenuItem;
+    @FXML
+    private RadioMenuItem modenaHighContrastWhiteonblackThemeMenuItem;
+    @FXML
+    private RadioMenuItem modenaHighContrastYellowonblackThemeMenuItem;
+    @FXML
     private RadioMenuItem caspianThemeMenuItem;
     @FXML
     private CheckMenuItem caspianHighContrastThemeMenuItem;
@@ -303,6 +318,16 @@ public class MenuBarController {
     private MenuItem removeResourceMenuItem;
     @FXML
     private MenuItem revealResourceMenuItem;
+    @FXML
+    private RadioMenuItem qvgaPreviewSizeMenuItem;
+    @FXML
+    private RadioMenuItem vgaPreviewSizeMenuItem;
+    @FXML
+    private RadioMenuItem touchPreviewSizeMenuItem;
+    @FXML
+    private RadioMenuItem hdPreviewSizeMenuItem;
+    @FXML
+    private RadioMenuItem preferredPreviewSizeMenuItem;
 
     // Window
     // Help
@@ -444,6 +469,10 @@ public class MenuBarController {
         assert decreaseColumnSpanMenuItem != null;
         assert editIncludedFileMenuItem != null;
         assert revealIncludedFileMenuItem != null;
+        assert qvgaSetSizeMenuItem != null;
+        assert vgaSetSizeMenuItem != null;
+        assert touchSetSizeMenuItem != null;
+        assert hdSetSizeMenuItem != null;
 
         assert bringToFrontMenuItem != null;
         assert sendToBackMenuItem != null;
@@ -466,6 +495,9 @@ public class MenuBarController {
         assert showPreviewMenuItem != null;
         assert modenaThemeMenuItem != null;
         assert modenaTouchThemeMenuItem != null;
+        assert modenaHighContrastBlackonwhiteThemeMenuItem != null;
+        assert modenaHighContrastWhiteonblackThemeMenuItem != null;
+        assert modenaHighContrastYellowonblackThemeMenuItem != null;
         assert caspianThemeMenuItem != null;
         assert caspianHighContrastThemeMenuItem != null;
         assert caspianEmbeddedThemeMenuItem != null;
@@ -477,6 +509,11 @@ public class MenuBarController {
         assert setResourceMenuItem != null;
         assert removeResourceMenuItem != null;
         assert revealResourceMenuItem != null;
+        assert qvgaPreviewSizeMenuItem != null;
+        assert vgaPreviewSizeMenuItem != null;
+        assert touchPreviewSizeMenuItem != null;
+        assert hdPreviewSizeMenuItem != null;
+        assert preferredPreviewSizeMenuItem != null;
 
         assert helpMenuItem != null;
         assert aboutMenuItem != null;
@@ -755,6 +792,34 @@ public class MenuBarController {
         increaseColumnSpanMenuItem.setUserData(new EditActionController(EditAction.INCREASE_COLUMN_SPAN));
         decreaseColumnSpanMenuItem.setUserData(new EditActionController(EditAction.DECREASE_COLUMN_SPAN));
         editIncludedFileMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.EDIT_INCLUDED_FILE));
+        qvgaSetSizeMenuItem.setUserData(new EditActionController(EditAction.SET_SIZE_320x240) {
+            @Override
+            public void perform() {
+                super.perform();
+                updatePreviewWindowSize(Size.SIZE_320x240);
+            }
+        });
+        vgaSetSizeMenuItem.setUserData(new EditActionController(EditAction.SET_SIZE_640x480) {
+            @Override
+            public void perform() {
+                super.perform();
+                updatePreviewWindowSize(Size.SIZE_640x480);
+            }
+        });
+        touchSetSizeMenuItem.setUserData(new EditActionController(EditAction.SET_SIZE_1280x800) {
+            @Override
+            public void perform() {
+                super.perform();
+                updatePreviewWindowSize(Size.SIZE_1280x800);
+            }
+        });
+        hdSetSizeMenuItem.setUserData(new EditActionController(EditAction.SET_SIZE_1920x1080) {
+            @Override
+            public void perform() {
+                super.perform();
+                updatePreviewWindowSize(Size.SIZE_1920x1080);
+            }
+        });
 
         // Add Effect submenu
         updateAddEffectMenu();
@@ -816,6 +881,9 @@ public class MenuBarController {
         caspianEmbeddedQVGAThemeMenuItem.setUserData(new SetThemeActionController(EditorPlatform.Theme.CASPIAN_EMBEDDED_QVGA));
         modenaThemeMenuItem.setUserData(new SetThemeActionController(EditorPlatform.Theme.MODENA));
         modenaTouchThemeMenuItem.setUserData(new SetThemeActionController(EditorPlatform.Theme.MODENA_TOUCH));
+        modenaHighContrastBlackonwhiteThemeMenuItem.setUserData(new SetThemeActionController(EditorPlatform.Theme.MODENA_HIGH_CONTRAST_BLACK_ON_WHITE));
+        modenaHighContrastWhiteonblackThemeMenuItem.setUserData(new SetThemeActionController(EditorPlatform.Theme.MODENA_HIGH_CONTRAST_WHITE_ON_BLACK));
+        modenaHighContrastYellowonblackThemeMenuItem.setUserData(new SetThemeActionController(EditorPlatform.Theme.MODENA_HIGH_CONTRAST_YELLOW_ON_BLACK));
 
         addSceneStyleSheetMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.ADD_SCENE_STYLE_SHEET));
         updateOpenAndRemoveSceneStyleSheetMenus();
@@ -861,6 +929,11 @@ public class MenuBarController {
                 return title;
             }
         });
+        qvgaPreviewSizeMenuItem.setUserData(new SetSizeActionController(EditorController.Size.SIZE_320x240));
+        vgaPreviewSizeMenuItem.setUserData(new SetSizeActionController(EditorController.Size.SIZE_640x480));
+        touchPreviewSizeMenuItem.setUserData(new SetSizeActionController(EditorController.Size.SIZE_1280x800));
+        hdPreviewSizeMenuItem.setUserData(new SetSizeActionController(EditorController.Size.SIZE_1920x1080));
+        preferredPreviewSizeMenuItem.setUserData(new SetSizeActionController(EditorController.Size.SIZE_PREFERRED));
 
         /*
          * Window menu : it is setup after the other menus
@@ -1488,6 +1561,81 @@ public class MenuBarController {
         }
 
     }
+    
+    private void updatePreviewWindowSize(Size size) {
+        if (documentWindowController != null
+                && documentWindowController.getPreviewWindowController() != null
+                && documentWindowController.getPreviewWindowController().getStage().isShowing()) {
+            documentWindowController.getPreviewWindowController().setSize(size);
+        }
+    }
+
+    class SetSizeActionController extends MenuItemController {
+
+        private final EditorController.Size size;
+
+        public SetSizeActionController(EditorController.Size size) {
+            this.size = size;
+        }
+
+        @Override
+        public boolean canPerform() {
+            boolean res = (documentWindowController != null)
+                    && (documentWindowController.getPreviewWindowController() != null)
+                    && documentWindowController.getPreviewWindowController().getStage().isShowing()
+                    && ! documentWindowController.getEditorController().is3D()
+                    && documentWindowController.getEditorController().isNode()
+                    && documentWindowController.getPreviewWindowController().sizeDoesFit(size);
+            return res;
+        }
+
+        @Override
+        public void perform() {
+            assert documentWindowController != null;
+            assert documentWindowController.getPreviewWindowController() != null;
+            documentWindowController.getPreviewWindowController().setSize(size);
+        }
+
+        @Override
+        public boolean isSelected() {
+            boolean res;
+
+            if (documentWindowController == null || documentWindowController.getPreviewWindowController() == null) {
+                res = false;
+            } else {
+                Size currentSize = documentWindowController.getPreviewWindowController().getSize();
+                res = (size == currentSize)
+                        && documentWindowController.getPreviewWindowController().getStage().isShowing()
+                        && ! documentWindowController.getPreviewWindowController().userResizedPreviewWindow()
+                        && ! documentWindowController.getEditorController().is3D()
+                        && documentWindowController.getEditorController().isNode();
+            }
+            
+            return res;
+        }
+        
+        @Override
+        public String getTitle() {
+            assert documentWindowController != null;
+            
+            if (size == EditorController.Size.SIZE_PREFERRED) {
+                String title = I18N.getString("menu.title.size.preferred");
+                
+                if (documentWindowController.getPreviewWindowController() != null
+                        && documentWindowController.getPreviewWindowController().getStage().isShowing()
+                        && ! documentWindowController.getEditorController().is3D()
+                        && documentWindowController.getEditorController().isNode()) {
+                        title = I18N.getString("menu.title.size.preferred.with.value",
+                                documentWindowController.getPreviewWindowController().getRoot().prefWidth(-1),
+                                documentWindowController.getPreviewWindowController().getRoot().prefHeight(-1));
+                }
+                
+                return title;
+            } else {
+                return null;
+            }
+        }
+    }
 
     class SetThemeActionController extends MenuItemController {
 
@@ -1504,18 +1652,34 @@ public class MenuBarController {
                     = documentWindowController.getEditorController().getTheme();
             // CASPIAN_HIGH_CONTRAST can be selected only if another CASPIAN
             // theme is active.
+            // MODENA_HIGH_CONTRAST_<*> can be selected only if another MODENA
+            // theme is active.
             if (theme == EditorPlatform.Theme.CASPIAN_HIGH_CONTRAST
-                    && (currentTheme == EditorPlatform.Theme.MODENA || currentTheme == EditorPlatform.Theme.MODENA_TOUCH)) {
+                    && EditorPlatform.isModena(currentTheme)) {
                 res = false;
                 caspianHighContrastThemeMenuItem.setSelected(false);
+            } else if (theme == EditorPlatform.Theme.MODENA_HIGH_CONTRAST_BLACK_ON_WHITE
+                    && EditorPlatform.isCaspian(currentTheme)) {
+                res = false;
+                modenaHighContrastBlackonwhiteThemeMenuItem.setSelected(false);
+            } else if (theme == EditorPlatform.Theme.MODENA_HIGH_CONTRAST_WHITE_ON_BLACK
+                    && EditorPlatform.isCaspian(currentTheme)) {
+                res = false;
+                modenaHighContrastWhiteonblackThemeMenuItem.setSelected(false);
+            } else if (theme == EditorPlatform.Theme.MODENA_HIGH_CONTRAST_YELLOW_ON_BLACK
+                    && EditorPlatform.isCaspian(currentTheme)) {
+                res = false;
+                modenaHighContrastYellowonblackThemeMenuItem.setSelected(false);
             }
+            
             return res;
         }
 
         @Override
         public void perform() {
             assert documentWindowController != null;
-
+            EditorPlatform.Theme currentTheme
+                            = documentWindowController.getEditorController().getTheme();
             EditorPlatform.Theme overiddingTheme = theme;
 
             switch (theme) {
@@ -1535,8 +1699,6 @@ public class MenuBarController {
                     }
                     break;
                 case CASPIAN_HIGH_CONTRAST:
-                    final EditorPlatform.Theme currentTheme
-                            = documentWindowController.getEditorController().getTheme();
                     switch (currentTheme) {
                         case CASPIAN:
                             if (caspianHighContrastThemeMenuItem.isSelected()) {
@@ -1569,13 +1731,151 @@ public class MenuBarController {
                             }
                             break;
                         default:
-                            // All known 6 Caspian cases are already handled above.
+                            // All known 6 Caspian cases are handled above.
                             assert false;
                             break;
                     }
                     break;
+                case MODENA:
+                    if (modenaHighContrastBlackonwhiteThemeMenuItem.isSelected()) {
+                        overiddingTheme = EditorPlatform.Theme.MODENA_HIGH_CONTRAST_BLACK_ON_WHITE;
+                    } else if (modenaHighContrastWhiteonblackThemeMenuItem.isSelected()) {
+                        overiddingTheme = EditorPlatform.Theme.MODENA_HIGH_CONTRAST_WHITE_ON_BLACK;
+                    } else if (modenaHighContrastYellowonblackThemeMenuItem.isSelected()) {
+                        overiddingTheme = EditorPlatform.Theme.MODENA_HIGH_CONTRAST_YELLOW_ON_BLACK;
+                    }
+                    break;
+                case MODENA_TOUCH:
+                    if (modenaHighContrastBlackonwhiteThemeMenuItem.isSelected()) {
+                        overiddingTheme = EditorPlatform.Theme.MODENA_TOUCH_HIGH_CONTRAST_BLACK_ON_WHITE;
+                    } else if (modenaHighContrastWhiteonblackThemeMenuItem.isSelected()) {
+                        overiddingTheme = EditorPlatform.Theme.MODENA_TOUCH_HIGH_CONTRAST_WHITE_ON_BLACK;
+                    } else if (modenaHighContrastYellowonblackThemeMenuItem.isSelected()) {
+                        overiddingTheme = EditorPlatform.Theme.MODENA_TOUCH_HIGH_CONTRAST_YELLOW_ON_BLACK;
+                    }
+                    break;
+                case MODENA_HIGH_CONTRAST_BLACK_ON_WHITE:
+                    switch (currentTheme) {
+                        case MODENA:
+                            if (modenaHighContrastBlackonwhiteThemeMenuItem.isSelected()) {
+                                overiddingTheme = EditorPlatform.Theme.MODENA_HIGH_CONTRAST_BLACK_ON_WHITE;
+                            }
+                            break;
+                        case MODENA_TOUCH:
+                            if (modenaHighContrastBlackonwhiteThemeMenuItem.isSelected()) {
+                                overiddingTheme = EditorPlatform.Theme.MODENA_TOUCH_HIGH_CONTRAST_BLACK_ON_WHITE;
+                            }
+                            break;
+                        case MODENA_HIGH_CONTRAST_BLACK_ON_WHITE:
+                            if (modenaHighContrastBlackonwhiteThemeMenuItem.isSelected()) {
+                                overiddingTheme = EditorPlatform.Theme.MODENA;
+                            }
+                            break;
+                        case MODENA_HIGH_CONTRAST_WHITE_ON_BLACK:
+                            break;
+                        case MODENA_HIGH_CONTRAST_YELLOW_ON_BLACK:
+                            break;
+                        case MODENA_TOUCH_HIGH_CONTRAST_BLACK_ON_WHITE:
+                            if (modenaHighContrastBlackonwhiteThemeMenuItem.isSelected()) {
+                                overiddingTheme = EditorPlatform.Theme.MODENA_TOUCH;
+                            }
+                            break;
+                        case MODENA_TOUCH_HIGH_CONTRAST_WHITE_ON_BLACK:
+                            if (modenaHighContrastBlackonwhiteThemeMenuItem.isSelected()) {
+                                overiddingTheme = EditorPlatform.Theme.MODENA_TOUCH_HIGH_CONTRAST_BLACK_ON_WHITE;
+                            }
+                            break;
+                        case MODENA_TOUCH_HIGH_CONTRAST_YELLOW_ON_BLACK:
+                            if (modenaHighContrastBlackonwhiteThemeMenuItem.isSelected()) {
+                                overiddingTheme = EditorPlatform.Theme.MODENA_TOUCH_HIGH_CONTRAST_BLACK_ON_WHITE;
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                break;
+                case MODENA_HIGH_CONTRAST_WHITE_ON_BLACK:
+                    switch (currentTheme) {
+                        case MODENA:
+                                if (modenaHighContrastWhiteonblackThemeMenuItem.isSelected()) {
+                                overiddingTheme = EditorPlatform.Theme.MODENA_HIGH_CONTRAST_WHITE_ON_BLACK;
+                            }
+                            break;
+                        case MODENA_TOUCH:
+                                if (modenaHighContrastWhiteonblackThemeMenuItem.isSelected()) {
+                                overiddingTheme = EditorPlatform.Theme.MODENA_TOUCH_HIGH_CONTRAST_WHITE_ON_BLACK;
+                            }
+                            break;
+                        case MODENA_HIGH_CONTRAST_BLACK_ON_WHITE:
+                            break;
+                        case MODENA_HIGH_CONTRAST_WHITE_ON_BLACK:
+                            if (modenaHighContrastWhiteonblackThemeMenuItem.isSelected()) {
+                                overiddingTheme = EditorPlatform.Theme.MODENA;
+                            }
+                            break;
+                        case MODENA_HIGH_CONTRAST_YELLOW_ON_BLACK:
+                            break;
+                        case MODENA_TOUCH_HIGH_CONTRAST_BLACK_ON_WHITE:
+                            if (modenaHighContrastWhiteonblackThemeMenuItem.isSelected()) {
+                                overiddingTheme = EditorPlatform.Theme.MODENA_TOUCH_HIGH_CONTRAST_WHITE_ON_BLACK;
+                            }
+                            break;
+                        case MODENA_TOUCH_HIGH_CONTRAST_WHITE_ON_BLACK:
+                            if (modenaHighContrastWhiteonblackThemeMenuItem.isSelected()) {
+                                overiddingTheme = EditorPlatform.Theme.MODENA_TOUCH;
+                            }
+                            break;
+                        case MODENA_TOUCH_HIGH_CONTRAST_YELLOW_ON_BLACK:
+                            if (modenaHighContrastWhiteonblackThemeMenuItem.isSelected()) {
+                                overiddingTheme = EditorPlatform.Theme.MODENA_TOUCH_HIGH_CONTRAST_WHITE_ON_BLACK;
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                break;
+                case MODENA_HIGH_CONTRAST_YELLOW_ON_BLACK:
+                    switch (currentTheme) {
+                        case MODENA:
+                            if (modenaHighContrastYellowonblackThemeMenuItem.isSelected()) {
+                                overiddingTheme = EditorPlatform.Theme.MODENA_HIGH_CONTRAST_YELLOW_ON_BLACK;
+                            }
+                            break;
+                        case MODENA_TOUCH:
+                            if (modenaHighContrastYellowonblackThemeMenuItem.isSelected()) {
+                                overiddingTheme = EditorPlatform.Theme.MODENA_TOUCH_HIGH_CONTRAST_YELLOW_ON_BLACK;
+                            }
+                            break;
+                        case MODENA_HIGH_CONTRAST_BLACK_ON_WHITE:
+                            break;
+                        case MODENA_HIGH_CONTRAST_WHITE_ON_BLACK:
+                            break;
+                        case MODENA_HIGH_CONTRAST_YELLOW_ON_BLACK:
+                            if (modenaHighContrastYellowonblackThemeMenuItem.isSelected()) {
+                                overiddingTheme = EditorPlatform.Theme.MODENA;
+                            }
+                            break;
+                        case MODENA_TOUCH_HIGH_CONTRAST_BLACK_ON_WHITE:
+                            if (modenaHighContrastYellowonblackThemeMenuItem.isSelected()) {
+                                overiddingTheme = EditorPlatform.Theme.MODENA_TOUCH_HIGH_CONTRAST_YELLOW_ON_BLACK;
+                            }
+                            break;
+                        case MODENA_TOUCH_HIGH_CONTRAST_WHITE_ON_BLACK:
+                            if (modenaHighContrastYellowonblackThemeMenuItem.isSelected()) {
+                                overiddingTheme = EditorPlatform.Theme.MODENA_TOUCH_HIGH_CONTRAST_YELLOW_ON_BLACK;
+                            }
+                            break;
+                        case MODENA_TOUCH_HIGH_CONTRAST_YELLOW_ON_BLACK:
+                            if (modenaHighContrastYellowonblackThemeMenuItem.isSelected()) {
+                                overiddingTheme = EditorPlatform.Theme.MODENA_TOUCH;
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                break;
                 default:
-                    // Modena
+                    assert false;
                     break;
             }
 
@@ -1596,11 +1896,7 @@ public class MenuBarController {
                     // CASPIAN_HIGH_CONTRAST can be selected only if another CASPIAN
                     // theme is active.
                     case CASPIAN_HIGH_CONTRAST:
-                        if (currentTheme == EditorPlatform.Theme.MODENA || currentTheme == EditorPlatform.Theme.MODENA_TOUCH) {
-                            res = false;
-                        } else {
-                            res = true;
-                        }
+                        res = EditorPlatform.isCaspian(currentTheme);
                         break;
                     case CASPIAN:
                         res = (currentTheme == theme || currentTheme == EditorPlatform.Theme.CASPIAN_HIGH_CONTRAST);
@@ -1611,9 +1907,29 @@ public class MenuBarController {
                     case CASPIAN_EMBEDDED_QVGA:
                         res = (currentTheme == theme || currentTheme == EditorPlatform.Theme.CASPIAN_EMBEDDED_QVGA_HIGH_CONTRAST);
                         break;
+                    case MODENA_HIGH_CONTRAST_BLACK_ON_WHITE:
+                        res = EditorPlatform.isModenaBlackonwhite(currentTheme)
+                                && EditorPlatform.isModenaHighContrast(currentTheme);
+                        break;
+                    case MODENA_HIGH_CONTRAST_WHITE_ON_BLACK:
+                        res = EditorPlatform.isModenaWhiteonblack(currentTheme)
+                                && EditorPlatform.isModenaHighContrast(currentTheme);
+                        break;
+                    case MODENA_HIGH_CONTRAST_YELLOW_ON_BLACK:
+                        res = EditorPlatform.isModenaYellowonblack(currentTheme)
+                                && EditorPlatform.isModenaHighContrast(currentTheme);
+                        break;
+                    case MODENA:
+                        res = (currentTheme == theme
+                                || (EditorPlatform.isModenaHighContrast(currentTheme)
+                                    && !EditorPlatform.isModenaTouch(currentTheme)));
+                        break;
+                    case MODENA_TOUCH:
+                        res = (currentTheme == theme || EditorPlatform.isModenaTouchHighContrast(currentTheme));
+                        break;
                     default:
-                        // Modena
-                        res = currentTheme == theme;
+                        assert false;
+                        res = false;
                         break;
                 }
             }

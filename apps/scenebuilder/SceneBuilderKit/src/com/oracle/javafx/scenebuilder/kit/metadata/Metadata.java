@@ -44,6 +44,7 @@ import com.oracle.javafx.scenebuilder.kit.metadata.property.ComponentPropertyMet
 import com.oracle.javafx.scenebuilder.kit.metadata.property.PropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.*;
+import com.oracle.javafx.scenebuilder.kit.metadata.property.value.effect.*;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.list.*;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPathComparator;
@@ -1121,8 +1122,6 @@ public class Metadata {
             new PropertyName("tooltip");
     private final PropertyName topName = 
             new PropertyName("top");
-    private final PropertyName transformsName = 
-            new PropertyName("transforms");
     private final PropertyName translateXName = 
             new PropertyName("translateX");
     private final PropertyName translateYName = 
@@ -3789,12 +3788,6 @@ public class Metadata {
                 topName,
                 NodeMetadata,
                 false); /* collection */
-    private final ValuePropertyMetadata transformsPropertyMetadata =
-            new TransformListPropertyMetadata(
-                transformsName,
-                true, /* readWrite */
-                Collections.emptyList(), /* defaultValue */
-                new InspectorPath("Layout", "Transforms", 8));
     private final ValuePropertyMetadata translateXPropertyMetadata =
             new DoublePropertyMetadata(
                 translateXName,
@@ -3925,7 +3918,7 @@ public class Metadata {
                 viewportName,
                 true, /* readWrite */
                 null, /* defaultValue */
-                new InspectorPath("Layout", "Transforms", 9));
+                new InspectorPath("Layout", "Specific", 0));
     private final ValuePropertyMetadata viewportBoundsPropertyMetadata =
             new BoundsPropertyMetadata(
                 viewportBoundsName,
@@ -4776,7 +4769,6 @@ public class Metadata {
         NodeMetadata.getProperties().add(scaleZPropertyMetadata);
         NodeMetadata.getProperties().add(stylePropertyMetadata);
         NodeMetadata.getProperties().add(styleClass_empty_PropertyMetadata);
-        NodeMetadata.getProperties().add(transformsPropertyMetadata);
         NodeMetadata.getProperties().add(translateXPropertyMetadata);
         NodeMetadata.getProperties().add(translateYPropertyMetadata);
         NodeMetadata.getProperties().add(translateZPropertyMetadata);
@@ -5364,6 +5356,7 @@ public class Metadata {
         hiddenProperties.add(new PropertyName("tableView"));
         hiddenProperties.add(new PropertyName("tabPane"));
         hiddenProperties.add(new PropertyName("toggleGroup"));
+        hiddenProperties.add(new PropertyName("transforms"));
         hiddenProperties.add(new PropertyName("treeTableView"));
         hiddenProperties.add(new PropertyName("typeInternal"));
         hiddenProperties.add(new PropertyName("typeSelector"));
@@ -5419,6 +5412,7 @@ public class Metadata {
         ss1.add("Transforms");
         ss1.add("Bounds");
         ss1.add("Extras");
+        ss1.add("Specific");
         subSectionMap.put("Layout", ss1);
         final List<String> ss2 = new ArrayList<>();
         ss2.add("Main");

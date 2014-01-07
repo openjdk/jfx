@@ -34,10 +34,7 @@ package com.oracle.javafx.scenebuilder.kit.fxom;
 import com.oracle.javafx.scenebuilder.kit.fxom.glue.GlueElement;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import com.oracle.javafx.scenebuilder.kit.util.JavaLanguage;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
+import com.oracle.javafx.scenebuilder.kit.util.URLUtils;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -363,6 +360,17 @@ public abstract class FXOMObject extends FXOMNode {
     protected abstract void collectNullProperties(List<FXOMPropertyT> result);
     
     
+    public List<FXOMPropertyT> collectPropertiesT() {
+        final List<FXOMPropertyT> result = new ArrayList<>();
+        
+        collectPropertiesT(result);
+        
+        return result;
+    }
+    
+    protected abstract void collectPropertiesT(List<FXOMPropertyT> result);
+    
+    
     public List<FXOMIntrinsic> collectReferences(String source) {
         final List<FXOMIntrinsic> result = new ArrayList<>();
         
@@ -459,13 +467,10 @@ public abstract class FXOMObject extends FXOMNode {
     
     
     public void setFxId(String fxId) {
+        assert (fxId == null) || JavaLanguage.isIdentifier(fxId);
         if (fxId == null) {
             glueElement.getAttributes().remove("fx:id");
         } else {
-            if (!fxId.isEmpty()) {
-                // Empty fx:id is allowed by fxml
-                assert JavaLanguage.isIdentifier(fxId);
-            }
             glueElement.getAttributes().put("fx:id", fxId);
         }
     }
@@ -556,6 +561,10 @@ public abstract class FXOMObject extends FXOMNode {
                 || (parentProperty.getParentInstance() == null)
                 || (parentProperty.getValues().size() >= 2);
         
+        if (URLUtils.equals(getFxomDocument().getLocation(), destination.getLocation()) == false) {
+            documentLocationWillChange(destination.getLocation());
+        }
+        
         if (parentProperty != null) {
             assert parentProperty.getFxomDocument() == getFxomDocument();
             removeFromParentProperty();
@@ -582,7 +591,7 @@ public abstract class FXOMObject extends FXOMNode {
         
         super.changeFxomDocument(destination);
     }
-    
+
     
     /*
      * Object

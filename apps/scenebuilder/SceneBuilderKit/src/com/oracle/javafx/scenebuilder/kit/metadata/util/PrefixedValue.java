@@ -32,7 +32,9 @@
 
 package com.oracle.javafx.scenebuilder.kit.metadata.util;
 
+import java.io.File;
 import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -272,15 +274,20 @@ public class PrefixedValue {
     
     public static PrefixedValue makePrefixedValue(URL assetURL, URL documentURL) {
         
-        final Path documentPath = Paths.get(documentURL.getPath());
-        final Path assetPath = Paths.get(assetURL.getPath());
-        final Path parentPath = documentPath.getParent();
+        final File assetFile, documentFile;
+        try {
+            assetFile = new File(assetURL.toURI());
+            documentFile = new File(documentURL.toURI());
+        } catch(URISyntaxException x) {
+            throw new IllegalArgumentException(x);
+        }
+        final File parentFile = documentFile.getParentFile();
         
         final PrefixedValue result;
-        if ((parentPath == null) || parentPath.equals(assetPath)) {
+        if ((parentFile == null) || parentFile.equals(assetFile)) {
             throw new IllegalArgumentException(documentURL.toString());
         } else {
-            final Path relativePath = parentPath.relativize(assetPath);
+            final Path relativePath = parentFile.toPath().relativize(assetFile.toPath());
             result = new PrefixedValue(Type.DOCUMENT_RELATIVE_PATH, relativePath.toString());
         }
         

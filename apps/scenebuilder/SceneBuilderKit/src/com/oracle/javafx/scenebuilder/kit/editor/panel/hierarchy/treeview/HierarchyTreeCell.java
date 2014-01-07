@@ -688,8 +688,10 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
                         }
                         break;
                     case FXID:
+                        assert newValue != null;
+                        final String fxId = newValue.isEmpty() ? null : newValue;
                         final ModifyFxIdJob job
-                                = new ModifyFxIdJob(fxomObject, newValue, editorController);
+                                = new ModifyFxIdJob(fxomObject, fxId, editorController);
                         if (job.isExecutable()) {
                             editorController.getJobManager().push(job);
                         }

@@ -33,13 +33,13 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 
 import static com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.PropertyEditor.handleIndeterminate;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
@@ -168,8 +168,7 @@ public abstract class AutoSuggestEditor extends PropertyEditor {
         }
 
         if (value == null) {
-            // Should be set to null, but need a global work on the "null handling"
-            entryField.setText(""); //NOI18N
+            entryField.setText(null);
         } else {
             assert value instanceof String;
             entryField.setText((String) value); //NOI18N
@@ -194,15 +193,15 @@ public abstract class AutoSuggestEditor extends PropertyEditor {
 
     public void reset(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, List<String> suggestedList) {
         super.reset(propMeta, selectedClasses);
-        reset(suggestedList);
+        resetSuggestedList(suggestedList);
     }
 
     public void reset(String name, String defaultValue, List<String> suggestedList) {
         super.reset(name, defaultValue);
-        reset(suggestedList);
+        resetSuggestedList(suggestedList);
     }
 
-    private void reset(List<String> suggestedList) {
+    protected void resetSuggestedList(List<String> suggestedList) {
         this.suggestedList = suggestedList;
         updateMenuButtonIfNeeded();
         entryField.setPromptText(null);
@@ -265,7 +264,7 @@ public abstract class AutoSuggestEditor extends PropertyEditor {
         String value = entryField.getText();
         if (!suggest) {
             // Suggest popup is disabled
-            if (value.isEmpty()) {
+            if (value == null || value.isEmpty()) {
                 // Suggest popup is re-enabled when text is empty
                 suggest = true;
             } else {
@@ -273,7 +272,7 @@ public abstract class AutoSuggestEditor extends PropertyEditor {
             }
         }
 
-        ObservableList<String> suggestedItems;
+        List<String> suggestedItems;
         suggestedItems = getSuggestedItems(value, value);
         // If the suggested list is empty, or contains a single element equals to the current value,
         // hide the popup
@@ -285,9 +284,12 @@ public abstract class AutoSuggestEditor extends PropertyEditor {
         }
     }
 
-    private ObservableList<String> getSuggestedItems(String filter, String currentValue) {
-        // filter equal to null means no filter
-        ObservableList<String> suggestedItems = FXCollections.observableArrayList();
+    private List<String> getSuggestedItems(String filter, String currentValue) {
+        List<String> suggestedItems = new ArrayList<>();
+        if (filter == null || currentValue == null) {
+            // Return the whole suggestedList
+            return suggestedList;
+        }
         // We don't want to be case sensitive
         assert filter != null;
         filter = filter.toLowerCase(Locale.ROOT);
@@ -306,9 +308,9 @@ public abstract class AutoSuggestEditor extends PropertyEditor {
         return suggestedItems;
     }
 
-    private void showPopup(ObservableList<String> suggestedItems) {
+    private void showPopup(List<String> suggestedItems) {
         if (!suggestedLv.getItems().equals(suggestedItems)) {
-            suggestedLv.setItems(suggestedItems);
+            suggestedLv.setItems(FXCollections.observableArrayList(suggestedItems));
         }
         if (entryField.getContextMenu().isShowing() == false) {
 //                System.out.println("showPopup");

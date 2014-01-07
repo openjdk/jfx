@@ -33,6 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.fxom;
 
 import com.oracle.javafx.scenebuilder.kit.fxom.sampledata.SampleDataGenerator;
 import com.oracle.javafx.scenebuilder.kit.fxom.glue.GlueDocument;
+import com.oracle.javafx.scenebuilder.kit.util.URLUtils;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -96,9 +97,14 @@ public class FXOMDocument {
     }
 
     public void setLocation(URL location) {
-        beginUpdate();
-        this.location = location;
-        endUpdate();
+        if (URLUtils.equals(this.location, location) == false) {
+            beginUpdate();
+            if (fxomRoot != null) {
+                fxomRoot.documentLocationWillChange(location);
+            }
+            this.location = location;
+            endUpdate();
+        }
     }
 
     public ClassLoader getClassLoader() {

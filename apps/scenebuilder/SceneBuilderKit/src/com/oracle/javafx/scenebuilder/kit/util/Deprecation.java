@@ -34,9 +34,7 @@ package com.oracle.javafx.scenebuilder.kit.util;
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Application.EventHandler;
 import com.sun.javafx.css.Style;
-import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.scene.control.skin.MenuBarSkin;
-import com.sun.javafx.scene.input.PickResultChooser;
 import java.net.URL;
 import java.util.List;
 import javafx.collections.ObservableMap;
@@ -44,11 +42,10 @@ import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import javafx.fxml.FXMLLoader;
+import javafx.fxml.JavaFXBuilderFactory;
 import javafx.geometry.Bounds;
-import javafx.geometry.Point2D;
 import javafx.scene.Group;
 import javafx.scene.Node;
-import javafx.scene.Parent;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.PopupControl;
@@ -193,40 +190,53 @@ public class Deprecation {
         return result;
     }
     
-    
     public static URL getCaspianStylesheetURL() {
         final String resourceName = "com/sun/javafx/scene/control/skin/caspian/caspian.bss"; //NOI18N
         return ClassLoader.getSystemResource(resourceName);
     }
-    
     
     public static URL getCaspianHighContrastStylesheetURL() {
         final String resourceName = "com/sun/javafx/scene/control/skin/caspian/highcontrast.bss"; //NOI18N
         return ClassLoader.getSystemResource(resourceName);
     }
     
-    
     public static URL getCaspianEmbeddedStylesheetURL() {
         final String resourceName = "com/sun/javafx/scene/control/skin/caspian/embedded.bss"; //NOI18N
         return ClassLoader.getSystemResource(resourceName);
     }
-    
     
     public static URL getCaspianEmbeddedQVGAStylesheetURL() {
         final String resourceName = "com/sun/javafx/scene/control/skin/caspian/embedded-qvga.bss"; //NOI18N
         return ClassLoader.getSystemResource(resourceName);
     }
     
-    
     public static URL getModenaStylesheetURL() {
         final String resourceName = "com/sun/javafx/scene/control/skin/modena/modena.bss"; //NOI18N
         return ClassLoader.getSystemResource(resourceName);
     }
     
-    
     public static URL getModenaTouchStylesheetURL() {
         final String resourceName = "com/sun/javafx/scene/control/skin/modena/touch.bss"; //NOI18N
         return ClassLoader.getSystemResource(resourceName);
     }
+    
+    public static URL getModenaHighContrastBlackonwhiteStylesheetURL() {
+        final String resourceName = "com/sun/javafx/scene/control/skin/modena/blackOnWhite.css"; //NOI18N
+        return ClassLoader.getSystemResource(resourceName);
+    }
 
+    public static URL getModenaHighContrastWhiteonblackStylesheetURL() {
+        final String resourceName = "com/sun/javafx/scene/control/skin/modena/whiteOnBlack.css"; //NOI18N
+        return ClassLoader.getSystemResource(resourceName);
+    }
+
+    public static URL getModenaHighContrastYellowonblackStylesheetURL() {
+        final String resourceName = "com/sun/javafx/scene/control/skin/modena/yellowOnBlack.css"; //NOI18N
+        return ClassLoader.getSystemResource(resourceName);
+    }
+
+    // RT-21230 : Promote JavaFXBuilderFactory(ClassLoader classLoader, boolean alwaysUseBuilders) constructor to public API
+    public static JavaFXBuilderFactory newJavaFXBuilderFactory(ClassLoader classLoader) {
+        return new JavaFXBuilderFactory(classLoader, false /* alwaysUseBuilders */);
+    }
 }

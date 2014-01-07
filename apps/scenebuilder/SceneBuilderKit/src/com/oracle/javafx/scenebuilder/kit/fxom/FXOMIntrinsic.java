@@ -33,6 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.fxom;
 
 import com.oracle.javafx.scenebuilder.kit.fxom.glue.GlueElement;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
+import java.net.URL;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -158,6 +159,11 @@ public class FXOMIntrinsic extends FXOMObject {
     }
 
     @Override
+    protected void collectPropertiesT(List<FXOMPropertyT> result) {
+        // Nothing to collect in this kind of object
+    }
+
+    @Override
     protected void collectProperties(PropertyName propertyName, List<FXOMProperty> result) {
         // Nothing to collect in this kind of object
     }
@@ -190,7 +196,16 @@ public class FXOMIntrinsic extends FXOMObject {
         // Nothing to collect in this kind of object
     }
 
-
+    /*
+     * FXOMNode
+     */
+    
+    @Override
+    public void documentLocationWillChange(URL newLocation) {
+        // Nothing special to do here
+    }
+    
+    
     /*
      * Private
      */

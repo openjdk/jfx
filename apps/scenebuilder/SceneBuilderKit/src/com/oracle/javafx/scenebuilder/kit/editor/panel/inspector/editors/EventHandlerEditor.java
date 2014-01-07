@@ -34,6 +34,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.util.JavaLanguage;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import javafx.event.ActionEvent;
@@ -60,21 +61,23 @@ public class EventHandlerEditor extends AutoSuggestEditor {
     private boolean methodNameMode;
     private StackPane root = new StackPane();
     private HBox hbox = null;
+    private List<String> suggestedMethods;
 
     @SuppressWarnings("LeakingThisInConstructor")
     public EventHandlerEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, List<String> suggestedMethods) {
         super(propMeta, selectedClasses, suggestedMethods); //NOI18N
+        this.suggestedMethods = suggestedMethods;
 
         // text field events handling
         EventHandler<ActionEvent> onActionListener = new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                String tfValue = textField.getText();
-                if (tfValue.isEmpty()) {
+                String tfValue = getTextField().getText();
+                if (tfValue == null || tfValue.isEmpty()) {
                     userUpdateValueProperty(null);
                     return;
                 }
-                if (!tfValue.isEmpty() && methodNameMode) {
+                if (methodNameMode) {
                     // method name should be a java identifier
                     if (!JavaLanguage.isIdentifier(tfValue)) {
                         System.err.println(I18N.getString("inspector.event.invalid.method", tfValue)); // Will go in message panel
@@ -85,37 +88,29 @@ public class EventHandlerEditor extends AutoSuggestEditor {
                 Object value = getValue();
                 assert value instanceof String;
                 userUpdateValueProperty((String) value);
-                textField.selectAll();
+                getTextField().selectAll();
             }
         };
-        setTextEditorBehavior(this, textField, onActionListener);
+        setTextEditorBehavior(this, getTextField(), onActionListener);
 
         scriptMenuItem.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent e) {
-                Object valueObj = getValue();
-                assert valueObj instanceof String;
-                String value = (String) valueObj;
-                assert value.startsWith(HASH_STR);
-                // Remove '#'
-                value = value.substring(1);
-                setValue(value);
+                getTextField().setText(null);
+                userUpdateValueProperty(null);
+                switchToScriptMode();
             }
         });
 
         controllerMethodMenuItem.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent e) {
-                Object valueObj = getValue();
-                assert valueObj instanceof String;
-                String value = (String) valueObj;
-                assert !value.startsWith(HASH_STR);
-                // Add '#'
-                value = HASH_STR + value;
-                setValue(value);
+                getTextField().setText(null);
+                userUpdateValueProperty(null);
+                switchToMethodNameMode();
             }
         });
-        getMenu().getItems().add(scriptMenuItem);
+        getMenu().getItems().add(controllerMethodMenuItem);
 
         // methodeName mode by default
         switchToMethodNameMode();
@@ -123,14 +118,15 @@ public class EventHandlerEditor extends AutoSuggestEditor {
 
     @Override
     public Object getValue() {
-        if (textField.getText().isEmpty()) {
-            return "";
+        String valueTf = getTextField().getText();
+        if (valueTf == null || valueTf.isEmpty()) {
+            return null; // default value
         }
         String value;
         if (methodNameMode) {
-            value = HASH_STR + textField.getText();
+            value = HASH_STR + getTextField().getText();
         } else {
-            value = textField.getText();
+            value = getTextField().getText();
         }
 //        System.out.println("EventHandlerEditor : getValue() returns: '" + value + "'");
         return value;
@@ -149,7 +145,7 @@ public class EventHandlerEditor extends AutoSuggestEditor {
             if (!methodNameMode) {
                 switchToMethodNameMode();
             }
-            valueStr = ""; //NOI18N
+            valueStr = null;
         } else {
             assert value instanceof String;
             valueStr = (String) value;
@@ -162,7 +158,7 @@ public class EventHandlerEditor extends AutoSuggestEditor {
                 switchToScriptMode();
             }
         }
-        textField.setText(valueStr);
+        getTextField().setText(valueStr);
     }
 
     @Override
@@ -181,26 +177,28 @@ public class EventHandlerEditor extends AutoSuggestEditor {
         hbox.setAlignment(Pos.CENTER);
         Label hashLabel = new Label(HASH_STR);
         hashLabel.setMinWidth(10);
-        hbox.getChildren().addAll(hashLabel, textField);
-        HBox.setHgrow(textField, Priority.ALWAYS);
+        hbox.getChildren().addAll(hashLabel, getRoot());
+        HBox.setHgrow(getTextField(), Priority.ALWAYS);
         root.getChildren().clear();
         root.getChildren().add(hbox);
     }
 
     private void unwrapHBox() {
         root.getChildren().clear();
-        root.getChildren().add(textField);
+        root.getChildren().add(getRoot());
     }
 
     private void switchToMethodNameMode() {
         methodNameMode = true;
-        EditorUtils.replaceMenuItem(controllerMethodMenuItem, scriptMenuItem);
+        resetSuggestedList(suggestedMethods);
+        replaceMenuItem(controllerMethodMenuItem, scriptMenuItem);
         wrapInHBox();
     }
 
     private void switchToScriptMode() {
         methodNameMode = false;
-        EditorUtils.replaceMenuItem(scriptMenuItem, controllerMethodMenuItem);
+        resetSuggestedList(new ArrayList<>());
+        replaceMenuItem(scriptMenuItem, controllerMethodMenuItem);
         unwrapHBox();
     }
 }

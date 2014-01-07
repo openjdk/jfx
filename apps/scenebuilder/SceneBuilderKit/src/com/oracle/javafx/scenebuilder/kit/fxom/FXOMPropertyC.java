@@ -33,6 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.fxom;
 
 import com.oracle.javafx.scenebuilder.kit.fxom.glue.GlueElement;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -183,6 +184,8 @@ public class FXOMPropertyC extends FXOMProperty {
         assert destination != null;
         assert destination != getFxomDocument();
         
+        documentLocationWillChange(destination.getLocation());
+        
         if (getParentInstance() != null) {
             assert getParentInstance().getFxomDocument() == getFxomDocument();
             removeFromParentInstance();
@@ -208,6 +211,12 @@ public class FXOMPropertyC extends FXOMProperty {
         }
     }
 
+    @Override
+    public void documentLocationWillChange(URL newLocation) {
+        for (FXOMObject v : values) {
+            v.documentLocationWillChange(newLocation);
+        }
+    }
     
   
     /*

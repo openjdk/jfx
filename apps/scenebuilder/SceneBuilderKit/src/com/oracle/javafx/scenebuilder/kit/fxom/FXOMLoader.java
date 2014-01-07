@@ -64,13 +64,19 @@ class FXOMLoader implements LoadListener {
     public void load(String fxmlText) throws java.io.IOException {
         assert fxmlText != null;
         
+        final ClassLoader classLoader;
+        if (document.getClassLoader() != null) {
+            classLoader = document.getClassLoader();
+        } else {
+            classLoader = FXMLLoader.getDefaultClassLoader();
+        }
+        
         FXMLLoader fxmlLoader = new FXMLLoader();
         
         fxmlLoader.setLocation(document.getLocation());
         fxmlLoader.setResources(new ResourceKeyCollector(document.getResources()));
-        if (document.getClassLoader() != null) {
-            fxmlLoader.setClassLoader(document.getClassLoader());
-        }
+        fxmlLoader.setClassLoader(new TransientClassLoader(classLoader));
+        fxmlLoader.setBuilderFactory(new FXOMBuilderFactory(classLoader));
         Deprecation.setStaticLoad(fxmlLoader, true);
         Deprecation.setLoadListener(fxmlLoader, this);
         
@@ -111,7 +117,8 @@ class FXOMLoader implements LoadListener {
     @Override
     public void beginInstanceDeclarationElement(Class<?> declaredClass) {
         assert declaredClass != null;
-        assert glueCursor.getCurrentElement().getTagName().equals(declaredClass.getSimpleName());
+        assert glueCursor.getCurrentElement().getTagName().equals(declaredClass.getSimpleName()) ||
+                glueCursor.getCurrentElement().getTagName().equals(declaredClass.getCanonicalName());
         
         final TransientObject transientInstance
                 = new TransientObject(currentTransientNode, 

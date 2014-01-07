@@ -36,6 +36,7 @@ import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
+import javafx.fxml.FXMLLoader;
 
 /**
  *
@@ -67,7 +68,7 @@ class ResourceKeyCollector extends ResourceBundle {
             result = null;
         }
         if (result == null) {
-            result = "%" + key;
+            result = FXMLLoader.RESOURCE_KEY_PREFIX + key;
         }
         
         return result;

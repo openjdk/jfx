@@ -238,6 +238,12 @@ public abstract class PropertyEditor extends Editor {
         return menu;
     }
 
+    public void replaceMenuItem(MenuItem item, MenuItem newItem) {
+        MenuButton cogMenu = getMenu();
+        int index = cogMenu.getItems().indexOf(item);
+        cogMenu.getItems().set(index, newItem);
+    }
+
     public void setPropertyMetadata(ValuePropertyMetadata propMeta) {
         this.propMeta = propMeta;
     }

@@ -56,7 +56,8 @@ class TransientObject extends TransientNode {
         
         assert declaredClass != null;
         assert glueElement != null;
-        assert glueElement.getTagName().equals(declaredClass.getSimpleName());
+        assert glueElement.getTagName().equals(declaredClass.getSimpleName()) ||
+                glueElement.getTagName().equals(declaredClass.getCanonicalName());
         
         this.declaredClass = declaredClass;
         this.unknownClassName = null;

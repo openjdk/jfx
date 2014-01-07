@@ -351,8 +351,10 @@ public class HierarchyTreeTableCell<T extends HierarchyItem, S extends Hierarchy
                         }
                         break;
                     case FXID:
+                        assert newValue != null;
+                        final String fxId = newValue.isEmpty() ? null : newValue;
                         final ModifyFxIdJob job
-                                = new ModifyFxIdJob(fxomObject, newValue, editorController);
+                                = new ModifyFxIdJob(fxomObject, fxId, editorController);
                         if (job.isExecutable()) {
                             editorController.getJobManager().push(job);
                         }

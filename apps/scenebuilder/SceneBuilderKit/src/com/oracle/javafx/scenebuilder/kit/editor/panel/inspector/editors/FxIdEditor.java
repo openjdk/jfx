@@ -67,7 +67,7 @@ public class FxIdEditor extends AutoSuggestEditor {
                         return;
                     }
                 }
-                userUpdateValueProperty(value);
+                userUpdateValueProperty(value.isEmpty() ? null : value);
                 textField.selectAll();
             }
         };
@@ -75,6 +75,6 @@ public class FxIdEditor extends AutoSuggestEditor {
     }
     
     public void reset(List<String> suggestedFxIds) {
-        super.reset(PROPERTY_NAME, DEFAULT_VALUE, suggestedFxIds);
+        reset(PROPERTY_NAME, DEFAULT_VALUE, suggestedFxIds);
     }
 }

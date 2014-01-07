@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.panel.util;
 
+import java.util.List;
 import javafx.application.Platform;
 import javafx.event.EventHandler;
 import javafx.geometry.Rectangle2D;
@@ -231,5 +232,53 @@ public abstract class AbstractWindowController {
         }
     }
 
+    protected Rectangle2D getBiggestViewableRectangle() {
+        assert stage != null;
+        
+        Rectangle2D res;
+        
+        if (Screen.getScreens().size() == 1) {
+            res = Screen.getPrimary().getVisualBounds();
+        } else {
+            Rectangle2D stageRect = new Rectangle2D(stage.getX(), stage.getY(), stage.getWidth(), stage.getHeight());
+            List<Screen> screens = Screen.getScreensForRectangle(stageRect);
+            
+            // The stage is entirely rendered on one screen, which is either the
+            // primary one or not, we don't care here.
+//            if (screens.size() == 1) {
+                res = screens.get(0).getVisualBounds();
+//            } else {
+                // The stage is spread over several screens.
+                // We compute the surface of the stage on each on the involved
+                // screen to select the biggest one == still to be implemented.
+//                TreeMap<String, Screen> sortedScreens = new TreeMap<>();
+//                
+//                for (Screen screen : screens) {
+//                    computeSurface(screen, stageRect, sortedScreens);
+//                }
+//                
+//                res = sortedScreens.get(sortedScreens.lastKey()).getVisualBounds();
+//            }
+        }
+        
+        return res;
+    }
+
+    // Compute the percentage of the surface of stageRect which is rendered in
+    // the given screen and write the result in sortedScreens (percentage is
+    // rounded and turned into a String so that we benefit natural order sorting.
+//    private void computeSurface(Screen screen, Rectangle2D stageRect, TreeMap<String, Screen> sortedScreens) {
+//        Rectangle2D screenBounds = screen.getVisualBounds();
+//        double surfaceX, surfaceY, surfaceW, surfaceH;
+//        if (screenBounds.getMinX() < stageRect.getMinX()) {
+//            if (screenBounds.getMinX() < 0) {
+//                surfaceX = stageRect.getMinX();
+//            } else {
+//                surfaceX = screenBounds.getMinX();
+//            }
+//        } else {
+//            
+//        }
+//    }
 
 }

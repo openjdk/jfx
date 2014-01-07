@@ -385,6 +385,21 @@ public class SceneBuilderTest {
         return awc.getBuildInfo();
     }
     
+    
+    /**
+     * Closes the preview window associated to a document window.
+     * Performs nothing if documentScene is not a scene associated to a
+     * document window or if preview window is not opened.
+     * 
+     * @param documentScene a scene holding a document window
+     */
+    public static void closePreviewWindow(Scene documentScene) {
+        final DocumentWindowController dwc = lookupWindowController(documentScene);
+        if (dwc != null) {
+            dwc.getPreviewWindowController().closeWindow();
+        }
+    }
+    
     /*
      * Private
      */

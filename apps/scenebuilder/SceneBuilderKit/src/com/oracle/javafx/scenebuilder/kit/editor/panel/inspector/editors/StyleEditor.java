@@ -182,7 +182,7 @@ public class StyleEditor extends InlineListEditor {
      *
      ***************************************************************************
      */
-    public class StyleItem extends AutoSuggestEditor implements EditorItem {
+    private class StyleItem extends AutoSuggestEditor implements EditorItem {
 
         @FXML
         private Button plusBt;

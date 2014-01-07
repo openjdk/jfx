@@ -34,7 +34,10 @@ package com.oracle.javafx.scenebuilder.kit.metadata.property.value;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
+import java.net.MalformedURLException;
+import java.net.URL;
 import javafx.scene.image.Image;
 
 /**
@@ -57,7 +60,7 @@ public class ImagePropertyMetadata extends ComplexPropertyMetadata<Image> {
             true /* readWrite */, false /* defaultValue */, InspectorPath.UNUSED);
     private final BooleanPropertyMetadata smoothMetadata
             = new BooleanPropertyMetadata(new PropertyName("smooth"),
-            true /* readWrite */, true /* defaultValue */, InspectorPath.UNUSED);
+            true /* readWrite */, false /* defaultValue */, InspectorPath.UNUSED);
     private final BooleanPropertyMetadata backgroundLoading
             = new BooleanPropertyMetadata(new PropertyName("backgroundLoading"),
             true /* readWrite */, false /* defaultValue */, InspectorPath.UNUSED);
@@ -78,7 +81,26 @@ public class ImagePropertyMetadata extends ComplexPropertyMetadata<Image> {
     
     @Override
     protected void updateFxomInstanceWithValue(FXOMInstance valueInstance, Image value) {
-        urlMetadata.setValue(valueInstance, Deprecation.getUrl(value));
+        /*
+         * Image location is expressed as an absolute url.
+         * If the fxom document has a location, then we convert this location
+         * as a relative path expression (ie starting with @). If not, then
+         * we keep the absolute url.
+         */
+        final URL documentURL = valueInstance.getFxomDocument().getLocation();
+        final String imageLocation;
+        if (documentURL != null) {
+            try {
+                final URL imageURL = new URL(Deprecation.getUrl(value));
+                final PrefixedValue pv = PrefixedValue.makePrefixedValue(imageURL, documentURL);
+                imageLocation = pv.toString();
+            } catch(MalformedURLException|IllegalArgumentException x) {
+                throw new RuntimeException("Bug", x); // NOI18N
+            }
+        } else {
+            imageLocation = Deprecation.getUrl(value);
+        }
+        urlMetadata.setValue(valueInstance, imageLocation);
         requestedWidthMetadata.setValue(valueInstance, value.getRequestedWidth());
         requestedHeightMetadata.setValue(valueInstance, value.getRequestedHeight());
         preserveRatioMetadata.setValue(valueInstance, value.isPreserveRatio());

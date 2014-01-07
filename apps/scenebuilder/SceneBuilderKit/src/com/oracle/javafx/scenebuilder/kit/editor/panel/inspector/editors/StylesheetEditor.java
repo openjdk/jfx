@@ -271,7 +271,7 @@ public class StylesheetEditor extends InlineListEditor {
      *
      ***************************************************************************
      */
-    public class StylesheetItem implements EditorItem {
+    private class StylesheetItem implements EditorItem {
 
         @FXML
         private Button plusBt;

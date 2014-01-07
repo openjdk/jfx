@@ -33,6 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.fxom;
 
 import com.oracle.javafx.scenebuilder.kit.fxom.glue.GlueElement;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -61,7 +62,8 @@ public class FXOMInstance extends FXOMObject {
         
         assert declaredClass != null;
         assert glueElement.getTagName().equals("fx:root") 
-                || glueElement.getTagName().equals(declaredClass.getSimpleName());
+                || glueElement.getTagName().equals(declaredClass.getSimpleName())
+                || glueElement.getTagName().equals(declaredClass.getCanonicalName());
         assert sceneGraphObject != null;
         assert properties != null;
 
@@ -244,6 +246,23 @@ public class FXOMInstance extends FXOMObject {
     }
 
     @Override
+    protected void collectPropertiesT(List<FXOMPropertyT> result) {
+        assert result != null;
+        
+        for (FXOMProperty p : properties.values()) {
+            if (p instanceof FXOMPropertyT) {
+                final FXOMPropertyT tp = (FXOMPropertyT) p;
+                result.add(tp);
+            } else {
+                assert p instanceof FXOMPropertyC;
+                for (FXOMObject v : ((FXOMPropertyC)p).getValues()) {
+                    v.collectPropertiesT(result);
+                }
+            }
+        }
+    }
+
+    @Override
     protected void collectReferences(String source, List<FXOMIntrinsic> result) {
         for (FXOMProperty p : properties.values()) {
             if (p instanceof FXOMPropertyC) {
@@ -320,8 +339,14 @@ public class FXOMInstance extends FXOMObject {
         }
     }
 
+    @Override
+    public void documentLocationWillChange(URL newLocation) {
+        for (FXOMProperty p : properties.values()) {
+            p.documentLocationWillChange(newLocation);
+        }
+    }
+
     
-  
     /*
      * Package
      */

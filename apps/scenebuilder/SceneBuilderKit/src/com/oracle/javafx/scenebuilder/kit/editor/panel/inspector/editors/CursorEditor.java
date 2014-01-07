@@ -40,7 +40,6 @@ import java.io.File;
 import java.net.MalformedURLException;
 import java.util.Arrays;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -90,7 +89,7 @@ public class CursorEditor extends PropertyEditor {
             public void handle(ActionEvent event) {
                 try {
                     cursor = new ImageCursor(new Image(imagePathTf.getText()));
-                } catch (NullPointerException  | IllegalArgumentException ex) {
+                } catch (NullPointerException | IllegalArgumentException ex) {
                     handleInvalidValue(imagePathTf.getText());
                     return;
                 }
@@ -103,15 +102,22 @@ public class CursorEditor extends PropertyEditor {
     // Separate method to please FindBugs
     private void initialize(EventHandler<ActionEvent> valueListener) {
         setTextEditorBehavior(this, imagePathTf, valueListener);
+        // We do not want the valueListener is called when reset to default
+        setCommitListener(null);
         imagePathTfEnabled(false);
 
         int index = 0;
         Map<Cursor, String> predefinedCursors = CursorPropertyMetadata.getCursorMap();
-        for (Entry<Cursor, String> entry : predefinedCursors.entrySet()) {
-            String cursorStr = entry.getValue();
+        // Order the cursors
+        Cursor[] cursorList = {Cursor.DEFAULT, Cursor.CLOSED_HAND, Cursor.OPEN_HAND, Cursor.HAND, Cursor.MOVE, Cursor.WAIT,
+            Cursor.TEXT, Cursor.V_RESIZE, Cursor.H_RESIZE, Cursor.N_RESIZE, Cursor.NE_RESIZE, Cursor.E_RESIZE, Cursor.SE_RESIZE,
+            Cursor.S_RESIZE, Cursor.SW_RESIZE, Cursor.W_RESIZE, Cursor.NW_RESIZE,
+            Cursor.CROSSHAIR, Cursor.NONE, Cursor.DISAPPEAR};
+        for (Cursor cursorObj : cursorList) {
+            String cursorStr = predefinedCursors.get(cursorObj);
             final Label cursorLabel = new Label(cursorStr);
 //            cursorLabel.setPrefWidth(150.0);
-            cursorLabel.setCursor(entry.getKey());
+            cursorLabel.setCursor(cursorObj);
             CheckMenuItem menuItem = new CheckMenuItem();
             menuItem.setGraphic(cursorLabel);
             // add predefined cursors before "Choose image" menu item
