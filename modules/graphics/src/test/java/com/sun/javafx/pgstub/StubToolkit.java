@@ -126,7 +126,7 @@ public class StubToolkit extends Toolkit {
     }
 
     @Override
-    public TKStage createTKPopupStage(Window peerWindow, TKStage owner, AccessControlContext acc) {
+    public TKStage createTKPopupStage(Window peerWindow, StageStyle popupStyle, TKStage owner, AccessControlContext acc) {
         return new StubPopupStage();
     }
 
@@ -350,6 +350,8 @@ public class StubToolkit extends Toolkit {
 
     @Override public boolean isSupported(ConditionalFeature feature) {
         if (feature == ConditionalFeature.SCENE3D) {
+            return true;
+        } else if (feature == ConditionalFeature.TRANSPARENT_WINDOW) {
             return true;
         }
         return false;
