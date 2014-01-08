@@ -150,6 +150,7 @@ def extraLFlags = [
         "-L$sdk/opt/vc/lib"].flatten()
 
 def lensLFlags = [extraLFlags, "-lpthread", "-ludev", "-ldl", "-lm"].flatten()
+def monocleLFlags = [extraLFlags, "-ldl", "-lm"].flatten()
 
 def fontCFlags = [extraCFlags].flatten()
 def fontLFlags = [extraLFlags].flatten()
@@ -319,11 +320,14 @@ def compiler = file("$compilerHome/bin/${compilerPrefix}gcc").getAbsolutePath()
 def linker = file("$compilerHome/bin/${compilerPrefix}g++").getAbsolutePath()
 
 ARMV6HF.glass = [:]
-ARMV6HF.glass.variants = ["eglfb", "directfb", "fb", "gtk", "lensport" ]
+ARMV6HF.glass.variants = ["eglfb", "directfb", "fb", "gtk", "lensport", "monocle", "monocle_x11" ]
 ARMV6HF.glass.javahInclude = [
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*",
     "com/sun/glass/ui/lens/*",
+    "com/sun/glass/ui/monocle/linux/*",
+    "com/sun/glass/ui/monocle/util/*",
+    "com/sun/glass/ui/monocle/x11/*",
     "com/sun/glass/ui/gtk/*",
     "com/sun/glass/ui/accessible/gtk/*"]
 ARMV6HF.glass.lib = "glass"
@@ -337,6 +341,30 @@ ARMV6HF.glass.lensport.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DISEG
 ARMV6HF.glass.lensport.linker = linker
 ARMV6HF.glass.lensport.linkFlags = [lensLFlags].flatten()
 ARMV6HF.glass.lensport.lib = "lens_porting"
+
+ARMV6HF.glass.monocle = [:]
+ARMV6HF.glass.monocle.nativeSource = [
+        file("modules/graphics/src/main/native-glass/monocle"),
+        file("modules/graphics/src/main/native-glass/monocle/linux") ]
+ARMV6HF.glass.monocle.compiler = compiler
+ARMV6HF.glass.monocle.ccFlags = [
+        extraCFlags,
+        "-I", file("modules/graphics/src/main/native-glass/monocle/") ].flatten();
+ARMV6HF.glass.monocle.linker = linker
+ARMV6HF.glass.monocle.linkFlags = monocleLFlags
+ARMV6HF.glass.monocle.lib = "glass_monocle"
+
+ARMV6HF.glass.monocle_x11 = [:]
+ARMV6HF.glass.monocle_x11.nativeSource = [
+        file("modules/graphics/src/main/native-glass/monocle/util"),
+        file("modules/graphics/src/main/native-glass/monocle/x11") ]
+ARMV6HF.glass.monocle_x11.compiler = compiler
+ARMV6HF.glass.monocle_x11.ccFlags = [
+        extraCFlags,
+        "-I", file("modules/graphics/src/main/native-glass/monocle/") ].flatten();
+ARMV6HF.glass.monocle_x11.linker = linker
+ARMV6HF.glass.monocle_x11.linkFlags = [ monocleLFlags, "-lX11" ].flatten()
+ARMV6HF.glass.monocle_x11.lib = "glass_monocle_x11"
 
 ARMV6HF.glass.eglfb = [:]
 // TODO when building headless, use lens/cursor/nullcursor/
