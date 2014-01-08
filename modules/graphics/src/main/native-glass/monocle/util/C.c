@@ -24,7 +24,7 @@
  */
 
 #include "com_sun_glass_ui_monocle_util_C.h"
-#include "monocle.h"
+#include "Monocle.h"
 
 JNIEXPORT jobject JNICALL
  Java_com_sun_glass_ui_monocle_util_C_NewDirectByteBuffer

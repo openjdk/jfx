@@ -25,7 +25,7 @@
 
 #include "com_sun_glass_ui_monocle_x11_X.h"
 #include <X11/Xlib.h>
-#include "monocle.h"
+#include "Monocle.h"
 
 JNIEXPORT jlong JNICALL
  Java_com_sun_glass_ui_monocle_x11_X_XOpenDisplay
