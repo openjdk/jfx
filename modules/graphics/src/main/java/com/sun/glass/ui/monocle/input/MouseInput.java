@@ -51,8 +51,8 @@ public class MouseInput {
     }
 
     public void setState(MouseState newState) {
-        MonocleWindow oldWindow = state.getWindow();
-        MonocleWindow window = newState.getWindow();
+        MonocleWindow oldWindow = state.getWindow(false);
+        MonocleWindow window = newState.getWindow(true);
         MonocleView view = (window == null) ? null : (MonocleView) window.getView();
         boolean moved = false;
         // send exit event

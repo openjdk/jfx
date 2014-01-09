@@ -64,8 +64,8 @@ public class MouseState {
     }
 
     /** Returns the Glass window on which this event state is located . */
-    MonocleWindow getWindow() {
-        if (window == null) {
+    MonocleWindow getWindow(boolean recalculateCache) {
+        if (window == null || recalculateCache) {
             window = (MonocleWindow)
                     MonocleWindowManager.getInstance().getWindowForLocation(x, y);
         }
