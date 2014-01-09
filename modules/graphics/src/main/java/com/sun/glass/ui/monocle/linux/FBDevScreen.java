@@ -44,6 +44,7 @@ public class FBDevScreen implements NativeScreen {
     private long nativeHandle;
     private FileChannel fbdev;
     private boolean isShutdown;
+    private int consoleCursorBlink;
 
     public FBDevScreen() {
         try {
@@ -53,6 +54,16 @@ public class FBDevScreen implements NativeScreen {
             height = vsize[1];
             nativeHandle = 1l;
             nativeFormat = Pixels.Format.BYTE_BGRA_PRE;
+            try {
+                consoleCursorBlink = SysFS.readInt(SysFS.CURSOR_BLINK);
+                if (consoleCursorBlink != 0) {
+                    SysFS.write(SysFS.CURSOR_BLINK, "0");
+                }
+            } catch (IOException e) {
+                // We failed to read or set the cursor blink state. So don't
+                // try to restore the previous state on exit.
+                consoleCursorBlink = 0;
+            }
         } catch (IOException e) {
             e.printStackTrace();
             throw (IllegalStateException)
@@ -124,6 +135,13 @@ public class FBDevScreen implements NativeScreen {
         } finally {
             fbdev = null;
             isShutdown = true;
+        }
+        if (consoleCursorBlink != 0) {
+            try {
+                SysFS.write(SysFS.CURSOR_BLINK, String.valueOf(consoleCursorBlink));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 

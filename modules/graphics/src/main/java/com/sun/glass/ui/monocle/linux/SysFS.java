@@ -39,6 +39,9 @@ import java.util.Map;
 
 public class SysFS {
 
+    public static final String CURSOR_BLINK =
+            "/sys/devices/virtual/graphics/fbcon/cursor_blink";
+
     /** Read input device capability data from sysfs */
     static Map<String, BitSet> readCapabilities(File sysPath) {
         Map<String, BitSet> capsMap = new HashMap<String, BitSet>();
