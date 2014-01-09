@@ -29,6 +29,7 @@ import com.sun.glass.events.MouseEvent;
 import com.sun.glass.ui.monocle.MonocleView;
 import com.sun.glass.ui.monocle.MonocleWindow;
 import com.sun.glass.ui.monocle.NativePlatformFactory;
+import com.sun.glass.ui.monocle.NativeScreen;
 import com.sun.glass.ui.monocle.util.IntSet;
 
 /**
@@ -74,6 +75,11 @@ public class MouseInput {
         }
         int x = newState.getX();
         int y = newState.getY();
+        NativeScreen screen = NativePlatformFactory.getNativePlatform().getScreen();
+        x = Math.min(x, screen.getWidth() - 1);
+        y = Math.min(y, screen.getHeight() - 1);
+        x = Math.max(x, 0);
+        y = Math.max(y, 0);
         boolean newAbsoluteLocation = state.getX() != x || state.getY() != y;
         if (newAbsoluteLocation) {
             NativePlatformFactory.getNativePlatform()

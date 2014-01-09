@@ -1,4 +1,4 @@
-package com.sun.glass.ui.monocle.omap;/*
+/*
  * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -23,20 +23,27 @@ package com.sun.glass.ui.monocle.omap;/*
  * questions.
  */
 
-import com.sun.glass.ui.monocle.NativeCursor;
-import com.sun.glass.ui.monocle.NativeScreen;
-import com.sun.glass.ui.monocle.linux.LinuxPlatform;
+package com.sun.glass.ui.monocle.omap;
 
-public class OMAPPlatform extends LinuxPlatform {
+import com.sun.glass.ui.monocle.linux.FBDevScreen;
+import com.sun.glass.ui.monocle.linux.SysFS;
 
-    @Override
-    protected NativeCursor createCursor() {
-        return new OMAPCursor();
+import java.io.IOException;
+
+public class OMAPScreen extends FBDevScreen {
+
+    public OMAPScreen() {
+        try {
+            // OMAP can report a larger vertical screen size in
+            // /sys/class/graphics/fb0/virtual_size than the physical size. So
+            // we read the real size here.
+            int[] size = SysFS.readInts("/sys/devices/platform/omapdss/overlay0/input_size", 2);
+            width = size[0];
+            height = size[1];
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw (IllegalStateException)
+                    new IllegalStateException().initCause(e);
+        }
     }
-
-    @Override
-    protected NativeScreen createScreen() {
-        return new OMAPScreen();
-    }
-
 }

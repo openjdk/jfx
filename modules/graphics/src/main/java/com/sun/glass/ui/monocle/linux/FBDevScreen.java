@@ -39,8 +39,8 @@ public class FBDevScreen implements NativeScreen {
 
     private int depth;
     private int nativeFormat;
-    private int width;
-    private int height;
+    protected int width;
+    protected int height;
     private long nativeHandle;
     private FileChannel fbdev;
     private boolean isShutdown;
