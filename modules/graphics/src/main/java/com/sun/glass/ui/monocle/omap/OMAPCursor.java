@@ -47,7 +47,7 @@ public class OMAPCursor implements NativeCursor {
     private int offsetY;
     private int cursorX;
     private int cursorY;
-    private static final int INT_KEY = 0xABABABAB;
+    private static final int INT_KEY = 0x12121212;
     private static final int SHORT_KEY = 0xABAB;
     private static final int CURSOR_WIDTH = 16;
     private static final int CURSOR_HEIGHT = 16;
