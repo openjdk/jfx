@@ -46,6 +46,8 @@ import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
+import javafx.geometry.Bounds;
+import javafx.geometry.BoundingBox;
 import javafx.geometry.Orientation;
 import javafx.geometry.Point3D;
 import javafx.geometry.Pos;
@@ -80,6 +82,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.scene.transform.Rotate;
+import javafx.animation.AnimationTimer;
 import javafx.stage.Modality;
 import javafx.stage.Popup;
 import javafx.stage.Stage;
@@ -99,7 +102,7 @@ public class TestBuilder {
     private CheckMenuItem showMessagesItem;
     private final Label sysMenuLabel = new Label("Using System Menu");
 
-    //Variables use by "HelloComboBox" section
+    //Variables used by "HelloComboBox" section
     private final ObservableList<String> strings = FXCollections.observableArrayList(
             "Option 1", "Option 2", "Option 3", 
             "Option 4", "Option 5", "Option 6",
@@ -111,18 +114,21 @@ public class TestBuilder {
 
     private final ObservableList<String> fonts = FXCollections.observableArrayList(Font.getFamilies());
 
-    //Variables use by "HelloTabPane" section
+    //Variables used by "HelloTabPane" section
     private TabPane tabPane;
     private Tab tab1, tab2, tab3, emptyTab, internalTab, multipleTabs;
     private ContextMenu menu;
     private boolean showScrollArrows = false;
     private boolean showTabMenu = false;
 
-    //Variables use by "HelloButtonMenu" section
+    //Variables used by "HelloButtonMenu" section
     private final static int column_enabled = 10;
     private final static int column_disabled = 160;
     private final static int line_spacing = 30;
 
+    //Variable used by "RobotTest" section
+    private final Rectangle rec1 = new Rectangle(50, 50, 40, 160);
+    
     private static TestBuilder instance;
 
     protected TestBuilder() {}
@@ -1500,21 +1506,17 @@ public class TestBuilder {
      */
     public void robotTest(final Scene globalScene, final VBox mainBox,
                           final Stage robotStage){
-
-        int x = ((int) robotStage.getX());
-        int y = ((int) robotStage.getY());
-        System.out.println("Screen coordinates are x="+x+" and y="+y);
-
+	
         Label l = new Label("Robot features Demo");
         Group lGroup = new Group(l);
-        lGroup.setLayoutX(x + 400);
-        lGroup.setLayoutY(y + 10);
+        lGroup.setLayoutX(400);
+        lGroup.setLayoutY(10);
 
-        final int recX = x + 50;
-        final int recY = y + 50;
-        System.out.println("Rec coordinates are x="+recX+" and y="+recY);
+    	//Rectangle's coordinates
+        final int recX = 50;
+        final int recY = 50;
+
         Group allGroup = new Group();
-        Rectangle rec1 = new Rectangle(recX, recY, 40, 160);
         rec1.setFill(Color.RED);
         Rectangle rec2 = new Rectangle(recX + 40, recY, 40, 160);
         rec2.setFill(Color.BLUE);
@@ -1527,14 +1529,14 @@ public class TestBuilder {
         grid.setVgap(50);
         grid.setHgap(20);
         grid.setLayoutX(recX + 300);
-        grid.setLayoutY(recY+50);
+        grid.setLayoutY(recY + 50);
 
         final TextField result1 = new TextField("Result");
         result1.setEditable(false);
         Button screenTestBtn = new Button("Robot Get Screen Capture Test");
         screenTestBtn.setOnAction(new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent e) {
-               robotScreenTest(result1, robotStage, recX, recY);
+               robotScreenTest(result1, robotStage);
             }
         });
 
@@ -1548,7 +1550,7 @@ public class TestBuilder {
         Button pixelTestBtn = new Button("Robot Get Pixel Color Test");
         pixelTestBtn.setOnAction(new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent e) {
-               robotPixelTest(result2, robotStage, recX+3, recY+3);
+               robotPixelTest(result2, robotStage);
             }
         });
 
@@ -1596,7 +1598,7 @@ public class TestBuilder {
         Button wheelTestBtn = new Button("Robot Mouse Press/Release/Wheel Test");
         wheelTestBtn.setOnAction(new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent e) {
-                robotWheelTest(sv, result4, robotStage, recX + 5 , recY + 250 + 5 );
+                robotWheelTest(sv, result4, robotStage);
             }
         });
 
@@ -1612,100 +1614,111 @@ public class TestBuilder {
             }
         });
         Group btnGroup = new Group(btn);
-        btnGroup.setLayoutX(((int) robotStage.getX()) + 450);
-        btnGroup.setLayoutY(((int) robotStage.getY()) + 450);
+        btnGroup.setLayoutX(450);
+        btnGroup.setLayoutY(450);
 
         allGroup.getChildren().addAll(rec1, rec2, rec3, rec4, grid, lGroup, btnGroup,
                                       writeFieldGroup, svGroup);
         globalScene.setRoot(allGroup);
     }
 
-    
-    public void robotKeyTest(final TextField field, final TextField result){
-        field.requestFocus();
-        new Thread(new Runnable(){
-                public void run(){
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) { }
 
-                    Platform.runLater (new Runnable(){
-                         public void run(){
-                             if (field.isFocused()) {
-                                 Robot robot = com.sun.glass.ui.Application.GetApplication().createRobot();
-                                 robot.keyPress(KeyEvent.VK_T);
-                                 robot.keyRelease(KeyEvent.VK_T);
-                                 robot.keyPress(KeyEvent.VK_E);
-                                 robot.keyRelease(KeyEvent.VK_E);
-                                 robot.keyPress(KeyEvent.VK_S);
-                                 robot.keyRelease(KeyEvent.VK_S);
-                                 robot.keyPress(KeyEvent.VK_T);
-                                 robot.keyRelease(KeyEvent.VK_T);
-                                 robot.destroy();
-                                 try {
-                                     Thread.sleep(1000);
-                                 } catch (InterruptedException e) { }
+   public void robotKeyTest(final TextField field, final TextField result) {
+		field.requestFocus();
+		new AnimationTimer() {
+			long startTime = System.nanoTime();
+			@Override 
+			public void handle(long now) {
+				if (now > startTime + 3000000000l){ 
+					stop(); 
+					field.setText("Failed");
+				} else if (field.isFocused()) {
+					stop();
+					Robot robot = com.sun.glass.ui.Application.GetApplication().createRobot();
+					robot.keyPress(KeyEvent.VK_T);
+					robot.keyRelease(KeyEvent.VK_T);
+					robot.keyPress(KeyEvent.VK_E);
+					robot.keyRelease(KeyEvent.VK_E);
+					robot.keyPress(KeyEvent.VK_S);
+					robot.keyRelease(KeyEvent.VK_S);
+					robot.keyPress(KeyEvent.VK_T);
+					robot.keyRelease(KeyEvent.VK_T);
+					robot.destroy();
+					new AnimationTimer() {
+						long startTime = System.nanoTime();
+						@Override
+						public void handle(long now) {
+							if (now > startTime + 3000000000l){ 
+								stop();
+								result.setText("Failed");
+							} else if ((field.getText()).equals("test")) { 
+								stop();
+								result.setText("Passed");
+							}
+						}
+					}.start();
+				}
+			}
+		}.start();
+	}
 
-                                 if ((field.getText()).equals("test")){
-                                     result.setText("Passed");
-                                 } else {
-                                     result.setText("Failed");
-                                 }
-                              }
-                            }
-                        });
-                    }
-                }).start();
-    }
+    public void robotWheelTest(final ListView<String> lv, final TextField result, Stage currentStage){
 
-    public void robotWheelTest(final ListView<String> lv, final TextField result, Stage currentStage, final int x, final int y){
+		//Caclulation of ListView minimal coordinates
+		Bounds bounds = lv.localToScreen(new BoundingBox(0, 0, 
+	        lv.getBoundsInParent().getWidth(),
+	        lv.getBoundsInParent().getHeight()));
+		int x = 10 + (int) bounds.getMinX();
+		int y = 10 + (int) bounds.getMinY();
 
-        final Robot robot = com.sun.glass.ui.Application.GetApplication().createRobot();
+		final Robot robot = com.sun.glass.ui.Application.GetApplication().createRobot();
         robot.mouseMove(x, y);
         robot.mousePress(Robot.MOUSE_LEFT_BTN);
         robot.mouseRelease(Robot.MOUSE_LEFT_BTN);
 
-        new Thread(new Runnable(){
-                public void run(){
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) { }
+		new AnimationTimer() {
+			long startTime = System.nanoTime();
+			@Override 
+			public void handle(long now) {
+				if (now > startTime + 3000000000l){ 
+					stop(); 
+					result.setText("Failed");
+				} else if (lv.isFocused()) {
+					stop();
+					robot.mouseWheel(-5);
+					robot.mousePress(Robot.MOUSE_LEFT_BTN);
+                    robot.mouseRelease(Robot.MOUSE_LEFT_BTN);
+                    robot.destroy();
+					new AnimationTimer() {
+						long startTime = System.nanoTime();
+						@Override
+						public void handle(long now) {
+							if (now > startTime + 3000000000l){ 
+								stop();
+								result.setText("Scoll Down Failed");
+							} else if (!lv.getSelectionModel().selectedItemProperty().getValue().equals("a")) { 
+								stop();
+								result.setText("Scoll Down Passed");
+							}
+						}
+					}.start();
+				}
+			}
+		}.start();
+	}
 
-                    Platform.runLater (new Runnable(){
-                         public void run(){
-                             if (lv.isFocused()) {                                
-                                 try {
-                                     Thread.sleep(1000);
-                                 } catch (InterruptedException e) { }
-                                 robot.mouseWheel(-5);
-                                 robot.mousePress(Robot.MOUSE_LEFT_BTN);
-                                 robot.mouseRelease(Robot.MOUSE_LEFT_BTN);
-                                 robot.destroy();
-                                 try {
-                                     Thread.sleep(5000);
-                                 } catch (InterruptedException e) { }
+    public void robotPixelTest(final TextField result, Stage currentStage){
 
-                                 String s = lv.getSelectionModel().selectedItemProperty().getValue();
-                                 
-                                 if (!s.equals("a")) {
-                                     result.setText("Scoll Down Passed");
-                                 } else {
-                                     result.setText("Scoll Down Failed");
-                                 }                                
-                              }
-                            }
-                        });
-                    }
-                }).start();
-    }
-
-    public void robotPixelTest(final TextField result, Stage currentStage, int x, int y){
-
-        int answer = assertPixelEquals(x, y, Color.RED) +
+	Bounds bounds = rec1.localToScreen(new BoundingBox(0, 0, 
+			rec1.getBoundsInParent().getWidth(),
+                        rec1.getBoundsInParent().getHeight()));
+	int x = 53 + (int) bounds.getMinX();
+	int y = 53 + (int) bounds.getMinY();
+	int answer = assertPixelEquals(x, y, Color.RED) +
                      assertPixelEquals(x + 40, y, Color.BLUE) +
                      assertPixelEquals(x + 80, y, Color.YELLOW) +
                      assertPixelEquals(x + 120, y, Color.GREEN);
-        if (answer==4) {
+        if (answer == 4) {
             result.setText("Passed");
         } else {
             result.setText("Failed");
@@ -1735,10 +1748,15 @@ public class TestBuilder {
         return 0;
     }
        
-    public void robotScreenTest(final TextField result, Stage stage, final int x, final int y){
+    public void robotScreenTest(final TextField result, Stage stage){
+	
+		Bounds bounds = rec1.localToScreen(new BoundingBox(0, 0, 
+            rec1.getBoundsInParent().getWidth(),
+            rec1.getBoundsInParent().getHeight()));
 
-        System.out.println("Capture Screen coordinates are x="+x+" and y="+y);
-        int []intArr = null;
+		int x = 50 + (int) bounds.getMinX();
+		int y = 50 + (int) bounds.getMinY();
+		int []intArr = null;
         boolean correct = true;
         Robot robot = com.sun.glass.ui.Application.GetApplication().createRobot();
         Buffer buff = robot.getScreenCapture(x,y,160,1).getPixels();
@@ -1779,7 +1797,6 @@ public class TestBuilder {
         } else {
             result.setText("Failed");
         }
-
     }
 
     /**
