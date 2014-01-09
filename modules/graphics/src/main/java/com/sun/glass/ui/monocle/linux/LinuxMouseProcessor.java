@@ -58,7 +58,7 @@ public class LinuxMouseProcessor implements LinuxInputProcessor {
                 case Input.EV_SYN:
                     switch (device.getEventCode()) {
                         case Input.SYN_REPORT:
-                            mouse.setState(state);
+                            mouse.setState(state, false);
                             break;
                         default: // ignore
                     }

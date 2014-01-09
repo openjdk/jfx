@@ -267,7 +267,7 @@ final class MonocleApplication extends Application {
                 MouseState mouseState = new MouseState();
                 mouseState.setX(ns.getWidth() / 2);
                 mouseState.setY(ns.getHeight() / 2);
-                MouseInput.getInstance().setState(mouseState);
+                MouseInput.getInstance().setState(mouseState, false);
             }
         } catch (Exception e) {
             e.printStackTrace();

@@ -25,27 +25,32 @@
 
 package com.sun.glass.ui.monocle.input;
 
-/**
- * Processes touch input events based on changes to touch state. Not
- * thread-safe.
- */
-public class TouchInput {
-    private static TouchInput instance = new TouchInput();
+import com.sun.glass.events.MouseEvent;
 
-    private TouchState state = new TouchState();
+public class MouseInputSynthesizer {
 
-    public static TouchInput getInstance() {
+    private static MouseInputSynthesizer instance = new MouseInputSynthesizer();
+
+    private MouseState mouseState = new MouseState();
+
+    public static MouseInputSynthesizer getInstance() {
         return instance;
     }
 
-    public void getState(TouchState result) {
-        state.copyTo(result);
-    }
-
-    public void setState(TouchState newState) {
-        // TODO: send touch events
-        newState.copyTo(state);
-        MouseInputSynthesizer.getInstance().setState(newState);
+    public void setState(TouchState touchState) {
+        if (touchState.getPointCount() == 0) {
+            mouseState.releaseButton(MouseEvent.BUTTON_LEFT);
+        } else {
+            mouseState.pressButton(MouseEvent.BUTTON_LEFT);
+        }
+        if (touchState.getPointCount() == 1) {
+            // do not synthesize mouse drag events if more than one finger is
+            // down
+            TouchState.Point p = touchState.getPoint(0);
+            mouseState.setX(p.x);
+            mouseState.setY(p.y);
+        }
+        MouseInput.getInstance().setState(mouseState, true);
     }
 
 }

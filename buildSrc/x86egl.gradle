@@ -279,8 +279,8 @@ X86EGL.glass.lib = "glass"
 
 X86EGL.glass.monocle = [:]
 X86EGL.glass.monocle.nativeSource = [
-        file("modules/graphics/src/main/native-glass/monocle"),
-        file("modules/graphics/src/main/native-glass/monocle/linux") ]
+        file("modules/graphics/src/main/native-glass/monocle/linux"),
+        file("modules/graphics/src/main/native-glass/monocle/util") ]
 X86EGL.glass.monocle.compiler = compiler
 X86EGL.glass.monocle.ccFlags = monocleCFlags
 X86EGL.glass.monocle.linker = linker

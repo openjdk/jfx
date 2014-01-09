@@ -131,7 +131,7 @@ class X11InputDeviceRegistry extends InputDeviceRegistry {
             if (glassButton != MouseEvent.BUTTON_NONE) {
                 state.pressButton(glassButton);
             }
-            MouseInput.getInstance().setState(state);
+            MouseInput.getInstance().setState(state, false);
         }
     }
 
@@ -147,7 +147,7 @@ class X11InputDeviceRegistry extends InputDeviceRegistry {
             if (glassButton != MouseEvent.BUTTON_NONE) {
                 state.releaseButton(glassButton);
             }
-            MouseInput.getInstance().setState(state);
+            MouseInput.getInstance().setState(state, false);
         }
     }
 
@@ -163,7 +163,7 @@ class X11InputDeviceRegistry extends InputDeviceRegistry {
             MouseInput.getInstance().getState(state);
             state.setX(x);
             state.setY(y);
-            MouseInput.getInstance().setState(state);
+            MouseInput.getInstance().setState(state, false);
         }
     }
 

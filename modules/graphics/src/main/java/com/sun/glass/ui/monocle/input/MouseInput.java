@@ -50,7 +50,7 @@ public class MouseInput {
         state.copyTo(result);
     }
 
-    public void setState(MouseState newState) {
+    public void setState(MouseState newState, boolean synthesized) {
         MonocleWindow oldWindow = state.getWindow(false);
         MonocleWindow window = newState.getWindow(true);
         MonocleView view = (window == null) ? null : (MonocleView) window.getView();
@@ -70,7 +70,7 @@ public class MouseInput {
                 int oldRelY = oldY - oldWindow.getY();
                 oldView._notifyMouse(MouseEvent.EXIT, button,
                                   oldRelX, oldRelY, oldX, oldY,
-                                  modifiers, isPopupTrigger, false);
+                                  modifiers, isPopupTrigger, synthesized);
             }
         }
         int x = newState.getX();
@@ -98,7 +98,7 @@ public class MouseInput {
             boolean isPopupTrigger = false; // TODO
             view._notifyMouse(MouseEvent.ENTER, button,
                               relX, relY, x, y,
-                              modifiers, isPopupTrigger, false);
+                              modifiers, isPopupTrigger, synthesized);
         }
         // send motion events
         if (oldWindow != window | newAbsoluteLocation) {
@@ -109,7 +109,7 @@ public class MouseInput {
             boolean isPopupTrigger = false; // TODO
             view._notifyMouse(eventType, button,
                               relX, relY, x, y,
-                              modifiers, isPopupTrigger, false);
+                              modifiers, isPopupTrigger, synthesized);
         }
         // send press events
         newState.getButtonsPressed().difference(buttons, state.getButtonsPressed());
@@ -124,7 +124,7 @@ public class MouseInput {
                 view._notifyMouse(MouseEvent.DOWN, button,
                                   relX, relY, x, y,
                                   pressState.getModifiers(), isPopupTrigger,
-                                  false);
+                                  synthesized);
             }
         }
         buttons.clear();
@@ -142,7 +142,7 @@ public class MouseInput {
                 view._notifyMouse(MouseEvent.UP, button,
                                   relX, relY, x, y,
                                   releaseState.getModifiers(), isPopupTrigger,
-                                  false);
+                                  synthesized);
 
             }
         }

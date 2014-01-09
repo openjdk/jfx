@@ -31,8 +31,8 @@ public class TouchState {
 
     public static class Point {
         public int id;
-        public float x;
-        public float y;
+        public int x;
+        public int y;
         public void copyTo(Point target) {
             target.id = id;
             target.x = x;
@@ -48,6 +48,25 @@ public class TouchState {
 
     public Point getPoint(int index) {
         return points[index];
+    }
+
+    /*
+     * If there is more than one point, returns the first point.
+     * If there used to be any points but now are not, reinstate what used to be
+     * the first point and return it.
+     * If there never where any points, create a new one and set it to be the first point.
+      */
+    public Point getPointZero() {
+        if (pointCount == 0 && points[0] == null) {
+            Point p = new Point();
+            addPoint(p);
+            return p;
+        } else if (pointCount == 0) {
+            pointCount ++;
+            return points[0];
+        } else {
+            return points[0];
+        }
     }
 
     public int getPointCount() {
@@ -97,13 +116,12 @@ public class TouchState {
     }
 
     public String toString() {
-        StringBuffer sb = new StringBuffer("TouchState[" + pointCount + ",");
+        StringBuffer sb = new StringBuffer("TouchState[" + pointCount);
         for (int i = 0; i < pointCount; i++) {
+            sb.append(",");
             sb.append(points[i]);
-            if (i < pointCount - 1) {
-                sb.append(",");
-            }
         }
+        sb.append("]");
         return sb.toString();
     }
 

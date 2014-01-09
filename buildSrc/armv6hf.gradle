@@ -348,8 +348,8 @@ ARMV6HF.glass.lensport.lib = "lens_porting"
 
 ARMV6HF.glass.monocle = [:]
 ARMV6HF.glass.monocle.nativeSource = [
-        file("modules/graphics/src/main/native-glass/monocle"),
-        file("modules/graphics/src/main/native-glass/monocle/linux") ]
+        file("modules/graphics/src/main/native-glass/monocle/linux"),
+        file("modules/graphics/src/main/native-glass/monocle/util") ]
 ARMV6HF.glass.monocle.compiler = compiler
 ARMV6HF.glass.monocle.ccFlags = monocleCFlags
 ARMV6HF.glass.monocle.linker = linker

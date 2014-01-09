@@ -72,6 +72,7 @@ public class LinuxInputDevice implements Runnable, InputDevice {
     private File devNode;
     private File sysPath;
     private Map<String, BitSet> capabilities;
+    private Map<Integer, AbsoluteInputCapabilities> absCaps;
     private Map<String, String> udevManifest;
     private ByteBuffer bb = ByteBuffer.allocate(EVENT_STRUCT_SIZE * EVENT_BUFFER_SIZE);
     private ByteBuffer event = ByteBuffer.allocate(EVENT_STRUCT_SIZE);
@@ -96,6 +97,8 @@ public class LinuxInputDevice implements Runnable, InputDevice {
         this.sysPath = sysPath;
         this.udevManifest = udevManifest;
         this.capabilities = SysFS.readCapabilities(sysPath);
+        this.absCaps = AbsoluteInputCapabilities.getCapabilities(
+                devNode, capabilities.get("abs"));
         this.in = new FileInputStream(devNode).getChannel();
         this.executor = NativePlatformFactory.getNativePlatform().getExecutor();
     }
@@ -251,6 +254,10 @@ public class LinuxInputDevice implements Runnable, InputDevice {
 
     BitSet getCapability(String type) {
         return capabilities.get(type);
+    }
+
+    AbsoluteInputCapabilities getAbsoluteInputCapabilities(int axis) {
+        return absCaps == null ? null : absCaps.get(axis);
     }
 
     @Override
