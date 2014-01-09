@@ -150,6 +150,10 @@ def extraLFlags = [
         "-L$sdk/opt/vc/lib"].flatten()
 
 def lensLFlags = [extraLFlags, "-lpthread", "-ludev", "-ldl", "-lm"].flatten()
+def monocleCFlags = [
+        extraCFlags,
+        "-Werror",
+        "-I", file("modules/graphics/src/main/native-glass/monocle/")].flatten();
 def monocleLFlags = [extraLFlags, "-ldl", "-lm"].flatten()
 
 def fontCFlags = [extraCFlags].flatten()
@@ -347,9 +351,7 @@ ARMV6HF.glass.monocle.nativeSource = [
         file("modules/graphics/src/main/native-glass/monocle"),
         file("modules/graphics/src/main/native-glass/monocle/linux") ]
 ARMV6HF.glass.monocle.compiler = compiler
-ARMV6HF.glass.monocle.ccFlags = [
-        extraCFlags,
-        "-I", file("modules/graphics/src/main/native-glass/monocle/") ].flatten();
+ARMV6HF.glass.monocle.ccFlags = monocleCFlags
 ARMV6HF.glass.monocle.linker = linker
 ARMV6HF.glass.monocle.linkFlags = monocleLFlags
 ARMV6HF.glass.monocle.lib = "glass_monocle"
@@ -359,9 +361,7 @@ ARMV6HF.glass.monocle_x11.nativeSource = [
         file("modules/graphics/src/main/native-glass/monocle/util"),
         file("modules/graphics/src/main/native-glass/monocle/x11") ]
 ARMV6HF.glass.monocle_x11.compiler = compiler
-ARMV6HF.glass.monocle_x11.ccFlags = [
-        extraCFlags,
-        "-I", file("modules/graphics/src/main/native-glass/monocle/") ].flatten();
+ARMV6HF.glass.monocle_x11.ccFlags = monocleCFlags
 ARMV6HF.glass.monocle_x11.linker = linker
 ARMV6HF.glass.monocle_x11.linkFlags = [ monocleLFlags, "-lX11" ].flatten()
 ARMV6HF.glass.monocle_x11.lib = "glass_monocle_x11"

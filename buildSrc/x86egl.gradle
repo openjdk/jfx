@@ -130,6 +130,10 @@ def extraLFlags = [
         linkFlags].flatten()
 
 def lensLFlags = [extraLFlags, "-lpthread", "-ludev", "-ldl", "-lm"].flatten()
+def monocleCFlags = [
+        extraCFlags,
+        "-Werror",
+        "-I", file("modules/graphics/src/main/native-glass/monocle/")].flatten();
 def monocleLFlags = [extraLFlags, "-ldl", "-lm"].flatten()
 
 def fontCFlags = [extraCFlags].flatten()
@@ -278,9 +282,7 @@ X86EGL.glass.monocle.nativeSource = [
         file("modules/graphics/src/main/native-glass/monocle"),
         file("modules/graphics/src/main/native-glass/monocle/linux") ]
 X86EGL.glass.monocle.compiler = compiler
-X86EGL.glass.monocle.ccFlags = [
-        extraCFlags,
-        "-I", file("modules/graphics/src/main/native-glass/monocle/") ].flatten();
+X86EGL.glass.monocle.ccFlags = monocleCFlags
 X86EGL.glass.monocle.linker = linker
 X86EGL.glass.monocle.linkFlags = monocleLFlags
 X86EGL.glass.monocle.lib = "glass_monocle"
@@ -290,9 +292,7 @@ X86EGL.glass.monocle_x11.nativeSource = [
         file("modules/graphics/src/main/native-glass/monocle/util"),
         file("modules/graphics/src/main/native-glass/monocle/x11") ]
 X86EGL.glass.monocle_x11.compiler = compiler
-X86EGL.glass.monocle_x11.ccFlags = [
-        extraCFlags,
-        "-I", file("modules/graphics/src/main/native-glass/monocle/") ].flatten();
+X86EGL.glass.monocle_x11.ccFlags = monocleCFlags
 X86EGL.glass.monocle_x11.linker = linker
 X86EGL.glass.monocle_x11.linkFlags = [ monocleLFlags, "-lX11" ].flatten()
 X86EGL.glass.monocle_x11.lib = "glass_monocle_x11"
