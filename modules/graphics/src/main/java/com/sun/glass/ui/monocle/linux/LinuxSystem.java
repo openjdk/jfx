@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,16 +27,24 @@ package com.sun.glass.ui.monocle.linux;
 
 import com.sun.glass.ui.monocle.util.C;
 
+import java.nio.ByteBuffer;
+import java.security.Permission;
+
 public class LinuxSystem {
+    private static Permission permission = new RuntimePermission("loadLibrary.*");
 
     private static LinuxSystem instance = new LinuxSystem();
 
     public static LinuxSystem getLinuxSystem() {
+        checkPermissions();
+        return instance;
+    }
+
+    private static void checkPermissions() {
         SecurityManager security = System.getSecurityManager();
         if (security != null) {
-            security.checkPermission(new RuntimePermission("loadLibrary.*"));
+            security.checkPermission(permission);
         }
-        return instance;
     }
 
     private LinuxSystem() {
@@ -45,12 +53,18 @@ public class LinuxSystem {
 
     // fcntl.h
 
-    static final int O_RDONLY = 0;
+    public static final int O_RDONLY = 0;
+    public static final int O_WRONLY = 1;
+    public static final int O_RDWR = 2;
 
-    native long open(String path, int flags);
+    public native long open(String path, int flags);
 
     // unistd.h
-    native int close(long fd);
+    public native int close(long fd);
+    public native long lseek(long fd, long offset, int whence);
+    public native long write(long fd, ByteBuffer buf);
+
+    public static final int SEEK_SET = 0;
 
     // input.h
 
@@ -69,24 +83,43 @@ public class LinuxSystem {
 
     // fb.h
 
-    static final int FBIOGET_VSCREENINFO = 0x4600;
+    public static final int FBIOGET_VSCREENINFO = 0x4600;
+    public static final int FBIOPUT_VSCREENINFO = 0x4601;
+    public static final int FBIOBLANK = 0x4611;
 
-    static class FbVarScreenInfo extends C.Structure {
+    public static final int FB_BLANK_UNBLANK = 0;
+
+    public static class FbVarScreenInfo extends C.Structure {
+        public FbVarScreenInfo() {
+            checkPermissions();
+        }
         @Override
         public native int sizeof();
-        static native int getXRes(long p);
-        static native int getYRes(long p);
+        public native int getXRes(long p);
+        public native int getYRes(long p);
+        public native void setRes(long p, int x, int y);
+        public native void setVirtualRes(long p, int x, int y);
+        public native void setOffset(long p, int x, int y);
+        public native void setActivate(long p, int activate);
+        public native void setBitsPerPixel(long p, int bpp);
+        public native void setRed(long p, int length, int offset);
+        public native void setGreen(long p, int length, int offset);
+        public native void setBlue(long p, int length, int offset);
+        public native void setTransp(long p, int length, int offset);
     }
 
     // ioctl.h
 
-    native int ioctl(long fd, int request, long data);
+    public native int ioctl(long fd, int request, long data);
+    public native int IOW(int type, int number, int size);
+    public native int IOR(int type, int number, int size);
+    public native int IOWR(int type, int number, int size);
 
     // errno.h
-    native int errno();
+    public native int errno();
 
     // string.h
-    native String strerror(int errnum);
+    public native String strerror(int errnum);
 
     // dlfcn.h
     public native long dlopen(String filename, int flag);

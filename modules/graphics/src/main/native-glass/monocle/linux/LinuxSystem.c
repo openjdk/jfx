@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,6 +50,18 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_close
     return (jint) close((int) fdL);
 }
 
+JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_lseek
+  (JNIEnv *UNUSED(env), jobject UNUSED(obj), jlong fdL, jlong offset, jint whence) {
+    return (jlong) lseek((int) fdL, (off_t) offset, (int) whence);
+}
+
+JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_write
+  (JNIEnv *env, jobject UNUSED(obj), jlong fdL, jobject buf) {
+    void *data = (*env)->GetDirectBufferAddress(env, buf);
+    size_t capacity = (*env)->GetDirectBufferCapacity(env, buf);
+    return (jlong) write((int) fdL, data, capacity);
+}
+
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_EVIOCGABS
   (JNIEnv *UNUSED(env), jobject UNUSED(obj), jint type) {
     return (jint) EVIOCGABS((int) type);
@@ -58,6 +70,21 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_EVIOCGABS
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_ioctl
   (JNIEnv *UNUSED(env), jobject UNUSED(obj), jlong fdL, jint request, jlong dataL) {
     return ioctl((int) fdL, (int) request, asPtr(dataL));
+}
+
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_IOR
+  (JNIEnv *UNUSED(env), jobject UNUSED(obj), jint type, jint number, jint size) {
+    return _IOC(_IOC_READ, type, number, size);
+}
+
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_IOW
+  (JNIEnv *UNUSED(env), jobject UNUSED(obj), jint type, jint number, jint size) {
+    return _IOC(_IOC_WRITE, type, number, size);
+}
+
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_IOWR
+  (JNIEnv *UNUSED(env), jobject UNUSED(obj), jint type, jint number, jint size) {
+    return _IOC(_IOC_READ|_IOC_WRITE, type, number, size);
 }
 
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_errno
@@ -104,13 +131,74 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_00024FbVa
 }
 
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_00024FbVarScreenInfo_getXRes
-  (JNIEnv *UNUSED(env), jclass UNUSED(cls), jlong p) {
+  (JNIEnv *UNUSED(env), jobject UNUSED(obj), jlong p) {
     return (jint) ((struct fb_var_screeninfo *) asPtr(p))->xres;
 }
 
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_00024FbVarScreenInfo_getYRes
-  (JNIEnv *UNUSED(env), jclass UNUSED(cls), jlong p) {
+  (JNIEnv *UNUSED(env), jobject UNUSED(obj), jlong p) {
     return (jint) ((struct fb_var_screeninfo *) asPtr(p))->yres;
+}
+
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_00024FbVarScreenInfo_setRes
+  (JNIEnv *UNUSED(env), jobject UNUSED(obj), jlong p, int x, int y) {
+    struct fb_var_screeninfo *screen = (struct fb_var_screeninfo *) asPtr(p);
+    screen->xres = x;
+    screen->yres = y;
+}
+
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_00024FbVarScreenInfo_setVirtualRes
+  (JNIEnv *UNUSED(env), jobject UNUSED(obj), jlong p, int x, int y) {
+    struct fb_var_screeninfo *screen = (struct fb_var_screeninfo *) asPtr(p);
+    screen->xres_virtual = x;
+    screen->yres_virtual = y;
+}
+
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_00024FbVarScreenInfo_setOffset
+  (JNIEnv *UNUSED(env), jobject UNUSED(obj), jlong p, int x, int y) {
+    struct fb_var_screeninfo *screen = (struct fb_var_screeninfo *) asPtr(p);
+    screen->xoffset = x;
+    screen->yoffset = y;
+}
+
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_00024FbVarScreenInfo_setActivate
+  (JNIEnv *UNUSED(env), jobject UNUSED(obj), jlong p, int activate) {
+    struct fb_var_screeninfo *screen = (struct fb_var_screeninfo *) asPtr(p);
+    screen->activate = activate;
+}
+
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_00024FbVarScreenInfo_setBitsPerPixel
+  (JNIEnv *UNUSED(env), jobject UNUSED(obj), jlong p, int bpp) {
+    struct fb_var_screeninfo *screen = (struct fb_var_screeninfo *) asPtr(p);
+    screen->bits_per_pixel = bpp;
+}
+
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_00024FbVarScreenInfo_setRed
+  (JNIEnv *UNUSED(env), jobject UNUSED(obj), jlong p, int length, int offset) {
+    struct fb_var_screeninfo *screen = (struct fb_var_screeninfo *) asPtr(p);
+    screen->red.length = length;
+    screen->red.offset = offset;
+}
+
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_00024FbVarScreenInfo_setGreen
+  (JNIEnv *UNUSED(env), jobject UNUSED(obj), jlong p, int length, int offset) {
+    struct fb_var_screeninfo *screen = (struct fb_var_screeninfo *) asPtr(p);
+    screen->green.length = length;
+    screen->green.offset = offset;
+}
+
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_00024FbVarScreenInfo_setBlue
+  (JNIEnv *UNUSED(env), jobject UNUSED(obj), jlong p, int length, int offset) {
+    struct fb_var_screeninfo *screen = (struct fb_var_screeninfo *) asPtr(p);
+    screen->blue.length = length;
+    screen->blue.offset = offset;
+}
+
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_00024FbVarScreenInfo_setTransp
+  (JNIEnv *UNUSED(env), jobject UNUSED(obj), jlong p, int length, int offset) {
+    struct fb_var_screeninfo *screen = (struct fb_var_screeninfo *) asPtr(p);
+    screen->transp.length = length;
+    screen->transp.offset = offset;
 }
 
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_00024InputAbsInfo_sizeof
@@ -133,18 +221,15 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_00024Inpu
     return (jint) ((struct input_absinfo *) asPtr(p))->maximum;
 }
 
-
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_00024InputAbsInfo_getFuzz
   (JNIEnv *UNUSED(env), jclass UNUSED(cls), jlong p) {
     return (jint) ((struct input_absinfo *) asPtr(p))->fuzz;
 }
 
-
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_00024InputAbsInfo_getFlat
   (JNIEnv *UNUSED(env), jclass UNUSED(cls), jlong p) {
     return (jint) ((struct input_absinfo *) asPtr(p))->flat;
 }
-
 
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_00024InputAbsInfo_getResolution
   (JNIEnv *UNUSED(env), jclass UNUSED(cls), jlong p) {
