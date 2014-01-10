@@ -324,7 +324,7 @@ public class TestBuilder {
 
         final MenuBar menuBar = new MenuBar();
         final String os = System.getProperty("os.name");
-        EventHandler actionHandler = new EventHandler<ActionEvent>() {
+        final EventHandler actionHandler = new EventHandler<ActionEvent>() {
             public void handle(ActionEvent t) {
                 if (t.getTarget() instanceof MenuItem) {
                     System.out.println(((MenuItem)t.getTarget()).
@@ -348,6 +348,7 @@ public class TestBuilder {
         MenuItem menu15 = new MenuItem("E_xit");
         menu15.setOnAction(new EventHandler<ActionEvent>() {
             public void handle(ActionEvent t) {
+                actionHandler.handle(t);
                 System.exit(0);
             }
         });
@@ -357,6 +358,7 @@ public class TestBuilder {
         menu16.setAccelerator(KeyCombination.keyCombination("Shortcut+C"));
         menu16.setOnAction(new EventHandler<ActionEvent>() {
             public void handle(ActionEvent t) {
+                actionHandler.handle(t);
                 menu16.setText((menu16.getText().equals(
                                     change[0])) ? change[1] : change[0]);
             }
