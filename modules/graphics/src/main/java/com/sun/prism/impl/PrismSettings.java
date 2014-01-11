@@ -62,7 +62,6 @@ public final class PrismSettings {
     public static final boolean showDirtyRegions;
     public static final boolean showOverdraw;
     public static final boolean printRenderGraph;
-    public static final boolean shutdownHook;
     public static final int minTextureSize;
     public static final int minRTTSize;
     public static final int dirtyRegionCount;
@@ -242,10 +241,6 @@ public final class PrismSettings {
 
         /* Setting for reference type used by Disposer */
         refType = systemProperties.getProperty("prism.reftype");
-
-        /* shutdown the pipeline on System.exit, ^c - needed with X11, so linux default is true */
-        shutdownHook = getBoolean(systemProperties, "prism.shutdownHook",
-                                  PlatformUtil.isUnix());
 
         forcePow2 = getBoolean(systemProperties, "prism.forcepowerof2", false);
         noClampToZero = getBoolean(systemProperties, "prism.noclamptozero", false);

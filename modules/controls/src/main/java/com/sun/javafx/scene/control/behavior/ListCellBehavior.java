@@ -265,7 +265,13 @@ public class ListCellBehavior<T> extends CellBehaviorBase<ListCell<T>> {
         MultipleSelectionModel<T> sm = lv.getSelectionModel();
         boolean isAlreadySelected = sm.isSelected(index);
 
-        lv.getSelectionModel().clearAndSelect(index);
+        if (isAlreadySelected && (e.isControlDown() || e.isMetaDown())) {
+            sm.clearSelection(index);
+            lv.getFocusModel().focus(index);
+            isAlreadySelected = false;
+        } else {
+            sm.clearAndSelect(index);
+        }
 
         // handle editing, which only occurs with the primary mouse button
         if (e.getButton() == MouseButton.PRIMARY) {

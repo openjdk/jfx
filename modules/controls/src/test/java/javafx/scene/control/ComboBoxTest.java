@@ -56,6 +56,7 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.stage.Stage;
@@ -1158,5 +1159,36 @@ public class ComboBoxTest {
         assertEquals("A", comboBox.getButtonCell().getText());
         assertEquals(0, comboBox.getButtonCell().getIndex());
         assertFalse(customCell.getPseudoClassStates().contains(empty));
+    }
+
+    private int test_rt34603_count = 0;
+    @Ignore("Bug has not yet been resolved")
+    @Test public void test_rt34603() {
+        assertEquals(0, test_rt34603_count);
+
+        VBox hbox = new VBox(10);
+
+        ComboBox<String> box = new ComboBox<>();
+        box.getItems().add("test");
+        box.setEditable(true);
+        box.getSelectionModel().selectFirst();
+
+        Button defaultButton = new Button("press");
+        defaultButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override public void handle(ActionEvent arg0) {
+                test_rt34603_count++;
+            }
+        });
+        defaultButton.setDefaultButton(true);
+
+        hbox.getChildren().addAll(box, defaultButton);
+
+        new StageLoader(hbox);
+
+        box.getEditor().requestFocus();
+        KeyEventFirer keyboard = new KeyEventFirer(box);
+        keyboard.doKeyPress(KeyCode.ENTER);
+
+        assertEquals(1, test_rt34603_count);
     }
 }

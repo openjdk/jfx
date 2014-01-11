@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -56,6 +56,8 @@ import javafx.scene.Group;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
@@ -74,8 +76,9 @@ public class EnsembleApp extends Application {
     private static final String OS_ARCH = System.getProperty("ensemble.os.arch", System.getProperty("os.arch"));
     public static final boolean IS_IPHONE = false;
     public static final boolean IS_IOS = "iOS".equals(OS_NAME);
-    public static final boolean IS_EMBEDDED = "arm".equals(OS_ARCH) && !IS_IOS;
-    public static final boolean IS_DESKTOP = !IS_EMBEDDED && !IS_IOS;
+    public static final boolean IS_ANDROID = "android".equals(System.getProperty("javafx.platform")) || "Dalvik".equals(System.getProperty("java.vm.name"));
+    public static final boolean IS_EMBEDDED = "arm".equals(OS_ARCH) && !IS_IOS && !IS_ANDROID;
+    public static final boolean IS_DESKTOP = !IS_EMBEDDED && !IS_IOS && !IS_ANDROID;
     public static final boolean IS_MAC = OS_NAME.startsWith("Mac");
     public static final boolean PRELOAD_PREVIEW_IMAGES = true;
     public static final boolean SHOW_HIGHLIGHTS = IS_DESKTOP;
@@ -101,6 +104,7 @@ public class EnsembleApp extends Application {
         Logger.getLogger(EnsembleApp.class.getName()).finer("IS_IPHONE = " + IS_IPHONE);
         Logger.getLogger(EnsembleApp.class.getName()).finer("IS_MAC = " + IS_MAC);
         Logger.getLogger(EnsembleApp.class.getName()).finer("IS_IOS = " + IS_IOS);
+        Logger.getLogger(EnsembleApp.class.getName()).finer("IS_ANDROID = " + IS_ANDROID);
         Logger.getLogger(EnsembleApp.class.getName()).finer("IS_EMBEDDED = " + IS_EMBEDDED);
         Logger.getLogger(EnsembleApp.class.getName()).finer("IS_DESKTOP = " + IS_DESKTOP);
     }
@@ -231,6 +235,52 @@ public class EnsembleApp extends Application {
             }
         });
         
+        // create AndroidStyle menu handling
+        if (IS_ANDROID) {
+            root.setOnKeyReleased(new EventHandler<KeyEvent>() {
+                private int exitCount = 0;
+
+                @Override
+                public void handle(KeyEvent event) {
+                    if (event.getCode() == KeyCode.ESCAPE) {
+                        if (sampleListPopover.isVisible()) {
+                            sampleListPopover.hide();
+                            event.consume();
+                            return;
+                        }
+
+                        if (!backButton.isDisabled()) {
+                            pageBrowser.backward();
+                            event.consume();
+                            return;
+                        }
+                        exitCount++;
+                        if (exitCount == 2) {
+                            System.exit(0);
+                        }
+                    } else {
+                        exitCount = 0;
+                    }
+
+                    if (event.getCode() == KeyCode.CONTEXT_MENU) {
+                        if (sampleListPopover.isVisible()) {
+                            sampleListPopover.hide();
+                        } else {
+                            sampleListPopover.clearPages();
+                            sampleListPopover.pushPage(rootPage);
+                            sampleListPopover.show(new Runnable() {
+                                @Override
+                                public void run() {
+                                    listButton.setSelected(false);
+                                }
+                            });
+                        }
+                        event.consume();
+                    }
+                }
+            });
+        }
+        
         // create and setup search popover
         searchPopover = new SearchPopover(searchBox,pageBrowser);
         root.getChildren().add(searchPopover);
@@ -241,7 +291,7 @@ public class EnsembleApp extends Application {
         radioMenuItem.setToggleGroup(tg);
         radioMenuItem.setOnAction(new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent t) {
-                double menuHeight = IS_IOS || IS_MAC ? 0 : menuBar.prefHeight(width);
+                double menuHeight = IS_IOS || IS_MAC || IS_ANDROID ? 0 : menuBar.prefHeight(width);
                 scene.getWindow().setWidth(width + scene.getWindow().getWidth() - scene.getWidth());
                 scene.getWindow().setHeight(height + menuHeight + scene.getWindow().getHeight() - scene.getHeight());
                 if (retina) {
@@ -311,7 +361,7 @@ public class EnsembleApp extends Application {
     @Override public void start(final Stage stage) throws Exception {
         // CREATE SCENE
         scene = new Scene(root, 1024, 768, Color.BLACK);
-        if (IS_EMBEDDED) {
+        if (IS_EMBEDDED || IS_ANDROID) {
             new ScrollEventSynthesizer(scene);
         }
         setStylesheets();

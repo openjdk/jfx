@@ -108,7 +108,6 @@ public class TableColumnHeader extends Region {
     private boolean isSortColumn;
 
     private boolean isSizeDirty = false;
-    private boolean sortOrderDotsDirty = false;
 
     boolean isLastVisibleColumn = false;
     private int columnIndex = -1;
@@ -376,9 +375,6 @@ public class TableColumnHeader extends Region {
         if (isSizeDirty) {
             resize(getTableColumn().getWidth(), getHeight());
             isSizeDirty = false;
-        } else if (sortOrderDotsDirty) {
-            updateSortOrderDots(sortPos);
-            sortOrderDotsDirty = false;
         }
 
         double sortWidth = 0;
@@ -599,7 +595,7 @@ public class TableColumnHeader extends Region {
                 sortArrowGrid.add(sortOrderLabel, 2, 1);
             } else if (showSortOrderDots) {
                 if (sortOrderDots == null) {
-                    sortOrderDots = new HBox(1);
+                    sortOrderDots = new HBox(0);
                     sortOrderDots.getStyleClass().add("sort-order-dots-container");
                 }
 
@@ -612,7 +608,7 @@ public class TableColumnHeader extends Region {
                 GridPane.setHalignment(arrow, HPos.CENTER);
                 sortArrowGrid.add(sortOrderDots, 1, dotsRow);
 
-                sortOrderDotsDirty = true;
+                updateSortOrderDots(sortPos);
             } else {
                 // only show the arrow
                 sortArrowGrid.add(arrow, 1, 1);
@@ -651,6 +647,16 @@ public class TableColumnHeader extends Region {
             }
             
             sortOrderDots.getChildren().add(r);
+
+            // RT-34914: fine tuning the placement of the sort dots. We could have gone to a custom layout, but for now
+            // this works fine.
+            if (i < sortPos) {
+                Region spacer = new Region();
+                double rp = sortPos == 1 ? 1 : 1;
+                double lp = sortPos == 1 ? 1 : 0;
+                spacer.setPadding(new Insets(0, rp, 0, lp));
+                sortOrderDots.getChildren().add(spacer);
+            }
         }
         
         sortOrderDots.setAlignment(Pos.TOP_CENTER);

@@ -1,0 +1,64 @@
+    /*
+        Font configuration for HelloSanity sample
+    */
+    
+    .button {
+    -fx-font-size: 18px;
+    }
+
+    .label {
+    -fx-font-size: 18px;
+    }
+
+    .text-field {
+    -fx-font-size: 18px;
+    }
+
+    .radio-button {
+    -fx-font-size: 18px;
+    }
+
+    .check-box {
+    -fx-font-size: 18px;
+    }
+    
+    .slider {
+    -fx-font-size: 18px;
+    }
+
+    .scroll-pane {
+    -fx-font-size: 18px;
+    }
+
+    .list-view {
+    -fx-font-size: 18px;
+    }
+
+    .menu-bar {
+    -fx-font-size: 18px;
+    }
+
+    .menu {
+    -fx-font-size: 18px;
+    }
+
+    .combo-box {
+    -fx-font-size: 18px;
+    }
+
+    .menu-item {
+    -fx-font-size: 18px;
+    }
+
+    .menu-button {
+    -fx-font-size: 18px;
+    }
+
+    .split-menu-button {
+    -fx-font-size: 18px;
+    }
+
+
+
+
+    
