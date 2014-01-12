@@ -185,6 +185,8 @@ public class NativeCursors {
             }
         }
         sourceBuffer.rewind();
+        sourceBuffer.limit(sourceBuffer.capacity());
         destBuffer.rewind();
+        destBuffer.limit(destBuffer.capacity());
     }
 }
