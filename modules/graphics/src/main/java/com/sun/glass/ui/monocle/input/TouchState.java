@@ -25,7 +25,11 @@
 
 package com.sun.glass.ui.monocle.input;
 
+import com.sun.glass.ui.monocle.MonocleWindow;
+import com.sun.glass.ui.monocle.MonocleWindowManager;
+
 import java.util.Arrays;
+import java.util.Comparator;
 
 public class TouchState {
 
@@ -43,29 +47,85 @@ public class TouchState {
         }
     }
 
+    static Comparator<Point> pointIdComparator = new Comparator<Point>() {
+        @Override
+        public int compare(Point p1, Point p2) {
+            return p1.id - p2.id;
+        }
+    };
+
     private Point[] points = new Point[1];
     private int pointCount = 0;
+    private int primaryID = 0;
+    private MonocleWindow window;
+
+    /** Returns the Glass window on which this event state is located.
+     * assignPrimaryID() should be called before this method.
+     *
+     * @param recalculateCache true if the cached value should be discarded and
+     *                         recomputed
+     * @param fallback the window to use if no primary ID is available
+     */
+    MonocleWindow getWindow(boolean recalculateCache, MonocleWindow fallback) {
+        if (window == null || recalculateCache) {
+            window = fallback;
+            if (primaryID > 0) {
+                Point p = getPointForID(primaryID, false);
+                if (p != null) {
+                    window = (MonocleWindow)
+                            MonocleWindowManager.getInstance()
+                                    .getWindowForLocation(p.x, p.y);
+                }
+            }
+        }
+        return window;
+    }
 
     public Point getPoint(int index) {
         return points[index];
     }
 
-    /*
-     * If there is more than one point, returns the first point.
-     * If there used to be any points but now are not, reinstate what used to be
-     * the first point and return it.
-     * If there never where any points, create a new one and set it to be the first point.
-      */
-    public Point getPointZero() {
-        if (pointCount == 0 && points[0] == null) {
-            Point p = new Point();
-            addPoint(p);
+    /** Gets the Point matching the given ID, optionally reinstating the point
+     * from the previous touch state.
+     * @param id The Point ID to match. A value or zero matches any Point.
+     * @return a matching Point, or a new Point if there was no match and
+     * reinstatement was requested; null otherwise
+     */
+    public Point getPointForID(int id, boolean reinstate) {
+        for (int i = 0; i < pointCount; i++) {
+            if (id == 0 || points[i].id == id) {
+                return points[i];
+            }
+        }
+        if (reinstate) {
+            Point p = addPoint(TouchInput.getInstance().getPointForID(id));
+            p.id = id;
             return p;
-        } else if (pointCount == 0) {
-            pointCount ++;
-            return points[0];
         } else {
-            return points[0];
+            return null;
+        }
+    }
+
+    int getPrimaryID() {
+        return primaryID;
+    }
+
+    void assignPrimaryID() {
+        if (pointCount == 0) {
+            primaryID = -1;
+        }
+        if (primaryID <= 0) {
+            // No primary ID is assigned. Assign a new ID arbitrarily.
+            primaryID = points[0].id;
+        } else {
+            for (int i = 0; i < pointCount; i++) {
+                if (points[i].id == primaryID) {
+                    // The old primary ID is still valid
+                    return;
+                }
+            }
+            // assign a new primary ID
+            primaryID = points[0].id;
         }
     }
 
@@ -77,15 +137,17 @@ public class TouchState {
         pointCount = 0;
     }
 
-    public void addPoint(Point p) {
+    public Point addPoint(Point p) {
         if (points.length == pointCount) {
             points = Arrays.copyOf(points, points.length * 2);
         }
         if (points[pointCount] == null) {
             points[pointCount] = new Point();
         }
-        p.copyTo(points[pointCount]);
-        pointCount ++;
+        if (p != null) {
+            p.copyTo(points[pointCount]);
+        }
+        return points[pointCount++];
     }
 
     public void removePointForID(int id) {
@@ -107,12 +169,12 @@ public class TouchState {
     }
 
     public void copyTo(TouchState target) {
-        if (target.points.length < points.length) {
-            target.points = Arrays.copyOf(points, points.length);
-        } else {
-            System.arraycopy(points, 0, target.points, 0, points.length);
+        target.clear();
+        for (int i = 0; i < pointCount; i++) {
+            target.addPoint(points[0]);
         }
-        target.pointCount = pointCount;
+        target.primaryID = primaryID;
+        target.window = window;
     }
 
     public String toString() {
@@ -123,6 +185,28 @@ public class TouchState {
         }
         sb.append("]");
         return sb.toString();
+    }
+
+    void sortPointsByID() {
+        Arrays.sort(points, 0, pointCount, pointIdComparator);
+    }
+
+    /** Compare two non-null states whose points are sorted by ID */
+    boolean equalsSorted(TouchState ts) {
+        if (ts.pointCount == pointCount
+                && ts.primaryID == primaryID
+                && ts.window == window) {
+            for (int i = 0; i < pointCount; i++) {
+                Point p1 = ts.points[i];
+                Point p2 = points[i];
+                if (p1.x != p2.x || p1.y != p2.y || p1.id != p2.id) {
+                    return false;
+                }
+            }
+            return true;
+        } else {
+            return false;
+        }
     }
 
 }

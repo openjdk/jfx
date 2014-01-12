@@ -39,6 +39,8 @@ public class LinuxTouchProcessor implements LinuxInputProcessor {
     @Override
     public void processEvents(LinuxInputDevice device) {
         LinuxEventBuffer buffer = device.getBuffer();
+        touch.getState(state);
+        state.clear();
         processedFirstEvent = false;
         while (buffer.hasNextEvent()) {
             switch (buffer.getEventType()) {
@@ -48,10 +50,10 @@ public class LinuxTouchProcessor implements LinuxInputProcessor {
                                                   buffer.getEventValue());
                     switch (buffer.getEventCode()) {
                         case Input.ABS_X:
-                            state.getPointZero().x = pixelValue;
+                            state.getPointForID(0, true).x = pixelValue;
                             break;
                         case Input.ABS_Y:
-                            state.getPointZero().y = pixelValue;
+                            state.getPointForID(0, true).y = pixelValue;
                             break;
                     }
                     break;
@@ -60,6 +62,7 @@ public class LinuxTouchProcessor implements LinuxInputProcessor {
                     switch (buffer.getEventCode()) {
                         case Input.SYN_REPORT:
                             sendEvent();
+                            touch.getState(state);
                             state.clear();
                             break;
                         default: // ignore
@@ -68,13 +71,15 @@ public class LinuxTouchProcessor implements LinuxInputProcessor {
             }
             buffer.nextEvent();
         }
-        touch.setState(previousState);
+        touch.setState(previousState, true);
     }
 
     private void sendEvent() {
         if (processedFirstEvent) {
             // fold together TouchStates that have the same touch point count
-            // and IDs
+            // and IDs. For Protocol A devices the touch IDs are not initialized
+            // yet, which means the only differentiator will be the number of
+            // points.
             boolean fold = true;
             if (state.getPointCount() != previousState.getPointCount()) {
                 fold = false;
@@ -86,7 +91,7 @@ public class LinuxTouchProcessor implements LinuxInputProcessor {
             }
             if (!fold) {
                 // the events are different. Send "previousState".
-                touch.setState(previousState);
+                touch.setState(previousState, true);
             }
         } else {
             processedFirstEvent = true;

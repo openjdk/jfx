@@ -46,9 +46,12 @@ public class MouseInputSynthesizer {
         if (touchState.getPointCount() == 1) {
             // do not synthesize mouse drag events if more than one finger is
             // down
-            TouchState.Point p = touchState.getPoint(0);
-            mouseState.setX(p.x);
-            mouseState.setY(p.y);
+            TouchState.Point p = touchState.getPointForID(
+                    touchState.getPrimaryID(), false);
+            if (p != null) {
+                mouseState.setX(p.x);
+                mouseState.setY(p.y);
+            }
         }
         MouseInput.getInstance().setState(mouseState, true);
     }

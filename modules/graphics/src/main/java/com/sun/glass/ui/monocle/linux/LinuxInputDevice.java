@@ -25,6 +25,7 @@
 
 package com.sun.glass.ui.monocle.linux;
 
+import com.sun.glass.ui.Application;
 import com.sun.glass.ui.monocle.NativePlatformFactory;
 import com.sun.glass.ui.monocle.input.InputDevice;
 
@@ -131,7 +132,11 @@ public class LinuxInputDevice implements Runnable, InputDevice {
             buffer.startIteration();
             // Do not lock the buffer while processing events. We still want to be
             // able to add incoming events to it.
-            inputProcessor.processEvents(LinuxInputDevice.this);
+            try {
+                inputProcessor.processEvents(LinuxInputDevice.this);
+            } catch (RuntimeException e) {
+                Application.reportException(e);
+            }
             synchronized (buffer) {
                 if (buffer.hasNextEvent()) {
                     // a new event came in after the call to processEvents
