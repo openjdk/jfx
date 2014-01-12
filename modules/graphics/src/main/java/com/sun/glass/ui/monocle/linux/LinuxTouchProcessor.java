@@ -31,18 +31,22 @@ import com.sun.glass.ui.monocle.input.TouchState;
 
 public class LinuxTouchProcessor implements LinuxInputProcessor {
 
+    private TouchInput touch = TouchInput.getInstance();
+    private TouchState previousState = new TouchState();
     private TouchState state = new TouchState();
+    private boolean processedFirstEvent;
 
     @Override
     public void processEvents(LinuxInputDevice device) {
-        TouchInput touch = TouchInput.getInstance();
-        while (device.hasNextEvent()) {
-            switch (device.getEventType()) {
+        LinuxEventBuffer buffer = device.getBuffer();
+        processedFirstEvent = false;
+        while (buffer.hasNextEvent()) {
+            switch (buffer.getEventType()) {
                 case Input.EV_ABS: {
                     int pixelValue = toPixelValue(device,
-                                                  device.getEventCode(),
-                                                  device.getEventValue());
-                    switch (device.getEventCode()) {
+                                                  buffer.getEventCode(),
+                                                  buffer.getEventValue());
+                    switch (buffer.getEventCode()) {
                         case Input.ABS_X:
                             state.getPointZero().x = pixelValue;
                             break;
@@ -53,17 +57,41 @@ public class LinuxTouchProcessor implements LinuxInputProcessor {
                     break;
                 }
                 case Input.EV_SYN:
-                    switch (device.getEventCode()) {
+                    switch (buffer.getEventCode()) {
                         case Input.SYN_REPORT:
-                            touch.setState(state);
+                            sendEvent();
                             state.clear();
                             break;
                         default: // ignore
                     }
                     break;
             }
-            device.nextEvent();
+            buffer.nextEvent();
         }
+        touch.setState(previousState);
+    }
+
+    private void sendEvent() {
+        if (processedFirstEvent) {
+            // fold together TouchStates that have the same touch point count
+            // and IDs
+            boolean fold = true;
+            if (state.getPointCount() != previousState.getPointCount()) {
+                fold = false;
+            }
+            for (int i = 0; fold && i < previousState.getPointCount(); i++) {
+                if (state.getPoint(i).id != previousState.getPoint(i).id) {
+                    fold = false;
+                }
+            }
+            if (!fold) {
+                // the events are different. Send "previousState".
+                touch.setState(previousState);
+            }
+        } else {
+            processedFirstEvent = true;
+        }
+        state.copyTo(previousState);
     }
 
     private static int toPixelValue(LinuxInputDevice device, int axis, int value) {

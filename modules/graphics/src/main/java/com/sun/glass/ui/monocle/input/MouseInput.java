@@ -51,14 +51,22 @@ public class MouseInput {
     }
 
     public void setState(MouseState newState, boolean synthesized) {
+        // Restrict new state coordinates to screen bounds
+        NativeScreen screen = NativePlatformFactory.getNativePlatform().getScreen();
+        int x = Math.min(newState.getX(), screen.getWidth() - 1);
+        int y = Math.min(newState.getY(), screen.getHeight() - 1);
+        x = Math.max(x, 0);
+        y = Math.max(y, 0);
+        newState.setX(x);
+        newState.setY(y);
+        // Get the cached window for the old state and compute the window for
+        // the new state
         MonocleWindow oldWindow = state.getWindow(false);
         MonocleWindow window = newState.getWindow(true);
         MonocleView view = (window == null) ? null : (MonocleView) window.getView();
-        boolean moved = false;
         // send exit event
         if (oldWindow != window && oldWindow != null) {
             MonocleView oldView = (MonocleView) oldWindow.getView();
-            moved = true;
             if (oldView != null) {
                 // send exit event
                 int modifiers = state.getModifiers(); // TODO: include key modifiers
@@ -73,13 +81,6 @@ public class MouseInput {
                                   modifiers, isPopupTrigger, synthesized);
             }
         }
-        int x = newState.getX();
-        int y = newState.getY();
-        NativeScreen screen = NativePlatformFactory.getNativePlatform().getScreen();
-        x = Math.min(x, screen.getWidth() - 1);
-        y = Math.min(y, screen.getHeight() - 1);
-        x = Math.max(x, 0);
-        y = Math.max(y, 0);
         boolean newAbsoluteLocation = state.getX() != x || state.getY() != y;
         if (newAbsoluteLocation) {
             NativePlatformFactory.getNativePlatform()

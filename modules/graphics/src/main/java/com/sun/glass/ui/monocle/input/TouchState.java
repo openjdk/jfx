@@ -106,7 +106,7 @@ public class TouchState {
         p.copyTo(points[index]);
     }
 
-    void copyTo(TouchState target) {
+    public void copyTo(TouchState target) {
         if (target.points.length < points.length) {
             target.points = Arrays.copyOf(points, points.length);
         } else {

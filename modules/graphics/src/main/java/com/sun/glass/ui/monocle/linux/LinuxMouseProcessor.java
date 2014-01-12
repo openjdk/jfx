@@ -31,24 +31,29 @@ import com.sun.glass.ui.monocle.input.MouseState;
 
 public class LinuxMouseProcessor implements LinuxInputProcessor {
 
+    private MouseInput mouse = MouseInput.getInstance();
+    private MouseState previousState = new MouseState();
     private MouseState state = new MouseState();
+    private boolean processedFirstEvent;
 
     @Override
     public void processEvents(LinuxInputDevice device) {
-        MouseInput mouse = MouseInput.getInstance();
+        LinuxEventBuffer buffer = device.getBuffer();
+        mouse.getState(previousState);
         mouse.getState(state);
-        while (device.hasNextEvent()) {
-            switch (device.getEventType()) {
+        processedFirstEvent = false;
+        while (buffer.hasNextEvent()) {
+            switch (buffer.getEventType()) {
                 case Input.EV_REL:
-                    switch (device.getEventCode()) {
+                    switch (buffer.getEventCode()) {
                         case Input.REL_X:
-                            int x = state.getX();
-                            x += device.getEventValue();
+                            int x = previousState.getX();
+                            x += buffer.getEventValue();
                             state.setX(x);
                             break;
                         case Input.REL_Y:
-                            int y = state.getY();
-                            y += device.getEventValue();
+                            int y = previousState.getY();
+                            y += buffer.getEventValue();
                             state.setY(y);
                             break;
                         default:
@@ -56,17 +61,17 @@ public class LinuxMouseProcessor implements LinuxInputProcessor {
                     }
                     break;
                 case Input.EV_SYN:
-                    switch (device.getEventCode()) {
+                    switch (buffer.getEventCode()) {
                         case Input.SYN_REPORT:
-                            mouse.setState(state, false);
+                            sendEvent();
                             break;
                         default: // ignore
                     }
                     break;
                 case Input.EV_KEY: {
-                    int button = mouseButtonForKeyCode(device.getEventCode());
+                    int button = mouseButtonForKeyCode(buffer.getEventCode());
                     if (button >= 0) {
-                        if (device.getEventValue() == 0) {
+                        if (buffer.getEventValue() == 0) {
                             state.releaseButton(button);
                         } else {
                             state.pressButton(button);
@@ -77,9 +82,22 @@ public class LinuxMouseProcessor implements LinuxInputProcessor {
                 default:
                     // Ignore other events
             }
-            device.nextEvent();
+            buffer.nextEvent();
         }
+        mouse.setState(previousState, false);
+    }
 
+    private void sendEvent() {
+        if (processedFirstEvent) {
+            // fold together MouseStates that differ only in their buttons
+            if (!state.getButtonsPressed().equals(previousState.getButtonsPressed())) {
+                // the events are different. Send "previousState".
+                mouse.setState(previousState, false);
+            }
+        } else {
+            processedFirstEvent = true;
+        }
+        state.copyTo(previousState);
     }
 
     private static int mouseButtonForKeyCode(int keyCode) {

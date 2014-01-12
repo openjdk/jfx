@@ -154,7 +154,9 @@ public class NativeCursors {
             }
         }
         sourceBuffer.rewind();
+        sourceBuffer.limit(sourceBuffer.capacity());
         destBuffer.rewind();
+        destBuffer.limit(destBuffer.capacity());
     }
 
     private static void offsetCursor16(ShortBuffer sourceBuffer,

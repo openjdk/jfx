@@ -98,13 +98,13 @@ public class MouseState {
         return modifiers;
     }
 
-    void copyTo(MouseState target) {
+    public void copyTo(MouseState target) {
         target.x = x;
         target.y = y;
         buttonsPressed.copyTo(target.buttonsPressed);
     }
 
-    IntSet getButtonsPressed() {
+    public IntSet getButtonsPressed() {
         return buttonsPressed;
     }
 

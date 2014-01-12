@@ -54,18 +54,6 @@ import java.util.concurrent.ExecutorService;
  * To save on RAM and GC, event lines are not objects.
  */
 public class LinuxInputDevice implements Runnable, InputDevice {
-    private static final int EVENT_STRUCT_SIZE = 16;
-    private static final int EVENT_STRUCT_TYPE_INDEX = 8;
-    private static final int EVENT_STRUCT_CODE_INDEX = 10;
-    private static final int EVENT_STRUCT_VALUE_INDEX = 12;
-    /**
-     * EVENT_BUFFER_SIZE controls the maximum number of event lines that can be
-     * processed per device in one pulse. This value must be greater than the
-     * number of lines in the largest event including the terminating EV_SYN
-     * SYN_REPORT. However it sould not be too large or a flood of events will
-     * prevent rendering from happening until the buffer is full.
-     */
-    private static final int EVENT_BUFFER_SIZE = 100;
 
     private LinuxInputProcessor inputProcessor;
     private ReadableByteChannel in;
@@ -74,12 +62,11 @@ public class LinuxInputDevice implements Runnable, InputDevice {
     private Map<String, BitSet> capabilities;
     private Map<Integer, AbsoluteInputCapabilities> absCaps;
     private Map<String, String> udevManifest;
-    private ByteBuffer bb = ByteBuffer.allocate(EVENT_STRUCT_SIZE * EVENT_BUFFER_SIZE);
-    private ByteBuffer event = ByteBuffer.allocate(EVENT_STRUCT_SIZE);
+    private ByteBuffer event = ByteBuffer.allocate(LinuxEventBuffer.EVENT_STRUCT_SIZE);
     private ExecutorService executor;
     private EventProcessor processor = new EventProcessor();
-    private int positionOfLastSync;
-    private int currentPosition;
+    private LinuxEventBuffer buffer = new LinuxEventBuffer();
+
 
     /**
      * Create a new com.sun.glass.ui.monocle.input.LinuxInputDevice on the given
@@ -113,26 +100,13 @@ public class LinuxInputDevice implements Runnable, InputDevice {
             System.err.println("Error: no input processor set on " + devNode);
             return;
         }
-        bb.order(ByteOrder.nativeOrder());
         while (true) {
             try {
                 in.read(event);
                 if (event.position() == event.limit()) {
                     event.flip();
-                    boolean isSync = event.getInt(EVENT_STRUCT_TYPE_INDEX) == 0
-                            && event.getInt(EVENT_STRUCT_CODE_INDEX) == 0;
-                    synchronized (bb) {
-                        while (bb.limit() - bb.position() < event.limit()) {
-                            // Block if bb is full. This should be the
-                            // only time this thread waits for anything
-                            // except for more event lines.
-                            bb.wait();
-                        }
-                        if (isSync) {
-                            positionOfLastSync = bb.position();
-                        }
-                        bb.put(event);
-                        if (isSync && !processor.scheduled) {
+                    synchronized (buffer) {
+                        if (buffer.put(event) && !processor.scheduled) {
                             executor.submit(processor);
                             processor.scheduled = true;
                         }
@@ -154,95 +128,24 @@ public class LinuxInputDevice implements Runnable, InputDevice {
         boolean scheduled;
 
         public void run() {
-            synchronized (bb) {
-                processor.scheduled = false;
-                currentPosition = 0;
-            }
-            // Do not lock bb while process events. We still want to be
+            buffer.startIteration();
+            // Do not lock the buffer while processing events. We still want to be
             // able to add incoming events to it.
             inputProcessor.processEvents(LinuxInputDevice.this);
-            synchronized (bb) {
-                positionOfLastSync -= currentPosition;
-                int newLimit = bb.position();
-                bb.position(currentPosition);
-                bb.limit(newLimit);
-                bb.compact();
-                bb.notifyAll();
+            synchronized (buffer) {
+                if (buffer.hasNextEvent()) {
+                    // a new event came in after the call to processEvents
+                    executor.submit(processor);
+                } else {
+                    processor.scheduled = false;
+                }
+                buffer.compact();
             }
         }
     }
 
-    /**
-     * Returns the type of the current event line. Call from the application
-     * thread.
-     *
-     * @return the type of the current event line
-     */
-    public short getEventType() {
-        synchronized (bb) {
-            return bb.getShort(currentPosition + EVENT_STRUCT_TYPE_INDEX);
-        }
-    }
-
-    /**
-     * Returns the code of the current event line.  Call from the application
-     * thread.
-     *
-     * @return the code of the event line
-     */
-    public short getEventCode() {
-        synchronized (bb) {
-            return bb.getShort(currentPosition + EVENT_STRUCT_CODE_INDEX);
-        }
-    }
-
-    /**
-     * Returns the value of the current event line.  Call from the application
-     * thread.
-     *
-     * @return the value of the current event line
-     */
-    public int getEventValue() {
-        synchronized (bb) {
-            return bb.getInt(currentPosition + EVENT_STRUCT_VALUE_INDEX);
-        }
-    }
-
-    /**
-     * Returns a string describing the current event. Call from the application
-     * thread.
-     *
-     * @return a string describing the event
-     */
-    public String getEventDescription() {
-        short type = getEventType();
-        short code = getEventCode();
-        int value = getEventValue();
-        String typeStr = Input.typeToString(type);
-        return typeStr + " " + Input.codeToString(typeStr, code) + " " + value;
-    }
-
-    /**
-     * Advances to the next event line.  Call from the application thread.
-     */
-    public void nextEvent() {
-        synchronized (bb) {
-            if (currentPosition > positionOfLastSync) {
-                throw new IllegalStateException("Cannot advance past the last" +
-                        " EV_SYN EV_SYN_REPORT 0");
-            }
-            currentPosition += EVENT_STRUCT_SIZE;
-        }
-    }
-
-    /**
-     * Returns true iff another event line is available AND it is part of a
-     * complete event. Call from the application thread.
-     */
-    public boolean hasNextEvent() {
-        synchronized (bb) {
-            return currentPosition <= positionOfLastSync;
-        }
+    public LinuxEventBuffer getBuffer() {
+        return buffer;
     }
 
     /**
