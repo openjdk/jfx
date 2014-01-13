@@ -52,7 +52,7 @@ PangoGlyphInfo_FID_CACHE PangoGlyphInfoFc;
 void cachePangoGlyphInfoFields(JNIEnv *env)
 {
     if (PangoGlyphInfoFc.cached) return;
-    jclass tmpClass = (*env)->FindClass(env, "com/sun/javafx/font/pango/PangoGlyphInfo");
+    jclass tmpClass = (*env)->FindClass(env, "com/sun/javafx/font/freetype/PangoGlyphInfo");
     PangoGlyphInfoFc.clazz =  (jclass)(*env)->NewGlobalRef(env, tmpClass);
     PangoGlyphInfoFc.glyph = (*env)->GetFieldID(env, PangoGlyphInfoFc.clazz, "glyph", "I");
     PangoGlyphInfoFc.width = (*env)->GetFieldID(env, PangoGlyphInfoFc.clazz, "width", "I");
@@ -92,10 +92,10 @@ PangoGlyphString_FID_CACHE PangoGlyphStringFc;
 void cachePangoGlyphStringFields(JNIEnv *env)
 {
     if (PangoGlyphStringFc.cached) return;
-    jclass tmpClass = (*env)->FindClass(env, "com/sun/javafx/font/pango/PangoGlyphString");
+    jclass tmpClass = (*env)->FindClass(env, "com/sun/javafx/font/freetype/PangoGlyphString");
     PangoGlyphStringFc.clazz =  (jclass)(*env)->NewGlobalRef(env, tmpClass);
     PangoGlyphStringFc.num_glyphs = (*env)->GetFieldID(env, PangoGlyphStringFc.clazz, "num_glyphs", "I");
-    PangoGlyphStringFc.glyphs = (*env)->GetFieldID(env, PangoGlyphStringFc.clazz, "glyphs", "[Lcom/sun/javafx/font/pango/PangoGlyphInfo;");
+    PangoGlyphStringFc.glyphs = (*env)->GetFieldID(env, PangoGlyphStringFc.clazz, "glyphs", "[Lcom/sun/javafx/font/freetype/PangoGlyphInfo;");
     PangoGlyphStringFc.log_clusters = (*env)->GetFieldID(env, PangoGlyphStringFc.clazz, "log_clusters", "[I");
     PangoGlyphStringFc.offset = (*env)->GetFieldID(env, PangoGlyphStringFc.clazz, "offset", "I");
     PangoGlyphStringFc.length = (*env)->GetFieldID(env, PangoGlyphStringFc.clazz, "length", "I");
