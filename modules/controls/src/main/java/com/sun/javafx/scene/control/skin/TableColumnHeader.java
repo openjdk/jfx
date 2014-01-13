@@ -776,7 +776,7 @@ public class TableColumnHeader extends Region {
         int pos = 0;
         for (int i = 0; i < sortOrder.size(); i++) {
             TableColumnBase _tc = sortOrder.get(i);
-            if (_tc == null || ! _tc.isSortable()) {
+            if (_tc == null || ! _tc.isSortable() || ! _tc.isVisible()) {
                 continue;
             }
 
