@@ -82,20 +82,31 @@ import javafx.util.Callback;
 
 /**
  * The TreeTableView control is designed to visualize an unlimited number of rows
- * of data, broken out into columns. A TreeTableView is therefore very similar to the
- * {@link ListView} and {@link TableView} controls. For an
- * example on how to create a TreeTableView, refer to the 'Creating a TreeTableView'
- * control section below.
+ * of data, broken out into columns. The TreeTableView control is conceptually
+ * very similar to the {@link TreeView} and {@link TableView} controls,
+ * and as you read on you'll come to see the APIs are largely the same.
+ * However, to give a high-level overview, you'll note that the TreeTableView
+ * uses the same {@link TreeItem} API as {@link TreeView},
+ * and that you therefore are required to simply set the
+ * {@link #rootProperty() root node} in the TreeTableView. Similarly, the
+ * TreeTableView control makes use of the same TableColumn-based approach that
+ * the {@link TableView} control uses, except instead of using the
+ * TableView-specific {@link TableColumn} class, you should instead use the
+ * TreeTableView-specific {@link TreeTableColumn} class instead. For an
+ * example on how to create a TreeTableView instance, refer to the 'Creating a
+ * TreeTableView' control section below.
  *
- * <p>The TreeTableView control has a number of features, including:
+ * <p>As with the {@link TableView} control, the TreeTableView control has a
+ * number of features, including:
  * <ul>
  * <li>Powerful {@link TreeTableColumn} API:
  *   <ul>
  *   <li>Support for {@link TreeTableColumn#cellFactoryProperty() cell factories} to
  *      easily customize {@link Cell cell} contents in both rendering and editing
  *      states.
- *   <li>Specification of {@link #minWidthProperty() minWidth}/
- *      {@link #prefWidthProperty() prefWidth}/{@link #maxWidthProperty() maxWidth},
+ *   <li>Specification of {@link TreeTableColumn#minWidthProperty() minWidth}/
+ *      {@link TreeTableColumn#prefWidthProperty() prefWidth}/
+ *      {@link TreeTableColumn#maxWidthProperty() maxWidth},
  *      and also {@link TreeTableColumn#resizableProperty() fixed width columns}.
  *   <li>Width resizing by the user at runtime.
  *   <li>Column reordering by the user at runtime.
@@ -109,22 +120,14 @@ import javafx.util.Callback;
  * </ul>
  * </p>
  *
- * <p>Note that TreeTableView is intended to be used to visualize data - it is not
- * intended to be used for laying out your user interface. If you want to lay
- * your user interface out in a grid-like fashion, consider the 
- * {@link GridPane} layout.</p>
- *
  * <h2>Creating a TreeTableView</h2>
  * 
- * TODO update to a relevant example
- *
  * <p>Creating a TreeTableView is a multi-step process, and also depends on the
  * underlying data model needing to be represented. For this example we'll use
  * the TreeTableView to visualise a file system, and will therefore make use
  * of an imaginary (and vastly simplified) File class as defined below:
  * 
- * <pre>
- * {@code
+ * <pre>{@code
  * public class File {
  *     private StringProperty name;
  *     public void setName(String value) { nameProperty().set(value); }
@@ -134,28 +137,26 @@ import javafx.util.Callback;
  *         return name; 
  *     }
  * 
- *     private DoubleProperty lastModified;
- *     public void setLastModified(Double value) { lastModifiedProperty().set(value); }
- *     public DoubleProperty getLastModified() { return lastModifiedProperty().get(); }
- *     public DoubleProperty lastModifiedProperty() { 
- *         if (lastModified == null) lastModified = new SimpleDoubleProperty(this, "lastModified");
+ *     private LongProperty lastModified;
+ *     public void setLastModified(long value) { lastModifiedProperty().set(value); }
+ *     public long getLastModified() { return lastModifiedProperty().get(); }
+ *     public LongProperty lastModifiedProperty() {
+ *         if (lastModified == null) lastModified = new SimpleLongProperty(this, "lastModified");
  *         return lastModified; 
  *     } 
  * }}</pre>
  * 
  * <p>Firstly, a TreeTableView instance needs to be defined, as such:
  * 
- * <pre>
- * {@code
- * TreeTableView<File> treeTable = new TreeTableView<File>();}</pre>
+ * <pre>{@code
+ * TreeTableView<File> treeTable = new TreeTableView<>();}</pre>
  *
- * <p>With the basic tree table defined, we next focus on the data model. As mentioned,
- * for this example, we'll be representing a file system using File instances. To
- * do this, we need to define the root node of the tree table, as such:
+ * <p>With the basic TreeTableView instantiated, we next focus on the data model.
+ * As mentioned, for this example, we'll be representing a file system using File
+ * instances. To do this, we need to define the root node of the tree table, as such:
  *
- * <pre>
- * {@code
- * TreeItem<File> root = new TreeItem<File>(new File("/"));
+ * <pre>{@code
+ * TreeItem<File> root = new TreeItem<>(new File("/"));
  * treeTable.setRoot(root);}</pre>
  * 
  * <p>With the root set as such, the TreeTableView will automatically update whenever
@@ -168,44 +169,48 @@ import javafx.util.Callback;
  * create a two-column TreeTableView to show the file name and last modified 
  * properties, we extend the code shown above as follows:
  * 
- * <pre>
- * {@code
- * TreeItem<File> root = new TreeItem<File>(new File("/"));
- * treeTable.setRoot(root);
+ * <pre>{@code
+ * TreeTableColumns<File,String> fileNameCol = new TreeTableColumn<>("Filename");
+ * TreeTableColumns<File,Long> lastModifiedCol = new TreeTableColumn<>("Size");
+ *
+ * table.getColumns().setAll(fileNameCol, lastModifiedCol);}</pre>
  * 
- * // TODO this is not valid TreeTableView code
- * TreeTableColumns<Person,String> firstNameCol = new TreeTableColumns<Person,String>("First Name");
- * firstNameCol.setCellValueFactory(new PropertyValueFactory("firstName"));
- * TreeTableColumns<Person,String> lastNameCol = new TreeTableColumns<Person,String>("Last Name");
- * lastNameCol.setCellValueFactory(new PropertyValueFactory("lastName"));
- * 
- * table.getColumns().setAll(firstNameCol, lastNameCol);}</pre>
- * 
- * <p>With the code shown above we have fully defined the minimum properties
- * required to create a TreeTableView instance. Running this code (assuming the
- * file system structure is probably built up in memory) will result in a TreeTableView being
- * shown with two columns for name and lastModified. Any other properties of the
- * File class will not be shown, as no TreeTableColumns are defined for them.
+ * <p>With the code shown above we have nearly fully defined the minimum properties
+ * required to create a TreeTableView instance. The only thing missing is the
+ * {@link javafx.scene.control.TreeTableColumn#cellValueFactoryProperty() cell value factories}
+ * for the two columns - it is these that are responsible for determining the value
+ * of a cell in a given row. Commonly these can be specified using the
+ * {@link javafx.scene.control.cell.TreeItemPropertyValueFactory} class, but
+ * failing that you can also create an anonymous inner class and do whatever is
+ * necessary. For example, using {@link javafx.scene.control.cell.TreeItemPropertyValueFactory}
+ * you would do the following:
+ *
+ * <pre>{@code
+ * fileNameCol.setCellValueFactory(new TreeItemPropertyValueFactory("name"));
+ * lastModifiedCol.setCellValueFactory(new TreeItemPropertyValueFactory("lastModified"));}</pre>
+ *
+ * Running this code (assuming the file system structure is probably built up in
+ * memory) will result in a TreeTableView being shown with two columns for name
+ * and lastModified. Any other properties of the File class will not be shown, as
+ * no TreeTableColumns are defined for them.
  * 
  * <h3>TreeTableView support for classes that don't contain properties</h3>
  *
- * // TODO update - this is not correct for TreeTableView
- * 
  * <p>The code shown above is the shortest possible code for creating a TreeTableView
  * when the domain objects are designed with JavaFX properties in mind 
- * (additionally, {@link javafx.scene.control.cell.PropertyValueFactory} supports
+ * (additionally, {@link javafx.scene.control.cell.TreeItemPropertyValueFactory} supports
  * normal JavaBean properties too, although there is a caveat to this, so refer 
  * to the class documentation for more information). When this is not the case, 
  * it is necessary to provide a custom cell value factory. More information
  * about cell value factories can be found in the {@link TreeTableColumn} API
  * documentation, but briefly, here is how a TreeTableColumns could be specified:
  * 
- * <pre>
- * {@code
+ * <pre>{@code
  * firstNameCol.setCellValueFactory(new Callback<CellDataFeatures<Person, String>, ObservableValue<String>>() {
  *     public ObservableValue<String> call(CellDataFeatures<Person, String> p) {
- *         // p.getValue() returns the Person instance for a particular TreeTableView row
- *         return p.getValue().firstNameProperty();
+ *         // p.getValue() returns the TreeItem<Person> instance for a particular TreeTableView row,
+ *         // p.getValue().getValue() returns the Person instance inside the TreeItem<Person>
+ *         return p.getValue().getValue().firstNameProperty();
  *     }
  *  });
  * }}</pre>
@@ -215,7 +220,7 @@ import javafx.util.Callback;
  * {@link SelectionModel} and {@link FocusModel} classes. A TreeTableView has at most
  * one instance of each of these classes, available from 
  * {@link #selectionModelProperty() selectionModel} and 
- * {@link #focusModelProperty() focusModel} properties respectively.
+ * {@link #focusModelProperty() focusModel} properties, respectively.
  * Whilst it is possible to use this API to set a new selection model, in
  * most circumstances this is not necessary - the default selection and focus
  * models should work in most circumstances.
@@ -2367,7 +2372,7 @@ public class TreeTableView<S> extends Control {
             // fire off a single add/remove/replace notification (rather than
             // individual remove and add notifications) - see RT-33324
             int changeIndex = selectedCellsSeq.indexOf(new TreeTablePosition<>(getTreeTableView(), row, (TreeTableColumn<S,?>)column));
-            ListChangeListener.Change change = new NonIterableChange.GenericAddRemoveChange<>(
+            ListChangeListener.Change change = new NonIterableChange.GenericAddRemoveChange<TreeTablePosition<S,?>>(
                     changeIndex, changeIndex+1, previousSelection, selectedCellsSeq);
             handleSelectedCellsListChangeEvent(change);
         }

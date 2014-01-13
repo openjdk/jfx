@@ -54,7 +54,7 @@ import sun.util.logging.PlatformLogger.Level;
  * <code>firstNameProperty()</code> method in the <code>Person</code> class type
  * (which is the class type of the TreeTableView). Additionally, this method must
  * return a {@link Property} instance. If a method meeting these requirements
- * is found, then the {@link TreeTableCell} is populated with this ObservableValue<T>.
+ * is found, then the {@link javafx.scene.control.TreeTableCell} is populated with this ObservableValue<T>.
  * In addition, the TreeTableView will automatically add an observer to the
  * returned value, such that any changes fired will be observed by the TreeTableView,
  * resulting in the cell immediately updating.
@@ -86,8 +86,8 @@ import sun.util.logging.PlatformLogger.Level;
  * </code></pre>
  *
  * @see TreeTableColumn
- * @see TreeTableView
- * @see TreeTableCell
+ * @see javafx.scene.control.TreeTableView
+ * @see javafx.scene.control.TreeTableCell
  * @see PropertyValueFactory
  * @see MapValueFactory
  * @since JavaFX 8.0

@@ -51,12 +51,14 @@ import javafx.css.Styleable;
 import com.sun.javafx.scene.control.skin.TableViewSkinBase;
 /**
  * A {@link TreeTableView} is made up of a number of TreeTableColumn instances. Each
- * TreeTableColumn in a tree table is responsible for displaying (and editing) the contents
- * of that column. As well as being responsible for displaying and editing data 
- * for a single column, a TableColumn also contains the necessary properties to:
+ * TreeTableColumn in a {@link TreeTableView} is responsible for displaying
+ * (and editing) the contents of that column. As well as being responsible for
+ * displaying and editing data for a single column, a TreeTableColumn also
+ * contains the necessary properties to:
  * <ul>
- *    <li>Be resized (using {@link #minWidthProperty() minWidth}/{@link #prefWidthProperty() prefWidth}/{@link #maxWidthProperty() maxWidth}
- *      and {@link #widthProperty() width} properties)
+ *    <li>Be resized (using {@link #minWidthProperty() minWidth}/
+ *    {@link #prefWidthProperty() prefWidth}/
+ *    {@link #maxWidthProperty() maxWidth} and {@link #widthProperty() width} properties)
  *    <li>Have its {@link #visibleProperty() visibility} toggled
  *    <li>Display {@link #textProperty() header text}
  *    <li>Display any {@link #getColumns() nested columns} it may contain
@@ -74,48 +76,43 @@ import com.sun.javafx.scene.control.skin.TableViewSkinBase;
  * (which is used to populate individual cells in the column). This can be 
  * achieved using some variation on the following code:
  * 
- * <p>// TODO update example for TreeTableColumn
- * 
- * <pre>
- * {@code 
- * ObservableList<Person> data = ...
- * TableView<Person> tableView = new TableView<Person>(data);
- * 
- * TableColumn<Person,String> firstNameCol = new TableColumn<Person,String>("First Name");
+ * <pre>{@code
  * firstNameCol.setCellValueFactory(new Callback<CellDataFeatures<Person, String>, ObservableValue<String>>() {
  *     public ObservableValue<String> call(CellDataFeatures<Person, String> p) {
- *         // p.getValue() returns the Person instance for a particular TableView row
- *         return p.getValue().firstNameProperty();
+ *         // p.getValue() returns the TreeItem<Person> instance for a particular TreeTableView row,
+ *         // p.getValue().getValue() returns the Person instance inside the TreeItem<Person>
+ *         return p.getValue().getValue().firstNameProperty();
  *     }
  *  });
- * }
- * tableView.getColumns().add(firstNameCol);}</pre>
+ * }}</pre>
  * 
- * This approach assumes that the object returned from <code>p.getValue()</code>
+ * This approach assumes that the object returned from <code>p.getValue().getValue()</code>
  * has a JavaFX {@link ObservableValue} that can simply be returned. The benefit of this
  * is that the TableView will internally create bindings to ensure that,
  * should the returned {@link ObservableValue} change, the cell contents will be
  * automatically refreshed. 
  * 
  * <p>In situations where a TableColumn must interact with classes created before
- * JavaFX, or that generally do not wish to use JavaFX apis for properties, it is
+ * JavaFX, or that generally do not wish to use JavaFX APIs for properties, it is
  * possible to wrap the returned value in a {@link ReadOnlyObjectWrapper} instance. For
  * example:
  * 
- * <pre>
- * {@code 
+ *<pre>{@code
  * firstNameCol.setCellValueFactory(new Callback<CellDataFeatures<Person, String>, ObservableValue<String>>() {
  *     public ObservableValue<String> call(CellDataFeatures<Person, String> p) {
- *         return new ReadOnlyObjectWrapper(p.getValue().getFirstName());
+ *         // p.getValue() returns the TreeItem<Person> instance for a particular TreeTableView row,
+ *         // p.getValue().getValue() returns the Person instance inside the TreeItem<Person>
+ *         return new ReadOnlyObjectWrapper(p.getValue().getValue().getFirstName());
  *     }
- *  });}</pre>
+ *  });
+ * }}</pre>
  * 
  * It is hoped that over time there will be convenience cell value factories 
  * developed and made available to developers. As of the JavaFX 2.0 release, 
  * there is one such convenience class: {@link javafx.scene.control.cell.TreeItemPropertyValueFactory}.
  * This class removes the need to write the code above, instead relying on reflection to
  * look up a given property from a String. Refer to the 
- * <code>PropertyValueFactory</code> class documentation for more information
+ * <code>TreeItemPropertyValueFactory</code> class documentation for more information
  * on how to use this with a TableColumn.
  * 
  * Finally, for more detail on how to use TableColumn, there is further documentation in
@@ -126,6 +123,7 @@ import com.sun.javafx.scene.control.skin.TableViewSkinBase;
  * @see TableView
  * @see TableCell
  * @see TablePosition
+ * @see javafx.scene.control.cell.TreeItemPropertyValueFactory
  * @since JavaFX 8.0
  */
 public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> implements EventTarget {
@@ -357,28 +355,26 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
      * will be observed internally to allow for updates to the value to be 
      * immediately reflected on screen.
      * 
-     * <p> // TODO update example
+     * <p>An example of how to set a cell value factory is:
      * 
-     * An example of how to set a cell value factory is:
-     * 
-     * <pre><code>
-     * lastNameCol.setCellValueFactory(new Callback&lt;CellDataFeatures&lt;Person, String&gt;, ObservableValue&lt;String&gt;&gt;() {
-     *     public ObservableValue&lt;String&gt; call(CellDataFeatures&lt;Person, String&gt; p) {
-     *         // p.getValue() returns the Person instance for a particular TableView row
-     *         return p.getValue().lastNameProperty();
+     * <pre>{@code
+     * firstNameCol.setCellValueFactory(new Callback<CellDataFeatures<Person, String>, ObservableValue<String>>() {
+     *     public ObservableValue<String> call(CellDataFeatures<Person, String> p) {
+     *         // p.getValue() returns the TreeItem<Person> instance for a particular TreeTableView row,
+     *         // p.getValue().getValue() returns the Person instance inside the TreeItem<Person>
+     *         return p.getValue().getValue().firstNameProperty();
      *     }
      *  });
-     * }
-     * </code></pre>
+     * }}</pre>
      * 
      * A common approach is to want to populate cells in a TreeTableColumn using
      * a single value from a Java bean. To support this common scenario, there
      * is the {@link javafx.scene.control.cell.TreeItemPropertyValueFactory} class.
      * Refer to this class for more information on how to use it, but briefly
-     * here is how the above use case could be simplified using the PropertyValueFactory class:
+     * here is how the above use case could be simplified using the TreeItemPropertyValueFactory class:
      * 
      * <pre><code>
-     * lastNameCol.setCellValueFactory(new PropertyValueFactory&lt;Person,String&gt;("lastName"));
+     * firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory&lt;Person,String&gt;("firstName"));
      * </code></pre>
      * 
      * @see javafx.scene.control.cell.TreeItemPropertyValueFactory

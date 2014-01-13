@@ -87,8 +87,9 @@ import com.sun.javafx.scene.control.skin.TableViewSkinBase;
  *   <li>Support for {@link TableColumn#cellFactoryProperty() cell factories} to
  *      easily customize {@link Cell cell} contents in both rendering and editing
  *      states.
- *   <li>Specification of {@link #minWidthProperty() minWidth}/
- *      {@link #prefWidthProperty() prefWidth}/{@link #maxWidthProperty() maxWidth},
+ *   <li>Specification of {@link TableColumn#minWidthProperty() minWidth}/
+ *      {@link TableColumn#prefWidthProperty() prefWidth}/
+ *      {@link TableColumn#maxWidthProperty() maxWidth},
  *      and also {@link TableColumn#resizableProperty() fixed width columns}.
  *   <li>Width resizing by the user at runtime.
  *   <li>Column reordering by the user at runtime.
@@ -2175,7 +2176,7 @@ public class TableView<S> extends Control {
             // fire off a single add/remove/replace notification (rather than
             // individual remove and add notifications) - see RT-33324
             int changeIndex = selectedCellsSeq.indexOf(new TablePosition(getTableView(), row, column));
-            ListChangeListener.Change change = new NonIterableChange.GenericAddRemoveChange<>(
+            ListChangeListener.Change change = new NonIterableChange.GenericAddRemoveChange<TablePosition<S,?>>(
                     changeIndex, changeIndex+1, previousSelection, selectedCellsSeq);
             handleSelectedCellsListChangeEvent(change);
         }
