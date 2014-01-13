@@ -1305,6 +1305,10 @@ public class ContextMenuContent extends Region {
         
         private void updateAccelerator() {
             if (item.getAccelerator() != null) {
+                if (right != null) {
+                    getChildren().remove(right);
+                }
+
                 String text = KeystrokeUtils.toString(item.getAccelerator());
                 right = new Label(text);
                 right.setStyle(item.getStyle());

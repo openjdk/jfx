@@ -38,10 +38,13 @@ import javafx.scene.control.Menu;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioMenuItem;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import com.sun.javafx.scene.control.behavior.MenuButtonBehaviorBase;
+
+import java.util.Map;
 
 /**
  * Base class for MenuButtonSkin and SplitMenuButtonSkin. It consists of the
@@ -65,6 +68,18 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
      */
     protected boolean behaveLikeButton = false;
     private ListChangeListener<MenuItem> itemsChangedListener;
+
+    private final ChangeListener<KeyCombination> acceleratorListener = new ChangeListener<KeyCombination>() {
+        @Override public void changed(ObservableValue<? extends KeyCombination> observable, KeyCombination oldValue, KeyCombination newValue) {
+            Map<KeyCombination, Runnable> accelerators = getSkinnable().getScene().getAccelerators();
+            if (accelerators != null) {
+                Runnable acceleratorRunnable = accelerators.remove(oldValue);
+                accelerators.put(newValue, acceleratorRunnable);
+            }
+        }
+    };
+
+
 
     /***************************************************************************
      *                                                                         *
@@ -130,13 +145,12 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
             addAccelerators(getSkinnable().getItems());
         }
         control.sceneProperty().addListener(new ChangeListener<Scene>() {
-                @Override
-                    public void changed(ObservableValue<? extends Scene> scene, Scene oldValue, Scene newValue) {
-                    if (getSkinnable() != null && getSkinnable().getScene() != null) {
-                        addAccelerators(getSkinnable().getItems());
-                    }
+            @Override public void changed(ObservableValue<? extends Scene> scene, Scene oldValue, Scene newValue) {
+                if (getSkinnable() != null && getSkinnable().getScene() != null) {
+                    addAccelerators(getSkinnable().getItems());
                 }
-            });
+            }
+        });
 
 //        If setOnAction() is overridden the code below causes the popup to show and hide.
 //        control.addEventHandler(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
@@ -298,8 +312,8 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
                 ** check is there are any accelerators in this menuitem
                 */
                 if (menuitem.getAccelerator() != null) {
-                    if (getSkinnable().getScene().getAccelerators() != null) {
-
+                    Map<KeyCombination, Runnable> accelerators = getSkinnable().getScene().getAccelerators();
+                    if (accelerators != null) {
                         Runnable acceleratorRunnable = new Runnable() {
                             public void run() {
                                 if (menuitem.getOnMenuValidation() != null) {
@@ -321,16 +335,16 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
                                 }
                             }
                         };
-                        getSkinnable().getScene().getAccelerators().put(menuitem.getAccelerator(), acceleratorRunnable);
+                        accelerators.put(menuitem.getAccelerator(), acceleratorRunnable);
+                        menuitem.acceleratorProperty().addListener(acceleratorListener);
                     }
                 }
             }
         }
     }
-   
-    
-    private class MenuLabeledImpl extends LabeledImpl {
 
+
+    private class MenuLabeledImpl extends LabeledImpl {
         MenuButton button;
         public MenuLabeledImpl(MenuButton b) {
             super(b);
