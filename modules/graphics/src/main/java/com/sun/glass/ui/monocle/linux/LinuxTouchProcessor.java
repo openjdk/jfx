@@ -25,35 +25,32 @@
 
 package com.sun.glass.ui.monocle.linux;
 
-import com.sun.glass.ui.monocle.NativePlatformFactory;
-import com.sun.glass.ui.monocle.input.TouchInput;
-import com.sun.glass.ui.monocle.input.TouchState;
+import com.sun.glass.ui.monocle.input.TouchLookahead;
 
 public class LinuxTouchProcessor implements LinuxInputProcessor {
 
-    private TouchInput touch = TouchInput.getInstance();
-    private TouchState previousState = new TouchState();
-    private TouchState state = new TouchState();
-    private boolean processedFirstEvent;
+    private final TouchLookahead tl = new TouchLookahead();
+    private final LinuxTouchTransform transform;
+
+    LinuxTouchProcessor(LinuxInputDevice device) {
+        tl.setAssignIDs(true);
+        transform = new LinuxTouchTransform(device);
+    }
 
     @Override
     public void processEvents(LinuxInputDevice device) {
         LinuxEventBuffer buffer = device.getBuffer();
-        touch.getState(state);
-        state.clear();
-        processedFirstEvent = false;
+        tl.pullState(true);
         while (buffer.hasNextEvent()) {
             switch (buffer.getEventType()) {
                 case Input.EV_ABS: {
-                    int pixelValue = toPixelValue(device,
-                                                  buffer.getEventCode(),
-                                                  buffer.getEventValue());
-                    switch (buffer.getEventCode()) {
+                    int value = transform.getValue(buffer);
+                    switch (transform.getAxis(buffer)) {
                         case Input.ABS_X:
-                            state.getPointForID(0, true).x = pixelValue;
+                            tl.getState().getPointForID(0, true).x = value;
                             break;
                         case Input.ABS_Y:
-                            state.getPointForID(0, true).y = pixelValue;
+                            tl.getState().getPointForID(0, true).y = value;
                             break;
                     }
                     break;
@@ -61,9 +58,8 @@ public class LinuxTouchProcessor implements LinuxInputProcessor {
                 case Input.EV_SYN:
                     switch (buffer.getEventCode()) {
                         case Input.SYN_REPORT:
-                            sendEvent();
-                            touch.getState(state);
-                            state.clear();
+                            tl.pushState();
+                            tl.pullState(true);
                             break;
                         default: // ignore
                     }
@@ -71,63 +67,7 @@ public class LinuxTouchProcessor implements LinuxInputProcessor {
             }
             buffer.nextEvent();
         }
-        touch.setState(previousState, true);
-    }
-
-    private void sendEvent() {
-        if (processedFirstEvent) {
-            // fold together TouchStates that have the same touch point count
-            // and IDs. For Protocol A devices the touch IDs are not initialized
-            // yet, which means the only differentiator will be the number of
-            // points.
-            boolean fold = true;
-            if (state.getPointCount() != previousState.getPointCount()) {
-                fold = false;
-            }
-            for (int i = 0; fold && i < previousState.getPointCount(); i++) {
-                if (state.getPoint(i).id != previousState.getPoint(i).id) {
-                    fold = false;
-                }
-            }
-            if (!fold) {
-                // the events are different. Send "previousState".
-                touch.setState(previousState, true);
-            }
-        } else {
-            processedFirstEvent = true;
-        }
-        state.copyTo(previousState);
-    }
-
-    private static int toPixelValue(LinuxInputDevice device, int axis, int value) {
-        switch (axis) {
-            case Input.ABS_X:
-            case Input.ABS_MT_POSITION_X:
-                return toPixelX(device, axis, value);
-            case Input.ABS_Y:
-            case Input.ABS_MT_POSITION_Y:
-                return toPixelY(device, axis, value);
-            default:
-                return value;
-        }
-    }
-
-    private static int toPixelX(LinuxInputDevice device, int axis, int value) {
-        AbsoluteInputCapabilities caps = device.getAbsoluteInputCapabilities(axis);
-        int minimum = caps.getMinimum();
-        int maximum = caps.getMaximum();
-        int screenWidth = NativePlatformFactory.getNativePlatform().getScreen().getWidth();
-        int pixel = ((value - minimum) * screenWidth) / (maximum - minimum);
-        return pixel;
-    }
-
-    private static int toPixelY(LinuxInputDevice device, int axis, int value) {
-        AbsoluteInputCapabilities caps = device.getAbsoluteInputCapabilities(axis);
-        int minimum = caps.getMinimum();
-        int maximum = caps.getMaximum();
-        int screenHeight = NativePlatformFactory.getNativePlatform().getScreen().getHeight();
-        int pixel = ((value - minimum) * screenHeight) / (maximum - minimum);
-        return pixel;
+        tl.flushState();
     }
 
 }

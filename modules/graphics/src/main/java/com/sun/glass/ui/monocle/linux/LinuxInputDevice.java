@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -67,7 +67,7 @@ public class LinuxInputDevice implements Runnable, InputDevice {
     private ExecutorService executor;
     private EventProcessor processor = new EventProcessor();
     private LinuxEventBuffer buffer = new LinuxEventBuffer();
-
+    private Map<String,String> uevent;
 
     /**
      * Create a new com.sun.glass.ui.monocle.input.LinuxInputDevice on the given
@@ -89,6 +89,7 @@ public class LinuxInputDevice implements Runnable, InputDevice {
                 devNode, capabilities.get("abs"));
         this.in = new FileInputStream(devNode).getChannel();
         this.executor = NativePlatformFactory.getNativePlatform().getExecutor();
+        this.uevent = SysFS.readUEvent(sysPath);
     }
 
     public void setInputProcessor(LinuxInputProcessor inputProcessor) {
@@ -166,6 +167,10 @@ public class LinuxInputDevice implements Runnable, InputDevice {
 
     AbsoluteInputCapabilities getAbsoluteInputCapabilities(int axis) {
         return absCaps == null ? null : absCaps.get(axis);
+    }
+
+    String getProduct() {
+        return uevent.get("PRODUCT");
     }
 
     @Override

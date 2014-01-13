@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -74,6 +74,23 @@ public class SysFS {
             }
         }
         return capsMap;
+    }
+
+    static Map<String, String> readUEvent(File sysPath) {
+        Map<String, String> uevent = new HashMap();
+        File f = new File(sysPath, "device/uevent");
+        try {
+            BufferedReader r = new BufferedReader(new FileReader(f));
+            for (String line; (line = r.readLine()) != null;) {
+                int i = line.indexOf("=");
+                if (i >= 0) {
+                    uevent.put(line.substring(0, i), line.substring(i + 1));
+                }
+            }
+        } catch (IOException e) {
+            // return an empty map
+        }
+        return uevent;
     }
 
     /** Fires udev notification events for devices of the given type */
