@@ -29,13 +29,18 @@ import com.sun.glass.ui.monocle.input.InputDeviceRegistry;
 
 import java.io.File;
 import java.io.IOException;
+import java.security.AllPermission;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Map;
 
-class LinuxInputDeviceRegistry extends InputDeviceRegistry {
+public class LinuxInputDeviceRegistry extends InputDeviceRegistry {
 
-    LinuxInputDeviceRegistry() {
+    public LinuxInputDeviceRegistry(boolean headless) {
+        if (headless) {
+            // Keep the registry but do not bind it to udev.
+            return;
+        }
         Map<File, LinuxInputDevice> deviceMap = new HashMap<>();
         UdevListener udevListener = new UdevListener() {
             @Override
@@ -55,7 +60,6 @@ class LinuxInputDeviceRegistry extends InputDeviceRegistry {
                                     devNode, sysPath, event);
                             if (device != null) {
                                 deviceMap.put(sysPath, device);
-                                devices.add(device);
                             }
                         } else if (action.equals("remove")) {
                             LinuxInputDevice device = deviceMap.get(devPath);
@@ -81,17 +85,38 @@ class LinuxInputDeviceRegistry extends InputDeviceRegistry {
             throws IOException {
         LinuxInputDevice device = new LinuxInputDevice(
                 devNode, sysPath, udevManifest);
+        return addDeviceInternal(device, "Linux input: " + devNode.toString());
+    }
+
+    public LinuxInputDevice addDevice(LinuxInputDevice device, String name) {
+        SecurityManager security = System.getSecurityManager();
+        if (security != null) {
+            security.checkPermission(new AllPermission());
+        }
+        return addDeviceInternal(device, name);
+    }
+
+    private LinuxInputDevice addDeviceInternal(LinuxInputDevice device, String name) {
         LinuxInputProcessor processor = createInputProcessor(device);
         if (processor == null) {
             return null;
         } else {
             device.setInputProcessor(createInputProcessor(device));
             Thread thread = new Thread(device);
-            thread.setName("Linux input: " + devNode.toString());
+            thread.setName(name);
             thread.setDaemon(true);
             thread.start();
+            devices.add(device);
             return device;
         }
+    }
+
+    public void removeDevice(LinuxInputDevice device) {
+        SecurityManager security = System.getSecurityManager();
+        if (security != null) {
+            security.checkPermission(new AllPermission());
+        }
+        devices.remove(device);
     }
 
     private LinuxInputProcessor createInputProcessor(LinuxInputDevice device) {

@@ -30,7 +30,6 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
-import javafx.geometry.Pos;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -39,7 +38,6 @@ import javafx.scene.control.SplitPane;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.scene.layout.VBoxBuilder;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
@@ -69,8 +67,8 @@ public class HelloSplitPane extends Application {
         final Button l = new Button("Left Button");
         final Button r = new Button("Right Button");
         horizSplitPane.getItems().addAll(
-            VBoxBuilder.create().children(l).alignment(Pos.CENTER).build(),
-            VBoxBuilder.create().children(r).alignment(Pos.CENTER).build());
+                new VBox(l),
+                new VBox(r));
         horizSplitPane.getDividers().get(0).positionProperty().addListener(new InvalidationListener() {
             public void invalidated(Observable ov) {
                 horizSlider.setValue(horizSplitPane.getDividers().get(0).getPosition());
@@ -98,8 +96,8 @@ public class HelloSplitPane extends Application {
         final Button t = new Button("Top Button");
         final Button b = new Button("Bottom Button");
         vertSplitPane.getItems().addAll(
-            VBoxBuilder.create().children(t).alignment(Pos.CENTER).build(),
-            VBoxBuilder.create().children(b).alignment(Pos.CENTER).build());
+                new VBox(t),
+                new VBox(b));
         vertSplitPane.getDividers().get(0).positionProperty().addListener(new InvalidationListener() {
             public void invalidated(Observable ov) {                
                 vertSlider.setValue(1 - vertSplitPane.getDividers().get(0).getPosition());
@@ -122,18 +120,19 @@ public class HelloSplitPane extends Application {
         mailClient.setId("main-spt-pane");
         Button lbtn = new Button("hello");
         lbtn.setId("leftbtn");
-        mailClient.getItems().addAll(VBoxBuilder.create().children(lbtn).alignment(Pos.CENTER).build());
-        
+        mailClient.getItems().addAll(new VBox(lbtn));
+
         SplitPane rsp = new SplitPane();
         rsp.setId("right-spt-pane");
         rsp.setDividerPosition(0, 0.6f);
         rsp.setOrientation(Orientation.VERTICAL);
         Button tbtn = new Button("hello");
         tbtn.setId("right-topbtn");
-        rsp.getItems().addAll(VBoxBuilder.create().children(tbtn).alignment(Pos.CENTER).build());
+        rsp.getItems().addAll(new VBox(tbtn));
+
         Button bbtn = new Button("hello");
         bbtn.setId("right-bottombtn");
-        rsp.getItems().addAll(VBoxBuilder.create().children(bbtn).alignment(Pos.CENTER).build());
+        rsp.getItems().addAll(new VBox(bbtn));
         mailClient.getItems().addAll(rsp);
     }
 
@@ -157,11 +156,11 @@ public class HelloSplitPane extends Application {
         rsp.setOrientation(Orientation.VERTICAL);
         Button tbtn = new Button("hello");
         tbtn.setId("right-topbtn");
-        rsp.getItems().addAll(VBoxBuilder.create().children(tbtn).alignment(Pos.CENTER).build());
+        rsp.getItems().addAll(new VBox(tbtn));
 
         Button bbtn = new Button("hello");
         bbtn.setId("right-bottombtn");
-        rsp.getItems().addAll(VBoxBuilder.create().children(bbtn).alignment(Pos.CENTER).build());
+        rsp.getItems().addAll(new VBox(bbtn));
         mailClient2.getItems().addAll(rsp);
     }
 
@@ -172,7 +171,7 @@ public class HelloSplitPane extends Application {
 
         Button lbtn = new Button("hello");
         lbtn.setId("left-btn");
-        recursiveSplitPane.getItems().addAll(VBoxBuilder.create().children(lbtn).alignment(Pos.CENTER).build());
+        recursiveSplitPane.getItems().addAll(new VBox(lbtn));
 
         SplitPane sp = new SplitPane();
         sp.setId("right-split-pane");
@@ -180,7 +179,7 @@ public class HelloSplitPane extends Application {
         sp.setOrientation(Orientation.VERTICAL);
         Button rbtn = new Button("hello");
         rbtn.setId("right-top-btn");
-        sp.getItems().addAll(VBoxBuilder.create().children(rbtn).alignment(Pos.CENTER).build());
+        sp.getItems().addAll(new VBox(rbtn));
         SplitPane sv2 = new SplitPane();
         sv2.setId("right-bottom-split-pane");
         sp.getItems().addAll(sv2);

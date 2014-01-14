@@ -112,7 +112,7 @@ public class TouchStates {
                 Arrays.fill(mappedIndices, 0);
             }
             int mappedIndexCount = 0;
-            for (int i = 0; i < oldState.getPointCount()
+            for (int i = 0; i < state.getPointCount()
                     && mappedIndexCount < oldState.getPointCount(); i++) {
                 TouchState.Point newPoint = state.getPoint(i);
                 int x = newPoint.x;

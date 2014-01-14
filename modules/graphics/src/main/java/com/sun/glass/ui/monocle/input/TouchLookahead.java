@@ -64,7 +64,6 @@ public class TouchLookahead {
      */
     public void pullState(boolean clearPoints) {
         touch.getState(state);
-        processedFirstEvent = false;
         if (clearPoints) {
             state.clear();
         }

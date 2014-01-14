@@ -28,12 +28,15 @@ import com.sun.glass.ui.monocle.NativePlatform;
 import com.sun.glass.ui.monocle.NativeScreen;
 import com.sun.glass.ui.monocle.NullCursor;
 import com.sun.glass.ui.monocle.input.InputDeviceRegistry;
+import com.sun.glass.ui.monocle.linux.LinuxInputDeviceRegistry;
 
 public class HeadlessPlatform extends NativePlatform {
 
     @Override
     protected InputDeviceRegistry createInputDeviceRegistry() {
-        return new InputDeviceRegistry();
+        // use of a LinuxInputDeviceRegistry lets us simulate
+        // Linux input devices on any system
+        return new LinuxInputDeviceRegistry(true);
     }
 
     @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -776,7 +776,7 @@ public class TableColumnHeader extends Region {
         int pos = 0;
         for (int i = 0; i < sortOrder.size(); i++) {
             TableColumnBase _tc = sortOrder.get(i);
-            if (_tc == null || ! _tc.isSortable()) {
+            if (_tc == null || ! _tc.isSortable() || ! _tc.isVisible()) {
                 continue;
             }
 

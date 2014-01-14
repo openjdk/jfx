@@ -33,7 +33,7 @@ import java.util.Map;
 
 /** Describes the capabilities of Linux input devices with absolute
  * coordinates. See /usr/include/linux/input.h */
-class AbsoluteInputCapabilities {
+public class AbsoluteInputCapabilities {
 
     private int value;
     private int minimum;
@@ -41,6 +41,16 @@ class AbsoluteInputCapabilities {
     private int fuzz;
     private int flat;
     private int resolution;
+
+    public AbsoluteInputCapabilities(int value, int maximum, int minimum,
+                                     int fuzz, int flat, int resolution) {
+        this.value = value;
+        this.maximum = maximum;
+        this.minimum = minimum;
+        this.fuzz = fuzz;
+        this.flat = flat;
+        this.resolution = resolution;
+    }
 
     private AbsoluteInputCapabilities(LinuxSystem system,
                                       LinuxSystem.InputAbsInfo info,
