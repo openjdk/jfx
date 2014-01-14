@@ -92,6 +92,28 @@ public class LinuxInputDevice implements Runnable, InputDevice {
         this.uevent = SysFS.readUEvent(sysPath);
     }
 
+    /**
+     * Create a new simulated LinuxInputDevice
+     *
+     * @param capabilities Simulated capabilities
+     * @param absCaps Simulated absolute axis capabilities
+     * @param in Channel f  or simulated input events
+     * @param uevent Simulated uevent data
+     */
+    public LinuxInputDevice(
+            Map<String, BitSet> capabilities,
+            Map<Integer, AbsoluteInputCapabilities> absCaps,
+            ReadableByteChannel in,
+            Map<String, String> udevManifest,
+            Map<String, String> uevent) {
+        this.capabilities = capabilities;
+        this.absCaps = absCaps;
+        this.in = in;
+        this.udevManifest = udevManifest;
+        this.uevent = uevent;
+        this.executor = NativePlatformFactory.getNativePlatform().getExecutor();
+    }
+
     public void setInputProcessor(LinuxInputProcessor inputProcessor) {
         this.inputProcessor = inputProcessor;
     }
@@ -158,7 +180,7 @@ public class LinuxInputDevice implements Runnable, InputDevice {
      * @return a string describing this input device
      */
     public String toString() {
-        return devNode.toString();
+        return devNode == null ? "Robot" : devNode.toString();
     }
 
     BitSet getCapability(String type) {

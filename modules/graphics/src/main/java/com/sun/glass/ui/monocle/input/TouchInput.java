@@ -138,13 +138,19 @@ public class TouchInput {
      * @param eventType The type of TouchEvent to send (e.g. TouchEvent.PRESSED)
      */
     private void dispatchAllPoints(TouchState state, int eventType) {
+
         Window window = state.getWindow(false, null);
         View view = window == null ? null : window.getView();
         if (view != null) {
             touches.notifyBeginTouchEvent(view, 0, true, state.getPointCount());
             for (int i = 0; i < state.getPointCount(); i++) {
                 TouchState.Point oldPoint = state.getPoint(i);
-                dispatchPoint(window, view, eventType, oldPoint);
+                try {
+                    dispatchPoint(window, view, eventType, oldPoint);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    System.exit(0);
+                }
             }
             touches.notifyEndTouchEvent(view);
         }

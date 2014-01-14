@@ -16,7 +16,7 @@ public class LinuxPlatform extends NativePlatform {
 
     @Override
     protected InputDeviceRegistry createInputDeviceRegistry() {
-        return new LinuxInputDeviceRegistry();
+        return new LinuxInputDeviceRegistry(false);
     }
 
     @Override

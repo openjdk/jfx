@@ -220,8 +220,7 @@ final class MonocleApplication extends Application {
 
     @Override
     public Robot createRobot() {
-        Thread.dumpStack();
-        throw new UnsupportedOperationException();
+        return new MonocleRobot();
     }
 
     @Override

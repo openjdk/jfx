@@ -41,23 +41,43 @@ public class LinuxTouchProcessor implements LinuxInputProcessor {
     public void processEvents(LinuxInputDevice device) {
         LinuxEventBuffer buffer = device.getBuffer();
         tl.pullState(true);
+        boolean touchReleased = false;
         while (buffer.hasNextEvent()) {
             switch (buffer.getEventType()) {
                 case Input.EV_ABS: {
                     int value = transform.getValue(buffer);
                     switch (transform.getAxis(buffer)) {
                         case Input.ABS_X:
+                        case Input.ABS_MT_POSITION_X:
                             tl.getState().getPointForID(0, true).x = value;
                             break;
                         case Input.ABS_Y:
+                        case Input.ABS_MT_POSITION_Y:
                             tl.getState().getPointForID(0, true).y = value;
                             break;
                     }
                     break;
                 }
+                case Input.EV_KEY:
+                    switch (buffer.getEventCode()) {
+                        case Input.BTN_TOUCH:
+                            if (buffer.getEventValue() == 0) {
+                                touchReleased = true;
+                            } else {
+                                // restore an old point
+                                tl.getState().getPointForID(0, true);
+                            }
+                            break;
+                    }
+                    break;
                 case Input.EV_SYN:
                     switch (buffer.getEventCode()) {
                         case Input.SYN_REPORT:
+                            if (touchReleased) {
+                                // remove points
+                                tl.getState().clear();
+                                touchReleased = false;
+                            }
                             tl.pushState();
                             tl.pullState(true);
                             break;

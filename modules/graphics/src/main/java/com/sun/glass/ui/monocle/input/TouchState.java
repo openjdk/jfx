@@ -113,8 +113,7 @@ public class TouchState {
     void assignPrimaryID() {
         if (pointCount == 0) {
             primaryID = -1;
-        }
-        if (primaryID <= 0) {
+        } else if (primaryID <= 0) {
             // No primary ID is assigned. Assign a new ID arbitrarily.
             primaryID = points[0].id;
         } else {
