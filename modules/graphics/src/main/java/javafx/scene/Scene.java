@@ -3674,10 +3674,7 @@ public class Scene implements EventTarget {
             // enter/exit handling
             handleEnterExit(e, tmpTargetWrapper);
 
-            Cursor cursor = target.getCursor();
-
             //deliver event to the target node
-
             if (Scene.this.dndGesture != null) {
                 Scene.this.dndGesture.processDragDetection(e);
             }
@@ -3701,9 +3698,9 @@ public class Scene implements EventTarget {
             if (!onPulse) {
                 clickGenerator.postProcess(e, target, tmpTargetWrapper);
             }
-
+            
             // handle drag and drop
-
+            
             if (!PLATFORM_DRAG_GESTURE_INITIATION && !onPulse) {
                 if (Scene.this.dndGesture != null) {
                     if (!Scene.this.dndGesture.process(e, target.getEventTarget())) {
@@ -3711,7 +3708,8 @@ public class Scene implements EventTarget {
                     }
                 }
             }
-
+            
+            Cursor cursor = target.getCursor();
             if (e.getEventType() != MouseEvent.MOUSE_EXITED) {
                 if (cursor == null && hover) {
                     cursor = Scene.this.getCursor();
