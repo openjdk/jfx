@@ -217,7 +217,7 @@ echo Using crosslibs directory $CROSSLIBS
 
 mkdir -p $CROSSLIBS || exit 1
 
-PILIBS=$CROSSLIBS/armhf-raspberry-pi-09
+PILIBS=$CROSSLIBS/armhf-raspberry-pi-10
 
 checkReinstall $PILIBS
 if [[ ! -d $PILIBS ]]; then
