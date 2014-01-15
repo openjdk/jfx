@@ -3037,4 +3037,78 @@ public class TreeTableViewTest {
         assertTrue(table.getSelectionModel().isSelected(0));
         assertTrue(table.getFocusModel().isFocused(0));
     }
+
+    private int test_rt_35213_eventCount = 0;
+    @Test public void test_rt35213() {
+        final TreeTableView<String> view = new TreeTableView<>();
+
+        TreeItem<String> root = new TreeItem<>("Boss");
+        view.setRoot(root);
+
+        TreeItem<String> group1 = new TreeItem<>("Group 1");
+        TreeItem<String> group2 = new TreeItem<>("Group 2");
+        TreeItem<String> group3 = new TreeItem<>("Group 3");
+
+        root.getChildren().addAll(group1, group2, group3);
+
+        TreeItem<String> employee1 = new TreeItem<>("Employee 1");
+        TreeItem<String> employee2 = new TreeItem<>("Employee 2");
+
+        group2.getChildren().addAll(employee1, employee2);
+
+        TreeTableColumn<String, String> nameColumn = new TreeTableColumn<>("Name");
+        nameColumn.setCellValueFactory(new TreeItemPropertyValueFactory<>("name"));
+        view.getColumns().add(nameColumn);
+
+        view.expandedItemCountProperty().addListener(new ChangeListener<Number>() {
+            @Override public void changed(
+                    ObservableValue<? extends Number> observableValue,
+                    Number oldCount, Number newCount) {
+
+                // DEBUG OUTPUT
+//                System.out.println("new expanded item count: " + newCount.intValue());
+//                for (int i = 0; i < newCount.intValue(); i++) {
+//                    TreeItem<String> item = view.getTreeItem(i);
+//                    String text = item.getValue();
+//                    System.out.println("person found at index " + i + " is " + text);
+//                }
+//                System.out.println("------------------------------------------");
+
+                if (test_rt_35213_eventCount == 0) {
+                    assertEquals(4, newCount);
+                    assertEquals("Boss", view.getTreeItem(0).getValue());
+                    assertEquals("Group 1", view.getTreeItem(1).getValue());
+                    assertEquals("Group 2", view.getTreeItem(2).getValue());
+                    assertEquals("Group 3", view.getTreeItem(3).getValue());
+                } else if (test_rt_35213_eventCount == 1) {
+                    assertEquals(6, newCount);
+                    assertEquals("Boss", view.getTreeItem(0).getValue());
+                    assertEquals("Group 1", view.getTreeItem(1).getValue());
+                    assertEquals("Group 2", view.getTreeItem(2).getValue());
+                    assertEquals("Employee 1", view.getTreeItem(3).getValue());
+                    assertEquals("Employee 2", view.getTreeItem(4).getValue());
+                    assertEquals("Group 3", view.getTreeItem(5).getValue());
+                } else if (test_rt_35213_eventCount == 2) {
+                    assertEquals(4, newCount);
+                    assertEquals("Boss", view.getTreeItem(0).getValue());
+                    assertEquals("Group 1", view.getTreeItem(1).getValue());
+                    assertEquals("Group 2", view.getTreeItem(2).getValue());
+                    assertEquals("Group 3", view.getTreeItem(3).getValue());
+                }
+
+                test_rt_35213_eventCount++;
+            }
+        });
+
+        new StageLoader(view);
+
+        root.setExpanded(true);
+        Toolkit.getToolkit().firePulse();
+
+        group2.setExpanded(true);
+        Toolkit.getToolkit().firePulse();
+
+        group2.setExpanded(false);
+        Toolkit.getToolkit().firePulse();
+    }
 }

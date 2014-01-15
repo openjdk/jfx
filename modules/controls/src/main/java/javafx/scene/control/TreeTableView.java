@@ -1480,11 +1480,15 @@ public class TreeTableView<S> extends Control {
         // normalize the requested row based on whether showRoot is set
         final int _row = isShowRoot() ? row : (row + 1);
 
-        if (treeItemCacheMap.containsKey(_row)) {
-            SoftReference<TreeItem<S>> treeItemRef = treeItemCacheMap.get(_row);
-            TreeItem<S> treeItem = treeItemRef.get();
-            if (treeItem != null) {
-                return treeItem;
+        if (expandedItemCountDirty) {
+            updateExpandedItemCount(getRoot());
+        } else {
+            if (treeItemCacheMap.containsKey(_row)) {
+                SoftReference<TreeItem<S>> treeItemRef = treeItemCacheMap.get(_row);
+                TreeItem<S> treeItem = treeItemRef.get();
+                if (treeItem != null) {
+                    return treeItem;
+                }
             }
         }
 

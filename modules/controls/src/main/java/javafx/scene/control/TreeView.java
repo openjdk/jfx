@@ -934,11 +934,15 @@ public class TreeView<T> extends Control {
         // normalize the requested row based on whether showRoot is set
         final int _row = isShowRoot() ? row : (row + 1);
 
-        if (treeItemCacheMap.containsKey(_row)) {
-            SoftReference<TreeItem<T>> treeItemRef = treeItemCacheMap.get(_row);
-            TreeItem<T> treeItem = treeItemRef.get();
-            if (treeItem != null) {
-                return treeItem;
+        if (expandedItemCountDirty) {
+            updateExpandedItemCount(getRoot());
+        } else {
+            if (treeItemCacheMap.containsKey(_row)) {
+                SoftReference<TreeItem<T>> treeItemRef = treeItemCacheMap.get(_row);
+                TreeItem<T> treeItem = treeItemRef.get();
+                if (treeItem != null) {
+                    return treeItem;
+                }
             }
         }
 
