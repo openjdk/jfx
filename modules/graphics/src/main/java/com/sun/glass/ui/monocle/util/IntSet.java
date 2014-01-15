@@ -67,14 +67,15 @@ public class IntSet {
     }
 
     private int getIndex(int value) {
-        for (int i = 0; i < size; i++) {
+        int i;
+        for (i = 0; i < size; i++) {
             if (elements[i] == value) {
                 return i;
             } else if (elements[i] > value) {
                 return -i - 1;
             }
         }
-        return -1;
+        return -i - 1;
     }
 
     public int get(int index) {

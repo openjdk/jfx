@@ -62,6 +62,12 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_write
     return (jlong) write((int) fdL, data, capacity);
 }
 
+JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_read
+  (JNIEnv *env, jobject UNUSED(obj), jlong fdL, jobject buf, jint position, jint limit) {
+    void *data = (*env)->GetDirectBufferAddress(env, buf);
+    return (jlong) read((int) fdL, data + position, limit - position);
+}
+
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_EVIOCGABS
   (JNIEnv *UNUSED(env), jobject UNUSED(obj), jint type) {
     return (jint) EVIOCGABS((int) type);

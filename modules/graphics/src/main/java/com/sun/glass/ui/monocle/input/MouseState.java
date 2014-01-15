@@ -102,6 +102,7 @@ public class MouseState {
         target.x = x;
         target.y = y;
         buttonsPressed.copyTo(target.buttonsPressed);
+        target.window = window;
     }
 
     public IntSet getButtonsPressed() {

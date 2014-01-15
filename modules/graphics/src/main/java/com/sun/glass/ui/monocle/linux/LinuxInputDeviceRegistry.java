@@ -127,8 +127,7 @@ public class LinuxInputDeviceRegistry extends InputDeviceRegistry {
         } else {
             BitSet keyCaps = device.getCapability("key");
             if (keyCaps != null && !keyCaps.isEmpty()) {
-                System.err.println("TODO: implement LinuxKeyboardProcessor");
-                return new LinuxInputProcessor.Logger();
+                return new LinuxKeyProcessor();
             } else {
                 return null;
             }

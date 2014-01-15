@@ -122,7 +122,7 @@ public class MX6Cursor implements NativeCursor {
             LinuxSystem.FbVarScreenInfo screen = new LinuxSystem.FbVarScreenInfo();
             fd = system.open("/dev/fb1", LinuxSystem.O_RDWR);
             if (fd == -1) {
-                throw new IOException(system.strerror(system.errno()));
+                throw new IOException(system.getErrorMessage());
             }
             system.ioctl(fd, LinuxSystem.FBIOGET_VSCREENINFO, screen.p);
             screen.setRes(screen.p, CURSOR_WIDTH, CURSOR_HEIGHT);
@@ -190,7 +190,7 @@ public class MX6Cursor implements NativeCursor {
             system.lseek(fd, 0, LinuxSystem.SEEK_SET);
             if (system.write(fd, offsetCursorByteBuffer) < 0) {
                 System.err.println("Failed to write to i.MX6 cursor: "
-                                   + system.strerror(system.errno()));
+                                   + system.getErrorMessage());
             }
         }
     }

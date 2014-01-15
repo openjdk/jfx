@@ -63,6 +63,7 @@ public class LinuxSystem {
     public native int close(long fd);
     public native long lseek(long fd, long offset, int whence);
     public native long write(long fd, ByteBuffer buf);
+    public native long read(long fd, ByteBuffer buf, int position, int limit);
 
     public static final int SEEK_SET = 0;
 
@@ -126,4 +127,9 @@ public class LinuxSystem {
     public native String dlerror();
     public native long dlsym(long handle, String symbol);
     public native int dlclose(long handle);
+
+    public String getErrorMessage() {
+        return strerror(errno());
+    }
+
 }

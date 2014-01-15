@@ -149,7 +149,6 @@ public class TouchInput {
                     dispatchPoint(window, view, eventType, oldPoint);
                 } catch (Exception e) {
                     e.printStackTrace();
-                    System.exit(0);
                 }
             }
             touches.notifyEndTouchEvent(view);

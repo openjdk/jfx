@@ -79,7 +79,7 @@ public class AbsoluteInputCapabilities {
         LinuxSystem.InputAbsInfo info = new LinuxSystem.InputAbsInfo();
         long fd = system.open(devNode.getPath(), LinuxSystem.O_RDONLY);
         if (fd == -1) {
-            throw new IOException(system.strerror(system.errno()));
+            throw new IOException(system.getErrorMessage());
         }
         Map<Integer, AbsoluteInputCapabilities> caps =
                 new HashMap<Integer, AbsoluteInputCapabilities>();

@@ -34,7 +34,9 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
+import java.nio.file.StandardOpenOption;
 import java.util.BitSet;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -58,16 +60,18 @@ public class LinuxInputDevice implements Runnable, InputDevice {
 
     private LinuxInputProcessor inputProcessor;
     private ReadableByteChannel in;
+    private long fd = -1;
     private File devNode;
     private File sysPath;
     private Map<String, BitSet> capabilities;
     private Map<Integer, AbsoluteInputCapabilities> absCaps;
     private Map<String, String> udevManifest;
-    private ByteBuffer event = ByteBuffer.allocate(LinuxEventBuffer.EVENT_STRUCT_SIZE);
+    private ByteBuffer event = ByteBuffer.allocateDirect(LinuxEventBuffer.EVENT_STRUCT_SIZE);
     private ExecutorService executor;
     private EventProcessor processor = new EventProcessor();
     private LinuxEventBuffer buffer = new LinuxEventBuffer();
     private Map<String,String> uevent;
+    private static LinuxSystem system = LinuxSystem.getLinuxSystem();
 
     /**
      * Create a new com.sun.glass.ui.monocle.input.LinuxInputDevice on the given
@@ -87,7 +91,13 @@ public class LinuxInputDevice implements Runnable, InputDevice {
         this.capabilities = SysFS.readCapabilities(sysPath);
         this.absCaps = AbsoluteInputCapabilities.getCapabilities(
                 devNode, capabilities.get("abs"));
-        this.in = new FileInputStream(devNode).getChannel();
+        fd = system.open(devNode.getPath(), LinuxSystem.O_RDONLY);
+        if (fd == -1) {
+            throw new IOException(system.getErrorMessage() + " on " + devNode);
+        }
+        // attempt to grab the device. If the grab fails, keep going.
+        int EVIOCGRAB = system.IOW('E', 0x90, 4);
+        system.ioctl(fd, EVIOCGRAB, 1);
         this.executor = NativePlatformFactory.getNativePlatform().getExecutor();
         this.uevent = SysFS.readUEvent(sysPath);
     }
@@ -118,6 +128,20 @@ public class LinuxInputDevice implements Runnable, InputDevice {
         this.inputProcessor = inputProcessor;
     }
 
+    private void readToEventBuffer() throws IOException {
+        if (in != null) {
+            in.read(event);
+        } else if (fd != -1) {
+            int position = event.position();
+            int bytesRead = (int) system.read(fd, event, position, event.limit());
+            if (bytesRead == -1) {
+                throw new IOException(system.getErrorMessage() + " on " + devNode);
+            } else {
+                event.position(position + bytesRead);
+            }
+        }
+    }
+
     @Override
     public void run() {
         if (inputProcessor == null) {
@@ -126,7 +150,7 @@ public class LinuxInputDevice implements Runnable, InputDevice {
         }
         while (true) {
             try {
-                in.read(event);
+                readToEventBuffer();
                 if (event.position() == event.limit()) {
                     event.flip();
                     synchronized (buffer) {
