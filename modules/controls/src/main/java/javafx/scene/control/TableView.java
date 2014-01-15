@@ -2142,6 +2142,8 @@ public class TableView<S> extends Control {
         }
 
         @Override public void clearAndSelect(int row, TableColumn<S,?> column) {
+            if (row < 0 || row >= getItemCount()) return;
+
             // RT-33558 if this method has been called with a given row/column
             // intersection, and that row/column intersection is the only
             // selection currently, then this method becomes a no-op.

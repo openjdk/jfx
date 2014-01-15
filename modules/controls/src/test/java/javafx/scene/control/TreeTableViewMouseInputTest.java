@@ -614,4 +614,22 @@ public class TreeTableViewMouseInputTest {
         assertFalse(sm.isSelected(4));
         assertTrue(fm.isFocused(4));
     }
+
+    @Test public void test_rt_35338() {
+        root.getChildren().clear();
+        tableView.setRoot(root);
+        tableView.getColumns().setAll(col0);
+
+        col0.setWidth(20);
+        tableView.setMinWidth(1000);
+        tableView.setMinWidth(1000);
+
+        TreeTableRow row = (TreeTableRow) VirtualFlowTestUtils.getCell(tableView, 4);
+        assertNotNull(row);
+        assertNull(row.getItem());
+        assertEquals(4, row.getIndex());
+
+        MouseEventFirer mouse = new MouseEventFirer(row);
+        mouse.fireMousePressAndRelease(1, 100, 10);
+    }
 }
