@@ -91,28 +91,12 @@ public final class MonocleWindow extends Window {
         //the window size w/o decorations
         boolean isContentSize = false;
 
-        //if true window position is also need to be update, else x&y are
-        //to be ignored
-        boolean  needToUpdatePosition = xSet || ySet;
-
         //if false, only move window
         boolean needResize = false;
 
-        if (!xSet && !ySet && w < 0 && h < 0 && cw < 0 && ch < 0) {
+        if (w < 0 && h < 0 && cw < 0 && ch < 0) {
             //nothing to do, return
             return;
-        }
-
-        if (needToUpdatePosition) {
-            if (!xSet) {
-                //no explicit request to change x, get default
-                x = getX();
-            }
-
-            if (!ySet) {
-                //no explicit request to change y, get default
-                y = getY();
-            }
         }
 
         if (w > 0) {
@@ -159,8 +143,7 @@ public final class MonocleWindow extends Window {
         }
 
         //handle move if needed
-        if (needToUpdatePosition && 
-            (getX() != x || getY() != y)) {
+        if (getX() != x || getY() != y) {
             notifyMove(x, y);       
 
             windowHasBeenUpdated = true;
