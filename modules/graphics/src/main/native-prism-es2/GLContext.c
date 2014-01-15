@@ -281,7 +281,7 @@ GLenum translateScaleFactor(jint scaleFactor) {
         case com_sun_prism_es2_GLContext_GL_SRC_ALPHA_SATURATE:
             return GL_SRC_ALPHA_SATURATE;
         default:
-            fprintf(stderr, "Error: Unknown scale factor. Returning GL_ZERO (default)");
+            fprintf(stderr, "Error: Unknown scale factor. Returning GL_ZERO (default)\n");
     }
     return GL_ZERO;
 }
@@ -538,6 +538,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nCreateProgram
             || (ctxInfo->glBindAttribLocation == NULL)
             || (ctxInfo->glLinkProgram == NULL)
             || (ctxInfo->glGetProgramiv == NULL)
+            || (ctxInfo->glGetProgramInfoLog == NULL)
             || (ctxInfo->glDetachShader == NULL)
             || (ctxInfo->glDeleteShader == NULL)
             || (ctxInfo->glDeleteProgram == NULL)) {
@@ -572,11 +573,12 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nCreateProgram
 
     if (success == GL_FALSE) {
         GLint  length;
-        ctxInfo->glGetShaderiv(shaderProgram, GL_INFO_LOG_LENGTH , &length );
+
+        ctxInfo->glGetProgramiv(shaderProgram, GL_INFO_LOG_LENGTH, &length);
         if (length) {
-            char* msg  =  (char *) malloc((length * sizeof(char)) + 1);
-            ctxInfo->glGetShaderInfoLog ( shaderProgram , length , NULL , msg );
-            printf("Shader validation log: %s\n",msg);
+            char* msg  =  (char *) malloc(length * sizeof(char));
+            ctxInfo->glGetProgramInfoLog(shaderProgram, length, NULL, msg);
+            fprintf(stderr, "Program link log: %.*s\n", length, msg);
             free(msg);
         }
 
@@ -614,6 +616,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nCompileShader
             || (ctxInfo->glShaderSource == NULL)
             || (ctxInfo->glCompileShader == NULL)
             || (ctxInfo->glGetShaderiv == NULL)
+            || (ctxInfo->glGetShaderInfoLog == NULL)
             || (ctxInfo->glDeleteShader == NULL)) {
         return 0;
     }
@@ -634,16 +637,15 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nCompileShader
 
     if (success == GL_FALSE) {
         GLint  length;
-        ctxInfo->glGetShaderiv(shaderID, GL_INFO_LOG_LENGTH , &length );
+
+        ctxInfo->glGetShaderiv(shaderID, GL_INFO_LOG_LENGTH, &length);
         if (length) {
-            char* msg  =  (char *) malloc((length * sizeof(char)) + 1);
-            ctxInfo->glGetShaderInfoLog ( shaderID , length , NULL , msg );
-            printf("Shader compile log: %s\n",msg);
+            char* msg = (char *) malloc(length * sizeof(char));
+            ctxInfo->glGetShaderInfoLog(shaderID, length, NULL, msg);
+            fprintf(stderr, "Shader compile log: %.*s\n", length, msg);
             free(msg);
         }
-    }
 
-    if (success == GL_FALSE) {
         ctxInfo->glDeleteShader(shaderID);
         return 0;
     }

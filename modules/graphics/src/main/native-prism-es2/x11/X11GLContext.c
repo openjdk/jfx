@@ -260,6 +260,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLContext_nInitialize
             dlsym(RTLD_DEFAULT, "glBufferSubData");
     ctxInfo->glGetShaderInfoLog = (PFNGLGETSHADERINFOLOGPROC)
             dlsym(RTLD_DEFAULT, "glGetShaderInfoLog");
+    ctxInfo->glGetProgramInfoLog = (PFNGLGETPROGRAMINFOLOGPROC)
+            dlsym(RTLD_DEFAULT, "glGetProgramInfoLog");
     ctxInfo->glTexImage2DMultisample = (PFNGLTEXIMAGE2DMULTISAMPLEPROC)
             dlsym(RTLD_DEFAULT,"glTexImage2DMultisample");
     ctxInfo->glRenderbufferStorageMultisample = (PFNGLRENDERBUFFERSTORAGEMULTISAMPLEPROC)
