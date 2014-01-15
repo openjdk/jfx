@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,6 +45,10 @@ import com.sun.scenario.effect.Filterable;
 import com.sun.scenario.effect.ImageData;
 import com.sun.scenario.effect.impl.prism.PrDrawable;
 import com.sun.scenario.effect.impl.prism.PrFilterContext;
+import javafx.geometry.Insets;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
+import javafx.scene.paint.Color;
 
 /**
  * Base implementation of the Node.cache and cacheHint APIs.
@@ -712,7 +716,33 @@ public class CacheFilter {
         }
 
         NGNode clip = node.getClipNode();
-        return clip != null && clip.isRectClip(BaseTransform.IDENTITY_TRANSFORM, false);
+        if (clip == null || !clip.isRectClip(BaseTransform.IDENTITY_TRANSFORM, false)) {
+            return false;
+        }
+        
+        if (node instanceof NGRegion) {
+            NGRegion region = (NGRegion) node;
+            if (!region.getBorder().isEmpty()) {
+                return false;
+            }
+            final Background background = region.getBackground();
+
+            if (!background.isEmpty()) {
+                if (!background.getImages().isEmpty()
+                        || background.getFills().size() != 1) {
+                    return false;
+                }
+                BackgroundFill fill = background.getFills().get(0);
+                javafx.scene.paint.Paint fillPaint = fill.getFill();
+                BaseBounds clipBounds = clip.getCompleteBounds(TEMP_BOUNDS, BaseTransform.IDENTITY_TRANSFORM);
+
+                return fillPaint.isOpaque() && fillPaint instanceof Color && fill.getInsets().equals(Insets.EMPTY)
+                        && clipBounds.getMinX() == 0 && clipBounds.getMinY() == 0
+                        && clipBounds.getMaxX() == region.getWidth() && clipBounds.getMaxY() == region.getHeight();
+            }
+        }
+        
+        return true;
     }
 
     /**

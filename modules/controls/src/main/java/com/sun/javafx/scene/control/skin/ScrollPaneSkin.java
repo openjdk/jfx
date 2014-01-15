@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -884,7 +884,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         }
         updateHorizontalSB();
 
-        viewRect.resize(snapSize(contentWidth), snapSize(contentHeight));
+        viewRect.resizeRelocate(snappedLeftInset(), snappedTopInset(), snapSize(contentWidth), snapSize(contentHeight));
         resetClip();
 
         if (vsbvis && hsbvis) {
@@ -1013,7 +1013,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             if (nodeWidth > contentWidth) {
                 updatePosX();
             } else {
-                viewContent.setLayoutX(snappedLeftInset());
+                viewContent.setLayoutX(0);
             }
         }
     }
@@ -1037,7 +1037,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             if (nodeHeight > contentHeight) {
                 updatePosY();
             } else {
-                viewContent.setLayoutY(snappedTopInset());
+                viewContent.setLayoutY(0);
             }
         }
     }
@@ -1045,14 +1045,14 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
     private double updatePosX() {
         final ScrollPane sp = getSkinnable();
         double x = isReverseNodeOrientation() ? (hsb.getMax() - (posX - hsb.getMin())) : posX;
-        viewContent.setLayoutX(snapPosition(snappedLeftInset() - x / (hsb.getMax() - hsb.getMin()) * (nodeWidth - contentWidth)));
+        viewContent.setLayoutX(snapPosition(- x / (hsb.getMax() - hsb.getMin()) * (nodeWidth - contentWidth)));
         sp.setHvalue(Utils.clamp(sp.getHmin(), posX, sp.getHmax()));
         return posX;
     }
 
     private double updatePosY() {
         final ScrollPane sp = getSkinnable();
-        viewContent.setLayoutY(snapPosition(snappedTopInset() - posY / (vsb.getMax() - vsb.getMin()) * (nodeHeight - contentHeight)));
+        viewContent.setLayoutY(snapPosition(- posY / (vsb.getMax() - vsb.getMin()) * (nodeHeight - contentHeight)));
         sp.setVvalue(Utils.clamp(sp.getVmin(), posY, sp.getVmax()));
         return posY;
     }
@@ -1060,7 +1060,6 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
     private void resetClip() {
         clipRect.setWidth(snapSize(contentWidth));
         clipRect.setHeight(snapSize(contentHeight));
-        clipRect.relocate(snappedLeftInset(), snappedTopInset());
     }
 
     Timeline sbTouchTimeline;
