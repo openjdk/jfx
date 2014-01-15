@@ -171,7 +171,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
                         double w = bounds.getWidth();
                         double h = bounds.getHeight();
                         Affine3D trans = TextFieldBehavior.calculateNodeToSceneTransform(textArea);
-                        String text = textArea.getText();
+                        String text = textArea.textProperty().getValueSafe();
 
                         // we need to display native text input component on the place where JFX component is drawn
                         // all parameters needed to do that are passed to native impl. here
@@ -272,7 +272,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         int start = selection.getStart();
         int end = selection.getEnd();
 
-        getUndoManager().addChange(start, textArea.getText().substring(start, end), "\n", false);
+        getUndoManager().addChange(start, textArea.textProperty().getValueSafe().substring(start, end), "\n", false);
         textArea.replaceSelection("\n");
     }
 
@@ -282,7 +282,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         int start = selection.getStart();
         int end = selection.getEnd();
 
-        getUndoManager().addChange(start, textArea.getText().substring(start, end), "\t", false);
+        getUndoManager().addChange(start, textArea.textProperty().getValueSafe().substring(start, end), "\t", false);
         textArea.replaceSelection("\t");
     }
 
@@ -338,7 +338,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
             // if the primary button was pressed
             if (e.getButton() == MouseButton.PRIMARY && !(e.isMiddleButtonDown() || e.isSecondaryButtonDown())) {
                 HitInfo hit = skin.getIndex(e);
-                int i = com.sun.javafx.scene.control.skin.Utils.getHitInsertionIndex(hit, textArea.getText());
+                int i = com.sun.javafx.scene.control.skin.Utils.getHitInsertionIndex(hit, textArea.textProperty().getValueSafe());
 //                 int i = skin.getInsertionPoint(e.getX(), e.getY());
                 final int anchor = textArea.getAnchor();
                 final int caretPosition = textArea.getCaretPosition();

@@ -320,7 +320,9 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         
         for (int i = 0; i < dragRects.size(); i++) {
             Rectangle rect = dragRects.get(i);
-            rect.visibleProperty().unbind();
+            if (rect != null) {
+                rect.visibleProperty().unbind();
+            }
         }
         dragRects.clear();
         getChildren().clear();

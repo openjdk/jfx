@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -368,7 +368,7 @@ public abstract class NGNode {
         boolean useHint = false;
 
         // If the parent is cached, try to check if the transformation is only a translation
-        if (parent != null && parent.cacheFilter != null) {
+        if (parent != null && parent.cacheFilter != null && PrismSettings.scrollCacheOpt) {
             if (hint == null) {
                 // If there's no hint created yet, this is the first setTransformMatrix
                 // call and we have nothing to compare to yet.
@@ -1281,7 +1281,7 @@ public abstract class NGNode {
             // the group exceeds the bounds of the clip on the group. Just trust me.
             region = region.deriveWithNewBounds(transformedBounds);
         }
-
+        
         // We shouldn't do anything with empty region, as we may accidentally make
         // it non empty or turn it into some nonsense (like (-1,-1,0,0) )
         if (!region.isEmpty()) {
@@ -2462,7 +2462,7 @@ public abstract class NGNode {
             }
         }
     }
-
+    
     public void applyEffect(final EffectFilter effectFilter, DirtyRegionContainer drc, DirtyRegionPool regionPool) {
         Effect effect = effectFilter.getEffect();
         EffectDirtyBoundsHelper helper = EffectDirtyBoundsHelper.getInstance();

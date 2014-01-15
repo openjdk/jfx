@@ -793,6 +793,7 @@ void addNative(Project project, String name, List<String> includeTargets) {
             }
             output = headerDir
             include(properties.javahInclude)
+            cleanTask.delete headerDir
         }
 
         def variants = properties.containsKey("variants") ? properties.variants : [""];

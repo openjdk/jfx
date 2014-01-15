@@ -82,7 +82,7 @@ class PangoGlyphLayout extends GlyphLayout {
         CoderResult result = encoder.encode(in, out, true);
         if (result.isOverflow()) {
             capacity = (int)(length * (double)encoder.maxBytesPerChar());
-            in.rewind();
+            in = CharBuffer.wrap(chars, start, length);
             out = ByteBuffer.allocateDirect(capacity);
             encoder.encode(in, out, true);
             if (PrismFontFactory.debugFonts) {

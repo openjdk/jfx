@@ -2334,6 +2334,10 @@ public class Scene implements EventTarget {
                 cam.impl_updatePeer();
                 impl_peer.setCamera((NGCamera) cam.impl_getPeer());
             }
+            
+            if (isDirty(DirtyBits.CURSOR_DIRTY)) {
+                mouseHandler.updateCursor(getCursor());
+            }
 
             clearDirty();
             inSynchronizer = false;
@@ -3727,10 +3731,7 @@ public class Scene implements EventTarget {
             // enter/exit handling
             handleEnterExit(e, tmpTargetWrapper);
 
-            Cursor cursor = target.getCursor();
-
             //deliver event to the target node
-
             if (Scene.this.dndGesture != null) {
                 Scene.this.dndGesture.processDragDetection(e);
             }
@@ -3754,9 +3755,9 @@ public class Scene implements EventTarget {
             if (!onPulse) {
                 clickGenerator.postProcess(e, target, tmpTargetWrapper);
             }
-
+            
             // handle drag and drop
-
+            
             if (!PLATFORM_DRAG_GESTURE_INITIATION && !onPulse) {
                 if (Scene.this.dndGesture != null) {
                     if (!Scene.this.dndGesture.process(e, target.getEventTarget())) {
@@ -3764,14 +3765,16 @@ public class Scene implements EventTarget {
                     }
                 }
             }
+            
+            Cursor cursor = target.getCursor();
+            if (e.getEventType() != MouseEvent.MOUSE_EXITED) {
+                if (cursor == null && hover) {
+                    cursor = Scene.this.getCursor();
+                }
 
-
-            if (cursor == null && hover) {
-                cursor = Scene.this.getCursor();
+                updateCursor(cursor);
+                updateCursorFrame();
             }
-
-            updateCursor(cursor);
-            updateCursorFrame();
 
             if (gestureStarted) {
                 pdrInProgress = true;
@@ -3865,7 +3868,7 @@ public class Scene implements EventTarget {
                 currCursor = newCursor;
             }
         }
-
+        
         public void updateCursorFrame() {
             final CursorFrame newCursorFrame =
                     (currCursor != null)

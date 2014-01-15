@@ -34,6 +34,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+
+import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -850,5 +852,26 @@ public class TabPaneTest {
 
         assertTrue(button1Focused);
 
-    }    
+    }
+
+    @Test public void test_rt_35013() {
+        SplitPane splitPane = new SplitPane();
+        splitPane.getItems().addAll(new Button("Button1"), new Button("Button2"));
+
+        TabPane tabPane = new TabPane();
+        Tab emptyTab;
+        Tab splitTab = new Tab("SplitPane Tab");
+        splitTab.setContent(splitPane);
+        tabPane.getTabs().addAll(emptyTab = new Tab("Empty Tab"), splitTab);
+
+        new StageLoader(tabPane);
+
+        tabPane.getSelectionModel().select(emptyTab);
+        Toolkit.getToolkit().firePulse();
+        assertFalse(splitPane.getParent().isVisible());
+
+        tabPane.getSelectionModel().select(splitTab);
+        Toolkit.getToolkit().firePulse();
+        assertTrue(splitPane.getParent().isVisible());
+    }
 }

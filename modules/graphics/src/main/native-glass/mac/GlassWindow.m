@@ -1322,14 +1322,12 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setIcon
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
+        GlassWindow *window = getGlassWindow(env, jPtr);
         if (jPixels != NULL)
         {
             NSImage *image = nil;
             (*env)->CallVoidMethod(env, jPixels, jPixelsAttachData, ptr_to_jlong(&image));
-            if (image != nil)
-            {
-                GlassWindow *window = getGlassWindow(env, jPtr);
-                
+            if (image != nil) {
                 // need an explicit window title for the rest of the code to work
                 if ([window->nsWindow title] == nil)
                 {
@@ -1340,7 +1338,11 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setIcon
                 [window->nsWindow setRepresentedURL:[NSURL fileURLWithPath:[window->nsWindow title]]];
                 [[window->nsWindow standardWindowButton:NSWindowDocumentIconButton] setImage:image];
                 [image release];
+            } else {
+                [[window->nsWindow standardWindowButton:NSWindowDocumentIconButton] setImage:nil];
             }
+        } else {
+            [[window->nsWindow standardWindowButton:NSWindowDocumentIconButton] setImage:nil];
         }
     }
     GLASS_POOL_EXIT;

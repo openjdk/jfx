@@ -2530,6 +2530,9 @@ is being used to size a border should also be in pixels.
 .chart {
     -fx-padding: 5px;
 }
+.chart-plot-background {
+    -fx-background-color: -fx-background;
+}
 .chart-content {
     -fx-padding: 10px;
 }

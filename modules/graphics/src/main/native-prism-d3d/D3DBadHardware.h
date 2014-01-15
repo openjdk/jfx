@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,56 +55,56 @@ static const ADAPTER_INFO badHardware[] = {
     // Reason: workaround for RT-11540
     // Clarkdale (Desktop) GMA HD Lines
     { 0x8086, 0x0042, D_VERSION(6,14,10,5337), OS_WINXP },
-    { 0x8086, 0x0042, D_VERSION(8,15,10,2302), OS_VISTA },
+    { 0x8086, 0x0042, D_VERSION(8,15,10,2302), OS_VISTA_OR_NEWER },
     // Arrandale (Mobile) GMA HD Lines
     { 0x8086, 0x0046, D_VERSION(6,14,10,5337), OS_WINXP },
-    { 0x8086, 0x0046, D_VERSION(8,15,10,2302), OS_VISTA },
+    { 0x8086, 0x0046, D_VERSION(8,15,10,2302), OS_VISTA_OR_NEWER },
     // Sandy Bridge GMA HD Lines
     { 0x8086, 0x0102, D_VERSION(6,14,10,5337), OS_WINXP },
-    { 0x8086, 0x0102, D_VERSION(8,15,10,2302), OS_VISTA },
+    { 0x8086, 0x0102, D_VERSION(8,15,10,2302), OS_VISTA_OR_NEWER },
     { 0x8086, 0x0106, D_VERSION(6,14,10,5337), OS_WINXP },
-    { 0x8086, 0x0106, D_VERSION(8,15,10,2302), OS_VISTA },
+    { 0x8086, 0x0106, D_VERSION(8,15,10,2302), OS_VISTA_OR_NEWER },
     { 0x8086, 0x0112, D_VERSION(6,14,10,5337), OS_WINXP },
-    { 0x8086, 0x0112, D_VERSION(8,15,10,2302), OS_VISTA },
+    { 0x8086, 0x0112, D_VERSION(8,15,10,2302), OS_VISTA_OR_NEWER },
     { 0x8086, 0x0116, D_VERSION(6,14,10,5337), OS_WINXP },
-    { 0x8086, 0x0116, D_VERSION(8,15,10,2302), OS_VISTA },
+    { 0x8086, 0x0116, D_VERSION(8,15,10,2302), OS_VISTA_OR_NEWER },
     { 0x8086, 0x0122, D_VERSION(6,14,10,5337), OS_WINXP },
-    { 0x8086, 0x0122, D_VERSION(8,15,10,2302), OS_VISTA },
+    { 0x8086, 0x0122, D_VERSION(8,15,10,2302), OS_VISTA_OR_NEWER },
     { 0x8086, 0x0126, D_VERSION(6,14,10,5337), OS_WINXP },
-    { 0x8086, 0x0126, D_VERSION(8,15,10,2302), OS_VISTA },
+    { 0x8086, 0x0126, D_VERSION(8,15,10,2302), OS_VISTA_OR_NEWER },
     { 0x8086, 0x010A, D_VERSION(6,14,10,5337), OS_WINXP },
-    { 0x8086, 0x010A, D_VERSION(8,15,10,2302), OS_VISTA },
+    { 0x8086, 0x010A, D_VERSION(8,15,10,2302), OS_VISTA_OR_NEWER },
 
     // Mobile Intel 4 Series Express Chipset Family
     // Reason: workaround for RT-11540
     // Eaglelake (Desktop) GMA 4500 Lines
     { 0x8086, 0x2E42, D_VERSION(6,14,10,5303), OS_WINXP },
-    { 0x8086, 0x2E42, D_VERSION(8,15,10,2302), OS_VISTA },
+    { 0x8086, 0x2E42, D_VERSION(8,15,10,2302), OS_VISTA_OR_NEWER },
     { 0x8086, 0x2E43, D_VERSION(6,14,10,5303), OS_WINXP },
-    { 0x8086, 0x2E43, D_VERSION(8,15,10,2302), OS_VISTA },
+    { 0x8086, 0x2E43, D_VERSION(8,15,10,2302), OS_VISTA_OR_NEWER },
     { 0x8086, 0x2E92, D_VERSION(6,14,10,5303), OS_WINXP },
-    { 0x8086, 0x2E92, D_VERSION(8,15,10,2302), OS_VISTA },
+    { 0x8086, 0x2E92, D_VERSION(8,15,10,2302), OS_VISTA_OR_NEWER },
     { 0x8086, 0x2E93, D_VERSION(6,14,10,5303), OS_WINXP },
-    { 0x8086, 0x2E93, D_VERSION(8,15,10,2302), OS_VISTA },
+    { 0x8086, 0x2E93, D_VERSION(8,15,10,2302), OS_VISTA_OR_NEWER },
     { 0x8086, 0x2E12, D_VERSION(6,14,10,5303), OS_WINXP },
-    { 0x8086, 0x2E12, D_VERSION(8,15,10,2302), OS_VISTA },
+    { 0x8086, 0x2E12, D_VERSION(8,15,10,2302), OS_VISTA_OR_NEWER },
     { 0x8086, 0x2E13, D_VERSION(6,14,10,5303), OS_WINXP },
-    { 0x8086, 0x2E13, D_VERSION(8,15,10,2302), OS_VISTA },
+    { 0x8086, 0x2E13, D_VERSION(8,15,10,2302), OS_VISTA_OR_NEWER },
     // Eaglelake (Desktop) GMA X4500 Lines
     { 0x8086, 0x2E32, D_VERSION(6,14,10,5303), OS_WINXP },
-    { 0x8086, 0x2E32, D_VERSION(8,15,10,2302), OS_VISTA },
+    { 0x8086, 0x2E32, D_VERSION(8,15,10,2302), OS_VISTA_OR_NEWER },
     { 0x8086, 0x2E33, D_VERSION(6,14,10,5303), OS_WINXP },
-    { 0x8086, 0x2E33, D_VERSION(8,15,10,2302), OS_VISTA },
+    { 0x8086, 0x2E33, D_VERSION(8,15,10,2302), OS_VISTA_OR_NEWER },
     { 0x8086, 0x2E22, D_VERSION(6,14,10,5303), OS_WINXP },
-    { 0x8086, 0x2E22, D_VERSION(8,15,10,2302), OS_VISTA },
+    { 0x8086, 0x2E22, D_VERSION(8,15,10,2302), OS_VISTA_OR_NEWER },
     // Eaglelake (Desktop) GMA X4500HD Lines
     { 0x8086, 0x2E23, D_VERSION(6,14,10,5303), OS_WINXP },
-    { 0x8086, 0x2E23, D_VERSION(8,15,10,2302), OS_VISTA },
+    { 0x8086, 0x2E23, D_VERSION(8,15,10,2302), OS_VISTA_OR_NEWER },
     // Cantiga (Mobile) GMA 4500MHD Lines
     { 0x8086, 0x2A42, D_VERSION(6,14,10,5303), OS_WINXP },
-    { 0x8086, 0x2A42, D_VERSION(8,15,10,2302), OS_VISTA },
+    { 0x8086, 0x2A42, D_VERSION(8,15,10,2302), OS_VISTA_OR_NEWER },
     { 0x8086, 0x2A43, D_VERSION(6,14,10,5303), OS_WINXP },
-    { 0x8086, 0x2A43, D_VERSION(8,15,10,2302), OS_VISTA },
+    { 0x8086, 0x2A43, D_VERSION(8,15,10,2302), OS_VISTA_OR_NEWER },
 
     // Intel 9XX Chipset families that are used in GMA 3XXX series
     // Reason: RT-31537 - unusable
@@ -198,15 +198,6 @@ static const ADAPTER_INFO badHardware[] = {
     // Reason: workaround for RT-14870, 15045
     { 0x1002, 0x71D4, NO_VERSION, OS_ALL},
 
-    // Nvidia FX 5200
-    // Reason: workaround for 6717988
-    { 0x10DE, 0x0322, D_VERSION(6,14,11,6921), OS_WINXP },
-
-    // Nvidia FX Go5600, Go5700
-    // Reason: workaround for 6714579
-    { 0x10DE, 0x031A, D_VERSION(6,14,11,6921), OS_WINXP },
-    { 0x10DE, 0x0347, D_VERSION(6,14,11,6921), OS_WINXP },
-
     // Nvidia Quadro NVS 110M
     // Reason: workaround for 6629891
     { 0x10DE, 0x01D7, D_VERSION(6,14,11,5665), OS_WINXP },
@@ -215,9 +206,112 @@ static const ADAPTER_INFO badHardware[] = {
     // Reason: workaround for 6653860
     { 0x10DE, 0x00FD, D_VERSION(6,14,10,6573), OS_WINXP },
 
+    // Disable a range Nvidia GeForce 5 series cards that are too old to 
+    // be usable for JavaFX
+    { 0x10DE, 0x001D, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x00FA, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x00FB, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x00FC, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0301, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0302, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0311, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0312, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0314, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x031A, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x031B, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0320, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0321, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0322, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0323, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0324, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0325, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0326, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0327, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0328, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x032C, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x032D, NO_VERSION, OS_ALL}, 
+    { 0x10DE, 0x0330, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0331, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0332, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0333, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0334, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0341, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0342, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0343, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0344, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0347, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0348, NO_VERSION, OS_ALL},
+
+    // Disable a range Nvidia GeForce 6 series cards that are too old to 
+    // be usable for JavaFX
+    { 0x10DE, 0x0040, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0041, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0042, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0043, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0044, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0045, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0046, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0047, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0048, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x00C0, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x00C1, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x00C2, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x00C3, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x00C8, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x00C9, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x00F1, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x00F2, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x00F3, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x00F4, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x00F6, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x00F9, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0140, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0141, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0142, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0143, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0144, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0145, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0146, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0147, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0148, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0149, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x014F, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0160, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0161, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0162, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0163, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0166, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0167, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0168, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0169, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0221, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0222, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0240, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0241, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0242, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0245, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0247, NO_VERSION, OS_ALL},
+
+    // Disable a range Nvidia Quadro cards (mainly 5 and 6 series core) 
+    // that are too old to be usable for JavaFX
+    { 0x10DE, 0x004D, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x004E, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x00CD, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x00CE, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x00F8, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x014C, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x014D, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x014E, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0308, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0309, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x031C, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x032B, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x0338, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x033F, NO_VERSION, OS_ALL},
+    { 0x10DE, 0x034E, NO_VERSION, OS_ALL},
+
     // Nvidia Quadro FX family
     // Reason: workaround for 6772137
-    { 0x10DE, 0x00F8, D_VERSION(6,14,10,9381), OS_WINXP },
     { 0x10DE, 0x009D, D_VERSION(6,14,10,9381), OS_WINXP },
     { 0x10DE, 0x029C, D_VERSION(6,14,10,9381), OS_WINXP },
     { 0x10DE, 0x029D, D_VERSION(6,14,10,9381), OS_WINXP },
@@ -234,16 +328,6 @@ static const ADAPTER_INFO badHardware[] = {
     { 0x10DE, 0x06F9, D_VERSION(6,14,10,9381), OS_WINXP },
     { 0x10DE, 0x05FD, D_VERSION(6,14,10,9381), OS_WINXP },
     { 0x10DE, 0x05FE, D_VERSION(6,14,10,9381), OS_WINXP },
-    { 0x10DE, 0x004E, D_VERSION(6,14,10,9381), OS_WINXP },
-    { 0x10DE, 0x00CD, D_VERSION(6,14,10,9381), OS_WINXP },
-    { 0x10DE, 0x00CE, D_VERSION(6,14,10,9381), OS_WINXP },
-    { 0x10DE, 0x014C, D_VERSION(6,14,10,9381), OS_WINXP },
-    { 0x10DE, 0x014D, D_VERSION(6,14,10,9381), OS_WINXP },
-    { 0x10DE, 0x014E, D_VERSION(6,14,10,9381), OS_WINXP },
-
-    // Nvidia GeForce 6200 TurboCache(TM)
-    // Reason: workaround for 6588384
-    { 0x10DE, 0x0161, NO_VERSION, OS_VISTA },
 
     // Old low-end Nvidia GeForce 7300 seriers cards
     // Reason: workaround for RT-15381

@@ -305,6 +305,7 @@ class WindowStage extends GlassStage {
         }
 
         if (icons == null || icons.size() < 1) { //no icons passed in
+            platformWindow.setIcon(null);
             return;
         }
 
