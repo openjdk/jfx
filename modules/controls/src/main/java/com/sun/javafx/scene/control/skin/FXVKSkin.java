@@ -54,6 +54,7 @@ import javafx.scene.input.InputEvent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.MouseButton;
 import javafx.scene.layout.Region;
 import javafx.scene.text.Text;
 import javafx.stage.Popup;
@@ -685,11 +686,15 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
             altText.setTextOrigin(VPos.TOP);
             getChildren().setAll(text, altText, icon);
             getStyleClass().setAll("key");
-            addEventHandler(MouseEvent.ANY, new EventHandler<MouseEvent>() {
+            addEventHandler(MouseEvent.MOUSE_PRESSED, new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent event) {
-                    if (event.getEventType() == MouseEvent.MOUSE_PRESSED)
+                    if (event.getButton() == MouseButton.PRIMARY)
                         press();
-                    else if (event.getEventType() == MouseEvent.MOUSE_RELEASED)
+                }
+            });
+            addEventHandler(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
+                @Override public void handle(MouseEvent event) {
+                    if (event.getButton() == MouseButton.PRIMARY)
                         release();
                 }
             });
