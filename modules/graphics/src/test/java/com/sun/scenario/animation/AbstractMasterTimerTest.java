@@ -28,6 +28,7 @@ package com.sun.scenario.animation;
 import javafx.animation.AnimationTimer;
 import com.sun.scenario.DelayedRunnable;
 import com.sun.scenario.animation.shared.PulseReceiver;
+import com.sun.scenario.animation.shared.TimerReceiver;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -123,15 +124,21 @@ public class AbstractMasterTimerTest {
                 flag.flag();
             }
         };
+
+        final TimerReceiver timerReceiver = new TimerReceiver() {
+            @Override public void handle(long l) {
+                animationTimer.handle(l);
+            }
+        };
         
         // add AnimationTimer
-        timer.addAnimationTimer(animationTimer);
+        timer.addAnimationTimer(timerReceiver);
         timer.simulatePulse();
         assertTrue(flag.isFlagged());
         
         // remove AnimationTimer
         flag.unflag();
-        timer.removeAnimationTimer(animationTimer);
+        timer.removeAnimationTimer(timerReceiver);
         timer.simulatePulse();
         assertFalse(flag.isFlagged());
     }

@@ -46,6 +46,7 @@ import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import java.security.AccessController;
+import java.security.AccessControlContext;
 import java.security.PrivilegedAction;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;
@@ -733,13 +734,19 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * @param task a non-null task to execute
      * @since JavaFX 2.1
      */
-    protected void executeTask(Task<V> task) {
-        Executor e = getExecutor();
-        if (e != null) {
-            e.execute(task);
-        } else {
-            EXECUTOR.execute(task);
-        }
+    protected void executeTask(final Task<V> task) {
+        final AccessControlContext acc = AccessController.getContext();
+        final Executor e = getExecutor() != null ? getExecutor() : EXECUTOR;
+        e.execute(new Runnable() {
+            @Override public void run() {
+                AccessController.doPrivileged(new PrivilegedAction<Void>() {
+                    @Override public Void run() {
+                        task.run();
+                        return null;
+                    }
+                }, acc);
+            }
+        });
     }
 
     /***************************************************************************
