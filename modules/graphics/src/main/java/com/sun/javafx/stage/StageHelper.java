@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,7 +37,8 @@ public class StageHelper {
     private static StageAccessor stageAccessor;
 
     public static interface StageAccessor {
-          public ObservableList<Stage> getStages();
+        public ObservableList<Stage> getStages();
+        public void initSecurityDialog(Stage stage, boolean securityDialog);
     }
 
     /**
@@ -58,6 +59,10 @@ public class StageHelper {
             }
         }
         return stageAccessor.getStages();
+    }
+
+    public static void initSecurityDialog(Stage stage, boolean securityDialog) {
+        stageAccessor.initSecurityDialog(stage, securityDialog);
     }
 
     public static void setStageAccessor(StageAccessor a) {
