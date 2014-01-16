@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -702,9 +702,11 @@ final public class CSSParser {
         }
 
         if (root.token.getType() == CSSLexer.IDENT) {
-            if ("inherit".equalsIgnoreCase(root.token.getText())) {
+            final String txt = root.token.getText();
+            if ("inherit".equalsIgnoreCase(txt)) {
                 return new ParsedValueImpl<String,String>("inherit", null);
-            } else if ("null".equalsIgnoreCase(root.token.getText())) {
+            } else if ("null".equalsIgnoreCase(txt)
+                    || "none".equalsIgnoreCase(txt)) {
                 return new ParsedValueImpl<String,String>("null", null);
             }
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,7 +49,8 @@ public final class ColorConverter extends StyleConverterImpl<String, Color> {
     @Override
     public Color convert(ParsedValue<String, Color> value, Font font) {
         String str = value.getValue();
-        if (str == null || str.isEmpty() || "null".equals(str)) {
+        if (str == null || str.isEmpty() || "null".equals(str) || "none".equals(str) ) {
+
             return null;
         }
         try {
