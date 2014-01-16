@@ -31,8 +31,9 @@ import java.util.Arrays;
 
 public final class MonocleWindowManager {
 
-    static private MonocleWindowManager instance = new MonocleWindowManager();
+    private static MonocleWindowManager instance = new MonocleWindowManager();
 
+    /** The window stack. Windows are in Z-order, from back to front. */
     private MonocleWindow[] windows = new MonocleWindow[0];
     private int nextID = 1;
 
@@ -122,7 +123,7 @@ public final class MonocleWindowManager {
     }
 
     public MonocleWindow getWindowForLocation(int x, int y) {
-        for (int i = 0; i < windows.length; i++) {
+        for (int i = windows.length - 1; i >=0 ; i--) {
             MonocleWindow w = windows[i];
             if (x >= w.getX() && y >= w.getY()
                    && x < w.getX() + w.getWidth()
