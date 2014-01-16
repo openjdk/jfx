@@ -28,6 +28,7 @@ package com.sun.glass.ui.monocle;
 import com.sun.glass.events.ViewEvent;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.View;
+import com.sun.glass.ui.Window;
 
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
@@ -91,8 +92,9 @@ public final class MonocleView extends View {
         if (getWindow() != null) {
             NativeScreen screen =
                     NativePlatformFactory.getNativePlatform().getScreen();
+            Window window = getWindow();
             screen.uploadPixels(pixels.asByteBuffer(), // TODO: asByteBuffer is inefficient
-                                x, y,
+                                x + window.getX(), y + window.getY(),
                                 pixels.getWidth(), pixels.getHeight());
         }
     }

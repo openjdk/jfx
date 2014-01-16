@@ -126,6 +126,12 @@ public final class MonocleWindow extends Window {
             //no explicit request to change height, get default
             height = getHeight();
         }
+        if (!xSet) {
+            x = getX();
+        }
+        if (!ySet) {
+            y = getY();
+        }
 
 
         //perform actions
