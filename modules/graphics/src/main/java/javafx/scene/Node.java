@@ -8047,8 +8047,9 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Sets the handler to use for this event type. There can only be one such handler
-     * specified at a time. This handler is guaranteed to be called first. This is
-     * used for registering the user-defined onFoo event handlers.
+     * specified at a time. This handler is guaranteed to be called as the last, after
+     * handlers added using {@link #addEventHandler(javafx.event.EventType, javafx.event.EventHandler)}.
+     * This is used for registering the user-defined onFoo event handlers.
      *
      * @param <T> the specific event class of the handler
      * @param eventType the event type to associate with the given eventHandler
