@@ -586,7 +586,7 @@
         <tr>
             <td>javafx.scene.text.Font</td>
             <td>font</td>
-            <td>-fx-font</td>
+            <td>-fx-font, -fx-font-family, -fx-font-size, -fx-font-weight, -fx-font-style</td>
             <td>Font.DEFAULT (12px system)</td>
         </tr>
         </tbody>
@@ -601,6 +601,12 @@
         using a JavaFX class name as a type selector is an exact match, providing
         style declarations for a Shape will not cause a Rectangle to use those
         values (unless the .css value for the Rectangle's property is "inherit").</p>
+    <p>For font inheritance, the CSS engine looks <em>only</em> for the styles in the table above. When
+        looking for a font to inherit, the search
+        terminates at any node that has a Font property that was set by the user. The user-set font is
+        inherited provided there is not an author or an inline-style that applies specifically to that node.
+        In this case, the inherited font is created from the user-set font and any parts of the applicable
+        author or in-line style.
     <h3><a name="introexamples" id="introexamples">Examples</a></h3>
     <p>Consider the following simple JavaFX application: </p>
     <p class="example">Scene scene = new Scene(new Group()); <br>
