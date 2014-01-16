@@ -47,10 +47,7 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
-import javafx.geometry.HPos;
-import javafx.geometry.Orientation;
-import javafx.geometry.Side;
-import javafx.geometry.VPos;
+import javafx.geometry.*;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.*;
@@ -66,7 +63,6 @@ import javafx.util.Duration;
 
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
-import javafx.geometry.NodeOrientation;
 
 import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import com.sun.javafx.scene.control.behavior.TwoLevelFocusPopupBehavior;
@@ -385,25 +381,21 @@ public class ContextMenuContent extends Region {
         return h;
     }
   
-//    // FIXME: This handles shifting ty when doing keyboard navigation.
-//    // By no means is this the best way to do this, but it works for now.
-//    private Node focusedItem;
-//    public Node getFocusedItem() { return focusedItem; }
-//
-//    private void setFocusedItem(Node node) {
-//        focusedItem = node;
-//        if (focusedItem != null) {
-//            // this is for moving down the menu
-//            if (focusedItem.getBoundsInParent().getMaxY() >= clipRect.getBoundsInParent().getMaxY()) {
-//                watchMouseHover = false;
-//                ty = ty - focusedItem.getBoundsInParent().getMaxY() + clipRect.getBoundsInParent().getMaxY();
-//            } else // this is for moving up the menu
-//            if (focusedItem.getBoundsInParent().getMinY() <= clipRect.getBoundsInParent().getMinY()) {
-//                watchMouseHover = false;
-//                ty = ty - focusedItem.getBoundsInParent().getMinY() + clipRect.getBoundsInParent().getMinY();
-//            }
-//        }
-//    }
+    // This handles shifting ty when doing keyboard navigation.
+    private void ensureFocusedMenuItemIsVisible(Node node) {
+        if (node == null) return;
+
+        final Bounds nodeBounds = node.getBoundsInParent();
+        final Bounds clipBounds = clipRect.getBoundsInParent();
+
+        if (nodeBounds.getMaxY() >= clipBounds.getMaxY()) {
+            // this is for moving down the menu
+            setTy(ty - nodeBounds.getMaxY() + clipBounds.getMaxY());
+        } else if (nodeBounds.getMinY() <= clipBounds.getMinY()) {
+            // this is for moving up the menu
+            setTy(ty - nodeBounds.getMinY() + clipBounds.getMinY());
+        }
+    }
     
     protected ObservableList<MenuItem> getItems() {
         return contextMenu.getItems();
@@ -461,20 +453,7 @@ public class ContextMenuContent extends Region {
         }
         return index;
     }
-//    /**
-//     * When we have a scrollable menu, and the mouse is left hovering over a menu
-//     * item when the user is scrolling using keyboard up/down arrows, as soon as
-//     * the user forces a scroll we get a new node hover event, which makes the
-//     * selection jump back to whatever is under the mouse. This prevents keyboard
-//     * navigation from working in this circumstance.
-//     *
-//     * To work around this we use this boolean. Just prior to doing a scroll
-//     * we turn off mouse hover watching. When this is false, we don't look for
-//     * new hoveredItem's. As soon as the mouse moves over the skin we start
-//     * watching for hover events again.
-//     */
-//    private boolean watchMouseHover = true;
-   
+
     private void initialize() {
         // keyboard navigation support. Initially focus goes to this ContextMenu,
         // but when the user first hits the up or down arrow keys, the focus
@@ -628,13 +607,6 @@ public class ContextMenuContent extends Region {
                 }
             }
         });
-
-//        addEventFilter(MouseEvent.MOUSE_MOVED, new EventHandler<MouseEvent>() {
-//            @Override
-//            public void handle(MouseEvent event) {
-//                watchMouseHover = true;
-//            }
-//        });
     }
 
     private void processLeftKey(KeyEvent ke) {
@@ -710,18 +682,14 @@ public class ContextMenuContent extends Region {
         for (int i = from; i < itemsContainer.getChildren().size(); i++) {
             Node n = itemsContainer.getChildren().get(i);
             if (n instanceof MenuItemContainer) {
-                return(i);
-            } else {
-                continue;
+                return i;
             }
         }
         // find from top
         for (int i = 0; i < from; i++) {
             Node n = itemsContainer.getChildren().get(i);
             if (n instanceof MenuItemContainer) {
-                return(i);
-            } else {
-                continue;
+                return i;
             }
         }
         return -1; // should not happen
@@ -736,11 +704,15 @@ public class ContextMenuContent extends Region {
             currentFocusedIndex = findNext(currentFocusedIndex + 1);
         } else if (currentFocusedIndex == -1 || currentFocusedIndex == (itemsContainer.getChildren().size() - 1)) {
             currentFocusedIndex = findNext(0);
-        } 
+        }
+
         // request focus on the next sibling which currentFocusIndex points to
         if (currentFocusedIndex != -1) {
-            ((MenuItemContainer)(itemsContainer.getChildren().get(currentFocusedIndex))).requestFocus();
+            Node n = itemsContainer.getChildren().get(currentFocusedIndex);
+            n.requestFocus();
+            ensureFocusedMenuItemIsVisible(n);
         }
+
     }
     
     /*
@@ -751,16 +723,12 @@ public class ContextMenuContent extends Region {
             Node n = itemsContainer.getChildren().get(i);
             if (n instanceof MenuItemContainer) {
                 return(i);
-            } else {
-                continue;
             }
         }
         for (int i = itemsContainer.getChildren().size() - 1 ; i > from; i--) {
             Node n = itemsContainer.getChildren().get(i);
             if (n instanceof MenuItemContainer) {
                 return(i);
-            } else {
-                continue;
             }
         }
         return -1;
@@ -775,11 +743,14 @@ public class ContextMenuContent extends Region {
             currentFocusedIndex = findPrevious(currentFocusedIndex - 1);
         } else if(currentFocusedIndex == -1 || currentFocusedIndex == 0) {
             currentFocusedIndex = findPrevious(itemsContainer.getChildren().size() - 1);
-        } 
+        }
+
         // request focus on the previous sibling which currentFocusIndex points to
         if (currentFocusedIndex != -1) {
-            ((MenuItemContainer)(itemsContainer.getChildren().get(currentFocusedIndex))).requestFocus();
-         }
+            Node n = itemsContainer.getChildren().get(currentFocusedIndex);
+            n.requestFocus();
+            ensureFocusedMenuItemIsVisible(n);
+        }
     }
 
     /*
@@ -1036,10 +1007,6 @@ public class ContextMenuContent extends Region {
             upDownArrow.resize(w, h);
             positionInArea(upDownArrow, 0, 0, getWidth(), getHeight(),
                     /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
-        }
-
-        public Region getArrowRegion() {
-            return upDownArrow;
         }
 
         private void adjust() {
