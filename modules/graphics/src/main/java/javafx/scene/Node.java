@@ -8671,14 +8671,11 @@ public abstract class Node implements EventTarget, Styleable {
                 subScene.notifyParentsOfInvalidatedCSS();
             }
         }
-        Node _parent = getParent();
-        if (_parent == null) _parent = getClipParent();
-
+        Parent _parent = getParent();
         while (_parent != null) {
             if (_parent.cssFlag == CssFlags.CLEAN) {
                 _parent.cssFlag = CssFlags.DIRTY_BRANCH;
                 _parent = _parent.getParent();
-                if (_parent == null) _parent = getClipParent();
             } else {
                 _parent = null;
             }
@@ -8719,17 +8716,13 @@ public abstract class Node implements EventTarget, Styleable {
                 break;
             case DIRTY_BRANCH:
             {
-                if (this instanceof Parent) {
-                    Parent me = (Parent)this;
-                    // clear the flag first in case the flag is set to something
-                    // other than clean by downstream processing.
-                    me.cssFlag = CssFlags.CLEAN;
-                    List<Node> children = me.getChildren();
-                    for (int i=0, max=children.size(); i<max; i++) {
-                        children.get(i).processCSS(cacheHint);
-                    }
-                } else if (miscProperties != null && miscProperties.getClip() != null) {
-                    miscProperties.getClip().processCSS(cacheHint);
+                Parent me = (Parent)this;
+                // clear the flag first in case the flag is set to something
+                // other than clean by downstream processing.
+                me.cssFlag = CssFlags.CLEAN;
+                List<Node> children = me.getChildren();
+                for (int i=0, max=children.size(); i<max; i++) {
+                    children.get(i).processCSS(cacheHint);
                 }
                 break;
             }
@@ -8894,10 +8887,6 @@ public abstract class Node implements EventTarget, Styleable {
         // Transition to the new state and apply styles
         if (styleHelper != null) {
                 styleHelper.transitionToState(this, flag);
-        }
-
-        if (miscProperties != null && miscProperties.getClip() != null) {
-            miscProperties.getClip().impl_processCSS(cacheHint);
         }
     }
 
