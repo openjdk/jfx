@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -699,30 +699,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                     }
 
                     if (isSelectingTab) {
-                        double offset = 0;
-                        double selectedTabOffset = 0;
-                        double selectedTabWidth = 0;
-                        double previousSelectedTabOffset = 0;
-                        double previousSelectedTabWidth = 0;
-                        for (Node node: getChildren()) {
-                            TabHeaderSkin tabHeader = (TabHeaderSkin)node;
-                            // size and position the header relative to the other headers
-                            double tabHeaderPrefWidth = snapSize(tabHeader.prefWidth(-1));
-                            if (selectedTab != null && selectedTab.equals(tabHeader.getTab())) {
-                                selectedTabOffset = offset;
-                                selectedTabWidth = tabHeaderPrefWidth;
-                            }
-                            if (previousSelectedTab != null && previousSelectedTab.equals(tabHeader.getTab())) {
-                                previousSelectedTabOffset = offset;
-                                previousSelectedTabWidth = tabHeaderPrefWidth;
-                            }
-                            offset+=tabHeaderPrefWidth;
-                        }
-                        if (selectedTabOffset > previousSelectedTabOffset) {
-                            scrollToSelectedTab(selectedTabOffset + selectedTabWidth, previousSelectedTabOffset);
-                        } else {
-                            scrollToSelectedTab(selectedTabOffset, previousSelectedTabOffset);
-                        }
+                        ensureSelectedTabIsVisible();
                         isSelectingTab = false;
                     }
 
@@ -734,10 +711,12 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                     updateHeaderClip();
                     for (Node node : getChildren()) {
                         TabHeaderSkin tabHeader = (TabHeaderSkin)node;
+
                         // size and position the header relative to the other headers
                         double tabHeaderPrefWidth = snapSize(tabHeader.prefWidth(-1) * tabHeader.animationTransition.get());
                         double tabHeaderPrefHeight = snapSize(tabHeader.prefHeight(-1));
                         tabHeader.resize(tabHeaderPrefWidth, tabHeaderPrefHeight);
+
                         // This ensures that the tabs are located in the correct position
                         // when there are tabs of differing heights.
                         double startY = tabPosition.equals(Side.BOTTOM) ?
@@ -851,35 +830,6 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             return null;
         }
 
-        // ----- Code for scrolling the tab header area based on the user clicking
-        // the left/right arrows on the control buttons tab
-//        private Timeline scroller;
-//
-//        private void createScrollTimeline(final double val) {
-//            scroll(val);
-//            scroller = new Timeline();
-//            scroller.setCycleCount(Timeline.INDEFINITE);
-//            scroller.getKeyFrames().add(new KeyFrame(Duration.millis(150), new EventHandler<ActionEvent>() {
-//                @Override public void handle(ActionEvent event) {
-//                    scroll(val);
-//                }
-//            }));
-//        }
-//
-//        // ----- End of control button scrolling support
-//        private void scroll(double d) {
-//            if (tabsFit()) {
-//                return;
-//            }
-//            Side tabPosition = getSkinnable().getSide();
-//            double headerPrefWidth = snapSize(headersRegion.prefWidth(-1));
-//            double controlTabWidth = snapSize(controlButtons.prefWidth(-1));
-//            double max = getWidth() - headerPrefWidth - controlTabWidth;
-//            double delta = tabPosition.equals(Side.LEFT) || tabPosition.equals(Side.BOTTOM) ? -d : d;
-//            double newOffset = getScrollOffset() + delta;
-//            setScrollOffset(newOffset >= 0 ? 0.0F : (newOffset <= max ? max : newOffset));
-//        }
-
         private boolean tabsFit() {
             double headerPrefWidth = snapSize(headersRegion.prefWidth(-1));
             double controlTabWidth = snapSize(controlButtons.prefWidth(-1));
@@ -887,21 +837,46 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             return visibleWidth < getWidth();
         }
 
-        private void scrollToSelectedTab(double selected, double previous) {
-            if (selected > previous) {
-                // needs to scroll to the left
-                double distance = selected - previous;
-                double offset = (previous + getScrollOffset()) + distance;
-                double width = snapSize(getWidth()) - snapSize(controlButtons.prefWidth(-1)) - firstTabIndent() - SPACER;
-                if (offset > width) {
-                    setScrollOffset(getScrollOffset() -(offset - width));
+        private void ensureSelectedTabIsVisible() {
+            // work out the visible width of the tab header
+            double tabPaneWidth = snapSize(getSkinnable().getWidth());
+            double controlTabWidth = snapSize(controlButtons.getWidth());
+            double visibleWidth = tabPaneWidth - controlTabWidth - firstTabIndent() - SPACER;
+
+            // and get where the selected tab is in the header area
+            double offset = 0.0;
+            double selectedTabOffset = 0.0;
+            double selectedTabWidth = 0.0;
+            for (Node node : headersRegion.getChildren()) {
+                TabHeaderSkin tabHeader = (TabHeaderSkin)node;
+
+                double tabHeaderPrefWidth = snapSize(tabHeader.prefWidth(-1));
+
+                if (selectedTab != null && selectedTab.equals(tabHeader.getTab())) {
+                    selectedTabOffset = offset;
+                    selectedTabWidth = tabHeaderPrefWidth;
                 }
-            } else {
-                // needs to scroll to the right
-                double offset = selected + getScrollOffset();
-                if (offset < 0) {
-                    setScrollOffset(getScrollOffset() - offset);
-                }
+                offset += tabHeaderPrefWidth;
+            }
+
+            final double scrollOffset = getScrollOffset();
+            final double selectedTabStartX = selectedTabOffset;
+            final double selectedTabEndX = selectedTabOffset + selectedTabWidth;
+
+            final double visibleAreaEndX = visibleWidth;
+
+            if (selectedTabStartX < -scrollOffset) {
+                setScrollOffset(-selectedTabStartX);
+            } else if (selectedTabEndX > (visibleAreaEndX - scrollOffset)) {
+                setScrollOffset(visibleAreaEndX - selectedTabEndX);
+            }
+
+            // need to make sure the right-most tab is attached to the
+            // right-hand side of the tab header (e.g. if the tab header area width
+            // is expanded), and if it isn't modify the scroll offset to bring
+            // it into line. See RT-35194 for a test case.
+            if ((visibleWidth - scrollOffset) > offset) {
+                setScrollOffset(visibleWidth - offset);
             }
         }
 
@@ -960,10 +935,12 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             }
             
             updateHeaderClip();
+            headersRegion.requestLayout();
 
             // RESIZE CONTROL BUTTONS
             double btnWidth = snapSize(controlButtons.prefWidth(-1));
             controlButtons.resize(btnWidth, controlButtons.getControlTabHeight());
+
             // POSITION TABS
             headersRegion.resize(headersPrefWidth, headersPrefHeight);
 
