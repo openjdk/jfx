@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,23 +25,21 @@
 
 package hello;
 
-import com.sun.javafx.css.Rule;
-import com.sun.javafx.css.Selector;
-import com.sun.javafx.css.SimpleSelector;
-import com.sun.javafx.css.Stylesheet;
-import com.sun.javafx.css.parser.CSSParser;
-import javafx.application.Application;
-import javafx.geometry.Pos;
-import javafx.scene.Scene;
-import javafx.scene.control.Label;
-import javafx.scene.layout.VBox;
-import javafx.stage.Stage;
 
-import java.io.IOException;
-import java.net.URL;
+import javafx.application.Application;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.scene.Scene;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ListView;
+import javafx.scene.control.Tooltip;
+import javafx.stage.Stage;
+import javafx.util.Callback;
+
 
 /**
- * Different stroke and image borders around a Label
+ * Different stroke and image borders shown in a ListView.
+ * See hello.css for styles pertaining to .hello-label-borders
  */
 public class HelloLabelBorders  extends Application {
 
@@ -52,44 +50,164 @@ public class HelloLabelBorders  extends Application {
         Application.launch(HelloLabelBorders.class, args);
     }
 
+    private static class LabelListCell extends ListCell<Data> {
+
+        LabelListCell() {
+            super();
+            super.setTooltip(tooltip);
+        }
+
+        @Override
+        protected void updateItem(Data item, boolean empty) {
+            super.updateItem(item, empty);
+
+            if (empty) {
+                tooltip.setText(null);
+            } else {
+                super.setText(item.getText());
+                super.setStyle(item.getStyle());
+                tooltip.setText(item.getStyle());
+            }
+        }
+
+        private final Tooltip tooltip = new Tooltip();
+    }
+
+    // This is the data type on which the ListView operates.
+    private static class Data {
+
+        Data(String text, String style) {
+            this.text = text;
+            this.style = style;
+        }
+
+        String getText() {
+            return text;
+        }
+
+        String getStyle() {
+            return style;
+        }
+
+        private final String text;
+        private final String style;
+    }
+
+    // ListView operates on an ObservableList. The newline characters in the styles are
+    // there just to make the tooltip wrap where it is most logic.  
+    private static ObservableList<Data> data = FXCollections.observableArrayList(
+            new Data(
+                    "no-border",
+                    "-fx-border-color: null;"
+            ),
+            new Data(
+                    "border-color",
+                    "-fx-border-color: green blue cyan red;"
+            ),
+            new Data(
+                    "border-inset",
+                    "-fx-border-color: red blue green cyan;\n" +
+                            "-fx-border-radius: 5;\n" +
+                            "-fx-border-insets: 5;"
+            ),
+            new Data(
+                    "border-style-dashed",
+                    "-fx-border-style: dashed;\n" +
+                            "-fx-border-insets: 0, -3;\n" +
+                            "-fx-border-radius: 5;"
+            ),
+            new Data(
+                    "border-style-dotted",
+                    "-fx-border-color: red blue green cyan;\n" +
+                            "-fx-border-style: dotted;\n" +
+                            "-fx-border-radius: 5;"
+            ),
+            new Data(
+                    "border-width",
+                    "-fx-border-width: 1 2 1 2;\n" +
+                            "-fx-border-color: red;"
+            ),
+            new Data(
+                    "border-width-dashed",
+                    "-fx-border-width: 1 3 5 1;\n" +
+                            "-fx-border-color: red blue green cyan;\n" +
+                            "-fx-border-style: dashed;"
+            ),
+            new Data(
+                    "border-width-dotted",
+                    "-fx-border-width: 1 3 5 1;\n" +
+                            "-fx-border-color: red blue green cyan;\n" +
+                            "-fx-border-style: dotted;"
+            ),
+            new Data(
+                    "image-border",
+                    "-fx-border-image-source: url('/hello/border.png');\n" +
+                            "-fx-border-image-slice: 28;\n" +
+                            "-fx-border-image-width: 9;"
+            ),
+            new Data(
+                    "image-border-insets",
+                    "-fx-border-image-source: url('/hello/heart_16.png');\n" +
+                            "-fx-border-image-width: 10;\n" +
+                            "-fx-border-image-insets: 1 5 10 15;"
+            ),
+            new Data(
+                    "image-border-no-repeat",
+                    "-fx-border-image-source: url('/hello/border.png');\n" +
+                            "-fx-border-image-repeat: no-repeat;\n" +
+                            "-fx-border-image-slice: 28;\n" +
+                            "-fx-border-image-width: 9;"
+            ),
+            new Data(
+                    "image-border-repeat-x",
+                    "-fx-border-image-source: url('/hello/border.png');\n" +
+                            "-fx-border-image-repeat: repeat-x;\n" +
+                            "-fx-border-image-slice: 28;\n" +
+                            "-fx-border-image-width: 9;"
+            ),
+            new Data(
+                    "image-border-repeat-y",
+                    "-fx-border-image-source: url('/hello/border.png');\n" +
+                            "-fx-border-image-repeat: repeat-y;\n" +
+                            "-fx-border-image-slice: 28;\n" +
+                            "-fx-border-image-width: 9;"
+            ),
+            new Data(
+                    "image-border-round",
+                    "-fx-border-image-source: url('/hello/border.png');\n" +
+                            "-fx-border-image-repeat: round;\n" +
+                            "-fx-border-image-slice: 28;\n" +
+                            "-fx-border-image-width: 9;"
+            ),
+            new Data(
+                    "image-border-space",
+                    "-fx-border-image-source: url('/hello/border.png');\n" +
+                            "-fx-border-image-repeat: space;\n" +
+                            "-fx-border-image-slice: 28;\n" +
+                            "-fx-border-image-width: 9;"
+            )
+    );
+
     @Override
     public void start(Stage primaryStage) {
 
-        VBox root = new VBox(10);
-        root.setAlignment(Pos.CENTER);
+        ListView<Data> listView = new ListView<>(data);
 
-        Scene scene = new Scene(root, 400, 600);
+        // A CSS style-class. See hello.css for its use.
+        listView.getStyleClass().add("hello-label-borders");
 
-        root.getChildren().add(new Label("no-border"));
-
-        try {
-            URL url = HelloLabelBorders.class.getResource("LabelBorders.css");
-            System.out.println(url.toExternalForm());
-
-            scene.getStylesheets().add(url.toExternalForm());
-
-            Stylesheet ss = CSSParser.getInstance().parse(url);
-            for (Rule rule : ss.getRules()) {
-                for(Selector selector : rule.getSelectors()) {
-                    if (selector instanceof SimpleSelector) {
-
-                        SimpleSelector simpleSelector = (SimpleSelector)selector;
-                        String id = simpleSelector.getId();
-
-                        System.out.println("add Label \"" + id + "\"");
-
-                        Label lbl = new Label(id);
-                        lbl.setId(id);
-                        root.getChildren().add(lbl);
-                    }
-                }
+        // We want the ListCells in our ListView to be LabelListCells.
+        listView.setCellFactory(new Callback<ListView<Data>, ListCell<Data>>() {
+            @Override
+            public ListCell<Data> call(ListView param) {
+                return new LabelListCell();
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        });
+
+        Scene scene = new Scene(listView);
+        scene.getStylesheets().add("/hello/hello.css");
 
         primaryStage.setScene(scene);
         primaryStage.show();
-
     }
 }

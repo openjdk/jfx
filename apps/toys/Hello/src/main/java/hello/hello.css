@@ -65,3 +65,15 @@
 .date-cell.weekend {
     -fx-text-fill: red;
 }
+
+/*
+ * In HelloLabelBorders, the borders are set on the ListCell.
+ * These styles push the border in from the edges of the ListCell
+ * which makes the border easier to distinguish.
+ */
+.hello-label-borders .list-cell {
+    -fx-border-insets: 5px;
+    -fx-border-image-insets: 5px;
+    -fx-padding: 10 5 10 5;
+    -fx-alignment: center;
+}
