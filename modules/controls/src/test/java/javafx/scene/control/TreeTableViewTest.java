@@ -3057,7 +3057,7 @@ public class TreeTableViewTest {
         group2.getChildren().addAll(employee1, employee2);
 
         TreeTableColumn<String, String> nameColumn = new TreeTableColumn<>("Name");
-        nameColumn.setCellValueFactory(new TreeItemPropertyValueFactory<>("name"));
+        nameColumn.setCellValueFactory(new TreeItemPropertyValueFactory<String, String>("name"));
         view.getColumns().add(nameColumn);
 
         view.expandedItemCountProperty().addListener(new ChangeListener<Number>() {
