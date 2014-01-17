@@ -1046,14 +1046,14 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         final ScrollPane sp = getSkinnable();
         double x = isReverseNodeOrientation() ? (hsb.getMax() - (posX - hsb.getMin())) : posX;
         viewContent.setLayoutX(snapPosition(- x / (hsb.getMax() - hsb.getMin()) * (nodeWidth - contentWidth)));
-        sp.setHvalue(Utils.clamp(sp.getHmin(), posX, sp.getHmax()));
+        if (!sp.hvalueProperty().isBound()) sp.setHvalue(Utils.clamp(sp.getHmin(), posX, sp.getHmax()));
         return posX;
     }
 
     private double updatePosY() {
         final ScrollPane sp = getSkinnable();
         viewContent.setLayoutY(snapPosition(- posY / (vsb.getMax() - vsb.getMin()) * (nodeHeight - contentHeight)));
-        sp.setVvalue(Utils.clamp(sp.getVmin(), posY, sp.getVmax()));
+        if (!sp.vvalueProperty().isBound()) sp.setVvalue(Utils.clamp(sp.getVmin(), posY, sp.getVmax()));
         return posY;
     }
 
