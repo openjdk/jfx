@@ -9,7 +9,7 @@
               JavaFX GUI development, JavaFX application development">
     <meta http-equiv="content-type" content="text/html; charset=UTF-8">
     <title>JavaFX CSS Reference Guide</title>
-    <style>
+    <style type="text/css">
             body {
                 font-family: Helvetica, Arial, sans-serif;
                 font-size: 14px;
@@ -201,7 +201,7 @@
           <li><a href="#typeangle">&lt;angle&gt;</a></li>
           <li><a href="#typepoint">&lt;point&gt;</a></li>
           <li><a href="#typecolorstop">&lt;color-stop&gt;</a></li>
-          <li><a href="#typeuri">&lt;uri&gt;</a></li>
+          <li><a href="#typeurl">&lt;uri&gt;</a></li>
           <li><a href="#typeeffect">&lt;effect&gt;</a></li>
           <li><a href="#typefont">&lt;font&gt;</a></li>
           <li><a href="#typepaint">&lt;paint&gt;</a></li>
@@ -545,7 +545,7 @@
         specifying fonts is not supported. There is no equivalent for the
         font-variant property.</p>
     <p>JavaFX CSS uses the HSB color model instead of the HSL color model. </p>
-    If a property of a node is initialized by calling the set method of the
+    <p>If a property of a node is initialized by calling the set method of the
     property, the CSS implementation will see this as a user set value and the
     value will not be overwritten by a style from a user agent style
     sheet.</p>
@@ -601,7 +601,7 @@
         using a JavaFX class name as a type selector is an exact match, providing
         style declarations for a Shape will not cause a Rectangle to use those
         values (unless the .css value for the Rectangle's property is "inherit").</p>
-    <p>For font inheritance, the CSS engine looks <em>only</em> for the styles in the table above. When
+    <p>For font inheritance, the CSS engine looks <span style="font-style:italic;">only</span> for the styles in the table above. When
         looking for a font to inherit, the search
         terminates at any node that has a Font property that was set by the user. The user-set font is
         inherited provided there is not an author or an inline-style that applies specifically to that node.
@@ -620,7 +620,7 @@
         test.css contains the following: </p>
     <p class="example">.my-rect { -fx-fill: red; }</p>
     <p>the rectangle will be red instead of black: </p>
-    <p><img src="cssexample1.png"></p>
+    <p><img src="cssexample1.png" alt="A rectangle with red fill"></p>
     <p>If test.css contains the following: </p>
     <p class="example">.my-rect {<br>
         &nbsp;&nbsp;&nbsp; -fx-fill: yellow;<br>
@@ -633,7 +633,7 @@
     </p>
     <p>the result will be a yellow rectangle with a nicely dashed green border:
     </p>
-    <p><img src="cssexample2.png"></p>
+    <p><img src="cssexample2.png" alt="A rectangle with yellow fill and a green, dashed border"></p>
     <h3><a name="introparserwarnings" id="introparserwarnings">Understanding
         Parser Warnings</a></h3>
     <p>When the JavaFX CSS parser encounters a syntax error, a warning message
@@ -755,16 +755,16 @@
       values are used, then the distance value for first and last stop in the
       series must be specified. This restriction may be removed in a future
       release.</p>
-    <p>"<font color="#009900">red, white 70%, blue</font>" is valid since the
+    <p>"<span style="color: #009900; ">red, white 70%, blue</span>" is valid since the
       distance for red and blue is assumed to be 0% and 100%, respectively.</p>
-    <p>"<font color="#009900">red 10, white, blue 90</font>" is valid. Because
+    <p>"<span style="color: #009900; ">red 10, white, blue 90</span>" is valid. Because
       distance for red and blue is 10 and 90, respectively, the distance for
       white can be calculated.</p>
-    <p>"<font color="#009900">red, white 70, blue</font>" is <em>not</em> valid
+    <p>"<span style="color: #009900; ">red, white 70, blue</span>" is <span style="font-style:italic;">not</span> valid
       since distance units do not agree.</p>
-    <p>"<font color="#009900">red, white, blue</font>" is valid. The stops are
+    <p>"<span style="color: #009900; ">red, white, blue</span>" is valid. The stops are
       distributed evenly between 0% and 100%.</p>
-    <h3><a name="typeuri" id="typeuri">&lt;uri&gt;</a></h3>
+    <h3><a name="typeurl" id="typeurl">&lt;uri&gt;</a></h3>
     <p class="grammar">url ( [\"\']? &lt;address&gt; [\"\']? )</p>
     <p><span class="grammar">&lt;address&gt;</span> can be an absolute URI, for
       example:</p>
@@ -919,16 +919,16 @@
     <p class="grammar"><a href="#typecolor" class="typelink">&lt;color&gt;</a> |
       <a href="#typelinear-gradient" class="typelink">&lt;linear-gradient&gt;</a> |
       <a href="#typeradial-gradient" class="typelink">&lt;radial-gradient&gt;</a> |
-      <a href="#typeimage-pattern" class="typelink">&lt;image-pattern&gt;</a></p>
+      <a href="#typeimage-pattern" class="typelink">&lt;image-pattern&gt;</a>
       <a href="#typeimage-pattern" class="typelink">&lt;repeating-image-pattern&gt;</a></p>
     <h4>Linear Gradients<span class="grammar" style="font-size: smaller;">
             <a name="typelinear-gradient" id="typelinear-gradient">&lt;linear-gradient&gt;</a>
         </span></h4>
     <p class="grammar">linear-gradient( [ [from <a href="#typepoint" class="typelink">&lt;point&gt;</a>
       to <a href="#typepoint" class="typelink">&lt;point&gt;</a>] | [ to
-      &lt;side-or-corner&gt;], ]? [ [ repeat | reflect ], ]? <a href="#color-stop"
+      &lt;side-or-corner&gt;], ]? [ [ repeat | reflect ], ]? <a href="#typecolorstop"
         class="typelink">&lt;color-stop&gt;</a>[,
-      <a href="#color-stop" class="typelink">&lt;color-stop&gt;</a>]+) <br>
+      <a href="#typecolorstop" class="typelink">&lt;color-stop&gt;</a>]+) <br>
       <br>
       where &lt;side-or-corner&gt; = [left | right] || [top | bottom] </p>
     <p> </p>
@@ -956,13 +956,13 @@
       color gradient with white underneath for the rest of the filled area.</p>
     <p class="example">linear-gradient(from 0px 0px to 0px 50px, gray, darkgray
       50%, dimgray 99%, white)</p>
-    <p><font color="#af0000">The following syntax for linear gradient does not
+    <p><span style="color: #af0000; ">The following syntax for linear gradient does not
         conform to the CSS grammar and is deprecated in JavaFX 2.0. The JavaFX
         2.0 CSS parser supports the syntax but this support may be removed in
-        later releases.</font></p>
-    <p class="grammar"><font color="#af0000">linear (&lt;size&gt;, &lt;size&gt;)
+        later releases.</span></p>
+    <p class="grammar"><span style="color: #af0000; ">linear (&lt;size&gt;, &lt;size&gt;)
         to (&lt;size&gt;, &lt;size&gt;) stops [ (&lt;number&gt;,&lt;color&gt;)
-        ]+ [ repeat | reflect ]?</font></p>
+        ]+ [ repeat | reflect ]?</span></p>
     <h4>Radial Gradients <span class="grammar" style="font-size: smaller;">
             <a name="typeradial-gradient" id="typeradial-gradient">&lt;radial-gradient&gt;</a>
         </span></h4>
@@ -983,14 +983,14 @@
     <p class="example">radial-gradient(radius 100%, red, darkgray, black)</p>
     <p class="example">radial-gradient(focus-angle 45deg, focus-distance 20%,
       center 25% 25%, radius 50%, reflect, gray, darkgray 75%, dimgray)</p>
-    <p><font color="#af0000">The following syntax for radial gradient does not
+    <p><span style="color: #af0000; ">The following syntax for radial gradient does not
         conform to the CSS grammar and is deprecated in JavaFX 2.0. The JavaFX
         2.0 CSS parser supports the syntax but this support may be removed in
-        later releases.</font></p>
-    <p class="grammar"><font color="#af0000">radial [focus-angle &lt;number&gt;
+        later releases.</span></p>
+    <p class="grammar"><span style="color: #af0000; ">radial [focus-angle &lt;number&gt;
         | &lt;number&gt; ] ]? [ focus-distance &lt;size&gt; ]? [ center
         &lt;size,size&gt; ]? &lt;size&gt; stops [ ( &lt;number&gt;,
-        &lt;color&gt; ) ]+ [ repeat | reflect ]?</font></p>
+        &lt;color&gt; ) ]+ [ repeat | reflect ]?</span></p>
     <h4>Image Paint <span class="grammar" style="font-size: smaller;">
             <a name="typeimage-pattern" id="typeimage-pattern">&lt;image-pattern&gt;</a>
         </span></h4>
@@ -1005,9 +1005,9 @@
     <span class="grammar"><a href="#typestring" class="typelink">&lt;string&gt;</a></span>
       The URL of the image.<br>
       <span class="grammar"><a href="#typesize" class="typelink">&lt;size&gt;</a></span>
-      The <i>x</i> origin of the anchor rectangle.<br>
+      The <span style="font-style:italic;">x</span> origin of the anchor rectangle.<br>
       <span class="grammar"><a href="#typesize" class="typelink">&lt;size&gt;</a></span>
-      The <i>y</i> origin of the anchor rectangle.<br>
+      The <span style="font-style: italic;">y</span> origin of the anchor rectangle.<br>
       <span class="grammar"><a href="#typesize" class="typelink">&lt;size&gt;</a></span>
       The width of the anchor rectangle.<br>
       <span class="grammar"><a href="#typesize" class="typelink">&lt;size&gt;</a></span>
@@ -1026,7 +1026,6 @@
     <p>Related, there is the <code>repeating-image-pattern</code> function which is a shorthand
     for producing tiled image based fills. It is equivalent to
     <p class="example">image-pattern("images/Duke.png", 0, 0, imageWidth, imageHeight, false)</p>
-    </p>
 
     <p class="grammar">repeating-image-pattern(<a href="#typestring" class="typelink">&lt;string&gt;</a>)</p>
     <p>The only parameter is the uri of the image. Following is an example of the use of image-pattern:</p>
@@ -1660,9 +1659,9 @@
       , <a href="#typenumber" class="typelink">&lt;number&gt;</a>% , <a href="#typenumber"
         class="typelink">&lt;number&gt;</a>
       )</p>
-    <p>The first number is <em>hue</em>, a number in the range 0 to 360
+    <p>The first number is <span style="font-style:italic;">hue</span>, a number in the range 0 to 360
       degrees. The second number is <em>saturation,</em> a percentage in the
-      range 0% to 100%. The third number is <em>brightness</em>, also a
+      range 0% to 100%. The third number is <span style="font-style:italic;">brightness</span>, also a
       percentage in the range 0% to 100%. The hsba(...) form takes a fourth
       parameter at the end which is a alpha value in the range 0.0 to 1.0,
       specifying completely transparent and completely opaque, respectively.</p>
@@ -1708,15 +1707,15 @@
       black. If we were to change the background color to black or dark grey,
       the brightness would be less than 50%, giving an -fx-text-fill value of
       white.</p>
-    <p><font color="#af0000">The following syntax for ladder does not
+    <p><span style="color: #af0000; ">The following syntax for ladder does not
         conform to the CSS grammar and is deprecated in JavaFX 2.0. The JavaFX
         2.0 CSS parser supports the syntax but this support may be removed in
-        later releases.</font></p>
-    <p class="grammar"><font color="#af0000">ladder(<a href="#typecolor" class="typelink">&lt;color&gt;</a>)
+        later releases.</span></p>
+    <p class="grammar"><span style="color: #af0000; ">ladder(<a href="#typecolor" class="typelink">&lt;color&gt;</a>)
         stops [ ( <a href="#typenumber" class="typelink">&lt;number&gt;</a> , <a
           href="#typecolor"
           class="typelink">&lt;color&gt;</a>
-        ) ]+ </font></p>
+        ) ]+ </span></p>
     <h2><a name="stage" id="stage">Stage</a></h2>
     <table summary="property table" class="package" width="100%">
         <tbody>
@@ -1967,7 +1966,7 @@
       <tbody>
         <tr>
           <td class="propertyname">-fx-image</td>
-          <td class="value"><a href="#typeuri" class="typelink">&lt;uri&gt;</a></td>
+          <td class="value"><a href="#typeurl" class="typelink">&lt;uri&gt;</a></td>
           <td class="default">null</td>
           <td>Relative URLs are resolved against the URL of the stylesheet.</td>
         </tr>
@@ -2232,7 +2231,7 @@
       will be painted with the second radius value and second insets value, and
       so forth.</p>
     <p>Note also that properties such as -fx-background-radius and
-      -fx-background-insets can contain a series of values or <em>sets</em> of
+      -fx-background-insets can contain a series of values or <span style="font-style:italic;">sets</span> of
       four values. A set of values is separated by whitespace, whereas the
       values or sets-of-values in a series are separated by commas. For
       -fx-background-radius, a single value indicates that the value should be
@@ -2345,8 +2344,8 @@
         </tr>
         <tr>
           <td class="propertyname">-fx-background-image</td>
-          <td class="value"><a href="#typeuri" class="typelink">&lt;uri&gt;</a>
-            [ , <a href="#typeuri" class="typelink">&lt;uri&gt;</a> ]*</td>
+          <td class="value"><a href="#typeurl" class="typelink">&lt;uri&gt;</a>
+            [ , <a href="#typeurl" class="typelink">&lt;uri&gt;</a> ]*</td>
           <td class="default">null</td>
           <td>A series of image URIs separated by commas.</td>
         </tr>
@@ -2488,14 +2487,14 @@
             <p>A series of border style values, separated by commas. Each item
               in the series applies to the corresponding item in the series of
               border colors.</p>
-            <p>The <i>segments</i> dash-style defines a sequence representing
+            <p>The <span style="font-style:italic;">segments</span> dash-style defines a sequence representing
               the lengths of the dash segments. Alternate entries in the
               sequence represent the lengths of the opaque and transparent
-              segments of the dashes. This corresponds to the <i>strokeDashArray</i>
+              segments of the dashes. This corresponds to the <span style="font-style:italic;">strokeDashArray</span>
               variable of Shape.</p>
-            <p>The optional <i>phase</i> parameter defines the point in the
+            <p>The optional <span style="font-style:italic;">phase</span> parameter defines the point in the
               dashing pattern that will correspond to the beginning of the
-              stroke. This corresponds to the <i>strokeDashOffset</i> variable
+              stroke. This corresponds to the <span style="font-style:italic;">strokeDashOffset</span> variable
               of Shape.</p>
           </td>
         </tr>
@@ -2525,8 +2524,8 @@
         </tr>
         <tr>
           <td class="propertyname">-fx-border-image-source</td>
-          <td class="value"><a href="#typeuri" class="typelink">&lt;uri&gt;</a>
-            [ , <a href="#typeuri" class="typelink">&lt;uri&gt;</a> ]*</td>
+          <td class="value"><a href="#typeurl" class="typelink">&lt;uri&gt;</a>
+            [ , <a href="#typeurl" class="typelink">&lt;uri&gt;</a> ]*</td>
           <td class="default">null</td>
           <td>
             <p>A series of image URIs, separated by commas.</p>
@@ -2627,7 +2626,7 @@
           </td>
         </tr>
         <tr>
-          <td colspan="4" class="propertyname"><em>OTHER</em></td>
+          <td colspan="4" class="propertyname"><span style="font-style:italic;">OTHER</span></td>
         </tr>
         <tr>
           <td class="propertyname">-fx-padding</td>
@@ -3200,8 +3199,7 @@
         </tr>
       </tbody>
     </table>
-    <!--
-        --        --        -- Controls        --        -->
+    <!-- Controls -->
     <table summary="property table" class="package" width="100%">
       <tbody>
         <tr>
@@ -3363,10 +3361,11 @@
     </table>
     <h4>Substructure</h4>
     <ul>
-      <li>box &mdash; a StackPane</li>
+      <li>box &mdash; a StackPane
       <ul>
         <li>mark &mdash; a StackPane</li>
       </ul>
+      </li>
     </ul>
     <h4><a name="checkmenuitem" id="checkmenuitem">CheckMenuItem</a></h4>
     <h4>Pseudo-classes</h4>
@@ -3422,11 +3421,11 @@
     <h4>Substructure</h4>
     <ul>
 	  <li>color display node  &mdash; Label</li>
-      <li>arrow-button - StackPane</li>
+      <li>arrow-button - StackPane
 	    <ul>
 		  <li>arrow &mdash; StackPane</li>
 	    </ul>
-	  </ul>
+      </li>
     </ul>
     <h4><a name="combobox" id="combobox">ComboBox</a></h4>
     <p class="styleclass">Style class: combo-box</p>
@@ -3440,10 +3439,11 @@
       <li>combo-box-popup - a PopupControl that is displayed when the button is
         pressed
         <ul>
-          <li>list-view - a ListView</li>
+          <li>list-view - a ListView
           <ul>
             <li>list-cell - a ListCell</li>
           </ul>
+          </li>
         </ul>
       </li>
     </ul>
@@ -3637,7 +3637,7 @@
         </tr>
         <tr>
           <td class="propertyname">-fx-graphic</td>
-          <td class="value"><a href="#typeuri" class="typelink">&lt;uri&gt;</a></td>
+          <td class="value"><a href="#typeurl" class="typelink">&lt;uri&gt;</a></td>
           <td>null</td>
           <td>&nbsp;</td>
         </tr>
@@ -3850,20 +3850,23 @@
     <h4>Substructure</h4>
     <ul>
 	  <li>page &mdash; StackPane</li>
-      <li>pagination-control &mdash; StackPane</li>
+      <li>pagination-control &mdash; StackPane
         <ul>
-          <li>leftArrowButton - Button</li>
-	    <ul>
-		  <li>leftArrow &mdash; StackPane</li>
-	    </ul>
-	    <li>rightArrowButton - Button</li>
-	    <ul>
-		  <li>rightArrow &mdash; StackPane</li>
-	    </ul>
-	    <li>bullet-button - ToggleButton</li>
-	    <li>number-button - ToogleButton</li>
-	    <li>page-information - Label</li>
+          <li>leftArrowButton - Button
+	        <ul>
+		      <li>leftArrow &mdash; StackPane</li>
+	        </ul>
+          </li>
+	      <li>rightArrowButton - Button
+     	    <ul>
+	    	  <li>rightArrow &mdash; StackPane</li>
+	        </ul>
+          </li>
+	      <li>bullet-button - ToggleButton</li>
+	      <li>number-button - ToogleButton</li>
+	      <li>page-information - Label</li>
 	  </ul>
+      </li>
     </ul>
     <h4><a name="passwordfield" id="passwordfield">PasswordField</a></h4>
     <p class="styleclass">Style class: password-field</p>
@@ -3913,10 +3916,11 @@
       of <a href="#progressindicator">ProgressIndicator</a></p>
     <h4>Substructure</h4>
     <ul>
-      <li>track - StackPane</li>
+      <li>track - StackPane
       <ul>
         <li>bar &mdash; Region</li>
       </ul>
+      </li>
     </ul>
     <h4><a name="progressindicator" id="progressindicator">ProgressIndicator</a></h4>
     <p class="styleclass">Style class: progress-indicator</p>
@@ -4066,16 +4070,18 @@
     </table>
     <h4>Substructure</h4>
     <ul>
-      <li>decrement-button &mdash; StackPane</li>
-      <ul>
-        <li>decrement-arrow &mdash; StackPane </li>
-      </ul>
+      <li>decrement-button &mdash; StackPane
+        <ul>
+          <li>decrement-arrow &mdash; StackPane </li>
+        </ul>
+      </li>
       <li>track &mdash; StackPane</li>
       <li>thumb &mdash; StackPane</li>
-      <li>increment-button &mdash; StackPane</li>
-      <ul>
-        <li>increment-arrow &mdash; StackPane</li>
-      </ul>
+      <li>increment-button &mdash; StackPane
+        <ul>
+          <li>increment-arrow &mdash; StackPane</li>
+        </ul>
+      </li>
     </ul>
     <h4><a name="scrollpane" id="scrollpane">ScrollPane</a></h4>
     <p class="styleclass">Style class: scroll-pane</p>
@@ -4374,11 +4380,12 @@
     </table>
     <h4>Substructure</h4>
     <ul>
-      <li>split-pane-divider &mdash; StackPane</li>
+      <li>split-pane-divider &mdash; StackPane
       <ul>
         <li>vertical-grabber &mdash; StackPane</li>
         <li>horizontal-grabber &mdash; StackPane</li>
       </ul>
+      </li>
     </ul>
     <h4><a name="tabpane" id="tabpane">TabPane</a></h4>
     <p class="styleclass">Style class: tab-pane</p>
@@ -4466,23 +4473,27 @@
     </table>
     <h4>Substructure</h4>
     <ul>
-      <li>tab-header-area &mdash; StackPane</li>
+      <li>tab-header-area &mdash; StackPane
       <ul>
         <li>headers-region - StackPane</li>
         <li>tab-header-background - StackPane</li>
-        <li>control-buttons-tab - StackPane</li>
+        <li>control-buttons-tab - StackPane
         <ul>
-          <li>tab-down-button - Pane</li>
+          <li>tab-down-button - Pane
           <ul>
             <li>arrow - StackPane</li>
           </ul>
+          </li>
         </ul>
-        <li>tab - Tab</li>
+        </li>
+        <li>tab - Tab
         <ul>
           <li>tab-label - Label</li>
           <li>tab-close-button - StackPane</li>
         </ul>
+        </li>
       </ul>
+      </li>
       <li>tab-content-area &mdash; StackPane</li>
     </ul>
     <h4><a name="tablecolumnheader" id="tablecolumnheader">TableColumnHeader</a></h4>
@@ -4499,7 +4510,6 @@
             <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a></td>
             <td>20</td>
             <td>The table column header size.</td>
-        </tr>
         </tr>
         </thead>
         <tbody>
@@ -4531,22 +4541,26 @@
         <li>column-resize-line - Region</li>
         <li>column-overlay - Region</li>
         <li>placeholder - StackPane</li>
-        <li>column-header-background - StackPane</li>
+        <li>column-header-background - StackPane
         <ul>
-            <li>nested-column-header</li>
+            <li>nested-column-header
             <ul>
                 <li>column-header</li>
             </ul>
+            </li>
             <li>filler - Region</li>
-            <li>show-hide-columns-button - StackPane</li>
+            <li>show-hide-columns-button - StackPane
             <ul>
                 <li>show-hide-column-image - StackPane</li>
             </ul>
-            <li>column-drag-header - StackPane</li>
+            </li>
+            <li>column-drag-header - StackPane
             <ul>
                 <li>label - Label</li>
             </ul>
+            </li>
         </ul>
+        </li>
     </ul>
     <h4><a name="tableview" id="tableview">TableView</a></h4>
     <p class="styleclass">Style class: table-view</p>
@@ -4563,7 +4577,6 @@
           <td>-1</td>
           <td>A value greater than zero sets the fixed cell size of the table.
               A value of zero or less disables fixed cell size.</td>
-        </tr>
         </tr>
       </thead>
       <tbody>
@@ -4599,22 +4612,26 @@
       <li>column-resize-line - Region</li>
       <li>column-overlay - Region</li>
       <li>placeholder - StackPane</li>
-      <li>column-header-background - StackPane</li>
+      <li>column-header-background - StackPane
       <ul>
-        <li>nested-column-header</li>
+        <li>nested-column-header
         <ul>
           <li>column-header</li>
         </ul>
+        </li>
         <li>filler - Region</li>
-        <li>show-hide-columns-button - StackPane</li>
+        <li>show-hide-columns-button - StackPane
         <ul>
           <li>show-hide-column-image - StackPane</li>
         </ul>
-        <li>column-drag-header - StackPane</li>
+        </li>
+        <li>column-drag-header - StackPane
         <ul>
           <li>label - Label</li>
         </ul>
+        </li>
       </ul>
+      </li>
         <li>table-column - TableColumn</li>
     </ul>
     <h4><a name="textarea" id="textarea">TextArea</a></h4>
@@ -4654,10 +4671,11 @@
     </table>
     <h4>Substructure</h4>
     <ul>
-      <li>scroll-pane - ScrollPane</li>
+      <li>scroll-pane - ScrollPane
       <ul>
         <li>content - Region</li>
       </ul>
+      </li>
     </ul>
     <h4><a name="textinputcontrol" id="textinputcontrol">TextInputControl</a></h4>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
@@ -4815,7 +4833,7 @@
     </table>
     <h4>Substructure</h4>
     <ul>
-      <li>title &mdash; HBox</li>
+      <li>title &mdash; HBox
       <ul>
         <li>text &mdash; Label/li&gt; </li>
         <li>arrow-button &mdash; StackPane/li&gt;
@@ -4824,6 +4842,7 @@
           </ul>
         </li>
       </ul>
+      </li>
       <li>content &mdash; StackPane/li&gt; </li>
     </ul>
     <h4><a name="togglebutton" id="togglebutton">ToggleButton</a></h4>
@@ -4894,10 +4913,11 @@
     </table>
     <h4>Substructure</h4>
     <ul>
-      <li>tool-bar-overflow-button - StackPane</li>
+      <li>tool-bar-overflow-button - StackPane
       <ul>
         <li>arrow - StackPane</li>
       </ul>
+      </li>
     </ul>
     <h4><a name="tooltip" id="tooltip">Tooltip</a></h4>
     <p class="styleclass">Style class: tooltip</p>
@@ -4933,7 +4953,7 @@
         </tr>
         <tr>
           <td class="propertyname">-fx-graphic</td>
-          <td class="value"><a href="#typeuri" class="typelink">&lt;uri&gt;</a></td>
+          <td class="value"><a href="#typeurl" class="typelink">&lt;uri&gt;</a></td>
           <td>null</td>
           <td>&nbsp;</td>
         </tr>
@@ -5079,7 +5099,6 @@
           </tr>
         </tbody>
       </table>
-    </p>
     <h4><a name="barchart" id="barchart">BarChart</a></h4>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -5141,7 +5160,6 @@
           </tr>
         </tbody>
       </table>
-    </p>
     <h4><a name="bubblechart" id="bubblechart">BubbleChart</a></h4>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -5185,10 +5203,8 @@
           </tr>
         </tbody>
       </table>
-    </p>
     <h4><a name="chart" id="chart">Chart</a></h4>
-    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
-<p class="styleclass">Style class: chart</p>
+    <p class="styleclass">Style class: chart</p>
       <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
         <thead>
           <tr>
@@ -5283,7 +5299,6 @@
           </tr>
         </tbody>
       </table>
-    </p>
     <h4><a name="scatterchart" id="scatterchart">ScatterChart</a></h4>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -5326,7 +5341,6 @@
           </tr>
         </tbody>
       </table>
-    </p>
     <h4><a name="piechart" id="piechart">PieChart</a></h4>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -5356,7 +5370,7 @@
           <td><a href="#path" class="typelink">Text</a> </td>
         </tr>
         <tr>
-          <td class="propertyname">"pie-legend-symbol &lt;<i>i<sup>th</sup></i>
+          <td class="propertyname">"pie-legend-symbol &lt;<em>i<sup>th</sup></em>
             data item&rsquo;s style&#8209;class&gt;"</td>
           <td>Each item in the legend has the style&#8209;class "pie-legend-symbol"
             plus the style&#8209;class of the corresponding data item</td>
@@ -5404,7 +5418,6 @@
           </tr>
         </tbody>
       </table>
-    </p>
     <h4><a name="xychart" id="xychart">XYChart</a></h4>
     <p class="styleclass">Style class: set by sub-type</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
@@ -5667,9 +5680,8 @@
     <p>[5] Uniform Resource Identifier (URI): Generic Syntax <a href="http://www.ietf.org/rfc/rfc3986">RFC-3986</a></p>
     <hr>
     <p>
-<small><a href="http://docs.oracle.com/javase/8/docs/legal/cpyr.html">Copyright</a> (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.</small>
+<span style="font-size: small;"><a href="http://docs.oracle.com/javase/8/docs/legal/cpyr.html">Copyright</a> (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.</span>
     </p>
     <br>
-    </table>
   </body>
 </html>
