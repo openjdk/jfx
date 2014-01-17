@@ -950,8 +950,10 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             return (tempVisibility && (nodeWidth > contentw));
         }
         else {
-            return (getSkinnable().getHbarPolicy().equals(ScrollBarPolicy.NEVER)) ? false :
-                ((getSkinnable().getHbarPolicy().equals(ScrollBarPolicy.ALWAYS)) ? true :
+            // RT-17395: ScrollBarPolicy might be null. If so, treat it as "AS_NEEDED", which is the default
+            ScrollBarPolicy hbarPolicy = sp.getHbarPolicy();
+            return (ScrollBarPolicy.NEVER == hbarPolicy) ? false :
+                ((ScrollBarPolicy.ALWAYS == hbarPolicy) ? true :
                  ((getSkinnable().isFitToWidth() && scrollNode != null ? scrollNode.isResizable() : false) ?
                   (nodeWidth > contentw && scrollNode.minWidth(-1) > contentw) : (nodeWidth > contentw)));
         }
@@ -964,8 +966,10 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             return (tempVisibility && (nodeHeight > contenth));
         }
         else {
-            return (getSkinnable().getVbarPolicy().equals(ScrollBarPolicy.NEVER)) ? false :
-                ((getSkinnable().getVbarPolicy().equals(ScrollBarPolicy.ALWAYS)) ? true :
+            // RT-17395: ScrollBarPolicy might be null. If so, treat it as "AS_NEEDED", which is the default
+            ScrollBarPolicy vbarPolicy = sp.getVbarPolicy();
+            return (ScrollBarPolicy.NEVER == vbarPolicy) ? false :
+                ((ScrollBarPolicy.ALWAYS == vbarPolicy) ? true :
                  ((getSkinnable().isFitToHeight() && scrollNode != null ? scrollNode.isResizable() : false) ?
                   (nodeHeight > contenth && scrollNode.minHeight(-1) > contenth) : (nodeHeight > contenth)));
         }
