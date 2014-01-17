@@ -176,9 +176,8 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
         // determine the percentage of the way between min and max
         // represented by this mouse event
         final ScrollBar bar = getControl();
-        // If not already focused, request focus
+        if (!bar.isFocused() && bar.isFocusTraversable()) bar.requestFocus();
         final double pos = position;
-        if (!bar.isFocused()) bar.requestFocus();
         final boolean incrementing = (pos > ((bar.getValue() - bar.getMin())/(bar.getMax() - bar.getMin())));
         timeline = new Timeline();
         timeline.setCycleCount(Timeline.INDEFINITE);
@@ -224,6 +223,7 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
      */
     public void decButtonPressed(MouseEvent e) {
         final ScrollBar bar = getControl();
+        if (!bar.isFocused() && bar.isFocusTraversable()) bar.requestFocus();
         if (timeline != null) {
             com.sun.javafx.Logging.getJavaFXLogger().warning("timeline is not null");
             timeline.stop();
@@ -268,6 +268,7 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
      */
     public void incButtonPressed(MouseEvent e) {
         final ScrollBar bar = getControl();
+        if (!bar.isFocused() && bar.isFocusTraversable()) bar.requestFocus();
         if (timeline != null) {
             com.sun.javafx.Logging.getJavaFXLogger().warning("timeline is not null");
             timeline.stop();
@@ -317,6 +318,7 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
      */
     public void thumbDragged(MouseEvent e, double position) {
         final ScrollBar scrollbar = getControl();
+        if (!scrollbar.isFocused() && scrollbar.isFocusTraversable()) scrollbar.requestFocus();
         double newValue = (position * (scrollbar.getMax() - scrollbar.getMin())) + scrollbar.getMin();
         if (!Double.isNaN(newValue)) {
             scrollbar.setValue(Utils.clamp(scrollbar.getMin(), newValue, scrollbar.getMax()));
