@@ -210,4 +210,8 @@ public class TouchInput {
         return count;
     }
 
+    public int getTouchMoveSensitivity() {
+        return touchMoveSensitivity;
+    }
+
 }

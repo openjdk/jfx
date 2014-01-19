@@ -208,4 +208,25 @@ public class TouchState {
         }
     }
 
+    /** Finds out whether two non-null states are identical in everything but
+     * their touch point coordinates
+     *
+     * @param ts the TouchState to compare to
+     * @param ignoreIDs if true, ignore IDs when comparing points
+     */
+    boolean canBeFoldedWith(TouchState ts, boolean ignoreIDs) {
+        if (ts.pointCount != pointCount) {
+            return false;
+        }
+        if (ignoreIDs) {
+            return true;
+        }
+        for (int i = 0; i < pointCount; i++) {
+            if (ts.points[i].id != points[i].id) {
+                return false;
+            }
+        }
+        return true;
+    }
+
 }

@@ -38,6 +38,7 @@ public class MouseInputSynthesizer {
     }
 
     public void setState(TouchState touchState) {
+        MouseInput.getInstance().getState(mouseState);
         if (touchState.getPointCount() == 0) {
             mouseState.releaseButton(MouseEvent.BUTTON_LEFT);
         } else {

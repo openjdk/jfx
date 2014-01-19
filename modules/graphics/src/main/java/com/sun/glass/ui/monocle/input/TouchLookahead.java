@@ -70,29 +70,24 @@ public class TouchLookahead {
     }
 
     public void pushState() {
+        if (!processedFirstEvent) {
+            touch.getState(previousState);
+            if (state.canBeFoldedWith(previousState, assignIDs)) {
+                processedFirstEvent = true;
+            } else {
+                touch.setState(state, true);
+            }
+        }
         if (processedFirstEvent) {
             // fold together TouchStates that have the same touch point count
             // and IDs. For Protocol A devices the touch IDs are not initialized
             // yet, which means the only differentiator will be the number of
             // points.
-            boolean fold = true;
-            if (state.getPointCount() != previousState.getPointCount()) {
-                fold = false;
-            }
-            if (!assignIDs) {
-                state.sortPointsByID();
-                for (int i = 0; fold && i < previousState.getPointCount(); i++) {
-                    if (state.getPoint(i).id != previousState.getPoint(i).id) {
-                        fold = false;
-                    }
-                }
-            }
-            if (!fold) {
+            state.sortPointsByID();
+            if (!state.canBeFoldedWith(previousState, assignIDs)) {
                 // the events are different. Send "previousState".
                 touch.setState(previousState, true);
             }
-        } else {
-            processedFirstEvent = true;
         }
         state.copyTo(previousState);
     }
