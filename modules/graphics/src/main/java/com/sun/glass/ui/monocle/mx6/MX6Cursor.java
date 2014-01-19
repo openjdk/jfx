@@ -188,7 +188,8 @@ public class MX6Cursor implements NativeCursor {
             offsetX = newOffsetX;
             offsetY = newOffsetY;
             system.lseek(fd, 0, LinuxSystem.SEEK_SET);
-            if (system.write(fd, offsetCursorByteBuffer) < 0) {
+            if (system.write(fd, offsetCursorByteBuffer,
+                             0, offsetCursorByteBuffer.capacity()) < 0) {
                 System.err.println("Failed to write to i.MX6 cursor: "
                                    + system.getErrorMessage());
             }

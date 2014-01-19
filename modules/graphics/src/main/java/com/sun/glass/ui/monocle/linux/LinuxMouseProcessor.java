@@ -88,6 +88,14 @@ public class LinuxMouseProcessor implements LinuxInputProcessor {
     }
 
     private void sendEvent() {
+        if (!processedFirstEvent) {
+            mouse.getState(previousState);
+            if (state.getButtonsPressed().equals(previousState.getButtonsPressed())) {
+                processedFirstEvent = true;
+            } else {
+                mouse.setState(state, false);
+            }
+        }
         if (processedFirstEvent) {
             // fold together MouseStates that differ only in their buttons
             if (!state.getButtonsPressed().equals(previousState.getButtonsPressed())) {

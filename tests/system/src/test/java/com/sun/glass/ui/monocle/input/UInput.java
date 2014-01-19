@@ -48,7 +48,7 @@ public class UInput {
 
     public UInput() {
         nativeUInput.setup();
-        nativeUInput.init(verbose);
+        nativeUInput.init();
     }
 
     private static NativeUInput createNativeUInput() {
@@ -136,15 +136,13 @@ public class UInput {
         if (line.length() > 0) {
             String[] args = line.split(" ");
             switch (args.length) {
-                case 0: nativeUInput.processLine0(line); break;
+                case 0: break;
                 case 1: nativeUInput.processLine1(line, args[0]); break;
                 case 2: nativeUInput.processLine2(line, args[0], args[1]); break;
                 case 3: nativeUInput.processLine3(line, args[0], args[1], args[2]); break;
                 default:
                     throw new IllegalArgumentException(line);
             }
-        } else {
-            nativeUInput.processLine0(line);
         }
     }
 

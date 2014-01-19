@@ -28,14 +28,25 @@
 #include "com_sun_glass_ui_monocle_linux_LinuxSystem_InputAbsInfo.h"
 #include "Monocle.h"
 
+#include <dlfcn.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <linux/fb.h>
 #include <linux/input.h>
-#include <sys/ioctl.h>
-#include <errno.h>
+#include <stdlib.h>
 #include <string.h>
-#include <dlfcn.h>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
 #include <unistd.h>
+
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_setenv
+  (JNIEnv *env, jobject UNUSED(obj), jstring keyS, jstring valueS, jboolean overwrite) {
+    const char *key = (*env)->GetStringUTFChars(env, keyS, NULL);
+    const char *value = (*env)->GetStringUTFChars(env, valueS, NULL);
+    setenv(key, value, (int) overwrite);
+    (*env)->ReleaseStringUTFChars(env, keyS, key);
+    (*env)->ReleaseStringUTFChars(env, valueS, value);
+}
 
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_open
   (JNIEnv *env, jobject UNUSED(obj), jstring filenameS, jint flag) {
@@ -56,10 +67,9 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_lseek
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_write
-  (JNIEnv *env, jobject UNUSED(obj), jlong fdL, jobject buf) {
+  (JNIEnv *env, jobject UNUSED(obj), jlong fdL, jobject buf, jint position, jint limit) {
     void *data = (*env)->GetDirectBufferAddress(env, buf);
-    size_t capacity = (*env)->GetDirectBufferCapacity(env, buf);
-    return (jlong) write((int) fdL, data, capacity);
+    return (jlong) write((int) fdL, data + position, (size_t) limit - position);
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_read
@@ -129,6 +139,14 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_dlsym
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_dlclose
   (JNIEnv *UNUSED(env), jobject UNUSED(obj), jlong handleL) {
     return (jint) dlclose(asPtr(handleL));
+}
+
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_mkfifo
+  (JNIEnv *UNUSED(env), jobject UNUSED(obj), jstring pathnameS, jint mode) {
+    const char *pathname = (*env)->GetStringUTFChars(env, pathnameS, NULL);
+    int rc = mkfifo(pathname, (mode_t) mode);
+    (*env)->ReleaseStringUTFChars(env, pathnameS, pathname);
+    return (jint) rc;
 }
 
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_00024FbVarScreenInfo_sizeof

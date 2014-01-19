@@ -26,6 +26,7 @@
 package com.sun.glass.ui.monocle.linux;
 
 import com.sun.glass.ui.monocle.util.C;
+import com.sun.glass.utils.NativeLibLoader;
 
 import java.nio.ByteBuffer;
 import java.security.Permission;
@@ -50,19 +51,26 @@ public class LinuxSystem {
     private LinuxSystem() {
     }
 
+    public void loadLibrary() {
+        NativeLibLoader.loadLibrary("glass_monocle");
+    }
+
+    // stdlib.h
+    public native void setenv(String key, String value, boolean overwrite);
 
     // fcntl.h
 
     public static final int O_RDONLY = 0;
     public static final int O_WRONLY = 1;
     public static final int O_RDWR = 2;
+    public static final int O_NONBLOCK = 00004000;
 
     public native long open(String path, int flags);
 
     // unistd.h
     public native int close(long fd);
     public native long lseek(long fd, long offset, int whence);
-    public native long write(long fd, ByteBuffer buf);
+    public native long write(long fd, ByteBuffer buf, int position, int limit);
     public native long read(long fd, ByteBuffer buf, int position, int limit);
 
     public static final int SEEK_SET = 0;
@@ -116,8 +124,17 @@ public class LinuxSystem {
     public native int IOR(int type, int number, int size);
     public native int IOWR(int type, int number, int size);
 
+    // stropts.h
+    private static int __SID = ('S' << 8);
+    public static int I_FLUSH = __SID | 5;
+
+    public static int FLUSHRW = 0x03;
+
     // errno.h
     public native int errno();
+
+    public static final int ENXIO = 6;
+    public static final int EAGAIN = 11;
 
     // string.h
     public native String strerror(int errnum);
@@ -131,5 +148,10 @@ public class LinuxSystem {
     public String getErrorMessage() {
         return strerror(errno());
     }
+
+    // stat.h
+    public static int S_IRWXU = 00700;
+
+    public native int mkfifo(String pathname, int mode);
 
 }

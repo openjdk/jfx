@@ -200,6 +200,7 @@ public class DragTouchInAndOutAWindowTest {
      * 
      */
     public void singleTouch_dragPointInandOutAwindow() throws Exception {
+        Assume.assumeTrue(!TestApplication.isMonocle()); // RT-35406
         TestLog.reset();
         Stage stage = TestApplication.getStage();
         int windowMiddleWidth = (int)(stage.getX() + stage.getWidth() / 2);

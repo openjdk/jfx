@@ -11,7 +11,7 @@ import com.sun.glass.utils.NativeLibLoader;
 public class LinuxPlatform extends NativePlatform {
 
     public LinuxPlatform() {
-        NativeLibLoader.loadLibrary("glass_monocle");
+        LinuxSystem.getLinuxSystem().loadLibrary();
     }
 
     @Override
