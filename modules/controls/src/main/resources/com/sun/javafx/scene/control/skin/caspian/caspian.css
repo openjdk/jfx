@@ -2819,7 +2819,8 @@
     -fx-font-size: 1.4em;
 }
 .chart-legend {
-   -fx-background-color:  #cccccc, #eeeeee;
+   -fx-background-color: ladder(-fx-background, derive(-fx-box-border, -10%) 50%, derive(-fx-box-border, 10%) 51%),
+                         ladder(-fx-background, derive(-fx-control-inner-background, 5%) 50%, derive(-fx-control-inner-background, -5%) 51%);
    -fx-background-insets: 0,1;
    -fx-background-radius: 6,5;
    -fx-padding: 6px;
@@ -3068,6 +3069,7 @@
 }
 .chart-pie-label {
     -fx-padding: 3px;
+    -fx-fill: -fx-text-base-color;
 }
 .chart-pie-label-line {
     -fx-stroke: #aaaaaa;
