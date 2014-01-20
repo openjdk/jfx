@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -244,10 +244,10 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
 
 
     private void updateComboBoxMode() {
-        if (getSkinnable().getStyleClass().contains(ColorPicker.STYLE_CLASS_BUTTON)) {
+        List<String> styleClass = getSkinnable().getStyleClass();
+        if (styleClass.contains(ColorPicker.STYLE_CLASS_BUTTON)) {
             setMode(ComboBoxMode.BUTTON);
-        }
-        else if (getSkinnable().getStyleClass().contains(ColorPicker.STYLE_CLASS_SPLIT_BUTTON)) {
+        } else if (styleClass.contains(ColorPicker.STYLE_CLASS_SPLIT_BUTTON)) {
             setMode(ComboBoxMode.SPLITBUTTON);
         }
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -159,13 +159,13 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
         if (displayNode != null) {
             displayNode.resizeRelocate(x, y, w - arrowButtonWidth, h);
         }
-        
-        if (isButton()) return;
-        
-        arrowButton.resize(arrowButtonWidth, h);
-        positionInArea(arrowButton, 
-                (x+w) - arrowButtonWidth, y,
-                arrowButtonWidth, h, 0, HPos.CENTER, VPos.CENTER);
+
+        arrowButton.setVisible(! isButton());
+        if (! isButton()) {
+            arrowButton.resize(arrowButtonWidth, h);
+            positionInArea(arrowButton, (x + w) - arrowButtonWidth, y,
+                    arrowButtonWidth, h, 0, HPos.CENTER, VPos.CENTER);
+        }
     }
     
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
@@ -174,7 +174,7 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
         }
 
         final double arrowWidth = snapSize(arrow.prefWidth(-1));
-        final double arrowButtonWidth = (isButton()) ? 0 : 
+        final double arrowButtonWidth = isButton() ? 0 :
                                         arrowButton.snappedLeftInset() +
                                         arrowWidth + 
                                         arrowButton.snappedRightInset();

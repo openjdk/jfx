@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,10 +26,14 @@
 package hello;
 
 import javafx.application.Application;
+import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.ColorPicker;
+import javafx.scene.control.Label;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
@@ -40,28 +44,57 @@ public class HelloColorPicker extends Application {
         launch(args);
     }
     @Override public void start(Stage stage) {
+//        setUserAgentStylesheet(STYLESHEET_CASPIAN);
+
         stage.setTitle("ColorPicker");
-        
-        Scene scene = new Scene(new VBox(20), 620, 190);
-        VBox box = (VBox)scene.getRoot();
-        
-        final ColorPicker colorPicker = new ColorPicker();
-        // default mode is combobox (above)
-        // uncomment the line below for simple button mode
-//        colorPicker.getStyleClass().add("button");
-        // uncomment the line below for SplitMenuButton mode
-//        colorPicker.getStyleClass().add("split-button");
-        // Uncomment the line below if you do not wish to see the label next the color.
-//        colorPicker.setStyle("-fx-color-label-visible: false;");
-        box.getChildren().addAll(colorPicker);
-        
-        stage.setScene(scene);
-        stage.show();
-        colorPicker.setOnAction(new EventHandler() {
-            public void handle(Event t) {
-                Color c = colorPicker.getValue();
+
+        EventHandler<ActionEvent> actionEventHandler = new EventHandler<ActionEvent>() {
+            public void handle(ActionEvent t) {
+                ColorPicker cp = (ColorPicker) t.getTarget();
+                Color c = cp.getValue();
                 System.out.println("New Color's RGB = "+c.getRed()+" "+c.getGreen()+" "+c.getBlue());
             }
-        });
+        };
+
+        // default mode combobox
+        final ColorPicker normalColorPicker = new ColorPicker();
+        normalColorPicker.setOnAction(actionEventHandler);
+
+        // simple button mode
+        final ColorPicker buttonColorPicker = new ColorPicker();
+        buttonColorPicker.getStyleClass().add(ColorPicker.STYLE_CLASS_BUTTON);
+        buttonColorPicker.setOnAction(actionEventHandler);
+
+        // SplitMenuButton mode
+        final ColorPicker splitMenuColorPicker = new ColorPicker();
+        splitMenuColorPicker.getStyleClass().add(ColorPicker.STYLE_CLASS_SPLIT_BUTTON);
+        splitMenuColorPicker.setOnAction(actionEventHandler);
+
+        // Hidden label mode
+        final ColorPicker noLabelColorPicker = new ColorPicker();
+        noLabelColorPicker.setStyle("-fx-color-label-visible: false;");
+        noLabelColorPicker.setOnAction(actionEventHandler);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(10));
+
+        grid.add(new Label("Default ColorPicker: "), 1, 1);
+        grid.add(normalColorPicker, 2, 1);
+
+        grid.add(new Label("'Button' ColorPicker: "), 1, 2);
+        grid.add(buttonColorPicker, 2, 2);
+
+        grid.add(new Label("'SplitButton' ColorPicker: "), 1, 3);
+        grid.add(splitMenuColorPicker, 2, 3);
+
+        grid.add(new Label("'Hidden Label' ColorPicker: "), 1, 4);
+        grid.add(noLabelColorPicker, 2, 4);
+
+        Scene scene = new Scene(grid, 620, 190);
+
+        stage.setScene(scene);
+        stage.show();
     }
 }
