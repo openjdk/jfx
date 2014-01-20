@@ -161,7 +161,7 @@ public abstract class NGNode {
      * essentially the rectangle formed by the union of the dirtyBounds
      * and the transformedBounds.
      */
-    private BaseBounds dirtyBounds = new RectBounds();
+    BaseBounds dirtyBounds = new RectBounds();
 
     /**
      * Whether the node is visible. We need to know about the visibility of
@@ -1263,6 +1263,9 @@ public abstract class NGNode {
                                           final BaseTransform tx,
                                           final GeneralTransform3D pvTx)
     {
+        if (cacheFilter != null) {
+            return cacheFilter.computeDirtyBounds(dirtyRegionTemp, tx, pvTx);
+        }
         // The passed in region is a scratch object that exists for me to use,
         // such that I don't have to create a temporary object. So I just
         // hijack it right here to start with. Note that any of the calls
@@ -1285,12 +1288,12 @@ public abstract class NGNode {
         // We shouldn't do anything with empty region, as we may accidentally make
         // it non empty or turn it into some nonsense (like (-1,-1,0,0) )
         if (!region.isEmpty()) {
-            // Now that we have the dirty region, we will simply apply the tx
-            // to it (after slightly padding it for good luck) to get the scene
-            // coordinates for this.
-            region = computePadding(region);
-            region = tx.transform(region, region);
-            region = pvTx.transform(region, region);
+                // Now that we have the dirty region, we will simply apply the tx
+                // to it (after slightly padding it for good luck) to get the scene
+                // coordinates for this.
+                region = computePadding(region);
+                region = tx.transform(region, region);
+                region = pvTx.transform(region, region);
         }
         return region;
     }

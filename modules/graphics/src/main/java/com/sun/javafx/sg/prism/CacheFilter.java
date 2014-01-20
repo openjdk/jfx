@@ -794,5 +794,25 @@ public class CacheFilter {
         bounds.setBounds(b);
         return bounds;
     }
-}
+    
+    BaseBounds computeDirtyBounds(BaseBounds region, BaseTransform tx, GeneralTransform3D pvTx) {
+        // For now, we just use the computed dirty bounds of the Node and
+        // round them out before the transforms.
+        // Later, we could use the bounds of the cache
+        // to compute the dirty region directly (and more accurately).
+        // See RT-34928 for more details.
+        if (!node.dirtyBounds.isEmpty()) {
+            region = region.deriveWithNewBounds(node.dirtyBounds);
+        } else {
+            region = region.deriveWithNewBounds(node.transformedBounds);
+        }
 
+        if (!region.isEmpty()) {
+            region.roundOut();
+            region = node.computePadding(region);
+            region = tx.transform(region, region);
+            region = pvTx.transform(region, region);
+        }
+        return region;
+    }
+}
