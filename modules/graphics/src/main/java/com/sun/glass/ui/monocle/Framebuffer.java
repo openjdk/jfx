@@ -31,7 +31,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
-import java.nio.channels.FileChannel;
+import java.nio.channels.WritableByteChannel;
 
 public class Framebuffer {
 
@@ -56,6 +56,7 @@ public class Framebuffer {
     }
 
     public ByteBuffer getBuffer() {
+        bb.clear();
         return bb;
     }
 
@@ -177,7 +178,6 @@ public class Framebuffer {
                     IntBuffer dstPixels = bb.asIntBuffer();
                     IntBuffer srcPixels = (IntBuffer) src;
                     for (int i = 0; i < pH; i++) {
-//                        dstPixels.position((address >> 2) + pX + (pY + i) * width);
                         dstPixels.position(pX + (pY + i) * width);
                         srcPixels.limit(pW + ((start + i * stride) >> 2));
                         srcPixels.position((start + i * stride) >> 2);
@@ -205,7 +205,7 @@ public class Framebuffer {
         return (dstA << 24)| (dstR << 16) | (dstG << 8) | dstB;
     }
 
-    public void write(FileChannel out) throws IOException {
+    public void write(WritableByteChannel out) throws IOException {
         bb.clear();
         if (byteDepth == 4) {
             out.write(bb);

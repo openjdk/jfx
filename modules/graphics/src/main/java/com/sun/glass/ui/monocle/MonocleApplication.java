@@ -75,6 +75,9 @@ final class MonocleApplication extends Application {
     };
 
     MonocleApplication() {
+        for (InputDevice device : platform.getInputDeviceRegistry().getInputDevices()) {
+            updateDeviceFlags(device, true);
+        }
         platform.getInputDeviceRegistry().getInputDevices().addListener(
                 new SetChangeListener<InputDevice>() {
             @Override
@@ -82,41 +85,32 @@ final class MonocleApplication extends Application {
                     Change<? extends InputDevice> change) {
                 if (change.wasAdded()) {
                     InputDevice device = change.getElementAdded();
-                    if (device.isTouch()) {
-                        deviceFlags[DEVICE_TOUCH] ++;
-                    }
-                    if (device.isMultiTouch()) {
-                        deviceFlags[DEVICE_MULTITOUCH] ++;
-                    }
-                    if (device.isRelative()) {
-                        deviceFlags[DEVICE_POINTER] ++;
-                    }
-                    if (device.isFullKeyboard()) {
-                        deviceFlags[DEVICE_PC_KEYBOARD] ++;
-                    }
-                    if (device.is5Way()) {
-                        deviceFlags[DEVICE_5WAY] ++;
-                    }
+                    updateDeviceFlags(device, true);
                 } else if (change.wasRemoved()) {
                     InputDevice device = change.getElementRemoved();
-                    if (device.isTouch()) {
-                        deviceFlags[DEVICE_TOUCH] --;
-                    }
-                    if (device.isMultiTouch()) {
-                        deviceFlags[DEVICE_MULTITOUCH] --;
-                    }
-                    if (device.isRelative()) {
-                        deviceFlags[DEVICE_POINTER] --;
-                    }
-                    if (device.isFullKeyboard()) {
-                        deviceFlags[DEVICE_PC_KEYBOARD] --;
-                    }
-                    if (device.is5Way()) {
-                        deviceFlags[DEVICE_5WAY] --;
-                    }
+                    updateDeviceFlags(device, false);
                 }
             }
         });
+    }
+
+    private void updateDeviceFlags(InputDevice device, boolean added) {
+        int modifier = added ? 1 : -1;
+        if (device.isTouch()) {
+            deviceFlags[DEVICE_TOUCH] += modifier;
+        }
+        if (device.isMultiTouch()) {
+            deviceFlags[DEVICE_MULTITOUCH] += modifier;
+        }
+        if (device.isRelative()) {
+            deviceFlags[DEVICE_POINTER] += modifier;
+        }
+        if (device.isFullKeyboard()) {
+            deviceFlags[DEVICE_PC_KEYBOARD] += modifier;
+        }
+        if (device.is5Way()) {
+            deviceFlags[DEVICE_5WAY] += modifier;
+        }
     }
 
     @Override

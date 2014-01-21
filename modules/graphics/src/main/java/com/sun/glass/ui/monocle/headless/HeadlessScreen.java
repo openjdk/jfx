@@ -38,12 +38,21 @@ import java.security.PrivilegedAction;
 
 public class HeadlessScreen implements NativeScreen {
 
-    private int depth = 32;
-    private int width = 1280;
-    private int height = 800;
-    private Framebuffer fb;
+    protected int depth;
+    protected int width;
+    protected int height;
+    protected Framebuffer fb;
 
     public HeadlessScreen() {
+        this(1280, 800, 32);
+    }
+
+    protected HeadlessScreen(int defaultWidth,
+                             int defaultHeight,
+                             int defaultDepth) {
+        this.width = defaultWidth;
+        this.height = defaultHeight;
+        this.depth = defaultDepth;
         String geometry = AccessController.doPrivileged(new PrivilegedAction<String>() {
             @Override
             public String run() {
