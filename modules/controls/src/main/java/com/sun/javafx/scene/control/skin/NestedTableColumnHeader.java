@@ -317,9 +317,8 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             TableColumnHeader header = getColumnHeaders().get(i);
             header.dispose();
         }
-        
-        for (int i = 0; i < dragRects.size(); i++) {
-            Rectangle rect = dragRects.get(i);
+
+        for (Rectangle rect : dragRects.values()) {
             if (rect != null) {
                 rect.visibleProperty().unbind();
             }

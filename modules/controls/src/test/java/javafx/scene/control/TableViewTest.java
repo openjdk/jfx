@@ -2056,4 +2056,19 @@ public class TableViewTest {
         assertEquals("Andrew", person1.getFirstName());
         assertEquals(1, test_rt_34685_commitCount);
     }
+
+    @Test public void test_rt_35224() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        table.getColumns().setAll(col1, col2);
+
+        new StageLoader(table);
+
+        Toolkit.getToolkit().firePulse();
+        col1.getColumns().setAll(new TableColumn(), new TableColumn());
+        Toolkit.getToolkit().firePulse();
+        col2.getColumns().setAll(new TableColumn(), new TableColumn());
+        Toolkit.getToolkit().firePulse();
+    }
 }
