@@ -289,13 +289,13 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_00024Inpu
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_mmap
-  (JNIEnv *env, jobject UNUSED(obj), jlong addr, long length, jlong prot,
+  (JNIEnv *UNUSED(env), jobject UNUSED(obj), jlong addr, jlong length, jlong prot,
         jlong flags, jlong fd, jlong offset) {
     return asJLong(mmap(asPtr(addr), (size_t) length, (int) prot, (int) flags,
                         (int) fd, (off_t) offset));
 }
 
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_munmap
-  (JNIEnv *env, jobject UNUSED(obj), jlong addr, long length) {
+  (JNIEnv *UNUSED(env), jobject UNUSED(obj), jlong addr, jlong length) {
     return (jint) munmap(asPtr(addr), (size_t) length);
 }
