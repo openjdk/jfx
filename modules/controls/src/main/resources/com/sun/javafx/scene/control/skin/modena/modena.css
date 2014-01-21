@@ -2882,6 +2882,9 @@ is being used to size a border should also be in pixels.
     -fx-background-insets: 0, 0;
     -fx-padding: 0;
  }
+ .tab-pane > * > .scroll-pane > .corner {
+     -fx-background-insets: 0;  /* Fix for RT-35067 */
+ }
 .tab-pane.floating > * > .table-view,
 .tab-pane.floating > * > .tree-table-view,
 .tab-pane.floating > * > .list-view,
