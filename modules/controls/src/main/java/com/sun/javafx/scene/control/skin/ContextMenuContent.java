@@ -390,10 +390,10 @@ public class ContextMenuContent extends Region {
 
         if (nodeBounds.getMaxY() >= clipBounds.getMaxY()) {
             // this is for moving down the menu
-            setTy(ty - nodeBounds.getMaxY() + clipBounds.getMaxY());
+            scroll(-nodeBounds.getMaxY() + clipBounds.getMaxY());
         } else if (nodeBounds.getMinY() <= clipBounds.getMinY()) {
             // this is for moving up the menu
-            setTy(ty - nodeBounds.getMinY() + clipBounds.getMinY());
+            scroll(-nodeBounds.getMinY() + clipBounds.getMinY());
         }
     }
     
@@ -416,11 +416,6 @@ public class ContextMenuContent extends Region {
 
     private boolean isFirstShow = true;
     private double ty;
-    private void setTy(double value) {
-        if (ty == value) return;
-        ty = value;
-        itemsContainer.requestLayout();
-    }
 
     /**
     * Optimization part of RT-20197. In order to match the width of the choiceBox
@@ -571,11 +566,13 @@ public class ContextMenuContent extends Region {
         addEventHandler(ScrollEvent.SCROLL, new EventHandler<javafx.scene.input.ScrollEvent>() {
             @Override public void handle(ScrollEvent event) {
                 /*
-                ** we'll only scroll is the arrows are visible in the direction
-                ** that we're going, otherwise we go into empty space.
-                */
-                if ((downArrow.isVisible() && (event.getTextDeltaY() < 0.0 || event.getDeltaY() < 0.0)) ||
-                    (upArrow.isVisible() && (event.getTextDeltaY() > 0.0 || event.getDeltaY() > 0.0))) {
+                 * we'll only scroll if the arrows are visible in the direction
+                 * that we're going, otherwise we go into empty space.
+                 */
+                final double textDeltaY = event.getTextDeltaY();
+                final double deltaY = event.getDeltaY();
+                if ((downArrow.isVisible() && (textDeltaY < 0.0 || deltaY < 0.0)) ||
+                    (upArrow.isVisible() && (textDeltaY > 0.0 || deltaY > 0.0))) {
 
                     switch(event.getTextDeltaYUnits()) {
                       case LINES:
@@ -588,19 +585,19 @@ public class ContextMenuContent extends Region {
                               focusedIndex = 0;
                           }
                           double rowHeight = itemsContainer.getChildren().get(focusedIndex).prefHeight(-1);
-                          scroll(event.getTextDeltaY()*rowHeight);
+                          scroll(textDeltaY * rowHeight);
                           break;
                       case PAGES:
                           /*
                           ** page scroll, scroll the menu height
                           */
-                          scroll(event.getTextDeltaY()*itemsContainer.getHeight());
+                          scroll(textDeltaY * itemsContainer.getHeight());
                           break;
                       case NONE:
                           /*
                           ** pixel scroll
                           */
-                          scroll(event.getDeltaY());
+                          scroll(deltaY);
                           break;
                     }
                     event.consume();
@@ -878,7 +875,24 @@ public class ContextMenuContent extends Region {
     private Region selectedBackground;
     
     void scroll(double delta) {
-        setTy(ty+delta);
+        double newTy = ty + delta;
+        if (ty == newTy) return;
+
+        // translation should never be positive (this would mean the top of the
+        // menu content is detaching from the top of the menu!)
+        if (newTy > 0.0) {
+            newTy = 0.0;
+        }
+
+        // translation should never be greater than the preferred height of the
+        // menu content (otherwise the menu content will be detaching from the
+        // bottom of the menu)
+        if (getHeight() - newTy > itemsContainer.getHeight()) {
+            newTy = getHeight() - itemsContainer.getHeight() - downArrow.getHeight();
+        }
+
+        ty = newTy;
+        itemsContainer.requestLayout();
     }
 
     /***************************************************************************
@@ -929,7 +943,7 @@ public class ContextMenuContent extends Region {
     }
     
     protected Label getLabelAt(int index) {
-        return (Label)((MenuItemContainer)itemsContainer.getChildren().get(index)).getLabel();
+        return ((MenuItemContainer)itemsContainer.getChildren().get(index)).getLabel();
     }
 
     /**
@@ -941,7 +955,7 @@ public class ContextMenuContent extends Region {
 
         @Override protected void layoutChildren() {
             double yOffset = ty;
-            for (Node n : itemsContainer.getChildren()) {
+            for (Node n : getChildren()) {
                 if (n.isVisible()) {
                     final double prefHeight = snapSize(n.prefHeight(-1));
                     n.resize(snapSize(getWidth()), prefHeight);
