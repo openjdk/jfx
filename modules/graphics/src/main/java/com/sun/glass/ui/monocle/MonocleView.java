@@ -31,8 +31,6 @@ import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
 
 import java.nio.Buffer;
-import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
 import java.util.Map;
 
 public final class MonocleView extends View {
@@ -93,9 +91,10 @@ public final class MonocleView extends View {
             NativeScreen screen =
                     NativePlatformFactory.getNativePlatform().getScreen();
             Window window = getWindow();
-            screen.uploadPixels(pixels.asByteBuffer(), // TODO: asByteBuffer is inefficient
+            screen.uploadPixels(pixels.getPixels(),
                                 x + window.getX(), y + window.getY(),
-                                pixels.getWidth(), pixels.getHeight());
+                                pixels.getWidth(), pixels.getHeight(),
+                                window.getAlpha());
         }
     }
 
@@ -103,63 +102,72 @@ public final class MonocleView extends View {
      * Events
      */
 
-    public void _notifyMove(int x, int y) {
-        this.x = x;
-        this.y = y;
-        notifyView(ViewEvent.MOVE);
+    @Override
+    public void notifyKey(int type, int keyCode, char[] keyChars,
+                          int modifiers) {
+        super.notifyKey(type, keyCode, keyChars, modifiers);
     }
 
-    public void _notifyKey(int type, int keyCode, char[] keyChars,
-                              int modifiers) {
-        notifyKey(type, keyCode, keyChars, modifiers);
+    @Override
+    public void notifyMouse(int type, int button,
+                            int x, int y, int xAbs, int yAbs, int modifiers,
+                            boolean isPopupTrigger, boolean isSynthesized) {
+        super.notifyMouse(type, button, x, y, xAbs, yAbs, modifiers,
+                          isPopupTrigger,
+                          isSynthesized);
     }
 
-    public void _notifyMouse(int type, int button,
-                                int x, int y, int xAbs, int yAbs, int modifiers,
-                                boolean isPopupTrigger, boolean isSynthesized) {
-        notifyMouse(type, button, x, y, xAbs, yAbs, modifiers, isPopupTrigger,
-                    isSynthesized);
+    @Override
+    public void notifyScroll(int x, int y, int xAbs, int yAbs,
+                             double deltaX, double deltaY, int modifiers,
+                             int lines, int chars,
+                             int defaultLines, int defaultChars,
+                             double xMultiplier, double yMultiplier) {
+        super.notifyScroll(x, y, xAbs, yAbs, deltaX, deltaY,
+                           modifiers, lines, chars,
+                           defaultLines, defaultChars, xMultiplier,
+                           yMultiplier);
     }
 
-    public void _notifyScroll(int x, int y, int xAbs, int yAbs,
-                                 double deltaX, double deltaY, int modifiers,
-                                 int lines, int chars,
-                                 int defaultLines, int defaultChars,
-                                 double xMultiplier, double yMultiplier) {
-        notifyScroll(x, y, xAbs, yAbs, deltaX, deltaY,
-                     modifiers, lines, chars,
-                     defaultLines, defaultChars, xMultiplier, yMultiplier);
+    protected void notifyRepaint() {
+        super.notifyRepaint(x, y, getWidth(), getHeight());
     }
 
-    protected void _notifyRepaint(int x, int y, int width, int height) {
-        notifyRepaint(x, y, width, height);
+    @Override
+    protected void notifyResize(int width, int height) {
+        super.notifyResize(width, height);
     }
 
-    protected void _notifyResize(int width, int height) {
-        notifyResize(width, height);
-    }
-
-    protected void _notifyViewEvent(int viewEvent) {
-        notifyView(viewEvent);
+    @Override
+    protected void notifyView(int viewEvent) {
+        super.notifyView(viewEvent);
     }
 
     //DnD
-    protected void _notifyDragEnter(int x, int y, int absx, int absy, int recommendedDropAction) {
-        notifyDragEnter(x, y, absx, absy, recommendedDropAction);
+    @Override
+    protected int notifyDragEnter(int x, int y, int absx, int absy, int recommendedDropAction) {
+        return super.notifyDragEnter(x, y, absx, absy, recommendedDropAction);
     }
-    protected void _notifyDragLeave() {
-        notifyDragLeave();
+
+    @Override
+    protected void notifyDragLeave() {
+        super.notifyDragLeave();
     }
-    protected void _notifyDragDrop(int x, int y, int absx, int absy, int recommendedDropAction) {
-        notifyDragDrop(x, y, absx, absy, recommendedDropAction);
+
+    @Override
+    protected int notifyDragDrop(int x, int y, int absx, int absy, int recommendedDropAction) {
+        return super.notifyDragDrop(x, y, absx, absy, recommendedDropAction);
     }
-    protected void _notifyDragOver(int x, int y, int absx, int absy, int recommendedDropAction) {
-        notifyDragOver(x, y, absx, absy, recommendedDropAction);
+
+    @Override
+    protected int notifyDragOver(int x, int y, int absx, int absy, int recommendedDropAction) {
+        return super.notifyDragOver(x, y, absx, absy, recommendedDropAction);
     }
 
     //Menu event - i.e context menu hint (usually mouse right click) 
-    protected void _notifyMenu(int x, int y, int xAbs, int yAbs, boolean isKeyboardTrigger) {
-        notifyMenu(x, y, xAbs, yAbs, isKeyboardTrigger);
+    @Override
+    protected void notifyMenu(int x, int y, int xAbs, int yAbs, boolean isKeyboardTrigger) {
+        super.notifyMenu(x, y, xAbs, yAbs, isKeyboardTrigger);
     }
 
     @Override

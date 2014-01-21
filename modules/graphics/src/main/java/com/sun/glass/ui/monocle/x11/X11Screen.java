@@ -28,7 +28,8 @@ package com.sun.glass.ui.monocle.x11;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.monocle.NativeScreen;
 
-import java.nio.ByteBuffer;
+import java.nio.Buffer;
+import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
@@ -159,11 +160,18 @@ public class X11Screen implements NativeScreen {
     }
 
     @Override
-    public void uploadPixels(ByteBuffer b, int x, int y, int width, int height) {
+    public void uploadPixels(Buffer b,
+                             int x, int y, int width, int height,
+                             float alpha) {
         // TODO: upload pixels to X11 window
     }
 
     @Override
     public void swapBuffers() {
+    }
+
+    @Override
+    public IntBuffer getScreenCapture() {
+        return null;
     }
 }

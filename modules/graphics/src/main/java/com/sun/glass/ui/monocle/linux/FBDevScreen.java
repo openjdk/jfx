@@ -26,10 +26,14 @@
 package com.sun.glass.ui.monocle.linux;
 
 import com.sun.glass.ui.Pixels;
+import com.sun.glass.ui.monocle.Framebuffer;
 import com.sun.glass.ui.monocle.NativeScreen;
 
 import java.io.IOException;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.IntBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
@@ -37,21 +41,18 @@ import java.nio.file.StandardOpenOption;
 
 public class FBDevScreen implements NativeScreen {
 
-    private int depth;
     private int nativeFormat;
-    protected int width;
-    protected int height;
     private long nativeHandle;
     private FileChannel fbdev;
+    private ByteBuffer mappedFB;
     private boolean isShutdown;
     private int consoleCursorBlink;
+    private Framebuffer fb;
+    private LinuxFrameBuffer linuxFB;
 
     public FBDevScreen() {
         try {
-            depth = SysFS.readInt("/sys/class/graphics/fb0/bits_per_pixel");
-            int[] vsize = SysFS.readInts("/sys/class/graphics/fb0/virtual_size", 2);
-            width = vsize[0];
-            height = vsize[1];
+            linuxFB = new LinuxFrameBuffer("/dev/fb0");
             nativeHandle = 1l;
             nativeFormat = Pixels.Format.BYTE_BGRA_PRE;
             try {
@@ -73,7 +74,7 @@ public class FBDevScreen implements NativeScreen {
 
     @Override
     public int getDepth() {
-        return depth;
+        return linuxFB.getDepth();
     }
 
     @Override
@@ -83,12 +84,12 @@ public class FBDevScreen implements NativeScreen {
 
     @Override
     public int getWidth() {
-        return width;
+        return linuxFB.getWidth();
     }
 
     @Override
     public int getHeight() {
-        return height;
+        return linuxFB.getHeight();
     }
 
     @Override
@@ -101,39 +102,59 @@ public class FBDevScreen implements NativeScreen {
         return 96; // no way to read DPI from sysfs and ioctl returns junk values
     }
 
-    private void openFBDev() throws IOException {
-        Path fbdevPath = FileSystems.getDefault().getPath("/dev/fb0");
-        fbdev = FileChannel.open(fbdevPath, StandardOpenOption.WRITE);
+    private boolean isFBDevOpen() {
+        return mappedFB != null || fbdev != null;
     }
 
-    private void clearFBDev() {
-        ByteBuffer b = ByteBuffer.allocate(width * depth >> 3);
-        try {
-            for (int i = 0; i < height; i++) {
-                b.position(0);
-                b.limit(b.capacity());
-                fbdev.position(i * width * depth >> 3);
-                fbdev.write(b);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
+    private void openFBDev() throws IOException {
+        if (mappedFB == null) {
+            Path fbdevPath = FileSystems.getDefault().getPath("/dev/fb0");
+            fbdev = FileChannel.open(fbdevPath, StandardOpenOption.WRITE);
         }
+    }
+
+    private void closeFBDev() {
+        if (mappedFB != null) {
+            linuxFB.releaseMappedBuffer(mappedFB);
+            mappedFB = null;
+        } else if (fbdev != null) {
+            try {
+                fbdev.close();
+            } catch (IOException e) { }
+            fbdev = null;
+        }
+        linuxFB.close();
+    }
+
+    private Framebuffer getFramebuffer() {
+        // The Framebuffer obect must be created lazily. If we are running with
+        // the ES2 pipeline then we won't need the framebuffer until shutdown time.
+        if (fb == null) {
+            ByteBuffer bb;
+            mappedFB = linuxFB.getMappedBuffer();
+            if (mappedFB != null) {
+                bb = mappedFB;
+            } else {
+                bb = ByteBuffer.allocateDirect(getWidth() * getHeight() * 4);
+            }
+            bb.order(ByteOrder.nativeOrder());
+            fb = new Framebuffer(bb, getWidth(), getHeight(), getDepth(), true);
+            fb.setStartAddress(linuxFB.getNextAddress());
+        }
+        return fb;
     }
 
     @Override
     public synchronized void shutdown() {
+        getFramebuffer().clearBufferContents();
         try {
-            if (fbdev == null) {
-                openFBDev();
-            }
-            if (fbdev != null) {
-                clearFBDev();
-                fbdev.close();
+            if (isFBDevOpen()) {
+                writeBuffer();
+                closeFBDev();
             }
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
-            fbdev = null;
             isShutdown = true;
         }
         if (consoleCursorBlink != 0) {
@@ -146,39 +167,47 @@ public class FBDevScreen implements NativeScreen {
     }
 
     @Override
-    public synchronized void uploadPixels(ByteBuffer b,
-                             int pX, int pY, int pWidth, int pHeight) {
-        if (isShutdown) {
-            return;
-        }
-        // TODO: Handle 16-bit screens and window composition
+    public synchronized void uploadPixels(Buffer b,
+                             int pX, int pY, int pWidth, int pHeight,
+                             float alpha) {
+        getFramebuffer().composePixels(b, pX, pY, pWidth, pHeight, alpha);
+    }
+
+    @Override
+    public synchronized void swapBuffers() {
         try {
-            if (fbdev == null) {
-                openFBDev();
-                clearFBDev();
+            if (isShutdown || fb == null || !getFramebuffer().hasReceivedData()) {
+                return;
             }
-            if (width == pWidth) {
-                b.limit(pWidth * 4 * pHeight);
-                fbdev.position((pY * width + pX) * (depth >> 3));
-                fbdev.write(b);
-            } else {
-                for (int i = 0; i < pHeight; i++) {
-                    int position = i * pWidth * (depth >> 3);
-                    b.position(position);
-                    b.limit(position + pWidth * 4);
-                    fbdev.position(((i + pY) * width + pX) * (depth >> 3));
-                    fbdev.write(b);
-                }
-            }
+            writeBuffer();
         } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            getFramebuffer().reset();
+        }
+    }
+
+    private synchronized void writeBuffer() throws IOException {
+        if (!linuxFB.isDoubleBuffer()) {
+            linuxFB.vSync();
+        }
+        if (mappedFB == null) {
+            if (!isFBDevOpen()) {
+                openFBDev();
+            }
+            fbdev.position(linuxFB.getNextAddress());
+            getFramebuffer().write(fbdev);
+        } else if (linuxFB.isDoubleBuffer()) {
+            linuxFB.next();
+            linuxFB.vSync();
+            getFramebuffer().setStartAddress(linuxFB.getNextAddress());
         }
     }
 
     @Override
-    public void swapBuffers() {
-        // TODO: We could double-buffer here if the virtual screen size is at
-        // least twice the visible size
+    public synchronized IntBuffer getScreenCapture() {
+        getFramebuffer().getBuffer().clear();
+        return getFramebuffer().getBuffer().asIntBuffer();
     }
 
 }

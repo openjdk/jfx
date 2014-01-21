@@ -26,8 +26,11 @@
 package com.sun.glass.ui.monocle;
 
 import com.sun.glass.events.WindowEvent;
+import com.sun.glass.ui.Window;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public final class MonocleWindowManager {
 
@@ -91,6 +94,16 @@ public final class MonocleWindowManager {
                              windows.length - index - 1);
             windows = Arrays.copyOf(windows, windows.length - 1);
         }
+        List<MonocleWindow> windowsToNotify = new ArrayList<MonocleWindow>();
+        for (MonocleWindow otherWindow : windows) {
+            if (otherWindow.getOwner() == window) {
+                windowsToNotify.add(otherWindow);
+            }
+        }
+        for (int i = 0; i < windowsToNotify.size(); i++) {
+            windowsToNotify.get(i).notifyClose();
+        }
+        window.notifyDestroy();
         return true;
 
     }
@@ -107,7 +120,7 @@ public final class MonocleWindowManager {
         int index = getWindowIndex(window);
         if (index != -1) {
             focusedWindow = window;
-            window._notifyFocus(WindowEvent.FOCUS_GAINED);
+            window.notifyFocus(WindowEvent.FOCUS_GAINED);
             return true;
         } else {
             return false;

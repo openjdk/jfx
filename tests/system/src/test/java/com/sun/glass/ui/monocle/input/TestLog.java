@@ -27,7 +27,9 @@ package com.sun.glass.ui.monocle.input;
 
 import junit.framework.AssertionFailedError;
 
+import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Formatter;
 import java.util.List;
 
 public class TestLog {
@@ -44,6 +46,10 @@ public class TestLog {
             log.add(s);
             lock.notifyAll();
         }
+    }
+
+    public static void format(String format, Object... args) {
+        log(new Formatter().format(format, args).toString());
     }
 
     public static String[] getLog() {
@@ -169,10 +175,14 @@ public class TestLog {
                 if (timeNow >= endTime) {
                     String message = "Timed out after " + (timeNow - startTime)
                             + "ms waiting for '" + s + "'";
-                    if (TestApplication.isVerbose()) {
-                        TestLog.log(message);
+                    if (!TestApplication.isVerbose()) {
+                        System.out.flush();
+                        System.err.flush();
+                        for (String logLine: log) {
+                            System.out.println(logLine);
+                        }
                     }
-                    throw new RuntimeException(message);
+                    throw new AssertionFailedError(message);
                 }
             }
         }

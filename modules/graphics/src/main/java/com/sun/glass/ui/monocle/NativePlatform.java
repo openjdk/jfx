@@ -27,39 +27,19 @@ package com.sun.glass.ui.monocle;
 
 import com.sun.glass.ui.monocle.input.InputDeviceRegistry;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
-
 public abstract class NativePlatform {
 
     private static InputDeviceRegistry inputDeviceRegistry;
-    protected final ExecutorService executor;
-    private Thread executorThread;
+    protected final RunnableProcessor runnableProcessor;
     private NativeCursor cursor;
     private NativeScreen screen;
 
     protected NativePlatform() {
-        this.executor = Executors.newSingleThreadExecutor(new ThreadFactory() {
-            @Override
-            public Thread newThread(Runnable r) {
-                executorThread = new Thread(r, "Monocle Application Thread");
-                return executorThread;
-            }
-        });
-        // Get the event thread started so that its thread exists when we ask
-        // for it in getExecutorThread(). This causes newThread() to run
-        // immediately, in the current thread. So once submit() returns,
-        // executorThread has been initialized.
-        executor.submit(new Runnable() {
-            public void run() {
-            }
-        });
-        assert(executorThread != null);
+        runnableProcessor = new RunnableProcessor();
     }
 
     protected void shutdown() {
-        executor.shutdown();
+        runnableProcessor.shutdown();
         if (cursor != null) {
             cursor.shutdown();
         }
@@ -68,12 +48,8 @@ public abstract class NativePlatform {
         }
     }
 
-    public ExecutorService getExecutor() {
-        return executor;
-    }
-
-    public Thread getExecutorThread() {
-        return executorThread;
+    public RunnableProcessor getRunnableProcessor() {
+        return runnableProcessor;
     }
 
     public synchronized InputDeviceRegistry getInputDeviceRegistry() {

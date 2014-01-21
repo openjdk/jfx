@@ -94,9 +94,12 @@ public class LinuxSystem {
 
     public static final int FBIOGET_VSCREENINFO = 0x4600;
     public static final int FBIOPUT_VSCREENINFO = 0x4601;
+    public static final int FBIOPAN_DISPLAY = 0x4606;
     public static final int FBIOBLANK = 0x4611;
 
     public static final int FB_BLANK_UNBLANK = 0;
+    public static final int FB_ACTIVATE_NOW = 0;
+    public static final int FB_ACTIVATE_VBL = 16;
 
     public static class FbVarScreenInfo extends C.Structure {
         public FbVarScreenInfo() {
@@ -104,8 +107,13 @@ public class LinuxSystem {
         }
         @Override
         public native int sizeof();
+        public native int getBitsPerPixel(long p);
         public native int getXRes(long p);
         public native int getYRes(long p);
+        public native int getXResVirtual(long p);
+        public native int getYResVirtual(long p);
+        public native int getOffsetX(long p);
+        public native int getOffsetY(long p);
         public native void setRes(long p, int x, int y);
         public native void setVirtualRes(long p, int x, int y);
         public native void setOffset(long p, int x, int y);
@@ -144,6 +152,15 @@ public class LinuxSystem {
     public native String dlerror();
     public native long dlsym(long handle, String symbol);
     public native int dlclose(long handle);
+
+    // mman.h
+    public static final long PROT_READ = 0x1l;
+    public static final long PROT_WRITE = 0x2l;
+    public static final long MAP_SHARED = 0x1l;
+    public static final long MAP_FAILED = 0xffffffffl;
+    public native long mmap(long addr, long length, long prot, long flags,
+                            long fd, long offset);
+    public native int munmap(long addr, long length);
 
     public String getErrorMessage() {
         return strerror(errno());

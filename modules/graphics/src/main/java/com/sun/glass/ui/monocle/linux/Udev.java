@@ -26,6 +26,7 @@
 package com.sun.glass.ui.monocle.linux;
 
 import com.sun.glass.ui.monocle.NativePlatformFactory;
+import com.sun.glass.ui.monocle.RunnableProcessor;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -33,7 +34,6 @@ import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
 
 /**
  * Udev connects to the udev system to get updates on sysfs devices that
@@ -92,11 +92,11 @@ public class Udev implements Runnable {
     @Override
     public void run() {
         try {
-            ExecutorService executor =
-                    NativePlatformFactory.getNativePlatform().getExecutor();
+            RunnableProcessor runnableProcessor =
+                    NativePlatformFactory.getNativePlatform().getRunnableProcessor();
             while (true) {
                 Map<String, String> event = readEvent();
-                executor.submit(new Runnable() {
+                runnableProcessor.invokeLater(new Runnable() {
                     public void run() {
                         String action = event.get("ACTION");
                         if (action != null) {
@@ -109,10 +109,13 @@ public class Udev implements Runnable {
                                     try {
                                         uls[i].udevEvent(action, event);
                                     } catch (RuntimeException e) {
-                                        System.err.println("Exception in udev listener:");
+                                        System.err.println(
+                                                "Exception in udev listener:");
                                         e.printStackTrace();
                                     } catch (Error e) {
-                                        System.err.println("Error in udev listener, closing udev");
+                                        System.err.println(
+                                                "Error in udev listener, " +
+                                                        "closing udev");
                                         e.printStackTrace();
                                         close();
                                         return;

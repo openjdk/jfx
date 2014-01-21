@@ -28,14 +28,14 @@
 
 JNIEXPORT jobject JNICALL
  Java_com_sun_glass_ui_monocle_util_C_NewDirectByteBuffer
-    (JNIEnv *env, jclass UNUSED(cClass), jlong ptr, jint size) {
+    (JNIEnv *env, jobject UNUSED(obj), jlong ptr, jint size) {
     return (*env)->NewDirectByteBuffer(env,
             (void *) (unsigned long) ptr, (jlong) size);
 }
 
 JNIEXPORT jlong JNICALL
  Java_com_sun_glass_ui_monocle_util_C_GetDirectBufferAddress
-    (JNIEnv *env, jclass UNUSED(cClass), jobject byteBuffer) {
+    (JNIEnv *env, jobject UNUSED(obj), jobject byteBuffer) {
     return byteBuffer
             ? asJLong((*env)->GetDirectBufferAddress(env, byteBuffer))
             : (jlong) 0l;

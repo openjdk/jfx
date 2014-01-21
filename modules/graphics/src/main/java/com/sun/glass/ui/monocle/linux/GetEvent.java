@@ -37,7 +37,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Callable;
 
 /** A test entry point for Monacle to show what events are read from input
  * devices.
@@ -103,13 +102,7 @@ public class GetEvent {
         Udev.getInstance().addListener(udevListener);
         // Request updates for existing devices
         SysFS.triggerUdevNotification("input");
-        // Make sure the executor is started. Otherwise we will exit at the
-        // end of this method, since all other threads are daemons.
-        platform.getExecutor().submit(new Callable<Void>() {
-            public Void call() {
-                return null;
-            }
-        }).get();
+        new Thread(platform.getRunnableProcessor()).start();
     }
 
 }

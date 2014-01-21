@@ -28,8 +28,12 @@ package com.sun.glass.ui.monocle;
 import com.sun.glass.events.MouseEvent;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Robot;
+import com.sun.glass.ui.monocle.input.KeyInput;
+import com.sun.glass.ui.monocle.input.KeyState;
 import com.sun.glass.ui.monocle.input.MouseInput;
 import com.sun.glass.ui.monocle.input.MouseState;
+
+import java.nio.IntBuffer;
 
 public class MonocleRobot extends Robot {
     @Override
@@ -42,12 +46,18 @@ public class MonocleRobot extends Robot {
 
     @Override
     protected void _keyPress(int code) {
-        // TODO: robot key press
+        KeyState state = new KeyState();
+        KeyInput.getInstance().getState(state);
+        state.pressKey(code);
+        KeyInput.getInstance().setState(state);
     }
 
     @Override
     protected void _keyRelease(int code) {
-        // TODO: robot key release
+        KeyState state = new KeyState();
+        KeyInput.getInstance().getState(state);
+        state.releaseKey(code);
+        KeyInput.getInstance().setState(state);
     }
 
     @Override
@@ -112,13 +122,29 @@ public class MonocleRobot extends Robot {
 
     @Override
     protected int _getPixelColor(int x, int y) {
-        return 0;
+        NativeScreen screen = NativePlatformFactory.getNativePlatform().getScreen();
+        IntBuffer buffer = screen.getScreenCapture();
+        return buffer.get(x + y * screen.getWidth());
     }
 
     @Override
     protected Pixels _getScreenCapture(int x, int y, int width, int height,
                                        boolean isHiDPI) {
-        // TODO: screen capture
-        return null;
+        NativeScreen screen = NativePlatformFactory.getNativePlatform().getScreen();
+        IntBuffer buffer = screen.getScreenCapture();
+        buffer.clear();
+        if (x == 0 && y == 0 && width == screen.getWidth() && height == screen.getHeight()) {
+            return new MonoclePixels(width, height, buffer);
+        } else {
+            IntBuffer selection = IntBuffer.allocate(width * height);
+            for (int i = 0; i < height; i++) {
+                int srcPos = x + (y + i) * screen.getWidth();
+                buffer.position(srcPos);
+                buffer.limit(srcPos + width);
+                selection.put(buffer);
+            }
+            selection.clear();
+            return new MonoclePixels(width, height, selection);
+        }
     }
 }

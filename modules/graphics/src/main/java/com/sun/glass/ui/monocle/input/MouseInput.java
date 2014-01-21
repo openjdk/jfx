@@ -76,9 +76,9 @@ public class MouseInput {
                 int oldY = state.getY();
                 int oldRelX = oldX - oldWindow.getX();
                 int oldRelY = oldY - oldWindow.getY();
-                oldView._notifyMouse(MouseEvent.EXIT, button,
-                                  oldRelX, oldRelY, oldX, oldY,
-                                  modifiers, isPopupTrigger, synthesized);
+                oldView.notifyMouse(MouseEvent.EXIT, button,
+                                    oldRelX, oldRelY, oldX, oldY,
+                                    modifiers, isPopupTrigger, synthesized);
             }
         }
         boolean newAbsoluteLocation = state.getX() != x || state.getY() != y;
@@ -97,9 +97,9 @@ public class MouseInput {
             int modifiers = state.getModifiers(); // TODO: include key modifiers
             int button = state.getButton();
             boolean isPopupTrigger = false; // TODO
-            view._notifyMouse(MouseEvent.ENTER, button,
-                              relX, relY, x, y,
-                              modifiers, isPopupTrigger, synthesized);
+            view.notifyMouse(MouseEvent.ENTER, button,
+                             relX, relY, x, y,
+                             modifiers, isPopupTrigger, synthesized);
         }
         // send motion events
         if (oldWindow != window | newAbsoluteLocation) {
@@ -108,9 +108,9 @@ public class MouseInput {
             int modifiers = state.getModifiers(); // TODO: include key modifiers
             int button = state.getButton();
             boolean isPopupTrigger = false; // TODO
-            view._notifyMouse(eventType, button,
-                              relX, relY, x, y,
-                              modifiers, isPopupTrigger, synthesized);
+            view.notifyMouse(eventType, button,
+                             relX, relY, x, y,
+                             modifiers, isPopupTrigger, synthesized);
         }
         // send press events
         newState.getButtonsPressed().difference(buttons, state.getButtonsPressed());
@@ -122,10 +122,10 @@ public class MouseInput {
                 pressState.pressButton(button);
                 // send press event
                 boolean isPopupTrigger = false; // TODO
-                view._notifyMouse(MouseEvent.DOWN, button,
-                                  relX, relY, x, y,
-                                  pressState.getModifiers(), isPopupTrigger,
-                                  synthesized);
+                view.notifyMouse(MouseEvent.DOWN, button,
+                                 relX, relY, x, y,
+                                 pressState.getModifiers(), isPopupTrigger,
+                                 synthesized);
             }
         }
         buttons.clear();
@@ -140,10 +140,10 @@ public class MouseInput {
                 releaseState.releaseButton(button);
                 // send release event
                 boolean isPopupTrigger = false; // TODO
-                view._notifyMouse(MouseEvent.UP, button,
-                                  relX, relY, x, y,
-                                  releaseState.getModifiers(), isPopupTrigger,
-                                  synthesized);
+                view.notifyMouse(MouseEvent.UP, button,
+                                 relX, relY, x, y,
+                                 releaseState.getModifiers(), isPopupTrigger,
+                                 synthesized);
 
             }
         }

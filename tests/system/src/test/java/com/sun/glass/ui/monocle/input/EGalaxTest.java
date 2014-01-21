@@ -257,7 +257,7 @@ public class EGalaxTest extends TouchTestBase {
         final int y1 = (int) Math.round(screen.getHeight() / 2.0);
         final int x2 = (int) Math.round(screen.getWidth() / 3.0);
         final int y2 = (int) Math.round(screen.getHeight() / 2.0);
-        
+
         TestLog.reset();
         // first finger
         ui.processLine("EV_ABS ABS_MT_TRACKING_ID 0");
@@ -350,5 +350,83 @@ public class EGalaxTest extends TouchTestBase {
         TestLog.waitForLog("Mouse released: " + x2 + ", " + y2, 3000l);
         TestLog.waitForLog("Touch released: " + x2 + ", " + y2, 3000l);        
     }
-}
+
+    /** Test that double taps in the same area generate synthesized
+     * multi-click mouse events. */
+    @Test
+    public void testDoubleClick1() throws Exception {
+        int x = (int) Math.round(screen.getWidth() / 2.0);
+        int y = (int) Math.round(screen.getHeight() / 2.0);
+        TestApplication.getStage().getScene().setOnMouseClicked((e) -> {
+            TestLog.format("Mouse clicked: %d, %d: clickCount %d",
+                           (int) e.getScreenX(), (int) e.getScreenY(),
+                           e.getClickCount());
+        });
+        TestLog.reset();
+        ui.processLine("EV_ABS ABS_MT_TRACKING_ID 0");
+        ui.processLine("EV_ABS ABS_MT_TOUCH_MAJOR 1");
+        absMTPosition(x, y);
+        ui.processLine("EV_SYN SYN_MT_REPORT 0");
+        ui.processLine("EV_SYN SYN_REPORT 0");
+
+        ui.processLine("EV_ABS ABS_MT_TRACKING_ID 0");
+        ui.processLine("EV_ABS ABS_MT_TOUCH_MAJOR 0");
+        ui.processLine("EV_SYN SYN_MT_REPORT 0");
+        ui.processLine("EV_SYN SYN_REPORT 0");
+
+        ui.processLine("EV_ABS ABS_MT_TRACKING_ID 0");
+        ui.processLine("EV_ABS ABS_MT_TOUCH_MAJOR 1");
+        absMTPosition(x, y);
+        ui.processLine("EV_SYN SYN_MT_REPORT 0");
+        ui.processLine("EV_SYN SYN_REPORT 0");
+
+        ui.processLine("EV_ABS ABS_MT_TRACKING_ID 0");
+        ui.processLine("EV_ABS ABS_MT_TOUCH_MAJOR 0");
+        ui.processLine("EV_SYN SYN_MT_REPORT 0");
+        ui.processLine("EV_SYN SYN_REPORT 0");
+
+        TestLog.waitForLog("Mouse clicked: " + x + ", " + y + ": clickCount 1", 3000l);
+        TestLog.waitForLog("Mouse clicked: " + x + ", " + y + ": clickCount 2", 3000l);
+    }
+
+    @Test
+    public void testDoubleClick2() throws Exception {
+        int x1 = (int) Math.round(screen.getWidth() / 2.0);
+        int y1 = (int) Math.round(screen.getHeight() / 2.0);
+        int x2 = x1 + TestApplication.getTapRadius();
+        int y2 = y1 + TestApplication.getTapRadius();
+
+        TestApplication.getStage().getScene().setOnMouseClicked((e) -> {
+            TestLog.format("Mouse clicked: %d, %d: clickCount %d",
+                           (int) e.getScreenX(), (int) e.getScreenY(),
+                           e.getClickCount());
+        });
+        TestLog.reset();
+        ui.processLine("EV_ABS ABS_MT_TRACKING_ID 0");
+        ui.processLine("EV_ABS ABS_MT_TOUCH_MAJOR 1");
+        absMTPosition(x1, y1);
+        ui.processLine("EV_SYN SYN_MT_REPORT 0");
+        ui.processLine("EV_SYN SYN_REPORT 0");
+
+        ui.processLine("EV_ABS ABS_MT_TRACKING_ID 0");
+        ui.processLine("EV_ABS ABS_MT_TOUCH_MAJOR 0");
+        ui.processLine("EV_SYN SYN_MT_REPORT 0");
+        ui.processLine("EV_SYN SYN_REPORT 0");
+
+        ui.processLine("EV_ABS ABS_MT_TRACKING_ID 0");
+        ui.processLine("EV_ABS ABS_MT_TOUCH_MAJOR 1");
+        absMTPosition(x2, y2);
+        ui.processLine("EV_SYN SYN_MT_REPORT 0");
+        ui.processLine("EV_SYN SYN_REPORT 0");
+
+        ui.processLine("EV_ABS ABS_MT_TRACKING_ID 0");
+        ui.processLine("EV_ABS ABS_MT_TOUCH_MAJOR 0");
+        ui.processLine("EV_SYN SYN_MT_REPORT 0");
+        ui.processLine("EV_SYN SYN_REPORT 0");
+
+        TestLog.waitForLog("Mouse clicked: " + x1 + ", " + y1 + ": clickCount 1", 3000l);
+        TestLog.waitForLog("Mouse clicked: " + x2 + ", " + y2 + ": clickCount 2", 3000l);
+    }
+
+ }
 

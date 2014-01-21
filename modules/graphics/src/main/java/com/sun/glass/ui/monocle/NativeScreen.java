@@ -25,7 +25,8 @@
 
 package com.sun.glass.ui.monocle;
 
-import java.nio.ByteBuffer;
+import java.nio.Buffer;
+import java.nio.IntBuffer;
 
 public interface NativeScreen {
 
@@ -37,9 +38,11 @@ public interface NativeScreen {
     public long getNativeHandle();
     public void shutdown();
 
-    public void uploadPixels(ByteBuffer b,
-                             int x, int y, int width, int height);
+    public void uploadPixels(Buffer b,
+                             int x, int y, int width, int height, float alpha);
 
     public void swapBuffers();
+
+    public IntBuffer getScreenCapture();
 
 }

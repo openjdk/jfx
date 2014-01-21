@@ -103,9 +103,9 @@ public class KeyInput {
             return;
         }
         char[] chars = getKeyChars(ks, key);
-        view._notifyKey(type, key, chars, ks.getModifiers());
+        view.notifyKey(type, key, chars, ks.getModifiers());
         if (type == KeyEvent.PRESS && chars.length > 0) {
-            view._notifyKey(KeyEvent.TYPED, key, chars, ks.getModifiers());
+            view.notifyKey(KeyEvent.TYPED, key, chars, ks.getModifiers());
         }
     }
 

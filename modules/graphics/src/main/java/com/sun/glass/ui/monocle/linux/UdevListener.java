@@ -36,7 +36,7 @@ public interface UdevListener {
 
     /**
      * Called when a udev event is available.
-     * Called on the executor provided to the Udev.
+     * Called on the runnable processor provided to the Udev.
      *
      * @param action The udev action, usually "add", "remove", "change",
      *               "online" or "offline.

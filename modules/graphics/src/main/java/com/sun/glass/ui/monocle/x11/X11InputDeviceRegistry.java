@@ -28,12 +28,11 @@ package com.sun.glass.ui.monocle.x11;
 import com.sun.glass.events.MouseEvent;
 import com.sun.glass.ui.monocle.NativePlatform;
 import com.sun.glass.ui.monocle.NativePlatformFactory;
+import com.sun.glass.ui.monocle.RunnableProcessor;
 import com.sun.glass.ui.monocle.input.InputDevice;
 import com.sun.glass.ui.monocle.input.InputDeviceRegistry;
 import com.sun.glass.ui.monocle.input.MouseInput;
 import com.sun.glass.ui.monocle.input.MouseState;
-
-import java.util.concurrent.ExecutorService;
 
 class X11InputDeviceRegistry extends InputDeviceRegistry {
 
@@ -73,8 +72,9 @@ class X11InputDeviceRegistry extends InputDeviceRegistry {
                 X11Screen screen = (X11Screen) platform.getScreen();
                 long display = screen.getDisplay();
                 long window = screen.getNativeHandle();
-                ExecutorService executor = platform.getExecutor();
-                executor.submit(new Runnable() {
+                RunnableProcessor runnableProcessor =
+                        platform.getRunnableProcessor();
+                runnableProcessor.invokeLater(new Runnable() {
                     public void run() {
                         devices.add(device);
                     }
@@ -86,7 +86,7 @@ class X11InputDeviceRegistry extends InputDeviceRegistry {
                     if (X.XEvent.getWindow(event.p) != window) {
                         continue;
                     }
-                    processXEvent(event, executor);
+                    processXEvent(event, runnableProcessor);
                 }
             }
         });
@@ -95,25 +95,27 @@ class X11InputDeviceRegistry extends InputDeviceRegistry {
         x11InputThread.start();
     }
 
-    private void processXEvent(X.XEvent event, ExecutorService executor) {
+    private void processXEvent(X.XEvent event,
+                               RunnableProcessor runnableProcessor) {
         switch (X.XEvent.getType(event.p)) {
             case X.ButtonPress: {
                 X.XButtonEvent buttonEvent = new X.XButtonEvent(event);
                 int button = X.XButtonEvent.getButton(buttonEvent.p);
-                executor.submit(new ButtonPressProcessor(button));
+                runnableProcessor.invokeLater(new ButtonPressProcessor(button));
                 break;
             }
             case X.ButtonRelease: {
                 X.XButtonEvent buttonEvent = new X.XButtonEvent(event);
                 int button = X.XButtonEvent.getButton(buttonEvent.p);
-                executor.submit(new ButtonReleaseProcessor(button));
+                runnableProcessor.invokeLater(
+                        new ButtonReleaseProcessor(button));
                 break;
             }
             case X.MotionNotify: {
                 X.XMotionEvent motionEvent = new X.XMotionEvent(event);
                 int x = X.XMotionEvent.getX(motionEvent.p);
                 int y = X.XMotionEvent.getY(motionEvent.p);
-                executor.submit(new MotionProcessor(x, y));
+                runnableProcessor.invokeLater(new MotionProcessor(x, y));
                 break;
             }
         }

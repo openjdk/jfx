@@ -25,16 +25,29 @@
 
 package com.sun.glass.ui.monocle;
 
+import com.sun.glass.events.ViewEvent;
 import com.sun.glass.events.WindowEvent;
 import com.sun.glass.ui.Cursor;
 import com.sun.glass.ui.Pixels;
+import com.sun.glass.ui.PlatformFactory;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
 
 public final class MonocleWindow extends Window {
 
+
+    private static final int STATE_NORMAL = 0;
+    private static final int STATE_MINIMIZED = 1;
+    private static final int STATE_MAXIMIZED = 2;
+    private static final int STATE_FULLSCREEN = 3;
+
     private int id;
+    private int state;
+    private int cachedX, cachedY, cachedW, cachedH;
+    private int minW, minH;
+    private int maxW = -1;
+    private int maxH = -1;
 
     protected MonocleWindow(Window owner, Screen screen, int styleMask) {
         super(owner, screen, styleMask);
@@ -80,34 +93,15 @@ public final class MonocleWindow extends Window {
                               int x, int y, boolean xSet, boolean ySet,
                               int w, int h, int cw, int ch,
                               float xGravity, float yGravity) {
-
-        //calculated window dimensions
         int width;
         int height;
-
-        //is new window size is the content size or the window size
-        //this required for platforms that support decorations.
-        //if isContentSize == true - width & height are
-        //the window size w/o decorations
-        boolean isContentSize = false;
-
-        //if false, only move window
-        boolean needResize = false;
-
-        if (w < 0 && h < 0 && cw < 0 && ch < 0) {
-            //nothing to do, return
-            return;
-        }
 
         if (w > 0) {
             //window width surpass window content width (cw)
             width = w;
-            needResize = true;
         } else if (cw > 0) {
             //content width changed
             width = cw;
-            isContentSize = true;
-            needResize = true;
         } else {
             //no explicit request to change width, get default
             width = getWidth();
@@ -116,12 +110,9 @@ public final class MonocleWindow extends Window {
         if (h > 0) {
             //window height surpass window content height(ch)
             height = h;
-            needResize = true;
         } else if (cw > 0) {
             //content height changed
             height = ch;
-            isContentSize = true;
-            needResize = true;
         } else {
             //no explicit request to change height, get default
             height = getHeight();
@@ -132,32 +123,38 @@ public final class MonocleWindow extends Window {
         if (!ySet) {
             y = getY();
         }
+        if (maxW >= 0) {
+            width = Math.min(width, maxW);
+        }
+        if (maxH >= 0) {
+            height = Math.min(height, maxH);
+        }
+        width = Math.max(width, minW);
+        height = Math.max(height, minH);
 
+        notifyResizeAndMove(x, y, width, height);
+    }
 
-        //perform actions
-        boolean windowHasBeenUpdated = false;
-        needResize |= isContentSize;
+    private void notifyResizeAndMove(int x, int y, int width, int height) {
+        MonocleView view = (MonocleView) getView();
+        boolean repaintView = false;
 
-        //handle resize if needed
-        if (needResize &&
-            (getWidth() != width || getHeight() != height)) {
-
+        if (getWidth() != width || getHeight() != height) {
             notifyResize(WindowEvent.RESIZE, width, height);
-
-            windowHasBeenUpdated = true;
-
+            if (view != null) {
+                view.notifyResize(width, height);
+                repaintView = true;
+            }
         }
-
-        //handle move if needed
         if (getX() != x || getY() != y) {
-            notifyMove(x, y);       
-
-            windowHasBeenUpdated = true;
-
-            //TODO: do we need repaints?
-            //lens_wm_repaint(env, window);
+            notifyMove(x, y);
+            if (view != null) {
+                repaintView = true;
+            }
         }
-
+        if (repaintView) {
+            view.notifyRepaint();
+        }
     }
 
     //creates the native window
@@ -184,7 +181,7 @@ public final class MonocleWindow extends Window {
         if (view != null) {
             // the system assumes a resize notification to set the View
             // sizes and to get the Scene to layout correctly.
-            ((MonocleView)view)._notifyResize(getWidth(), getHeight());
+            ((MonocleView)view).notifyResize(getWidth(), getHeight());
         }
         return result;
     }
@@ -204,13 +201,89 @@ public final class MonocleWindow extends Window {
 
     @Override
     protected boolean _minimize(long nativeWindowPointer, boolean minimize) {
-        return MonocleWindowManager.getInstance().minimizeWindow(this);
+        if (minimize) {
+            state = STATE_MINIMIZED;
+        } else {
+            state = STATE_NORMAL;
+        }
+        return true;
     }
 
     @Override
     protected boolean _maximize(long nativeWindowPointer, boolean maximize,
                                 boolean wasMaximized) {
-        return MonocleWindowManager.getInstance().maximizeWindow(this);
+        NativeScreen screen = NativePlatformFactory.getNativePlatform().getScreen();
+        int x = getX();
+        int y = getY();
+        int width = getWidth();
+        int height = getHeight();
+        if (maximize && !wasMaximized) {
+            if (state == STATE_NORMAL) {
+                cachedX = x;
+                cachedY = y;
+                cachedW = width;
+                cachedH = height;
+            }
+            if (maxW >= 0) {
+                width = maxW;
+                x = Math.min(x, screen.getWidth() - width);
+            } else {
+                x = 0;
+                width = screen.getWidth();
+            }
+            if (maxH >= 0) {
+                height = maxH;
+                y = Math.min(y, screen.getHeight() - height);
+            } else {
+                y = 0;
+                height = screen.getHeight();
+            }
+            state = STATE_MAXIMIZED;
+        } else if (!maximize && wasMaximized) {
+            x = cachedX;
+            y = cachedY;
+            width = cachedW;
+            height = cachedH;
+            state = STATE_NORMAL;
+        }
+        notifyResizeAndMove(x, y, width, height);
+        return true;
+    }
+
+    void setFullScreen(boolean fullscreen) {
+        NativeScreen screen = NativePlatformFactory.getNativePlatform().getScreen();
+        int x = getX();
+        int y = getY();
+        int width = getWidth();
+        int height = getHeight();
+        if (fullscreen) {
+            if (state == STATE_NORMAL) {
+                cachedX = x;
+                cachedY = y;
+                cachedW = width;
+                cachedH = height;
+            }
+            x = 0;
+            y = 0;
+            width = screen.getWidth();
+            height = screen.getHeight();
+            MonocleView view = (MonocleView) getView();
+            if (view != null) {
+                view.notifyView(ViewEvent.FULLSCREEN_ENTER);
+            }
+            state = STATE_FULLSCREEN;
+        } else {
+            x = cachedX;
+            y = cachedY;
+            width = cachedW;
+            height = cachedH;
+            MonocleView view = (MonocleView) getView();
+            if (view != null) {
+                view.notifyView(ViewEvent.FULLSCREEN_EXIT);
+            }
+            state = STATE_NORMAL;
+        }
+        notifyResizeAndMove(x, y, width, height);
     }
 
     private float cachedAlpha = 1;
@@ -260,11 +333,15 @@ public final class MonocleWindow extends Window {
 
     @Override
     protected boolean _setMinimumSize(long ptr, int width, int height) {
+        minW = width;
+        minH = height;
         return true;
     }
 
     @Override
     protected boolean _setMaximumSize(long ptr, int width, int height) {
+        maxW = width;
+        maxH = height;
         return true;
     }
 
@@ -303,47 +380,19 @@ public final class MonocleWindow extends Window {
         throw new UnsupportedOperationException();
     }
 
-    //**************************************************************
-    // wrappers so Application run loop can get where it needs to go
-    protected void _notifyClose() {
-        //This event is called by MonocleWindowManager when a window needs to be
-        //closed, so this is a synthetic way to emulate platform window manager
-        //window close event
-        notifyClose();
-        close();
+    @Override
+    protected void notifyClose() {
+        super.notifyClose();
     }
 
-    protected void _notifyDestroy() {
-        notifyDestroy();
+    @Override
+    protected void notifyDestroy() {
+        super.notifyDestroy();
     }
 
-    protected void _notifyFocus(int event) {
-        notifyFocus(event);
-    }
-
-    protected void _notifyMove(final int x, final int y) {
-        notifyMove(x, y);
-        // Note! we don't notify the view of a move
-        // as the view is only supposed to have decoration
-        // offsets for X and Y. If we have those, call
-        // view._notifyMove(x,y) directly with the offsets
-    }
-
-    protected void _notifyResize(final int type, final int width,
-                                 final int height) {
-        notifyResize(type, width, height);
-        MonocleView view = (MonocleView) getView();
-        if (view != null) {
-            view._notifyResize(width, height);
-        }
-    }
-
-    protected void _notifyExpose(final int x, final int y, final int width,
-                                 final int height) {
-        MonocleView view = (MonocleView) getView();
-        if (view != null) {
-            view._notifyRepaint(x, y, width, height);
-        }
+    @Override
+    protected void notifyFocus(int event) {
+        super.notifyFocus(event);
     }
 
     protected void _notifyFocusUngrab() {

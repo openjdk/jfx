@@ -32,18 +32,4 @@ import java.io.IOException;
 
 public class OMAPScreen extends FBDevScreen {
 
-    public OMAPScreen() {
-        try {
-            // OMAP can report a larger vertical screen size in
-            // /sys/class/graphics/fb0/virtual_size than the physical size. So
-            // we read the real size here.
-            int[] size = SysFS.readInts("/sys/devices/platform/omapdss/overlay0/input_size", 2);
-            width = size[0];
-            height = size[1];
-        } catch (IOException e) {
-            e.printStackTrace();
-            throw (IllegalStateException)
-                    new IllegalStateException().initCause(e);
-        }
-    }
 }

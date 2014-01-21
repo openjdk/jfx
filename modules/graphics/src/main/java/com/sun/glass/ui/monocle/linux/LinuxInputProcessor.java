@@ -34,7 +34,7 @@ package com.sun.glass.ui.monocle.linux;
 public interface LinuxInputProcessor {
     /**
      * Called when events are waiting on the input device to be processed.
-     * Called on the executor provided to the input device.
+     * Called on the runnable processor provided to the input device.
      *
      * @param device The device on which events are pending
      */
