@@ -875,7 +875,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             // right-hand side of the tab header (e.g. if the tab header area width
             // is expanded), and if it isn't modify the scroll offset to bring
             // it into line. See RT-35194 for a test case.
-            if ((visibleWidth - scrollOffset) > offset) {
+            if ((visibleWidth - scrollOffset) > offset && scrollOffset < 0) {
                 setScrollOffset(visibleWidth - offset);
             }
         }
