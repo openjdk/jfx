@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -590,8 +590,10 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                     /*
                     ** only consume it if we use it
                     */
-                    adjustPixels(-virtualDelta);
-                    event.consume();
+                    double result = adjustPixels(-virtualDelta);
+                    if (result != 0.0) {
+                        event.consume();
+                    }
                 }
                 else {
                     /*
