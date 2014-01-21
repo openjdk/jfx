@@ -3236,7 +3236,7 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
 }
 
-.color-picker > .split-button > .arrow-button {
+.combo-box-base.color-picker.split-button > .arrow-button {
     -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
@@ -3245,6 +3245,21 @@ Only the properties with values that are different from the TextBox are specifie
 
 .color-picker:hover {
     -fx-color: -fx-base;
+}
+
+/** Fix for RT-35422 where border was being shown incorrectly on non-split-buttons */
+.combo-box-base.color-picker:hover > .arrow-button {
+    -fx-background-insets: 0, 1 1 1 0, 2 2 2 0;
+}
+
+.color-picker.button {
+    -fx-padding: 0 5 0 0;
+}
+
+.color-picker.button > .arrow-button {
+    -fx-background-color: -fx-inner-border, -fx-body-color;
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 0 5 5 0, 0 4 4 0;
 }
 
 .color-picker > .split-button > .arrow-button:hover {
@@ -3288,7 +3303,7 @@ Only the properties with values that are different from the TextBox are specifie
 }
 
 .color-palette > .color-picker-grid {
-    -fx-border-color: black;
+    -fx-border-color: transparent;
 }
 
 .color-palette > .color-picker-grid > .color-square {
