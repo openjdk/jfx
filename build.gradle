@@ -338,6 +338,10 @@ ext.IS_FULL_TEST = Boolean.parseBoolean(FULL_TEST);
 defineProperty("USE_ROBOT", "true")
 ext.IS_USE_ROBOT = Boolean.parseBoolean(USE_ROBOT);
 
+// Specified whether to run tests in headless mode
+defineProperty("HEADLESS_TEST", "false")
+ext.IS_HEADLESS_TEST = Boolean.parseBoolean(HEADLESS_TEST);
+
 // Specifies whether to run system tests that depend on AWT (only used when FULL_TEST is also enabled)
 defineProperty("AWT_TEST", "true")
 ext.IS_AWT_TEST = Boolean.parseBoolean(AWT_TEST);
@@ -1039,6 +1043,11 @@ allprojects {
             addJCov(project, test)
         }
         classpath = files("$jfxrtJar") + classpath
+        if (IS_HEADLESS_TEST) {
+            systemProperty 'glass.platform', 'Monocle'
+            systemProperty 'monocle.platform', 'Headless'
+            systemProperty 'prism.order', 'sw'
+        }
     }
 
     compileTestJava {
