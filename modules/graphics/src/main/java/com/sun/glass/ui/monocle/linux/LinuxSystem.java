@@ -30,6 +30,7 @@ import com.sun.glass.utils.NativeLibLoader;
 
 import java.nio.ByteBuffer;
 import java.security.Permission;
+import com.sun.glass.utils.NativeLibLoader;
 
 public class LinuxSystem {
     private static Permission permission = new RuntimePermission("loadLibrary.*");
@@ -148,6 +149,8 @@ public class LinuxSystem {
     public native String strerror(int errnum);
 
     // dlfcn.h
+    public static final int RTLD_LAZY = 0x00001;
+    public static final int RTLD_GLOBAL = 0x00100;
     public native long dlopen(String filename, int flag);
     public native String dlerror();
     public native long dlsym(long handle, String symbol);

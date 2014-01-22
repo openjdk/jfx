@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013,2014 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,26 +23,14 @@
  * questions.
  */
 
-package com.sun.glass.ui.monocle;
+#include <EGL/egl.h>
 
-import java.nio.Buffer;
-import java.nio.IntBuffer;
+#include "com_sun_glass_ui_monocle_EGL.h"
+#include "Monocle.h"
 
-public interface NativeScreen {
-
-    public int getDepth();
-    public int getNativeFormat();
-    public int getWidth();
-    public int getHeight();
-    public int getDPI();
-    public long getNativeHandle();
-    public void shutdown();
-    public long platformGetNativeDisplay();
-    public void uploadPixels(Buffer b,
-                             int x, int y, int width, int height, float alpha);
-
-    public void swapBuffers();
-
-    public IntBuffer getScreenCapture();
-
+JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_EGL_eglGetDisplay
+    (JNIEnv *env, jclass class, jlong display) {
+    EGLDisplay dpy = eglGetDisplay(display);
+    return asJLong(dpy);
 }
+

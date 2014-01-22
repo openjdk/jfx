@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,9 +27,14 @@ package com.sun.glass.ui.monocle.omap;
 
 import com.sun.glass.ui.monocle.linux.FBDevScreen;
 import com.sun.glass.ui.monocle.linux.SysFS;
+import com.sun.glass.ui.monocle.linux.LinuxSystem;
 
 import java.io.IOException;
 
 public class OMAPScreen extends FBDevScreen {
 
+    public long platformGetNativeDisplay() {
+        initPlatformLibraries();
+        return 0L;
+    }
 }

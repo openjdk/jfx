@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013,2014 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,26 +23,37 @@
  * questions.
  */
 
-package com.sun.glass.ui.monocle;
+#include <jni.h>
 
-import java.nio.Buffer;
-import java.nio.IntBuffer;
+#include "../PrismES2Defs.h"
 
-public interface NativeScreen {
+extern int useDispman;
+extern const char *eglErrorMsg(int err);
+extern char *printErrorExit(char *message);
+extern int printConfigAttrs(EGLint *config);
+extern int printConfig(EGLDisplay display, EGLConfig config);
 
-    public int getDepth();
-    public int getNativeFormat();
-    public int getWidth();
-    public int getHeight();
-    public int getDPI();
-    public long getNativeHandle();
-    public void shutdown();
-    public long platformGetNativeDisplay();
-    public void uploadPixels(Buffer b,
-                             int x, int y, int width, int height, float alpha);
+extern ContextInfo *eglContextFromConfig(EGLDisplay *display, EGLConfig config);
+extern void setEGLAttrs(jint *attrs, int *eglAttrs);
+extern EGLSurface getDummyWindowSurface(EGLDisplay dpy,
+                                        EGLConfig cfg);
+extern EGLSurface getSharedWindowSurface(EGLDisplay dpy,
+                                         EGLConfig cfg,
+                                         void *nativeWindow);
 
-    public void swapBuffers();
+//#define DEBUG_EGL 1
 
-    public IntBuffer getScreenCapture();
+#define eglCheck() { \
+        int err; \
+        if ((err = eglGetError()) != EGL_SUCCESS) { \
+            fprintf(stderr, "EGLERROR: %s\n",eglErrorMsg(err)); \
+        }; \
+    } //end of eglCheck
 
-}
+#ifdef DEBUG_EGL
+#define EGL_CHECK eglCheck();
+#else
+#define EGL_CHECK
+#endif
+
+

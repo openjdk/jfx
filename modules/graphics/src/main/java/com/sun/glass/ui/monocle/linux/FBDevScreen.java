@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,6 +49,10 @@ public class FBDevScreen implements NativeScreen {
     private int consoleCursorBlink;
     private Framebuffer fb;
     private LinuxFrameBuffer linuxFB;
+
+    private static long glesLibraryHandle;
+    private static long eglLibraryHandle;
+    private static boolean initialized = false;
 
     public FBDevScreen() {
         try {
@@ -208,6 +212,22 @@ public class FBDevScreen implements NativeScreen {
     public synchronized IntBuffer getScreenCapture() {
         getFramebuffer().getBuffer().clear();
         return getFramebuffer().getBuffer().asIntBuffer();
+    }
+
+    protected boolean initPlatformLibraries() {
+        if (!initialized) {
+            LinuxSystem ls = LinuxSystem.getLinuxSystem();
+            glesLibraryHandle = ls.dlopen("libGLESv2.so",
+                    LinuxSystem.RTLD_LAZY | LinuxSystem.RTLD_GLOBAL);
+            eglLibraryHandle = ls.dlopen("libEGL.so",
+                    LinuxSystem.RTLD_LAZY | LinuxSystem.RTLD_GLOBAL);
+            initialized = true;
+        }
+        return true;
+    }
+
+    public long platformGetNativeDisplay() {
+        return 0L;
     }
 
 }
