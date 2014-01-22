@@ -110,7 +110,9 @@ public class TableColumnHeader extends Region {
     private boolean isSizeDirty = false;
 
     boolean isLastVisibleColumn = false;
-    private int columnIndex = -1;
+
+    // package for testing
+    int columnIndex = -1;
 
     private int newColumnPos;
 
@@ -662,28 +664,42 @@ public class TableColumnHeader extends Region {
         sortOrderDots.setAlignment(Pos.TOP_CENTER);
         sortOrderDots.setMaxWidth(arrowWidth);
     }
-    
-    private void moveColumn(TableColumnBase column, int newColumnPos) {
+
+    // Package for testing purposes only
+    void moveColumn(TableColumnBase column, int newColumnPos) {
         if (column == null || newColumnPos < 0) return;
 
         ObservableList<TableColumnBase> columns = column.getParentColumn() == null ?
             getTableViewSkin().getColumns() :
             column.getParentColumn().getColumns();
-        
-        int currentPos = columns.indexOf(column);
+
+        final int columnsCount = columns.size();
+        final int currentPos = columns.indexOf(column);
+
+        // Fix for RT-35141: We need to account for hidden columns
+        for (int i = 0; i <= newColumnPos && i < columnsCount; i++) {
+            newColumnPos += columns.get(i).isVisible() ? 0 : 1;
+        }
+        for (int i = newColumnPos + 1; i <= currentPos && i < columnsCount; i++) {
+            newColumnPos += columns.get(i).isVisible() ? 0 : -1;
+        }
+        // --- end of RT-35141 fix
+
         if (newColumnPos == currentPos) return;
 
-        if (newColumnPos >= columns.size()) {
+        if (newColumnPos >= columnsCount) {
             newColumnPos = columns.size() - 1;
+        } else if (newColumnPos < 0) {
+            newColumnPos = 0;
         }
 
-        List<TableColumnBase> tempList = new ArrayList<TableColumnBase>(columns);
+        List<TableColumnBase> tempList = new ArrayList<>(columns);
         tempList.remove(column);
         tempList.add(newColumnPos, column);
         
         columns.setAll(tempList);
     }
-    
+
     private void updateColumnIndex() {
 //        TableView tv = getTableView();
         TableViewSkinBase skin = getTableViewSkin();

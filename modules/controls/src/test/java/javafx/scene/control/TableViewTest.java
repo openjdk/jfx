@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,10 +43,8 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.collections.transformation.SortedList;
 import javafx.event.Event;
 import javafx.event.EventHandler;
-import javafx.scene.Node;
 import javafx.scene.control.cell.*;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
@@ -63,6 +61,8 @@ import com.sun.javafx.scene.control.TableColumnComparatorBase.TableColumnCompara
 import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import com.sun.javafx.scene.control.test.Person;
 import com.sun.javafx.scene.control.test.RT_22463_Person;
+
+import static com.sun.javafx.scene.control.skin.TableColumnHeaderRetriever.*;
 
 public class TableViewTest {
     private TableView<String> table;
@@ -2070,5 +2070,366 @@ public class TableViewTest {
         Toolkit.getToolkit().firePulse();
         col2.getColumns().setAll(new TableColumn(), new TableColumn());
         Toolkit.getToolkit().firePulse();
+    }
+
+    @Test public void test_rt_35141_simple_switch_two_columns_move_col1_forward_1_place() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        table.getColumns().setAll(col1, col2);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(1, getColumnIndex(col2));
+
+        moveColumn(col1, 1);
+        assertEquals(1, getColumnIndex(col1));
+        assertEquals(0, getColumnIndex(col2));
+    }
+
+    @Test public void test_rt_35141_simple_switch_two_columns_move_col2_backward_1_place() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        table.getColumns().setAll(col1, col2);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(1, getColumnIndex(col2));
+
+        moveColumn(col2, 0);
+        assertEquals(1, getColumnIndex(col1));
+        assertEquals(0, getColumnIndex(col2));
+    }
+
+    @Test public void test_rt_35141_simple_switch_three_columns_move_col1_forward_1_place() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        TableColumn col3 = new TableColumn();
+        table.getColumns().setAll(col1, col2, col3);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(1, getColumnIndex(col2));
+        assertEquals(2, getColumnIndex(col3));
+
+        moveColumn(col1, 1);
+        assertEquals(1, getColumnIndex(col1));
+        assertEquals(0, getColumnIndex(col2));
+        assertEquals(2, getColumnIndex(col3));
+    }
+
+    @Test public void test_rt_35141_simple_switch_three_columns_move_col2_backward_1_place() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        TableColumn col3 = new TableColumn();
+        table.getColumns().setAll(col1, col2, col3);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(1, getColumnIndex(col2));
+        assertEquals(2, getColumnIndex(col3));
+
+        moveColumn(col2, 0);
+        assertEquals(1, getColumnIndex(col1));
+        assertEquals(0, getColumnIndex(col2));
+        assertEquals(2, getColumnIndex(col3));
+    }
+
+    @Test public void test_rt_35141_simple_switch_three_columns_move_col2_forward_1_place() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        TableColumn col3 = new TableColumn();
+        table.getColumns().setAll(col1, col2, col3);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(1, getColumnIndex(col2));
+        assertEquals(2, getColumnIndex(col3));
+
+        moveColumn(col2, 2);
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(2, getColumnIndex(col2));
+        assertEquals(1, getColumnIndex(col3));
+    }
+
+    @Test public void test_rt_35141_simple_switch_three_columns_move_col3_backward_1_place() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        TableColumn col3 = new TableColumn();
+        table.getColumns().setAll(col1, col2, col3);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(1, getColumnIndex(col2));
+        assertEquals(2, getColumnIndex(col3));
+
+        moveColumn(col3, 1);
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(2, getColumnIndex(col2));
+        assertEquals(1, getColumnIndex(col3));
+    }
+
+    @Test public void test_rt_35141_simple_switch_three_columns_move_col0_forward_2_places() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        TableColumn col3 = new TableColumn();
+        table.getColumns().setAll(col1, col2, col3);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(1, getColumnIndex(col2));
+        assertEquals(2, getColumnIndex(col3));
+
+        moveColumn(col1, 2);
+        assertEquals(2, getColumnIndex(col1));
+        assertEquals(0, getColumnIndex(col2));
+        assertEquals(1, getColumnIndex(col3));
+    }
+
+    @Test public void test_rt_35141_simple_switch_three_columns_move_col3_backward_2_places() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        TableColumn col3 = new TableColumn();
+        table.getColumns().setAll(col1, col2, col3);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(1, getColumnIndex(col2));
+        assertEquals(2, getColumnIndex(col3));
+
+        moveColumn(col3, 0);
+        assertEquals(1, getColumnIndex(col1));
+        assertEquals(2, getColumnIndex(col2));
+        assertEquals(0, getColumnIndex(col3));
+    }
+
+    @Test public void test_rt_35141_hidden_column_move_col1_forward_1_place() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        TableColumn col3 = new TableColumn();
+        table.getColumns().setAll(col1, col2, col3);
+
+        col2.setVisible(false);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(1, getColumnIndex(col3));
+
+        moveColumn(col1, 1);
+        assertEquals(1, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(0, getColumnIndex(col3));
+    }
+
+    @Test public void test_rt_35141_hidden_column_move_col1_forward_100_places() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        TableColumn col3 = new TableColumn();
+        table.getColumns().setAll(col1, col2, col3);
+
+        col2.setVisible(false);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(1, getColumnIndex(col3));
+
+        moveColumn(col1, 100);
+        assertEquals(1, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(0, getColumnIndex(col3));
+    }
+
+    @Test public void test_rt_35141_hidden_column_move_col3_backward_1_place() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        TableColumn col3 = new TableColumn();
+        table.getColumns().setAll(col1, col2, col3);
+
+        col2.setVisible(false);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(1, getColumnIndex(col3));
+
+        moveColumn(col3, 0);
+        assertEquals(1, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(0, getColumnIndex(col3));
+    }
+
+    @Test public void test_rt_35141_multiple_hidden_columns_move_col1_to_middle() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        TableColumn col3 = new TableColumn();
+        TableColumn col4 = new TableColumn();
+        TableColumn col5 = new TableColumn();
+        TableColumn col6 = new TableColumn();
+        table.getColumns().setAll(col1, col2, col3, col4, col5, col6);
+
+        col2.setVisible(false);
+        col4.setVisible(false);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(1, getColumnIndex(col3));
+        assertEquals(-1, getColumnIndex(col4));
+        assertEquals(2, getColumnIndex(col5));
+        assertEquals(3, getColumnIndex(col6));
+
+        moveColumn(col1, 1);    // 1 should represent the spot between col2 and col4
+        assertEquals(1, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(0, getColumnIndex(col3));
+        assertEquals(-1, getColumnIndex(col4));
+        assertEquals(2, getColumnIndex(col5));
+        assertEquals(3, getColumnIndex(col6));
+    }
+
+    @Test public void test_rt_35141_multiple_hidden_columns_move_col1_to_end() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        TableColumn col3 = new TableColumn();
+        TableColumn col4 = new TableColumn();
+        TableColumn col5 = new TableColumn();
+        TableColumn col6 = new TableColumn();
+        table.getColumns().setAll(col1, col2, col3, col4, col5, col6);
+
+        col2.setVisible(false);
+        col4.setVisible(false);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(1, getColumnIndex(col3));
+        assertEquals(-1, getColumnIndex(col4));
+        assertEquals(2, getColumnIndex(col5));
+        assertEquals(3, getColumnIndex(col6));
+
+        moveColumn(col1, 3);    // 3 should represent the end place
+        assertEquals(3, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(0, getColumnIndex(col3));
+        assertEquals(-1, getColumnIndex(col4));
+        assertEquals(1, getColumnIndex(col5));
+        assertEquals(2, getColumnIndex(col6));
+    }
+
+    @Test public void test_rt_35141_multiple_hidden_columns_move_col3_to_start() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        TableColumn col3 = new TableColumn();
+        TableColumn col4 = new TableColumn();
+        TableColumn col5 = new TableColumn();
+        TableColumn col6 = new TableColumn();
+        table.getColumns().setAll(col1, col2, col3, col4, col5, col6);
+
+        col2.setVisible(false);
+        col4.setVisible(false);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(1, getColumnIndex(col3));
+        assertEquals(-1, getColumnIndex(col4));
+        assertEquals(2, getColumnIndex(col5));
+        assertEquals(3, getColumnIndex(col6));
+
+        moveColumn(col3, 0);
+        assertEquals(1, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(0, getColumnIndex(col3));
+        assertEquals(-1, getColumnIndex(col4));
+        assertEquals(2, getColumnIndex(col5));
+        assertEquals(3, getColumnIndex(col6));
+    }
+
+    @Test public void test_rt_35141_multiple_hidden_columns_move_col3_to_end() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        TableColumn col3 = new TableColumn();
+        TableColumn col4 = new TableColumn();
+        TableColumn col5 = new TableColumn();
+        TableColumn col6 = new TableColumn();
+        table.getColumns().setAll(col1, col2, col3, col4, col5, col6);
+
+        col2.setVisible(false);
+        col4.setVisible(false);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(1, getColumnIndex(col3));
+        assertEquals(-1, getColumnIndex(col4));
+        assertEquals(2, getColumnIndex(col5));
+        assertEquals(3, getColumnIndex(col6));
+
+        moveColumn(col3, 3);    // 3 should represent the end place
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(3, getColumnIndex(col3));
+        assertEquals(-1, getColumnIndex(col4));
+        assertEquals(1, getColumnIndex(col5));
+        assertEquals(2, getColumnIndex(col6));
+    }
+
+    @Test public void test_rt_35141_multiple_hidden_columns_move_col6_to_start() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        TableColumn col3 = new TableColumn();
+        TableColumn col4 = new TableColumn();
+        TableColumn col5 = new TableColumn();
+        TableColumn col6 = new TableColumn();
+        table.getColumns().setAll(col1, col2, col3, col4, col5, col6);
+
+        col2.setVisible(false);
+        col4.setVisible(false);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(1, getColumnIndex(col3));
+        assertEquals(-1, getColumnIndex(col4));
+        assertEquals(2, getColumnIndex(col5));
+        assertEquals(3, getColumnIndex(col6));
+
+        moveColumn(col6, 0);
+        assertEquals(1, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(2, getColumnIndex(col3));
+        assertEquals(-1, getColumnIndex(col4));
+        assertEquals(3, getColumnIndex(col5));
+        assertEquals(0, getColumnIndex(col6));
+    }
+
+    @Test public void test_rt_35141_multiple_hidden_columns_move_col6_to_middle() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        TableColumn col3 = new TableColumn();
+        TableColumn col4 = new TableColumn();
+        TableColumn col5 = new TableColumn();
+        TableColumn col6 = new TableColumn();
+        table.getColumns().setAll(col1, col2, col3, col4, col5, col6);
+
+        col2.setVisible(false);
+        col4.setVisible(false);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(1, getColumnIndex(col3));
+        assertEquals(-1, getColumnIndex(col4));
+        assertEquals(2, getColumnIndex(col5));
+        assertEquals(3, getColumnIndex(col6));
+
+        moveColumn(col6, 1);
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(2, getColumnIndex(col3));
+        assertEquals(-1, getColumnIndex(col4));
+        assertEquals(3, getColumnIndex(col5));
+        assertEquals(1, getColumnIndex(col6));
     }
 }
