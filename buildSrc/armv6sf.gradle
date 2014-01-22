@@ -318,8 +318,8 @@ setupTools("armv6sf_pango_tools",
     }
 )
 
-def freetypeCCFlags = [ext.COMPILE_PANGO ? "-D_ENABLE_PANGO" : 
-                       ext.COMPILE_HARFBUZZ ? "-D_ENABLE_HARFBUZZ" : ""]
+def freetypeCCFlags = [ext.IS_COMPILE_PANGO ? "-D_ENABLE_PANGO" :
+                       ext.IS_COMPILE_HARFBUZZ ? "-D_ENABLE_HARFBUZZ" : ""]
 def freetypeLinkFlags = []
 setupTools("armv6sf_freetype_tools",
     { propFile ->
