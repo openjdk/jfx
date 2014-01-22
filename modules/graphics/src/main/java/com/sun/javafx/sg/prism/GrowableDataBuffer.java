@@ -49,7 +49,8 @@ import java.util.Arrays;
  * time, but any given buffer should only be returned to the pool once.
  */
 public class GrowableDataBuffer {
-    static final int MIN_VAL_GROW = 1024;
+    static final int VAL_GROW_QUANTUM = 1024;
+    static final int MAX_VAL_GROW = 1024 * 1024;
     static final int MIN_OBJ_GROW = 32;
 
     static class WeakLink {
@@ -299,9 +300,15 @@ public class GrowableDataBuffer {
     }
 
     private void ensureWriteCapacity(int newbytes) {
-        if (writevalpos + newbytes > vals.length) {
-            if (newbytes < MIN_VAL_GROW) newbytes = MIN_VAL_GROW;
-            vals = Arrays.copyOf(vals, writevalpos + newbytes);
+        if (newbytes > vals.length - writevalpos) {
+            newbytes = writevalpos + newbytes - vals.length;
+            // Double in size up to MAX_VAL_GROW
+            int growbytes = Math.min(vals.length, MAX_VAL_GROW);
+            // And at least by the number of new bytes
+            if (growbytes < newbytes) growbytes = newbytes;
+            int newsize = vals.length + growbytes;
+            newsize = (newsize + (VAL_GROW_QUANTUM - 1)) & ~(VAL_GROW_QUANTUM - 1);
+            vals = Arrays.copyOf(vals, newsize);
         }
     }
 
