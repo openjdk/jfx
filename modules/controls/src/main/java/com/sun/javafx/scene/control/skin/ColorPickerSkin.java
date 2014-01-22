@@ -437,7 +437,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
     @Override protected Node getPopupContent() {
         if (popupContent == null) {
 //            popupContent = new ColorPalette(colorPicker.getValue(), colorPicker);
-            popupContent = new ColorPalette(getSkinnable().getValue(), (ColorPicker)getSkinnable());
+            popupContent = new ColorPalette((ColorPicker)getSkinnable());
             popupContent.setPopupControl(getPopup());
         }
        return popupContent;

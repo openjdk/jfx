@@ -44,8 +44,6 @@ public class HelloColorPicker extends Application {
         launch(args);
     }
     @Override public void start(Stage stage) {
-//        setUserAgentStylesheet(STYLESHEET_CASPIAN);
-
         stage.setTitle("ColorPicker");
 
         EventHandler<ActionEvent> actionEventHandler = new EventHandler<ActionEvent>() {

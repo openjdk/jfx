@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER. 
  *  
  * This code is free software; you can redistribute it and/or modify it 
@@ -3312,17 +3312,13 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-padding: 0.5;
     -fx-border: black;
 }
-/* the color over which the user is hovering */
-.color-palette > .color-picker-grid > .color-square:focused, 
-.color-palette > .color-picker-grid > .color-square:selected:focused {
-    -fx-background-color: -fx-focus-color;
-}
 
-/* the currently selected color */
-.color-palette > .color-picker-grid > .color-square:selected {
-/*    -fx-background-color: derive(-fx-base, -27%)  #989898 , white, derive(-fx-base, -59%)  #555555 ;*/
+/* the color over which the user is hovering */
+.color-palette-region > .color-square.hover-square {
     -fx-background-color: black;
-} 
+    -fx-background-insets: -1;
+    -fx-padding: 1;
+}
 
 .color-palette > .separator > .line {
     -fx-border-color: -fx-text-box-border transparent transparent transparent,
