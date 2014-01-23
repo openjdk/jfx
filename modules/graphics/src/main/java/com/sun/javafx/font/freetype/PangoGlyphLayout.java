@@ -127,29 +127,26 @@ class PangoGlyphLayout extends GlyphLayout {
             }
             int[] glyphs = new int[glyphCount];
             float[] pos = new float[glyphCount * 2 + 2];
-            int[] indices = new int[run.getLength()];
-            int gi = 0;                             /* glyph index */
-            int lci = 0;                            /* logical char index */
-            int vci = rtl ? run.getLength() : 0;    /* visual char index */
+            int[] indices = new int[glyphCount];
+            int gi = 0;
+            int ci = rtl ? run.getLength() : 0;
             int width = 0;
             for (PangoGlyphString g : pangoGlyphs) {
                 if (g != null) {
                     int slot = composite ? getSlot(font, g) : 0;
+                    if (rtl) ci -= g.num_chars;
                     for (int i = 0; i < g.num_glyphs; i++) {
+                        int gii = gi + i;
                         if (slot != -1) {
-                            glyphs[gi + i] = (slot << 24) | g.glyphs[i];
+                            glyphs[gii] = (slot << 24) | g.glyphs[i];
                         }
                         if (size != 0) {
                             width += g.widths[i];
-                            pos[2 + ((gi + i) << 1)] = ((float)width) / OSPango.PANGO_SCALE;
+                            pos[2 + (gii << 1)] = ((float)width) / OSPango.PANGO_SCALE;
                         }
+                        indices[gii] = g.log_clusters[i] + ci;
                     }
-                    if (rtl) vci -= g.num_chars;
-                    for (int i = 0; i < g.log_clusters.length; i++) {
-                        indices[lci + i] = g.log_clusters[i] + vci;
-                    }
-                    if (!rtl) vci += g.num_chars;
-                    lci += g.num_chars;
+                    if (!rtl) ci += g.num_chars;
                     gi += g.num_glyphs;
                 }
             }
