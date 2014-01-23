@@ -62,9 +62,6 @@ if (!ARMV6SF.canBuild) {
 // Lambda for naming the generated libs
 ARMV6SF.library = { name -> return "lib${name}.so" as String }
 
-// alias for this platform in legacy artifacts
-ARMV6SF.artifactsName = "armv6-vfp"
-
 ARMV6SF.compileSwing = false;
 ARMV6SF.compileSWT = false;
 ARMV6SF.compileFXPackager = false;
