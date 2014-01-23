@@ -685,13 +685,13 @@ public class TableColumnHeader extends Region {
         }
         // --- end of RT-35141 fix
 
-        if (newColumnPos == currentPos) return;
-
         if (newColumnPos >= columnsCount) {
-            newColumnPos = columns.size() - 1;
+            newColumnPos = columnsCount - 1;
         } else if (newColumnPos < 0) {
             newColumnPos = 0;
         }
+
+        if (newColumnPos == currentPos) return;
 
         List<TableColumnBase> tempList = new ArrayList<>(columns);
         tempList.remove(column);
