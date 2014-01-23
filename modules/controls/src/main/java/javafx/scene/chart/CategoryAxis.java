@@ -165,12 +165,6 @@ public final class CategoryAxis extends Axis<String> {
     public final void setGapStartAndEnd(boolean value) { gapStartAndEnd.setValue(value); }
     public final BooleanProperty gapStartAndEndProperty() { return gapStartAndEnd; }
 
-    /**
-     * The ordered list of categories plotted on this axis. This is set automatically 
-     * based on the charts data if autoRanging is true. If the application sets the categories
-     * then auto ranging is turned off. If there is an attempt to add duplicate entry into this list, 
-     * an {@link IllegalArgumentException} is thrown.
-     */
     private ObjectProperty<ObservableList<String>> categories = new ObjectPropertyBase<ObservableList<String>>() {
         ObservableList<String> old;
         @Override protected void invalidated() {
@@ -196,6 +190,13 @@ public final class CategoryAxis extends Axis<String> {
             return "categories";
         }
     };
+
+    /**
+     * The ordered list of categories plotted on this axis. This is set automatically
+     * based on the charts data if autoRanging is true. If the application sets the categories
+     * then auto ranging is turned off. If there is an attempt to add duplicate entry into this list,
+     * an {@link IllegalArgumentException} is thrown.
+     */
     public final void setCategories(ObservableList<String> value) {
         categories.set(value);
         if (!changeIsLocal) {

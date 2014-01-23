@@ -934,6 +934,10 @@ public class PieChart extends Chart {
          */
         private ObjectProperty<Node> node = new SimpleObjectProperty<Node>(this, "node");
 
+        /**
+         * Returns the node that represents the pie slice. You can use this to
+         * add mouse event listeners etc.
+         */
         public Node getNode() {
             return node.getValue();
         }
