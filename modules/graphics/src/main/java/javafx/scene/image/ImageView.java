@@ -144,6 +144,7 @@ public class ImageView extends Node {
      * Allocates a new ImageView object.
      */
     public ImageView() {
+        getStyleClass().add(DEFAULT_STYLE_CLASS);
         setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
     }
 
@@ -170,6 +171,7 @@ public class ImageView extends Node {
      * @param image Image that this ImageView uses
      */
     public ImageView(Image image) {
+        getStyleClass().add(DEFAULT_STYLE_CLASS);
         setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
         setImage(image);
     }
@@ -774,6 +776,8 @@ public class ImageView extends Node {
     /***************************************************************************
      * * Stylesheet Handling * *
      **************************************************************************/
+
+    private static final String DEFAULT_STYLE_CLASS = "image_view";
 
      /**
       * Super-lazy instantiation pattern from Bill Pugh.
