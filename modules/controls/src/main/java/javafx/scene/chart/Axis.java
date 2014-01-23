@@ -1018,6 +1018,11 @@ public abstract class Axis<T> extends Region {
          * @return true if tick mark label text is visible and false otherwise
          */
         public final boolean isTextVisible() { return textVisible.get(); }
+
+        /**
+         * Specifies whether this tick mark label text is displayed or not.
+         * @param value true if tick mark label text is visible and false otherwise
+         */
         public final void setTextVisible(boolean value) { textVisible.set(value); }
 
         /**
