@@ -136,12 +136,11 @@ class PangoGlyphLayout extends GlyphLayout {
                 if (g != null) {
                     int slot = composite ? getSlot(font, g) : 0;
                     for (int i = 0; i < g.num_glyphs; i++) {
-                        PangoGlyphInfo info = g.glyphs[i];
                         if (slot != -1) {
-                            glyphs[gi + i] = (slot << 24) | info.glyph;
+                            glyphs[gi + i] = (slot << 24) | g.glyphs[i];
                         }
                         if (size != 0) {
-                            width += info.width;
+                            width += g.widths[i];
                             pos[2 + ((gi + i) << 1)] = ((float)width) / OSPango.PANGO_SCALE;
                         }
                     }

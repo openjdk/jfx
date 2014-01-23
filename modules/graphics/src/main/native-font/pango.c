@@ -40,50 +40,10 @@
 /*                                                                        */
 /**************************************************************************/
 
-typedef struct PangoGlyphInfo_FID_CACHE {
-    int cached;
-    jclass clazz;
-    jfieldID glyph, width, x_offset, y_offset;
-    jmethodID init;
-} PangoGlyphInfo_FID_CACHE;
-
-PangoGlyphInfo_FID_CACHE PangoGlyphInfoFc;
-
-void cachePangoGlyphInfoFields(JNIEnv *env)
-{
-    if (PangoGlyphInfoFc.cached) return;
-    jclass tmpClass = (*env)->FindClass(env, "com/sun/javafx/font/freetype/PangoGlyphInfo");
-    PangoGlyphInfoFc.clazz =  (jclass)(*env)->NewGlobalRef(env, tmpClass);
-    PangoGlyphInfoFc.glyph = (*env)->GetFieldID(env, PangoGlyphInfoFc.clazz, "glyph", "I");
-    PangoGlyphInfoFc.width = (*env)->GetFieldID(env, PangoGlyphInfoFc.clazz, "width", "I");
-    PangoGlyphInfoFc.x_offset = (*env)->GetFieldID(env, PangoGlyphInfoFc.clazz, "x_offset", "I");
-    PangoGlyphInfoFc.y_offset = (*env)->GetFieldID(env, PangoGlyphInfoFc.clazz, "y_offset", "I");
-    PangoGlyphInfoFc.init = (*env)->GetMethodID(env, PangoGlyphInfoFc.clazz, "<init>", "()V");
-    PangoGlyphInfoFc.cached = 1;
-}
-
-void setPangoGlyphInfoFields(JNIEnv *env, jobject lpObject, PangoGlyphInfo *lpStruct)
-{
-    if (!PangoGlyphInfoFc.cached) cachePangoGlyphInfoFields(env);
-    (*env)->SetIntField(env, lpObject, PangoGlyphInfoFc.glyph, (jint)lpStruct->glyph);
-    (*env)->SetIntField(env, lpObject, PangoGlyphInfoFc.width, (jint)lpStruct->geometry.width);
-    (*env)->SetIntField(env, lpObject, PangoGlyphInfoFc.x_offset, (jint)lpStruct->geometry.x_offset);
-    (*env)->SetIntField(env, lpObject, PangoGlyphInfoFc.y_offset, (jint)lpStruct->geometry.y_offset);
-}
-
-jobject newPangoGlyphInfo(JNIEnv *env, PangoGlyphInfo *lpStruct)
-{
-    jobject lpObject = NULL;
-    if (!PangoGlyphInfoFc.cached) cachePangoGlyphInfoFields(env);
-    lpObject = (*env)->NewObject(env, PangoGlyphInfoFc.clazz, PangoGlyphInfoFc.init);
-    if (lpObject && lpStruct) setPangoGlyphInfoFields(env, lpObject, lpStruct);
-    return lpObject;
-}
-
 typedef struct PangoGlyphString_FID_CACHE {
     int cached;
     jclass clazz;
-    jfieldID num_glyphs, glyphs, log_clusters, offset, length, num_chars, font;
+    jfieldID num_glyphs, glyphs, widths, log_clusters, offset, length, num_chars, font;
     jmethodID init;
 } PangoGlyphString_FID_CACHE;
 
@@ -95,7 +55,8 @@ void cachePangoGlyphStringFields(JNIEnv *env)
     jclass tmpClass = (*env)->FindClass(env, "com/sun/javafx/font/freetype/PangoGlyphString");
     PangoGlyphStringFc.clazz =  (jclass)(*env)->NewGlobalRef(env, tmpClass);
     PangoGlyphStringFc.num_glyphs = (*env)->GetFieldID(env, PangoGlyphStringFc.clazz, "num_glyphs", "I");
-    PangoGlyphStringFc.glyphs = (*env)->GetFieldID(env, PangoGlyphStringFc.clazz, "glyphs", "[Lcom/sun/javafx/font/freetype/PangoGlyphInfo;");
+    PangoGlyphStringFc.glyphs = (*env)->GetFieldID(env, PangoGlyphStringFc.clazz, "glyphs", "[I");
+    PangoGlyphStringFc.widths = (*env)->GetFieldID(env, PangoGlyphStringFc.clazz, "widths", "[I");
     PangoGlyphStringFc.log_clusters = (*env)->GetFieldID(env, PangoGlyphStringFc.clazz, "log_clusters", "[I");
     PangoGlyphStringFc.offset = (*env)->GetFieldID(env, PangoGlyphStringFc.clazz, "offset", "I");
     PangoGlyphStringFc.length = (*env)->GetFieldID(env, PangoGlyphStringFc.clazz, "length", "I");
@@ -112,11 +73,6 @@ void cachePangoGlyphStringFields(JNIEnv *env)
 /**************************************************************************/
 
 /** Custom **/
-JNIEXPORT jlong JNICALL OS_NATIVE(pango_1itemize)
-    (JNIEnv *env, jclass that, jlong arg0, jlong arg1, jint arg2, jint arg3, jlong arg4, jlong arg5)
-{
-    return (jlong)pango_itemize((PangoContext *)arg0, (const char *)arg1, arg2, arg3, (PangoAttrList *)arg4, (PangoAttrIterator *)arg5);
-}
 
 JNIEXPORT jobject JNICALL OS_NATIVE(pango_1shape)
     (JNIEnv *env, jclass that, jlong str, jlong pangoItem)
@@ -125,33 +81,36 @@ JNIEXPORT jobject JNICALL OS_NATIVE(pango_1shape)
     PangoItem *item = (PangoItem *)pangoItem;
     PangoAnalysis analysis = item->analysis;
     const gchar *text= (const gchar *)(str + item->offset);
-    PangoGlyphString *glyphs = pango_glyph_string_new();
+    PangoGlyphString *glyphString = pango_glyph_string_new();
 
-    pango_shape(text, item->length, &analysis, glyphs);
-    int count = glyphs->num_glyphs;
+    pango_shape(text, item->length, &analysis, glyphString);
+    int count = glyphString->num_glyphs;
     if(count == 0) return NULL;
 
-    if (!PangoGlyphInfoFc.cached) cachePangoGlyphInfoFields(env);
-    jobjectArray infoArray = (*env)->NewObjectArray(env, count, PangoGlyphInfoFc.clazz, NULL);
+    jintArray glyphsArray = (*env)->NewIntArray(env, count);
+    jintArray widthsArray = (*env)->NewIntArray(env, count);
     jintArray clusterArray = (*env)->NewIntArray(env, count);
     jobject result = NULL;
-    if (infoArray && clusterArray) {
+    if (glyphsArray && widthsArray && clusterArray) {
+    	jint glyphs[count];
+    	jint widths[count];
         jint cluster[count];
         int i;
         for (i = 0; i < count; i++) {
-            jobject info = newPangoGlyphInfo(env, &glyphs->glyphs[i]);
-            (*env)->SetObjectArrayElement(env, infoArray, i, info);
+        	glyphs[i] = glyphString->glyphs[i].glyph;
+        	widths[i] = glyphString->glyphs[i].geometry.width;
             /* translate byte index to char index */
-            cluster[i] = (jint)g_utf8_pointer_to_offset(text, text + glyphs->log_clusters[i]);
+            cluster[i] = (jint)g_utf8_pointer_to_offset(text, text + glyphString->log_clusters[i]);
         }
+        (*env)->SetIntArrayRegion(env, glyphsArray, 0, count, glyphs);
+        (*env)->SetIntArrayRegion(env, widthsArray, 0, count, widths);
         (*env)->SetIntArrayRegion(env, clusterArray, 0, count, cluster);
         if (!PangoGlyphStringFc.cached) cachePangoGlyphStringFields(env);
         result = (*env)->NewObject(env, PangoGlyphStringFc.clazz, PangoGlyphStringFc.init);
         if (result) {
             (*env)->SetIntField(env, result, PangoGlyphStringFc.num_glyphs, count);
-
-            /* Set custom fields */
-            (*env)->SetObjectField(env, result, PangoGlyphStringFc.glyphs, infoArray);
+            (*env)->SetObjectField(env, result, PangoGlyphStringFc.glyphs, glyphsArray);
+            (*env)->SetObjectField(env, result, PangoGlyphStringFc.widths, widthsArray);
             (*env)->SetObjectField(env, result, PangoGlyphStringFc.log_clusters, clusterArray);
             (*env)->SetIntField(env, result, PangoGlyphStringFc.offset, item->offset);
             (*env)->SetIntField(env, result, PangoGlyphStringFc.length, item->length);
@@ -159,7 +118,7 @@ JNIEXPORT jobject JNICALL OS_NATIVE(pango_1shape)
             (*env)->SetLongField(env, result, PangoGlyphStringFc.font, (jlong)analysis.font);
         }
     }
-    pango_glyph_string_free(glyphs);
+    pango_glyph_string_free(glyphString);
     return result;
 }
 
@@ -206,6 +165,12 @@ JNIEXPORT jboolean JNICALL OS_NATIVE(FcConfigAppFontAddFile)
 }
 
 /** one to one **/
+JNIEXPORT jlong JNICALL OS_NATIVE(pango_1itemize)
+    (JNIEnv *env, jclass that, jlong arg0, jlong arg1, jint arg2, jint arg3, jlong arg4, jlong arg5)
+{
+    return (jlong)pango_itemize((PangoContext *)arg0, (const char *)arg1, arg2, arg3, (PangoAttrList *)arg4, (PangoAttrIterator *)arg5);
+}
+
 JNIEXPORT jlong JNICALL OS_NATIVE(pango_1font_1describe)
     (JNIEnv *env, jclass that, jlong arg0)
 {

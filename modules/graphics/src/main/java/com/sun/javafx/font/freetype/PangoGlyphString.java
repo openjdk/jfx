@@ -33,6 +33,9 @@ class PangoGlyphString {
     /* pangoItem->analysis->font*/
     long font;
     int num_glyphs;
-    PangoGlyphInfo[] glyphs;
+    /* PangoGlyphInfo->glyph */
+    int[] glyphs;
+    /* PangoGlyphInfo->PangoGlyphGeometry->width */
+    int[] widths;
     int[] log_clusters;
 }
