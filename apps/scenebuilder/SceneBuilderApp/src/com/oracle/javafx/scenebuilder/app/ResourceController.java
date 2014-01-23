@@ -97,6 +97,10 @@ class ResourceController {
         }
     }
 
+    public void performReloadResource() {
+        assert resourceFile != null;
+        resourceFileDidChange();
+    }
     
     /*
      * Private
@@ -113,6 +117,7 @@ class ResourceController {
         }
         
         documentWindowController.getEditorController().setResources(resources);
+        documentWindowController.getWatchingController().update();
     }
     
     

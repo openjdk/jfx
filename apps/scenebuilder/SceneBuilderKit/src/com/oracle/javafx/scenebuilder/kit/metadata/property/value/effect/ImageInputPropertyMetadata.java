@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -32,10 +32,12 @@
 
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value.effect;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.ComplexPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.ImagePropertyMetadata;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignImage;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import javafx.scene.effect.ImageInput;
@@ -65,14 +67,19 @@ public class ImageInputPropertyMetadata extends ComplexPropertyMetadata<ImageInp
      */
     
     @Override
-    protected ImageInput castValue(Object value) {
-        return (ImageInput) value;
-    }
-    
-    @Override
-    public void updateFxomInstanceWithValue(FXOMInstance valueInstance, ImageInput value) {
-        sourceMetadata.setValue(valueInstance, value.getSource());
-        xMetadata.setValue(valueInstance, value.getX());
-        yMetadata.setValue(valueInstance, value.getY());
+    public FXOMInstance makeFxomInstanceFromValue(ImageInput value, FXOMDocument fxomDocument) {
+        final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
+        
+        final DesignImage designImage;
+        if (value.getSource() == null) {
+            designImage = null;
+        } else {
+            designImage = new DesignImage(value.getSource());
+        }
+        sourceMetadata.setValue(result, designImage);
+        xMetadata.setValue(result, value.getX());
+        yMetadata.setValue(result, value.getY());
+
+        return result;
     }
 }

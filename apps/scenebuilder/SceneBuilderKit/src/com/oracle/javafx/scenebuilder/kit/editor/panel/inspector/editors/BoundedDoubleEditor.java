@@ -34,9 +34,11 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.event.ActionEvent;
@@ -59,21 +61,43 @@ public class BoundedDoubleEditor extends AutoSuggestEditor {
     @FXML
     private StackPane textSp;
 
-    private final Parent root;
+    private Parent root = null;
     private Map<String, Object> constants;
     // default min and max
-    double min = 0;
-    double max = 100;
+    private double min = 0;
+    private double max = 100;
+    private boolean minMaxForSliderOnly = false;
     private int roundingFactor = 1; // no decimals
     private boolean updateFromTextField = false;
     private boolean updateFromSlider = false;
 
-    @SuppressWarnings("LeakingThisInConstructor")
+    public BoundedDoubleEditor(String name, String defaultValue, List<String> suggestedList) {
+        this(name, defaultValue, suggestedList, null, null, false);
+     }
+    
+    public BoundedDoubleEditor(String name, String defaultValue, List<String> suggestedList, Double min, Double max, boolean minMaxForSliderOnly) {
+        super(name, defaultValue, suggestedList, AutoSuggestEditor.Type.DOUBLE);
+        if (min != null) {
+            this.min = min;
+        }
+        if (max != null) {
+            this.max = max;
+        }
+        this.minMaxForSliderOnly = minMaxForSliderOnly;
+        this.constants = new TreeMap<>();
+        initialize();
+    }
+
     public BoundedDoubleEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, Map<String, Object> constantsMap) {
         super(propMeta, selectedClasses, new ArrayList<>(constantsMap.keySet()), AutoSuggestEditor.Type.DOUBLE);
         this.constants = constantsMap;
-        root = EditorUtils.loadFxml("BoundedDoubleEditor.fxml", this); //NOI18N
+        initialize();
+    }
 
+    // Method to please FindBugs
+    private void initialize() {
+        root = EditorUtils.loadFxml("BoundedDoubleEditor.fxml", this); //NOI18N
+        
         //
         // Text field
         //
@@ -90,9 +114,11 @@ public class BoundedDoubleEditor extends AutoSuggestEditor {
                 }
 
                 Object value = getValue();
-                if ((value == null)
-                        || !((DoublePropertyMetadata) getPropertyMeta()).isValidValue((Double) value)) {
-                    handleInvalidValue(getTextField().getText());
+                if (getPropertyMeta() != null) {
+                    if ((value == null)
+                            || !((DoublePropertyMetadata) getPropertyMeta()).isValidValue((Double) value)) {
+                        handleInvalidValue(getTextField().getText());
+                    }
                 }
                 assert value instanceof Double;
                 double valDouble = (Double) value;
@@ -108,7 +134,7 @@ public class BoundedDoubleEditor extends AutoSuggestEditor {
                 // If the value is not a constant,
                 // and is less than the minimum, or more than the maximum,
                 // set the value to min or max
-                if (!isConstant && (valDouble < min || valDouble > max)) {
+                if (!minMaxForSliderOnly && !isConstant && (valDouble < min || valDouble > max)) {
                     if (valDouble < min) {
                         valDouble = min;
                     } else if (valDouble > max) {
@@ -123,12 +149,12 @@ public class BoundedDoubleEditor extends AutoSuggestEditor {
                 userUpdateValueProperty(valDouble);
             }
         };
-        initialize(onActionListener);
+        setNumericEditorBehavior(this, getTextField(), onActionListener, false);
 
         //
         // Slider
         //
-        configureSlider(propMeta);
+        configureSlider(getPropertyMeta());
 
         slider.valueProperty().addListener(new InvalidationListener() {
             @Override
@@ -149,13 +175,8 @@ public class BoundedDoubleEditor extends AutoSuggestEditor {
                 userUpdateValueProperty(value);
             }
         });
-    }
-
-    // Method to please FindBugs
-    private void initialize(EventHandler<ActionEvent> onActionListener) {
         // Add the AutoSuggest text field in the scene graph
         textSp.getChildren().add(super.getRoot());
-        setTextEditorBehavior(this, getTextField(), onActionListener, false);
     }
 
     @Override
@@ -213,14 +234,16 @@ public class BoundedDoubleEditor extends AutoSuggestEditor {
     }
 
     private void configureSlider(ValuePropertyMetadata propMeta) {
-        assert propMeta instanceof DoublePropertyMetadata;
-        DoublePropertyMetadata doublePropMeta = (DoublePropertyMetadata) propMeta;
-        DoublePropertyMetadata.DoubleKind kind = doublePropMeta.getKind();
-        if ((kind == DoublePropertyMetadata.DoubleKind.OPACITY)
-                || (kind == DoublePropertyMetadata.DoubleKind.PROGRESS)) {
-            min = 0;
-            max = 1;
-            roundingFactor = 100; // 2 decimals
+        if (propMeta != null) {
+            assert propMeta instanceof DoublePropertyMetadata;
+            DoublePropertyMetadata doublePropMeta = (DoublePropertyMetadata) propMeta;
+            DoublePropertyMetadata.DoubleKind kind = doublePropMeta.getKind();
+            if ((kind == DoublePropertyMetadata.DoubleKind.OPACITY)
+                    || (kind == DoublePropertyMetadata.DoubleKind.PROGRESS)) {
+                min = 0;
+                max = 1;
+                roundingFactor = 100; // 2 decimals
+            }
         }
         slider.setMin(min);
         slider.setMax(max);

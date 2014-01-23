@@ -33,6 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
+import com.oracle.javafx.scenebuilder.kit.editor.job.v2.ClearSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.UpdateSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
@@ -98,6 +99,7 @@ public class PasteJob extends CompositeJob {
                 if (targetObject == null) {
                     // Document is empty : only one object can be inserted
                     if (newObjects.size() == 1) {
+                        result.add(new ClearSelectionJob(getEditorController()));
                         final FXOMObject newObject0 = newObjects.get(0);
                         final SetDocumentRootJob subJob = new SetDocumentRootJob(
                                 newObject0,
@@ -109,6 +111,7 @@ public class PasteJob extends CompositeJob {
                     // Build InsertAsSubComponent jobs
                     final DesignHierarchyMask targetMask = new DesignHierarchyMask(targetObject);
                     if (targetMask.isAcceptingSubComponent(newObjects)) {
+                        result.add(new ClearSelectionJob(getEditorController()));
                         for (FXOMObject newObject : newObjects) {
                             final InsertAsSubComponentJob subJob = new InsertAsSubComponentJob(
                                     newObject,
@@ -131,7 +134,7 @@ public class PasteJob extends CompositeJob {
     protected String makeDescription() {
         final String result;
         
-        if (getSubJobs().size() == 2) { // Insert + Select
+        if (getSubJobs().size() == 3) { // ClearSelectionJob + Insert/SetDocumentRootJob + UpdateSelectionJob
             result = makeSingleSelectionDescription();
         } else {
             result = makeMultipleSelectionDescription();
@@ -146,8 +149,8 @@ public class PasteJob extends CompositeJob {
     private String makeSingleSelectionDescription() {
         final String result;
 
-        assert getSubJobs().size() == 2; // Insert + Select
-        final Job subJob0 = getSubJobs().get(0);
+        assert getSubJobs().size() == 3; // ClearSelectionJob + Insert/SetDocumentRootJob + UpdateSelectionJob
+        final Job subJob0 = getSubJobs().get(1);
         final FXOMObject newObject;
         if (subJob0 instanceof InsertAsSubComponentJob) {
             final InsertAsSubComponentJob insertJob = (InsertAsSubComponentJob) subJob0;
@@ -175,7 +178,7 @@ public class PasteJob extends CompositeJob {
     }
 
     private String makeMultipleSelectionDescription() {
-        final int objectCount = getSubJobs().size() - 1;
-        return I18N.getString("label.action.edit.paste.1", objectCount);
+        final int objectCount = getSubJobs().size() - 2;
+        return I18N.getString("label.action.edit.paste.n", objectCount);
     }
 }

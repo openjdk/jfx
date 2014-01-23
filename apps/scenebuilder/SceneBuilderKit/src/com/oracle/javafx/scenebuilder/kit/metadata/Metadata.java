@@ -620,8 +620,6 @@ public class Metadata {
             new PropertyName("depthTest");
     private final PropertyName disableName = 
             new PropertyName("disable");
-    private final PropertyName disabledName = 
-            new PropertyName("disabled");
     private final PropertyName dividerPositionsName = 
             new PropertyName("dividerPositions");
     private final PropertyName divisionsName = 
@@ -1118,6 +1116,8 @@ public class Metadata {
             new PropertyName("title");
     private final PropertyName titleSideName = 
             new PropertyName("titleSide");
+    private final PropertyName toggleGroupName = 
+            new PropertyName("toggleGroup");
     private final PropertyName tooltipName = 
             new PropertyName("tooltip");
     private final PropertyName topName = 
@@ -1444,7 +1444,7 @@ public class Metadata {
                 cacheShapeName,
                 true, /* readWrite */
                 true, /* defaultValue */
-                new InspectorPath("Properties", "Node", 8));
+                new InspectorPath("Properties", "Node", 7));
     private final ValuePropertyMetadata cancelButtonPropertyMetadata =
             new BooleanPropertyMetadata(
                 cancelButtonName,
@@ -1481,7 +1481,7 @@ public class Metadata {
                 centerShapeName,
                 true, /* readWrite */
                 true, /* defaultValue */
-                new InspectorPath("Properties", "Node", 9));
+                new InspectorPath("Properties", "Node", 8));
     private final ValuePropertyMetadata centerXPropertyMetadata =
             new DoublePropertyMetadata(
                 centerXName,
@@ -1677,13 +1677,13 @@ public class Metadata {
                 cursorName,
                 true, /* readWrite */
                 javafx.scene.Cursor.HAND, /* defaultValue */
-                new InspectorPath("Properties", "Node", 14));
+                new InspectorPath("Properties", "Node", 13));
     private final ValuePropertyMetadata cursor_NULL_PropertyMetadata =
             new CursorPropertyMetadata(
                 cursorName,
                 true, /* readWrite */
                 null, /* defaultValue */
-                new InspectorPath("Properties", "Node", 14));
+                new InspectorPath("Properties", "Node", 13));
     private final ValuePropertyMetadata defaultButtonPropertyMetadata =
             new BooleanPropertyMetadata(
                 defaultButtonName,
@@ -1710,12 +1710,6 @@ public class Metadata {
                 true, /* readWrite */
                 false, /* defaultValue */
                 new InspectorPath("Properties", "Node", 1));
-    private final ValuePropertyMetadata disabledPropertyMetadata =
-            new BooleanPropertyMetadata(
-                disabledName,
-                false, /* readWrite */
-                null, /* No defaultValue for R/O property */
-                new InspectorPath("Properties", "Node", 2));
     private final ValuePropertyMetadata dividerPositionsPropertyMetadata =
             new DoubleArrayPropertyMetadata(
                 dividerPositionsName,
@@ -1752,7 +1746,7 @@ public class Metadata {
                 effectName,
                 true, /* readWrite */
                 null, /* defaultValue */
-                new InspectorPath("Properties", "Node", 15));
+                new InspectorPath("Properties", "Node", 14));
     private final ValuePropertyMetadata effectiveNodeOrientationPropertyMetadata =
             new EnumerationPropertyMetadata(
                 effectiveNodeOrientationName,
@@ -1893,13 +1887,13 @@ public class Metadata {
                 focusTraversableName,
                 true, /* readWrite */
                 true, /* defaultValue */
-                new InspectorPath("Properties", "Node", 7));
+                new InspectorPath("Properties", "Node", 6));
     private final ValuePropertyMetadata focusTraversable_false_PropertyMetadata =
             new BooleanPropertyMetadata(
                 focusTraversableName,
                 true, /* readWrite */
                 false, /* defaultValue */
-                new InspectorPath("Properties", "Node", 7));
+                new InspectorPath("Properties", "Node", 6));
     private final ValuePropertyMetadata fontPropertyMetadata =
             new FontPropertyMetadata(
                 fontName,
@@ -2075,7 +2069,7 @@ public class Metadata {
                 idName,
                 true, /* readWrite */
                 "", /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 0));
+                new InspectorPath("Properties", "JavaFX CSS", 3));
     private final ValuePropertyMetadata imagePropertyMetadata =
             new ImagePropertyMetadata(
                 imageName,
@@ -2393,14 +2387,14 @@ public class Metadata {
                 javafx.geometry.NodeOrientation.class,
                 true, /* readWrite */
                 javafx.geometry.NodeOrientation.LEFT_TO_RIGHT, /* defaultValue */
-                new InspectorPath("Properties", "Node", 5));
+                new InspectorPath("Properties", "Node", 4));
     private final ValuePropertyMetadata nodeOrientation_INHERIT_PropertyMetadata =
             new EnumerationPropertyMetadata(
                 nodeOrientationName,
                 javafx.geometry.NodeOrientation.class,
                 true, /* readWrite */
                 javafx.geometry.NodeOrientation.INHERIT, /* defaultValue */
-                new InspectorPath("Properties", "Node", 5));
+                new InspectorPath("Properties", "Node", 4));
     private final ValuePropertyMetadata onActionPropertyMetadata =
             new EventHandlerPropertyMetadata(
                 onActionName,
@@ -2743,27 +2737,27 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.OPACITY,
                 true, /* readWrite */
                 1.0, /* defaultValue */
-                new InspectorPath("Properties", "Node", 3));
+                new InspectorPath("Properties", "Node", 2));
     private final ValuePropertyMetadata opaqueInsetsPropertyMetadata =
             new InsetsPropertyMetadata(
                 opaqueInsetsName,
                 true, /* readWrite */
                 null, /* defaultValue */
-                new InspectorPath("Properties", "Node", 13));
+                new InspectorPath("Properties", "Node", 12));
     private final ValuePropertyMetadata orientation_HORIZONTAL_PropertyMetadata =
             new EnumerationPropertyMetadata(
                 orientationName,
                 javafx.geometry.Orientation.class,
                 true, /* readWrite */
                 javafx.geometry.Orientation.HORIZONTAL, /* defaultValue */
-                new InspectorPath("Properties", "Node", 4));
+                new InspectorPath("Properties", "Node", 3));
     private final ValuePropertyMetadata orientation_VERTICAL_PropertyMetadata =
             new EnumerationPropertyMetadata(
                 orientationName,
                 javafx.geometry.Orientation.class,
                 true, /* readWrite */
                 javafx.geometry.Orientation.VERTICAL, /* defaultValue */
-                new InspectorPath("Properties", "Node", 4));
+                new InspectorPath("Properties", "Node", 3));
     private final ValuePropertyMetadata paddingPropertyMetadata =
             new InsetsPropertyMetadata(
                 paddingName,
@@ -3044,7 +3038,7 @@ public class Metadata {
                 scaleShapeName,
                 true, /* readWrite */
                 true, /* defaultValue */
-                new InspectorPath("Properties", "Node", 10));
+                new InspectorPath("Properties", "Node", 9));
     private final ValuePropertyMetadata scaleXPropertyMetadata =
             new DoublePropertyMetadata(
                 scaleXName,
@@ -3124,7 +3118,7 @@ public class Metadata {
             new BooleanPropertyMetadata(
                 showWeekNumbersName,
                 true, /* readWrite */
-                true, /* defaultValue */
+                false, /* defaultValue */
                 new InspectorPath("Properties", "Specific", 126));
     private final ValuePropertyMetadata side_NULL_PropertyMetadata =
             new EnumerationPropertyMetadata(
@@ -3294,307 +3288,307 @@ public class Metadata {
                 styleName,
                 true, /* readWrite */
                 "", /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 1));
+                new InspectorPath("Properties", "JavaFX CSS", 0));
     private final ValuePropertyMetadata styleClass_c4_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("accordion"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c33_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("chart"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c41_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("axis"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c1_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("chart","bar-chart"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c17_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("button"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c37_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("radio-button"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c10_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("check-box"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c26_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("menu-item","check-menu-item"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c39_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("choice-box"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c5_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("combo-box-base","color-picker"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c11_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("combo-box-base","combo-box"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c8_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("context-menu"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c23_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("hyperlink"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c25_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("menu-item","custom-menu-item"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c9_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("combo-box-base","date-picker"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c20_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("html-editor"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c3_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("label"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c31_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("list-view"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c27_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("menu-item","menu"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c18_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("menu-bar"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c47_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("menu-button"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c32_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("menu-item"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_empty_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Collections.emptyList(), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c35_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("pagination"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c48_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("text-input","text-field","password-field"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c13_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("progress-bar"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c45_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("progress-indicator"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c7_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("menu-item","radio-menu-item"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c30_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("scroll-bar"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c34_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("scroll-pane"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c28_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("separator"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c22_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("menu-item","custom-menu-item","separator-menu-item"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c36_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("slider"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c2_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("split-menu-button"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c14_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("split-pane"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c12_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("chart","stacked-bar-chart"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c19_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("tab"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c6_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("tab-pane"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c38_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("table-column"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c44_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("table-view"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c46_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("text-input","text-area"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c42_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("text-input","text-field"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c24_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("titled-pane"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c40_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("toggle-button"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c16_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("tool-bar"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c15_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("tooltip"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c29_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("tree-table-view"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c21_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("tree-view"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c43_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("web-view"), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 2));
+                new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata stylesheetsPropertyMetadata =
             new StringListPropertyMetadata(
                 stylesheetsName,
                 true, /* readWrite */
                 Collections.emptyList(), /* defaultValue */
-                new InspectorPath("Properties", "JavaFX CSS", 3));
+                new InspectorPath("Properties", "JavaFX CSS", 2));
     private final ValuePropertyMetadata sweepFlagPropertyMetadata =
             new BooleanPropertyMetadata(
                 sweepFlagName,
@@ -3778,6 +3772,12 @@ public class Metadata {
                 true, /* readWrite */
                 javafx.geometry.Side.TOP, /* defaultValue */
                 new InspectorPath("Properties", "Specific", 58));
+    private final ValuePropertyMetadata toggleGroupPropertyMetadata =
+            new ToggleGroupPropertyMetadata(
+                toggleGroupName,
+                true, /* readWrite */
+                null, /* defaultValue */
+                new InspectorPath("Properties", "Specific", 36));
     private final ComponentPropertyMetadata tooltipPropertyMetadata =
             new ComponentPropertyMetadata(
                 tooltipName,
@@ -3930,7 +3930,7 @@ public class Metadata {
                 visibleName,
                 true, /* readWrite */
                 true, /* defaultValue */
-                new InspectorPath("Properties", "Node", 6));
+                new InspectorPath("Properties", "Node", 5));
     private final ValuePropertyMetadata visibleAmountPropertyMetadata =
             new DoublePropertyMetadata(
                 visibleAmountName,
@@ -4710,7 +4710,6 @@ public class Metadata {
         NodeMetadata.getProperties().add(cursor_NULL_PropertyMetadata);
         NodeMetadata.getProperties().add(depthTestPropertyMetadata);
         NodeMetadata.getProperties().add(disablePropertyMetadata);
-        NodeMetadata.getProperties().add(disabledPropertyMetadata);
         NodeMetadata.getProperties().add(effectPropertyMetadata);
         NodeMetadata.getProperties().add(effectiveNodeOrientationPropertyMetadata);
         NodeMetadata.getProperties().add(focusTraversable_false_PropertyMetadata);
@@ -4911,6 +4910,7 @@ public class Metadata {
 
         RadioMenuItemMetadata.getProperties().add(selected_Boolean_PropertyMetadata);
         RadioMenuItemMetadata.getProperties().add(styleClass_c7_PropertyMetadata);
+        RadioMenuItemMetadata.getProperties().add(toggleGroupPropertyMetadata);
 
         RectangleMetadata.getProperties().add(arcHeightPropertyMetadata);
         RectangleMetadata.getProperties().add(arcWidthPropertyMetadata);
@@ -5047,7 +5047,6 @@ public class Metadata {
         TabMetadata.getProperties().add(content_Node_NULL_PropertyMetadata);
         TabMetadata.getProperties().add(contextMenuPropertyMetadata);
         TabMetadata.getProperties().add(disablePropertyMetadata);
-        TabMetadata.getProperties().add(disabledPropertyMetadata);
         TabMetadata.getProperties().add(graphicPropertyMetadata);
         TabMetadata.getProperties().add(idPropertyMetadata);
         TabMetadata.getProperties().add(onClosedPropertyMetadata);
@@ -5171,6 +5170,7 @@ public class Metadata {
         ToggleButtonMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         ToggleButtonMetadata.getProperties().add(selected_Boolean_PropertyMetadata);
         ToggleButtonMetadata.getProperties().add(styleClass_c40_PropertyMetadata);
+        ToggleButtonMetadata.getProperties().add(toggleGroupPropertyMetadata);
 
         ToolBarMetadata.getProperties().add(items_Node_PropertyMetadata);
         ToolBarMetadata.getProperties().add(orientation_HORIZONTAL_PropertyMetadata);
@@ -5297,6 +5297,7 @@ public class Metadata {
         hiddenProperties.add(new PropertyName("customColors"));
         hiddenProperties.add(new PropertyName("data"));
         hiddenProperties.add(new PropertyName("dayCellFactory"));
+        hiddenProperties.add(new PropertyName("disabled"));
         hiddenProperties.add(new PropertyName("dividers"));
         hiddenProperties.add(new PropertyName("editingCell"));
         hiddenProperties.add(new PropertyName("editingIndex"));
@@ -5355,7 +5356,6 @@ public class Metadata {
         hiddenProperties.add(new PropertyName("styleableParent"));
         hiddenProperties.add(new PropertyName("tableView"));
         hiddenProperties.add(new PropertyName("tabPane"));
-        hiddenProperties.add(new PropertyName("toggleGroup"));
         hiddenProperties.add(new PropertyName("transforms"));
         hiddenProperties.add(new PropertyName("treeTableView"));
         hiddenProperties.add(new PropertyName("typeInternal"));

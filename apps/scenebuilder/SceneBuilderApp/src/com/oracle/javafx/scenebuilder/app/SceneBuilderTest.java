@@ -400,6 +400,17 @@ public class SceneBuilderTest {
         }
     }
     
+    /**
+     * Starts the application in test mode.
+     * In this mode, no files are opened at application startup.
+     * 
+     * @param args arguments to SceneBuilderApp.main()
+     */
+    public static void startApplication(String[] args) {
+        AppPlatform.setStartingFromTestBed(true);
+        SceneBuilderApp.main(args);
+    }
+    
     /*
      * Private
      */

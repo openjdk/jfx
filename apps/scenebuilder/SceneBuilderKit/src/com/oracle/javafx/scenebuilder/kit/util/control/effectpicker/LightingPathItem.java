@@ -58,7 +58,7 @@ public class LightingPathItem extends EffectPathItem {
     }
 
     @Override
-    public EffectPathItem getSelectedInputPathItem() {
+    EffectPathItem getSelectedInputPathItem() {
         if (bumpMenuItem.isSelected()) {
             return bumpInputPathItem;
         } else {
@@ -66,9 +66,9 @@ public class LightingPathItem extends EffectPathItem {
             return contentInputPathItem;
         }
     }
-    
+
     @Override
-    public void setSelectedInput(Effect input) {
+    void setSelectedInputEffect(Effect input) {
         if (bumpMenuItem.isSelected()) {
             setBumpInput(input);
         } else {
@@ -77,27 +77,27 @@ public class LightingPathItem extends EffectPathItem {
         }
     }
 
-    public void setBumpInputPathItem(EffectPathItem epi) {
+    void setBumpInputPathItem(EffectPathItem epi) {
         bumpInputPathItem = epi;
     }
 
-    public void setContentInputPathItem(EffectPathItem epi) {
+    void setContentInputPathItem(EffectPathItem epi) {
         contentInputPathItem = epi;
     }
 
-    public Effect getBumpInput() {
+    Effect getBumpInput() {
         return ((Lighting) effect).getBumpInput();
     }
 
-    public void setBumpInput(Effect input) {
+    void setBumpInput(Effect input) {
         ((Lighting) effect).setBumpInput(input);
     }
 
-    public Effect getContentInput() {
+    Effect getContentInput() {
         return ((Lighting) effect).getContentInput();
     }
 
-    public void setContentInput(Effect input) {
+    void setContentInput(Effect input) {
         ((Lighting) effect).setContentInput(input);
     }
 

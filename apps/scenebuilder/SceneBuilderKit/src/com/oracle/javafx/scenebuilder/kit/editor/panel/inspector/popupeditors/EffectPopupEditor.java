@@ -33,6 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.popupeditors;
 
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.EffectPicker;
+import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.Utils;
 import java.util.List;
 import java.util.Set;
 import javafx.beans.value.ChangeListener;
@@ -48,13 +49,17 @@ public class EffectPopupEditor extends PopupEditor {
     private final EffectPicker effectPicker = new EffectPicker();
     private final List<MenuItem> effectMenuItems;
 
-    private final ChangeListener<Effect> effectChangeListener = new ChangeListener<Effect>() {
+    private final ChangeListener<Number> effectRevisionChangeListener = new ChangeListener<Number>() {
         @Override
-        public void changed(ObservableValue<? extends Effect> ov, Effect oldValue, Effect newValue) {
+        public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
             final String valueAsString = effectPicker.getEffectPath();
-            commitValue(newValue, valueAsString);
+            final Effect rootEffect = effectPicker.getRootEffectProperty();
+            // Need to clone the root effect of the effect picker
+            // in order to commit with a new value
+            final Effect rootEffectClone = Utils.clone(rootEffect);
+            commitValue(rootEffectClone, valueAsString);
             // Refresh MenuButton items if needed
-            updateMenuButton(newValue);
+            updateMenuButton(rootEffectClone);
             displayValueAsString(valueAsString);
         }
     };
@@ -69,11 +74,14 @@ public class EffectPopupEditor extends PopupEditor {
     @Override
     public void setPopupContentValue(Object value) {
         assert value == null || value instanceof Effect;
-        effectPicker.rootEffectProperty().removeListener(effectChangeListener);
-        effectPicker.setRootEffectProperty((Effect) value);
+        effectPicker.revisionProperty().removeListener(effectRevisionChangeListener);
+        // We first clone the root effect and initialize the effect picker with the clone value :
+        // then the clone value will be updated and passed back to the model
+        final Effect rootEffectClone = Utils.clone((Effect) value);
+        effectPicker.setRootEffectProperty(rootEffectClone);
         // Refresh MenuButton items if needed
-        updateMenuButton((Effect) value);
-        effectPicker.rootEffectProperty().addListener(effectChangeListener);
+        updateMenuButton(rootEffectClone);
+        effectPicker.revisionProperty().addListener(effectRevisionChangeListener);
         // Update the menu button string
         displayValueAsString(effectPicker.getEffectPath());
     }

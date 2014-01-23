@@ -32,8 +32,10 @@
 
 package com.oracle.javafx.scenebuilder.kit.fxom;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import javafx.scene.control.ToggleGroup;
 
 /**
  *
@@ -56,6 +58,22 @@ public class FXOMIndex {
     public FXOMObject lookup(String fxId) {
         assert fxId != null;
         return fxIds.get(fxId);
+    }
+    
+    public List<FXOMInstance> collectToggleGroups() {
+        final List<FXOMInstance> result = new ArrayList<>();
+        
+        for (Map.Entry<String, FXOMObject> e : fxIds.entrySet()) {
+            final FXOMObject fxomObject = e.getValue();
+            if (fxomObject instanceof FXOMInstance) {
+                final FXOMInstance fxomInstance = (FXOMInstance) fxomObject;
+                if (fxomInstance.getDeclaredClass() == ToggleGroup.class) {
+                    result.add(fxomInstance);
+                }
+            }
+        }
+        
+        return result;
     }
     
     /**

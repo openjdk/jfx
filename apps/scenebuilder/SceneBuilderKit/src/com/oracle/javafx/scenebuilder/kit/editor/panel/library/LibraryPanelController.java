@@ -69,6 +69,7 @@ import javafx.collections.ListChangeListener;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.control.Accordion;
+import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TitledPane;
@@ -104,7 +105,8 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
 
     @FXML
     private Accordion libAccordion;
-    
+    @FXML
+    Label noSearchResults;
     @FXML ListView<LibraryListItem> libSearchList;
     
     @FXML ListView<LibraryListItem> libList = new ListView<>();
@@ -183,6 +185,13 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
     }
 
     /**
+     * @treatAsPrivate User scene graph did change.
+     */
+    @Override
+    protected void cssRevisionDidChange() {
+    }
+
+    /**
      * @treatAsPrivate Job manager revision did change.
      */
     @Override
@@ -210,6 +219,8 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
         assert libAccordion != null;
         assert libPane != null;
         assert libList != null;
+        assert noSearchResults != null;
+        assert libSearchList != null;
         
         startListeningToDrop();
         setDisplayMode(DISPLAY_MODE.SECTIONS);
@@ -236,6 +247,8 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
             case SECTIONS:
                 libAccordion.setVisible(true);
                 libAccordion.setManaged(true);
+                noSearchResults.setVisible(false);
+                noSearchResults.setManaged(false);
                 libSearchList.setVisible(false);
                 libSearchList.setManaged(false);
                 libList.setVisible(false);
@@ -244,14 +257,25 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
             case SEARCH:
                 libAccordion.setVisible(false);
                 libAccordion.setManaged(false);
-                libSearchList.setVisible(true);
-                libSearchList.setManaged(true);
+                if (libSearchList.getItems().isEmpty()) {
+                    noSearchResults.setVisible(true);
+                    noSearchResults.setManaged(true);
+                    libSearchList.setVisible(false);
+                    libSearchList.setManaged(false);
+                } else {
+                    noSearchResults.setVisible(false);
+                    noSearchResults.setManaged(false);
+                    libSearchList.setVisible(true);
+                    libSearchList.setManaged(true);
+                }
                 libList.setVisible(false);
                 libList.setManaged(false);
                 break;
             case LIST:
                 libAccordion.setVisible(false);
                 libAccordion.setManaged(false);
+                noSearchResults.setVisible(false);
+                noSearchResults.setManaged(false);
                 libSearchList.setVisible(false);
                 libSearchList.setManaged(false);
                 libList.setVisible(true);
@@ -444,12 +468,12 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
     
     private void searchPatternDidChange() {
         if (searchPattern == null || searchPattern.isEmpty()) {
-            setDisplayMode(previousDisplayMode);
+            currentDisplayMode = previousDisplayMode;
         } else {
             if (currentDisplayMode != DISPLAY_MODE.SEARCH) {
                 previousDisplayMode = currentDisplayMode;
+                currentDisplayMode = DISPLAY_MODE.SEARCH;
             }
-            setDisplayMode(DISPLAY_MODE.SEARCH);
         }
         
         // The filtering is done by ignoring case, and by retaining any item that
@@ -476,6 +500,8 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
             }
             rawFilteredItem.clear();
         }
+        
+        setDisplayMode(currentDisplayMode);
     }
     
     // Key events listened onto the ListView

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <!--
   Copyright (c) 2012, 2014, Oracle and/or its affiliates.
   All rights reserved. Use is subject to license terms.
@@ -36,13 +37,13 @@
 <?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
 
-<HBox xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+<HBox xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
   <children>
-    <ToggleButton fx:id="leftTb" maxWidth="1.7976931348623157E308" mnemonicParsing="false" style="-fx-background-radius: 3 0 0 3;" styleClass="toggle-button, toggle-button-left" HBox.hgrow="ALWAYS">
+    <ToggleButton fx:id="leftTb" maxWidth="1.7976931348623157E308" mnemonicParsing="false" style="" styleClass="left-pill">
       <graphic>
         <ImageView>
           <image>
-            <Image smooth="false" url="@../images/text-alignment-left.png" />
+            <Image url="@../images/text-alignment-left.png" smooth="false" />
           </image>
         </ImageView>
       </graphic>
@@ -50,35 +51,35 @@
         <ToggleGroup fx:id="tg1" />
       </toggleGroup>
     </ToggleButton>
-    <ToggleButton fx:id="centerTb" maxWidth="1.7976931348623157E308" mnemonicParsing="false" styleClass="toggle-button, toggle-button-center" toggleGroup="$tg1" HBox.hgrow="ALWAYS">
+    <ToggleButton fx:id="centerTb" maxWidth="1.7976931348623157E308" mnemonicParsing="false" styleClass="center-pill" toggleGroup="$tg1">
       <graphic>
         <ImageView>
           <image>
-            <Image smooth="false" url="@../images/text-alignment-center.png" />
+            <Image url="@../images/text-alignment-center.png" smooth="false" />
           </image>
         </ImageView>
       </graphic>
     </ToggleButton>
-    <ToggleButton fx:id="rightTb" maxWidth="1.7976931348623157E308" mnemonicParsing="false" styleClass="toggle-button, toggle-button-center" toggleGroup="$tg1" HBox.hgrow="ALWAYS">
+    <ToggleButton fx:id="rightTb" maxWidth="1.7976931348623157E308" mnemonicParsing="false" styleClass="center-pill" toggleGroup="$tg1">
       <graphic>
         <ImageView>
           <image>
-            <Image smooth="false" url="@../images/text-alignment-right.png" />
+            <Image url="@../images/text-alignment-right.png" smooth="false" />
           </image>
         </ImageView>
       </graphic>
     </ToggleButton>
-    <ToggleButton fx:id="justifyTb" maxWidth="1.7976931348623157E308" mnemonicParsing="false" styleClass="toggle-button, toggle-button-right" toggleGroup="$tg1" HBox.hgrow="ALWAYS">
+    <ToggleButton fx:id="justifyTb" maxWidth="1.7976931348623157E308" mnemonicParsing="false" styleClass="right-pill" toggleGroup="$tg1">
       <graphic>
         <ImageView>
           <image>
-            <Image smooth="false" url="@../images/text-alignment-justify.png" />
+            <Image url="@../images/text-alignment-justify.png" smooth="false" />
           </image>
         </ImageView>
       </graphic>
     </ToggleButton>
   </children>
   <stylesheets>
-    <URL value="@../Inspector.css" />
+    <URL value="@../../../css/Theme.css" />
   </stylesheets>
 </HBox>

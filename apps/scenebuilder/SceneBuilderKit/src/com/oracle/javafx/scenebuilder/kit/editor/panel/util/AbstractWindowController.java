@@ -54,6 +54,7 @@ public abstract class AbstractWindowController {
     private Scene scene;
     private Stage stage;
     private final double CLAMP_FACTOR = 0.9;
+    private final boolean sizeToScene; // true by default
 
     private final EventHandler<WindowEvent> closeRequestHandler = new EventHandler<WindowEvent>() {
         @Override
@@ -64,11 +65,16 @@ public abstract class AbstractWindowController {
     };
     
     public AbstractWindowController() {
-        this(null);
+        this(null, true);
     }
     
     public AbstractWindowController(Window owner) {
+        this(owner, true);
+    }
+    
+    public AbstractWindowController(Window owner, boolean sizeToScene) {
         this.owner = owner;
+        this.sizeToScene = sizeToScene;
     }
     
     /**
@@ -124,7 +130,9 @@ public abstract class AbstractWindowController {
             stage.setOnCloseRequest(closeRequestHandler);
             stage.setScene(getScene());
             clampWindow();
-            stage.sizeToScene();
+            if (sizeToScene) {
+                stage.sizeToScene();
+            }
             controllerDidCreateStage();
         }
         

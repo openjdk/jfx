@@ -31,20 +31,18 @@
  */
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
-import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignImage;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
-import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
-import java.net.MalformedURLException;
-import java.net.URL;
 import javafx.scene.image.Image;
 
 /**
  *
  * 
  */
-public class ImagePropertyMetadata extends ComplexPropertyMetadata<Image> {
+public class ImagePropertyMetadata extends ComplexPropertyMetadata<DesignImage> {
 
     private final StringPropertyMetadata urlMetadata
             = new StringPropertyMetadata(new PropertyName("url"), 
@@ -66,8 +64,8 @@ public class ImagePropertyMetadata extends ComplexPropertyMetadata<Image> {
             true /* readWrite */, false /* defaultValue */, InspectorPath.UNUSED);
     
     public ImagePropertyMetadata(PropertyName name, boolean readWrite, 
-            Image defaultValue, InspectorPath inspectorPath) {
-        super(name, Image.class, readWrite, defaultValue, inspectorPath);
+            DesignImage defaultValue, InspectorPath inspectorPath) {
+        super(name, DesignImage.class, readWrite, defaultValue, inspectorPath);
     }
 
     /*
@@ -75,37 +73,23 @@ public class ImagePropertyMetadata extends ComplexPropertyMetadata<Image> {
      */
     
     @Override
-    protected Image castValue(Object value) {
-        return (Image) value;
+    public FXOMInstance makeFxomInstanceFromValue(DesignImage value, FXOMDocument fxomDocument) {
+        final FXOMInstance result = new FXOMInstance(fxomDocument, Image.class);
+        
+        urlMetadata.setValue(result, value.getLocation());
+        requestedWidthMetadata.setValue(result, value.getImage().getRequestedWidth());
+        requestedHeightMetadata.setValue(result, value.getImage().getRequestedHeight());
+        preserveRatioMetadata.setValue(result, value.getImage().isPreserveRatio());
+        smoothMetadata.setValue(result, value.getImage().isSmooth());
+        backgroundLoading.setValue(result, value.getImage().isBackgroundLoading());
+
+        return result;
     }
     
     @Override
-    protected void updateFxomInstanceWithValue(FXOMInstance valueInstance, Image value) {
-        /*
-         * Image location is expressed as an absolute url.
-         * If the fxom document has a location, then we convert this location
-         * as a relative path expression (ie starting with @). If not, then
-         * we keep the absolute url.
-         */
-        final URL documentURL = valueInstance.getFxomDocument().getLocation();
-        final String imageLocation;
-        if (documentURL != null) {
-            try {
-                final URL imageURL = new URL(Deprecation.getUrl(value));
-                final PrefixedValue pv = PrefixedValue.makePrefixedValue(imageURL, documentURL);
-                imageLocation = pv.toString();
-            } catch(MalformedURLException|IllegalArgumentException x) {
-                throw new RuntimeException("Bug", x); // NOI18N
-            }
-        } else {
-            imageLocation = Deprecation.getUrl(value);
-        }
-        urlMetadata.setValue(valueInstance, imageLocation);
-        requestedWidthMetadata.setValue(valueInstance, value.getRequestedWidth());
-        requestedHeightMetadata.setValue(valueInstance, value.getRequestedHeight());
-        preserveRatioMetadata.setValue(valueInstance, value.isPreserveRatio());
-        smoothMetadata.setValue(valueInstance, value.isSmooth());
-        backgroundLoading.setValue(valueInstance, value.isBackgroundLoading());
+    public DesignImage makeValueFromFxomInstance(FXOMInstance valueFxomInstance) {
+        final String location = urlMetadata.getValue(valueFxomInstance);
+        final Image image = (Image)valueFxomInstance.getSceneGraphObject();
+        return new DesignImage(image, location);
     }
-    
 }

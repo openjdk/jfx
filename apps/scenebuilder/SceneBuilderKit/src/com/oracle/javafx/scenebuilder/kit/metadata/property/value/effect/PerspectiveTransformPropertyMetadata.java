@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -32,6 +32,7 @@
 
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value.effect;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.ComplexPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata;
@@ -82,20 +83,19 @@ public class PerspectiveTransformPropertyMetadata extends ComplexPropertyMetadat
      */
     
     @Override
-    protected PerspectiveTransform castValue(Object value) {
-        return (PerspectiveTransform) value;
-    }
-    
-    @Override
-    public void updateFxomInstanceWithValue(FXOMInstance valueInstance, PerspectiveTransform value) {
-        inputMetadata.setValue(valueInstance, value.getInput());
-        llxMetadata.setValue(valueInstance, value.getLlx());
-        llyMetadata.setValue(valueInstance, value.getLly());
-        lrxMetadata.setValue(valueInstance, value.getLrx());
-        lryMetadata.setValue(valueInstance, value.getLry());
-        ulxMetadata.setValue(valueInstance, value.getUlx());
-        ulyMetadata.setValue(valueInstance, value.getUly());
-        urxMetadata.setValue(valueInstance, value.getUrx());
-        uryMetadata.setValue(valueInstance, value.getUry());
+    public FXOMInstance makeFxomInstanceFromValue(PerspectiveTransform value, FXOMDocument fxomDocument) {
+        final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
+        
+        inputMetadata.setValue(result, value.getInput());
+        llxMetadata.setValue(result, value.getLlx());
+        llyMetadata.setValue(result, value.getLly());
+        lrxMetadata.setValue(result, value.getLrx());
+        lryMetadata.setValue(result, value.getLry());
+        ulxMetadata.setValue(result, value.getUlx());
+        ulyMetadata.setValue(result, value.getUly());
+        urxMetadata.setValue(result, value.getUrx());
+        uryMetadata.setValue(result, value.getUry());
+
+        return result;
     }
 }

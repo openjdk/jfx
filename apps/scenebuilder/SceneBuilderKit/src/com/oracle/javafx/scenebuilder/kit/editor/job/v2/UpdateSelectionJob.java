@@ -38,6 +38,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGrou
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -55,7 +56,7 @@ public class UpdateSelectionJob extends Job {
         this.newSelectedObjects.add(newSelectedObject);
     }
 
-    public UpdateSelectionJob(List<FXOMObject> newSelectedObjects, EditorController editorController) {
+    public UpdateSelectionJob(Collection<FXOMObject> newSelectedObjects, EditorController editorController) {
         super(editorController);
         
         assert newSelectedObjects != null; // But possibly empty

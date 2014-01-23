@@ -64,6 +64,6 @@ public abstract class AbstractDragSource {
     public abstract Image makeDragView();
     public abstract Node makeShadow();
     public abstract String makeDropJobDescription();
-    
+    public abstract boolean isNodeOnly();
     
 }

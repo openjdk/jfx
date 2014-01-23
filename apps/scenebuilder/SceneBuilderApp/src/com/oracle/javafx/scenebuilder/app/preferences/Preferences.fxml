@@ -45,9 +45,9 @@
 <GridPane hgap="6.0" maxWidth="1.7976931348623157E308" vgap="10.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
   <children>
     <Label text="%prefs.doc.width" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-    <TextField fx:id="documentWidth" prefWidth="200.0" text="" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+    <TextField fx:id="rootContainerWidth" prefWidth="200.0" text="" GridPane.columnIndex="1" GridPane.rowIndex="0" />
     <Label text="%prefs.doc.height" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-    <TextField fx:id="documentHeight" prefWidth="200.0" text="" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+    <TextField fx:id="rootContainerHeight" prefWidth="200.0" text="" GridPane.columnIndex="1" GridPane.rowIndex="1" />
     <Label text="%prefs.background" GridPane.columnIndex="0" GridPane.rowIndex="3" />
     <ChoiceBox fx:id="backgroundImage" GridPane.columnIndex="1" GridPane.rowIndex="3" />
     <Label text="%prefs.alignment.guides" GridPane.columnIndex="0" GridPane.rowIndex="4" />
@@ -68,10 +68,10 @@
         <CustomMenuItem hideOnClick="false" mnemonicParsing="false" text="Unspecified Action" fx:id="parentRingMenuItem" />
       </items>
     </MenuButton>
-    <Label text="%prefs.hierarchy.displayoption" GridPane.columnIndex="0" GridPane.rowIndex="7" />
-    <ChoiceBox fx:id="hierarchyDisplayOption" GridPane.columnIndex="1" GridPane.rowIndex="7" />
-    <Label text="%prefs.cssanalyzer.columns.order" GridPane.columnIndex="0" GridPane.rowIndex="8" />
-    <ChoiceBox fx:id="cssAnalyzerColumnsOrder" GridPane.columnIndex="1" GridPane.rowIndex="8">
+    <Label text="%prefs.hierarchy.displayoption" GridPane.columnIndex="0" GridPane.rowIndex="8" />
+    <ChoiceBox fx:id="hierarchyDisplayOption" GridPane.columnIndex="1" GridPane.rowIndex="8" />
+    <Label text="%prefs.cssanalyzer.columns.order" GridPane.columnIndex="0" GridPane.rowIndex="9" />
+    <ChoiceBox fx:id="cssAnalyzerColumnsOrder" GridPane.columnIndex="1" GridPane.rowIndex="9">
       <items>
         <FXCollections fx:factory="observableArrayList">
           <String fx:value="Item 1" />
@@ -81,10 +81,8 @@
       </items>
     </ChoiceBox>
     <Separator prefWidth="-1.0" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="2" />
-    <Separator prefWidth="-1.0" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="6" />
-    <Separator prefWidth="-1.0" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="9" />
-    <Label text="%prefs.recent.items" GridPane.columnIndex="0" GridPane.rowIndex="10" />
-    <ChoiceBox fx:id="recentItemsSize" GridPane.columnIndex="1" GridPane.rowIndex="10">
+    <Separator prefWidth="-1.0" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="10" />
+    <ChoiceBox fx:id="recentItemsSize" GridPane.columnIndex="1" GridPane.rowIndex="11">
       <items>
         <FXCollections fx:factory="observableArrayList">
           <String fx:value="Item 1" />
@@ -93,6 +91,10 @@
         </FXCollections>
       </items>
     </ChoiceBox>
+    <Label text="%prefs.library.displayoption" GridPane.columnIndex="0" GridPane.rowIndex="7" />
+    <ChoiceBox fx:id="libraryDisplayOption" GridPane.columnIndex="1" GridPane.rowIndex="7" />
+    <Separator prefWidth="-1.0" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="6" />
+    <Label text="%prefs.recent.items" GridPane.columnIndex="0" GridPane.rowIndex="11" />
   </children>
   <columnConstraints>
     <ColumnConstraints halignment="RIGHT" hgrow="SOMETIMES" maxWidth="-Infinity" minWidth="-Infinity" />
@@ -102,6 +104,8 @@
     <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
   </padding>
   <rowConstraints>
+    <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="-1.0" vgrow="NEVER" />
+    <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="-1.0" vgrow="NEVER" />
     <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="-1.0" vgrow="NEVER" />
     <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="-1.0" vgrow="NEVER" />
     <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="-1.0" vgrow="NEVER" />

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <!--
   Copyright (c) 2012, 2014, Oracle and/or its affiliates.
   All rights reserved. Use is subject to license terms.
@@ -30,30 +31,27 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
+
 <?import java.lang.*?>
-<?import java.net.*?>
-<?import java.util.*?>
 <?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.scene.paint.*?>
-<?import javafx.scene.text.*?>
 
-<HBox spacing="1.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
-  <children>
+<HBox spacing="1.0" stylesheets="@../../../css/Theme.css" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+  <children><Label fx:id="prefixLb" alignment="CENTER" maxWidth="20.0" minWidth="20.0" prefWidth="20.0" />
     <TextField fx:id="stylesheetTf" maxHeight="22.0" minHeight="22.0" prefHeight="22.0" prefWidth="200.0" />
     <HBox>
       <children>
         <Button fx:id="plusBt" maxHeight="22.0" minHeight="22.0" mnemonicParsing="false" onAction="#chooseStylesheet" onKeyReleased="#plusBtTyped" prefHeight="22.0" styleClass="plus-button" text="" />
         <MenuButton maxHeight="22.0" minHeight="22.0" mnemonicParsing="false" prefHeight="22.0" prefWidth="-1.0" styleClass="listrow-menubutton" text="">
           <items>
-            <MenuItem disable="true" mnemonicParsing="false" onAction="#remove" text="Remove (i18n)" fx:id="removeMi" />
+            <MenuItem fx:id="removeMi" disable="true" mnemonicParsing="false" onAction="#remove" text="Remove (i18n)" />
             <SeparatorMenuItem mnemonicParsing="false" />
-            <MenuItem mnemonicParsing="false" onAction="#up" text="Move Up (i18n)" fx:id="moveUpMi" />
-            <MenuItem mnemonicParsing="false" onAction="#down" text="Move Down (i18n)" fx:id="moveDownMi" />
+            <MenuItem fx:id="moveUpMi" mnemonicParsing="false" onAction="#up" text="Move Up (i18n)" />
+            <MenuItem fx:id="moveDownMi" mnemonicParsing="false" onAction="#down" text="Move Down (i18n)" />
             <SeparatorMenuItem mnemonicParsing="false" />
-            <MenuItem mnemonicParsing="false" onAction="#open" text="Open (i18n)" fx:id="openMi" />
-            <MenuItem mnemonicParsing="false" onAction="#reveal" text="Reveal (i18n)" fx:id="revealMi" />
+            <MenuItem fx:id="openMi" mnemonicParsing="false" onAction="#open" text="Open (i18n)" />
+            <MenuItem fx:id="revealMi" mnemonicParsing="false" onAction="#reveal" text="Reveal (i18n)" />
           </items>
         </MenuButton>
       </children>
@@ -65,7 +63,4 @@
   <padding>
     <Insets />
   </padding>
-  <stylesheets>
-    <URL value="@../Inspector.css" />
-  </stylesheets>
 </HBox>

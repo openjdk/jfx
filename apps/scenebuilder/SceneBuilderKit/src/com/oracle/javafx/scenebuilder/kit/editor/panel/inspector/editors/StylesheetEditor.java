@@ -34,6 +34,8 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue.Type;
 import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 import com.sun.javafx.css.StyleManager;
 import java.io.File;
@@ -41,6 +43,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -52,14 +55,17 @@ import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.FileChooser;
 
@@ -74,15 +80,46 @@ public class StylesheetEditor extends InlineListEditor {
     private final StackPane root = new StackPane();
     private final Parent rootInitialBt;
 
+    private final MenuItem documentRelativeMenuItem
+            = new MenuItem(I18N.getString("inspector.resource.documentrelative"));
+    private final MenuItem classPathRelativeMenuItem
+            = new MenuItem(I18N.getString("inspector.resource.classpathrelative"));
+    private final MenuItem absoluteMenuItem
+            = new MenuItem(I18N.getString("inspector.resource.absolute"));
+
+    private Type type;
+    private URL fxmlFileLocation;
+
     @SuppressWarnings("LeakingThisInConstructor")
-    public StylesheetEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
+    public StylesheetEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, URL fxmlFileLocation) {
         super(propMeta, selectedClasses);
+        this.fxmlFileLocation = fxmlFileLocation;
         setLayoutFormat(PropertyEditor.LayoutFormat.DOUBLE_LINE);
         // Add initial button
         rootInitialBt = EditorUtils.loadFxml("StylesheetEditorInitialBt.fxml", this); //NOI18N
         root.getChildren().add(rootInitialBt);
         // Set the initial value to empty list (instead of null)
         valueProperty().setValue(FXCollections.observableArrayList());
+
+        documentRelativeMenuItem.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent e) {
+                switchType(Type.DOCUMENT_RELATIVE_PATH);
+            }
+        });
+        classPathRelativeMenuItem.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent e) {
+                switchType(Type.CLASSLOADER_RELATIVE_PATH);
+            }
+        });
+        absoluteMenuItem.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent e) {
+                switchType(Type.PLAIN_STRING);
+            }
+        });
+        getMenu().getItems().addAll(documentRelativeMenuItem, classPathRelativeMenuItem, absoluteMenuItem);
     }
 
     @Override
@@ -105,6 +142,7 @@ public class StylesheetEditor extends InlineListEditor {
             // no stylesheet
             return super.getPropertyMeta().getDefaultValueObject();
         } else {
+            type = getType(value);
             return value;
         }
     }
@@ -127,6 +165,9 @@ public class StylesheetEditor extends InlineListEditor {
         if (isSetValueDone()) {
             return;
         }
+
+        type = getType((List<String>) value);
+        updateMenuItems();
         Iterator<EditorItem> itemsIter = new ArrayList<>(getEditorItems()).iterator();
         for (String item : (List<String>) value) {
             item = item.trim();
@@ -151,9 +192,9 @@ public class StylesheetEditor extends InlineListEditor {
         switchToItemList();
     }
 
-    @Override
-    public void reset(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
+    public void reset(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, URL fxmlFileLocation) {
         super.reset(propMeta, selectedClasses, true);
+        this.fxmlFileLocation = fxmlFileLocation;
         switchToInitialButton();
     }
 
@@ -180,20 +221,37 @@ public class StylesheetEditor extends InlineListEditor {
     }
 
     private void open(EditorItem source) {
+        String urlStr = getUrl(source);
+        if (urlStr == null) {
+            return;
+        }
         try {
-            EditorPlatform.open(source.getValue());
+            EditorPlatform.open(urlStr);
         } catch (IOException ex) {
-            System.err.println(I18N.getString("inspector.stylesheet.cannotopen", source.getValue() + " : " + ex)); // should go to message panel
+            System.err.println(I18N.getString("inspector.stylesheet.cannotopen", urlStr + " : " + ex)); // should go to message panel
         }
     }
 
     private void reveal(EditorItem source) {
-        try {
-            File file = new File((new URI(source.getValue())).toURL().getFile());
-            EditorPlatform.revealInFileBrowser(file);
-        } catch (IOException | URISyntaxException ex) {
-            System.err.println(I18N.getString("inspector.stylesheet.cannotreveal", source.getValue() + " : " + ex)); // should go to message panel
+        String urlStr = getUrl(source);
+        if (urlStr == null) {
+            return;
         }
+        try {
+            File file = new File((new URI(urlStr)).toURL().getFile());
+            EditorPlatform.revealInFileBrowser(file);
+        } catch (URISyntaxException | IOException ex) {
+            System.err.println(I18N.getString("inspector.stylesheet.cannotreveal", urlStr + " : " + ex)); // should go to message panel
+        }
+    }
+
+    private String getUrl(EditorItem source) {
+        URL url = EditorUtils.getUrl(source.getValue(), fxmlFileLocation);
+        if (url == null) {
+            return null;
+        }
+        String urlStr = url.toExternalForm();
+        return urlStr;
     }
 
     @FXML
@@ -210,26 +268,33 @@ public class StylesheetEditor extends InlineListEditor {
         if ((file == null)) {
             return;
         }
-        String url;
+        URL url;
         try {
-            url = file.toURI().toURL().toExternalForm();
+            url = file.toURI().toURL();
         } catch (MalformedURLException ex) {
             throw new RuntimeException("Invalid URL", ex); //NOI18N
         }
-        if (alreadyUsed(url)) {
+        if (alreadyUsed(url.toExternalForm())) {
             System.err.println(I18N.getString("inspector.stylesheet.alreadyexist", url)); // should go to message panel
             return;
         }
 
         switchToItemList();
         // Add editor item
-        addItem(new StylesheetItem(this, url));
+        String urlStr;
+        if (fxmlFileLocation != null) {
+            // If the document exists, make the type as document relative by default.
+            urlStr = PrefixedValue.makePrefixedValue(url, fxmlFileLocation).toString();
+            switchType(Type.DOCUMENT_RELATIVE_PATH);
+        } else {
+            urlStr = url.toExternalForm();
+            switchType(Type.PLAIN_STRING);
+        }
+        addItem(new StylesheetItem(this, urlStr));
 
         // Workaround for RT-34863: Reload of an updated css file has no effect.
         // This reset the whole CSS from top. Would need to be moved on the FXOM side.
-        Scene scene = root.getScene();
-        StyleManager.getInstance().forget(scene);
-        Deprecation.reapplyCSS(scene.getRoot());
+        Deprecation.reapplyCSS(root.getScene());
 
         userUpdateValueProperty(getValue());
     }
@@ -264,6 +329,63 @@ public class StylesheetEditor extends InlineListEditor {
         return false;
     }
 
+    private void switchType(Type type) {
+        this.type = type;
+        updateMenuItems();
+        for (EditorItem editorItem : getEditorItems()) {
+            assert editorItem instanceof StylesheetItem;
+            StylesheetItem stylesheetItem = (StylesheetItem) editorItem;
+            URL url = EditorUtils.getUrl(stylesheetItem.getValue(), fxmlFileLocation);
+            String value = null;
+            if ((url == null) || (type == Type.CLASSLOADER_RELATIVE_PATH)) {
+                // In this case we empty the text field (i.e. suffix) content
+                value = new PrefixedValue(type, "").toString(); //NOI18N
+            } else if (type == Type.PLAIN_STRING) {
+                value = url.toExternalForm();
+            } else if (type == Type.DOCUMENT_RELATIVE_PATH) {
+                value = PrefixedValue.makePrefixedValue(url, fxmlFileLocation).toString();
+            }
+            stylesheetItem.setValue(value);
+            commit(stylesheetItem);
+        }
+    }
+
+    private Type getType(List<String> styleSheets) {
+        Type commonType = null;
+        for (String styleSheet : styleSheets) {
+            if (commonType == null) {
+                commonType = getType(styleSheet);
+            } else {
+                if (commonType != getType(styleSheet)) {
+                    // mix of different types: set all to document relative
+                    commonType = Type.DOCUMENT_RELATIVE_PATH;
+                    break;
+                }
+            }
+        }
+        return commonType;
+    }
+
+    private static Type getType(String styleSheet) {
+        return (new PrefixedValue(styleSheet)).getType();
+    }
+
+    private void updateMenuItems() {
+        documentRelativeMenuItem.setDisable(false);
+        classPathRelativeMenuItem.setDisable(false);
+        absoluteMenuItem.setDisable(false);
+        if (fxmlFileLocation == null) {
+            documentRelativeMenuItem.setDisable(true);
+        }
+        if (type == Type.DOCUMENT_RELATIVE_PATH) {
+            documentRelativeMenuItem.setDisable(true);
+        } else if (type == Type.CLASSLOADER_RELATIVE_PATH) {
+            classPathRelativeMenuItem.setDisable(true);
+        } else if (type == Type.PLAIN_STRING) {
+            absoluteMenuItem.setDisable(true);
+        }
+    }
+
     /**
      ***************************************************************************
      *
@@ -286,24 +408,29 @@ public class StylesheetEditor extends InlineListEditor {
         @FXML
         private MenuItem revealMi;
         @FXML
+        private Label prefixLb;
+        @FXML
         private TextField stylesheetTf;
 
-        private final Parent root;
+        private final Pane root;
         private String currentValue;
         private final EditorItemDelegate editor;
+        private Type itemType = Type.PLAIN_STRING;
 
         @SuppressWarnings("LeakingThisInConstructor")
         public StylesheetItem(EditorItemDelegate editor, String url) {
 //            System.out.println("New StylesheetItem.");
             this.editor = editor;
-            root = EditorUtils.loadFxml("StylesheetEditorItem.fxml", this);
+            Parent parentRoot = EditorUtils.loadFxml("StylesheetEditorItem.fxml", this);
+            assert parentRoot instanceof Pane;
+            root = (Pane) parentRoot;
 
             initialize(url);
         }
 
         // Method to please FindBugs
         private void initialize(String url) {
-            stylesheetTf.setText(url);
+            setValue(url);
             EventHandler<ActionEvent> onActionListener = new EventHandler<ActionEvent>() {
                 @Override
                 public void handle(ActionEvent event) {
@@ -320,6 +447,7 @@ public class StylesheetEditor extends InlineListEditor {
                     assert event.getSource() instanceof TextField;
                     ((TextField) event.getSource()).selectAll();
                     updateButtons();
+                    updateOpenRevealMenuItems();
                     currentValue = getValue();
                 }
             };
@@ -331,6 +459,7 @@ public class StylesheetEditor extends InlineListEditor {
                     if (prevText.isEmpty() || newText.isEmpty()) {
                         // Text changed FROM empty value, or TO empty value: buttons status change
                         updateButtons();
+                        updateOpenRevealMenuItems();
                     }
                 }
             };
@@ -343,13 +472,6 @@ public class StylesheetEditor extends InlineListEditor {
             removeMi.setText(I18N.getString("inspector.list.remove"));
             moveUpMi.setText(I18N.getString("inspector.list.moveup"));
             moveDownMi.setText(I18N.getString("inspector.list.movedown"));
-            String fileName = EditorUtils.getFileName(url);
-            openMi.setText(I18N.getString("inspector.list.open", fileName));
-            if (EditorPlatform.IS_MAC) {
-                revealMi.setText(I18N.getString("inspector.list.reveal.finder", fileName));
-            } else {
-                revealMi.setText(I18N.getString("inspector.list.reveal.explorer", fileName));
-            }
         }
 
         @Override
@@ -359,19 +481,28 @@ public class StylesheetEditor extends InlineListEditor {
 
         @Override
         public String getValue() {
-            String value;
+            String suffix;
             if (stylesheetTf.getText().isEmpty()) {
-                return "";
+                return ""; //NOI18N
             } else {
-                value = stylesheetTf.getText().trim();
+                suffix = stylesheetTf.getText().trim();
             }
-            return value;
+            return (new PrefixedValue(itemType, suffix)).toString();
         }
 
         @Override
-        public void setValue(String styleClass) {
-            stylesheetTf.setText(styleClass.trim());
+        public void setValue(String styleSheet) {
+            PrefixedValue prefixedValue = new PrefixedValue(styleSheet);
+            itemType = prefixedValue.getType();
+            handlePrefix(itemType);
+            if (prefixedValue.getSuffix() != null) {
+                stylesheetTf.setText(prefixedValue.getSuffix().trim());
+            } else {
+                // may happen if wrong style sheet
+                stylesheetTf.setText("");//NOI18N
+            }
             updateButtons();
+            updateOpenRevealMenuItems();
             currentValue = getValue();
         }
 
@@ -453,6 +584,32 @@ public class StylesheetEditor extends InlineListEditor {
             }
         }
 
+        private void updateOpenRevealMenuItems() {
+            // Get the file name part of the suffix
+            String suffix = new PrefixedValue(getValue()).getSuffix();
+            String fileName = null;
+            if (!suffix.isEmpty()) {
+                String[] urlParts = suffix.split("\\/");
+                fileName = urlParts[urlParts.length - 1];
+                // On windows, we may have "\" separators.
+                urlParts = fileName.split("\\\\");
+                fileName = urlParts[urlParts.length - 1];
+            }
+            if (fileName != null) {
+                openMi.setVisible(true);
+                revealMi.setVisible(true);
+                openMi.setText(I18N.getString("inspector.list.open", fileName));
+                if (EditorPlatform.IS_MAC) {
+                    revealMi.setText(I18N.getString("inspector.list.reveal.finder", fileName));
+                } else {
+                    revealMi.setText(I18N.getString("inspector.list.reveal.explorer", fileName));
+                }
+            } else {
+                openMi.setVisible(false);
+                revealMi.setVisible(false);
+            }
+        }
+
         private void updateButtons() {
             if (stylesheetTf.getText().isEmpty()) {
                 // if no content, disable plus
@@ -472,5 +629,31 @@ public class StylesheetEditor extends InlineListEditor {
         protected void disableRemove(boolean disable) {
             removeMi.setDisable(disable);
         }
+
+        protected void handlePrefix(Type type) {
+            this.itemType = type;
+            if (type == Type.DOCUMENT_RELATIVE_PATH) {
+                setPrefix(FXMLLoader.RELATIVE_PATH_PREFIX);
+            } else if (type == Type.CLASSLOADER_RELATIVE_PATH) {
+                setPrefix(FXMLLoader.RELATIVE_PATH_PREFIX + "/");//NOI18N
+            } else {
+                // absolute
+                removeLabel();
+            }
+        }
+
+        private void setPrefix(String str) {
+            if (!prefixLb.isVisible()) {
+                prefixLb.setVisible(true);
+                prefixLb.setManaged(true);
+            }
+            prefixLb.setText(str);
+        }
+
+        private void removeLabel() {
+            prefixLb.setVisible(false);
+            prefixLb.setManaged(false);
+        }
     }
+
 }

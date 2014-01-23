@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
@@ -66,15 +67,15 @@ public class InsetsPropertyMetadata extends ComplexPropertyMetadata<Insets> {
      * ComplexValuePropertyMetadata
      */
     @Override
-    protected Insets castValue(Object value) {
-        return (Insets) value;
+    public FXOMInstance makeFxomInstanceFromValue(Insets value, FXOMDocument fxomDocument) {
+        final FXOMInstance result = new FXOMInstance(fxomDocument, getValueClass());
+        
+        topMetadata.setValue(result, value.getTop());
+        bottomMetadata.setValue(result, value.getBottom());
+        leftMetadata.setValue(result, value.getLeft());
+        rightMetadata.setValue(result, value.getRight());
+
+        return result;
     }
-    
-    @Override
-    protected void updateFxomInstanceWithValue(FXOMInstance valueInstance, Insets value) {
-        topMetadata.setValue(valueInstance, value.getTop());
-        bottomMetadata.setValue(valueInstance, value.getBottom());
-        leftMetadata.setValue(valueInstance, value.getLeft());
-        rightMetadata.setValue(valueInstance, value.getRight());
-    }
+
 }

@@ -45,13 +45,13 @@ import javafx.scene.layout.RowConstraints;
  */
 public class RowConstraintsListPropertyMetadata extends ListValuePropertyMetadata<RowConstraints> {
 
-    private final RowConstraintsPropertyMetadata rowConstraintsMetadata
+    private static final RowConstraintsPropertyMetadata itemMetadata
             = new RowConstraintsPropertyMetadata(new PropertyName("unused"), //NOI18N
             true /* readWrite */, null, InspectorPath.UNUSED);
     
     public RowConstraintsListPropertyMetadata(PropertyName name, boolean readWrite, 
             List<RowConstraints> defaultValue, InspectorPath inspectorPath) {
-        super(name, RowConstraints.class, readWrite, defaultValue, inspectorPath);
+        super(name, RowConstraints.class, itemMetadata, readWrite, defaultValue, inspectorPath);
     }
 
     public RowConstraintsListPropertyMetadata() {
@@ -106,31 +106,6 @@ public class RowConstraintsListPropertyMetadata extends ListValuePropertyMetadat
         }
         
         return result;
-    }
-    
-    /*
-     * ListValuePropertyMetadata
-     */
-    
-    @Override
-    protected RowConstraints castItemValue(Object value) {
-        return (RowConstraints) value;
-    }
-    
-    @Override
-    protected boolean isItemTextEncodable() {
-        return false;
-    }
-
-    @Override
-    protected String itemTextEncoding(RowConstraints value) {
-        throw new UnsupportedOperationException(
-                getClass().getName() + " cannot be encoded as text"); //NOI18N
-    }
-
-    @Override
-    protected void updateFxomInstanceWithItemValue(FXOMInstance itemInstance, RowConstraints itemValue) {
-        rowConstraintsMetadata.updateFxomInstanceWithValue(itemInstance, itemValue);
     }
 
 }

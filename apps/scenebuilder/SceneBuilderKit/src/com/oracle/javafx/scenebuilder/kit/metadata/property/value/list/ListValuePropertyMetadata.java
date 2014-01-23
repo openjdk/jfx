@@ -35,15 +35,18 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMIntrinsic;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMNodes;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyT;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
+import com.oracle.javafx.scenebuilder.kit.metadata.property.value.SingleValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import javafx.fxml.FXMLLoader;
 
 /**
  *
@@ -51,19 +54,26 @@ import java.util.Objects;
 public abstract class ListValuePropertyMetadata<T> extends ValuePropertyMetadata {
 
     private final Class<T> itemClass;
+    private final SingleValuePropertyMetadata<T> itemMetadata;
     private final List<T> defaultValue;
     
-    public ListValuePropertyMetadata(PropertyName name, Class<T> itemClass, 
+    public ListValuePropertyMetadata(PropertyName name, 
+            Class<T> itemClass, SingleValuePropertyMetadata<T> itemMetadata,
             boolean readWrite, List<T> defaultValue, InspectorPath inspectorPath) {
         super(name, readWrite, inspectorPath);
         this.itemClass = itemClass;
         this.defaultValue = defaultValue;
+        this.itemMetadata = itemMetadata;
     }
     
     public Class<T> getItemClass() {
         return itemClass;
     }
     
+    public List<T> getDefaultValue() {
+        return defaultValue;
+    }
+
     public List<T> getValue(FXOMInstance fxomInstance) {
         final List<T> result;
         
@@ -76,24 +86,27 @@ public abstract class ListValuePropertyMetadata<T> extends ValuePropertyMetadata
                 result = defaultValue;
             } else if (fxomProperty instanceof FXOMPropertyT) {
                 final FXOMPropertyT fxomPropertyT = (FXOMPropertyT) fxomProperty;
-                result = new ArrayList<>();
-                result.add(castItemValue(fxomPropertyT.getValue()));
-            } else {
-                assert fxomProperty instanceof FXOMPropertyC;
-                
+                result = makeValueFromString(fxomPropertyT.getValue());
+            } else if (fxomProperty instanceof FXOMPropertyC) {
                 final FXOMPropertyC fxomPropertyC = (FXOMPropertyC) fxomProperty;
                 result = new ArrayList<>();
                 for (FXOMObject itemFxomObject : fxomPropertyC.getValues()) {
-                    assert itemFxomObject instanceof FXOMInstance;
-                    final FXOMInstance itemFxomInstance = (FXOMInstance) itemFxomObject;
-                    result.add(castItemValue(itemFxomInstance.getSceneGraphObject()));
+                    if (itemFxomObject instanceof FXOMInstance) {
+                        final FXOMInstance itemFxomInstance = (FXOMInstance) itemFxomObject;
+                        result.add(itemMetadata.makeValueFromFxomInstance(itemFxomInstance));
+                    } else {
+                        assert false;
+                    }
                 }
+            } else {
+                assert false;
+                result = defaultValue;
             }
         } else {
             final List<?> items = (List<?>)getName().getValue(fxomInstance.getSceneGraphObject());
             result = new ArrayList<>();
             for (Object item : items) {
-                result.add(castItemValue(item));
+                result.add(getItemClass().cast(item));
             }
         }
         
@@ -105,161 +118,78 @@ public abstract class ListValuePropertyMetadata<T> extends ValuePropertyMetadata
         
         final FXOMProperty fxomProperty = fxomInstance.getProperties().get(getName());
 
-        if (Objects.equals(value, getDefaultValueObject())) {
+        if (Objects.equals(value, getDefaultValueObject()) || value.isEmpty()) {
             // We must remove the fxom property if any
             if (fxomProperty != null) {
                 fxomProperty.removeFromParentInstance();
             }
         } else {
-            if (fxomProperty == null) {
-                // propertyName is not specified in the fxom instance.
-                // We insert a new fxom property
-                final FXOMProperty newProperty;
-                if (isItemTextEncodable() && (value.size() == 1)) {
-                    final String itemText = itemTextEncoding(value.get(0));
-                    newProperty = makeFxomPropertyFromValue(fxomInstance, itemText);
-                } else {
-                    newProperty = makeFxomPropertyFromValue(fxomInstance, value);
-                }
-                newProperty.addToParentInstance(-1, fxomInstance);
+            final FXOMDocument fxomDocument = fxomInstance.getFxomDocument();
+            final FXOMProperty newProperty;
+            if (canMakeStringFromValue(value)) {
+                final String valueString = makeStringFromValue(value);
+                newProperty = new FXOMPropertyT(fxomDocument, getName(), valueString);
             } else {
-                /*
-                 *       \ value |     size = 1           |      size > 1
-                 * fxomProperty  |                        |
-                 * --------------+------------------------+--------------------
-                 * FXOMPropertyT | update FXOMPropertyT   | remove
-                 *               |                        | new FXOMPropertyC
-                 *               |                        | add
-                 *               |           #1           |         #2
-                 * --------------+------------------------+--------------------
-                 * FXOMPropertyC | if text-encodable #3a  | update FXOMPropertyC
-                 *               |   remove               |
-                 *               |   new FXOMPropertyT    | 
-                 *               |   add                  |
-                 *               | else              #3b  |
-                 *               |   update FXOMPropertyC |
-                 *               |                        |         #4
-                 */
-                if (value.size() == 1) {
-                    if (fxomProperty instanceof FXOMPropertyT) {
-                        // Case #1
-                        final FXOMPropertyT fxomPropertyT = (FXOMPropertyT) fxomProperty;
-                        updateFxomPropertyWithValue(fxomPropertyT, value.get(0));
-                    } else {
-                        assert fxomProperty instanceof FXOMPropertyC;
-                        if (isItemTextEncodable()) {
-                            // Case #3a
-                            fxomProperty.removeFromParentInstance();
-                            final String itemText = itemTextEncoding(value.get(0));
-                            final FXOMPropertyT newProperty
-                                   = makeFxomPropertyFromValue(fxomInstance, itemText);
-                            newProperty.addToParentInstance(-1, fxomInstance);
-                        } else {
-                            // Case #3b
-                            final FXOMPropertyC fxomPropertyC = (FXOMPropertyC) fxomProperty;
-                            updateFxomPropertyWithValue(fxomPropertyC, value);
-                        }
-                    }
-                } else {
-                    assert value.size() > 1;
-                    if (fxomProperty instanceof FXOMPropertyT) {
-                        // Case #2
-                        fxomProperty.removeFromParentInstance();
-                        final FXOMPropertyC newProperty
-                               = makeFxomPropertyFromValue(fxomInstance, value);
-                        newProperty.addToParentInstance(-1, fxomInstance);
-                    } else {
-                        // Case #4
-                        assert fxomProperty instanceof FXOMPropertyC;
-                        final FXOMPropertyC fxomPropertyC = (FXOMPropertyC) fxomProperty;
-                        updateFxomPropertyWithValue(fxomPropertyC, value);
-                    }
+                final List<FXOMObject> items = new ArrayList<>();
+                for (T i : value) {
+                    items.add(itemMetadata.makeFxomInstanceFromValue(i, fxomDocument));
                 }
+                newProperty = new FXOMPropertyC(fxomDocument, getName(), items);
             }
+            FXOMNodes.updateProperty(fxomInstance, newProperty);
         }
     }
-    
-    public FXOMPropertyT makeFxomPropertyFromValue(FXOMInstance fxomInstance, String value) {
-        assert fxomInstance != null;
-        assert value != null;
-        
-        final FXOMDocument fxomDocument = fxomInstance.getFxomDocument();
-        return new FXOMPropertyT(fxomDocument, getName(), value);
-    }
-    
-    public FXOMPropertyC makeFxomPropertyFromValue(FXOMInstance fxomInstance, List<T> value) {
-        assert fxomInstance != null;
-        assert value != null;
-        assert value.isEmpty() == false;
-        
-        final FXOMDocument fxomDocument = fxomInstance.getFxomDocument();
-        final List<FXOMObject> items = new ArrayList<>();
-        for (T item : value) {
-            final FXOMInstance itemInstance = new FXOMInstance(fxomDocument, itemClass);
-            updateFxomInstanceWithItemValue(itemInstance, item);
-            items.add(itemInstance);
-        }
-        return new FXOMPropertyC(fxomDocument, getName(), items);
-    }
-    
-    protected void updateFxomPropertyWithValue(FXOMPropertyT fxomProperty, T value) {
-        
-        fxomProperty.setValue(itemTextEncoding(value));
-    }
-    
-    protected void updateFxomPropertyWithValue(FXOMPropertyC fxomProperty, List<T> value) {
-        
-        final FXOMDocument fxomDocument = fxomProperty.getFxomDocument();
-        final int currentCount = fxomProperty.getValues().size();
-        final int newCount = value.size();
-        final int updateCount = Math.min(currentCount, newCount);
-        
-        // Update items
-        for (int i = 0; i < updateCount; i++) {
-            final FXOMObject itemFxomObject = fxomProperty.getValues().get(i);
-            final T itemValue = value.get(i);
-            if (itemFxomObject instanceof FXOMInstance) {
-                updateFxomInstanceWithItemValue((FXOMInstance) itemFxomObject, itemValue);
-            } else {
-                assert itemFxomObject instanceof FXOMIntrinsic;
-                final FXOMInstance itemInstance = new FXOMInstance(fxomDocument, itemClass);
-                updateFxomInstanceWithItemValue(itemInstance, itemValue);
-                itemInstance.addToParentProperty(i, fxomProperty);
-                itemFxomObject.removeFromParentProperty();
-            }
-        }
-        
-        if (currentCount < newCount) {
-            // Add new items
-            final int addCount = newCount - currentCount;
-            for (int i = 0; i < addCount; i++) {
-                final FXOMInstance itemInstance = new FXOMInstance(fxomDocument, itemClass);
-                final T itemValue = value.get(currentCount + i);
-                updateFxomInstanceWithItemValue(itemInstance, itemValue);
-                itemInstance.addToParentProperty(-1, fxomProperty);
-            }
-        } else {
-            // Delete old items
-            final int removeCount = currentCount - newCount;
-            for (int i = 0; i < removeCount; i++) {
-                final FXOMObject itemFxomObject = fxomProperty.getValues().get(newCount);
-                itemFxomObject.removeFromParentProperty();
-            }
-        }
-        
-    }
-    
-    
-    protected void updateFxomInstanceWithItemValue(FXOMInstance itemInstance, T itemValue) {
-        throw new UnsupportedOperationException("Not yet implemented"); //NOI18N
-    }
-    
-    protected abstract T castItemValue(Object value);
-    
-    protected abstract boolean isItemTextEncodable();
-    
-    protected abstract String itemTextEncoding(T value);
 
+    
+    /*
+     * To be subclassed
+     */
+    
+    protected boolean canMakeStringFromValue(List<T> value) {
+        boolean result = true;
+        
+        for (T i : value) {
+            result = itemMetadata.canMakeStringFromValue(i);
+            if (result == false) {
+                break;
+            }
+        }
+        
+        return result;
+    }
+    
+    protected String makeStringFromValue(List<T> value) {
+        assert canMakeStringFromValue(value);
+        
+        final StringBuilder result = new StringBuilder();
+        
+        for (T item : value) {
+            if (result.length() >= 1) {
+                result.append(FXMLLoader.ARRAY_COMPONENT_DELIMITER);
+                result.append(' ');
+            }
+            result.append(itemMetadata.makeStringFromValue(item));
+        }
+        
+        return result.toString();
+    }
+    
+    
+    protected List<T> makeValueFromString(String string) {
+        final List<T> result;
+        
+        final String[] items = string.split(FXMLLoader.ARRAY_COMPONENT_DELIMITER);
+        if (items.length == 0) {
+            result = Collections.emptyList();
+        } else {
+            result = new ArrayList<>();
+            for (String itemString : items) {
+                result.add(itemMetadata.makeValueFromString(itemString));
+            }
+        }
+        
+        return result;
+    }
     
     /*
      * ValuePropertyMetadata
@@ -294,7 +224,7 @@ public abstract class ListValuePropertyMetadata<T> extends ValuePropertyMetadata
         final List<T> result = new ArrayList<>();
         
         for (Object itemValueObject : valueObject) {
-            result.add(castItemValue(itemValueObject));
+            result.add(getItemClass().cast(itemValueObject));
         }
         
         return result;

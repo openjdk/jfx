@@ -37,11 +37,12 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.paint.*?>
+<?import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.*?>
 
 <fx:root type="javafx.scene.layout.GridPane" id="GridPane" hgap="4.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
   <children>
     <Label fx:id="slider_label" text="Label" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-    <TextField fx:id="slider_textfield" onAction="#sliderAction" onKeyPressed="#sliderKeyPressed" prefColumnCount="4" prefWidth="-1.0" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+    <DoubleTextField fx:id="slider_textfield" onAction="#sliderAction" onKeyPressed="#sliderKeyPressed" prefColumnCount="4" prefWidth="-1.0" GridPane.columnIndex="1" GridPane.rowIndex="0" />
     <Slider fx:id="slider_slider" max="1.0" prefWidth="100.0" value="0.5" GridPane.columnIndex="2" GridPane.rowIndex="0" />
   </children>
   <columnConstraints>

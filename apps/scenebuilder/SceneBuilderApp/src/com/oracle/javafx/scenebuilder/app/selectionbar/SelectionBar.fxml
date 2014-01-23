@@ -34,12 +34,13 @@
 <?import java.lang.*?>
 <?import java.net.*?>
 <?import java.util.*?>
+<?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.paint.*?>
 
-<HBox id="HBox" alignment="CENTER_LEFT" maxWidth="1.7976931348623157E308" minWidth="0.0" prefWidth="-1.0" spacing="0.0" style="" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
+<HBox id="HBox" alignment="CENTER_LEFT" maxWidth="1.7976931348623157E308" minWidth="0.0" prefWidth="-1.0" spacing="0.0" style="" styleClass="theme-presets" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
   <children>
     <MenuButton fx:id="pathMenuButton" minWidth="-1.0" mnemonicParsing="false" prefWidth="-1.0" text="">
       <items>
@@ -47,7 +48,7 @@
         <MenuItem mnemonicParsing="false" text="Action 2" />
       </items>
     </MenuButton>
-    <HBox fx:id="pathBox" alignment="CENTER_LEFT" minWidth="0.0" spacing="3.0" style="">
+    <HBox fx:id="pathBox" alignment="CENTER_LEFT" minWidth="0.0" spacing="3.0" style="" HBox.hgrow="ALWAYS">
       <children>
         <Hyperlink text="Hyperlink" />
         <Hyperlink text="Hyperlink" />
@@ -55,7 +56,10 @@
       </children>
     </HBox>
   </children>
+  <padding>
+    <Insets left="5.0" />
+  </padding>
   <stylesheets>
-    <URL value="@SelectionBar.css" />
+    <URL value="@../css/SelectionBar.css" />
   </stylesheets>
 </HBox>

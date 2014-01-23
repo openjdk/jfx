@@ -35,13 +35,14 @@ import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMNodes;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.Metadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.klass.ComponentClassMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.PropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.ImagePropertyMetadata;
-import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignImage;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.io.File;
 import java.io.IOException;
@@ -68,6 +69,7 @@ public class ExternalDragSource extends AbstractDragSource {
     private final FXOMDocument targetDocument;
     private List<FXOMObject> draggedObjects; // Initialized lazily
     private List<File> inputFiles; // Initialized lazily
+    private boolean nodeOnly; // Iniitalized lazily
     private int errorCount;
     private Exception lastException;
 
@@ -99,48 +101,22 @@ public class ExternalDragSource extends AbstractDragSource {
         if (draggedObjects == null) {
             draggedObjects = new ArrayList<>();
             inputFiles = new ArrayList<>();
-            
-            for (File f : dragboard.getFiles()) {
-                if (f.getAbsolutePath().endsWith(".fxml")) { //NOI18N
-                    try {
-                        final String fxmlText 
-                                = FXOMDocument.readContentFromURL(f.toURI().toURL());
-                        final FXOMDocument transientDoc = new FXOMDocument(
-                                fxmlText,
-                                targetDocument.getLocation(),
-                                targetDocument.getClassLoader(),
-                                targetDocument.getResources());
-                        final FXOMObject fxomObject = transientDoc.getFxomRoot();
-                        fxomObject.moveToFxomDocument(targetDocument);
-                        draggedObjects.add(fxomObject);
-                        inputFiles.add(f);
-                    } catch(IOException x) {
-                        errorCount++;
-                        lastException = x;
+
+            for (File file : dragboard.getFiles()) {
+                try {
+                    final FXOMObject newObject
+                            = FXOMNodes.newObject(targetDocument, file);
+                    // newObject is null when file is empty
+                    if (newObject != null) {
+                        draggedObjects.add(newObject);
+                        inputFiles.add(file);
                     }
-                } else {
-                    // Try load the file has an image
-                    try {
-                        final String fileURL = f.toURI().toURL().toString();
-                        final Image image = new Image(fileURL);
-                        if (image.isError()) {
-                            errorCount++;
-                            lastException = image.getException();
-                        } else {
-                            final FXOMDocument transientDoc = 
-                                    makeFxomDocumentFromImageURL(image, 200.0);
-                            final FXOMObject fxomObject = transientDoc.getFxomRoot();
-                            fxomObject.moveToFxomDocument(targetDocument);
-                            draggedObjects.add(fxomObject);
-                            inputFiles.add(f);
-                       }
-                    } catch(IOException x) {
-                        errorCount++;
-                        lastException = x;
-                    }
+                } catch (IOException x) {
+                    errorCount++;
+                    lastException = x;
                 }
             }
-            
+
             // We put all the Node dragged objects in a Scene and layout them
             // so that ContainerXYDropTarget can measure them.
             // We stack and shift them a little so that they are all visible.
@@ -265,6 +241,21 @@ public class ExternalDragSource extends AbstractDragSource {
         
         return result;
     }
+
+    @Override
+    public boolean isNodeOnly() {
+        if (draggedObjects == null) {
+            int nonNodeCount = 0;
+            for (FXOMObject draggedObject : getDraggedObjects()) {
+                if (draggedObject.isNode() == false) {
+                    nonNodeCount++;
+                }
+            }
+            nodeOnly = nonNodeCount == 0;
+        }
+        
+        return nodeOnly;
+    }
     
     /*
      * Object
@@ -337,7 +328,7 @@ public class ExternalDragSource extends AbstractDragSource {
         final DoublePropertyMetadata fitHeightMeta
                 = (DoublePropertyMetadata) fitHeightPropMeta;
 
-        imageMeta.setValue(imageView, image);
+        imageMeta.setValue(imageView, new DesignImage(image));
         fitWidthMeta.setValue(imageView, fitWidth);
         fitHeightMeta.setValue(imageView, fitHeight);
         

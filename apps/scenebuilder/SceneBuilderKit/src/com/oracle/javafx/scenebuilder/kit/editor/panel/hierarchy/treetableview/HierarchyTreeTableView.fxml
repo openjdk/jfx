@@ -38,7 +38,7 @@
 <?import javafx.scene.paint.*?>
 <?scenebuilder-preview-i18n-resource ../../../i18n/SceneBuilderKit.properties?>
 
-<StackPane prefHeight="-1.0" prefWidth="-1.0" xmlns:fx="http://javafx.com/fxml">
+<StackPane prefHeight="-1.0" prefWidth="-1.0" styleClass="theme-presets, SBKIT-hierarchy-panel" xmlns:fx="http://javafx.com/fxml">
     <children>
         <TreeTableView fx:id="treeTableView" prefHeight="-1.0" prefWidth="-1.0">
             <columns>
@@ -48,6 +48,6 @@
         </TreeTableView>
     </children>
     <stylesheets>
-        <URL value="@HierarchyTreeTableView.css" />
+        <URL value="@../../../css/Theme.css" />
     </stylesheets>
 </StackPane>

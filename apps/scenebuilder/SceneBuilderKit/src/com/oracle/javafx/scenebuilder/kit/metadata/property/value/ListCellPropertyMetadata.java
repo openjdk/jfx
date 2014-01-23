@@ -31,6 +31,8 @@
  */
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 
@@ -45,8 +47,8 @@ public class ListCellPropertyMetadata extends ComplexPropertyMetadata<Object> {
     }
 
     @Override
-    protected Object castValue(Object value) {
-        return value;
+    public FXOMInstance makeFxomInstanceFromValue(Object value, FXOMDocument fxomDocument) {
+        throw new UnsupportedOperationException("Not supported yet."); //NOI18N
     }
     
 }

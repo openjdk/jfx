@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value.keycombination;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.ComplexPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.EnumerationPropertyMetadata;
@@ -81,19 +82,22 @@ public class KeyCharacterCombinationPropertyMetadata extends ComplexPropertyMeta
         super(name, KeyCharacterCombination.class, readWrite, defaultValue, inspectorPath);
     }
 
-    @Override
-    protected KeyCharacterCombination castValue(Object value) {
-        return (KeyCharacterCombination) value;
-    }
+    /*
+     * ComplexPropertyMetadata
+     */
     
     @Override
-    protected void updateFxomInstanceWithValue(FXOMInstance valueInstance, KeyCharacterCombination value) {
-        altMetadata.setValue(valueInstance, value.getAlt().toString());
-        controlMetadata.setValue(valueInstance, value.getControl().toString());
-        metaMetadata.setValue(valueInstance, value.getMeta().toString());
-        shiftMetadata.setValue(valueInstance, value.getShift().toString());
-        shortcutMetadata.setValue(valueInstance, value.getShortcut().toString());
-        characterMetadata.setValue(valueInstance, value.getCharacter());
+    public FXOMInstance makeFxomInstanceFromValue(KeyCharacterCombination value, FXOMDocument fxomDocument) {
+        final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
+        
+        altMetadata.setValue(result, value.getAlt().toString());
+        controlMetadata.setValue(result, value.getControl().toString());
+        metaMetadata.setValue(result, value.getMeta().toString());
+        shiftMetadata.setValue(result, value.getShift().toString());
+        shortcutMetadata.setValue(result, value.getShortcut().toString());
+        characterMetadata.setValue(result, value.getCharacter());
+
+        return result;
     }
     
 }

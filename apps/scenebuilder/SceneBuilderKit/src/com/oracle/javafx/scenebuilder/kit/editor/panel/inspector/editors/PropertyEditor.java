@@ -93,8 +93,6 @@ public abstract class PropertyEditor extends Editor {
         DOUBLE_LINE
     }
     public final static LayoutFormat DEFAULT_LAYOUT_FORMAT = LayoutFormat.SIMPLE_LINE_CENTERED;
-    private static final Image cogIcon = new Image(
-            InspectorPanelController.class.getResource("images/cog.png").toExternalForm()); //NOI18N
     private static final Image cssIcon = new Image(
             InspectorPanelController.class.getResource("images/css-icon.png").toExternalForm()); //NOI18N
     private Hyperlink propName;
@@ -204,7 +202,6 @@ public abstract class PropertyEditor extends Editor {
         if (menu == null) {
             menu = new MenuButton();
             menu.disableProperty().bind(disableProperty);
-            menu.setGraphic(new ImageView(cogIcon));
             menu.getStyleClass().add("cog-button"); //NOI18N
             menu.setOpacity(0);
             if (fadeTransition == null) {
@@ -543,7 +540,6 @@ public abstract class PropertyEditor extends Editor {
         if (!propNameNode.getStyleClass().contains("css-override")) { //NOI18N
             ImageView iv = new ImageView(cssIcon);
             propName.setGraphic(iv);
-            propName.getStyleClass().add("css-background"); //NOI18N
             propNameNode.getStyleClass().add("css-override"); //NOI18N
             setTooltipText();
 
@@ -578,7 +574,6 @@ public abstract class PropertyEditor extends Editor {
     private void removeCssVisual() {
         if (propNameNode.getStyleClass().contains("css-override")) { //NOI18N
             propName.setGraphic(null);
-            propName.getStyleClass().remove("css-background"); //NOI18N
             propNameNode.getStyleClass().remove("css-override"); //NOI18N
             setTooltipText();
         }
@@ -750,13 +745,13 @@ public abstract class PropertyEditor extends Editor {
         this.commitListener = listener;
     }
 
-    protected void setNumericEditorBehavior(PropertyEditor editor, Control control, EventHandler<ActionEvent> onActionListener) {
+    protected void setNumericEditorBehavior(PropertyEditor editor, Control control,
+            EventHandler<ActionEvent> onActionListener) {
         setNumericEditorBehavior(editor, control, onActionListener, true);
     }
 
     protected void setNumericEditorBehavior(PropertyEditor editor, Control control,
             EventHandler<ActionEvent> onActionListener, boolean stretchable) {
-        setCommitListener(onActionListener);
         setTextEditorBehavior(editor, control, onActionListener, stretchable);
         control.setOnKeyPressed(new EventHandler<KeyEvent>() {
 
@@ -765,26 +760,34 @@ public abstract class PropertyEditor extends Editor {
                 if (event.getCode() != KeyCode.UP && event.getCode() != KeyCode.DOWN) {
                     return;
                 }
+                if (!(control instanceof TextField)) {
+                    // Apply only for text field based controls
+                    return;
+                }
+                TextField textField = (TextField) control;
                 int incDecVal = 1;
                 boolean shiftDown = event.isShiftDown();
                 if (shiftDown) {
                     incDecVal = 10;
                 }
-                Object val = getValue();
-                assert val != null;
-                if (event.getCode() == KeyCode.UP) {
-                    if (val instanceof Double) {
-                        setValue(((Double) val) + incDecVal);
-                    } else if (val instanceof Integer) {
-                        setValue(((Integer) val) + incDecVal);
-                    }
-                } else if (event.getCode() == KeyCode.DOWN) {
-                    if (val instanceof Double) {
-                        setValue(((Double) val) - incDecVal);
-                    } else if (val instanceof Integer) {
-                        setValue(((Integer) val) - incDecVal);
-                    }
+                String valStr = textField.getText();
+                Double val;
+                try {
+                    val = Double.parseDouble(valStr);
+                } catch (NumberFormatException ex) {
+                    // may happen if the text field is empty,
+                    // or contains a constant string: do nothing
+                    return;
                 }
+                assert val != null;
+                Double newVal = null;
+                if (event.getCode() == KeyCode.UP) {
+                    newVal = val + incDecVal;
+                } else if (event.getCode() == KeyCode.DOWN) {
+                    newVal = val - incDecVal;
+                }
+                textField.setText(EditorUtils.valAsStr(newVal));
+                getCommitListener().handle(null);
                 event.consume();
             }
         });

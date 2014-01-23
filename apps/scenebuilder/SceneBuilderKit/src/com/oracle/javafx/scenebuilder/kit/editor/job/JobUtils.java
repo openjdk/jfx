@@ -446,6 +446,16 @@ public class JobUtils {
         }
     }
 
+    // Returns a String with no trailing zero; if decimal part is non zero then
+    // it is kept.
+    public static String getStringFromDouble(double value) {
+        String res = Double.toString(value);
+        if(res.endsWith(".0")) { //NOI18N
+            res = Integer.toString((int)value);
+        }
+        return res;
+    }
+
     /*
      * Private
      */

@@ -33,10 +33,6 @@ package com.oracle.javafx.scenebuilder.kit.metadata.property.value.keycombinatio
 
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMIntrinsic;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.ComplexPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
@@ -63,53 +59,17 @@ public class KeyCombinationPropertyMetadata extends ComplexPropertyMetadata<KeyC
      * ComplexPropertyMetadata
      */
     @Override
-    protected KeyCombination castValue(Object value) {
-        return (KeyCombination) value;
-    }
-
-
-    @Override
-    protected void updateFxomPropertyWithValue(FXOMProperty fxomProperty, KeyCombination value) {
-        assert fxomProperty instanceof FXOMPropertyC;
-        assert value != null;
-
-        final FXOMPropertyC fxomPropertyC = (FXOMPropertyC) fxomProperty;
-        assert fxomPropertyC.getValues().size() == 1;
-
-        FXOMObject valueObject = fxomPropertyC.getValues().get(0);
-        if (valueObject instanceof FXOMInstance) {
-            final FXOMInstance currentValueInstance = (FXOMInstance) valueObject;
-            final Class<?> currentValueClass = currentValueInstance.getDeclaredClass();
-
-            if (currentValueClass != value.getClass()) {
-                // Eg current value is a KeyCodeCombination, new value is a KeyCharacterCombination
-                final FXOMDocument fxomDocument = fxomProperty.getFxomDocument();
-                final FXOMInstance valueInstance = new FXOMInstance(fxomDocument, value.getClass());
-                updateFxomInstanceWithValue(valueInstance, value);
-                valueInstance.addToParentProperty(0, fxomPropertyC);
-                valueObject.removeFromParentProperty();
-            } else {
-                updateFxomInstanceWithValue(currentValueInstance, value);
-            }
-        } else {
-            assert valueObject instanceof FXOMIntrinsic;
-
-            final FXOMDocument fxomDocument = fxomProperty.getFxomDocument();
-            final FXOMInstance valueInstance = new FXOMInstance(fxomDocument, value.getClass());
-            updateFxomInstanceWithValue(valueInstance, value);
-            valueInstance.addToParentProperty(0, fxomPropertyC);
-            valueObject.removeFromParentProperty();
-        }
-    }
-
-    @Override
-    protected void updateFxomInstanceWithValue(FXOMInstance valueInstance, KeyCombination value) {
+    public FXOMInstance makeFxomInstanceFromValue(KeyCombination value, FXOMDocument fxomDocument) {
+        final FXOMInstance result;
+        
         if (value instanceof KeyCodeCombination) {
-            keyCodeCombinationMetadata.updateFxomInstanceWithValue(valueInstance, (KeyCodeCombination) value);
+            result = keyCodeCombinationMetadata.makeFxomInstanceFromValue((KeyCodeCombination) value, fxomDocument);
         } else {
             assert value instanceof KeyCharacterCombination;
-            keyCharacterCombinationMetadata.updateFxomInstanceWithValue(valueInstance, (KeyCharacterCombination) value);
+            result = keyCharacterCombinationMetadata.makeFxomInstanceFromValue((KeyCharacterCombination) value, fxomDocument);
         }
+
+        return result;
     }
 
 }

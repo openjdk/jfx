@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <!--
   Copyright (c) 2012, 2014, Oracle and/or its affiliates.
   All rights reserved. Use is subject to license terms.
@@ -37,12 +38,11 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.paint.*?>
 
-<StackPane prefHeight="-1.0" prefWidth="-1.0" xmlns:fx="http://javafx.com/fxml">
-    <children>
-        <TreeView fx:id="treeView" prefHeight="-1.0" prefWidth="-1.0">
-        </TreeView>
-    </children>
-    <stylesheets>
-        <URL value="@HierarchyTreeView.css" />
-    </stylesheets>
+<StackPane prefHeight="-1.0" prefWidth="-1.0" styleClass="theme-presets, SBKIT-hierarchy-panel" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
+  <children>
+    <TreeView fx:id="treeView" prefHeight="-1.0" prefWidth="-1.0" />
+  </children>
+  <stylesheets>
+    <URL value="@../../../css/Theme.css" />
+  </stylesheets>
 </StackPane>

@@ -211,29 +211,35 @@ implements AbstractGesture.Observer {
      * Private (pring)
      */
     private void updateParentRing() {
-        final Selection selection = contentPanelController.getEditorController().getSelection();
         final AbstractPring<?> newPring;
         
-        if ((pring == null) || (pring.getFxomObject() != selection.getAncestor())) {
-            if (selection.getAncestor() != null) {
-                newPring = makePring(selection.getAncestor());
+        if (contentPanelController.isContentDisplayable()) {
+            final Selection selection 
+                    = contentPanelController.getEditorController().getSelection();
+            if ((pring == null) || (pring.getFxomObject() != selection.getAncestor())) {
+                if (selection.getAncestor() != null) {
+                    newPring = makePring(selection.getAncestor());
+                } else {
+                    newPring = null;
+                }
             } else {
-                newPring = null;
+                switch(pring.getState()) {
+                    default:
+                    case CLEAN:
+                        newPring = pring;
+                        break;
+                    case NEEDS_RECONCILE:
+                        newPring = pring;
+                        pring.reconcile();;
+                        break;
+                    case NEEDS_REPLACE:
+                        newPring = makePring(pring.getFxomObject());
+                        break;
+                }
             }
         } else {
-            switch(pring.getState()) {
-                default:
-                case CLEAN:
-                    newPring = pring;
-                    break;
-                case NEEDS_RECONCILE:
-                    newPring = pring;
-                    pring.reconcile();;
-                    break;
-                case NEEDS_REPLACE:
-                    newPring = makePring(pring.getFxomObject());
-                    break;
-            }
+            // Document content cannot be displayed in content panel
+            newPring = null;
         }
         
         if (newPring != pring) {
@@ -275,7 +281,8 @@ implements AbstractGesture.Observer {
                 = contentPanelController.getEditorController().getDragController();
         final AbstractTring<?> newTring;
         
-        if (dragController.isDropAccepted()) {
+        if (dragController.isDropAccepted()
+                && contentPanelController.isContentDisplayable()) {
             final AbstractDropTarget dropTarget = dragController.getDropTarget();
             if ((tring instanceof GridPaneTring) && (dropTarget instanceof GridPaneDropTarget)) {
                 // Let's reuse the GridPaneTring (because it's costly)
@@ -354,7 +361,9 @@ implements AbstractGesture.Observer {
         final List<FXOMObject> incomingObjects = new ArrayList<>();
         
         // Collects fxom objects from selection
-        incomingObjects.addAll(osg.getItems());
+        if (contentPanelController.isContentDisplayable()) {
+            incomingObjects.addAll(osg.getItems());
+        }
         
         // Collects obsolete handles
         for (AbstractHandles<?> h : handles) {
@@ -413,24 +422,30 @@ implements AbstractGesture.Observer {
         final List<AbstractHandles<?>> obsoleteHandles = new ArrayList<>();
         
         // Collects obsolete handles
-        for (AbstractHandles<?> h : handles) {
-            if (h.getFxomObject() == gsg.getParentObject()) {
-                assert h instanceof GridPaneHandles;
-                
-                if (h.getState() == AbstractDecoration.State.NEEDS_RECONCILE) {
-                    // scene graph associated to h has changed but h is still compatible
-                    h.reconcile();
+        if (contentPanelController.isContentDisplayable()) {
+            for (AbstractHandles<?> h : handles) {
+                if (h.getFxomObject() == gsg.getParentObject()) {
+                    assert h instanceof GridPaneHandles;
+
+                    if (h.getState() == AbstractDecoration.State.NEEDS_RECONCILE) {
+                        // scene graph associated to h has changed but h is still compatible
+                        h.reconcile();
+                    } else {
+                        assert h.getState() == AbstractDecoration.State.CLEAN;
+                    }
+
+                    final GridPaneHandles gph = (GridPaneHandles) h;
+                    gph.updateColumnRowSelection(gsg);
                 } else {
-                    assert h.getState() == AbstractDecoration.State.CLEAN;
+                    // FXOM object associated to these handles is no longer selected
+                    // => handles become obsolete
+                    obsoleteHandles.add(h);
                 }
-                
-                final GridPaneHandles gph = (GridPaneHandles) h;
-                gph.updateColumnRowSelection(gsg);
-            } else {
-                // FXOM object associated to these handles is no longer selected
-                // => handles become obsolete
-                obsoleteHandles.add(h);
             }
+        } else {
+            // Document content is not displayed (because its root is not a node)
+            // => all handles are obsoletes
+            obsoleteHandles.addAll(handles);
         }
         
         // Let's create new handles for the incoming objects
@@ -841,10 +856,14 @@ implements AbstractGesture.Observer {
         assert gesture != null;
         
         /*
-         * Before activating the gesture, we test if a text session is on-going
-         * and can be completed cleanly. If not, we do not activate the gesture.
+         * Before activating the gesture, we check:
+         *   - that there is a document attached to the editor controller
+         *   - if a text session is on-going and can be completed cleanly. 
+         * If not, we do not activate the gesture.
          */
-        if (contentPanelController.getEditorController().canGetFxmlText()) {
+        final EditorController editorController
+                = contentPanelController.getEditorController();
+        if ((editorController.getFxomDocument() != null) && editorController.canGetFxmlText()) {
             
             contentPanelController.beginInteraction();
             

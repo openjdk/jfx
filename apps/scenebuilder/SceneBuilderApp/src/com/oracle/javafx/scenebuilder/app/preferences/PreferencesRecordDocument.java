@@ -36,7 +36,7 @@ import com.oracle.javafx.scenebuilder.app.SplitController;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.BOTTOM_DIVIDER_VPOS;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.BOTTOM_VISIBLE;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.DOCUMENT_VISIBLE;
-import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.HEIGHT;
+import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.STAGE_HEIGHT;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.INSPECTOR_SECTION_ID;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.LEFT_VISIBLE;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.LEFT_DIVIDER_HPOS;
@@ -45,7 +45,7 @@ import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesControll
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.PATH;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.RIGHT_DIVIDER_HPOS;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.RIGHT_VISIBLE;
-import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.WIDTH;
+import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.STAGE_WIDTH;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.X_POS;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.Y_POS;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.InspectorPanelController;
@@ -59,10 +59,8 @@ import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.scene.Parent;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.TitledPane;
-import javafx.scene.layout.Region;
 import javafx.stage.Stage;
 
 /**
@@ -75,8 +73,8 @@ public class PreferencesRecordDocument {
     // Default values
     private static final double DEFAULT_X_POS = UNDEFINED_POS;
     private static final double DEFAULT_Y_POS = UNDEFINED_POS;
-    private static final double DEFAULT_HEIGHT = 800;
-    private static final double DEFAULT_WIDTH = 1200;
+    private static final double DEFAULT_STAGE_HEIGHT = 800;
+    private static final double DEFAULT_STAGE_WIDTH = 1240;
     private static final boolean DEFAULT_BOTTOM_VISIBLE = false;
     private static final boolean DEFAULT_LEFT_VISIBLE = true;
     private static final boolean DEFAULT_RIGHT_VISIBLE = true;
@@ -92,8 +90,8 @@ public class PreferencesRecordDocument {
     private String path = null;
     private double xPos = DEFAULT_X_POS;
     private double yPos = DEFAULT_Y_POS;
-    private double height = DEFAULT_HEIGHT;
-    private double width = DEFAULT_WIDTH;
+    private double stageHeight = DEFAULT_STAGE_HEIGHT;
+    private double stageWidth = DEFAULT_STAGE_WIDTH;
     private boolean bottomVisible = DEFAULT_BOTTOM_VISIBLE;
     private boolean leftVisible = DEFAULT_LEFT_VISIBLE;
     private boolean rightVisible = DEFAULT_RIGHT_VISIBLE;
@@ -138,7 +136,7 @@ public class PreferencesRecordDocument {
         this.documentWindowController = dwc;
         this.documentsRootPreferences = documentsRootPreferences;
 
-        // Add document X and Y listeners
+        // Add stage X and Y listeners
         final Stage stage = documentWindowController.getStage();
         assert stage != null;
         stage.xProperty().addListener(new ChangeListener<Number>() {
@@ -156,22 +154,19 @@ public class PreferencesRecordDocument {
             }
         });
 
-        // Add document height and width listeners
-        final Parent root = documentWindowController.getRoot();
-        assert root instanceof Region;
-        final Region sceneGraphRootNode = (Region) root;
-        sceneGraphRootNode.heightProperty().addListener(new ChangeListener<Number>() {
+        // Add stage height and width listeners
+        stage.heightProperty().addListener(new ChangeListener<Number>() {
 
             @Override
             public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
-                setHeight(t1.doubleValue());
+                setStageHeight(t1.doubleValue());
             }
         });
-        sceneGraphRootNode.widthProperty().addListener(new ChangeListener<Number>() {
+        stage.widthProperty().addListener(new ChangeListener<Number>() {
 
             @Override
             public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
-                setWidth(t1.doubleValue());
+                setStageWidth(t1.doubleValue());
             }
         });
 
@@ -223,20 +218,20 @@ public class PreferencesRecordDocument {
         yPos = value;
     }
 
-    public double getHeight() {
-        return height;
+    public double getStageHeight() {
+        return stageHeight;
     }
 
-    public void setHeight(double value) {
-        height = value;
+    public void setStageHeight(double value) {
+        stageHeight = value;
     }
 
-    public double getWidth() {
-        return width;
+    public double getStageWidth() {
+        return stageWidth;
     }
 
-    public void setWidth(double value) {
-        width = value;
+    public void setStageWidth(double value) {
+        stageWidth = value;
     }
 
     public boolean getBottomVisible() {
@@ -331,18 +326,12 @@ public class PreferencesRecordDocument {
         }
     }
 
-    public void refreshHeight() {
-        final Parent root = documentWindowController.getRoot();
-        assert root instanceof Region;
-        final Region sceneGraphRootNode = (Region) root;
-        sceneGraphRootNode.setPrefHeight(height);
+    public void refreshStageHeight() {
+        documentWindowController.getStage().setHeight(stageHeight);
     }
 
-    public void refreshWidth() {
-        final Parent root = documentWindowController.getRoot();
-        assert root instanceof Region;
-        final Region sceneGraphRootNode = (Region) root;
-        sceneGraphRootNode.setPrefWidth(width);
+    public void refreshStageWidth() {
+        documentWindowController.getStage().setWidth(stageWidth);
     }
 
     public void refreshInspectorSectionId() {
@@ -406,8 +395,8 @@ public class PreferencesRecordDocument {
     public void refresh() {
         refreshXPos();
         refreshYPos();
-        refreshHeight();
-        refreshWidth();
+        refreshStageHeight();
+        refreshStageWidth();
         refreshInspectorSectionId();
         refreshBottomVisible();
         refreshLeftVisible();
@@ -435,13 +424,14 @@ public class PreferencesRecordDocument {
 
         // Check if there is some preferences for this document
         try {
-            final String fxmlPath = fxmlLocation.getPath();
+            // Use URL path value to avoid file separator issues
+            final String urlPath = fxmlLocation.getPath();
             final String[] childrenNames = documentsRootPreferences.childrenNames();
             for (String child : childrenNames) {
                 final Preferences pref = documentsRootPreferences.node(child);
                 final String nodePath = pref.get(PATH, null);
                 assert nodePath != null && nodePath.isEmpty() == false; // Each document node defines a path
-                if (fxmlPath.equals(nodePath)) {
+                if (urlPath.equals(nodePath)) {
                     documentPreferences = pref;
                     break;
                 }
@@ -464,10 +454,10 @@ public class PreferencesRecordDocument {
         setYPos(ypos);
 
         // Window size
-        final double h = documentPreferences.getDouble(HEIGHT, DEFAULT_HEIGHT);
-        setHeight(h);
-        final double w = documentPreferences.getDouble(WIDTH, DEFAULT_WIDTH);
-        setWidth(w);
+        final double h = documentPreferences.getDouble(STAGE_HEIGHT, DEFAULT_STAGE_HEIGHT);
+        setStageHeight(h);
+        final double w = documentPreferences.getDouble(STAGE_WIDTH, DEFAULT_STAGE_WIDTH);
+        setStageWidth(w);
 
         // Panel visibility
         final boolean bv = documentPreferences.getBoolean(BOTTOM_VISIBLE,
@@ -524,13 +514,15 @@ public class PreferencesRecordDocument {
             try {
                 final FXOMDocument fxomDocument
                         = documentWindowController.getEditorController().getFxomDocument();
-                final File fxmlFile = new File(fxomDocument.getLocation().getPath());
+                // Use URL path value to avoid file separator issues
+                final String urlPath = fxomDocument.getLocation().getPath();
+                final File fxmlFile = new File(urlPath);
                 final String key = generateKey(fxmlFile.getName());
                 assert documentsRootPreferences.nodeExists(key) == false;
                 // Create a new document preference node under the document root node
                 documentPreferences = documentsRootPreferences.node(key);
                 // Document path
-                documentPreferences.put(PATH, fxmlFile.getAbsolutePath());
+                documentPreferences.put(PATH, urlPath);
             } catch (BackingStoreException ex) {
                 Logger.getLogger(PreferencesRecordDocument.class.getName()).log(Level.SEVERE, null, ex);
                 return;
@@ -544,8 +536,8 @@ public class PreferencesRecordDocument {
         documentPreferences.putDouble(Y_POS, getYPos());
 
         // Window size
-        documentPreferences.putDouble(HEIGHT, getHeight());
-        documentPreferences.putDouble(WIDTH, getWidth());
+        documentPreferences.putDouble(STAGE_HEIGHT, getStageHeight());
+        documentPreferences.putDouble(STAGE_WIDTH, getStageWidth());
 
         // Panel visibility
         documentPreferences.putBoolean(BOTTOM_VISIBLE, getBottomVisible());

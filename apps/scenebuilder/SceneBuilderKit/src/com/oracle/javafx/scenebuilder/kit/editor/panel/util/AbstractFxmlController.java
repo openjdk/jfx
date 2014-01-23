@@ -120,6 +120,11 @@ public abstract class AbstractFxmlController extends AbstractPanelController {
     }
 
     @Override
+    protected void cssRevisionDidChange() {
+        // Ignored
+    }
+
+    @Override
     protected void jobManagerRevisionDidChange() {
         // Ignored
     }

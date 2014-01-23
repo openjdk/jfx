@@ -35,10 +35,6 @@ import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import static com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.PropertyEditor.handleIndeterminate;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.CursorPropertyMetadata;
-import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
-import java.io.File;
-import java.net.MalformedURLException;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
 import javafx.event.ActionEvent;
@@ -52,9 +48,6 @@ import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
-import javafx.scene.control.TextField;
-import javafx.scene.image.Image;
-import javafx.stage.FileChooser;
 
 /**
  * Insets editor (for top/right/bottom/left fields).
@@ -68,13 +61,9 @@ public class CursorEditor extends PropertyEditor {
     @FXML
     private MenuButton cursorMb;
     @FXML
-    private TextField imagePathTf;
-    @FXML
     private CheckMenuItem inheritedMi;
     @FXML
     private Label inheritedLb;
-    @FXML
-    private Label chooseImageLb;
 
     private Cursor cursor = Cursor.DEFAULT;
     private String inheritedText, inheritedParentText;
@@ -83,29 +72,11 @@ public class CursorEditor extends PropertyEditor {
     public CursorEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
         root = EditorUtils.loadFxml("CursorEditor.fxml", this); //NOI18N
-
-        EventHandler<ActionEvent> valueListener = new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                try {
-                    cursor = new ImageCursor(new Image(imagePathTf.getText()));
-                } catch (NullPointerException | IllegalArgumentException ex) {
-                    handleInvalidValue(imagePathTf.getText());
-                    return;
-                }
-                userUpdateValueProperty(getValue());
-            }
-        };
-        initialize(valueListener);
+        initialize();
     }
 
     // Separate method to please FindBugs
-    private void initialize(EventHandler<ActionEvent> valueListener) {
-        setTextEditorBehavior(this, imagePathTf, valueListener);
-        // We do not want the valueListener is called when reset to default
-        setCommitListener(null);
-        imagePathTfEnabled(false);
-
+    private void initialize() {
         int index = 0;
         Map<Cursor, String> predefinedCursors = CursorPropertyMetadata.getCursorMap();
         // Order the cursors
@@ -116,16 +87,14 @@ public class CursorEditor extends PropertyEditor {
         for (Cursor cursorObj : cursorList) {
             String cursorStr = predefinedCursors.get(cursorObj);
             final Label cursorLabel = new Label(cursorStr);
-//            cursorLabel.setPrefWidth(150.0);
             cursorLabel.setCursor(cursorObj);
             CheckMenuItem menuItem = new CheckMenuItem();
             menuItem.setGraphic(cursorLabel);
-            // add predefined cursors before "Choose image" menu item
+            // add predefined cursors before "inherited" menu item
             cursorMb.getItems().add(index++, menuItem);
             menuItem.setOnAction(new EventHandler<ActionEvent>() {
                 @Override
                 public void handle(ActionEvent e) {
-                    imagePathTfEnabled(false);
                     selectCursor(cursorStr);
                     userUpdateValueProperty(getValue());
                 }
@@ -136,9 +105,6 @@ public class CursorEditor extends PropertyEditor {
         inheritedText = I18N.getString("inspector.cursor.inherited");
         inheritedParentText = I18N.getString("inspector.cursor.inheritedparent");
         inheritedLb.setText(inheritedParentText);
-        // "Choose image" menu item
-        chooseImageLb.setText(I18N.getString("inspector.cursor.chooseimage"));
-
     }
 
     @Override
@@ -166,11 +132,8 @@ public class CursorEditor extends PropertyEditor {
             assert value instanceof Cursor;
             if (value instanceof ImageCursor) {
                 // Custom cursor
-                ImageCursor imageCursor = (ImageCursor) value;
-                imagePathTfEnabled(true);
-                imagePathTf.setText(Deprecation.getUrl(imageCursor.getImage()));
                 selectCursor(""); //NOI18N
-                cursorMb.setText(""); //NOI18N
+                cursorMb.setText(I18N.getString("inspector.cursor.custom"));
             } else {
                 // predefined cursor
                 // select the corresponding menu item
@@ -182,12 +145,11 @@ public class CursorEditor extends PropertyEditor {
     @Override
     public void reset(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super.reset(propMeta, selectedClasses);
-        imagePathTf.setPromptText(null);
     }
 
     @Override
     protected void valueIsIndeterminate() {
-        handleIndeterminate(imagePathTf);
+        handleIndeterminate(cursorMb);
     }
 
     //
@@ -200,44 +162,11 @@ public class CursorEditor extends PropertyEditor {
         userUpdateValueProperty(getValue());
     }
 
-    @FXML
-    void chooseImage(ActionEvent event) {
-        imagePathTfEnabled(true);
-
-        String[] extensions = {"*.jpg", "*.jpeg", "*.png", "*.gif"}; //NOI18N
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle(I18N.getString("inspector.select.image"));
-        fileChooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter(
-                        I18N.getString("inspector.select.image"),
-                        Arrays.asList(extensions)));
-        File file = fileChooser.showOpenDialog(cursorMb.getScene().getWindow());
-        if ((file == null)) {
-            return;
-        }
-        String url;
-        try {
-            url = file.toURI().toURL().toExternalForm();
-        } catch (MalformedURLException ex) {
-            throw new RuntimeException("Invalid URL", ex); //NOI18N
-        }
-        selectCursor(""); //NOI18N
-        cursorMb.setText(""); //NOI18N
-        imagePathTf.setText(url);
-        cursor = new ImageCursor(new Image(url));
-        userUpdateValueProperty(getValue());
-    }
-
-    private void imagePathTfEnabled(Boolean b) {
-        imagePathTf.setVisible(b);
-        imagePathTf.setManaged(b);
-    }
-
     // Select the menu item corresponding to a cursor string.
     private void selectCursor(String cursorStr) {
         for (MenuItem menuItem : cursorMb.getItems()) {
             if (!(menuItem instanceof CheckMenuItem)) {
-                // custom cursor action
+                // inherited action
                 continue;
             }
             CheckMenuItem checkMenuItem = (CheckMenuItem) menuItem;
@@ -264,11 +193,7 @@ public class CursorEditor extends PropertyEditor {
 
             @Override
             public void run() {
-                if (imagePathTf.isVisible()) {
-                    imagePathTf.requestFocus();
-                } else {
-                    cursorMb.requestFocus();
-                }
+                cursorMb.requestFocus();
             }
         });
     }

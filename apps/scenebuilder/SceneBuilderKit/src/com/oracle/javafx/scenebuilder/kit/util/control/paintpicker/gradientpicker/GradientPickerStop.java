@@ -46,7 +46,6 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import java.io.IOException;
-import java.text.DecimalFormat;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.beans.value.ChangeListener;
@@ -177,8 +176,8 @@ public class GradientPickerStop extends VBox {
     }
 
     @FXML
-    void thumKeyPressed(KeyEvent e) {
-        if (e.getCode() == KeyCode.BACK_SPACE) {
+    void thumbKeyPressed(KeyEvent e) {
+        if (e.getCode() == KeyCode.BACK_SPACE || e.getCode() == KeyCode.DELETE) {
             gradientPicker.removeStop(this);
             // Called when removing a gradient stop :
             // - update gradient preview accordingly
@@ -190,6 +189,7 @@ public class GradientPickerStop extends VBox {
             gradientPicker.updatePreview(value);
             // Update model
             paintPicker.setPaintProperty(value);
+            e.consume();
         }
     }
 
@@ -238,13 +238,11 @@ public class GradientPickerStop extends VBox {
     }
 
     private void showHUD() {
-        final DecimalFormat df = new DecimalFormat("0.00"); //NOI18N
-        final String valueString = String.valueOf(df.format(offset));
-        offset_textfield.setText(valueString);
+        offset_textfield.setText(Double.toString(offset));
         context_menu.show(this, Side.BOTTOM, 0, 5); // better way to center?
     }
 
-    public void valueToPixels() {
+    private void valueToPixels() {
         double stopValue = Utils.clamp(min, offset, max);
         double availablePixels = getParent().getLayoutBounds().getWidth() - (thumbWidth + edgeMargin);
         double range = max - min;

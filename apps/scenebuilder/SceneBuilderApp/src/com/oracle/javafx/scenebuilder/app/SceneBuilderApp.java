@@ -36,11 +36,11 @@ import com.oracle.javafx.scenebuilder.app.about.AboutWindowController;
 import com.oracle.javafx.scenebuilder.app.i18n.I18N;
 import com.oracle.javafx.scenebuilder.app.menubar.MenuBarController;
 import com.oracle.javafx.scenebuilder.app.preferences.PreferencesController;
+import com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordDocument;
 import com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal;
 import com.oracle.javafx.scenebuilder.app.preferences.PreferencesWindowController;
 import com.oracle.javafx.scenebuilder.app.template.FxmlTemplates;
 import com.oracle.javafx.scenebuilder.app.template.TemplateDialogController;
-import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.dialog.AlertDialog;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.dialog.ErrorDialog;
 import com.oracle.javafx.scenebuilder.kit.library.user.UserLibrary;
@@ -57,6 +57,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.stage.FileChooser;
@@ -149,6 +150,39 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
         }
     }
 
+
+    public boolean canPerformControlAction(ApplicationControlAction a, DocumentWindowController source) {
+        final boolean result;
+        switch (a) {
+            case ABOUT:
+            case NEW_FILE:
+            case NEW_ALERT_DIALOG:
+            case NEW_BASIC_APPLICATION:
+            case NEW_COMPLEX_APPLICATION:
+            case NEW_ALERT_DIALOG_CSS:
+            case NEW_ALERT_DIALOG_I18N:
+            case NEW_BASIC_APPLICATION_CSS:
+            case NEW_BASIC_APPLICATION_I18N:
+            case NEW_COMPLEX_APPLICATION_CSS:
+            case NEW_COMPLEX_APPLICATION_I18N:
+            case OPEN_FILE:
+            case SHOW_PREFERENCES:
+            case EXIT:
+                result = true;
+                break;
+
+            case CLOSE_FRONT_WINDOW:
+                result = windowList.isEmpty() == false;
+                break;
+                
+            default:
+                result = false;
+                assert false;
+                break;
+        }
+        return result;
+    }
+    
     public void performOpenRecent(DocumentWindowController source, final File fxmlFile) {
         assert fxmlFile != null && fxmlFile.exists();
 
@@ -187,6 +221,19 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
             throw new RuntimeException("Bug in " + getClass().getSimpleName(), x); //NOI18N
         }
 
+        return result;
+    }
+
+    public DocumentWindowController lookupUnusedDocumentWindowController() {
+        DocumentWindowController result = null;
+        
+        for (DocumentWindowController dwc : windowList) {
+            if (dwc.isUnused()) {
+                result = dwc;
+                break;
+            }
+        }
+        
         return result;
     }
 
@@ -250,6 +297,8 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
             errorDialog.showAndWait();
             Platform.exit();
         }
+        
+        logTimestamp(ACTION.START);
     }
 
     /*
@@ -332,18 +381,19 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
          * should be not be executed.
          */
         if (windowList.isEmpty()) {
+            logTimestamp(ACTION.STOP);
             Platform.exit();
         }
     }
 
     /**
-     * Ignored in correctly deployed JavaFX application.
+     * Normally ignored in correctly deployed JavaFX application.
+     * But on Mac OS, this method seems to be called by the javafx launcher.
      */
     public static void main(String[] args) {
-        AppPlatform.setLaunchedFromMainRoutine(true);
         launch(args);
     }
-
+    
     /*
      * Private
      */
@@ -424,8 +474,10 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
                 } else {
                     // Open fxmlFile
                     final DocumentWindowController hostWindow;
-                    if ((fromWindow != null) && (fromWindow.getFxmlText() == null)) {
-                        hostWindow = fromWindow;
+                    final DocumentWindowController unusedWindow
+                            = lookupUnusedDocumentWindowController();
+                    if (unusedWindow != null) {
+                        hostWindow = unusedWindow;
                     } else {
                         hostWindow = makeNewWindow();
                     }
@@ -480,8 +532,7 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
         // Collects the documents with pending changes
         final List<DocumentWindowController> pendingDocs = new ArrayList<>();
         for (DocumentWindowController dwc : windowList) {
-            final EditorController c = dwc.getEditorController();
-            if (c.getJobManager().canUndo()) {
+            if (dwc.isDocumentDirty()) {
                 pendingDocs.add(dwc);
             }
         }
@@ -536,11 +587,31 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
 
         // Exit if confirmed
         if (exitConfirmed) {
+            final PreferencesController pc = PreferencesController.getSingleton();
             for (DocumentWindowController dwc : new ArrayList<>(windowList)) {
+                // Write to java preferences before closing
+                final PreferencesRecordDocument recordDocument = pc.getRecordDocument(dwc);
+                recordDocument.writeToJavaPreferences();
                 documentWindowRequestClose(dwc);
             }
+            logTimestamp(ACTION.STOP);
             // TODO (elp): something else here ?
             Platform.exit();
+        }
+    }
+    
+    private enum ACTION {START, STOP};
+    
+    private void logTimestamp(ACTION type) {
+        switch (type) {
+            case START:
+                Logger.getLogger(this.getClass().getName()).severe(I18N.getString("log.start"));
+                break;
+            case STOP:
+                Logger.getLogger(this.getClass().getName()).severe(I18N.getString("log.stop"));
+                break;
+            default:
+                assert false;
         }
     }
 }

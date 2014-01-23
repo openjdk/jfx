@@ -91,6 +91,10 @@ public class MovingGuideController {
         clear();
     }
     
+    public boolean hasSampleBounds() {
+        return (horizontalLineIndex.isEmpty() == false) || (verticalLineIndex.isEmpty() == false);
+    }
+    
     public void clear() {
         renderer.setLines(Collections.emptyList(), Collections.emptyList());
     }

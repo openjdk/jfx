@@ -57,49 +57,49 @@ import javafx.stage.WindowEvent;
 public class ContextMenuController {
 
     private final EditorController editorController;
-    private final ContextMenu contextMenu;
+    private ContextMenu contextMenu;
 
-    private final MenuItem cutMenuItem;
-    private final MenuItem copyMenuItem;
-    private final MenuItem pasteMenuItem;
-    private final MenuItem pasteIntoMenuItem;
-    private final MenuItem duplicateMenuItem;
-    private final MenuItem deleteMenuItem;
-    private final MenuItem selectParentMenuItem;
-    private final MenuItem fitToParentMenuItem;
-    private final MenuItem editIncludedFileMenuItem;
-    private final MenuItem revealIncludedFileMenuItem;
-    private final MenuItem bringToFrontMenuItem;
-    private final MenuItem sendToBackMenuItem;
-    private final MenuItem bringForwardMenuItem;
-    private final MenuItem sendBackwardMenuItem;
-    private final Menu wrapInMenu;
-    private final MenuItem wrapInAnchorPaneMenuItem;
-    private final MenuItem wrapInGridPaneMenuItem;
-    private final MenuItem wrapInHBoxMenuItem;
-    private final MenuItem wrapInPaneMenuItem;
-    private final MenuItem wrapInScrollPaneMenuItem;
-    private final MenuItem wrapInSplitPaneMenuItem;
-    private final MenuItem wrapInStackPaneMenuItem;
-    private final MenuItem wrapInTabPaneMenuItem;
-    private final MenuItem wrapInTitledPaneMenuItem;
-    private final MenuItem wrapInToolBarMenuItem;
-    private final MenuItem wrapInVBoxMenuItem;
-    private final MenuItem wrapInGroupMenuItem;
-    private final MenuItem unwrapMenuItem;
-    private final Menu gridPaneMenu;
-    private final MenuItem moveRowAboveMenuItem;
-    private final MenuItem moveRowBelowMenuItem;
-    private final MenuItem moveColumnBeforeMenuItem;
-    private final MenuItem moveColumnAfterMenuItem;
-    private final MenuItem addRowAboveMenuItem;
-    private final MenuItem addRowBelowMenuItem;
-    private final MenuItem addColumnBeforeMenuItem;
-    private final MenuItem addColumnAfterMenuItem;
-    private final MenuItem increaseRowSpan;
-    private final MenuItem decreaseRowSpan;
-    private final MenuItem increaseColumnSpan;
-    private final MenuItem decreaseColumnSpan;
+    private MenuItem cutMenuItem;
+    private MenuItem copyMenuItem;
+    private MenuItem pasteMenuItem;
+    private MenuItem pasteIntoMenuItem;
+    private MenuItem duplicateMenuItem;
+    private MenuItem deleteMenuItem;
+    private MenuItem selectParentMenuItem;
+    private MenuItem fitToParentMenuItem;
+    private MenuItem editIncludedFileMenuItem;
+    private MenuItem revealIncludedFileMenuItem;
+    private MenuItem bringToFrontMenuItem;
+    private MenuItem sendToBackMenuItem;
+    private MenuItem bringForwardMenuItem;
+    private MenuItem sendBackwardMenuItem;
+    private Menu wrapInMenu;
+    private MenuItem wrapInAnchorPaneMenuItem;
+    private MenuItem wrapInGridPaneMenuItem;
+    private MenuItem wrapInHBoxMenuItem;
+    private MenuItem wrapInPaneMenuItem;
+    private MenuItem wrapInScrollPaneMenuItem;
+    private MenuItem wrapInSplitPaneMenuItem;
+    private MenuItem wrapInStackPaneMenuItem;
+    private MenuItem wrapInTabPaneMenuItem;
+    private MenuItem wrapInTitledPaneMenuItem;
+    private MenuItem wrapInToolBarMenuItem;
+    private MenuItem wrapInVBoxMenuItem;
+    private MenuItem wrapInGroupMenuItem;
+    private MenuItem unwrapMenuItem;
+    private Menu gridPaneMenu;
+    private MenuItem moveRowAboveMenuItem;
+    private MenuItem moveRowBelowMenuItem;
+    private MenuItem moveColumnBeforeMenuItem;
+    private MenuItem moveColumnAfterMenuItem;
+    private MenuItem addRowAboveMenuItem;
+    private MenuItem addRowBelowMenuItem;
+    private MenuItem addColumnBeforeMenuItem;
+    private MenuItem addColumnAfterMenuItem;
+    private MenuItem increaseRowSpan;
+    private MenuItem decreaseRowSpan;
+    private MenuItem increaseColumnSpan;
+    private MenuItem decreaseColumnSpan;
 
     private final EventHandler<Event> onShowingMenuEventHandler
             = new EventHandler<Event>() {
@@ -132,6 +132,191 @@ public class ContextMenuController {
 
     public ContextMenuController(final EditorController editorController) {
         this.editorController = editorController;
+    }
+
+    public ContextMenu getContextMenu() {
+        if (contextMenu == null) {
+            makeContextMenu();
+        }
+        return contextMenu;
+    }
+
+    /**
+     * Updates the context menu items depending on the selection.
+     */
+    public void updateContextMenuItems() {
+
+        getContextMenu().getItems().clear();
+
+        final Selection selection = editorController.getSelection();
+        if (selection.isEmpty() == false) {
+            final AbstractSelectionGroup asg = selection.getGroup();
+            if (asg instanceof ObjectSelectionGroup) {
+
+                // Common editing actions
+                getContextMenu().getItems().addAll(
+                        cutMenuItem,
+                        copyMenuItem,
+                        pasteMenuItem,
+                        pasteIntoMenuItem,
+                        duplicateMenuItem,
+                        deleteMenuItem,
+                        new SeparatorMenuItem(),
+                        selectParentMenuItem,
+                        new SeparatorMenuItem(),
+                        fitToParentMenuItem);
+                // GridPane specific actions
+                if (canPerformGridPaneActions() || canPerformGridPaneChildActions()) {
+                    updateGridPaneMenuItems();
+                    getContextMenu().getItems().add(gridPaneMenu);
+                }
+                // Common editing actions on going
+                getContextMenu().getItems().addAll(
+                        editIncludedFileMenuItem,
+                        revealIncludedFileMenuItem,
+                        new SeparatorMenuItem(),
+                        bringToFrontMenuItem,
+                        sendToBackMenuItem,
+                        bringForwardMenuItem,
+                        sendBackwardMenuItem,
+                        new SeparatorMenuItem(),
+                        wrapInMenu,
+                        unwrapMenuItem);
+
+            } else {
+                assert asg instanceof GridSelectionGroup;
+                getContextMenu().getItems().addAll(
+                        deleteMenuItem,
+                        new SeparatorMenuItem(),
+                        moveRowAboveMenuItem,
+                        moveRowBelowMenuItem,
+                        moveColumnBeforeMenuItem,
+                        moveColumnAfterMenuItem,
+                        new SeparatorMenuItem(),
+                        addRowAboveMenuItem,
+                        addRowBelowMenuItem,
+                        addColumnBeforeMenuItem,
+                        addColumnAfterMenuItem);
+            }
+        }
+    }
+
+    private void handleOnShowing(final ObservableList<MenuItem> menuItems) {
+        for (MenuItem menuItem : menuItems) {
+            final boolean disable, selected;
+            final String title;
+            if (menuItem.getUserData() instanceof MenuItemController) {
+                final MenuItemController c = (MenuItemController) menuItem.getUserData();
+                disable = !c.canPerform();
+                title = c.getTitle();
+                selected = c.isSelected();
+            } else {
+                if (menuItem instanceof Menu) {
+                    disable = false;
+                    selected = false;
+                    title = null;
+                } else {
+                    disable = true;
+                    selected = false;
+                    title = null;
+                }
+            }
+            menuItem.setDisable(disable);
+            if (title != null) {
+                menuItem.setText(title);
+            }
+            if (menuItem instanceof RadioMenuItem) {
+                final RadioMenuItem ri = (RadioMenuItem) menuItem;
+                ri.setSelected(selected);
+            }
+        }
+    }
+
+    private void handleOnActionMenu(MenuItem i) {
+        assert i.getUserData() instanceof MenuItemController;
+        final MenuItemController c = (MenuItemController) i.getUserData();
+        c.perform();
+    }
+
+    /**
+     * Returns true if all the selected items are GridPanes.
+     *
+     * @return
+     */
+    private boolean canPerformGridPaneActions() {
+        boolean result = false;
+        final Selection selection = editorController.getSelection();
+        final AbstractSelectionGroup asg = selection.getGroup();
+
+        if (asg instanceof ObjectSelectionGroup) {
+            final ObjectSelectionGroup osg = (ObjectSelectionGroup) asg;
+            result = true;
+            for (FXOMObject obj : osg.getItems()) {
+                if ((obj.getSceneGraphObject() instanceof GridPane) == false) {
+                    result = false;
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Returns true if all the selected items are children of 1 or more GridPanes.
+     *
+     * @return
+     */
+    private boolean canPerformGridPaneChildActions() {
+        boolean result = false;
+        final Selection selection = editorController.getSelection();
+        final AbstractSelectionGroup asg = selection.getGroup();
+
+        if (asg instanceof ObjectSelectionGroup) {
+            final ObjectSelectionGroup osg = (ObjectSelectionGroup) asg;
+            result = true;
+            for (FXOMObject obj : osg.getItems()) {
+                final FXOMObject parent = obj.getParentObject();
+                if (parent == null
+                        || (parent.getSceneGraphObject() instanceof GridPane) == false) {
+                    result = false;
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+
+    private void updateGridPaneMenuItems() {
+        assert canPerformGridPaneActions() || canPerformGridPaneChildActions();
+        gridPaneMenu.getItems().clear();
+        // Add actions on the GridPane rows/columns
+        if (canPerformGridPaneActions()) {
+            gridPaneMenu.getItems().addAll(
+                    moveRowAboveMenuItem,
+                    moveRowBelowMenuItem,
+                    moveColumnBeforeMenuItem,
+                    moveColumnAfterMenuItem,
+                    new SeparatorMenuItem(),
+                    addRowAboveMenuItem,
+                    addRowBelowMenuItem,
+                    addColumnBeforeMenuItem,
+                    addColumnAfterMenuItem);
+        }
+        // Add actions on the GridPane row/column span
+        if (canPerformGridPaneChildActions()) {
+            // The selection is a GridPane child of another GridPane
+            if (gridPaneMenu.getItems().isEmpty() == false) {
+                gridPaneMenu.getItems().add(new SeparatorMenuItem());
+            }
+            gridPaneMenu.getItems().addAll(
+                    increaseRowSpan,
+                    decreaseRowSpan,
+                    increaseColumnSpan,
+                    decreaseColumnSpan);
+        }
+    }
+
+    private void makeContextMenu() {
         this.contextMenu = new ContextMenu();
         this.contextMenu.setConsumeAutoHidingEvents(false);
 
@@ -275,185 +460,6 @@ public class ContextMenuController {
 
         for (MenuItem child : contextMenu.getItems()) {
             child.setOnAction(onActionEventHandler);
-        }
-    }
-
-    public ContextMenu getContextMenu() {
-        return contextMenu;
-    }
-
-    /**
-     * Updates the context menu items depending on the selection.
-     */
-    public void updateContextMenuItems() {
-
-        contextMenu.getItems().clear();
-
-        final Selection selection = editorController.getSelection();
-        if (selection.isEmpty() == false) {
-            final AbstractSelectionGroup asg = selection.getGroup();
-            if (asg instanceof ObjectSelectionGroup) {
-
-                // Common editing actions
-                contextMenu.getItems().addAll(
-                        cutMenuItem,
-                        copyMenuItem,
-                        pasteMenuItem,
-                        pasteIntoMenuItem,
-                        duplicateMenuItem,
-                        deleteMenuItem,
-                        new SeparatorMenuItem(),
-                        selectParentMenuItem,
-                        new SeparatorMenuItem(),
-                        fitToParentMenuItem);
-                // GridPane specific actions
-                if (canPerformGridPaneActions() || canPerformGridPaneChildActions()) {
-                    updateGridPaneMenuItems();
-                    contextMenu.getItems().add(gridPaneMenu);
-                }
-                // Common editing actions on going
-                contextMenu.getItems().addAll(
-                        editIncludedFileMenuItem,
-                        revealIncludedFileMenuItem,
-                        new SeparatorMenuItem(),
-                        bringToFrontMenuItem,
-                        sendToBackMenuItem,
-                        bringForwardMenuItem,
-                        sendBackwardMenuItem,
-                        new SeparatorMenuItem(),
-                        wrapInMenu,
-                        unwrapMenuItem);
-
-            } else {
-                assert asg instanceof GridSelectionGroup;
-                contextMenu.getItems().addAll(
-                        deleteMenuItem,
-                        new SeparatorMenuItem(),
-                        moveRowAboveMenuItem,
-                        moveRowBelowMenuItem,
-                        moveColumnBeforeMenuItem,
-                        moveColumnAfterMenuItem,
-                        new SeparatorMenuItem(),
-                        addRowAboveMenuItem,
-                        addRowBelowMenuItem,
-                        addColumnBeforeMenuItem,
-                        addColumnAfterMenuItem);
-            }
-        }
-    }
-
-    private void handleOnShowing(final ObservableList<MenuItem> menuItems) {
-        for (MenuItem menuItem : menuItems) {
-            final boolean disable, selected;
-            final String title;
-            if (menuItem.getUserData() instanceof MenuItemController) {
-                final MenuItemController c = (MenuItemController) menuItem.getUserData();
-                disable = !c.canPerform();
-                title = c.getTitle();
-                selected = c.isSelected();
-            } else {
-                if (menuItem instanceof Menu) {
-                    disable = false;
-                    selected = false;
-                    title = null;
-                } else {
-                    disable = true;
-                    selected = false;
-                    title = null;
-                }
-            }
-            menuItem.setDisable(disable);
-            if (title != null) {
-                menuItem.setText(title);
-            }
-            if (menuItem instanceof RadioMenuItem) {
-                final RadioMenuItem ri = (RadioMenuItem) menuItem;
-                ri.setSelected(selected);
-            }
-        }
-    }
-
-    private void handleOnActionMenu(MenuItem i) {
-        assert i.getUserData() instanceof MenuItemController;
-        final MenuItemController c = (MenuItemController) i.getUserData();
-        c.perform();
-    }
-
-    /**
-     * Returns true if all the selected items are GridPanes.
-     *
-     * @return
-     */
-    private boolean canPerformGridPaneActions() {
-        boolean result = false;
-        final Selection selection = editorController.getSelection();
-        final AbstractSelectionGroup asg = selection.getGroup();
-
-        if (asg instanceof ObjectSelectionGroup) {
-            final ObjectSelectionGroup osg = (ObjectSelectionGroup) asg;
-            result = true;
-            for (FXOMObject obj : osg.getItems()) {
-                if ((obj.getSceneGraphObject() instanceof GridPane) == false) {
-                    result = false;
-                    break;
-                }
-            }
-        }
-        return result;
-    }
-
-    /**
-     * Returns true if all the selected items are children of 1 or more GridPanes.
-     *
-     * @return
-     */
-    private boolean canPerformGridPaneChildActions() {
-        boolean result = false;
-        final Selection selection = editorController.getSelection();
-        final AbstractSelectionGroup asg = selection.getGroup();
-
-        if (asg instanceof ObjectSelectionGroup) {
-            final ObjectSelectionGroup osg = (ObjectSelectionGroup) asg;
-            result = true;
-            for (FXOMObject obj : osg.getItems()) {
-                final FXOMObject parent = obj.getParentObject();
-                if (parent == null
-                        || (parent.getSceneGraphObject() instanceof GridPane) == false) {
-                    result = false;
-                    break;
-                }
-            }
-        }
-        return result;
-    }
-
-    private void updateGridPaneMenuItems() {
-        assert canPerformGridPaneActions() || canPerformGridPaneChildActions();
-        gridPaneMenu.getItems().clear();
-        // Add actions on the GridPane rows/columns
-        if (canPerformGridPaneActions()) {
-            gridPaneMenu.getItems().addAll(
-                    moveRowAboveMenuItem,
-                    moveRowBelowMenuItem,
-                    moveColumnBeforeMenuItem,
-                    moveColumnAfterMenuItem,
-                    new SeparatorMenuItem(),
-                    addRowAboveMenuItem,
-                    addRowBelowMenuItem,
-                    addColumnBeforeMenuItem,
-                    addColumnAfterMenuItem);
-        }
-        // Add actions on the GridPane row/column span
-        if (canPerformGridPaneChildActions()) {
-            // The selection is a GridPane child of another GridPane
-            if (gridPaneMenu.getItems().isEmpty() == false) {
-                gridPaneMenu.getItems().add(new SeparatorMenuItem());
-            }
-            gridPaneMenu.getItems().addAll(
-                    increaseRowSpan,
-                    decreaseRowSpan,
-                    increaseColumnSpan,
-                    decreaseColumnSpan);
         }
     }
 

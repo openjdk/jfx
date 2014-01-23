@@ -58,6 +58,10 @@ class HorizontalLineIndex {
         lines.clear();
     }
     
+    public boolean isEmpty() {
+        return lines.isEmpty();
+    }
+    
     public List<HorizontalSegment> matchNorth(Bounds boundsInScene, double threshold) {
         assert boundsInScene.isEmpty() == false;
         return matchY(boundsInScene.getMinY(), threshold);

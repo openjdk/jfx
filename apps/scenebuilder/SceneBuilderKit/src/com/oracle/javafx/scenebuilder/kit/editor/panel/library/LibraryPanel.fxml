@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <!--
   Copyright (c) 2012, 2014, Oracle and/or its affiliates.
   All rights reserved. Use is subject to license terms.
@@ -32,18 +33,17 @@
 -->
 <?import java.lang.*?>
 <?import java.net.*?>
-<?import java.util.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.scene.paint.*?>
 
-<StackPane fx:id="libPane" prefHeight="-1.0" prefWidth="-1.0" styleClass="library-stack-pane" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
+<StackPane fx:id="libPane" alignment="TOP_LEFT" prefHeight="-1.0" prefWidth="-1.0" styleClass="theme-presets, SBKIT-library-panel, search-pane-background" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
   <children>
-    <Accordion fx:id="libAccordion" expandedPane="$null" prefHeight="-1.0" prefWidth="-1.0" />
+    <Accordion fx:id="libAccordion" prefHeight="-1.0" prefWidth="-1.0" />
     <ListView fx:id="libSearchList" prefHeight="-1.0" prefWidth="-1.0" />
     <ListView fx:id="libList" prefHeight="-1.0" prefWidth="-1.0" />
+    <Label fx:id="noSearchResults" styleClass="library-no-results-label" text="%label.search.noresults" />
   </children>
   <stylesheets>
-    <URL value="@LibraryPanel.css" />
+    <URL value="@../../css/Theme.css" />
   </stylesheets>
 </StackPane>

@@ -234,15 +234,9 @@ public class HierarchyTreeViewController extends AbstractHierarchyPanelControlle
         // Then update parent ring if selection is not empty
         if (!selectedTreeItems.isEmpty()) {
 
-            // Single selection is ROOT TreeItem
+            // Single selection is ROOT TreeItem => no parent ring
             final TreeItem<HierarchyItem> treeItemRoot = treeView.getRoot();
             if (selectedTreeItems.size() == 1 && selectedTreeItems.get(0) == treeItemRoot) {
-                final TreeCell<?> treeCellRoot
-                        = HierarchyTreeViewUtils.getTreeCell(treeCells, treeItemRoot);
-                // TreeCell is null when hidden
-                if (treeCellRoot != null) {
-                    treeCellRoot.setBorder(getBorder(BorderSide.TOP_RIGHT_BOTTOM_LEFT));
-                }
                 return;
             }
 

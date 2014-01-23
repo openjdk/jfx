@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <!--
   Copyright (c) 2012, 2014, Oracle and/or its affiliates.
   All rights reserved. Use is subject to license terms.
@@ -40,7 +41,7 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.*?>
 
-<HBox fx:id="searchTopElement" alignment="CENTER" prefWidth="-1.0" spacing="0.0" styleClass="search-box" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
+<HBox fx:id="searchTopElement" alignment="CENTER" prefWidth="-1.0" spacing="0.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
   <children>
     <TextField fx:id="searchField" maxWidth="1.7976931348623157E308" minHeight="-1.0" minWidth="80.0" prefWidth="-1.0" promptText="" HBox.hgrow="ALWAYS" />
     <StackPane fx:id="searchClearArea" maxHeight="14.0" maxWidth="14.0" minHeight="14.0" minWidth="14.0" prefHeight="14.0" prefWidth="14.0" HBox.hgrow="NEVER">
@@ -55,7 +56,4 @@
       </HBox.margin>
     </StackPane>
   </children>
-  <stylesheets>
-    <URL value="@Search.css" />
-  </stylesheets>
 </HBox>

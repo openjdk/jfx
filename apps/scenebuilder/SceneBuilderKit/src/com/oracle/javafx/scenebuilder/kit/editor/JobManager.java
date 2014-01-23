@@ -43,14 +43,18 @@ import javafx.beans.property.SimpleIntegerProperty;
 public class JobManager {
     
     private final EditorController editorController;
+    private final int undoStackMaxSize;
     private final List<Job> undoStack = new ArrayList<>();
     private final List<Job> redoStack = new ArrayList<>();
     private final SimpleIntegerProperty revision = new SimpleIntegerProperty();
     private boolean lock;
     
     
-    JobManager(EditorController editorController) {
+    JobManager(EditorController editorController, int undoStackMaxSize) {
+        assert editorController != null;
+        assert undoStackMaxSize >= 1;
         this.editorController = editorController;
+        this.undoStackMaxSize = undoStackMaxSize;
     }
     
     public void push(Job job) {
@@ -65,6 +69,9 @@ public class JobManager {
         
         executeJob(job);
         undoStack.add(0, job);
+        if (undoStack.size() > undoStackMaxSize) {
+            undoStack.remove(undoStack.size()-1);
+        }
         redoStack.clear();
         incrementRevision();
         

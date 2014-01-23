@@ -49,6 +49,8 @@ import javafx.scene.shape.Line;
  */
 public class MovingGuideRenderer {
     
+    private static final String NID_MOVING_GUIDE = "movingGuide"; //NOI18N
+
     private final Group guideGroup = new Group();
     private final Map<AbstractSegment, Line> chromeMap = new HashMap<>();
     private final Set<Line> reusableChromes = new HashSet<>();
@@ -91,6 +93,7 @@ public class MovingGuideRenderer {
             final Line chrome;
             if (reusableChromes.isEmpty()) {
                 chrome = new Line();
+                chrome.setId(NID_MOVING_GUIDE);
                 chrome.setStroke(chromeColor);
                 guideGroup.getChildren().add(chrome);
             } else {

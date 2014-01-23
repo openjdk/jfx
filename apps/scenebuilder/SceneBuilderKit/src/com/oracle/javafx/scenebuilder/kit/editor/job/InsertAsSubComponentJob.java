@@ -34,26 +34,31 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.AddPropertyJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.AddPropertyValueJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.v2.RemovePropertyJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.v2.UpdateSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMCollection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyT;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Job used to insert new FXOM objects into a sub component location.
  *
  */
-public class InsertAsSubComponentJob extends Job {
+public class InsertAsSubComponentJob extends CompositeJob {
 
     private final FXOMObject newObject;
     private final FXOMObject targetObject;
     private final int targetIndex;
-    private BatchJob subJob; // Initialized by execute()
-    private String description; // final but initialized lazily
 
     public InsertAsSubComponentJob(
             FXOMObject newObject,
@@ -82,105 +87,114 @@ public class InsertAsSubComponentJob extends Job {
     }
     
     /*
-     * Job
+     * CompositeJob
      */
     @Override
-    public boolean isExecutable() {
-        final boolean result;
-
+    protected List<Job> makeSubJobs() {
+        final List<Job> result;
+        
+        final boolean executable;
         if (targetObject instanceof FXOMInstance) {
             final DesignHierarchyMask mask = new DesignHierarchyMask(targetObject);
-            result = mask.isAcceptingSubComponent(newObject);
+            executable = mask.isAcceptingSubComponent(newObject);
         } else {
             // TODO(elp): someday we should support insering in FXOMCollection
-            result = false;
+            executable = false;
         }
+        
+        if (executable) {
+            final FXOMDocument fxomDocument = targetObject.getFxomDocument();
+            final FXOMInstance targetInstance = (FXOMInstance) targetObject;
+            final DesignHierarchyMask mask = new DesignHierarchyMask(targetObject);
+            final PropertyName subComponentName = mask.getSubComponentPropertyName();
+            assert subComponentName != null;
 
+            /*
+             * Two cases:
+             *  1) targetObject has no sub component yet
+             *      => a new FXOMProperty must created
+             *      => newObject must be added to this property using AddPropertyValueJob
+             *      => new property must be added to targetObject using AddPropertyJob
+             *  2) targetObject has already some sub components
+             *      2.1) property is an FXOMPropertyC
+             *          => newObject must be inserted amongst the existing values
+             *      2.2) property is an empty FXOMPropertyT (see DTL-6206)
+             *          => property must be replaced by an FXOMPropertyC
+             *          => newObject must be inserted in the FXOMPropertyC
+             */
+
+            final FXOMProperty currentProperty
+                    = targetInstance.getProperties().get(subComponentName);
+           
+            final FXOMPropertyC targetProperty;
+            if (currentProperty instanceof FXOMPropertyC) {
+                targetProperty = (FXOMPropertyC) currentProperty;
+            } else {
+                targetProperty = new FXOMPropertyC(fxomDocument, subComponentName);
+            }
+            
+            result = new ArrayList<>();
+
+            /*
+             * RemovePropertyJob
+             */
+            if (currentProperty instanceof FXOMPropertyT) {
+                result.add(new RemovePropertyJob(currentProperty, getEditorController()));
+            }
+
+            /*
+             * AddPropertyValueJob
+             */
+            final Job addValueJob 
+                    = new AddPropertyValueJob(newObject, 
+                            targetProperty, 
+                            targetIndex, 
+                            getEditorController());
+            result.add(addValueJob);
+
+            /*
+             * AddPropertyJob
+             */
+            if (targetProperty.getParentInstance() == null) {
+                assert targetObject instanceof FXOMInstance;
+                final Job addPropertyJob
+                        = new AddPropertyJob(targetProperty, targetInstance,
+                        -1, getEditorController());
+                result.add(addPropertyJob);
+            }
+            
+            /*
+             * UpdateSelectionJob
+             */
+            result.add(new UpdateSelectionJob(newObject, getEditorController()));
+            
+        } else {
+            result = Collections.emptyList();
+        }
+        
         return result;
     }
 
     @Override
-    public void execute() {
-        final FXOMDocument fxomDocument = targetObject.getFxomDocument();
-        final FXOMInstance targetInstance = (FXOMInstance) targetObject;
-        final DesignHierarchyMask mask = new DesignHierarchyMask(targetObject);
-        final PropertyName subComponentName = mask.getSubComponentPropertyName();
-        assert subComponentName != null;
-        
-        /*
-         * Two cases:
-         *  1) targetObject has no sub component yet
-         *      => a new FXOMProperty must created
-         *      => newObject must be added to this property using AddPropertyValueJob
-         *      => new property must be added to targetObject using AddPropertyJob
-         *  2) targetObject has already some sub components
-         *      => newObject must be inserted in the existing FXOMProperty
-         */
-        
-        FXOMProperty targetProperty
-                = targetInstance.getProperties().get(subComponentName);
-        if (targetProperty == null) {
-            targetProperty = new FXOMPropertyC(fxomDocument, subComponentName);
-        }
-        assert targetProperty instanceof FXOMPropertyC;
-        
-        subJob = new BatchJob(getEditorController(),
-                true /* shouldUpdateSceneGraph */, null);
-        final Job addValueJob 
-                = new AddPropertyValueJob(newObject, 
-                        (FXOMPropertyC) targetProperty, 
-                        targetIndex, 
-                        getEditorController());
-        subJob.addSubJob(addValueJob);
-        
-        if (targetProperty.getParentInstance() == null) {
-            assert targetObject instanceof FXOMInstance;
-            final Job addPropertyJob
-                    = new AddPropertyJob(targetProperty, targetInstance,
-                    -1, getEditorController());
-            subJob.addSubJob(addPropertyJob);
-        }
+    protected String makeDescription() {
+        final StringBuilder sb = new StringBuilder();
 
-        /*
-         * Executes the subjob.
-         */
-        subJob.execute();
-    }
+        sb.append("Insert ");
 
-    @Override
-    public void undo() {
-        assert subJob != null;
-        subJob.undo();
-    }
-
-    @Override
-    public void redo() {
-        assert subJob != null;
-        subJob.redo();
-    }
-
-    @Override
-    public String getDescription() {
-        if (description == null) {
-            final StringBuilder sb = new StringBuilder();
-
-            sb.append("Insert ");
-
-            if (newObject instanceof FXOMInstance) {
-                final Object sceneGraphObject = newObject.getSceneGraphObject();
-                if (sceneGraphObject != null) {
-                    sb.append(sceneGraphObject.getClass().getSimpleName());
-                } else {
-                    sb.append("Unresolved Object");
-                }
-            } else if (newObject instanceof FXOMCollection) {
-                sb.append("Collection");
+        if (newObject instanceof FXOMInstance) {
+            final Object sceneGraphObject = newObject.getSceneGraphObject();
+            if (sceneGraphObject != null) {
+                sb.append(sceneGraphObject.getClass().getSimpleName());
             } else {
-                assert false;
-                sb.append(newObject.getClass().getSimpleName());
+                sb.append("Unresolved Object");
             }
-            description = sb.toString();
+        } else if (newObject instanceof FXOMCollection) {
+            sb.append("Collection");
+        } else {
+            assert false;
+            sb.append(newObject.getClass().getSimpleName());
         }
-        return description;
+        
+        return sb.toString();
     }
 }

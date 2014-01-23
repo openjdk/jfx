@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
@@ -106,30 +107,29 @@ public class RowConstraintsPropertyMetadata extends ComplexPropertyMetadata<RowC
      */
     
     @Override
-    protected RowConstraints castValue(Object value) {
-        return (RowConstraints) value;
-    }
-    
-    @Override
-    public void updateFxomInstanceWithValue(FXOMInstance valueInstance, RowConstraints value) {
-        fillHeightMetadata.setValue(valueInstance, value.isFillHeight());
-        maxHeightMetadata.setValue(valueInstance, value.getMaxHeight());
-        minHeightMetadata.setValue(valueInstance, value.getMinHeight());
-        percentHeightMetadata.setValue(valueInstance, value.getPercentHeight());
-        prefHeightMetadata.setValue(valueInstance, value.getPrefHeight());
+    public FXOMInstance makeFxomInstanceFromValue(RowConstraints value, FXOMDocument fxomDocument) {
+        final FXOMInstance result = new FXOMInstance(fxomDocument, getValueClass());
+        
+        fillHeightMetadata.setValue(result, value.isFillHeight());
+        maxHeightMetadata.setValue(result, value.getMaxHeight());
+        minHeightMetadata.setValue(result, value.getMinHeight());
+        percentHeightMetadata.setValue(result, value.getPercentHeight());
+        prefHeightMetadata.setValue(result, value.getPrefHeight());
         
         final VPos valignment = value.getValignment();
         if (valignment == null) {
-            valignmentMetadata.setValue(valueInstance, valignmentMetadata.getDefaultValue());
+            valignmentMetadata.setValue(result, valignmentMetadata.getDefaultValue());
         } else {
-            valignmentMetadata.setValue(valueInstance, valignment.toString());
+            valignmentMetadata.setValue(result, valignment.toString());
         }
         final Priority vgrow = value.getVgrow();
         if (vgrow == null) {
-            vgrowMetadata.setValue(valueInstance, vgrowMetadata.getDefaultValue());
+            vgrowMetadata.setValue(result, vgrowMetadata.getDefaultValue());
         } else {
-            vgrowMetadata.setValue(valueInstance, vgrow.toString());
+            vgrowMetadata.setValue(result, vgrow.toString());
         }
+
+        return result;
     }
     
 }

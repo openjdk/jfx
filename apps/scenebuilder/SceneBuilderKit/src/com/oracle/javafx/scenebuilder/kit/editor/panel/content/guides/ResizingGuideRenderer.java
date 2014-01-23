@@ -46,6 +46,8 @@ import javafx.scene.paint.Paint;
  */
 public class ResizingGuideRenderer {
     
+    private static final String NID_RESIZING_GUIDE = "resizingGuide"; //NOI18N
+
     private final Group guideGroup = new Group();
     private final Map<AbstractSegment, ResizingGuideChrome> chromeMap = new HashMap<>();
     private final Set<ResizingGuideChrome> reusableChromes = new HashSet<>();
@@ -84,6 +86,7 @@ public class ResizingGuideRenderer {
             final ResizingGuideChrome chrome;
             if (reusableChromes.isEmpty()) {
                 chrome = new ResizingGuideChrome(chromeSideLength);
+                chrome.setId(NID_RESIZING_GUIDE);
                 chrome.setStroke(chromeColor);
                 guideGroup.getChildren().add(chrome);
             } else {

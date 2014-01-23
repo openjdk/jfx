@@ -31,8 +31,8 @@
  */
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 
@@ -46,24 +46,32 @@ public class ObjectPropertyMetadata extends SingleValuePropertyMetadata<Object> 
         super(name, Object.class, readWrite, defaultValue, inspectorPath);
     }
 
-    @Override
-    protected Object castValue(Object value) {
-        return value;
-    }
-    
-    
     /*
      * SingleValuePropertyMetadata
      */
-    
     @Override
-    public FXOMProperty makeFxomPropertyFromValue(FXOMInstance fxomInstance, Object value) {
-        throw new UnsupportedOperationException();
+    public Object makeValueFromString(String string) {
+        return string;
     }
 
     @Override
-    protected void updateFxomPropertyWithValue(FXOMProperty fxomProperty, Object value) {
-        throw new UnsupportedOperationException("Not supported yet."); //NOI18N
+    public Object makeValueFromFxomInstance(FXOMInstance valueFxomInstance) {
+        return valueFxomInstance.getSceneGraphObject();
+    }
+
+    @Override
+    public boolean canMakeStringFromValue(Object value) {
+        return false;
+    }
+
+    @Override
+    public String makeStringFromValue(Object value) {
+        throw new RuntimeException("Bug"); //NOI18N
+    }
+
+    @Override
+    public FXOMInstance makeFxomInstanceFromValue(Object value, FXOMDocument fxomDocument) {
+        throw new RuntimeException("Bug"); //NOI18N
     }
     
 }

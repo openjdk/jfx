@@ -215,6 +215,11 @@ public class LibraryDragSource extends AbstractDragSource {
         return I18N.getString("drop.job.insert.library.item",
                 getLibraryItem().getName());
     }
+
+    @Override
+    public boolean isNodeOnly() {
+        return getLibraryItemObject().isNode();
+    }
     
     /*
      * Object

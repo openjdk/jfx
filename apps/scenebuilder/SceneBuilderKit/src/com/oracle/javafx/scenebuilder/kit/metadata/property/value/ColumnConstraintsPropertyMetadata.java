@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
@@ -107,31 +108,30 @@ public class ColumnConstraintsPropertyMetadata extends ComplexPropertyMetadata<C
      */
     
     @Override
-    protected ColumnConstraints castValue(Object value) {
-        return (ColumnConstraints) value;
-    }
-    
-    @Override
-    public void updateFxomInstanceWithValue(FXOMInstance valueInstance, ColumnConstraints value) {
-        fillWidthMetadata.setValue(valueInstance, value.isFillWidth());
-        maxWidthMetadata.setValue(valueInstance, value.getMaxWidth());
-        minWidthMetadata.setValue(valueInstance, value.getMinWidth());
-        percentWidthMetadata.setValue(valueInstance, value.getPercentWidth());
-        prefWidthMetadata.setValue(valueInstance, value.getPrefWidth());
+    public FXOMInstance makeFxomInstanceFromValue(ColumnConstraints value, FXOMDocument fxomDocument) {
+        final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
+        
+        fillWidthMetadata.setValue(result, value.isFillWidth());
+        maxWidthMetadata.setValue(result, value.getMaxWidth());
+        minWidthMetadata.setValue(result, value.getMinWidth());
+        percentWidthMetadata.setValue(result, value.getPercentWidth());
+        prefWidthMetadata.setValue(result, value.getPrefWidth());
         
         final HPos halignment = value.getHalignment();
         if (halignment == null) {
-            halignmentMetadata.setValue(valueInstance, halignmentMetadata.getDefaultValue());
+            halignmentMetadata.setValue(result, halignmentMetadata.getDefaultValue());
         } else {
-            halignmentMetadata.setValue(valueInstance, halignment.toString());
+            halignmentMetadata.setValue(result, halignment.toString());
         }
         
         final Priority hgrow = value.getHgrow();
         if (hgrow == null) {
-            hgrowMetadata.setValue(valueInstance, hgrowMetadata.getDefaultValue());
+            hgrowMetadata.setValue(result, hgrowMetadata.getDefaultValue());
         } else {
-            hgrowMetadata.setValue(valueInstance, hgrow.toString());
+            hgrowMetadata.setValue(result, hgrow.toString());
         }
+
+        return result;
     }
     
 }

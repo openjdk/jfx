@@ -68,14 +68,14 @@ public abstract class EffectPathItem extends HBox {
     public Menu replace_input_menu;
 
     protected final Effect effect;
-    protected final EffectPathItem hostPathItem;
+    protected final EffectPathItem parentPahItem;
     protected final EffectPickerController effectPickerController;
 
-    public EffectPathItem(EffectPickerController epc, Effect effect, EffectPathItem hostPathItem) {
+    public EffectPathItem(EffectPickerController epc, Effect effect, EffectPathItem parentPahItem) {
         assert epc != null;
         assert effect != null;
         this.effectPickerController = epc;
-        this.hostPathItem = hostPathItem;
+        this.parentPahItem = parentPahItem;
         this.effect = effect;
         initialize();
     }
@@ -84,39 +84,36 @@ public abstract class EffectPathItem extends HBox {
         return effect;
     }
 
-    public ToggleButton getToggleButton() {
+    ToggleButton getToggleButton() {
         return toggle_button;
     }
 
-    public EffectPathItem getHostPathItem() {
-        return hostPathItem;
+    abstract EffectPathItem getSelectedInputPathItem();
+
+    Effect getSelectedInputEffect() {
+        return getSelectedInputPathItem() == null ? null : getSelectedInputPathItem().getValue();
     }
 
-    public abstract EffectPathItem getSelectedInputPathItem();
+    abstract void setSelectedInputEffect(Effect input);
 
-    public abstract void setSelectedInput(Effect input);
-
-    public String getSimpleName() {
+    String getSimpleName() {
         return effect.getClass().getSimpleName();
     }
 
     @FXML
     void deleteEffect(ActionEvent event) {
+
         // Update model
         //---------------------------------------------
-        if (getHostPathItem() != null) {
+        if (parentPahItem != null) {
             // Delete this effect from the chain but relink it's input to its parent effect
-            if (getSelectedInputPathItem() != null) {
-                final Effect input = getSelectedInputPathItem().getValue();
-                getHostPathItem().setSelectedInput(input);
-            } else {
-                getHostPathItem().setSelectedInput(null);
-            }
-
+            final Effect inputEffect = getSelectedInputEffect();
+            parentPahItem.setSelectedInputEffect(inputEffect);
         } else {
             // This is the root effect
             effectPickerController.setRootEffectProperty(null);
         }
+        effectPickerController.incrementRevision();
 
         // Update UI
         //---------------------------------------------
@@ -125,9 +122,11 @@ public abstract class EffectPathItem extends HBox {
 
     @FXML
     void deleteEffectInput(ActionEvent event) {
+
         // Update model
         //---------------------------------------------
-        setSelectedInput(null);
+        setSelectedInputEffect(null);
+        effectPickerController.incrementRevision();
 
         // Update UI
         //---------------------------------------------
@@ -138,21 +137,21 @@ public abstract class EffectPathItem extends HBox {
     void replaceEffect(ActionEvent event) {
         final MenuItem menuItem = (MenuItem) event.getSource();
         final String text = menuItem.getText();
+
         // Update model
         //---------------------------------------------
-        final Effect new_effect = Utils.newInstance(text);
-        // Update effect input if any
-        if (getSelectedInputPathItem() != null) {
-            final Effect input = getSelectedInputPathItem().getValue();
-            Utils.setDefaultInput(new_effect, input);
-        }
-        // Update effect host if any
-        if (getHostPathItem() != null) {
-            getHostPathItem().setSelectedInput(new_effect);
+        final Effect newEffect = Utils.newInstance(text);
+        // Relink this effect input to the new effect
+        final Effect inputEffect = getSelectedInputEffect();
+        Utils.setDefaultInput(newEffect, inputEffect);
+        // Update effect parent with the new effect
+        if (parentPahItem != null) {
+            parentPahItem.setSelectedInputEffect(newEffect);
         } else {
             // This is the root effect
-            effectPickerController.setRootEffectProperty(new_effect);
+            effectPickerController.setRootEffectProperty(newEffect);
         }
+        effectPickerController.incrementRevision();
 
         // Update UI
         //---------------------------------------------
@@ -163,10 +162,12 @@ public abstract class EffectPathItem extends HBox {
     void replaceEffectInput(ActionEvent event) {
         final MenuItem menuItem = (MenuItem) event.getSource();
         final String text = menuItem.getText();
+
         // Update model
         //---------------------------------------------
-        final Effect new_effect = Utils.newInstance(text);
-        setSelectedInput(new_effect);
+        final Effect newEffect = Utils.newInstance(text);
+        setSelectedInputEffect(newEffect);
+        effectPickerController.incrementRevision();
 
         // Update UI
         //---------------------------------------------

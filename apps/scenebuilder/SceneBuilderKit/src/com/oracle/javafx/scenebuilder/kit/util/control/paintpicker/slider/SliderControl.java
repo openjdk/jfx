@@ -33,7 +33,6 @@ package com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.slider;
 
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.gradientpicker.GradientPicker;
 import java.io.IOException;
-import java.text.DecimalFormat;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.beans.value.ChangeListener;
@@ -133,10 +132,8 @@ public class SliderControl extends GridPane {
             return; // check it's a textField
         }        // increment or decrement the value
         final TextField tf = (TextField) e.getSource();
-        final String s = tf.getText();
-        final Double d = (Double.valueOf(s) + x);
-        final DecimalFormat df = new DecimalFormat("0.###"); //NOI18N
-        tf.setText(df.format(d));
+        final Double newValue = Double.valueOf(tf.getText()) + x;
+        tf.setText(Double.toString(newValue));
         // Avoid using runLater
         // This should be done somewhere else (need to investigate)
 //        Platform.runLater(new Runnable() {

@@ -79,15 +79,18 @@ public abstract class AbstractPanelController {
                 assert editorController.getFxomDocument() == nd;
                 if (od != null) {
                     od.sceneGraphRevisionProperty().removeListener(fxomDocumentRevisionListener);
+                    od.cssRevisionProperty().removeListener(cssRevisionListener);
                 }
                 fxomDocumentDidChange(od);
                 if (nd != null) {
                     nd.sceneGraphRevisionProperty().addListener(fxomDocumentRevisionListener);
+                    nd.cssRevisionProperty().addListener(cssRevisionListener);
                 }
             }
         });
         if (editorController.getFxomDocument() != null) {
             editorController.getFxomDocument().sceneGraphRevisionProperty().addListener(fxomDocumentRevisionListener);
+            editorController.getFxomDocument().cssRevisionProperty().addListener(cssRevisionListener);
         }
     }
     
@@ -144,6 +147,13 @@ public abstract class AbstractPanelController {
     protected abstract void sceneGraphRevisionDidChange();
     
     /**
+     * Updates the panel after the css revision has changed.
+     * Revision is incremented each time the fxom document forces FX to
+     * reload its stylesheets.
+     */
+    protected abstract void cssRevisionDidChange();
+    
+    /**
      * Updates the panel after the revision of job manager has changed.
      * Revision is incremented each time a job is executed, undone or redone.
      */
@@ -177,6 +187,14 @@ public abstract class AbstractPanelController {
                 @Override
                 public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
                     sceneGraphRevisionDidChange();
+                }
+            };
+    
+    private final ChangeListener<Number> cssRevisionListener
+            = new ChangeListener<Number>() {
+                @Override
+                public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
+                    cssRevisionDidChange();
                 }
             };
     

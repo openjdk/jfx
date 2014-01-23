@@ -62,6 +62,6 @@
     <Insets />
   </padding>
   <stylesheets>
-    <URL value="@../Inspector.css" />
+    <URL value="@../../../css/Theme.css" />
   </stylesheets>
 </HBox>

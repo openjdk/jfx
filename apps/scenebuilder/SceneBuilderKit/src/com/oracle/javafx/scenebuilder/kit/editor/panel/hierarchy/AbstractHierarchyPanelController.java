@@ -489,6 +489,14 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
         }
     }
 
+    /**
+     * @treatAsPrivate
+     */
+    @Override
+    protected void cssRevisionDidChange() {
+        // Ignored
+    }
+
     private void updateTreeItemsExpandedMap(TreeItem<HierarchyItem> treeItem) {
         assert treeItem != null;
         final HierarchyItem item = treeItem.getValue();
@@ -782,6 +790,21 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
         //---------------------------------
         if (mask.isAcceptingAccessory(Accessory.CONTEXT_MENU)) {
             final FXOMObject value = mask.getAccessory(Accessory.CONTEXT_MENU);
+            if (value != null) {
+                treeItem.getChildren().add(makeTreeItem(value));
+            }
+        }
+
+        // Axis (chart)
+        //---------------------------------
+        if (mask.isAcceptingAccessory(Accessory.XAXIS)) {
+            final FXOMObject value = mask.getAccessory(Accessory.XAXIS);
+            if (value != null) {
+                treeItem.getChildren().add(makeTreeItem(value));
+            }
+        }
+        if (mask.isAcceptingAccessory(Accessory.YAXIS)) {
+            final FXOMObject value = mask.getAccessory(Accessory.YAXIS);
             if (value != null) {
                 treeItem.getChildren().add(makeTreeItem(value));
             }

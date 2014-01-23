@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
@@ -65,16 +66,15 @@ public class Rectangle2DPropertyMetadata extends ComplexPropertyMetadata<Rectang
      */
     
     @Override
-    protected Rectangle2D castValue(Object value) {
-        return (Rectangle2D) value;
-    }
-    
-    @Override
-    protected void updateFxomInstanceWithValue(FXOMInstance valueInstance, Rectangle2D value) {
-        minXMetadata.setValue(valueInstance, value.getMinX());
-        minYMetadata.setValue(valueInstance, value.getMinY());
-        widthMetadata.setValue(valueInstance, value.getWidth());
-        heightMetadata.setValue(valueInstance, value.getHeight());
+    public FXOMInstance makeFxomInstanceFromValue(Rectangle2D value, FXOMDocument fxomDocument) {
+        final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
+        
+        minXMetadata.setValue(result, value.getMinX());
+        minYMetadata.setValue(result, value.getMinY());
+        widthMetadata.setValue(result, value.getWidth());
+        heightMetadata.setValue(result, value.getHeight());
+
+        return result;
     }
     
 }

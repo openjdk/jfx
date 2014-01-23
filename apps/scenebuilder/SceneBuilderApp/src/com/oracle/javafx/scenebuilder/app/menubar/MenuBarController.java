@@ -46,10 +46,10 @@ import com.oracle.javafx.scenebuilder.kit.editor.EditorController.Size;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
 import com.oracle.javafx.scenebuilder.kit.library.BuiltinSectionComparator;
-import com.oracle.javafx.scenebuilder.kit.library.Library;
 import com.oracle.javafx.scenebuilder.kit.library.LibraryItem;
 import com.oracle.javafx.scenebuilder.kit.library.LibraryItemNameComparator;
 import com.oracle.javafx.scenebuilder.kit.util.MathUtils;
+import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.EffectPicker;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -101,6 +101,8 @@ public class MenuBarController {
     @FXML
     private Menu fileMenu; // Useless as soon as Preferences menu item is implemented
     @FXML
+    private Menu previewMenu;
+    @FXML
     private Menu windowMenu;
 
     // File
@@ -138,6 +140,10 @@ public class MenuBarController {
     private MenuItem closeMenuItem;
     @FXML
     private MenuItem revealMenuItem;
+    @FXML
+    private MenuItem importFxmlMenuItem;
+    @FXML
+    private MenuItem importMediaMenuItem;
     @FXML
     private MenuItem showPreferencesMenuItem;
     @FXML
@@ -210,6 +216,10 @@ public class MenuBarController {
     private MenuItem fitToParentMenuItem;
     @FXML
     private MenuItem useComputedSizesMenuItem;
+    @FXML
+    private MenuItem addContextMenuMenuItem;
+    @FXML
+    private MenuItem addTooltipMenuItem;
     @FXML
     private MenuItem moveRowAboveMenuItem;
     @FXML
@@ -304,6 +314,8 @@ public class MenuBarController {
     private RadioMenuItem caspianEmbeddedThemeMenuItem;
     @FXML
     private RadioMenuItem caspianEmbeddedQVGAThemeMenuItem;
+    @FXML
+    private MenuItem separatorAboveChooseBackgroundColorMenuItem;
     @FXML
     private MenuItem chooseBackgroundColorMenuItem;
     @FXML
@@ -418,6 +430,8 @@ public class MenuBarController {
         assert revertMenuItem != null;
         assert closeMenuItem != null;
         assert revealMenuItem != null;
+        assert importFxmlMenuItem != null;
+        assert importMediaMenuItem != null;
         assert separatorAbovePreferencesMenuItem != null;
         assert showPreferencesMenuItem != null;
         assert exitMenuItem != null;
@@ -455,6 +469,8 @@ public class MenuBarController {
 
         assert fitToParentMenuItem != null;
         assert useComputedSizesMenuItem != null;
+        assert addContextMenuMenuItem != null;
+        assert addTooltipMenuItem != null;
         assert moveRowAboveMenuItem != null;
         assert moveRowBelowMenuItem != null;
         assert moveColumnBeforeMenuItem != null;
@@ -577,9 +593,12 @@ public class MenuBarController {
         saveAsMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.SHIFT_DOWN, modifier));
         revertMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.REVERT_FILE));
         revealMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.REVEAL_FILE));
+        importFxmlMenuItem.setUserData(new DocumentEditActionController(DocumentEditAction.IMPORT_FXML));
+        importMediaMenuItem.setUserData(new DocumentEditActionController(DocumentEditAction.IMPORT_MEDIA));
         closeMenuItem.setUserData(new ApplicationControlActionController(ApplicationControlAction.CLOSE_FRONT_WINDOW));
         closeMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.W, modifier));
         showPreferencesMenuItem.setUserData(new ApplicationControlActionController(ApplicationControlAction.SHOW_PREFERENCES));
+        showPreferencesMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.COMMA, modifier));
         exitMenuItem.setUserData(new ApplicationControlActionController(ApplicationControlAction.EXIT));
 
         /*
@@ -606,7 +625,7 @@ public class MenuBarController {
         pasteIntoMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.V, KeyCombination.SHIFT_DOWN, modifier));
         duplicateMenuItem.setUserData(new EditActionController(EditAction.DUPLICATE));
         duplicateMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.D, modifier));
-        deleteMenuItem.setUserData(new EditActionController(EditAction.DELETE));
+        deleteMenuItem.setUserData(new DocumentEditActionController(DocumentEditAction.DELETE));
         deleteMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.DELETE));
         selectAllMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.SELECT_ALL));
         selectAllMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.A, modifier));
@@ -759,18 +778,8 @@ public class MenuBarController {
         updateZoomMenu();
 
         /*
-         * Insert menu
+         * Insert menu: it is setup after the other menus.
          */
-        updateInsertMenu();
-        if (documentWindowController != null) {
-            this.documentWindowController.getEditorController().libraryProperty().addListener(
-                    new ChangeListener<Library>() {
-                        @Override
-                        public void changed(ObservableValue<? extends Library> ov, Library t, Library t1) {
-                            updateInsertMenu();
-                        }
-                    });
-        }
 
         /*
          * Modify menu
@@ -779,6 +788,8 @@ public class MenuBarController {
         fitToParentMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.K, modifier));
         useComputedSizesMenuItem.setUserData(new EditActionController(EditAction.USE_COMPUTED_SIZES));
         useComputedSizesMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.K, KeyCombination.SHIFT_DOWN, modifier));
+        addContextMenuMenuItem.setUserData(new EditActionController(EditAction.ADD_CONTEXT_MENU));
+        addTooltipMenuItem.setUserData(new EditActionController(EditAction.ADD_TOOLTIP));
         moveRowAboveMenuItem.setUserData(new EditActionController(EditAction.MOVE_ROW_ABOVE));
         moveRowBelowMenuItem.setUserData(new EditActionController(EditAction.MOVE_ROW_BELOW));
         moveColumnBeforeMenuItem.setUserData(new EditActionController(EditAction.MOVE_COLUMN_BEFORE));
@@ -791,7 +802,38 @@ public class MenuBarController {
         decreaseRowSpanMenuItem.setUserData(new EditActionController(EditAction.DECREASE_ROW_SPAN));
         increaseColumnSpanMenuItem.setUserData(new EditActionController(EditAction.INCREASE_COLUMN_SPAN));
         decreaseColumnSpanMenuItem.setUserData(new EditActionController(EditAction.DECREASE_COLUMN_SPAN));
-        editIncludedFileMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.EDIT_INCLUDED_FILE));
+        editIncludedFileMenuItem.setUserData(new ControlActionController(ControlAction.EDIT_INCLUDED_FILE) {
+
+            @Override
+            public String getTitle() {
+                String title = I18N.getString("menu.title.edit.included.default");
+                if (documentWindowController != null) {
+                    final File file = documentWindowController.getEditorController().getIncludedFile();
+                    if (file != null) {
+                        title = I18N.getString("menu.title.edit.included", file.getName());
+                    }
+                }
+                return title;
+            }
+        });
+        revealIncludedFileMenuItem.setUserData(new ControlActionController(ControlAction.REVEAL_INCLUDED_FILE) {
+
+            @Override
+            public String getTitle() {
+                String title = I18N.getString("menu.title.reveal.included.default");
+                if (documentWindowController != null) {
+                    final File file = documentWindowController.getEditorController().getIncludedFile();
+                    if (file != null) {
+                        if (EditorPlatform.IS_MAC) {
+                            title = I18N.getString("menu.title.reveal.included.finder", file.getName());
+                        } else {
+                            title = I18N.getString("menu.title.reveal.included.explorer", file.getName());
+                        }
+                    }
+                }
+                return title;
+            }
+        });
         qvgaSetSizeMenuItem.setUserData(new EditActionController(EditAction.SET_SIZE_320x240) {
             @Override
             public void perform() {
@@ -840,29 +882,17 @@ public class MenuBarController {
         sendBackwardMenuItem.setAccelerator(
                 new KeyCharacterCombination("[", modifier)); //NOI18N
         wrapInAnchorPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_ANCHOR_PANE));
-        wrapInAnchorPaneMenuItem.setAccelerator(
-                new KeyCodeCombination(KeyCode.A, KeyCombination.ALT_DOWN, modifier));
         wrapInGroupMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_GROUP));
         wrapInGridPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_GRID_PANE));
-        wrapInGridPaneMenuItem.setAccelerator(
-                new KeyCodeCombination(KeyCode.G, KeyCombination.ALT_DOWN, modifier));
         wrapInHBoxMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_HBOX));
-        wrapInHBoxMenuItem.setAccelerator(
-                new KeyCodeCombination(KeyCode.H, KeyCombination.ALT_DOWN, modifier));
         wrapInPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_PANE));
         wrapInScrollPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_SCROLL_PANE));
         wrapInSplitPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_SPLIT_PANE));
-        wrapInSplitPaneMenuItem.setAccelerator(
-                new KeyCodeCombination(KeyCode.S, KeyCombination.ALT_DOWN, modifier));
         wrapInStackPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_STACK_PANE));
         wrapInTabPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TAB_PANE));
         wrapInTitledPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TITLED_PANE));
-        wrapInTitledPaneMenuItem.setAccelerator(
-                new KeyCodeCombination(KeyCode.T, KeyCombination.ALT_DOWN, modifier));
         wrapInToolBarMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TOOL_BAR));
         wrapInVBoxMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_VBOX));
-        wrapInVBoxMenuItem.setAccelerator(
-                new KeyCodeCombination(KeyCode.V, KeyCombination.ALT_DOWN, modifier));
         wrapInGroupMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_GROUP));
         unwrapMenuItem.setUserData(new EditActionController(EditAction.UNWRAP));
         unwrapMenuItem.setAccelerator(
@@ -938,6 +968,7 @@ public class MenuBarController {
         /*
          * Window menu : it is setup after the other menus
          */
+        
         /*
          * Help menu
          */
@@ -947,12 +978,20 @@ public class MenuBarController {
 
         /*
          * Put some generic handlers on each Menu and MenuItem.
-         * For Window menu, they are overriden with specific handlers.
+         * For Insert and Window menu, we override with specific handlers.
          */
         for (Menu m : menuBar.getMenus()) {
             setupMenuItemHandlers(m);
         }
+        
+        insertMenu.setOnMenuValidation(onInsertMenuValidationHandler);
         windowMenu.setOnMenuValidation(onWindowMenuValidationHandler);
+        
+        /*
+         * Until Preference menu is implemented, we remove it (see DTL-5854).
+         */
+        previewMenu.getItems().remove(separatorAboveChooseBackgroundColorMenuItem);
+        previewMenu.getItems().remove(chooseBackgroundColorMenuItem);
     }
 
     /*
@@ -1139,6 +1178,15 @@ public class MenuBarController {
     /*
      * Private (insert menu)
      */
+    private final EventHandler<Event> onInsertMenuValidationHandler
+            = new EventHandler<Event>() {
+                @Override
+                public void handle(Event t) {
+                    assert t.getSource() == insertMenu;
+                    updateInsertMenu();
+                }
+            };
+    
     private void updateInsertMenu() {
         assert insertMenu != null;
 
@@ -1217,13 +1265,13 @@ public class MenuBarController {
      */
     private void updateAddEffectMenu() {
         addEffectMenu.getItems().clear();
-        for (Class<? extends Effect> c : EditorController.getEffectsSupportingAddition()) {
+        for (Class<? extends Effect> c : EffectPicker.getEffectClasses()) {
             addEffectMenu.getItems().add(makeMenuItemForEffect(c));
         }
     }
 
     private MenuItem makeMenuItemForEffect(Class<? extends Effect> effectClass) {
-        final Menu result = new Menu();
+        final MenuItem result = new MenuItem();
         result.setText(effectClass.getSimpleName());
         result.setUserData(new AddEffectActionController(effectClass));
         return result;
@@ -1488,8 +1536,8 @@ public class MenuBarController {
 
         @Override
         public boolean canPerform() {
-            // Right now, all document actions are always enabled
-            return true;
+            return SceneBuilderApp.getSingleton().canPerformControlAction(controlAction,
+                    documentWindowController);
         }
 
         @Override
@@ -1510,15 +1558,13 @@ public class MenuBarController {
 
         @Override
         public boolean canPerform() {
-            // TODO(elp) : to be implemented
-            return false;
+            return documentWindowController.getEditorController().canPerformSetEffect();
         }
 
         @Override
         public void perform() {
-            throw new UnsupportedOperationException("Not supported yet: effectClass=" + effectClass);  //NOI18N
+            documentWindowController.getEditorController().performSetEffect(effectClass);
         }
-
     }
 
     class SetZoomActionController extends MenuItemController {
@@ -1626,8 +1672,8 @@ public class MenuBarController {
                         && ! documentWindowController.getEditorController().is3D()
                         && documentWindowController.getEditorController().isNode()) {
                         title = I18N.getString("menu.title.size.preferred.with.value",
-                                documentWindowController.getPreviewWindowController().getRoot().prefWidth(-1),
-                                documentWindowController.getPreviewWindowController().getRoot().prefHeight(-1));
+                                getStringFromDouble(documentWindowController.getPreviewWindowController().getRoot().prefWidth(-1)),
+                                getStringFromDouble(documentWindowController.getPreviewWindowController().getRoot().prefHeight(-1)));
                 }
                 
                 return title;
@@ -1994,6 +2040,16 @@ public class MenuBarController {
 
     public Set<KeyCombination> getAccelerators() {
         return keyToMenu.keySet();
+    }
+    
+    // Returns a String with no trailing zero; if decimal part is non zero then
+    // it is kept.
+    private String getStringFromDouble(double value) {
+        String res = Double.toString(value);
+        if(res.endsWith(".0")) { //NOI18N
+            res = Integer.toString((int)value);
+        }
+        return res;
     }
 
     /**

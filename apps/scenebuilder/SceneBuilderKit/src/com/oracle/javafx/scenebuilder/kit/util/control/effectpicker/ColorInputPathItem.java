@@ -48,12 +48,12 @@ public class ColorInputPathItem extends EffectPathItem {
     }
 
     @Override
-    public EffectPathItem getSelectedInputPathItem() {
+    EffectPathItem getSelectedInputPathItem() {
         return null;
     }
 
     @Override
-    public void setSelectedInput(Effect input) {
+    void setSelectedInputEffect(Effect input) {
         // No input
     }
 

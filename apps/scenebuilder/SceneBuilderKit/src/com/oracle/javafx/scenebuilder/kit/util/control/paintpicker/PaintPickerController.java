@@ -241,6 +241,8 @@ public class PaintPickerController {
         assert value instanceof LinearGradient;
         // Update UI
         setMode(value);
+        gradientPicker.setMode(value);
+        gradientPicker.updatePreview(value);
         // Update model
         setPaintProperty(value);
         event.consume();
@@ -254,6 +256,8 @@ public class PaintPickerController {
         assert value instanceof RadialGradient;
         // Update UI
         setMode(value);
+        gradientPicker.setMode(value);
+        gradientPicker.updatePreview(value);
         // Update model
         setPaintProperty(value);
         event.consume();

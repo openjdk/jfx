@@ -46,10 +46,11 @@ import javafx.scene.layout.Region;
 import javafx.scene.web.WebView;
 
 /**
- * Job to use for setting the size of the layout. It will set the preferred width
- * and height to the given value while min and max width and height are set to
- * Region.USE_PREF_SIZE.
- * No action is taken unless the layout is an instance of Region or WebView.
+ * Job to use for setting the size of the given FXOMObject; when not provided
+ * deal with the top level item of the layout. The job will set the preferred
+ * width and height to the given value while min and max width and height are
+ * set to Region.USE_PREF_SIZE.
+ * No action is taken unless the FXOMObject is an instance of Region or WebView.
  */
 public class UsePredefinedSizeJob extends Job {
 
@@ -57,14 +58,28 @@ public class UsePredefinedSizeJob extends Job {
     private String description; // final but initialized lazily
     private final Size size;
     private final EditorController editorController;
+    private final FXOMObject fxomObject;
+
+    public UsePredefinedSizeJob(EditorController editorController, Size size, FXOMObject fxomObject) {
+        super(editorController);
+        this.editorController = editorController;
+        this.size = size;
+        this.fxomObject = fxomObject;
+        buildSubJobs();
+    }
 
     public UsePredefinedSizeJob(EditorController editorController, Size size) {
         super(editorController);
         this.editorController = editorController;
         this.size = size;
+        if (editorController.getFxomDocument() == null) {
+            this.fxomObject = null;
+        } else {
+            this.fxomObject = editorController.getFxomDocument().getFxomRoot();
+        }
         buildSubJobs();
     }
-
+    
     /*
      * Job
      */
@@ -106,21 +121,24 @@ public class UsePredefinedSizeJob extends Job {
     @Override
     public String getDescription() {
         if (description == null) {
-            description = I18N.getString("job.set.size", getWidthFromSize(size), getHeightFromSize(size));
+            description = I18N.getString("job.set.size",
+                    JobUtils.getStringFromDouble(getWidthFromSize(size)),
+                    JobUtils.getStringFromDouble(getHeightFromSize(size)));
         }
         return description;
     }
 
     private void buildSubJobs() {
 
-        final Object sceneGraphObject = editorController.getFxomDocument().getSceneGraphRoot();
-        FXOMObject fxomObject = editorController.getFxomDocument().getFxomRoot();
-
-        if (sceneGraphObject instanceof WebView
-                || sceneGraphObject instanceof Region) {
-            assert fxomObject instanceof FXOMInstance;
-            subJobs.addAll(modifyHeightJobs((FXOMInstance)fxomObject));
-            subJobs.addAll(modifyWidthJobs((FXOMInstance)fxomObject));
+        if (editorController.getFxomDocument() != null && (fxomObject instanceof FXOMInstance)) {
+            final FXOMInstance fxomInstance = (FXOMInstance) fxomObject;
+            final Object sceneGraphObject = fxomInstance.getSceneGraphObject();
+            
+            if (sceneGraphObject instanceof WebView
+                    || sceneGraphObject instanceof Region) {
+                subJobs.addAll(modifyHeightJobs(fxomInstance));
+                subJobs.addAll(modifyWidthJobs(fxomInstance));
+            }
         }
     }
 
@@ -191,12 +209,24 @@ public class UsePredefinedSizeJob extends Job {
     }
     
     private double getWidthFromSize(Size size) {
+        assert size != Size.SIZE_PREFERRED;
+        
+        if (size == Size.SIZE_DEFAULT) {
+            return editorController.getDefaultRootContainerWidth();
+        }
+
         String sizeString = size.toString();
-        return new Double(sizeString.substring(5, sizeString.indexOf("x"))).doubleValue(); //NOI18N
+        return Double.parseDouble(sizeString.substring(5, sizeString.indexOf("x"))); //NOI18N
     }
     
     private double getHeightFromSize(Size size) {
+        assert size != Size.SIZE_PREFERRED;
+        
+        if (size == Size.SIZE_DEFAULT) {
+            return editorController.getDefaultRootContainerHeight();
+        }
+        
         String sizeString = size.toString();
-        return new Double(sizeString.substring(sizeString.indexOf("x") + 1, sizeString.length())).doubleValue(); //NOI18N
+        return Double.parseDouble(sizeString.substring(sizeString.indexOf("x") + 1, sizeString.length())); //NOI18N
     }
 }

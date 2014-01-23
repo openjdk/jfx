@@ -38,7 +38,7 @@ import javafx.scene.image.Image;
  * Effect path item for the image input effect.
  */
 public class ImageInputPathItem extends EffectPathItem {
-    
+
     private Image image;
 
     public ImageInputPathItem(EffectPickerController epc, Effect effect, EffectPathItem hostPathItem) {
@@ -48,12 +48,12 @@ public class ImageInputPathItem extends EffectPathItem {
     }
 
     @Override
-    public EffectPathItem getSelectedInputPathItem() {
+    EffectPathItem getSelectedInputPathItem() {
         return null;
     }
 
     @Override
-    public void setSelectedInput(Effect input) {
+    void setSelectedInputEffect(Effect input) {
         // No input
     }
 

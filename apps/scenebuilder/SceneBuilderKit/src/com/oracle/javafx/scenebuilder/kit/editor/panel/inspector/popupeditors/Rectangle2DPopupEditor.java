@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -111,7 +111,7 @@ public class Rectangle2DPopupEditor extends PopupEditor {
         int index = 0;
         for (DoubleField doubleField : doubleFields) {
             String val = doubleField.getText();
-            if (val.isEmpty()) {
+            if (val == null || val.isEmpty()) {
                 val = "0"; //NOI18N
             } else {
                 try {

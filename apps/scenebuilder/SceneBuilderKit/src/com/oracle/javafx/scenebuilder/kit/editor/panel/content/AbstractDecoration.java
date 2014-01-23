@@ -79,12 +79,7 @@ public abstract class AbstractDecoration<T> {
         this.rootNode.sceneProperty().addListener(new ChangeListener<Scene>() {
             @Override
             public void changed(ObservableValue<? extends Scene> ov, Scene v1, Scene v2) {
-                if (v2 == null) {
-                    stopListeningToSceneGraphObject();
-                } else {
-                    startListeningToSceneGraphObject();
-                    layoutDecoration();
-                }
+                rootNodeSceneDidChange();
             }
         });
     }
@@ -126,7 +121,7 @@ public abstract class AbstractDecoration<T> {
         assert getState() == State.NEEDS_RECONCILE;
         
         stopListeningToSceneGraphObject();
-        this.sceneGraphObject = sceneGraphClass.cast(fxomObject.getSceneGraphObject());
+        updateSceneGraphObject();
         startListeningToSceneGraphObject();
         layoutDecoration();
     }
@@ -203,7 +198,23 @@ public abstract class AbstractDecoration<T> {
         node.localToSceneTransformProperty().removeListener(localToSceneTransformListener);
     }
     
+    /*
+     * Protected
+     */
 
+    protected void rootNodeSceneDidChange() {
+        if (rootNode.getScene() == null) {
+            stopListeningToSceneGraphObject();
+        } else {
+            startListeningToSceneGraphObject();
+            layoutDecoration();
+        }
+    }
+    
+    protected void updateSceneGraphObject() {
+        this.sceneGraphObject = sceneGraphClass.cast(fxomObject.getSceneGraphObject());
+    }
+    
     /*
      * Private
      */

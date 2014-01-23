@@ -38,6 +38,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.EditorController.Size;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractWindowController;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
+import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 import com.oracle.javafx.scenebuilder.kit.util.MathUtils;
 import java.io.File;
 import java.io.IOException;
@@ -108,9 +109,11 @@ public final class PreviewWindowController extends AbstractWindowController {
                         assert editorController.getFxomDocument() == nd;
                         if (od != null) {
                             od.sceneGraphRevisionProperty().removeListener(fxomDocumentRevisionListener);
+                            od.cssRevisionProperty().removeListener(cssRevisionListener);
                         }
                         if (nd != null) {
                             nd.sceneGraphRevisionProperty().addListener(fxomDocumentRevisionListener);
+                            nd.cssRevisionProperty().addListener(cssRevisionListener);
                             requestUpdate();
                         }
                     }
@@ -118,6 +121,7 @@ public final class PreviewWindowController extends AbstractWindowController {
         
         if (editorController.getFxomDocument() != null) {
             editorController.getFxomDocument().sceneGraphRevisionProperty().addListener(fxomDocumentRevisionListener);
+            editorController.getFxomDocument().cssRevisionProperty().addListener(cssRevisionListener);
         }
         
         this.editorControllerTheme = editorController.getTheme();
@@ -207,6 +211,15 @@ public final class PreviewWindowController extends AbstractWindowController {
                 public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
 //                    System.out.println("fxomDocumentRevisionListener called");
                     requestUpdate();
+                }
+            };
+
+    private final ChangeListener<Number> cssRevisionListener
+            = new ChangeListener<Number>() {
+                @Override
+                public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
+//                    System.out.println("cssRevisionListener called");
+                    Deprecation.reapplyCSS(getScene());
                 }
             };
 
@@ -566,9 +579,9 @@ public final class PreviewWindowController extends AbstractWindowController {
         
         if (getStage() != null) {
             Rectangle2D frame = getBiggestViewableRectangle();
-            
-            if (getWidthFromSize(size) <= frame.getWidth()
-                    && getHeightFromSize(size) <= frame.getHeight()) {
+                        
+            if (getWidthFromSize(size) <= frame.getWidth() - decorationX
+                    && getHeightFromSize(size) <= frame.getHeight() - decorationY) {
                 res = true;
             }
         }

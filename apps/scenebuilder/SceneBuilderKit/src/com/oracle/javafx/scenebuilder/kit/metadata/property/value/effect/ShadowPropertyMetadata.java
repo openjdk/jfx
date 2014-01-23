@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -32,6 +32,7 @@
 
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value.effect;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.ComplexPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata;
@@ -77,17 +78,16 @@ public class ShadowPropertyMetadata extends ComplexPropertyMetadata<Shadow> {
      */
     
     @Override
-    protected Shadow castValue(Object value) {
-        return (Shadow) value;
-    }
-    
-    @Override
-    public void updateFxomInstanceWithValue(FXOMInstance valueInstance, Shadow value) {
-        blurTypeMetadata.setValue(valueInstance, value.getBlurType().toString());
-        colorMetadata.setValue(valueInstance, value.getColor());
-        heightMetadata.setValue(valueInstance, value.getHeight());
-        inputMetadata.setValue(valueInstance, value.getInput());
-        radiusMetadata.setValue(valueInstance, value.getRadius());
-        widthMetadata.setValue(valueInstance, value.getWidth());
+    public FXOMInstance makeFxomInstanceFromValue(Shadow value, FXOMDocument fxomDocument) {
+        final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
+        
+        blurTypeMetadata.setValue(result, value.getBlurType().toString());
+        colorMetadata.setValue(result, value.getColor());
+        heightMetadata.setValue(result, value.getHeight());
+        inputMetadata.setValue(result, value.getInput());
+        radiusMetadata.setValue(result, value.getRadius());
+        widthMetadata.setValue(result, value.getWidth());
+
+        return result;
     }
 }

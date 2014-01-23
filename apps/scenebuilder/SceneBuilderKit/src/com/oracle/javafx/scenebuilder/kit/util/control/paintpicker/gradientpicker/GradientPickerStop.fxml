@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <!--
   Copyright (c) 2012, 2014, Oracle and/or its affiliates.
   All rights reserved. Use is subject to license terms.
@@ -39,16 +40,17 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.paint.*?>
 <?import javafx.scene.shape.*?>
+<?import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.*?>
 
 <fx:root type="javafx.scene.layout.VBox" alignment="TOP_CENTER" prefHeight="-1.0" prefWidth="-1.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
   <children>
-    <Button fx:id="stop_button" mnemonicParsing="false" onKeyPressed="#thumKeyPressed" onMouseDragged="#thumbMouseDragged" onMousePressed="#thumbMousePressed" onMouseReleased="#thumbMouseReleased" styleClass="gradient-stop-thumb" text="">
+    <Button fx:id="stop_button" mnemonicParsing="false" onKeyPressed="#thumbKeyPressed" onMouseDragged="#thumbMouseDragged" onMousePressed="#thumbMousePressed" onMouseReleased="#thumbMouseReleased" styleClass="gradient-stop-thumb" text="">
       <contextMenu>
         <ContextMenu autoHide="false" fx:id="context_menu">
           <items>
             <CustomMenuItem hideOnClick="false" mnemonicParsing="false" text="Unspecified Action" fx:id="custom_menu_item">
               <content>
-                <TextField fx:id="offset_textfield" onAction="#stopAction" prefColumnCount="3" prefWidth="-1.0" />
+                <DoubleTextField fx:id="offset_textfield" onAction="#stopAction" prefColumnCount="3" prefWidth="-1.0" />
               </content>
             </CustomMenuItem>
           </items>

@@ -55,8 +55,19 @@ public abstract class AbstractFxmlWindowController extends AbstractWindowControl
         this(fxmlURL, resources, null);
     }
     
+    public AbstractFxmlWindowController(URL fxmlURL, ResourceBundle resources, boolean sizeToScene) {
+        this(fxmlURL, resources, null, sizeToScene);
+    }
+    
     public AbstractFxmlWindowController(URL fxmlURL, ResourceBundle resources, Window owner) {
         super(owner);
+        assert fxmlURL != null : "Check fxml path given to " + getClass().getSimpleName();
+        this.fxmlURL = fxmlURL;
+        this.resources = resources;
+    }
+
+    public AbstractFxmlWindowController(URL fxmlURL, ResourceBundle resources, Window owner, boolean sizeToScene) {
+        super(owner, sizeToScene);
         assert fxmlURL != null : "Check fxml path given to " + getClass().getSimpleName();
         this.fxmlURL = fxmlURL;
         this.resources = resources;

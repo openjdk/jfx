@@ -81,7 +81,7 @@ public class SearchController extends AbstractFxmlController {
             searchImage.setImage(magnifyImage);
         }
         
-        searchField.setPromptText(I18N.getString("search.prompt"));
+//        searchField.setPromptText(I18N.getString("search.prompt"));
         
         // For SQE tests
         searchField.setId("Search Text"); //NOI18N

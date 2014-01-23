@@ -48,13 +48,14 @@ public class PreferencesController {
     static final String SB_RELEASE_NODE = "SB_2.0"; //NOI18N
 
     // GLOBAL PREFERENCES
-    static final String DOCUMENT_HEIGHT = "DOCUMENT_HEIGHT"; //NOI18N
-    static final String DOCUMENT_WIDTH = "DOCUMENT_WIDTH"; //NOI18N
+    static final String ROOT_CONTAINER_HEIGHT = "ROOT_CONTAINER_HEIGHT"; //NOI18N
+    static final String ROOT_CONTAINER_WIDTH = "ROOT_CONTAINER_WIDTH"; //NOI18N
 
     static final String BACKGROUND_IMAGE = "BACKGROUND_IMAGE"; //NOI18N
     static final String ALIGNMENT_GUIDES_COLOR = "ALIGNMENT_GUIDES_COLOR"; //NOI18N
     static final String PARENT_RING_COLOR = "PARENT_RING_COLOR"; //NOI18N
 
+    static final String LIBRARY_DISPLAY_OPTION = "LIBRARY_DISPLAY_OPTION"; //NOI18N
     static final String HIERARCHY_DISPLAY_OPTION = "HIERARCHY_DISPLAY_OPTION"; //NOI18N
     static final String CSS_ANALYZER_COLUMN_ORDER = "CSS_ANALYZER_COLUMN_ORDER"; //NOI18N
 
@@ -66,8 +67,8 @@ public class PreferencesController {
     static final String PATH = "path"; //NOI18N
     static final String X_POS = "X"; //NOI18N
     static final String Y_POS = "Y"; //NOI18N
-    static final String HEIGHT = "height"; //NOI18N
-    static final String WIDTH = "width"; //NOI18N
+    static final String STAGE_HEIGHT = "height"; //NOI18N
+    static final String STAGE_WIDTH = "width"; //NOI18N
     static final String BOTTOM_VISIBLE = "bottomVisible";//NOI18N
     static final String LEFT_VISIBLE = "leftVisible"; //NOI18N
     static final String RIGHT_VISIBLE = "rightVisible"; //NOI18N

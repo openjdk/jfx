@@ -45,18 +45,13 @@ public class BooleanPropertyMetadata extends TextEncodablePropertyMetadata<java.
         super(name, Boolean.class, readWrite, defaultValue, inspectorPath);
     }
 
+    /*
+     * TextEncodablePropertyMetadata
+     */
+    
     @Override
-    protected Boolean castValue(Object value) {
-        final Boolean result;
-        
-        if (value instanceof Boolean) {
-            result = (Boolean) value;
-        } else {
-            assert value instanceof String;
-            result = Boolean.valueOf((String)value);
-        }
-        
-        return result;
+    public Boolean makeValueFromString(String string) {
+        return Boolean.valueOf(string);
     }
     
 }

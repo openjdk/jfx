@@ -219,8 +219,10 @@ public class DragGesture extends AbstractGesture {
             }
         } else {
             final DesignHierarchyMask m = new DesignHierarchyMask(hitObject);
+            final boolean acceptSubComponent = m.isAcceptingSubComponent();
+            final boolean acceptContentAccessory = m.isAcceptingAccessory(DesignHierarchyMask.Accessory.CONTENT);
             final boolean isBorderPane = hitObject.getSceneGraphObject() instanceof BorderPane;
-            if (m.isAcceptingSubComponent() || isBorderPane) {
+            if (acceptSubComponent || acceptContentAccessory || isBorderPane) {
                 assert hitObject instanceof FXOMInstance;
                 candidateParent = (FXOMInstance) hitObject;
             } else {
@@ -236,7 +238,7 @@ public class DragGesture extends AbstractGesture {
                 movingGuideController.clearSampleBounds();
             } else {
                 hitParentMask = new DesignHierarchyMask(hitParent);
-                if (hitParentMask.isFreeChildPositioning()) {
+                if (hitParentMask.isFreeChildPositioning() && dragController.getDragSource().isNodeOnly()) {
                     populateMovingGuideController();
                 } else {
                     movingGuideController.clearSampleBounds();
@@ -245,9 +247,7 @@ public class DragGesture extends AbstractGesture {
         }
         
         final double guidedX, guidedY;
-        if ((hitParentMask != null) 
-                && hitParentMask.isFreeChildPositioning()
-                && (guidesDisabled == false)) {
+        if (movingGuideController.hasSampleBounds() && (guidesDisabled == false)) {
             updateShadow(hitX, hitY);
             final Bounds shadowBounds = shadow.getLayoutBounds();
             final Bounds shadowBoundsInScene = shadow.localToScene(shadowBounds);

@@ -33,31 +33,17 @@ package com.oracle.javafx.scenebuilder.kit.util.control.effectpicker;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.control.MenuItem;
-import javafx.scene.effect.Blend;
-import javafx.scene.effect.Bloom;
-import javafx.scene.effect.BoxBlur;
-import javafx.scene.effect.ColorAdjust;
-import javafx.scene.effect.ColorInput;
-import javafx.scene.effect.DisplacementMap;
-import javafx.scene.effect.DropShadow;
 import javafx.scene.effect.Effect;
-import javafx.scene.effect.GaussianBlur;
-import javafx.scene.effect.Glow;
-import javafx.scene.effect.ImageInput;
-import javafx.scene.effect.InnerShadow;
-import javafx.scene.effect.Lighting;
-import javafx.scene.effect.MotionBlur;
-import javafx.scene.effect.PerspectiveTransform;
-import javafx.scene.effect.Reflection;
-import javafx.scene.effect.SepiaTone;
-import javafx.scene.effect.Shadow;
 import javafx.scene.layout.Pane;
 
 /**
@@ -67,24 +53,33 @@ public class EffectPicker extends Pane {
 
     private final EffectPickerController controller;
 
-    private final Class<?>[] effectClasses = {
-        Blend.class,
-        Bloom.class,
-        BoxBlur.class,
-        ColorAdjust.class,
-        ColorInput.class,
-        DisplacementMap.class,
-        DropShadow.class,
-        GaussianBlur.class,
-        Glow.class,
-        ImageInput.class,
-        InnerShadow.class,
-        Lighting.class,
-        MotionBlur.class,
-        PerspectiveTransform.class,
-        Reflection.class,
-        SepiaTone.class,
-        Shadow.class};
+    private static List<Class<? extends Effect>> effectClasses;
+
+    public synchronized static Collection<Class<? extends Effect>> getEffectClasses() {
+        if (effectClasses == null) {
+            effectClasses = new ArrayList<>();
+            effectClasses.add(javafx.scene.effect.Blend.class);
+            effectClasses.add(javafx.scene.effect.Bloom.class);
+            effectClasses.add(javafx.scene.effect.BoxBlur.class);
+            effectClasses.add(javafx.scene.effect.ColorAdjust.class);
+            effectClasses.add(javafx.scene.effect.ColorInput.class);
+            effectClasses.add(javafx.scene.effect.DisplacementMap.class);
+            effectClasses.add(javafx.scene.effect.DropShadow.class);
+            effectClasses.add(javafx.scene.effect.GaussianBlur.class);
+            effectClasses.add(javafx.scene.effect.Glow.class);
+            effectClasses.add(javafx.scene.effect.ImageInput.class);
+            effectClasses.add(javafx.scene.effect.InnerShadow.class);
+            effectClasses.add(javafx.scene.effect.Lighting.class);
+            effectClasses.add(javafx.scene.effect.MotionBlur.class);
+            effectClasses.add(javafx.scene.effect.PerspectiveTransform.class);
+            effectClasses.add(javafx.scene.effect.Reflection.class);
+            effectClasses.add(javafx.scene.effect.SepiaTone.class);
+            effectClasses.add(javafx.scene.effect.Shadow.class);
+            effectClasses = Collections.unmodifiableList(effectClasses);
+        }
+
+        return effectClasses;
+    }
 
     public EffectPicker() {
         final FXMLLoader loader = new FXMLLoader();
@@ -121,6 +116,10 @@ public class EffectPicker extends Pane {
         return controller.getRootEffectProperty();
     }
 
+    public ReadOnlyIntegerProperty revisionProperty() {
+        return controller.revisionProperty();
+    }
+
     public void reset() {
         controller.reset();
     }
@@ -131,13 +130,14 @@ public class EffectPicker extends Pane {
 
     public List<MenuItem> getMenuItems() {
         final List<MenuItem> menuItems = new ArrayList<>();
-        for (final Class<?> clazz : effectClasses) {
+        for (final Class<? extends Effect> clazz : getEffectClasses()) {
             final MenuItem mi = new MenuItem(clazz.getSimpleName());
             mi.setOnAction(new EventHandler<ActionEvent>() {
                 @Override
                 public void handle(ActionEvent t) {
                     final Effect effect = Utils.newInstance(clazz);
                     setRootEffectProperty(effect);
+                    controller.incrementRevision();
                 }
             });
             menuItems.add(mi);

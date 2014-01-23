@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value;
 
+import com.oracle.javafx.scenebuilder.kit.metadata.property.value.list.ListValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.List;
@@ -39,27 +40,16 @@ import java.util.List;
  *
  * 
  */
-public class DoubleArrayPropertyMetadata extends ArrayPropertyMetadata<Double> {
+public class DoubleArrayPropertyMetadata extends ListValuePropertyMetadata<Double> {
+    
+    private final static PropertyName unusedName
+            = new PropertyName("unused"); //NOI18N
+    private final static DoublePropertyMetadata doubleMetadata
+            = new DoublePropertyMetadata(unusedName, 
+                    DoublePropertyMetadata.DoubleKind.COORDINATE,
+                    true, 0.0, InspectorPath.UNUSED);
 
     public DoubleArrayPropertyMetadata(PropertyName name, boolean readWrite, List<Double> defaultValue, InspectorPath inspectorPath) {
-        super(name, Double.class, readWrite, defaultValue, inspectorPath);
+        super(name, Double.class, doubleMetadata, readWrite, defaultValue, inspectorPath);
     }
-
-    
-    /*
-     * ArrayPropertyMetadata
-     */
-    
-    @Override
-    public String itemValueToString(Double itemValue) {
-        assert itemValue != null;
-        return itemValue.toString();
-    }
-
-    @Override
-    protected Double stringToItemValue(String itemString) {
-        assert itemString != null;
-        return Double.valueOf(itemString);
-    }
-
 }

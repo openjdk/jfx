@@ -35,9 +35,10 @@ import com.oracle.javafx.scenebuilder.app.i18n.I18N;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.ALIGNMENT_GUIDES_COLOR;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.BACKGROUND_IMAGE;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.CSS_ANALYZER_COLUMN_ORDER;
-import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.DOCUMENT_HEIGHT;
-import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.DOCUMENT_WIDTH;
+import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.ROOT_CONTAINER_HEIGHT;
+import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.ROOT_CONTAINER_WIDTH;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.HIERARCHY_DISPLAY_OPTION;
+import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.LIBRARY_DISPLAY_OPTION;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.PARENT_RING_COLOR;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.RECENT_ITEMS;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.RECENT_ITEMS_SIZE;
@@ -45,6 +46,7 @@ import com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal.Ba
 import com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal.CSSAnalyzerColumnsOrder;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal.recentItemsSizes;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController.DisplayOption;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.library.LibraryPanelController.DISPLAY_MODE;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractFxmlWindowController;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPickerController.Mode;
@@ -69,11 +71,13 @@ import javafx.stage.WindowEvent;
 public class PreferencesWindowController extends AbstractFxmlWindowController {
 
     @FXML
-    private TextField documentHeight;
+    private TextField rootContainerHeight;
     @FXML
-    private TextField documentWidth;
+    private TextField rootContainerWidth;
     @FXML
     private ChoiceBox<BackgroundImage> backgroundImage;
+    @FXML
+    private ChoiceBox<DISPLAY_MODE> libraryDisplayOption;
     @FXML
     private ChoiceBox<DisplayOption> hierarchyDisplayOption;
     @FXML
@@ -110,29 +114,33 @@ public class PreferencesWindowController extends AbstractFxmlWindowController {
         final PreferencesRecordGlobal recordGlobal
                 = preferencesController.getRecordGlobal();
 
-        // Document size
-        documentHeight.setText(String.valueOf(recordGlobal.getDocumentHeight()));
-        documentHeight.setOnAction(new EventHandler<ActionEvent>() {
+        // Root container size
+        rootContainerHeight.setText(String.valueOf(recordGlobal.getRootContainerHeight()));
+        rootContainerHeight.setOnAction(new EventHandler<ActionEvent>() {
 
             @Override
             public void handle(ActionEvent t) {
-                final String value = documentHeight.getText();
-                recordGlobal.setDocumentHeight(Double.valueOf(value));
-                documentHeight.selectAll();
+                final String value = rootContainerHeight.getText();
+                recordGlobal.setRootContainerHeight(Double.valueOf(value));
+                rootContainerHeight.selectAll();
                 // Update preferences
-                recordGlobal.writeToJavaPreferences(DOCUMENT_HEIGHT);
+                recordGlobal.writeToJavaPreferences(ROOT_CONTAINER_HEIGHT);
+                // Update UI
+                recordGlobal.refreshRootContainerHeight();
             }
         });
-        documentWidth.setText(String.valueOf(recordGlobal.getDocumentWidth()));
-        documentWidth.setOnAction(new EventHandler<ActionEvent>() {
+        rootContainerWidth.setText(String.valueOf(recordGlobal.getRootContainerWidth()));
+        rootContainerWidth.setOnAction(new EventHandler<ActionEvent>() {
 
             @Override
             public void handle(ActionEvent t) {
-                final String value = documentWidth.getText();
-                recordGlobal.setDocumentWidth(Double.valueOf(value));
-                documentWidth.selectAll();
+                final String value = rootContainerWidth.getText();
+                recordGlobal.setRootContainerWidth(Double.valueOf(value));
+                rootContainerWidth.selectAll();
                 // Update preferences
-                recordGlobal.writeToJavaPreferences(DOCUMENT_WIDTH);
+                recordGlobal.writeToJavaPreferences(ROOT_CONTAINER_WIDTH);
+                // Update UI
+                recordGlobal.refreshRootContainerWidth();
             }
         });
 
@@ -158,6 +166,13 @@ public class PreferencesWindowController extends AbstractFxmlWindowController {
         parentRingColorPicker.setPaintProperty(alignmentColor);
         parentRingColorPicker.paintProperty().addListener(
                 new ParentRingColorListener(parentRingGraphic));
+
+        // Library view option
+        final DISPLAY_MODE availableDisplayMode[] = new DISPLAY_MODE[]{
+            DISPLAY_MODE.LIST, DISPLAY_MODE.SECTIONS};
+        libraryDisplayOption.getItems().setAll(Arrays.asList(availableDisplayMode));
+        libraryDisplayOption.setValue(recordGlobal.getLibraryDisplayOption());
+        libraryDisplayOption.getSelectionModel().selectedItemProperty().addListener(new LibraryOptionListener());
 
         // Hierarchy display option
         hierarchyDisplayOption.getItems().setAll(Arrays.asList(DisplayOption.class.getEnumConstants()));
@@ -212,6 +227,22 @@ public class PreferencesWindowController extends AbstractFxmlWindowController {
             recordGlobal.writeToJavaPreferences(BACKGROUND_IMAGE);
             // Update UI
             recordGlobal.refreshBackgroundImage();
+        }
+    }
+
+    private static class LibraryOptionListener implements ChangeListener<DISPLAY_MODE> {
+
+        @Override
+        public void changed(ObservableValue<? extends DISPLAY_MODE> ov, DISPLAY_MODE oldValue, DISPLAY_MODE newValue) {
+            final PreferencesController preferencesController
+                    = PreferencesController.getSingleton();
+            final PreferencesRecordGlobal recordGlobal
+                    = preferencesController.getRecordGlobal();
+            // Update preferences
+            recordGlobal.setLibraryDisplayOption(newValue);
+            recordGlobal.writeToJavaPreferences(LIBRARY_DISPLAY_OPTION);
+            // Update UI
+            recordGlobal.refreshLibraryDisplayOption();
         }
     }
 

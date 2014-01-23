@@ -35,10 +35,12 @@ package com.oracle.javafx.scenebuilder.kit.editor.drag.target;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.source.AbstractDragSource;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.SetDocumentRootJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
+import com.oracle.javafx.scenebuilder.kit.editor.job.SetDocumentRootJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.UsePredefinedSizeJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.UpdateSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 
 /**
  *
@@ -66,8 +68,21 @@ public class RootDropTarget extends AbstractDropTarget {
         assert dragSource.getDraggedObjects().size() == 1;
         
         final FXOMObject newRoot = dragSource.getDraggedObjects().get(0);
+        
+        final UsePredefinedSizeJob resizeJob;
+        final DesignHierarchyMask mask = new DesignHierarchyMask(newRoot);
+        if (mask.needResizeWhenTopElement()) {
+            resizeJob = new UsePredefinedSizeJob(editorController, 
+                    EditorController.Size.SIZE_DEFAULT, newRoot);
+        } else {
+            resizeJob = null;
+        }
+        
         final BatchJob result = new BatchJob(editorController, true, dragSource.makeDropJobDescription());
         result.addSubJob(new SetDocumentRootJob(newRoot, editorController));
+        if ((resizeJob != null) && resizeJob.isExecutable()) {
+            result.addSubJob(resizeJob);
+        }
         result.addSubJob(new UpdateSelectionJob(newRoot, editorController));
         
         return result ;

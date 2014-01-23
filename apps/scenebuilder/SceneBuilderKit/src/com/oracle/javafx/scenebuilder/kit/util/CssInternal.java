@@ -163,7 +163,8 @@ public class CssInternal {
                 try {
                     classes.addAll(getStyleClasses(new URL(stylesheet)));
                 } catch (MalformedURLException ex) {
-                    throw new RuntimeException(ex);
+                    return classes;
+//                    throw new RuntimeException(ex);
                 }
             }
         }
@@ -176,7 +177,8 @@ public class CssInternal {
         try {
             s = CSSParser.getInstance().parse(url);
         } catch (IOException ex) {
-            throw new RuntimeException("Invalid Stylesheet " + url, ex); //NOI18N
+            System.out.println("Warning: Invalid Stylesheet " + url); //NOI18N
+            return styleClasses;
         }
         if (s == null) {
             // The parsed CSS file was empty. No parsing occured.

@@ -35,9 +35,11 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
+import com.oracle.javafx.scenebuilder.kit.metadata.property.value.IntegerPropertyMetadata;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -101,6 +103,23 @@ public class GridSelectionGroup extends AbstractSelectionGroup {
                 break;
             case COLUMN:
                 result = collectColumnConstraintsInstances();
+                break;
+            default:
+                throw new RuntimeException("Bug");
+        }
+        
+        return result;
+    }
+    
+    public List<FXOMObject> collectSelectedObjects() {
+        final List<FXOMObject> result;
+        
+        switch(type) {
+            case ROW:
+                result = collectSelectedObjectsInRow();
+                break;
+            case COLUMN:
+                result = collectSelectedObjectsInColumn();
                 break;
             default:
                 throw new RuntimeException("Bug");
@@ -217,4 +236,60 @@ public class GridSelectionGroup extends AbstractSelectionGroup {
         
         return result;
     }
+    
+    
+    private static final IntegerPropertyMetadata columnIndexMeta =
+            new IntegerPropertyMetadata(
+                new PropertyName("columnIndex", GridPane.class), //NOI18N
+                true, /* readWrite */
+                0, /* defaultValue */
+                InspectorPath.UNUSED);
+
+    private List<FXOMObject> collectSelectedObjectsInColumn() {
+        final List<FXOMObject> result = new ArrayList<>();
+        
+        final DesignHierarchyMask m = new DesignHierarchyMask(parentObject);
+        assert m.isAcceptingSubComponent();
+        
+        for (int i = 0, count = m.getSubComponentCount(); i <  count; i++) {
+            final FXOMObject childObject = m.getSubComponentAtIndex(i);
+            if (childObject instanceof FXOMInstance) {
+                final FXOMInstance childInstance = (FXOMInstance) childObject;
+                if (indexes.contains(columnIndexMeta.getValue(childInstance))) {
+                    // child belongs to a selected column
+                    result.add(childInstance);
+                }
+            }
+        }
+        
+        return result;
+    }
+    
+    private static final IntegerPropertyMetadata rowIndexMeta =
+            new IntegerPropertyMetadata(
+                new PropertyName("rowIndex", GridPane.class), //NOI18N
+                true, /* readWrite */
+                0, /* defaultValue */
+                InspectorPath.UNUSED);
+
+    private List<FXOMObject> collectSelectedObjectsInRow() {
+        final List<FXOMObject> result = new ArrayList<>();
+        
+        final DesignHierarchyMask m = new DesignHierarchyMask(parentObject);
+        assert m.isAcceptingSubComponent();
+        
+        for (int i = 0, count = m.getSubComponentCount(); i <  count; i++) {
+            final FXOMObject childObject = m.getSubComponentAtIndex(i);
+            if (childObject instanceof FXOMInstance) {
+                final FXOMInstance childInstance = (FXOMInstance) childObject;
+                if (indexes.contains(rowIndexMeta.getValue(childInstance))) {
+                    // child belongs to a selected column
+                    result.add(childInstance);
+                }
+            }
+        }
+        
+        return result;
+    }
+    
 }

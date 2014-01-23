@@ -72,6 +72,12 @@
             <SeparatorMenuItem mnemonicParsing="false" />
             <MenuItem fx:id="revealMenuItem" mnemonicParsing="false" text="Reveal (setup at runtime)" />
             <SeparatorMenuItem mnemonicParsing="false" />
+            <Menu fx:id="importMenu" mnemonicParsing="false" text="%menu.title.import">
+              <items>
+                <MenuItem fx:id="importFxmlMenuItem" mnemonicParsing="false" text="%menu.title.import.fxml" />
+                <MenuItem fx:id="importMediaMenuItem" mnemonicParsing="false" text="%menu.title.import.media" />
+              </items>
+            </Menu>
             <MenuItem fx:id="closeMenuItem" mnemonicParsing="false" text="%menu.title.close" />
             <SeparatorMenuItem fx:id="separatorAbovePreferencesMenuItem" mnemonicParsing="false" />
             <MenuItem fx:id="showPreferencesMenuItem" mnemonicParsing="false" text="%menu.title.preferences" />
@@ -123,7 +129,11 @@
             <MenuItem fx:id="showSampleControllerMenuItem" mnemonicParsing="false" text="%menu.title.show.sample.controller.skeleton" />
           </items>
         </Menu>
-        <Menu fx:id="insertMenu" mnemonicParsing="false" text="%menu.title.insert" />
+        <Menu fx:id="insertMenu" mnemonicParsing="false" text="%menu.title.insert" >
+          <items>
+            <SeparatorMenuItem mnemonicParsing="false" />
+          </items>
+        </Menu>
         <Menu mnemonicParsing="false" text="%menu.title.modify">
           <items>
             <MenuItem fx:id="fitToParentMenuItem" mnemonicParsing="false" text="%menu.title.fit" />
@@ -149,7 +159,12 @@
             </Menu>
             <SeparatorMenuItem mnemonicParsing="false" />
             <Menu fx:id="addEffectMenu" mnemonicParsing="false" text="%menu.title.add.effect" />
-            <Menu fx:id="addPopupControlMenu" mnemonicParsing="false" text="%menu.title.add.popup" />
+            <Menu fx:id="addPopupControlMenu" mnemonicParsing="false" text="%menu.title.add.popup" >
+              <items>
+                <MenuItem fx:id="addContextMenuMenuItem" mnemonicParsing="false" text="%menu.title.add.popup.context.menu" />
+                <MenuItem fx:id="addTooltipMenuItem" mnemonicParsing="false" text="%menu.title.add.popup.tooltip" />
+              </items>
+            </Menu>
             <SeparatorMenuItem mnemonicParsing="false" />
             <MenuItem fx:id="editIncludedFileMenuItem" mnemonicParsing="false" text="%menu.title.edit.included.default" />
             <MenuItem fx:id="revealIncludedFileMenuItem" mnemonicParsing="false" text="%menu.title.reveal.included.default" />
@@ -189,10 +204,10 @@
             <MenuItem fx:id="unwrapMenuItem" mnemonicParsing="false" text="%menu.title.unwrap" />
           </items>
         </Menu>
-        <Menu mnemonicParsing="false" text="%menu.title.preview">
+        <Menu fx:id="previewMenu" mnemonicParsing="false" text="%menu.title.preview">
           <items>
             <MenuItem fx:id="showPreviewMenuItem" mnemonicParsing="false" text="%menu.title.show.preview" />
-            <SeparatorMenuItem mnemonicParsing="false" />
+            <SeparatorMenuItem  fx:id="separatorAboveChooseBackgroundColorMenuItem" mnemonicParsing="false" />
             <MenuItem fx:id="chooseBackgroundColorMenuItem" mnemonicParsing="false" text="%menu.title.choose.background.color" />
             <SeparatorMenuItem mnemonicParsing="false" />
             <Menu mnemonicParsing="false" text="%menu.title.theme">
@@ -233,13 +248,14 @@
                 <MenuItem fx:id="revealResourceMenuItem" mnemonicParsing="false" text="%menu.title.reveal.resource" />
               </items>
             </Menu>
-            <Menu mnemonicParsing="false" text="%menu.title.size">
+            <Menu mnemonicParsing="false" text="%menu.title.preview.size">
               <items>
+                  <RadioMenuItem fx:id="preferredPreviewSizeMenuItem" mnemonicParsing="false" text="%menu.title.size.preferred" />
+                  <SeparatorMenuItem mnemonicParsing="false" />
                   <RadioMenuItem fx:id="qvgaPreviewSizeMenuItem" mnemonicParsing="false" text="%menu.title.size.qvga" />
                   <RadioMenuItem fx:id="vgaPreviewSizeMenuItem" mnemonicParsing="false" text="%menu.title.size.vga" />
                   <RadioMenuItem fx:id="touchPreviewSizeMenuItem" mnemonicParsing="false" text="%menu.title.size.touch" />
                   <RadioMenuItem fx:id="hdPreviewSizeMenuItem" mnemonicParsing="false" text="%menu.title.size.hd" />
-                  <RadioMenuItem fx:id="preferredPreviewSizeMenuItem" mnemonicParsing="false" text="%menu.title.size.preferred" />
               </items>
             </Menu>
           </items>

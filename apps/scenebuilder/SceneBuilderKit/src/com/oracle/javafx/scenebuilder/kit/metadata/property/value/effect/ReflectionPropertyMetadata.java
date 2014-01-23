@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -32,6 +32,7 @@
 
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value.effect;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.ComplexPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata;
@@ -70,16 +71,15 @@ public class ReflectionPropertyMetadata extends ComplexPropertyMetadata<Reflecti
      */
     
     @Override
-    protected Reflection castValue(Object value) {
-        return (Reflection) value;
-    }
-    
-    @Override
-    public void updateFxomInstanceWithValue(FXOMInstance valueInstance, Reflection value) {
-        bottomOpacityMetadata.setValue(valueInstance, value.getBottomOpacity());
-        fractionMetadata.setValue(valueInstance, value.getFraction());
-        inputMetadata.setValue(valueInstance, value.getInput());
-        topOffsetMetadata.setValue(valueInstance, value.getTopOffset());
-        topOpacityMetadata.setValue(valueInstance, value.getTopOpacity());
+    public FXOMInstance makeFxomInstanceFromValue(Reflection value, FXOMDocument fxomDocument) {
+        final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
+        
+        bottomOpacityMetadata.setValue(result, value.getBottomOpacity());
+        fractionMetadata.setValue(result, value.getFraction());
+        inputMetadata.setValue(result, value.getInput());
+        topOffsetMetadata.setValue(result, value.getTopOffset());
+        topOpacityMetadata.setValue(result, value.getTopOpacity());
+
+        return result;
     }
 }

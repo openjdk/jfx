@@ -149,19 +149,7 @@ public class DoublePropertyMetadata extends TextEncodablePropertyMetadata<java.l
      */
     
     @Override
-    protected Double castValue(Object value) {
-        final Double result;
-        
-        if (value == null) {
-            assert kind == DoubleKind.NULLABLE_COORDINATE;
-            result = null;
-        } else if  (value instanceof Double) {
-            result = (Double) value;
-        } else {
-            assert value instanceof String;
-            result = Double.valueOf((String)value);
-        }
-        
-        return result;
+    public Double makeValueFromString(String string) {
+        return Double.valueOf(string);
     }
 }
