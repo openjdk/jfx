@@ -1071,6 +1071,9 @@ public class ContextMenuContent extends Region {
                 }
             });
 
+        private EventHandler<MouseEvent> mouseEnteredEventHandler;
+        private EventHandler<MouseEvent> mouseReleasedEventHandler;
+
         protected Label getLabel(){
             return (Label) label;
         }
@@ -1146,6 +1149,10 @@ public class ContextMenuContent extends Region {
                 computeVisualMetrics();
             } else if ("ACCELERATOR".equals(p)) {
                 updateAccelerator();
+            } else if ("FOCUSED".equals(p)) {
+                if (isFocused()) {
+                    currentFocusedIndex = itemsContainer.getChildren().indexOf(MenuItemContainer.this);
+                }
             }
         }
         
@@ -1157,11 +1164,17 @@ public class ContextMenuContent extends Region {
             // this background also acts as the receiver of user input
             if (item instanceof CustomMenuItem) {
                 createNodeMenuItemChildren((CustomMenuItem)item);
-                addEventHandler(MouseEvent.MOUSE_ENTERED, new EventHandler<MouseEvent>() {
-                    @Override public void handle(MouseEvent event) {
-                        requestFocus(); // request Focus on hover
-                    }
-                });
+
+                if (mouseEnteredEventHandler == null) {
+                    mouseEnteredEventHandler = new EventHandler<MouseEvent>() {
+                        @Override public void handle(MouseEvent event) {
+                            requestFocus(); // request Focus on hover
+                        }
+                    };
+                } else {
+                    removeEventHandler(MouseEvent.MOUSE_ENTERED, mouseEnteredEventHandler);
+                }
+                addEventHandler(MouseEvent.MOUSE_ENTERED, mouseEnteredEventHandler);
             } else {
                 // --- add check / radio to left column
                 Node leftNode = getLeftGraphic(item);
@@ -1192,19 +1205,12 @@ public class ContextMenuContent extends Region {
 
                 label.setMouseTransparent(true);
                 getChildren().add(label);
-                addEventHandler(MouseEvent.MOUSE_ENTERED, new EventHandler<MouseEvent>() {
-                    @Override public void handle(MouseEvent event) {
-                        requestFocus();  // request Focus on hover
-                    }
-                });
 
 
                 // --- draw in right column - this depends on whether we are
                 // a Menu or not. A Menu gets an arrow, whereas other MenuItems
                 // get the ability to draw an accelerator
                 if (item instanceof Menu) {
-                    final Menu menu = (Menu) item;
-                    
                     // --- add arrow / accelerator / mnemonic to right column
                     Region rightNode = new Region();
                     rightNode.setMouseTransparent(true);
@@ -1217,69 +1223,79 @@ public class ContextMenuContent extends Region {
                     rightPane.getChildren().add(rightNode);
                     right = rightPane;
                     getChildren().add(rightPane);
+
+                    if (mouseEnteredEventHandler == null) {
+                        mouseEnteredEventHandler = new EventHandler<MouseEvent>() {
+                            @Override public void handle(MouseEvent event) {
+                                if (openSubmenu != null && item != openSubmenu) {
+                                    // if a submenu of a different menu is already
+                                    // open then close it (RT-15049)
+                                    hideSubmenu();
+                                }
+
+                                final Menu menu = (Menu) item;
+                                if (menu.isDisable()) return;
+                                selectedBackground = MenuItemContainer.this;
+                                menu.show();
+                                requestFocus();  // request Focus on hover
+                            }
+                        };
+                    } else {
+                        removeEventHandler(MouseEvent.MOUSE_ENTERED, mouseEnteredEventHandler);
+                    }
+
+                    if (mouseReleasedEventHandler == null) {
+                        mouseReleasedEventHandler = new EventHandler<MouseEvent>() {
+                            @Override public void handle(MouseEvent event) {
+                                item.fire();
+                            }
+                        };
+                    } else {
+                        removeEventHandler(MouseEvent.MOUSE_RELEASED, mouseReleasedEventHandler);
+                    }
                     
                     // show submenu when the menu is hovered over
-                    addEventHandler(MouseEvent.MOUSE_ENTERED, new EventHandler<MouseEvent>() {
-                        @Override public void handle(MouseEvent event) {
-                            if (openSubmenu != null && item != openSubmenu) {
-                                // if a submenu of a different menu is already
-                                // open then close it (RT-15049)
-                                hideSubmenu();
-                            }
-                            
-                            if (menu.isDisable()) return;
-                            selectedBackground = MenuItemContainer.this;
-                            menu.show();
-                            requestFocus();  // request Focus on hover
-                        }
-                    });
-                    addEventHandler(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
-                        @Override public void handle(MouseEvent event) {
-                            item.fire();
-                        }
-                    });
+                    addEventHandler(MouseEvent.MOUSE_ENTERED, mouseEnteredEventHandler);
+                    addEventHandler(MouseEvent.MOUSE_RELEASED, mouseReleasedEventHandler);
                 } else { // normal MenuItem
-                    // accelerator text
-//                    Label rightNode = new Label("Ctrl+x");
-//                    rightNode.getStyleClass().add("accelerator-text");
-//
-//                    StackPane rightPane = new StackPane();
-//                    rightPane.setMaxWidth(Math.max(rightNode.prefWidth(-1), 10));
-//                    rightPane.setMouseTransparent(true);
-//                    rightPane.getStyleClass().add("right-container");
-//                    rightPane.getChildren().add(rightNode);
-//                    right = rightPane;
-//                    getChildren().add(rightPane);
-                    
+                    // remove old listeners
+                    listener.unregisterChangeListener(item.acceleratorProperty());
+                    listener.unregisterChangeListener(focusedProperty());
+
                     // accelerator support
                     updateAccelerator();
-                    listener.registerChangeListener(item.acceleratorProperty(), "ACCELERATOR");
 
-                    addEventHandler(MouseEvent.MOUSE_ENTERED,new EventHandler<MouseEvent>() {
-                        @Override public void handle(MouseEvent event) {
-                            if (openSubmenu != null) {
-                                openSubmenu.hide();
+                    if (mouseEnteredEventHandler == null) {
+                        mouseEnteredEventHandler = new EventHandler<MouseEvent>() {
+                            @Override public void handle(MouseEvent event) {
+                                if (openSubmenu != null) {
+                                    openSubmenu.hide();
+                                }
+                                requestFocus();  // request Focus on hover
                             }
-                            requestFocus();  // request Focus on hover
-                        }
-                    });
-                    addEventHandler(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
-                        @Override public void handle(MouseEvent event) {
-                            doSelect();
-                        }
-                    });
+                        };
+                    } else {
+                        removeEventHandler(MouseEvent.MOUSE_ENTERED, mouseEnteredEventHandler);
+                    }
+
+                    if (mouseReleasedEventHandler == null) {
+                        mouseReleasedEventHandler = new EventHandler<MouseEvent>() {
+                            @Override public void handle(MouseEvent event) {
+                                doSelect();
+                            }
+                        };
+                    } else {
+                        removeEventHandler(MouseEvent.MOUSE_RELEASED, mouseReleasedEventHandler);
+                    }
+
+                    addEventHandler(MouseEvent.MOUSE_ENTERED, mouseEnteredEventHandler);
+                    addEventHandler(MouseEvent.MOUSE_RELEASED, mouseReleasedEventHandler);
+
+                    listener.registerChangeListener(item.acceleratorProperty(), "ACCELERATOR");
                     // RT-19546 update currentFocusedIndex when MenuItemContainer gets focused.
                     // e.g this happens when you press the Right key to open a submenu; the first
                     // menuitem is focused.
-                    focusedProperty().addListener(new ChangeListener<Boolean>() {
-                        @Override public void changed(ObservableValue<? extends Boolean> ov,
-                                                                    Boolean t, Boolean t1) {
-                            if (t1 && !t) {
-                                currentFocusedIndex =
-                                    itemsContainer.getChildren().indexOf(MenuItemContainer.this);
-                            }
-                        }
-                    });
+                    listener.registerChangeListener(focusedProperty(), "FOCUSED");
                 }
             }
         }
