@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,20 +25,12 @@
 
 package com.sun.javafx.font.freetype;
 
-import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
-import java.nio.charset.Charset;
-import java.nio.charset.CharsetEncoder;
-import java.nio.charset.CoderResult;
-import java.nio.charset.StandardCharsets;
 import com.sun.javafx.font.CompositeFontResource;
 import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.PGFont;
 import com.sun.javafx.font.PrismFontFactory;
-import com.sun.javafx.scene.text.TextSpan;
 import com.sun.javafx.text.GlyphLayout;
-import com.sun.javafx.text.PrismTextLayout;
 import com.sun.javafx.text.TextRun;
 
 class PangoGlyphLayout extends GlyphLayout {
@@ -70,32 +62,15 @@ class PangoGlyphLayout extends GlyphLayout {
         return slot;
     }
 
-    protected TextRun addTextRun(PrismTextLayout layout, char[] chars, int start,
-                                 int length, PGFont font, TextSpan span, byte level) {
+    private long str = 0L;
+    public void layout(TextRun run, PGFont font, FontStrike strike, char[] text) {
 
-        TextRun textRun = null;
-        Charset utf8 = StandardCharsets.UTF_8;
-        CharsetEncoder encoder = utf8.newEncoder();
-        CharBuffer in = CharBuffer.wrap(chars, start, length);
-        int capacity = (int)(length * (double)encoder.averageBytesPerChar());
-        ByteBuffer out = ByteBuffer.allocateDirect(capacity);
-        CoderResult result = encoder.encode(in, out, true);
-        if (result.isOverflow()) {
-            capacity = (int)(length * (double)encoder.maxBytesPerChar());
-            in = CharBuffer.wrap(chars, start, length);
-            out = ByteBuffer.allocateDirect(capacity);
-            encoder.encode(in, out, true);
-            if (PrismFontFactory.debugFonts) {
-                System.err.println("[PANGO] ByteBuffer capacity increased " + out);
-            }
-        }
-
+        /* Create the pango font and attribute list */
         FontResource fr = font.getFontResource();
         boolean composite = fr instanceof CompositeFontResource;
         if (composite) {
             fr = ((CompositeFontResource)fr).getSlotResource(0);
         }
-
         long fontmap = OSPango.pango_ft2_font_map_new();
         long context = OSPango.pango_font_map_create_context(fontmap);
         float size = font.getSize();
@@ -114,50 +89,87 @@ class PangoGlyphLayout extends GlyphLayout {
             attr = OSPango.pango_attr_fallback_new(false);
             OSPango.pango_attr_list_insert(attrList, attr);
         }
-        long runs = OSPango.pango_itemize(context, out, 0, out.position(), attrList, 0);
+
+        if (str == 0L) {
+            str = OSPango.g_utf16_to_utf8(text);
+            if (str == 0L) {
+                if (PrismFontFactory.debugFonts) {
+                    System.err.println("Failed allocating UTF-8 buffer.");
+                }
+                return;
+            }
+        }
+
+        /* Itemize */
+        long start = OSPango.g_utf8_offset_to_pointer(str, run.getStart());
+        long end = OSPango.g_utf8_offset_to_pointer(str, run.getEnd());
+        long runs = OSPango.pango_itemize(context, str, (int)(start - str), (int)(end - start), attrList, 0);
+
         if (runs != 0) {
+            /* Shape all PangoItem into PangoGlyphString */
             int runsCount = OSPango.g_list_length(runs);
-            int runStart = start;
+            PangoGlyphString[] pangoGlyphs = new PangoGlyphString[runsCount];
             for (int i = 0; i < runsCount; i++) {
                 long pangoItem = OSPango.g_list_nth_data(runs, i);
-                PangoGlyphString glyphString = OSPango.pango_shape(out, pangoItem);
-                OSPango.pango_item_free(pangoItem);
-                if (glyphString != null) {
-                    int slot = composite ? getSlot(font, glyphString) : 0;
-                    int glyphCount = glyphString.num_glyphs;
-                    int[] glyphs = new int[glyphCount];
-                    float[] pos = new float[glyphCount*2+2];
-                    PangoGlyphInfo info = null;
-                    int k = 2;
-                    int width = 0;
-                    for (int j = 0; j < glyphCount; j++) {
-                        info = glyphString.glyphs[j];
-                        if (slot != -1) {
-                            glyphs[j] = (slot << 24) | info.glyph;
-                        }
-                        if (size != 0) width += info.width;
-                        pos[k] = ((float)width) / OSPango.PANGO_SCALE;
-                        k += 2;
-                    }
-
-                    int runLength = glyphString.num_chars;
-                    textRun = new TextRun(runStart, runLength, level, true, 0, span, 0, false);
-                    textRun.shape(glyphCount, glyphs, pos, glyphString.log_clusters);
-                    layout.addTextRun(textRun);
-                    runStart += runLength;
+                if (pangoItem != 0) {
+                    pangoGlyphs[i] = OSPango.pango_shape(str, pangoItem);
+                    OSPango.pango_item_free(pangoItem);
                 }
             }
             OSPango.g_list_free(runs);
+
+            boolean rtl = (run.getLevel() & 1) != 0;
+            int glyphCount = 0;
+            for (PangoGlyphString g : pangoGlyphs) {
+                if (g != null) {
+                    glyphCount += g.num_glyphs;
+                }
+            }
+            int[] glyphs = new int[glyphCount];
+            float[] pos = new float[glyphCount * 2 + 2];
+            int[] indices = new int[run.getLength()];
+            int gi = 0;                             /* glyph index */
+            int lci = 0;                            /* logical char index */
+            int vci = rtl ? run.getLength() : 0;    /* visual char index */
+            int width = 0;
+            for (PangoGlyphString g : pangoGlyphs) {
+                if (g != null) {
+                    int slot = composite ? getSlot(font, g) : 0;
+                    for (int i = 0; i < g.num_glyphs; i++) {
+                        PangoGlyphInfo info = g.glyphs[i];
+                        if (slot != -1) {
+                            glyphs[gi + i] = (slot << 24) | info.glyph;
+                        }
+                        if (size != 0) {
+                            width += info.width;
+                            pos[2 + ((gi + i) << 1)] = ((float)width) / OSPango.PANGO_SCALE;
+                        }
+                    }
+                    if (rtl) vci -= g.num_chars;
+                    for (int i = 0; i < g.log_clusters.length; i++) {
+                        indices[lci + i] = g.log_clusters[i] + vci;
+                    }
+                    if (!rtl) vci += g.num_chars;
+                    lci += g.num_chars;
+                    gi += g.num_glyphs;
+                }
+            }
+            run.shape(glyphCount, glyphs, pos, indices);
         }
+
         /* pango_attr_list_unref() also frees the attributes it contains */
         OSPango.pango_attr_list_unref(attrList);
         OSPango.pango_font_description_free(desc);
         OSPango.g_object_unref(context);
         OSPango.g_object_unref(fontmap);
-        return textRun;
     }
 
-    public void layout(TextRun run, PGFont font, FontStrike strike, char[] text) {
-        // Nothing - complex run are analyzed by Pango during break run
+    @Override
+    public void dispose() {
+        super.dispose();
+        if (str != 0L) {
+            OSPango.g_free(str);
+            str = 0L;
+        }
     }
 }

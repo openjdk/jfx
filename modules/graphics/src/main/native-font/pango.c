@@ -113,28 +113,18 @@ void cachePangoGlyphStringFields(JNIEnv *env)
 
 /** Custom **/
 JNIEXPORT jlong JNICALL OS_NATIVE(pango_1itemize)
-    (JNIEnv *env, jclass that, jlong arg0, jobject arg1, jint arg2, jint arg3, jlong arg4, jlong arg5)
+    (JNIEnv *env, jclass that, jlong arg0, jlong arg1, jint arg2, jint arg3, jlong arg4, jlong arg5)
 {
-    jbyte *lparg1=NULL;
-    jlong rc = 0;
-    if (arg1) lparg1 = (*env)->GetDirectBufferAddress(env, arg1);
-    if (lparg1) {
-        rc = (jlong)pango_itemize((PangoContext *)arg0, (const char *)lparg1, arg2, arg3, (PangoAttrList *)arg4, (PangoAttrIterator *)arg5);
-    }
-    return rc;
+    return (jlong)pango_itemize((PangoContext *)arg0, (const char *)arg1, arg2, arg3, (PangoAttrList *)arg4, (PangoAttrIterator *)arg5);
 }
 
-
 JNIEXPORT jobject JNICALL OS_NATIVE(pango_1shape)
-    (JNIEnv *env, jclass that, jobject nioBuffer, jlong pangoItem)
+    (JNIEnv *env, jclass that, jlong str, jlong pangoItem)
 {
     if (!pangoItem) return NULL;
-    if (!nioBuffer) return NULL;
-    void *bytePtr = (*env)->GetDirectBufferAddress(env, nioBuffer);
-    if (!bytePtr) return NULL;
     PangoItem *item = (PangoItem *)pangoItem;
     PangoAnalysis analysis = item->analysis;
-    const gchar *text= bytePtr + item->offset;
+    const gchar *text= (const gchar *)(str + item->offset);
     PangoGlyphString *glyphs = pango_glyph_string_new();
 
     pango_shape(text, item->length, &analysis, glyphs);
@@ -334,6 +324,34 @@ JNIEXPORT void JNICALL OS_NATIVE(g_1list_1free)
     (JNIEnv *env, jclass that, jlong arg0)
 {
     g_list_free((GList *)arg0);
+}
+
+JNIEXPORT jlong JNICALL OS_NATIVE(g_1utf8_1offset_1to_1pointer)
+    (JNIEnv *env, jclass that, jlong arg0, jlong arg1)
+{
+    return (jlong)g_utf8_offset_to_pointer((const gchar *)arg0, (glong)arg1);
+}
+
+JNIEXPORT jlong JNICALL OS_NATIVE(g_1utf8_1pointer_1to_1offset)
+    (JNIEnv *env, jclass that, jlong arg0, jlong arg1)
+{
+    return (jlong)g_utf8_pointer_to_offset((const gchar *)arg0, (const gchar *)arg1);
+}
+
+JNIEXPORT jlong JNICALL OS_NATIVE(g_1utf16_1to_1utf8)
+    (JNIEnv *env, jclass that, jcharArray arg0)
+{
+    jsize length = (*env)->GetArrayLength(env, arg0);
+    void *ch = (*env)->GetPrimitiveArrayCritical(env, arg0, 0);
+    jlong str = (jlong)g_utf16_to_utf8((const gunichar2 *)ch, length, NULL, NULL, NULL);
+    (*env)->ReleasePrimitiveArrayCritical(env, arg0, ch, 0);
+    return str;
+}
+
+JNIEXPORT void JNICALL OS_NATIVE(g_1free)
+    (JNIEnv *env, jclass that, jlong arg0)
+{
+    g_free((gpointer)arg0);
 }
 
 JNIEXPORT void JNICALL OS_NATIVE(pango_1attr_1list_1unref)
