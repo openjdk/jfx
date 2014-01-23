@@ -309,6 +309,10 @@ ext.IS_COMPILE_MEDIA = Boolean.parseBoolean(COMPILE_MEDIA)
 defineProperty("COMPILE_PANGO", "${IS_LINUX}")
 ext.IS_COMPILE_PANGO = Boolean.parseBoolean(COMPILE_PANGO)
 
+// COMPILE_HARFBUZZ specifies whether to use Harfbuzz.
+defineProperty("COMPILE_HARFBUZZ", "false")
+ext.IS_COMPILE_HARFBUZZ = Boolean.parseBoolean(COMPILE_HARFBUZZ)
+
 // COMPILE_PARFAIT specifies whether to build parfait
 defineProperty("COMPILE_PARFAIT", "false")
 ext.IS_COMPILE_PARFAIT = Boolean.parseBoolean(COMPILE_PARFAIT)
