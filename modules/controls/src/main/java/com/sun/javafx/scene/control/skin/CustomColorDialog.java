@@ -203,8 +203,12 @@ public class CustomColorDialog extends HBox {
             // don't recalculate min size once it's set
             return;
         }
-        dialog.setMinWidth(computeMinWidth(getHeight()) + (dialog.getWidth() - customScene.getWidth()));
-        dialog.setMinHeight(computeMinHeight(getWidth()) + (dialog.getHeight() - customScene.getHeight()));
+
+        // Math.max(0, ...) added for RT-34704 to ensure the dialog is at least 0 x 0
+        double minWidth = Math.max(0, computeMinWidth(getHeight()) + (dialog.getWidth() - customScene.getWidth()));
+        double minHeight = Math.max(0, computeMinHeight(getWidth()) + (dialog.getHeight() - customScene.getHeight()));
+        dialog.setMinWidth(minWidth);
+        dialog.setMinHeight(minHeight);
     }
        
     /* ------------------------------------------------------------------------*/
