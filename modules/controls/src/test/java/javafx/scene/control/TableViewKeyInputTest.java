@@ -3304,4 +3304,14 @@ public class TableViewKeyInputTest {
         assertEquals(leadSelectedIndex, sm.getSelectedIndex());
         assertEquals(selectedIndicesCount, sm.getSelectedIndices().size());
     }
+
+    @Test public void test_rt34768() {
+        tableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        TableColumn<String, String> firstNameCol = new TableColumn<>("First Name");
+        tableView.getColumns().setAll(firstNameCol);
+        tableView.getItems().clear();
+
+        // no need for an assert here - we're testing for an AIOOBE
+        keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
+    }
 }

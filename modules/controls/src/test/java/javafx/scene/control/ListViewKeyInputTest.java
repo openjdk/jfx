@@ -1877,4 +1877,12 @@ public class ListViewKeyInputTest {
         assertEquals(leadSelectedIndex, sm.getSelectedIndex());
         assertEquals(selectedIndicesCount, sm.getSelectedIndices().size());
     }
+
+    @Test public void test_rt34768() {
+        listView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        listView.getItems().clear();
+
+        // no need for an assert here - we're testing for an AIOOBE
+        keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
+    }
 }

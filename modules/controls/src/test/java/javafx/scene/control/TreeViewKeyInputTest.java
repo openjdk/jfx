@@ -2106,4 +2106,13 @@ public class TreeViewKeyInputTest {
         assertEquals(leadSelectedIndex, sm.getSelectedIndex());
         assertEquals(selectedIndicesCount, sm.getSelectedIndices().size());
     }
+
+    @Test public void test_rt34768() {
+        treeView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        TreeTableColumn<String, String> firstNameCol = new TreeTableColumn<>("First Name");
+        treeView.setRoot(null);
+
+        // no need for an assert here - we're testing for an AIOOBE
+        keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
+    }
 }
