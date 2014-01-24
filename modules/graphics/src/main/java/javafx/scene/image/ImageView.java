@@ -777,7 +777,7 @@ public class ImageView extends Node {
      * * Stylesheet Handling * *
      **************************************************************************/
 
-    private static final String DEFAULT_STYLE_CLASS = "image_view";
+    private static final String DEFAULT_STYLE_CLASS = "image-view";
 
      /**
       * Super-lazy instantiation pattern from Bill Pugh.
