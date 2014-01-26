@@ -40,6 +40,10 @@ public class TouchTestBase {
     private SystemErrFilter systemErrFilter;
     protected Rectangle2D screen;
     private double absXMax, absYMax;
+    /** UNDEFINED is an arbitrary marker to use for when we want to avoid
+     *  setting a value for a coordinate.
+     */
+    protected static final double UNDEFINED = Double.MAX_VALUE / Math.PI;
 
     static class SystemErrFilter extends PrintStream {
         private boolean foundException = false;
@@ -103,17 +107,25 @@ public class TouchTestBase {
     }
 
     protected void absMTPosition(double x, double y) {
-        ui.processLine("EV_ABS ABS_MT_POSITION_X "
-                + Math.round(x * absXMax / screen.getWidth()));
-        ui.processLine("EV_ABS ABS_MT_POSITION_Y "
-                + Math.round(y * absYMax / screen.getHeight()));
+        if (x != UNDEFINED) {
+            ui.processLine("EV_ABS ABS_MT_POSITION_X "
+                    + Math.round(x * absXMax / screen.getWidth()));
+        }
+        if (y != UNDEFINED) {
+            ui.processLine("EV_ABS ABS_MT_POSITION_Y "
+                    + Math.round(y * absYMax / screen.getHeight()));
+        }
     }
 
     protected void absPosition(double x, double y) {
-        ui.processLine("EV_ABS ABS_X "
-                + Math.round(x * absXMax / screen.getWidth()));
-        ui.processLine("EV_ABS ABS_Y "
-                + Math.round(y * absYMax / screen.getHeight()));
+        if (x != UNDEFINED) {
+            ui.processLine("EV_ABS ABS_X "
+                    + Math.round(x * absXMax / screen.getWidth()));
+        }
+        if (y != UNDEFINED) {
+            ui.processLine("EV_ABS ABS_Y "
+                    + Math.round(y * absYMax / screen.getHeight()));
+        }
     }
 
 }

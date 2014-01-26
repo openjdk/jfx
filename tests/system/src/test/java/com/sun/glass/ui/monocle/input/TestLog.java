@@ -33,6 +33,9 @@ import java.util.Formatter;
 import java.util.List;
 
 public class TestLog {
+
+    private static final long DEFAULT_TIMEOUT = 3000l;
+
     private static final List<String> log = new ArrayList<>();
     private static final Object lock = new Object();
 
@@ -209,6 +212,18 @@ public class TestLog {
 
     public static String waitForLogContaining(String s, long timeout) throws InterruptedException {
         return waitForLog(s, timeout, false);
+    }
+
+    public static String waitForLog(String format, Object... args) throws InterruptedException {
+        return waitForLog(new Formatter().format(format, args).toString(),
+                          DEFAULT_TIMEOUT);
+
+    }
+
+    public static String waitForLogContaining(String format, Object... args) throws InterruptedException {
+        return waitForLogContaining(new Formatter().format(format, args).toString(),
+                          DEFAULT_TIMEOUT);
+
     }
 
 }
