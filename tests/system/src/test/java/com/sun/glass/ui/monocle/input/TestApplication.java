@@ -167,15 +167,15 @@ public class TestApplication extends Application {
     }
 
     public static void waitForNextPulse() throws InterruptedException {
-        Semaphore done = new Semaphore(1);
+        final Semaphore done = new Semaphore(1);
         done.acquire();
-        new AnimationTimer() {
+        Platform.runLater(() -> new AnimationTimer() {
             @Override
             public void handle(long now) {
                 done.release();
                 stop();
             }
-        }.start();
+        }.start());
         done.acquire();
     }
 

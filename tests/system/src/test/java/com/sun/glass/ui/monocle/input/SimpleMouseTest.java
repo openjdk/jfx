@@ -54,6 +54,7 @@ public class SimpleMouseTest {
         ui.processLine("EVBIT EV_REL");
         ui.processLine("RELBIT REL_X");
         ui.processLine("RELBIT REL_Y");
+        ui.processLine("RELBIT REL_WHEEL");
         ui.processLine("PROPERTY ID_INPUT_MOUSE 1");
         ui.processLine("CREATE");
     }
@@ -89,4 +90,25 @@ public class SimpleMouseTest {
         TestLog.waitForLog("Mouse dragged: 200, 250", 3000);
         TestLog.waitForLog("Mouse released: 200, 250", 3000);
     }
+
+    @Test
+    public void testWheel() throws Exception {
+        TestApplication.getStage().getScene().setOnScroll(
+                (e) -> TestLog.format("Scroll: %.0g",
+                                      Math.signum(e.getDeltaY())));
+        ui.processLine("EV_SYN");
+        ui.processLine("EV_REL REL_WHEEL 1");
+        ui.processLine("EV_SYN");
+        ui.processLine("EV_REL REL_WHEEL 0");
+        ui.processLine("EV_SYN");
+        TestLog.waitForLog("Scroll: 1");
+        TestLog.reset();
+
+        ui.processLine("EV_REL REL_WHEEL -1");
+        ui.processLine("EV_SYN");
+        ui.processLine("EV_REL REL_WHEEL 0");
+        ui.processLine("EV_SYN");
+        TestLog.waitForLog("Scroll: -1");
+    }
+
 }

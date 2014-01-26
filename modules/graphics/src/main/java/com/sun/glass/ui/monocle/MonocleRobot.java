@@ -32,6 +32,7 @@ import com.sun.glass.ui.monocle.input.KeyInput;
 import com.sun.glass.ui.monocle.input.KeyState;
 import com.sun.glass.ui.monocle.input.MouseInput;
 import com.sun.glass.ui.monocle.input.MouseState;
+import javafx.application.Platform;
 
 import java.nio.IntBuffer;
 
@@ -46,64 +47,105 @@ public class MonocleRobot extends Robot {
 
     @Override
     protected void _keyPress(int code) {
-        KeyState state = new KeyState();
-        KeyInput.getInstance().getState(state);
-        state.pressKey(code);
-        KeyInput.getInstance().setState(state);
+        Platform.runLater(new Runnable() {
+            @Override
+            public void run() {
+                KeyState state = new KeyState();
+                KeyInput.getInstance().getState(state);
+                state.pressKey(code);
+                KeyInput.getInstance().setState(state);
+            }
+        });
     }
 
     @Override
     protected void _keyRelease(int code) {
-        KeyState state = new KeyState();
-        KeyInput.getInstance().getState(state);
-        state.releaseKey(code);
-        KeyInput.getInstance().setState(state);
+        Platform.runLater(new Runnable() {
+            @Override
+            public void run() {
+                KeyState state = new KeyState();
+                KeyInput.getInstance().getState(state);
+                state.releaseKey(code);
+                KeyInput.getInstance().setState(state);
+            }
+        });
     }
 
     @Override
     protected void _mouseMove(int x, int y) {
-        MouseState state = new MouseState();
-        MouseInput.getInstance().getState(state);
-        state.setX(x);
-        state.setY(y);
-        MouseInput.getInstance().setState(state, false);
+        Platform.runLater(new Runnable() {
+            @Override
+            public void run() {
+                MouseState state = new MouseState();
+                MouseInput.getInstance().getState(state);
+                state.setX(x);
+                state.setY(y);
+                MouseInput.getInstance().setState(state, false);
+            }
+        });
     }
 
     @Override
     protected void _mousePress(int buttons) {
-        MouseState state = new MouseState();
-        MouseInput.getInstance().getState(state);
-        if ((buttons & MOUSE_LEFT_BTN) != 0) {
-            state.pressButton(MouseEvent.BUTTON_LEFT);
-        }
-        if ((buttons & MOUSE_MIDDLE_BTN) != 0) {
-            state.pressButton(MouseEvent.BUTTON_OTHER);
-        }
-        if ((buttons & MOUSE_RIGHT_BTN) != 0) {
-            state.pressButton(MouseEvent.BUTTON_RIGHT);
-        }
-        MouseInput.getInstance().setState(state, false);
+        Platform.runLater(new Runnable() {
+            @Override
+            public void run() {
+                MouseState state = new MouseState();
+                MouseInput.getInstance().getState(state);
+                if ((buttons & MOUSE_LEFT_BTN) != 0) {
+                    state.pressButton(MouseEvent.BUTTON_LEFT);
+                }
+                if ((buttons & MOUSE_MIDDLE_BTN) != 0) {
+                    state.pressButton(MouseEvent.BUTTON_OTHER);
+                }
+                if ((buttons & MOUSE_RIGHT_BTN) != 0) {
+                    state.pressButton(MouseEvent.BUTTON_RIGHT);
+                }
+                MouseInput.getInstance().setState(state, false);
+            }
+        });
     }
 
     @Override
     protected void _mouseRelease(int buttons) {
-        MouseState state = new MouseState();
-        MouseInput.getInstance().getState(state);
-        if ((buttons & MOUSE_LEFT_BTN) != 0) {
-            state.pressButton(MouseEvent.BUTTON_LEFT);
-        }
-        if ((buttons & MOUSE_MIDDLE_BTN) != 0) {
-            state.pressButton(MouseEvent.BUTTON_OTHER);
-        }
-        if ((buttons & MOUSE_RIGHT_BTN) != 0) {
-            state.pressButton(MouseEvent.BUTTON_RIGHT);
-        }
-        MouseInput.getInstance().setState(state, false);
+        Platform.runLater(new Runnable() {
+            @Override
+            public void run() {
+                MouseState state = new MouseState();
+                MouseInput.getInstance().getState(state);
+                if ((buttons & MOUSE_LEFT_BTN) != 0) {
+                    state.releaseButton(MouseEvent.BUTTON_LEFT);
+                }
+                if ((buttons & MOUSE_MIDDLE_BTN) != 0) {
+                    state.releaseButton(MouseEvent.BUTTON_OTHER);
+                }
+                if ((buttons & MOUSE_RIGHT_BTN) != 0) {
+                    state.releaseButton(MouseEvent.BUTTON_RIGHT);
+                }
+                MouseInput.getInstance().setState(state, false);
+            }
+        });
     }
 
     @Override
     protected void _mouseWheel(int wheelAmt) {
-        // TODO: Mouse wheel robot
+        Platform.runLater(new Runnable() {
+            @Override
+            public void run() {
+                MouseState state = new MouseState();
+                MouseInput mouse = MouseInput.getInstance();
+                mouse.getState(state);
+                int direction = wheelAmt < 0
+                                ? MouseState.WHEEL_DOWN
+                                : MouseState.WHEEL_UP;
+                for (int i = 0; i < Math.abs(wheelAmt); i++) {
+                    state.setWheel(direction);
+                    mouse.setState(state, false);
+                    state.setWheel(MouseState.WHEEL_NONE);
+                    mouse.setState(state, false);
+                }
+            }
+        });
     }
 
     @Override

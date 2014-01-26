@@ -148,6 +148,19 @@ public class MouseInput {
             }
         }
         buttons.clear();
+        // send scroll events
+        if (newState.getWheel() != state.getWheel()) {
+            double dY;
+            switch (newState.getWheel()) {
+                case MouseState.WHEEL_DOWN: dY = -1.0; break;
+                case MouseState.WHEEL_UP: dY = 1.0; break;
+                default: dY = 0.0; break;
+            }
+            if (dY != 0.0) {
+                view.notifyScroll(relX, relY, x, y, 0.0, dY,
+                                  newState.getModifiers(), 1, 0, 0, 0, 1.0, 1.0);
+            }
+        }
         newState.copyTo(state);
     }
 

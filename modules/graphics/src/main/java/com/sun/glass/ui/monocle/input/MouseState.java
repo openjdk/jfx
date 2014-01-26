@@ -33,8 +33,13 @@ import com.sun.glass.ui.monocle.util.IntSet;
 
 public class MouseState {
 
+    public static final int WHEEL_NONE = 0;
+    public static final int WHEEL_UP = 1;
+    public static final int WHEEL_DOWN = -1 ;
+
     private int x;
     private int y;
+    private int wheel;
     private MonocleWindow window;
 
     private IntSet buttonsPressed = new IntSet();
@@ -53,6 +58,14 @@ public class MouseState {
 
     public void setY(int y) {
         this.y = y;
+    }
+
+    public int getWheel() {
+        return wheel;
+    }
+
+    public void setWheel(int wheel) {
+        this.wheel = wheel;
     }
 
     public void pressButton(int button) {
@@ -101,6 +114,7 @@ public class MouseState {
     public void copyTo(MouseState target) {
         target.x = x;
         target.y = y;
+        target.wheel = wheel;
         buttonsPressed.copyTo(target.buttonsPressed);
         target.window = window;
     }
@@ -112,6 +126,17 @@ public class MouseState {
     public String toString() {
         return "MouseState[x="
                 + x + ",y=" + y
+                + ",wheel=" + wheel
                 + ",buttonsPressed=" + buttonsPressed + "]";
     }
+
+    /** Finds out whether two non-null states are identical in everything but
+     * their coordinates
+     *
+     * @param ms the MouseState to compare to
+     */
+    public boolean canBeFoldedWith(MouseState ms) {
+        return ms.buttonsPressed.equals(buttonsPressed) && ms.wheel == wheel;
+    }
+
 }
