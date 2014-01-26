@@ -182,7 +182,6 @@ public class SimpleTouchTest extends TouchTestBase {
      * Touch down, drag, touch up, coordinates sent before tap
      */
     @Test
-    @Ignore("RT-34296")
     public void tapAndDrag4() throws Exception {
         Rectangle2D r = Screen.getPrimary().getBounds();
         final int width = (int) r.getWidth();
@@ -194,21 +193,23 @@ public class SimpleTouchTest extends TouchTestBase {
         // send coordinates
         absPosition(x2, y2);
         ui.processLine("EV_SYN SYN_REPORT 0");
+        TestLog.waitForLog("Mouse pressed: %d, %d", x2, y2);
         // tap
         absPosition(x1, y1);
         ui.processLine("EV_KEY BTN_TOUCH 1");
         ui.processLine("EV_SYN SYN_REPORT 0");
+        TestLog.waitForLog("Mouse dragged: %d, %d", x1, y1);
         // drag
         absPosition(x2, y2);
         ui.processLine("EV_SYN SYN_REPORT 0");
+        TestLog.waitForLog("Mouse dragged: %d, %d", x2, y2);
         // release
         ui.processLine("EV_KEY BTN_TOUCH 0 ");
         ui.processLine("EV_SYN SYN_REPORT 0");
-        TestLog.waitForLog("Mouse pressed: %d, %d", x1, y1);
-        TestLog.waitForLog("Mouse dragged: %d, %d", x2, y2);
         TestLog.waitForLog("Mouse released: %d, %d", x2, y2);
         TestLog.waitForLog("Mouse clicked: %d, %d", x2, y2);
-        TestLog.waitForLog("Touch pressed: %d, %d", x1, y1);
+        TestLog.waitForLog("Touch pressed: %d, %d", x2, y2);
+        TestLog.waitForLog("Touch moved: %d, %d", x1, y1);
         TestLog.waitForLog("Touch moved: %d, %d", x2, y2);
         TestLog.waitForLog("Touch released: %d, %d", x2, y2);
     }
