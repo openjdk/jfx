@@ -101,7 +101,7 @@ public class TestApplication extends Application {
             Platform.runLater(() -> {
                 if (isMonocle()) {
                     tapRadius = TouchInput.getInstance().getTouchMoveSensitivity();
-                    useMultitouch = false; // RT-35407
+                    useMultitouch = true;
                 } else {
                     tapRadius = Integer.getInteger("lens.input.touch.TapRadius", 20);
                     useMultitouch = Boolean.getBoolean("com.sun.javafx.experimental.embedded.multiTouch");

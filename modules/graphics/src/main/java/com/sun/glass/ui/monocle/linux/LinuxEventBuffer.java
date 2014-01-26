@@ -65,7 +65,7 @@ public class LinuxEventBuffer {
      */
     public synchronized boolean put(ByteBuffer event) throws InterruptedException {
         boolean isSync = event.getInt(EVENT_STRUCT_TYPE_INDEX) == 0
-                && event.getInt(EVENT_STRUCT_CODE_INDEX) == 0;
+                && event.getInt(EVENT_STRUCT_VALUE_INDEX) == 0;
         while (bb.limit() - bb.position() < event.limit()) {
             // Block if bb is full. This should be the
             // only time this thread waits for anything

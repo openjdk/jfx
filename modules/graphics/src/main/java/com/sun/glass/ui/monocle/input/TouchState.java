@@ -56,7 +56,7 @@ public class TouchState {
 
     private Point[] points = new Point[1];
     private int pointCount = 0;
-    private int primaryID = 0;
+    private int primaryID = -1;
     private MonocleWindow window;
 
     /** Returns the Glass window on which this event state is located.
@@ -69,7 +69,7 @@ public class TouchState {
     MonocleWindow getWindow(boolean recalculateCache, MonocleWindow fallback) {
         if (window == null || recalculateCache) {
             window = fallback;
-            if (primaryID > 0) {
+            if (primaryID >= 0) {
                 Point p = getPointForID(primaryID, false);
                 if (p != null) {
                     window = (MonocleWindow)
@@ -87,13 +87,13 @@ public class TouchState {
 
     /** Gets the Point matching the given ID, optionally reinstating the point
      * from the previous touch state.
-     * @param id The Point ID to match. A value or zero matches any Point.
+     * @param id The Point ID to match. A value of -1 matches any Point.
      * @return a matching Point, or a new Point if there was no match and
      * reinstatement was requested; null otherwise
      */
     public Point getPointForID(int id, boolean reinstate) {
         for (int i = 0; i < pointCount; i++) {
-            if (id == 0 || points[i].id == id) {
+            if (id == -1 || points[i].id == id) {
                 return points[i];
             }
         }
@@ -170,7 +170,7 @@ public class TouchState {
     public void copyTo(TouchState target) {
         target.clear();
         for (int i = 0; i < pointCount; i++) {
-            target.addPoint(points[0]);
+            target.addPoint(points[i]);
         }
         target.primaryID = primaryID;
         target.window = window;

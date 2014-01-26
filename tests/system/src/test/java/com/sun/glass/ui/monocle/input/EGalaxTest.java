@@ -391,6 +391,7 @@ public class EGalaxTest extends TouchTestBase {
 
     @Test
     public void testDoubleClick2() throws Exception {
+        Assume.assumeTrue(TestApplication.isMonocle()); // RT-35536
         int x1 = (int) Math.round(screen.getWidth() / 2.0);
         int y1 = (int) Math.round(screen.getHeight() / 2.0);
         int x2 = x1 + TestApplication.getTapRadius();

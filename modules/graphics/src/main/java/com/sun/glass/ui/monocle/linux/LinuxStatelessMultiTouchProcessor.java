@@ -26,13 +26,22 @@
 package com.sun.glass.ui.monocle.linux;
 
 import com.sun.glass.ui.monocle.input.TouchLookahead;
+import com.sun.glass.ui.monocle.input.TouchState;
 
-public class LinuxTouchProcessor implements LinuxInputProcessor {
+/**
+ * This multitouch processor works with drivers that do not send a tracking ID
+ * themselves. Drivers that do not send tracking IDs will send all touch points
+ * in each SYN_REPORT-terminated event sequence. So for these drivers we will
+ * clear touch state before each event sequence.
+ */
+public class LinuxStatelessMultiTouchProcessor implements LinuxInputProcessor {
+
+    private static final int COORD_UNDEFINED = Integer.MIN_VALUE;
 
     private final TouchLookahead tl = new TouchLookahead();
     private final LinuxTouchTransform transform;
 
-    LinuxTouchProcessor(LinuxInputDevice device) {
+    LinuxStatelessMultiTouchProcessor(LinuxInputDevice device) {
         tl.setAssignIDs(true);
         transform = new LinuxTouchTransform(device);
     }
@@ -41,6 +50,8 @@ public class LinuxTouchProcessor implements LinuxInputProcessor {
     public void processEvents(LinuxInputDevice device) {
         LinuxEventBuffer buffer = device.getBuffer();
         tl.pullState(true);
+        int x = COORD_UNDEFINED;
+        int y = COORD_UNDEFINED;
         boolean touchReleased = false;
         while (buffer.hasNextEvent()) {
             switch (buffer.getEventType()) {
@@ -49,11 +60,11 @@ public class LinuxTouchProcessor implements LinuxInputProcessor {
                     switch (transform.getAxis(buffer)) {
                         case Input.ABS_X:
                         case Input.ABS_MT_POSITION_X:
-                            tl.getState().getPointForID(-1, true).x = value;
+                            x = value;
                             break;
                         case Input.ABS_Y:
                         case Input.ABS_MT_POSITION_Y:
-                            tl.getState().getPointForID(-1, true).y = value;
+                            y = value;
                             break;
                     }
                     break;
@@ -63,23 +74,30 @@ public class LinuxTouchProcessor implements LinuxInputProcessor {
                         case Input.BTN_TOUCH:
                             if (buffer.getEventValue() == 0) {
                                 touchReleased = true;
-                            } else {
-                                // restore an old point
-                                tl.getState().getPointForID(-1, true);
                             }
                             break;
                     }
                     break;
                 case Input.EV_SYN:
                     switch (buffer.getEventCode()) {
+                        case Input.SYN_MT_REPORT: {
+                            if (x != COORD_UNDEFINED && y != COORD_UNDEFINED) {
+                                TouchState.Point p = tl.getState().addPoint(null);
+                                p.id = 0;
+                                p.x = x;
+                                p.y = y;
+                            }
+                            x = y = COORD_UNDEFINED;
+                            break;
+                        }
                         case Input.SYN_REPORT:
                             if (touchReleased) {
                                 // remove points
                                 tl.getState().clear();
                                 touchReleased = false;
-                            }
-                            tl.pushState();
+                            }                            tl.pushState();
                             tl.pullState(true);
+                            x = y = COORD_UNDEFINED;
                             break;
                         default: // ignore
                     }

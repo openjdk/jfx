@@ -75,7 +75,7 @@ public class TouchLookahead {
             if (state.canBeFoldedWith(previousState, assignIDs)) {
                 processedFirstEvent = true;
             } else {
-                touch.setState(state, true);
+                touch.setState(state, assignIDs);
             }
         }
         if (processedFirstEvent) {
@@ -86,7 +86,7 @@ public class TouchLookahead {
             state.sortPointsByID();
             if (!state.canBeFoldedWith(previousState, assignIDs)) {
                 // the events are different. Send "previousState".
-                touch.setState(previousState, true);
+                touch.setState(previousState, assignIDs);
             }
         }
         state.copyTo(previousState);

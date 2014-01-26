@@ -121,7 +121,18 @@ public class LinuxInputDeviceRegistry extends InputDeviceRegistry {
 
     private LinuxInputProcessor createInputProcessor(LinuxInputDevice device) {
         if (device.isTouch()) {
-            return new LinuxTouchProcessor(device);
+            BitSet absCaps = device.getCapability("abs");
+            boolean isMT = absCaps.get(Input.ABS_MT_POSITION_X)
+                    && absCaps.get(Input.ABS_MT_POSITION_Y);
+            if (isMT) {
+                if (absCaps.get(Input.ABS_MT_TRACKING_ID)) {
+                    return new LinuxStatefulMultiTouchProcessor(device);
+                } else {
+                    return new LinuxStatelessMultiTouchProcessor(device);
+                }
+            } else {
+                return new LinuxTouchProcessor(device);
+            }
         } else if (device.isRelative()) {
             return new LinuxMouseProcessor();
         } else {
