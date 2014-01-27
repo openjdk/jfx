@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,6 +44,7 @@ import javafx.stage.StageStyle;
 
 import com.sun.glass.events.WindowEvent;
 import com.sun.glass.ui.*;
+import com.sun.glass.ui.Window.Level;
 import com.sun.glass.ui.accessible.AccessibleBaseProvider;
 import com.sun.glass.ui.accessible.AccessibleRoot;
 import com.sun.javafx.PlatformUtil;
@@ -494,6 +495,18 @@ class WindowStage extends GlassStage {
         platformWindow.maximize(maximized);
     }
 
+    @Override
+    public void setAlwaysOnTop(boolean alwaysOnTop) {
+        if (alwaysOnTop) {
+            if (hasPermission(alwaysOnTopPermission)) {
+                platformWindow.setLevel(Level.FLOATING);
+            }
+        } else {
+            platformWindow.setLevel(Level.NORMAL);
+        }
+        
+    }
+
     @Override public void setResizable(boolean resizable) {
         platformWindow.setResizable(resizable);
         // note: for child windows this is ignored and we fail silently
@@ -530,6 +543,7 @@ class WindowStage extends GlassStage {
     // now AllPermission is good enough to do the job we need, such
     // as fullscreen support for signed/unsigned application.
     private static final Permission fullScreenPermission = new AllPermission();
+    private static final Permission alwaysOnTopPermission = new AllPermission();
 
     private boolean fullScreenFromUserEvent = false;
 

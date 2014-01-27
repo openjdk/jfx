@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -176,7 +176,6 @@ public:
 };
 
 class WindowContextBase: public WindowContext {
-    std::set<WindowContextTop*> children;
 
     struct _XIM{
         XIM im;
@@ -187,6 +186,7 @@ class WindowContextBase: public WindowContext {
     size_t events_processing_cnt;
     bool can_be_deleted;
 protected:
+    std::set<WindowContextTop*> children;
     jobject jwindow;
     jobject jview;
     GtkWidget* gtk_widget;
@@ -373,6 +373,7 @@ class WindowContextTop: public WindowContextBase {
     bool map_received;
     bool location_assigned;
     bool size_assigned;
+    bool on_top;
 public:
     WindowContextTop(jobject, WindowContext*, long, WindowFrameType, WindowType);
     void process_map();
@@ -417,6 +418,8 @@ private:
     void window_configure(XWindowChanges *, unsigned int);
     void update_window_constraints();
     void set_window_resizable(bool, bool);
+    void update_ontop_tree(bool);
+    bool on_top_inherited();
     WindowContextTop(WindowContextTop&);
     WindowContextTop& operator= (const WindowContextTop&);
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,7 +38,7 @@ public abstract class Window {
     public static class EventHandler {
         public void handleWindowEvent(Window window, long time, int type) {
         }
-
+        
         /**
          * Notifies a listener that the screen object for this Window instance
          * has been updated.
@@ -816,10 +816,10 @@ public abstract class Window {
         if (level < Level._MIN || level > Level._MAX) {
             throw new IllegalArgumentException("Level should be in the range [" + Level._MIN + ".." + Level._MAX + "]");
         }
-
-        _setLevel(this.ptr, level);
-
-        this.level = level;
+        if (this.level != level) {
+            _setLevel(this.ptr, level);
+            this.level = level;
+        }
     }
 
     public int getLevel() {
@@ -1226,7 +1226,7 @@ public abstract class Window {
     protected void notifyInitAccessibility() {
         handleWindowEvent(System.nanoTime(), WindowEvent.INIT_ACCESSIBILITY);
     }
-
+    
     // *****************************************************
     // window event handlers
     // *****************************************************
