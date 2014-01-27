@@ -437,11 +437,13 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
              maxw = Math.max(maxw, snapSize(contentRegion.prefWidth(-1)));
         }
 
-        final double tabHeaderAreaPrefWidth = snapSize(tabHeaderArea.prefWidth(-1));
+        final boolean isHorizontal = isHorizontal();
+        final double tabHeaderAreaSize = snapSize(isHorizontal ?
+                tabHeaderArea.prefWidth(-1) : tabHeaderArea.prefHeight(-1));
 
-        double prefwidth = isHorizontal() ?
-            Math.max(maxw, tabHeaderAreaPrefWidth) : maxw + tabHeaderAreaPrefWidth;
-        return snapSize(prefwidth) + rightInset + leftInset;
+        double prefWidth = isHorizontal ?
+            Math.max(maxw, tabHeaderAreaSize) : maxw + tabHeaderAreaSize;
+        return snapSize(prefWidth) + rightInset + leftInset;
     }
 
     private double maxh = 0.0d;
@@ -450,10 +452,14 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         for (TabContentRegion contentRegion: tabContentRegions) {
              maxh = Math.max(maxh, snapSize(contentRegion.prefHeight(-1)));
         }
-        double prefheight = isHorizontal()?
-             maxh + snapSize(tabHeaderArea.prefHeight(-1)) : 
-                Math.max(maxh, snapSize(tabHeaderArea.prefHeight(-1)));
-        return snapSize(prefheight) + topInset + bottomInset;
+
+        final boolean isHorizontal = isHorizontal();
+        final double tabHeaderAreaSize = snapSize(isHorizontal ?
+                tabHeaderArea.prefHeight(-1) : tabHeaderArea.prefWidth(-1));
+
+        double prefHeight = isHorizontal ?
+             maxh + snapSize(tabHeaderAreaSize) : Math.max(maxh, tabHeaderAreaSize);
+        return snapSize(prefHeight) + topInset + bottomInset;
     }
 
     @Override public double computeBaselineOffset(double topInset, double rightInset, double bottomInset, double leftInset) {
