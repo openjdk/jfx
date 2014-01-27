@@ -249,6 +249,7 @@ public class ContextMenuContent extends Region {
                 // background entirely. This may cause issues if people
                 // intend to style the background differently.
                 Node node = ((CustomMenuItem) item).getContent();
+                node.visibleProperty().bind(item.visibleProperty());
                 itemsContainerChilder.add(node);
                 // Add the (separator) menu item to properties map of this node.
                 // Special casing this for separator :
