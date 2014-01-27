@@ -32,6 +32,7 @@ import javafx.stage.Screen;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
@@ -208,6 +209,7 @@ public class NTrigTest extends TouchTestBase {
     }
 
     @Test
+    @Ignore("RT-35546")
     /** This test follows the sequence described in touch event documentation:
      * 1. Touch the screen with two fingers
      * 2. Move both fingers
