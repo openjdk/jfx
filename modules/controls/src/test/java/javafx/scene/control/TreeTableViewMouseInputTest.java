@@ -517,7 +517,6 @@ public class TreeTableViewMouseInputTest {
     }
 
     private int rt_30626_count = 0;
-    @Ignore("This is now broken due to backing out RT-33897 (as it introduced RT-34685), so ignoring for now")
     @Test public void test_rt_30626() {
         final int items = 8;
         root.getChildren().clear();
@@ -548,7 +547,6 @@ public class TreeTableViewMouseInputTest {
         assertEquals(1, rt_30626_count);
     }
 
-    @Ignore("This is now broken due to backing out RT-33897 (as it introduced RT-34685), so ignoring for now")
     @Test public void test_rt_33897_rowSelection() {
         final int items = 8;
         root.getChildren().clear();

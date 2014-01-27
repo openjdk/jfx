@@ -140,7 +140,8 @@ public class TreeTableCellBehavior<S,T> extends TableCellBehaviorBase<TreeItem<S
             sm.clearSelection(index, column);
             isAlreadySelected = false;
         } else {
-            sm.clearAndSelect(index, column);
+            // we check if cell selection is enabled to fix RT-33897
+            sm.clearAndSelect(index, sm.isCellSelectionEnabled() ? column : null);
         }
 
         // handle editing, which only occurs with the primary mouse button
