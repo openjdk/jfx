@@ -23,59 +23,38 @@
  * questions.
  */
 
-package com.sun.glass.ui.monocle.input;
+package com.sun.glass.ui.monocle.input.filters;
 
-/**
- * TouchLookahead handles compression of touch event streams by folding
- * together adjacent events that differ only in their coordinates but not in
- * number of touch points or the IDs assigned to those points.
- *
- * pullState(..) gets the current state from TouchInput
- * pushState() updates TouchInput with new touch point data
- * flushState() must be called at the end of event processing to clear the
- * pipeline.
- */
-public class TouchLookahead {
+import com.sun.glass.ui.monocle.input.TouchInput;
+import com.sun.glass.ui.monocle.input.TouchState;
+
+public class LookaheadTouchFilter implements TouchFilter {
 
     private TouchInput touch = TouchInput.getInstance();
     private TouchState previousState = new TouchState();
-    private TouchState state = new TouchState();
+    private TouchState tmpState = new TouchState();
     private boolean assignIDs;
     private boolean processedFirstEvent;
 
-    public TouchState getState() {
-        return state;
-    }
-
-    /** Sets whether or not we are asking TouchInput to assign touch point IDs */
-    public void setAssignIDs(boolean assignIDs) {
+    /**
+     * Creates a new LookaheadTouchFilter
+     *
+     * @param assignIDs Sets whether or not we are asking the touch pipeline to
+     *                  assign touch point IDs
+     */
+    public LookaheadTouchFilter(boolean assignIDs) {
         this.assignIDs = assignIDs;
     }
 
-    /**
-     * Updates the local touch point state from TouchInput
-     *
-     * @param clearPoints Whether to clear touch point data in the updated local
-     *                    state. Stateless Touch processors getting their input
-     *                    with drivers that send each touch point on every event
-     *                    might need to set this; touch processors using drivers
-     *                    that send only the delta from the previous state will
-     *                    not want to clear the points.
-     */
-    public void pullState(boolean clearPoints) {
-        touch.getState(state);
-        if (clearPoints) {
-            state.clear();
-        }
-    }
-
-    public void pushState() {
+    @Override
+    public boolean filter(TouchState state) {
         if (!processedFirstEvent) {
             touch.getState(previousState);
             if (state.canBeFoldedWith(previousState, assignIDs)) {
                 processedFirstEvent = true;
             } else {
-                touch.setState(state, assignIDs);
+                state.copyTo(previousState);
+                return false; // send state
             }
         }
         if (processedFirstEvent) {
@@ -86,15 +65,30 @@ public class TouchLookahead {
             state.sortPointsByID();
             if (!state.canBeFoldedWith(previousState, assignIDs)) {
                 // the events are different. Send "previousState".
-                touch.setState(previousState, assignIDs);
+                state.copyTo(tmpState);
+                previousState.copyTo(state);
+                tmpState.copyTo(previousState);
+                return false;
             }
         }
         state.copyTo(previousState);
+        return true;
     }
 
-    public void flushState() {
-        touch.setState(previousState, assignIDs);
-        processedFirstEvent = false;
+    @Override
+    public boolean flush(TouchState state) {
+        if (processedFirstEvent) {
+            previousState.copyTo(state);
+            processedFirstEvent = false;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    @Override
+    public int getPriority() {
+        return PRIORITY_PRE_ID + 1;
     }
 
 }

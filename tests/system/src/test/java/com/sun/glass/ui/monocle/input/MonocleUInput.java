@@ -54,7 +54,13 @@ class MonocleUInput extends NativeUInput {
             pipe = Pipe.open();
         } catch (IOException e) {
             e.printStackTrace();
-        }        Application.invokeAndWait(() -> {
+        }
+        uevent.put("PRODUCT",
+                   Integer.toHexString(bus) + "/"
+                   + Integer.toHexString(vendor) + "/"
+                   + Integer.toHexString(product) + "/"
+                   + Integer.toHexString(version));
+        Application.invokeAndWait(() -> {
             device = registry.addDevice(
                     new LinuxInputDevice(capabilities,
                                          createAbsCapsMap(),

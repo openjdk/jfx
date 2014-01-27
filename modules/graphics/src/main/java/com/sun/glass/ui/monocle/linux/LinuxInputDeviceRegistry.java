@@ -131,7 +131,7 @@ public class LinuxInputDeviceRegistry extends InputDeviceRegistry {
                     return new LinuxStatelessMultiTouchProcessor(device);
                 }
             } else {
-                return new LinuxTouchProcessor(device);
+                return new LinuxSimpleTouchProcessor(device);
             }
         } else if (device.isRelative()) {
             return new LinuxMouseProcessor();

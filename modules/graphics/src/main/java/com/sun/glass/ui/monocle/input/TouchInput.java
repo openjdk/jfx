@@ -31,6 +31,7 @@ import com.sun.glass.ui.TouchInputSupport;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
 import com.sun.glass.ui.monocle.MonocleWindow;
+import com.sun.glass.ui.monocle.input.filters.TouchPipeline;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -42,15 +43,22 @@ import java.security.PrivilegedAction;
 public class TouchInput {
 
     /**
-     * This property determine the sensitivity of move events from touch. The
+     * This property determines the sensitivity of move events from touch. The
      * bigger the value the less sensitive is the touch screen. In practice move
      * events with a delta smaller then the value of this property will be
      * filtered out.The value of the property is in pixels.
-     * Property is used by Lens native input driver
      */
-    private final int touchMoveSensitivity;
+    private final int touchRadius = AccessController.doPrivileged(
+            new PrivilegedAction<Integer>() {
+                @Override
+                public Integer run() {
+                    return Integer.getInteger(
+                            "monocle.input.touchRadius", 20);
+                }
+            });
 
     private static TouchInput instance = new TouchInput();
+    private TouchPipeline basePipeline;
 
     private TouchState state = new TouchState();
     private final GestureSupport gestures = new GestureSupport(false);
@@ -62,14 +70,28 @@ public class TouchInput {
     }
 
     private TouchInput() {
-        touchMoveSensitivity = AccessController.doPrivileged(
-                new PrivilegedAction<Integer>() {
-                    @Override
-                    public Integer run() {
-                        return Integer.getInteger(
-                                "monocle.input.touch.MoveSensitivity", 20);
-                    }
-                });
+    }
+
+    /** Gets the base touch filter pipeline common to all touch devices */
+    public TouchPipeline getBasePipeline() {
+        if (basePipeline == null) {
+            basePipeline = new TouchPipeline();
+            String[] touchFilterNames = AccessController.doPrivileged(
+                    new PrivilegedAction<String>() {
+                        @Override
+                        public String run() {
+                            return System.getProperty(
+                                    "monocle.input.touchFilters",
+                                    "SmallMove");
+                        }
+                    }).split(",");
+            if (touchFilterNames != null) {
+                for (String touchFilterName : touchFilterNames) {
+                    basePipeline.addNamedFilter(touchFilterName.trim());
+                }
+            }
+        }
+        return basePipeline;
     }
 
     /** Copies the current state into the TouchState provided.
@@ -94,15 +116,9 @@ public class TouchInput {
      * touch and mouse events.
      *
      * @param newState The updated touch state
-     * @param assignIDs true if the input processor didn't assign IDs to
-     *                  touch points; false if it did.
      */
-    public void setState(TouchState newState, boolean assignIDs) {
-        if (assignIDs) {
-            TouchStates.assignIDs(newState, state);
-        }
+    public void setState(TouchState newState) {
         newState.sortPointsByID();
-        TouchStates.filterSmallMoves(newState, state, touchMoveSensitivity);
         newState.assignPrimaryID();
         // Get the cached window for the old state and compute the window for
         // the new state
@@ -210,8 +226,8 @@ public class TouchInput {
         return count;
     }
 
-    public int getTouchMoveSensitivity() {
-        return touchMoveSensitivity;
+    public int getTouchRadius() {
+        return touchRadius;
     }
 
 }

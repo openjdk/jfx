@@ -43,6 +43,7 @@ import javafx.stage.StageStyle;
 import org.junit.Assert;
 
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -100,7 +101,7 @@ public class TestApplication extends Application {
             ready.acquire();
             Platform.runLater(() -> {
                 if (isMonocle()) {
-                    tapRadius = TouchInput.getInstance().getTouchMoveSensitivity();
+                    tapRadius = TouchInput.getInstance().getTouchRadius();
                     useMultitouch = true;
                 } else {
                     tapRadius = Integer.getInteger("lens.input.touch.TapRadius", 20);
@@ -122,6 +123,7 @@ public class TestApplication extends Application {
 
     public static void showFullScreenScene() throws Exception {
         TestApplication.getStage();
+        frameWait(2);
         new TestRunnable() {
             @Override
             public void test() throws Exception {
@@ -138,11 +140,13 @@ public class TestApplication extends Application {
                 stage.requestFocus();
             }
         }.invokeAndWait();
-        waitForNextPulse();
+        frameWait(1);
     }
 
     public static void showInMiddleOfScreen() throws Exception {
         TestApplication.getStage();
+        // wait for events to finish being delivered to the previous scene
+        frameWait(2);
         new TestRunnable() {
             @Override
             public void test() throws Exception {
@@ -163,20 +167,29 @@ public class TestApplication extends Application {
                 stage.requestFocus();
             }
         }.invokeAndWait();
-        waitForNextPulse();
+        frameWait(1);
     }
 
     public static void waitForNextPulse() throws InterruptedException {
-        final Semaphore done = new Semaphore(1);
-        done.acquire();
+        frameWait(1);
+    }
+
+    private static void frameWait(int n) {
+        final CountDownLatch frameCounter = new CountDownLatch(n);
         Platform.runLater(() -> new AnimationTimer() {
             @Override
             public void handle(long now) {
-                done.release();
-                stop();
+                frameCounter.countDown();
+                if (frameCounter.getCount() == 0l) {
+                    stop();
+                }
             }
         }.start());
-        done.acquire();
+        try {
+            frameCounter.await();
+        } catch (InterruptedException ex) {
+            Assert.fail("Unexpected exception: " + ex);
+        }
     }
 
     public static void addKeyListeners() throws Exception {
@@ -308,6 +321,7 @@ public class TestApplication extends Application {
                     robot.destroy();
                 }
             });
+            frameWait(1);
         } finally {
             getStage().removeEventHandler(TouchEvent.TOUCH_RELEASED, touchHandler);
             ui.processLine("DESTROY");

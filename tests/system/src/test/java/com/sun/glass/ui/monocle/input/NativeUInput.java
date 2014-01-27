@@ -55,6 +55,7 @@ public abstract class NativeUInput {
     protected final Map<String, String> udevManifest;
     protected final Map<String, String> uevent;
     protected final ByteBuffer event;
+    protected int bus, vendor, product, version;
 
     public NativeUInput() {
         event = ByteBuffer.allocateDirect(EVENT_STRUCT_SIZE);
@@ -210,11 +211,11 @@ public abstract class NativeUInput {
             case "RELBIT": addCapability("rel", codeString); break;
             case "SNDBIT": addCapability("snd", codeString); break;
             case "SWBIT": addCapability("sw", codeString); break;
-            case "PROPBIT":
-            case "VENDOR":
-            case "PRODUCT":
-            case "VERSION":
-                break; // ignore
+            case "PROPBIT": break;
+            case "BUS": bus = valueToInt(codeString); break;
+            case "VENDOR": vendor = valueToInt(codeString); break;
+            case "PRODUCT": product = valueToInt(codeString); break;
+            case "VERSION": version = valueToInt(codeString); break;
             default: processLine3(line, typeString, codeString, "0");
         }
     }

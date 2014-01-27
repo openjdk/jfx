@@ -25,8 +25,8 @@
 
 package com.sun.glass.ui.monocle.linux;
 
-import com.sun.glass.ui.monocle.input.TouchLookahead;
 import com.sun.glass.ui.monocle.input.TouchState;
+import com.sun.glass.ui.monocle.input.filters.LookaheadTouchFilter;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -34,26 +34,24 @@ import java.util.Map;
 /**
  * This multitouch processor works with drivers that send tracking IDs.
  */
-public class LinuxStatefulMultiTouchProcessor implements LinuxInputProcessor {
+public class LinuxStatefulMultiTouchProcessor extends LinuxTouchProcessor {
 
     private static final int ID_UNASSIGNED = -1;
     private static final int SLOT_UNASSIGNED = -1;
     private static final int COORD_UNDEFINED = Integer.MIN_VALUE;
 
-    private final TouchLookahead tl = new TouchLookahead();
-    private final LinuxTouchTransform transform;
     private final Map<Integer, Integer> slotToIDMap =
             new HashMap<Integer, Integer>();
 
     LinuxStatefulMultiTouchProcessor(LinuxInputDevice device) {
-        tl.setAssignIDs(false);
-        transform = new LinuxTouchTransform(device);
+        super(device);
+        pipeline.addFilter(new LookaheadTouchFilter(false));
     }
 
     @Override
     public void processEvents(LinuxInputDevice device) {
         LinuxEventBuffer buffer = device.getBuffer();
-        tl.pullState(false);
+        pipeline.pullState(state, false);
         int currentID = ID_UNASSIGNED;
         int currentSlot = SLOT_UNASSIGNED;
         int x = COORD_UNDEFINED;
@@ -93,9 +91,9 @@ public class LinuxStatefulMultiTouchProcessor implements LinuxInputProcessor {
                         case Input.SYN_MT_REPORT: {
                             if (currentID != ID_UNASSIGNED) {
                                 if (x == COORD_UNDEFINED && y == COORD_UNDEFINED) {
-                                    tl.getState().removePointForID(currentID);
+                                    state.removePointForID(currentID);
                                 } else {
-                                    TouchState.Point p = tl.getState()
+                                    TouchState.Point p = state
                                             .getPointForID(currentID, false);
                                     if (p != null && p.id != currentID) {
                                         System.out.println("error");
@@ -103,7 +101,7 @@ public class LinuxStatefulMultiTouchProcessor implements LinuxInputProcessor {
                                     if (p == null) {
                                         p = new TouchState.Point();
                                         p.id = currentID;
-                                        p = tl.getState().addPoint(p);
+                                        p = state.addPoint(p);
                                     }
                                     if (x != COORD_UNDEFINED) {
                                         p.x = x;
@@ -118,8 +116,8 @@ public class LinuxStatefulMultiTouchProcessor implements LinuxInputProcessor {
                             break;
                         }
                         case Input.SYN_REPORT:
-                            tl.pushState();
-                            tl.pullState(false);
+                            pipeline.pushState(state);
+                            pipeline.pullState(state, false);
                             currentID = ID_UNASSIGNED;
                             currentSlot = SLOT_UNASSIGNED;
                             x = y = COORD_UNDEFINED;
@@ -130,7 +128,7 @@ public class LinuxStatefulMultiTouchProcessor implements LinuxInputProcessor {
             }
             buffer.nextEvent();
         }
-        tl.flushState();
+        pipeline.flush();
     }
 
 }

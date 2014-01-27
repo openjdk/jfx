@@ -186,7 +186,7 @@ public class TouchState {
         return sb.toString();
     }
 
-    void sortPointsByID() {
+    public void sortPointsByID() {
         Arrays.sort(points, 0, pointCount, pointIdComparator);
     }
 
@@ -214,7 +214,7 @@ public class TouchState {
      * @param ts the TouchState to compare to
      * @param ignoreIDs if true, ignore IDs when comparing points
      */
-    boolean canBeFoldedWith(TouchState ts, boolean ignoreIDs) {
+    public boolean canBeFoldedWith(TouchState ts, boolean ignoreIDs) {
         if (ts.pointCount != pointCount) {
             return false;
         }

@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+package com.sun.glass.ui.monocle.linux;/*
+ * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,71 +23,35 @@
  * questions.
  */
 
-package com.sun.glass.ui.monocle.linux;
+import com.sun.glass.ui.monocle.input.TouchInput;
+import com.sun.glass.ui.monocle.input.TouchState;
+import com.sun.glass.ui.monocle.input.filters.TouchPipeline;
 
-import com.sun.glass.ui.monocle.input.TouchLookahead;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 
-public class LinuxTouchProcessor implements LinuxInputProcessor {
+public abstract class LinuxTouchProcessor implements LinuxInputProcessor {
 
-    private final TouchLookahead tl = new TouchLookahead();
-    private final LinuxTouchTransform transform;
+    protected final TouchState state = new TouchState();
+    protected final TouchPipeline pipeline;
+    protected final LinuxTouchTransform transform;
 
     LinuxTouchProcessor(LinuxInputDevice device) {
-        tl.setAssignIDs(true);
         transform = new LinuxTouchTransform(device);
-    }
-
-    @Override
-    public void processEvents(LinuxInputDevice device) {
-        LinuxEventBuffer buffer = device.getBuffer();
-        tl.pullState(true);
-        boolean touchReleased = false;
-        while (buffer.hasNextEvent()) {
-            switch (buffer.getEventType()) {
-                case Input.EV_ABS: {
-                    int value = transform.getValue(buffer);
-                    switch (transform.getAxis(buffer)) {
-                        case Input.ABS_X:
-                        case Input.ABS_MT_POSITION_X:
-                            tl.getState().getPointForID(-1, true).x = value;
-                            break;
-                        case Input.ABS_Y:
-                        case Input.ABS_MT_POSITION_Y:
-                            tl.getState().getPointForID(-1, true).y = value;
-                            break;
+        PrivilegedAction<String> getFilterProperty =
+                new PrivilegedAction<String>() {
+                    @Override
+                    public String run() {
+                        return System.getProperty(
+                                "monocle.input." + device.getProduct()
+                                        + ".touchFilters",
+                                "");
                     }
-                    break;
-                }
-                case Input.EV_KEY:
-                    switch (buffer.getEventCode()) {
-                        case Input.BTN_TOUCH:
-                            if (buffer.getEventValue() == 0) {
-                                touchReleased = true;
-                            } else {
-                                // restore an old point
-                                tl.getState().getPointForID(-1, true);
-                            }
-                            break;
-                    }
-                    break;
-                case Input.EV_SYN:
-                    switch (buffer.getEventCode()) {
-                        case Input.SYN_REPORT:
-                            if (touchReleased) {
-                                // remove points
-                                tl.getState().clear();
-                                touchReleased = false;
-                            }
-                            tl.pushState();
-                            tl.pullState(true);
-                            break;
-                        default: // ignore
-                    }
-                    break;
-            }
-            buffer.nextEvent();
-        }
-        tl.flushState();
+                };
+        pipeline = new TouchPipeline();
+        pipeline.addNamedFilters(
+                AccessController.doPrivileged(getFilterProperty));
+        pipeline.add(TouchInput.getInstance().getBasePipeline());
     }
 
 }

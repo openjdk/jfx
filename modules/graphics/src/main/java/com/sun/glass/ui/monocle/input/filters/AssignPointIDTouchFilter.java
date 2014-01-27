@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,26 +23,29 @@
  * questions.
  */
 
-package com.sun.glass.ui.monocle.input;
+package com.sun.glass.ui.monocle.input.filters;
 
+import com.sun.glass.ui.monocle.input.TouchInput;
+import com.sun.glass.ui.monocle.input.TouchState;
 import com.sun.glass.ui.monocle.util.IntSet;
 
 import java.util.Arrays;
 
-public class TouchStates {
+public final class AssignPointIDTouchFilter implements TouchFilter {
 
-    private static int[] mappedIndices = new int[1];
-    private static IntSet ids = new IntSet();
-    private static int nextID = 1;
+    private final TouchState oldState = new TouchState();
+    private int[] mappedIndices = new int[1];
+    private IntSet ids = new IntSet();
+    private int nextID = 1;
 
     /** Acquire a touch point ID */
-    private static int acquireID() {
+    private int acquireID() {
         ids.addInt(nextID);
         return nextID ++;
     }
 
     /** Release a touch point ID */
-    private static void releaseID(int id) {
+    private void releaseID(int id) {
         ids.removeInt(id);
         nextID = 1;
         for (int i = 0; i < ids.size(); i++) {
@@ -50,9 +53,16 @@ public class TouchStates {
         }
     }
 
+    @Override
+    public int getPriority() {
+        return PRIORITY_ID;
+    }
+
     /** Assign touch point IDs, for protocol A multitouch drivers that do not
      * assign IDs themselves. */
-    static void assignIDs(TouchState state, TouchState oldState) {
+    @Override
+    public boolean filter(TouchState state) {
+        TouchInput.getInstance().getState(oldState);
         if (oldState.getPointCount() == 0) {
             for (int i = 0; i < state.getPointCount(); i++) {
                 state.getPoint(i).id = acquireID();
@@ -147,23 +157,27 @@ public class TouchStates {
                 releaseID(id);
             }
         }
+        return false;
     }
 
-    static void filterSmallMoves(TouchState state, TouchState oldState, int radius) {
-        for (int i = 0; i < oldState.getPointCount(); i++) {
-            TouchState.Point oldPoint = oldState.getPoint(i);
-            TouchState.Point newPoint = state.getPointForID(oldPoint.id, false);
-            if (newPoint != null) {
-                int dx = newPoint.x - oldPoint.x;
-                int dy = newPoint.y - oldPoint.y;
-                int dist2 = dx * dx + dy * dy;
-                if (dist2 < radius * radius) {
-                    // if this is a move, rewrite it as a stationary event
-                    newPoint.x = oldPoint.x;
-                    newPoint.y = oldPoint.y;
-                }
-            }
-        }
+    @Override
+    public boolean flush(TouchState state) {
+        return false;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof AssignPointIDTouchFilter;
+    }
+
+    @Override
+    public int hashCode() {
+        return 0;
+    }
+
+    @Override
+    public String toString() {
+        return "AssignPointID";
     }
 
 }

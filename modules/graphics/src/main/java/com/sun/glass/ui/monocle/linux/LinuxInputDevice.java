@@ -29,6 +29,7 @@ import com.sun.glass.ui.Application;
 import com.sun.glass.ui.monocle.NativePlatformFactory;
 import com.sun.glass.ui.monocle.RunnableProcessor;
 import com.sun.glass.ui.monocle.input.InputDevice;
+import com.sun.glass.ui.monocle.input.filters.TouchPipeline;
 
 import java.io.File;
 import java.io.IOException;
