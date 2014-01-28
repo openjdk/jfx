@@ -596,6 +596,10 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
 
         // ScrollPanes do not block all MouseEvents by default, unlike most other UI Controls.
         consumeMouseEvents(false);
+
+        // update skin initial state to match control (see RT-35554)
+        hsb.setValue(control.getHvalue());
+        vsb.setValue(control.getVvalue());
     }
 
 
