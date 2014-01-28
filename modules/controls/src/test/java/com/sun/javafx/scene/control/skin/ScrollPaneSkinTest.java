@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -114,10 +114,8 @@ public class ScrollPaneSkinTest {
     }
 
     /*
-    ** check we can drag contents that are larger than the scrollpane
-    */
-    @Ignore("Started to fail with RT-30363. Probably the test is incorrect, as it should do the drag"
-            + "in the oposite way in order to pass the last assert.")
+     * check we can drag contents that are larger than the scrollpane
+     */
     @Test public void shouldDragContentLargerThanViewport() {
         scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
         scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
@@ -144,12 +142,11 @@ public class ScrollPaneSkinTest {
 
         double originalValue = scrollPane.getVvalue();
 
-        Event.fireEvent(sp, generator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
-        Event.fireEvent(sp, generator.generateMouseEvent(MouseEvent.MOUSE_DRAGGED, 75, 75));
-        Event.fireEvent(sp, generator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, 75, 75));
+        Event.fireEvent(sp, generator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 75, 75));
+        Event.fireEvent(sp, generator.generateMouseEvent(MouseEvent.MOUSE_DRAGGED, 50, 50));
+        Event.fireEvent(sp, generator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, 50, 50));
 
         assertTrue(originalValue < scrollPane.getVvalue());
-
     }
 
 

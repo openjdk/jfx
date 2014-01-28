@@ -28,13 +28,11 @@ package hello;
 
 import javafx.application.Application;
 import javafx.geometry.Insets;
-import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
@@ -61,7 +59,8 @@ public class HelloScrollPane extends Application {
 
         tabPane.getTabs().addAll(
                 buildSimpleTab(),
-                buildControlsTab()
+                buildControlsTab(),
+                buildDragContentTab()
         );
 
         stage.setTitle("Hello ScrollPane");
@@ -187,6 +186,34 @@ public class HelloScrollPane extends Application {
 
         Tab tab = new Tab("Scroll Test");
         tab.setContent(sp1);
+        return tab;
+    }
+
+    private Tab buildDragContentTab() {
+        Pane r = new Pane();
+        r.setStyle("-fx-background-color: chocolate");
+        r.setPrefWidth(1000);
+        r.setPrefHeight(1000);
+
+        Label introLabel = new Label("Try dragging this area with your mouse - it should pan.");
+        introLabel.setWrapText(true);
+        introLabel.setFont(Font.font(18));
+        r.getChildren().addAll(introLabel);
+
+        Label helloLabel = new Label("Hi.");
+        helloLabel.setFont(Font.font(18));
+        helloLabel.setLayoutX(1000 - 25);
+        helloLabel.setLayoutY(1000 - 25);
+        r.getChildren().addAll(helloLabel);
+
+        ScrollPane sp = new ScrollPane();
+        sp.setHbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+        sp.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+        sp.setContent(r);
+        sp.setPannable(true);
+
+        Tab tab = new Tab("Drag Test");
+        tab.setContent(sp);
         return tab;
     }
 }
