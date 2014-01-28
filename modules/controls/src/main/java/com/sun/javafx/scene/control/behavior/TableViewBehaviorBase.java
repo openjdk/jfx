@@ -263,9 +263,13 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
      * Constructors                                                           *
      *                                                                        *  
      *************************************************************************/
-    
+
     public TableViewBehaviorBase(C control) {
-        super(control, TABLE_VIEW_BINDINGS);
+        this(control, null);
+    }
+
+    public TableViewBehaviorBase(C control, List<KeyBinding> bindings) {
+        super(control, bindings == null ? TABLE_VIEW_BINDINGS : bindings);
     }
 
     

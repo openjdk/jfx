@@ -43,8 +43,12 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.geometry.Orientation;
+import javafx.scene.Group;
+import javafx.scene.Scene;
 import javafx.scene.control.cell.*;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
@@ -2431,5 +2435,83 @@ public class TableViewTest {
         assertEquals(-1, getColumnIndex(col4));
         assertEquals(3, getColumnIndex(col5));
         assertEquals(1, getColumnIndex(col6));
+    }
+
+    @Test public void test_rt_34042() {
+        final ObservableList<Person> data =
+                FXCollections.observableArrayList(
+                        new Person("Jacob", "Smith", "jacob.smith@example.com"),
+                        new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
+                        new Person("Ethan", "Williams", "ethan.williams@example.com"),
+                        new Person("Emma", "Jones", "emma.jones@example.com"),
+                        new Person("Michael", "Brown", "michael.brown@example.com"));
+
+        Scene scene = new Scene(new Group());
+        SplitPane splitPane = new SplitPane();
+        splitPane.setOrientation(Orientation.VERTICAL);
+
+        //TREETABLECOLUMN
+        TreeTableView<Person> treeTableView = new TreeTableView<>();
+        TreeTableColumn temp = new TreeTableColumn("First Name");
+        temp.setMinWidth(100);
+        temp.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+
+        TreeTableColumn temp2 = new TreeTableColumn("Last Name");
+        temp2.setMinWidth(100);
+        temp2.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+
+        TreeTableColumn temp3 = new TreeTableColumn("Email");
+        temp3.setMinWidth(200);
+        temp3.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
+
+        treeTableView.getColumns().addAll(temp, temp2, temp3);
+
+        //TABLE
+        TableView<Person> table = new TableView<Person>();
+        table.setEditable(true);
+        table.getSelectionModel().setCellSelectionEnabled(true);
+        TableColumn firstNameCol = new TableColumn("First Name");
+        firstNameCol.setMinWidth(100);
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+
+        TableColumn lastNameCol = new TableColumn("Last Name");
+        lastNameCol.setMinWidth(100);
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+
+        TableColumn emailCol = new TableColumn("Email");
+        emailCol.setMinWidth(200);
+        emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
+
+        table.setItems(data);
+        table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
+
+        splitPane.getItems().add(treeTableView);
+        splitPane.getItems().add(table);
+
+        ((Group) scene.getRoot()).getChildren().addAll(splitPane);
+
+        new StageLoader(scene);
+
+        TableView.TableViewSelectionModel sm = table.getSelectionModel();
+        sm.select(2, lastNameCol);
+        assertFalse(sm.isSelected(2, firstNameCol));
+        assertTrue(sm.isSelected(2, lastNameCol));
+        assertFalse(sm.isSelected(2, emailCol));
+
+        KeyEventFirer keyboard = new KeyEventFirer(table);
+        keyboard.doKeyPress(KeyCode.LEFT);
+        assertTrue(sm.isSelected(2, firstNameCol));
+        assertFalse(sm.isSelected(2, lastNameCol));
+        assertFalse(sm.isSelected(2, emailCol));
+
+        keyboard.doKeyPress(KeyCode.RIGHT);
+        assertFalse(sm.isSelected(2, firstNameCol));
+        assertTrue(sm.isSelected(2, lastNameCol));
+        assertFalse(sm.isSelected(2, emailCol));
+
+        keyboard.doKeyPress(KeyCode.RIGHT);
+        assertFalse(sm.isSelected(2, firstNameCol));
+        assertFalse(sm.isSelected(2, lastNameCol));
+        assertTrue(sm.isSelected(2, emailCol));
     }
 }
