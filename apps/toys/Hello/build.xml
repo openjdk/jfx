@@ -82,6 +82,6 @@
             <os name="linux"/>
 	</condition>
 
-        <property name="file.reference.jfxrt.jar" value="../../../build/${osname}-sdk/rt/lib/ext/jfxrt.jar"/>
+        <property name="jfxbuild.jfxrt.jar" value="../../../build/${osname}-sdk/rt/lib/ext/jfxrt.jar"/>
     </target>
 </project>
