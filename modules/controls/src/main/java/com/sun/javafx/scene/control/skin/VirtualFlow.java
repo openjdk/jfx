@@ -982,6 +982,14 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             }
         }
 
+        // once per layout we reset the maximum pref breadth to -1 to allow for
+        // it to be recalculated. This is particularly useful when dealing with
+        // issues related to the control growing / shrinking in width and not
+        // correctly resizing cells (as the maxPrefBreadth was larger than the
+        // viewportBreadth when compared in fitCells()).
+        // The issue that resulted in this line being added was RT-34897.
+        setMaxPrefBreadth(-1);
+
 //        layingOut = true;
 
         /*
