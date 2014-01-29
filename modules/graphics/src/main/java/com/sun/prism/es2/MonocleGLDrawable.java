@@ -25,10 +25,10 @@
 
 package com.sun.prism.es2;
 
+import com.sun.glass.ui.monocle.AcceleratedScreen;
 import com.sun.prism.paint.Color;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-
 
 class MonocleGLDrawable extends GLDrawable {
 
@@ -40,28 +40,26 @@ class MonocleGLDrawable extends GLDrawable {
                 }
             });
 
-    private static native long nCreateDrawable(long nativeWindow, long nativeCtxInfo);
-    private static native long nGetDummyDrawable(long nativeCtxInfo);
-    private static native boolean nSwapBuffers(long nativeDInfo);
-    boolean isDummy = false;
+    AcceleratedScreen accScreen;
 
-    MonocleGLDrawable(GLPixelFormat pixelFormat) {
+    MonocleGLDrawable(GLPixelFormat pixelFormat, AcceleratedScreen accScreen) {
 
         super(0L, pixelFormat);
-        long nDInfo = nGetDummyDrawable(pixelFormat.getNativePFInfo());
-        setNativeDrawableInfo(nDInfo);
-        isDummy = true;
+        this.accScreen = accScreen;
     }
 
-    MonocleGLDrawable(long nativeWindow, GLPixelFormat pixelFormat) {
+    MonocleGLDrawable(long nativeWindow, GLPixelFormat pixelFormat,
+                      AcceleratedScreen accScreen) {
         super(nativeWindow, pixelFormat);
-        long nDInfo = nCreateDrawable(nativeWindow, pixelFormat.getNativePFInfo());
-        setNativeDrawableInfo(nDInfo);
+        this.accScreen = accScreen;
     }
 
     @Override
     boolean swapBuffers(GLContext glCtx) {
-        boolean retval = nSwapBuffers(getNativeDrawableInfo());
+
+       boolean retval = accScreen.swapBuffers();
+       // boolean retval = nSwapBuffers(getNativeDrawableInfo());
+
         // TODO: This looks hacky. Need to find a better approach.
         // For Monocle, we are painting in Z-order from the back,
         // possibly (likely) with an app that does not cover the
@@ -71,5 +69,6 @@ class MonocleGLDrawable extends GLDrawable {
                 transparentFramebuffer ? Color.TRANSPARENT : Color.BLACK,
                 true, true, true);
         return retval;
+
     }
 }

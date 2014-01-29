@@ -28,6 +28,7 @@ package com.sun.glass.ui.monocle.headless;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.monocle.Framebuffer;
 import com.sun.glass.ui.monocle.NativeScreen;
+import com.sun.glass.ui.monocle.AcceleratedScreen;
 
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
@@ -132,7 +133,7 @@ public class HeadlessScreen implements NativeScreen {
     }
 
     @Override
-    public long platformGetNativeDisplay() {
-        return 0L;
+    public AcceleratedScreen getAcceleratedScreen(int[] attributes) {
+        return null;
     }
 }

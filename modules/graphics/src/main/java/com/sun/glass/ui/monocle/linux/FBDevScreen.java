@@ -28,6 +28,7 @@ package com.sun.glass.ui.monocle.linux;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.monocle.Framebuffer;
 import com.sun.glass.ui.monocle.NativeScreen;
+import com.sun.glass.ui.monocle.AcceleratedScreen;
 
 import java.io.IOException;
 import java.nio.Buffer;
@@ -49,10 +50,6 @@ public class FBDevScreen implements NativeScreen {
     private int consoleCursorBlink;
     private Framebuffer fb;
     private LinuxFrameBuffer linuxFB;
-
-    private static long glesLibraryHandle;
-    private static long eglLibraryHandle;
-    private static boolean initialized = false;
 
     public FBDevScreen() {
         try {
@@ -214,20 +211,8 @@ public class FBDevScreen implements NativeScreen {
         return getFramebuffer().getBuffer().asIntBuffer();
     }
 
-    protected boolean initPlatformLibraries() {
-        if (!initialized) {
-            LinuxSystem ls = LinuxSystem.getLinuxSystem();
-            glesLibraryHandle = ls.dlopen("libGLESv2.so",
-                    LinuxSystem.RTLD_LAZY | LinuxSystem.RTLD_GLOBAL);
-            eglLibraryHandle = ls.dlopen("libEGL.so",
-                    LinuxSystem.RTLD_LAZY | LinuxSystem.RTLD_GLOBAL);
-            initialized = true;
-        }
-        return true;
+    @Override
+    public AcceleratedScreen getAcceleratedScreen(int[] attributes) {
+        return null;
     }
-
-    public long platformGetNativeDisplay() {
-        return 0L;
-    }
-
 }

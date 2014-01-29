@@ -30,6 +30,7 @@ import java.util.Formatter;
 
 /** Java wrapper for the EGL API */
 public class EGL {
+    private static long eglWindowSurface = 0l;
 
     public static final long EGL_DEFAULT_DISPLAY = 0l;
     public static final long EGL_NO_CONTEXT = 0l;
@@ -152,8 +153,9 @@ public class EGL {
 
     public static native boolean eglChooseConfig(
             long eglDisplay,
-            long eglAttrs,
+            int[] attribs,
             long[] eglConfigs,
+            int configSize,
             int[] configCount);
 
     public static native long eglContextFromConfig(long eglDisplay, long eglConfig);
@@ -164,7 +166,19 @@ public class EGL {
             long shareContext,
             int[] attribs);
 
-    public static native long eglCreateWindowSurface(
+    public static long eglCreateWindowSurface(long eglDisplay,
+                                              long eglConfig,
+                                              long nativeWindow,
+                                              int[] attribs) {
+        if (eglWindowSurface == 0) {
+            eglWindowSurface = _eglCreateWindowSurface(eglDisplay, eglConfig,
+                                                       nativeWindow, attribs);
+
+        }
+        return eglWindowSurface;
+    }
+
+    public static native long _eglCreateWindowSurface(
             long eglDisplay,
             long eglConfig,
             long nativeWindow,

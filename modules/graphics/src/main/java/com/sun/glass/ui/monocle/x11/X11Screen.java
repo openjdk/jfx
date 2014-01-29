@@ -27,6 +27,7 @@ package com.sun.glass.ui.monocle.x11;
 
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.monocle.NativeScreen;
+import com.sun.glass.ui.monocle.AcceleratedScreen;
 
 import java.nio.Buffer;
 import java.nio.IntBuffer;
@@ -176,7 +177,7 @@ public class X11Screen implements NativeScreen {
     }
 
     @Override
-    public long platformGetNativeDisplay() {
-        return 0L;
+    public AcceleratedScreen getAcceleratedScreen(int[] attributes) {
+        return null;
     }
 }

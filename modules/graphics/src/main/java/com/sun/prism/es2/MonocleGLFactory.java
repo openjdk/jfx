@@ -30,11 +30,12 @@ import com.sun.prism.es2.GLPixelFormat.Attributes;
 import java.util.HashMap;
 import com.sun.glass.ui.monocle.EGL;
 import com.sun.glass.ui.monocle.NativeScreen;
-
+import com.sun.glass.ui.monocle.AcceleratedScreen;
 
 class MonocleGLFactory extends GLFactory {
 
     private static native long nInitialize(int[] attrArr);
+    private static native long nPopulateNativeCtxInfo(long libraryHandle);
     private static native int nGetAdapterOrdinal(long nativeScreen);
     private static native int nGetAdapterCount();
     private static native int nGetDefaultScreen(long nativeCtxInfo);
@@ -46,6 +47,8 @@ class MonocleGLFactory extends GLFactory {
     // For Linux Beta release we will limit es2 pipe qualification check to NVidia GPUs only
     private GLGPUInfo preQualificationFilter[] = null;
     private GLGPUInfo blackList[] = null;
+
+    private AcceleratedScreen accScreen = null;
 
     @Override
     GLGPUInfo[] getPreQualificationFilter() {
@@ -65,18 +68,20 @@ class MonocleGLFactory extends GLFactory {
     @Override
     GLContext createGLContext(GLDrawable drawable, GLPixelFormat pixelFormat,
                                      GLContext shareCtx, boolean vSyncRequest) {
+
         // No need to pass down shareCtx as we don't use shared ctx on Monocle
-        return new MonocleGLContext(drawable, pixelFormat, vSyncRequest);
+        return new MonocleGLContext(drawable, pixelFormat, vSyncRequest,
+                                    accScreen, nativeCtxInfo);
     }
 
     @Override
     GLDrawable createDummyGLDrawable(GLPixelFormat pixelFormat) {
-        return new MonocleGLDrawable(pixelFormat);
+        return new MonocleGLDrawable(pixelFormat, accScreen);
     }
 
     @Override
     GLDrawable createGLDrawable(long nativeWindow, GLPixelFormat pixelFormat) {
-        return new MonocleGLDrawable(nativeWindow, pixelFormat);
+        return new MonocleGLDrawable(nativeWindow, pixelFormat, accScreen);
     }
 
     @Override
@@ -98,11 +103,14 @@ class MonocleGLFactory extends GLFactory {
         attrArr[GLPixelFormat.Attributes.DOUBLEBUFFER] = attrs.isDoubleBuffer() ? 1 : 0;
         attrArr[GLPixelFormat.Attributes.ONSCREEN] = attrs.isOnScreen() ? 1 : 0;
 
-        // return the context info object create on the default screen
-        nativeCtxInfo = nInitialize(attrArr);
+        accScreen = NativePlatformFactory.getNativePlatform().
+                                      getScreen().getAcceleratedScreen(attrArr);
 
-        EGL.eglGetDisplay(NativePlatformFactory.getNativePlatform().
-                getScreen().platformGetNativeDisplay());
+        accScreen.enableRendering(true);
+
+        nativeCtxInfo = nPopulateNativeCtxInfo(accScreen.getGLHandle());
+
+        accScreen.enableRendering(false);
 
         if (nativeCtxInfo == 0) {
             // current pipe doesn't support this pixelFormat request

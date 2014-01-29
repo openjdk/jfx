@@ -25,47 +25,34 @@
 
 package com.sun.prism.es2;
 
-
+import com.sun.glass.ui.monocle.AcceleratedScreen;
 
 class MonocleGLContext extends GLContext {
 
-    private static native long nInitialize(long nativeDInfo, long nativePFInfo,
-                                           boolean vSyncRequest);
-    private static native long nGetNativeHandle(long nativeCtxInfo);
-    private static native void nMakeCurrent(long nativeCtxInfo, long nativeDInfo);
+    private AcceleratedScreen accScreen;
 
     MonocleGLContext(long nativeCtxInfo) {
         this.nativeCtxInfo = nativeCtxInfo;
     }
 
     MonocleGLContext(GLDrawable drawable, GLPixelFormat pixelFormat,
-                          boolean vSyncRequest) {
-
-        // holds the list of attributes to be translated for native call
-        int attrArr[] = new int[GLPixelFormat.Attributes.NUM_ITEMS];
-
-        GLPixelFormat.Attributes attrs = pixelFormat.getAttributes();
-
-        attrArr[GLPixelFormat.Attributes.RED_SIZE] = attrs.getRedSize();
-        attrArr[GLPixelFormat.Attributes.GREEN_SIZE] = attrs.getGreenSize();
-        attrArr[GLPixelFormat.Attributes.BLUE_SIZE] = attrs.getBlueSize();
-        attrArr[GLPixelFormat.Attributes.ALPHA_SIZE] = attrs.getAlphaSize();
-        attrArr[GLPixelFormat.Attributes.DEPTH_SIZE] = attrs.getDepthSize();
-        attrArr[GLPixelFormat.Attributes.DOUBLEBUFFER] = attrs.isDoubleBuffer() ? 1 : 0;
-        attrArr[GLPixelFormat.Attributes.ONSCREEN] = attrs.isOnScreen() ? 1 : 0;
-
-        // return the context info object created on the default screen
-        nativeCtxInfo = nInitialize(drawable.getNativeDrawableInfo(),
-                                    pixelFormat.getNativePFInfo(), vSyncRequest);
+                          boolean vSyncRequest, AcceleratedScreen accScreen,
+                          long nativeCtxInfo) {
+        this.accScreen = accScreen;
+        this.nativeCtxInfo = nativeCtxInfo;
     }
 
     @Override
     long getNativeHandle() {
-        return nGetNativeHandle(nativeCtxInfo);
+        return 0l;
     }
 
     @Override
     void makeCurrent(GLDrawable drawable) {
-        nMakeCurrent(nativeCtxInfo, drawable.getNativeDrawableInfo());
+        if (drawable != null) {
+            accScreen.enableRendering(true);
+        } else {
+            accScreen.enableRendering(false);
+        }
     }
 }
