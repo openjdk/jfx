@@ -86,10 +86,10 @@ public class TouchEventLookaheadTest extends ParameterizedTestBase {
         // Check that the final point reported is correct
         TestLog.waitForLog("Mouse released: " + x2 + ", " + y2, 3000);
         TestLog.waitForLog("Touch released: " + x2 + ", " + y2, 3000);
-        // Check that there was only one move in between
+        // Check that moves in between were filtered
         TestLog.waitForLog("Mouse dragged: " + x2 + ", " + y2, 3000);
         TestLog.waitForLog("Touch moved: " + x2 + ", " + y2, 3000);
-        Assert.assertEquals(1, TestLog.countLogContaining("Mouse dragged"));
-        Assert.assertEquals(1, TestLog.countLogContaining("Touch moved"));
+        Assert.assertTrue(TestLog.countLogContaining("Mouse dragged") <= 3);
+        Assert.assertTrue(TestLog.countLogContaining("Touch moved") <= 3);
     }
 }
