@@ -75,7 +75,8 @@ public class TouchPipeline {
                     filterName = "com.sun.glass.ui.monocle.input.filters."
                             + filterName + "TouchFilter";
                 }
-                addFilter((TouchFilter) Class.forName(filterName).newInstance());
+                ClassLoader loader = Thread.currentThread().getContextClassLoader();
+                addFilter((TouchFilter) loader.loadClass(filterName).newInstance());
             }
         } catch (Exception e) {
             System.err.println(
