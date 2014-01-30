@@ -1316,22 +1316,33 @@ final class CssStyleHelper {
 
         StringBuilder sbuf = new StringBuilder();
         sbuf.append("Caught ")
-            .append(e.toString())
-            .append("'")
-            .append(" while calculating value for '")
-            .append(cssMetaData.getProperty())
-            .append("'");
+            .append(String.valueOf(e));
 
-        final Rule rule = style != null ? style.getDeclaration().getRule(): null;
-        final Stylesheet stylesheet = rule != null ? rule.getStylesheet() : null;
-        final String url = stylesheet != null ? stylesheet.getUrl() : null;
-        if (url != null) {
-            sbuf.append(" from rule '")
-                .append(style.getSelector())
-                .append("' in stylesheet ").append(url);
-        } else if (stylesheet != null && StyleOrigin.INLINE == stylesheet.getOrigin()) {
-            sbuf.append(" from inline style on " )
-                .append(styleable.toString());
+        if (cssMetaData != null) {
+            sbuf.append("'")
+                .append(" while calculating value for '")
+                .append(cssMetaData.getProperty())
+                .append("'");
+        }
+
+        if (style != null) {
+
+            final Rule rule = style.getDeclaration().getRule();
+            final Stylesheet stylesheet = rule != null ? rule.getStylesheet() : null;
+            final String url = stylesheet != null ? stylesheet.getUrl() : null;
+
+            if (url != null) {
+                sbuf.append(" from rule '")
+                        .append(style.getSelector())
+                        .append("' in stylesheet ").append(url);
+            } else if (styleable != null && stylesheet != null && StyleOrigin.INLINE == stylesheet.getOrigin()) {
+                sbuf.append(" from inline style on " )
+                        .append(styleable.toString());
+            } else {
+                sbuf.append(" from style '")
+                    .append(String.valueOf(style))
+                    .append("'");
+            }
         }
 
         return sbuf.toString();

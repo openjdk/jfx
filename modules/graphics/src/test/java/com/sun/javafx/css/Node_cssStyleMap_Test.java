@@ -99,7 +99,7 @@ public class Node_cssStyleMap_Test {
         return smap;
     }
     
-    @Test @Ignore ("Pending RT-34463")
+    @Test //@Ignore ("Pending RT-34463")
     public void testStyleMapTracksChanges() {
                 
         final List<Declaration> declsNoState = new ArrayList<Declaration>();
@@ -204,7 +204,7 @@ public class Node_cssStyleMap_Test {
         
     }
     
-    @Test @Ignore ("Pending RT-34463")
+    @Test //@Ignore ("Pending RT-34463")
     public void testRT_21212() {
 
         final List<Declaration> rootDecls = new ArrayList<Declaration>();
