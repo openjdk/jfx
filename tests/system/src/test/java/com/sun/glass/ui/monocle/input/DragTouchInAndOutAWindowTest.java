@@ -25,17 +25,16 @@
 
 package com.sun.glass.ui.monocle.input;
 
-import javafx.geometry.Rectangle2D;
-import javafx.stage.Screen;
+import com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
+import com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
 import javafx.stage.Stage;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.runners.Parameterized;
+
+import java.util.Collection;
 
 /**
  * This is a regression test for RT-33771 - Lens:FXML-LoginDemo throws
@@ -45,76 +44,30 @@ import org.junit.rules.TestName;
  * causing exceptions to be thrown. 
  *  
  */
-public class DragTouchInAndOutAWindowTest {
+public class DragTouchInAndOutAWindowTest extends ParameterizedTestBase {
 
-    private UInput ui;
-    @Rule public TestName name = new TestName();
+    public DragTouchInAndOutAWindowTest(TestTouchDevice device) {
+        super(device);
+    }
 
-    @Before public void setUpScreen() throws Exception {
-        TestLog.reset();
-        TestLog.log(name.getMethodName());
-      
+    @Parameterized.Parameters
+    public static Collection<Object[]> data() {
+        return TestTouchDevices.getTouchDeviceParameters(1);
+    }
+
+
+    @Before
+    public void setUpScreen() throws Exception {
         TestApplication.showInMiddleOfScreen();
         TestApplication.addTouchListeners();
-
-        initDevice();
+        int p = device.addPoint(0, 0);
+        device.sync();
+        device.removePoint(p);
+        device.sync();
+        TestLog.reset();
     }
 
-    public void initDevice() throws Exception {
-        ui = new UInput();
-        Rectangle2D r = Screen.getPrimary().getBounds();
-        final int width = (int) r.getWidth();
-        final int height = (int) r.getHeight();
-        ui.processLine("OPEN");
-        ui.processLine("EVBIT EV_SYN");
-        ui.processLine("EVBIT EV_KEY");
-        ui.processLine("KEYBIT BTN_TOUCH");
-        ui.processLine("EVBIT EV_ABS");
-        ui.processLine("ABSBIT ABS_X");
-        ui.processLine("ABSBIT ABS_Y");
-        ui.processLine("ABSBIT ABS_MT_POSITION_X");
-        ui.processLine("ABSBIT ABS_MT_POSITION_Y");
-        ui.processLine("ABSBIT ABS_MT_ORIENTATION");
-        ui.processLine("ABSBIT ABS_MT_TOUCH_MAJOR");
-        ui.processLine("ABSBIT ABS_MT_TOUCH_MINOR");
-        ui.processLine("ABSMIN ABS_X 0");
-        ui.processLine("ABSMAX ABS_X " + width);
-        ui.processLine("ABSMIN ABS_Y 0");
-        ui.processLine("ABSMAX ABS_Y " + height);
-        ui.processLine("ABSMIN ABS_MT_POSITION_X 0");
-        ui.processLine("ABSMAX ABS_MT_POSITION_X " + width);
-        ui.processLine("ABSMIN ABS_MT_POSITION_Y 0");
-        ui.processLine("ABSMAX ABS_MT_POSITION_Y " + height);
-        ui.processLine("ABSMIN ABS_MT_ORIENTATION 0");
-        ui.processLine("ABSMAX ABS_MT_ORIENTATION 1");
-        ui.processLine("PROPBIT INPUT_PROP_POINTER");
-        ui.processLine("PROPBIT INPUT_PROP_DIRECT");
-        ui.processLine("PROPERTY ID_INPUT_TOUCHSCREEN 1");
-        ui.processLine("CREATE");
-    }
-
-    @After public void destroyDevice() throws Exception {
-        if (ui != null) {
-            try {
-                ui.processLine("DESTROY");
-            } catch (RuntimeException e) { }
-            ui.processLine("CLOSE");
-            ui.dispose();
-        }
-    }
-
-    private void resetState() {
-        //make sure we reset the state of the window manager in case of exception
-        ui.processLine("EV_ABS ABS_MT_POSITION_X 0");
-        ui.processLine("EV_ABS ABS_MT_POSITION_Y 0");
-        ui.processLine("EV_SYN SYN_MT_REPORT 0"); 
-        ui.processLine("EV_SYN SYN_REPORT 0");
-
-         ui.processLine("EV_SYN SYN_MT_REPORT 0");
-         ui.processLine("EV_SYN SYN_REPORT 0");
-    }
-
-    /** 
+    /**
      * RT-33771 stated that exceptions are been thrown because the state of the 
      * point, when entering the window, is wrong. 
      * Test check that states are ok and no exception is been thrown 
@@ -125,27 +78,25 @@ public class DragTouchInAndOutAWindowTest {
     @Test
     public void singleTouch_dragPointIntoTheWindow() throws Exception {
         Assume.assumeTrue(!TestApplication.isMonocle()); // RT-35406
-        TestLog.reset();
         Stage stage = TestApplication.getStage();
         int windowRightEnd = (int)(stage.getX() + stage.getWidth());
         int windowMiddleHeight = (int)(stage.getY() + (stage.getHeight() / 2));
-
 
         //start outside the window and drag point into it (move in big steps
         //to avoid filtering)
         //expected:
         //1) no exception
         //2) no  press | move | release notifications
-        for (int i = 50; i >= -50 ; i -= 3) {
-            ui.processLine("EV_ABS ABS_MT_POSITION_X " + (windowRightEnd + i));
-            ui.processLine("EV_ABS ABS_MT_POSITION_Y " + windowMiddleHeight);
-            ui.processLine("EV_SYN SYN_MT_REPORT 0");
-            ui.processLine("EV_SYN SYN_REPORT 0");
+        int p = device.addPoint(windowRightEnd + 50, windowMiddleHeight);
+        device.sync();
+        for (int i = 49; i >= -50 ; i -= 3) {
+            device.setPoint(p, windowRightEnd + i, windowMiddleHeight);
+            device.sync();
         }
 
-        //release
-        ui.processLine("EV_SYN SYN_MT_REPORT 0");
-        ui.processLine("EV_SYN SYN_REPORT 0");
+        //
+        device.removePoint(p);
+        device.sync();
 
         //check that tested window didn't recive any notifications
 
@@ -164,21 +115,16 @@ public class DragTouchInAndOutAWindowTest {
      * 
      */
     public void singleTouch_dragPointoutsideAwindow() throws Exception {
-        Rectangle2D r = Screen.getPrimary().getBounds();
-        final int screenWidth = (int) r.getWidth();
-        TestLog.reset();
         Stage stage = TestApplication.getStage();
         int windowMiddleWidth = (int)(stage.getX() + stage.getWidth() / 2);
-        int WindowMiddleHeight = (int)(stage.getY() + (stage.getHeight() / 2));
-        resetState();
-
+        int windowMiddleHeight = (int)(stage.getY() + (stage.getHeight() / 2));
 
         //touch inside the window and drag the touch point to the end of the screen
-        for (int i = 0; i + windowMiddleWidth < screenWidth ; i += 5) {
-            ui.processLine("EV_ABS ABS_MT_POSITION_X " + (i + windowMiddleWidth));
-            ui.processLine("EV_ABS ABS_MT_POSITION_Y " + WindowMiddleHeight);
-            ui.processLine("EV_SYN SYN_MT_REPORT 0");
-            ui.processLine("EV_SYN SYN_REPORT 0");
+        int p = device.addPoint(windowMiddleWidth, windowMiddleHeight);
+        device.sync();
+        for (int i = 0; i + windowMiddleWidth < width ; i += 5) {
+            device.setPoint(p, windowMiddleWidth + i, windowMiddleHeight);
+            device.sync();
         }
 
         //wait for results
@@ -186,8 +132,8 @@ public class DragTouchInAndOutAWindowTest {
         TestLog.waitForLogContaining("TouchPoint: MOVED", 3000);
 
         //release outside the window
-        ui.processLine("EV_SYN SYN_MT_REPORT 0");
-        ui.processLine("EV_SYN SYN_REPORT 0");
+        device.removePoint(p);
+        device.sync();
         //check that we get the event
         TestLog.waitForLogContaining("TouchPoint: RELEASED", 3000);
     }
@@ -201,20 +147,18 @@ public class DragTouchInAndOutAWindowTest {
      */
     public void singleTouch_dragPointInandOutAwindow() throws Exception {
         Assume.assumeTrue(!TestApplication.isMonocle()); // RT-35406
-        TestLog.reset();
         Stage stage = TestApplication.getStage();
         int windowMiddleWidth = (int)(stage.getX() + stage.getWidth() / 2);
-        int WindowMiddleHeight = (int)(stage.getY() + (stage.getHeight() / 2));
+        int windowMiddleHeight = (int)(stage.getY() + (stage.getHeight() / 2));
         int windowRightEnd = (int)(stage.getX() + stage.getWidth());
         int i;
-        resetState();
 
-        //start inside the window and drag point outside 
-        for (i = windowMiddleWidth; i <= windowRightEnd+100 ; i += 10) {
-            ui.processLine("EV_ABS ABS_MT_POSITION_X " + i);
-            ui.processLine("EV_ABS ABS_MT_POSITION_Y " + WindowMiddleHeight);
-            ui.processLine("EV_SYN SYN_MT_REPORT 0");
-            ui.processLine("EV_SYN SYN_REPORT 0");
+        //start inside the window and drag point outside
+        int p = device.addPoint(windowMiddleWidth, windowMiddleHeight);
+        device.sync();
+        for (i = windowMiddleWidth; i <= windowRightEnd + 100 ; i += 10) {
+            device.setPoint(p, i, windowMiddleHeight);
+            device.sync();
         }
 
         //wait for results
@@ -223,15 +167,13 @@ public class DragTouchInAndOutAWindowTest {
 
         //continue from where we stopped and drag point back to window
         for (; i >= windowMiddleWidth  ; i -= 10) {
-            ui.processLine("EV_ABS ABS_MT_POSITION_X " + i);
-            ui.processLine("EV_ABS ABS_MT_POSITION_Y " + WindowMiddleHeight);
-            ui.processLine("EV_SYN SYN_MT_REPORT 0");
-            ui.processLine("EV_SYN SYN_REPORT 0");
+            device.setPoint(p, i, windowMiddleHeight);
+            device.sync();
         }
 
         //release inside the window
-        ui.processLine("EV_SYN SYN_MT_REPORT 0");
-        ui.processLine("EV_SYN SYN_REPORT 0");
+        device.removePoint(p);
+        device.sync();
         //check that we get the event
         TestLog.waitForLogContaining("TouchPoint: RELEASED", 3000);
     }
@@ -245,47 +187,38 @@ public class DragTouchInAndOutAWindowTest {
      */
     public void multiTouch_dragPointInandOutAwindow() throws Exception {
         Assume.assumeTrue(!TestApplication.isMonocle()); // RT-35406
-        Rectangle2D r = Screen.getPrimary().getBounds();
-        final int screenWidth = (int) r.getWidth();
-        TestLog.reset();
+        Assume.assumeTrue(device.getPointCount() >= 2);
         Stage stage = TestApplication.getStage();
         int windowMiddleWidth = (int)(stage.getX() + stage.getWidth() / 2);
-        int WindowMiddleHeight = (int)(stage.getY() + (stage.getHeight() / 2));
+        int windowMiddleHeight = (int)(stage.getY() + (stage.getHeight() / 2));
         int windowRightEnd = (int)(stage.getX() + stage.getWidth());
         int i;
-        resetState();
-
+        int p1 = device.addPoint(windowRightEnd + 15, windowMiddleHeight);
+        int p2 = device.addPoint(windowRightEnd + 15, windowMiddleHeight + 10);
+        device.sync();
         //start outside the window and drag point into the center of window 
-        for (i = windowRightEnd+15; i >= windowMiddleWidth ; i -= 3) {
+        for (i = windowRightEnd + 12; i >= windowMiddleWidth ; i -= 3) {
             //first finger
-            ui.processLine("EV_ABS ABS_MT_POSITION_X " + i);
-            ui.processLine("EV_ABS ABS_MT_POSITION_Y " + WindowMiddleHeight);
-            ui.processLine("EV_SYN SYN_MT_REPORT 0");
+            device.setPoint(p1, i, windowMiddleHeight);
             //second finger
-            ui.processLine("EV_ABS ABS_MT_POSITION_X " + i);
-            ui.processLine("EV_ABS ABS_MT_POSITION_Y " + (WindowMiddleHeight + 10));
-            ui.processLine("EV_SYN SYN_MT_REPORT 0");
-            ui.processLine("EV_SYN SYN_REPORT 0");
+            device.setPoint(p2, i, windowMiddleHeight + 10);
+            device.sync();
         }
 
         //continue from where we stopped and drag point outside the window to 
         //the end of screen
-        for (; i + windowMiddleWidth < screenWidth ; i += 5) {
+        for (; i + windowMiddleWidth < width ; i += 5) {
             //first finger
-            ui.processLine("EV_ABS ABS_MT_POSITION_X " + (i + windowMiddleWidth));
-            ui.processLine("EV_ABS ABS_MT_POSITION_Y " + WindowMiddleHeight);
-            ui.processLine("EV_SYN SYN_MT_REPORT 0");
+            device.setPoint(p1, i, windowMiddleHeight);
             //second finger
-            ui.processLine("EV_ABS ABS_MT_POSITION_X " + i);
-            ui.processLine("EV_ABS ABS_MT_POSITION_Y " + WindowMiddleHeight+10);
-            ui.processLine("EV_SYN SYN_MT_REPORT 0");
-            
-            ui.processLine("EV_SYN SYN_REPORT 0");
+            device.setPoint(p2, i, windowMiddleHeight + 10);
+            device.sync();
         }
 
         //release all points outside the window
-        ui.processLine("EV_SYN SYN_MT_REPORT 0");
-        ui.processLine("EV_SYN SYN_REPORT 0");
+        device.removePoint(p1);
+        device.removePoint(p2);
+        device.sync();
 
         //wait for results and make sure no event received
         Assert.assertEquals(0, TestLog.countLogContaining("TouchPoint: PRESSED"));

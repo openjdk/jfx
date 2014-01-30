@@ -125,10 +125,9 @@ public class TouchPipelineTest extends TouchTestBase {
     }
 
     public static class FlushingFilter implements TouchFilter {
-        int i;
+        int i = 3;
         @Override
         public boolean filter(TouchState state) {
-            i = 3;
             return false;
         }
 
@@ -163,9 +162,9 @@ public class TouchPipelineTest extends TouchTestBase {
         TestLog.reset();
         System.setProperty("monocle.input.ca/fe/ba/be.touchFilters",
                            TranslateFilter.class.getName() + ","
-                           + OverrideIDFilter.class.getName() +","
-                           + FlushingFilter.class.getName() +","
-                           + LoggingFilter.class.getName() +","
+                           + OverrideIDFilter.class.getName() + ","
+                           + FlushingFilter.class.getName() + ","
+                           + LoggingFilter.class.getName() + ","
                            + NoMultiplesOfTenOnXFilter.class.getName());
         Rectangle2D r = Screen.getPrimary().getBounds();
         ui.processLine("OPEN");
@@ -192,6 +191,7 @@ public class TouchPipelineTest extends TouchTestBase {
 
     @Test
     public void testFilters() throws Exception {
+        ui.processLine("EV_KEY BTN_TOUCH 1");
         ui.processLine("EV_ABS ABS_X 195");
         ui.processLine("EV_ABS ABS_Y 200");
         ui.processLine("EV_SYN");
@@ -206,6 +206,9 @@ public class TouchPipelineTest extends TouchTestBase {
         TestLog.waitForLog("Touch moved: 213, 95");
         // This one should have been filtered out
         Assert.assertEquals(0, TestLog.countLog("Touch Pressed: 208, 195"));
+        ui.processLine("EV_KEY BTN_TOUCH 0");
+        ui.processLine("EV_SYN");
+        TestLog.waitForLog("Touch released: 213, 95");
     }
 
 }

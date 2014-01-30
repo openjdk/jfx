@@ -25,43 +25,35 @@
 
 package com.sun.glass.ui.monocle.input;
 
-import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableBooleanValue;
-import javafx.beans.value.ObservableValue;
-import javafx.css.Styleable;
+import com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
+import com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
-import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.shape.Rectangle;
-import javafx.stage.Screen;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.runners.Parameterized;
 
-public class TouchButtonTest {
+import java.util.Collection;
+import java.util.concurrent.atomic.AtomicReference;
 
-    private UInput ui;
+public class TouchButtonTest extends ParameterizedTestBase {
+
     private Node button1;
     private Node button2;
     private Node button3;
-    private final Object lock = new Object();
-    private final int tapRadius = Integer.getInteger("lens.input.touch.TapRadius", 20);
 
-    @Rule public TestName name = new TestName();
+    public TouchButtonTest(TestTouchDevice device) {
+        super(device);
+    }
 
-    @Before public void setUpScreen() throws Exception {
-        TestLog.log(name.getMethodName());
-        TestApplication.showFullScreenScene();
-        createButtons();
-        initDevice();
-        TestLog.reset();
+    @Parameterized.Parameters
+    public static Collection<Object[]> data() {
+        return TestTouchDevices.getTouchDeviceParameters(1);
     }
 
     public Node createButton(String text, int x, int y, boolean setListeners) {
@@ -69,88 +61,38 @@ public class TouchButtonTest {
         button.setId(text);
         button.setLayoutX(x);
         button.setLayoutY(y);
-//        button.setFocusTraversable(true);
         button.setOnMousePressed((e) -> {
             button.requestFocus();
         });
         if (setListeners) {
-            button.addEventHandler(MouseEvent.ANY, (e) -> {
+            button.addEventHandler(MouseEvent.ANY, e ->
                 TestLog.log(e.getEventType().getName() +": " 
                                                      + (int) e.getScreenX()
-                                                     + ", " + (int) e.getScreenY());
-                });
-
-            button.focusedProperty().addListener(new ChangeListener<Boolean>() {
-                @Override
-                public void changed(ObservableValue<? extends Boolean> observableValue, Boolean oldValue, Boolean newValue) {
-                      ReadOnlyBooleanProperty prop = (ReadOnlyBooleanProperty)observableValue;
-                      TestLog.log(button.getId() + " isFocused=" + prop.get());
-                }
-            });
+                                                     + ", " + (int) e.getScreenY()));
+            button.focusedProperty().addListener((observable, oldValue, newValue) ->
+                    TestLog.log(button.getId() + " isFocused=" + newValue));
         }
 
         return button;
     }
 
+    @Before
     public void createButtons() throws Exception {
         TestRunnable.invokeAndWait(() -> {
-            int screenWidth =  (int) Screen.getPrimary().getVisualBounds().getWidth();
-            int screenHeight = (int) Screen.getPrimary().getVisualBounds().getHeight();
-            int X = screenWidth / 2;
-            int Y = screenHeight / 2;
+            int X = (int) width / 2;
+            int Y = (int) height / 2;
 
             button1 = createButton("button1", X, Y - 100, true);
             button2 = createButton("button2", X, Y + 100, true);
             button3 = createButton("button3", 0, 0, false);
 
             TestApplication.getRootGroup().getChildren().clear();
-            TestApplication.getRootGroup().getChildren().addAll(button1, button2, button3);
+            TestApplication.getRootGroup().getChildren().addAll(
+                    button1, button2, button3);
             button3.requestFocus();
         });
-        TestApplication.waitForNextPulse();
-    }
 
-    public void initDevice() throws Exception {
-        ui = new UInput();
-        Rectangle2D r = Screen.getPrimary().getBounds();
-        final int width = (int) r.getWidth();
-        final int height = (int) r.getHeight();
-        ui.processLine("OPEN");
-        ui.processLine("EVBIT EV_SYN");
-        ui.processLine("EVBIT EV_KEY");
-        ui.processLine("KEYBIT BTN_TOUCH");
-        ui.processLine("EVBIT EV_ABS");
-        ui.processLine("ABSBIT ABS_X");
-        ui.processLine("ABSBIT ABS_Y");
-        ui.processLine("ABSBIT ABS_MT_POSITION_X");
-        ui.processLine("ABSBIT ABS_MT_POSITION_Y");
-        ui.processLine("ABSBIT ABS_MT_ORIENTATION");
-        ui.processLine("ABSBIT ABS_MT_TOUCH_MAJOR");
-        ui.processLine("ABSBIT ABS_MT_TOUCH_MINOR");
-        ui.processLine("ABSMIN ABS_X 0");
-        ui.processLine("ABSMAX ABS_X " + width);
-        ui.processLine("ABSMIN ABS_Y 0");
-        ui.processLine("ABSMAX ABS_Y " + height);
-        ui.processLine("ABSMIN ABS_MT_POSITION_X 0");
-        ui.processLine("ABSMAX ABS_MT_POSITION_X " + width);
-        ui.processLine("ABSMIN ABS_MT_POSITION_Y 0");
-        ui.processLine("ABSMAX ABS_MT_POSITION_Y " + height);
-        ui.processLine("ABSMIN ABS_MT_ORIENTATION 0");
-        ui.processLine("ABSMAX ABS_MT_ORIENTATION 1");
-        ui.processLine("PROPBIT INPUT_PROP_POINTER");
-        ui.processLine("PROPBIT INPUT_PROP_DIRECT");
-        ui.processLine("PROPERTY ID_INPUT_TOUCHSCREEN 1");
-        ui.processLine("CREATE");
-    }
-
-    @After public void destroyDevice() throws Exception {
-        if (ui != null) {
-            try {
-                ui.processLine("DESTROY");
-            } catch (RuntimeException e) { }
-            ui.processLine("CLOSE");
-            ui.dispose();
-        }
+        TestApplication.waitForLayout();
     }
 
     /**
@@ -160,7 +102,7 @@ public class TouchButtonTest {
     @Test
     public void tapOnButton() throws Exception {
         Point2D clickAt = tapInsideButton(button1);
-        waitForFocusGainOn(button1);
+        waitForFocusGainOn("button1");
         waitForMouseEnteredAt(clickAt);
         waitForMouseClickAt(clickAt);
     }
@@ -168,13 +110,13 @@ public class TouchButtonTest {
     @Test
     public void tapOn2Buttons() throws Exception {
         Point2D clickAt = tapInsideButton(button1);
-        waitForFocusGainOn(button1);
+        waitForFocusGainOn("button1");
         waitForMouseEnteredAt(clickAt);
         waitForMouseClickAt(clickAt);
 
         clickAt = tapInsideButton(button2);
-        waitForFocusLostOn(button1);
-        waitForFocusGainOn(button2);
+        waitForFocusLostOn("button1");
+        waitForFocusGainOn("button2");
         waitForMouseEnteredAt(clickAt);
         waitForMouseClickAt(clickAt);
     }
@@ -185,7 +127,7 @@ public class TouchButtonTest {
         TestLog.reset();
         Point2D clickAt = tapInsideButton(button1);
         waitForMouseClickAt(clickAt);
-        waitForFocusGainOn(button1);
+        waitForFocusGainOn("button1");
     }
 
     @Test
@@ -194,11 +136,11 @@ public class TouchButtonTest {
         TestLog.reset();
         Point2D clickAt = tapInsideButton(button1);
         waitForMouseClickAt(clickAt);
-        waitForFocusGainOn(button1);
+        waitForFocusGainOn("button1");
 
         tapOutSideButton();
         tapInsideButton(button3);
-        waitForFocusLostOn(button1);
+        waitForFocusLostOn("button1");
     }
 
     @Test
@@ -210,24 +152,24 @@ public class TouchButtonTest {
             tapInsideButton(button3);
             TestLog.reset();
             Point2D clickAt = tapInsideButton(button1);
-            waitForFocusGainOn(button1);
+            waitForFocusGainOn("button1");
             waitForMouseEnteredAt(clickAt);
             waitForMouseClickAt(clickAt);
 
             tapOutSideButton();
             tapInsideButton(button3);
-            waitForFocusLostOn(button1);
+            waitForFocusLostOn("button1");
             TestLog.reset();
 
             clickAt = tapInsideButton(button2);
-            waitForFocusGainOn(button2);
+            waitForFocusGainOn("button2");
             waitForMouseEnteredAt(clickAt);
-            waitForMouseClickAt(clickAt);
 
+            waitForMouseClickAt(clickAt);
+            TestLog.reset();
             tapOutSideButton();
             tapInsideButton(button3);
-            waitForFocusLostOn(button2);
-            TestLog.reset();
+            waitForFocusLostOn("button2");
         }
     }
 
@@ -244,32 +186,30 @@ public class TouchButtonTest {
         int y = (int) (buttonBounds.getMinY() + buttonBounds.getMaxY()) / 2;
 
         ///tap
-        ui.processLine("EV_ABS ABS_MT_POSITION_X " + x);
-        ui.processLine("EV_ABS ABS_MT_POSITION_Y " + y);
-        ui.processLine("EV_SYN SYN_MT_REPORT 0");
-        ui.processLine("EV_SYN SYN_REPORT 0");
+        int p = device.addPoint(x, y);
+        device.sync();
 
-        waitForFocusGainOn(button2);
+        waitForFocusGainOn("button2");
 
         //drag inside button         
         for (; x > buttonBounds.getMinX(); x-- ) {
-            ui.processLine("EV_ABS ABS_MT_POSITION_X " + x);
-            ui.processLine("EV_ABS ABS_MT_POSITION_Y " + y);
-            ui.processLine("EV_SYN SYN_MT_REPORT 0");
-            ui.processLine("EV_SYN SYN_REPORT 0");
+            device.setPoint(p, x, y);
+            device.sync();
         }
 
         //release inside the button
-        ui.processLine("EV_SYN SYN_MT_REPORT 0");
-        ui.processLine("EV_SYN SYN_REPORT 0");
+        device.removePoint(p);
+        device.sync();
         TestLog.waitForLogContaining("MOUSE_CLICKED:", 3000l);
+        TestLog.waitForLogContaining("MOUSE_RELEASED:", 3000l);
     }
 
     /**
      * RT-34625 - Currently a control will not generate a click when tapping on 
      * it, drag the finger outside the control and release the finger. 
      * This might be a desired behavior, but sometime there are small 
-     * unintentional drags that resulting in a finger release outside the control. 
+     * unintentional drags that resulting in a finger release outside the
+     * control.
      *  
      * This test should fail and throw RuntimeException
      * 
@@ -284,59 +224,55 @@ public class TouchButtonTest {
         int y = (int) (buttonBounds.getMinY() + buttonBounds.getMaxY()) / 2;
 
         ///tap
-        ui.processLine("EV_ABS ABS_MT_POSITION_X " + x);
-        ui.processLine("EV_ABS ABS_MT_POSITION_Y " + y);
-        ui.processLine("EV_SYN SYN_MT_REPORT 0");
-        ui.processLine("EV_SYN SYN_REPORT 0");
+        int p = device.addPoint(x, y);
+        device.sync();
 
-        waitForFocusGainOn(button2);
+        waitForFocusGainOn("button2");
 
         //drag outside button         
-        for (; x > buttonBounds.getMinX() - tapRadius - 10; x-- ) {
-            ui.processLine("EV_ABS ABS_MT_POSITION_X " + x);
-            ui.processLine("EV_ABS ABS_MT_POSITION_Y " + y);
-            ui.processLine("EV_SYN SYN_MT_REPORT 0");
-            ui.processLine("EV_SYN SYN_REPORT 0");
+        for (; x > buttonBounds.getMinX() - device.getTapRadius() - 10; x-- ) {
+            device.setPoint(p, x, y);
+            device.sync();
         }
 
         //release outside the button
-        ui.processLine("EV_SYN SYN_MT_REPORT 0");
-        ui.processLine("EV_SYN SYN_REPORT 0");
+        device.removePoint(p);
+        device.sync();
         TestLog.waitForLogContaining("MOUSE_CLICKED:", 3000l);
     }
 
     @Test
     public void tapping_oneButtonOnScreen () throws Exception {
-        Node button4 = createButton("button", 0, 0, true);
-        button4.layoutYProperty().addListener((ov, t, t1) -> {
-            synchronized (lock) {
-                TestLog.log("Layout complete");
-                lock.notifyAll();
-            }
-        });
-
+        AtomicReference<Node> buttonRef = new AtomicReference<>();
         TestRunnable.invokeAndWait(() -> {
+            Node button4 = createButton("button4", 0, 0, true);
+            buttonRef.set(button4);
             TestApplication.getRootGroup().getChildren().clear();
             TestApplication.getRootGroup().getChildren().addAll(button4);
         });
-
-        TestApplication.waitForNextPulse();
+        TestApplication.waitForLayout();
 
         for (int i = 0; i < 5; i++) {
-            Point2D clickAt = tapInsideButton(button4);
+            Point2D clickAt = tapInsideButton(buttonRef.get());
             waitForMouseClickAt(clickAt);
             TestLog.reset();
         }
     }
     
     /** utilities */
-    public Bounds getButtonBounds(Node button) {
-        return button.localToScreen(new BoundingBox(0, 0, 
-            button.getBoundsInParent().getWidth(),
-            button.getBoundsInParent().getHeight()));
+    public Bounds getButtonBounds(Node button) throws Exception {
+        AtomicReference<Bounds> ref = new AtomicReference<>();
+        TestRunnable.invokeAndWait(() -> {
+            ref.set(button.localToScreen(
+                    new BoundingBox(0, 0,
+                                    button.getBoundsInParent().getWidth(),
+                                    button.getBoundsInParent().getHeight())));
+            TestLog.log("Bounds for " + button.getId() + " are " + ref.get());
+        });
+        return ref.get();
     }
 
-    public Point2D getCenterOfButton(Node button) {
+    public Point2D getCenterOfButton(Node button) throws Exception {
         Bounds buttonBounds = getButtonBounds(button);
         Point2D clickAt = new Point2D(
                 buttonBounds.getMinX()+ buttonBounds.getWidth() / 2,
@@ -344,54 +280,53 @@ public class TouchButtonTest {
         return clickAt;
     }
 
-    public Point2D tapInsideButton(Node button) {
+    public Point2D tapInsideButton(Node button) throws Exception {
         Point2D clickAt = getCenterOfButton(button);
         //tap
-        ui.processLine("EV_ABS ABS_MT_POSITION_X " + ((int)(clickAt.getX())));
-        ui.processLine("EV_ABS ABS_MT_POSITION_Y " + ((int)(clickAt.getY())));
-        ui.processLine("EV_SYN SYN_MT_REPORT 0");
-        ui.processLine("EV_SYN SYN_REPORT 0");
+        int p = device.addPoint(clickAt.getX(), clickAt.getY());
+        device.sync();
         //release
-        ui.processLine("EV_SYN SYN_MT_REPORT 0");
-        ui.processLine("EV_SYN SYN_REPORT 0");
-
+        device.removePoint(p);
+        device.sync();
+        TestLog.waitForLog("Mouse clicked: %.0f, %.0f", clickAt.getX(), clickAt.getY());
         return clickAt;
     }
 
-    public void tapOutSideButton() {
+    public void tapOutSideButton() throws Exception {
         Bounds buttonBounds = getButtonBounds(button3);
         ///tap
-        ui.processLine("EV_ABS ABS_MT_POSITION_X " + ((int)(buttonBounds.getMaxX() + tapRadius + 10)));
-        ui.processLine("EV_ABS ABS_MT_POSITION_Y " + ((int)(buttonBounds.getMaxY() + tapRadius + 10)));
-        ui.processLine("EV_SYN SYN_MT_REPORT 0");
-        ui.processLine("EV_SYN SYN_REPORT 0");
+        double x = buttonBounds.getMaxX() + device.getTapRadius() + 10;
+        double y = buttonBounds.getMaxY() + device.getTapRadius() + 10;
+        int p = device.addPoint(x, y);
+        device.sync();
         //release
-        ui.processLine("EV_SYN SYN_MT_REPORT 0");
-        ui.processLine("EV_SYN SYN_REPORT 0");
+        device.removePoint(p);
+        device.sync();
+        TestLog.waitForLog("Mouse clicked: %.0f, %.0f", x, y);
     }
 
     public void waitForMouseClickAt(Point2D clickAt) throws Exception{
-        TestLog.waitForLog("MOUSE_CLICKED: "
-                           + (int)clickAt.getX() + ", "
-                           + (int)clickAt.getY(), 3000l);
+        TestLog.waitForLog("MOUSE_CLICKED: %d, %d",
+                           Math.round(clickAt.getX()),
+                           Math.round(clickAt.getY()));
     }
 
     public void waitForMouseEnteredAt(Point2D clickAt) throws Exception{
-        TestLog.waitForLog("MOUSE_ENTERED: "
-                           + (int)clickAt.getX() + ", "
-                           + (int)clickAt.getY(), 3000l);
+        TestLog.waitForLog("MOUSE_ENTERED: %d, %d",
+                           Math.round(clickAt.getX()),
+                           Math.round(clickAt.getY()));
     }
 
-    public void waitForFocus(Styleable button, boolean focusState) throws Exception{
-        TestLog.waitForLog(button.getId() + " isFocused=" + focusState, 3000l);
+    public void waitForFocus(String id, boolean focusState) throws Exception {
+        TestLog.waitForLog("%s isFocused=%b", id, focusState);
     }
 
-    public void waitForFocusGainOn(Node button) throws Exception{
-        waitForFocus(button, true);
+    public void waitForFocusGainOn(String id) throws Exception{
+        waitForFocus(id, true);
     }
 
-    public void waitForFocusLostOn(Node button) throws Exception{
-        waitForFocus(button, false);
+    public void waitForFocusLostOn(String id) throws Exception{
+        waitForFocus(id, false);
     }
 
 }

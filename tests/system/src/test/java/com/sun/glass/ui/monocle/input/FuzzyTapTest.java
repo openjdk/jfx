@@ -25,6 +25,8 @@
 
 package com.sun.glass.ui.monocle.input;
 
+import com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
+import com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
 import javafx.event.Event;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.input.MouseEvent;
@@ -33,92 +35,35 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runners.Parameterized;
 
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.util.Collection;
 
-public class FuzzyTapTest extends TouchTestBase {
+public class FuzzyTapTest extends ParameterizedTestBase {
 
-    /** Touch down and up at different coordinates */
-    @Test
-    public void tap1() throws Exception {
-        TestApplication.showFullScreenScene();
-        TestApplication.addMouseListeners();
-        TestLog.reset();
-        Rectangle2D r = Screen.getPrimary().getBounds();
-        final int width = (int) r.getWidth();
-        final int height = (int) r.getHeight();
-        final int x = width / 2;
-        final int y = height / 2;
-        ui.processLine("OPEN");
-        ui.processLine("EVBIT EV_SYN");
-        ui.processLine("EVBIT EV_KEY");
-        ui.processLine("KEYBIT BTN_TOUCH");
-        ui.processLine("EVBIT EV_ABS");
-        ui.processLine("ABSBIT ABS_X");
-        ui.processLine("ABSBIT ABS_Y");
-        ui.processLine("ABSMIN ABS_X 0");
-        ui.processLine("ABSMAX ABS_X " + width);
-        ui.processLine("ABSMIN ABS_Y 0");
-        ui.processLine("ABSMAX ABS_Y " + height);
-        ui.processLine("PROPBIT INPUT_PROP_POINTER");
-        ui.processLine("PROPBIT INPUT_PROP_DIRECT");
-        ui.processLine("PROPERTY ID_INPUT_TOUCHSCREEN 1");
-        ui.processLine("CREATE");
-        ui.processLine("EV_KEY BTN_TOUCH 1");
-        ui.processLine("EV_ABS ABS_X " + x);
-        ui.processLine("EV_ABS ABS_Y " + y);
-        ui.processLine("EV_SYN");
-        ui.processLine("EV_ABS ABS_X " + (x));
-        ui.processLine("EV_ABS ABS_Y " + (y));
-        ui.processLine("EV_SYN");
-        ui.processLine("EV_KEY BTN_TOUCH 0");
-        ui.processLine("EV_ABS ABS_X " + (x));
-        ui.processLine("EV_ABS ABS_Y " + (y));
-        ui.processLine("EV_SYN");
-        TestLog.waitForLog("Mouse pressed: "
-                + x + ", " + y, 3000);
-        TestLog.waitForLog("Mouse released: "
-                + x + ", " + y, 3000);
+    public FuzzyTapTest(TestTouchDevice device) {
+        super(device);
+    }
+
+    @Parameterized.Parameters
+    public static Collection<Object[]> data() {
+        return TestTouchDevices.getTouchDeviceParameters(1);
     }
 
     /** Touch down, touch up at a slightly different location*/
     @Test
-    public void tap2() throws Exception {
-        TestApplication.showFullScreenScene();
-        TestApplication.addMouseListeners();
-        TestLog.reset();
-        Rectangle2D r = Screen.getPrimary().getBounds();
-        final int width = (int) r.getWidth();
-        final int height = (int) r.getHeight();
-        final int x = width / 2;
-        final int y = height / 2;
-        final int tapRadius = TestApplication.getTapRadius();
+    public void tap1() throws Exception {
+        final int x = (int) width / 2;
+        final int y = (int) height / 2;
+        final int tapRadius = device.getTapRadius();
         final int x1 = x + tapRadius / 2;
         final int y1 = y + tapRadius / 2;
-        ui.processLine("OPEN");
-        ui.processLine("EVBIT EV_SYN");
-        ui.processLine("EVBIT EV_KEY");
-        ui.processLine("KEYBIT BTN_TOUCH");
-        ui.processLine("EVBIT EV_ABS");
-        ui.processLine("ABSBIT ABS_X");
-        ui.processLine("ABSBIT ABS_Y");
-        ui.processLine("ABSMIN ABS_X 0");
-        ui.processLine("ABSMAX ABS_X " + width);
-        ui.processLine("ABSMIN ABS_Y 0");
-        ui.processLine("ABSMAX ABS_Y " + height);
-        ui.processLine("PROPBIT INPUT_PROP_POINTER");
-        ui.processLine("PROPBIT INPUT_PROP_DIRECT");
-        ui.processLine("PROPERTY ID_INPUT_TOUCHSCREEN 1");
-        ui.processLine("CREATE");
-        ui.processLine("EV_KEY BTN_TOUCH 1");
-        ui.processLine("EV_ABS ABS_X " + x);
-        ui.processLine("EV_ABS ABS_Y " + y);
-        ui.processLine("EV_SYN");
-        ui.processLine("EV_KEY BTN_TOUCH 0");
-        ui.processLine("EV_ABS ABS_X " + x1);
-        ui.processLine("EV_ABS ABS_Y " + y1);
-        ui.processLine("EV_SYN");
+        int p = device.addPoint(x, y);
+        device.sync();
+        device.setAndRemovePoint(p, x1, y1);
+        device.sync();
         TestLog.waitForLog("Mouse pressed: " + x + ", " + y, 3000);
         TestLog.waitForLog("Mouse clicked: " + x + ", " + y, 3000);
         TestLog.waitForLog("Mouse released: " + x + ", " + y, 3000);
@@ -128,90 +73,36 @@ public class FuzzyTapTest extends TouchTestBase {
 
     /** Touch down, small move, touch up */
     @Test
-    public void tap2a() throws Exception {
-        TestApplication.showFullScreenScene();
-        TestApplication.addMouseListeners();
-        TestLog.reset();
-        Rectangle2D r = Screen.getPrimary().getBounds();
-        final int width = (int) r.getWidth();
-        final int height = (int) r.getHeight();
-        final int x = width / 2;
-        final int y = height / 2;
-        final int tapRadius = TestApplication.getTapRadius();
+    public void tap1a() throws Exception {
+        final int x = (int) width / 2;
+        final int y = (int) height / 2;
+        final int tapRadius = device.getTapRadius();
         final int x1 = x + tapRadius / 2;
         final int y1 = y + tapRadius / 2;
-        ui.processLine("OPEN");
-        ui.processLine("EVBIT EV_SYN");
-        ui.processLine("EVBIT EV_KEY");
-        ui.processLine("KEYBIT BTN_TOUCH");
-        ui.processLine("EVBIT EV_ABS");
-        ui.processLine("ABSBIT ABS_X");
-        ui.processLine("ABSBIT ABS_Y");
-        ui.processLine("ABSMIN ABS_X 0");
-        ui.processLine("ABSMAX ABS_X " + width);
-        ui.processLine("ABSMIN ABS_Y 0");
-        ui.processLine("ABSMAX ABS_Y " + height);
-        ui.processLine("PROPBIT INPUT_PROP_POINTER");
-        ui.processLine("PROPBIT INPUT_PROP_DIRECT");
-        ui.processLine("PROPERTY ID_INPUT_TOUCHSCREEN 1");
-        ui.processLine("CREATE");
-        ui.processLine("EV_KEY BTN_TOUCH 1");
-        ui.processLine("EV_ABS ABS_X " + x);
-        ui.processLine("EV_ABS ABS_Y " + y);
-        ui.processLine("EV_SYN");
-        ui.processLine("EV_ABS ABS_X " + x1);
-        ui.processLine("EV_ABS ABS_Y " + y1);
-        ui.processLine("EV_SYN");
-        ui.processLine("EV_KEY BTN_TOUCH 0");
-        ui.processLine("EV_ABS ABS_X " + x1);
-        ui.processLine("EV_ABS ABS_Y " + y1);
-        ui.processLine("EV_SYN");
-        TestLog.waitForLog("Mouse pressed: " + x + ", " + y, 3000);
+        int p = device.addPoint(x, y);
+        device.sync();
+        device.setPoint(p, x1, y1);
+        device.sync();
+        device.removePoint(p);
+        device.sync();
         TestLog.waitForLog("Mouse clicked: " + x + ", " + y, 3000);
         TestLog.waitForLog("Mouse released: " + x + ", " + y, 3000);
         Assert.assertEquals(0, TestLog.countLogContaining("Mouse dragged:"));
         Assert.assertEquals(0, TestLog.countLogContaining("Touch moved:"));
     }
 
-    /** Touch down, touch up outside the tap radius NOTE: its not clear if
-     *  release event, on single-touch screen. must include coordinates */
+    /** Touch down, touch up outside the tap radius */
     @Test
-    public void tap3() throws Exception {
-        TestApplication.showFullScreenScene();
-        TestApplication.addMouseListeners();
-        TestApplication.addTouchListeners();
-        TestLog.reset();
-        Rectangle2D r = Screen.getPrimary().getBounds();
-        final int width = (int) r.getWidth();
-        final int height = (int) r.getHeight();
-        final int x = width / 2;
-        final int y = height / 2;
-        final int tapRadius = TestApplication.getTapRadius();
-        final int x1 = x + tapRadius * 2;
-        final int y1 = y + tapRadius * 2;
-        ui.processLine("OPEN");
-        ui.processLine("EVBIT EV_SYN");
-        ui.processLine("EVBIT EV_KEY");
-        ui.processLine("KEYBIT BTN_TOUCH");
-        ui.processLine("EVBIT EV_ABS");
-        ui.processLine("ABSBIT ABS_X");
-        ui.processLine("ABSBIT ABS_Y");
-        ui.processLine("ABSMIN ABS_X 0");
-        ui.processLine("ABSMAX ABS_X " + width);
-        ui.processLine("ABSMIN ABS_Y 0");
-        ui.processLine("ABSMAX ABS_Y " + height);
-        ui.processLine("PROPBIT INPUT_PROP_POINTER");
-        ui.processLine("PROPBIT INPUT_PROP_DIRECT");
-        ui.processLine("PROPERTY ID_INPUT_TOUCHSCREEN 1");
-        ui.processLine("CREATE");
-        ui.processLine("EV_KEY BTN_TOUCH 1");
-        ui.processLine("EV_ABS ABS_X " + x);
-        ui.processLine("EV_ABS ABS_Y " + y);
-        ui.processLine("EV_SYN");
-        ui.processLine("EV_KEY BTN_TOUCH 0");
-        ui.processLine("EV_ABS ABS_X " + x1);
-        ui.processLine("EV_ABS ABS_Y " + y1);
-        ui.processLine("EV_SYN");
+    public void tap2() throws Exception {
+        final int x = (int) width / 2;
+        final int y = (int) height / 2;
+        final int tapRadius = device.getTapRadius();
+        final int x1 = x + tapRadius;
+        final int y1 = y + tapRadius;
+        int p = device.addPoint(x, y);
+        device.sync();
+        device.setAndRemovePoint(p, x1, y1);
+        device.sync();
         TestLog.waitForLog("Mouse pressed: " + x + ", " + y, 3000);
         TestLog.waitForLog("Mouse released: " + x + ", " + y, 3000);
         TestLog.waitForLog("Mouse clicked: " + x + ", " + y, 3000);
@@ -222,45 +113,18 @@ public class FuzzyTapTest extends TouchTestBase {
 
     /** Touch down, move outside touch radius, touch up */
     @Test
-    public void tap3a() throws Exception {
-        TestApplication.showFullScreenScene();
-        TestApplication.addMouseListeners();
-        TestApplication.addTouchListeners();
-        TestLog.reset();
-        Rectangle2D r = Screen.getPrimary().getBounds();
-        final int width = (int) r.getWidth();
-        final int height = (int) r.getHeight();
-        final int x = width / 2;
-        final int y = height / 2;
-        final int tapRadius = TestApplication.getTapRadius();
-        final int x1 = x + tapRadius * 2;
-        final int y1 = y + tapRadius * 2;
-        ui.processLine("OPEN");
-        ui.processLine("EVBIT EV_SYN");
-        ui.processLine("EVBIT EV_KEY");
-        ui.processLine("KEYBIT BTN_TOUCH");
-        ui.processLine("EVBIT EV_ABS");
-        ui.processLine("ABSBIT ABS_X");
-        ui.processLine("ABSBIT ABS_Y");
-        ui.processLine("ABSMIN ABS_X 0");
-        ui.processLine("ABSMAX ABS_X " + width);
-        ui.processLine("ABSMIN ABS_Y 0");
-        ui.processLine("ABSMAX ABS_Y " + height);
-        ui.processLine("PROPBIT INPUT_PROP_POINTER");
-        ui.processLine("PROPBIT INPUT_PROP_DIRECT");
-        ui.processLine("PROPERTY ID_INPUT_TOUCHSCREEN 1");
-        ui.processLine("CREATE");
-        ui.processLine("EV_KEY BTN_TOUCH 1");
-        ui.processLine("EV_ABS ABS_X " + x);
-        ui.processLine("EV_ABS ABS_Y " + y);
-        ui.processLine("EV_SYN");
-        ui.processLine("EV_ABS ABS_X " + x1);
-        ui.processLine("EV_ABS ABS_Y " + y1);
-        ui.processLine("EV_SYN");
-        ui.processLine("EV_KEY BTN_TOUCH 0");
-        ui.processLine("EV_ABS ABS_X " + x1);
-        ui.processLine("EV_ABS ABS_Y " + y1);
-        ui.processLine("EV_SYN");
+    public void tap2a() throws Exception {
+        final int x = (int) width / 2;
+        final int y = (int) height / 2;
+        final int tapRadius = device.getTapRadius();
+        final int x1 = x + tapRadius;
+        final int y1 = y + tapRadius;
+        int p = device.addPoint(x, y);
+        device.sync();
+        device.setPoint(p, x1, y1);
+        device.sync();
+        device.removePoint(p);
+        device.sync();
         TestLog.waitForLog("Mouse pressed: " + x + ", " + y, 3000);
         TestLog.waitForLog("Mouse dragged: " + x1 + ", " + y1, 3000);
         TestLog.waitForLog("Mouse released: " + x1 + ", " + y1, 3000);
@@ -274,57 +138,28 @@ public class FuzzyTapTest extends TouchTestBase {
     /** Touch down, drift outside touch radius, touch up */
     @Test
     public void tap3b() throws Exception {
-        TestApplication.showFullScreenScene();
-        TestApplication.addMouseListeners();
-        TestApplication.addTouchListeners();
-        TestLog.reset();
-        Rectangle2D r = Screen.getPrimary().getBounds();
-        final int width = (int) r.getWidth();
-        final int height = (int) r.getHeight();
-        final int x = width / 2;
-        final int y = height / 2;
-        final int tapRadius = TestApplication.getTapRadius();
+        final int x = (int) width / 2;
+        final int y = (int) height / 2;
+        final int tapRadius = device.getTapRadius();
         final int x1 = x + tapRadius * 2;
         final int y1 = y + tapRadius * 2;
         final int x2 = x + tapRadius * 3;
         final int y2 = y + tapRadius * 3;
-        ui.processLine("OPEN");
-        ui.processLine("EVBIT EV_SYN");
-        ui.processLine("EVBIT EV_KEY");
-        ui.processLine("KEYBIT BTN_TOUCH");
-        ui.processLine("EVBIT EV_ABS");
-        ui.processLine("ABSBIT ABS_X");
-        ui.processLine("ABSBIT ABS_Y");
-        ui.processLine("ABSMIN ABS_X 0");
-        ui.processLine("ABSMAX ABS_X " + width);
-        ui.processLine("ABSMIN ABS_Y 0");
-        ui.processLine("ABSMAX ABS_Y " + height);
-        ui.processLine("PROPBIT INPUT_PROP_POINTER");
-        ui.processLine("PROPBIT INPUT_PROP_DIRECT");
-        ui.processLine("PROPERTY ID_INPUT_TOUCHSCREEN 1");
-        ui.processLine("CREATE");
-        ui.processLine("EV_KEY BTN_TOUCH 1");
-        ui.processLine("EV_ABS ABS_X " + x);
-        ui.processLine("EV_ABS ABS_Y " + y);
-        ui.processLine("EV_SYN");
+        int p = device.addPoint(x, y);
+        device.sync();
         // drift out of the tap radius
         for (int i = 0; i < tapRadius * 2; i++) {
-            ui.processLine("EV_ABS ABS_X " + (x + i));
-            ui.processLine("EV_ABS ABS_Y " + (y + i));
-            ui.processLine("EV_SYN");
+            device.setPoint(p, x + i, y + i);
+            device.sync();
         }
         // extra moves to make sure the final move is not filtered out
-        ui.processLine("EV_ABS ABS_X 0");
-        ui.processLine("EV_ABS ABS_Y 0");
-        ui.processLine("EV_SYN");
-        ui.processLine("EV_ABS ABS_X " + x2);
-        ui.processLine("EV_ABS ABS_Y " + y2);
-        ui.processLine("EV_SYN");
+        device.setPoint(p, 0, 0);
+        device.sync();
+        device.setPoint(p, x2, y2);
+        device.sync();
         // and release
-        ui.processLine("EV_KEY BTN_TOUCH 0");
-        ui.processLine("EV_ABS ABS_X " + x2);
-        ui.processLine("EV_ABS ABS_Y " + y2);
-        ui.processLine("EV_SYN");
+        device.removePoint(p);
+        device.sync();
         TestLog.waitForLog("Mouse pressed: " + x + ", " + y, 3000);
         TestLog.waitForLog("Mouse dragged: " + x2 + ", " + y2, 3000);
         TestLog.waitForLog("Mouse released: " + x2 + ", " + y2, 3000);

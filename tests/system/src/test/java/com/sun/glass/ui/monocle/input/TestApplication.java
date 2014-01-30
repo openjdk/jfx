@@ -128,6 +128,8 @@ public class TestApplication extends Application {
             @Override
             public void test() throws Exception {
                 Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
+                stage.setX(0.0);
+                stage.setY(0.0);
                 stage.setWidth(bounds.getWidth());
                 stage.setHeight(bounds.getHeight());
                 Rectangle r = new Rectangle(bounds.getWidth(), bounds.getHeight());
@@ -140,7 +142,7 @@ public class TestApplication extends Application {
                 stage.requestFocus();
             }
         }.invokeAndWait();
-        frameWait(1);
+        frameWait(2);
     }
 
     public static void showInMiddleOfScreen() throws Exception {
@@ -151,7 +153,9 @@ public class TestApplication extends Application {
             @Override
             public void test() throws Exception {
                 Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
-                stage.setWidth(bounds.getWidth() / 2 );
+                stage.setX(bounds.getWidth() / 4);
+                stage.setY(bounds.getHeight() / 4);
+                stage.setWidth(bounds.getWidth() / 2);
                 stage.setHeight(bounds.getHeight() / 2);
                 Rectangle r = new Rectangle(bounds.getWidth() / 2,
                                             bounds.getHeight() / 2);
@@ -167,11 +171,15 @@ public class TestApplication extends Application {
                 stage.requestFocus();
             }
         }.invokeAndWait();
-        frameWait(1);
+        frameWait(2);
     }
 
     public static void waitForNextPulse() throws InterruptedException {
         frameWait(1);
+    }
+
+    public static void waitForLayout() throws InterruptedException {
+        frameWait(5);
     }
 
     private static void frameWait(int n) {
