@@ -181,7 +181,7 @@ public class PrismTextLayout implements TextLayout {
     }
 
     public boolean setWrapWidth(float newWidth) {
-        if (Float.isFinite(newWidth)) newWidth = 0;
+        if (Float.isInfinite(newWidth)) newWidth = 0;
         if (Float.isNaN(newWidth)) newWidth = 0;
         float oldWidth = this.wrapWidth;
         this.wrapWidth = Math.max(0, newWidth);
