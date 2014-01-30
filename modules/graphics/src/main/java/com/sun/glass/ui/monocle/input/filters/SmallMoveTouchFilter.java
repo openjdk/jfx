@@ -48,7 +48,7 @@ public final class SmallMoveTouchFilter implements TouchFilter {
         TouchInput.getInstance().getState(oldState);
         for (int i = 0; i < oldState.getPointCount(); i++) {
             TouchState.Point oldPoint = oldState.getPoint(i);
-            TouchState.Point newPoint = state.getPointForID(oldPoint.id, false);
+            TouchState.Point newPoint = state.getPointForID(oldPoint.id);
             if (newPoint != null) {
                 int dx = newPoint.x - oldPoint.x;
                 int dy = newPoint.y - oldPoint.y;

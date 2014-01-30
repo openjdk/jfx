@@ -48,7 +48,7 @@ public class LinuxStatelessMultiTouchProcessor extends LinuxTouchProcessor {
     @Override
     public void processEvents(LinuxInputDevice device) {
         LinuxEventBuffer buffer = device.getBuffer();
-        pipeline.pullState(state, true);
+        state.clear();
         int x = COORD_UNDEFINED;
         int y = COORD_UNDEFINED;
         boolean touchReleased = false;
@@ -96,7 +96,7 @@ public class LinuxStatelessMultiTouchProcessor extends LinuxTouchProcessor {
                                 touchReleased = false;
                             }
                             pipeline.pushState(state);
-                            pipeline.pullState(state, true);
+                            state.clear();
                             x = y = COORD_UNDEFINED;
                             break;
                         default: // ignore

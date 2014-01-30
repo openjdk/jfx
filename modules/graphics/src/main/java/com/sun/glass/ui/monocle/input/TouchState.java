@@ -70,7 +70,7 @@ public class TouchState {
         if (window == null || recalculateCache) {
             window = fallback;
             if (primaryID >= 0) {
-                Point p = getPointForID(primaryID, false);
+                Point p = getPointForID(primaryID);
                 if (p != null) {
                     window = (MonocleWindow)
                             MonocleWindowManager.getInstance()
@@ -85,25 +85,17 @@ public class TouchState {
         return points[index];
     }
 
-    /** Gets the Point matching the given ID, optionally reinstating the point
-     * from the previous touch state.
+    /** Gets the Point matching the given ID. if available
      * @param id The Point ID to match. A value of -1 matches any Point.
-     * @return a matching Point, or a new Point if there was no match and
-     * reinstatement was requested; null otherwise
+     * @return a matching Point, or null if there is no point with that ID.
      */
-    public Point getPointForID(int id, boolean reinstate) {
+    public Point getPointForID(int id) {
         for (int i = 0; i < pointCount; i++) {
             if (id == -1 || points[i].id == id) {
                 return points[i];
             }
         }
-        if (reinstate) {
-            Point p = addPoint(TouchInput.getInstance().getPointForID(id));
-            p.id = id;
-            return p;
-        } else {
-            return null;
-        }
+        return null;
     }
 
     int getPrimaryID() {

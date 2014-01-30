@@ -91,4 +91,9 @@ public class LookaheadTouchFilter implements TouchFilter {
         return PRIORITY_PRE_ID + 1;
     }
 
+    @Override
+    public String toString() {
+        return "Lookahead";
+    }
+
 }

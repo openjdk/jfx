@@ -27,12 +27,15 @@ package com.sun.glass.ui.monocle.input;
 
 import com.sun.glass.ui.monocle.linux.Input;
 import com.sun.glass.ui.monocle.linux.LinuxSystem;
+import javafx.animation.AnimationTimer;
+import javafx.application.Platform;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.BitSet;
+import java.util.concurrent.CountDownLatch;
 
 public class LensUInput extends NativeUInput {
 
@@ -88,6 +91,21 @@ public class LensUInput extends NativeUInput {
 
     @Override
     public void dispose() {
+    }
+
+    @Override
+    public void waitForQuiet() throws InterruptedException {
+        final CountDownLatch frameCounter = new CountDownLatch(3);
+        Platform.runLater(() -> new AnimationTimer() {
+            @Override
+            public void handle(long now) {
+                frameCounter.countDown();
+                if (frameCounter.getCount() == 0l) {
+                    stop();
+                }
+            }
+        }.start());
+        frameCounter.await();
     }
 
     private void writeBytes(int length) throws IOException {

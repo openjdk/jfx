@@ -30,6 +30,8 @@ import com.sun.glass.ui.GestureSupport;
 import com.sun.glass.ui.TouchInputSupport;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
+import com.sun.glass.ui.monocle.MonocleSettings;
+import com.sun.glass.ui.monocle.MonocleTrace;
 import com.sun.glass.ui.monocle.MonocleWindow;
 import com.sun.glass.ui.monocle.input.filters.TouchPipeline;
 
@@ -102,22 +104,15 @@ public class TouchInput {
         state.copyTo(result);
     }
 
-    /** Returns the touch point for the given ID in the current TouchState,
-     *  or null if no match was found.
-     *
-     * @param id The touch point ID to check for. 0 matches any ID.
-     * @return A matching touch point if available, or null if none was found
-     */
-    TouchState.Point getPointForID(int id) {
-        return state.getPointForID(id, false);
-    }
-
     /** Called from the input processor to update the touch state and send
      * touch and mouse events.
      *
      * @param newState The updated touch state
      */
     public void setState(TouchState newState) {
+        if (MonocleSettings.settings.traceEvents) {
+            MonocleTrace.traceEvent("Set %s", state);
+        }
         newState.sortPointsByID();
         newState.assignPrimaryID();
         // Get the cached window for the old state and compute the window for
@@ -184,7 +179,7 @@ public class TouchInput {
         touches.notifyBeginTouchEvent(view, 0, true, countEvents(newState));
         for (int i = 0; i < state.getPointCount(); i++) {
             TouchState.Point oldPoint = state.getPoint(i);
-            TouchState.Point newPoint = newState.getPointForID(oldPoint.id, false);
+            TouchState.Point newPoint = newState.getPointForID(oldPoint.id);
             if (newPoint != null) {
                 if (newPoint.x == oldPoint.x && newPoint.y == oldPoint.y) {
                     dispatchPoint(window, view, TouchEvent.TOUCH_STILL,
@@ -201,7 +196,7 @@ public class TouchInput {
         // are new points.
         for (int i = 0; i < newState.getPointCount(); i++) {
             TouchState.Point newPoint = newState.getPoint(i);
-            TouchState.Point oldPoint = state.getPointForID(newPoint.id, false);
+            TouchState.Point oldPoint = state.getPointForID(newPoint.id);
             if (oldPoint == null) {
                 dispatchPoint(window, view, TouchEvent.TOUCH_PRESSED, newPoint);
             }
@@ -218,7 +213,7 @@ public class TouchInput {
         int count = state.getPointCount();
         for (int i = 0; i < newState.getPointCount(); i++) {
             TouchState.Point newPoint = newState.getPoint(i);
-            TouchState.Point oldPoint = state.getPointForID(newPoint.id, false);
+            TouchState.Point oldPoint = state.getPointForID(newPoint.id);
             if (oldPoint == null) {
                 count ++;
             }

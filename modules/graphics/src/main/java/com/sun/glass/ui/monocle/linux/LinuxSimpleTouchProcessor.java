@@ -25,6 +25,7 @@
 
 package com.sun.glass.ui.monocle.linux;
 
+import com.sun.glass.ui.monocle.input.TouchState;
 import com.sun.glass.ui.monocle.input.filters.AssignPointIDTouchFilter;
 import com.sun.glass.ui.monocle.input.filters.LookaheadTouchFilter;
 
@@ -39,7 +40,7 @@ public class LinuxSimpleTouchProcessor extends LinuxTouchProcessor {
     @Override
     public void processEvents(LinuxInputDevice device) {
         LinuxEventBuffer buffer = device.getBuffer();
-        pipeline.pullState(state, true);
+        state.clear();
         boolean touchReleased = false;
         while (buffer.hasNextEvent()) {
             switch (buffer.getEventType()) {
@@ -48,11 +49,19 @@ public class LinuxSimpleTouchProcessor extends LinuxTouchProcessor {
                     switch (transform.getAxis(buffer)) {
                         case Input.ABS_X:
                         case Input.ABS_MT_POSITION_X:
-                            state.getPointForID(-1, true).x = value;
+                            if (state.getPointCount() == 0) {
+                                state.addPoint(null).x = value;
+                            } else {
+                                state.getPoint(0).x = value;
+                            }
                             break;
                         case Input.ABS_Y:
                         case Input.ABS_MT_POSITION_Y:
-                            state.getPointForID(-1, true).y = value;
+                            if (state.getPointCount() == 0) {
+                                state.addPoint(null).y = value;
+                            } else {
+                                state.getPoint(0).y = value;
+                            }
                             break;
                     }
                     break;
@@ -64,7 +73,7 @@ public class LinuxSimpleTouchProcessor extends LinuxTouchProcessor {
                                 touchReleased = true;
                             } else {
                                 // restore an old point
-                                state.getPointForID(-1, true);
+                                state.addPoint(null);
                             }
                             break;
                     }
@@ -78,7 +87,7 @@ public class LinuxSimpleTouchProcessor extends LinuxTouchProcessor {
                                 touchReleased = false;
                             }
                             pipeline.pushState(state);
-                            pipeline.pullState(state, true);
+                            state.clear();
                             break;
                         default: // ignore
                     }

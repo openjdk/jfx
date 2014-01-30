@@ -36,6 +36,10 @@ public abstract class TestDevice {
     public void destroy() {
         if (ui != null) {
             try {
+                ui.waitForQuiet();
+            } catch (InterruptedException e) {
+            }
+            try {
                 ui.processLine("DESTROY");
             } catch (RuntimeException e) {
             }

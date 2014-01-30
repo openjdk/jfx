@@ -25,6 +25,8 @@
 
 package com.sun.glass.ui.monocle.input.filters;
 
+import com.sun.glass.ui.monocle.MonocleSettings;
+import com.sun.glass.ui.monocle.MonocleTrace;
 import com.sun.glass.ui.monocle.input.TouchInput;
 import com.sun.glass.ui.monocle.input.TouchState;
 
@@ -109,6 +111,9 @@ public class TouchPipeline {
     }
 
     public void pushState(TouchState state) {
+        if (MonocleSettings.settings.traceEventsVerbose) {
+            MonocleTrace.traceEvent("Pushing %s to %s", state, this);
+        }
         if (!filter(state)) {
             touch.setState(state);
         }
@@ -121,6 +126,9 @@ public class TouchPipeline {
         for (int i = 0; i < filters.size(); i++) {
             TouchFilter filter = filters.get(i);
             while (filter.flush(flushState)) {
+                if (MonocleSettings.settings.traceEventsVerbose) {
+                    MonocleTrace.traceEvent("Flushing %s from %s", flushState, filter);
+                }
                 boolean consumed = false;
                 for (int j = i + 1; j < filters.size() && !consumed; j++) {
                     consumed = filters.get(j).filter(flushState);
@@ -129,23 +137,6 @@ public class TouchPipeline {
                     touch.setState(flushState);
                 }
             }
-        }
-    }
-
-    /**
-     * Updates the local touch point state from TouchInput
-     *
-     * @param clearPoints Whether to clear touch point data in the updated local
-     *                    state. Stateless Touch processors getting their input
-     *                    with drivers that send each touch point on every event
-     *                    might need to set this; touch processors using drivers
-     *                    that send only the delta from the previous state will
-     *                    not want to clear the points.
-     */
-    public void pullState(TouchState state, boolean clearPoints) {
-        touch.getState(state);
-        if (clearPoints) {
-            state.clear();
         }
     }
 
@@ -160,4 +151,5 @@ public class TouchPipeline {
         sb.append("]");
         return sb.toString();
     }
+
 }

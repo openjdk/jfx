@@ -73,27 +73,12 @@ public abstract class ParameterizedTestBase {
     @Before
     public void createDevice() throws Exception {
         TestApplication.showFullScreenScene();
-        String testName = name.getMethodName() + "[" + device + "]";
-        String message = "Starting " + testName;
-        TestLog.log("Initializing " + testName);
+        TestLog.log("Starting " + name.getMethodName() + "[" + device + "]");
         Rectangle2D r = TestTouchDevices.getScreenBounds();
         width = r.getWidth();
         height = r.getHeight();
         TestLog.reset();
         device.create();
-
-//        TestApplication.addMouseListeners();
-//        TestApplication.addTouchListeners();
-//        // tap and release once in the middle of the screen. If the
-//        // previous test left us in a bad state, this will help recover
-//        TestApplication.getStage().getScene().setOnMouseReleased(
-//                e -> TestLog.log(message));
-
-//        int p = device.addPoint(width / 4, height / 4);
-//        device.sync();
-//        device.removePoint(p);
-//        device.sync();
-//        TestLog.waitForLog(message, 3000l);
         TestApplication.addMouseListeners();
         TestApplication.addTouchListeners();
         TestLog.reset();

@@ -61,6 +61,7 @@ public class SimpleMouseTest {
 
     @After public void destroyDevice() throws Exception {
         if (ui != null) {
+            ui.waitForQuiet();
             try {
                 ui.processLine("DESTROY");
             } catch (RuntimeException e) { }

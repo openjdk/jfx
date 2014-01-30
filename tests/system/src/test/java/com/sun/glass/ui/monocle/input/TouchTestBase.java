@@ -92,6 +92,10 @@ public class TouchTestBase {
     @After
     public void destroyDevice() throws InterruptedException {
         try {
+            ui.waitForQuiet();
+        } catch (InterruptedException e) {
+        }
+        try {
             ui.processLine("DESTROY");
         } catch (RuntimeException e) {
         }

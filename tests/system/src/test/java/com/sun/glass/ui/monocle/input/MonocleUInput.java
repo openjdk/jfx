@@ -33,8 +33,8 @@ import javafx.application.Platform;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.channels.Pipe;
+import java.util.concurrent.atomic.AtomicReference;
 
 class MonocleUInput extends NativeUInput {
 
@@ -109,4 +109,16 @@ class MonocleUInput extends NativeUInput {
         pipe.sink().write(buffer);
     }
 
+    @Override
+    public void waitForQuiet() throws InterruptedException {
+        if (device != null) {
+            AtomicReference<Boolean> done = new AtomicReference<>(Boolean.FALSE);
+            do {
+                Application.invokeAndWait(() -> done.set(device.isQuiet()));
+                if (!done.get()) {
+                    TestApplication.waitForNextPulse();
+                }
+            } while (!done.get());
+        }
+    }
 }

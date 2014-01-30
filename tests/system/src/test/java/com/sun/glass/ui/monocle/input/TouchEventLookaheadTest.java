@@ -25,13 +25,27 @@
 
 package com.sun.glass.ui.monocle.input;
 
+import com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
+import com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
 import javafx.geometry.Rectangle2D;
 import javafx.stage.Screen;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
+import org.junit.runners.Parameterized;
 
-public class TouchEventLookaheadTest extends TouchTestBase {
+import java.util.Collection;
+
+public class TouchEventLookaheadTest extends ParameterizedTestBase {
+
+    public TouchEventLookaheadTest(TestTouchDevice device) {
+        super(device);
+    }
+
+    @Parameterized.Parameters
+    public static Collection<Object[]> data() {
+        return TestTouchDevices.getTouchDeviceParameters(1);
+    }
 
     /** Merge together similar moves */
     @Test
@@ -44,46 +58,27 @@ public class TouchEventLookaheadTest extends TouchTestBase {
         Rectangle2D r = Screen.getPrimary().getBounds();
         final int width = (int) r.getWidth();
         final int height = (int) r.getHeight();
-        final int x1 = width / 2;
-        final int y1 = height / 2;
-        final int x2 = (width * 3) / 4;
-        final int y2 = (height * 3) / 4;
-        ui.processLine("OPEN");
-        ui.processLine("EVBIT EV_SYN");
-        ui.processLine("EVBIT EV_KEY");
-        ui.processLine("KEYBIT BTN_TOUCH");
-        ui.processLine("EVBIT EV_ABS");
-        ui.processLine("ABSBIT ABS_X");
-        ui.processLine("ABSBIT ABS_Y");
-        ui.processLine("ABSMIN ABS_X 0");
-        ui.processLine("ABSMAX ABS_X " + width);
-        ui.processLine("ABSMIN ABS_Y 0");
-        ui.processLine("ABSMAX ABS_Y " + height);
-        ui.processLine("PROPBIT INPUT_PROP_POINTER");
-        ui.processLine("PROPBIT INPUT_PROP_DIRECT");
-        ui.processLine("PROPERTY ID_INPUT_TOUCHSCREEN 1");
-        ui.processLine("CREATE");
+        final int x1 = (int) Math.round(width * 0.1);
+        final int y1 = (int) Math.round(height * 0.1);
+        final int x2 = (int) Math.round(width * 0.9);
+        final int y2 = (int) Math.round(height * 0.9);
         // Push events while on the event thread, making sure that events
         // will be buffered up and enabling filtering to take place
         TestRunnable.invokeAndWait(() -> {
-            ui.processLine("EV_KEY BTN_TOUCH 1");
-            ui.processLine("EV_ABS ABS_X " + x1);
-            ui.processLine("EV_ABS ABS_Y " + y1);
-            ui.processLine("EV_SYN");
-            for (int x = x1; x <= x2; x += (x2 - x1) / 10) {
-                ui.processLine("EV_ABS ABS_X " + x);
-                ui.processLine("EV_ABS ABS_Y " + y1);
-                ui.processLine("EV_SYN");
+            int p = device.addPoint(x1, y1);
+            device.sync();
+            for (int x = x1; x <= x2; x += (x2 - x1) / 11) {
+                device.setPoint(p, x, y1);
+                device.sync();
             }
-            for (int y = y1; y <= y2; y += (y2 - y1) / 10) {
-                ui.processLine("EV_ABS ABS_X " + x2);
-                ui.processLine("EV_ABS ABS_Y " + y);
-                ui.processLine("EV_SYN");
+            for (int y = y1; y <= y2; y += (y2 - y1) / 11) {
+                device.setPoint(p, x2, y);
+                device.sync();
             }
-            ui.processLine("EV_KEY BTN_TOUCH 0");
-            ui.processLine("EV_ABS ABS_X " + x2);
-            ui.processLine("EV_ABS ABS_Y " + y2);
-            ui.processLine("EV_SYN");
+            device.setPoint(p, x2, y2);
+            device.sync();
+            device.removePoint(p);
+            device.sync();
         });
         // Check that the initial point reported is correct
         TestLog.waitForLog("Mouse pressed: " + x1 + ", " + y1, 3000);

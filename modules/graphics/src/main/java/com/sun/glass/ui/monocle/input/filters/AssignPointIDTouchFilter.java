@@ -152,7 +152,7 @@ public final class AssignPointIDTouchFilter implements TouchFilter {
         // assigning all new IDs.
         for (int i = 0; i < oldState.getPointCount(); i++) {
             int id = oldState.getPoint(i).id;
-            TouchState.Point p = state.getPointForID(id, false);
+            TouchState.Point p = state.getPointForID(id);
             if (p == null) {
                 releaseID(id);
             }

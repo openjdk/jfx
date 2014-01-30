@@ -29,7 +29,6 @@ import com.sun.glass.ui.Application;
 import com.sun.glass.ui.monocle.NativePlatformFactory;
 import com.sun.glass.ui.monocle.RunnableProcessor;
 import com.sun.glass.ui.monocle.input.InputDevice;
-import com.sun.glass.ui.monocle.input.filters.TouchPipeline;
 
 import java.io.File;
 import java.io.IOException;
@@ -196,6 +195,16 @@ public class LinuxInputDevice implements Runnable, InputDevice {
 
     public LinuxEventBuffer getBuffer() {
         return buffer;
+    }
+
+    /** Asks whether the device is quiet. "Quiet" means that the event
+     * reader is blocked waiting for events, the buffer is empty and the event
+     * processor is not scheduled. Called on the application thread.
+     */
+    public boolean isQuiet() {
+        synchronized (buffer) {
+            return !processor.scheduled && !buffer.hasData();
+        }
     }
 
     /**

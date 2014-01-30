@@ -73,6 +73,10 @@ public class UInput {
         }
     }
 
+    public void waitForQuiet() throws InterruptedException {
+        nativeUInput.waitForQuiet();
+    }
+
     public void write(byte[] data, int offset, int length) {
         if (sync && !Application.isEventThread()) {
             Application.invokeAndWait(() -> nativeUInput.write(data, offset, length));

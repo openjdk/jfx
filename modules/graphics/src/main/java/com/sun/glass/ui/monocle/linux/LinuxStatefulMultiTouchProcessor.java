@@ -52,7 +52,6 @@ public class LinuxStatefulMultiTouchProcessor extends LinuxTouchProcessor {
     @Override
     public void processEvents(LinuxInputDevice device) {
         LinuxEventBuffer buffer = device.getBuffer();
-        pipeline.pullState(state, false);
         int x = COORD_UNDEFINED;
         int y = COORD_UNDEFINED;
         while (buffer.hasNextEvent()) {
@@ -119,7 +118,6 @@ public class LinuxStatefulMultiTouchProcessor extends LinuxTouchProcessor {
                                 updatePoint(x, y);
                             }
                             pipeline.pushState(state);
-                            pipeline.pullState(state, false);
                             x = y = COORD_UNDEFINED;
                             break;
                         default: // ignore
@@ -133,7 +131,7 @@ public class LinuxStatefulMultiTouchProcessor extends LinuxTouchProcessor {
 
     private void updatePoint(int x, int y) {
         TouchState.Point p = state
-                .getPointForID(currentID, false);
+                .getPointForID(currentID);
         if (p == null) {
             p = new TouchState.Point();
             p.id = currentID;

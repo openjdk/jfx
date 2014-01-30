@@ -129,7 +129,6 @@ public class DragTouchInAndOutAWindowTest extends ParameterizedTestBase {
 
         //wait for results
         TestLog.waitForLogContaining("TouchPoint: PRESSED", 3000);
-        TestLog.waitForLogContaining("TouchPoint: MOVED", 3000);
 
         //release outside the window
         device.removePoint(p);

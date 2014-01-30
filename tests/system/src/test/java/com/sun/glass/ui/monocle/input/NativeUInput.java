@@ -220,6 +220,8 @@ public abstract class NativeUInput {
         }
     }
 
+    public abstract void waitForQuiet() throws InterruptedException;
+
     public int writeTime(byte[] data, int offset) {
         Arrays.fill(data, offset, offset + 8, (byte) 0);
         return offset + 8;

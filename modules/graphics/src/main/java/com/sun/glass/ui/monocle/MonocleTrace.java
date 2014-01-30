@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+package com.sun.glass.ui.monocle;/*
+ * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,33 +23,14 @@
  * questions.
  */
 
-package com.sun.glass.ui.monocle.input;
+public class MonocleTrace {
 
-import com.sun.glass.events.MouseEvent;
-
-public class MouseInputSynthesizer {
-
-    private static MouseInputSynthesizer instance = new MouseInputSynthesizer();
-
-    private MouseState mouseState = new MouseState();
-
-    public static MouseInputSynthesizer getInstance() {
-        return instance;
-    }
-
-    public void setState(TouchState touchState) {
-        MouseInput.getInstance().getState(mouseState);
-        if (touchState.getPointCount() == 0) {
-            mouseState.releaseButton(MouseEvent.BUTTON_LEFT);
-        } else {
-            mouseState.pressButton(MouseEvent.BUTTON_LEFT);
+    public static void traceEvent(String format, Object... args) {
+        synchronized (System.out) {
+            System.out.print("traceEvent: ");
+            System.out.format(format, args);
+            System.out.println();
         }
-        TouchState.Point p = touchState.getPointForID(touchState.getPrimaryID());
-        if (p != null) {
-            mouseState.setX(p.x);
-            mouseState.setY(p.y);
-        }
-        MouseInput.getInstance().setState(mouseState, true);
     }
 
 }

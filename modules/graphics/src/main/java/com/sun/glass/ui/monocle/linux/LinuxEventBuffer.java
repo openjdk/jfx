@@ -23,10 +23,15 @@ package com.sun.glass.ui.monocle.linux;/*
  * questions.
  */
 
+import com.sun.glass.ui.monocle.MonocleSettings;
+import com.sun.glass.ui.monocle.MonocleTrace;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-/** A buffer holding raw Linux input events waiting to be processed */
+/**
+ * A buffer holding raw Linux input events waiting to be processed
+ */
 public class LinuxEventBuffer {
     static final int EVENT_STRUCT_SIZE = 16;
     private static final int EVENT_STRUCT_TYPE_INDEX = 8;
@@ -40,7 +45,7 @@ public class LinuxEventBuffer {
      * SYN_REPORT. However it sould not be too large or a flood of events will
      * prevent rendering from happening until the buffer is full.
      */
-    private static final int EVENT_BUFFER_SIZE = 100;
+    private static final int EVENT_BUFFER_SIZE = 1000;
 
     private final ByteBuffer bb;
 
@@ -54,16 +59,17 @@ public class LinuxEventBuffer {
 
     }
 
-    /** Adds a raw Linux event to the buffer. Blocks if the buffer is full.
-     * Checks whether this is a SYN SYN_REPORt event terminator.
-     *
+    /**
+     * Adds a raw Linux event to the buffer. Blocks if the buffer is full.
+     * Checks whether this is a SYN SYN_REPORT event terminator.
      *
      * @param event A ByteBuffer containing the event to be added.
      * @return true if the event was "SYN SYN_REPORT", false otherwise
      * @throws InterruptedException if our thread was interrupted while waiting
-     * for the buffer to empty.
+     *                              for the buffer to empty.
      */
-    public synchronized boolean put(ByteBuffer event) throws InterruptedException {
+    public synchronized boolean put(ByteBuffer event) throws
+            InterruptedException {
         boolean isSync = event.getInt(EVENT_STRUCT_TYPE_INDEX) == 0
                 && event.getInt(EVENT_STRUCT_VALUE_INDEX) == 0;
         while (bb.limit() - bb.position() < event.limit()) {
@@ -76,12 +82,20 @@ public class LinuxEventBuffer {
             positionOfLastSync = bb.position();
         }
         bb.put(event);
+        if (MonocleSettings.settings.traceEventsVerbose) {
+            MonocleTrace.traceEvent("Read %s",
+                                    getEventDescription(bb.position()
+                                                                - EVENT_STRUCT_SIZE));
+        }
         return isSync;
     }
 
     public synchronized void startIteration() {
         currentPosition = 0;
         mark = 0;
+        if (MonocleSettings.settings.traceEventsVerbose) {
+            MonocleTrace.traceEvent("Processing %s", getEventDescription());
+        }
     }
 
     public synchronized void compact() {
@@ -131,9 +145,13 @@ public class LinuxEventBuffer {
      * @return a string describing the event
      */
     public synchronized String getEventDescription() {
-        short type = getEventType();
-        short code = getEventCode();
-        int value = getEventValue();
+        return getEventDescription(currentPosition);
+    }
+
+    private synchronized String getEventDescription(int position) {
+        short type = bb.getShort(position + EVENT_STRUCT_TYPE_INDEX);
+        short code = bb.getShort(position + EVENT_STRUCT_CODE_INDEX);
+        int value = bb.getInt(position + EVENT_STRUCT_VALUE_INDEX);
         String typeStr = Input.typeToString(type);
         return typeStr + " " + Input.codeToString(typeStr, code) + " " + value;
     }
@@ -146,6 +164,9 @@ public class LinuxEventBuffer {
             throw new IllegalStateException("Cannot advance past the last" +
                                                     " EV_SYN EV_SYN_REPORT 0");
         }
+        if (MonocleSettings.settings.traceEventsVerbose) {
+            MonocleTrace.traceEvent("Processing %s", getEventDescription());
+        }
         currentPosition += EVENT_STRUCT_SIZE;
     }
 
@@ -157,8 +178,9 @@ public class LinuxEventBuffer {
         mark = currentPosition;
     }
 
-    /** Returns iteration to the event set previously in a call to mark(), or
-     * to the beginning of the buffer if no call to mark() was made.
+    /**
+     * Returns iteration to the event set previously in a call to mark(), or to
+     * the beginning of the buffer if no call to mark() was made.
      */
     public synchronized void reset() {
         currentPosition = mark;
@@ -170,6 +192,14 @@ public class LinuxEventBuffer {
      */
     public synchronized boolean hasNextEvent() {
         return currentPosition <= positionOfLastSync;
+    }
+
+    /**
+     * Returns true iff another event line is available. Call on the
+     * application thread.
+     */
+    synchronized boolean hasData() {
+        return bb.position() != 0;
     }
 
 }

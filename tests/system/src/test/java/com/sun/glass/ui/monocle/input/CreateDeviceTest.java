@@ -42,6 +42,7 @@ public class CreateDeviceTest {
     }
 
     @After public void destroyDevice() throws InterruptedException {
+        ui.waitForQuiet();
         try {
             ui.processLine("DESTROY");
         } catch (RuntimeException e) { }
