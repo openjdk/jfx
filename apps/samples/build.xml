@@ -3,10 +3,12 @@
 
     <target name="jar">
         <ant dir="Ensemble8" target="jar" inheritAll="true"/>
+        <ant dir="MandelbrotSet" target="jar" inheritAll="true"/>
     </target>
 
     <target name="clean">
         <ant dir="Ensemble8" target="clean" inheritAll="true"/>
+        <ant dir="MandelbrotSet" target="clean" inheritAll="true"/>
     </target>
 
 </project>

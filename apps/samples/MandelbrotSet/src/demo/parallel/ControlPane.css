@@ -1,0 +1,84 @@
+/*
+ * Copyright (c) 2013 Oracle and/or its affiliates. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *   - Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *
+ *   - Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in the
+ *     documentation and/or other materials provided with the distribution.
+ *
+ *   - Neither the name of Oracle nor the names of its
+ *     contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/*
+ * @author Alexander Kouznetsov
+ */
+
+#grid {
+    -fx-hgap: 1em;
+    -fx-vgap: 0.2em;
+    -fx-alignment: center;
+    -fx-background-color: black;
+    -fx-background-radius: 0 0 2.5em 2.5em;
+    -fx-padding: 0.5em 0.7em 0.5em 0.7em;
+    -fx-opacity: 0.9;
+}
+
+.progress-indicator {
+    -fx-progress-color: red;    
+}
+
+.progress-indicator .percentage {
+    -fx-fill: white;
+}
+
+.label {
+    -fx-text-fill: white;
+}
+
+#spacer {
+    -fx-min-height: 0.3em;
+}
+
+#open-close-toggle-button {
+    -fx-background-color: gray;
+    -fx-background-radius: 0;
+    -fx-content-display: graphic-only;
+    -fx-shape: "M 0,0 H 40 v 1 h -40 Z M 0,3 H 40 v 1 h -40 Z M 0,6 H40 v 1 h -40 Z";
+    -fx-max-width: 2.5em;
+    -fx-max-height: 0.7em;
+    -fx-min-width: 2.5em;
+    -fx-min-height: 0.7em;
+}
+
+#open-close-toggle-button:hover {
+    -fx-background-color: lightgray;
+}
+
+.time .bar {
+    -fx-background-color: linear-gradient(from 0em 0em to 8em 0em, green 30%, yellow 60%, red);
+    -fx-background-radius: 0;
+}
+
+.time .track {
+    -fx-background-color: black;
+}

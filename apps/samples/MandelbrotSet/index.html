@@ -1,0 +1,78 @@
+<html>
+<head>
+    <title>Mandelbrot Set Demo</title>
+</head>
+<body>
+<h1>Mandelbrot Set Demo</h1>
+<h3>Introduction</h3>
+<p>This application demonstrates advantages of parallel execution done using 
+    Java Parallel API.</p>
+<h3>About</h3>
+<p>This JavaFX application renders an image using Mandelbrot set
+    (<a href="http://en.wikipedia.org/wiki/Mandelbrot_set">wikipedia link</a>)
+    for any particular range of complex values.</p>
+<p>Given a complex number the algorithm calculates an integer value which is 
+    then mapped to a color.
+    Real part of a complex value is mapped to horizontal axis of the screen.
+    Imaginary part of a complex value is mapped to a vertical axis of the screen.</p>
+<h3>Navigation</h3>
+<ul>
+    <li>Drag the picture with left mouse button to explore fractal boundaries.</li>
+    <li>Scroll the mouse wheel to zoom in and out.</li>
+    <li>Press "1", "2" and "3" control panel buttons to navigate 
+        to a particular predefined areas of the fractal.</li>
+    <li>Press "0" to return to fractal overview.</li>
+    <li>Click "Compare" control panel button to run rendering in comparison mode.
+        <ul><li>In this case the application will re-render the whole picture using:
+            <ol>
+                <li>Sequential execution</li>
+                <li>Parallel execution</li>
+            </ol>
+            </li><li>
+                Supporting it with visual feedback and showing elapsed time 
+                    both graphically and in written.
+            </li>
+        </ul>
+    </li>
+    <li>Type "I" to print current position parameters to the output stream.</li>
+    <li>Type "R" to re-render current image using parallel calculation mode.</li>
+</ul>
+<h3>Details</h3>
+<p>
+    <code>MandelbrotSetTask.call()</code> method contains code which is equivalent 
+    to the following when running in parallel mode:</p>
+<pre>
+IntStream.range(0, height).parallel().forEach((int y) -> {
+    for (int x = 0; x < width; x++) {
+        // calculate (x, y) pixel color 
+    }
+});
+</pre>
+<h3>Command line options</h3>
+<pre>
+    java -jar MandelbrotSet.jar -min <i>&lt;minReal&gt;</i>,<i>&lt;minImaginary&gt;</i> -max <i>&lt;maxReal&gt;</i>,<i>&lt;maxImaginary&gt;</i> -windowSize <i>&lt;width&gt;</i>x<i>&lt;height&gt;</i>
+</pre>
+<ul>
+    <li><code>-min <i>&lt;minReal&gt;</i>,<i>&lt;minImaginary&gt;</i></code> specifies left top corner of the fractal complex number area</li>
+    <li><code>-max <i>&lt;maxReal&gt;</i>,<i>&lt;maxImaginary&gt;</i></code> specifies right bottom corner of the fractal complex number area</li>
+    <li><code>-windowSize <i>&lt;width&gt;</i>x<i>&lt;height&gt;</i></code> specifies initial window size in pixels</li>
+</ul>
+<p>Here is an example produced by typing "I" inside the app:</p>
+<pre>
+Use the following parameters to get to the same position
+-min -2.4807381162845332,-1.3061943784663503
+-max 0.9781413692299719,1.2879652356695286
+-windowSize 800.0x600.0;    
+</pre>
+<h3>Source code</h3>
+<ul>
+    <li><a href="src/demo/parallel/MandelbrotSetTask.java">MandelbrotSetTask.java</a> 
+        - Mandelbrot Set calculation code</li>
+    <li><a href="src/demo/parallel/Complex.java">Complex.java</a> - utility class 
+        for Complex numbers operations</li>
+    <li><a href="src/demo/parallel/Main.java">Main.java</a> - JavaFX UI source code</li>
+    <li><a href="src/demo/parallel/ControlPane.css">ControlPane.css</a> 
+        - JavaFX CSS file for control panel elements</li>
+</ul>
+</body>
+</html>
