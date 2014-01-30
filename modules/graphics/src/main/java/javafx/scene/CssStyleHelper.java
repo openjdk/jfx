@@ -2053,14 +2053,14 @@ final class CssStyleHelper {
                 Styleable parent = node;
                 do {
 
-                    StyleMap styleMap = getStyleMap(parent);
-                    if (styleMap == null || styleMap.isEmpty()) continue;
-
                     final Node _parent = parent instanceof Node ? (Node)parent : null;
                     final CssStyleHelper helper = _parent != null
                             ? _parent.styleHelper
                             : null;
                     if (helper != null) {
+
+                        StyleMap styleMap = helper.getStyleMap(parent);
+                        if (styleMap == null || styleMap.isEmpty()) continue;
 
                         final int start = styleList.size();
 
