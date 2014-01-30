@@ -33,7 +33,7 @@ public class InputDeviceRegistry {
             FXCollections.observableSet();
 
     public ObservableSet<InputDevice> getInputDevices() {
-        return FXCollections.unmodifiableObservableSet(devices);
+        return devices;
     }
 
 }
