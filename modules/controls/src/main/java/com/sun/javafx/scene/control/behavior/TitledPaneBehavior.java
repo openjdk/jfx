@@ -77,8 +77,8 @@ public class TitledPaneBehavior extends BehaviorBase<TitledPane> {
             //tps.getContentRegion().getImpl_traversalEngine().getTopLeftFocusableNode();
             // Is there any focusable node in the TitledPane content
             if (titledPane.isExpanded() &&
-                (!tps.getContentRegion().getImpl_traversalEngine().registeredNodes.isEmpty() ||
-                 TabPaneBehavior.getFirstPopulatedInnerTraversalEngine(tps.getContentRegion().getChildren()) != null)) {
+                (!tps.getContentContainer().getImpl_traversalEngine().registeredNodes.isEmpty() ||
+                 TabPaneBehavior.getFirstPopulatedInnerTraversalEngine(tps.getContentContainer().getChildren()) != null)) {
                 /*
                 ** if we have the focus owner then traverse from it, otherwise
                 ** request focus in the top-left
