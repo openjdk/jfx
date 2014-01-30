@@ -755,6 +755,7 @@
  ******************************************************************************/
 
 .context-menu {
+    -fx-color: -fx-base;
     -fx-background-color:
         derive(-fx-color,-40%),
         derive(-fx-color,100%),
@@ -782,8 +783,15 @@
 
 .context-menu:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
-} 
+}
 
+/*
+ * RT-33312 - if the context-menu is belongs to a menu-button, then set the context-menu's -fx-color to -fx-base
+ * effectively overriding the menu-button:armed, menu-button:hover styling of -fx-color
+ */
+.menu-button > * > .context-menu {
+    -fx-color: -fx-base;
+}
 
 /*******************************************************************************
  *                                                                             *
