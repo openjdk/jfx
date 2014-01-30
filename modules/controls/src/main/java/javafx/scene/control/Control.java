@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -170,6 +170,8 @@ public abstract class Control extends Region implements Skinnable {
      */
     private final static EventHandler<ContextMenuEvent> contextMenuHandler = new EventHandler<ContextMenuEvent>() {
         @Override public void handle(ContextMenuEvent event) {
+            if (event.isConsumed()) return;
+
             // If a context menu was shown, consume the event to prevent multiple context menus
             Object source = event.getSource();
             if (source instanceof Control) {

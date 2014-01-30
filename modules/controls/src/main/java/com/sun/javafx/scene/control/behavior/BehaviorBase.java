@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,7 @@ import javafx.event.EventHandler;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
+import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import java.util.ArrayList;
@@ -415,4 +416,13 @@ public class BehaviorBase<C extends Control> {
      * @param e the mouse event
      */
     public void mouseExited(MouseEvent e) { }
+
+    /**
+     * Invoked by a Skin when the control has had its context menu requested,
+     * most commonly by right-clicking on the control. Subclasses should be sure
+     * to call super unless they intend to disable any built-in support.
+     *
+     * @param e the context menu event
+     */
+    public void contextMenuRequested(ContextMenuEvent e) { }
 }

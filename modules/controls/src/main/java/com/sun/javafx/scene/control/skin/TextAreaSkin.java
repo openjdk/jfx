@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1121,18 +1121,18 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         return (Text)paragraphNodes.getChildren().get(0);
     }
 
-    public HitInfo getIndex(MouseEvent e) {
+    public HitInfo getIndex(double x, double y) {
         // adjust the event to be in the same coordinate space as the
         // text content of the textInputControl
         Text textNode = getTextNode();
-        Point2D p = new Point2D(e.getX() - textNode.getLayoutX(), e.getY() - getTextTranslateY());
+        Point2D p = new Point2D(x - textNode.getLayoutX(), y - getTextTranslateY());
         HitInfo hit = textNode.impl_hitTestChar(translateCaretPosition(p));
         int pos = hit.getCharIndex();
         if (pos > 0) {
             int oldPos = textNode.getImpl_caretPosition();
             textNode.setImpl_caretPosition(pos);
             PathElement element = textNode.getImpl_caretShape()[0];
-            if (element instanceof MoveTo && ((MoveTo)element).getY() > e.getY() - getTextTranslateY()) {
+            if (element instanceof MoveTo && ((MoveTo)element).getY() > y - getTextTranslateY()) {
                 hit.setCharIndex(pos - 1);
             }
             textNode.setImpl_caretPosition(oldPos);
