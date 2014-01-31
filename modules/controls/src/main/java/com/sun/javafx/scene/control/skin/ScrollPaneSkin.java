@@ -51,7 +51,6 @@ import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.input.TouchEvent;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
@@ -743,125 +742,36 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
 
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         final ScrollPane sp = getSkinnable();
-
-        if (sp.getPrefWidth() == ScrollPane.USE_COMPUTED_SIZE || sp.getPrefWidth() == ScrollPane.USE_PREF_SIZE) {
-
-            double vsbWidth = sp.getVbarPolicy() == ScrollBarPolicy.ALWAYS? vsb.prefWidth(ScrollBar.USE_COMPUTED_SIZE) : 0;
-            double minWidth = vsbWidth + snappedLeftInset() + snappedRightInset();
-
-            if (sp.getPrefViewportWidth() > 0) {
-                return (sp.getPrefViewportWidth() + minWidth);
-            }
-            else if (sp.getContent() != null) {
-                return (sp.getContent().prefWidth(height) + minWidth);
-            }
-            else {
-                return Math.max(minWidth, DEFAULT_PREF_SIZE);
-            }
-        }
-        else if (sp.getPrefWidth() < 0) {
-            return DEFAULT_PREF_SIZE;
+        
+        if (sp.getPrefViewportWidth() > 0) {
+            double vsbWidth = sp.getVbarPolicy() == ScrollBarPolicy.ALWAYS? vsb.prefWidth(-1) : 0;
+            return (sp.getPrefViewportWidth() + vsbWidth + snappedLeftInset() + snappedRightInset());
         }
         else {
-            return sp.getPrefWidth();
+            return DEFAULT_PREF_SIZE;
         }
     }
 
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         final ScrollPane sp = getSkinnable();
-
-        if (sp.getPrefHeight() == ScrollPane.USE_COMPUTED_SIZE || sp.getPrefWidth() == ScrollPane.USE_PREF_SIZE) {
-
-            double hsbHeight = sp.getHbarPolicy() == ScrollBarPolicy.ALWAYS ? hsb.prefHeight(ScrollBar.USE_COMPUTED_SIZE) : 0;
-            double minHeight = hsbHeight + snappedTopInset() + snappedBottomInset();
-
-            if (sp.getPrefViewportHeight() > 0) {
-                return (sp.getPrefViewportHeight() + minHeight);
-            }
-            else if (sp.getContent() != null) {
-                return (sp.getContent().prefHeight(width) + minHeight);
-            }
-            else {
-                return Math.max(minHeight, DEFAULT_PREF_SIZE);
-            }
-        }
-        else if (sp.getPrefHeight() < 0) {
-            return DEFAULT_PREF_SIZE;
+        
+        if (sp.getPrefViewportHeight() > 0) {
+            double hsbHeight = sp.getHbarPolicy() == ScrollBarPolicy.ALWAYS? hsb.prefHeight(-1) : 0;
+            return (sp.getPrefViewportHeight() + hsbHeight + snappedTopInset() + snappedBottomInset());
         }
         else {
-            return sp.getPrefHeight();
+            return DEFAULT_PREF_SIZE;
         }
     }
 
     @Override protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
-        final ScrollPane sp = getSkinnable();
-
-        if (sp.getMinWidth() == ScrollPane.USE_COMPUTED_SIZE) {
-            double minWidth = corner.minWidth(Region.USE_COMPUTED_SIZE) + snappedLeftInset() + snappedRightInset();
-            return (minWidth > 0) ? minWidth : DEFAULT_MIN_SIZE;
-        }
-        else if (sp.getMinWidth() == ScrollPane.USE_PREF_SIZE) {
-            return computePrefWidth(height, topInset, rightInset, bottomInset, leftInset);
-        }
-        else if (sp.getMinWidth() < 0) {
-            return DEFAULT_MIN_SIZE;
-        }
-        else {
-            return sp.getMinWidth();
-        }
+        double w = corner.minWidth(-1);
+        return (w > 0) ? (3 * w) : (DEFAULT_MIN_SIZE);
     }
 
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        final ScrollPane sp = getSkinnable();
-
-        if (sp.getMinHeight() == ScrollPane.USE_COMPUTED_SIZE) {
-            double minHeight = corner.minHeight(Region.USE_COMPUTED_SIZE) + snappedTopInset() + snappedBottomInset();
-            return (minHeight > 0) ? minHeight : DEFAULT_MIN_SIZE;
-        }
-        else if (sp.getMinHeight() == ScrollPane.USE_PREF_SIZE) {
-            return computePrefHeight(width, topInset, rightInset, bottomInset, leftInset);
-        }
-        else if (sp.getMinHeight() < 0) {
-            return DEFAULT_MIN_SIZE;
-        }
-        else {
-            return sp.getMinHeight();
-        }
-    }
-
-    @Override protected double computeMaxWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
-        final ScrollPane sp = getSkinnable();
-
-        if (sp.getMaxWidth() == ScrollPane.USE_COMPUTED_SIZE) {
-            return super.computeMaxWidth(height, topInset, rightInset, bottomInset, leftInset);
-        }
-        else if (sp.getMaxWidth() == ScrollPane.USE_PREF_SIZE) {
-            return computePrefWidth(height, topInset, rightInset, bottomInset, leftInset);
-        }
-        else if (sp.getMaxWidth() < 0) {
-            return Double.MAX_VALUE;
-        }
-        else {
-            return sp.getMaxWidth();
-        }
-    }
-
-    @Override protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        final ScrollPane sp = getSkinnable();
-
-        if (sp.getMaxHeight() == ScrollPane.USE_COMPUTED_SIZE) {
-            return super.computeMaxHeight(width, topInset, rightInset, bottomInset, leftInset);
-        }
-        else if (sp.getMaxHeight() == ScrollPane.USE_PREF_SIZE) {
-            return computePrefHeight(width, topInset, rightInset, bottomInset, leftInset);
-
-        }
-        else if (sp.getMaxHeight() < 0) {
-            return Double.MAX_VALUE;
-        }
-        else {
-            return sp.getMaxHeight();
-        }
+        double h = corner.minHeight(-1);
+        return (h > 0) ? (3 * h) : (DEFAULT_MIN_SIZE);
     }
 
     @Override protected void layoutChildren(final double x, final double y,
@@ -915,7 +825,6 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
                 if (vsbvis) {
                     // now both are visible
                     contentWidth -= vsbWidth;
-                    hsbWidth -= vsbWidth;
                     computeScrollNodeSize(contentWidth, contentHeight);
                 }
             } else if (vsbvis && !hsbvis) {
@@ -924,7 +833,6 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
                 if (hsbvis) {
                     // now both are visible
                     contentHeight -= hsbHeight;
-                    vsbHeight -= hsbHeight;
                     computeScrollNodeSize(contentWidth, contentHeight);
                 }
             }
@@ -1046,8 +954,12 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
     private boolean determineHorizontalSBVisible() {
         final ScrollPane sp = getSkinnable();
 
+        // the conditional at the end of this calculation comes due to RT-35053
+        final double contentw = sp.getWidth() - snappedLeftInset() - snappedRightInset()
+                - (vsbvis && ! sp.isFitToHeight() ? vsb.getWidth() : 0);
+
         if (IS_TOUCH_SUPPORTED) {
-            return (tempVisibility && (nodeWidth > contentWidth));
+            return (tempVisibility && (nodeWidth > contentw));
         }
         else {
             // RT-17395: ScrollBarPolicy might be null. If so, treat it as "AS_NEEDED", which is the default
@@ -1055,15 +967,15 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             return (ScrollBarPolicy.NEVER == hbarPolicy) ? false :
                    ((ScrollBarPolicy.ALWAYS == hbarPolicy) ? true :
                    ((sp.isFitToWidth() && scrollNode != null ? scrollNode.isResizable() : false) ?
-                   (nodeWidth > contentWidth && scrollNode.minWidth(-1) > contentWidth) : (nodeWidth > contentWidth)));
+                   (nodeWidth > contentw && scrollNode.minWidth(-1) > contentw) : (nodeWidth > contentw)));
         }
     }
 
     private boolean determineVerticalSBVisible() {
         final ScrollPane sp = getSkinnable();
-
+        final double contenth = sp.getHeight() - snappedTopInset() - snappedBottomInset();
         if (IS_TOUCH_SUPPORTED) {
-            return (tempVisibility && (nodeHeight > contentHeight));
+            return (tempVisibility && (nodeHeight > contenth));
         }
         else {
             // RT-17395: ScrollBarPolicy might be null. If so, treat it as "AS_NEEDED", which is the default
@@ -1071,7 +983,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             return (ScrollBarPolicy.NEVER == vbarPolicy) ? false :
                    ((ScrollBarPolicy.ALWAYS == vbarPolicy) ? true :
                    ((sp.isFitToHeight() && scrollNode != null ? scrollNode.isResizable() : false) ?
-                   (nodeHeight > contentHeight && scrollNode.minHeight(-1) > contentHeight) : (nodeHeight > contentHeight)));
+                   (nodeHeight > contenth && scrollNode.minHeight(-1) > contenth) : (nodeHeight > contenth)));
         }
     }
 
