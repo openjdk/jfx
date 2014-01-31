@@ -7658,11 +7658,11 @@ public abstract class Node implements EventTarget, Styleable {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public final void impl_traverse(Direction dir) {
+    public final boolean impl_traverse(Direction dir) {
         if (getScene() == null) {
-            return;
+            return false;
         }
-        getScene().traverse(this, dir);
+        return getScene().traverse(this, dir);
     }
 
     ////////////////////////////

@@ -101,8 +101,8 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
                 }
 
                 setImpl_traversalEngine(new TraversalEngine(this, false) {
-                    @Override public void trav(Node owner, Direction dir) {
-                        super.trav(owner, dir);
+                    @Override public boolean trav(Node owner, Direction dir) {
+                        return super.trav(owner, dir);
                     }
                 });
             }

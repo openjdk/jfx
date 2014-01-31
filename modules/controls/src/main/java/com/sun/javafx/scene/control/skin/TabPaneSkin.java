@@ -1434,9 +1434,9 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             });
 
             engine = new TraversalEngine(this, false) {
-                @Override public void trav(Node owner, Direction dir) {
+                @Override public boolean trav(Node owner, Direction dir) {
                     direction = dir;
-                    super.trav(owner, dir);
+                    return super.trav(owner, dir);
                 }
             };
             engine.addTraverseListener(this);

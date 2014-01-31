@@ -373,9 +373,9 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         }
         getSkinnable().getScene().getAccelerators().put(acceleratorKeyCombo, firstMenuRunnable);
         engine = new TraversalEngine(getSkinnable(), false) {
-            @Override public void trav(Node node, Direction dir) {
+            @Override public boolean trav(Node node, Direction dir) {
                 direction = dir;
-                super.trav(node,dir);
+                return super.trav(node,dir);
             }
         };
         engine.addTraverseListener(this);

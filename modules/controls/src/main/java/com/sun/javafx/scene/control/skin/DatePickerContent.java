@@ -204,8 +204,7 @@ public class DatePickerContent extends VBox {
 
         refresh();
 
-        // RT-30511: This enables traversal (not sure why Scene doesn't handle this),
-        // plus it prevents key events from reaching the popup's owner.
+        // RT-30511: This prevents key events from reaching the popup's owner.
         addEventHandler(KeyEvent.ANY, new EventHandler<KeyEvent>() {
             @Override public void handle(KeyEvent e) {
                 Node node = getScene().getFocusOwner();
@@ -215,35 +214,6 @@ public class DatePickerContent extends VBox {
 
                 if (e.getEventType() == KeyEvent.KEY_PRESSED) {
                     switch (e.getCode()) {
-                      case TAB:
-                          node.impl_traverse(e.isShiftDown() ? Direction.PREVIOUS : Direction.NEXT);
-                          e.consume();
-                          break;
-
-                      case UP:
-                          if (!e.isAltDown()) {
-                              node.impl_traverse(Direction.UP);
-                              e.consume();
-                          }
-                          break;
-
-                      case DOWN:
-                          if (!e.isAltDown()) {
-                              node.impl_traverse(Direction.DOWN);
-                              e.consume();
-                          }
-                          break;
-
-                      case LEFT:
-                          node.impl_traverse(Direction.LEFT);
-                          e.consume();
-                          break;
-
-                      case RIGHT:
-                          node.impl_traverse(Direction.RIGHT);
-                          e.consume();
-                          break;
-
                       case HOME:
                           goToDate(LocalDate.now());
                           e.consume();
@@ -284,14 +254,17 @@ public class DatePickerContent extends VBox {
                 }
 
                 // Consume all key events except those that control
-                // showing the popup.
+                // showing the popup and traversal.
                 switch (e.getCode()) {
                   case ESCAPE:
                   case F4:
                   case F10:
                   case UP:
                   case DOWN:
-                      break;
+                  case LEFT:
+                  case RIGHT:
+                  case TAB:
+                        break;
 
                   default:
                     e.consume();

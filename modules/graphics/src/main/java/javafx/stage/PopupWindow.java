@@ -983,7 +983,7 @@ public abstract class PopupWindow extends Window {
                 final Node sceneFocusOwner = scene.getFocusOwner();
                 final EventTarget eventTarget =
                         (sceneFocusOwner != null) ? sceneFocusOwner : scene;
-                if (EventUtil.fireEvent(eventTarget, new DirectEvent(event))
+                if (EventUtil.fireEvent(eventTarget, new DirectEvent(event.copyFor(popupWindow, eventTarget)))
                         == null) {
                     event.consume();
                     return;

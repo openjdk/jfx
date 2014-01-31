@@ -30,20 +30,23 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
+import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
+import com.sun.javafx.scene.control.behavior.TextBinding;
+import com.sun.javafx.scene.control.behavior.TwoLevelFocusPopupBehavior;
 import javafx.animation.Animation.Status;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
+import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
+import javafx.css.Styleable;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -61,13 +64,9 @@ import javafx.scene.shape.Rectangle;
 import javafx.util.Callback;
 import javafx.util.Duration;
 
-import javafx.css.CssMetaData;
-import javafx.css.PseudoClass;
-
-import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
-import com.sun.javafx.scene.control.behavior.TwoLevelFocusPopupBehavior;
-import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.css.Styleable;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * This is a the SkinBase for ContextMenu based controls so that the CSS parts
@@ -429,8 +428,10 @@ public class ContextMenuContent extends Region {
         int index = getLongestLabel();
         itemsContainer.getChildren().clear();
         if (!getItems().isEmpty()) {
-            final MenuItem item = getItems().get(index);
-            MenuItemContainer menuItemContainer = new MenuItemContainer(item);
+            // We need to strip mnemonic symbols to avoid mnemonic duplicates
+            String itemText = new TextBinding(getItems().get(index).getText()).getText().
+                    replaceAll("_", "__").replaceAll("@", "@@");
+            MenuItemContainer menuItemContainer = new MenuItemContainer(new MenuItem(itemText));
             itemsContainer.getChildren().add(menuItemContainer);
         }
     }
@@ -638,22 +639,26 @@ public class ContextMenuContent extends Region {
                     // if submenu for this menu is already showing then do nothing
                     // Menubar will process the right key and move to the next menu
                     if (openSubmenu == menu && submenu.isShowing()) return;
-                    menu.show();
-                    // request focus on the first item of the submenu after it is shown
-                    ContextMenuContent cmContent = (ContextMenuContent)submenu.getSkin().getNode();
-                    if (cmContent != null) {
-                       if (cmContent.itemsContainer.getChildren().size() > 0) {
-                           ((MenuItemContainer)(cmContent.itemsContainer.getChildren().get(0))).requestFocus();
-                       } else {
-                           cmContent.requestFocus();
-                       }
-                    }
+                    showMenu(menu);
                     ke.consume();
                 }
             }
         }
     }
-    
+
+    private void showMenu(Menu menu) {
+        menu.show();
+        // request focus on the first item of the submenu after it is shown
+        ContextMenuContent cmContent = (ContextMenuContent)submenu.getSkin().getNode();
+        if (cmContent != null) {
+           if (cmContent.itemsContainer.getChildren().size() > 0) {
+               cmContent.itemsContainer.getChildren().get(0).requestFocus();
+           } else {
+               cmContent.requestFocus();
+           }
+        }
+    }
+
     private void selectMenuItem() {
         if (currentFocusedIndex != -1) {
             Node n = itemsContainer.getChildren().get(currentFocusedIndex);
@@ -862,7 +867,7 @@ public class ContextMenuContent extends Region {
             parentMenu.hide();
             item = parentMenu;
         }
-        if (parentMenu == null && item.getParentPopup() != null) {
+        if (item.getParentPopup() != null) {
             item.getParentPopup().hide();
         }
     }
@@ -1090,6 +1095,7 @@ public class ContextMenuContent extends Region {
             
             getStyleClass().addAll(item.getStyleClass());
             setId(item.getId());
+            setFocusTraversable(true);
             this.item = item;
 
             createChildren();
@@ -1118,6 +1124,25 @@ public class ContextMenuContent extends Region {
             getProperties().put(MenuItem.class, item);
             
             listener.registerChangeListener(item.graphicProperty(), "GRAPHIC");
+
+            addEventHandler(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
+                @Override
+                public void handle(ActionEvent e) {
+                    if (item instanceof Menu) {
+                        final Menu menu = (Menu) item;
+                        if (openSubmenu == menu && submenu.isShowing()) return;
+                        if (openSubmenu != null) {
+                            hideSubmenu();
+                        }
+
+                        selectedBackground = MenuItemContainer.this;
+                        showMenu(menu);
+                    } else {
+                        doSelect();
+                    }
+                }
+            });
+
         }
         
         public void dispose() {
@@ -1207,6 +1232,11 @@ public class ContextMenuContent extends Region {
                 label.setMouseTransparent(true);
                 getChildren().add(label);
 
+                listener.unregisterChangeListener(focusedProperty());
+                // RT-19546 update currentFocusedIndex when MenuItemContainer gets focused.
+                // e.g this happens when you press the Right key to open a submenu; the first
+                // menuitem is focused.
+                listener.registerChangeListener(focusedProperty(), "FOCUSED");
 
                 // --- draw in right column - this depends on whether we are
                 // a Menu or not. A Menu gets an arrow, whereas other MenuItems
@@ -1261,7 +1291,6 @@ public class ContextMenuContent extends Region {
                 } else { // normal MenuItem
                     // remove old listeners
                     listener.unregisterChangeListener(item.acceleratorProperty());
-                    listener.unregisterChangeListener(focusedProperty());
 
                     // accelerator support
                     updateAccelerator();
@@ -1293,10 +1322,6 @@ public class ContextMenuContent extends Region {
                     addEventHandler(MouseEvent.MOUSE_RELEASED, mouseReleasedEventHandler);
 
                     listener.registerChangeListener(item.acceleratorProperty(), "ACCELERATOR");
-                    // RT-19546 update currentFocusedIndex when MenuItemContainer gets focused.
-                    // e.g this happens when you press the Right key to open a submenu; the first
-                    // menuitem is focused.
-                    listener.registerChangeListener(focusedProperty(), "FOCUSED");
                 }
             }
         }
@@ -1318,17 +1343,8 @@ public class ContextMenuContent extends Region {
         }
 
         void doSelect() {
-            doSelect(null);
-        }
-        
-        void doSelect(MouseEvent event) {
             // don't do anything on disabled menu items
-            if (item == null || item.isDisable()) return;
-            if (event != null && !(getLayoutBounds()).contains(event.getX(), event.getY())) {
-                // RT-23457 Mouse release happened outside the menu item - hide and return
-                hideAllMenus(item);
-                return;
-            }
+            if (item.isDisable()) return;
             // toggle state of check or radio items
             if (item instanceof CheckMenuItem) {
                 CheckMenuItem checkItem = (CheckMenuItem)item;
@@ -1461,107 +1477,11 @@ public class ContextMenuContent extends Region {
 
     private class MenuLabel extends Label {
 
-        final MenuItem menuitem;
-        final MenuItemContainer menuItemContainer;
         public MenuLabel(MenuItem item, MenuItemContainer mic) {
             super(item.getText());
             setMnemonicParsing(item.isMnemonicParsing());
-            setFocusTraversable(true);
             setLabelFor(mic);
-
-            menuitem = item;
-            menuItemContainer = mic;
-
-            addEventHandler(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent e) {
-                    /*
-                    ** if we get an ActionEvent for either RadioMenuItem
-                    ** or CheckMenuItem then we should toggle the selected
-                    ** state.
-                    */
-                    if (menuitem instanceof RadioMenuItem) {
-                        ((RadioMenuItem)menuitem).setSelected(!((RadioMenuItem)menuitem).isSelected());
-                    }
-                    else if (menuitem instanceof CheckMenuItem) {
-                        ((CheckMenuItem)menuitem).setSelected(!((CheckMenuItem)menuitem).isSelected());
-
-                    }
-                    Event.fireEvent(menuitem, new ActionEvent());
-
-
-                    /*
-                    ** The menuitem may contain a submenu, so check
-                    ** if there needs to be any further action
-                    */
-                    if (menuitem instanceof Menu) {
-                        if (((Menu)menuitem).isShowing()) {
-                            ((Menu)menuitem).hide();
-                        }
-                        else {
-                            /*
-                            ** close and open submenus first
-                            */
-                            for (Node node : itemsContainer.getChildren()) {
-                                if (node instanceof MenuItemContainer
-                                    && ((MenuItemContainer)node).item instanceof Menu) {
-                                    Menu menu = (Menu)((MenuItemContainer)node).item;
-                                    if (menu.isShowing()) {
-                                        menu.hide();
-                                    }
-                                }
-                            }
-
-                            Node nx = itemsContainer.getChildren().get(0);
-                            if (nx instanceof MenuItemContainer) {
-                                MenuItem item = ((MenuItemContainer)nx).item;
-                                item = menuitem;
-                                if (item instanceof Menu) {
-                                    final Menu menu = (Menu) item;
-                                    if (menu.isDisable()) return;
-
-                                    selectedBackground = menuItemContainer;
-
-                                    /*
-                                    ** if submenu for this menu is already showing then do nothing
-                                    ** Menubar will process the right key and move to the next menu
-                                    */
-                                    if (openSubmenu == menu && submenu.isShowing()) return;
-                                    menu.show();
-
-                                    /*
-                                    ** request focus on the first item of the submenu after it is shown
-                                    */
-                                    ContextMenuContent cmContent = (ContextMenuContent)submenu.getSkin().getNode();
-                                    if (cmContent != null) {
-                                        if (cmContent.itemsContainer.getChildren().size() > 0) {
-                                            ((MenuItemContainer)(cmContent.itemsContainer.getChildren().get(0))).requestFocus();
-                                        } else {
-                                            cmContent.requestFocus();
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    else {
-                        /*
-                        ** the menuitem doesn't have a submenu, so once
-                        ** we've fired our event we can close the menu
-                        */
-                        if (menuitem.getParentMenu().isShowing()) {
-                            menuitem.getParentMenu().hide();
-                        }
-                    }
-                    e.consume();
-                }
-            });
-        }
-        
-        /**
-         * Fires a new ActionEvent.
-         */
-        public void fire() {
-            menuItemContainer.doSelect();
         }
     }
+        
 }
