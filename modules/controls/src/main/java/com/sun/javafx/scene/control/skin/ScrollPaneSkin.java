@@ -298,7 +298,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             }
         };
         viewRect.getChildren().add(viewContent);
-        
+
         if (scrollNode != null) {
             viewContent.getChildren().add(scrollNode);
             viewRect.nodeOrientationProperty().bind(scrollNode.nodeOrientationProperty());
@@ -1061,14 +1061,16 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
     private double updatePosX() {
         final ScrollPane sp = getSkinnable();
         double x = isReverseNodeOrientation() ? (hsb.getMax() - (posX - hsb.getMin())) : posX;
-        viewContent.setLayoutX(snapPosition(- x / (hsb.getMax() - hsb.getMin()) * (nodeWidth - contentWidth)));
+        double minX = Math.min((- x / (hsb.getMax() - hsb.getMin()) * (nodeWidth - contentWidth)), 0);
+        viewContent.setLayoutX(snapPosition(minX));
         if (!sp.hvalueProperty().isBound()) sp.setHvalue(Utils.clamp(sp.getHmin(), posX, sp.getHmax()));
         return posX;
     }
 
     private double updatePosY() {
         final ScrollPane sp = getSkinnable();
-        viewContent.setLayoutY(snapPosition(- posY / (vsb.getMax() - vsb.getMin()) * (nodeHeight - contentHeight)));
+        double minY = Math.min((- posY / (vsb.getMax() - vsb.getMin()) * (nodeHeight - contentHeight)), 0);
+        viewContent.setLayoutY(minY);
         if (!sp.vvalueProperty().isBound()) sp.setVvalue(Utils.clamp(sp.getVmin(), posY, sp.getVmax()));
         return posY;
     }
