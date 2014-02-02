@@ -1117,7 +1117,11 @@ project(":base") {
 
     // Make sure to include $buildDir/generated-src/version-info that we previously created.
     // We DO NOT want to include src/main/version-info
-    sourceSets.main.java.srcDirs = ["src/main/java", "$buildDir/generated-src/version-info"]
+    if (System.getProperty("jfx.build.jdk.defenders", "true").equals("true")) { 
+        sourceSets.main.java.srcDirs = ["src/main/java", "src/main/java8", "$buildDir/generated-src/version-info"] 
+    } else { 
+        sourceSets.main.java.srcDirs = ["src/main/java", "src/main/java7", "$buildDir/generated-src/version-info"] 
+    } 
     compileJava.dependsOn processVersionInfo
 }
 
