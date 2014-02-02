@@ -1191,4 +1191,27 @@ public class ComboBoxTest {
 
         assertEquals(1, test_rt34603_count);
     }
+
+    private int test_rt35586_count = 0;
+    @Test public void test_rt35586() {
+        assertEquals(0, test_rt34603_count);
+
+        final ComboBox<String> cb = new ComboBox<String>();
+        cb.setEditable(true);
+        cb.setOnAction(new EventHandler<ActionEvent>() {
+            @Override public void handle(ActionEvent event) {
+                test_rt35586_count++;
+                assertEquals("Test", cb.getEditor().getText());
+            }
+        });
+
+        new StageLoader(cb);
+
+        cb.getEditor().requestFocus();
+        cb.getEditor().setText("Test");
+        KeyEventFirer keyboard = new KeyEventFirer(cb.getEditor());
+        keyboard.doKeyPress(KeyCode.ENTER);
+
+        assertEquals(1, test_rt35586_count);
+    }
 }

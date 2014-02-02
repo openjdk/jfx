@@ -143,43 +143,45 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 }
             }
         });
-        
-        comboBox.addEventFilter(KeyEvent.ANY, new EventHandler<KeyEvent>() {
-            @Override public void handle(KeyEvent ke) {
-                if (textField == null) return;
 
-                // This prevents a stack overflow from our rebroadcasting of the
-                // event to the textfield that occurs in the final else statement
-                // of the conditions below.
-                if (ke.getTarget().equals(textField)) return;
+        if (textField != null) {
+            textField.addEventFilter(KeyEvent.ANY, new EventHandler<KeyEvent>() {
+                @Override public void handle(KeyEvent ke) {
+                    if (textField == null) return;
 
-                // When the user hits the enter or F4 keys, we respond before 
-                // ever giving the event to the TextField.
-                if (ke.getCode() == KeyCode.ENTER) {
-                    setTextFromTextFieldIntoComboBoxValue();
-                    return;
-                } else if (ke.getCode() == KeyCode.F4 && ke.getEventType() == KeyEvent.KEY_RELEASED) {
-                    if (comboBox.isShowing()) comboBox.hide();
-                    else comboBox.show();
-                    ke.consume();
-                    return;
-                } else if (ke.getCode() == KeyCode.F10 || ke.getCode() == KeyCode.ESCAPE) {
-                    // RT-23275: The TextField fires F10 and ESCAPE key events
-                    // up to the parent, which are then fired back at the 
-                    // TextField, and this ends up in an infinite loop until
-                    // the stack overflows. So, here we consume these two
-                    // events and stop them from going any further.
-                    ke.consume();
-                    return;
-                } else {
-                    // Fix for the regression noted in a comment in RT-29885.
-                    // This forwards the event down into the TextField when
-                    // the key event is actually received by the ComboBox.
-                    textField.fireEvent(ke.copyFor(textField, textField));
-                    ke.consume();
+                    // This prevents a stack overflow from our rebroadcasting of the
+                    // event to the textfield that occurs in the final else statement
+                    // of the conditions below.
+                    if (ke.getTarget().equals(textField)) return;
+
+                    // When the user hits the enter or F4 keys, we respond before
+                    // ever giving the event to the TextField.
+                    if (ke.getCode() == KeyCode.ENTER) {
+                        setTextFromTextFieldIntoComboBoxValue();
+                        return;
+                    } else if (ke.getCode() == KeyCode.F4 && ke.getEventType() == KeyEvent.KEY_RELEASED) {
+                        if (comboBox.isShowing()) comboBox.hide();
+                        else comboBox.show();
+                        ke.consume();
+                        return;
+                    } else if (ke.getCode() == KeyCode.F10 || ke.getCode() == KeyCode.ESCAPE) {
+                        // RT-23275: The TextField fires F10 and ESCAPE key events
+                        // up to the parent, which are then fired back at the
+                        // TextField, and this ends up in an infinite loop until
+                        // the stack overflows. So, here we consume these two
+                        // events and stop them from going any further.
+                        ke.consume();
+                        return;
+                    } else {
+                        // Fix for the regression noted in a comment in RT-29885.
+                        // This forwards the event down into the TextField when
+                        // the key event is actually received by the ComboBox.
+                        textField.fireEvent(ke.copyFor(textField, textField));
+                        ke.consume();
+                    }
                 }
-            }
-        });
+            });
+        }
 
         // Fix for RT-31093 - drag events from the textfield were not surfacing
         // properly for the ComboBox.
