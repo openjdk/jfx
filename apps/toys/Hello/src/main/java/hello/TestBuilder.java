@@ -219,7 +219,8 @@ public class TestBuilder {
         grid.getChildren().add(l);
 
         ScrollPane sv = new ScrollPane();
-        sv.resize(300,300);
+        sv.setPrefViewportWidth(100);
+        sv.setPrefViewportHeight(100);
         sv.setPannable(true);
         final Group svg = new Group();
         final Rectangle rect = new Rectangle();
