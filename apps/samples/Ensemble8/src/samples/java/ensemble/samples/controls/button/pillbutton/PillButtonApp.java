@@ -68,7 +68,7 @@ public class PillButtonApp extends Application {
         tb3.setPrefSize(76, 45);
         tb3.getStyleClass().add("right-pill");
 
-        ToggleGroup group = new ToggleGroup();
+        final ToggleGroup group = new ToggleGroup();
         tb1.setToggleGroup(group);
         tb2.setToggleGroup(group);
         tb3.setToggleGroup(group);
