@@ -49,18 +49,12 @@ public class IntegerPropertyMetadata extends TextEncodablePropertyMetadata<Integ
         return (value != null) && (0 <= value);
     }
 
+    /*
+     * TextEncodablePropertyMetadata
+     */
     @Override
-    protected Integer castValue(Object value) {
-        final Integer result;
-        
-        if (value instanceof Integer) {
-            result = (Integer) value;
-        } else {
-            assert value instanceof String;
-            result = Integer.valueOf((String)value);
-        }
-        
-        return result;
+    public Integer makeValueFromString(String string) {
+        return Integer.valueOf(string);
     }
     
 }

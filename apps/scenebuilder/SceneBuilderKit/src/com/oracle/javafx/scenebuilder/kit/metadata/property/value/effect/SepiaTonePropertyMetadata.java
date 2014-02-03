@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -32,6 +32,7 @@
 
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value.effect;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.ComplexPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata;
@@ -61,13 +62,12 @@ public class SepiaTonePropertyMetadata extends ComplexPropertyMetadata<SepiaTone
      */
     
     @Override
-    protected SepiaTone castValue(Object value) {
-        return (SepiaTone) value;
-    }
-    
-    @Override
-    public void updateFxomInstanceWithValue(FXOMInstance valueInstance, SepiaTone value) {
-        inputMetadata.setValue(valueInstance, value.getInput());
-        levelMetadata.setValue(valueInstance, value.getLevel());
+    public FXOMInstance makeFxomInstanceFromValue(SepiaTone value, FXOMDocument fxomDocument) {
+        final FXOMInstance result = new FXOMInstance(fxomDocument, getValueClass());
+        
+        inputMetadata.setValue(result, value.getInput());
+        levelMetadata.setValue(result, value.getLevel());
+
+        return result;
     }
 }

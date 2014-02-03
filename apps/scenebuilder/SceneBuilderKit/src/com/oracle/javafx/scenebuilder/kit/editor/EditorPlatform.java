@@ -109,40 +109,35 @@ public class EditorPlatform {
     public static List<URL> getThemeStylesheetURLs(Theme theme) {
         final List<URL> result = new ArrayList<>();
 
+        // In all modena cases below we do not add to the result the modenaThemeUrl
+        // because it is already the default, set on top of the scenegraph
+        // (it is an FX 8 platform built-in behavior).
         switch (theme) {
             default:
                 break;
             case MODENA:
-                result.add(modenaThemeUrl);
                 break;
             case MODENA_TOUCH:
-                result.add(modenaThemeUrl);
                 result.add(modenaTouchThemeUrl);
                 break;
             case MODENA_HIGH_CONTRAST_BLACK_ON_WHITE:
-                result.add(modenaThemeUrl);
                 result.add(modenaHighContrastBlackonwhiteThemeUrl);
                 break;
             case MODENA_HIGH_CONTRAST_WHITE_ON_BLACK:
-                result.add(modenaThemeUrl);
                 result.add(modenaHighContrastWhiteonblackThemeUrl);
                 break;
             case MODENA_HIGH_CONTRAST_YELLOW_ON_BLACK:
-                result.add(modenaThemeUrl);
                 result.add(modenaHighContrastYellowonblackThemeUrl);
                 break;
             case MODENA_TOUCH_HIGH_CONTRAST_BLACK_ON_WHITE:
-                result.add(modenaThemeUrl);
                 result.add(modenaTouchThemeUrl);
                 result.add(modenaHighContrastBlackonwhiteThemeUrl);
                 break;
             case MODENA_TOUCH_HIGH_CONTRAST_WHITE_ON_BLACK:
-                result.add(modenaThemeUrl);
                 result.add(modenaTouchThemeUrl);
                 result.add(modenaHighContrastWhiteonblackThemeUrl);
                 break;
             case MODENA_TOUCH_HIGH_CONTRAST_YELLOW_ON_BLACK:
-                result.add(modenaThemeUrl);
                 result.add(modenaTouchThemeUrl);
                 result.add(modenaHighContrastYellowonblackThemeUrl);
                 break;
@@ -174,7 +169,10 @@ public class EditorPlatform {
                 result.add(caspianHighContrastThemeUrl);
                 break;
         }
-        assert !result.isEmpty() : "Missing logic for " + theme;
+        
+        if (!theme.equals(Theme.MODENA)) {
+            assert !result.isEmpty() : "Missing logic for " + theme;
+        }
 
         return result;
     }

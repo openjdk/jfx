@@ -31,6 +31,8 @@
  */
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import javafx.scene.shape.Mesh;
@@ -46,9 +48,8 @@ public class MeshPropertyMetadata extends ComplexPropertyMetadata<Mesh> {
     }
 
     @Override
-    protected Mesh castValue(Object value) {
-        assert (value == null) || (value instanceof Mesh);
-        return (Mesh) value;
+    public FXOMInstance makeFxomInstanceFromValue(Mesh value, FXOMDocument fxomDocument) {
+        throw new UnsupportedOperationException("Not supported yet."); //NOI18N
     }
     
 }

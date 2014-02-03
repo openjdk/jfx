@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <!--
   Copyright (c) 2012, 2014, Oracle and/or its affiliates.
   All rights reserved. Use is subject to license terms.
@@ -30,32 +31,18 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
-<?import java.lang.*?>
-<?import java.util.*?>
-<?import javafx.collections.*?>
-<?import javafx.geometry.*?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
-<?import javafx.scene.paint.*?>
 
-<HBox alignment="CENTER_LEFT" maxWidth="-1.0" spacing="2.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
-  <children>
-    <TextField fx:id="imagePathTf" prefWidth="400.0" HBox.hgrow="ALWAYS" />
-    <MenuButton fx:id="cursorMb" maxWidth="1.7976931348623157E308" mnemonicParsing="false" text="" HBox.hgrow="ALWAYS">
+<?import java.lang.*?>
+<?import javafx.scene.control.*?>
+
+
+    <MenuButton fx:id="cursorMb" maxWidth="1.7976931348623157E308" mnemonicParsing="false" text="" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
       <items>
         <SeparatorMenuItem mnemonicParsing="false" />
-        <CheckMenuItem mnemonicParsing="false" onAction="#inherited" text="" fx:id="inheritedMi">
+        <CheckMenuItem fx:id="inheritedMi" mnemonicParsing="false" onAction="#inherited" text="">
           <graphic>
             <Label fx:id="inheritedLb" text="" />
           </graphic>
         </CheckMenuItem>
-        <SeparatorMenuItem mnemonicParsing="false" />
-        <MenuItem mnemonicParsing="false" onAction="#chooseImage">
-          <graphic>
-            <Label fx:id="chooseImageLb" text="" />
-          </graphic>
-        </MenuItem>
       </items>
     </MenuButton>
-  </children>
-</HBox>

@@ -37,20 +37,26 @@ import com.oracle.javafx.scenebuilder.app.i18n.I18N;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.ALIGNMENT_GUIDES_COLOR;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.BACKGROUND_IMAGE;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.CSS_ANALYZER_COLUMN_ORDER;
-import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.DOCUMENT_HEIGHT;
-import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.DOCUMENT_WIDTH;
+import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.ROOT_CONTAINER_HEIGHT;
+import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.ROOT_CONTAINER_WIDTH;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.HIERARCHY_DISPLAY_OPTION;
+import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.LIBRARY_DISPLAY_OPTION;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.PARENT_RING_COLOR;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.RECENT_ITEMS;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.RECENT_ITEMS_SIZE;
+import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController.DisplayOption;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.library.LibraryPanelController.DISPLAY_MODE;
 import java.io.File;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.prefs.Preferences;
 import javafx.scene.image.Image;
 import javafx.scene.layout.Background;
@@ -65,14 +71,16 @@ import javafx.scene.paint.Color;
 public class PreferencesRecordGlobal {
 
     // Default values
-    private static final double DEFAULT_DOCUMENT_HEIGHT = 400;
-    private static final double DEFAULT_DOCUMENT_WIDTH = 600;
+    private static final double DEFAULT_ROOT_CONTAINER_HEIGHT = 400;
+    private static final double DEFAULT_ROOT_CONTAINER_WIDTH = 600;
 
     private static final BackgroundImage DEFAULT_BACKGROUND_IMAGE
-            = BackgroundImage.BACKGROUND_01;
+            = BackgroundImage.BACKGROUND_03;
     private static final Color DEFAULT_ALIGNMENT_GUIDES_COLOR = Color.RED;
     private static final Color DEFAULT_PARENT_RING_COLOR = Color.rgb(238, 168, 47);
 
+    private static final DISPLAY_MODE DEFAULT_LIBRARY_DISPLAY_OPTION
+            = DISPLAY_MODE.SECTIONS;
     private static final DisplayOption DEFAULT_HIERARCHY_DISPLAY_OPTION
             = DisplayOption.INFO;
     private static final CSSAnalyzerColumnsOrder DEFAULT_CSS_ANALYZER_COLUMN_ORDER
@@ -81,11 +89,12 @@ public class PreferencesRecordGlobal {
     private static final int DEFAULT_RECENT_ITEMS_SIZE = 15;
 
     // Global preferences
-    private double documentHeight = DEFAULT_DOCUMENT_HEIGHT;
-    private double documentWidth = DEFAULT_DOCUMENT_WIDTH;
+    private double rootContainerHeight = DEFAULT_ROOT_CONTAINER_HEIGHT;
+    private double rootContainerWidth = DEFAULT_ROOT_CONTAINER_WIDTH;
     private BackgroundImage backgroundImage = DEFAULT_BACKGROUND_IMAGE;
     private Color alignmentGuidesColor = DEFAULT_ALIGNMENT_GUIDES_COLOR;
     private Color parentRingColor = DEFAULT_PARENT_RING_COLOR;
+    private DISPLAY_MODE libraryDisplayOption = DEFAULT_LIBRARY_DISPLAY_OPTION;
     private DisplayOption hierarchyDisplayOption = DEFAULT_HIERARCHY_DISPLAY_OPTION;
     private CSSAnalyzerColumnsOrder cssAnalyzerColumnOrder = DEFAULT_CSS_ANALYZER_COLUMN_ORDER;
     private int recentItemsSize = DEFAULT_RECENT_ITEMS_SIZE;
@@ -142,20 +151,20 @@ public class PreferencesRecordGlobal {
         this.applicationRootPreferences = applicationRootPreferences;
     }
 
-    public double getDocumentHeight() {
-        return documentHeight;
+    public double getRootContainerHeight() {
+        return rootContainerHeight;
     }
 
-    public void setDocumentHeight(double value) {
-        documentHeight = value;
+    public void setRootContainerHeight(double value) {
+        rootContainerHeight = value;
     }
 
-    public double getDocumentWidth() {
-        return documentWidth;
+    public double getRootContainerWidth() {
+        return rootContainerWidth;
     }
 
-    public void setDocumentWidth(double value) {
-        documentWidth = value;
+    public void setRootContainerWidth(double value) {
+        rootContainerWidth = value;
     }
 
     public BackgroundImage getBackgroundImage() {
@@ -180,6 +189,14 @@ public class PreferencesRecordGlobal {
 
     public void setParentRingColor(Color value) {
         parentRingColor = value;
+    }
+
+    public DISPLAY_MODE getLibraryDisplayOption() {
+        return libraryDisplayOption;
+    }
+
+    public void setLibraryDisplayOption(DISPLAY_MODE value) {
+        libraryDisplayOption = value;
     }
 
     public DisplayOption getHierarchyDisplayOption() {
@@ -215,27 +232,39 @@ public class PreferencesRecordGlobal {
     }
 
     public void addRecentItem(File file) {
-        // Add the specified file to the recent items at first position
-        final String path = file.getAbsolutePath();
-        if (recentItems.contains(path)) {
-            recentItems.remove(path);
+        try {
+            // Use URL path value to avoid file separator issues
+            final URL url = file.toURI().toURL();
+            final String urlPath = url.getPath();
+            if (recentItems.contains(urlPath)) {
+                recentItems.remove(urlPath);
+            }
+            // Add the specified file to the recent items at first position
+            recentItems.add(0, urlPath);
+            // Remove last items depending on the size
+            while (recentItems.size() > recentItemsSize) {
+                recentItems.remove(recentItems.size() - 1);
+            }
+            writeToJavaPreferences(RECENT_ITEMS);
+        } catch (MalformedURLException ex) {
+            Logger.getLogger(PreferencesRecordGlobal.class.getName()).log(Level.SEVERE, null, ex);
         }
-        recentItems.add(0, path);
-        // Remove last items depending on the size
-        while (recentItems.size() > recentItemsSize) {
-            recentItems.remove(recentItems.size() - 1);
-        }
-        writeToJavaPreferences(RECENT_ITEMS);
     }
 
     public void addRecentItems(List<File> files) {
         // Add the specified files to the recent items at first position
         for (File file : files) {
-            final String path = file.getAbsolutePath();
-            if (recentItems.contains(path)) {
-                recentItems.remove(path);
+            try {
+                // Use URL path value to avoid file separator issues
+                final URL url = file.toURI().toURL();
+                final String urlPath = url.getPath();
+                if (recentItems.contains(urlPath)) {
+                    recentItems.remove(urlPath);
+                }
+                recentItems.add(0, urlPath);
+            } catch (MalformedURLException ex) {
+                Logger.getLogger(PreferencesRecordGlobal.class.getName()).log(Level.SEVERE, null, ex);
             }
-            recentItems.add(0, path);
         }
         // Remove last items depending on the size
         while (recentItems.size() > recentItemsSize) {
@@ -286,6 +315,10 @@ public class PreferencesRecordGlobal {
 
     }
 
+    public void refreshLibraryDisplayOption(DocumentWindowController dwc) {
+        dwc.refreshLibraryDisplayOption(libraryDisplayOption);
+    }
+
     public void refreshHierarchyDisplayOption(DocumentWindowController dwc) {
         dwc.refreshHierarchyDisplayOption(hierarchyDisplayOption);
     }
@@ -295,6 +328,16 @@ public class PreferencesRecordGlobal {
         cpc.setPringColor(parentRingColor);
         final AbstractHierarchyPanelController hpc = dwc.getHierarchyPanelController();
         hpc.setParentRingColor(parentRingColor);
+    }
+
+    public void refreshRootContainerHeight(DocumentWindowController dwc) {
+        final EditorController ec = dwc.getEditorController();
+        ec.setDefaultRootContainerHeight(rootContainerHeight);
+    }
+
+    public void refreshRootContainerWidth(DocumentWindowController dwc) {
+        final EditorController ec = dwc.getEditorController();
+        ec.setDefaultRootContainerWidth(rootContainerWidth);
     }
 
     public void refreshAlignmentGuidesColor() {
@@ -318,6 +361,13 @@ public class PreferencesRecordGlobal {
         }
     }
 
+    public void refreshLibraryDisplayOption() {
+        final SceneBuilderApp app = SceneBuilderApp.getSingleton();
+        for (DocumentWindowController dwc : app.getDocumentWindowControllers()) {
+            refreshLibraryDisplayOption(dwc);
+        }
+    }
+
     public void refreshHierarchyDisplayOption() {
         final SceneBuilderApp app = SceneBuilderApp.getSingleton();
         for (DocumentWindowController dwc : app.getDocumentWindowControllers()) {
@@ -332,12 +382,29 @@ public class PreferencesRecordGlobal {
         }
     }
 
+    public void refreshRootContainerHeight() {
+        final SceneBuilderApp app = SceneBuilderApp.getSingleton();
+        for (DocumentWindowController dwc : app.getDocumentWindowControllers()) {
+            refreshRootContainerHeight(dwc);
+        }
+    }
+
+    public void refreshRootContainerWidth() {
+        final SceneBuilderApp app = SceneBuilderApp.getSingleton();
+        for (DocumentWindowController dwc : app.getDocumentWindowControllers()) {
+            refreshRootContainerWidth(dwc);
+        }
+    }
+
     public void refresh(DocumentWindowController dwc) {
         refreshAlignmentGuidesColor(dwc);
         refreshBackgroundImage(dwc);
         refreshCSSAnalyzerColumnsOrder(dwc);
+        refreshLibraryDisplayOption(dwc);
         refreshHierarchyDisplayOption(dwc);
         refreshParentRingColor(dwc);
+        refreshRootContainerHeight(dwc);
+        refreshRootContainerWidth(dwc);
     }
 
     /**
@@ -348,12 +415,12 @@ public class PreferencesRecordGlobal {
         assert applicationRootPreferences != null;
 
         // Document size
-        final double height = applicationRootPreferences.getDouble(DOCUMENT_HEIGHT,
-                DEFAULT_DOCUMENT_HEIGHT);
-        setDocumentHeight(height);
-        final double width = applicationRootPreferences.getDouble(DOCUMENT_WIDTH,
-                DEFAULT_DOCUMENT_WIDTH);
-        setDocumentWidth(width);
+        final double height = applicationRootPreferences.getDouble(ROOT_CONTAINER_HEIGHT,
+                DEFAULT_ROOT_CONTAINER_HEIGHT);
+        setRootContainerHeight(height);
+        final double width = applicationRootPreferences.getDouble(ROOT_CONTAINER_WIDTH,
+                DEFAULT_ROOT_CONTAINER_WIDTH);
+        setRootContainerWidth(width);
 
         // Background image
         final String image = applicationRootPreferences.get(BACKGROUND_IMAGE,
@@ -370,10 +437,15 @@ public class PreferencesRecordGlobal {
                 DEFAULT_PARENT_RING_COLOR.toString());
         setParentRingColor(Color.valueOf(prColor));
 
+        // Library display option
+        final String library_DisplayOption = applicationRootPreferences.get(LIBRARY_DISPLAY_OPTION,
+                DEFAULT_LIBRARY_DISPLAY_OPTION.name());
+        setLibraryDisplayOption(DISPLAY_MODE.valueOf(library_DisplayOption));
+
         // Hierarchy display option
-        final String displayOption = applicationRootPreferences.get(HIERARCHY_DISPLAY_OPTION,
+        final String hierarchy_DisplayOption = applicationRootPreferences.get(HIERARCHY_DISPLAY_OPTION,
                 DEFAULT_HIERARCHY_DISPLAY_OPTION.name());
-        setHierarchyDisplayOption(DisplayOption.valueOf(displayOption));
+        setHierarchyDisplayOption(DisplayOption.valueOf(hierarchy_DisplayOption));
 
         // CSS analyzer column order
         final String order = applicationRootPreferences.get(CSS_ANALYZER_COLUMN_ORDER,
@@ -400,11 +472,11 @@ public class PreferencesRecordGlobal {
         assert applicationRootPreferences != null;
         assert key != null;
         switch (key) {
-            case DOCUMENT_HEIGHT:
-                applicationRootPreferences.putDouble(DOCUMENT_HEIGHT, getDocumentHeight());
+            case ROOT_CONTAINER_HEIGHT:
+                applicationRootPreferences.putDouble(ROOT_CONTAINER_HEIGHT, getRootContainerHeight());
                 break;
-            case DOCUMENT_WIDTH:
-                applicationRootPreferences.putDouble(DOCUMENT_WIDTH, getDocumentWidth());
+            case ROOT_CONTAINER_WIDTH:
+                applicationRootPreferences.putDouble(ROOT_CONTAINER_WIDTH, getRootContainerWidth());
                 break;
             case BACKGROUND_IMAGE:
                 applicationRootPreferences.put(BACKGROUND_IMAGE, getBackgroundImage().name());
@@ -414,6 +486,9 @@ public class PreferencesRecordGlobal {
                 break;
             case PARENT_RING_COLOR:
                 applicationRootPreferences.put(PARENT_RING_COLOR, getParentRingColor().toString());
+                break;
+            case LIBRARY_DISPLAY_OPTION:
+                applicationRootPreferences.put(LIBRARY_DISPLAY_OPTION, getLibraryDisplayOption().name());
                 break;
             case HIERARCHY_DISPLAY_OPTION:
                 applicationRootPreferences.put(HIERARCHY_DISPLAY_OPTION, getHierarchyDisplayOption().name());

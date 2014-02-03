@@ -167,8 +167,7 @@ public class FXOMPropertyT extends FXOMProperty {
         final GlueElement newParentElement = newParentInstance.getGlueElement();
         
         if (propertyElement == null) { // Case #1
-            assert index == -1;
-            
+            // index is ignored
             final Map<String,String> attributes = newParentElement.getAttributes();
             assert attributes.get(getName().toString()) == null;
             attributes.put(getName().toString(), value);

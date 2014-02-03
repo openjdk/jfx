@@ -37,7 +37,6 @@ import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.gradientpicke
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.gradientpicker.GradientPickerStop;
 import com.sun.javafx.Utils;
 import java.io.IOException;
-import java.text.DecimalFormat;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.beans.value.ChangeListener;
@@ -439,13 +438,12 @@ public class ColorPicker extends VBox {
         int green = (int) (rgb[1] * 255);
         int blue = (int) (rgb[2] * 255);
         final String hexa = String.format("%02X%02X%02X", red, green, blue); //NOI18N
-        final DecimalFormat df = new DecimalFormat("0.0#"); //NOI18N
 
         // Set TextFields value
         hue_textfield.setText(String.valueOf((int) hue));
         saturation_textfield.setText(String.valueOf((int) (saturation * 100)));
         brightness_textfield.setText(String.valueOf((int) (brightness * 100)));
-        alpha_textfield.setText(df.format(alpha));
+        alpha_textfield.setText(Double.toString(alpha));
         red_textfield.setText(Integer.toString(red));
         green_textfield.setText(Integer.toString(green));
         blue_textfield.setText(Integer.toString(blue));

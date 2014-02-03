@@ -37,11 +37,12 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.paint.*?>
+<?import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.*?>
 
 <fx:root type="javafx.scene.layout.GridPane" id="GridPane" hgap="4.0" vgap="0.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
   <children>
     <Label fx:id="rotator_label" text="Label" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-    <TextField fx:id="rotator_textfield" onAction="#rotatorAction" prefColumnCount="4" prefWidth="-1.0" styleClass="LF3-textfield1" text="0" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+    <DoubleTextField fx:id="rotator_textfield" onAction="#rotatorAction" prefColumnCount="4" prefWidth="-1.0" styleClass="LF3-textfield1" text="0" GridPane.columnIndex="1" GridPane.rowIndex="0" />
     <StackPane id="StackPane" GridPane.columnIndex="2" GridPane.rowIndex="0">
       <children>
         <Button fx:id="rotator_dial" mnemonicParsing="false" onMouseDragged="#rotatorMouseDragged" onMousePressed="#rotatorMousePressed" styleClass="rotation-dial" text="" />

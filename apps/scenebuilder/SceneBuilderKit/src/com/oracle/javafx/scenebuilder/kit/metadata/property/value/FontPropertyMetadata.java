@@ -31,6 +31,8 @@
  */
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import javafx.scene.text.Font;
@@ -41,23 +43,31 @@ import javafx.scene.text.Font;
  */
 public class FontPropertyMetadata extends ComplexPropertyMetadata<Font> {
 
+    private final StringPropertyMetadata nameMetadata
+            = new StringPropertyMetadata(new PropertyName("name"), //NOI18N
+            true, Font.getDefault().getName(), InspectorPath.UNUSED);
+    private final DoublePropertyMetadata sizeMetadata
+            = new DoublePropertyMetadata(new PropertyName("size"), //NOI18N
+            DoublePropertyMetadata.DoubleKind.SIZE, true, 0.0, InspectorPath.UNUSED);
+
+    
     public FontPropertyMetadata(PropertyName name, boolean readWrite, 
             Font defaultValue, InspectorPath inspectorPath) {
         super(name, Font.class, readWrite, defaultValue, inspectorPath);
     }
 
+    /*
+     * ComplexPropertyMetadata
+     */
+    
     @Override
-    protected Font castValue(Object value) {
-        final Font result;
+    public FXOMInstance makeFxomInstanceFromValue(Font value, FXOMDocument fxomDocument) {
+        final FXOMInstance result = new FXOMInstance(fxomDocument, getValueClass());
         
-        if (value instanceof Font) {
-            result = (Font) value;
-        } else {
-            // TODO : this is a temporary fix for DTL-5846
-            result = Font.getDefault();
-        }
+        nameMetadata.setValue(result, value.getName());
+        sizeMetadata.setValue(result, value.getSize());
 
         return result;
     }
-    
+
 }

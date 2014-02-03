@@ -201,7 +201,7 @@ public abstract class AbstractWrapInJob extends Job {
 
             // Retrieve the current container property name in use
             final PropertyName oldContainerPropertyName
-                    = WrapJobUtils.getContainerPropertyName(oldContainer);
+                    = WrapJobUtils.getContainerPropertyName(oldContainer, children);
             // Retrieve the current container property (already defined and not null)
             final FXOMPropertyC oldContainerProperty
                     = (FXOMPropertyC) oldContainer.getProperties().get(oldContainerPropertyName);

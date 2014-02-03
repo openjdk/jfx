@@ -377,7 +377,7 @@ public class HierarchyDNDController {
                 final DesignHierarchyMask dropTargetMask
                         = new DesignHierarchyMask(dropTargetInstance);
                 // Check if the drop target accepts sub components
-                if (dropTargetMask.isAcceptingSubComponent()) {
+                if (dropTargetMask.isAcceptingSubComponent(dragSource.getDraggedObjects())) {
                     final FXOMObject beforeChild;
                     if (targetIndex == -1) {
                         beforeChild = null;

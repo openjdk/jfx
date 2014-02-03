@@ -31,13 +31,6 @@
  */
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value.paint;
 
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyT;
-import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.TextEncodablePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.ColorEncoder;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
@@ -49,19 +42,6 @@ import javafx.scene.paint.Color;
  */
 public class ColorPropertyMetadata extends TextEncodablePropertyMetadata<Color> {
 
-    private final DoublePropertyMetadata redMetadata
-            = new DoublePropertyMetadata(new PropertyName("red"), 
-            DoublePropertyMetadata.DoubleKind.SIZE, true, 0.0, InspectorPath.UNUSED);
-    private final DoublePropertyMetadata greenMetadata
-            = new DoublePropertyMetadata(new PropertyName("green"), 
-            DoublePropertyMetadata.DoubleKind.SIZE, true, 0.0, InspectorPath.UNUSED);
-    private final DoublePropertyMetadata blueMetadata
-            = new DoublePropertyMetadata(new PropertyName("blue"), 
-            DoublePropertyMetadata.DoubleKind.SIZE, true, 0.0, InspectorPath.UNUSED);
-    private final DoublePropertyMetadata opacityMetadata
-            = new DoublePropertyMetadata(new PropertyName("opacity"), 
-            DoublePropertyMetadata.DoubleKind.OPACITY, true, 1.0, InspectorPath.UNUSED);
-
     public ColorPropertyMetadata(PropertyName name, boolean readWrite, 
             Color defaultValue, InspectorPath inspectorPath) {
         super(name, Color.class, readWrite, defaultValue, inspectorPath);
@@ -72,72 +52,14 @@ public class ColorPropertyMetadata extends TextEncodablePropertyMetadata<Color> 
      */
     
     @Override
-    protected Color castValue(Object value) {
-        final Color result;
-        
-        if (value instanceof Color) {
-            result = (Color) value;
-        } else {
-            assert value instanceof String;
-            result = Color.valueOf((String)value);
-        }
-        
-        return result;
+    public Color makeValueFromString(String string) {
+        return Color.valueOf(string);
     }
-
-    /*
-     * TextEncodablePropertyMetadata
-     */
     
     @Override
-    public FXOMProperty makeFxomPropertyFromValue(FXOMInstance fxomInstance, Color value) {
-        return new FXOMPropertyT(fxomInstance.getFxomDocument(), 
-                getName(), ColorEncoder.encodeColor(value));
+    public String makeStringFromValue(Color value) {
+        assert value != null;
+        return ColorEncoder.encodeColor(value);
     }
 
-    @Override
-    protected void updateFxomPropertyWithValue(FXOMProperty fxomProperty, Color value) {
-        
-        if (fxomProperty instanceof FXOMPropertyT) {
-            /*
-             * <CCCC property-name="#433444" />
-             * <CCCC><property-name>#433444</property-name></CCCC>
-             * <CCCC><property-name><String fx:value="#433444"/></CCCC>
-             */
-            final FXOMPropertyT fxomPropertyT = (FXOMPropertyT) fxomProperty;
-            fxomPropertyT.setValue(ColorEncoder.encodeColor(value));
-        } else {
-            assert fxomProperty instanceof FXOMPropertyC;
-            
-            /*
-             * <CCCC>
-             *      <property-name>
-             *          <Color red="43" green="34" blue="44" opacity="0.5"/>
-             *      </property-name>
-             * </CCCC>
-             */
-            
-            final FXOMPropertyC fxomPropertyC = (FXOMPropertyC) fxomProperty;
-            assert fxomPropertyC.getValues().size() == 1;
-
-            FXOMObject colorFxomObject = fxomPropertyC.getValues().get(0);
-            if (colorFxomObject instanceof FXOMInstance) {
-                updateFxomInstanceWithValue((FXOMInstance) colorFxomObject, value);
-            } else {
-                final FXOMDocument fxomDocument = fxomProperty.getFxomDocument();
-                final FXOMInstance valueInstance = new FXOMInstance(fxomDocument, value.getClass());
-                updateFxomInstanceWithValue(valueInstance, value);
-                valueInstance.addToParentProperty(0, fxomPropertyC);
-                colorFxomObject.removeFromParentProperty();
-            }
-        }
-    }
-    
-    protected void updateFxomInstanceWithValue(FXOMInstance valueInstance, Color value) {
-        redMetadata.setValue(valueInstance, value.getRed());
-        greenMetadata.setValue(valueInstance, value.getGreen());
-        blueMetadata.setValue(valueInstance, value.getBlue());
-        opacityMetadata.setValue(valueInstance, value.getOpacity());
-    }
-    
 }

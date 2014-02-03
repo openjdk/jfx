@@ -37,7 +37,7 @@
 <?import javafx.scene.layout.*?>
 
 <HBox spacing="2.0" style="" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
-  <children>
+  <children><Label fx:id="prefixLb" alignment="CENTER" maxWidth="20.0" minWidth="20.0" prefWidth="20.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" />
     <TextField fx:id="imagePathTf" maxWidth="1.7976931348623157E308" HBox.hgrow="ALWAYS" />
     <Button mnemonicParsing="false" onAction="#chooseImage" text="..." HBox.hgrow="NEVER" />
   </children>

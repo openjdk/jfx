@@ -57,9 +57,11 @@ class DragSourceShadow extends Group {
     
     private final ImageView imageView = new ImageView();
     private final Region glass = new Region();
-    
+    private static final String NID_DRAG_SHADOW = "dragShadow"; //NOI18N
+
     
     public DragSourceShadow() {
+        this.setId(NID_DRAG_SHADOW);
         this.getChildren().add(imageView);
         this.getChildren().add(glass);
         

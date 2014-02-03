@@ -33,9 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.metadata.property.value;
 
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignImage;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.Collections;
@@ -49,6 +47,16 @@ import javafx.scene.ImageCursor;
  * 
  */
 public class CursorPropertyMetadata extends ComplexPropertyMetadata<Cursor> {
+    
+    private final DoublePropertyMetadata hotspotXMetadata
+            = new DoublePropertyMetadata(new PropertyName("hotspotX"), 
+            DoublePropertyMetadata.DoubleKind.COORDINATE, true, 0.0, InspectorPath.UNUSED);
+    private final DoublePropertyMetadata hotspotYMetadata
+            = new DoublePropertyMetadata(new PropertyName("hotspotY"), 
+            DoublePropertyMetadata.DoubleKind.COORDINATE, true, 0.0, InspectorPath.UNUSED);
+    private final ImagePropertyMetadata imageMetadata
+            = new ImagePropertyMetadata(new PropertyName("image"), 
+            true, null, InspectorPath.UNUSED);
 
     private static Map<Cursor, String> cursorMap;
     
@@ -91,127 +99,28 @@ public class CursorPropertyMetadata extends ComplexPropertyMetadata<Cursor> {
      * ComplexPropertyMetadata
      */
     @Override
-    public FXOMProperty makeFxomPropertyFromValue(FXOMInstance fxomInstance, Cursor value) {
-        assert fxomInstance != null;
-        assert value != null;
-        
-        final FXOMDocument fxomDocument = fxomInstance.getFxomDocument();
-        final FXOMInstance valueInstance = new FXOMInstance(fxomDocument, computeDeclaredClass(value));
-        updateFxomInstanceWithValue(valueInstance, value);
-        return new FXOMPropertyC(fxomDocument, getName(), valueInstance);
-    }
-
-    
-    @Override
-    protected void updateFxomPropertyWithValue(FXOMProperty fxomProperty, Cursor value) {
-        assert value != null;
-        assert fxomProperty instanceof FXOMPropertyC; // Because it's *Complex*PropertyMetadata
-        
-        final Class<?> cursorDeclaredClass = computeDeclaredClass(value);
-        
-        final FXOMPropertyC fxomPropertyC = (FXOMPropertyC) fxomProperty;
-        assert fxomPropertyC.getValues().size() == 1;
-        
-        FXOMObject valueObject = fxomPropertyC.getValues().get(0);
-        if (valueObject instanceof FXOMInstance) {
-            final FXOMInstance valueInstance = (FXOMInstance) valueObject;
-            if (valueInstance.getDeclaredClass() == cursorDeclaredClass) {
-                updateFxomInstanceWithValue((FXOMInstance) valueObject, value);
-            } else {
-                final FXOMDocument fxomDocument = fxomProperty.getFxomDocument();
-                final FXOMInstance newValueInstance = new FXOMInstance(fxomDocument, cursorDeclaredClass);
-                updateFxomInstanceWithValue(newValueInstance, value);
-                newValueInstance.addToParentProperty(0, fxomPropertyC);
-                valueObject.removeFromParentProperty();
-            }
-        } else {
-            final FXOMDocument fxomDocument = fxomProperty.getFxomDocument();
-            final FXOMInstance valueInstance = new FXOMInstance(fxomDocument, cursorDeclaredClass);
-            updateFxomInstanceWithValue(valueInstance, value);
-            valueInstance.addToParentProperty(0, fxomPropertyC);
-            valueObject.removeFromParentProperty();
-        }
-    }
-    
-    @Override
-    protected Cursor castValue(Object value) {
-        final Cursor result;
-        
-        /*
-         * To simplify other routines of CursorPropertyMetadata, 
-         * we make sure that "value" is:
-         * 0) either null
-         * 1) either a standard cursor (eg Cursor.OPEN_HAND)
-         * 2) either an ImageCursor instance
-         * If not, we replace "value" by Cursor.DEFAULT (3).
-         */
-        if (value == null) {             // (0)
-            result = null;
-        } else if (getCursorMap().get((Cursor)value) != null) {
-            result = (Cursor) value;     // (1)
-        } else {
-            if (value instanceof ImageCursor) {
-                result = (Cursor) value; // (2)
-            } else {                          
-                result = Cursor.DEFAULT; // (3)
-            }
-        }
-
-        return result;
-    }
-    
-    @Override
-    protected void updateFxomInstanceWithValue(FXOMInstance valueInstance, Cursor value) {
-        /*
-         *      <cursor> <Cursor fx:constant="CLOSED_HAND" /> </cursor>
-         */
+    public FXOMInstance makeFxomInstanceFromValue(Cursor value, FXOMDocument fxomDocument) {
+        final FXOMInstance result;
         
         final String cursorName = getCursorMap().get(value);
         if (cursorName != null) {
             // It's a standard cursor
-            assert valueInstance.getDeclaredClass() == Cursor.class;
-            valueInstance.setFxConstant(cursorName);
+            result = new FXOMInstance(fxomDocument, Cursor.class);
+            result.setFxConstant(cursorName);
+        } else if (value instanceof ImageCursor) {
+            final ImageCursor imageCursor = (ImageCursor) value;
+            result = new FXOMInstance(fxomDocument, ImageCursor.class);
+            hotspotXMetadata.setValue(result, imageCursor.getHotspotX());
+            hotspotYMetadata.setValue(result, imageCursor.getHotspotY());
+            imageMetadata.setValue(result, new DesignImage(imageCursor.getImage()));
         } else {
-            assert value instanceof ImageCursor;
-            assert valueInstance.getDeclaredClass() == ImageCursor.class;
-            updateFxomInstanceWithImageCursor(valueInstance, (ImageCursor) value);
-        }
-        
-    }
-    
-    /*
-     * Private
-     */
-    
-    private Class<?> computeDeclaredClass(Cursor value) {
-        final Class<?> result;
-        
-        final String cursorName = getCursorMap().get(value);
-        if (cursorName != null) {
-            result = Cursor.class;
-        } else {
-            assert value instanceof ImageCursor; // See castValue() comments
-            result = ImageCursor.class;
+            // Emergency code
+            assert false;
+            result = new FXOMInstance(fxomDocument, Cursor.class);
+            result.setFxConstant(getCursorMap().get(Cursor.DEFAULT));
         }
         
         return result;
-    }
-    
-    private final DoublePropertyMetadata hotspotXMetadata
-            = new DoublePropertyMetadata(new PropertyName("hotspotX"), 
-            DoublePropertyMetadata.DoubleKind.COORDINATE, true, 0.0, InspectorPath.UNUSED);
-    private final DoublePropertyMetadata hotspotYMetadata
-            = new DoublePropertyMetadata(new PropertyName("hotspotY"), 
-            DoublePropertyMetadata.DoubleKind.COORDINATE, true, 0.0, InspectorPath.UNUSED);
-    private final ImagePropertyMetadata imageMetadata
-            = new ImagePropertyMetadata(new PropertyName("image"), 
-            true, null, InspectorPath.UNUSED);
-    
-    private void updateFxomInstanceWithImageCursor(FXOMInstance valueInstance, 
-            ImageCursor imageCursor) {
-        hotspotXMetadata.setValue(valueInstance, imageCursor.getHotspotX());
-        hotspotYMetadata.setValue(valueInstance, imageCursor.getHotspotY());
-        imageMetadata.setValue(valueInstance, imageCursor.getImage());
     }
 }
 

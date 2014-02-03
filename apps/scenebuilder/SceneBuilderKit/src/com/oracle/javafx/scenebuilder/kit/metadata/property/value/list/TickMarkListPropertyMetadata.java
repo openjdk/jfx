@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value.list;
 
+import com.oracle.javafx.scenebuilder.kit.metadata.property.value.ObjectPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.List;
@@ -40,25 +41,13 @@ import java.util.List;
  */
 public class TickMarkListPropertyMetadata extends ListValuePropertyMetadata<Object> {
 
+    private final static ObjectPropertyMetadata itemMetadata
+            = new ObjectPropertyMetadata(new PropertyName("unused"), //NOI18N
+                    true, null, InspectorPath.UNUSED);
+
     public TickMarkListPropertyMetadata(PropertyName name, boolean readWrite, 
             List<Object> defaultValue, InspectorPath inspectorPath) {
-        super(name, Object.class, readWrite, defaultValue, inspectorPath);
-    }
-
-    @Override
-    protected Object castItemValue(Object value) {
-        return value;
-    }
-    
-    @Override
-    protected boolean isItemTextEncodable() {
-        return false;
-    }
-
-    @Override
-    protected String itemTextEncoding(Object value) {
-        throw new UnsupportedOperationException(
-                getClass().getName() + " cannot be encoded as text"); //NOI18N
+        super(name, Object.class, itemMetadata, readWrite, defaultValue, inspectorPath);
     }
 
 }

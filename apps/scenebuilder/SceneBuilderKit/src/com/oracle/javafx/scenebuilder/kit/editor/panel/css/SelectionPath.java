@@ -122,7 +122,7 @@ public class SelectionPath extends HBox {
                 hbox.setOnMouseEntered(new MouseEnterListener(opt, label));
                 hbox.setOnMouseExited(new MouseExitedListener(opt, label));
                 opt.setMaxHeight(Double.MAX_VALUE);
-                opt.getStyleClass().add("path-optional-label");//NOI18N
+                opt.getStyleClass().add("styleable-path-optional-label");//NOI18N
                 hbox.getChildren().add(opt);
                 getChildren().add(hbox);
             } else {
@@ -193,7 +193,6 @@ public class SelectionPath extends HBox {
 
         private ChildButton(List<Item> children, final List<Item> childrenPath, final Item selectedChild) {
             pathButton.setPrefSize(17.0, 17.0);
-            pathButton.getStyleClass().add("css-path-button");//NOI18N
             getChildren().add(pathButton);
             final ContextMenu menu = new ContextMenu();
             for (final Item c : children) {

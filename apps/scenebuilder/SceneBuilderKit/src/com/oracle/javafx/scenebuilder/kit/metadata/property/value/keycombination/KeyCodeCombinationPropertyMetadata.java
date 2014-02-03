@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value.keycombination;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.ComplexPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.EnumerationPropertyMetadata;
@@ -92,19 +93,21 @@ public class KeyCodeCombinationPropertyMetadata extends ComplexPropertyMetadata<
         super(name, KeyCodeCombination.class, readWrite, defaultValue, inspectorPath);
     }
 
+    /*
+     * ComplexPropertyMetadata
+     */
     @Override
-    protected KeyCodeCombination castValue(Object value) {
-        return (KeyCodeCombination) value;
-    }
-    
-    @Override
-    protected void updateFxomInstanceWithValue(FXOMInstance valueInstance, KeyCodeCombination value) {
-        altMetadata.setValue(valueInstance, value.getAlt().toString());
-        controlMetadata.setValue(valueInstance, value.getControl().toString());
-        metaMetadata.setValue(valueInstance, value.getMeta().toString());
-        shiftMetadata.setValue(valueInstance, value.getShift().toString());
-        shortcutMetadata.setValue(valueInstance, value.getShortcut().toString());
-        codeMetadata.setValue(valueInstance, value.getCode().toString());
+    public FXOMInstance makeFxomInstanceFromValue(KeyCodeCombination value, FXOMDocument fxomDocument) {
+        final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
+        
+        altMetadata.setValue(result, value.getAlt().toString());
+        controlMetadata.setValue(result, value.getControl().toString());
+        metaMetadata.setValue(result, value.getMeta().toString());
+        shiftMetadata.setValue(result, value.getShift().toString());
+        shortcutMetadata.setValue(result, value.getShortcut().toString());
+        codeMetadata.setValue(result, value.getCode().toString());
+
+        return result;
     }
     
 }

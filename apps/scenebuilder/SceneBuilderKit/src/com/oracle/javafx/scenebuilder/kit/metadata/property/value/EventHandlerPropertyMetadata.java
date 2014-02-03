@@ -51,13 +51,13 @@ public class EventHandlerPropertyMetadata extends TextEncodablePropertyMetadata<
      */
     
     @Override
-    protected String castValue(Object value) {
-        assert (value == null) || (value instanceof String);
-        return (String)value;
+    public String makeValueFromString(String string) {
+        return string;
     }
     
     @Override
     public String getValue(FXOMInstance fxomInstance) {
+        // We override just to add a sanity check
         assert isReadWrite();
         return super.getValue(fxomInstance);
     }

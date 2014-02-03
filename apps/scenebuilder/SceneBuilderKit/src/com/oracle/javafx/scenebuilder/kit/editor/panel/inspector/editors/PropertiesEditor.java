@@ -58,8 +58,6 @@ public abstract class PropertiesEditor extends Editor {
     private MenuButton menu;
     private final MenuItem resetvalueMenuItem = new MenuItem(I18N.getString("inspector.editors.resetvalue"));
     private FadeTransition fadeTransition = null;
-    private static final Image cogIcon = new Image(
-            InspectorPanelController.class.getResource("images/cog.png").toExternalForm()); //NOI18N
     private final String name;
 
     public PropertiesEditor(String name) {
@@ -83,7 +81,6 @@ public abstract class PropertiesEditor extends Editor {
     public final MenuButton getMenu() {
         if (menu == null) {
             menu = new MenuButton();
-            menu.setGraphic(new ImageView(cogIcon));
             menu.getStyleClass().add("cog-button");
             menu.setOpacity(0);
             fadeTransition = new FadeTransition(Duration.millis(500), menu);

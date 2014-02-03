@@ -31,14 +31,13 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
-
 <?import java.lang.*?>
 <?import java.net.*?>
 <?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox id="StackPane" spacing="7.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+<VBox id="StackPane" spacing="7.0" styleClass="theme-presets, property-sheet-text" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
   <children>
     <VBox fx:id="controllerClassVBox" alignment="CENTER" spacing="0.0">
       <children>
@@ -54,14 +53,14 @@
             <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
           </columnResizePolicy>
           <columns>
-            <TableColumn fx:id="leftTableColumn" maxWidth="1.7976931348623157E308" minWidth="30.0" prefWidth="-1.0" resizable="true" sortable="true" text="fx:id" />
-            <TableColumn fx:id="rightTableColumn" maxWidth="1.7976931348623157E308" minWidth="100.0" prefWidth="-1.0" sortable="true" text="%info.label.component" />
+            <TableColumn maxWidth="1.7976931348623157E308" minWidth="30.0" prefWidth="-1.0" resizable="true" sortable="true" text="fx:id" fx:id="leftTableColumn" />
+            <TableColumn maxWidth="1.7976931348623157E308" minWidth="100.0" prefWidth="-1.0" sortable="true" text="%info.label.component" fx:id="rightTableColumn" />
           </columns>
           <sortOrder>
             <fx:reference source="leftTableColumn" />
           </sortOrder>
         </TableView>
-        <Label fx:id="bottomLabel" alignment="CENTER" maxHeight="-Infinity" maxWidth="1.7976931348623157E308" minHeight="-Infinity" text="Label" textAlignment="LEFT" VBox.vgrow="NEVER" />
+        <Label fx:id="bottomLabel" alignment="CENTER" maxHeight="-Infinity" maxWidth="1.7976931348623157E308" minHeight="-Infinity" styleClass="label, dimmed-label" text="Label" textAlignment="LEFT" VBox.vgrow="NEVER" />
       </children>
       <VBox.margin>
         <Insets top="10.0" />
@@ -69,6 +68,6 @@
     </VBox>
   </children>
   <stylesheets>
-    <URL value="@InfoPanel.css" />
+    <URL value="@../css/InfoPanel.css" />
   </stylesheets>
 </VBox>

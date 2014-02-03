@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -32,6 +32,7 @@
 
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value.effect;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.ComplexPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata;
@@ -64,14 +65,13 @@ public class MotionBlurPropertyMetadata extends ComplexPropertyMetadata<MotionBl
      */
     
     @Override
-    protected MotionBlur castValue(Object value) {
-        return (MotionBlur) value;
-    }
-    
-    @Override
-    public void updateFxomInstanceWithValue(FXOMInstance valueInstance, MotionBlur value) {
-        angleMetadata.setValue(valueInstance, value.getAngle());
-        inputMetadata.setValue(valueInstance, value.getInput());
-        radiusMetadata.setValue(valueInstance, value.getRadius());
+    public FXOMInstance makeFxomInstanceFromValue(MotionBlur value, FXOMDocument fxomDocument) {
+        final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
+        
+        angleMetadata.setValue(result, value.getAngle());
+        inputMetadata.setValue(result, value.getInput());
+        radiusMetadata.setValue(result, value.getRadius());
+
+        return result;
     }
 }

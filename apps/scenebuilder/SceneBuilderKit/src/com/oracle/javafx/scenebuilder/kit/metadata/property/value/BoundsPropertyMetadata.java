@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
@@ -72,17 +73,16 @@ public class BoundsPropertyMetadata extends ComplexPropertyMetadata<Bounds> {
      */
     
     @Override
-    protected Bounds castValue(Object value) {
-        return (Bounds) value;
-    }
-    
-    @Override
-    protected void updateFxomInstanceWithValue(FXOMInstance valueInstance, Bounds value) {
-        minXMetadata.setValue(valueInstance, value.getMinX());
-        minYMetadata.setValue(valueInstance, value.getMinY());
-        minZMetadata.setValue(valueInstance, value.getMinZ());
-        widthMetadata.setValue(valueInstance, value.getWidth());
-        heightMetadata.setValue(valueInstance, value.getHeight());
-        depthMetadata.setValue(valueInstance, value.getDepth());
+    public FXOMInstance makeFxomInstanceFromValue(Bounds value, FXOMDocument fxomDocument) {
+        final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
+        
+        minXMetadata.setValue(result, value.getMinX());
+        minYMetadata.setValue(result, value.getMinY());
+        minZMetadata.setValue(result, value.getMinZ());
+        widthMetadata.setValue(result, value.getWidth());
+        heightMetadata.setValue(result, value.getHeight());
+        depthMetadata.setValue(result, value.getDepth());
+
+        return result;
     }
 }

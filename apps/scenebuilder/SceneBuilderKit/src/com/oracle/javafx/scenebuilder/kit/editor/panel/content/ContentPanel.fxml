@@ -31,7 +31,6 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
-
 <?import java.lang.*?>
 <?import java.net.*?>
 <?import javafx.geometry.*?>
@@ -41,7 +40,7 @@
 <?import javafx.scene.shape.*?>
 <?import javafx.scene.text.*?>
 
-<ScrollPane fx:id="scrollPane" fitToHeight="true" fitToWidth="true" hvalue="0.5" minWidth="300.0" prefHeight="500.0" prefWidth="700.0" vvalue="0.5" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+<ScrollPane fx:id="scrollPane" fitToHeight="true" fitToWidth="true" hvalue="0.5" minWidth="300.0" prefHeight="500.0" prefWidth="700.0" styleClass="edge-to-edge, theme-presets, SBKIT-content-panel" vvalue="0.5" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
   <content>
     <StackPane fx:id="workspacePane" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" style="">
       <children>
@@ -79,6 +78,6 @@
     </StackPane>
   </content>
   <stylesheets>
-    <URL value="@ContentPanel.css" />
+    <URL value="@../../css/Theme.css" />
   </stylesheets>
 </ScrollPane>

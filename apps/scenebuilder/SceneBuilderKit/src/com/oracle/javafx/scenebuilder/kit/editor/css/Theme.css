@@ -1,0 +1,949 @@
+/*
+ * Copyright (c) 2014, Oracle and/or its affiliates.
+ * All rights reserved. Use is subject to license terms.
+ *
+ * This file is available and licensed under the following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *  - Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  - Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the distribution.
+ *  - Neither the name of Oracle Corporation nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/*******************************************************************************
+ *                                                                             *
+ * Preset colours for the theme                                                *
+ *                                                                             *
+ ******************************************************************************/
+
+.theme-presets {
+    -sb-base: rgb(147, 147, 147);
+    -sb-dark: derive(-sb-base, -30%);
+    -sb-content-text: derive(-sb-base, -70%); 
+    -sb-content-text-dimmed: derive(-sb-base, -30%);
+    -sb-header-text: derive(-sb-base, -70%);
+    -sb-header-text-dimmed: derive(-sb-base, -30%);
+    -sb-grad-hi: derive(-sb-base, 110%);
+    -sb-sharp-edge-hi: derive(-sb-base, 90%);
+    -sb-flat: derive(-sb-base, 65%);
+    -sb-sharp-edge-lo: derive(-sb-base, 20%);
+    -sb-panel-background: derive(-sb-base, 98%);
+    -sb-control-inner: derive(-sb-base, -25%);
+    -sb-input-control-outer: derive(-sb-base, -48%);
+    -sb-input-control-inner: derive(-sb-base, -40%);
+    -sb-scrollbar-thumb: derive(-sb-base, 60%);
+    -sb-selected-bar-color: rgb(75, 155, 210);
+    -sb-selected-bar-unfocused-color: derive(-sb-panel-background, -15%);
+    -sb-css-winner-color: rgb(210, 240, 255);
+}
+
+/*******************************************************************************
+ *                                                                             *
+ * Common UI Styling                                                           *
+ *                                                                             *
+ ******************************************************************************/
+
+/*******************************************************************************
+ * Common UI Styling - Controls                                                *
+ ******************************************************************************/
+
+.text-input {
+    -fx-padding: 0.25em 0.417em 0.167em 0.417em;
+    -fx-text-fill: -sb-content-text;
+}
+
+.table-view,
+.table-view:focused {
+    -fx-padding: 0;
+}
+.table-view .column-header .label {
+    -fx-text-fill: -sb-content-text;
+    -fx-font-size: 0.875em;
+    -fx-font-weight: normal;
+    -fx-alignment: CENTER_LEFT;
+    -fx-padding: 0 0 0 5;
+}
+.table-view .hyperlink {
+    -fx-font-size: 0.875em;
+    -fx-padding: 0 0 0 4;
+}
+.table-view .label {
+    -fx-font-size: 0.875em;
+    -fx-padding: 0 0 0 4;
+}
+.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:selected,
+.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell .table-cell:selected {
+    -fx-background: white;
+    -fx-table-cell-border-color: white;
+}
+
+/*******************************************************************************
+ * Common UI Styling - Cog Button                                              *
+ ******************************************************************************/
+
+.cog-button {
+    -fx-background-color: -sb-panel-background;
+    -fx-background-image: url("../cssimages/cog.png");
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: center;
+    -fx-padding: 1 4 5 4;
+    -fx-min-width: 10px;
+    -fx-min-height: 10px;
+}
+.cog-button:hover {
+    -fx-background-color: derive(-sb-panel-background, -10%), -sb-panel-background;
+    -fx-background-insets: 0, 1;
+}
+.cog-button:focused {
+    -fx-background-color: -fx-focus-color, -fx-background;
+}
+.cog-button .arrow-button {
+    -fx-padding:0;
+}
+.cog-button .arrow {
+    -fx-shape: null;
+    -fx-padding:0;
+}
+.cog-button .label {
+    -fx-padding: -2 0 0 0;
+}
+
+/*******************************************************************************
+ * Common UI Styling - Panel Headers (Background, search box and menu)         *
+ ******************************************************************************/
+
+.panel-header {
+    -fx-background-color: 
+        derive(-sb-grad-hi, 25%), 
+        linear-gradient(to bottom, -sb-grad-hi, -sb-flat);
+    -fx-background-insets: 0, 1 0 0 0;
+}
+.panel-header > .label {
+    -fx-padding: 8 32 7 8;
+    -fx-text-fill: -sb-header-text;
+}
+.panel-header > .menu-button {
+    -fx-background-color: null;
+    -fx-graphic: url('../cssimages/cog.png');
+    -fx-graphic-text-gap: 0px;
+    -fx-padding: 0 0 0 0.462em;
+}
+.panel-header > .menu-button .label {
+    -fx-padding: 0;
+}
+.panel-header > .menu-button > .arrow-button > .arrow {
+    -fx-background-color: -sb-dark;
+    -fx-padding: 0 0.231em 0.154em 0.154em;
+}
+.panel-header > .menu-button > .arrow-button {
+    -fx-padding: 0.462em 0.615em 0.462em 0.154em;
+}
+.panel-header .text-field {
+    -fx-text-fill: -sb-header-text;
+    -fx-font-size: 0.875em;
+    /*-fx-padding: 4 7 2 7;*/
+    -fx-padding: 3 7 2 7;
+    -fx-border-color: 
+        linear-gradient(to bottom, derive(-sb-sharp-edge-lo, 40%), derive(-sb-sharp-edge-hi, 25%));
+    -fx-border-radius: 10;
+    /*-fx-border-insets: -1 -12 1 0;*/
+    -fx-border-insets: 0 -12 0 0;
+    -fx-background-color: rgba(0, 0, 0, 0.02);
+    -fx-background-insets: 0 -12 0 0;
+    -fx-background-radius: 10;
+}
+
+/*******************************************************************************
+ * Common UI Styling - Accordion and TitledPane                                *
+ ******************************************************************************/
+
+.accordion > .titled-pane > .title {
+    -fx-background-color: 
+        derive(-sb-panel-background, -35%), -sb-sharp-edge-lo, -sb-sharp-edge-hi, -sb-flat;
+    -fx-background-insets: 0 0 -1 0, 0, 1 0 0 0, 2 0 0 0; 
+    -fx-padding: 0.385em 0.692em 0.231em 0.692em;
+    -fx-font-size: 0.875em;
+    -fx-alignment: center-right;
+    -fx-effect: dropshadow( two-pass-box, rgba(0, 0, 0, 0.2), 5, 0.0, 0, 2 );
+}
+.accordion > .first-titled-pane > .title {
+    -fx-background-insets: 0 0 -1 0, 0, 1 0 1 0, 2 0 0 0;
+}
+.accordion > .titled-pane > .title > .arrow-button {
+    -fx-padding: -0.154em 0.583em 0.0em 0.0em; 
+}
+.accordion > .titled-pane > .title > .arrow-button > .arrow {
+    -fx-background-color: -sb-dark;
+    -fx-padding: 0.154em 0.231em 0.231em 0.231em; /* 2 3 3 3 */
+}
+
+/*******************************************************************************
+ * Common UI Styling - Panel Backgrounds                                       *
+ ******************************************************************************/
+
+.search-pane-background, 
+.accordion > .titled-pane > .content, 
+.tree-view, 
+.tree-table-view {
+    -fx-border-color: null;
+    -fx-border-width: 0;
+    -fx-background-color: -sb-panel-background;
+    -fx-background-insets: 0, 1 0 0 0;
+}
+
+/*******************************************************************************
+ * Common UI Styling - Split Panes                                             *
+ ******************************************************************************/
+
+.split-pane {
+    -fx-background-color: -sb-dark;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+.split-pane:vertical > .split-pane-divider {
+    /*-fx-background-insets: 0 -2 0 -2, 0;*/
+}
+.split-pane:horizontal > .split-pane-divider {
+    /*-fx-background-insets: -1 0 -3 0;*/
+}
+.split-pane > .split-pane-divider {
+    -fx-background-color: -sb-dark;
+    -fx-padding: 0 0.5 0 0;
+}
+.split-pane:horizontal .split-pane-divider .horizontal-grabber,
+.split-pane:vertical .split-pane-divider .vertical-grabber {
+    -fx-padding: 0;
+    -fx-shape: "";
+}
+.SBKIT-inspector-panel.split-pane > .split-pane-divider {
+    -fx-background-color: transparent;
+    -fx-background-insets: -1 0 -3 0;
+    -fx-border-width: 0;
+    -fx-padding: 0;
+}
+
+/*******************************************************************************
+ * Common UI Styling - ScrollBars                                              *
+ ******************************************************************************/
+
+.scroll-bar .track-background {
+    -fx-background-color: transparent;
+}
+.scroll-bar:vertical > .decrement-button,
+.scroll-bar:vertical > .increment-button {
+    -fx-padding: 0.077em 0.769em 0.077em 0.615em;
+}
+.scroll-bar:horizontal > .decrement-button,
+.scroll-bar:horizontal > .increment-button {
+    -fx-padding: 0.769em 0.077em 0.769em 0.077em;
+}
+.scroll-bar .increment-arrow, 
+.scroll-bar .decrement-arrow {
+    -fx-padding: 0;
+}
+.scroll-bar:vertical {
+    -fx-background-color: -sb-sharp-edge-lo, -sb-panel-background;
+    -fx-background-insets: 1 0 0 0, 1 0 0 1;
+}
+.scroll-bar:horizontal {
+    -fx-background-color: -sb-sharp-edge-lo, -sb-panel-background;
+    -fx-background-insets: 0, 1 0 0 0;
+}
+.scroll-bar .thumb {
+    -fx-background-color: derive(-sb-sharp-edge-lo, 0%), -sb-scrollbar-thumb;
+    -fx-background-radius: 10, 10;
+}
+.scroll-bar:vertical .thumb {
+    -fx-background-insets: 3 4 3 4, 4 5 4 5;
+}
+.scroll-bar:horizontal .thumb {
+    -fx-background-insets: 4 3 4 3, 5 4 5 4;
+}
+
+/*******************************************************************************
+ *                                                                             *
+ * UI Panels                                                                   *
+ *                                                                             *
+ ******************************************************************************/
+
+/*******************************************************************************
+ *                                                                             *
+ * Library panel                                                               *
+ *                                                                             *
+ ******************************************************************************/
+
+.list-view {
+    -fx-background-color: transparent;
+}
+
+.list-view .list-cell .text {
+    -fx-fill: -sb-content-text;
+}
+
+.list-view .list-cell {
+    -fx-background-color: transparent;
+    -fx-background-insets: 2 0 1 0;
+    -fx-cell-size: 1.7em;
+}
+
+.list-view .list-cell:filled:hover {
+    -fx-background-color: null; /* no hover effect on list view */
+}
+
+.list-view:focused .list-cell:filled:selected {
+    -fx-background-color: -sb-selected-bar-color;
+}
+
+.list-view .list-cell:filled:selected {
+    /* When the ListView is not focused there is no need to highlight
+    the selected item */
+    -fx-background-color: null;
+}
+
+.list-view .scroll-bar {    
+    /* Cursor may dynamically change when working in library / hierarchy.
+       Set back the cursor to its default. */
+    -fx-cursor: default;
+}
+
+/* ListCell graphic is an HBox */
+.list-cell-graphic {
+    -fx-alignment: center-left;
+    -fx-padding: 0 2 0 2;
+    -fx-spacing: 4;
+}
+
+.library-no-results-label {
+    -fx-text-fill: -sb-content-text-dimmed;
+    -fx-font-size: 0.875em;
+    -fx-padding: 6 0 0 10;
+}
+
+.library-classname-label {
+    -fx-text-fill: black;
+}
+
+.library-qualifier-label {
+    -fx-text-fill: lightslategray;
+}
+
+.library-section-label {
+    -fx-text-fill: black;
+    -fx-font-weight: bold;
+}
+
+/*******************************************************************************
+ *                                                                             *
+ * Hierarchy Panel                                                             *
+ *                                                                             *
+ ******************************************************************************/
+
+/*******************************************************************************
+ * Hierarchy Panel - TreeView / TreeTableView                                  *
+ ******************************************************************************/
+
+.tree-cell {
+    -fx-background: transparent;
+    -fx-background-color: -fx-background;
+    -fx-background-insets: 2 0 1 0;
+    -fx-text-fill: pink;
+    -fx-padding: 1 0 1 0;
+}
+.tree-cell .text {
+    -fx-fill: -sb-content-text;
+}
+
+/* Selected rows */
+.tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:filled:selected,
+.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:selected,
+.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell .tree-table-cell:selected {
+    -fx-background: -sb-selected-bar-color;
+}
+/* Selected rows when control is not focused */
+.tree-cell:filled:selected,
+.tree-table-row-cell:filled:selected,
+.tree-table-row-cell:filled > .tree-table-cell:selected {
+    -fx-background: -sb-selected-bar-unfocused-color;
+}
+
+/*******************************************************************************
+ * Hierarchy Panel - Graphic Icon and Disclosure Arrows                        *
+ ******************************************************************************/
+
+/* TreeCell graphic is a HBox */
+.tree-cell-graphic {
+    -fx-alignment: center-left;
+    -fx-padding: 0 2 0 2;
+    -fx-spacing: 2;
+}
+
+.tree-view .tree-cell .tree-disclosure-node {
+    -fx-padding: 7 6 6 9;
+    -fx-background-color: derive(-sb-sharp-edge-hi, -60%), derive(-sb-sharp-edge-lo, 55%);
+    -fx-background-insets: 3 2 2 5, 4 3 3 6;
+    -fx-background-radius: 10;
+    -fx-cursor: hand;
+}
+.tree-view .tree-cell:expanded .tree-disclosure-node {
+    -fx-background-color: derive(-sb-sharp-edge-lo, 10%), derive(-sb-sharp-edge-hi, 0%);
+}
+.tree-view .tree-cell .tree-disclosure-node .arrow {
+    -fx-shape: "M0,3h3V0h1v3h3v1H4v3H3l0-3H0V3z";
+    -fx-padding: 0.2em;
+    -fx-background-color: -sb-header-text;
+}
+.tree-view .tree-cell:expanded .tree-disclosure-node .arrow {
+    -fx-shape: "M0,3h7v1H0V3z M0,0L0,0L0,0L0,0L0,0z M7,7L7,7L7,7L7,7L7,7z";
+    -fx-padding: 0.2em;
+    -fx-background-color: -sb-content-text;
+    -fx-rotate: 0;
+}
+
+/*******************************************************************************
+ * Hierarchy Panel - Read/Write labels and Inline editing                      *
+ ******************************************************************************/
+
+/* editable label on node in hierarchy (info / node id / fx:id) */
+.hierarchy-readwrite-label {
+    -fx-border-color: transparent;
+}
+.hierarchy-readwrite-label:hover {
+    -fx-border-color: -sb-sharp-edge-hi;
+    -fx-cursor: text;
+}
+.hierarchy-readwrite-label .text {
+    -fx-fill: derive(-sb-content-text, -20%);
+}
+.hierarchy-readwrite-label:hover .text {
+    -fx-fill: -sb-content-text;
+}
+
+.inline-editor, .inline-editor:focused {
+    -fx-background-color: white;
+    -fx-background-insets: 0;
+    -fx-border-color: rgb(25, 164, 255);
+    -fx-text-fill: black;
+    -fx-padding: 0 1 0 1;
+}
+
+/*******************************************************************************
+ * Hierarchy Panel - Empty FXML 'drag items here' prompt                       *
+ ******************************************************************************/
+
+.hierarchy-prompt-label {
+    -fx-font-size: 1.231em; /* 16px (base pixel size of 13px) */
+    -fx-text-fill: -sb-content-text-dimmed;
+    -fx-text-alignment: center;
+    -fx-alignment: center;
+    -fx-wrap-text: true;
+    -fx-label-padding: 16;
+    -fx-background-color: transparent;
+    -fx-border-color: -sb-sharp-edge-lo;
+    -fx-border-width: 1;
+    -fx-border-style: segments(1px, 2px);
+}
+
+/*******************************************************************************
+ *                                                                             *
+ * Content Panel                                                               *
+ *                                                                             *
+ ******************************************************************************/
+
+.selection-handles {
+    -fx-fill: white;
+    -fx-stroke: blue;
+    -fx-stroke-width: 1;
+    -fx-stroke-type: inside;
+}
+
+.selection-rect {
+    -fx-stroke: null; 
+    -fx-fill: rgba(0, 0, 0, 0.05);
+}
+
+.selection-wire {
+    -fx-stroke: rgb(25, 164, 255);
+    -fx-stroke-width: 1;
+    -fx-fill: null;
+}
+
+.selection-gap {
+    -fx-stroke: null;
+    -fx-fill: lightgrey;
+    -fx-opacity: 0.5;
+}
+
+.parent-ring {
+    /* -fx-stroke is setup from user preferences */
+    -fx-stroke-width: 7;
+    -fx-stroke-type: outside;
+    -fx-opacity: 0.5;
+    -fx-fill: null;
+}
+
+.target-ring {
+    /* -fx-stroke is setup from user preferences */
+    -fx-stroke-width: 7;
+    -fx-stroke-type: inside;
+    -fx-opacity: 0.9;
+    -fx-fill: null;
+}
+
+.target-crack {
+    -fx-stroke-width: 5;
+    -fx-stroke-type: centered;
+    -fx-stroke-line-cap: butt;
+    -fx-stroke: black;
+    -fx-opacity: 0.5;
+    -fx-fill: null;
+}
+
+.resize-rudder {
+    -fx-stroke-width: 1;
+    -fx-opacity: 0.3;
+    -fx-stroke-dash-array: 8 8;
+}
+
+/*******************************************************************************
+ * Content Panel - FXML 'drag items here' prompts                              *
+ ******************************************************************************/
+
+.stage-prompt {
+    -fx-font-size: 1.231em; /* 16px (base pixel size of 13px) */
+    -fx-text-fill: derive(-sb-content-text, 100%);
+    -fx-text-alignment: center;
+    -fx-alignment: center;
+    -fx-wrap-text: true;
+    -fx-label-padding: 16;
+    -fx-background-color: transparent;
+    -fx-border-color: -sb-sharp-edge-hi;
+    -fx-border-width: 1;
+    -fx-border-style: segments(1px, 2px);
+}
+
+.stage-prompt-default {
+    -fx-font-size: 1.231em; /* 16px (base pixel size of 13px) */
+    -fx-text-fill: -sb-content-text;
+    -fx-text-alignment: center;
+    -fx-alignment: center;
+    -fx-wrap-text: true;
+    -fx-label-padding: 16;
+    -fx-background-color: white;
+    /*-fx-effect: dropshadow( gaussian, rgba(0, 0, 0, 0.3), 15, 0.0, 0, 10 );*/
+}
+
+/*******************************************************************************
+ * Content Panel - GridPane Chrome #0 : common properties                      *
+ ******************************************************************************/
+
+.tray {
+    -fx-border-color: rgba(255, 255, 255, 0.4), rgba(0, 0, 0, 0.5), rgba(255, 255, 255, 0.5);
+    -fx-border-insets: 0, 1, 2;
+    -fx-border-radius: 5 5 0 0, 4 4 0 0, 3 3 0 0;
+    -fx-background-color: #bbddff; /* Can be overwritten by user preferences */
+    -fx-background-radius: 2 2 0 0;
+    -fx-background-insets: 3;
+    -fx-alignment: center;
+}
+
+.tray.south {
+    -fx-border-radius: 0 0 5 5, 0 0 4 4, 0 0 3 3;
+    -fx-background-radius: 0 0 2 2;
+}
+
+.tray.text {
+    -fx-text-fill: black;
+    -fx-text-overrun: leading-word-ellipsis;
+    -fx-font-size: 0.769em; /* 10px (base pixel size of 13px) */
+}
+
+.tray.west .text {
+   -fx-rotate: +90;
+}
+
+.tray.east .text {
+   -fx-rotate: -90;
+}
+
+/*******************************************************************************
+ * Content Panel - GridPane Chrome #1 : trays and cells of selected gridpane   *
+ ******************************************************************************/
+
+.gap {
+    -fx-stroke: transparent;
+    -fx-fill: rgba(0,0,0,0.2);
+}
+
+.gap.selected {
+    -fx-fill: rgba(0,0,0,0.4);
+}
+
+.gap.hilit {
+    -fx-stroke: rgba(0,0,0,0.4);
+    -fx-stroke-line-cap: butt;
+//  -fx-stroke-width is setup programmatically
+}
+
+.gap.empty {
+    -fx-stroke: rgba(0,0,0,0.4);
+    -fx-stroke-line-cap: butt;
+    -fx-stroke-dash-array: 3 3;
+}
+
+.tray.selected {
+    -fx-border-color: rgba(255, 255, 255, 0.4), rgba(0, 0, 0, 1), rgba(255, 255, 255, 0.5);
+    -fx-background-color: yellow;
+}
+
+.tray.selected .text {
+    -fx-text-fill: rgba(0,0,0,0.8);
+}
+
+/*******************************************************************************
+ * Content Panel - BorderPane                                                  *
+ ******************************************************************************/
+
+.target-ring.BorderPane {
+    -fx-alignment: CENTER;
+    -fx-border-width: 1;
+    -fx-border-color: rgba(0,0,0,0.1);
+    -fx-background-color: rgba(0,0,0,0.1);
+    -fx-text-fill: grey;
+}
+
+.target-ring.selected.BorderPane {
+    -fx-alignment: CENTER;
+    -fx-border-width: 1;
+    -fx-border-color: rgba(0,0,0,0.1);
+    -fx-background-color: rgba(0,0,0,0.4);
+    -fx-text-fill: grey;
+}
+
+/*******************************************************************************
+ * Content Panel - Marquee Chrome                                             *
+ ******************************************************************************/
+
+.marquee {
+/*    -fx-fill: rgba(178, 178, 229, 0.2);*/
+    -fx-fill: rgba(150, 150, 150, 0.2);
+    -fx-stroke: rgba(0, 0, 0, 0.3);
+    -fx-stroke-type: inside;
+}
+
+/*******************************************************************************
+ * Content Panel - Resize Shadow                                               *
+ ******************************************************************************/
+
+.resize-shadow {
+    -fx-background-color: rgba(255, 255, 0.0, 0.5);
+    -fx-border-width: 1;
+    -fx-border-style: dotted;
+    -fx-border-color: black;
+}
+
+/*******************************************************************************
+ * Content Panel - Resize Shadow                                               *
+ ******************************************************************************/
+
+.outline-ring {
+    -fx-stroke: rgba(0,0,0,0.2);
+    -fx-stroke-type: inside;
+    -fx-fill: rgba(0,0,0,0.01);
+}
+
+/*******************************************************************************
+ *                                                                             *
+ * Inspector Panel                                                             *
+ *                                                                             *
+ ******************************************************************************/
+
+/*******************************************************************************
+ * Inspector Panel - General Appearance                                        *
+ ******************************************************************************/
+
+.property-sheet-text {
+    -fx-font-size: 0.875em;
+}
+
+/* A ScrollPane is used in the search section */
+.scroll-pane .viewport {
+    -fx-background-color: transparent;
+}
+
+.custom-menu-item:focused {
+     -fx-background: white;
+}
+
+.button,
+.check-box .box,
+.choice-box,
+.combo-box,
+.combo-box .arrow-button,
+.menu-button,
+.label,
+.text-field,
+.text-area,
+.toggle-button {
+    -fx-background-radius: 0;
+}
+
+.SBKIT-inspector-panel .hyperlink {
+    /* need to add a background color because of RT-32834 */
+    -fx-background-color: -sb-panel-background;
+}
+
+.hyperlink, .hyperlink:visited {
+    -fx-padding: 0.25em 0.417em 0.167em 0em; /* 3 5 2 0 */
+    -fx-text-fill: -sb-content-text;
+    -fx-border-width: 0px;
+    -fx-underline: false;
+    -fx-padding: 0.25em 0.417em 0.167em 0em; /* 3 5 2 0 */
+}
+
+.hyperlink:hover, .hyperlink:visited:hover {
+    -fx-underline: true;
+}
+
+.inspector-message {
+    /* Used for 'No Selection' and 'No Results' messages */
+    -fx-text-fill: -sb-content-text-dimmed;
+    /* need to add a background color because of RT-32834 */
+    -fx-background-color: -sb-panel-background;
+}
+
+.css-override {
+    -fx-background-color: -sb-css-winner-color;
+    -fx-border-color: derive(-sb-sharp-edge-lo, 0%);
+    -fx-border-style: dotted;
+}
+.css-override .hyperlink {
+    /* need to paint over the background color added because of RT-32834 */
+    -fx-background-color: -sb-css-winner-color;
+}
+
+/*******************************************************************************
+ * Inspector Panel - Sub Section Titles                                        *
+ ******************************************************************************/
+
+.sub-section-label {
+    -fx-text-fill: derive(-sb-content-text, -15%);
+    -fx-padding: 4 12 4 0;
+}
+
+.sub-section-background {
+-fx-background-color:  
+        derive(-sb-sharp-edge-lo, 65%),
+        linear-gradient(to left, derive(-sb-panel-background, 40%) 0%, -sb-panel-background 70%);
+    -fx-background-insets: 7 0 8 -10, 8 0 9 -10;
+}
+
+/*******************************************************************************
+ * Inspector Panel - Insets Editor                                             *
+ ******************************************************************************/
+
+.insets-copy-button {
+    -fx-background-color: null;
+    -fx-background-image: url("../cssimages/values-link.png");
+    -fx-background-position: center;
+    -fx-background-repeat: no-repeat;
+    -fx-background-radius: 0;
+}
+.insets-copy-button:hover {
+    -fx-background-image: url("../cssimages/values-link-hover.png");
+    -fx-background-color: lightgrey, -fx-base;
+    -fx-background-insets: 0, 1;
+}
+.insets-copy-button:focused {
+    -fx-background-color: -fx-focus-color, -fx-control-inner-background, -fx-faint-focus-color, -fx-control-inner-background;
+    -fx-background-insets: 0, 1, 1, 2;
+}
+
+.small-label {
+    -fx-font-size: 0.750em; /* 9 */
+    -fx-text-fill: -sb-content-text-dimmed;
+    -fx-padding: 0;
+    /* need to add a background color because of RT-32834 */
+    -fx-background-color: -sb-panel-background;
+}
+
+/*******************************************************************************
+ * Inspector Panel - Rotate Editor                                             *
+ ******************************************************************************/
+
+.rotation-dial {
+    -fx-background-radius: 100;
+}
+.rotation-handle {
+    -fx-background-color: null;
+    -fx-background-image: url("../cssimages/rotate-handle.png");
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: right;
+}
+
+/*******************************************************************************
+ * Inspector Panel - Anchor Pane Constraints Editor                            *
+ ******************************************************************************/
+
+.ap-constraints-outer-border {
+    -fx-border-color: #cccccc;
+    -fx-border-insets: -1;
+}
+.ap-constraints-inner-border {
+    -fx-border-color: #cccccc;
+}
+.ap-constraints-toggle-h, .ap-constraints-toggle-v {
+    -fx-background-color: null;
+    -fx-padding: 3;
+}
+.ap-constraints-toggle-h:focused, .ap-constraints-toggle-v:focused {
+    -fx-background-color: -fx-focus-color, -fx-inner-border, -fx-base, -fx-faint-focus-color, -fx-base;
+    -fx-background-insets: -0.2, 1, 2, -1.4, 2.6;
+}
+.ap-constraints-toggle-h:hover, .ap-constraints-toggle-v:hover {
+    -fx-cursor: hand;
+    -fx-background-color: #cccccc, -fx-base;
+    -fx-background-insets: 1, 2;
+}
+.ap-constraints-toggle-h {
+    -fx-graphic: url("../cssimages/ap-constraint-h-off.png");
+}
+.ap-constraints-toggle-v {
+    -fx-graphic: url("../cssimages/ap-constraint-v-off.png");
+}
+.ap-constraints-toggle-h:selected {
+    -fx-graphic: url("../cssimages/ap-constraint-h-on.png");
+}
+.ap-constraints-toggle-v:selected {
+    -fx-graphic: url("../cssimages/ap-constraint-v-on.png");
+}
+
+/*******************************************************************************
+ * Inspector Panel - Multi Row Editor Plus Button                              *
+ ******************************************************************************/
+
+/* Issue with + button height to fix by Mo. Harcoded height in fxml as workaround to be removed.
+   Same thing for "action" MenuButton */
+.plus-button {
+    -fx-graphic: url("../cssimages/button-plus.png");
+    -fx-padding: 0.333em 0.5em 0.333em 0.5em; /* 4 6 4 6 */
+}
+
+/*******************************************************************************
+ * Inspector Panel - Multi Row Editor MenuButton                               *
+ ******************************************************************************/
+
+.listrow-menubutton {
+    -fx-graphic: url("../cssimages/button-pulldown.png");
+    -fx-padding: 0.083em -0.833em 0em -0.250em; /* 1 -9 0 -1 */
+    -fx-background-insets: 0 0 -1 0, 0, 1 1 1 0, 2 2 2 1;
+}
+.listrow-menubutton .arrow-button {
+    visibility: hidden;
+    -fx-padding: 0;
+}
+.listrow-menubutton:focused {
+    -fx-background-insets: -0.2, 1, 2, -1.4, 2.6;
+}
+
+/*******************************************************************************
+ * Inspector Panel - Suggestive ListView                                       *
+ ******************************************************************************/
+
+.suggested-list {
+    -fx-font-size: 0.846em;  /* 11 */ 
+ }
+
+/*******************************************************************************
+ *                                                                             *
+ * CSS Panel                                                                   *
+ *                                                                             *
+ ******************************************************************************/
+
+.notAppliedStyleLine .line {
+    -fx-border-width: 0;
+    -fx-background-color:black;
+}
+
+.winner-background {
+    -fx-background-color: derive(-sb-css-winner-color, -10%), -sb-css-winner-color;
+    -fx-background-insets: -4 -3 -3 -4, -3 -2 -2 -3;
+}
+
+.note-label {
+    -fx-alignment: center;
+    -fx-margin: 2;
+    -fx-label-padding: 0 0 2 0;
+    -fx-text-fill: -sb-content-text-dimmed;
+}
+.note-label .text {
+    -fx-font-size: 0.750em;
+}
+
+/*******************************************************************************
+ * CSS Panel - Stylelable Path                                                 *
+ ******************************************************************************/
+
+.styleable-path {
+    -fx-background-color: -sb-sharp-edge-lo, -sb-sharp-edge-hi, -sb-flat;
+    -fx-background-insets: -1 0 0 0, 0 0 1 0, 1 0 1 0;
+}
+.styleable-path .label {
+    -fx-font-size: 0.875em;
+    -fx-text-fill: -sb-header-text;
+    -fx-padding: 0 12 0 8;
+}
+.styleable-path .hyperlink {
+    -fx-font-size: 0.875em;
+    -fx-text-fill: -sb-header-text;
+    -fx-padding: 0 0 0 0;
+}
+.styleable-path .button {
+    -fx-background-color: derive( -fx-base, 50% );
+    -fx-background-radius: 100;
+    -fx-margin: 0 30 0 30;
+    -fx-padding: 1 5 1 6;
+    /*-fx-effect: dropshadow( one-pass-box , derive( -fx-base, -55% ), 3, 0.0 , 0 , 0 );*/
+    -fx-graphic: url("../cssimages/css-styleable-path-button.png");
+}
+.styleable-path .button:hover {
+    -fx-background-color: derive( -fx-base, 100% );
+}
+
+.styleable-path-optional-label .text {
+    -fx-fill: -sb-header-text-dimmed;
+}
+
+/*******************************************************************************
+ * CSS Panel - Lookup Button                                                   *
+ ******************************************************************************/
+
+.lookup-button {
+    -fx-background-color: transparent, transparent;
+    -fx-background-insets: 0 0 0 0;
+}
+.lookup-button .label {
+    -fx-padding: 0 0 0 0;
+}
+.lookup-button:hover {
+    -fx-background-color: derive(-fx-background, -25%), -fx-background;
+}

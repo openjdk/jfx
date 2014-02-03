@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -32,6 +32,7 @@
 
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value.effect;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.ComplexPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata;
@@ -68,15 +69,14 @@ public class BoxBlurPropertyMetadata extends ComplexPropertyMetadata<BoxBlur> {
      */
     
     @Override
-    protected BoxBlur castValue(Object value) {
-        return (BoxBlur) value;
-    }
-    
-    @Override
-    public void updateFxomInstanceWithValue(FXOMInstance valueInstance, BoxBlur value) {
-        inputMetadata.setValue(valueInstance, value.getInput());
-        heightMetadata.setValue(valueInstance, value.getHeight());
-        widthMetadata.setValue(valueInstance, value.getWidth());
-        iterationsMetadata.setValue(valueInstance, value.getIterations());
+    public FXOMInstance makeFxomInstanceFromValue(BoxBlur value, FXOMDocument fxomDocument) {
+        final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
+        
+        inputMetadata.setValue(result, value.getInput());
+        heightMetadata.setValue(result, value.getHeight());
+        widthMetadata.setValue(result, value.getWidth());
+        iterationsMetadata.setValue(result, value.getIterations());
+        
+        return result;
     }
 }

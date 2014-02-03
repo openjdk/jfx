@@ -31,11 +31,14 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.handles;
 
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.AbstractResilientHandles;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TreeTableViewDesignInfoX;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.AbstractGesture;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.mouse.DebugMouseGesture;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
@@ -48,15 +51,45 @@ import javafx.scene.transform.Transform;
  * 
  */
 
-public class TreeTableColumnHandles extends AbstractGenericHandles<Object> {
+public class TreeTableColumnHandles extends AbstractResilientHandles<Object> {
+    
+    /*
+     * Handles for TreeTableColumn need a special treatment.
+     * 
+     * A TreeTableColumn instance can be transiently disconnected from its parent TreeTableView:
+     *  - TreeTableColumn.getTableView() returns null
+     *  - TreeTableView.getColumns().contains() returns false
+     * 
+     * When the TreeTableColumn is disconnected, handles cannot be drawn.
+     * This Handles class inherits from AbstractResilientHandles to take
+     * care of this singularity.
+     */
     
     private final TreeTableViewDesignInfoX tableViewDesignInfo
             = new TreeTableViewDesignInfoX();
+    private TreeTableView<?> treeTableView;
     
     public TreeTableColumnHandles(ContentPanelController contentPanelController,
             FXOMInstance fxomInstance) {
         super(contentPanelController, fxomInstance, Object.class);
         assert fxomInstance.getSceneGraphObject() instanceof TreeTableColumn;
+        
+        getTreeTableColumn().treeTableViewProperty().addListener(
+                new ChangeListener<Object>() {
+                    @Override
+                    public void changed(ObservableValue<? extends Object> ov, Object v1, Object v2) {
+                        treeTableViewOrVisibilityDidChange();
+                    }
+                });
+        getTreeTableColumn().visibleProperty().addListener(
+                new ChangeListener<Object>() {
+                    @Override
+                    public void changed(ObservableValue<? extends Object> ov, Object v1, Object v2) {
+                        treeTableViewOrVisibilityDidChange();
+                    }
+                });
+        
+        treeTableViewOrVisibilityDidChange();
     }
     
     public FXOMInstance getFxomInstance() {
@@ -68,38 +101,47 @@ public class TreeTableColumnHandles extends AbstractGenericHandles<Object> {
      */
     @Override
     public Bounds getSceneGraphObjectBounds() {
+        assert isReady();
+        assert treeTableView != null;
+        assert getTreeTableColumn().isVisible();
         return tableViewDesignInfo.getColumnBounds(getTreeTableColumn());
     }
 
     @Override
     public Transform getSceneGraphToSceneTransform() {
-        return getTreeTableColumn().getTreeTableView().getLocalToSceneTransform();
+        assert isReady();
+        assert treeTableView != null;
+        return treeTableView.getLocalToSceneTransform();
     }
 
     @Override
     public Point2D sceneGraphObjectToScene(double x, double y) {
-        final TreeTableView<?> tv = getTreeTableColumn().getTreeTableView();
-        return tv.localToScene(x, y);
+        assert isReady();
+        assert treeTableView != null;
+        return treeTableView.localToScene(x, y);
     }
 
     @Override
     public Point2D sceneToSceneGraphObject(double x, double y) {
-        final TreeTableView<?> tv = getTreeTableColumn().getTreeTableView();
-        return tv.sceneToLocal(x, y);
+        assert isReady();
+        assert treeTableView != null;
+        return treeTableView.sceneToLocal(x, y);
     }
 
     @Override
     protected void startListeningToSceneGraphObject() {
-        final TreeTableView<?> tableView = getTreeTableColumn().getTreeTableView();
-        startListeningToLayoutBounds(tableView);
-        startListeningToLocalToSceneTransform(tableView);
+        assert isReady();
+        assert treeTableView != null;
+        startListeningToLayoutBounds(treeTableView);
+        startListeningToLocalToSceneTransform(treeTableView);
     }
 
     @Override
     protected void stopListeningToSceneGraphObject() {
-        final TreeTableView<?> tableView = getTreeTableColumn().getTreeTableView();
-        stopListeningToLayoutBounds(tableView);
-        stopListeningToLocalToSceneTransform(tableView);
+        assert isReady();
+        assert treeTableView != null;
+        stopListeningToLayoutBounds(treeTableView);
+        stopListeningToLocalToSceneTransform(treeTableView);
     }
 
     @Override
@@ -115,5 +157,11 @@ public class TreeTableColumnHandles extends AbstractGenericHandles<Object> {
     private TreeTableColumn<?,?> getTreeTableColumn() {
         assert getSceneGraphObject() instanceof TreeTableColumn;
         return (TreeTableColumn<?,?>) getSceneGraphObject();
+    }
+    
+    
+    private void treeTableViewOrVisibilityDidChange() {
+        treeTableView = getTreeTableColumn().getTreeTableView();
+        setReady((treeTableView != null) && getTreeTableColumn().isVisible());
     }
 }

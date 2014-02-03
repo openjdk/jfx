@@ -65,7 +65,7 @@ public class UnwrapJob extends Job {
     private BatchJob batchJob;
     private AbstractSelectionGroup selectionSnapshot;
     private FXOMInstance oldContainer, newContainer;
-    private Set<FXOMObject> children;
+    private Set<FXOMObject> oldContainerChildren;
 
     public UnwrapJob(EditorController editorController) {
         super(editorController);
@@ -95,7 +95,7 @@ public class UnwrapJob extends Job {
         fxomDocument.beginUpdate();
         batchJob.execute();
         fxomDocument.endUpdate();
-        selection.select(children);
+        selection.select(oldContainerChildren);
         selection.endUpdate();
     }
 
@@ -124,7 +124,7 @@ public class UnwrapJob extends Job {
         fxomDocument.beginUpdate();
         batchJob.redo();
         fxomDocument.endUpdate();
-        selection.select(children);
+        selection.select(oldContainerChildren);
         selection.endUpdate();
     }
 
@@ -148,9 +148,11 @@ public class UnwrapJob extends Job {
 
         // Retrieve the old container (container to unwrap)
         oldContainer = (FXOMInstance) osg.getItems().iterator().next();
+        // Retrieve the children of the old container
+        oldContainerChildren = getChildren(oldContainer);
         // Retrieve the old container property name in use
         final PropertyName oldContainerPropertyName
-                = WrapJobUtils.getContainerPropertyName(oldContainer);
+                = WrapJobUtils.getContainerPropertyName(oldContainer, oldContainerChildren);
         // Retrieve the old container property (already defined and not null)
         final FXOMPropertyC oldContainerProperty
                 = (FXOMPropertyC) oldContainer.getProperties().get(oldContainerPropertyName);
@@ -160,9 +162,6 @@ public class UnwrapJob extends Job {
         // Retrieve the parent of the old container (aka new container)
         newContainer = (FXOMInstance) oldContainer.getParentObject();
 
-        // Retrieve the children of the old container
-        children = getChildren(oldContainer);
-
         // Remove the old container property from the old container instance
         final Job removePropertyJob = new RemovePropertyJob(
                 oldContainerProperty,
@@ -171,7 +170,7 @@ public class UnwrapJob extends Job {
 
         // Remove the children from the old container property
         final List<Job> removeChildrenJobs
-                = removeChildrenFromPropertyJobs(oldContainerProperty, children);
+                = removeChildrenFromPropertyJobs(oldContainerProperty, oldContainerChildren);
         batchJob.addSubJobs(removeChildrenJobs);
 
         //------------------------------------------------------------------
@@ -182,8 +181,10 @@ public class UnwrapJob extends Job {
         if (newContainer != null) {
 
             // Retrieve the new container property name in use
+            final Set<FXOMObject> newContainerChildren = new HashSet<>();
+            newContainerChildren.add(oldContainer);
             final PropertyName newContainerPropertyName
-                    = WrapJobUtils.getContainerPropertyName(newContainer);
+                    = WrapJobUtils.getContainerPropertyName(newContainer, newContainerChildren);
             // Retrieve the new container property (already defined and not null)
             final FXOMPropertyC newContainerProperty
                     = (FXOMPropertyC) newContainer.getProperties().get(newContainerPropertyName);
@@ -195,14 +196,14 @@ public class UnwrapJob extends Job {
                     = new DesignHierarchyMask(newContainer);
             if (newContainerMask.isFreeChildPositioning()) {
                 final List<Job> modifyChildrenLayoutJobs
-                        = modifyChildrenLayoutJobs(children);
+                        = modifyChildrenLayoutJobs(oldContainerChildren);
                 batchJob.addSubJobs(modifyChildrenLayoutJobs);
             }
 
             // Add the children to the new container
             int index = oldContainer.getIndexInParentProperty();
             final List<Job> addChildrenJobs
-                    = addChildrenToPropertyJobs(newContainerProperty, index, children);
+                    = addChildrenToPropertyJobs(newContainerProperty, index, oldContainerChildren);
             batchJob.addSubJobs(addChildrenJobs);
 
             // Remove the old container from the new container property
@@ -216,9 +217,9 @@ public class UnwrapJob extends Job {
         // - we update the document root with the single child of the root node
         //------------------------------------------------------------------
         else {
-            assert children.size() == 1; // Because of (1)
+            assert oldContainerChildren.size() == 1; // Because of (1)
 
-            final FXOMObject child = children.iterator().next();
+            final FXOMObject child = oldContainerChildren.iterator().next();
             final Job setDocumentRoot = new SetDocumentRootJob(
                     child, getEditorController());
             batchJob.addSubJob(setDocumentRoot);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -32,6 +32,7 @@
 
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value.effect;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.ComplexPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata;
@@ -76,18 +77,17 @@ public class LightingPropertyMetadata extends ComplexPropertyMetadata<Lighting> 
      */
     
     @Override
-    protected Lighting castValue(Object value) {
-        return (Lighting) value;
-    }
-    
-    @Override
-    public void updateFxomInstanceWithValue(FXOMInstance valueInstance, Lighting value) {
-        bumpInputMetadata.setValue(valueInstance, value.getBumpInput());
-        contentInputMetadata.setValue(valueInstance, value.getContentInput());
-        diffuseConstantMetadata.setValue(valueInstance, value.getDiffuseConstant());
+    public FXOMInstance makeFxomInstanceFromValue(Lighting value, FXOMDocument fxomDocument) {
+        final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
+        
+        bumpInputMetadata.setValue(result, value.getBumpInput());
+        contentInputMetadata.setValue(result, value.getContentInput());
+        diffuseConstantMetadata.setValue(result, value.getDiffuseConstant());
 //        lightMetadata.setValue(valueInstance, value.getLight());
-        specularConstantMetadata.setValue(valueInstance, value.getSpecularConstant());
-        specularExponentMetadata.setValue(valueInstance, value.getSpecularExponent());
-        surfaceScaleMetadata.setValue(valueInstance, value.getSurfaceScale());
+        specularConstantMetadata.setValue(result, value.getSpecularConstant());
+        specularExponentMetadata.setValue(result, value.getSpecularExponent());
+        surfaceScaleMetadata.setValue(result, value.getSurfaceScale());
+
+        return result;
     }
 }

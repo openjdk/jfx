@@ -103,7 +103,7 @@ public class RotateEditor extends PropertyEditor {
     
     // Method to please FindBugs
     private void initialize(EventHandler<ActionEvent> valueListener) {
-        setTextEditorBehavior(this, rotateTf, valueListener, false);
+        setNumericEditorBehavior(this, rotateTf, valueListener, false);
     }
 
     @Override

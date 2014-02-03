@@ -35,6 +35,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.EditorU
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.PropertyEditor;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import java.util.Set;
+import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.CustomMenuItem;
@@ -71,6 +72,10 @@ public abstract class PopupEditor extends PropertyEditor implements PopupEditorV
         editorHost.getChildren().add(editorContent);
     }
 
+    public ReadOnlyBooleanProperty showingProperty() {
+        return popupMb.showingProperty();
+    }
+    
     @Override
     public Node getValueEditor() {
         return super.handleGenericModes(popupMb);

@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value.paint;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.ComplexPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata;
@@ -60,14 +61,13 @@ public class StopPropertyMetadata extends ComplexPropertyMetadata<Stop> {
      */
     
     @Override
-    protected Stop castValue(Object value) {
-        return (Stop) value;
-    }
-    
-    @Override
-    public void updateFxomInstanceWithValue(FXOMInstance valueInstance, Stop value) {
-        offsetMetadata.setValue(valueInstance, value.getOffset());
-        colorMetadata.setValue(valueInstance, value.getColor());
+    public FXOMInstance makeFxomInstanceFromValue(Stop value, FXOMDocument fxomDocument) {
+        final FXOMInstance result = new FXOMInstance(fxomDocument, getValueClass());
+        
+        offsetMetadata.setValue(result, value.getOffset());
+        colorMetadata.setValue(result, value.getColor());
+
+        return result;
     }
     
 }

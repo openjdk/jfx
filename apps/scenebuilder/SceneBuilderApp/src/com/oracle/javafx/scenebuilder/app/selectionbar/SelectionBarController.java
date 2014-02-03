@@ -101,6 +101,11 @@ public class SelectionBarController extends AbstractFxmlPanelController {
     }
 
     @Override
+    protected void cssRevisionDidChange() {
+        // Nothing to do here
+    }
+
+    @Override
     protected void jobManagerRevisionDidChange() {
         sceneGraphRevisionDidChange();
     }
@@ -117,10 +122,14 @@ public class SelectionBarController extends AbstractFxmlPanelController {
      */
     @Override
     protected void controllerDidLoadFxml() {
-
+        
         // Sanity checks
         assert pathMenuButton != null;
         assert pathBox != null;
+
+        // hack for temporary removal of pathMenuButton
+        pathMenuButton.setVisible(false);
+        pathMenuButton.setManaged(false);
 
         // Update
         updateSelectionBar();

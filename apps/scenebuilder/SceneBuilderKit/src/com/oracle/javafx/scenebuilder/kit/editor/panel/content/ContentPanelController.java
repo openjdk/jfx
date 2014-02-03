@@ -647,6 +647,27 @@ public class ContentPanelController extends AbstractFxmlPanelController
         return result;
     }
     
+    /**
+     * @treatAsPrivate
+     * Returns true if this content panel is able to display the content ie
+     * 1) fxomDocument != null
+     * 2) fxomDocument.getFxomRoot() != null
+     * 3) fxomDocument.getFxomRoot().isNode()
+     * 
+     * @return true if this content panel is able to display the content
+     */
+    public boolean isContentDisplayable() {
+        final boolean result;
+        
+        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
+        if ((fxomDocument == null) || (fxomDocument.getFxomRoot() == null)) {
+            result = false;
+        } else {
+            result = fxomDocument.getFxomRoot().isNode();
+        }
+        
+        return result;
+    }
     
     /*
      * AbstractPanelController<TreeView>
@@ -685,6 +706,14 @@ public class ContentPanelController extends AbstractFxmlPanelController
     @Override
     protected void sceneGraphRevisionDidChange() {
         // Everything is done by fxomDocumentDidRefreshSceneGraph().
+        // Nothing to do here.
+    }
+
+    /**
+     * @treatAsPrivate
+     */
+    @Override
+    protected void cssRevisionDidChange() {
         // Nothing to do here.
     }
 

@@ -31,6 +31,8 @@
  */
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import javafx.scene.paint.Material;
@@ -46,9 +48,8 @@ public class MaterialPropertyMetadata extends ComplexPropertyMetadata<Material> 
     }
 
     @Override
-    protected Material castValue(Object value) {
-        assert (value == null) || (value instanceof Material);
-        return (Material) value;
+    public FXOMInstance makeFxomInstanceFromValue(Material value, FXOMDocument fxomDocument) {
+        throw new UnsupportedOperationException("Not supported yet."); //NOI18N
     }
     
 }

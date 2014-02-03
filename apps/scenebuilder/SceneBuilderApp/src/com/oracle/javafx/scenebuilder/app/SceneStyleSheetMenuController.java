@@ -65,10 +65,13 @@ public class SceneStyleSheetMenuController {
                 "*.css", "*.bss")); //NOI18N
         List<File> selectedFiles = fileChooser.showOpenMultipleDialog(documentWindowController.getStage());
         
-        for (File f : selectedFiles) {
-            if (! knownFiles.contains(f)) {
-                knownFiles.add(f);
-                knownFilesModified = true;
+        if (selectedFiles != null) {
+            assert selectedFiles.isEmpty() == false;
+            for (File f : selectedFiles) {
+                if (!knownFiles.contains(f)) {
+                    knownFiles.add(f);
+                    knownFilesModified = true;
+                }
             }
         }
 

@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value.list;
 
+import com.oracle.javafx.scenebuilder.kit.metadata.property.value.paint.ColorPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.List;
@@ -41,27 +42,13 @@ import javafx.scene.paint.Color;
  */
 public class ColorListPropertyMetadata extends ListValuePropertyMetadata<Color> {
 
+    private final static ColorPropertyMetadata itemMetadata
+            = new ColorPropertyMetadata(new PropertyName("unused"), //NOI18N
+                    true, Color.BLACK, InspectorPath.UNUSED);
+
     public ColorListPropertyMetadata(PropertyName name, boolean readWrite, 
             List<Color> defaultValue, InspectorPath inspectorPath) {
-        super(name, Color.class, readWrite, defaultValue, inspectorPath);
-    }
-
-    @Override
-    protected Color castItemValue(Object value) {
-        assert value instanceof Color
-                : "getName()=" + getName()
-                + ",value=" + value;
-        return (Color) value;
-    }
-    
-    @Override
-    protected boolean isItemTextEncodable() {
-        return true;
-    }
-
-    @Override
-    protected String itemTextEncoding(Color value) {
-        return castItemValue(value).toString();
+        super(name, Color.class, itemMetadata, readWrite, defaultValue, inspectorPath);
     }
 
 }

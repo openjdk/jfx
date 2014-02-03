@@ -58,8 +58,6 @@ public class AppPlatform {
     private static String messageBoxFolder;
     private static MessageBox<MessageBoxMessage> messageBox;
     
-    private static boolean launchedFromMainRoutine;
-    
     public static synchronized String getApplicationDataFolder() {
         
         if (applicationDataFolder == null) {
@@ -92,11 +90,6 @@ public class AppPlatform {
         }
         
         return userLibraryFolder;
-    }
-    
-    public static void setLaunchedFromMainRoutine(boolean launched) {
-        // For testing purpose. See details in handleOpenFilesAction().
-        launchedFromMainRoutine = launched;
     }
     
     public static boolean requestStart(
@@ -232,6 +225,7 @@ public class AppPlatform {
         
         private final AppNotificationHandler notificationHandler;
         private final com.sun.glass.ui.Application.EventHandler oldEventHandler;
+        private int openFilesCount;
         
         public MacEventHandler(AppNotificationHandler notificationHandler,
                 com.sun.glass.ui.Application.EventHandler oldEventHandler) {
@@ -264,15 +258,22 @@ public class AppPlatform {
             }
             
             /*
-             * When SB is started by invoking SceneBuilderApp.main(),
-             * handleOpenFilesAction() is invoked with files[0] equal to
-             * the name of the class invoking main(). It's probably a bug in RT.
-             * 
-             * In that case, launchedFromMainroutine is set to true and 
-             * we simply ignore files variable.
+             * When SB is started from NB or test environment on Mac OS, this 
+             * method is called a first time with dummy parameter like this:
+             * files[0] == "com.oracle.javafx.scenebuilder.app.SceneBuilderApp". //NOI18N
+             * We ignore this call here.
              */
+            final boolean openRejected;
+            if (startingFromTestBed) {
+                openRejected = true;
+            } else if (openFilesCount++ == 0) {
+                openRejected = (files.length == 1) 
+                        && files[0].equals(SceneBuilderApp.class.getName()); //NOI18N
+            } else {
+                openRejected = false;
+            }
             
-            if (launchedFromMainRoutine == false) {
+            if (openRejected == false) {
                 notificationHandler.handleOpenFilesAction(Arrays.asList(files));
             }
         }
@@ -285,4 +286,16 @@ public class AppPlatform {
             notificationHandler.handleQuitAction();
         }  
     } 
+    
+    
+    /*
+     * Some code to help starting Scene Builder application from SQE java code.
+     * This is relevant on Mac only.
+     */
+    
+    private static boolean startingFromTestBed;
+    
+    public static void setStartingFromTestBed(boolean macWorkaroundEnabled) {
+        AppPlatform.startingFromTestBed = macWorkaroundEnabled;
+    }
 }

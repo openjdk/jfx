@@ -31,12 +31,15 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.handles;
 
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.AbstractResilientHandles;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TabPaneDesignInfoX;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.AbstractGesture;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.mouse.DebugMouseGesture;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.util.BoundsUtils;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
@@ -49,13 +52,37 @@ import javafx.scene.transform.Transform;
  * 
  */
 
-public class TabHandles extends AbstractGenericHandles<Tab> {
+public class TabHandles extends AbstractResilientHandles<Tab> {
     
+    /*
+     * Handles for Tab need a special treatment.
+     * 
+     * A Tab instance can be transiently disconnected from its parent TabPane:
+     *  - Tab.getTabPane() returns null
+     *  - TabPane.getTabs().contains() returns false
+     * 
+     * When the Tab is disconnected, handles cannot be drawn.
+     * This Handles class inherits from AbstractResilientHandles to take
+     * care of this singularity.
+     * 
+     */
+    
+    private TabPane tabPane;
     private Node tabNode; // Skin node representing the tab
     
     public TabHandles(ContentPanelController contentPanelController,
             FXOMInstance fxomInstance) {
         super(contentPanelController, fxomInstance, Tab.class);
+        
+        getSceneGraphObject().tabPaneProperty().addListener(
+                new ChangeListener<TabPane>() {
+                    @Override
+                    public void changed(ObservableValue<? extends TabPane> ov, TabPane v1, TabPane v2) {
+                        tabPaneDidChange();
+                    }
+                });
+        
+        tabPaneDidChange();
     }
 
     public FXOMInstance getFxomInstance() {
@@ -67,60 +94,88 @@ public class TabHandles extends AbstractGenericHandles<Tab> {
      */
     @Override
     public Bounds getSceneGraphObjectBounds() {
-        assert tabNode != null;
+        assert isReady();
+        assert tabPane != null;
+
+        if (tabNode == null) {
+            tabNode = lookupTabNode();
+        }
+
+        // Convert tabNode bounds from tabNode local space to tabPane local space
         final Bounds b = tabNode.getLayoutBounds();
-        
-        // Convert b from tabNode local space to tabPane local space
-        final TabPane tabPane = getSceneGraphObject().getTabPane();
         final Point2D min = tabPane.sceneToLocal(tabNode.localToScene(b.getMinX(), b.getMinY()));
         final Point2D max = tabPane.sceneToLocal(tabNode.localToScene(b.getMaxX(), b.getMaxY()));
+        
         return BoundsUtils.makeBounds(min, max);
     }
 
     @Override
     public Transform getSceneGraphToSceneTransform() {
-        return getSceneGraphObject().getTabPane().getLocalToSceneTransform();
+        assert isReady();
+        assert tabPane != null;
+        
+        return tabPane.getLocalToSceneTransform();
     }
 
     @Override
     public Point2D sceneGraphObjectToScene(double x, double y) {
-        final TabPane tabPane = getSceneGraphObject().getTabPane();
+        assert isReady();
+        assert tabPane != null;
+        
         return tabPane.localToScene(x, y);
     }
 
     @Override
     public Point2D sceneToSceneGraphObject(double x, double y) {
-        final TabPane tabPane = getSceneGraphObject().getTabPane();
+        assert isReady();
+        assert tabPane != null;
+        
         return tabPane.sceneToLocal(x, y);
     }
 
     @Override
     protected void startListeningToSceneGraphObject() {
-        assert tabNode == null;
+        assert isReady();
+        assert tabPane != null;
         
-        final TabPane tabPane = getSceneGraphObject().getTabPane();
+        if (tabNode == null) {
+            tabNode = lookupTabNode();
+        }
+
         startListeningToLayoutBounds(tabPane);
         startListeningToLocalToSceneTransform(tabPane);
-        
-        final TabPaneDesignInfoX di = new TabPaneDesignInfoX();
-        tabNode = di.getTabNode(tabPane, getSceneGraphObject());
         startListeningToBoundsInParent(tabNode);
     }
 
     @Override
     protected void stopListeningToSceneGraphObject() {
-        assert tabNode != null;
+        assert isReady();
+        assert tabPane != null;
         
-        final TabPane tabPane = getSceneGraphObject().getTabPane();
         stopListeningToLayoutBounds(tabPane);
         stopListeningToLocalToSceneTransform(tabPane);
         stopListeningToBoundsInParent(tabNode);
-        
-        tabNode = null;
     }
 
     @Override
     public AbstractGesture findGesture(Node node) {
         return new DebugMouseGesture(getContentPanelController(), "Resize gesture for Tab");
+    }
+    
+    
+    /*
+     * Private
+     */
+    
+    private void tabPaneDidChange() {
+        tabPane = getSceneGraphObject().getTabPane();
+        setReady(tabPane != null);
+    }
+    
+    private Node lookupTabNode() {
+        assert tabPane != null;
+        
+        final TabPaneDesignInfoX di = new TabPaneDesignInfoX();
+        return di.getTabNode(tabPane, getSceneGraphObject());
     }
 }

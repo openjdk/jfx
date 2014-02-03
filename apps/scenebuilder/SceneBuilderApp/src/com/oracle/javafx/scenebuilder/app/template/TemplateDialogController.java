@@ -44,6 +44,8 @@ import java.nio.file.CopyOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.FileAttribute;
 import java.text.MessageFormat;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -156,25 +158,27 @@ public class TemplateDialogController extends AbstractModalDialog {
         // OK button is enabled => directory creation should succeed
         assert newProjectDirectory.mkdir();
 
-        // Create FXML and resource files
-        if (createTemplateFiles(newProjectDirectory)) {
-            final String fxmlFileName = FxmlTemplates.getTemplateFileName(template);
-            final File fxmlFile = new File(newProjectDirectory, fxmlFileName);
+        try {
+            // Create template directory
+            Files.createDirectories(newProjectDirectory.toPath(),
+                    new FileAttribute<?>[]{});
+            // Create FXML and resource files
+            if (createTemplateFiles(newProjectDirectory)) {
+                final String fxmlFileName = FxmlTemplates.getTemplateFileName(template);
+                final File fxmlFile = new File(newProjectDirectory, fxmlFileName);
 
-            final DocumentWindowController newTemplateWindow
-                    = SceneBuilderApp.getSingleton().makeNewWindow();
-            try {
+                final DocumentWindowController newTemplateWindow
+                        = SceneBuilderApp.getSingleton().makeNewWindow();
                 newTemplateWindow.loadFromFile(fxmlFile);
-            } catch (IOException ex) {
-                final ErrorDialog errorDialog = new ErrorDialog(null);
-                errorDialog.setMessage(I18N.getString("alert.open.failure1.message", getStage().getTitle()));
-                errorDialog.setDetails(I18N.getString("alert.open.failure1.details"));
-                errorDialog.setDebugInfoWithThrowable(ex);
-                errorDialog.setTitle(I18N.getString("alert.title.open"));
-                errorDialog.showAndWait();
-                SceneBuilderApp.getSingleton().documentWindowRequestClose(newTemplateWindow);
+                newTemplateWindow.openWindow();
             }
-            newTemplateWindow.openWindow();
+        } catch (IOException ex) {
+            final ErrorDialog errorDialog = new ErrorDialog(null);
+            errorDialog.setMessage(I18N.getString("alert.open.failure1.message", getStage().getTitle()));
+            errorDialog.setDetails(I18N.getString("alert.open.failure1.details"));
+            errorDialog.setDebugInfoWithThrowable(ex);
+            errorDialog.setTitle(I18N.getString("alert.title.open"));
+            errorDialog.showAndWait();
         }
 
         SceneBuilderApp.getSingleton().updateNextInitialDirectory(newProjectDirectory);
@@ -200,7 +204,7 @@ public class TemplateDialogController extends AbstractModalDialog {
         // Copy FXML file
         final InputStream fromFxmlFile = TemplateDialogController.class.getResourceAsStream(fxmlFileName);
         final File toFxmlFile = new File(newProjectDirectory, fxmlFileName);
-        if (!copyFile(fromFxmlFile, toFxmlFile)) {
+        if (!copyFile(fromFxmlFile, toFxmlFile, StandardCopyOption.REPLACE_EXISTING)) {
             return false;
         }
 
@@ -208,7 +212,7 @@ public class TemplateDialogController extends AbstractModalDialog {
         for (String resourceFileName : FxmlTemplates.getResourceFileNames(template)) {
             final InputStream fromResourceFile = TemplateDialogController.class.getResourceAsStream(resourceFileName);
             final File toResourceFile = new File(newProjectDirectory, resourceFileName);
-            if (!copyFile(fromResourceFile, toResourceFile)) {
+            if (!copyFile(fromResourceFile, toResourceFile, StandardCopyOption.REPLACE_EXISTING)) {
                 return false;
             }
         }

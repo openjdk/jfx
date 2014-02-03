@@ -31,7 +31,6 @@
  */
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value.list;
 
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.paint.StopPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
@@ -43,38 +42,13 @@ import javafx.scene.paint.Stop;
  */
 public class StopListPropertyMetadata extends ListValuePropertyMetadata<Stop> {
     
-    private final StopPropertyMetadata stopMetadata
+    private static final StopPropertyMetadata itemMetadata
             = new StopPropertyMetadata(new PropertyName("unused"), //NOI18N
             true /* readWrite */, null, InspectorPath.UNUSED);
     
     public StopListPropertyMetadata(PropertyName name, boolean readWrite, 
             List<Stop> defaultValue, InspectorPath inspectorPath) {
-        super(name, Stop.class, readWrite, defaultValue, inspectorPath);
-    }
-
-    /*
-     * ListValuePropertyMetadata
-     */
-    
-    @Override
-    protected Stop castItemValue(Object value) {
-        return (Stop) value;
-    }
-
-    @Override
-    protected boolean isItemTextEncodable() {
-        return false;
-    }
-
-    @Override
-    protected String itemTextEncoding(Stop value) {
-        throw new UnsupportedOperationException(
-                getClass().getName() + " cannot be encoded as text"); //NOI18N
-    }
-
-    @Override
-    protected void updateFxomInstanceWithItemValue(FXOMInstance itemInstance, Stop itemValue) {
-        stopMetadata.updateFxomInstanceWithValue(itemInstance, itemValue);
+        super(name, Stop.class, itemMetadata, readWrite, defaultValue, inspectorPath);
     }
     
 }

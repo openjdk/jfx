@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
@@ -61,15 +62,14 @@ public class Point3DPropertyMetadata extends ComplexPropertyMetadata<Point3D> {
      */
     
     @Override
-    protected Point3D castValue(Object value) {
-        return (Point3D) value;
-    }
-    
-    @Override
-    protected void updateFxomInstanceWithValue(FXOMInstance valueInstance, Point3D value) {
-        xMetadata.setValue(valueInstance, value.getX());
-        yMetadata.setValue(valueInstance, value.getY());
-        zMetadata.setValue(valueInstance, value.getZ());
+    public FXOMInstance makeFxomInstanceFromValue(Point3D value, FXOMDocument fxomDocument) {
+        final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
+        
+        xMetadata.setValue(result, value.getX());
+        yMetadata.setValue(result, value.getY());
+        zMetadata.setValue(result, value.getZ());
+
+        return result;
     }
     
 }

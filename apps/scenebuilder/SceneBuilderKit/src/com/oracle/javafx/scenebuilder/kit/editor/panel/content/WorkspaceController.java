@@ -279,20 +279,8 @@ class WorkspaceController {
                 final Node rootNode = (Node) userSceneGraph;
                 assert rootNode.getParent() == null;
                 contentGroup.getChildren().add(rootNode);
-
-                if (userSceneGraph instanceof AnchorPane) {
-                    final AnchorPane rootAnchorPane = (AnchorPane) userSceneGraph;
-                    if (rootAnchorPane.getChildren().size() == 0) {
-                        statusMessageText = I18N.getString("content.label.status.invitation");
-                        statusStyleClass = "stage-prompt-default"; //NOI18N
-                    } else {
-                        statusMessageText = ""; //NOI18N
-                        statusStyleClass = "stage-prompt-default"; //NOI18N
-                    }
-                } else {
-                    statusMessageText = ""; //NOI18N
-                    statusStyleClass = "stage-prompt-default"; //NOI18N
-                }
+                statusMessageText = ""; //NOI18N
+                statusStyleClass = "stage-prompt-default"; //NOI18N
             } else {
                 statusMessageText = I18N.getString("content.label.status.cannot.display");
                 statusStyleClass = "stage-prompt"; //NOI18N

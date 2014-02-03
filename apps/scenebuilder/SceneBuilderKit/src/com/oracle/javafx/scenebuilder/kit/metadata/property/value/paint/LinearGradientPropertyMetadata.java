@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value.paint;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.BooleanPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.ComplexPropertyMetadata;
@@ -85,19 +86,18 @@ public class LinearGradientPropertyMetadata extends ComplexPropertyMetadata<Line
      */
     
     @Override
-    protected LinearGradient castValue(Object value) {
-        return (LinearGradient) value;
-    }
-    
-    @Override
-    protected void updateFxomInstanceWithValue(FXOMInstance valueInstance, LinearGradient value) {
-        startXMetadata.setValue(valueInstance, value.getStartX());
-        startYMetadata.setValue(valueInstance, value.getStartY());
-        endXMetadata.setValue(valueInstance, value.getEndX());
-        endYMetadata.setValue(valueInstance, value.getEndY());
-        proportionalMetadata.setValue(valueInstance, value.isProportional());
-        cycleMethodMetadata.setValue(valueInstance, value.getCycleMethod().toString());
-        stopsMetadata.setValue(valueInstance, value.getStops());
+    public FXOMInstance makeFxomInstanceFromValue(LinearGradient value, FXOMDocument fxomDocument) {
+        final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
+        
+        startXMetadata.setValue(result, value.getStartX());
+        startYMetadata.setValue(result, value.getStartY());
+        endXMetadata.setValue(result, value.getEndX());
+        endYMetadata.setValue(result, value.getEndY());
+        proportionalMetadata.setValue(result, value.isProportional());
+        cycleMethodMetadata.setValue(result, value.getCycleMethod().toString());
+        stopsMetadata.setValue(result, value.getStops());
+        
+        return result;
     }
     
 }

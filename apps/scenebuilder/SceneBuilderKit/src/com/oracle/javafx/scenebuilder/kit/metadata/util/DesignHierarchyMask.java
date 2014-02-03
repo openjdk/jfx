@@ -33,10 +33,10 @@ package com.oracle.javafx.scenebuilder.kit.metadata.util;
 
 import com.oracle.javafx.scenebuilder.kit.editor.images.ImageUtils;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMCollection;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMIntrinsic;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
 import com.oracle.javafx.scenebuilder.kit.metadata.Metadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.klass.ComponentClassMetadata;
@@ -45,6 +45,7 @@ import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadat
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,6 +55,7 @@ import javafx.scene.Node;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.Menu;
+import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.Separator;
@@ -102,8 +104,8 @@ public class DesignHierarchyMask {
     private static final PropertyName leftName = new PropertyName("left");
     private static final PropertyName rightName = new PropertyName("right");
     private static final PropertyName centerName = new PropertyName("center");
-    private static final PropertyName xAxisName = new PropertyName("xAxis");
-    private static final PropertyName yAxisName = new PropertyName("yAxis");
+    private static final PropertyName xAxisName = new PropertyName("XAxis");
+    private static final PropertyName yAxisName = new PropertyName("YAxis");
     private static final PropertyName placeholderName = new PropertyName("placeholder");
     private static final PropertyName tooltipName = new PropertyName("tooltip");
     private static final PropertyName contextMenuName = new PropertyName("contextMenu");
@@ -523,16 +525,36 @@ public class DesignHierarchyMask {
     }
 
     public int getSubComponentCount() {
-        final FXOMPropertyC fxomProperty = getSubComponentProperty();
-        return (fxomProperty == null) ? 0 : fxomProperty.getValues().size();
+        final PropertyName name = getSubComponentPropertyName();
+        return (name == null) ? 0 : getSubComponents().size();
     }
 
     public FXOMObject getSubComponentAtIndex(int i) {
         assert 0 <= i;
         assert i < getSubComponentCount();
-        assert getSubComponentProperty() != null;
+        assert getSubComponentPropertyName() != null;
 
-        return getSubComponentProperty().getValues().get(i);
+        return getSubComponents().get(i);
+    }
+    
+    public List<FXOMObject> getSubComponents() {
+
+        assert getSubComponentPropertyName() != null;
+        assert fxomObject instanceof FXOMInstance;
+
+        final PropertyName subComponentPropertyName = getSubComponentPropertyName();
+        final FXOMInstance fxomInstance = (FXOMInstance) fxomObject;
+        final FXOMProperty fxomProperty
+                = fxomInstance.getProperties().get(subComponentPropertyName);
+
+        final List<FXOMObject> result;
+        if (fxomProperty instanceof FXOMPropertyC) {
+            result = ((FXOMPropertyC) fxomProperty).getValues();
+        } else {
+            result = Collections.emptyList();
+        }
+
+        return result;
     }
 
     public PropertyName getPropertyNameForDescription() {
@@ -626,21 +648,6 @@ public class DesignHierarchyMask {
         }
 
         return result;
-    }
-
-    public FXOMPropertyC getSubComponentProperty() {
-
-        assert getSubComponentPropertyName() != null;
-        assert fxomObject instanceof FXOMInstance;
-
-        final PropertyName subComponentPropertyName = getSubComponentPropertyName();
-        final FXOMInstance fxomInstance = (FXOMInstance) fxomObject;
-        final FXOMProperty result
-                = fxomInstance.getProperties().get(subComponentPropertyName);
-
-        assert (result == null) || (result instanceof FXOMPropertyC);
-
-        return (FXOMPropertyC) result;
     }
 
     public FXOMPropertyC getAccessoryProperty(Accessory accessory) {
@@ -938,5 +945,21 @@ public class DesignHierarchyMask {
             return false;
         }
         return str.contains("\n"); //NOI18N
+    }
+    
+    /**
+     * 
+     * @return true if the mask deserves a resizing while used as top element of
+     * the layout.
+     */
+    public boolean needResizeWhenTopElement() {
+        return (this.isAcceptingSubComponent()
+                || this.isAcceptingAccessory(Accessory.CONTENT)
+                || this.isAcceptingAccessory(Accessory.CENTER)
+                || this.isAcceptingAccessory(Accessory.TOP)
+                || this.isAcceptingAccessory(Accessory.RIGHT)
+                || this.isAcceptingAccessory(Accessory.BOTTOM)
+                || this.isAcceptingAccessory(Accessory.LEFT))
+                && ! (fxomObject.getSceneGraphObject() instanceof MenuButton); // Jerome
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -32,6 +32,7 @@
 
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value.effect;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.ComplexPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata;
@@ -70,16 +71,15 @@ public class ColorAdjustPropertyMetadata extends ComplexPropertyMetadata<ColorAd
      */
     
     @Override
-    protected ColorAdjust castValue(Object value) {
-        return (ColorAdjust) value;
-    }
-    
-    @Override
-    public void updateFxomInstanceWithValue(FXOMInstance valueInstance, ColorAdjust value) {
-        inputMetadata.setValue(valueInstance, value.getInput());
-        brightnessMetadata.setValue(valueInstance, value.getBrightness());
-        contrastMetadata.setValue(valueInstance, value.getContrast());
-        hueMetadata.setValue(valueInstance, value.getHue());
-        saturationMetadata.setValue(valueInstance, value.getSaturation());
+    public FXOMInstance makeFxomInstanceFromValue(ColorAdjust value, FXOMDocument fxomDocument) {
+        final FXOMInstance result = new FXOMInstance(fxomDocument, getValueClass());
+        
+        inputMetadata.setValue(result, value.getInput());
+        brightnessMetadata.setValue(result, value.getBrightness());
+        contrastMetadata.setValue(result, value.getContrast());
+        hueMetadata.setValue(result, value.getHue());
+        saturationMetadata.setValue(result, value.getSaturation());
+
+        return result;
     }
 }

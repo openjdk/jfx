@@ -59,7 +59,7 @@ public class FxIdEditor extends AutoSuggestEditor {
                     return;
                 }
                 String value = textField.getText();
-                if (!value.isEmpty()) {
+                if (value != null && !value.isEmpty()) {
                     
                     if (!JavaLanguage.isIdentifier(value)) {
                         System.err.println(I18N.getString("inspector.fxml.invalid.id", value));
@@ -67,7 +67,7 @@ public class FxIdEditor extends AutoSuggestEditor {
                         return;
                     }
                 }
-                userUpdateValueProperty(value.isEmpty() ? null : value);
+                userUpdateValueProperty((value == null || value.isEmpty()) ? null : value);
                 textField.selectAll();
             }
         };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -32,6 +32,7 @@
 
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value.effect;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.ComplexPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata;
@@ -86,20 +87,19 @@ public class DropShadowPropertyMetadata extends ComplexPropertyMetadata<DropShad
      */
     
     @Override
-    protected DropShadow castValue(Object value) {
-        return (DropShadow) value;
-    }
-    
-    @Override
-    public void updateFxomInstanceWithValue(FXOMInstance valueInstance, DropShadow value) {
-        blurTypeMetadata.setValue(valueInstance, value.getBlurType().toString());
-        colorMetadata.setValue(valueInstance, value.getColor());
-        heightMetadata.setValue(valueInstance, value.getHeight());
-        inputMetadata.setValue(valueInstance, value.getInput());
-        offsetXMetadata.setValue(valueInstance, value.getOffsetX());
-        offsetYMetadata.setValue(valueInstance, value.getOffsetY());
-        radiusMetadata.setValue(valueInstance, value.getRadius());
-        spreadMetadata.setValue(valueInstance, value.getSpread());
-        widthMetadata.setValue(valueInstance, value.getWidth());
+    public FXOMInstance makeFxomInstanceFromValue(DropShadow value, FXOMDocument fxomDocument) {
+        final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
+        
+        blurTypeMetadata.setValue(result, value.getBlurType().toString());
+        colorMetadata.setValue(result, value.getColor());
+        heightMetadata.setValue(result, value.getHeight());
+        inputMetadata.setValue(result, value.getInput());
+        offsetXMetadata.setValue(result, value.getOffsetX());
+        offsetYMetadata.setValue(result, value.getOffsetY());
+        radiusMetadata.setValue(result, value.getRadius());
+        spreadMetadata.setValue(result, value.getSpread());
+        widthMetadata.setValue(result, value.getWidth());
+
+        return result;
     }
 }

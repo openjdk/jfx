@@ -31,9 +31,8 @@
  */
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyT;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 
@@ -50,23 +49,30 @@ public abstract class TextEncodablePropertyMetadata<T> extends SingleValueProper
     public String getValueString(FXOMInstance fxomInstance) {
         return getValue(fxomInstance).toString();
     }
-    
-    
+
     /*
      * SingleValuePropertyMetadata
      */
     
     @Override
-    public FXOMProperty makeFxomPropertyFromValue(FXOMInstance fxomInstance, T value) {
-        return new FXOMPropertyT(fxomInstance.getFxomDocument(), 
-                getName(), value.toString());
+    public T makeValueFromFxomInstance(FXOMInstance valueFxomInstance) {
+        return getValueClass().cast(valueFxomInstance.getSceneGraphObject());
     }
 
     @Override
-    protected void updateFxomPropertyWithValue(FXOMProperty fxomProperty, T value) {
-        assert fxomProperty instanceof FXOMPropertyT;
-        
-        final FXOMPropertyT fxomPropertyT = (FXOMPropertyT) fxomProperty;
-        fxomPropertyT.setValue(value.toString());
+    public boolean canMakeStringFromValue(T value) {
+        return true;
     }
-}
+
+    @Override
+    public String makeStringFromValue(T value) {
+        assert value != null;
+        return value.toString();
+    }
+
+    @Override
+    public FXOMInstance makeFxomInstanceFromValue(T value, FXOMDocument fxomDocument) {
+        throw new RuntimeException("Bug"); //NOI18N
+        // Should never be invoked because canMakeStringFromValue() always return true
+    }
+ }

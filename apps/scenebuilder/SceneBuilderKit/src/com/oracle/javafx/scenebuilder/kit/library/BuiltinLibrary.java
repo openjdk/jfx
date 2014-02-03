@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.library;
 
+import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.images.ImageUtils;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import java.io.IOException;
@@ -63,6 +64,17 @@ public class BuiltinLibrary extends Library {
     
     private static final String FX8_QUALIFIER = " (FX8)"; //NOI18N
     
+    // This qualifier is for use to provide a flavor of a component that has no
+    // children, in addition to the one having children. Typical use is for
+    // Accordion, ScrollPane, SplitPane, TabPane, TitledPane (see DTL-6274).
+    private static final String EMPTY_QUALIFIER = " " //NOI18N
+            + I18N.getString("label.qualifier.empty");
+    
+    private static final String HORIZONTAL_QUALIFIER = " " //NOI18N
+            + I18N.getString("label.qualifier.horizontal");
+    private static final String VERTICAL_QUALIFIER = " " //NOI18N
+            + I18N.getString("label.qualifier.vertical");
+    
     /*
      * Public
      */
@@ -72,6 +84,14 @@ public class BuiltinLibrary extends Library {
             library = new BuiltinLibrary();
         }
         return library;
+    }
+    
+    public static String getFX8Qualifier() {
+        return FX8_QUALIFIER;
+    }
+    
+    public static String getEmptyQualifier() {
+        return EMPTY_QUALIFIER;
     }
     
     
@@ -97,90 +117,97 @@ public class BuiltinLibrary extends Library {
      */
     
     private BuiltinLibrary() {
-        addCustomizedItem(javafx.scene.AmbientLight.class, TAG_3D, FX8_QUALIFIER);
-        addDefaultItem(javafx.scene.Group.class, TAG_MISCELLANEOUS);
-        addDefaultItem(javafx.scene.ParallelCamera.class, TAG_3D, FX8_QUALIFIER);
-        addDefaultItem(javafx.scene.PerspectiveCamera.class, TAG_3D, FX8_QUALIFIER);
-        addCustomizedItem(javafx.scene.PointLight.class, TAG_3D, FX8_QUALIFIER);
-//        addDefaultItem(javafx.scene.SubScene.class, TAG_3D, FX8_QUALIFIER); TODO fix DTL-5862
-        addCustomizedItem(javafx.scene.canvas.Canvas.class, TAG_MISCELLANEOUS);
-        addCustomizedItem(javafx.scene.chart.AreaChart.class, TAG_CHARTS);
-        addCustomizedItem(javafx.scene.chart.BarChart.class, TAG_CHARTS);
-        addCustomizedItem(javafx.scene.chart.BubbleChart.class, TAG_CHARTS);
-        addDefaultItem(javafx.scene.chart.CategoryAxis.class, TAG_CHARTS);
-        addCustomizedItem(javafx.scene.chart.LineChart.class, TAG_CHARTS);
-        addDefaultItem(javafx.scene.chart.NumberAxis.class, TAG_CHARTS);
-        addDefaultItem(javafx.scene.chart.PieChart.class, TAG_CHARTS);
-        addCustomizedItem(javafx.scene.chart.ScatterChart.class, TAG_CHARTS);
-        addCustomizedItem(javafx.scene.chart.StackedAreaChart.class, TAG_CHARTS);
-        addCustomizedItem(javafx.scene.chart.StackedBarChart.class, TAG_CHARTS);
+        // Containers
         addCustomizedItem(javafx.scene.control.Accordion.class, TAG_CONTAINERS);
-        addCustomizedItem(javafx.scene.control.Button.class, TAG_CONTROLS);
-        addCustomizedItem(javafx.scene.control.CheckBox.class, TAG_CONTROLS);
-        addCustomizedItem(javafx.scene.control.CheckMenuItem.class, TAG_MENU);
-        addCustomizedItem(javafx.scene.control.ChoiceBox.class, TAG_CONTROLS);
-        addDefaultItem(javafx.scene.control.ColorPicker.class, TAG_CONTROLS);
-        addCustomizedItem(javafx.scene.control.ComboBox.class, TAG_CONTROLS);
-        addCustomizedItem(javafx.scene.control.ContextMenu.class, TAG_MENU);
-        addCustomizedItem(javafx.scene.control.CustomMenuItem.class, TAG_MENU);
-        addDefaultItem(javafx.scene.control.DatePicker.class, TAG_CONTROLS, FX8_QUALIFIER);
-        addCustomizedItem(javafx.scene.control.Hyperlink.class, TAG_CONTROLS);
-        addCustomizedItem(javafx.scene.control.Label.class, TAG_CONTROLS);
-        addRegionItem200x200(javafx.scene.control.ListView.class, TAG_CONTROLS);
-        addCustomizedItem(javafx.scene.control.Menu.class, TAG_MENU);
-        addCustomizedItem(javafx.scene.control.MenuBar.class, TAG_CONTROLS);
-        addCustomizedItem(javafx.scene.control.MenuButton.class, TAG_CONTROLS);
-        addCustomizedItem(javafx.scene.control.MenuItem.class, TAG_MENU);
-        addRegionItem200x200(javafx.scene.control.Pagination.class, TAG_CONTAINERS);
-        addDefaultItem(javafx.scene.control.PasswordField.class, TAG_CONTROLS);
-        addCustomizedItem(javafx.scene.control.ProgressBar.class, TAG_CONTROLS);
-        addCustomizedItem(javafx.scene.control.ProgressIndicator.class, TAG_CONTROLS);
-        addCustomizedItem(javafx.scene.control.RadioButton.class, TAG_CONTROLS);
-        addCustomizedItem(javafx.scene.control.RadioMenuItem.class, TAG_MENU);
-        addCustomizedItem(javafx.scene.control.ScrollBar.class, TAG_CONTROLS, 
-                "ScrollBar (horizontal)", "ScrollBarH", "ScrollBar-h"); //NOI18N
-        addCustomizedItem(javafx.scene.control.ScrollBar.class, TAG_CONTROLS, 
-                "ScrollBar (vertical)", "ScrollBarV", "ScrollBar-v"); //NOI18N
-        addCustomizedItem(javafx.scene.control.ScrollPane.class, TAG_CONTAINERS); // fxml
-        addCustomizedItem(javafx.scene.control.Separator.class, TAG_CONTROLS, 
-                "Separator (horizontal)", "SeparatorH", "Separator-h"); //NOI18N
-        addCustomizedItem(javafx.scene.control.Separator.class, TAG_CONTROLS, 
-                "Separator (vertical)", "SeparatorV", "Separator-v"); //NOI18N
-        addCustomizedItem(javafx.scene.control.SeparatorMenuItem.class, TAG_MENU);
-        addCustomizedItem(javafx.scene.control.Slider.class, TAG_CONTROLS, 
-                "Slider (horizontal)", "SliderH", "Slider-h"); //NOI18N
-        addCustomizedItem(javafx.scene.control.Slider.class, TAG_CONTROLS, 
-                "Slider (vertical)", "SliderV", "Slider-v"); //NOI18N
-        addCustomizedItem(javafx.scene.control.SplitMenuButton.class, TAG_CONTROLS);
-        addCustomizedItem(javafx.scene.control.SplitPane.class, TAG_CONTAINERS, 
-                "SplitPane (vertical)", "SplitPaneV", "SplitPane-v"); //NOI18N
-        addCustomizedItem(javafx.scene.control.SplitPane.class, TAG_CONTAINERS, 
-                "SplitPane (horizontal)", "SplitPaneH", "SplitPane-h"); //NOI18N
-        addCustomizedItem(javafx.scene.control.Tab.class, TAG_CONTAINERS);
-        addCustomizedItem(javafx.scene.control.TabPane.class, TAG_CONTAINERS);
-        addCustomizedItem(javafx.scene.control.TableColumn.class, TAG_CONTROLS);
-        addCustomizedItem(javafx.scene.control.TableView.class, TAG_CONTROLS);
-        addRegionItem200x200(javafx.scene.control.TextArea.class, TAG_CONTROLS);
-        addDefaultItem(javafx.scene.control.TextField.class, TAG_CONTROLS);
-        addCustomizedItem(javafx.scene.control.TitledPane.class, TAG_CONTAINERS);
-        addCustomizedItem(javafx.scene.control.ToggleButton.class, TAG_CONTROLS);
-        addCustomizedItem(javafx.scene.control.ToolBar.class, TAG_CONTAINERS);
-        addCustomizedItem(javafx.scene.control.Tooltip.class, TAG_MISCELLANEOUS);
-        addCustomizedItem(javafx.scene.control.TreeTableColumn.class, TAG_CONTROLS, FX8_QUALIFIER);
-        addCustomizedItem(javafx.scene.control.TreeTableView.class, TAG_CONTROLS, FX8_QUALIFIER);
-        addRegionItem200x200(javafx.scene.control.TreeView.class, TAG_CONTROLS);
-        addCustomizedItem(javafx.scene.image.ImageView.class, TAG_CONTROLS);
+        addCustomizedItem(javafx.scene.control.Accordion.class, TAG_CONTAINERS,
+                "AccordionEmpty", "Accordion", EMPTY_QUALIFIER); //NOI18N
         addRegionItem200x200(javafx.scene.layout.AnchorPane.class, TAG_CONTAINERS);
         addRegionItem200x200(javafx.scene.layout.BorderPane.class, TAG_CONTAINERS);
         addRegionItem200x200(javafx.scene.layout.FlowPane.class, TAG_CONTAINERS);
         addCustomizedItem(javafx.scene.layout.GridPane.class, TAG_CONTAINERS);
         addRegionItem200x100(javafx.scene.layout.HBox.class, TAG_CONTAINERS);
         addRegionItem200x200(javafx.scene.layout.Pane.class, TAG_CONTAINERS);
+        addCustomizedItem(javafx.scene.control.ScrollPane.class, TAG_CONTAINERS);
+        addRegionItem200x200(javafx.scene.control.ScrollPane.class, TAG_CONTAINERS, EMPTY_QUALIFIER);
+        addCustomizedItem(javafx.scene.control.SplitPane.class, TAG_CONTAINERS,
+                "SplitPaneH", "SplitPane-h", HORIZONTAL_QUALIFIER); //NOI18N
+        addCustomizedItem(javafx.scene.control.SplitPane.class, TAG_CONTAINERS,
+                "SplitPaneV", "SplitPane-v", VERTICAL_QUALIFIER); //NOI18N
+        addRegionItem200x200(javafx.scene.control.SplitPane.class, TAG_CONTAINERS, EMPTY_QUALIFIER,
+                "SplitPane-h"); //NOI18N
         addRegionItem200x150(javafx.scene.layout.StackPane.class, TAG_CONTAINERS);
-        addRegionItem200x200(javafx.scene.layout.Region.class, TAG_MISCELLANEOUS);
+        addCustomizedItem(javafx.scene.control.Tab.class, TAG_CONTAINERS);
+        addCustomizedItem(javafx.scene.control.TabPane.class, TAG_CONTAINERS);
+        addCustomizedItem(javafx.scene.control.TabPane.class, TAG_CONTAINERS,
+                "TabPaneEmpty", "TabPane", EMPTY_QUALIFIER); //NOI18N
+        addRegionItem200x200(javafx.scene.text.TextFlow.class, TAG_CONTAINERS, FX8_QUALIFIER);
         addRegionItem200x200(javafx.scene.layout.TilePane.class, TAG_CONTAINERS);
+        addCustomizedItem(javafx.scene.control.TitledPane.class, TAG_CONTAINERS);
+        addRegionItem200x200(javafx.scene.control.TitledPane.class, TAG_CONTAINERS, EMPTY_QUALIFIER);
+        addCustomizedItem(javafx.scene.control.ToolBar.class, TAG_CONTAINERS);
         addRegionItem100x200(javafx.scene.layout.VBox.class, TAG_CONTAINERS);
+        
+        // Controls
+        addCustomizedItem(javafx.scene.control.Button.class, TAG_CONTROLS);
+        addCustomizedItem(javafx.scene.control.CheckBox.class, TAG_CONTROLS);
+        addCustomizedItem(javafx.scene.control.ChoiceBox.class, TAG_CONTROLS);
+        addDefaultItem(javafx.scene.control.ColorPicker.class, TAG_CONTROLS);
+        addCustomizedItem(javafx.scene.control.ComboBox.class, TAG_CONTROLS);
+        addDefaultItem(javafx.scene.control.DatePicker.class, TAG_CONTROLS, FX8_QUALIFIER);
+        addCustomizedItem(javafx.scene.web.HTMLEditor.class, TAG_CONTROLS);
+        addCustomizedItem(javafx.scene.control.Hyperlink.class, TAG_CONTROLS);
+        addCustomizedItem(javafx.scene.image.ImageView.class, TAG_CONTROLS);
+        addCustomizedItem(javafx.scene.control.Label.class, TAG_CONTROLS);
+        addRegionItem200x200(javafx.scene.control.ListView.class, TAG_CONTROLS);
         addCustomizedItem(javafx.scene.media.MediaView.class, TAG_CONTROLS);
+        addCustomizedItem(javafx.scene.control.MenuBar.class, TAG_CONTROLS);
+        addCustomizedItem(javafx.scene.control.MenuButton.class, TAG_CONTROLS);
+        addRegionItem200x200(javafx.scene.control.Pagination.class, TAG_CONTROLS);
+        addDefaultItem(javafx.scene.control.PasswordField.class, TAG_CONTROLS);
+        addCustomizedItem(javafx.scene.control.ProgressBar.class, TAG_CONTROLS);
+        addCustomizedItem(javafx.scene.control.ProgressIndicator.class, TAG_CONTROLS);
+        addCustomizedItem(javafx.scene.control.RadioButton.class, TAG_CONTROLS);
+        addCustomizedItem(javafx.scene.control.ScrollBar.class, TAG_CONTROLS,
+                "ScrollBarH", "ScrollBar-h", HORIZONTAL_QUALIFIER); //NOI18N
+        addCustomizedItem(javafx.scene.control.ScrollBar.class, TAG_CONTROLS,
+                "ScrollBarV", "ScrollBar-v", VERTICAL_QUALIFIER); //NOI18N
+        addCustomizedItem(javafx.scene.control.Separator.class, TAG_CONTROLS,
+                "SeparatorH", "Separator-h", HORIZONTAL_QUALIFIER); //NOI18N
+        addCustomizedItem(javafx.scene.control.Separator.class, TAG_CONTROLS,
+                "SeparatorV", "Separator-v", VERTICAL_QUALIFIER); //NOI18N
+        addCustomizedItem(javafx.scene.control.Slider.class, TAG_CONTROLS,
+                "SliderH", "Slider-h", HORIZONTAL_QUALIFIER); //NOI18N
+        addCustomizedItem(javafx.scene.control.Slider.class, TAG_CONTROLS,
+                "SliderV", "Slider-v", VERTICAL_QUALIFIER); //NOI18N
+        addCustomizedItem(javafx.scene.control.SplitMenuButton.class, TAG_CONTROLS);
+        addCustomizedItem(javafx.scene.control.TableColumn.class, TAG_CONTROLS);
+        addCustomizedItem(javafx.scene.control.TableView.class, TAG_CONTROLS);
+        addRegionItem200x200(javafx.scene.control.TextArea.class, TAG_CONTROLS);
+        addDefaultItem(javafx.scene.control.TextField.class, TAG_CONTROLS);
+        addCustomizedItem(javafx.scene.control.ToggleButton.class, TAG_CONTROLS);
+        addCustomizedItem(javafx.scene.control.TreeTableColumn.class, TAG_CONTROLS, FX8_QUALIFIER);
+        addCustomizedItem(javafx.scene.control.TreeTableView.class, TAG_CONTROLS, FX8_QUALIFIER);
+        addRegionItem200x200(javafx.scene.control.TreeView.class, TAG_CONTROLS);
+        addCustomizedItem(javafx.scene.web.WebView.class, TAG_CONTROLS);
+        
+        // Menu
+        addCustomizedItem(javafx.scene.control.CheckMenuItem.class, TAG_MENU);
+        addCustomizedItem(javafx.scene.control.ContextMenu.class, TAG_MENU);
+        addCustomizedItem(javafx.scene.control.CustomMenuItem.class, TAG_MENU);
+        addCustomizedItem(javafx.scene.control.Menu.class, TAG_MENU);
+        addCustomizedItem(javafx.scene.control.MenuItem.class, TAG_MENU);
+        addCustomizedItem(javafx.scene.control.RadioMenuItem.class, TAG_MENU);
+        addCustomizedItem(javafx.scene.control.SeparatorMenuItem.class, TAG_MENU);
+        
+        // Miscellaneous
+        addCustomizedItem(javafx.scene.canvas.Canvas.class, TAG_MISCELLANEOUS);
+        addDefaultItem(javafx.scene.Group.class, TAG_MISCELLANEOUS);
+        addRegionItem200x200(javafx.scene.layout.Region.class, TAG_MISCELLANEOUS);
+//        addDefaultItem(javafx.scene.SubScene.class, TAG_MISCELLANEOUS, FX8_QUALIFIER); TODO fix DTL-5862
+        addCustomizedItem(javafx.embed.swing.SwingNode.class, TAG_MISCELLANEOUS, FX8_QUALIFIER);
+        addCustomizedItem(javafx.scene.control.Tooltip.class, TAG_MISCELLANEOUS);
+
+        // Shapes
         addCustomizedItem(javafx.scene.shape.Arc.class, TAG_SHAPES);
         addDefaultItem(javafx.scene.shape.ArcTo.class, TAG_SHAPES);
         addCustomizedItem(javafx.scene.shape.Box.class, TAG_SHAPES, FX8_QUALIFIER);
@@ -201,14 +228,28 @@ public class BuiltinLibrary extends Library {
         addCustomizedItem(javafx.scene.shape.QuadCurve.class, TAG_SHAPES);
         addDefaultItem(javafx.scene.shape.QuadCurveTo.class, TAG_SHAPES);
         addCustomizedItem(javafx.scene.shape.Rectangle.class, TAG_SHAPES);
-        addCustomizedItem(javafx.scene.shape.SVGPath.class, TAG_SHAPES);
         addCustomizedItem(javafx.scene.shape.Sphere.class, TAG_SHAPES, FX8_QUALIFIER);
-        addDefaultItem(javafx.scene.shape.VLineTo.class, TAG_SHAPES);
+        addCustomizedItem(javafx.scene.shape.SVGPath.class, TAG_SHAPES);
         addCustomizedItem(javafx.scene.text.Text.class, TAG_SHAPES);
-        addRegionItem200x200(javafx.scene.text.TextFlow.class, TAG_CONTAINERS, FX8_QUALIFIER);
-        addCustomizedItem(javafx.scene.web.HTMLEditor.class, TAG_CONTROLS);
-        addCustomizedItem(javafx.scene.web.WebView.class, TAG_CONTROLS);
-        addCustomizedItem(javafx.embed.swing.SwingNode.class, TAG_MISCELLANEOUS, FX8_QUALIFIER);
+        addDefaultItem(javafx.scene.shape.VLineTo.class, TAG_SHAPES);
+        
+        // Charts
+        addCustomizedItem(javafx.scene.chart.AreaChart.class, TAG_CHARTS);
+        addCustomizedItem(javafx.scene.chart.BarChart.class, TAG_CHARTS);
+        addCustomizedItem(javafx.scene.chart.BubbleChart.class, TAG_CHARTS);
+        addDefaultItem(javafx.scene.chart.CategoryAxis.class, TAG_CHARTS);
+        addCustomizedItem(javafx.scene.chart.LineChart.class, TAG_CHARTS);
+        addDefaultItem(javafx.scene.chart.NumberAxis.class, TAG_CHARTS);
+        addDefaultItem(javafx.scene.chart.PieChart.class, TAG_CHARTS);
+        addCustomizedItem(javafx.scene.chart.ScatterChart.class, TAG_CHARTS);
+        addCustomizedItem(javafx.scene.chart.StackedAreaChart.class, TAG_CHARTS);
+        addCustomizedItem(javafx.scene.chart.StackedBarChart.class, TAG_CHARTS);
+        
+        // 3D
+        addCustomizedItem(javafx.scene.AmbientLight.class, TAG_3D, FX8_QUALIFIER);
+        addDefaultItem(javafx.scene.ParallelCamera.class, TAG_3D, FX8_QUALIFIER);
+        addDefaultItem(javafx.scene.PerspectiveCamera.class, TAG_3D, FX8_QUALIFIER);
+        addCustomizedItem(javafx.scene.PointLight.class, TAG_3D, FX8_QUALIFIER);
     }
     
     
@@ -223,14 +264,26 @@ public class BuiltinLibrary extends Library {
     }
     
     
-    private void addRegionItem200x200(Class<? extends Region> componentClass, String section, String... qualifiers) {
+    private void addRegionItem200x200(Class<? extends Region> componentClass, String section) {
+        addRegionItem200x200(componentClass, section, null);
+    }
+    
+    private void addRegionItem200x200(Class<? extends Region> componentClass, String section, String qualifier) {
+        addRegionItem200x200(componentClass, section, qualifier, null);
+    }
+    
+    private void addRegionItem200x200(Class<? extends Region> componentClass, String section, String qualifier, String iconName) {
         final String name = componentClass.getSimpleName();
         String nameWithQualifier = name;
-        if (qualifiers.length > 0) {
-            nameWithQualifier += qualifiers[0];
+        if (qualifier != null) {
+            nameWithQualifier += qualifier;
         }
         final String fxmlText = makeRegionFxmlText(componentClass, 200.0, 200.0);
-        addItem(nameWithQualifier, fxmlText, section, name);
+        String theIconName = name;
+        if (iconName != null) {
+            theIconName = iconName;
+        }
+        addItem(nameWithQualifier, fxmlText, section, theIconName);
     }
     
     
@@ -255,21 +308,24 @@ public class BuiltinLibrary extends Library {
     }
     
     
-    private void addCustomizedItem(Class<?> componentClass, String section, String... qualifiers) {
-        final String name = componentClass.getSimpleName();
-        String nameWithQualifier = name;
-        if (qualifiers.length > 0) {
-            nameWithQualifier += qualifiers[0];
-        }
-        addCustomizedItem(componentClass, section, nameWithQualifier, name, name);
+    private void addCustomizedItem(Class<?> componentClass, String section) {
+        addCustomizedItem(componentClass, section, null);
     }
     
+    private void addCustomizedItem(Class<?> componentClass, String section, String qualifier) {
+        final String name = componentClass.getSimpleName();
+        addCustomizedItem(componentClass, section, name, name, qualifier);
+    }
     
     private void addCustomizedItem(Class<?> componentClass, String section, 
-            String name, String fxmlBaseName, String iconName) {
+            String fxmlBaseName, String iconName, String qualifier) {
+        String nameWithQualifier = componentClass.getSimpleName();
+        if (qualifier != null) {
+            nameWithQualifier += qualifier;
+        }
         final String fxmlText = readCustomizedFxmlText(fxmlBaseName);
         assert fxmlText != null;
-        addItem(name, fxmlText, section, iconName);
+        addItem(nameWithQualifier, fxmlText, section, iconName);
     }
     
     

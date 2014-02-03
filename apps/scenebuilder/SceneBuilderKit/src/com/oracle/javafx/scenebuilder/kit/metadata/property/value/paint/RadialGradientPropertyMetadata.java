@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value.paint;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.BooleanPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.ComplexPropertyMetadata;
@@ -88,20 +89,19 @@ public class RadialGradientPropertyMetadata extends ComplexPropertyMetadata<Radi
      */
     
     @Override
-    protected RadialGradient castValue(Object value) {
-        return (RadialGradient) value;
-    }
-    
-    @Override
-    protected void updateFxomInstanceWithValue(FXOMInstance valueInstance, RadialGradient value) {
-        focusAngleMetadata.setValue(valueInstance, value.getFocusAngle());
-        focusDistanceMetadata.setValue(valueInstance, value.getFocusDistance());
-        centerXMetadata.setValue(valueInstance, value.getCenterX());
-        centerYMetadata.setValue(valueInstance, value.getCenterY());
-        radiusMetadata.setValue(valueInstance, value.getRadius());
-        proportionalMetadata.setValue(valueInstance, value.isProportional());
-        cycleMethodMetadata.setValue(valueInstance, value.getCycleMethod().toString());
-        stopsMetadata.setValue(valueInstance, value.getStops());
+    public FXOMInstance makeFxomInstanceFromValue(RadialGradient value, FXOMDocument fxomDocument) {
+        final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
+        
+        focusAngleMetadata.setValue(result, value.getFocusAngle());
+        focusDistanceMetadata.setValue(result, value.getFocusDistance());
+        centerXMetadata.setValue(result, value.getCenterX());
+        centerYMetadata.setValue(result, value.getCenterY());
+        radiusMetadata.setValue(result, value.getRadius());
+        proportionalMetadata.setValue(result, value.isProportional());
+        cycleMethodMetadata.setValue(result, value.getCycleMethod().toString());
+        stopsMetadata.setValue(result, value.getStops());
+
+        return result;
     }
     
 }

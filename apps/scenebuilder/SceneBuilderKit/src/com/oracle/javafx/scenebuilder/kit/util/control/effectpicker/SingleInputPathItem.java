@@ -71,12 +71,16 @@ public class SingleInputPathItem extends EffectPathItem {
     }
 
     @Override
-    public EffectPathItem getSelectedInputPathItem() {
+    EffectPathItem getSelectedInputPathItem() {
         return inputPathItem;
     }
 
+    void setInputPathItem(EffectPathItem epi) {
+        inputPathItem = epi;
+    }
+
     @Override
-    public void setSelectedInput(Effect input) {
+    void setSelectedInputEffect(Effect input) {
         if (effect instanceof Bloom) {
             ((Bloom) effect).setInput(input);
         } else if (effect instanceof BoxBlur) {
@@ -107,11 +111,7 @@ public class SingleInputPathItem extends EffectPathItem {
         }
     }
 
-    public void setInputPathItem(EffectPathItem epi) {
-        inputPathItem = epi;
-    }
-
-    public Effect getInput() {
+    Effect getInput() {
         if (effect instanceof Bloom) {
             return ((Bloom) effect).getInput();
         } else if (effect instanceof BoxBlur) {

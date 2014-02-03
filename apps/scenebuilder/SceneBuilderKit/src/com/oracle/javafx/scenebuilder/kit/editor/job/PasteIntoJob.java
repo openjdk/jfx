@@ -32,7 +32,10 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
+import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
+import com.oracle.javafx.scenebuilder.kit.editor.job.v2.ClearSelectionJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.v2.UpdateSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMCollection;
@@ -48,168 +51,93 @@ import javafx.scene.input.Clipboard;
 /**
  *
  */
-public class PasteIntoJob extends Job {
-
-    private final List<InsertAsSubComponentJob> subJobs = new ArrayList<>();
-    private String description; // Final but constructed lazily
-    private AbstractSelectionGroup selectionSnapshot;
+public class PasteIntoJob extends CompositeJob {
 
     public PasteIntoJob(EditorController editorController) {
         super(editorController);
-        buildSubJobs();
     }
 
     @Override
-    public boolean isExecutable() {
-        return subJobs.isEmpty() == false;
-    }
+    protected List<Job> makeSubJobs() {
+        final List<Job> result = new ArrayList<>();
 
-    @Override
-    public void execute() {
         final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        final Selection selection = getEditorController().getSelection();
+        if (fxomDocument != null) {
 
-        if (selection.getGroup() != null) {
-            try {
-                selectionSnapshot = selection.getGroup().clone();
-            } catch (CloneNotSupportedException x) {
-                // Emergency code
-                throw new RuntimeException(x);
-            }
-        } else {
-            selectionSnapshot = null;
-        }
-        selection.clear();
-        selection.beginUpdate();
-        fxomDocument.beginUpdate();
-        for (InsertAsSubComponentJob subJob : subJobs) {
-            subJob.execute();
-            selection.toggleSelection(subJob.getNewObject());
-        }
-        fxomDocument.endUpdate();
-        selection.endUpdate();
-    }
+            // Retrieve the FXOMObjects from the clipboard
+            final ClipboardDecoder clipboardDecoder
+                    = new ClipboardDecoder(Clipboard.getSystemClipboard());
+            final List<FXOMObject> newObjects
+                    = clipboardDecoder.decode(fxomDocument);
 
-    @Override
-    public void undo() {
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        final Selection selection = getEditorController().getSelection();
-
-        selection.beginUpdate();
-        fxomDocument.beginUpdate();
-        for (int i = subJobs.size() - 1; i >= 0; i--) {
-            subJobs.get(i).undo();
-        }
-        fxomDocument.endUpdate();
-        if (selectionSnapshot != null) {
-            selection.select(selectionSnapshot);
-        } else {
-            selection.clear();
-        }
-        selection.endUpdate();
-    }
-
-    @Override
-    public void redo() {
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        final Selection selection = getEditorController().getSelection();
-
-        selection.clear();
-        selection.beginUpdate();
-        fxomDocument.beginUpdate();
-        for (InsertAsSubComponentJob subJob : subJobs) {
-            subJob.redo();
-            selection.toggleSelection(subJob.getNewObject());
-        }
-        fxomDocument.endUpdate();
-        selection.endUpdate();
-    }
-
-    @Override
-    public String getDescription() {
-        if (description == null) {
-            buildDescription();
-        }
-
-        return description;
-    }
-
-    private void buildSubJobs() {
-       final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-
-        if (fxomDocument == null) {
-            return;
-        }
-
-        // Retrieve the FXOMObjects from the clipboard
-        final ClipboardDecoder clipboardDecoder
-                = new ClipboardDecoder(Clipboard.getSystemClipboard());
-        final List<FXOMObject> newObjects 
-                = clipboardDecoder.decode(fxomDocument);
-
-        // Retrieve the target FXOMObject
-        final Selection selection = getEditorController().getSelection();
-        if (selection.getGroup() instanceof ObjectSelectionGroup) {
-            final ObjectSelectionGroup osg = (ObjectSelectionGroup) selection.getGroup();
-            // Single selection
-            if (osg.getItems().size() == 1) {
-                final FXOMObject targetObject = osg.getItems().iterator().next();
-                // Build InsertAsSubComponent jobs
-                final DesignHierarchyMask targetMask = new DesignHierarchyMask(targetObject);
-                if (targetMask.isAcceptingSubComponent(newObjects)) {
-                    for (FXOMObject newObject : newObjects) {
-                        final InsertAsSubComponentJob subJob = new InsertAsSubComponentJob(
-                                newObject,
-                                targetObject,
-                                targetMask.getSubComponentCount(),
-                                getEditorController());
-                        subJobs.add(subJob);
+            // Retrieve the target FXOMObject
+            final Selection selection = getEditorController().getSelection();
+            if (selection.getGroup() instanceof ObjectSelectionGroup) {
+                final ObjectSelectionGroup osg = (ObjectSelectionGroup) selection.getGroup();
+                // Single selection
+                if (osg.getItems().size() == 1) {
+                    final FXOMObject targetObject = osg.getItems().iterator().next();
+                    // Build InsertAsSubComponent jobs
+                    final DesignHierarchyMask targetMask = new DesignHierarchyMask(targetObject);
+                    if (targetMask.isAcceptingSubComponent(newObjects)) {
+                        result.add(new ClearSelectionJob(getEditorController()));
+                        for (FXOMObject newObject : newObjects) {
+                            final InsertAsSubComponentJob subJob = new InsertAsSubComponentJob(
+                                    newObject,
+                                    targetObject,
+                                    targetMask.getSubComponentCount(),
+                                    getEditorController());
+                            result.add(subJob);
+                        }
+                        result.add(new UpdateSelectionJob(newObjects, getEditorController()));
                     }
                 }
             }
         }
+        return result;
     }
 
-    private void buildDescription() {
-        assert subJobs.isEmpty() != false;
-        if (subJobs.size() == 1) {
-            description = makeSingleSelectionDescription();
+    @Override
+    protected String makeDescription() {
+        final String result;
+
+        if (getSubJobs().size() == 3) { // ClearSelectionJob + InsertJob + UpdateSelectionJob
+            result = makeSingleSelectionDescription();
         } else {
-            description = makeMultipleSelectionDescription();
+            result = makeMultipleSelectionDescription();
         }
+
+        return result;
     }
 
     private String makeSingleSelectionDescription() {
-        final StringBuilder result = new StringBuilder();
+        final String result;
 
-        assert subJobs.size() == 1;
-        final InsertAsSubComponentJob insertJob = subJobs.get(0);
-        final FXOMObject fxomObject = insertJob.getNewObject();
-        result.append("Paste Into ");
-        if (fxomObject instanceof FXOMInstance) {
-            final Object sceneGraphObject = fxomObject.getSceneGraphObject();
+        assert getSubJobs().size() == 3; // ClearSelectionJob + InsertJob + UpdateSelectionJob
+        final Job subJob0 = getSubJobs().get(1);
+        final FXOMObject newObject;
+        assert subJob0 instanceof InsertAsSubComponentJob;
+        final InsertAsSubComponentJob insertJob = (InsertAsSubComponentJob) subJob0;
+        newObject = insertJob.getNewObject();
+        if (newObject instanceof FXOMInstance) {
+            final Object sceneGraphObject = newObject.getSceneGraphObject();
             if (sceneGraphObject != null) {
-                result.append(sceneGraphObject.getClass().getSimpleName());
+                result = I18N.getString("label.action.edit.paste.into.1", sceneGraphObject.getClass().getSimpleName());
             } else {
-                result.append("Unresolved Object");
+                result = I18N.getString("label.action.edit.paste.into.unresolved");
             }
-        } else if (fxomObject instanceof FXOMCollection) {
-            result.append("Collection");
+        } else if (newObject instanceof FXOMCollection) {
+            result = I18N.getString("label.action.edit.paste.into.collection");
         } else {
             assert false;
-            result.append(fxomObject.getClass().getSimpleName());
+            result = I18N.getString("label.action.edit.paste.into.1", newObject.getClass().getSimpleName());
         }
 
-        return result.toString();
+        return result;
     }
 
     private String makeMultipleSelectionDescription() {
-        final StringBuilder result = new StringBuilder();
-
-        result.append("Paste Into ");
-        result.append(subJobs.size());
-        result.append(" Objects");
-
-        return result.toString();
+        final int objectCount = getSubJobs().size() - 2;
+        return I18N.getString("label.action.edit.paste.into.n", objectCount);
     }
 }

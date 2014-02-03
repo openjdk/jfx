@@ -106,6 +106,11 @@ public class InfoPanelController extends AbstractFxmlPanelController {
     }
 
     @Override
+    protected void cssRevisionDidChange() {
+        // Nothing to do 
+    }
+
+    @Override
     protected void jobManagerRevisionDidChange() {
         requestEntriesUpdate();
         updateAsPerRootNodeStatus();
@@ -215,11 +220,8 @@ public class InfoPanelController extends AbstractFxmlPanelController {
                                 = fxomDocument.collectFxIds();
                         for (Map.Entry<String, FXOMObject> e : fxIds.entrySet()) {
                             final String fxId = e.getKey();
-                            // TODO Remove isEmpty test below once DTL-6085 is fixed
-                            if (! fxId.isEmpty()) {
-                                final FXOMObject fxomObject = e.getValue();
-                                newEntries.add(new IndexEntry(fxId, entryType, fxomObject));
-                            }
+                            final FXOMObject fxomObject = e.getValue();
+                            newEntries.add(new IndexEntry(fxId, entryType, fxomObject));
                         }
                         break;
                     }

@@ -73,7 +73,7 @@ public class DoubleEditor extends AutoSuggestEditor {
             }
         };
 
-        setTextEditorBehavior(this, getTextField(), onActionListener);
+        setNumericEditorBehavior(this, getTextField(), onActionListener);
     }
 
     @Override

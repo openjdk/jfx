@@ -62,6 +62,7 @@ public class DocumentDragSource extends AbstractDragSource {
     private final FXOMObject hitObject;
     private final double hitX;
     private final double hitY;
+    private final boolean nodeOnly;
 
     public DocumentDragSource(
             List<FXOMObject> draggedObjects, 
@@ -79,6 +80,7 @@ public class DocumentDragSource extends AbstractDragSource {
         this.hitObject = hitObject;
         this.hitX = hitX;
         this.hitY = hitY;
+        this.nodeOnly = checkForNodeOnly();
     }
 
     public DocumentDragSource(
@@ -97,6 +99,7 @@ public class DocumentDragSource extends AbstractDragSource {
         final Point2D hitPoint = computeDefaultHit(hitObject);
         this.hitX = hitPoint.getX();
         this.hitY = hitPoint.getY();
+        this.nodeOnly = checkForNodeOnly();
     }
     
     private static Point2D computeDefaultHit(FXOMObject fxomObject) {
@@ -245,6 +248,11 @@ public class DocumentDragSource extends AbstractDragSource {
         
         return result;
     }
+
+    @Override
+    public boolean isNodeOnly() {
+        return nodeOnly;
+    }
     
     /*
      * Object
@@ -255,4 +263,19 @@ public class DocumentDragSource extends AbstractDragSource {
         return getClass().getSimpleName() + ": hitObject=(" + hitObject + ")"; //NOI18N
     }
     
+    
+    /*
+     * Private
+     */
+    
+    private boolean checkForNodeOnly() {
+        int nonNodeCount = 0;
+        for (FXOMObject draggedObject : draggedObjects) {
+            if (draggedObject.isNode() == false) {
+                nonNodeCount++;
+            }
+        }
+        
+        return nonNodeCount == 0;
+    }
 }

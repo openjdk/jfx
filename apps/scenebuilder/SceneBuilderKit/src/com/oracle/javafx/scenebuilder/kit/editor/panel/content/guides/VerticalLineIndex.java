@@ -58,6 +58,10 @@ class VerticalLineIndex {
         lines.clear();
     }
     
+    public boolean isEmpty() {
+        return lines.isEmpty();
+    }
+    
     public List<VerticalSegment> matchWest(Bounds boundsInScene, double threshold) {
         assert boundsInScene.isEmpty() == false;
         return matchX(boundsInScene.getMinX(), threshold);

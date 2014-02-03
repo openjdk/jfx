@@ -61,6 +61,6 @@
         </VBox>
       </children>
       <stylesheets>
-        <URL value="@../Inspector.css" />
+        <URL value="@../../../css/Theme.css" />
       </stylesheets>
     </HBox>

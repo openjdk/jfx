@@ -119,6 +119,11 @@ public class MessageBarController extends AbstractFxmlPanelController {
     }
 
     @Override
+    protected void cssRevisionDidChange() {
+        // Nothing to do
+    }
+
+    @Override
     protected void jobManagerRevisionDidChange() {
         // Nothing to do
     }

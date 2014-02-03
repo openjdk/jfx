@@ -39,7 +39,6 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.HierarchyItem;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController.DisplayOption;
 import static com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController.HIERARCHY_READWRITE_LABEL;
-import static com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController.HIERARCHY_READONLY_LABEL;
 import static com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController.TREE_CELL_GRAPHIC;
 import com.oracle.javafx.scenebuilder.kit.editor.util.InlineEditController;
 import com.oracle.javafx.scenebuilder.kit.editor.util.InlineEditController.Type;
@@ -170,7 +169,6 @@ public class HierarchyTreeTableCell<T extends HierarchyItem, S extends Hierarchy
         // CSS
         graphic.getStyleClass().add(TREE_CELL_GRAPHIC);
         updatePlaceHolder();
-        classNameInfoLabel.getStyleClass().add(HIERARCHY_READONLY_LABEL);
         displayInfoLabel.getStyleClass().add(HIERARCHY_READWRITE_LABEL);
         // Layout
         classNameInfoLabel.setMinWidth(Control.USE_PREF_SIZE);

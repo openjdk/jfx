@@ -31,11 +31,14 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.handles;
 
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.AbstractResilientHandles;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TableViewDesignInfoX;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.AbstractGesture;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.mouse.DebugMouseGesture;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
@@ -48,15 +51,45 @@ import javafx.scene.transform.Transform;
  * 
  */
 
-public class TableColumnHandles extends AbstractGenericHandles<Object> {
+public class TableColumnHandles extends AbstractResilientHandles<Object> {
+    
+    /*
+     * Handles for TableColumn need a special treatment.
+     * 
+     * A TableColumn instance can be transiently disconnected from its parent TableView:
+     *  - TableColumn.getTableView() returns null
+     *  - TableView.getColumns().contains() returns false
+     * 
+     * When the TableColumn is disconnected, handles cannot be drawn.
+     * This Handles class inherits from AbstractResilientHandles to take
+     * care of this singularity.
+     */
     
     private final TableViewDesignInfoX tableViewDesignInfo
             = new TableViewDesignInfoX();
+    private TableView<?> tableView;
     
     public TableColumnHandles(ContentPanelController contentPanelController,
             FXOMInstance fxomInstance) {
         super(contentPanelController, fxomInstance, Object.class);
         assert fxomInstance.getSceneGraphObject() instanceof TableColumn;
+        
+        getTableColumn().tableViewProperty().addListener(
+                new ChangeListener<Object>() {
+                    @Override
+                    public void changed(ObservableValue<? extends Object> ov, Object v1, Object v2) {
+                        tableViewOrVisibilityDidChange();
+                    }
+                });
+        getTableColumn().visibleProperty().addListener(
+                new ChangeListener<Object>() {
+                    @Override
+                    public void changed(ObservableValue<? extends Object> ov, Object v1, Object v2) {
+                        tableViewOrVisibilityDidChange();
+                    }
+                });
+        
+        tableViewOrVisibilityDidChange();
     }
     
     public FXOMInstance getFxomInstance() {
@@ -68,36 +101,45 @@ public class TableColumnHandles extends AbstractGenericHandles<Object> {
      */
     @Override
     public Bounds getSceneGraphObjectBounds() {
+        assert isReady();
+        assert tableView != null;
+        assert getTableColumn().isVisible();
         return tableViewDesignInfo.getColumnBounds(getTableColumn());
     }
 
     @Override
     public Transform getSceneGraphToSceneTransform() {
-        return getTableColumn().getTableView().getLocalToSceneTransform();
+        assert isReady();
+        assert tableView != null;
+        return tableView.getLocalToSceneTransform();
     }
 
     @Override
     public Point2D sceneGraphObjectToScene(double x, double y) {
-        final TableView<?> tv = getTableColumn().getTableView();
-        return tv.localToScene(x, y);
+        assert isReady();
+        assert tableView != null;
+        return tableView.localToScene(x, y);
     }
 
     @Override
     public Point2D sceneToSceneGraphObject(double x, double y) {
-        final TableView<?> tv = getTableColumn().getTableView();
-        return tv.sceneToLocal(x, y);
+        assert isReady();
+        assert tableView != null;
+        return tableView.sceneToLocal(x, y);
     }
 
     @Override
     protected void startListeningToSceneGraphObject() {
-        final TableView<?> tableView = getTableColumn().getTableView();
+        assert isReady();
+        assert tableView != null;
         startListeningToLayoutBounds(tableView);
         startListeningToLocalToSceneTransform(tableView);
     }
 
     @Override
     protected void stopListeningToSceneGraphObject() {
-        final TableView<?> tableView = getTableColumn().getTableView();
+        assert isReady();
+        assert tableView != null;
         stopListeningToLayoutBounds(tableView);
         stopListeningToLocalToSceneTransform(tableView);
     }
@@ -115,5 +157,11 @@ public class TableColumnHandles extends AbstractGenericHandles<Object> {
     private TableColumn<?,?> getTableColumn() {
         assert getSceneGraphObject() instanceof TableColumn;
         return (TableColumn<?,?>) getSceneGraphObject();
+    }
+    
+    
+    private void tableViewOrVisibilityDidChange() {
+        tableView = getTableColumn().getTableView();
+        setReady((tableView != null) && getTableColumn().isVisible());
     }
 }

@@ -33,7 +33,6 @@ package com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.rotator;
 
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.gradientpicker.GradientPicker;
 import java.io.IOException;
-import java.text.DecimalFormat;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.beans.property.DoubleProperty;
@@ -126,11 +125,6 @@ public class RotatorControl extends GridPane {
     private void rotate(Double degrees) {
         rotation.set(degrees);
         rotator_handle.setRotate(degrees);
-        rotatePrint(degrees);
-    }
-
-    private void rotatePrint(Double r) {
-        final DecimalFormat df = new DecimalFormat("#.#"); //NOI18N
-        rotator_textfield.setText(String.valueOf(df.format(r)));
+        rotator_textfield.setText(Double.toString(degrees));
     }
 }

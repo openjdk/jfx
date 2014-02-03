@@ -40,6 +40,7 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.paint.*?>
 <?import javafx.scene.shape.*?>
+<?import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.*?>
 
 <fx:root type="javafx.scene.layout.VBox" id="CONTENT" maxHeight="-1.0" prefHeight="-1.0" prefWidth="-1.0" spacing="2.0" style="" visible="true" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
   <children>
@@ -99,13 +100,13 @@
             <Insets bottom="2.0" fx:id="x2" />
           </GridPane.margin>
         </StackPane>
-        <TextField fx:id="alpha_textfield" onAction="#onActionAlpha" prefColumnCount="3" prefWidth="-1.0" GridPane.columnIndex="6" GridPane.margin="$x2" GridPane.rowIndex="0" />
-        <TextField fx:id="hue_textfield" onAction="#onActionHue" prefColumnCount="3" prefWidth="-1.0" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-        <TextField fx:id="saturation_textfield" onAction="#onActionSaturation" prefColumnCount="3" prefWidth="-1.0" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-        <TextField fx:id="brightness_textfield" onAction="#onActionBrightness" prefColumnCount="3" prefWidth="-1.0" GridPane.columnIndex="2" GridPane.rowIndex="1" />
-        <TextField fx:id="red_textfield" onAction="#onActionRed" prefColumnCount="3" prefWidth="-1.0" GridPane.columnIndex="4" GridPane.rowIndex="1" />
-        <TextField fx:id="green_textfield" onAction="#onActionGreen" prefColumnCount="3" prefWidth="-1.0" GridPane.columnIndex="5" GridPane.rowIndex="1" />
-        <TextField fx:id="blue_textfield" onAction="#onActionBlue" prefColumnCount="3" prefWidth="-1.0" GridPane.columnIndex="6" GridPane.rowIndex="1" />
+        <DoubleTextField fx:id="alpha_textfield" onAction="#onActionAlpha" prefColumnCount="3" prefWidth="-1.0" GridPane.columnIndex="6" GridPane.margin="$x2" GridPane.rowIndex="0" />
+        <DoubleTextField fx:id="hue_textfield" onAction="#onActionHue" prefColumnCount="3" prefWidth="-1.0" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+        <DoubleTextField fx:id="saturation_textfield" onAction="#onActionSaturation" prefColumnCount="3" prefWidth="-1.0" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+        <DoubleTextField fx:id="brightness_textfield" onAction="#onActionBrightness" prefColumnCount="3" prefWidth="-1.0" GridPane.columnIndex="2" GridPane.rowIndex="1" />
+        <DoubleTextField fx:id="red_textfield" onAction="#onActionRed" prefColumnCount="3" prefWidth="-1.0" GridPane.columnIndex="4" GridPane.rowIndex="1" />
+        <DoubleTextField fx:id="green_textfield" onAction="#onActionGreen" prefColumnCount="3" prefWidth="-1.0" GridPane.columnIndex="5" GridPane.rowIndex="1" />
+        <DoubleTextField fx:id="blue_textfield" onAction="#onActionBlue" prefColumnCount="3" prefWidth="-1.0" GridPane.columnIndex="6" GridPane.rowIndex="1" />
         <Label styleClass="small-label" text="H°" GridPane.columnIndex="0" GridPane.rowIndex="2" />
         <Label styleClass="small-label" text="S %" GridPane.columnIndex="1" GridPane.rowIndex="2" />
         <Label styleClass="small-label" text="B %" GridPane.columnIndex="2" GridPane.rowIndex="2" />

@@ -42,15 +42,13 @@
 <?scenebuilder-classpath-element ../../../../../../../../../../dist/SceneBuilderKit.jar?>
 <?scenebuilder-preview-i18n-resource ../../../i18n/SceneBuilderKit.properties?>
 
-<VBox fx:id="root" prefHeight="507.0" prefWidth="689.0" spacing="5.0" stylesheets="@CssPanel.css" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+<VBox fx:id="root" prefWidth="800.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
   <children>
-    <VBox fx:id="header" alignment="CENTER" spacing="5.0">
-      <children>
-        <HBox alignment="CENTER" prefHeight="-1.0" prefWidth="-1.0">
+        <HBox fx:id="header" alignment="CENTER" prefHeight="-1.0" prefWidth="-1.0" styleClass="styleable-path">
           <children>
-            <Label styleClass="selection-label" text="%csspanel.styleable.path" />
+            <Label text="%csspanel.styleable.path" />
             <SelectionPath fx:id="selectionPath" alignment="BOTTOM_LEFT" styleClass="selection-path" HBox.hgrow="ALWAYS" />
-            <ToggleButton fx:id="edit" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#onSelectionModeSwitchAction" styleClass="toggle-button-left" textAlignment="JUSTIFY">
+            <ToggleButton fx:id="edit" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#onSelectionModeSwitchAction" textAlignment="JUSTIFY">
               <tooltip>
                 <Tooltip text="%csspanel.selection.tooltip" />
               </tooltip>
@@ -77,13 +75,14 @@
                 </ImageView>
               </graphic>
               <HBox.margin>
-                <Insets right="5.0" />
+                <Insets />
               </HBox.margin>
             </ToggleButton>
           </children>
+<VBox.margin>
+<Insets />
+</VBox.margin>
         </HBox>
-      </children>
-    </VBox>
     <TableView fx:id="table" prefHeight="200.0" prefWidth="200.0" styleClass="css-table-view" VBox.vgrow="ALWAYS">
       <columns>
         <TableColumn fx:id="propertiesColumn" editable="false" minWidth="150.0" prefWidth="200.0" resizable="false" sortable="false" text="%csspanel.col.properties" />
@@ -102,4 +101,8 @@
     </ScrollPane>
     <WebView fx:id="textPane" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS" />
   </children>
+<styleClass>
+<String fx:value="theme-presets" />
+<String fx:value="SBKIT-css-panel" />
+</styleClass>
 </VBox>

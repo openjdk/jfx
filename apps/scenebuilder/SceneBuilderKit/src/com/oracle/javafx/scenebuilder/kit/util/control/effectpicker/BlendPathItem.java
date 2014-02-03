@@ -58,7 +58,7 @@ public class BlendPathItem extends EffectPathItem {
     }
 
     @Override
-    public EffectPathItem getSelectedInputPathItem() {
+    EffectPathItem getSelectedInputPathItem() {
         if (topMenuItem.isSelected()) {
             return topInputPathItem;
         } else {
@@ -68,7 +68,7 @@ public class BlendPathItem extends EffectPathItem {
     }
 
     @Override
-    public void setSelectedInput(Effect input) {
+    void setSelectedInputEffect(Effect input) {
         if (topMenuItem.isSelected()) {
             setTopInput(input);
         } else {
@@ -77,27 +77,27 @@ public class BlendPathItem extends EffectPathItem {
         }
     }
 
-    public void setTopInputPathItem(EffectPathItem epi) {
+    void setTopInputPathItem(EffectPathItem epi) {
         topInputPathItem = epi;
     }
 
-    public void setBottomInputPathItem(EffectPathItem epi) {
+    void setBottomInputPathItem(EffectPathItem epi) {
         bottomInputPathItem = epi;
     }
 
-    public Effect getTopInput() {
+    Effect getTopInput() {
         return ((Blend) effect).getTopInput();
     }
 
-    public void setTopInput(Effect input) {
+    void setTopInput(Effect input) {
         ((Blend) effect).setTopInput(input);
     }
 
-    public Effect getBottomInput() {
+    Effect getBottomInput() {
         return ((Blend) effect).getBottomInput();
     }
 
-    public void setBottomInput(Effect input) {
+    void setBottomInput(Effect input) {
         ((Blend) effect).setBottomInput(input);
     }
 

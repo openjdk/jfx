@@ -91,7 +91,9 @@ public abstract class FXOMObject extends FXOMNode {
         if (parentProperty != null) {
             if (parentProperty.getValues().size() == 1) {
                 // it's the last value -> we remove the whole property
-                parentProperty.removeFromParentInstance();
+                if (parentProperty.getParentInstance() != null) {
+                    parentProperty.removeFromParentInstance();
+                }
             } else {
                 removeFromParentProperty();
             }
@@ -426,6 +428,22 @@ public abstract class FXOMObject extends FXOMNode {
             result = null;
         }
         return result;
+    }
+    
+    public void removeFromParentObject() {
+        if (parentProperty != null) {
+            if (parentProperty.getValues().size() == 1) {
+                // This object is the last value of its parent property
+                // We remove the property from the parent instance
+                if (parentProperty.getParentInstance() != null) {
+                    parentProperty.removeFromParentInstance();
+                }
+            } else {
+                removeFromParentProperty();
+            }
+        } else if (parentCollection != null) {
+            removeFromParentCollection();
+       }
     }
     
     public abstract List<FXOMObject> getChildObjects();

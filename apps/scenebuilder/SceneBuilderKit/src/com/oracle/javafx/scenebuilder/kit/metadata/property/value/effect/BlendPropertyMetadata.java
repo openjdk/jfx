@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -32,6 +32,7 @@
 
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value.effect;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.ComplexPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata;
@@ -69,15 +70,14 @@ public class BlendPropertyMetadata extends ComplexPropertyMetadata<Blend> {
      */
     
     @Override
-    protected Blend castValue(Object value) {
-        return (Blend) value;
-    }
-    
-    @Override
-    public void updateFxomInstanceWithValue(FXOMInstance valueInstance, Blend value) {
-        bottomInputMetadata.setValue(valueInstance, value.getBottomInput());
-        topInputMetadata.setValue(valueInstance, value.getTopInput());
-        opacityMetadata.setValue(valueInstance, value.getOpacity());
-        modeMetadata.setValue(valueInstance, value.getMode().toString());
+    public FXOMInstance makeFxomInstanceFromValue(Blend value, FXOMDocument fxomDocument) {
+        final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
+        
+        bottomInputMetadata.setValue(result, value.getBottomInput());
+        topInputMetadata.setValue(result, value.getTopInput());
+        opacityMetadata.setValue(result, value.getOpacity());
+        modeMetadata.setValue(result, value.getMode().toString());
+        
+        return result;
     }
 }

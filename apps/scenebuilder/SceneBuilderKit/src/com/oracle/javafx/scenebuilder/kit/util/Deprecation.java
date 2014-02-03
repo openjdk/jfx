@@ -34,6 +34,7 @@ package com.oracle.javafx.scenebuilder.kit.util;
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Application.EventHandler;
 import com.sun.javafx.css.Style;
+import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.control.skin.MenuBarSkin;
 import java.net.URL;
 import java.util.List;
@@ -46,6 +47,7 @@ import javafx.fxml.JavaFXBuilderFactory;
 import javafx.geometry.Bounds;
 import javafx.scene.Group;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.PopupControl;
@@ -83,8 +85,11 @@ public class Deprecation {
         return node.impl_getStyleMap();
     }
     
-    public static void reapplyCSS(Node node) {
-        node.impl_reapplyCSS();
+    // Used to woraround RT-34863
+    public static void reapplyCSS(Scene scene) {
+        assert scene != null;
+        StyleManager.getInstance().forget(scene);
+        scene.getRoot().impl_reapplyCSS();
     }
 
     // Retrieve the node of the Styleable.
@@ -182,6 +187,9 @@ public class Deprecation {
         final Group result = new Group() {
             @Override
             public Styleable getStyleableParent() { return null; }
+
+            @Override
+            public List<String> impl_getAllParentStylesheets() { return null; }
         };
         
         result.getStyleClass().add("root"); //NOI18N

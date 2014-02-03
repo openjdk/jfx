@@ -31,96 +31,44 @@
  */
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value.list;
 
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyT;
+import com.oracle.javafx.scenebuilder.kit.metadata.property.value.StringPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
-import java.net.URL;
+import java.util.Collections;
 import java.util.List;
-import javafx.scene.paint.Color;
 
 /**
  *
  */
 public class StringListPropertyMetadata extends ListValuePropertyMetadata<String> {
 
+    private final static StringPropertyMetadata itemMetadata
+            = new StringPropertyMetadata(new PropertyName("unused"), //NOI18N
+                    true, null, InspectorPath.UNUSED);
+
     public StringListPropertyMetadata(PropertyName name, boolean readWrite, 
             List<String> defaultValue, InspectorPath inspectorPath) {
-        super(name, String.class, readWrite, defaultValue, inspectorPath);
+        super(name, String.class, itemMetadata, readWrite, defaultValue, inspectorPath);
     }
-
+    
+    
     /*
      * ListValuePropertyMetadata
      */
     
     @Override
-    protected String castItemValue(Object value) {
-        assert value instanceof Boolean
-                || value instanceof Color
-                || value instanceof Double
-                || value instanceof Integer
-                || value instanceof String
-                || value instanceof URL
-                : "getName()=" + getName() //NOI18N
-                + ",value=" + value; //NOI18N
-        return value.toString();
+    protected boolean canMakeStringFromValue(List<String> value) {
+        return value.size() == 1;
     }
     
     @Override
-    protected boolean isItemTextEncodable() {
-        return true;
+    protected String makeStringFromValue(List<String> value) {
+        assert canMakeStringFromValue(value);
+        return value.get(0);
     }
-
+    
     @Override
-    protected String itemTextEncoding(String value) {
-        return castItemValue(value);
-    }
-
-    @Override
-    protected void updateFxomInstanceWithItemValue(FXOMInstance itemInstance, String itemValue) {
-        assert itemInstance != null;
-        assert itemValue != null;
-        
-        final Class<?> itemClass = itemInstance.getDeclaredClass();
-        if (itemClass == URL.class) {
-            updateURLInstanceWithItemValue(itemInstance, itemValue);
-        } else {
-            assert itemClass == Boolean.class
-                    || itemClass == Color.class
-                    || itemClass == Double.class
-                    || itemClass == Integer.class
-                    || itemClass == String.class;
-            itemInstance.setFxValue(itemValue);
-        }
-    }
-    
-    
-    /*
-     * Private
-     */
-    
-    private static final PropertyName valueName = new PropertyName("value"); //NOI18N
-    
-    private void updateURLInstanceWithItemValue(FXOMInstance urlInstance, String urlString) {
-        final FXOMDocument fxomDocument = urlInstance.getFxomDocument();
-        final FXOMProperty valueProperty = urlInstance.getProperties().get(valueName);
-        
-        if (valueProperty == null) {
-            final FXOMPropertyT newProperty 
-                    = new FXOMPropertyT(fxomDocument, valueName, urlString);
-            newProperty.addToParentInstance(-1,urlInstance);
-        } else if (valueProperty instanceof FXOMPropertyT) {
-            final FXOMPropertyT valuePropertyT = (FXOMPropertyT) valueProperty;
-            valuePropertyT.setValue(urlString);
-        } else {
-            assert valueProperty instanceof FXOMPropertyC;
-            valueProperty.removeFromParentInstance();
-            final FXOMPropertyT newProperty 
-                    = new FXOMPropertyT(fxomDocument, valueName, urlString);
-            newProperty.addToParentInstance(-1,urlInstance);
-        }
+    protected List<String> makeValueFromString(String string) {
+        return Collections.singletonList(string);
     }
 }

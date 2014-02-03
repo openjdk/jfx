@@ -90,6 +90,14 @@ public class FXOMIntrinsic extends FXOMObject {
         return getGlueElement().getAttributes().get("source");
     }
     
+    public void setSource(String source) {
+        if (source == null) {
+            getGlueElement().getAttributes().remove("source");
+        } else {
+            getGlueElement().getAttributes().put("source", source);
+        }
+    }
+    
     public Map<PropertyName, FXOMProperty> getProperties() {
         return properties;
     }

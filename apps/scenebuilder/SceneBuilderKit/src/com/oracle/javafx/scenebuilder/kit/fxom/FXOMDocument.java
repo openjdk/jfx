@@ -33,18 +33,22 @@ package com.oracle.javafx.scenebuilder.kit.fxom;
 
 import com.oracle.javafx.scenebuilder.kit.fxom.sampledata.SampleDataGenerator;
 import com.oracle.javafx.scenebuilder.kit.fxom.glue.GlueDocument;
+import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 import com.oracle.javafx.scenebuilder.kit.util.URLUtils;
+import com.sun.javafx.css.StyleManager;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Map;
 import java.util.ResourceBundle;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
+import javafx.scene.Node;
 
 /**
  *
@@ -60,6 +64,7 @@ public class FXOMDocument {
     private FXOMObject fxomRoot;
     private Object sceneGraphRoot;
     private final SimpleIntegerProperty sceneGraphRevision = new SimpleIntegerProperty();
+    private final SimpleIntegerProperty cssRevision = new SimpleIntegerProperty();
     private SceneGraphHolder sceneGraphHolder;
     private int updateDepth;
     
@@ -278,6 +283,38 @@ public class FXOMDocument {
      */
     public ReadOnlyIntegerProperty sceneGraphRevisionProperty() {
         return sceneGraphRevision;
+    }
+    
+    /**
+     * Forces this document to reload the specified css stylesheet file.
+     * 
+     * @param stylesheetPath path of the stylesheet to be reloaded.
+     */
+    public void reapplyCSS(Path stylesheetPath) {
+        if (sceneGraphRoot instanceof Node) {
+            
+            /*
+             * Normally we should scan for all stylesheets properties which
+             * include stylesheetPath and update them.
+             * Right now, we use a workaround solution because of bug RT-34863.
+             */
+            final Node rootNode = (Node) sceneGraphRoot;
+            if (rootNode.getScene() != null) {
+                Deprecation.reapplyCSS(rootNode.getScene());
+                cssRevision.set(cssRevision.get()+1);
+            }
+        }
+    }
+    
+    /**
+     * Returns the property holding the css revision number.
+     * reapplyCSS() method increments the revision by one each time it
+     * is invoked.
+     * 
+     * @return the property holding the css revision number.
+     */
+    public ReadOnlyIntegerProperty cssRevisionProperty() {
+        return cssRevision;
     }
     
     /**
