@@ -1796,7 +1796,6 @@ public class ListViewKeyInputTest {
         assertTrue(isSelected(1, 2));
     }
 
-    @Ignore("Bug not resolved yet")
     @Test public void test_rt34407_down_down_up() {
         final int items = 100;
         listView.getItems().clear();
@@ -1836,7 +1835,6 @@ public class ListViewKeyInputTest {
         assertEquals(selectedIndicesCount, sm.getSelectedIndices().size());
     }
 
-    @Ignore("Bug not resolved yet")
     @Test public void test_rt34407_up_up_down() {
         final int items = 100;
         listView.getItems().clear();
