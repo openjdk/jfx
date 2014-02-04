@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -76,6 +76,7 @@ jmethodID jWindowNotifyFocus;
 jmethodID jWindowNotifyFocusDisabled;
 jmethodID jWindowNotifyFocusUngrab;
 jmethodID jWindowNotifyMoveToAnotherScreen;
+jmethodID jWindowNotifyLevelChanged;
 jmethodID jWindowIsEnabled;
 jmethodID jWindowNotifyDelegatePtr;
 jfieldID jWindowPtr;
@@ -177,6 +178,7 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
     jWindowNotifyFocusDisabled = env->GetMethodID(clazz, "notifyFocusDisabled", "()V");
     jWindowNotifyFocusUngrab = env->GetMethodID(clazz, "notifyFocusUngrab", "()V");
     jWindowNotifyMoveToAnotherScreen = env->GetMethodID(clazz, "notifyMoveToAnotherScreen", "(Lcom/sun/glass/ui/Screen;)V");
+    jWindowNotifyLevelChanged = env->GetMethodID(clazz, "notifyLevelChanged", "(I)V");
     jWindowIsEnabled = env->GetMethodID(clazz, "isEnabled", "()Z");
     jWindowNotifyDelegatePtr = env->GetMethodID(clazz, "notifyDelegatePtr", "(J)V");
     jWindowPtr = env->GetFieldID(clazz, "ptr", "J");

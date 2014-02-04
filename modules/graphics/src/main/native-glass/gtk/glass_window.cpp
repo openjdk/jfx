@@ -120,6 +120,8 @@ void WindowContextBase::process_state(GdkEventWindowState* event) {
         }
 
         notify_state(stateChangeEvent);
+    } else if (event->changed_mask & GDK_WINDOW_STATE_ABOVE) {
+        notify_on_top( event->new_window_state & GDK_WINDOW_STATE_ABOVE);
     } 
 }
 
@@ -819,6 +821,7 @@ void WindowContextTop::process_net_wm_property() {
 
     static GdkAtom atom_atom = gdk_atom_intern_static_string("ATOM");
     static GdkAtom atom_net_wm_state_hidden = gdk_atom_intern_static_string("_NET_WM_STATE_HIDDEN");
+    static GdkAtom atom_net_wm_state_above = gdk_atom_intern_static_string("_NET_WM_STATE_ABOVE");
     
     gint length;
 
@@ -829,12 +832,13 @@ void WindowContextTop::process_net_wm_property() {
 
         gint i = 0;
         bool is_hidden = false;
+        bool is_above = false;
         while (i < length) {
             if (atom_net_wm_state_hidden == atoms[i]) {
                 is_hidden = true;
-                break;
+            } else if (atom_net_wm_state_above == atoms[i]) {
+                is_above = true;
             }
-
             i++;
         }
 
@@ -847,6 +851,8 @@ void WindowContextTop::process_net_wm_property() {
                     ? com_sun_glass_events_WindowEvent_MINIMIZE
                     : com_sun_glass_events_WindowEvent_RESTORE);
         }
+        
+        notify_on_top(is_above);
     }
 }
 
@@ -1340,6 +1346,31 @@ bool WindowContextTop::on_top_inherited() {
         o = topO->owner;
     }
     return false;
+}
+
+bool WindowContextTop::effective_on_top() {
+    if (owner) {
+        WindowContextTop* topO = dynamic_cast<WindowContextTop*>(owner);
+        return (topO && topO->effective_on_top()) || on_top;
+    }
+    return on_top;
+}
+
+void WindowContextTop::notify_on_top(bool top) {
+    // Do not report effective (i.e. native) values to the FX, only if the user sets it manually
+    if (top != effective_on_top() && jwindow) {
+        if (on_top_inherited() && !top) {
+            // Disallow user's "on top" handling on windows that inherited the property
+            gtk_window_set_keep_above(GTK_WINDOW(gtk_widget), TRUE);
+        } else {
+            on_top = top;
+            update_ontop_tree(top);
+            mainEnv->CallVoidMethod(jwindow,
+                    jWindowNotifyLevelChanged,
+                    top ? com_sun_glass_ui_Window_Level_FLOATING :  com_sun_glass_ui_Window_Level_NORMAL);
+            CHECK_JNI_EXCEPTION(mainEnv);
+        }
+    }
 }
 
 void WindowContextTop::set_level(int level) {

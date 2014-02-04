@@ -204,6 +204,11 @@ public class Stage extends Window {
         public void setFullScreen(Stage stage, boolean fs) {
             stage.fullScreenPropertyImpl().set(fs);
         }
+
+        @Override
+        public void setAlwaysOnTop(Stage stage, boolean aot) {
+            stage.alwaysOnTopPropertyImpl().set(aot);
+        }
     };
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,6 +48,7 @@ public class StagePeerListener extends WindowPeerListener {
         public void setMaximized(Stage stage, boolean maximized);
         public void setResizable(Stage stage, boolean resizable);
         public void setFullScreen(Stage stage, boolean fs);
+        public void setAlwaysOnTop(Stage stage, boolean aot);
     }
 
     public StagePeerListener(Stage stage, StageAccessor stageAccessor) {
@@ -76,6 +77,12 @@ public class StagePeerListener extends WindowPeerListener {
     public void changedFullscreen(boolean fs) {
         stageAccessor.setFullScreen(stage, fs);
     }
+
+    @Override
+    public void changedAlwaysOnTop(boolean aot) {
+        stageAccessor.setAlwaysOnTop(stage, aot);
+    }
+    
 
     /**
      * Initialize accessibility
