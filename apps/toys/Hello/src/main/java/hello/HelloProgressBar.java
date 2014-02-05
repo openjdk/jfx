@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,17 @@
 
 package hello;
 
+import javafx.animation.Interpolator;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 public class HelloProgressBar extends Application {
 
@@ -49,7 +54,7 @@ public class HelloProgressBar extends Application {
         Group root = (Group)scene.getRoot();
 
         double y = 15;
-        final double SPACING = 15;
+        final double SPACING = 25;
 
         ProgressBar pbar = new ProgressBar();
         pbar.setLayoutX(15);
@@ -95,8 +100,16 @@ public class HelloProgressBar extends Application {
         pbar.setPrefWidth(200);
         pbar.setLayoutX(230);
         pbar.setLayoutY(y);
-        pbar.setProgress(1);
+        pbar.setProgress(0);
         root.getChildren().add(pbar);
+
+        final Timeline timeline = new Timeline();
+        timeline.setCycleCount(Timeline.INDEFINITE);
+        timeline.setAutoReverse(true);
+        final KeyValue kv = new KeyValue(pbar.progressProperty(), 1);
+        final KeyFrame kf1 = new KeyFrame(Duration.millis(3000), kv);
+        timeline.getKeyFrames().add(kf1);
+        timeline.play();
 
         stage.setScene(scene);
         stage.show();

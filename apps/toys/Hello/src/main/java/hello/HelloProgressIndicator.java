@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,8 +31,6 @@ import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.ProgressIndicator;
@@ -136,28 +134,41 @@ public class HelloProgressIndicator extends Application {
         pInd9.setLayoutY(250);
         pInd9.setProgress(-0.1);
 
-        final String styleRED = new String("-fx-progress-color: red;");
-        final String styleORANGE = new String("-fx-progress-color: orange;");
-        final String styleGREEN = new String("-fx-progress-color: green;");
-
         pInd9.progressProperty().addListener(new ChangeListener<Number>() {
            @Override public void changed(ObservableValue ov, Number oldVal, Number newVal) {
-               String currentStyle = pInd9.getStyle();
-               if (pInd9.getProgress() < 0.25) {
-                   if (!currentStyle.contains(styleRED)) {
-                       pInd9.setStyle(styleRED);
-                   }
+
+               final double percent = newVal.doubleValue();
+               if (percent < 0) return; // progress bar went indeterminate
+
+               //
+               // poor man's gradient for stops: red, yellow 50%, green
+               // Based on http://en.wikibooks.org/wiki/Color_Theory/Color_gradient#Linear_RGB_gradient_with_6_segments
+               //
+               final double m = (2d * percent);
+               final int n = (int)m;
+               final double f = m - n;
+               final int t = (int)(255 * f);
+               int r=0, g=0, b=0;
+               switch(n) {
+                   case 0:
+                       r = 255;
+                       g = t;
+                       b = 0;
+                       break;
+                   case 1:
+                       r = 255 - t;
+                       g = 255;
+                       b = 0;
+                       break;
+                   case 2:
+                       r = 0;
+                       g = 255;
+                       b = 0;
+                       break;
+
                }
-               else if (pInd9.getProgress() < 0.5) {
-                   if (!currentStyle.contains(styleORANGE)) {
-                       pInd9.setStyle(styleORANGE);
-                   }
-               }
-               else {
-                   if (!currentStyle.contains(styleGREEN)) {
-                       pInd9.setStyle(styleGREEN);
-                   }
-               }
+               final String style = String.format("-fx-progress-color: rgb(%d,%d,%d)", r, g, b);
+               pInd9.setStyle(style);
             }
         });
         root.getChildren().add(pInd9);

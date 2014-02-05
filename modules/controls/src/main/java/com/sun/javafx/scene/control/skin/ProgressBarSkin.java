@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -527,10 +527,16 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
 
     }
 
+    boolean wasIndeterminate = false;
     private void updateProgress() {
         ProgressBar control = getSkinnable();
-        barWidth = ((int) (control.getWidth() - snappedLeftInset() - snappedRightInset()) * 2 * Math.min(1, Math.max(0, control.getProgress()))) / 2.0F;
-        getSkinnable().requestLayout();
+        // RT-33789: if the ProgressBar was indeterminate and still is indeterminate, don't update the bar width
+        final boolean isIndeterminate = control.isIndeterminate();
+        if (!(isIndeterminate && wasIndeterminate)) {
+            barWidth = ((int) (control.getWidth() - snappedLeftInset() - snappedRightInset()) * 2 * Math.min(1, Math.max(0, control.getProgress()))) / 2.0F;
+            getSkinnable().requestLayout();
+        }
+        wasIndeterminate = isIndeterminate;
     }
 
     @Override
