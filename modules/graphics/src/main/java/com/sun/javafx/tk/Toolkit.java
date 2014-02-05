@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -274,8 +274,7 @@ public abstract class Toolkit {
 
     public abstract boolean isNestedLoopRunning();
 
-    public abstract TKStage createTKStage(Window peerWindow, StageStyle stageStyle, boolean primary,
-            Modality modality, TKStage owner, boolean rtl, AccessControlContext acc);
+    public abstract TKStage createTKStage(Window peerWindow, boolean securityDialog, StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl, AccessControlContext acc);
 
     public abstract TKStage createTKPopupStage(Window peerWindow, StageStyle popupStyle, TKStage owner, AccessControlContext acc);
     public abstract TKStage createTKEmbeddedStage(HostInterface host, AccessControlContext acc);
