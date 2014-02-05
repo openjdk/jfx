@@ -550,6 +550,10 @@ g_ascii_strtod (const gchar *nptr,
       char *copy;
 
       copy = g_malloc (end - (char *)nptr + 1);
+#ifdef GSTREAMER_LITE
+      if (copy == NULL)
+        return 0;
+#endif
       memcpy (copy, nptr, end - nptr);
       *(copy + (end - (char *)nptr)) = 0;
 
