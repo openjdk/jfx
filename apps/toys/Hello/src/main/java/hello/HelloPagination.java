@@ -35,6 +35,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.Callback;
@@ -197,16 +198,10 @@ public class HelloPagination extends Application {
                 getCurrentPageIndex);
 
         HBox box = new HBox(10);
-        box.getChildren().addAll(toolbar);
-        AnchorPane anchor = new AnchorPane();
-        AnchorPane.setTopAnchor(box, 10.0);
-        AnchorPane.setLeftAnchor(box, 10.0);
-        AnchorPane.setTopAnchor(pagination, 10.0);
-        AnchorPane.setRightAnchor(pagination, 10.0);
-        AnchorPane.setBottomAnchor(pagination, 10.0);
-        AnchorPane.setLeftAnchor(pagination, 250.0);
-        anchor.getChildren().addAll(box, pagination);
-        Scene scene = new Scene(anchor, 800, 600);
+        HBox.setHgrow(pagination, Priority.ALWAYS);
+        box.getChildren().addAll(toolbar, pagination);
+
+        Scene scene = new Scene(box, 800, 600);
         stage.setScene(scene);
         stage.show();
     }
