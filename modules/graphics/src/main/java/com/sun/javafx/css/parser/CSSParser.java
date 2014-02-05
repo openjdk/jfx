@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.javafx.css.parser;
 
+import javafx.css.StyleConverter;
 import javafx.css.Styleable;
 import javafx.geometry.Insets;
 import javafx.scene.effect.BlurType;
@@ -702,14 +703,24 @@ final public class CSSParser {
         }
 
         if (root.token.getType() == CSSLexer.IDENT) {
-            if ("inherit".equalsIgnoreCase(root.token.getText())) {
+            final String txt = root.token.getText();
+            if ("inherit".equalsIgnoreCase(txt)) {
                 return new ParsedValueImpl<String,String>("inherit", null);
-            } else if ("null".equalsIgnoreCase(root.token.getText())) {
+            } else if ("null".equalsIgnoreCase(txt)
+                    || "none".equalsIgnoreCase(txt)) {
                 return new ParsedValueImpl<String,String>("null", null);
             }
         }
-
-        if ("-fx-background-color".equals(property)) {
+        if ("-fx-fill".equals(property)) {
+             ParsedValueImpl pv = parse(root);
+            if (pv.getConverter() == StyleConverter.getUrlConverter()) {
+                // ImagePatternConverter expects array of ParsedValue where element 0 is the URL
+                // Pending RT-33574
+                pv = new ParsedValueImpl(new ParsedValue[] {pv},PaintConverter.ImagePatternConverter.getInstance());
+            }
+            return pv;
+        }
+        else if ("-fx-background-color".equals(property)) {
             return parsePaintLayers(root);
         } else if ("-fx-background-image".equals(prop)) {
             return parseURILayers(root);

@@ -45,8 +45,7 @@ import javafx.scene.image.Image;
  * Because the BorderImage is immutable, it can safely be used in any
  * cache, and can safely be reused among multiple Regions.
  * <p/>
- * When applied to a Region with a defined shape, a BorderImage is not drawn.
- * TODO Should the insets still be applied?
+ * When applied to a Region with a defined shape, a BorderImage is ignored.
  * @since JavaFX 8.0
  */
 public class BorderImage {

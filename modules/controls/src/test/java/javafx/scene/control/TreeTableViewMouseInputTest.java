@@ -517,7 +517,6 @@ public class TreeTableViewMouseInputTest {
     }
 
     private int rt_30626_count = 0;
-    @Ignore("This is now broken due to backing out RT-33897 (as it introduced RT-34685), so ignoring for now")
     @Test public void test_rt_30626() {
         final int items = 8;
         root.getChildren().clear();
@@ -548,7 +547,6 @@ public class TreeTableViewMouseInputTest {
         assertEquals(1, rt_30626_count);
     }
 
-    @Ignore("This is now broken due to backing out RT-33897 (as it introduced RT-34685), so ignoring for now")
     @Test public void test_rt_33897_rowSelection() {
         final int items = 8;
         root.getChildren().clear();
@@ -589,5 +587,47 @@ public class TreeTableViewMouseInputTest {
         TreeTablePosition pos = sm.getSelectedCells().get(0);
         assertEquals(1, pos.getRow());
         assertNotNull(pos.getTableColumn());
+    }
+
+    @Test public void test_rt_34649() {
+        final int items = 8;
+        root.getChildren().clear();
+        root.setExpanded(true);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+        tableView.setRoot(root);
+
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        final FocusModel fm = tableView.getFocusModel();
+        sm.setSelectionMode(SelectionMode.SINGLE);
+
+        assertFalse(sm.isSelected(4));
+        assertFalse(fm.isFocused(4));
+        VirtualFlowTestUtils.clickOnRow(tableView, 4, true, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(4));
+        assertTrue(fm.isFocused(4));
+
+        VirtualFlowTestUtils.clickOnRow(tableView, 4, true, KeyModifier.getShortcutKey());
+        assertFalse(sm.isSelected(4));
+        assertTrue(fm.isFocused(4));
+    }
+
+    @Test public void test_rt_35338() {
+        root.getChildren().clear();
+        tableView.setRoot(root);
+        tableView.getColumns().setAll(col0);
+
+        col0.setWidth(20);
+        tableView.setMinWidth(1000);
+        tableView.setMinWidth(1000);
+
+        TreeTableRow row = (TreeTableRow) VirtualFlowTestUtils.getCell(tableView, 4);
+        assertNotNull(row);
+        assertNull(row.getItem());
+        assertEquals(4, row.getIndex());
+
+        MouseEventFirer mouse = new MouseEventFirer(row);
+        mouse.fireMousePressAndRelease(1, 100, 10);
     }
 }

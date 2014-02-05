@@ -934,11 +934,15 @@ public class TreeView<T> extends Control {
         // normalize the requested row based on whether showRoot is set
         final int _row = isShowRoot() ? row : (row + 1);
 
-        if (treeItemCacheMap.containsKey(_row)) {
-            SoftReference<TreeItem<T>> treeItemRef = treeItemCacheMap.get(_row);
-            TreeItem<T> treeItem = treeItemRef.get();
-            if (treeItem != null) {
-                return treeItem;
+        if (expandedItemCountDirty) {
+            updateExpandedItemCount(getRoot());
+        } else {
+            if (treeItemCacheMap.containsKey(_row)) {
+                SoftReference<TreeItem<T>> treeItemRef = treeItemCacheMap.get(_row);
+                TreeItem<T> treeItem = treeItemRef.get();
+                if (treeItem != null) {
+                    return treeItem;
+                }
             }
         }
 
@@ -1218,9 +1222,9 @@ public class TreeView<T> extends Control {
                     // in which the children were added, rather than from the
                     // actual position of the new child. This led to selection
                     // being moved off the parent TreeItem by mistake.
-                    if (e.getAddedSize() == 1) {
-                        startRow = treeView.getRow(e.getAddedChildren().get(0));
-                    }
+                    // The 'if (e.getAddedSize() == 1)' condition here was
+                    // subsequently commented out due to RT-33894.
+                    startRow = treeView.getRow(e.getAddedChildren().get(0));
                 } else if (e.wasRemoved()) {
                     // shuffle selection by the number of removed items
                     shift = treeItem.isExpanded() ? -e.getRemovedSize() : 0;
@@ -1443,11 +1447,13 @@ public class TreeView<T> extends Control {
                 
                 if(shift != 0) {
                     final int newFocus = getFocusedIndex() + shift;
-                    Platform.runLater(new Runnable() {
-                        @Override public void run() {
-                            focus(newFocus);
-                        }
-                    });
+                    if (newFocus >= 0) {
+                        Platform.runLater(new Runnable() {
+                            @Override public void run() {
+                                focus(newFocus);
+                            }
+                        });
+                    }
                 } 
             }
         };

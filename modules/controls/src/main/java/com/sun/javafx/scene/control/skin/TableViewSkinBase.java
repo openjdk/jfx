@@ -37,8 +37,7 @@ import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
-import javafx.scene.control.Label;
-import javafx.scene.control.SelectionModel;
+import javafx.scene.control.*;
 
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -54,14 +53,6 @@ import javafx.beans.value.WeakChangeListener;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
-import javafx.scene.control.Control;
-import javafx.scene.control.IndexedCell;
-import javafx.scene.control.ResizeFeaturesBase;
-import javafx.scene.control.ScrollToEvent;
-import javafx.scene.control.TableColumnBase;
-import javafx.scene.control.TableFocusModel;
-import javafx.scene.control.TablePositionBase;
-import javafx.scene.control.TableSelectionModel;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -447,6 +438,9 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
      * if this is a horizontal container, then the scrolling will be to the right.
      */
     public int onScrollPageDown(boolean isFocusDriven) {
+        TableSelectionModel<S> sm = getSelectionModel();
+        if (sm == null) return -1;
+
         final int itemCount = getItemCount();
 
         I lastVisibleCell = flow.getLastVisibleCellWithinViewPort();
@@ -460,7 +454,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
         lastVisibleCellIndex = lastVisibleCellIndex >= itemCount ? itemCount - 1 : lastVisibleCellIndex;
         
         // isSelected represents focus OR selection
-        boolean isSelected = false;
+        boolean isSelected;
         if (isFocusDriven) {
             isSelected = lastVisibleCell.isFocused() || isCellFocused(lastVisibleCellIndex);
         } else {
@@ -468,12 +462,16 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
         }
         
         if (isSelected) {
-            // if the last visible cell is selected, we want to shift that cell up
-            // to be the top-most cell, or at least as far to the top as we can go.
-            flow.showAsFirst(lastVisibleCell);
+            boolean isLeadIndex = isLeadIndex(isFocusDriven, lastVisibleCellIndex);
 
-            I newLastVisibleCell = flow.getLastVisibleCellWithinViewPort();
-            lastVisibleCell = newLastVisibleCell == null ? lastVisibleCell : newLastVisibleCell;
+            if (isLeadIndex) {
+                // if the last visible cell is selected, we want to shift that cell up
+                // to be the top-most cell, or at least as far to the top as we can go.
+                flow.showAsFirst(lastVisibleCell);
+
+                I newLastVisibleCell = flow.getLastVisibleCellWithinViewPort();
+                lastVisibleCell = newLastVisibleCell == null ? lastVisibleCell : newLastVisibleCell;
+            }
         } 
 
         int newSelectionIndex = lastVisibleCell.getIndex();
@@ -489,7 +487,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
     public int onScrollPageUp(boolean isFocusDriven) {
         I firstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
         if (firstVisibleCell == null) return -1;
-        
+
         int firstVisibleCellIndex = firstVisibleCell.getIndex();
 
         // isSelected represents focus OR selection
@@ -501,17 +499,29 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
         }
 
         if (isSelected) {
-            // if the first visible cell is selected, we want to shift that cell down
-            // to be the bottom-most cell, or at least as far to the bottom as we can go.
-            flow.showAsLast(firstVisibleCell);
+            boolean isLeadIndex = isLeadIndex(isFocusDriven, firstVisibleCellIndex);
 
-            I newFirstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
-            firstVisibleCell = newFirstVisibleCell == null ? firstVisibleCell : newFirstVisibleCell;
+            if (isLeadIndex) {
+                // if the first visible cell is selected, we want to shift that cell down
+                // to be the bottom-most cell, or at least as far to the bottom as we can go.
+                flow.showAsLast(firstVisibleCell);
+
+                I newFirstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
+                firstVisibleCell = newFirstVisibleCell == null ? firstVisibleCell : newFirstVisibleCell;
+            }
         }
 
         int newSelectionIndex = firstVisibleCell.getIndex();
         flow.show(newSelectionIndex);
         return newSelectionIndex;
+    }
+
+    private boolean isLeadIndex(boolean isFocusDriven, int index) {
+        final TableSelectionModel<S> sm = getSelectionModel();
+        final FocusModel fm = getFocusModel();
+
+        return (isFocusDriven && fm.getFocusedIndex() == index)
+                || (! isFocusDriven && sm.getSelectedIndex() == index);
     }
     
      boolean isColumnPartiallyOrFullyVisible(TC col) {

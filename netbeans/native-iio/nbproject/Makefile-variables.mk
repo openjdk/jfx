@@ -7,21 +7,21 @@ CND_BASEDIR=`pwd`
 CND_BUILDDIR=build
 CND_DISTDIR=dist
 # Debug configuration
-CND_PLATFORM_Debug=Cygwin_4.x-Windows
-CND_ARTIFACT_DIR_Debug=dist/Debug/Cygwin_4.x-Windows
-CND_ARTIFACT_NAME_Debug=libnative-iio.dll
-CND_ARTIFACT_PATH_Debug=dist/Debug/Cygwin_4.x-Windows/libnative-iio.dll
-CND_PACKAGE_DIR_Debug=dist/Debug/Cygwin_4.x-Windows/package
-CND_PACKAGE_NAME_Debug=libnative-iio.dll.tar
-CND_PACKAGE_PATH_Debug=dist/Debug/Cygwin_4.x-Windows/package/libnative-iio.dll.tar
+CND_PLATFORM_Debug=GNU-MacOSX
+CND_ARTIFACT_DIR_Debug=dist/Debug/GNU-MacOSX
+CND_ARTIFACT_NAME_Debug=libnative-iio.dylib
+CND_ARTIFACT_PATH_Debug=dist/Debug/GNU-MacOSX/libnative-iio.dylib
+CND_PACKAGE_DIR_Debug=dist/Debug/GNU-MacOSX/package
+CND_PACKAGE_NAME_Debug=libnative-iio.dylib.tar
+CND_PACKAGE_PATH_Debug=dist/Debug/GNU-MacOSX/package/libnative-iio.dylib.tar
 # Release configuration
-CND_PLATFORM_Release=Cygwin_4.x-Windows
-CND_ARTIFACT_DIR_Release=dist/Release/Cygwin_4.x-Windows
-CND_ARTIFACT_NAME_Release=libnative-iio.dll
-CND_ARTIFACT_PATH_Release=dist/Release/Cygwin_4.x-Windows/libnative-iio.dll
-CND_PACKAGE_DIR_Release=dist/Release/Cygwin_4.x-Windows/package
-CND_PACKAGE_NAME_Release=libnative-iio.dll.tar
-CND_PACKAGE_PATH_Release=dist/Release/Cygwin_4.x-Windows/package/libnative-iio.dll.tar
+CND_PLATFORM_Release=GNU-MacOSX
+CND_ARTIFACT_DIR_Release=dist/Release/GNU-MacOSX
+CND_ARTIFACT_NAME_Release=libnative-iio.dylib
+CND_ARTIFACT_PATH_Release=dist/Release/GNU-MacOSX/libnative-iio.dylib
+CND_PACKAGE_DIR_Release=dist/Release/GNU-MacOSX/package
+CND_PACKAGE_NAME_Release=libnative-iio.dylib.tar
+CND_PACKAGE_PATH_Release=dist/Release/GNU-MacOSX/package/libnative-iio.dylib.tar
 #
 # include compiler specific variables
 #

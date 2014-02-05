@@ -261,6 +261,9 @@ public abstract class Chart extends Region {
 
     // -------------- CONSTRUCTOR --------------------------------------------------------------------------------------
 
+    /**
+     * Creates a new default Chart instance.
+     */
     public Chart() {
         titleLabel.setAlignment(Pos.CENTER);
         getChildren().addAll(titleLabel, chartContent);

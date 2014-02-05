@@ -364,6 +364,14 @@ public abstract class Application {
         return true; // overridden in platform application class
     }
 
+    /**
+     * Notifies the Application that rendering has completed for current pulse.
+     *
+     * This is called on the render thread.
+     */
+    public void notifyRenderingFinished() {
+    }
+
     public void terminate() {
         checkEventThread();
         try {

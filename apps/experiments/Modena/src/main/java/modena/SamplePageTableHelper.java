@@ -273,9 +273,7 @@ public class SamplePageTableHelper {
                 System.out.println("Edit commit event: " + t.getNewValue());
             }
         });
-        final Node graphic1 = new ImageView(new Image("file:src/helloworld/about_16.png"));
         lastNameCol = new TableColumn<Person, String>();
-        lastNameCol.setGraphic(graphic1);
         lastNameCol.setText("Last");
         lastNameCol.setSortType(TableColumn.SortType.DESCENDING);
         lastNameCol.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<Person, String>, ObservableValue<String>>() {

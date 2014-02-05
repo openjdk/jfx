@@ -107,7 +107,6 @@ public class SampleInfo {
         this.ensemblePath = ensemblePath;
         this.baseUri = baseUri;
         this.appClass = appClass;
-        this.previewUrl = previewUrl;
         this.resourceUrls = resourceUrls;
         this.mainFileUrl = mainFileUrl;
         this.apiClasspaths = apiClasspaths;
@@ -118,8 +117,22 @@ public class SampleInfo {
         this.runsOnEmbedded = runsOnEmbedded;
         
         if (EnsembleApp.PRELOAD_PREVIEW_IMAGES) {
-            getImage(getClass().getResource(previewUrl).toExternalForm());
+            // Note: there may be missing classes/resources due to some filtering
+            if (PlatformFeatures.USE_EMBEDDED_FILTER && !runsOnEmbedded) {
+                // we should skip loading this image which will not ever be shown
+            } else {
+                java.net.URL url = getClass().getResource(previewUrl);
+                if (url != null) {
+                    getImage(url.toExternalForm());
+                } else {
+                    // mark this previewURL as missing
+                    System.out.println("Note: Sample preview "+ensemblePath+" not found");
+                    previewUrl = null;
+                }
+            }
         }
+
+        this.previewUrl = previewUrl;
     }
     
     @Override public String toString() {

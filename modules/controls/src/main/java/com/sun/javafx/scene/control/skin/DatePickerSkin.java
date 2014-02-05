@@ -284,7 +284,7 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
         if (textField != null) return textField;
 
         textField = datePicker.getEditor();
-        textField.setFocusTraversable(true);
+        textField.focusTraversableProperty().bindBidirectional(datePicker.focusTraversableProperty());
         textField.promptTextProperty().bind(datePicker.promptTextProperty());
 
         textField.focusedProperty().addListener(new ChangeListener<Boolean>() {

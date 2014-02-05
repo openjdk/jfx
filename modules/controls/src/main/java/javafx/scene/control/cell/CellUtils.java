@@ -29,6 +29,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.control.Cell;
@@ -240,18 +241,26 @@ class CellUtils {
     
     static <T> TextField createTextField(final Cell<T> cell, final StringConverter<T> converter) {
         final TextField textField = new TextField(getItemText(cell, converter));
+
+        // Use onAction here rather than onKeyReleased (with check for Enter),
+        // as otherwise we encounter RT-34685
+        textField.setOnAction(new EventHandler<ActionEvent>() {
+            @Override public void handle(ActionEvent event) {
+                if (converter == null) {
+                    throw new IllegalStateException(
+                            "Attempting to convert text input into Object, but provided "
+                                    + "StringConverter is null. Be sure to set a StringConverter "
+                                    + "in your cell factory.");
+                }
+                cell.commitEdit(converter.fromString(textField.getText()));
+                event.consume();
+            }
+        });
         textField.setOnKeyReleased(new EventHandler<KeyEvent>() {
             @Override public void handle(KeyEvent t) {
-                if (t.getCode() == KeyCode.ENTER) {
-                    if (converter == null) {
-                        throw new IllegalStateException(
-                            "Attempting to convert text input into Object, but provided "
-                                + "StringConverter is null. Be sure to set a StringConverter "
-                                + "in your cell factory.");
-                    }
-                    cell.commitEdit(converter.fromString(textField.getText()));
-                } else if (t.getCode() == KeyCode.ESCAPE) {
+                if (t.getCode() == KeyCode.ESCAPE) {
                     cell.cancelEdit();
+                    t.consume();
                 }
             }
         });

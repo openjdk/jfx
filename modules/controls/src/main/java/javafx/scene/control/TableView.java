@@ -87,8 +87,9 @@ import com.sun.javafx.scene.control.skin.TableViewSkinBase;
  *   <li>Support for {@link TableColumn#cellFactoryProperty() cell factories} to
  *      easily customize {@link Cell cell} contents in both rendering and editing
  *      states.
- *   <li>Specification of {@link #minWidthProperty() minWidth}/
- *      {@link #prefWidthProperty() prefWidth}/{@link #maxWidthProperty() maxWidth},
+ *   <li>Specification of {@link TableColumn#minWidthProperty() minWidth}/
+ *      {@link TableColumn#prefWidthProperty() prefWidth}/
+ *      {@link TableColumn#maxWidthProperty() maxWidth},
  *      and also {@link TableColumn#resizableProperty() fixed width columns}.
  *   <li>Width resizing by the user at runtime.
  *   <li>Column reordering by the user at runtime.
@@ -2141,6 +2142,8 @@ public class TableView<S> extends Control {
         }
 
         @Override public void clearAndSelect(int row, TableColumn<S,?> column) {
+            if (row < 0 || row >= getItemCount()) return;
+
             // RT-33558 if this method has been called with a given row/column
             // intersection, and that row/column intersection is the only
             // selection currently, then this method becomes a no-op.
@@ -2175,7 +2178,7 @@ public class TableView<S> extends Control {
             // fire off a single add/remove/replace notification (rather than
             // individual remove and add notifications) - see RT-33324
             int changeIndex = selectedCellsSeq.indexOf(new TablePosition(getTableView(), row, column));
-            ListChangeListener.Change change = new NonIterableChange.GenericAddRemoveChange<>(
+            ListChangeListener.Change change = new NonIterableChange.GenericAddRemoveChange<TablePosition<S,?>>(
                     changeIndex, changeIndex+1, previousSelection, selectedCellsSeq);
             handleSelectedCellsListChangeEvent(change);
         }
@@ -2337,8 +2340,11 @@ public class TableView<S> extends Control {
                 
                 int focusedIndex = getFocusedIndex();
                 if (focusedIndex == -1) {
-                    select(getItemCount() - 1);
-                    focus(indices.get(indices.size() - 1));
+                    final int itemCount = getItemCount();
+                    if (itemCount > 0) {
+                        select(itemCount - 1);
+                        focus(indices.get(indices.size() - 1));
+                    }
                 } else {
                     select(focusedIndex);
                     focus(focusedIndex);

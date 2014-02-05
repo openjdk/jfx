@@ -35,6 +35,8 @@ import javafx.beans.property.ObjectProperty;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
+import javafx.css.StyleOrigin;
+import javafx.css.StyleableObjectProperty;
 import javafx.geometry.HPos;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
@@ -355,9 +357,15 @@ public abstract class TableRowSkinBase<T,
                 // alignment has not been manually changed, but for now this will
                 // do.
                 final boolean centreContent = h <= 24.0;
-                if (! centreContent && tableCell.getAlignment() == Pos.CENTER_LEFT) {
+
+                // if the style origin is null then the property has not been
+                // set (or it has been reset to its default), which means that
+                // we can set it without overwriting someone elses settings.
+                final StyleOrigin origin = ((StyleableObjectProperty) tableCell.alignmentProperty()).getStyleOrigin();
+                if (! centreContent && origin == null) {
                     tableCell.setAlignment(Pos.TOP_LEFT);
                 }
+                // --- end of RT-32700 fix
 
                 ///////////////////////////////////////////
                 // further indentation code starts here

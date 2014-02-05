@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -176,6 +176,11 @@ public class StubStage implements TKStage {
     @Override
     public void setMaximized(boolean maximized) {
         notificationSender.changedMaximized(maximized);
+    }
+
+    @Override
+    public void setAlwaysOnTop(boolean alwaysOnTop) {
+        notificationSender.changedAlwaysOnTop(alwaysOnTop);
     }
 
     @Override
@@ -425,6 +430,15 @@ public class StubStage implements TKStage {
                         @Override
                         public void execute(final TKStageListener listener) {
                             listener.changedMaximized(maximized);
+                        }
+                    });
+        }
+
+        public void changedAlwaysOnTop(boolean alwaysOnTop) {
+            process(new Notification() {
+                        @Override
+                        public void execute(final TKStageListener listener) {
+                            listener.changedAlwaysOnTop(alwaysOnTop);
                         }
                     });
         }

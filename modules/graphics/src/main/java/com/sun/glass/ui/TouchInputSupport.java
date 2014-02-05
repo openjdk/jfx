@@ -24,7 +24,6 @@
  */
 package com.sun.glass.ui;
 
-import com.sun.glass.events.GestureEvent;
 import com.sun.glass.events.TouchEvent;
 
 import java.util.HashMap;
@@ -35,8 +34,17 @@ public class TouchInputSupport
     private int touchCount = 0;
 
     private boolean filterTouchCoordinates;
-    private Map<Long, Integer> touchX;
-    private Map<Long, Integer> touchY;
+    private static class TouchCoord {
+        private final int x, y, xAbs, yAbs;
+
+        private TouchCoord(int x, int y, int xAbs, int yAbs) {
+            this.x = x;
+            this.y = y;
+            this.xAbs = xAbs;
+            this.yAbs = yAbs;
+        }
+    }
+    private Map<Long, TouchCoord> touch;
 
     private TouchCountListener listener;
 
@@ -56,8 +64,7 @@ public class TouchInputSupport
         this.listener = listener;
         this.filterTouchCoordinates = filterTouchCoordinates;
         if (filterTouchCoordinates) {
-            touchX = new HashMap<Long, Integer>();
-            touchY = new HashMap<Long, Integer>();
+            touch = new HashMap<>();
         }
     }
 
@@ -68,6 +75,21 @@ public class TouchInputSupport
 
     public void notifyBeginTouchEvent(View view, int modifiers, boolean isDirect,
                                       int touchEventCount) {
+
+        if (curView != null && view != curView && touchCount != 0) {
+            // Release the currently pressed touch points
+            curView.notifyBeginTouchEvent(0, true, touchCount);
+            for (Map.Entry<Long, TouchCoord> e : touch.entrySet()) {
+                TouchCoord coord = e.getValue();
+                curView.notifyNextTouchEvent(TouchEvent.TOUCH_RELEASED, e.getKey(), coord.x, coord.y, coord.xAbs, coord.yAbs);
+            }
+            curView.notifyEndTouchEvent();
+            touchCount = 0;
+            if (listener != null ) {
+                listener.touchCountChanged(this, curView, 0, true);
+            }
+        }
+
         curTouchCount = touchCount;
         curView = view;
         curModifiers = modifiers;
@@ -110,7 +132,7 @@ public class TouchInputSupport
         }
         
         if (filterTouchCoordinates) {
-            state = filterTouchInputState(state, id, x, y);
+            state = filterTouchInputState(state, id, x, y, xAbs, yAbs);
         }
 
         if (view != null) {
@@ -118,21 +140,20 @@ public class TouchInputSupport
         }
     }
 
-    private int filterTouchInputState(int state, long id, int x, int y) {
+    private int filterTouchInputState(int state, long id, int x, int y, int xAbs, int yAbs) {
         switch (state) {
             case TouchEvent.TOUCH_RELEASED:
-                touchX.remove(id);
-                touchY.remove(id);
+                touch.remove(id);
                 break;
             case TouchEvent.TOUCH_MOVED:
-                if (x == touchX.get(id) && y == touchY.get(id)) {
+                TouchCoord c = touch.get(id);
+                if (x == c.x && y == c.y) {
                     state = TouchEvent.TOUCH_STILL;
                     break;
                 }
                 // fall through;
             case TouchEvent.TOUCH_PRESSED:
-                touchX.put(id, x);
-                touchY.put(id, y);
+                touch.put(id, new TouchCoord(x, y, xAbs, yAbs));
                 break;
             case TouchEvent.TOUCH_STILL:
                 break;

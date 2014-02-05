@@ -428,6 +428,15 @@ public class PieChart extends Chart {
             item.setRadiusMultiplier(1);
             item.setCurrentPieValue(item.getPieValue());
         }
+
+        // we sort the text nodes to always be at the end of the children list, so they have a higher z-order
+        // (Fix for RT-34564)
+        for (int i = 0; i < getChartChildren().size(); i++) {
+            Node n = getChartChildren().get(i);
+            if (n instanceof Text) {
+                n.toFront();
+            }
+        }
     }
 
     private void removeDataItemRef(Data item) {
@@ -925,6 +934,10 @@ public class PieChart extends Chart {
          */
         private ObjectProperty<Node> node = new SimpleObjectProperty<Node>(this, "node");
 
+        /**
+         * Returns the node that represents the pie slice. You can use this to
+         * add mouse event listeners etc.
+         */
         public Node getNode() {
             return node.getValue();
         }

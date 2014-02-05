@@ -299,6 +299,8 @@ final class PaintCollector implements CompletionListener {
                 toolkit.vsyncHint();
             }
 
+            Application.GetApplication().notifyRenderingFinished();
+
             // If pulse logging is enabled, then we must call renderEnd now
             // that we know that all of the scene's being rendered are finished
             if (PULSE_LOGGING_ENABLED) {
