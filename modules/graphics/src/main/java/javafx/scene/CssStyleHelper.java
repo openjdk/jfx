@@ -977,9 +977,10 @@ final class CssStyleHelper {
                         errors.add(error);
                     }
                     if (LOGGER.isLoggable(Level.WARNING)) {
-                        LOGGER.warning("caught: ", cce);
-                        LOGGER.warning("styleable = " + cssMetaData);
-                        LOGGER.warning("node = " + styleable.toString());
+                        LOGGER.warning(msg);
+                        LOGGER.fine("caught: ", cce);
+                        LOGGER.fine("styleable = " + cssMetaData);
+                        LOGGER.fine("node = " + styleable.toString());
                     }
                     return SKIP;
                 }
@@ -1467,7 +1468,8 @@ final class CssStyleHelper {
                     errors.add(error);
                 }
                 if (LOGGER.isLoggable(Level.WARNING)) {
-                    LOGGER.warning("caught: ", iae);
+                    LOGGER.warning(msg);
+                    LOGGER.fine("caught: ", iae);
                     LOGGER.fine("styleable = " + cssMetaData);
                     LOGGER.fine("node = " + styleable.toString());
                 }
@@ -1480,7 +1482,8 @@ final class CssStyleHelper {
                     errors.add(error);
                 }
                 if (LOGGER.isLoggable(Level.WARNING)) {
-                    LOGGER.warning("caught: ", npe);
+                    LOGGER.warning(msg);
+                    LOGGER.fine("caught: ", npe);
                     LOGGER.fine("styleable = " + cssMetaData);
                     LOGGER.fine("node = " + styleable.toString());
                 }

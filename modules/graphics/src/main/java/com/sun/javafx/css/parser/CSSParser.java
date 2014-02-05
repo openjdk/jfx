@@ -158,16 +158,7 @@ final public class CSSParser {
         sourceOfInlineStyle = styleable;
     }
 
-    private static final PlatformLogger LOGGER;
-    static {
-        LOGGER = com.sun.javafx.Logging.getCSSLogger();
-        final Level level = LOGGER.level();
-        if (level == null || (
-            level.compareTo(Level.WARNING) > 0 &&
-            level != Level.OFF)) {
-            LOGGER.setLevel(Level.WARNING);
-        }
-    }
+    private static final PlatformLogger LOGGER = com.sun.javafx.Logging.getCSSLogger();
 
     private static final class ParseException extends Exception {
         ParseException(String message) {
