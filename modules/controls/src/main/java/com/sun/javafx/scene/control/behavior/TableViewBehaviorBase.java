@@ -1007,7 +1007,10 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         }
         
         int leadSelectedIndex = onScrollPageUp.call(false);
-        
+
+        // fix for RT-34407
+        int adjust = leadIndex < leadSelectedIndex ? 1 : -1;
+
         selectionChanging = true;
         if (sm.getSelectionMode() == null || sm.getSelectionMode() == SelectionMode.SINGLE) {
             if (sm.isCellSelectionEnabled()) {
@@ -1018,9 +1021,9 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         } else {
             sm.clearSelection();
             if (sm.isCellSelectionEnabled()) {
-                sm.selectRange(leadIndex, col, leadSelectedIndex - 1, col);
+                sm.selectRange(leadIndex, col, leadSelectedIndex + adjust, col);
             } else {
-                sm.selectRange(leadIndex, leadSelectedIndex - 1);
+                sm.selectRange(leadIndex, leadSelectedIndex + adjust);
             }
         }
         selectionChanging = false;
@@ -1041,6 +1044,9 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         }
         
         int leadSelectedIndex = onScrollPageDown.call(false);
+
+        // fix for RT-34407
+        int adjust = leadIndex < leadSelectedIndex ? 1 : -1;
         
         selectionChanging = true;
         if (sm.getSelectionMode() == null || sm.getSelectionMode() == SelectionMode.SINGLE) {
@@ -1053,11 +1059,11 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
             sm.clearSelection();
 
             if (sm.isCellSelectionEnabled()) {
-                for (int _row = leadIndex; _row <= leadSelectedIndex + 1; _row++) {
+                for (int _row = leadIndex; _row <= leadSelectedIndex + adjust; _row++) {
                     sm.select(_row, col);
                 }
             } else {
-                sm.selectRange(leadIndex, leadSelectedIndex + 1);
+                sm.selectRange(leadIndex, leadSelectedIndex + adjust);
             }
         }
         selectionChanging = false;

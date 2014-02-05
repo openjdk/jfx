@@ -231,8 +231,8 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     private boolean isShiftDown = false;
     private boolean isShortcutDown = false;
     
-    private Callback<Integer, Integer> onScrollPageUp;
-    private Callback<Integer, Integer> onScrollPageDown;
+    private Callback<Boolean, Integer> onScrollPageUp;
+    private Callback<Boolean, Integer> onScrollPageDown;
     private Runnable onFocusPreviousRow;
     private Runnable onFocusNextRow;
     private Runnable onSelectPreviousRow;
@@ -240,8 +240,8 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     private Runnable onMoveToFirstCell;
     private Runnable onMoveToLastCell;
 
-    public void setOnScrollPageUp(Callback<Integer, Integer> c) { onScrollPageUp = c; }
-    public void setOnScrollPageDown(Callback<Integer, Integer> c) { onScrollPageDown = c; }
+    public void setOnScrollPageUp(Callback<Boolean, Integer> c) { onScrollPageUp = c; }
+    public void setOnScrollPageDown(Callback<Boolean, Integer> c) { onScrollPageDown = c; }
     public void setOnFocusPreviousRow(Runnable r) { onFocusPreviousRow = r; }
     public void setOnFocusNextRow(Runnable r) { onFocusNextRow = r; }
     public void setOnSelectPreviousRow(Runnable r) { onSelectPreviousRow = r; }
@@ -387,7 +387,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     private void scrollPageUp() {
         int newSelectedIndex = -1;
         if (onScrollPageUp != null) {
-            newSelectedIndex = onScrollPageUp.call(getAnchor());
+            newSelectedIndex = onScrollPageUp.call(false);
         }
         if (newSelectedIndex == -1) return;
         
@@ -399,7 +399,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     private void scrollPageDown() {
         int newSelectedIndex = -1;
         if (onScrollPageDown != null) {
-            newSelectedIndex = onScrollPageDown.call(getAnchor());
+            newSelectedIndex = onScrollPageDown.call(false);
         }
         if (newSelectedIndex == -1) return;
         
@@ -457,7 +457,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     }
     
     private void focusPageUp() {
-        int newFocusIndex = onScrollPageUp.call(getAnchor());
+        int newFocusIndex = onScrollPageUp.call(true);
         
         FocusModel<T> fm = getControl().getFocusModel();
         if (fm == null) return;
@@ -465,7 +465,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     }
     
     private void focusPageDown() {
-        int newFocusIndex = onScrollPageDown.call(getAnchor());
+        int newFocusIndex = onScrollPageDown.call(true);
         
         FocusModel<T> fm = getControl().getFocusModel();
         if (fm == null) return;
@@ -603,7 +603,10 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             setAnchor(leadIndex);
         }
         
-        int leadSelectedIndex = onScrollPageUp.call(getAnchor());
+        int leadSelectedIndex = onScrollPageUp.call(false);
+
+        // fix for RT-34407
+        int adjust = leadIndex < leadSelectedIndex ? 1 : -1;
 
         MultipleSelectionModel<T> sm = getControl().getSelectionModel();
         if (sm == null) return;
@@ -613,7 +616,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             sm.select(leadSelectedIndex);
         } else {
             sm.clearSelection();
-            sm.selectRange(leadIndex, leadSelectedIndex - 1);
+            sm.selectRange(leadIndex, leadSelectedIndex + adjust);
         }
         selectionChanging = false;
     }
@@ -628,17 +631,20 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             setAnchor(leadIndex);
         }
         
-        int leadSelectedIndex = onScrollPageDown.call(getAnchor());
+        int leadSelectedIndex = onScrollPageDown.call(false);
+
+        // fix for RT-34407
+        int adjust = leadIndex < leadSelectedIndex ? 1 : -1;
         
         MultipleSelectionModel<T> sm = getControl().getSelectionModel();
         if (sm == null) return;
-        
+
         selectionChanging = true;
         if (sm.getSelectionMode() == SelectionMode.SINGLE) {
             sm.select(leadSelectedIndex);
         } else {
             sm.clearSelection();
-            sm.selectRange(leadIndex, leadSelectedIndex + 1);
+            sm.selectRange(leadIndex, leadSelectedIndex + adjust);
         }
         selectionChanging = false;
     }
@@ -813,7 +819,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         if (fm == null) return;
 
         int leadIndex = fm.getFocusedIndex();
-        int leadSelectedIndex = onScrollPageUp.call(getAnchor());
+        int leadSelectedIndex = onScrollPageUp.call(false);
         sm.selectRange(leadIndex, leadSelectedIndex - 1);
     }
     
@@ -825,7 +831,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         if (fm == null) return;
         
         int leadIndex = fm.getFocusedIndex();
-        int leadSelectedIndex = onScrollPageDown.call(getAnchor());
+        int leadSelectedIndex = onScrollPageDown.call(false);
         sm.selectRange(leadIndex, leadSelectedIndex + 1);
     }
     

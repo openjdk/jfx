@@ -154,6 +154,7 @@ public:
     virtual void process_state(GdkEventWindowState*) = 0;
     
     virtual void notify_state(jint) = 0;
+    virtual void notify_on_top(bool) {}
 
     virtual void add_child(WindowContextTop* child) = 0;
     virtual void remove_child(WindowContextTop* child) = 0;
@@ -401,6 +402,7 @@ public:
     void set_gravity(float, float);
     void set_level(int);
     void set_visible(bool);
+    void notify_on_top(bool);
 
     void enter_fullscreen();
     void exit_fullscreen();
@@ -420,6 +422,7 @@ private:
     void set_window_resizable(bool, bool);
     void update_ontop_tree(bool);
     bool on_top_inherited();
+    bool effective_on_top();
     WindowContextTop(WindowContextTop&);
     WindowContextTop& operator= (const WindowContextTop&);
 };

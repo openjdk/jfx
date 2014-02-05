@@ -64,6 +64,15 @@ public abstract class Window {
          */
         public void handleScreenChangedEvent(Window window, long time, Screen oldScreen, Screen newScreen) {
         }
+
+        /**
+         * Notifies the listener that the window level has changed. The Level should be one of
+         * {@link com.sun.glass.ui.Window.Level#NORMAL}, {@link com.sun.glass.ui.Window.Level#FLOATING},
+         * {@link com.sun.glass.ui.Window.Level#TOPMOST}.
+         * @param level Level from {@link com.sun.glass.ui.Window.Level} class
+         */
+        public void handleLevelEvent(int level) {
+        }
     }
 
     // Native object handle (HWND, or NSWindow*, etc.)
@@ -240,7 +249,7 @@ public abstract class Window {
             default:
                 throw new RuntimeException("The functional type should be NORMAL, POPUP, or UTILITY, but not a combination of these");
         }
-
+        
         if (((styleMask & UNIFIED) != 0)
                 && !Application.GetApplication().supportsUnifiedWindows()) {
            styleMask &= ~UNIFIED;
@@ -1368,6 +1377,13 @@ public abstract class Window {
             return ((size > 0) &&
                     (x >= this.x) && (x < (this.x + this.width)) &&
                         (y >= this.y) && (y < (this.y + this.height)));
+        }
+    }
+    
+    protected void notifyLevelChanged(int level) {
+        this.level = level;
+        if (this.eventHandler != null) {
+            this.eventHandler.handleLevelEvent(level);
         }
     }
 

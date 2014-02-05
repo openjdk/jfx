@@ -3740,7 +3740,6 @@ public class TreeTableViewKeyInputTest {
         assertTrue(sm.isSelected(2));
     }
 
-    @Ignore("Bug not resolved yet")
     @Test public void test_rt34407_down_down_up() {
         final int items = 100;
         root.getChildren().clear();
@@ -3783,7 +3782,6 @@ public class TreeTableViewKeyInputTest {
         assertEquals(selectedIndicesCount, sm.getSelectedIndices().size());
     }
 
-    @Ignore("Bug not resolved yet")
     @Test public void test_rt34407_up_up_down() {
         final int items = 100;
         root.getChildren().clear();
@@ -3791,7 +3789,7 @@ public class TreeTableViewKeyInputTest {
         for (int i = 0; i < items; i++) {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
-        tableView.setPrefHeight(130); // roughly room for four rows
+        tableView.setPrefHeight(160); // roughly room for four rows
 
         new StageLoader(tableView);
         final TableFocusModel fm = tableView.getFocusModel();
@@ -3820,8 +3818,8 @@ public class TreeTableViewKeyInputTest {
         assertEquals(4, selectedIndicesCount);
 
         keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
-        assertEquals(99 - diff * 2, sm.getSelectedIndex());
-        assertEquals(selectedIndicesCount * 2 - 1, sm.getSelectedIndices().size());
+        assertEquals(99 - diff * 2 - 1, sm.getSelectedIndex());
+        assertEquals(selectedIndicesCount * 2, sm.getSelectedIndices().size());
 
         keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
         assertEquals(leadSelectedIndex, sm.getSelectedIndex());

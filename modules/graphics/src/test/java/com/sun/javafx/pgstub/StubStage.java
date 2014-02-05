@@ -180,6 +180,7 @@ public class StubStage implements TKStage {
 
     @Override
     public void setAlwaysOnTop(boolean alwaysOnTop) {
+        notificationSender.changedAlwaysOnTop(alwaysOnTop);
     }
 
     @Override
@@ -429,6 +430,15 @@ public class StubStage implements TKStage {
                         @Override
                         public void execute(final TKStageListener listener) {
                             listener.changedMaximized(maximized);
+                        }
+                    });
+        }
+
+        public void changedAlwaysOnTop(boolean alwaysOnTop) {
+            process(new Notification() {
+                        @Override
+                        public void execute(final TKStageListener listener) {
+                            listener.changedAlwaysOnTop(alwaysOnTop);
                         }
                     });
         }

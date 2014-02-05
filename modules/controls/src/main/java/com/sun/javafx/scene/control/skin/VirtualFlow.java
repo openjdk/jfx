@@ -1969,7 +1969,10 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
             final double cellStart = getCellPosition(cell);
             final double cellEnd = cellStart + getCellLength(cell);
-            if (cellEnd <= max) {
+
+            // we use the magic +2 to allow for a little bit of fuzziness,
+            // this is to help in situations such as RT-34407
+            if (cellEnd <= (max + 2)) {
                 return cell;
             }
         }

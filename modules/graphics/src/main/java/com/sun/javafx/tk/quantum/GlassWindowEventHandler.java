@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import com.sun.glass.events.WindowEvent;
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.Window;
+import com.sun.glass.ui.Window.Level;
 
 import com.sun.javafx.tk.FocusCause;
 
@@ -121,6 +122,11 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
         return null;
     }
 
+    @Override
+    public void handleLevelEvent(int level) {
+        stage.stageListener.changedAlwaysOnTop(level != Level.NORMAL);
+    }
+    
     @Override
     public void handleWindowEvent(final Window window, final long time, final int type) {
         this.window = window;

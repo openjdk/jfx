@@ -809,7 +809,7 @@ public class TableViewKeyInputTest {
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
         keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
-        assertTrue(isSelected(0,1,2));
+        assertTrue(debug(), isSelected(0,1,2));
         assertTrue(isAnchor(2));
     }
     
@@ -3219,7 +3219,6 @@ public class TableViewKeyInputTest {
         assertTrue(sm.isSelected(2));
     }
 
-    @Ignore("Bug not resolved yet")
     @Test public void test_rt34407_down_down_up() {
         final int items = 100;
         tableView.getItems().clear();
@@ -3261,7 +3260,6 @@ public class TableViewKeyInputTest {
         assertEquals(selectedIndicesCount, sm.getSelectedIndices().size());
     }
 
-    @Ignore("Bug not resolved yet")
     @Test public void test_rt34407_up_up_down() {
         final int items = 100;
         tableView.getItems().clear();

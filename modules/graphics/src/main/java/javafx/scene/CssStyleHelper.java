@@ -25,6 +25,7 @@
 package javafx.scene;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -1534,16 +1535,17 @@ final class CssStyleHelper {
                 Set<PseudoClass>[] transitionStates = parentHelper.getTransitionStates(parent);
                 StyleCacheEntry.Key parentCacheEntryKey = new StyleCacheEntry.Key(transitionStates, Font.getDefault());
                 cachedFont = parentCacheContainer.fontSizeCache.get(parentCacheEntryKey);
+            }
 
-            } else {
+            if (cachedFont == null)  {
 
                 Set<PseudoClass> pseudoClassState = parent.getPseudoClassStates();
                 StyleMap smap = parentHelper.getStyleMap(parent);
-                cachedFont = parentHelper.lookup(parent, dummyFontProperty, smap, pseudoClassState, parent, null);
+                cachedFont = parentHelper.lookupFont(parent, "-fx-font", smap, null);
             }
         }
 
-        return cachedFont;
+        return cachedFont != SKIP ? cachedFont : null;
     }
 
     /*package access for testing*/ FontPosture getFontPosture(Font font) {
