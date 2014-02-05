@@ -36,14 +36,20 @@ import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractPopupController;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
+import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.control.Labeled;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
 import static javafx.scene.input.KeyCode.ENTER;
 import static javafx.scene.input.KeyCode.ESCAPE;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.Region;
+import javafx.scene.text.Font;
+import javafx.scene.text.Text;
 import javafx.stage.Popup;
 import javafx.stage.WindowEvent;
 import javafx.util.Callback;
@@ -60,6 +66,7 @@ public class InlineEditController {
     private static final double TEXT_AREA_MIN_HEIGHT = 80;
     private static final double TEXT_FIELD_MIN_HEIGHT = 15;
     private final EditorController editorController;
+    private InlineEditPopupController popupController;
 
     private static final String NID_INLINE_EDITOR = "inlineEditor";
 
@@ -70,6 +77,14 @@ public class InlineEditController {
 
     public InlineEditController(final EditorController editorController) {
         this.editorController = editorController;
+    }
+
+    public boolean isWindowOpened() {
+        return (popupController == null) ? false : popupController.isWindowOpened();
+    }
+
+    public TextInputControl getEditor() {
+        return popupController.getEditor();
     }
 
     /**
@@ -91,10 +106,16 @@ public class InlineEditController {
             case TEXT_AREA:
                 editor = new TextArea(initialValue);
                 minHeight = TEXT_AREA_MIN_HEIGHT;
+                // Update some properties specific to TextArea
+                final Boolean isWrapText = isWrapText(target);
+                ((TextArea) editor).setWrapText(isWrapText);
                 break;
             case TEXT_FIELD:
                 editor = new TextField(initialValue);
                 minHeight = TEXT_FIELD_MIN_HEIGHT;
+                // Update some properties specific to TextField
+                final Pos alignment = getAlignment(target);
+                ((TextField) editor).setAlignment(alignment);
                 break;
             default:
                 // Should never occur
@@ -114,6 +135,12 @@ public class InlineEditController {
         editor.setPrefSize(editorWidth, editorHeight);
         editor.setId(NID_INLINE_EDITOR);
 
+        // Update some properties with the target properties values
+        final Insets padding = getPadding(target);
+        editor.setPadding(padding);
+        final Font font = getFont(target);
+        editor.setFont(font);
+
         return editor;
     }
 
@@ -130,8 +157,7 @@ public class InlineEditController {
 
         assert editor != null && anchor != null && requestCommit != null;
 
-        final InlineEditPopupController popupController
-                = new InlineEditPopupController(editor, requestCommit);
+        popupController = new InlineEditPopupController(editor, requestCommit);
 
         // Handle key events
         // 1) Commit then stop inline editing when pressing Ctl/Meta + ENTER key
@@ -155,6 +181,18 @@ public class InlineEditController {
                             // Consume the event so it is not received by the underlyting panel controller
                             event.consume();
                         }
+                        break;
+                    // COMMIT the new value on TAB key pressed
+                    case TAB:
+                        // Commit inline editing on TAB key
+                        boolean commitSucceeded = requestCommit.call(editor.getText());
+                        // If the commit succeeded, stop the editing session,
+                        // otherwise keeps the editing session on-going
+                        if (commitSucceeded) {
+                            popupController.closeWindow();
+                        }
+                        // Consume the event so it is not received by the underlyting panel controller
+                        event.consume();
                         break;
                     // STOP inline editing session without COMMIT on ESCAPE key pressed
                     case ESCAPE:
@@ -182,11 +220,59 @@ public class InlineEditController {
         }
     }
 
+    private Pos getAlignment(Node node) {
+        final Pos result;
+        if (node instanceof Labeled) {
+            result = ((Labeled) node).getAlignment();
+        } else if (node instanceof TextField) {
+            result = ((TextField) node).getAlignment();
+        } else {
+            result = Pos.CENTER_LEFT;
+        }
+        return result;
+    }
+
+    private Font getFont(Node node) {
+        final Font result;
+        if (node instanceof Labeled) {
+            result = ((Labeled) node).getFont();
+        } else if (node instanceof Text) {
+            result = ((Text) node).getFont();
+        } else if (node instanceof TextInputControl) {
+            result = ((TextInputControl) node).getFont();
+        } else {
+            result = Font.getDefault();
+        }
+        return result;
+    }
+
+    private Insets getPadding(Node node) {
+        final Insets result;
+        if (node instanceof Region) {
+            result = ((Region) node).getPadding();
+        } else {
+            result = Insets.EMPTY;
+        }
+        return result;
+    }
+
+    private boolean isWrapText(Node node) {
+        final boolean result;
+        if (node instanceof TextArea) {
+            result = ((TextArea) node).isWrapText();
+        } else if (node instanceof Labeled) {
+            result = ((Labeled) node).isWrapText();
+        } else {
+            result = false;
+        }
+        return result;
+    }
     /*
      * *************************************************************************
      * Popup controller class
      * *************************************************************************
      */
+
     private class InlineEditPopupController extends AbstractPopupController {
 
         private final TextInputControl editor;
@@ -197,6 +283,10 @@ public class InlineEditController {
             this.editor = editor;
             this.requestCommit = requestCommit;
             this.initialValue = editor.getText();
+        }
+
+        TextInputControl getEditor() {
+            return editor;
         }
 
         @Override

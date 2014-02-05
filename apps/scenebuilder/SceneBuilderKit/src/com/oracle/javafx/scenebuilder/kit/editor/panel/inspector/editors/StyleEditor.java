@@ -31,15 +31,27 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 
+import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.util.CssInternal;
+import com.sun.javafx.css.CssError;
+import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.parser.CSSParser;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
+import javafx.collections.ObservableSet;
+import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
+import javafx.css.Styleable;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
@@ -62,11 +74,13 @@ public class StyleEditor extends InlineListEditor {
 
     private List<String> cssProperties;
     private Set<Class<?>> selectedClasses;
+    private EditorController editorController;
 
     @SuppressWarnings("LeakingThisInConstructor")
-    public StyleEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
+    public StyleEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, EditorController editorController) {
         super(propMeta, selectedClasses);
         this.selectedClasses = selectedClasses;
+        this.editorController = editorController;
         setLayoutFormat(LayoutFormat.DOUBLE_LINE);
         addItem(getNewStyleItem());
     }
@@ -76,6 +90,16 @@ public class StyleEditor extends InlineListEditor {
             cssProperties = CssInternal.getCssProperties(selectedClasses);
         }
         return new StyleItem(this, cssProperties);
+    }
+
+    @Override
+    public void commit(EditorItem source) {
+        try {
+            userUpdateValueProperty(getValue());
+        } catch (Exception ex) {
+            editorController.getMessageLog().logWarningMessage(
+                    "inspector.style.valuetypeerror", ex.getMessage());
+        }
     }
 
     @Override
@@ -90,7 +114,12 @@ public class StyleEditor extends InlineListEditor {
             if (value == null) {
                 value = ""; //NOI18N
             }
-            value += styleItem.getValue() + " "; //NOI18N
+            assert styleItem instanceof StyleItem;
+            if (((StyleItem) styleItem).hasParsingError()) {
+                editorController.getMessageLog().logWarningMessage(
+                        "inspector.style.parsingerror", itemValue);
+            }
+            value += itemValue + " "; //NOI18N
         }
         if (value != null) {
             value = value.trim();
@@ -159,10 +188,10 @@ public class StyleEditor extends InlineListEditor {
         return false;
     }
 
-    @Override
-    public void reset(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
+    public void reset(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, EditorController editorController) {
         super.reset(propMeta, selectedClasses);
         this.selectedClasses = selectedClasses;
+        this.editorController = editorController;
         cssProperties = null;
         // add an empty item
         addItem(getNewStyleItem());
@@ -201,6 +230,8 @@ public class StyleEditor extends InlineListEditor {
         private TextField propertyTf;
         private String currentValue;
         private final EditorItemDelegate editor;
+        private boolean parsingError = false;
+        private ListChangeListener<CssError> errorListener;
 
         @SuppressWarnings("LeakingThisInConstructor")
         public StyleItem(EditorItemDelegate editor, List<String> suggestedList) {
@@ -230,8 +261,9 @@ public class StyleEditor extends InlineListEditor {
                     if (!propertyTf.getText().isEmpty() && !valueTf.getText().isEmpty()) {
 //                        System.out.println("StyleEditorItem : COMMIT");
                         editor.commit(StyleItem.this);
-                        assert event.getSource() instanceof TextField;
-                        ((TextField) event.getSource()).selectAll();
+                        if (event != null && event.getSource() instanceof TextField) {
+                            ((TextField) event.getSource()).selectAll();
+                        }
                     }
                     updateButtons();
                     currentValue = getValue();
@@ -262,7 +294,10 @@ public class StyleEditor extends InlineListEditor {
                 public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
                     if (!newValue) {
                         // focus lost: commit
-                        onActionListener.handle(new ActionEvent(propertyTf, null));
+                        editor.editing(false, onActionListener);
+                    } else {
+                        // got focus
+                        editor.editing(true, onActionListener);
                     }
                 }
             };
@@ -273,6 +308,24 @@ public class StyleEditor extends InlineListEditor {
             removeMi.setText(I18N.getString("inspector.list.remove"));
             moveUpMi.setText(I18N.getString("inspector.list.moveup"));
             moveDownMi.setText(I18N.getString("inspector.list.movedown"));
+
+            errorListener = new ListChangeListener<CssError>() {
+
+                @Override
+                public void onChanged(ListChangeListener.Change<? extends CssError> change) {
+                    while (change.next()) {
+                        if (change.wasAdded()) {
+                            for (CssError error : change.getAddedSubList()) {
+                                if (error instanceof CssError.InlineStyleParsingError) {
+                                    parsingError = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
         }
 
         @Override
@@ -288,7 +341,18 @@ public class StyleEditor extends InlineListEditor {
             } else {
                 value = propertyTf.getText().trim() + ": " + valueTf.getText().trim() + ";"; //NOI18N
             }
+
+            // Parse the style, and set the parsingError boolean if any error
+            parsingError = false;
+            StyleManager.errorsProperty().addListener(errorListener);
+            CSSParser.getInstance().parseInlineStyle(new StyleableStub(value));
+            StyleManager.errorsProperty().removeListener(errorListener);
+
             return value;
+        }
+
+        public boolean hasParsingError() {
+            return parsingError;
         }
 
         @Override
@@ -298,7 +362,7 @@ public class StyleEditor extends InlineListEditor {
                 style = style.substring(0, style.length() - 1);
             }
             // split in property and value
-            String[] styleItem = style.split(":");
+            String[] styleItem = style.split(":"); //NOI18N
             propertyTf.setText(styleItem[0].trim());
             // If invalid style, we may have more than 2 styleItem
             StringBuilder valueStr = new StringBuilder();
@@ -316,6 +380,12 @@ public class StyleEditor extends InlineListEditor {
             valueTf.setText(""); //NOI18N
             propertyTf.setPromptText(null);
             valueTf.setPromptText(null);
+        }
+        
+        // Please findBugs
+        @Override
+        public void requestFocus() {
+            super.requestFocus();
         }
 
         @Override
@@ -346,7 +416,9 @@ public class StyleEditor extends InlineListEditor {
 
         @FXML
         void add(ActionEvent event) {
-            editor.add(this, getNewStyleItem());
+            StyleItem styleItem = getNewStyleItem();
+            editor.add(this, styleItem);
+            styleItem.requestFocus();
         }
 
         @FXML
@@ -367,7 +439,9 @@ public class StyleEditor extends InlineListEditor {
         @FXML
         void plusBtTyped(KeyEvent event) {
             if (event.getCode() == KeyCode.ENTER) {
-                editor.add(this, getNewStyleItem());
+                StyleItem styleItem = getNewStyleItem();
+                editor.add(this, styleItem);
+                styleItem.requestFocus();
             }
         }
 
@@ -395,4 +469,50 @@ public class StyleEditor extends InlineListEditor {
             removeMi.setDisable(disable);
         }
     }
+
+    // Stub for style parsing
+    private static class StyleableStub implements Styleable {
+
+        private final String style;
+
+        private StyleableStub(String style) {
+            this.style = style;
+        }
+
+        @Override
+        public String getTypeSelector() {
+            return null;
+        }
+
+        @Override
+        public String getId() {
+            return null;
+        }
+
+        @Override
+        public ObservableList<String> getStyleClass() {
+            return FXCollections.emptyObservableList();
+        }
+
+        @Override
+        public String getStyle() {
+            return style;
+        }
+
+        @Override
+        public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
+            return Collections.emptyList();
+        }
+
+        @Override
+        public Styleable getStyleableParent() {
+            return null;
+        }
+
+        @Override
+        public ObservableSet<PseudoClass> getPseudoClassStates() {
+            return FXCollections.emptyObservableSet();
+        }
+    }
+
 }

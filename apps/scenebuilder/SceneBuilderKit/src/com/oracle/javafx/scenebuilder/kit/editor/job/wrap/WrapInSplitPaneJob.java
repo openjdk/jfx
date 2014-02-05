@@ -39,6 +39,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.FXOMObjectCourseCompar
 import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.FXOMObjectCourseComparator.UnidimensionalComparator;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -69,34 +70,38 @@ public class WrapInSplitPaneJob extends AbstractWrapInSubComponentJob {
         final Orientation orientation = getOrientation(children);
         JobUtils.setOrientation(newContainer, SplitPane.class, orientation.name());
     }
+    
+    @Override
+    protected Collection<FXOMObject> sortChildren(Set<FXOMObject> children) {
+        final List<FXOMObject> sorted = new ArrayList<>(children);
+        final Orientation orientation = getOrientation(children);
+        Collections.sort(sorted, UnidimensionalComparator.of(orientation));
+        return sorted;
+    }
 
     private Orientation getOrientation(final Set<FXOMObject> fxomObjects) {
-        int cols = sortAndComputeSizeByCourse(fxomObjects, GridCourse.COL_BY_COL);
+        int cols = computeSizeByCourse(fxomObjects, GridCourse.COL_BY_COL);
         if (cols == fxomObjects.size()) {
             return Orientation.HORIZONTAL;
         }
-        int rows = sortAndComputeSizeByCourse(fxomObjects, GridCourse.ROW_BY_ROW);
+        int rows = computeSizeByCourse(fxomObjects, GridCourse.ROW_BY_ROW);
         if (rows == fxomObjects.size()) {
             return Orientation.VERTICAL;
         }
         final Orientation orientation = cols >= rows
                 ? Orientation.HORIZONTAL : Orientation.VERTICAL;
-        Collections.sort(new ArrayList<>(fxomObjects), UnidimensionalComparator.of(orientation));
         return orientation;
     }
 
-    private int sortAndComputeSizeByCourse(
+    private int computeSizeByCourse(
             final Set<FXOMObject> fxomObjects,
             final GridCourse course) {
 
         final BidimensionalComparator comparator = new BidimensionalComparator(course);
-        final List<FXOMObject> unsorted = new ArrayList<>(fxomObjects);
-        Collections.sort(unsorted, comparator);
         FXOMObject lastObject = null;
         int rc = 0;
         int max = -1;
-        for (int i = 0; i < unsorted.size(); i++) {
-            final FXOMObject currentObject = unsorted.get(i);
+        for (FXOMObject currentObject : fxomObjects) {
             if (lastObject != null) {
                 if (comparator.compare(lastObject, currentObject) != 0) {
                     final Node lastNode = (Node) lastObject.getSceneGraphObject();

@@ -68,12 +68,12 @@ import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
-import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
 import javafx.util.Duration;
 
 /**
@@ -97,12 +97,12 @@ public abstract class PropertyEditor extends Editor {
             InspectorPanelController.class.getResource("images/css-icon.png").toExternalForm()); //NOI18N
     private Hyperlink propName;
     private HBox propNameNode;
-    private Tooltip tooltip;
     private MenuButton menu;
     private ValuePropertyMetadata propMeta = null;
     private Set<Class<?>> selectedClasses;
     private Object defaultValue;
     private final Set<ChangeListener<Object>> valueListeners = new HashSet<>();
+    private final Set<ChangeListener<Object>> transientValueListeners = new HashSet<>();
     private final Set<ChangeListener<Boolean>> editingListeners = new HashSet<>();
     private final Set<ChangeListener<Boolean>> indeterminateListeners = new HashSet<>();
     private ChangeListener<String> navigateRequestListener = null;
@@ -116,6 +116,7 @@ public abstract class PropertyEditor extends Editor {
     private MenuItem showCssMenuItem = null;
     private boolean updateFromModel = true; // Value update from the model
     private final ObjectProperty<Object> valueProperty = new SimpleObjectProperty<>();
+    private final ObjectProperty<Object> transientValueProperty = new SimpleObjectProperty<>();
     private final BooleanProperty editingProperty = new SimpleBooleanProperty(false);
     private final BooleanProperty invalidValueProperty = new SimpleBooleanProperty(false);
     private final StringProperty navigateRequestProperty = new SimpleStringProperty();
@@ -131,9 +132,6 @@ public abstract class PropertyEditor extends Editor {
         initialize();
         setSelectedClasses(selectedClasses);
         setPropNamePrettyText();
-        tooltip = new Tooltip();
-        propName.setTooltip(tooltip);
-        setTooltipText();
         this.defaultValue = propMeta.getDefaultValueObject();
     }
 
@@ -158,7 +156,8 @@ public abstract class PropertyEditor extends Editor {
                         }
                     } else {
                         // Special case for non-properties (fx:id, ...)
-                        EditorPlatform.open("http://docs.oracle.com/javafx/2/api/javafx/fxml/doc-files/introduction_to_fxml.html"); //NOI18N
+                        EditorPlatform.open(EditorPlatform.JAVADOC_HOME + 
+                                "javafx/2/api/javafx/fxml/doc-files/introduction_to_fxml.html"); //NOI18N
                     }
                     // Selection of multiple different classes ==> no link
                 } catch (IOException ex) {
@@ -201,8 +200,14 @@ public abstract class PropertyEditor extends Editor {
     public final MenuButton getMenu() {
         if (menu == null) {
             menu = new MenuButton();
+            
+            Region region = new Region();
+            menu.setGraphic(region);
+            region.getStyleClass().add("cog-shape"); //NOI18N
+            
+            
             menu.disableProperty().bind(disableProperty);
-            menu.getStyleClass().add("cog-button"); //NOI18N
+            menu.getStyleClass().add("cog-menubutton"); //NOI18N
             menu.setOpacity(0);
             if (fadeTransition == null) {
                 fadeTransition = new FadeTransition(Duration.millis(500), menu);
@@ -226,9 +231,7 @@ public abstract class PropertyEditor extends Editor {
                 @Override
                 public void handle(ActionEvent e) {
                     setValue(defaultValue);
-                    if (getCommitListener() != null) {
-                        getCommitListener().handle(null);
-                    }
+                    userUpdateValueProperty(defaultValue);
                 }
             });
         }
@@ -255,6 +258,18 @@ public abstract class PropertyEditor extends Editor {
     public void removeValueListener(ChangeListener<Object> listener) {
         valueProperty().removeListener(listener);
         valueListeners.remove(listener);
+    }
+
+    public void addTransientValueListener(ChangeListener<Object> listener) {
+        if (!transientValueListeners.contains(listener)) {
+            transientValueProperty().addListener(listener);
+            transientValueListeners.add(listener);
+        }
+    }
+
+    public void removeTransientValueListener(ChangeListener<Object> listener) {
+        transientValueProperty().removeListener(listener);
+        transientValueListeners.remove(listener);
     }
 
     public void addEditingListener(ChangeListener<Boolean> listener) {
@@ -299,6 +314,10 @@ public abstract class PropertyEditor extends Editor {
         Set<ChangeListener<Object>> valListeners = new HashSet<>(valueListeners);
         for (ChangeListener<Object> listener : valListeners) {
             removeValueListener(listener);
+        }
+        Set<ChangeListener<Object>> transientValListeners = new HashSet<>(transientValueListeners);
+        for (ChangeListener<Object> listener : transientValListeners) {
+            removeTransientValueListener(listener);
         }
         Set<ChangeListener<Boolean>> editListeners = new HashSet<>(editingListeners);
         for (ChangeListener<Boolean> listener : editListeners) {
@@ -444,7 +463,6 @@ public abstract class PropertyEditor extends Editor {
         this.propMeta = propMeta;
         setSelectedClasses(selClasses);
         setPropNamePrettyText();
-        setTooltipText();
         this.defaultValue = propMeta.getDefaultValueObject();
     }
 
@@ -458,6 +476,10 @@ public abstract class PropertyEditor extends Editor {
         return valueProperty;
     }
 
+    public ObjectProperty<Object> transientValueProperty() {
+        return transientValueProperty;
+    }
+
     public LayoutFormat getLayoutFormat() {
         return layoutFormat;
     }
@@ -467,12 +489,24 @@ public abstract class PropertyEditor extends Editor {
     }
 
     public void userUpdateValueProperty(Object value) {
-        if (!isValueChanged(value)) {
+        userUpdateValueProperty(value, false);
+    }
+
+    public void userUpdateTransientValueProperty(Object value) {
+        userUpdateValueProperty(value, true);
+    }
+
+    private void userUpdateValueProperty(Object value, boolean transientValue) {
+        if (!transientValue && !isValueChanged(value)) {
             return;
         }
         invalidValueProperty.setValue(false);
         indeterminateProperty.setValue(false);
-        valueProperty.setValue(value);
+        if (transientValue) {
+            transientValueProperty.setValue(value);
+        } else {
+            valueProperty.setValue(value);
+        }
         resetMenuUpdate(value);
     }
 
@@ -541,7 +575,6 @@ public abstract class PropertyEditor extends Editor {
             ImageView iv = new ImageView(cssIcon);
             propName.setGraphic(iv);
             propNameNode.getStyleClass().add("css-override"); //NOI18N
-            setTooltipText();
 
             // menu
             if (showCssMenuItem == null) {
@@ -575,7 +608,6 @@ public abstract class PropertyEditor extends Editor {
         if (propNameNode.getStyleClass().contains("css-override")) { //NOI18N
             propName.setGraphic(null);
             propNameNode.getStyleClass().remove("css-override"); //NOI18N
-            setTooltipText();
         }
         cssMenuUpdate();
     }
@@ -673,14 +705,6 @@ public abstract class PropertyEditor extends Editor {
 
     private void setPropNamePrettyText() {
         propName.setText(EditorUtils.toDisplayName(getPropertyName().getName()));
-    }
-
-    private void setTooltipText() {
-        if (isRuledByCss()) {
-            tooltip.setText(I18N.getString("inspector.css.tooltip"));
-        } else {
-            tooltip.setText(getPropertyName().getName()); //NOI18N
-        }
     }
 
     protected static void handleIndeterminate(Node node) {

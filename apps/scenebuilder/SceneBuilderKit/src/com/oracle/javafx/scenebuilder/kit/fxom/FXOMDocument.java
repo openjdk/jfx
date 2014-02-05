@@ -265,7 +265,7 @@ public class FXOMDocument {
         }
         final FXOMRefresher fxomRefresher = new FXOMRefresher();
         fxomRefresher.refresh(this);
-        if (sampleDataGenerator != null) {
+        if ((sampleDataGenerator != null) && (fxomRoot != null)) {
             sampleDataGenerator.assignSampleData(fxomRoot);
         }
         if (sceneGraphHolder != null) {

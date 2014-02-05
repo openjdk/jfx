@@ -82,13 +82,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
@@ -99,7 +97,6 @@ import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.Accordion;
-import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.MenuItem;
@@ -231,19 +228,11 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
     
     private FileTime loadFileTime;
     private Job saveJob;
-    
-    final static String[] imageExtensions = {"*.jpg", "*.jpeg", "*.png", "*.gif"}; //NOI18N
-    final static String[] audioExtensions = {"*.aif", "*.aiff", "*.mp3", "*.m4a", "*.wav", "*.m3u", "*.m3u8"}; //NOI18N
-    final static String[] videoExtensions = {"*.flv", "*.fxm", "*.mp4", "*.m4v"}; //NOI18N
-    final static String[] mediaExtensions;
 
-    static {
-        final Set<String> mediaSet = new HashSet<>();
-        mediaSet.addAll(Arrays.asList(imageExtensions));
-        mediaSet.addAll(Arrays.asList(audioExtensions));
-        mediaSet.addAll(Arrays.asList(videoExtensions));
-        mediaExtensions = mediaSet.toArray(new String[mediaSet.size()]);
-    }
+    private static List<String> imageExtensions;
+    private static List<String> audioExtensions;
+    private static List<String> videoExtensions;
+    private static List<String> mediaExtensions;
 
     private final EventHandler<KeyEvent> mainKeyEventFilter = new EventHandler<KeyEvent>() {
 
@@ -392,7 +381,8 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         final String fxmlText = FXOMDocument.readContentFromURL(fxmlURL);
         editorController.setFxmlTextAndLocation(fxmlText, fxmlURL);
         updateLoadFileTime();
-        updateStageTitleAndPreferences(); // No-op if fxml has not been loaded yet
+        updateStageTitle(); // No-op if fxml has not been loaded yet
+        updateFromDocumentPreferences();
         watchingController.update();
     }
     
@@ -402,7 +392,8 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
             final String fxmlText = FXOMDocument.readContentFromURL(fxmlURL);
             editorController.setFxmlTextAndLocation(fxmlText, null);
             updateLoadFileTime();
-            updateStageTitleAndPreferences(); // No-op if fxml has not been loaded yet
+            updateStageTitle(); // No-op if fxml has not been loaded yet
+            updateFromDocumentPreferences();
             watchingController.update();
         } catch(IOException x) {
             throw new IllegalStateException(x);
@@ -413,7 +404,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         try {
             editorController.setFxmlTextAndLocation("", null); //NOI18N
             updateLoadFileTime();
-            updateStageTitleAndPreferences(); // No-op if fxml has not been loaded yet
+            updateStageTitle(); // No-op if fxml has not been loaded yet
             watchingController.update();
         } catch (IOException x) {
             throw new IllegalStateException(x);
@@ -518,7 +509,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 break;
                 
             case SAVE_FILE:
-                result = editorController.canUndo();
+                result = isDocumentDirty();
                 break;
                 
             case SAVE_AS_FILE:
@@ -527,7 +518,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 break;
                 
             case REVERT_FILE:
-                result = editorController.canUndo() 
+                result = isDocumentDirty() 
                         && editorController.getFxomDocument().getLocation() != null;
                 break;
                 
@@ -640,12 +631,32 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 performGoToSection(SectionId.CODE);
                 break;
                 
-            case TOGGLE_LEFT_PANEL: 
-                leftSplitController.toggleTarget();
+            case TOGGLE_LEFT_PANEL:
+                if (leftSplitController.isTargetVisible()) {
+                    assert librarySplitController.isTargetVisible()
+                            || documentSplitController.isTargetVisible();
+                    // Hide Left => hide both Library + Document
+                    librarySplitController.hideTarget();
+                    documentSplitController.hideTarget();
+                    leftSplitController.hideTarget();
+                } else {
+                    assert librarySplitController.isTargetVisible() == false
+                            && documentSplitController.isTargetVisible() == false;
+                    // Show Left => show both Library + Document
+                    librarySplitController.showTarget();
+                    documentSplitController.showTarget();
+                    leftSplitController.showTarget();
+
+                    // This workarounds layout issues when showing Left
+                    libraryDocumentSplitPane.layout();
+                    libraryDocumentSplitPane.setDividerPositions(0.5);
+                }
                 // Update preferences
+                recordDocument.setLibraryVisible(librarySplitController.isTargetVisible());
+                recordDocument.setDocumentVisible(documentSplitController.isTargetVisible());
                 recordDocument.setLeftVisible(leftSplitController.isTargetVisible());
                 break;
-                
+
             case TOGGLE_RIGHT_PANEL:
                 rightSplitController.toggleTarget();
                 // Update preferences
@@ -669,23 +680,39 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 break;
                 
             case TOGGLE_LIBRARY_PANEL:
-                librarySplitController.toggleTarget();
-                if (librarySplitController.isTargetVisible() == false) {
-                    // Make sure Hierarchy is visible
-                    documentSplitController.showTarget();
-                }
-                // Update preferences
-                recordDocument.setLibraryVisible(librarySplitController.isTargetVisible());
-                break;
-                
-            case TOGGLE_DOCUMENT_PANEL:
-                documentSplitController.toggleTarget();
-                if (documentSplitController.isTargetVisible() == false) {
-                    // Make sure Library is visible
+                if (librarySplitController.isTargetVisible()) {
+                    assert leftSplitController.isTargetVisible();
+                    librarySplitController.hideTarget();
+                    if (documentSplitController.isTargetVisible() == false) {
+                        leftSplitController.hideTarget();
+                    }
+                } else {
+                    if (leftSplitController.isTargetVisible() == false) {
+                        leftSplitController.showTarget();
+                    }
                     librarySplitController.showTarget();
                 }
                 // Update preferences
+                recordDocument.setLibraryVisible(librarySplitController.isTargetVisible());
+                recordDocument.setLeftVisible(leftSplitController.isTargetVisible());
+                break;
+                
+            case TOGGLE_DOCUMENT_PANEL:
+                if (documentSplitController.isTargetVisible()) {
+                    assert leftSplitController.isTargetVisible();
+                    documentSplitController.hideTarget();
+                    if (librarySplitController.isTargetVisible() == false) {
+                        leftSplitController.hideTarget();
+                    }
+                } else {
+                    if (leftSplitController.isTargetVisible() == false) {
+                        leftSplitController.showTarget();
+                    }
+                    documentSplitController.showTarget();
+                }
+                // Update preferences
                 recordDocument.setDocumentVisible(documentSplitController.isTargetVisible());
+                recordDocument.setLeftVisible(leftSplitController.isTargetVisible());
                 break;
                 
             case TOGGLE_OUTLINES_VISIBILITY:
@@ -704,10 +731,14 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 
             case SET_RESOURCE:
                 resourceController.performSetResource();
+                // Update preferences
+                recordDocument.setI18NResourceFile(getResourceFile());
                 break;
                 
             case REMOVE_RESOURCE:
                 resourceController.performRemoveResource();
+                // Update preferences
+                recordDocument.setI18NResourceFile(getResourceFile());
                 break;
                 
             case REVEAL_RESOURCE:
@@ -820,6 +851,10 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
     
     public File getResourceFile() {
         return resourceController.getResourceFile();
+    }
+    
+    public void setResourceFile(File file) {
+        resourceController.setResourceFile(file);
     }
     
     public boolean isDocumentDirty() {
@@ -1004,7 +1039,38 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
 
     @Override
     protected void controllerDidCreateStage() {
-        updateStageTitleAndPreferences();
+        updateStageTitle();
+        updateFromDocumentPreferences();
+    }
+    
+    @Override
+    public void openWindow() {
+        
+        if (getStage().isShowing() == false) {
+            // Starts watching document:
+            //      - editorController watches files referenced from the FXML text
+            //      - watchingController watches the document file, i18n resources, 
+            //        preview stylesheets...
+            assert editorController.isFileWatchingStarted() == false;
+            editorController.startFileWatching();
+            watchingController.start();
+        }
+        
+        super.openWindow();
+        
+        // Give focus to the library search TextField
+        assert librarySearchController != null;
+        librarySearchController.requestFocus();
+    }
+    
+    @Override
+    public void closeWindow() {
+        
+        super.closeWindow();
+        
+        // Stops watching
+        editorController.stopFileWatching();
+        watchingController.stop();
     }
     
     @Override 
@@ -1070,16 +1136,22 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
     @FXML
     void onCssPanelViewRulesAction(ActionEvent event) {
         cssPanelMenuController.viewRules();
+        cssPanelSplitDefaultsMi.setDisable(true);
+        cssPanelShowStyledOnlyMi.setDisable(true);
     }
 
     @FXML
     void onCssPanelViewTableAction(ActionEvent event) {
         cssPanelMenuController.viewTable();
+        cssPanelSplitDefaultsMi.setDisable(false);
+        cssPanelShowStyledOnlyMi.setDisable(false);
     }
 
     @FXML
     void onCssPanelViewTextAction(ActionEvent event) {
         cssPanelMenuController.viewText();
+        cssPanelSplitDefaultsMi.setDisable(true);
+        cssPanelShowStyledOnlyMi.setDisable(true);
     }
 
     @FXML
@@ -1128,12 +1200,20 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
     
     @FXML
     void onLibraryViewAsList(ActionEvent event) {
-        libraryPanelController.setDisplayMode(LibraryPanelController.DISPLAY_MODE.LIST);
+        if (libraryPanelController.getDisplayMode() != LibraryPanelController.DISPLAY_MODE.SEARCH) {
+            libraryPanelController.setDisplayMode(LibraryPanelController.DISPLAY_MODE.LIST);
+        } else {
+            libraryPanelController.setPreviousDisplayMode(LibraryPanelController.DISPLAY_MODE.LIST);
+        }
     }
     
     @FXML
     void onLibraryViewAsSections(ActionEvent event) {
-        libraryPanelController.setDisplayMode(LibraryPanelController.DISPLAY_MODE.SECTIONS);
+        if (libraryPanelController.getDisplayMode() != LibraryPanelController.DISPLAY_MODE.SEARCH) {
+            libraryPanelController.setDisplayMode(LibraryPanelController.DISPLAY_MODE.SECTIONS);
+        } else {
+            libraryPanelController.setPreviousDisplayMode(LibraryPanelController.DISPLAY_MODE.SECTIONS);
+        }
     }
 
     // This method cannot be called if there is not a valid selection, a selection
@@ -1179,38 +1259,21 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
      * Private
      */
 
-    private boolean canPerformCopy() {
-        boolean result;
-        final Node focusOwner = this.getScene().getFocusOwner();
-        if (isTextInputControlEditing(focusOwner)) {
-            final TextInputControl tic = getTextInputControl(focusOwner);
-            result = tic.getSelectedText() != null && tic.getSelectedText().isEmpty() == false;
-        } else {
-            result = getEditorController().canPerformControlAction(ControlAction.COPY);
-        }
-        return result;
-    }
-
-    private void performCopy() {
-        final Node focusOwner = this.getScene().getFocusOwner();
-        if (isTextInputControlEditing(focusOwner)) {
-            final TextInputControl tic = getTextInputControl(focusOwner);
-            tic.copy();
-        } else {
-            this.getEditorController().performControlAction(ControlAction.COPY);
-        }
-    }
-
     private boolean canPerformSelectAll() {
-        boolean result;
+        final boolean result;
         final Node focusOwner = this.getScene().getFocusOwner();
-        if (isTextInputControlEditing(focusOwner)) {
+        if (isPopupEditing(focusOwner)) {
+            return false;
+        } else if (isTextInputControlEditing(focusOwner)) {
             final TextInputControl tic = getTextInputControl(focusOwner);
-            result = tic.getText() != null && tic.getText().isEmpty() == false;
+            final String text = tic.getText();
             final String selectedText = tic.getSelectedText();
-            // Check if the TextInputControl is not already ALL selected
-            if (selectedText != null && selectedText.length() == tic.getText().length()) {
+            if (text == null || text.isEmpty()) {
                 result = false;
+            } else {
+                // Check if the TextInputControl is not already ALL selected
+                result = selectedText == null
+                        || selectedText.length() < tic.getText().length();
             }
         } else {
             result = getEditorController().canPerformControlAction(ControlAction.SELECT_ALL);
@@ -1231,7 +1294,9 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
     private boolean canPerformSelectNone() {
         boolean result;
         final Node focusOwner = this.getScene().getFocusOwner();
-        if (isTextInputControlEditing(focusOwner)) {
+        if (isPopupEditing(focusOwner)) {
+            return false;
+        } else if (isTextInputControlEditing(focusOwner)) {
             final TextInputControl tic = getTextInputControl(focusOwner);
             result = tic.getSelectedText() != null && tic.getSelectedText().isEmpty() == false;
         } else {
@@ -1250,6 +1315,82 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         }
     }
     
+    private boolean canPerformCopy() {
+        boolean result;
+        final Node focusOwner = this.getScene().getFocusOwner();
+        if (isPopupEditing(focusOwner)) {
+            return false;
+        } else if (isTextInputControlEditing(focusOwner)) {
+            final TextInputControl tic = getTextInputControl(focusOwner);
+            result = tic.getSelectedText() != null && tic.getSelectedText().isEmpty() == false;
+        } else {
+            result = getEditorController().canPerformControlAction(ControlAction.COPY);
+        }
+        return result;
+    }
+
+    private void performCopy() {
+        final Node focusOwner = this.getScene().getFocusOwner();
+        if (isTextInputControlEditing(focusOwner)) {
+            final TextInputControl tic = getTextInputControl(focusOwner);
+            tic.copy();
+        } else {
+            this.getEditorController().performControlAction(ControlAction.COPY);
+        }
+    }
+
+    private boolean canPerformCut() {
+        boolean result;
+        final Node focusOwner = this.getScene().getFocusOwner();
+        if (isPopupEditing(focusOwner)) {
+            return false;
+        } else if (isTextInputControlEditing(focusOwner)) {
+            final TextInputControl tic = getTextInputControl(focusOwner);
+            result = tic.getSelectedText() != null && tic.getSelectedText().isEmpty() == false;
+        } else {
+            result = getEditorController().canPerformEditAction(EditAction.CUT);
+        }
+        return result;
+    }
+    
+    private void performCut() {
+        final Node focusOwner = this.getScene().getFocusOwner();
+        if (isTextInputControlEditing(focusOwner)) {
+            final TextInputControl tic = getTextInputControl(focusOwner);
+            tic.cut();
+        } else {
+            this.getEditorController().performEditAction(EditAction.CUT);
+        }
+    }
+
+    private boolean canPerformPaste() {
+        boolean result;
+        final Node focusOwner = this.getScene().getFocusOwner();
+        // If there is FXML in the clipboard, we paste the FXML whatever the focus owner is
+        if (getEditorController().canPerformEditAction(EditAction.PASTE)) {
+            result = true;
+        } else if (isTextInputControlEditing(focusOwner)) {
+            result = Clipboard.getSystemClipboard().hasString();
+        } else {
+            result = false;
+        }
+        return result;
+    }
+    
+    private void performPaste() {
+        final Node focusOwner = this.getScene().getFocusOwner();
+        // If there is FXML in the clipboard, we paste the FXML whatever the focus owner is
+        if (getEditorController().canPerformEditAction(EditAction.PASTE)) {
+            this.getEditorController().performEditAction(EditAction.PASTE);
+            // Give focus to content panel
+            contentPanelController.getGlassLayer().requestFocus();
+        } else {
+            assert isTextInputControlEditing(focusOwner);
+            final TextInputControl tic = getTextInputControl(focusOwner);
+            tic.paste();
+        }
+    }
+
     private void performDelete() {
         
         // Collects all the selected objects
@@ -1305,28 +1446,6 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         }
     }
 
-    private boolean canPerformCut() {
-        boolean result;
-        final Node focusOwner = this.getScene().getFocusOwner();
-        if (isTextInputControlEditing(focusOwner)) {
-            final TextInputControl tic = getTextInputControl(focusOwner);
-            result = tic.getSelectedText() != null && tic.getSelectedText().isEmpty() == false;
-        } else {
-            result = getEditorController().canPerformEditAction(EditAction.CUT);
-        }
-        return result;
-    }
-    
-    private void performCut() {
-        final Node focusOwner = this.getScene().getFocusOwner();
-        if (isTextInputControlEditing(focusOwner)) {
-            final TextInputControl tic = getTextInputControl(focusOwner);
-            tic.cut();
-        } else {
-            this.getEditorController().performEditAction(EditAction.CUT);
-        }
-    }
-
     private void performImportFxml() {
 
         final FileChooser fileChooser = new FileChooser();
@@ -1352,16 +1471,16 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         final FileChooser fileChooser = new FileChooser();
         final ExtensionFilter imageFilter
                 = new ExtensionFilter(I18N.getString("file.filter.label.image"),
-                        imageExtensions);
+                        getImageExtensions());
         final ExtensionFilter audioFilter
                 = new ExtensionFilter(I18N.getString("file.filter.label.audio"),
-                        audioExtensions);
+                        getAudioExtensions());
         final ExtensionFilter videoFilter
                 = new ExtensionFilter(I18N.getString("file.filter.label.video"),
-                        videoExtensions);
+                        getVideoExtensions());
         final ExtensionFilter mediaFilter
                 = new ExtensionFilter(I18N.getString("file.filter.label.media"),
-                        mediaExtensions);
+                        getMediaExtensions());
         
         fileChooser.getExtensionFilters().add(mediaFilter);
         fileChooser.getExtensionFilters().add(imageFilter);
@@ -1373,30 +1492,63 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
             this.getEditorController().performImportMedia(mediaFile);
         }
     }
-
-    private boolean canPerformPaste() {
-        boolean result;
-        final Node focusOwner = this.getScene().getFocusOwner();
-        if (isTextInputControlEditing(focusOwner)) {
-            result = Clipboard.getSystemClipboard().hasString();
-        } else {
-            result = getEditorController().canPerformEditAction(EditAction.PASTE);
-        }
-        return result;
-    }
     
-    private void performPaste() {
-        final Node focusOwner = this.getScene().getFocusOwner();
-        if (isTextInputControlEditing(focusOwner)) {
-            final TextInputControl tic = getTextInputControl(focusOwner);
-            tic.paste();
-        } else {
-            this.getEditorController().performEditAction(EditAction.PASTE);
+    private static synchronized List<String> getImageExtensions() {
+        if (imageExtensions == null) {
+            imageExtensions = new ArrayList<>();
+            imageExtensions.add("*.jpg"); //NOI18N
+            imageExtensions.add("*.jpeg"); //NOI18N
+            imageExtensions.add("*.png"); //NOI18N
+            imageExtensions.add("*.gif"); //NOI18N
+            imageExtensions = Collections.unmodifiableList(imageExtensions);
         }
+        return imageExtensions;
+    }
+
+    private static synchronized List<String> getAudioExtensions() {
+        if (audioExtensions == null) {
+            audioExtensions = new ArrayList<>();
+            audioExtensions.add("*.aif"); //NOI18N
+            audioExtensions.add("*.aiff"); //NOI18N
+            audioExtensions.add("*.mp3"); //NOI18N
+            audioExtensions.add("*.m4a"); //NOI18N
+            audioExtensions.add("*.wav"); //NOI18N
+            audioExtensions.add("*.m3u"); //NOI18N
+            audioExtensions.add("*.m3u8"); //NOI18N
+            audioExtensions = Collections.unmodifiableList(audioExtensions);
+        }
+        return audioExtensions;
+    }
+
+    private static synchronized List<String> getVideoExtensions() {
+        if (videoExtensions == null) {
+            videoExtensions = new ArrayList<>();
+            videoExtensions.add("*.flv"); //NOI18N
+            videoExtensions.add("*.fxm"); //NOI18N
+            videoExtensions.add("*.mp4"); //NOI18N
+            videoExtensions.add("*.m4v"); //NOI18N
+            videoExtensions = Collections.unmodifiableList(videoExtensions);
+        }
+        return videoExtensions;
+    }
+
+    private static synchronized List<String> getMediaExtensions() {
+        if (mediaExtensions == null) {
+            mediaExtensions = new ArrayList<>();
+            mediaExtensions.addAll(getImageExtensions());
+            mediaExtensions.addAll(getAudioExtensions());
+            mediaExtensions.addAll(getVideoExtensions());
+            mediaExtensions = Collections.unmodifiableList(mediaExtensions);
+        }
+        return mediaExtensions;
     }
     
     /**
-     * Returns true if the specified node is either a TextInputControl or a ComboBox.
+     * Returns true if the specified node is part of the main scene and is
+     * either a TextInputControl or a ComboBox.
+     * 
+     * @param node the focused node of the main scene
+     * @return 
      */
     private boolean isTextInputControlEditing(Node node) {
         return (node instanceof TextInputControl
@@ -1416,6 +1568,19 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         return tic;
     }
     
+    /**
+     * Returns true if we are editing within a popup window :
+     * either the specified node is showing a popup window
+     * or the inline editing popup is showing.
+     *
+     * @param node the focused node of the main scene
+     * @return
+     */
+    private boolean isPopupEditing(Node node) {
+        return (node instanceof MenuButton && ((MenuButton) node).isShowing())
+                || editorController.getInlineEditController().isWindowOpened();
+    }
+    
     private KeyCombination getAccelerator(final KeyEvent event) {
         KeyCombination result = null;
         for (KeyCombination kc : menuBarController.getAccelerators()) {
@@ -1427,25 +1592,31 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         return result;
     }
 
-    private void updateStageTitleAndPreferences() {
+    private void updateStageTitle() {
         if (libraryPanelHost != null) {
             getStage().setTitle(makeTitle(editorController.getFxomDocument()));
-            updatePreferences();
         } // else controllerDidLoadFxml() will invoke me again
     }
     
-    private void updatePreferences() {
-        
-        // Refresh UI with preferences 
+    private void updateFromDocumentPreferences() {
+        if (libraryPanelHost != null) { // Layout is over
+            // Refresh UI with preferences 
+            final PreferencesController pc = PreferencesController.getSingleton();
+            // Preferences global to the application
+            final PreferencesRecordGlobal recordGlobal = pc.getRecordGlobal();
+            recordGlobal.refresh(this);
+            // Preferences specific to the document
+            final PreferencesRecordDocument recordDocument = pc.getRecordDocument(this);
+            recordDocument.readFromJavaPreferences();
+            // Update UI accordingly
+            recordDocument.refresh();
+        }
+    }
+    
+    private void resetDocumentPreferences() {
         final PreferencesController pc = PreferencesController.getSingleton();
-        // Preferences global to the application
-        final PreferencesRecordGlobal recordGlobal = pc.getRecordGlobal();
-        recordGlobal.refresh(this);
-        // Preferences specific to the document
         final PreferencesRecordDocument recordDocument = pc.getRecordDocument(this);
-        recordDocument.readFromJavaPreferences();
-        // Update UI accordingly
-        recordDocument.refresh();
+        recordDocument.resetDocumentPreferences();
     }
     
     private void performChooseBackgroundColor(Window owner) {
@@ -1608,7 +1779,11 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                     // First change the location of the fxom document
                     editorController.setFxmlLocation(newLocation);
                     updateLoadFileTime();
-                    updateStageTitleAndPreferences();
+                    updateStageTitle();
+                    // We use same DocumentWindowController BUT we change its fxml :
+                    // => reset document preferences
+                    resetDocumentPreferences();
+                    
                     watchingController.update();
 
                     // Now performs a regular save action

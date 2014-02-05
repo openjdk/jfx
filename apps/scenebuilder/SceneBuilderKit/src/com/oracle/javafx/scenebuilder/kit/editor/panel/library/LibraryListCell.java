@@ -33,7 +33,6 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.library;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.source.LibraryDragSource;
-import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.images.ImageUtils;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.library.BuiltinLibrary;
@@ -119,15 +118,6 @@ class LibraryListCell extends ListCell<LibraryListItem> {
                 }
             }
         });
-        
-        // Never seen this one called
-//        setOnDragDone(new EventHandler<DragEvent>() {
-//
-//            @Override
-//            public void handle(DragEvent t) {
-//                System.out.println("LibraryListCell - setOnDragDone.handle");
-//            }
-//        });
     }
 
     @Override
@@ -258,7 +248,7 @@ class LibraryListCell extends ListCell<LibraryListItem> {
     }
     
     private String getClassName(String input) {
-        if (input.indexOf(" ") == -1) { //NOI18N
+        if (!input.contains(" ")) { //NOI18N
             return input;
         } else {
             return input.substring(0, input.lastIndexOf(" ")); //NOI18N
@@ -266,7 +256,7 @@ class LibraryListCell extends ListCell<LibraryListItem> {
     }
     
     private String getQualifier(String input) {
-        if (input.indexOf(" ") == -1) { //NOI18N
+        if (!input.contains(" ")) { //NOI18N
             return ""; //NOI18N
         } else {
             return input.substring(input.indexOf(" "), input.length()); //NOI18N

@@ -32,6 +32,7 @@
 package com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.editors;
 
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.DoubleField;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.EditorUtils;
 import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.EffectPickerController;
 import java.io.IOException;
 import java.io.InputStream;
@@ -65,6 +66,7 @@ public class SliderControl extends GridPane {
     private double incDecValue;
     private final DoubleProperty value = new SimpleDoubleProperty();
     private final EffectPickerController effectPickerController;
+    private final int roundingFactor = 100; // 2 decimals rounding
 
     public SliderControl(
             EffectPickerController effectPickerController,
@@ -120,16 +122,17 @@ public class SliderControl extends GridPane {
     }
 
     private void setValue(Number n) {
-        value.set(n.doubleValue());
-        value.set(Utils.clamp(editor_slider.getMin(), value.get(), editor_slider.getMax()));
-        editor_slider.setValue(value.get());
         if (intMode) {
-            int rounded = (int) Math.round((double) n);
-            editor_textfield.setText(Integer.toString(rounded));
+            long rounded = Math.round(n.doubleValue());
             value.set(rounded);
+            editor_textfield.setText(Long.toString(rounded));
         } else {
-            editor_textfield.setText(Double.toString(getValue()));
+            double val = Utils.clamp(editor_slider.getMin(), n.doubleValue(), editor_slider.getMax());
+            double rounded = EditorUtils.round(val, roundingFactor);
+            value.set(rounded);
+            editor_textfield.setText(Double.toString(rounded));
         }
+        editor_slider.setValue(value.get());
     }
 
     private double checkStringIsNumber(String s) {

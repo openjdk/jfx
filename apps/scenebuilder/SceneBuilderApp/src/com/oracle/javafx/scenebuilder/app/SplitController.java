@@ -99,12 +99,11 @@ public class SplitController {
                 divider.setPosition(dividerPosition);
             }
         }
-        dividerPosition = -1;
     }
 
     public void hideTarget() {
         if (isTargetVisible()) {
-            // Backup the divider position
+            // Backup the divider position (if any)
             final List<Divider> dividers = splitPane.getDividers();
             if (dividers.isEmpty() == false) { // (1)
                 final Divider divider = getDivider();

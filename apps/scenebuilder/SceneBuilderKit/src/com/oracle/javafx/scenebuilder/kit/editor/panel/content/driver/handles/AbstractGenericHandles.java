@@ -201,15 +201,25 @@ public abstract class AbstractGenericHandles<T> extends AbstractHandles<T> {
         final double midY = (minY + maxY) / 2.0;
         
         final boolean snapToPixel = true;
-        final Point2D pNW = sceneGraphObjectToDecoration(minX, minY, snapToPixel);
-        final Point2D pNE = sceneGraphObjectToDecoration(maxX, minY, snapToPixel);
-        final Point2D pSE = sceneGraphObjectToDecoration(maxX, maxY, snapToPixel);
-        final Point2D pSW = sceneGraphObjectToDecoration(minX, maxY, snapToPixel);
+        final Point2D pNW, pNE, pSE, pSW;
+        final Point2D pNN, pEE, pSS, pWW;
         
-        final Point2D pNN = sceneGraphObjectToDecoration(midX, minY, snapToPixel);
-        final Point2D pEE = sceneGraphObjectToDecoration(maxX, midY, snapToPixel);
-        final Point2D pSS = sceneGraphObjectToDecoration(midX, maxY, snapToPixel);
-        final Point2D pWW = sceneGraphObjectToDecoration(minX, midY, snapToPixel);
+        if (b.isEmpty()) {
+            // Object is zero sized : let's optmize and avoid rounding errors
+            pNW = pNE = pSE = pSW = 
+            pNN = pEE = pSS = pWW = 
+                    sceneGraphObjectToDecoration(minX, minY, snapToPixel);
+        } else {
+            pNW = sceneGraphObjectToDecoration(minX, minY, snapToPixel);
+            pNE = sceneGraphObjectToDecoration(maxX, minY, snapToPixel);
+            pSE = sceneGraphObjectToDecoration(maxX, maxY, snapToPixel);
+            pSW = sceneGraphObjectToDecoration(minX, maxY, snapToPixel);
+
+            pNN = sceneGraphObjectToDecoration(midX, minY, snapToPixel);
+            pEE = sceneGraphObjectToDecoration(maxX, midY, snapToPixel);
+            pSS = sceneGraphObjectToDecoration(midX, maxY, snapToPixel);
+            pWW = sceneGraphObjectToDecoration(minX, midY, snapToPixel);
+        }
         
         moveTo0.setX(pNW.getX());
         moveTo0.setY(pNW.getY());

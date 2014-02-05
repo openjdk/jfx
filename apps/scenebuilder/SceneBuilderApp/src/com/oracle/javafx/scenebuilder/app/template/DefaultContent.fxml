@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<?import java.lang.*?>
-<?import java.util.*?>
-<?import javafx.scene.layout.*?>
-<?import javafx.scene.paint.*?>
-
-<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="DOCUMENT_HEIGHT" prefWidth="DOCUMENT_WIDTH" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/8" />

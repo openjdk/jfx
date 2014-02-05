@@ -542,6 +542,9 @@ public class CssPanelController extends AbstractFxmlPanelController {
 
     public void showStyledOnly() {
         styledOnly = !styledOnly;
+        if (model == null) {
+            return;
+        }
         showStyled(model);
     }
 
@@ -909,7 +912,8 @@ public class CssPanelController extends AbstractFxmlPanelController {
             try {
                 // XXX jfdenise, for now can't do better than opening the file, no Anchor per property...
                 // Retrieve defining class
-                EditorPlatform.open("http://docs.oracle.com/javafx/2/api/javafx/scene/doc-files/cssref.html#" + //NOI18N
+                EditorPlatform.open(EditorPlatform.JAVADOC_HOME + 
+                        "javafx/scene/doc-files/cssref.html#" + //NOI18N
                         item.getTarget().getClass().getSimpleName().toLowerCase(Locale.ROOT));
             } catch (IOException ex) {
                 System.out.println(ex.getMessage());

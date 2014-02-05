@@ -34,11 +34,14 @@ package com.oracle.javafx.scenebuilder.kit.editor.util;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController.ControlAction;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController.EditAction;
+import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
@@ -67,6 +70,7 @@ public class ContextMenuController {
     private MenuItem deleteMenuItem;
     private MenuItem selectParentMenuItem;
     private MenuItem fitToParentMenuItem;
+    private MenuItem useComputedSizesMenuItem;
     private MenuItem editIncludedFileMenuItem;
     private MenuItem revealIncludedFileMenuItem;
     private MenuItem bringToFrontMenuItem;
@@ -76,6 +80,7 @@ public class ContextMenuController {
     private Menu wrapInMenu;
     private MenuItem wrapInAnchorPaneMenuItem;
     private MenuItem wrapInGridPaneMenuItem;
+    private MenuItem wrapInGroupMenuItem;
     private MenuItem wrapInHBoxMenuItem;
     private MenuItem wrapInPaneMenuItem;
     private MenuItem wrapInScrollPaneMenuItem;
@@ -85,7 +90,6 @@ public class ContextMenuController {
     private MenuItem wrapInTitledPaneMenuItem;
     private MenuItem wrapInToolBarMenuItem;
     private MenuItem wrapInVBoxMenuItem;
-    private MenuItem wrapInGroupMenuItem;
     private MenuItem unwrapMenuItem;
     private Menu gridPaneMenu;
     private MenuItem moveRowAboveMenuItem;
@@ -130,8 +134,17 @@ public class ContextMenuController {
                 }
             };
 
+    private final ChangeListener<Number> jobManagerRevisionListener
+            = new ChangeListener<Number>() {
+                @Override
+                public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
+                    jobManagerRevisionDidChange();
+                }
+            };
+
     public ContextMenuController(final EditorController editorController) {
         this.editorController = editorController;
+        this.editorController.getJobManager().revisionProperty().addListener(jobManagerRevisionListener);
     }
 
     public ContextMenu getContextMenu() {
@@ -164,7 +177,8 @@ public class ContextMenuController {
                         new SeparatorMenuItem(),
                         selectParentMenuItem,
                         new SeparatorMenuItem(),
-                        fitToParentMenuItem);
+                        fitToParentMenuItem,
+                        useComputedSizesMenuItem);
                 // GridPane specific actions
                 if (canPerformGridPaneActions() || canPerformGridPaneChildActions()) {
                     updateGridPaneMenuItems();
@@ -237,6 +251,14 @@ public class ContextMenuController {
         final MenuItemController c = (MenuItemController) i.getUserData();
         c.perform();
     }
+    
+    private void jobManagerRevisionDidChange() {
+        // FXOMDocument has been modified by a job.
+        if (contextMenu != null && contextMenu.isShowing()) {
+            contextMenu.hide();
+        }
+    }
+
 
     /**
      * Returns true if all the selected items are GridPanes.
@@ -320,49 +342,52 @@ public class ContextMenuController {
         this.contextMenu = new ContextMenu();
         this.contextMenu.setConsumeAutoHidingEvents(false);
 
-        copyMenuItem = new MenuItem("Copy");
+        copyMenuItem = new MenuItem(I18N.getString("menu.title.copy"));
         copyMenuItem.setOnAction(onActionEventHandler);
         copyMenuItem.setUserData(new ControlActionController(ControlAction.COPY));
-        selectParentMenuItem = new MenuItem("Select Parent");
+        selectParentMenuItem = new MenuItem(I18N.getString("menu.title.select.parent"));
         selectParentMenuItem.setOnAction(onActionEventHandler);
         selectParentMenuItem.setUserData(new ControlActionController(ControlAction.SELECT_PARENT));
-        editIncludedFileMenuItem = new MenuItem("Edit Included File");
+        editIncludedFileMenuItem = new MenuItem(I18N.getString("menu.title.edit.included.default"));
         editIncludedFileMenuItem.setOnAction(onActionEventHandler);
-//        editIncludedFileMenuItem.setUserData(new ControlActionController(DocumentControlAction.EDIT_INCLUDED_FILE));
-        revealIncludedFileMenuItem = new MenuItem("Reveal Included File In Finder");
+        editIncludedFileMenuItem.setUserData(new ControlActionController(ControlAction.EDIT_INCLUDED_FILE));
+        revealIncludedFileMenuItem = new MenuItem(I18N.getString("menu.title.reveal.included.default"));
         revealIncludedFileMenuItem.setOnAction(onActionEventHandler);
-//        revealIncludedFileMenuItem.setUserData(new ControlActionController(DocumentControlAction.REVEAL_INCLUDED_FILE));
-        cutMenuItem = new MenuItem("Cut");
+        revealIncludedFileMenuItem.setUserData(new ControlActionController(ControlAction.REVEAL_INCLUDED_FILE));
+        cutMenuItem = new MenuItem(I18N.getString("menu.title.cut"));
         cutMenuItem.setOnAction(onActionEventHandler);
         cutMenuItem.setUserData(new EditActionController(EditAction.CUT));
-        pasteMenuItem = new MenuItem("Paste");
+        pasteMenuItem = new MenuItem(I18N.getString("menu.title.paste"));
         pasteMenuItem.setOnAction(onActionEventHandler);
         pasteMenuItem.setUserData(new EditActionController(EditAction.PASTE));
-        pasteIntoMenuItem = new MenuItem("Paste Into");
+        pasteIntoMenuItem = new MenuItem(I18N.getString("menu.title.paste.into"));
         pasteIntoMenuItem.setOnAction(onActionEventHandler);
         pasteIntoMenuItem.setUserData(new EditActionController(EditAction.PASTE_INTO));
-        duplicateMenuItem = new MenuItem("Duplicate");
+        duplicateMenuItem = new MenuItem(I18N.getString("menu.title.duplicate"));
         duplicateMenuItem.setOnAction(onActionEventHandler);
         duplicateMenuItem.setUserData(new EditActionController(EditAction.DUPLICATE));
-        deleteMenuItem = new MenuItem("Delete");
+        deleteMenuItem = new MenuItem(I18N.getString("menu.title.delete"));
         deleteMenuItem.setOnAction(onActionEventHandler);
         deleteMenuItem.setUserData(new EditActionController(EditAction.DELETE));
-        fitToParentMenuItem = new MenuItem("Fit To Parent");
+        fitToParentMenuItem = new MenuItem(I18N.getString("menu.title.fit"));
         fitToParentMenuItem.setOnAction(onActionEventHandler);
         fitToParentMenuItem.setUserData(new EditActionController(EditAction.FIT_TO_PARENT));
-        bringToFrontMenuItem = new MenuItem("Bring To Front");
+        useComputedSizesMenuItem = new MenuItem(I18N.getString("menu.title.use.computed.sizes"));
+        useComputedSizesMenuItem.setOnAction(onActionEventHandler);
+        useComputedSizesMenuItem.setUserData(new EditActionController(EditAction.USE_COMPUTED_SIZES));
+        bringToFrontMenuItem = new MenuItem(I18N.getString("menu.title.front"));
         bringToFrontMenuItem.setOnAction(onActionEventHandler);
         bringToFrontMenuItem.setUserData(new EditActionController(EditAction.BRING_TO_FRONT));
-        sendToBackMenuItem = new MenuItem("Send To Back");
+        sendToBackMenuItem = new MenuItem(I18N.getString("menu.title.back"));
         sendToBackMenuItem.setOnAction(onActionEventHandler);
         sendToBackMenuItem.setUserData(new EditActionController(EditAction.SEND_TO_BACK));
-        bringForwardMenuItem = new MenuItem("Bring Forward");
+        bringForwardMenuItem = new MenuItem(I18N.getString("menu.title.forward"));
         bringForwardMenuItem.setOnAction(onActionEventHandler);
         bringForwardMenuItem.setUserData(new EditActionController(EditAction.BRING_FORWARD));
-        sendBackwardMenuItem = new MenuItem("Send Backward");
+        sendBackwardMenuItem = new MenuItem(I18N.getString("menu.title.backward"));
         sendBackwardMenuItem.setOnAction(onActionEventHandler);
         sendBackwardMenuItem.setUserData(new EditActionController(EditAction.SEND_BACKWARD));
-        wrapInMenu = new Menu("Wrap In");
+        wrapInMenu = new Menu(I18N.getString("menu.title.wrap"));
         wrapInAnchorPaneMenuItem = new MenuItem("AnchorPane");
         wrapInAnchorPaneMenuItem.setOnAction(onActionEventHandler);
         wrapInAnchorPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_ANCHOR_PANE));
@@ -402,6 +427,7 @@ public class ContextMenuController {
         wrapInMenu.getItems().setAll(
                 wrapInAnchorPaneMenuItem,
                 wrapInGridPaneMenuItem,
+                wrapInGroupMenuItem,
                 wrapInHBoxMenuItem,
                 wrapInPaneMenuItem,
                 wrapInScrollPaneMenuItem,
@@ -410,47 +436,46 @@ public class ContextMenuController {
                 wrapInTabPaneMenuItem,
                 wrapInTitledPaneMenuItem,
                 wrapInToolBarMenuItem,
-                wrapInVBoxMenuItem,
-                wrapInGroupMenuItem);
-        unwrapMenuItem = new MenuItem("Unwrap");
+                wrapInVBoxMenuItem);
+        unwrapMenuItem = new MenuItem(I18N.getString("menu.title.unwrap"));
         unwrapMenuItem.setOnAction(onActionEventHandler);
         unwrapMenuItem.setUserData(new EditActionController(EditAction.UNWRAP));
         // GridPane specifics
-        gridPaneMenu = new Menu("GridPane");
-        moveRowAboveMenuItem = new MenuItem("Move Row Above");
+        gridPaneMenu = new Menu(I18N.getString("menu.title.grid"));
+        moveRowAboveMenuItem = new MenuItem(I18N.getString("menu.title.grid.move.row.above"));
         moveRowAboveMenuItem.setOnAction(onActionEventHandler);
         moveRowAboveMenuItem.setUserData(new EditActionController(EditAction.MOVE_ROW_ABOVE));
-        moveRowBelowMenuItem = new MenuItem("Move Row Below");
+        moveRowBelowMenuItem = new MenuItem(I18N.getString("menu.title.grid.move.row.below"));
         moveRowBelowMenuItem.setOnAction(onActionEventHandler);
         moveRowBelowMenuItem.setUserData(new EditActionController(EditAction.MOVE_ROW_BELOW));
-        moveColumnBeforeMenuItem = new MenuItem("Move Column Before");
+        moveColumnBeforeMenuItem = new MenuItem(I18N.getString("menu.title.grid.move.column.before"));
         moveColumnBeforeMenuItem.setOnAction(onActionEventHandler);
         moveColumnBeforeMenuItem.setUserData(new EditActionController(EditAction.MOVE_COLUMN_BEFORE));
-        moveColumnAfterMenuItem = new MenuItem("Move Column After");
+        moveColumnAfterMenuItem = new MenuItem(I18N.getString("menu.title.grid.move.column.after"));
         moveColumnAfterMenuItem.setOnAction(onActionEventHandler);
         moveColumnAfterMenuItem.setUserData(new EditActionController(EditAction.MOVE_COLUMN_AFTER));
-        addRowAboveMenuItem = new MenuItem("Add Row Above");
+        addRowAboveMenuItem = new MenuItem(I18N.getString("menu.title.grid.add.row.above"));
         addRowAboveMenuItem.setOnAction(onActionEventHandler);
         addRowAboveMenuItem.setUserData(new EditActionController(EditAction.ADD_ROW_ABOVE));
-        addRowBelowMenuItem = new MenuItem("Add Row Below");
+        addRowBelowMenuItem = new MenuItem(I18N.getString("menu.title.grid.add.row.below"));
         addRowBelowMenuItem.setOnAction(onActionEventHandler);
         addRowBelowMenuItem.setUserData(new EditActionController(EditAction.ADD_ROW_BELOW));
-        addColumnBeforeMenuItem = new MenuItem("Add Column Before");
+        addColumnBeforeMenuItem = new MenuItem(I18N.getString("menu.title.grid.add.column.before"));
         addColumnBeforeMenuItem.setOnAction(onActionEventHandler);
         addColumnBeforeMenuItem.setUserData(new EditActionController(EditAction.ADD_COLUMN_BEFORE));
-        addColumnAfterMenuItem = new MenuItem("Add Column After");
+        addColumnAfterMenuItem = new MenuItem(I18N.getString("menu.title.grid.add.column.after"));
         addColumnAfterMenuItem.setOnAction(onActionEventHandler);
         addColumnAfterMenuItem.setUserData(new EditActionController(EditAction.ADD_COLUMN_AFTER));
-        increaseRowSpan = new MenuItem("Increase Row Span");
+        increaseRowSpan = new MenuItem(I18N.getString("menu.title.grid.increase.row.span"));
         increaseRowSpan.setOnAction(onActionEventHandler);
         increaseRowSpan.setUserData(new EditActionController(EditAction.INCREASE_ROW_SPAN));
-        decreaseRowSpan = new MenuItem("Decrease Row Span");
+        decreaseRowSpan = new MenuItem(I18N.getString("menu.title.grid.decrease.row.span"));
         decreaseRowSpan.setOnAction(onActionEventHandler);
         decreaseRowSpan.setUserData(new EditActionController(EditAction.DECREASE_ROW_SPAN));
-        increaseColumnSpan = new MenuItem("Increase Column Span");
+        increaseColumnSpan = new MenuItem(I18N.getString("menu.title.grid.increase.column.span"));
         increaseColumnSpan.setOnAction(onActionEventHandler);
         increaseColumnSpan.setUserData(new EditActionController(EditAction.INCREASE_COLUMN_SPAN));
-        decreaseColumnSpan = new MenuItem("Decrease Column Span");
+        decreaseColumnSpan = new MenuItem(I18N.getString("menu.title.grid.decrease.column.span"));
         decreaseColumnSpan.setOnAction(onActionEventHandler);
         decreaseColumnSpan.setUserData(new EditActionController(EditAction.DECREASE_COLUMN_SPAN));
 

@@ -59,22 +59,25 @@ class ResourceController {
         return resourceFile;
     }
     
+    public void setResourceFile(File file) {
+        if (file != null) {
+            if (readPropertyResourceBundle(file) == null) {
+                // Property file syntax is probably incorrect
+
+            } else {
+                resourceFile = file;
+                resourceFileDidChange();
+            }
+        }
+    }
+    
     public void performSetResource() {
         // Open a file chooser for *.properties & *.bss
         FileChooser fileChooser = new FileChooser();
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(I18N.getString("resource.filechooser.filter.msg"),
                 "*.properties")); //NOI18N
         File newResourceFile = fileChooser.showOpenDialog(documentWindowController.getStage());
-        if (newResourceFile != null) {
-            if (readPropertyResourceBundle(newResourceFile) == null) {
-                // Property file syntax is probably incorrect
-                
-            } else {
-                resourceFile = newResourceFile;
-                resourceFileDidChange();
-            }            
-        }
-
+        setResourceFile(newResourceFile);
     }
 
     public void performRemoveResource() {

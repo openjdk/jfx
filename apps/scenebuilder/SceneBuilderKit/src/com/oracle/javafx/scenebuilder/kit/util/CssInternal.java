@@ -31,6 +31,8 @@
  */
 package com.oracle.javafx.scenebuilder.kit.util;
 
+import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
+import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform.Theme;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.sun.javafx.css.CompoundSelector;
@@ -111,6 +113,23 @@ public class CssInternal {
             }
         }
         return false;
+    }
+
+    public static boolean isThemeClass(Theme theme, String styleClass) {
+        return getThemeStyleClasses(theme).contains(styleClass);
+    }
+    
+    public static List<String> getThemeStyleClasses(Theme theme) {
+        List<URL> themeStyleSheets = EditorPlatform.getThemeStylesheetURLs(theme);
+        // Add the Modena css, which is not added in the list
+        themeStyleSheets.add(EditorPlatform.getPlatformThemeStylesheetURL());
+        Set<String> themeClasses = new HashSet<>();
+        for (URL themeStyleSheet : themeStyleSheets) {
+            // For Theme css, we need to get the text css (.css) to be able to parse it.
+            // (instead of the default binary format .bss)
+            themeClasses.addAll(getStyleClasses(Deprecation.getThemeTextStylesheet(themeStyleSheet)));
+        }
+        return new ArrayList<>(themeClasses);
     }
 
     public static List<String> getStyleClasses(Set<FXOMInstance> instances) {

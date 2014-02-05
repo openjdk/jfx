@@ -73,8 +73,8 @@ public class BoundedDoubleEditor extends AutoSuggestEditor {
 
     public BoundedDoubleEditor(String name, String defaultValue, List<String> suggestedList) {
         this(name, defaultValue, suggestedList, null, null, false);
-     }
-    
+    }
+
     public BoundedDoubleEditor(String name, String defaultValue, List<String> suggestedList, Double min, Double max, boolean minMaxForSliderOnly) {
         super(name, defaultValue, suggestedList, AutoSuggestEditor.Type.DOUBLE);
         if (min != null) {
@@ -97,7 +97,7 @@ public class BoundedDoubleEditor extends AutoSuggestEditor {
     // Method to please FindBugs
     private void initialize() {
         root = EditorUtils.loadFxml("BoundedDoubleEditor.fxml", this); //NOI18N
-        
+
         //
         // Text field
         //
@@ -172,7 +172,18 @@ public class BoundedDoubleEditor extends AutoSuggestEditor {
                 updateFromSlider = true;
                 getTextField().setText(EditorUtils.valAsStr(value));
                 updateFromSlider = false;
-                userUpdateValueProperty(value);
+                userUpdateTransientValueProperty(value);
+            }
+        });
+
+        slider.pressedProperty().addListener(new InvalidationListener() {
+
+            @Override
+            public void invalidated(Observable valueModel) {
+                if (!slider.isPressed()) {
+                    double value = EditorUtils.round(slider.getValue(), roundingFactor);
+                    userUpdateValueProperty(value);
+                }
             }
         });
         // Add the AutoSuggest text field in the scene graph

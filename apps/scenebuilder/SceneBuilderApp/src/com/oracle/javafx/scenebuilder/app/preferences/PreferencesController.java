@@ -62,8 +62,9 @@ public class PreferencesController {
     static final String RECENT_ITEMS = "RECENT_ITEMS"; //NOI18N
     static final String RECENT_ITEMS_SIZE = "RECENT_ITEMS_SIZE"; //NOI18N
 
-    // DOCUMENT SPECIFIC PREFERENCES
     static final String DOCUMENTS = "DOCUMENTS"; //NOI18N
+
+    // DOCUMENT SPECIFIC PREFERENCES
     static final String PATH = "path"; //NOI18N
     static final String X_POS = "X"; //NOI18N
     static final String Y_POS = "Y"; //NOI18N
@@ -79,6 +80,8 @@ public class PreferencesController {
     static final String RIGHT_DIVIDER_HPOS = "rightDividerHPos"; //NOI18N
     static final String BOTTOM_DIVIDER_VPOS = "bottomDividerVPos"; //NOI18N
     static final String LEFT_DIVIDER_VPOS = "leftDividerVPos"; //NOI18N
+    static final String SCENE_STYLE_SHEETS = "sceneStyleSheets"; //NOI18N
+    static final String I18N_RESOURCE = "I18NResource"; //NOI18N
 
     private static final PreferencesController singleton = new PreferencesController();
 
@@ -100,22 +103,27 @@ public class PreferencesController {
 
         // Cleanup document preferences at start time : 
         // We keep only document preferences for the documents defined in RECENT_ITEMS
-        final String items = applicationRootPreferences.get(RECENT_ITEMS, ""); //NOI18N
-        // Remove document preferences node if needed
-        try {
-            final String[] childrenNames = documentsRootPreferences.childrenNames();
-            // Check among the document root chidlren if there is a child
-            // which path matches the specified one
-            for (String child : childrenNames) {
-                final Preferences documentPreferences = documentsRootPreferences.node(child);
-                final String nodePath = documentPreferences.get(PATH, null);
-                assert nodePath != null && nodePath.isEmpty() == false; // Each document node defines a path
-                if (items.contains(nodePath) == false) {
-                    documentPreferences.removeNode();
+        final String items = applicationRootPreferences.get(RECENT_ITEMS, null); //NOI18N
+        if (items != null) {
+            // Remove document preferences node if needed
+            try {
+                final String[] childrenNames = documentsRootPreferences.childrenNames();
+                // Check among the document root chidlren if there is a child
+                // which path matches the specified one
+                for (String child : childrenNames) {
+                    final Preferences documentPreferences = documentsRootPreferences.node(child);
+                    final String nodePath = documentPreferences.get(PATH, null);
+                    // Each document node defines a path
+                    // If path is null or empty, this means preferences DB has been corrupted
+                    if (nodePath == null || nodePath.isEmpty()) {
+                        documentPreferences.removeNode();
+                    } else if (items.contains(nodePath) == false) {
+                        documentPreferences.removeNode();
+                    }
                 }
+            } catch (BackingStoreException ex) {
+                Logger.getLogger(PreferencesRecordGlobal.class.getName()).log(Level.SEVERE, null, ex);
             }
-        } catch (BackingStoreException ex) {
-            Logger.getLogger(PreferencesRecordGlobal.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 

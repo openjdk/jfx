@@ -89,6 +89,9 @@ public final class PreviewWindowController extends AbstractWindowController {
     // dependent on the operating system.
     private double decorationX = 0;
     private double decorationY = 0;
+    private boolean isDirty = false;
+    private final long IMMEDIATE = 0; // milliseconds
+    private final long DELAYED = 1000; // milliseconds
     
     /**
      * The type of Camera used by the Preview panel.
@@ -114,7 +117,7 @@ public final class PreviewWindowController extends AbstractWindowController {
                         if (nd != null) {
                             nd.sceneGraphRevisionProperty().addListener(fxomDocumentRevisionListener);
                             nd.cssRevisionProperty().addListener(cssRevisionListener);
-                            requestUpdate();
+                            requestUpdate(DELAYED);
                         }
                     }
                 });
@@ -132,7 +135,7 @@ public final class PreviewWindowController extends AbstractWindowController {
                     EditorPlatform.Theme t, EditorPlatform.Theme t1) {
                 if (t1 != null) {
                     editorControllerTheme = t1;
-                    requestUpdate();
+                    requestUpdate(DELAYED);
                 }
             }
         });
@@ -144,7 +147,7 @@ public final class PreviewWindowController extends AbstractWindowController {
             public void changed(ObservableValue<? extends ObservableList<File>> ov, ObservableList<File> t, ObservableList<File> t1) {
                 if (t1 != null) {
                     sceneStyleSheet = t1;
-                    requestUpdate();
+                    requestUpdate(DELAYED);
                 }
             }
         });
@@ -153,14 +156,14 @@ public final class PreviewWindowController extends AbstractWindowController {
 
             @Override
             public void changed(ObservableValue<? extends ResourceBundle> ov, ResourceBundle t, ResourceBundle t1) {
-                requestUpdate();
+                requestUpdate(DELAYED);
             }
         });
         this.editorController.sampleDataEnabledProperty().addListener(new ChangeListener<Boolean>() {
 
             @Override
             public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                requestUpdate();
+                requestUpdate(DELAYED);
             }
         });
     }
@@ -176,7 +179,7 @@ public final class PreviewWindowController extends AbstractWindowController {
         sp.setPrefSize(WIDTH_WHEN_EMPTY, HEIGHT_WHEN_EMPTY);
         setRoot(sp);
 
-        requestUpdate();
+        requestUpdate(IMMEDIATE);
     }
 
     @Override
@@ -196,9 +199,19 @@ public final class PreviewWindowController extends AbstractWindowController {
     }
 
     @Override
+    public void openWindow() {
+        super.openWindow();
+        if (isDirty) {
+            requestUpdate(IMMEDIATE);
+            isDirty = false;
+        }
+    }
+    
+    @Override
     public void closeWindow() {
 //        System.out.println("PreviewWindowController::closeWindow called");
         super.closeWindow();
+        isDirty = true;
     }
     
     /*
@@ -210,7 +223,7 @@ public final class PreviewWindowController extends AbstractWindowController {
                 @Override
                 public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
 //                    System.out.println("fxomDocumentRevisionListener called");
-                    requestUpdate();
+                    requestUpdate(DELAYED);
                 }
             };
 
@@ -224,12 +237,14 @@ public final class PreviewWindowController extends AbstractWindowController {
             };
 
     /**
-     * There's a delay before the content of the preview is refreshed. If any
-     * further modification is brought to the layout before expiration of it
+     * We use the provided delay before refreshing the content of the preview.
+     * If further modification is brought to the layout before expiration of it
      * we restart the timer. The idea is to lower the resources used to refresh
      * the preview window content.
+     * The delay is expressed in milliseconds.
+     * In some cases it is wise to used delay = 0, e.g. when opening the window.
      */
-    private void requestUpdate() {
+    private void requestUpdate(long delay) {
 //        System.out.println("PreviewWindowController::requestUpdate: Called");
 
         TimerTask timerTask = new TimerTask() {
@@ -317,18 +332,6 @@ public final class PreviewWindowController extends AbstractWindowController {
                 });
             }
         };
-
-        long delay = 0;
-
-        // A long delay makes sense only if we have a valid document and
-        // the preview window is already opened, except when we change size thanks
-        // Scene Size menu.
-        // When opening preview window we want it fast.
-        if (editorController.getFxomDocument() != null
-                && getStage().isShowing()
-                && ! sizeChangedFromMenu) {
-            delay = 1000;
-        }
 
         if (timer != null) {
             timer.cancel();
@@ -544,7 +547,7 @@ public final class PreviewWindowController extends AbstractWindowController {
     public void setSize(Size size) {
         currentSize = size;
         sizeChangedFromMenu = true;
-        requestUpdate();
+        requestUpdate(IMMEDIATE);
     }
     
     private void computeStyleSheets(List<String> newStyleSheets, Object sceneGraphRoot, List<String> themeStyleSheetStrings) {        

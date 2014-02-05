@@ -203,8 +203,8 @@ public class BuiltinLibrary extends Library {
         addCustomizedItem(javafx.scene.canvas.Canvas.class, TAG_MISCELLANEOUS);
         addDefaultItem(javafx.scene.Group.class, TAG_MISCELLANEOUS);
         addRegionItem200x200(javafx.scene.layout.Region.class, TAG_MISCELLANEOUS);
-//        addDefaultItem(javafx.scene.SubScene.class, TAG_MISCELLANEOUS, FX8_QUALIFIER); TODO fix DTL-5862
-        addCustomizedItem(javafx.embed.swing.SwingNode.class, TAG_MISCELLANEOUS, FX8_QUALIFIER);
+        addCustomizedItem(javafx.scene.SubScene.class, TAG_MISCELLANEOUS, FX8_QUALIFIER);
+        addDefaultItem(javafx.embed.swing.SwingNode.class, TAG_MISCELLANEOUS, FX8_QUALIFIER);
         addCustomizedItem(javafx.scene.control.Tooltip.class, TAG_MISCELLANEOUS);
 
         // Shapes
@@ -222,7 +222,7 @@ public class BuiltinLibrary extends Library {
         addDefaultItem(javafx.scene.shape.LineTo.class, TAG_SHAPES);
         addDefaultItem(javafx.scene.shape.MeshView.class, TAG_SHAPES, FX8_QUALIFIER);
         addDefaultItem(javafx.scene.shape.MoveTo.class, TAG_SHAPES);
-        addDefaultItem(javafx.scene.shape.Path.class, TAG_SHAPES);
+        addCustomizedItem(javafx.scene.shape.Path.class, TAG_SHAPES);
         addCustomizedItem(javafx.scene.shape.Polygon.class, TAG_SHAPES);
         addCustomizedItem(javafx.scene.shape.Polyline.class, TAG_SHAPES);
         addCustomizedItem(javafx.scene.shape.QuadCurve.class, TAG_SHAPES);

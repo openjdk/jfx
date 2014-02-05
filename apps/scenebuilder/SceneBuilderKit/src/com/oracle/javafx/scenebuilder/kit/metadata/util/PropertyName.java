@@ -75,6 +75,18 @@ public class PropertyName implements Comparable<PropertyName> {
         return result;
     }
     
+    public void setValue(Object sceneGraphObject, Object value) {
+        if (residenceClass == null) {
+            final BeanPropertyIntrospector bpi 
+                    = new BeanPropertyIntrospector(sceneGraphObject);
+            bpi.setValue(name, value);
+        } else {
+            final StaticPropertyIntrospector spi 
+                    = new StaticPropertyIntrospector(sceneGraphObject, residenceClass);
+            spi.setValue(name, value);
+        }
+    }
+    
     /*
      * Object
      */

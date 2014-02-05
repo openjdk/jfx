@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <!--
   Copyright (c) 2012, 2014, Oracle and/or its affiliates.
   All rights reserved. Use is subject to license terms.
@@ -30,23 +31,23 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
+
 <?import java.lang.*?>
-<?import java.util.*?>
 <?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.scene.paint.*?>
+<?import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.*?>
 
-<HBox alignment="CENTER" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
+<HBox alignment="CENTER" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
   <children>
-    <TextField fx:id="rotateTf" prefColumnCount="12" prefWidth="-1.0" styleClass="LF3-textfield1" text="0" HBox.hgrow="ALWAYS">
+    <DoubleField fx:id="rotateTf" prefColumnCount="12" prefWidth="-1.0" styleClass="LF3-textfield1" text="0" HBox.hgrow="ALWAYS">
       <HBox.margin>
         <Insets right="8.0" />
       </HBox.margin>
-    </TextField>
+    </DoubleField>
     <StackPane>
       <children>
-        <Button fx:id="rotatorDial" maxHeight="36.0" maxWidth="36.0" minHeight="36.0" minWidth="36.0" mnemonicParsing="false" onMouseDragged="#rotatorDragged" onMousePressed="#rotatorPressed" prefHeight="36.0" prefWidth="36.0" styleClass="rotation-dial" text="" />
+        <Button fx:id="rotatorDial" maxHeight="36.0" maxWidth="36.0" minHeight="36.0" minWidth="36.0" mnemonicParsing="false" onMouseDragged="#rotatorDragged" onMousePressed="#rotatorPressed" onMouseReleased="#rotatorReleased" prefHeight="36.0" prefWidth="36.0" styleClass="rotation-dial" text="" />
         <Button fx:id="rotatorHandle" disable="true" maxHeight="36.0" maxWidth="36.0" minHeight="36.0" minWidth="36.0" mnemonicParsing="false" opacity="1.0" prefHeight="36.0" prefWidth="36.0" rotate="0.0" styleClass="rotation-handle" text="" />
       </children>
     </StackPane>

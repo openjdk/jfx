@@ -37,14 +37,11 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.popupeditors;
 public interface PopupEditorValidation {
 
     // Commit the value in the model.
-    public void commitValue(Object value, String displayString);
+    public void commitValue(Object value);
 
     // Set the value in the model, skipping the undo/redo mechanism.
     // Typically used when a Slider is moved.
     public void transientValue(Object value);
-
-    // Display the value (as a string) in the menu button.
-    public void displayValueAsString(String strValue);
 
     // Handle an invalid value.
     public void invalidValue(Object value);

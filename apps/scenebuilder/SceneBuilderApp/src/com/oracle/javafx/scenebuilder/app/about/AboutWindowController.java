@@ -38,7 +38,6 @@ import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.GraphicsPipeline;
 import java.io.IOException;
 import java.io.InputStream;
-import java.text.MessageFormat;
 import java.util.Properties;
 import javafx.fxml.FXML;
 import javafx.scene.control.TextArea;
@@ -62,6 +61,8 @@ public final class AboutWindowController extends AbstractFxmlWindowController {
     private String sbBuildJavaVersion = "PLACEHOLDER"; //NOI18N
     // The resource bundle contains two keys: about.copyright and about.copyright.open
     private String sbAboutCopyrightKeyName = "about.copyright.open"; //NOI18N
+    // File name must be in sync with what we use in logging.properties
+    private final String LOG_FILE_NAME = "scenebuilder-2.0.log"; //NOI18N
 
     public AboutWindowController() {
         super(AboutWindowController.class.getResource("About.fxml"), //NOI18N
@@ -115,52 +116,16 @@ public final class AboutWindowController extends AbstractFxmlWindowController {
     }
 
     private String getAboutText() {
-        boolean hwAccelerated = false;
 
-        String tk = Toolkit.getToolkit().getClass().getSimpleName();
-        String fxtra = I18N.getString("about.fx.toolkit")
-                + " = " + tk + "\n"; //NOI18N
-        if ("GlassToolkit".equals(tk) || "PrismToolkit".equals(tk) //NOI18N
-                || "QuantumToolkit".equals(tk)) { //NOI18N
-            String ppl = GraphicsPipeline.getPipeline().getClass().getSimpleName();
-            fxtra += I18N.getString("about.fx.pipeline")
-                    + " = " + ppl + "\n"; //NOI18N
-            if (ppl.trim().equals("D3DPipeline") //NOI18N
-                    || ppl.trim().equals("ES1Pipeline") //NOI18N
-                    || ppl.trim().equals("ES2Pipeline")) { //NOI18N
-                hwAccelerated = true;
-            }
-        }
-        fxtra += I18N.getString("about.fx.hardware.acceleration")
-                + " " //NOI18N
-                + (hwAccelerated ? I18N.getString("about.fx.hardware.acceleration.enabled")
-                : I18N.getString("about.fx.hardware.acceleration.disabled"))
-                + "\n\n"; //NOI18N
-
-        String text = I18N.getString("about.product.version")
-                + "\nJavaFX Scene Builder 2.0 (Developer Preview)\n\n" //NOI18N
-                + I18N.getString("about.build.information")
-                + "\n" + sbBuildInfo + "\n" //NOI18N
-                + MessageFormat.format(I18N.getString("about.build.date"), sbBuildDate)
-                + "\n\nJavaFX\n"; //NOI18N
-
-        text += fxtra
-                + "Java\n" //NOI18N
-                + System.getProperty("java.runtime.version") //NOI18N
-                + ", " //NOI18N
-                + System.getProperty("java.vendor") //NOI18N
-                + "\n\n" //NOI18N
-                + I18N.getString("about.operating.system")
-                + "\n" //NOI18N
-                + System.getProperty("os.name") //NOI18N
-                + ", " //NOI18N
-                + System.getProperty("os.arch") //NOI18N
-                + ", " //NOI18N
-                + System.getProperty("os.version") //NOI18N
-                + "\n\n"; //NOI18N
-
-        text += I18N.getString(sbAboutCopyrightKeyName);
-        return text;
+        StringBuilder text = getVersionParagraph()
+                .append(getBuildInfoParagraph())
+                .append(getLoggingParagraph())
+                .append(getFxParagraph())
+                .append(getJavaParagraph())
+                .append(getOsParagraph())
+                .append(I18N.getString(sbAboutCopyrightKeyName));
+        
+        return text.toString();
     }
     
     /**
@@ -177,5 +142,77 @@ public final class AboutWindowController extends AbstractFxmlWindowController {
      */
     public String getBuildInfo() {
         return sbBuildInfo;
+    }
+    
+    private StringBuilder getVersionParagraph() {
+        StringBuilder sb = new StringBuilder(I18N.getString("about.product.version"));
+        sb.append("\nJavaFX Scene Builder 2.0 (Developer Preview)\n\n"); //NOI18N
+        return sb;
+    }
+    private String getLogFilePath() {
+        StringBuilder sb = new StringBuilder(System.getProperty("java.io.tmpdir")); //NOI18N
+        sb.append(LOG_FILE_NAME);
+        return sb.toString();
+        
+    }
+
+    private StringBuilder getBuildInfoParagraph() {
+        StringBuilder sb = new StringBuilder(I18N.getString("about.build.information"));
+        sb.append("\n").append(sbBuildInfo).append("\n") //NOI18N
+                .append(I18N.getString("about.build.date", sbBuildDate))
+                .append("\n\n"); //NOI18N
+        return sb;
+    }
+
+    private StringBuilder getLoggingParagraph() {
+        StringBuilder sb = new StringBuilder(I18N.getString("about.logging.title"));
+        sb.append("\n") //NOI18N
+                .append(I18N.getString("about.logging.body.first", LOG_FILE_NAME))
+                .append("\n") //NOI18N
+                .append(I18N.getString("about.logging.body.second", getLogFilePath()))
+                .append("\n\n"); //NOI18N
+        return sb;
+    }
+    
+    private StringBuilder getFxParagraph() {
+        boolean hwAccelerated = false;
+        String tk = Toolkit.getToolkit().getClass().getSimpleName();
+        StringBuilder fxtra = new StringBuilder("JavaFX\n"); //NOI18N
+        fxtra.append(I18N.getString("about.fx.toolkit"))
+                .append(" = ").append(tk).append("\n"); //NOI18N
+
+        if ("GlassToolkit".equals(tk) || "PrismToolkit".equals(tk) //NOI18N
+                || "QuantumToolkit".equals(tk)) { //NOI18N
+            String ppl = GraphicsPipeline.getPipeline().getClass().getSimpleName();
+            fxtra.append(I18N.getString("about.fx.pipeline"))
+                    .append(" = ").append(ppl).append("\n"); //NOI18N
+            if (ppl.trim().equals("D3DPipeline") //NOI18N
+                    || ppl.trim().equals("ES1Pipeline") //NOI18N
+                    || ppl.trim().equals("ES2Pipeline")) { //NOI18N
+                hwAccelerated = true;
+            }
+        }
+        fxtra.append(I18N.getString("about.fx.hardware.acceleration"))
+                .append(" ") //NOI18N
+                .append(hwAccelerated ? I18N.getString("about.fx.hardware.acceleration.enabled")
+                        : I18N.getString("about.fx.hardware.acceleration.disabled"))
+                .append("\n\n"); //NOI18N
+
+        return fxtra;
+    }
+    
+    private StringBuilder getJavaParagraph() {
+        StringBuilder sb = new StringBuilder("Java\n"); //NOI18N
+        sb.append(System.getProperty("java.runtime.version")).append(", ") //NOI18N
+                .append(System.getProperty("java.vendor")).append("\n\n"); //NOI18N
+        return sb;
+    }
+    
+    private StringBuilder getOsParagraph() {
+        StringBuilder sb = new StringBuilder(I18N.getString("about.operating.system"));
+        sb.append("\n").append(System.getProperty("os.name")).append(", ") //NOI18N
+                .append(System.getProperty("os.arch")).append(", ") //NOI18N
+                .append(System.getProperty("os.version")).append("\n\n"); //NOI18N
+        return sb;
     }
 }

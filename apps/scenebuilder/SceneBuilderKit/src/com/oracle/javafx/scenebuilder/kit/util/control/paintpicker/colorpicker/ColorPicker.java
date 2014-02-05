@@ -413,7 +413,7 @@ public class ColorPicker extends VBox {
 
     private Color updateUI_OnHexaChange() {
         // retrieve Hexa TextField value
-        final String hexa = hexa_textfield.getText();
+        final String hexa = hexa_textfield.getText().trim();
         // retrieve HSB values from RGB values
         double hue = getHueFromHexa(hexa);
         double saturation = getSaturationFromHexa(hexa);
@@ -437,13 +437,14 @@ public class ColorPicker extends VBox {
         int red = (int) (rgb[0] * 255);
         int green = (int) (rgb[1] * 255);
         int blue = (int) (rgb[2] * 255);
-        final String hexa = String.format("%02X%02X%02X", red, green, blue); //NOI18N
+        final String hexa = String.format("%02x%02x%02x", red, green, blue); //NOI18N
 
         // Set TextFields value
         hue_textfield.setText(String.valueOf((int) hue));
         saturation_textfield.setText(String.valueOf((int) (saturation * 100)));
         brightness_textfield.setText(String.valueOf((int) (brightness * 100)));
-        alpha_textfield.setText(Double.toString(alpha));
+        double alpha_rounded = round(alpha, 100); // 2 decimals rounding
+        alpha_textfield.setText(Double.toString(alpha_rounded));
         red_textfield.setText(Integer.toString(red));
         green_textfield.setText(Integer.toString(green));
         blue_textfield.setText(Integer.toString(blue));
@@ -530,5 +531,10 @@ public class ColorPicker extends VBox {
     private double getBrightnessFromHexa(String hexa) {
         final Color c = Color.web(hexa);
         return c.getBrightness();
+    }
+
+    private double round(double value, int roundingFactor) {
+        double doubleRounded = Math.round(value * roundingFactor);
+        return doubleRounded / roundingFactor;
     }
 }

@@ -33,10 +33,14 @@ package com.oracle.javafx.scenebuilder.kit.editor.job.wrap;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
+import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.FXOMObjectCourseComparator.UnidimensionalComparator;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import javafx.geometry.Orientation;
 import javafx.scene.layout.VBox;
 
 /**
@@ -56,5 +60,12 @@ public class WrapInVBoxJob extends AbstractWrapInSubComponentJob {
 
     @Override
     protected void modifyContainer(final Set<FXOMObject> children) {
+    }
+
+    @Override
+    protected Collection<FXOMObject> sortChildren(Set<FXOMObject> children) {
+        final List<FXOMObject> sorted = new ArrayList<>(children);
+        Collections.sort(sorted, UnidimensionalComparator.of(Orientation.VERTICAL));
+        return sorted;
     }
 }

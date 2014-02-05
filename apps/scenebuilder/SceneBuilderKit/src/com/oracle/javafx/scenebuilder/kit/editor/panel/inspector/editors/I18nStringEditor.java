@@ -57,13 +57,15 @@ public class I18nStringEditor extends PropertyEditor {
     private TextInputControl textNode = new TextField();
     private HBox i18nHBox = null;
     final EventHandler<ActionEvent> valueListener;
-    private final MenuItem i18nOnMenuItem = new MenuItem(I18N.getString("inspector.i18n.on"));
-    private final MenuItem i18nOffMenuItem = new MenuItem(I18N.getString("inspector.i18n.off"));
-    private final MenuItem multilineMenuItem = new MenuItem(I18N.getString("inspector.i18n.multiline"));
-    private final MenuItem singlelineMenuItem = new MenuItem(I18N.getString("inspector.i18n.singleline"));
+    private final MenuItem i18nMenuItem = new MenuItem();
+    private final String I18N_ON = I18N.getString("inspector.i18n.on");
+    private final String I18N_OFF = I18N.getString("inspector.i18n.off");
+    private final MenuItem multilineMenuItem = new MenuItem();
+    private final String MULTI_LINE = I18N.getString("inspector.i18n.multiline");
+    private final String SINGLE_LINE = I18N.getString("inspector.i18n.singleline");
     // Specific states
-    private boolean i18nMode;
-    private boolean multiLineMode;
+    private boolean i18nMode = false;
+    private boolean multiLineMode = false;
 
     @SuppressWarnings("LeakingThisInConstructor")
     public I18nStringEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
@@ -78,45 +80,42 @@ public class I18nStringEditor extends PropertyEditor {
         };
         setTextEditorBehavior(this, textNode, valueListener);
 
-        getMenu().getItems().add(i18nOnMenuItem);
+        getMenu().getItems().add(i18nMenuItem);
         getMenu().getItems().add(multilineMenuItem);
 
-        i18nOnMenuItem.setOnAction(new EventHandler<ActionEvent>() {
+        i18nMenuItem.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent e) {
-                setValue(PERCENT_STR + I18N.getString("inspector.i18n.dummykey"));
+                if (!i18nMode) {
+                    setValue(PERCENT_STR + I18N.getString("inspector.i18n.dummykey"));
+                } else {
+                    setValue(""); //NOI18N
+                }
                 I18nStringEditor.this.getCommitListener().handle(null);
-                replaceMenuItem(i18nOnMenuItem, i18nOffMenuItem);
-                multilineMenuItem.setDisable(true);
-            }
-        });
-        i18nOffMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                setValue(""); //NOI18N
-                I18nStringEditor.this.getCommitListener().handle(null);
-                replaceMenuItem(i18nOffMenuItem, i18nOnMenuItem);
-                multilineMenuItem.setDisable(false);
+                updateMenuItems();
             }
         });
         multilineMenuItem.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent e) {
-                switchToTextArea();
-            }
-        });
-
-        singlelineMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                switchToTextField();
+                if (!multiLineMode) {
+                    switchToTextArea();
+                } else {
+                    switchToTextField();
+                }
+                multiLineMode = !multiLineMode;
+                updateMenuItems();
             }
         });
     }
 
     @Override
     public Object getValue() {
-        return textNode.getText();
+        String val = textNode.getText();
+        if (i18nMode) {
+            val = PERCENT_STR + val;
+        }
+        return val;
     }
 
     @Override
@@ -132,20 +131,42 @@ public class I18nStringEditor extends PropertyEditor {
         }
         assert value instanceof String;
         String val = (String) value;
-        if (containsLineFeed(val) && !multiLineMode) {
-            switchToTextArea();
-        } else if (multiLineMode && i18nMode) {
-            switchToTextField();
-        }
-        if (val.startsWith(PERCENT_STR) && !i18nMode) {
-            i18nMode = true;
+
+        // Handle i18n
+        if (val.startsWith(PERCENT_STR)) {
+            if (!i18nMode) {
+                wrapInHBox();
+                i18nMode = true;
+            }
             val = val.substring(1);
-            wrapInHBox();
-        } else if (!val.startsWith(PERCENT_STR) && i18nMode) {
-            i18nMode = false;
+        } else if (i18nMode) {
+            // no percent + i18nMode
             unwrapHBox();
+            i18nMode = false;
         }
+
+        // Handle multi-line
+        if (containsLineFeed(val)) {
+            if (i18nMode) {
+                // multi-line + i18n ==> set as i18n only
+                multiLineMode = false;
+                switchToTextField();
+            } else {
+                if (!multiLineMode) {
+                    multiLineMode = true;
+                    switchToTextArea();
+                }
+            }
+        } else {
+            // no line feed
+            if (multiLineMode) {
+                multiLineMode = false;
+                switchToTextField();
+            }
+        }
+
         textNode.setText(val);
+        updateMenuItems();
     }
 
     @Override
@@ -172,25 +193,25 @@ public class I18nStringEditor extends PropertyEditor {
     }
 
     protected void switchToTextArea() {
-        multiLineMode = true;
+        if (textNode instanceof TextArea) {
+            return;
+        }
         // Move the node from TextField to TextArea
         TextArea textArea = new TextArea(textNode.getText());
         setTextEditorBehavior(this, textArea, valueListener);
         textArea.setPrefHeight(50);
         setLayoutFormat(LayoutFormat.SIMPLE_LINE_TOP);
         if (textNode.getParent() != null) {
-            // textNode is alrady in scene graph
+            // textNode is already in scene graph
             EditorUtils.replaceNode(textNode, textArea, getLayoutFormat());
         }
         textNode = textArea;
-
-        getMenu().getItems().remove(multilineMenuItem);
-        getMenu().getItems().add(singlelineMenuItem);
-        i18nOnMenuItem.setDisable(true);
     }
 
     protected void switchToTextField() {
-        multiLineMode = false;
+        if (textNode instanceof TextField) {
+            return;
+        }
         // Move the node from TextArea to TextField.
         // The current text is compacted to a single line.
         String val = textNode.getText().replace("\n", "");//NOI18N
@@ -198,23 +219,23 @@ public class I18nStringEditor extends PropertyEditor {
         setTextEditorBehavior(this, textField, valueListener);
         setLayoutFormat(LayoutFormat.SIMPLE_LINE_CENTERED);
         if (textNode.getParent() != null) {
-            // textNode is alrady in scene graph
+            // textNode is already in scene graph
             EditorUtils.replaceNode(textNode, textField, getLayoutFormat());
         }
         textNode = textField;
-
-        getMenu().getItems().remove(singlelineMenuItem);
-        getMenu().getItems().add(multilineMenuItem);
-        i18nOnMenuItem.setDisable(false);
     }
 
     private void wrapInHBox() {
-        i18nHBox = new HBox(5);
+        i18nHBox = new HBox();
         i18nHBox.setAlignment(Pos.CENTER);
         EditorUtils.replaceNode(textNode, i18nHBox, null);
         Label percentLabel = new Label(PERCENT_STR);
-        percentLabel.setMinWidth(10);
+        percentLabel.getStyleClass().add("symbol-prefix"); //NOI18N
         i18nHBox.getChildren().addAll(percentLabel, textNode);
+        HBox.setHgrow(percentLabel, Priority.NEVER);
+        // we have to set a small pref width for the text node else it will
+        // revert to it's API set pref width which is too wide
+        textNode.setPrefWidth(30.0);
         HBox.setHgrow(textNode, Priority.ALWAYS);
     }
 
@@ -236,5 +257,23 @@ public class I18nStringEditor extends PropertyEditor {
                 textNode.requestFocus();
             }
         });
+    }
+
+    private void updateMenuItems() {
+        if (i18nMode) {
+            i18nMenuItem.setText(I18N_OFF);
+            multilineMenuItem.setDisable(true);
+        } else {
+            i18nMenuItem.setText(I18N_ON);
+            multilineMenuItem.setDisable(false);
+        }
+
+        if (multiLineMode) {
+            multilineMenuItem.setText(SINGLE_LINE);
+            i18nMenuItem.setDisable(true);
+        } else {
+            multilineMenuItem.setText(MULTI_LINE);
+            i18nMenuItem.setDisable(false);
+        }
     }
 }

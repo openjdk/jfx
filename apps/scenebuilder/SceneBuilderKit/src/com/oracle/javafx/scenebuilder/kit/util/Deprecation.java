@@ -36,6 +36,7 @@ import com.sun.glass.ui.Application.EventHandler;
 import com.sun.javafx.css.Style;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.control.skin.MenuBarSkin;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 import javafx.collections.ObservableMap;
@@ -84,7 +85,7 @@ public class Deprecation {
     public static ObservableMap<StyleableProperty<?>, List<Style>> getStyleMap(Node node) {
         return node.impl_getStyleMap();
     }
-    
+
     // Used to woraround RT-34863
     public static void reapplyCSS(Scene scene) {
         assert scene != null;
@@ -175,59 +176,65 @@ public class Deprecation {
     public static Bounds getGridPaneCellBounds(GridPane gridPane, int c, int r) {
         return gridPane.impl_getCellBounds(c, r);
     }
-    
+
     // RT-33675 : Promote TableColumn.impl_setReorderable() to public API
     @SuppressWarnings("rawtypes")
     public static void setTableColumnReordable(TableColumn tableColumn, boolean reordable) {
         tableColumn.impl_setReorderable(reordable);
     }
-    
-    // RT-21247 : Promote impl_getAllParentStylesheets to public API
-    public static Group makeStylingIsolationGroup() {
-        final Group result = new Group() {
-            @Override
-            public Styleable getStyleableParent() { return null; }
 
+    // RT-21247 : Promote impl_getAllParentStylesheets to public API
+    public static Group makeStylingIsolationGroupA() {
+        final Group result = new Group() {
             @Override
             public List<String> impl_getAllParentStylesheets() { return null; }
         };
-        
-        result.getStyleClass().add("root"); //NOI18N
-        result.getStylesheets().add(getModenaStylesheetURL().toString());
-        
+
         return result;
     }
-    
+
+    public static Group makeStylingIsolationGroupB() {
+        final Group result = new Group() {
+            @Override
+            public Styleable getStyleableParent() { return null; }
+        };
+
+        result.getStyleClass().add("root"); //NOI18N
+        result.getStylesheets().add(getModenaStylesheetURL().toString());
+
+        return result;
+    }
+
     public static URL getCaspianStylesheetURL() {
         final String resourceName = "com/sun/javafx/scene/control/skin/caspian/caspian.bss"; //NOI18N
         return ClassLoader.getSystemResource(resourceName);
     }
-    
+
     public static URL getCaspianHighContrastStylesheetURL() {
         final String resourceName = "com/sun/javafx/scene/control/skin/caspian/highcontrast.bss"; //NOI18N
         return ClassLoader.getSystemResource(resourceName);
     }
-    
+
     public static URL getCaspianEmbeddedStylesheetURL() {
         final String resourceName = "com/sun/javafx/scene/control/skin/caspian/embedded.bss"; //NOI18N
         return ClassLoader.getSystemResource(resourceName);
     }
-    
+
     public static URL getCaspianEmbeddedQVGAStylesheetURL() {
         final String resourceName = "com/sun/javafx/scene/control/skin/caspian/embedded-qvga.bss"; //NOI18N
         return ClassLoader.getSystemResource(resourceName);
     }
-    
+
     public static URL getModenaStylesheetURL() {
         final String resourceName = "com/sun/javafx/scene/control/skin/modena/modena.bss"; //NOI18N
         return ClassLoader.getSystemResource(resourceName);
     }
-    
+
     public static URL getModenaTouchStylesheetURL() {
         final String resourceName = "com/sun/javafx/scene/control/skin/modena/touch.bss"; //NOI18N
         return ClassLoader.getSystemResource(resourceName);
     }
-    
+
     public static URL getModenaHighContrastBlackonwhiteStylesheetURL() {
         final String resourceName = "com/sun/javafx/scene/control/skin/modena/blackOnWhite.css"; //NOI18N
         return ClassLoader.getSystemResource(resourceName);
@@ -241,6 +248,18 @@ public class Deprecation {
     public static URL getModenaHighContrastYellowonblackStylesheetURL() {
         final String resourceName = "com/sun/javafx/scene/control/skin/modena/yellowOnBlack.css"; //NOI18N
         return ClassLoader.getSystemResource(resourceName);
+    }
+
+    // Returns the corresponding text css (.css) from a binary css (.bss)
+    public static URL getThemeTextStylesheet(URL binaryStylesheetUrl) {
+        String binaryCssUrlStr = binaryStylesheetUrl.toExternalForm();
+        String textCssUrlStr = binaryCssUrlStr.replaceAll(".bss", ".css"); //NOI18N
+        try {
+            return new URL(textCssUrlStr);
+        } catch (MalformedURLException ex) {
+            // should never happen
+            return null;
+        }
     }
 
     // RT-21230 : Promote JavaFXBuilderFactory(ClassLoader classLoader, boolean alwaysUseBuilders) constructor to public API

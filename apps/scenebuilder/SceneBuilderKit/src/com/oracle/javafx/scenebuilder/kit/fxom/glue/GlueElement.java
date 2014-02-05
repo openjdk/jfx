@@ -46,7 +46,7 @@ import java.util.Objects;
 public class GlueElement extends GlueNode {
     
     private GlueDocument document;
-    private final String tagName;
+    private String tagName;
     private final List<GlueElement> children = new ArrayList<>();
 
     private final Map<String, String> attributes = new HashMap<>();
@@ -82,6 +82,12 @@ public class GlueElement extends GlueNode {
 
     public String getTagName() {
         return tagName;
+    }
+
+    public void setTagName(String tagName) {
+        assert tagName != null;
+        assert tagName.isEmpty() == false;
+        this.tagName = tagName;
     }
 
     public List<GlueElement> getChildren() {

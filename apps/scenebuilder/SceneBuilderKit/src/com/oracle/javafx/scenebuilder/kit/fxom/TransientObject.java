@@ -142,7 +142,8 @@ class TransientObject extends TransientNode {
                 assert fxRootType != null;
                 
                 final Class<?> rootClass = getSceneGraphObject().getClass();
-                assert fxRootType.equals(rootClass.getName());
+                assert fxRootType.equals(rootClass.getName())
+                        || fxRootType.equals(rootClass.getSimpleName());
                 result = new FXOMInstance(fxomDocument, glueElement, 
                                           rootClass, getSceneGraphObject(),
                                           properties);

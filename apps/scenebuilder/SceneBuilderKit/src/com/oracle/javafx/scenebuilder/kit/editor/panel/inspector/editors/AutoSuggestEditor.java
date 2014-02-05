@@ -156,25 +156,6 @@ public abstract class AutoSuggestEditor extends PropertyEditor {
         // Align popup with (at least its list view) with property text field
 //        suggestedLv.prefWidthProperty().bind(entryField.widthProperty());
 
-        //
-        // Set the font on the list view cells. Should be done from the FontEditor.
-        // There is an issue with the scroll-bar, which is impacted by the font size.
-        //
-//        suggestedLv.setCellFactory(new javafx.util.Callback<ListView<String>, ListCell<String>>() {
-//            @Override public ListCell<String> call(ListView<String> param) {
-//                final ListCell<String> cell = new ListCell<String>() {
-//                    @Override public void updateItem(String item, boolean empty) {
-//                        super.updateItem(item, empty);
-//                        if (item != null) {
-//                            setText(item);
-//                            setFont(new Font(item, 12));
-//                        }
-//                    }
-//                };
-//                return cell;
-//            }
-//        });
-//                
         updateMenuButtonIfNeeded();
     }
 

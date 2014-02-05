@@ -31,6 +31,8 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 
+import javafx.event.EventHandler;
+
 /**
  * Defines the communication interface between an EditorItem and its editor.
  * 
@@ -38,6 +40,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
  */
 public interface EditorItemDelegate {
     public void commit(EditorItem source);
+    public void editing(boolean editing, EventHandler<?> editingHandler);
     public void add(EditorItem previousItem, EditorItem newItem);
     public void remove(EditorItem source);
     public void up(EditorItem source);

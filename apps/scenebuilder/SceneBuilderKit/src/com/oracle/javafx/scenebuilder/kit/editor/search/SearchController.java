@@ -32,8 +32,6 @@
 package com.oracle.javafx.scenebuilder.kit.editor.search;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
-import com.oracle.javafx.scenebuilder.kit.editor.images.ImageUtils;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractFxmlController;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
@@ -41,8 +39,6 @@ import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.control.TextField;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
@@ -57,15 +53,9 @@ public class SearchController extends AbstractFxmlController {
     @FXML
     private TextField searchField;
     
-    @FXML
-    private ImageView searchImage;
-    
     // This StackPane contains the searchImage.
     @FXML
-    private StackPane searchClearArea;
-
-    private final Image magnifyImage = ImageUtils.getImage(SearchController.class.getResource("images/search-icon.png")); //NOI18N
-    private final Image clearImage = ImageUtils.getImage(SearchController.class.getResource("images/search-clear.png")); //NOI18N
+    private StackPane searchIcon;
 
     public SearchController(EditorController c) {
         super(SearchController.class.getResource("Search.fxml"), c); //NOI18N
@@ -74,14 +64,16 @@ public class SearchController extends AbstractFxmlController {
     public final StringProperty textProperty() {
         return searchField.textProperty();
     }
+    
+    public void requestFocus() {
+        searchField.requestFocus();
+    }
 
     @Override
     protected void controllerDidLoadFxml() {
         if (searchField.getLength() == 0) {
-            searchImage.setImage(magnifyImage);
+            searchIcon.getStyleClass().add("search-magnifying-glass"); //NOI18N
         }
-        
-//        searchField.setPromptText(I18N.getString("search.prompt"));
         
         // For SQE tests
         searchField.setId("Search Text"); //NOI18N
@@ -91,9 +83,11 @@ public class SearchController extends AbstractFxmlController {
             @Override
             public void changed(ObservableValue<? extends String> ov, String oldStr, String newStr) {
                 if (newStr.isEmpty()) {
-                    searchImage.setImage(magnifyImage);
+                    searchIcon.getStyleClass().clear();
+                    searchIcon.getStyleClass().add("search-magnifying-glass"); //NOI18N
                 } else {
-                    searchImage.setImage(clearImage);
+                    searchIcon.getStyleClass().clear();
+                    searchIcon.getStyleClass().add("search-clear"); //NOI18N
                 }
             }
         });
@@ -108,7 +102,7 @@ public class SearchController extends AbstractFxmlController {
             }
         });
         
-        searchClearArea.setOnMouseClicked(new EventHandler<MouseEvent>() {
+        searchIcon.setOnMouseClicked(new EventHandler<MouseEvent>() {
 
             @Override
             public void handle(MouseEvent t) {

@@ -34,6 +34,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 import static com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.PropertyEditor.handleIndeterminate;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import javafx.event.ActionEvent;
@@ -83,7 +84,7 @@ public class DividerPositionsEditor extends PropertyEditor {
             values[index] = new Double(val);
             index++;
         }
-        return values;
+        return Arrays.asList(values);
     }
 
     @SuppressWarnings("unchecked")

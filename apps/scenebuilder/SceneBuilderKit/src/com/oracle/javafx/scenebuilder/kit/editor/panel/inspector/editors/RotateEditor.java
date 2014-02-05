@@ -144,6 +144,11 @@ public class RotateEditor extends PropertyEditor {
     }
 
     @FXML
+    void rotatorReleased(MouseEvent e) {
+        userUpdateValueProperty(getValue());
+    }
+
+    @FXML
     public void rotatorDragged(MouseEvent e) {
 //        System.out.println("in RotateEditor.rotatorDragged");
         updateFromRotator = true;
@@ -157,7 +162,7 @@ public class RotateEditor extends PropertyEditor {
         Double deltaY = mouse.getY() - center.getY();
         Double radians = Math.atan2(deltaY, deltaX);
         rotate(Math.toDegrees(radians));
-        userUpdateValueProperty(getValue());
+        userUpdateTransientValueProperty(getValue());
         updateFromRotator = false;
     }
 

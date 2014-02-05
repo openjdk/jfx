@@ -59,6 +59,7 @@ public class RotatorControl extends GridPane {
     private Button rotator_handle;
     @FXML
     private Label rotator_label;
+    private final int roundingFactor = 100; // 2 decimals rounding
 
     private final DoubleProperty rotation = new SimpleDoubleProperty();
 
@@ -99,7 +100,9 @@ public class RotatorControl extends GridPane {
 
     @FXML
     void rotatorAction(ActionEvent event) {
-        rotate(Double.valueOf(rotator_textfield.getText()));
+        double value = Double.valueOf(rotator_textfield.getText());
+        double rounded = round(value, roundingFactor);
+        rotate(rounded);
         rotator_textfield.selectAll();
     }
 
@@ -122,9 +125,15 @@ public class RotatorControl extends GridPane {
         rotate(Math.toDegrees(radians));
     }
 
-    private void rotate(Double degrees) {
-        rotation.set(degrees);
-        rotator_handle.setRotate(degrees);
-        rotator_textfield.setText(Double.toString(degrees));
+    private void rotate(Double value) {
+        double rounded = round(value, roundingFactor);
+        rotation.set(rounded);
+        rotator_handle.setRotate(rounded);
+        rotator_textfield.setText(Double.toString(rounded));
+    }
+
+    private double round(double value, int roundingFactor) {
+        double doubleRounded = Math.round(value * roundingFactor);
+        return doubleRounded / roundingFactor;
     }
 }

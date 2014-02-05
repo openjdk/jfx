@@ -35,6 +35,7 @@ package com.oracle.javafx.scenebuilder.kit.fxom;
 import com.sun.javafx.fxml.builder.JavaFXImageBuilder;
 import java.io.File;
 import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Objects;
 
@@ -60,7 +61,7 @@ class FXOMImageBuilder extends JavaFXImageBuilder {
                     final URL url = new URL(value.toString());
                     if (Objects.equals(url.getProtocol(), "file")) { //NOI18N
                         // Check if a valid Image can be created from file
-                        final File imageFile = new File(url.getPath());
+                        final File imageFile = new File(url.toURI());
                         if (imageFile.canRead()) {
                             fixedValue = value;
                         } else {
@@ -69,7 +70,7 @@ class FXOMImageBuilder extends JavaFXImageBuilder {
                     } else {
                         fixedValue = value;
                     }
-                } catch(MalformedURLException x) {
+                } catch(MalformedURLException|URISyntaxException x) {
                     fixedValue = getMissingImageURL().toExternalForm();
                 }
             }

@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.layout.VBox;
 
@@ -82,6 +83,12 @@ public abstract class InlineListEditor extends PropertyEditor implements EditorI
     public void commit(EditorItem source) {
 //        System.out.println("COMMIT");
         userUpdateValueProperty(getValue());
+    }
+
+    @Override
+    public void editing(boolean editing, EventHandler<?> editingHandler) {
+        editingProperty().setValue(editing);
+        setCommitListener(editingHandler);
     }
 
     @Override
@@ -151,7 +158,6 @@ public abstract class InlineListEditor extends PropertyEditor implements EditorI
         if (!removeAll && editorItems.size() == 1) {
             // Do not remove last item, but reset it
             editorItem.reset();
-            editorItem.getPlusButton().setDisable(false);
             editorItem.getRemoveMenuItem().setDisable(true);
             return;
         }

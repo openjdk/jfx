@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import javafx.fxml.FXMLLoader;
 
 /**
  *
@@ -106,6 +107,24 @@ public class FXOMInstance extends FXOMObject {
         return getGlueElement().getTagName().equals("fx:root");
     }
     
+    public void toggleFxRoot() {
+        
+        if (isFxRoot()) {
+            assert getType() != null;
+            getGlueElement().setTagName(getType());
+            getGlueElement().getAttributes().remove(FXMLLoader.ROOT_TYPE_ATTRIBUTE);
+        } else {
+            assert getType() == null;
+            getGlueElement().getAttributes().put(FXMLLoader.ROOT_TYPE_ATTRIBUTE, getGlueElement().getTagName());
+            getGlueElement().setTagName("fx:root");
+        }
+    }
+    
+    public String getType() {
+        return getGlueElement().getAttributes().get(FXMLLoader.ROOT_TYPE_ATTRIBUTE);
+    }
+        
+    
     public static FXOMInstance newInstance(FXOMInstance source) {
         final FXOMInstance result;
         
@@ -131,6 +150,23 @@ public class FXOMInstance extends FXOMObject {
     /*
      * FXOMObject
      */
+
+    @Override
+    public void addToParentCollection(int index, FXOMCollection newParentCollection) {
+        super.addToParentCollection(index, newParentCollection);
+        
+        // May be this object was root : fx:root, type properties must be reset.
+        resetRootProperties();
+    }
+
+    @Override
+    public void addToParentProperty(int index, FXOMPropertyC newParentProperty) {
+        super.addToParentProperty(index, newParentProperty); //To change body of generated methods, choose Tools | Templates.
+        
+        // May be this object was root : fx:root, type properties must be reset.
+        resetRootProperties();
+    }
+
 
     @Override
     public List<FXOMObject> getChildObjects() {
@@ -364,5 +400,16 @@ public class FXOMInstance extends FXOMObject {
         assert properties.get(property.getName()) == property;
         properties.remove(property.getName());
         
+    }
+    
+    
+    /*
+     * Private
+     */
+    
+    private void resetRootProperties() {
+        if (isFxRoot()) {
+            toggleFxRoot();
+        }
     }
 }

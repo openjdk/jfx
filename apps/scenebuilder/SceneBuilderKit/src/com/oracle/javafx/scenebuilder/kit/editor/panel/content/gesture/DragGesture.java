@@ -71,7 +71,8 @@ public class DragGesture extends AbstractGesture {
     private DragEvent dragEnteredEvent;
     private DragEvent lastDragEvent;
     private Observer observer;
-    private boolean shouldEndOnExitOrDropped;
+    private boolean willReceiveDragDone;
+    private boolean shouldInvokeEnd;
     private FXOMObject hitParent;
     private DesignHierarchyMask hitParentMask;
     private MovingGuideController movingGuideController;
@@ -94,12 +95,20 @@ public class DragGesture extends AbstractGesture {
         assert e.getEventType() == DragEvent.DRAG_ENTERED;
         
         final Node glassLayer = contentPanelController.getGlassLayer();
+        assert glassLayer.getOnDragEntered()== null;
         assert glassLayer.getOnDragOver()== null;
         assert glassLayer.getOnDragExited()== null;
         assert glassLayer.getOnDragDropped()== null;
         assert glassLayer.getOnDragDone()== null;
         assert glassLayer.getOnKeyPressed()== null;
         
+        glassLayer.setOnDragEntered(new EventHandler<DragEvent>() {
+            @Override
+            public void handle(DragEvent e) {
+                lastDragEvent = e;
+                dragEnteredGlassLayer();
+            }
+        });
         glassLayer.setOnDragOver(new EventHandler<DragEvent>() {
             @Override
             public void handle(DragEvent e) {
@@ -146,7 +155,8 @@ public class DragGesture extends AbstractGesture {
         this.dragEnteredEvent = (DragEvent) e;
         this.lastDragEvent = this.dragEnteredEvent;
         this.observer = observer;
-        this.shouldEndOnExitOrDropped = false;
+        this.willReceiveDragDone = this.dragEnteredEvent.getGestureSource() == glassLayer;
+        this.shouldInvokeEnd = willReceiveDragDone;
         assert this.hitParent == null;
         assert this.hitParentMask == null;
         assert this.shadow == null;
@@ -170,7 +180,7 @@ public class DragGesture extends AbstractGesture {
             final ExternalDragSource dragSource = new ExternalDragSource(
                     lastDragEvent.getDragboard(), fxomDocument, ownerWindow);
             dragController.begin(dragSource);
-            shouldEndOnExitOrDropped = true;
+            shouldInvokeEnd = true;
         }
         
         // Objects being dragged should be excluded from the pick.
@@ -186,7 +196,7 @@ public class DragGesture extends AbstractGesture {
     }
     
     private void dragOverGlassLayer() {
-                
+        
         final double hitX = lastDragEvent.getSceneX();
         final double hitY = lastDragEvent.getSceneY();
         final FXOMObject hitObject =
@@ -226,7 +236,8 @@ public class DragGesture extends AbstractGesture {
                 assert hitObject instanceof FXOMInstance;
                 candidateParent = (FXOMInstance) hitObject;
             } else {
-                assert hitObject.getParentObject() instanceof FXOMInstance;
+                assert (hitObject.getParentObject() == null)
+                        || (hitObject.getParentObject() instanceof FXOMInstance);
                 candidateParent = (FXOMInstance) hitObject.getParentObject();
             }
         }
@@ -280,35 +291,36 @@ public class DragGesture extends AbstractGesture {
     }
     
     private void dragExitedGlassLayer() {
+        
         dragController.setDropTarget(null);
-        if (shouldEndOnExitOrDropped) {
-            dragController.end();
-        }
-        if (willReceiveDragDone() == false) {
-            performTermination();
+        hideShadow();
+        movingGuideController.clearSampleBounds();
+
+        if (willReceiveDragDone == false) {
+            dragDoneOnGlassLayer();
         }
     }
     
-    private void dragDroppedOnGlassLayer() {
+    private void dragDroppedOnGlassLayer() {    
+        lastDragEvent.setDropCompleted(true);
         dragController.commit();
-        if (shouldEndOnExitOrDropped) {
-            dragController.end();
-        }
-        if (willReceiveDragDone() == false) {
-            performTermination();
-        }
     }
     
     private void dragDoneOnGlassLayer() {
-        assert shouldEndOnExitOrDropped == false;
-        dragController.end();
+        if (shouldInvokeEnd) {
+            dragController.end();
+        }
         performTermination();
     }
     
     private void handleKeyPressed(KeyEvent e) {
         if (e.getCode() == KeyCode.ESCAPE) {
-            dragController.setDropTarget(null);
-            performTermination();
+            dragExitedGlassLayer();
+            if (willReceiveDragDone) {
+                // dragDone will not arrive but 
+                // we need to execute the corresponding logic
+                dragDoneOnGlassLayer();
+            }
         } else if (e.getCode() == KeyCode.ALT) {
             final EventType<KeyEvent> eventType = e.getEventType();
             if (eventType == KeyEvent.KEY_PRESSED) {
@@ -321,32 +333,15 @@ public class DragGesture extends AbstractGesture {
     }
     
     
-    private boolean willReceiveDragDone() {
-        /*
-         * DragGesture.dragDoneOnGlassLayer() will be invoked only if 
-         * glass layer is the gesture source ie this gesture has been
-         * initiated by SelectAndMoveGesture.mouseDragDetected.
-         * 
-         * If drag done will be called, then this gesture must perform itss 
-         * termination sequence only when drag done is called.
-         * If drag done will not be called, then this gesture must perform its
-         * termination sequence when drag exits or drops.
-         * 
-         */
-        return dragEnteredEvent.getGestureSource() 
-                == contentPanelController.getGlassLayer();
-    }
-    
-    
     private void performTermination() {
         final Node glassLayer = contentPanelController.getGlassLayer();
+        glassLayer.setOnDragEntered(null);
         glassLayer.setOnDragOver(null);
         glassLayer.setOnDragExited(null);
         glassLayer.setOnDragDropped(null);
         glassLayer.setOnDragDone(null);
         glassLayer.setOnKeyPressed(null);
         
-        hideShadow();
         dismantleMovingGuideController();
         
         observer.gestureDidTerminate(this);
@@ -354,10 +349,10 @@ public class DragGesture extends AbstractGesture {
         
         dragEnteredEvent = null;
         lastDragEvent = null;
-        shouldEndOnExitOrDropped = false;
+        shouldInvokeEnd = false;
         hitParent = null;
         hitParentMask = null;
-        assert shadow == null; // Because we called hideShadow()
+        assert shadow == null; // Because dragExitedGlassLayer() called hideShadow()
     }
     
     /*

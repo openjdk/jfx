@@ -38,7 +38,10 @@ import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask.Accessory;
+import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Point2D;
@@ -67,6 +70,10 @@ public class SelectWithMarqueeGesture extends AbstractMouseGesture {
         this.hitObject = hitObject;
         this.scopeObject = scopeObject;
         marqueeRect.getStyleClass().add("marquee");
+    }
+
+    public FXOMObject getHitObject() {
+        return hitObject;
     }
     
     /*
@@ -227,6 +234,21 @@ public class SelectWithMarqueeGesture extends AbstractMouseGesture {
                 final int count = m.getSubComponentCount();
                 for (int i = 0; i < count; i++) {
                     candidates.add(m.getSubComponentAtIndex(i));
+                }
+            } else {
+                final List<Accessory> accessories = Arrays.asList(
+                        Accessory.CONTENT,
+                        Accessory.CENTER,
+                        Accessory.BOTTOM, Accessory.TOP,
+                        Accessory.LEFT, Accessory.RIGHT,
+                        Accessory.XAXIS, Accessory.YAXIS);
+                for (Accessory accessory : accessories) {
+                    if (m.isAcceptingAccessory(accessory)) {
+                        final FXOMObject fxomObject = m.getAccessory(accessory);
+                        if (fxomObject != null) {
+                            candidates.add(fxomObject);
+                        }
+                    }
                 }
             }
         }

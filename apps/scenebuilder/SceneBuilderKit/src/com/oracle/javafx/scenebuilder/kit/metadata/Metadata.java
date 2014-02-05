@@ -1872,7 +1872,7 @@ public class Metadata {
     private final ValuePropertyMetadata fixedCellSizePropertyMetadata =
             new DoublePropertyMetadata(
                 fixedCellSizeName,
-                com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
+                com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.COORDINATE,
                 true, /* readWrite */
                 -1.0, /* defaultValue */
                 new InspectorPath("Properties", "Specific", 127));
@@ -2292,7 +2292,7 @@ public class Metadata {
     private final ValuePropertyMetadata minPropertyMetadata =
             new DoublePropertyMetadata(
                 minName,
-                com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
+                com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.COORDINATE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
                 new InspectorPath("Properties", "Specific", 27));

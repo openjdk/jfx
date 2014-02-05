@@ -36,6 +36,7 @@ import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadat
 import java.util.Set;
 import javafx.fxml.FXML;
 import javafx.geometry.Bounds;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Label;
 
@@ -63,61 +64,58 @@ public class BoundsPopupEditor extends PopupEditor {
     @FXML
     Label depth;
 
-    private final Parent root;
+    private Parent root;
     private Bounds bounds;
 
     @SuppressWarnings("LeakingThisInConstructor")
     public BoundsPopupEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
+    }
+
+    //
+    // Interface from PopupEditor.
+    // Methods called by PopupEditor.
+    //
+    
+    @Override
+    public void initializePopupContent() {
         root = EditorUtils.loadPopupFxml("BoundsPopupEditor.fxml", this); //NOI18N
-        initialize();
     }
 
-    // Method to please FindBugs
-    private void initialize() {
-
-        // Plug to the menu button.
-        plugEditor(this, root);
-    }
-
-    private String getValueAsString() {
+    @Override
+    public String getPreviewString(Object value) {
+        // value should never be null
+        assert value instanceof Bounds;
+        Bounds boundsVal = (Bounds) value;
         String valueAsString;
         if (isIndeterminate()) {
             valueAsString = "-"; //NOI18N
         } else {
-            valueAsString = EditorUtils.valAsStr(bounds.getMinX()) + "," //NOI18N
-                    + EditorUtils.valAsStr(bounds.getMinY())
-                    + "  " + EditorUtils.valAsStr(bounds.getWidth()) //NOI18N
-                    + "x" + EditorUtils.valAsStr(bounds.getHeight()); //NOI18N
+            valueAsString = EditorUtils.valAsStr(boundsVal.getMinX()) + "," //NOI18N
+                    + EditorUtils.valAsStr(boundsVal.getMinY())
+                    + "  " + EditorUtils.valAsStr(boundsVal.getWidth()) //NOI18N
+                    + "x" + EditorUtils.valAsStr(boundsVal.getHeight()); //NOI18N
         }
         return valueAsString;
     }
 
-    //
-    // Interface PopupEditor.InputValue.
-    // Methods called by PopupEditor.
-    //
     @Override
     public void setPopupContentValue(Object value) {
         if (value == null) {
             bounds = null;
-            resetPopupContent();
+            updateValues();
         } else {
             assert value instanceof Bounds;
             bounds = (Bounds) value;
             updateValues();
         }
-
-        // Update the menu button string
-        displayValueAsString(getValueAsString());
     }
 
     @Override
-    public void resetPopupContent() {
-        bounds = null;
-        updateValues();
+    public Node getPopupContentNode() {
+        return root;
     }
-
+    
     private void updateValues() {
         minX.setText(EditorUtils.valAsStr((bounds != null) ? bounds.getMinX() : ""));//NOI18N
         minY.setText(EditorUtils.valAsStr((bounds != null) ? bounds.getMinY() : ""));//NOI18N

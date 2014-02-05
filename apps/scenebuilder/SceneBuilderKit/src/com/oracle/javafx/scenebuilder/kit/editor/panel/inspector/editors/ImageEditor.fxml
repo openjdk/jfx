@@ -33,12 +33,20 @@
 -->
 
 <?import java.lang.*?>
+<?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<HBox spacing="2.0" style="" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
-  <children><Label fx:id="prefixLb" alignment="CENTER" maxWidth="20.0" minWidth="20.0" prefWidth="20.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" />
-    <TextField fx:id="imagePathTf" maxWidth="1.7976931348623157E308" HBox.hgrow="ALWAYS" />
-    <Button mnemonicParsing="false" onAction="#chooseImage" text="..." HBox.hgrow="NEVER" />
+<HBox style="" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+  <children><Label fx:id="prefixLb" alignment="CENTER" minWidth="10.0" HBox.hgrow="NEVER" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+<styleClass>
+<String fx:value="label" />
+<String fx:value="symbol-prefix" />
+</styleClass></Label>
+    <TextField fx:id="imagePathTf" prefWidth="30.0" HBox.hgrow="ALWAYS">
+<HBox.margin>
+<Insets right="1.0" />
+</HBox.margin></TextField>
+    <Button mnemonicParsing="false" onAction="#chooseImage" text="..." HBox.hgrow="ALWAYS" />
   </children>
 </HBox>

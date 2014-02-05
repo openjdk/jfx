@@ -61,10 +61,8 @@ import javafx.geometry.Bounds;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Control;
 import javafx.scene.control.MenuButton;
-import javafx.scene.control.MenuItem;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -72,7 +70,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.RowConstraints;
-
+        
 /**
  * Utility class for property editors.
  *
@@ -424,15 +422,14 @@ public class EditorUtils {
         propNameStr = propNameStr.substring(0, 1).toUpperCase(Locale.ENGLISH) + propNameStr.substring(1);
         String methodName;
         if (propMeta.getValueClass() == Boolean.class) {
-            methodName = "is" + propNameStr + "()"; //NOI18N
+            methodName = "is" + propNameStr + "--"; //NOI18N
         } else if (propMeta.isStaticProperty()) {
-            methodName = "get" + propNameStr + "(" + Node.class.getName() + ")"; //NOI18N
+            methodName = "get" + propNameStr + "-" + Node.class.getName() + "-"; //NOI18N
         } else {
-            methodName = "get" + propNameStr + "()"; //NOI18N
+            methodName = "get" + propNameStr + "--"; //NOI18N
         }
 
-        // http pointer to set on fx 8 when publicly available
-        String url = "http://docs.oracle.com/javafx/2/api/" + clazz.getName().replaceAll("\\.", "/") + ".html"; //NOI18N
+        String url = EditorPlatform.JAVADOC_HOME + clazz.getName().replaceAll("\\.", "/") + ".html"; //NOI18N
         url += "#" + methodName; //NOI18N
         EditorPlatform.open(url);
     }

@@ -34,6 +34,7 @@ package com.oracle.javafx.scenebuilder.kit.metadata.util;
 
 import java.io.File;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Path;
@@ -72,19 +73,25 @@ public class PrefixedValue {
         
         this.type = type;
         switch(this.type) {
-            case DOCUMENT_RELATIVE_PATH:
-                this.value = FXMLLoader.RELATIVE_PATH_PREFIX + suffix;
+            case DOCUMENT_RELATIVE_PATH: {
+                final String encoding = encodePath(new File(suffix));
+                this.value = FXMLLoader.RELATIVE_PATH_PREFIX + encoding;
                 break;
-            case CLASSLOADER_RELATIVE_PATH:
-                this.value = FXMLLoader.RELATIVE_PATH_PREFIX + "/" + suffix; //NOI18N
+            }
+            case CLASSLOADER_RELATIVE_PATH: {
+                final String encoding = encodePath(new File(suffix));
+                this.value = FXMLLoader.RELATIVE_PATH_PREFIX + "/" + encoding; //NOI18N
                 break;
-            case RESOURCE_KEY:
+            }
+            case RESOURCE_KEY: {
                 this.value = FXMLLoader.RESOURCE_KEY_PREFIX + suffix; //NOI18N
                 break;
-            case EXPRESSION:
+            }
+            case EXPRESSION: {
                 this.value = FXMLLoader.EXPRESSION_PREFIX + suffix; //NOI18N
                 break;
-            case PLAIN_STRING:
+            }
+            case PLAIN_STRING: {
                 if (suffix.startsWith(FXMLLoader.ESCAPE_PREFIX) 
                         || suffix.startsWith(FXMLLoader.RELATIVE_PATH_PREFIX) 
                         || suffix.startsWith(FXMLLoader.RESOURCE_KEY_PREFIX)
@@ -94,10 +101,12 @@ public class PrefixedValue {
                     this.value = suffix;
                 }
                 break;
+            }
             default:
-            case INVALID:
+            case INVALID: {
                 // Emergency code
                 throw new IllegalArgumentException("Unexpected type " + Type.INVALID); //NOI18N
+            }
         }
     }
     
@@ -135,12 +144,14 @@ public class PrefixedValue {
         switch(this.type) {
             case DOCUMENT_RELATIVE_PATH: {
                 assert value.startsWith(FXMLLoader.RELATIVE_PATH_PREFIX);
-                result = value.substring(FXMLLoader.RELATIVE_PATH_PREFIX.length());
+                final String encoding = value.substring(FXMLLoader.RELATIVE_PATH_PREFIX.length());
+                result = decodePath(encoding).getPath();
                 break;
             }
             case CLASSLOADER_RELATIVE_PATH: {
                 assert value.startsWith(FXMLLoader.RELATIVE_PATH_PREFIX+"/"); //NOI18N
-                result = value.substring(FXMLLoader.RELATIVE_PATH_PREFIX.length()+1);
+                final String encoding = value.substring(FXMLLoader.RELATIVE_PATH_PREFIX.length()+1);
+                result = decodePath(encoding).getPath();
                 break;
             }
             case RESOURCE_KEY: {
@@ -330,4 +341,56 @@ public class PrefixedValue {
         return true;
     }
     
+    
+    /*
+     * Private
+     */
+        
+    private static String encodePath(File file) {
+        final String result;
+        
+        try {
+            if (file.isAbsolute()) {
+                result = file.toURI().toURL().getPath();
+            } else {
+                final Path tmpPath = Paths.get(System.getProperty("java.io.tmpdir")); //NOI18N
+                final String tmpPathEncoding = tmpPath.toFile().toURI().toURL().getPath();
+                final Path absolutePath = tmpPath.resolve(file.toPath());
+                final String absoluteEncoding = absolutePath.toFile().toURI().toURL().getPath();
+                assert absoluteEncoding.startsWith(tmpPathEncoding);
+                result = absoluteEncoding.substring(tmpPathEncoding.length());
+            }
+        } catch(MalformedURLException x) {
+            throw new IllegalStateException(x);
+        }
+        
+        return result;
+    }
+    
+    private static File decodePath(String encoding) {
+        File result;
+        
+        try {
+            if (encoding.startsWith("/")) { //NOI18N
+                result = new File(new URI("file:" + encoding)) ; //NOI18N
+            } else {
+                final Path tmpPath = Paths.get(System.getProperty("java.io.tmpdir")); //NOI18N
+                final URL tmpPathURL = tmpPath.toFile().toURI().toURL();
+                final URL absoluteURL = new URL(tmpPathURL.toString() + "/" + encoding); //NOI18N
+                final File absoluteFile = new File(absoluteURL.toURI());
+                final Path absolutePath = absoluteFile.toPath();
+                assert absolutePath.startsWith(tmpPath);
+                final Path relativePath = tmpPath.relativize(absolutePath);
+                result = relativePath.toFile();
+            }
+            
+            assert encoding.equals(encodePath(result));
+            
+        } catch(MalformedURLException | URISyntaxException x) {
+            result = new File(encoding);
+        }
+        
+        
+        return result;
+    }
 }

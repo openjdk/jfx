@@ -39,11 +39,6 @@ import java.util.Enumeration;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import javafx.fxml.FXMLLoader;
-import javafx.scene.Node;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
-import javafx.scene.layout.StackPane;
-import javafx.stage.Stage;
 
 /**
  *
@@ -133,7 +128,8 @@ public class JarExplorer {
         } else {
             final String className = makeClassName(entry.getName());
             if (className == null || className.startsWith("java.") //NOI18N
-                    || className.startsWith("javax.") || className.startsWith("javafx.")) { //NOI18N
+                    || className.startsWith("javax.") || className.startsWith("javafx.") //NOI18N
+                    || className.startsWith("com.oracle.javafx.scenebuilder.")) { //NOI18N
                 status = JarReportEntry.Status.IGNORED;
                 entryClass = null;
                 entryException = null;

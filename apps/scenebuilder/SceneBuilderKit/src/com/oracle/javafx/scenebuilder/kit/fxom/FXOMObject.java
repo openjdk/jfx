@@ -106,6 +106,10 @@ public abstract class FXOMObject extends FXOMNode {
         
         final GlueElement newParentElement = parentProperty.getGlueElement();
         glueElement.addToParent(index, newParentElement);
+        
+        // May be this object was a root : properties like fx:controller must
+        // be reset to preserve FXML validity.
+        resetRootProperties();
     }
     
     public void removeFromParentProperty() {
@@ -152,6 +156,10 @@ public abstract class FXOMObject extends FXOMNode {
         
         final GlueElement newParentElement = parentCollection.getGlueElement();
         glueElement.addToParent(index, newParentElement);
+        
+        // May be this object was a root : properties like fx:controller must
+        // be reset to preserve FXML validity.
+        resetRootProperties();
     }
     
     public void removeFromParentCollection() {
@@ -654,6 +662,12 @@ public abstract class FXOMObject extends FXOMNode {
     
     
     /*
-     * Private (fx:id)
+     * Private
      */
+    
+    private void resetRootProperties() {
+        setFxController(null);
+        setNameSpaceFX(null);
+        setNameSpaceFXML(null);
+    }
 }

@@ -162,7 +162,7 @@ public class ContentPanelController extends AbstractFxmlPanelController
      * @param editorController the editor controller (never null).
      */
     public ContentPanelController(EditorController editorController) {
-        super(ContentPanelController.class.getResource("ContentPanel.fxml"), I18N.getBundle(), editorController);
+        super(ContentPanelController.class.getResource("ContentPanel.fxml"), I18N.getBundle(), editorController); //NOI18N
         this.editModeController = new EditModeController(this);
         this.pickModeController = new PickModeController(this);
         
@@ -471,10 +471,10 @@ public class ContentPanelController extends AbstractFxmlPanelController
                 = fxomDocument.searchWithSceneGraphObject(sceneGraphNode);
          /*
          * Refine the search.
-         * With the logic above, a click in a "tab header" returns the
-         * fxom object associated to the "tab pane". We would like to get
-         * the fxom object associated to the "tab". When the pick result is
-         * a "TabPane" we need to refine this result. This refinement logic
+         * With the logic above, a click in a 'tab header' returns the
+         * fxom object associated to the 'tab pane'. We would like to get
+         * the fxom object associated to the 'tab'. When the pick result is
+         * a 'TabPane' we need to refine this result. This refinement logic
          * is available in AbstractDriver.
          */
         if (match != null) {
@@ -631,7 +631,7 @@ public class ContentPanelController extends AbstractFxmlPanelController
     /**
      * @treatAsPrivate Returns the handles associated an fxom object.
      * Returns null if the fxom object is currently not selected or
-     * if content panel is not in "edit mode".
+     * if content panel is not in 'edit mode'.
      * @param fxomObject an fxom object
      * @return null or the associated handles
      */
@@ -795,7 +795,7 @@ public class ContentPanelController extends AbstractFxmlPanelController
         installStylingIsolationGroup();
         
         // Remove fake content used to help design
-        backgroundPane.setText("");
+        backgroundPane.setText(""); //NOI18N
         
         // Setup our workspace controller
         workspaceController.panelControllerDidLoadFxml(
@@ -934,13 +934,13 @@ public class ContentPanelController extends AbstractFxmlPanelController
     private void traceEvent(Event e) {
         final StringBuilder sb = new StringBuilder();
         
-        sb.append("ContentPanelController: eventType=");
+        sb.append("ContentPanelController: eventType="); //NOI18N
         sb.append(e.getEventType());
-        sb.append(", target=");
+        sb.append(", target="); //NOI18N
         sb.append(e.getTarget());
         if (e instanceof KeyEvent) {
             final KeyEvent ke = (KeyEvent) e;
-            sb.append(", keyCode=");
+            sb.append(", keyCode="); //NOI18N
             sb.append(ke.getCode());
         }
         
@@ -986,13 +986,39 @@ public class ContentPanelController extends AbstractFxmlPanelController
     private void installStylingIsolationGroup() {
         assert contentGroup.getParent() == scalingGroup;
         
-        final Group isolationGroup = Deprecation.makeStylingIsolationGroup();;
+        /*
+         * To isolate user content styling from SB's own styling we 
+         * insert two custom groups between scalingGroup and contentGroup:
+         * 
+         * 1) original layout loaded from FXML:
+         * 
+         *      ...
+         *          scalingGroup
+         *              contentGroup
+         *                  ... (user content)
+         * 
+         * 2) layout with isolation groups:
+         * 
+         *      ... 
+         *          scalingGroup
+         *              isolationGroupA     # impl_getAllParentStylesheets() overriden
+         *                  isolationGroupB     # getStyleableParent() overriden 
+         *                      contentGroup
+         *                          ... (user content)
+         *
+         * isolationGroupA prevents styling from SB to apply to user content
+         * isolationGroupB enables user content to have its own theme (modena, caspian...)
+         */
+        
+        final Group isolationGroupA = Deprecation.makeStylingIsolationGroupA();
+        final Group isolationGroupB = Deprecation.makeStylingIsolationGroupB();
 
         final int contentGroupIndex = scalingGroup.getChildren().indexOf(contentGroup);
         assert contentGroupIndex != -1;
         scalingGroup.getChildren().remove(contentGroup);
-        scalingGroup.getChildren().add(contentGroupIndex, isolationGroup);
-        isolationGroup.getChildren().add(contentGroup);
+        scalingGroup.getChildren().add(contentGroupIndex, isolationGroupA);
+        isolationGroupA.getChildren().add(isolationGroupB);
+        isolationGroupB.getChildren().add(contentGroup);
     }
     
     

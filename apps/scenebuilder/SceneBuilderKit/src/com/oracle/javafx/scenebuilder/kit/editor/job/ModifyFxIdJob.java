@@ -32,12 +32,13 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
+import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.util.JavaLanguage;
 import java.util.Objects;
 
 /**
- * Job used to modify the FX id.
+ * Job used to modify an fx:id.
  *
  */
 public class ModifyFxIdJob extends Job {
@@ -89,9 +90,15 @@ public class ModifyFxIdJob extends Job {
 
     @Override
     public String getDescription() {
-        final StringBuilder result = new StringBuilder();
-        result.append("Set FX id on ");
-        result.append(fxomObject.getSceneGraphObject().getClass().getSimpleName());
-        return result.toString();
+        final String result;
+        
+        if (newValue == null) {
+            assert oldValue != null;
+            result = I18N.getString("job.remove.fxid", oldValue);
+        } else {
+            result = I18N.getString("job.set.fxid", newValue);
+        }
+        
+        return result;
     }
 }

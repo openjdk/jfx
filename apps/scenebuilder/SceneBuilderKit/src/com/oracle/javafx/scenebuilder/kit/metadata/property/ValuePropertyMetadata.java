@@ -82,6 +82,19 @@ public abstract class ValuePropertyMetadata extends PropertyMetadata {
         return getName().getResidenceClass() != null;
     }
     
+    /**
+     * Sets the property value in the scene graph object.
+     * FXOM instance is unchanged. 
+     * Value is lost at next scene graph reconstruction.
+     * 
+     * @param fxomInstance an fxom instance (never null)
+     * @param value a value conform with the property typing
+     */
+    public void setValueInSceneGraphObject(FXOMInstance fxomInstance, Object value) {
+        assert fxomInstance != null;
+        assert fxomInstance.getSceneGraphObject() != null;
+        getName().setValue(fxomInstance.getSceneGraphObject(), value);
+    }
     
     /*
      * Object

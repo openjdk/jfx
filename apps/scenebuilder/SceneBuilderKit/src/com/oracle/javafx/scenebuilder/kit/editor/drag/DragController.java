@@ -36,7 +36,10 @@ import com.oracle.javafx.scenebuilder.kit.editor.drag.target.AbstractDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.source.DocumentDragSource;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.RootDropTarget;
+import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
+import com.oracle.javafx.scenebuilder.kit.editor.job.v2.BackupSelectionJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.v2.UpdateSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyPath;
 import java.util.List;
@@ -59,6 +62,7 @@ public class DragController {
     private final ObjectProperty<AbstractDropTarget> dropTargetProperty
             = new SimpleObjectProperty<>(null);
     private LiveUpdater liveUpdater;
+    private Job backupSelectionJob;
     private boolean liveUpdateEnabled;
     private boolean dropAccepted;
     private AbstractDropTarget committedDropTarget;
@@ -73,15 +77,18 @@ public class DragController {
         assert getDragSource() == null;
         assert getDropTarget() == null;
         assert liveUpdater == null;
+        assert backupSelectionJob == null;
         assert dropAccepted == false;
         assert committedDropTarget == null;
         assert mouseTimer == null;
         
-        editorController.getSelection().clear();
-        
         liveUpdater = new LiveUpdater(dragSource, editorController);
         dragSourceProperty.set(dragSource);
         dropTargetProperty.set(null);
+        
+        // Backup and clear the selection
+        backupSelectionJob = new BackupSelectionJob(editorController);
+        editorController.getSelection().clear();
     }
     
     public void end() {
@@ -101,13 +108,16 @@ public class DragController {
 
         if (committedDropTarget != null) {
             assert committedDropTarget.acceptDragSource(getDragSource());
-            final Job dropJob = committedDropTarget.makeDropJob(getDragSource(), editorController);
-            editorController.getSelection().beginUpdate();
-            editorController.getFxomDocument().beginUpdate(); // Required because dropJob may not do it
-            editorController.getJobManager().push(dropJob);
-            editorController.getFxomDocument().endUpdate();
-            editorController.getSelection().select(getDragSource().getDraggedObjects());
-            editorController.getSelection().endUpdate();
+            final Job dropJob 
+                    = committedDropTarget.makeDropJob(getDragSource(), editorController);
+            final Job selectJob 
+                    = new UpdateSelectionJob(getDragSource().getDraggedObjects(), editorController);
+            final BatchJob batchJob 
+                    = new BatchJob(editorController, dropJob.getDescription());
+            batchJob.addSubJob(backupSelectionJob);
+            batchJob.addSubJob(dropJob);
+            batchJob.addSubJob(selectJob);
+            editorController.getJobManager().push(batchJob);
         }
         
         if (mouseTimer != null) {
@@ -115,6 +125,7 @@ public class DragController {
             mouseTimer = null;
         }
         liveUpdater = null;
+        backupSelectionJob = null;
         committedDropTarget = null;
         dragSourceProperty.set(null);
         

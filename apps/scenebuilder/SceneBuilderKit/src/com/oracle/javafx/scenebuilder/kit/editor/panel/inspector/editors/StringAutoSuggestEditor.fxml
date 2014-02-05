@@ -33,13 +33,14 @@
 -->
 
 <?import java.lang.*?>
+<?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?scenebuilder-classpath-element ../../../../../../../../../../dist/SceneBuilderKit.jar?>
 
-<HBox maxWidth="1.7976931348623157E308" stylesheets="@../../../css/Theme.css" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+<HBox maxWidth="1.7976931348623157E308" spacing="1.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
 <children>
-    <TextField fx:id="textField" maxHeight="22.0" maxWidth="1.7976931348623157E308" minHeight="22.0" minWidth="100.0" onKeyReleased="#textFieldKeyReleased" onMouseClicked="#textFieldMouseClicked" prefHeight="22.0" prefWidth="-1.0">
+    <TextField fx:id="textField" onKeyReleased="#textFieldKeyReleased" onMouseClicked="#textFieldMouseClicked" prefWidth="-1.0">
       <contextMenu>
         <ContextMenu maxHeight="-1.0">
           <items>
@@ -51,14 +52,17 @@
           </items>
         </ContextMenu>
       </contextMenu>
-    </TextField><MenuButton fx:id="menuButton" maxHeight="22.0" minHeight="22.0" mnemonicParsing="false" prefHeight="22.0" HBox.hgrow="NEVER" xmlns:fx="http://javafx.com/fxml">
+<HBox.margin>
+<Insets />
+</HBox.margin>
+    </TextField><MenuButton fx:id="menuButton" mnemonicParsing="false" HBox.hgrow="NEVER" xmlns:fx="http://javafx.com/fxml">
   <items>
     <MenuItem mnemonicParsing="false" text="Action 1" />
     <MenuItem mnemonicParsing="false" text="Action 2" />
   </items>
 <styleClass>
 <String fx:value="menu-button" />
-<String fx:value="listrow-menubutton" />
+<String fx:value="multi-row-menubutton" />
 </styleClass>
 </MenuButton>
 </children>

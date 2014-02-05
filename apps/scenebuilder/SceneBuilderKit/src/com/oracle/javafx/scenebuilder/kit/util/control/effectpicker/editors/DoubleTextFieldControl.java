@@ -32,6 +32,7 @@
 package com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.editors;
 
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.DoubleField;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.EditorUtils;
 import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.EffectPickerController;
 import com.sun.javafx.Utils;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -59,6 +60,7 @@ public class DoubleTextFieldControl extends GridPane {
     private double incDecValue;
     private final DoubleProperty value = new SimpleDoubleProperty();
     private final EffectPickerController effectPickerController;
+    private final int roundingFactor = 100; // 2 decimals rounding
 
     public DoubleTextFieldControl(
             EffectPickerController effectPickerController,
@@ -115,9 +117,10 @@ public class DoubleTextFieldControl extends GridPane {
     }
 
     private void setValue(double d) {
-        value.set(d);
-        value.set(Utils.clamp(mini, value.get(), maxi));
-        editor_textfield.setText(Double.toString(getValue()));
+        double val = Utils.clamp(mini, d, maxi);
+        double rounded = EditorUtils.round(val, roundingFactor);
+        value.set(rounded);
+        editor_textfield.setText(Double.toString(rounded));
     }
 
     private double checkStringIsNumber(String s) {

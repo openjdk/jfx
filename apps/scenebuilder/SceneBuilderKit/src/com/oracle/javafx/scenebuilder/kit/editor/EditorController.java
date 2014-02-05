@@ -76,7 +76,6 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMIntrinsic;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMNodes;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyT;
 import com.oracle.javafx.scenebuilder.kit.glossary.Glossary;
 import com.oracle.javafx.scenebuilder.kit.glossary.BuiltinGlossary;
 import com.oracle.javafx.scenebuilder.kit.library.BuiltinLibrary;
@@ -90,13 +89,11 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask.Accessory;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
-import com.oracle.javafx.scenebuilder.kit.util.FileWatcher;
 import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.Utils;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -120,6 +117,7 @@ import javafx.scene.Parent;
 import javafx.scene.control.Control;
 import javafx.scene.effect.Effect;
 import javafx.scene.input.Clipboard;
+import javafx.scene.layout.BorderPane;
 import javafx.util.Callback;
 
 /**
@@ -646,6 +644,32 @@ public class EditorController {
      */
     public FXOMDocument getFxomDocument() {
         return fxomDocumentProperty.getValue();
+    }
+    
+    /**
+     * Starts file watching on this editor.
+     * This editor will now monitor the files referenced by the FXML text
+     * (like images, medias, stylesheets, included fxmls...) and automatically
+     * request attached panels to update themselves.
+     */
+    public void startFileWatching() {
+        watchingController.start();
+    }
+    
+    /**
+     * Stops file watching on this editor.
+     */
+    public void stopFileWatching() {
+        watchingController.stop();
+    }
+    
+    /**
+     * Returns true if file watching is started on this editor.
+     * 
+     * @return true if file watching is started on this editor.
+     */
+    public boolean isFileWatchingStarted() {
+        return watchingController.isStarted();
     }
 
     /**
@@ -1426,25 +1450,39 @@ public class EditorController {
      * @param libraryItem the library item describing the object to be inserted.
      */
     public void performInsert(LibraryItem libraryItem) {
+        final Job job;
         final FXOMObject target;
-        
+
         assert canPerformInsert(libraryItem); // (1)
-        
-        final FXOMObject rootObject = getFxomDocument().getFxomRoot();
-        if (selection.isEmpty() || selection.isSelected(rootObject)) {
-            target = rootObject;
-        } else {
-            target = selection.getAncestor();
-            assert target != null; // Because (1)
-        }
-        
+
         final FXOMDocument newItemDocument = libraryItem.instantiate();
         assert newItemDocument != null; // Because (1)
         final FXOMObject newObject = newItemDocument.getFxomRoot();
         assert newObject != null;
         newObject.moveToFxomDocument(getFxomDocument());
-        final InsertAsSubComponentJob job = new InsertAsSubComponentJob(
-                newObject, target, -1, this);
+        final FXOMObject rootObject = getFxomDocument().getFxomRoot();
+        if (rootObject == null) { // Empty document
+            job = new BatchJob(this, true,
+                    I18N.getString("drop.job.insert.library.item", libraryItem.getName()));
+            ((BatchJob) job).addSubJob(new SetDocumentRootJob(newObject, this));
+            // New root container may need a resize
+            final DesignHierarchyMask mask = new DesignHierarchyMask(newObject);
+            if (mask.needResizeWhenTopElement()) {
+                ((BatchJob) job).addSubJob(new UsePredefinedSizeJob(this,
+                        EditorController.Size.SIZE_DEFAULT, newObject));
+            }
+        } else {
+            if (selection.isEmpty() || selection.isSelected(rootObject)) {
+                // No selection or root is selected -> we insert below root
+                target = rootObject;
+            } else {
+                // Let's use the common parent of the selected objects.
+                // It might be null if selection holds some non FXOMObject entries
+                target = selection.getAncestor();
+            }
+            job = new InsertAsSubComponentJob(newObject, target, -1, this);
+        }
+
         jobManager.push(job);
     }
 
@@ -1458,38 +1496,39 @@ public class EditorController {
     public boolean canPerformInsert(LibraryItem libraryItem) {
         final FXOMObject targetCandidate;
         final boolean result;
-        
+
         if (getFxomDocument() == null) {
-            targetCandidate = null;
-        } else {
-            assert (libraryItem.getLibrary().getClassLoader() == null)
-                || (libraryItem.getLibrary().getClassLoader() == getFxomDocument().getClassLoader());
-            final FXOMObject rootObject = getFxomDocument().getFxomRoot();
-            if (selection.isEmpty() || selection.isSelected(rootObject)) {
-                // No selection or root is selected -> we insert below root
-                targetCandidate = rootObject;
-            } else {
-                // Let's use the common parent of the selected objects.
-                // It might be null if selection holds some non FXOMObject entries
-                targetCandidate = selection.getAncestor();
-            }
-        }
-        
-        if (targetCandidate == null) {
             result = false;
         } else {
+            assert (libraryItem.getLibrary().getClassLoader() == null)
+                    || (libraryItem.getLibrary().getClassLoader() == getFxomDocument().getClassLoader());
             final FXOMDocument newItemDocument = libraryItem.instantiate();
             if (newItemDocument == null) {
                 // For some reason, library is unable to instantiate this item
                 result = false;
             } else {
                 newItemDocument.getFxomRoot().moveToFxomDocument(getFxomDocument());
-                final InsertAsSubComponentJob job = new InsertAsSubComponentJob(
-                        newItemDocument.getFxomRoot(), targetCandidate, -1, this);
-                result = job.isExecutable();
+                final FXOMObject rootObject = getFxomDocument().getFxomRoot();
+                if (rootObject == null) { // Empty document
+                    final SetDocumentRootJob job = new SetDocumentRootJob(
+                            newItemDocument.getFxomRoot(), this);
+                    result = job.isExecutable();
+                } else {
+                    if (selection.isEmpty() || selection.isSelected(rootObject)) {
+                        // No selection or root is selected -> we insert below root
+                        targetCandidate = rootObject;
+                    } else {
+                        // Let's use the common parent of the selected objects.
+                        // It might be null if selection holds some non FXOMObject entries
+                        targetCandidate = selection.getAncestor();
+                    }
+                    final InsertAsSubComponentJob job = new InsertAsSubComponentJob(
+                            newItemDocument.getFxomRoot(), targetCandidate, -1, this);
+                    result = job.isExecutable();
+                }
             }
         }
-        
+
         return result;
     }
 
@@ -1596,7 +1635,25 @@ public class EditorController {
             final FXOMObject ancestor = selection.getAncestor();
             assert ancestor != null; // Because of (1)
             final DesignHierarchyMask mask = new DesignHierarchyMask(ancestor);
-            selection.select(mask.getSubComponents());
+            final Set<FXOMObject> selectableObjects = new HashSet<>();
+            // BorderPane special case : use accessories
+            if (mask.getFxomObject().getSceneGraphObject() instanceof BorderPane) {
+                final FXOMObject top = mask.getAccessory(Accessory.TOP);
+                final FXOMObject left = mask.getAccessory(Accessory.LEFT);
+                final FXOMObject center = mask.getAccessory(Accessory.CENTER);
+                final FXOMObject right = mask.getAccessory(Accessory.RIGHT);
+                final FXOMObject bottom = mask.getAccessory(Accessory.BOTTOM);
+                for (FXOMObject accessoryObject : new FXOMObject[]{
+                    top, left, center, right, bottom}) {
+                    if (accessoryObject != null) {
+                        selectableObjects.add(accessoryObject);
+                    }
+                }
+            } else {
+                assert mask.isAcceptingSubComponent(); // Because of (1)
+                selectableObjects.addAll(mask.getSubComponents());
+            }
+            selection.select(selectableObjects);
         } else if (selection.getGroup() instanceof GridSelectionGroup) {
             // Select ALL rows / columns
             final GridSelectionGroup gsg = (GridSelectionGroup) selection.getGroup();
@@ -1648,7 +1705,21 @@ public class EditorController {
                 final FXOMObject ancestor = selection.getAncestor();
                 assert ancestor != null; // Because of (1)
                 final DesignHierarchyMask mask = new DesignHierarchyMask(ancestor);
-                if (mask.isAcceptingSubComponent()) {
+                // BorderPane special case : use accessories
+                if (mask.getFxomObject().getSceneGraphObject() instanceof BorderPane) {
+                    final FXOMObject top = mask.getAccessory(Accessory.TOP);
+                    final FXOMObject left = mask.getAccessory(Accessory.LEFT);
+                    final FXOMObject center = mask.getAccessory(Accessory.CENTER);
+                    final FXOMObject right = mask.getAccessory(Accessory.RIGHT);
+                    final FXOMObject bottom = mask.getAccessory(Accessory.BOTTOM);
+                    for (FXOMObject bpAccessoryObject : new FXOMObject[] {
+                        top, left, center, right, bottom}) {
+                        if (bpAccessoryObject != null 
+                                && selection.isSelected(bpAccessoryObject) == false) {
+                            return true;
+                        }
+                    }
+                } else if (mask.isAcceptingSubComponent()) {
                     for (FXOMObject subComponentObject : mask.getSubComponents()) {
                         if (selection.isSelected(subComponentObject) == false) {
                             return true;
@@ -1667,7 +1738,7 @@ public class EditorController {
         }
         return false;
     }
-        
+    
     /**
      * Performs the select parent control action.
      * If the selection is multiple, we select the common ancestor.
@@ -2191,12 +2262,13 @@ public class EditorController {
         return res;
     }
 
-    
-    /*
-     * Private
+    /**
+     * @treatAsPrivate
+     * 
+     * @return true if the current selection objects are all instances of a Node, 
+     * false otherwise.
      */
-    
-    private boolean isSelectionNode() {
+    public boolean isSelectionNode() {
         final AbstractSelectionGroup asg = selection.getGroup();
         if (asg instanceof ObjectSelectionGroup) {
             final ObjectSelectionGroup osg = (ObjectSelectionGroup) asg;
@@ -2211,7 +2283,11 @@ public class EditorController {
         }
         return true;
     }
-
+    
+    /*
+     * Private
+     */
+    
     private boolean isSelectionControl() {
         final AbstractSelectionGroup asg = selection.getGroup();
         if (asg instanceof ObjectSelectionGroup) {

@@ -46,6 +46,7 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
@@ -324,7 +325,9 @@ public class SceneBuilderTest {
                     = dwc.getHierarchyPanelController();
             assert hpc != null;
             assert hpc.getPanelControl() != null;
-
+            // First expand the hierarchy tree
+            expandAllTreeItems(hpc.getRoot());
+            // Then look for the fxom object
             if (hpc.getPanelControl().isVisible()) {
                 final TreeItem<HierarchyItem> treeItem 
                         = hpc.lookupTreeItem(fxomObject);
@@ -440,5 +443,17 @@ public class SceneBuilderTest {
         }
         
         return result;
+    }
+    
+    private static <T> void expandAllTreeItems(final TreeItem<T> parentTreeItem) {
+        if (parentTreeItem != null) {
+            parentTreeItem.setExpanded(true);
+            final List<TreeItem<T>> children = parentTreeItem.getChildren();
+            if (children != null) {
+                for (TreeItem<T> child : children) {
+                    expandAllTreeItems(child);
+                }
+            }
+        }
     }
 }

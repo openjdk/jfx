@@ -38,19 +38,17 @@
 
 .theme-presets {
     -sb-base: rgb(147, 147, 147);
-    -sb-dark: derive(-sb-base, -30%);
-    -sb-content-text: derive(-sb-base, -70%); 
-    -sb-content-text-dimmed: derive(-sb-base, -30%);
-    -sb-header-text: derive(-sb-base, -70%);
+    -sb-dark: derive(-sb-base, -25%);
+    -sb-content-text: derive(-sb-base, -50%); 
+    -sb-content-text-dimmed: derive(-sb-base, -20%);
+    -sb-header-text: derive(-sb-base, -80%);
     -sb-header-text-dimmed: derive(-sb-base, -30%);
     -sb-grad-hi: derive(-sb-base, 110%);
     -sb-sharp-edge-hi: derive(-sb-base, 90%);
-    -sb-flat: derive(-sb-base, 65%);
+    -sb-flat: derive(-sb-base, 60%);
     -sb-sharp-edge-lo: derive(-sb-base, 20%);
     -sb-panel-background: derive(-sb-base, 98%);
-    -sb-control-inner: derive(-sb-base, -25%);
-    -sb-input-control-outer: derive(-sb-base, -48%);
-    -sb-input-control-inner: derive(-sb-base, -40%);
+    -sb-control-inner: -fx-control-inner-background;
     -sb-scrollbar-thumb: derive(-sb-base, 60%);
     -sb-selected-bar-color: rgb(75, 155, 210);
     -sb-selected-bar-unfocused-color: derive(-sb-panel-background, -15%);
@@ -67,9 +65,8 @@
  * Common UI Styling - Controls                                                *
  ******************************************************************************/
 
-.text-input {
-    -fx-padding: 0.25em 0.417em 0.167em 0.417em;
-    -fx-text-fill: -sb-content-text;
+.custom-menu-item:focused {
+     -fx-background: white;
 }
 
 .table-view,
@@ -101,9 +98,30 @@
  * Common UI Styling - Cog Button                                              *
  ******************************************************************************/
 
+.cog-shape {
+    -fx-shape: "M15.385,6.769h-0.738c-0.338,0-0.697-0.265-0.797-0.587L13.424,5.15c-0.158-0.298-0.094-0.74,0.145-0.978l0.523-0.523
+        c0.242-0.239,0.242-0.632,0-0.872l-0.869-0.868c-0.24-0.241-0.633-0.241-0.873,0l-0.521,0.523
+        c-0.238,0.239-0.682,0.304-0.979,0.144L9.818,2.152C9.496,2.052,9.23,1.692,9.23,1.354V0.615C9.23,0.277,8.953,0,8.615,0H7.386
+        C7.047,0,6.77,0.277,6.77,0.615v0.739c0,0.338-0.265,0.697-0.586,0.798L5.152,2.576c-0.299,0.16-0.739,0.097-0.978-0.144
+        L3.65,1.909c-0.24-0.241-0.631-0.241-0.872,0L1.91,2.777c-0.241,0.24-0.241,0.633,0,0.871l0.522,0.524
+        C2.672,4.41,2.738,4.853,2.578,5.15L2.152,6.183C2.052,6.504,1.692,6.77,1.355,6.77l-0.74-0.001C0.277,6.769,0,7.046,0,7.385v1.23
+        C0,8.951,0.277,9.23,0.615,9.23h0.74c0.337,0,0.695,0.266,0.797,0.588l0.426,1.029c0.158,0.299,0.094,0.742-0.146,0.979L1.91,12.35
+        c-0.241,0.24-0.241,0.633,0,0.873l0.868,0.869c0.241,0.24,0.632,0.24,0.872,0l0.523-0.523c0.237-0.238,0.679-0.305,0.977-0.143
+        l1.033,0.424c0.321,0.1,0.586,0.459,0.586,0.797v0.738C6.77,15.723,7.047,16,7.386,16h1.229c0.338,0,0.615-0.277,0.615-0.615
+        v-0.738c0-0.338,0.266-0.697,0.588-0.797l1.031-0.424c0.301-0.162,0.74-0.096,0.98,0.143l0.52,0.523c0.24,0.24,0.633,0.24,0.873,0
+        l0.869-0.869c0.242-0.24,0.242-0.633,0-0.873l-0.523-0.523c-0.238-0.236-0.303-0.68-0.145-0.979l0.426-1.029
+        c0.1-0.322,0.459-0.588,0.797-0.588h0.738C15.725,9.23,16,8.953,16,8.615v-1.23C16,7.046,15.725,6.769,15.385,6.769z M11.582,7.998
+        c0,1.979-1.602,3.58-3.578,3.58c-1.979,0-3.582-1.602-3.582-3.58c0-1.978,1.603-3.58,3.582-3.58
+        C9.98,4.418,11.582,6.021,11.582,7.998z";
+    -fx-background-color: -sb-header-text-dimmed;
+    -fx-min-width: 8;
+    -fx-max-width: 8;
+    -fx-min-height: 8;
+    -fx-max-height: 8;
+}
 .cog-button {
     -fx-background-color: -sb-panel-background;
-    -fx-background-image: url("../cssimages/cog.png");
+    -fx-background-image: url("../cssimages/property-cog.png");
     -fx-background-repeat: no-repeat;
     -fx-background-position: center;
     -fx-padding: 1 4 5 4;
@@ -118,6 +136,7 @@
     -fx-background-color: -fx-focus-color, -fx-background;
 }
 .cog-button .arrow-button {
+    visibility: hidden;
     -fx-padding:0;
 }
 .cog-button .arrow {
@@ -129,52 +148,7 @@
 }
 
 /*******************************************************************************
- * Common UI Styling - Panel Headers (Background, search box and menu)         *
- ******************************************************************************/
-
-.panel-header {
-    -fx-background-color: 
-        derive(-sb-grad-hi, 25%), 
-        linear-gradient(to bottom, -sb-grad-hi, -sb-flat);
-    -fx-background-insets: 0, 1 0 0 0;
-}
-.panel-header > .label {
-    -fx-padding: 8 32 7 8;
-    -fx-text-fill: -sb-header-text;
-}
-.panel-header > .menu-button {
-    -fx-background-color: null;
-    -fx-graphic: url('../cssimages/cog.png');
-    -fx-graphic-text-gap: 0px;
-    -fx-padding: 0 0 0 0.462em;
-}
-.panel-header > .menu-button .label {
-    -fx-padding: 0;
-}
-.panel-header > .menu-button > .arrow-button > .arrow {
-    -fx-background-color: -sb-dark;
-    -fx-padding: 0 0.231em 0.154em 0.154em;
-}
-.panel-header > .menu-button > .arrow-button {
-    -fx-padding: 0.462em 0.615em 0.462em 0.154em;
-}
-.panel-header .text-field {
-    -fx-text-fill: -sb-header-text;
-    -fx-font-size: 0.875em;
-    /*-fx-padding: 4 7 2 7;*/
-    -fx-padding: 3 7 2 7;
-    -fx-border-color: 
-        linear-gradient(to bottom, derive(-sb-sharp-edge-lo, 40%), derive(-sb-sharp-edge-hi, 25%));
-    -fx-border-radius: 10;
-    /*-fx-border-insets: -1 -12 1 0;*/
-    -fx-border-insets: 0 -12 0 0;
-    -fx-background-color: rgba(0, 0, 0, 0.02);
-    -fx-background-insets: 0 -12 0 0;
-    -fx-background-radius: 10;
-}
-
-/*******************************************************************************
- * Common UI Styling - Accordion and TitledPane                                *
+ * Common UI Styling - Accordion and TitledPane and search area shadows        *
  ******************************************************************************/
 
 .accordion > .titled-pane > .title {
@@ -184,7 +158,7 @@
     -fx-padding: 0.385em 0.692em 0.231em 0.692em;
     -fx-font-size: 0.875em;
     -fx-alignment: center-right;
-    -fx-effect: dropshadow( two-pass-box, rgba(0, 0, 0, 0.2), 5, 0.0, 0, 2 );
+    -fx-effect: dropshadow( two-pass-box, rgba(0, 0, 0, 0.2), 5, 0.0, 0, 1 );
 }
 .accordion > .first-titled-pane > .title {
     -fx-background-insets: 0 0 -1 0, 0, 1 0 1 0, 2 0 0 0;
@@ -196,19 +170,26 @@
     -fx-background-color: -sb-dark;
     -fx-padding: 0.154em 0.231em 0.231em 0.231em; /* 2 3 3 3 */
 }
+.pane-shadow {
+    -fx-background-color: derive(-sb-panel-background, -35%);
+    -fx-effect: dropshadow( two-pass-box, rgba(0, 0, 0, 0.6), 5, 0.0, 0, 0 );
+}
 
 /*******************************************************************************
  * Common UI Styling - Panel Backgrounds                                       *
  ******************************************************************************/
 
-.search-pane-background, 
 .accordion > .titled-pane > .content, 
+.scroll-pane, 
+.scroll-pane .viewport, 
+.search-pane-background, 
 .tree-view, 
 .tree-table-view {
     -fx-border-color: null;
     -fx-border-width: 0;
     -fx-background-color: -sb-panel-background;
-    -fx-background-insets: 0, 1 0 0 0;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
 }
 
 /*******************************************************************************
@@ -219,12 +200,6 @@
     -fx-background-color: -sb-dark;
     -fx-background-insets: 0;
     -fx-padding: 0;
-}
-.split-pane:vertical > .split-pane-divider {
-    /*-fx-background-insets: 0 -2 0 -2, 0;*/
-}
-.split-pane:horizontal > .split-pane-divider {
-    /*-fx-background-insets: -1 0 -3 0;*/
 }
 .split-pane > .split-pane-divider {
     -fx-background-color: -sb-dark;
@@ -673,62 +648,102 @@
 
 /*******************************************************************************
  *                                                                             *
- * Inspector Panel                                                             *
+ * Property Sheet Panels (Inspector, Controller)                               *
  *                                                                             *
  ******************************************************************************/
 
 /*******************************************************************************
- * Inspector Panel - General Appearance                                        *
+ * Property Sheet Panels - General Appearance                                  *
  ******************************************************************************/
 
-.property-sheet-text {
+.property-sheet {
     -fx-font-size: 0.875em;
 }
 
-/* A ScrollPane is used in the search section */
-.scroll-pane .viewport {
-    -fx-background-color: transparent;
-}
-
-.custom-menu-item:focused {
-     -fx-background: white;
-}
-
-.button,
-.check-box .box,
-.choice-box,
-.combo-box,
-.combo-box .arrow-button,
-.menu-button,
-.label,
-.text-field,
-.text-area,
-.toggle-button {
+.property-sheet .check-box .box {
     -fx-background-radius: 0;
 }
 
-.SBKIT-inspector-panel .hyperlink {
-    /* need to add a background color because of RT-32834 */
-    -fx-background-color: -sb-panel-background;
-}
-
-.hyperlink, .hyperlink:visited {
-    -fx-padding: 0.25em 0.417em 0.167em 0em; /* 3 5 2 0 */
+.property-sheet .label {
+    -fx-font-size: 0.875em;
     -fx-text-fill: -sb-content-text;
-    -fx-border-width: 0px;
-    -fx-underline: false;
-    -fx-padding: 0.25em 0.417em 0.167em 0em; /* 3 5 2 0 */
+    -fx-padding: 4 0 3 0;
 }
 
-.hyperlink:hover, .hyperlink:visited:hover {
+.property-sheet .hyperlink, .hyperlink:visited {
+    -fx-text-fill: -sb-content-text;
+    -fx-padding: 3 0 2 0;
+    -fx-underline: false;
+}
+.property-sheet .hyperlink:hover, .hyperlink:visited:hover {
     -fx-underline: true;
 }
 
-.inspector-message {
-    /* Used for 'No Selection' and 'No Results' messages */
-    -fx-text-fill: -sb-content-text-dimmed;
-    /* need to add a background color because of RT-32834 */
+.property-sheet .button, 
+.property-sheet .choice-box, 
+.property-sheet .menu-button, 
+.property-sheet .toggle-button {
+    -fx-padding: 4 6 3 6;
+    -fx-background-radius: 0;
+}
+
+.property-sheet .text-field {
+    -fx-text-fill: -sb-content-text;
+    -fx-padding: 4 5 3 5;
+    -fx-background-radius: 0;
+}
+
+.property-sheet .text-area {
+    -fx-text-fill: -sb-content-text;
+    -fx-background-radius: 0;
+}
+.property-sheet .text-area .content {
+    -fx-padding: 3 5 3 5;
+}
+
+.property-sheet .choice-box > .open-button, 
+.property-sheet .menu-button > .arrow-button {
+    -fx-padding: 2 0 2 0;
+}
+.property-sheet .choice-box > .label, 
+.property-sheet .menu-button > .label {
+    -fx-padding: 0 4 0 0;
+}
+.property-sheet .choice-box > .open-button > .arrow,
+.property-sheet .menu-button > .arrow-button > .arrow  {
+    -fx-background-color: -sb-dark;
+    -fx-background-insets: 0;
+    -fx-padding: 0.154em 0.308em 0.154em 0.231em;  /* 2 4 2 3 */
+}
+
+.property-sheet .cog-menubutton {
     -fx-background-color: -sb-panel-background;
+    -fx-background-radius: 0;
+    -fx-padding: 4 0 3 1;
+    -fx-graphic-text-gap: 0;
+    -fx-min-width: 10;
+    -fx-max-width: 10;
+    -fx-min-height: 10;
+}
+.property-sheet .cog-menubutton:hover {
+    -fx-background-color: derive(-sb-panel-background, -10%), -sb-panel-background;
+    -fx-background-insets: 0, 1;
+}
+.property-sheet .cog-menubutton:focused {
+    -fx-background-color: -fx-focus-color, -fx-background;
+}
+.property-sheet .cog-menubutton > .arrow-button {
+    visibility: hidden;
+    -fx-padding: 0;
+}
+.property-sheet .cog-menubutton > .arrow {
+    -fx-shape: null;
+    -fx-padding: 0;
+}
+
+.inspector-message .text {
+    /* Used for 'No Selection' and 'No Results' messages */
+    -fx-fill: -sb-content-text-dimmed;
 }
 
 .css-override {
@@ -736,18 +751,13 @@
     -fx-border-color: derive(-sb-sharp-edge-lo, 0%);
     -fx-border-style: dotted;
 }
-.css-override .hyperlink {
-    /* need to paint over the background color added because of RT-32834 */
-    -fx-background-color: -sb-css-winner-color;
-}
 
 /*******************************************************************************
- * Inspector Panel - Sub Section Titles                                        *
+ * Property Sheet Panels - Sub Section Titles                                  *
  ******************************************************************************/
 
-.sub-section-label {
-    -fx-text-fill: derive(-sb-content-text, -15%);
-    -fx-padding: 4 12 4 0;
+.sub-section-label .text {
+    -fx-fill: -sb-content-text-dimmed;
 }
 
 .sub-section-background {
@@ -755,10 +765,11 @@
         derive(-sb-sharp-edge-lo, 65%),
         linear-gradient(to left, derive(-sb-panel-background, 40%) 0%, -sb-panel-background 70%);
     -fx-background-insets: 7 0 8 -10, 8 0 9 -10;
+    -fx-padding: 8 12 8 0;
 }
 
 /*******************************************************************************
- * Inspector Panel - Insets Editor                                             *
+ * Property Sheet Panels - Insets Editor                                       *
  ******************************************************************************/
 
 .insets-copy-button {
@@ -778,30 +789,27 @@
     -fx-background-insets: 0, 1, 1, 2;
 }
 
-.small-label {
+.property-sheet .small-label {
     -fx-font-size: 0.750em; /* 9 */
     -fx-text-fill: -sb-content-text-dimmed;
     -fx-padding: 0;
-    /* need to add a background color because of RT-32834 */
-    -fx-background-color: -sb-panel-background;
 }
 
 /*******************************************************************************
- * Inspector Panel - Rotate Editor                                             *
+ * Property Sheet Panels - Rotate Editor                                       *
  ******************************************************************************/
 
-.rotation-dial {
+.property-sheet .rotation-dial {
     -fx-background-radius: 100;
 }
-.rotation-handle {
-    -fx-background-color: null;
-    -fx-background-image: url("../cssimages/rotate-handle.png");
-    -fx-background-repeat: no-repeat;
-    -fx-background-position: right;
+.property-sheet .rotation-handle {
+    -fx-background-color: -sb-sharp-edge-lo, derive(-sb-flat, 30%);
+    -fx-background-insets: 14 5 14 23, 15 6 15 24;
+    -fx-background-radius: 20, 20;
 }
 
 /*******************************************************************************
- * Inspector Panel - Anchor Pane Constraints Editor                            *
+ * Property Sheet Panels - Anchor Pane Constraints Editor                      *
  ******************************************************************************/
 
 .ap-constraints-outer-border {
@@ -838,39 +846,37 @@
 }
 
 /*******************************************************************************
- * Inspector Panel - Multi Row Editor Plus Button                              *
+ * Property Sheet Panels - Multi Row Editor Buttons                         *
  ******************************************************************************/
 
-/* Issue with + button height to fix by Mo. Harcoded height in fxml as workaround to be removed.
-   Same thing for "action" MenuButton */
-.plus-button {
-    -fx-graphic: url("../cssimages/button-plus.png");
-    -fx-padding: 0.333em 0.5em 0.333em 0.5em; /* 4 6 4 6 */
+.property-sheet .multi-row-plus-button {
+    -fx-padding: 4 3 3 4;
+    -fx-min-width: 17;
+}
+
+.property-sheet .multi-row-menubutton {
+    -fx-padding: 4 5 3 1;
+    -fx-min-width: 17;
 }
 
 /*******************************************************************************
- * Inspector Panel - Multi Row Editor MenuButton                               *
+ * Property Sheet Panels - Symbol Prefix @ @/ / # etc                          *
  ******************************************************************************/
 
-.listrow-menubutton {
-    -fx-graphic: url("../cssimages/button-pulldown.png");
-    -fx-padding: 0.083em -0.833em 0em -0.250em; /* 1 -9 0 -1 */
-    -fx-background-insets: 0 0 -1 0, 0, 1 1 1 0, 2 2 2 1;
-}
-.listrow-menubutton .arrow-button {
-    visibility: hidden;
-    -fx-padding: 0;
-}
-.listrow-menubutton:focused {
-    -fx-background-insets: -0.2, 1, 2, -1.4, 2.6;
+.property-sheet .symbol-prefix {
+    -fx-text-fill: -sb-content-text-dimmed;
+    -fx-background-color: 
+        derive(-sb-panel-background, -15%), -sb-panel-background;
+    -fx-background-insets: 0, 1 0 1 1;
+    -fx-padding: 4 3 3 5;
 }
 
 /*******************************************************************************
- * Inspector Panel - Suggestive ListView                                       *
+ * Property Sheet Panels - Suggestive ListView                                 *
  ******************************************************************************/
 
 .suggested-list {
-    -fx-font-size: 0.846em;  /* 11 */ 
+    -fx-font-size: 0.875em;
  }
 
 /*******************************************************************************

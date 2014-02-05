@@ -31,26 +31,16 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
-<?import java.lang.*?>
-<?import java.net.*?>
-<?import java.util.*?>
-<?import javafx.geometry.*?>
-<?import javafx.scene.*?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.image.*?>
-<?import javafx.scene.layout.*?>
-<?import javafx.scene.text.*?>
 
-<HBox fx:id="searchTopElement" alignment="CENTER" prefWidth="-1.0" spacing="0.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
+<?import java.lang.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<HBox fx:id="searchTopElement" alignment="CENTER" prefWidth="-1.0" spacing="0.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
   <children>
     <TextField fx:id="searchField" maxWidth="1.7976931348623157E308" minHeight="-1.0" minWidth="80.0" prefWidth="-1.0" promptText="" HBox.hgrow="ALWAYS" />
-    <StackPane fx:id="searchClearArea" maxHeight="14.0" maxWidth="14.0" minHeight="14.0" minWidth="14.0" prefHeight="14.0" prefWidth="14.0" HBox.hgrow="NEVER">
-      <children>
-        <ImageView fx:id="searchImage" fitHeight="12.0" fitWidth="12.0" pickOnBounds="true" preserveRatio="true" />
-      </children>
-      <padding>
-        <Insets right="15.0" />
-      </padding>
+    <StackPane fx:id="searchIcon" HBox.hgrow="NEVER">
       <HBox.margin>
         <Insets />
       </HBox.margin>

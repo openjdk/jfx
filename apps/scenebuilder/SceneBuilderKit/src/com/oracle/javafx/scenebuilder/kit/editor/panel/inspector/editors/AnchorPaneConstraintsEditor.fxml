@@ -38,6 +38,7 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.paint.*?>
 <?import javafx.scene.text.*?>
+<?import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.*?>
 <?scenebuilder-background-color 0xdfdfdfff?>
 
 <HBox alignment="CENTER" prefWidth="-1.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
@@ -46,33 +47,33 @@
       <children>
         <Region fx:id="outerR" prefHeight="45.0" prefWidth="45.0" style="" styleClass="ap-constraints-outer-border" GridPane.columnIndex="1" GridPane.columnSpan="3" GridPane.rowIndex="1" GridPane.rowSpan="3" />
         <Region fx:id="innerR" prefHeight="45.0" prefWidth="45.0" style="" styleClass="ap-constraints-inner-border" GridPane.columnIndex="2" GridPane.rowIndex="2" />
-        <TextField fx:id="topTf" alignment="CENTER" prefColumnCount="3" prefWidth="45.0" GridPane.columnIndex="2" GridPane.rowIndex="0">
+        <DoubleField fx:id="topTf" alignment="CENTER" prefColumnCount="3" prefWidth="45.0" GridPane.columnIndex="2" GridPane.rowIndex="0">
           <GridPane.margin>
             <Insets bottom="4.0" />
           </GridPane.margin>
-        </TextField>
+        </DoubleField>
         <ToggleButton fx:id="topTb" mnemonicParsing="false" styleClass="ap-constraints-toggle-v" text="" GridPane.columnIndex="2" GridPane.rowIndex="1">
           <GridPane.margin>
             <Insets fx:id="x1" />
           </GridPane.margin>
         </ToggleButton>
-        <TextField fx:id="rightTf" prefColumnCount="3" prefWidth="-1.0" GridPane.columnIndex="4" GridPane.rowIndex="2">
+        <DoubleField fx:id="rightTf" prefColumnCount="3" prefWidth="-1.0" GridPane.columnIndex="4" GridPane.rowIndex="2">
           <GridPane.margin>
             <Insets left="4.0" />
           </GridPane.margin>
-        </TextField>
+        </DoubleField>
         <ToggleButton fx:id="rightTb" mnemonicParsing="false" styleClass="ap-constraints-toggle-h" text="" GridPane.columnIndex="3" GridPane.margin="$x1" GridPane.rowIndex="2" />
-        <TextField fx:id="bottomTf" alignment="CENTER" prefColumnCount="3" prefWidth="-1.0" GridPane.columnIndex="2" GridPane.rowIndex="4">
+        <DoubleField fx:id="bottomTf" alignment="CENTER" prefColumnCount="3" prefWidth="-1.0" GridPane.columnIndex="2" GridPane.rowIndex="4">
           <GridPane.margin>
             <Insets top="4.0" />
           </GridPane.margin>
-        </TextField>
+        </DoubleField>
         <ToggleButton fx:id="bottomTb" mnemonicParsing="false" styleClass="ap-constraints-toggle-v" text="" GridPane.columnIndex="2" GridPane.margin="$x1" GridPane.rowIndex="3" />
-        <TextField fx:id="leftTf" alignment="CENTER_RIGHT" prefColumnCount="3" prefWidth="-1.0" GridPane.columnIndex="0" GridPane.rowIndex="2">
+        <DoubleField fx:id="leftTf" alignment="CENTER_RIGHT" prefColumnCount="3" prefWidth="-1.0" GridPane.columnIndex="0" GridPane.rowIndex="2">
           <GridPane.margin>
             <Insets right="4.0" />
           </GridPane.margin>
-        </TextField>
+        </DoubleField>
         <ToggleButton fx:id="leftTb" mnemonicParsing="false" styleClass="ap-constraints-toggle-h" text="" GridPane.columnIndex="1" GridPane.margin="$x1" GridPane.rowIndex="2" />
       </children>
       <columnConstraints>

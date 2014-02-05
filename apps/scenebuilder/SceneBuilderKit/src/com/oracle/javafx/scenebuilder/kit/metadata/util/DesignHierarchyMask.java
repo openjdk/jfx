@@ -353,11 +353,21 @@ public class DesignHierarchyMask {
                 || sceneGraphObject instanceof MenuItem
                 || sceneGraphObject instanceof Tab
                 || sceneGraphObject instanceof TableColumn
+                || sceneGraphObject instanceof Text
                 || sceneGraphObject instanceof TextInputControl
                 || sceneGraphObject instanceof TitledPane
                 || sceneGraphObject instanceof Tooltip;
     }
     
+    public boolean isResourceKey() {
+        if (hasDescription()) {
+            final String description = getDescription();
+            final PrefixedValue pv = new PrefixedValue(description);
+            return pv.isResourceKey();
+        }
+        return false;
+    }
+
     public boolean isFreeChildPositioning() {
         boolean result = false;
         if (fxomObject instanceof FXOMInstance) {
@@ -434,13 +444,12 @@ public class DesignHierarchyMask {
         final FXOMProperty fxomProperty = fxomInstance.getProperties().get(propertyName);
         final FXOMObject result;
 
-        if (fxomProperty == null) {
-            result = null;
-        } else {
-            assert fxomProperty instanceof FXOMPropertyC;
+        if (fxomProperty instanceof FXOMPropertyC) {
             final FXOMPropertyC fxomPropertyC = (FXOMPropertyC) fxomProperty;
-            assert fxomPropertyC.getValues().size() == 1;
+            assert fxomPropertyC.getValues().size() >= 1 : "accessory=" + accessory;
             result = fxomPropertyC.getValues().get(0);
+        } else {
+            result = null;
         }
 
         return result;

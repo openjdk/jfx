@@ -52,6 +52,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.text.Font;
@@ -68,7 +69,7 @@ public class FontPopupEditor extends PopupEditor {
     @FXML
     private StackPane sizeSp;
 
-    private final Parent root;
+    private Parent root;
     private Font font = Font.getDefault();
     private FamilyEditor familyEditor;
     private StyleEditor styleEditor;
@@ -77,58 +78,6 @@ public class FontPopupEditor extends PopupEditor {
     @SuppressWarnings("LeakingThisInConstructor")
     public FontPopupEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
-        root = EditorUtils.loadPopupFxml("FontPopupEditor.fxml", this); //NOI18N
-        initialize();
-    }
-
-    // Method to please FindBugs
-    private void initialize() {
-        // Add the editors in the scene graph
-        familyEditor = new FamilyEditor("", "", new ArrayList<>());//NOI18N
-        familySp.getChildren().add(familyEditor.getValueEditor());
-        styleEditor = new StyleEditor("", "", new ArrayList<>());//NOI18N
-        styleSp.getChildren().add(styleEditor.getValueEditor());
-        sizeEditor = new BoundedDoubleEditor("", "", getPredefinedFontSizes(), 1.0, 96.0, true);//NOI18N
-        commitOnFocusLost(sizeEditor);
-        sizeSp.getChildren().add(sizeEditor.getValueEditor());
-
-        familyEditor.valueProperty().addListener(new ChangeListener<Object>() {
-            @Override
-            public void changed(ObservableValue<? extends Object> ov, Object oldVal, Object newVal) {
-                commit();
-                setStyle();
-            }
-        });
-
-        ChangeListener<Object> valueListener = new ChangeListener<Object>() {
-            @Override
-            public void changed(ObservableValue<? extends Object> ov, Object oldVal, Object newVal) {
-                commit();
-            }
-        };
-        styleEditor.valueProperty().addListener(valueListener);
-        sizeEditor.valueProperty().addListener(valueListener);
-
-        setCommitListener(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                commit();
-            }
-        });
-
-        // Font families are costly to initialize, so this is delayed when the popup is opened
-        showingProperty().addListener(new ChangeListener<Boolean>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean previousValue, Boolean newValue) {
-                if (newValue && familyEditor.getFamilies().isEmpty()) {
-                    familyEditor.setFamilies(getFamilies());
-                }
-            }
-        });
-
-        // Plug to the menu button.
-        plugEditor(this, root);
     }
 
     private void setStyle() {
@@ -145,7 +94,7 @@ public class FontPopupEditor extends PopupEditor {
         font = getFont();
         assert font != null;
 //        System.out.println("Committing: " + font + " - preview: " + getValueAsString());
-        commitValue(font, getValueAsString());
+        commitValue(font);
     }
 
     private Font getFont() {
@@ -160,27 +109,84 @@ public class FontPopupEditor extends PopupEditor {
         }
     }
 
-    private String getValueAsString() {
-        if (isIndeterminate()) {
-            return "-"; //NOI18N
-        } else {
-            assert font != null;
-            String size = EditorUtils.valAsStr(font.getSize());
-            return font.getFamily() + " " + size + "px" //NOI18N
-                    + (!font.getName().equals(font.getFamily()) && !"Regular".equals(font.getStyle()) ? //NOI18N
-                    " (" + font.getStyle() + ")" : ""); //NOI18N
-        }
-    }
-
     @Override
     public Object getValue() {
         return font;
     }
 
     //
-    // Interface PopupEditor.InputValue.
+    // Interface from PopupEditor
     // Methods called by PopupEditor.
     //
+    @Override
+    public void initializePopupContent() {
+        root = EditorUtils.loadPopupFxml("FontPopupEditor.fxml", this); //NOI18N
+        // Add the editors in the scene graph
+        familyEditor = new FamilyEditor("", "", getFamilies());//NOI18N
+        familySp.getChildren().add(familyEditor.getValueEditor());
+        styleEditor = new StyleEditor("", "", new ArrayList<>());//NOI18N
+        styleSp.getChildren().add(styleEditor.getValueEditor());
+        sizeEditor = new BoundedDoubleEditor("", "", getPredefinedFontSizes(), 1.0, 96.0, true);//NOI18N
+        commitOnFocusLost(sizeEditor);
+        sizeSp.getChildren().add(sizeEditor.getValueEditor());
+
+        familyEditor.valueProperty().addListener(new ChangeListener<Object>() {
+            @Override
+            public void changed(ObservableValue<? extends Object> ov, Object oldVal, Object newVal) {
+                if (familyEditor.isUpdateFromModel()) {
+                    // nothing to do
+                    return;
+                }
+                commit();
+                setStyle();
+            }
+        });
+
+        styleEditor.valueProperty().addListener(new ChangeListener<Object>() {
+            @Override
+            public void changed(ObservableValue<? extends Object> ov, Object oldVal, Object newVal) {
+                if (styleEditor.isUpdateFromModel()) {
+                    // nothing to do
+                    return;
+                }
+                commit();
+            }
+        });
+
+        sizeEditor.valueProperty().addListener(new ChangeListener<Object>() {
+            @Override
+            public void changed(ObservableValue<? extends Object> ov, Object oldVal, Object newVal) {
+                if (sizeEditor.isUpdateFromModel()) {
+                    // nothing to do
+                    return;
+                }
+                commit();
+            }
+        });
+        
+        sizeEditor.transientValueProperty().addListener(new ChangeListener<Object>() {
+            @Override
+            public void changed(ObservableValue<? extends Object> ov, Object oldVal, Object newVal) {
+                transientValue(getFont());
+            }
+        });
+    }
+
+    @Override
+    public String getPreviewString(Object value) {
+        // value should never be null
+        assert value instanceof Font;
+        Font fontVal = (Font) value;
+        if (isIndeterminate()) {
+            return "-"; //NOI18N
+        } else {
+            String size = EditorUtils.valAsStr(fontVal.getSize());
+            return fontVal.getFamily() + " " + size + "px" //NOI18N
+                    + (!fontVal.getName().equals(fontVal.getFamily()) && !"Regular".equals(fontVal.getStyle()) ? //NOI18N
+                    " (" + fontVal.getStyle() + ")" : ""); //NOI18N
+        }
+    }
+
     @Override
     public void setPopupContentValue(Object value) {
         assert value instanceof Font;
@@ -192,16 +198,13 @@ public class FontPopupEditor extends PopupEditor {
         sizeEditor.setUpdateFromModel(true);
         sizeEditor.setValue(font.getSize());
         sizeEditor.setUpdateFromModel(false);
-
-        // Update the menu button string
-        displayValueAsString(getValueAsString());
     }
 
     @Override
-    public void resetPopupContent() {
-        // Nothing to do here, since the font is never null
+    public Node getPopupContentNode() {
+        return root;
     }
-
+    
     private static class FamilyEditor extends AutoSuggestEditor {
 
         private List<String> families;
@@ -233,11 +236,6 @@ public class FontPopupEditor extends PopupEditor {
             return getTextField().getText();
         }
 
-        public void setFamilies(List<String> families) {
-            super.resetSuggestedList(families);
-            this.families = families;
-        }
-        
         public List<String> getFamilies() {
             return families;
         }

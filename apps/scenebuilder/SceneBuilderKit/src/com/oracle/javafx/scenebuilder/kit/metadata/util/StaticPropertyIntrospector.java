@@ -53,6 +53,12 @@ class StaticPropertyIntrospector {
     }
     
     public Object getValue(String propertyName) {
-        return null; // TODO(elp) : to be implemented
+        // So far we have no use for this : we'll implement when needed.
+        throw new UnsupportedOperationException("Not yet implemented"); //NOI18N
+    }
+    
+    public void setValue(String propertyName, Object value) {
+        // So far we have no use for this : we'll implement when needed.
+        throw new UnsupportedOperationException("Not yet implemented"); //NOI18N
     }
 }

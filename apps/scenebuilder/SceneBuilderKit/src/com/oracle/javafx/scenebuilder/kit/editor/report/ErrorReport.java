@@ -171,7 +171,8 @@ public class ErrorReport {
         assert fxomIntrinsic.getParentObject() != null;
         
         if (fxomIntrinsic.getType() == FXOMIntrinsic.Type.FX_INCLUDE) {
-            final PrefixedValue source = new PrefixedValue(fxomIntrinsic.getSource());
+            final String equivalentValue = "@" + fxomIntrinsic.getSource(); //NOI18N
+            final PrefixedValue source = new PrefixedValue(equivalentValue);
             assert source.isInvalid() == false;
             
             if (source.isDocumentRelativePath()) {
@@ -200,6 +201,29 @@ public class ErrorReport {
                             = new ErrorReportEntry(fxomIntrinsic, ErrorReportEntry.Type.UNRESOLVED_LOCATION);
                     addEntry(fxomIntrinsic, newEntry);
                 }
+                
+            } else if (source.isClassLoaderRelativePath()) {
+                final ClassLoader classLoader;
+                final boolean ok;
+
+                if (fxomDocument.getClassLoader() != null) {
+                    classLoader = fxomDocument.getClassLoader();
+                } else {
+                    classLoader = ClassLoader.getSystemClassLoader();
+                }
+
+                if (classLoader == null) {
+                    ok = false;
+                } else {
+                    final URL location = source.resolveClassLoaderRelativePath(classLoader);
+                    ok = (location != null);
+                }
+                if (ok == false) {
+                    final ErrorReportEntry newEntry 
+                            = new ErrorReportEntry(fxomIntrinsic, ErrorReportEntry.Type.UNRESOLVED_LOCATION);
+                    addEntry(fxomIntrinsic, newEntry);
+                }
+                
             } else if (source.isPlainString()) {
                 
                 boolean ok;

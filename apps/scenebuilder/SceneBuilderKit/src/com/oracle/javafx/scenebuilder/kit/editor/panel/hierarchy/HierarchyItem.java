@@ -48,6 +48,7 @@ import javafx.scene.image.Image;
  * Object representing the data contained within the hierarchy TreeItems.
  *
  * p
+ *
  * @treatAsPrivate
  */
 public class HierarchyItem {
@@ -199,6 +200,14 @@ public class HierarchyItem {
                 assert false;
         }
         return propertyName;
+    }
+
+    public boolean isResourceKey(final DisplayOption option) {
+        // Place holder items do not have display info
+        if (mask == null) {
+            return false;
+        }
+        return option == INFO && mask.isResourceKey();
     }
 
     public boolean isPlaceHolder() {

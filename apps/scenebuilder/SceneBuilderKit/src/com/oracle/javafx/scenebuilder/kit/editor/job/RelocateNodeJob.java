@@ -47,8 +47,8 @@ public class RelocateNodeJob extends Job {
     private final FXOMInstance fxomInstance;
     private final double oldLayoutX;
     private final double oldLayoutY;
-    private final double newLayoutX;
-    private final double newLayoutY;
+    private double newLayoutX;
+    private double newLayoutY;
     private final DoublePropertyMetadata layoutXMeta;
     private final DoublePropertyMetadata layoutYMeta;
     
@@ -84,6 +84,10 @@ public class RelocateNodeJob extends Job {
         return newLayoutY;
     }
     
+    public void mergeWith(RelocateNodeJob youngerJob) {
+        this.newLayoutX = youngerJob.newLayoutX;
+        this.newLayoutY = youngerJob.newLayoutY;
+    }
     
     /*
      * Job

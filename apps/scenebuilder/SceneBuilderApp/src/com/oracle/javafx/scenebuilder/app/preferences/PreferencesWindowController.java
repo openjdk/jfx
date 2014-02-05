@@ -45,11 +45,14 @@ import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesControll
 import com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal.BackgroundImage;
 import com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal.CSSAnalyzerColumnsOrder;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal.recentItemsSizes;
+import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController.DisplayOption;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.DoubleField;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.library.LibraryPanelController.DISPLAY_MODE;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractFxmlWindowController;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPickerController.Mode;
+import java.net.URL;
 import java.util.Arrays;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -59,7 +62,6 @@ import javafx.fxml.FXML;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.CustomMenuItem;
 import javafx.scene.control.MenuButton;
-import javafx.scene.control.TextField;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Rectangle;
@@ -71,9 +73,9 @@ import javafx.stage.WindowEvent;
 public class PreferencesWindowController extends AbstractFxmlWindowController {
 
     @FXML
-    private TextField rootContainerHeight;
+    private DoubleField rootContainerHeight;
     @FXML
-    private TextField rootContainerWidth;
+    private DoubleField rootContainerWidth;
     @FXML
     private ChoiceBox<BackgroundImage> backgroundImage;
     @FXML
@@ -113,6 +115,11 @@ public class PreferencesWindowController extends AbstractFxmlWindowController {
                 = PreferencesController.getSingleton();
         final PreferencesRecordGlobal recordGlobal
                 = preferencesController.getRecordGlobal();
+
+        // CSS setup
+        final URL themeURL = EditorController.class.getResource("css/Theme.css"); //NOI18N
+        assert themeURL != null;
+        getRoot().getStylesheets().add(0, themeURL.toString());
 
         // Root container size
         rootContainerHeight.setText(String.valueOf(recordGlobal.getRootContainerHeight()));

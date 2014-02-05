@@ -31,17 +31,31 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
+
 <?import java.lang.*?>
 <?import java.net.*?>
 <?import javafx.scene.control.*?>
+<?import javafx.scene.effect.*?>
 <?import javafx.scene.layout.*?>
 
-<StackPane fx:id="libPane" alignment="TOP_LEFT" prefHeight="-1.0" prefWidth="-1.0" styleClass="theme-presets, SBKIT-library-panel, search-pane-background" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
+<StackPane fx:id="libPane" alignment="TOP_LEFT" prefHeight="-1.0" prefWidth="-1.0" styleClass="theme-presets, SBKIT-library-panel, search-pane-background" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
   <children>
-    <Accordion fx:id="libAccordion" prefHeight="-1.0" prefWidth="-1.0" />
     <ListView fx:id="libSearchList" prefHeight="-1.0" prefWidth="-1.0" />
     <ListView fx:id="libList" prefHeight="-1.0" prefWidth="-1.0" />
-    <Label fx:id="noSearchResults" styleClass="library-no-results-label" text="%label.search.noresults" />
+    <Label fx:id="noSearchResults" styleClass="library-no-results-label" text="%label.search.noresults" /><SplitPane layoutX="191.0" layoutY="131.0" maxHeight="10.0" orientation="VERTICAL" style="-fx-background-color: transparent;" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+<items>
+<VBox>
+<children>
+<Region layoutX="200.0" layoutY="140.0" maxHeight="1.0" minHeight="1.0" styleClass="pane-shadow">
+<effect>
+<DropShadow />
+</effect>
+</Region>
+</children>
+</VBox>
+</items>
+</SplitPane>
+    <Accordion fx:id="libAccordion" prefHeight="-1.0" prefWidth="-1.0" />
   </children>
   <stylesheets>
     <URL value="@../../css/Theme.css" />

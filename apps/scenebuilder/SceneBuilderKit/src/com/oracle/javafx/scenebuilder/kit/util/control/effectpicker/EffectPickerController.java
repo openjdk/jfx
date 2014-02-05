@@ -120,6 +120,8 @@ public class EffectPickerController {
     }
 
     public void reset() {
+        setRootEffectProperty(null);
+        incrementRevision();
     }
 
     /**
@@ -339,7 +341,7 @@ public class EffectPickerController {
         vBox.getChildren().add(modeEditor);
 
         final SliderControl opacityEditor = new SliderControl(
-                this, "opacity", 0, 1.0, blend.getOpacity(), 1.0, false); //NOI18N
+                this, "opacity", 0, 1.0, blend.getOpacity(), 0.1, false); //NOI18N
         blend.opacityProperty().bind(opacityEditor.valueProperty());
         vBox.getChildren().add(opacityEditor);
 
@@ -443,7 +445,7 @@ public class EffectPickerController {
 
         final PaintPicker colorPicker = new PaintPicker();
         colorPicker.setPaintProperty(colorInput.getPaint());
-        colorPicker.paintProperty().addListener(new PaintChangeListener(colorInput));
+        colorPicker.paintProperty().addListener(new PaintChangeListener(this, colorInput));
         vBox.getChildren().add(colorPicker);
 
         props_vbox.getChildren().add(vBox);
@@ -502,6 +504,12 @@ public class EffectPickerController {
         dropShadow.heightProperty().bind(heightEditor.valueProperty());
         vBox.getChildren().add(heightEditor);
 
+        // setting radius equivalent to setting both width and height attributes to value of (2 * radius + 1)
+        final SliderControl radiusEditor = new SliderControl(
+                this, "radius", 0, 127.0, dropShadow.getRadius(), 1.0, false); //NOI18N
+        dropShadow.radiusProperty().bind(radiusEditor.valueProperty());
+        vBox.getChildren().add(radiusEditor);
+
         final DoubleTextFieldControl offsetXEditor = new DoubleTextFieldControl(
                 this, "offsetX", -10.0, 10.0, dropShadow.getOffsetX(), 1.0); //NOI18N
         dropShadow.offsetXProperty().bind(offsetXEditor.valueProperty());
@@ -512,10 +520,6 @@ public class EffectPickerController {
         dropShadow.offsetYProperty().bind(offsetYEditor.valueProperty());
         vBox.getChildren().add(offsetYEditor);
 
-        // setting radius equivalent to setting both width and height attributes to value of (2 * radius + 1)
-//        SliderEditor e6 = (new SliderEditor("radius", 0, 127.0 , dropShadow.getRadius(), 1.0, false ) );
-//        dropShadow.radiusProperty().bind(e6.value);
-//        vBox.getChildren().add(e6);
         final SliderControl spreadEditor = new SliderControl(
                 this, "spread", 0, 1.0, dropShadow.getSpread(), 0.1, false); //NOI18N
         dropShadow.spreadProperty().bind(spreadEditor.valueProperty());
@@ -523,7 +527,7 @@ public class EffectPickerController {
 
         final PaintPicker colorPicker = new PaintPicker(Mode.COLOR);
         colorPicker.setPaintProperty(dropShadow.getColor());
-        colorPicker.paintProperty().addListener(new ColorChangeListener(dropShadow));
+        colorPicker.paintProperty().addListener(new ColorChangeListener(this, dropShadow));
         vBox.getChildren().add(colorPicker);
 
         props_vbox.getChildren().add(vBox);
@@ -594,14 +598,20 @@ public class EffectPickerController {
         vBox.getChildren().add(chokeEditor);
 
         final SliderControl widthEditor = new SliderControl(
-                this, "width", 0, 255.0, innerShadow.getWidth(), 0.1, false); //NOI18N
+                this, "width", 0, 255.0, innerShadow.getWidth(), 1.0, false); //NOI18N
         innerShadow.widthProperty().bind(widthEditor.valueProperty());
         vBox.getChildren().add(widthEditor);
 
         final SliderControl heightEditor = new SliderControl(
-                this, "height", 0, 255.0, innerShadow.getHeight(), 0.1, false); //NOI18N
+                this, "height", 0, 255.0, innerShadow.getHeight(), 1.0, false); //NOI18N
         innerShadow.heightProperty().bind(heightEditor.valueProperty());
         vBox.getChildren().add(heightEditor);
+
+        // setting radius equivalent to setting both width and height attributes to value of (2 * radius + 1)
+        final SliderControl radiusEditor = new SliderControl(
+                this, "radius", 0, 127.0, innerShadow.getRadius(), 1.0, false); //NOI18N
+        innerShadow.radiusProperty().bind(radiusEditor.valueProperty());
+        vBox.getChildren().add(radiusEditor);
 
         final DoubleTextFieldControl offsetXEditor = new DoubleTextFieldControl(
                 this, "offsetX", -10.0, 10.0, innerShadow.getOffsetX(), 1.0); //NOI18N
@@ -613,13 +623,9 @@ public class EffectPickerController {
         innerShadow.offsetYProperty().bind(offsetYEditor.valueProperty());
         vBox.getChildren().add(offsetYEditor);
 
-        // setting radius equivalent to setting both width and height attributes to value of (2 * radius + 1)
-//        SliderEditor e7 = (new SliderEditor("radius", 0, 127.0 , innerShadow.getRadius(), 1.0, false ) );
-//        innerShadow.radiusProperty().bind(e7.value);
-//        vBox.getChildren().add(e7);
         final PaintPicker colorPicker = new PaintPicker(Mode.COLOR);
         colorPicker.setPaintProperty(innerShadow.getColor());
-        colorPicker.paintProperty().addListener(new ColorChangeListener(innerShadow));
+        colorPicker.paintProperty().addListener(new ColorChangeListener(this, innerShadow));
         vBox.getChildren().add(colorPicker);
 
         props_vbox.getChildren().add(vBox);
@@ -631,22 +637,22 @@ public class EffectPickerController {
         VBox vBox = new VBox(8.0);
 
         final SliderControl diffuseConstantEditor = new SliderControl(
-                this, "diffuseConstant", 0, 2.0, lighting.getDiffuseConstant(), 0.1, false); //NOI18N
+                this, "diffuseConstant", 0, 2.0, lighting.getDiffuseConstant(), 1.0, false); //NOI18N
         lighting.diffuseConstantProperty().bind(diffuseConstantEditor.valueProperty());
         vBox.getChildren().add(diffuseConstantEditor);
 
         final SliderControl specularConstantEditor = new SliderControl(
-                this, "specularConstant", 0, 2.0, lighting.getSpecularConstant(), 0.1, false); //NOI18N
+                this, "specularConstant", 0, 2.0, lighting.getSpecularConstant(), 1.0, false); //NOI18N
         lighting.specularConstantProperty().bind(specularConstantEditor.valueProperty());
         vBox.getChildren().add(specularConstantEditor);
 
         final SliderControl specularExponentEditor = new SliderControl(
-                this, "specularExponent", 0, 40.0, lighting.getSpecularExponent(), 0.1, false); //NOI18N
+                this, "specularExponent", 0, 40.0, lighting.getSpecularExponent(), 1.0, false); //NOI18N
         lighting.specularExponentProperty().bind(specularExponentEditor.valueProperty());
         vBox.getChildren().add(specularExponentEditor);
 
         final SliderControl surfaceScaleEditor = new SliderControl(
-                this, "surfaceScale", 0, 10.0, lighting.getSurfaceScale(), 0.1, false); //NOI18N
+                this, "surfaceScale", 0, 10.0, lighting.getSurfaceScale(), 1.0, false); //NOI18N
         lighting.surfaceScaleProperty().bind(surfaceScaleEditor.valueProperty());
         vBox.getChildren().add(surfaceScaleEditor);
 
@@ -661,11 +667,13 @@ public class EffectPickerController {
         final MotionBlur motionBlur = (MotionBlur) effect;
         VBox vBox = new VBox(8.0);
 
-        // need editor for this
-        vBox.getChildren().add(new Label("Angle editor here")); //NOI18N
+        final SliderControl angleEditor = new SliderControl(
+                this, "angle", 0, 360.0, motionBlur.getAngle(), 1.0, false); //NOI18N
+        motionBlur.angleProperty().bind(angleEditor.valueProperty());
+        vBox.getChildren().add(angleEditor);
 
         final SliderControl radiusEditor = new SliderControl(
-                this, "radius", 0, 63.0, motionBlur.getRadius(), 0.1, false); //NOI18N
+                this, "radius", 0, 63.0, motionBlur.getRadius(), 1.0, false); //NOI18N
         motionBlur.radiusProperty().bind(radiusEditor.valueProperty());
         vBox.getChildren().add(radiusEditor);
 
@@ -772,23 +780,24 @@ public class EffectPickerController {
         vBox.getChildren().add(blurTypeEditor);
 
         final SliderControl widthEditor = new SliderControl(
-                this, "width", 0, 255.0, shadow.getWidth(), 0.1, false); //NOI18N
+                this, "width", 0, 255.0, shadow.getWidth(), 1.0, false); //NOI18N
         shadow.widthProperty().bind(widthEditor.valueProperty());
         vBox.getChildren().add(widthEditor);
 
         final SliderControl heightEditor = new SliderControl(
-                this, "height", 0, 255.0, shadow.getHeight(), 0.1, false); //NOI18N
+                this, "height", 0, 255.0, shadow.getHeight(), 1.0, false); //NOI18N
         shadow.heightProperty().bind(heightEditor.valueProperty());
         vBox.getChildren().add(heightEditor);
 
+        // setting radius equivalent to setting both width and height attributes to value of (2 * radius + 1)
         final SliderControl radiusEditor = new SliderControl(
-                this, "radius", 0, 127.0, shadow.getRadius(), 0.1, false); //NOI18N
+                this, "radius", 0, 127.0, shadow.getRadius(), 1.0, false); //NOI18N
         shadow.radiusProperty().bind(radiusEditor.valueProperty());
         vBox.getChildren().add(radiusEditor);
 
         final PaintPicker colorPicker = new PaintPicker(Mode.COLOR);
         colorPicker.setPaintProperty(shadow.getColor());
-        colorPicker.paintProperty().addListener(new ColorChangeListener(shadow));
+        colorPicker.paintProperty().addListener(new ColorChangeListener(this, shadow));
         vBox.getChildren().add(colorPicker);
 
         props_vbox.getChildren().add(vBox);
@@ -801,12 +810,14 @@ public class EffectPickerController {
      */
     private static class ColorChangeListener implements ChangeListener<Paint> {
 
+        private final EffectPickerController effectPickerController;
         private final Effect effect;
 
-        public ColorChangeListener(Effect effect) {
+        public ColorChangeListener(EffectPickerController effectPickerController, Effect effect) {
             assert effect instanceof DropShadow
                     || effect instanceof InnerShadow
                     || effect instanceof Shadow;
+            this.effectPickerController = effectPickerController;
             this.effect = effect;
         }
 
@@ -822,20 +833,26 @@ public class EffectPickerController {
                 assert effect instanceof Shadow;
                 ((Shadow) effect).setColor(color);
             }
+            // Then notify the controller a change occured
+            effectPickerController.incrementRevision();
         }
     }
 
     private static class PaintChangeListener implements ChangeListener<Paint> {
 
+        private final EffectPickerController effectPickerController;
         private final ColorInput colorInput;
 
-        public PaintChangeListener(ColorInput colorInput) {
+        public PaintChangeListener(EffectPickerController effectPickerController, ColorInput colorInput) {
+            this.effectPickerController = effectPickerController;
             this.colorInput = colorInput;
         }
 
         @Override
         public void changed(ObservableValue<? extends Paint> ov, Paint oldValue, Paint newValue) {
             colorInput.setPaint(newValue);
+            // Then notify the controller a change occured
+            effectPickerController.incrementRevision();
         }
     }
 }

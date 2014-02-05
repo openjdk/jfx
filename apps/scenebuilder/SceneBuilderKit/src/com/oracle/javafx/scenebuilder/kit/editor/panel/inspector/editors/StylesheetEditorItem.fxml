@@ -37,13 +37,20 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<HBox spacing="1.0" stylesheets="@../../../css/Theme.css" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
-  <children><Label fx:id="prefixLb" alignment="CENTER" maxWidth="20.0" minWidth="20.0" prefWidth="20.0" />
-    <TextField fx:id="stylesheetTf" maxHeight="22.0" minHeight="22.0" prefHeight="22.0" prefWidth="200.0" />
-    <HBox>
+<HBox xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+  <children><Label fx:id="prefixLb" alignment="CENTER" prefWidth="10.0">
+<styleClass>
+<String fx:value="label" />
+<String fx:value="symbol-prefix" />
+</styleClass></Label>
+    <TextField fx:id="stylesheetTf">
+<HBox.margin>
+<Insets right="1.0" />
+</HBox.margin></TextField>
+    <HBox spacing="1.0">
       <children>
-        <Button fx:id="plusBt" maxHeight="22.0" minHeight="22.0" mnemonicParsing="false" onAction="#chooseStylesheet" onKeyReleased="#plusBtTyped" prefHeight="22.0" styleClass="plus-button" text="" />
-        <MenuButton maxHeight="22.0" minHeight="22.0" mnemonicParsing="false" prefHeight="22.0" prefWidth="-1.0" styleClass="listrow-menubutton" text="">
+        <Button fx:id="plusBt" mnemonicParsing="false" onAction="#chooseStylesheet" onKeyReleased="#plusBtTyped" styleClass="multi-row-plus-button" text="+" />
+        <MenuButton mnemonicParsing="false" prefWidth="-1.0" styleClass="multi-row-menubutton" text="">
           <items>
             <MenuItem fx:id="removeMi" disable="true" mnemonicParsing="false" onAction="#remove" text="Remove (i18n)" />
             <SeparatorMenuItem mnemonicParsing="false" />

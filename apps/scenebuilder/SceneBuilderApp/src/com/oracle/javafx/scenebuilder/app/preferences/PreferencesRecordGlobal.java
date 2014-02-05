@@ -50,13 +50,10 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarc
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController.DisplayOption;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.library.LibraryPanelController.DISPLAY_MODE;
 import java.io.File;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.prefs.Preferences;
 import javafx.scene.image.Image;
 import javafx.scene.layout.Background;
@@ -232,39 +229,19 @@ public class PreferencesRecordGlobal {
     }
 
     public void addRecentItem(File file) {
-        try {
-            // Use URL path value to avoid file separator issues
-            final URL url = file.toURI().toURL();
-            final String urlPath = url.getPath();
-            if (recentItems.contains(urlPath)) {
-                recentItems.remove(urlPath);
-            }
-            // Add the specified file to the recent items at first position
-            recentItems.add(0, urlPath);
-            // Remove last items depending on the size
-            while (recentItems.size() > recentItemsSize) {
-                recentItems.remove(recentItems.size() - 1);
-            }
-            writeToJavaPreferences(RECENT_ITEMS);
-        } catch (MalformedURLException ex) {
-            Logger.getLogger(PreferencesRecordGlobal.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        final List<File> files = new ArrayList<>();
+        files.add(file);
+        addRecentItems(files);
     }
 
     public void addRecentItems(List<File> files) {
-        // Add the specified files to the recent items at first position
         for (File file : files) {
-            try {
-                // Use URL path value to avoid file separator issues
-                final URL url = file.toURI().toURL();
-                final String urlPath = url.getPath();
-                if (recentItems.contains(urlPath)) {
-                    recentItems.remove(urlPath);
-                }
-                recentItems.add(0, urlPath);
-            } catch (MalformedURLException ex) {
-                Logger.getLogger(PreferencesRecordGlobal.class.getName()).log(Level.SEVERE, null, ex);
+            final String path = file.getPath();
+            if (recentItems.contains(path)) {
+                recentItems.remove(path);
             }
+            // Add the specified file to the recent items at first position
+            recentItems.add(0, path);
         }
         // Remove last items depending on the size
         while (recentItems.size() > recentItemsSize) {
@@ -273,11 +250,10 @@ public class PreferencesRecordGlobal {
         writeToJavaPreferences(RECENT_ITEMS);
     }
 
-    public void removeRecentItems(List<File> files) {
+    public void removeRecentItems(List<String> filePaths) {
         // Remove the specified files from the recent items
-        for (File file : files) {
-            final String path = file.getAbsolutePath();
-            recentItems.remove(path);
+        for (String filePath : filePaths) {
+            recentItems.remove(filePath);
         }
         writeToJavaPreferences(RECENT_ITEMS);
     }
@@ -458,9 +434,9 @@ public class PreferencesRecordGlobal {
         setRecentItemsSize(size);
 
         // Recent items list
-        final String items = applicationRootPreferences.get(RECENT_ITEMS, ""); //NOI18N
+        final String items = applicationRootPreferences.get(RECENT_ITEMS, null);
         assert recentItems.isEmpty();
-        if (items.isEmpty() == false) {
+        if (items != null) {
             final String[] itemsArray = items.split("\\" + File.pathSeparator); //NOI18N
             assert itemsArray.length <= recentItemsSize;
             recentItems.addAll(Arrays.asList(itemsArray));

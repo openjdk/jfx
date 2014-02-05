@@ -79,7 +79,4 @@
       </graphic>
     </ToggleButton>
   </children>
-  <stylesheets>
-    <URL value="@../../../css/Theme.css" />
-  </stylesheets>
 </HBox>

@@ -1111,13 +1111,40 @@ public class MenuBarController {
             menuItems.add(clearMenuItem);
         } else {
             clearMenuItem.setDisable(false);
-            
-            final List<File> recentItemsToRemove = new ArrayList<>();
-            for (String recentItem : recentItems) {
 
+            final Map<String, Integer> recentItemsNames = new HashMap<>();
+            final List<String> recentItemsToRemove = new ArrayList<>();
+
+            // First pass to build recentItemsNames and recentItemsToRemove
+            for (String recentItem : recentItems) {
                 final File recentItemFile = new File(recentItem);
                 if (recentItemFile.exists()) {
-                    final MenuItem mi = new MenuItem(recentItem);
+                    final String name = recentItemFile.getName();
+                    if (recentItemsNames.containsKey(name)) {
+                        recentItemsNames.replace(name, recentItemsNames.get(name) + 1);
+                    } else {
+                        recentItemsNames.put(name, 1);
+                    }
+                } else {
+                    // recent item file is still in preferences DB but has been removed from disk
+                    recentItemsToRemove.add(recentItem);
+                }
+            }
+            // Second pass to build MenuItems
+            for (String recentItem : recentItems) {
+                final File recentItemFile = new File(recentItem);
+                if (recentItemFile.exists()) {
+                    final String name = recentItemFile.getName();
+                    assert recentItemsNames.keySet().contains(name);
+                    final MenuItem mi;
+                    if (recentItemsNames.get(name) > 1) {
+                        // Several files with same name : display full path
+                        mi = new MenuItem(recentItem);
+                    } else {
+                        // Single file with this name : display file name only
+                        assert recentItemsNames.get(name) == 1;
+                        mi = new MenuItem(name);
+                    }
                     mi.setOnAction(new EventHandler<ActionEvent>() {
 
                         @Override
@@ -1127,11 +1154,9 @@ public class MenuBarController {
                         }
                     });
                     menuItems.add(mi);
-                } else {
-                    // recent item file is still in preferences DB but has been removed from disk
-                    recentItemsToRemove.add(recentItemFile);
                 }
             }
+            
             // Cleanup recent items preferences if needed
             if (recentItemsToRemove.isEmpty() == false) {
                 recordGlobal.removeRecentItems(recentItemsToRemove);

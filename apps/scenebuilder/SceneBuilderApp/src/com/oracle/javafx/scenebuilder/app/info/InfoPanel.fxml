@@ -37,7 +37,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox id="StackPane" spacing="7.0" styleClass="theme-presets, property-sheet-text" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
+<VBox id="StackPane" spacing="7.0" styleClass="theme-presets, property-sheet" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
   <children>
     <VBox fx:id="controllerClassVBox" alignment="CENTER" spacing="0.0">
       <children>

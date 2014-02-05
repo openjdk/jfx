@@ -40,14 +40,15 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.paint.*?>
 <?import javafx.scene.shape.*?>
+<?import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.*?>
 <?scenebuilder-preview-i18n-resource ../i18n/SceneBuilderApp.properties?>
 
 <GridPane hgap="6.0" maxWidth="1.7976931348623157E308" vgap="10.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
   <children>
     <Label text="%prefs.doc.width" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-    <TextField fx:id="rootContainerWidth" prefWidth="200.0" text="" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+    <DoubleField fx:id="rootContainerWidth" prefWidth="200.0" text="" GridPane.columnIndex="1" GridPane.rowIndex="0" />
     <Label text="%prefs.doc.height" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-    <TextField fx:id="rootContainerHeight" prefWidth="200.0" text="" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+    <DoubleField fx:id="rootContainerHeight" prefWidth="200.0" text="" GridPane.columnIndex="1" GridPane.rowIndex="1" />
     <Label text="%prefs.background" GridPane.columnIndex="0" GridPane.rowIndex="3" />
     <ChoiceBox fx:id="backgroundImage" GridPane.columnIndex="1" GridPane.rowIndex="3" />
     <Label text="%prefs.alignment.guides" GridPane.columnIndex="0" GridPane.rowIndex="4" />

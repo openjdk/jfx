@@ -538,7 +538,9 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
                     final HierarchyItem item = getItem();
                     assert item != null; // Because of (1)
                     final DisplayOption option = panelController.getDisplayOption();
-                    if (item.hasDisplayInfo(option) && displayInfoLabel.isHover()) {
+                    if (item.hasDisplayInfo(option) 
+                            && item.isResourceKey(option) == false // Do not allow inline editing of the I18N value
+                            && displayInfoLabel.isHover()) {
                         startEditingDisplayInfo();
                         // Consume the event so the native expand/collapse behavior is not performed
                         me.consume();
@@ -757,6 +759,14 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
 
         final DisplayOption option = panelController.getDisplayOption();
         final String displayInfo = item.getDisplayInfo(option);
+        // Do not allow inline editing of the I18N value
+        if (item.isResourceKey(option)) {
+            displayInfoLabel.getStyleClass().removeAll(HIERARCHY_READWRITE_LABEL);
+        } else {
+            if (displayInfoLabel.getStyleClass().contains(HIERARCHY_READWRITE_LABEL) == false) {
+                displayInfoLabel.getStyleClass().add(HIERARCHY_READWRITE_LABEL);
+            }
+        }
         displayInfoLabel.setText(displayInfo);
         displayInfoLabel.setManaged(item.hasDisplayInfo(option));
         displayInfoLabel.setVisible(item.hasDisplayInfo(option));

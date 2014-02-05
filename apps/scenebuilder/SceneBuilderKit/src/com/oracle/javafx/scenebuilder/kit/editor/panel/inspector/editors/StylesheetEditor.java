@@ -37,7 +37,6 @@ import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadat
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue.Type;
 import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
-import com.sun.javafx.css.StyleManager;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -58,7 +57,6 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
@@ -444,8 +442,9 @@ public class StylesheetEditor extends InlineListEditor {
                     }
 //                        System.out.println("StyleEditorItem : COMMIT");
                     editor.commit(StylesheetItem.this);
-                    assert event.getSource() instanceof TextField;
-                    ((TextField) event.getSource()).selectAll();
+                    if (event != null && event.getSource() instanceof TextField) {
+                        ((TextField) event.getSource()).selectAll();
+                    }
                     updateButtons();
                     updateOpenRevealMenuItems();
                     currentValue = getValue();

@@ -31,17 +31,20 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
+
 <?import java.lang.*?>
 <?import java.net.*?>
 <?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<SplitPane fx:id="inspectorRoot" dividerPositions="0.3847328244274809" focusTraversable="true" minWidth="262.0" orientation="VERTICAL" prefHeight="655.0" prefWidth="262.0" styleClass="theme-presets, SBKIT-inspector-panel" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
+<SplitPane fx:id="inspectorRoot" dividerPositions="0.3847328244274809" focusTraversable="true" orientation="VERTICAL" prefHeight="600.0" styleClass="theme-presets, SBKIT-inspector-panel" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
   <items>
-    <ScrollPane fx:id="searchScrollPane" fitToWidth="true" minHeight="250.0" style="" styleClass="search-pane-background, property-sheet-text">
+<StackPane fx:id="searchStackPane" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+<children>
+    <ScrollPane fitToWidth="true" minHeight="250.0" styleClass="property-sheet">
       <content>
-        <GridPane fx:id="searchContent" gridLinesVisible="false" hgap="5.0" maxWidth="-1.0" minHeight="0.0" minWidth="-1.0" prefHeight="-1.0" prefWidth="-1.0" style="" vgap="5.0">
+        <GridPane fx:id="searchContent" gridLinesVisible="false" hgap="1.0" maxWidth="-1.0" minHeight="0.0" minWidth="-1.0" prefHeight="-1.0" prefWidth="-1.0" style="" vgap="5.0">
           <children>
             <Label minWidth="-1.0" text="Label1 Label2 Label3 Label4" GridPane.columnIndex="0" GridPane.rowIndex="0" />
             <TextField maxWidth="1.7976931348623157E308" minWidth="0.0" prefWidth="-1.0" text="Value1 Value2 Value3 Value4 Value5 Value6" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.rowIndex="0" />
@@ -58,7 +61,7 @@
             <ColumnConstraints hgrow="NEVER" maxWidth="-1.0" minWidth="-1.0" prefWidth="-1.0" />
           </columnConstraints>
           <padding>
-            <Insets bottom="5.0" left="10.0" top="5.0" fx:id="x1" />
+            <Insets bottom="5.0" left="10.0" right="1.0" top="5.0" fx:id="x1" />
           </padding>
           <rowConstraints>
             <RowConstraints maxHeight="30.0" minHeight="10.0" prefHeight="30.0" vgrow="ALWAYS" />
@@ -66,14 +69,18 @@
           </rowConstraints>
         </GridPane>
       </content>
-    </ScrollPane>
-    <Accordion fx:id="accordion">
+    </ScrollPane><Region maxHeight="1.0" styleClass="pane-shadow" StackPane.alignment="TOP_CENTER" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" />
+</children>
+</StackPane>
+<VBox xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+<children>
+    <Accordion fx:id="accordion" VBox.vgrow="ALWAYS">
       <panes>
-        <TitledPane fx:id="propertiesTitledPane" animated="true" contentDisplay="RIGHT" styleClass="property-sheet-text" text="Properties">
+        <TitledPane fx:id="propertiesTitledPane" animated="true" contentDisplay="RIGHT" text="Properties">
           <content>
             <ScrollPane fx:id="propertiesScroll" fitToWidth="true" prefViewportHeight="320.0" prefViewportWidth="251.0">
               <content>
-                <GridPane fx:id="propertiesSection" gridLinesVisible="false" hgap="2.0" maxWidth="-1.0" minWidth="-1.0" padding="$x1" prefHeight="-1.0" prefWidth="-1.0" style="" vgap="5.0">
+                <GridPane fx:id="propertiesSection" gridLinesVisible="false" hgap="1.0" maxWidth="-1.0" minWidth="-1.0" prefHeight="-1.0" prefWidth="-1.0" style="" vgap="5.0">
                   <children>
                     <Label text="Label" GridPane.columnIndex="0" GridPane.rowIndex="0" />
                     <TextField maxWidth="1.7976931348623157E308" minWidth="0.0" prefWidth="-1.0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.rowIndex="0" />
@@ -94,19 +101,26 @@
                     <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
                     <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
                   </rowConstraints>
+<padding>
+<Insets bottom="5.0" left="10.0" right="1.0" top="5.0" />
+</padding>
                 </GridPane>
               </content>
+<styleClass>
+<String fx:value="scroll-pane" />
+<String fx:value="property-sheet" />
+</styleClass>
             </ScrollPane>
           </content>
           <graphic>
             <Label text=": &lt;className&gt;" />
           </graphic>
         </TitledPane>
-        <TitledPane fx:id="layoutTitledPane" animated="true" contentDisplay="RIGHT" styleClass="property-sheet-text" text="Layout">
+        <TitledPane fx:id="layoutTitledPane" animated="true" contentDisplay="RIGHT" text="Layout">
           <content>
             <ScrollPane fx:id="layoutScroll" fitToWidth="true" prefViewportHeight="320.0" prefViewportWidth="254.0">
               <content>
-                <GridPane fx:id="layoutSection" gridLinesVisible="false" hgap="2.0" maxWidth="-1.0" minWidth="-1.0" padding="$x1" prefHeight="-1.0" prefWidth="-1.0" style="" vgap="5.0">
+                <GridPane fx:id="layoutSection" gridLinesVisible="false" hgap="1.0" maxWidth="-1.0" minWidth="-1.0" padding="$x1" prefHeight="-1.0" prefWidth="-1.0" style="" vgap="5.0">
                   <children>
                     <Label text="Label" GridPane.columnIndex="0" GridPane.rowIndex="0" />
                     <TextField maxWidth="1.7976931348623157E308" minWidth="0.0" prefWidth="-1.0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.rowIndex="0" />
@@ -129,17 +143,21 @@
                   </rowConstraints>
                 </GridPane>
               </content>
+<styleClass>
+<String fx:value="scroll-pane" />
+<String fx:value="property-sheet" />
+</styleClass>
             </ScrollPane>
           </content>
           <graphic>
             <Label text=": &lt;className&gt;" />
           </graphic>
         </TitledPane>
-        <TitledPane fx:id="codeTitledPane" animated="true" contentDisplay="RIGHT" expanded="false" styleClass="property-sheet-text" text="Code">
+        <TitledPane fx:id="codeTitledPane" animated="true" contentDisplay="RIGHT" expanded="false" text="Code">
           <content>
             <ScrollPane fx:id="codeScroll" fitToWidth="true" prefViewportHeight="320.0" prefViewportWidth="257.0">
               <content>
-                <GridPane fx:id="codeSection" gridLinesVisible="false" hgap="2.0" maxWidth="-1.0" minWidth="-1.0" padding="$x1" prefHeight="-1.0" prefWidth="-1.0" style="" vgap="5.0">
+                <GridPane fx:id="codeSection" gridLinesVisible="false" hgap="1.0" maxWidth="-1.0" minWidth="-1.0" padding="$x1" prefHeight="-1.0" prefWidth="-1.0" style="" vgap="5.0">
                   <children>
                     <Label text="Label" GridPane.columnIndex="0" GridPane.rowIndex="0" />
                     <TextField maxWidth="1.7976931348623157E308" minWidth="0.0" prefWidth="-1.0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.rowIndex="0" />
@@ -162,17 +180,21 @@
                   </rowConstraints>
                 </GridPane>
               </content>
+<styleClass>
+<String fx:value="scroll-pane" />
+<String fx:value="property-sheet" />
+</styleClass>
             </ScrollPane>
           </content>
           <graphic>
             <Label text=": &lt;className&gt;" />
           </graphic>
         </TitledPane>
-        <TitledPane fx:id="allTitledPane" animated="true" contentDisplay="RIGHT" expanded="true" styleClass="property-sheet-text" text="&lt;all&gt;">
+        <TitledPane fx:id="allTitledPane" animated="true" contentDisplay="RIGHT" expanded="true" text="&lt;all&gt;">
           <content>
             <ScrollPane fx:id="allScroll" fitToWidth="true" prefViewportHeight="320.0" prefViewportWidth="260.0">
               <content>
-                <GridPane fx:id="allContent" gridLinesVisible="false" hgap="5.0" maxWidth="-1.0" minWidth="-1.0" padding="$x1" prefHeight="-1.0" prefWidth="-1.0" style="" vgap="5.0">
+                <GridPane fx:id="allContent" gridLinesVisible="false" hgap="1.0" maxWidth="-1.0" minWidth="-1.0" padding="$x1" prefHeight="-1.0" prefWidth="-1.0" style="" vgap="5.0">
                   <children>
                     <Label text="Label" GridPane.columnIndex="0" GridPane.rowIndex="0" />
                     <TextField maxWidth="1.7976931348623157E308" minWidth="0.0" prefWidth="-1.0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.rowIndex="0" />
@@ -189,6 +211,10 @@
                   </rowConstraints>
                 </GridPane>
               </content>
+<styleClass>
+<String fx:value="scroll-pane" />
+<String fx:value="property-sheet" />
+</styleClass>
             </ScrollPane>
           </content>
           <graphic>
@@ -197,6 +223,8 @@
         </TitledPane>
       </panes>
     </Accordion>
+</children>
+</VBox>
   </items>
   <stylesheets>
     <URL value="@../../css/Theme.css" />

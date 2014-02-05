@@ -33,18 +33,18 @@
 -->
 
 <?import java.lang.*?>
-<?import java.net.*?>
 <?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
 <HBox spacing="1.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
   <children>
-    <StackPane fx:id="styleClassSp" maxHeight="22.0" minHeight="22.0" prefHeight="22.0" prefWidth="200.0" />
-    <HBox>
-      <children>
-        <Button fx:id="plusBt" maxHeight="22.0" minHeight="22.0" mnemonicParsing="false" onAction="#add" onKeyReleased="#plusBtTyped" prefHeight="22.0" styleClass="plus-button" text="" />
-        <MenuButton fx:id="actionMb" maxHeight="22.0" minHeight="22.0" mnemonicParsing="false" prefHeight="22.0" prefWidth="-1.0" styleClass="listrow-menubutton" text="">
+    <StackPane fx:id="styleClassSp" prefWidth="100.0" HBox.hgrow="ALWAYS">
+<HBox.margin>
+<Insets />
+</HBox.margin></StackPane>
+        <Button fx:id="plusBt" mnemonicParsing="false" onAction="#add" onKeyReleased="#plusBtTyped" styleClass="multi-row-plus-button" text="+" />
+        <MenuButton fx:id="actionMb" mnemonicParsing="false" prefWidth="-1.0" styleClass="multi-row-menubutton" text="">
           <items>
             <MenuItem fx:id="removeMi" disable="true" mnemonicParsing="false" onAction="#remove" text="Remove (i18n)" />
             <SeparatorMenuItem mnemonicParsing="false" />
@@ -52,16 +52,8 @@
             <MenuItem fx:id="moveDownMi" mnemonicParsing="false" onAction="#down" text="Move Down (i18n)" />
           </items>
         </MenuButton>
-      </children>
-      <HBox.margin>
-        <Insets />
-      </HBox.margin>
-    </HBox>
   </children>
   <padding>
     <Insets />
   </padding>
-  <stylesheets>
-    <URL value="@../../../css/Theme.css" />
-  </stylesheets>
 </HBox>

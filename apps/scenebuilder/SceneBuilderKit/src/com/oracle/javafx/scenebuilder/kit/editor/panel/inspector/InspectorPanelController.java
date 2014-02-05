@@ -32,6 +32,7 @@
 package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
+import com.oracle.javafx.scenebuilder.kit.editor.drag.source.AbstractDragSource;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyFxIdJob;
@@ -42,6 +43,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.Boolean
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.BoundedDoubleEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.ColumnResizePolicyEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.CursorEditor;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.DividerPositionsEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.DoubleEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.Editor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.EditorUtils;
@@ -58,17 +60,16 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.Propert
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.PropertyEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.PropertyEditor.LayoutFormat;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.RotateEditor;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.StringEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.StyleClassEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.StyleEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.StylesheetEditor;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.DividerPositionsEditor;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.StringEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.TextAlignmentEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.ToggleGroupEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.popupeditors.BoundsPopupEditor;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.popupeditors.KeyCombinationPopupEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.popupeditors.EffectPopupEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.popupeditors.FontPopupEditor;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.popupeditors.KeyCombinationPopupEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.popupeditors.PaintPopupEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.popupeditors.Rectangle2DPopupEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractFxmlPanelController;
@@ -85,7 +86,6 @@ import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadat
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.BooleanPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.BoundsPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.CursorPropertyMetadata;
-import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoubleArrayPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.EnumerationPropertyMetadata;
@@ -97,11 +97,11 @@ import com.oracle.javafx.scenebuilder.kit.metadata.property.value.IntegerPropert
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.Point3DPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.Rectangle2DPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.StringPropertyMetadata;
-import com.oracle.javafx.scenebuilder.kit.metadata.property.value.keycombination.KeyCombinationPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.TableViewResizePolicyPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.ToggleGroupPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.TreeTableViewResizePolicyPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.effect.EffectPropertyMetadata;
+import com.oracle.javafx.scenebuilder.kit.metadata.property.value.keycombination.KeyCombinationPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.list.ListValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.paint.PaintPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
@@ -148,6 +148,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.RowConstraints;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.util.Callback;
 
@@ -182,7 +183,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     @FXML
     private GridPane allContent;
     @FXML
-    private ScrollPane searchScrollPane;
+    private StackPane searchStackPane;
     @FXML
     private GridPane searchContent;
     @FXML
@@ -212,10 +213,12 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     }
     //
     private static final String fxmlFile = "Inspector.fxml"; //NOI18N
+    private static final String FXID_SUBSECTION_NAME = "Identity";
     private String searchPattern;
     private SectionId previousExpandedSection;
     private PropertyEditor lastPropertyEditorValueChanged = null;
     private boolean resetInProgress = false;
+    private boolean dragOnGoing = false;
     //
     // Editor pools
     private final Stack<Editor> i18nStringEditorPool = new Stack<>();
@@ -451,7 +454,9 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     @Override
     protected void sceneGraphRevisionDidChange() {
 //        System.out.println("Scene graph changed.");
-        updateInspector();
+        if (!dragOnGoing) {
+            updateInspector();
+        }
     }
 
     @Override
@@ -461,7 +466,9 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
 
             @Override
             public void run() {
-                updateInspector();
+                if (!dragOnGoing) {
+                    updateInspector();
+                }
             }
         });
     }
@@ -477,7 +484,9 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     @Override
     protected void editorSelectionDidChange() {
 //        System.out.println("Selection changed.");
-        updateInspector();
+        if (!dragOnGoing) {
+            updateInspector();
+        }
     }
 
     /*
@@ -499,7 +508,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         assert allTitledPane != null;
         assert allScroll != null;
         assert allContent != null;
-        assert searchScrollPane != null;
+        assert searchStackPane != null;
         assert searchContent != null;
         assert accordion != null;
         assert inspectorRoot != null;
@@ -526,6 +535,22 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         // Clean the potential nodes added for design purpose in fxml
         clearSections();
 
+        // Listen the drag property changes
+        getEditorController().getDragController().dragSourceProperty().addListener(new ChangeListener<AbstractDragSource>() {
+
+            @Override
+            public void changed(ObservableValue<? extends AbstractDragSource> ov, AbstractDragSource oldVal, AbstractDragSource newVal) {
+                if (newVal != null) {
+//                    System.out.println("Drag started !");
+                    dragOnGoing = true;
+                } else {
+//                    System.out.println("Drag finished.");
+                    dragOnGoing = false;
+                    updateInspector();
+                }
+            }
+        });
+
         accordion.getStyleClass().add("INSPECTOR_THEME"); //NOI18N
         selectionState = new SelectionState(editorController);
         setViewMode(ViewMode.SECTION);
@@ -533,7 +558,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         accordion.setPrefSize(300, 700);
         buildExpandedSection();
         updateClassNameInSectionTitles();
-        searchResultMinHeight = searchScrollPane.getMinHeight();
+        searchResultMinHeight = searchStackPane.getMinHeight();
         searchPatternDidChange();
     }
 
@@ -568,11 +593,11 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         if (isInspectorLoaded()) {
             // Collapse/Expand the search result panel
             if (hasSearchPattern()) {
-                searchScrollPane.setMaxHeight(Double.MAX_VALUE);
-                searchScrollPane.setMinHeight(searchResultMinHeight);
+                searchStackPane.setMaxHeight(Double.MAX_VALUE);
+                searchStackPane.setMinHeight(searchResultMinHeight);
             } else {
-                searchScrollPane.setMaxHeight(0);
-                searchScrollPane.setMinHeight(0);
+                searchStackPane.setMaxHeight(0);
+                searchStackPane.setMinHeight(0);
             }
 
             buildFlatContent(searchContent);
@@ -673,7 +698,11 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         String currentSubSection = ""; //NOI18N
         int lineIndex = 0;
         if (sectionId == SectionId.CODE) {
-            // add fx:id here, since it is not a property
+            // add fx:id here, since it is not a property.
+            // It has its own sub section title
+            addSubSectionSeparator(gridPane, lineIndex, FXID_SUBSECTION_NAME);
+            lineIndex++;
+            currentSubSection = FXID_SUBSECTION_NAME;
             lineIndex = addFxIdEditor(gridPane, lineIndex);
         }
         Set<PropertyName> groupProperties = new HashSet<>();
@@ -685,13 +714,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
             String newSubSection = inspectorPath.getSubSectionTag();
 //            System.out.println(inspectorPath.getSectionTag() + " - " + newSubSection + " - " + propMeta.getName());
             if (!currentSubSection.equalsIgnoreCase(newSubSection)) {
-                // add section separator
-                Node title = getSubSectionTitle(newSubSection);
-                gridPane.add(title, 0, lineIndex);
-                GridPane.setColumnSpan(title, GridPane.REMAINING);
-                RowConstraints rowConstraint = new RowConstraints();
-                rowConstraint.setValignment(VPos.CENTER);
-                gridPane.getRowConstraints().add(rowConstraint);
+                addSubSectionSeparator(gridPane, lineIndex, newSubSection);
                 lineIndex++;
                 currentSubSection = newSubSection;
             }
@@ -710,6 +733,15 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
                 lineIndex = addInGridPane(gridPane, getInitializedPropertyEditor(propMeta), lineIndex);
             }
         }
+    }
+
+    private void addSubSectionSeparator(GridPane gridPane, int lineIndex, String titleStr) {
+        Node title = getSubSectionTitle(titleStr);
+        gridPane.add(title, 0, lineIndex);
+        GridPane.setColumnSpan(title, GridPane.REMAINING);
+        RowConstraints rowConstraint = new RowConstraints();
+        rowConstraint.setValignment(VPos.CENTER);
+        gridPane.getRowConstraints().add(rowConstraint);
     }
 
     private PropertiesEditor getInitializedPropertiesEditor(PropertyName groupedPropName,
@@ -743,6 +775,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
 
     private void handlePropertyEditorChanges(PropertyEditor propertyEditor) {
         handleValueChange(propertyEditor);
+        handleTransientValueChange(propertyEditor);
         handleEditingChange(propertyEditor);
         handleIndeterminateChange(propertyEditor);
         handleNavigateRequest(propertyEditor);
@@ -1056,6 +1089,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         propertyEditor.addValueListener(new ChangeListener<Object>() {
             @Override
             public void changed(ObservableValue<? extends Object> ov, Object oldValue, Object newValue) {
+//                System.out.println("Value change : " + newValue);
                 if (!propertyEditor.isUpdateFromModel()) {
                     lastPropertyEditorValueChanged = propertyEditor;
                     updateValueInModel(propertyEditor, oldValue, newValue);
@@ -1066,7 +1100,20 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
                 }
             }
         });
+    }
 
+    private void handleTransientValueChange(PropertyEditor propertyEditor) {
+        // Handle the transient value change (no job here, only the scene graph is updated)
+        propertyEditor.addTransientValueListener(new ChangeListener<Object>() {
+            @Override
+            public void changed(ObservableValue<? extends Object> ov, Object oldValue, Object newValue) {
+//                System.out.println("Transient value change : " + newValue);
+                lastPropertyEditorValueChanged = propertyEditor;
+                for (FXOMInstance fxomInstance : getSelectedInstances()) {
+                    propertyEditor.getPropertyMeta().setValueInSceneGraphObject(fxomInstance, newValue);
+                }
+            }
+        });
     }
 
     private void updateValueInModel(PropertyEditor propertyEditor, Object oldValue, Object newValue) {
@@ -1097,7 +1144,10 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
 
                         @Override
                         public Boolean call(Void p) {
-                            propertyEditor.getCommitListener().handle(null);
+                            // requestSessionEnd
+                            if (propertyEditor.getCommitListener() != null) {
+                                propertyEditor.getCommitListener().handle(null);
+                            }
                             boolean hasError = propertyEditor.isInvalidValue();
                             if (!hasError) {
 //                                System.out.println("textEditingSessionDidEnd() called (from callback).");
@@ -1114,7 +1164,9 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
                     if (editorController.isTextEditingSessionOnGoing()) {
 //                        System.out.println("textEditingSessionDidEnd() called.");
                         editorController.textEditingSessionDidEnd();
-                        propertyEditor.getCommitListener().handle(null);
+                        if (propertyEditor.getCommitListener() != null) {
+                            propertyEditor.getCommitListener().handle(null);
+                        }
                     }
                 }
             }
@@ -1305,6 +1357,9 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
                 case "stylesheets": //NOI18N
                     propertyEditor = makePropertyEditor(StylesheetEditor.class, propMeta);
                     break;
+                case "dividerPositions": //NOI18N
+                    propertyEditor = makePropertyEditor(DividerPositionsEditor.class, propMeta);
+                    break;
                 default:
                     // Generic editor
                     propertyEditor = makePropertyEditor(GenericEditor.class, propMeta);
@@ -1327,17 +1382,6 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
                 // other kind to be added when editors available...
                 // Use simple double editor for now
                 propertyEditor = makePropertyEditor(DoubleEditor.class, propMeta);
-            }
-        } else if (propMeta instanceof DoubleArrayPropertyMetadata) {
-            // Double array editors
-            switch (propMeta.getName().getName()) {
-                case "dividerPositions": //NOI18N
-                    propertyEditor = makePropertyEditor(DividerPositionsEditor.class, propMeta);
-                    break;
-                default:
-                    // Generic editor
-                    propertyEditor = makePropertyEditor(GenericEditor.class, propMeta);
-                    break;
             }
         } else if (propMeta instanceof IntegerPropertyMetadata) {
             // Integer editor
@@ -1650,15 +1694,15 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
             }
         } else if (editorClass == StyleEditor.class) {
             if (propertyEditor != null) {
-                ((StyleEditor) propertyEditor).reset(propMeta, selectedClasses);
+                ((StyleEditor) propertyEditor).reset(propMeta, selectedClasses, getEditorController());
             } else {
-                propertyEditor = new StyleEditor(propMeta, selectedClasses);
+                propertyEditor = new StyleEditor(propMeta, selectedClasses, getEditorController());
             }
         } else if (editorClass == StyleClassEditor.class) {
             if (propertyEditor != null) {
-                ((StyleClassEditor) propertyEditor).reset(propMeta, selectedClasses, getSelectedInstances());
+                ((StyleClassEditor) propertyEditor).reset(propMeta, selectedClasses, getSelectedInstances(), getEditorController());
             } else {
-                propertyEditor = new StyleClassEditor(propMeta, selectedClasses, getSelectedInstances());
+                propertyEditor = new StyleClassEditor(propMeta, selectedClasses, getSelectedInstances(), getEditorController());
             }
         } else if (editorClass == StylesheetEditor.class) {
             if (propertyEditor != null) {
@@ -1952,7 +1996,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         }
 
         protected void initialize() {
-            // New selection: initialize all the selection variables
+            // New selection: initializePopupContent all the selection variables
 
             selectedInstances.clear();
             if (selection.getGroup() instanceof ObjectSelectionGroup) {

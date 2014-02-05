@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Set;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.scene.Node;
 import javafx.scene.control.MenuItem;
 import javafx.scene.effect.Effect;
 
@@ -46,49 +47,67 @@ import javafx.scene.effect.Effect;
  */
 public class EffectPopupEditor extends PopupEditor {
 
-    private final EffectPicker effectPicker = new EffectPicker();
-    private final List<MenuItem> effectMenuItems;
+    private EffectPicker effectPicker;
+    private List<MenuItem> effectMenuItems;
 
     private final ChangeListener<Number> effectRevisionChangeListener = new ChangeListener<Number>() {
         @Override
         public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
-            final String valueAsString = effectPicker.getEffectPath();
             final Effect rootEffect = effectPicker.getRootEffectProperty();
             // Need to clone the root effect of the effect picker
             // in order to commit with a new value
             final Effect rootEffectClone = Utils.clone(rootEffect);
-            commitValue(rootEffectClone, valueAsString);
+            commitValue(rootEffectClone);
             // Refresh MenuButton items if needed
             updateMenuButton(rootEffectClone);
-            displayValueAsString(valueAsString);
         }
     };
 
     @SuppressWarnings("LeakingThisInConstructor")
     public EffectPopupEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
-        plugEditor(this, effectPicker);
-        effectMenuItems = effectPicker.getMenuItems();
     }
 
     @Override
     public void setPopupContentValue(Object value) {
         assert value == null || value instanceof Effect;
         effectPicker.revisionProperty().removeListener(effectRevisionChangeListener);
-        // We first clone the root effect and initialize the effect picker with the clone value :
+        // We first clone the root effect and initializePopupContent the effect picker with the clone value :
         // then the clone value will be updated and passed back to the model
         final Effect rootEffectClone = Utils.clone((Effect) value);
         effectPicker.setRootEffectProperty(rootEffectClone);
         // Refresh MenuButton items if needed
         updateMenuButton(rootEffectClone);
         effectPicker.revisionProperty().addListener(effectRevisionChangeListener);
-        // Update the menu button string
-        displayValueAsString(effectPicker.getEffectPath());
     }
 
     @Override
-    public void resetPopupContent() {
-        effectPicker.reset();
+    public void initializePopupContent() {
+        effectPicker = new EffectPicker();
+        effectMenuItems = effectPicker.getMenuItems();
+    }
+
+    @Override
+    public String getPreviewString(Object value) {
+        if (value == null) {
+            return "+"; //NOI18N
+        }
+        assert value instanceof Effect;
+        Effect effect = (Effect) value;
+        final StringBuilder sb = new StringBuilder();
+        while (effect != null) {
+            sb.append(effect.getClass().getSimpleName());
+            effect = Utils.getDefaultInput(effect);
+            if (effect != null) {
+                sb.append(", "); //NOI18N
+            }
+        }
+        return sb.toString();
+    }
+
+    @Override
+    public Node getPopupContentNode() {
+        return effectPicker;
     }
 
     private void updateMenuButton(Effect value) {

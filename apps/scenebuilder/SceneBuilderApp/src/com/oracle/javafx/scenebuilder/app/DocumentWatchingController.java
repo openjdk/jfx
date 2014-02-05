@@ -55,7 +55,8 @@ public class DocumentWatchingController implements FileWatcher.Delegate {
     private final EditorController editorController;
     private final ResourceController resourceController;
     private final SceneStyleSheetMenuController sceneStyleSheetMenuController;
-    private final FileWatcher fileWatcher = new FileWatcher(2000 /* ms */, this);
+    private final FileWatcher fileWatcher 
+            = new FileWatcher(2000 /* ms */, this, DocumentWindowController.class.getSimpleName());
     
     
     public DocumentWatchingController(DocumentWindowController documentWindowController) {
@@ -63,7 +64,6 @@ public class DocumentWatchingController implements FileWatcher.Delegate {
         this.editorController = documentWindowController.getEditorController();
         this.resourceController = documentWindowController.getResourceController();
         this.sceneStyleSheetMenuController = documentWindowController.getSceneStyleSheetMenuController();
-        fileWatcher.start();
         
         this.editorController.sceneStyleSheetProperty().addListener(
                 new ChangeListener<ObservableList<File>>() {
@@ -74,7 +74,17 @@ public class DocumentWatchingController implements FileWatcher.Delegate {
                     }
                 });
     }
+    
+    public void start() {
+        fileWatcher.start();
+    }
 
+    
+    public void stop() {
+        fileWatcher.stop();
+    }
+    
+    
     public void update() {
         /*
          * The file watcher associated to this document window controller watches:

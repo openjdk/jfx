@@ -37,6 +37,7 @@ import java.util.Set;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.TextField;
 
@@ -48,45 +49,31 @@ public class StringPopupEditor extends PopupEditor {
     @FXML
     TextField textField;
 
-    private final Parent root;
+    private Parent root;
 
     @SuppressWarnings("LeakingThisInConstructor")
     public StringPopupEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
-        root = EditorUtils.loadPopupFxml("StringPopupEditor.fxml", this);
-        initialize();
     }
 
-    // Method to please FindBugs
-    private void initialize() {
+    //
+    // Interface from PopupEditor.
+    // Methods called by PopupEditor.
+    //
+    
+    @Override
+    public void initializePopupContent() {
+        root = EditorUtils.loadPopupFxml("StringPopupEditor.fxml", this);
         assert textField != null;
         textField.setOnAction(new EventHandler<ActionEvent>() {
 
             @Override
             public void handle(ActionEvent t) {
-                commitValue(textField.getText(), getValueAsString());
-                displayValueAsString(getValueAsString());
+                commitValue(textField.getText());
             }
         });
-
-        // Plug to the menu button.
-        plugEditor(this, root);
     }
 
-    private String getValueAsString() {
-        String valueAsString;
-        if (isIndeterminate()) {
-            valueAsString = "-"; //NOI18N
-        } else {
-            valueAsString = textField.getText();
-        }
-        return valueAsString;
-    }
-
-    //
-    // Interface PopupEditor.InputValue.
-    // Methods called by PopupEditor.
-    //
     @Override
     public void setPopupContentValue(Object value) {
         if (value == null) {
@@ -95,15 +82,24 @@ public class StringPopupEditor extends PopupEditor {
             assert value instanceof String;
             textField.setText((String) value);
         }
-
-        // Update the menu button string
-        displayValueAsString(getValueAsString());
     }
 
     @Override
-    public void resetPopupContent() {
-        textField.setText(null);
-        textField.setPromptText(null);
+    public String getPreviewString(Object value) {
+        if (value == null) {
+            return ""; //NOI18N
+        }
+        String valueAsString;
+        if (isIndeterminate()) {
+            valueAsString = "-"; //NOI18N
+        } else {
+            valueAsString = value.toString();
+        }
+        return valueAsString;
     }
 
+    @Override
+    public Node getPopupContentNode() {
+        return root;
+    }
 }

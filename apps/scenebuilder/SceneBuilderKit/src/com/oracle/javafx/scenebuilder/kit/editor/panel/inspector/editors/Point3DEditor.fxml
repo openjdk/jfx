@@ -34,33 +34,29 @@
 
 <?import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.*?>
 <?import java.lang.*?>
-<?import java.net.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?scenebuilder-classpath-element ../../../../../../../../../../dist/SceneBuilderKit.jar?>
 
-<HBox spacing="5.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+<HBox spacing="1.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
       <children>
         <VBox alignment="TOP_LEFT" HBox.hgrow="ALWAYS">
           <children>
             <Label styleClass="label, small-label" text="X" />
-            <DoubleField fx:id="xDf" />
+            <DoubleField prefWidth="30.0" fx:id="xDf" />
           </children>
         </VBox>
         <VBox alignment="TOP_LEFT" HBox.hgrow="ALWAYS">
           <children>
             <Label styleClass="label, small-label" text="Y" />
-            <DoubleField fx:id="yDf" />
+            <DoubleField fx:id="yDf" prefWidth="30.0" />
           </children>
         </VBox>
         <VBox alignment="TOP_LEFT" HBox.hgrow="ALWAYS">
           <children>
             <Label styleClass="label, small-label" text="Z" />
-            <DoubleField fx:id="zDf" />
+            <DoubleField fx:id="zDf" prefWidth="30.0" />
           </children>
         </VBox>
       </children>
-      <stylesheets>
-        <URL value="@../../../css/Theme.css" />
-      </stylesheets>
     </HBox>

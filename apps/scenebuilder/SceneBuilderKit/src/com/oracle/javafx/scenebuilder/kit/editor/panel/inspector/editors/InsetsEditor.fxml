@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <!--
   Copyright (c) 2012, 2014, Oracle and/or its affiliates.
   All rights reserved. Use is subject to license terms.
@@ -30,33 +31,33 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
+
 <?import java.lang.*?>
-<?import java.util.*?>
 <?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.scene.paint.*?>
+<?import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.*?>
 <?scenebuilder-preview-i18n-resource ../../../i18n/SceneBuilderKit.properties?>
 
-<GridPane xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
+<GridPane xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
   <children>
-    <Label styleClass="small-label" text="Top" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-    <Label styleClass="small-label" text="Right" GridPane.columnIndex="2" GridPane.rowIndex="0" />
-    <Label styleClass="small-label" text="Bottom" GridPane.columnIndex="3" GridPane.rowIndex="0" />
-    <Label styleClass="small-label" text="Left" GridPane.columnIndex="4" GridPane.rowIndex="0" />
-    <TextField fx:id="topTf" prefColumnCount="12" prefWidth="-1.0" text="" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+    <Label styleClass="small-label" text="TOP" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+    <Label styleClass="small-label" text="RIGHT" GridPane.columnIndex="2" GridPane.rowIndex="0" />
+    <Label styleClass="small-label" text="BOTTOM" GridPane.columnIndex="3" GridPane.rowIndex="0" />
+    <Label styleClass="small-label" text="LEFT" GridPane.columnIndex="4" GridPane.rowIndex="0" />
+    <DoubleField fx:id="topTf" prefColumnCount="12" prefWidth="-1.0" text="" GridPane.columnIndex="0" GridPane.rowIndex="1" />
     <Button fx:id="linkBt" defaultButton="false" maxWidth="8.0" minWidth="8.0" mnemonicParsing="false" onAction="#linkValuesAction" onKeyReleased="#linkValuesKeypressed" prefWidth="8.0" styleClass="insets-copy-button" text="" GridPane.columnIndex="1" GridPane.rowIndex="1">
       <tooltip>
         <Tooltip text="%inspector.insets.setall" />
       </tooltip>
     </Button>
-    <TextField fx:id="rightTf" prefColumnCount="12" prefWidth="-1.0" text="" GridPane.columnIndex="2" GridPane.rowIndex="1">
+    <DoubleField fx:id="rightTf" prefColumnCount="12" prefWidth="-1.0" text="" GridPane.columnIndex="2" GridPane.rowIndex="1">
       <GridPane.margin>
-        <Insets right="2.0" fx:id="x1" />
+        <Insets right="1.0" fx:id="x1" />
       </GridPane.margin>
-    </TextField>
-    <TextField fx:id="bottomTf" prefColumnCount="12" prefWidth="-1.0" text="" GridPane.columnIndex="3" GridPane.margin="$x1" GridPane.rowIndex="1" />
-    <TextField fx:id="leftTf" prefColumnCount="12" prefWidth="-1.0" text="" GridPane.columnIndex="4" GridPane.rowIndex="1" />
+    </DoubleField>
+    <DoubleField fx:id="bottomTf" prefColumnCount="12" prefWidth="-1.0" text="" GridPane.columnIndex="3" GridPane.margin="$x1" GridPane.rowIndex="1" />
+    <DoubleField fx:id="leftTf" prefColumnCount="12" prefWidth="-1.0" text="" GridPane.columnIndex="4" GridPane.rowIndex="1" />
   </children>
   <columnConstraints>
     <ColumnConstraints hgrow="SOMETIMES" />

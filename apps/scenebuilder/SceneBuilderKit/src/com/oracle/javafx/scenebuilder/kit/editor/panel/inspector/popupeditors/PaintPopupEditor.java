@@ -37,6 +37,7 @@ import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker;
 import java.util.Set;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.scene.Node;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.ImagePattern;
 import javafx.scene.paint.LinearGradient;
@@ -49,15 +50,13 @@ import javafx.scene.shape.Rectangle;
  */
 public class PaintPopupEditor extends PopupEditor {
 
-    private final PaintPicker paintEditor = new PaintPicker();
+    private PaintPicker paintEditor;
     private final Rectangle graphic = new Rectangle(20, 10);
 
     private final ChangeListener<Paint> paintChangeListener = new ChangeListener<Paint>() {
         @Override
         public void changed(ObservableValue<? extends Paint> ov, Paint oldValue, Paint newValue) {
-            final String valueAsString = getValueAsString(newValue);
-            commitValue(newValue, valueAsString);
-            displayValueAsString(valueAsString);
+            commitValue(newValue);
             graphic.setFill(newValue);
         }
     };
@@ -65,8 +64,30 @@ public class PaintPopupEditor extends PopupEditor {
     @SuppressWarnings("LeakingThisInConstructor")
     public PaintPopupEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
-        plugEditor(this, paintEditor);
-        popupMb.setGraphic(graphic);
+    }
+
+    //
+    // Interface from PopupEditor.
+    // Methods called by PopupEditor.
+    //
+    @Override
+    public void initializePopupContent() {
+        paintEditor = new PaintPicker();
+    }
+
+    @Override
+    public String getPreviewString(Object value) {
+        if (value == null) {
+            return null;
+        }
+        assert value instanceof Paint;
+        if (value instanceof LinearGradient
+                || value instanceof RadialGradient
+                || value instanceof ImagePattern) {
+            return value.getClass().getSimpleName();
+        }
+        assert value instanceof Color;
+        return ColorEncoder.encodeColor((Color) value);
     }
 
     @Override
@@ -83,29 +104,24 @@ public class PaintPopupEditor extends PopupEditor {
             final Paint paint = (Paint) value;
             paintEditor.setPaintProperty(paint);
         }
-        paintEditor.paintProperty().addListener(paintChangeListener);
+        paintEditor.paintProperty().addListener(paintChangeListener);       
+        // !! exception in case of null
         graphic.setFill((Paint) value);
-        // Update the menu button string
-        final String valueAsString = getValueAsString((Paint) value);
-        displayValueAsString(valueAsString);
     }
 
     @Override
-    public void resetPopupContent() {
-//        paintEditor.setPaintProperty(null);
-        paintEditor.reset();
+    public Node getPopupContentNode() {
+        return paintEditor;
     }
 
-    private String getValueAsString(final Paint paint) {
-        if (paint == null) {
-            return null;
+    public Node getPreviewGraphic(Object value) {
+        Paint paintVal;
+        if (value == null) {
+            paintVal = null;
+        } else {
+            paintVal = (Paint) value;
         }
-        if (paint instanceof LinearGradient
-                || paint instanceof RadialGradient
-                || paint instanceof ImagePattern) {
-            return paint.getClass().getSimpleName();
-        }
-        assert paint instanceof Color;
-        return ColorEncoder.encodeColor((Color) paint);
+        graphic.setFill(paintVal);
+        return graphic;
     }
 }

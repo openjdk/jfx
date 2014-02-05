@@ -35,6 +35,7 @@ import com.oracle.javafx.scenebuilder.kit.fxom.glue.GlueElement;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  *
@@ -45,6 +46,7 @@ class TransientProperty extends TransientNode {
     private final PropertyName name;
     private final GlueElement propertyElement;
     private final List<FXOMObject> values = new ArrayList<>();
+    private final List<FXOMProperty> collectedProperties = new ArrayList<>();
 
     public TransientProperty(
             TransientNode parentNode,
@@ -72,58 +74,69 @@ class TransientProperty extends TransientNode {
         return values;
     }
 
+    public List<FXOMProperty> getCollectedProperties() {
+        return collectedProperties;
+    }
+
     public FXOMProperty makeFxomProperty(FXOMDocument fxomDocument) {
         final FXOMProperty result;
         
-        /*
-         * Two cases:
-         * 
-         * 1) (values.size() == 0)
-         *
-         *    => it's a textual property expressed as plain text
-         *    => for example with Button.text:
-         *    <Button><text>OK</text></Button>
-         * 
-         * 2) (values.size() == 1) &&
-         *    (values.get(0).properties().size() == 0) &&
-         *    (values.get(0).getFxValue() != null
-         * 
-         *    => it's a textual property expressed with fx:value
-         *    => we create an FXOMPropertyT instance
-         *    => for example with Button.text:
-         * 
-         *    <Button><text><String fx:value="OK"/></text></Button>
-         * 
-         * 
-         * 3) else
-         * 
-         *    => it's a complex property
-         *    => we create an FXOMPropertyC instance
-         */
-        
-        if (values.isEmpty()) {
-            // Case #1
-            assert propertyElement.getChildren().isEmpty();
-            assert propertyElement.getContent().isEmpty() == false;
-            result = new FXOMPropertyT(fxomDocument, name,
-                    propertyElement, null, propertyElement.getContentText());
-        }
-        else if ((values.size() == 1) && (values.get(0) instanceof FXOMInstance)) {
-            final FXOMInstance value = (FXOMInstance) values.get(0);
-            final String fxValue = value.getFxValue();
-            if (fxValue != null) {
-                // Case #2
+        if (collectedProperties.isEmpty()) {
+            /*
+             * Two cases:
+             * 
+             * 1) (values.size() == 0)
+             *
+             *    => it's a textual property expressed as plain text
+             *    => for example with Button.text:
+             *    <Button><text>OK</text></Button>
+             * 
+             * 2) (values.size() == 1) &&
+             *    (values.get(0).properties().size() == 0) &&
+             *    (values.get(0).getFxValue() != null
+             * 
+             *    => it's a textual property expressed with fx:value
+             *    => we create an FXOMPropertyT instance
+             *    => for example with Button.text:
+             * 
+             *    <Button><text><String fx:value="OK"/></text></Button>
+             * 
+             * 
+             * 3) else
+             * 
+             *    => it's a complex property
+             *    => we create an FXOMPropertyC instance
+             */
+
+            if (values.isEmpty()) {
+                // Case #1
+                assert propertyElement.getChildren().isEmpty();
+                assert propertyElement.getContent().isEmpty() == false;
                 result = new FXOMPropertyT(fxomDocument, name,
-                        propertyElement, value.getGlueElement(), fxValue);
+                        propertyElement, null, propertyElement.getContentText());
+            }
+            else if ((values.size() == 1) && (values.get(0) instanceof FXOMInstance)) {
+                final FXOMInstance value = (FXOMInstance) values.get(0);
+                final String fxValue = value.getFxValue();
+                if (fxValue != null) {
+                    // Case #2
+                    result = new FXOMPropertyT(fxomDocument, name,
+                            propertyElement, value.getGlueElement(), fxValue);
+                } else {
+                    // Case #3
+                    result = new FXOMPropertyC(fxomDocument, name, 
+                            values, propertyElement);
+                }
             } else {
                 // Case #3
                 result = new FXOMPropertyC(fxomDocument, name, 
                         values, propertyElement);
             }
         } else {
-            // Case #3
-            result = new FXOMPropertyC(fxomDocument, name, 
-                    values, propertyElement);
+            // It is a property of type Map ; currently we don't support
+            // map property editing ; so we create a fake value.
+            assert getSceneGraphObject() instanceof Map;
+            result = new FXOMPropertyT(fxomDocument, name, "fake-value");
         }
         
         return result;

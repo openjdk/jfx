@@ -318,10 +318,17 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
         final PreferencesController pc = PreferencesController.getSingleton();
         final PreferencesRecordGlobal recordGlobal = pc.getRecordGlobal();
         recordGlobal.readFromJavaPreferences();
-        
+
         // Creates the user library
         userLibrary = new UserLibrary(AppPlatform.getUserLibraryFolder());
-        userLibrary.startWatching();
+        // runLater below is here to fix DTL-6378
+        Platform.runLater(new Runnable() {
+
+            @Override
+            public void run() {
+                userLibrary.startWatching();
+            }
+        });
 
         if (files.isEmpty()) {
             // Creates an empty document
@@ -605,10 +612,10 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
     private void logTimestamp(ACTION type) {
         switch (type) {
             case START:
-                Logger.getLogger(this.getClass().getName()).severe(I18N.getString("log.start"));
+                Logger.getLogger(this.getClass().getName()).info(I18N.getString("log.start"));
                 break;
             case STOP:
-                Logger.getLogger(this.getClass().getName()).severe(I18N.getString("log.stop"));
+                Logger.getLogger(this.getClass().getName()).info(I18N.getString("log.stop"));
                 break;
             default:
                 assert false;

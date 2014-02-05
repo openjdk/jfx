@@ -58,6 +58,31 @@ public class JavaLanguage {
                 && ! isNullLiteral(value);
     }
     
+    
+    /**
+     * Returns true if value is a valid class name (fully qualified or not).
+     * 
+     * @param value string to test (can be null or empty)
+     * @return  true if value is a valid class name
+     */
+    public static boolean isClassName(String value) {
+        boolean result;
+        
+        if (value == null) {
+            result = false;
+        } else {
+            result = true;
+            for (String item : value.split("\\.")) { //NOI18N
+                if (isIdentifier(item) == false) {
+                    result = false;
+                    break;
+                }
+            }
+        }
+        
+        return result;
+    }
+    
     /*
      * Private
      */

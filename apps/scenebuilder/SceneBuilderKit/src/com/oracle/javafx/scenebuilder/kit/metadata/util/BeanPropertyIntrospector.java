@@ -73,6 +73,21 @@ class BeanPropertyIntrospector {
         return result;
     }
     
+    
+    public void setValue(String propertyName, Object value) {
+        final PropertyDescriptor d = findDescriptor(propertyName);
+        
+        if (d != null) {
+            try {
+                d.getWriteMethod().invoke(object, value);
+            } catch(InvocationTargetException|IllegalAccessException x) {
+                throw new RuntimeException(x);
+            }
+        } else {
+            throw new RuntimeException(propertyName + " not found"); //NOI18N
+        }
+    }
+    
     private PropertyDescriptor findDescriptor(String propertyName) {
         assert propertyDescriptors != null;
         int i = 0;

@@ -68,8 +68,7 @@ public abstract class ComplexPropertyMetadata<T> extends SingleValuePropertyMeta
                 result = getValueClass().cast(targetObject.getSceneGraphObject());
             }
         } else {
-            // Emergency code
-            result = getDefaultValue();
+            result = makeValueFromString(fxomProperty.getValue());
         }
         
         return result;

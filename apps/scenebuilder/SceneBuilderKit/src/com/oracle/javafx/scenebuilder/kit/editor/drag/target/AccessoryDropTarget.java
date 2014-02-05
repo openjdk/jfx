@@ -37,11 +37,17 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.DeleteObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.InsertAsAccessoryJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyObjectJob;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import com.oracle.javafx.scenebuilder.kit.metadata.property.value.EnumerationPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask.Accessory;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.Objects;
+import javafx.geometry.Pos;
+import javafx.scene.layout.BorderPane;
 
 /**
  *
@@ -109,6 +115,23 @@ public class AccessoryDropTarget extends AbstractDropTarget {
         final Job j = new InsertAsAccessoryJob(draggedObject, 
                 targetContainer, accessory, editorController);
         result.addSubJob(j);
+        
+        if (targetContainer.getSceneGraphObject() instanceof BorderPane) {
+            assert draggedObject instanceof FXOMInstance;
+            
+            // We add a job which sets BorderPane.alignment=CENTER on draggedObject
+            final FXOMInstance draggedInstance
+                    = (FXOMInstance) draggedObject;
+            final PropertyName alignmentName
+                    = new PropertyName("alignment", BorderPane.class); //NOI18N
+            final EnumerationPropertyMetadata alignmentMeta
+                    = new EnumerationPropertyMetadata(alignmentName, Pos.class,
+                    "UNUSED", true /* readWrite */, InspectorPath.UNUSED); //NOI18N
+            final Job alignmentJob
+                    = new ModifyObjectJob(draggedInstance, alignmentMeta, 
+                            Pos.CENTER.toString(), editorController);
+            result.addSubJob(alignmentJob);
+        }
         
         assert result.isExecutable();
         

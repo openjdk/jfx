@@ -31,23 +31,14 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
 <?import java.lang.*?>
-<?import java.net.*?>
-<?import java.util.*?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
-<?import javafx.scene.paint.*?>
-<?scenebuilder-preview-i18n-resource ../../../i18n/SceneBuilderKit.properties?>
+<?import javafx.scene.shape.*?>
 
-<StackPane prefHeight="-1.0" prefWidth="-1.0" styleClass="theme-presets, SBKIT-hierarchy-panel" xmlns:fx="http://javafx.com/fxml">
-    <children>
-        <TreeTableView fx:id="treeTableView" prefHeight="-1.0" prefWidth="-1.0">
-            <columns>
-                <TreeTableColumn prefWidth="150.0" sortable="false" fx:id="classNameColumn" text="%hierarchy.column.header.classname" />
-                <TreeTableColumn prefWidth="150.0" sortable="false" fx:id="displayInfoColumn"  text="%hierarchy.column.header.info" />
-            </columns>
-        </TreeTableView>
-    </children>
-    <stylesheets>
-        <URL value="@../../../css/Theme.css" />
-    </stylesheets>
-</StackPane>
+<Path fill="DODGERBLUE" stroke="BLACK" strokeType="INSIDE" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+    <elements>
+        <MoveTo x="100.0" />
+        <LineTo x="150.0" y="50.0" />
+        <ArcTo radiusX="30.0" radiusY="25" x="200.0" y="100.0" />
+        <QuadCurveTo controlX="300.0" controlY="300.0" y="150.0" />
+        <ClosePath />
+    </elements>
+</Path>

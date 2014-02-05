@@ -34,13 +34,14 @@
 
 <?import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.*?>
 <?import java.lang.*?>
+<?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?scenebuilder-classpath-element ../../../../../../../../../../dist/SceneBuilderKit.jar?>
 
-<HBox maxWidth="1.7976931348623157E308" stylesheets="@../../../css/Theme.css" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+<HBox maxWidth="1.7976931348623157E308" spacing="1.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
 <children>
-    <IntegerField fx:id="integerField" maxHeight="22.0" minHeight="22.0" onKeyReleased="#textFieldKeyReleased" onMouseClicked="#textFieldMouseClicked" prefHeight="22.0" prefWidth="300.0">
+    <IntegerField fx:id="integerField" onKeyReleased="#textFieldKeyReleased" onMouseClicked="#textFieldMouseClicked">
       <contextMenu>
         <ContextMenu maxHeight="-1.0">
           <items>
@@ -52,14 +53,17 @@
           </items>
         </ContextMenu>
       </contextMenu>
-    </IntegerField><MenuButton fx:id="menuButton" maxHeight="22.0" minHeight="22.0" mnemonicParsing="false" prefHeight="22.0" HBox.hgrow="NEVER" xmlns:fx="http://javafx.com/fxml">
+<HBox.margin>
+<Insets />
+</HBox.margin>
+    </IntegerField><MenuButton fx:id="menuButton" mnemonicParsing="false" HBox.hgrow="NEVER" xmlns:fx="http://javafx.com/fxml">
   <items>
     <MenuItem mnemonicParsing="false" text="Action 1" />
     <MenuItem mnemonicParsing="false" text="Action 2" />
   </items>
 <styleClass>
 <String fx:value="menu-button" />
-<String fx:value="listrow-menubutton" />
+<String fx:value="multi-row-menubutton" />
 </styleClass>
 </MenuButton>
 </children>

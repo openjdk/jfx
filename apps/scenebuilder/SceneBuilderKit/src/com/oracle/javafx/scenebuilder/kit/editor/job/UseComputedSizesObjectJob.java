@@ -34,13 +34,16 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.Metadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.ArrayList;
 import java.util.List;
-import javafx.scene.control.Control;
+import javafx.scene.Parent;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.RowConstraints;
@@ -127,9 +130,11 @@ public class UseComputedSizesObjectJob extends Job {
         else if (sceneGraphObject instanceof ColumnConstraints) {
             subJobs.addAll(modifyWidthJobs(fxomInstance));
         } //
-        // Control/Region: both height and width properties are meaningfull
-        else if (sceneGraphObject instanceof Control
-                || sceneGraphObject instanceof Region) {
+        // Region: both height and width properties are meaningfull
+        else if (sceneGraphObject instanceof Region) {
+            // First remove anchors if any
+            subJobs.addAll(removeAnchorsJobs());
+            // Then modify height / width
             subJobs.addAll(modifyHeightJobs(fxomInstance));
             subJobs.addAll(modifyWidthJobs(fxomInstance));
         } //
@@ -138,6 +143,37 @@ public class UseComputedSizesObjectJob extends Job {
             subJobs.addAll(modifyFitHeightJob(fxomInstance));
             subJobs.addAll(modifyFitWidthJob(fxomInstance));
         }
+    }
+
+    private List<ModifyObjectJob> removeAnchorsJobs() {
+        final List<ModifyObjectJob> result = new ArrayList<>();
+        final FXOMObject parentObject = fxomInstance.getParentObject();
+
+        if (parentObject != null && parentObject.getSceneGraphObject() instanceof AnchorPane) {
+            // switch off AnchorPane Constraints when parent is AnchorPane
+            final PropertyName topAnchorPN = new PropertyName("topAnchor", AnchorPane.class);
+            final ValuePropertyMetadata topAnchorVPM
+                    = Metadata.getMetadata().queryValueProperty(fxomInstance, topAnchorPN);
+            final PropertyName rightAnchorPN = new PropertyName("rightAnchor", AnchorPane.class);
+            final ValuePropertyMetadata rightAnchorVPM
+                    = Metadata.getMetadata().queryValueProperty(fxomInstance, rightAnchorPN);
+            final PropertyName bottomAnchorPN = new PropertyName("bottomAnchor", AnchorPane.class);
+            final ValuePropertyMetadata bottomAnchorVPM
+                    = Metadata.getMetadata().queryValueProperty(fxomInstance, bottomAnchorPN);
+            final PropertyName leftAnchorPN = new PropertyName("leftAnchor", AnchorPane.class);
+            final ValuePropertyMetadata leftAnchorVPM
+                    = Metadata.getMetadata().queryValueProperty(fxomInstance, leftAnchorPN);
+            for (ValuePropertyMetadata vpm : new ValuePropertyMetadata[]{
+                topAnchorVPM, rightAnchorVPM, bottomAnchorVPM, leftAnchorVPM}) {
+
+                if (vpm.getValueObject(fxomInstance) != null) {
+                    final ModifyObjectJob subJob = new ModifyObjectJob(
+                            fxomInstance, vpm, null, getEditorController());
+                    result.add(subJob);
+                }
+            }
+        }
+        return result;
     }
 
     private List<ModifyObjectJob> modifyHeightJobs(final FXOMInstance candidate) {

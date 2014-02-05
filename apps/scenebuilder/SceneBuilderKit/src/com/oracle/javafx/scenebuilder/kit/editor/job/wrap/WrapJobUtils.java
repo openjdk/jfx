@@ -85,6 +85,9 @@ public class WrapJobUtils {
         if (osg.hasSingleParent() == false) {
             return false;
         }
+        if (editorController.isSelectionNode() == false) {
+            return false;
+        }
         final FXOMObject parent = osg.getAncestor();
         if (parent == null) { // selection == root object
             return true;
@@ -111,7 +114,9 @@ public class WrapJobUtils {
             return false;
         }
         final FXOMObject container = osg.getItems().iterator().next();
-        assert container instanceof FXOMInstance;
+        if (container instanceof FXOMInstance == false) {
+            return false;
+        }
         // Can unwrap the following containers only
         final Class<?>[] containerClasses = { // (1)
             AnchorPane.class,

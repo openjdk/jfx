@@ -38,6 +38,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.JobUtils;
 import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.SetDocumentRootJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.ToggleFxRootJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.AddPropertyValueJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
@@ -49,6 +50,7 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -71,11 +73,11 @@ public abstract class AbstractWrapInJob extends Job {
     public AbstractWrapInJob(EditorController editorController) {
         super(editorController);
     }
-    
+
     public static AbstractWrapInJob getWrapInJob(
-            EditorController editorController, 
+            EditorController editorController,
             Class<? extends Parent> wrappingClass) {
-        
+
         assert EditorController.getClassesSupportingWrapping().contains(wrappingClass);
         final AbstractWrapInJob job;
         if (wrappingClass == javafx.scene.layout.AnchorPane.class) {
@@ -209,7 +211,7 @@ public abstract class AbstractWrapInJob extends Job {
                     && oldContainerProperty.getParentInstance() != null;
 
             // Update the new container before adding it to the old container
-            final DesignHierarchyMask oldContainerMask 
+            final DesignHierarchyMask oldContainerMask
                     = new DesignHierarchyMask(oldContainer);
             if (oldContainerMask.isFreeChildPositioning()
                     && Region.class.isAssignableFrom(newContainer.getDeclaredClass())) { // Do not include Group new container
@@ -234,9 +236,24 @@ public abstract class AbstractWrapInJob extends Job {
         // - we update the document root with the new container
         //------------------------------------------------------------------
         else {
+            assert children.size() == 1; // Wrap the single root node
+            final FXOMObject rootObject = children.iterator().next();
+            assert rootObject instanceof FXOMInstance;
+            boolean isFxRoot = ((FXOMInstance) rootObject).isFxRoot();
+            // First remove the fx:root from the old root object
+            if (isFxRoot) {
+                final ToggleFxRootJob fxRootJob = new ToggleFxRootJob(getEditorController());
+                batchJob.addSubJob(fxRootJob);
+            }
+            // Then set the new container as root object
             final Job setDocumentRoot = new SetDocumentRootJob(
                     newContainer, getEditorController());
             batchJob.addSubJob(setDocumentRoot);
+            // Finally add the fx:root to the new root object
+            if (isFxRoot) {
+                final ToggleFxRootJob fxRootJob = new ToggleFxRootJob(getEditorController());
+                batchJob.addSubJob(fxRootJob);
+            }
         }
 
         //==================================================================
@@ -250,7 +267,7 @@ public abstract class AbstractWrapInJob extends Job {
 
     protected List<Job> addChildrenToPropertyJobs(
             final FXOMPropertyC containerProperty,
-            final Set<FXOMObject> children) {
+            final Collection<FXOMObject> children) {
 
         final List<Job> jobs = new ArrayList<>();
         int index = 0;

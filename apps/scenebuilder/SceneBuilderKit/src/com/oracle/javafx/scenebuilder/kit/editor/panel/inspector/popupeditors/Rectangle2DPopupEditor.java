@@ -40,6 +40,7 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.geometry.Rectangle2D;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 
 /**
@@ -57,52 +58,12 @@ public class Rectangle2DPopupEditor extends PopupEditor {
     DoubleField heightDf;
 
     DoubleField[] doubleFields = new DoubleField[4];
-    private final Parent root;
+    private Parent root;
     private Rectangle2D rectangle2D;
 
     @SuppressWarnings("LeakingThisInConstructor")
     public Rectangle2DPopupEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
-        root = EditorUtils.loadPopupFxml("Rectangle2DPopupEditor.fxml", this); //NOI18N
-        initialize();
-    }
-
-    // Method to please FindBugs
-    private void initialize() {
-        doubleFields[0] = minXDf;
-        doubleFields[1] = minYDf;
-        doubleFields[2] = widthDf;
-        doubleFields[3] = heightDf;
-        for (DoubleField doubleField : doubleFields) {
-            EventHandler<ActionEvent> valueListener = new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent event) {
-                    commitValue(getValue(), getValueAsString());
-                    displayValueAsString(getValueAsString());
-                }
-            };
-            setNumericEditorBehavior(this, doubleField, valueListener, false);
-        }
-
-        // Plug to the menu button.
-        plugEditor(this, root);
-    }
-
-    private String getValueAsString() {
-        String valueAsString;
-        if (isIndeterminate()) {
-            valueAsString = "-"; //NOI18N
-        } else {
-            if (rectangle2D == null) {
-                valueAsString = I18N.getString("inspector.rectangle2D.not.defined");
-            } else {
-                valueAsString = EditorUtils.valAsStr(rectangle2D.getMinX()) + "," //NOI18N
-                        + EditorUtils.valAsStr(rectangle2D.getMinY())
-                        + "  " + EditorUtils.valAsStr(rectangle2D.getWidth()) //NOI18N
-                        + "x" + EditorUtils.valAsStr(rectangle2D.getHeight()); //NOI18N
-            }
-        }
-        return valueAsString;
     }
 
     @Override
@@ -129,12 +90,50 @@ public class Rectangle2DPopupEditor extends PopupEditor {
     }
 
     //
-    // Interface PopupEditor.InputValue.
+    // Interface from PopupEditor.
     // Methods called by PopupEditor.
     //
     @Override
+    public void initializePopupContent() {
+        root = EditorUtils.loadPopupFxml("Rectangle2DPopupEditor.fxml", this); //NOI18N
+        doubleFields[0] = minXDf;
+        doubleFields[1] = minYDf;
+        doubleFields[2] = widthDf;
+        doubleFields[3] = heightDf;
+        for (DoubleField doubleField : doubleFields) {
+            EventHandler<ActionEvent> valueListener = new EventHandler<ActionEvent>() {
+                @Override
+                public void handle(ActionEvent event) {
+                    commitValue(getValue());
+                }
+            };
+            setNumericEditorBehavior(this, doubleField, valueListener, false);
+        }
+    }
+
+    @Override
+    public String getPreviewString(Object value) {
+        if (value == null) {
+            return I18N.getString("inspector.rectangle2D.not.defined");
+        }
+        assert value instanceof Rectangle2D;
+        Rectangle2D rectangle2DVal = (Rectangle2D) value;
+        String valueAsString;
+        if (isIndeterminate()) {
+            valueAsString = "-"; //NOI18N
+        } else {
+            valueAsString = EditorUtils.valAsStr(rectangle2DVal.getMinX()) + "," //NOI18N
+                    + EditorUtils.valAsStr(rectangle2DVal.getMinY())
+                    + "  " + EditorUtils.valAsStr(rectangle2DVal.getWidth()) //NOI18N
+                    + "x" + EditorUtils.valAsStr(rectangle2DVal.getHeight()); //NOI18N
+        }
+        return valueAsString;
+    }
+
+    @Override
     public void setPopupContentValue(Object value) {
         if (value == null) {
+            rectangle2D = null;
             for (DoubleField doubleField : doubleFields) {
                 doubleField.setText(""); //NOI18N
             }
@@ -146,14 +145,10 @@ public class Rectangle2DPopupEditor extends PopupEditor {
             widthDf.setText(EditorUtils.valAsStr(rectangle2D.getWidth()));
             heightDf.setText(EditorUtils.valAsStr(rectangle2D.getHeight()));
         }
-
-        // Update the menu button string
-        displayValueAsString(getValueAsString());
     }
 
     @Override
-    public void resetPopupContent() {
-        rectangle2D = null;
-        setPopupContentValue(null);
+    public Node getPopupContentNode() {
+        return root;
     }
 }

@@ -39,6 +39,7 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -71,9 +72,11 @@ public abstract class AbstractWrapInSubComponentJob extends AbstractWrapInJob {
         final List<Job> modifyChildrenJobs = modifyChildrenJobs(children);
         jobs.addAll(modifyChildrenJobs);
 
+        // Sort the children before adding them to their new container
+        final Collection<FXOMObject> sorted = sortChildren(children);
         // Add the children to the new container
         final List<Job> addChildrenJobs
-                = addChildrenToPropertyJobs(newContainerProperty, children);
+                = addChildrenToPropertyJobs(newContainerProperty, sorted);
         jobs.addAll(addChildrenJobs);
 
         // Add the new container property to the new container instance
@@ -85,5 +88,9 @@ public abstract class AbstractWrapInSubComponentJob extends AbstractWrapInJob {
         jobs.add(addPropertyJob);
 
         return jobs;
+    }
+    
+    protected Collection<FXOMObject> sortChildren(Set<FXOMObject> children) {
+        return children;
     }
 }

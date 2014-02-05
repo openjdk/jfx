@@ -36,6 +36,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.v2.RemovePropertyJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.RemovePropertyValueJob;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMCollection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMIntrinsic;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
 
@@ -148,6 +149,8 @@ public class DeleteObjectJob extends Job {
                 }
             } else if (targetFxomObject instanceof FXOMCollection) {
                 sb.append("Collection");
+            } else if (targetFxomObject instanceof FXOMIntrinsic) {
+                sb.append(targetFxomObject.getGlueElement().getTagName());
             } else {
                 assert false;
                 sb.append(targetFxomObject.getClass().getSimpleName());

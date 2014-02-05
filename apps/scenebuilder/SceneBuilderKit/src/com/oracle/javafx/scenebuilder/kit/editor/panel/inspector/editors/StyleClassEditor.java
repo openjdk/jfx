@@ -31,6 +31,8 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 
+import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
+import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform.Theme;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
@@ -66,18 +68,34 @@ public class StyleClassEditor extends InlineListEditor {
 
     private Set<FXOMInstance> selectedInstances;
     private List<String> cssClasses;
+    private List<String> themeClasses;
+    private EditorController editorController;
 
     @SuppressWarnings("LeakingThisInConstructor")
-    public StyleClassEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, Set<FXOMInstance> selectedInstances) {
+    public StyleClassEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses,
+            Set<FXOMInstance> selectedInstances, EditorController editorController) {
         super(propMeta, selectedClasses);
         this.selectedInstances = selectedInstances;
+        this.editorController = editorController;
         setLayoutFormat(PropertyEditor.LayoutFormat.DOUBLE_LINE);
+        themeClasses = CssInternal.getThemeStyleClasses(editorController.getTheme());
         addItem(getNewStyleClassItem());
+
+        // On Theme change, update the themeClasses
+        editorController.themeProperty().addListener(new ChangeListener<Theme>() {
+
+            @Override
+            public void changed(ObservableValue<? extends Theme> ov, Theme t, Theme t1) {
+                themeClasses = CssInternal.getThemeStyleClasses(StyleClassEditor.this.editorController.getTheme());
+            }
+        });
     }
 
     private StyleClassItem getNewStyleClassItem() {
         if (cssClasses == null) {
             cssClasses = CssInternal.getStyleClasses(selectedInstances);
+            // We don't want the theme classes to be suggested: remove them from the list
+            cssClasses.removeAll(themeClasses);
         }
         return new StyleClassItem(this, cssClasses);
     }
@@ -115,10 +133,12 @@ public class StyleClassEditor extends InlineListEditor {
         if (isSetValueDone()) {
             return;
         }
+
         Iterator<EditorItem> itemsIter = new ArrayList<>(getEditorItems()).iterator();
         for (String item : (List<String>) value) {
             item = item.trim();
-            if (item.isEmpty()) {
+            if (item.isEmpty() || themeClasses.contains(item)) {
+                // We don't want to show the theme classes
                 continue;
             }
             EditorItem editorItem;
@@ -138,9 +158,11 @@ public class StyleClassEditor extends InlineListEditor {
         }
     }
 
-    public void reset(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, Set<FXOMInstance> selectedInstances) {
+    public void reset(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses,
+            Set<FXOMInstance> selectedInstances, EditorController editorController) {
         super.reset(propMeta, selectedClasses);
         this.selectedInstances = selectedInstances;
+        this.editorController = editorController;
         cssClasses = null;
         // add an empty item
         addItem(getNewStyleClassItem());
@@ -239,7 +261,10 @@ public class StyleClassEditor extends InlineListEditor {
                 public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
                     if (!newValue) {
                         // focus lost: commit
-                        onActionListener.handle(new ActionEvent(styleClassTf, null));
+                        editor.editing(false, onActionListener);
+                    } else {
+                        // got focus
+                        editor.editing(true, onActionListener);
                     }
                 }
             };
@@ -300,6 +325,12 @@ public class StyleClassEditor extends InlineListEditor {
             styleClassTf.setText(""); //NOI18N
         }
 
+        // Please findBugs
+        @Override
+        public void requestFocus() {
+            super.requestFocus();
+        }
+
         @Override
         public void setValueAsIndeterminate() {
             handleIndeterminate(styleClassTf);
@@ -327,7 +358,10 @@ public class StyleClassEditor extends InlineListEditor {
 
         @FXML
         void add(ActionEvent event) {
-            editor.add(this, getNewStyleClassItem());
+            StyleClassEditor.StyleClassItem styleClassItem = getNewStyleClassItem();
+            editor.add(this, styleClassItem);
+            styleClassItem.requestFocus();
+
         }
 
         @FXML

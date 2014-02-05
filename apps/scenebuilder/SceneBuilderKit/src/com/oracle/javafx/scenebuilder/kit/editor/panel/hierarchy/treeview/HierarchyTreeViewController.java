@@ -112,7 +112,11 @@ public class HierarchyTreeViewController extends AbstractHierarchyPanelControlle
     @Override
     protected void select(final TreeItem<HierarchyItem> treeItem) {
         assert treeView != null;
+        // The select method of TreeView selection model will expand the selected TreeItem.
+        // Keep the current expanded value to set it back after selection.
+        boolean isExpanded = treeItem.isExpanded();
         treeView.getSelectionModel().select(treeItem);
+        treeItem.setExpanded(isExpanded);
     }
 
     @Override
@@ -183,7 +187,9 @@ public class HierarchyTreeViewController extends AbstractHierarchyPanelControlle
             final TreeItem<HierarchyItem> selectedTreeItem = selectedTreeItems.get(0);
             final HierarchyItem item = selectedTreeItem.getValue();
             final DisplayOption option = getDisplayOption();
-            if (item != null && item.hasDisplayInfo(option)) {
+            if (item != null 
+                    && item.isResourceKey(option) == false // Do not allow inline editing of the I18N value
+                    && item.hasDisplayInfo(option)) {
                 final TreeCell<?> tc = HierarchyTreeViewUtils.getTreeCell(treeView, selectedTreeItem);
                 assert tc instanceof HierarchyTreeCell;
                 final HierarchyTreeCell<?> htc = (HierarchyTreeCell) tc;

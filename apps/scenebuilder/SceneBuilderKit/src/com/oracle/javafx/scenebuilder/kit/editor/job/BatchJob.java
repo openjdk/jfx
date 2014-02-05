@@ -65,7 +65,14 @@ public class BatchJob extends Job {
         this.shouldUpdateSelection = true;
     }
     
-    public BatchJob(EditorController editorController) {
+     public BatchJob(EditorController editorController, String description) {
+         super(editorController);
+         this.description = description;
+         this.shouldRefreshSceneGraph = true;
+         this.shouldUpdateSelection = true;
+    }
+    
+   public BatchJob(EditorController editorController) {
         super(editorController);
         this.description = getClass().getSimpleName();
         this.shouldRefreshSceneGraph = true;
@@ -80,6 +87,11 @@ public class BatchJob extends Job {
     public void addSubJobs(List<Job> subJobs) {
         assert subJobs != null;
         this.subJobs.addAll(subJobs);
+    }
+
+    public void prependSubJob(Job subJob) {
+        assert subJob != null;
+        this.subJobs.add(0, subJob);
     }
 
     /*

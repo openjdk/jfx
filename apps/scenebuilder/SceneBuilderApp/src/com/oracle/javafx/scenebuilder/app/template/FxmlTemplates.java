@@ -50,10 +50,6 @@ import java.util.Set;
  */
 public class FxmlTemplates {
 
-    public static URL getDefaultContentURL() {
-        return FxmlTemplates.class.getResource("DefaultContent.fxml"); //NOI18N
-    }
-
     public static URL getContentURL(ApplicationControlAction action) {
         final String name = getTemplateFileName(action);
         return FxmlTemplates.class.getResource(name);

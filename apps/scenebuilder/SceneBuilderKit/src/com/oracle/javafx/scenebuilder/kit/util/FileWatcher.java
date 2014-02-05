@@ -52,6 +52,7 @@ import javafx.application.Platform;
  */
 public class FileWatcher {
     
+    private final String name;
     private final Set<Path> targets = new HashSet<>();
     private final Map<Path, FileTime> modifiedTimes = new HashMap<>();
     private final long pollingTime; // milliseconds
@@ -59,12 +60,14 @@ public class FileWatcher {
     private boolean started;
     private Timer watchingTimer;
     
-    public FileWatcher(long pollingTime, Delegate delegate) {
+    public FileWatcher(long pollingTime, Delegate delegate, String name) {
         assert pollingTime > 0;
         assert delegate != null;
+        assert name != null;
         
         this.pollingTime = pollingTime;
         this.delegate = delegate;
+        this.name = getClass().getSimpleName() + "[" + name + "]"; //NOI18N
     }
     
     public synchronized void addTarget(Path target) {
@@ -124,7 +127,7 @@ public class FileWatcher {
     }
     
     public synchronized boolean isStarted() {
-        return watchingTimer != null;
+        return started;
     }
     
     public static interface Delegate {
@@ -143,7 +146,7 @@ public class FileWatcher {
         
         if (timerNeeded) {
             if (watchingTimer == null) {
-                watchingTimer = new Timer(true /* isDaemon */);
+                watchingTimer = new Timer(name, true /* isDaemon */);
                 watchingTimer.schedule(new TimerTask() {
                     @Override
                     public void run() {

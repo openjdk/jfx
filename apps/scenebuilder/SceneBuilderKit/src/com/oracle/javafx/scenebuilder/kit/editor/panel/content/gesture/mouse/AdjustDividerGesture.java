@@ -131,7 +131,9 @@ public class AdjustDividerGesture extends AbstractMouseGesture {
                 dividerPositionsMeta,
                 newDividerPositions,
                 editorController);
-        editorController.getJobManager().push(j);
+        if (j.isExecutable()) {
+            editorController.getJobManager().push(j);
+        } // else divider has been release to its original position
     }
 
     @Override

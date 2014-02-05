@@ -240,6 +240,52 @@ public abstract class Utils {
         return clone;
     }
 
+    public static Effect getDefaultInput(Effect effect) {
+        final Effect input;
+        assert effect != null;
+        if (effect instanceof Blend) {
+            input = ((Blend) effect).getTopInput();
+        } else if (effect instanceof Bloom) {
+            input = ((Bloom) effect).getInput();
+        } else if (effect instanceof BoxBlur) {
+            input = ((BoxBlur) effect).getInput();
+        } else if (effect instanceof ColorAdjust) {
+            input = ((ColorAdjust) effect).getInput();
+        } else if (effect instanceof ColorInput) {
+            // No input
+            input = null;
+        } else if (effect instanceof DisplacementMap) {
+            input = ((DisplacementMap) effect).getInput();
+        } else if (effect instanceof DropShadow) {
+            input = ((DropShadow) effect).getInput();
+        } else if (effect instanceof GaussianBlur) {
+            input = ((GaussianBlur) effect).getInput();
+        } else if (effect instanceof Glow) {
+            input = ((Glow) effect).getInput();
+        } else if (effect instanceof ImageInput) {
+            // No input
+            input = null;
+        } else if (effect instanceof InnerShadow) {
+            input = ((InnerShadow) effect).getInput();
+        } else if (effect instanceof Lighting) {
+            input = ((Lighting) effect).getBumpInput();
+        } else if (effect instanceof MotionBlur) {
+            input = ((MotionBlur) effect).getInput();
+        } else if (effect instanceof PerspectiveTransform) {
+            input = ((PerspectiveTransform) effect).getInput();
+        } else if (effect instanceof Reflection) {
+            input = ((Reflection) effect).getInput();
+        } else if (effect instanceof SepiaTone) {
+            input = ((SepiaTone) effect).getInput();
+        } else if (effect instanceof Shadow) {
+            input = ((Shadow) effect).getInput();
+        } else {
+            assert false;
+            input = null;
+        }
+        return input;
+    }
+
     static void setDefaultInput(Effect effect, Effect input) {
         assert effect != null;
         if (effect instanceof Blend) {

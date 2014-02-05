@@ -38,7 +38,6 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelContr
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import java.util.Objects;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.input.Dragboard;
@@ -249,7 +248,10 @@ public class SelectAndMoveGesture extends AbstractMouseDragGesture {
     protected void mouseExited(MouseEvent e) {
         // Should be not called because mouse should exit glass layer
         // during this gesture
-        assert false;
+        
+        // Commenting the assertion : in some cases, this method is executed ;
+        // is it related to DTL-6393 ?
+//        assert false;
     }
     
 }

@@ -50,8 +50,6 @@ import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
-import javafx.scene.control.MenuButton;
-import javafx.scene.control.MenuItem;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -65,8 +63,6 @@ import javafx.scene.layout.StackPane;
  */
 public class SelectionBarController extends AbstractFxmlPanelController {
 
-    @FXML
-    private MenuButton pathMenuButton;
     @FXML
     private HBox pathBox;
 
@@ -88,14 +84,14 @@ public class SelectionBarController extends AbstractFxmlPanelController {
      */
     @Override
     protected void fxomDocumentDidChange(FXOMDocument oldDocument) {
-        if (pathMenuButton != null) {
+        if (pathBox != null) {
             updateSelectionBar();
         }
     }
 
     @Override
     protected void sceneGraphRevisionDidChange() {
-        if (pathMenuButton != null) {
+        if (pathBox != null) {
             updateSelectionBar();
         }
     }
@@ -112,7 +108,7 @@ public class SelectionBarController extends AbstractFxmlPanelController {
 
     @Override
     protected void editorSelectionDidChange() {
-        if (pathMenuButton != null) {
+        if (pathBox != null) {
             updateSelectionBar();
         }
     }
@@ -124,12 +120,7 @@ public class SelectionBarController extends AbstractFxmlPanelController {
     protected void controllerDidLoadFxml() {
         
         // Sanity checks
-        assert pathMenuButton != null;
         assert pathBox != null;
-
-        // hack for temporary removal of pathMenuButton
-        pathMenuButton.setVisible(false);
-        pathMenuButton.setManaged(false);
 
         // Update
         updateSelectionBar();
@@ -141,7 +132,6 @@ public class SelectionBarController extends AbstractFxmlPanelController {
     private void updateSelectionBar() {
         final Selection selection = getEditorController().getSelection();
 
-        pathMenuButton.getItems().clear();
         pathBox.getChildren().clear();
 
         if (selection.isEmpty()) {
@@ -155,14 +145,6 @@ public class SelectionBarController extends AbstractFxmlPanelController {
                 while (fxomObject != null) {
                     final DesignHierarchyMask mask = new DesignHierarchyMask(fxomObject);
                     final String entryText = makeEntryText(mask);
-
-                    final MenuItem menuItem = new MenuItem();
-                    menuItem.setText(entryText);
-                    menuItem.setGraphic(new ImageView(mask.getClassNameIcon()));
-                    menuItem.setUserData(fxomObject);
-                    menuItem.setOnAction(menuItemHandler);
-                    pathMenuButton.getItems().add(0, menuItem);
-
                     final Hyperlink boxItem = new Hyperlink();
                     boxItem.setText(entryText);
                     final Node graphic;
@@ -230,16 +212,6 @@ public class SelectionBarController extends AbstractFxmlPanelController {
         }
         return result.toString();
     }
-
-    private final EventHandler<ActionEvent> menuItemHandler = new EventHandler<ActionEvent>() {
-        @Override
-        public void handle(ActionEvent t) {
-            assert t.getSource() instanceof MenuItem;
-            final MenuItem menuItem = (MenuItem) t.getSource();
-            assert menuItem.getUserData() instanceof FXOMObject;
-            handleSelect((FXOMObject) menuItem.getUserData());
-        }
-    };
 
     private final EventHandler<ActionEvent> hyperlinkHandler = new EventHandler<ActionEvent>() {
         @Override

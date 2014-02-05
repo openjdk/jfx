@@ -43,6 +43,7 @@ import com.oracle.javafx.scenebuilder.kit.util.FileWatcher;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -56,11 +57,11 @@ import javafx.application.Platform;
 class WatchingController implements FileWatcher.Delegate {
     
     private final EditorController editorController;
-    private final FileWatcher fileWatcher = new FileWatcher(2000 /*ms*/, this);
+    private final FileWatcher fileWatcher 
+            = new FileWatcher(2000 /*ms*/, this,  EditorController.class.getSimpleName());
 
     public WatchingController(EditorController editorController) {
         this.editorController = editorController;
-        this.fileWatcher.start();
     }
     
     public void fxomDocumentDidChange() {
@@ -69,6 +70,18 @@ class WatchingController implements FileWatcher.Delegate {
     
     public void jobManagerRevisionDidChange() {
         updateFileWatcher();
+    }
+    
+    public void start() {
+        fileWatcher.start();
+    }
+    
+    public void stop() {
+        fileWatcher.stop();
+    }
+    
+    public boolean isStarted() {
+        return fileWatcher.isStarted();
     }
     
     /*
@@ -124,8 +137,6 @@ class WatchingController implements FileWatcher.Delegate {
                         final Path path = extractPath(valuePropertyT);
                         if (path != null) {
                             targetPaths.add(path);
-                        } else {
-                            assert false : "valuePropertyT.getValue()=" + valuePropertyT.getValue();
                         }
                     } else {
                         assert false : "valueProperty.getName()=" + valueProperty.getName();
@@ -160,7 +171,7 @@ class WatchingController implements FileWatcher.Delegate {
                 } else {
                     try {
                         result = Paths.get(url.toURI());
-                    } catch(URISyntaxException x) {
+                    } catch(FileSystemNotFoundException|URISyntaxException x) {
                         result = null;
                     }
                 }

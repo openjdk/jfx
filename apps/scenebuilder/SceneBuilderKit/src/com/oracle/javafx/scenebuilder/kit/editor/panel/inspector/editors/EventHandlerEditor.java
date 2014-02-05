@@ -173,12 +173,12 @@ public class EventHandlerEditor extends AutoSuggestEditor {
     }
 
     private void wrapInHBox() {
-        hbox = new HBox(5);
+        hbox = new HBox();
         hbox.setAlignment(Pos.CENTER);
         Label hashLabel = new Label(HASH_STR);
-        hashLabel.setMinWidth(10);
+        hashLabel.getStyleClass().add("symbol-prefix");
         hbox.getChildren().addAll(hashLabel, getRoot());
-        HBox.setHgrow(getTextField(), Priority.ALWAYS);
+        HBox.setHgrow(hashLabel, Priority.NEVER);
         root.getChildren().clear();
         root.getChildren().add(hbox);
     }

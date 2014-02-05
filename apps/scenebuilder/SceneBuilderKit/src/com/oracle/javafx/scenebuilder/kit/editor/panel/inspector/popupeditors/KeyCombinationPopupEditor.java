@@ -72,7 +72,7 @@ public class KeyCombinationPopupEditor extends PopupEditor {
     @FXML
     Button clearAllBt;
 
-    private final GridPane gridPane;
+    private GridPane gridPane;
     private static final int NB_MODIFIERS_MAX = 5;
     private final ArrayList<ModifierRow> modifierRows = new ArrayList<>();
     private KeyCombination.ModifierValue alt;
@@ -91,15 +91,17 @@ public class KeyCombinationPopupEditor extends PopupEditor {
     @SuppressWarnings("LeakingThisInConstructor")
     public KeyCombinationPopupEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
+    }
+
+    //
+    // Interface from PopupEditor.
+    // Methods called by PopupEditor.
+    //
+    @Override
+    public void initializePopupContent() {
         Parent root = EditorUtils.loadPopupFxml("KeyCombinationPopupEditor.fxml", this); //NOI18N
         assert root instanceof GridPane;
         gridPane = (GridPane) root;
-
-        initialize();
-    }
-
-    // Method to please FindBugs
-    private void initialize() {
         // Build suggested key code list
         List<Field> keyCodes = Arrays.asList(KeyCode.class.getFields());
         List<String> keyCodesStr = new ArrayList<>();
@@ -115,31 +117,31 @@ public class KeyCombinationPopupEditor extends PopupEditor {
 
             @Override
             public void handle(ActionEvent t) {
-                resetPopupContent();
+                resetState();
+                buildUI();
                 commit(null);
             }
         });
 
-        // Plug to the menu button.
-        plugEditor(this, gridPane);
-
         buildUI();
     }
 
-    private String getValueAsString(Object value) {
+    @Override
+    public String getPreviewString(Object value) {
+        if (value == null) {
+            return I18N.getString("inspector.keycombination.null");
+        }
+        assert value instanceof KeyCombination;
+        KeyCombination keyCombinationVal = (KeyCombination) value;
         String valueAsString;
         if (isIndeterminate()) {
             valueAsString = "-"; //NOI18N
         } else {
-            valueAsString = (value != null) ? value.toString() : I18N.getString("inspector.keycombination.null"); //NOI18N
+            valueAsString = keyCombinationVal.toString();
         }
         return valueAsString;
     }
 
-    //
-    // Interface PopupEditor.InputValue.
-    // Methods called by PopupEditor.
-    //
     @Override
     public void setPopupContentValue(Object value) {
 
@@ -151,19 +153,14 @@ public class KeyCombinationPopupEditor extends PopupEditor {
             // Apply the new keyCombination
             buildContent((KeyCombination) value);
         } else {
-            resetPopupContent();
+            resetState();
+            buildUI();
         }
-
-        // Update the menu button string
-        displayValueAsString(getValueAsString(value));
     }
 
     @Override
-    public void resetPopupContent() {
-        // Set the editor to its initial value
-        resetState();
-        buildUI();
-        displayValueAsString(getValueAsString(null));
+    public Node getPopupContentNode() {
+        return gridPane;
     }
 
     private void resetState() {
@@ -252,9 +249,9 @@ public class KeyCombinationPopupEditor extends PopupEditor {
     }
 
     private void commit(KeyCombination keyCombination) {
-        commitValue(keyCombination, getValueAsString(keyCombination));
+        commitValue(keyCombination);
     }
-    
+
     private KeyCombination createKeyCombination() {
         if (mainKey.isEmpty()) {
             return null;
