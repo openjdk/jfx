@@ -124,11 +124,15 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
     }
     
     private void updateDisplayArea() {
-        List<Node> children = getChildren();
-        if (displayNode != null) {
-            children.remove(displayNode);
-        }
+        final List<Node> children = getChildren();
+        final Node oldDisplayNode = displayNode;
         displayNode = getDisplayNode();
+
+        // don't remove displayNode if it hasn't changed.
+        if (oldDisplayNode != null && oldDisplayNode != displayNode) {
+            children.remove(oldDisplayNode);
+        }
+
         if (displayNode != null && !children.contains(displayNode)) {
             children.add(displayNode);
 
