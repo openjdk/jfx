@@ -69,13 +69,12 @@ import javafx.scene.control.TabPane;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.Tooltip;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseEvent;
+import javafx.scene.input.*;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 import javafx.util.Duration;
@@ -812,25 +811,89 @@ public class HelloListView extends Application implements InvalidationListener {
         ObservableList<String> listOneItems = FXCollections.observableArrayList(names.subList(0, 8));
         ObservableList<String> listTwoItems = FXCollections.observableArrayList(names.subList(8, 16));
 
+        Label introLabel = new Label("By default, DnD is a MOVE, hold ctrl/cmd whilst dragging for COPY.");
+        introLabel.setWrapText(true);
+        introLabel.setFont(Font.font(18));
+        grid.add(introLabel, 0, 0, 2, 1);
+
         // --- list one
         final ListView<String> listOne = new ListView<String>();
+        listOne.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
         listOne.setItems(listOneItems);
         Node listOneLabel = createLabel("List One:");
         grid.getChildren().addAll(listOneLabel, listOne);
-        GridPane.setConstraints(listOneLabel, 0, 0);
-        GridPane.setConstraints(listOne, 0, 1);
+        GridPane.setConstraints(listOneLabel, 0, 1);
+        GridPane.setConstraints(listOne, 0, 2);
         GridPane.setVgrow(listOne, Priority.ALWAYS);
         // --- list one
 
         // --- list two
         final ListView<String> listTwo = new ListView<String>();
+        listTwo.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
         listTwo.setItems(listTwoItems);
         Node listTwoLabel = createLabel("List Two:");
         grid.getChildren().addAll(listTwoLabel, listTwo);
-        GridPane.setConstraints(listTwoLabel, 1, 0);
-        GridPane.setConstraints(listTwo, 1, 1);
+        GridPane.setConstraints(listTwoLabel, 1, 1);
+        GridPane.setConstraints(listTwo, 1, 2);
         GridPane.setVgrow(listTwo, Priority.ALWAYS);
         // --- list two
+
+        // set up Dnd in both directions
+        EventHandler<MouseEvent> dragDetected = new EventHandler<MouseEvent>() {
+            public void handle(MouseEvent event) {
+                ListView<String> list = (ListView) event.getSource();
+                Dragboard db = list.startDragAndDrop(TransferMode.ANY);
+
+                ClipboardContent content = new ClipboardContent();
+                content.putString(list.getSelectionModel().getSelectedItem());
+                db.setContent(content);
+
+                event.consume();
+            }
+        };
+        EventHandler<DragEvent> dragOver = new EventHandler<DragEvent>() {
+            public void handle(DragEvent event) {
+                if (event.getGestureSource() != event.getTarget() && event.getDragboard().hasString()) {
+                    event.acceptTransferModes(TransferMode.COPY_OR_MOVE);
+                }
+
+                event.consume();
+            }
+        };
+        EventHandler<DragEvent> dragDropped = new EventHandler<DragEvent>() {
+            public void handle(DragEvent event) {
+                ListView<String> list = (ListView) event.getGestureTarget();
+
+                Dragboard db = event.getDragboard();
+                boolean success = false;
+                if (db.hasString()) {
+                    list.getItems().add(db.getString());
+                    success = true;
+                }
+
+                event.setDropCompleted(success);
+                event.consume();
+            }
+        };
+        EventHandler<DragEvent> dragDone = new EventHandler<DragEvent>() {
+            public void handle(DragEvent event) {
+                if (event.getTransferMode() == TransferMode.MOVE) {
+                    ListView<String> list = (ListView) event.getGestureSource();
+                    list.getItems().remove(event.getDragboard().getString());
+                }
+                event.consume();
+            }
+        };
+
+        listOne.setOnDragDetected(dragDetected);
+        listOne.setOnDragOver(dragOver);
+        listOne.setOnDragDropped(dragDropped);
+        listOne.setOnDragDone(dragDone);
+
+        listTwo.setOnDragDetected(dragDetected);
+        listTwo.setOnDragOver(dragOver);
+        listTwo.setOnDragDropped(dragDropped);
+        listTwo.setOnDragDone(dragDone);
 
         tab.setContent(grid);
     }
@@ -1164,3 +1227,4 @@ public class HelloListView extends Application implements InvalidationListener {
         }
     }
 }
+
