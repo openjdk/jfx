@@ -69,6 +69,8 @@ import javafx.scene.control.TabPane;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.Tooltip;
+import javafx.scene.control.cell.ChoiceBoxListCell;
+import javafx.scene.control.cell.TextFieldListCell;
 import javafx.scene.input.*;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
@@ -544,22 +546,7 @@ public class HelloListView extends Application implements InvalidationListener {
         textFieldListView.setEditable(true);
         textFieldListView.setItems(data);
         textFieldListView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-        textFieldListView.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
-            public ListCell<String> call(ListView<String> p) {
-                return new TextFieldCell();
-            }
-        });
-//        textFieldListView.setOnEditCommit(new EventHandler<EditEvent<String>>() {
-//            @Override public void handle(EditEvent<String> t) {
-//                System.out.println("Edit commit event: " + t);
-//                Object obj = t.getNewValue();
-//
-//                if (obj instanceof String) {
-//                    ListView lv = t.getSource();
-//                    lv.getItems().set(lv.getEditingIndex(), obj);
-//                }
-//            }
-//        });
+        textFieldListView.setCellFactory(TextFieldListCell.forListView());
         textFieldListView.setOnEditStart(new EventHandler<EditEvent<String>>() {
             @Override public void handle(EditEvent<String> t) {
                 System.out.println("On Edit Start: " + t);
@@ -581,32 +568,7 @@ public class HelloListView extends Application implements InvalidationListener {
         choiceBoxListView.setEditable(true);
         choiceBoxListView.setItems(data);
         choiceBoxListView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-        choiceBoxListView.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
-            public ListCell<String> call(ListView<String> p) {
-                return new ChoiceBoxCell<String>(options);
-            }
-        });
-        choiceBoxListView.setOnEditCommit(new EventHandler<EditEvent<String>>() {
-            @Override public void handle(EditEvent<String> t) {
-                System.out.println("Edit commit event: " + t);
-                Object obj = t.getNewValue();
-
-                if (obj instanceof String) {
-                    ListView lv = t.getSource();
-                    lv.getItems().set(lv.getEditingIndex(), obj);
-                }
-            }
-        });
-//        choiceBoxListView.setOnEditStart(new EventHandler<ListView.EditEvent>() {
-//            @Override public void handle(ListView.EditEvent t) {
-//                System.out.println("On Edit Start: " + t);
-//            }
-//        });
-//        choiceBoxListView.setOnEditCancel(new EventHandler<ListView.EditEvent>() {
-//            @Override public void handle(ListView.EditEvent t) {
-//                System.out.println("On Edit Cancel: " + t);
-//            }
-//        });
+        choiceBoxListView.setCellFactory(ChoiceBoxListCell.forListView(options));
         grid.add(choiceBoxListView, 1, 0, 1, 10);
         GridPane.setVgrow(choiceBoxListView, Priority.ALWAYS);
         GridPane.setHgrow(choiceBoxListView, Priority.ALWAYS);
@@ -1006,139 +968,6 @@ public class HelloListView extends Application implements InvalidationListener {
     }
 
 
-    /**
-     * Class to demonstrate cell editing support with TextBoxes
-     */
-    private static class TextFieldCell extends ListCell<String> {
-
-        private TextField textBox;
-
-        public TextFieldCell() {
-            setEditable(true);
-        }
-
-        @Override
-        public void startEdit() {
-            super.startEdit();
-
-            if (textBox == null) {
-                createTextBox();
-            }
-            textBox.setText(getItem());
-
-            setText(null);
-            setGraphic(textBox);
-            textBox.selectAll();
-        }
-
-        @Override
-        public void cancelEdit() {
-            super.cancelEdit();
-
-            setText((String)getItem());
-            setGraphic(null);
-        }
-
-        @Override
-        public void updateItem(String item, boolean empty) {
-            super.updateItem(item, empty);
-
-            if (empty) {
-                setText(null);
-                setGraphic(null);
-            } else {
-                if (isEditing()) {
-                    if (textBox != null) {
-                        textBox.setText(item);
-                    }
-                    setText(null);
-                    setGraphic(textBox);
-                } else {
-                    setText(item);
-                    setGraphic(null);
-                }
-            }
-        }
-
-        private void createTextBox() {
-            textBox = new TextField(getItem());
-            textBox.setOnKeyReleased(new EventHandler<KeyEvent>() {
-                @Override public void handle(KeyEvent t) {
-                    if (t.getCode() == KeyCode.ENTER) {
-                        System.out.println("committing edit");
-                        commitEdit(textBox.getText());
-                    } else if (t.getCode() == KeyCode.ESCAPE) {
-                        System.out.println("cancelling edit");
-                        cancelEdit();
-                    }
-                }
-            });
-        }
-    }
-
-
-    /**
-     * Class to demonstrate cell editing support with ChoiceBox
-     */
-    private static class ChoiceBoxCell<T> extends ListCell<T> {
-
-        private final ObservableList<T> items;
-
-        private ChoiceBox<T> choiceBox;
-
-        public ChoiceBoxCell(ObservableList<T> items) {
-            this.items = items;
-            setEditable(true);
-        }
-
-        @Override
-        public void startEdit() {
-            if (choiceBox == null) {
-                createTextBox();
-            }
-
-            choiceBox.getSelectionModel().select(getItem());
-
-            super.startEdit();
-            setText(null);
-            setGraphic(choiceBox);
-        }
-
-        @Override
-        public void cancelEdit() {
-            super.cancelEdit();
-
-            updateItem(getItem(), isEmpty());
-        }
-
-        @Override
-        public void updateItem(T item, boolean empty) {
-            super.updateItem(item, empty);
-
-            if (isEditing()) {
-                if (choiceBox != null) {
-                    choiceBox.getSelectionModel().select(item);
-                }
-                setText(null);
-                setGraphic(choiceBox);
-            } else {
-                setText(item == null ? "" : item.toString());
-                setGraphic(null);
-            }
-        }
-
-        private void createTextBox() {
-            choiceBox = new ChoiceBox<T>(items);
-            choiceBox.setMaxWidth(Double.MAX_VALUE);
-            choiceBox.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<T>() {
-                public void changed(ObservableValue<? extends T> ov, T oldValue, T newValue) {
-                    if (isEditing()) {
-                        commitEdit(newValue);
-                    }
-                }
-            });
-        }
-    }
 
     private static class ExpandOnSelectionCell<T> extends ListCell<T> {
         private static final double PREF_HEIGHT = 24;
