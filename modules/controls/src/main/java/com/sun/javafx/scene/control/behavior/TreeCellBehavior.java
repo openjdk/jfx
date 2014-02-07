@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import com.sun.javafx.scene.control.Logging;
 import javafx.scene.Node;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.MultipleSelectionModel;
@@ -34,12 +35,12 @@ import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import com.sun.javafx.scene.control.Logging;
-import sun.util.logging.PlatformLogger;
-import sun.util.logging.PlatformLogger.Level;
 
 /**
  */
@@ -86,17 +87,10 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
      *                                                                         *
      **************************************************************************/
 
-    // For RT-17456: have selection occur as fast as possible with mouse input.
-    // The idea is (consistently with some native applications we've tested) to
-    // do the action as soon as you can. It takes a bit more coding but provides
-    // the best feel:
-    //  - when you click on a not-selected item, you can select immediately on press
-    //  - when you click on a selected item, you need to wait whether DragDetected or Release comes first
     // To support touch devices, we have to slightly modify this behavior, such
     // that selection only happens on mouse release, if only minimal dragging
     // has occurred.
     private boolean latePress = false;
-    private boolean wasSelected = false;
 
 
 
@@ -119,17 +113,14 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
      **************************************************************************/
 
     @Override public void mousePressed(MouseEvent event) {
-        boolean selectedBefore = getControl().isSelected();
 
-        if (getControl().isSelected()) {
+        if (event.isSynthesized()) {
             latePress = true;
-            return;
-        }
-
-        doSelect(event);
-
-        if (IS_TOUCH_SUPPORTED && selectedBefore) {
-            wasSelected = getControl().isSelected();
+        } else {
+            latePress  = getControl().isSelected();
+            if (!latePress) {
+                doSelect(event);
+            }
         }
     }
 
@@ -138,22 +129,10 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
             latePress = false;
             doSelect(event);
         }
-
-        wasSelected = false;
     }
 
     @Override public void mouseDragged(MouseEvent event) {
         latePress = false;
-
-        TreeView<T> treeView = getControl().getTreeView();
-        if (treeView == null || treeView.getSelectionModel() == null) return;
-
-        // the mouse has now been dragged on a touch device, we should
-        // remove the selection if we just added it in the last mouse press
-        // event
-        if (IS_TOUCH_SUPPORTED && ! wasSelected && getControl().isSelected()) {
-            treeView.getSelectionModel().clearSelection(getControl().getIndex());
-        }
     }
 
 

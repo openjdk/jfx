@@ -43,18 +43,10 @@ public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
      *                                                                         *
      **************************************************************************/
 
-    // For RT-17456: have selection occur as fast as possible with mouse input.
-    // The idea is (consistently with some native applications we've tested) to
-    // do the action as soon as you can. It takes a bit more coding but provides
-    // the best feel:
-    //  - when you click on a not-selected item, you can select immediately on press
-    //  - when you click on a selected item, you need to wait whether DragDetected or Release comes first
-    //
     // To support touch devices, we have to slightly modify this behavior, such
     // that selection only happens on mouse release, if only minimal dragging
     // has occurred.
     private boolean latePress = false;
-    private boolean wasSelected = false;
 
 
 
@@ -78,44 +70,25 @@ public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
         // we only care about clicks to the right of the right-most column
         if (! isClickOutsideCellBounds(event.getX())) return;
 
-        boolean selectedBefore = getControl().isSelected();
-
-        if (getControl().isSelected()) {
+        if (event.isSynthesized()) {
             latePress = true;
-            return;
-        }
-
-        doSelect(event);
-
-        if (IS_TOUCH_SUPPORTED && selectedBefore) {
-            wasSelected = getControl().isSelected();
+        } else {
+            latePress  = getControl().isSelected();
+            if (!latePress) {
+                doSelect(event);
+            }
         }
     }
 
     @Override public void mouseReleased(MouseEvent event) {
-        // we only care about clicks to the right of the right-most column
-        if (! isClickOutsideCellBounds(event.getX())) return;
-
         if (latePress) {
             latePress = false;
             doSelect(event);
         }
-
-        wasSelected = false;
     }
 
     @Override public void mouseDragged(MouseEvent event) {
-        // we only care about clicks to the right of the right-most column
-        if (! isClickOutsideCellBounds(event.getX())) return;
-
         latePress = false;
-
-        // the mouse has now been dragged on a touch device, we should
-        // remove the selection if we just added it in the last mouse press
-        // event
-        if (IS_TOUCH_SUPPORTED && ! wasSelected && getControl().isSelected()) {
-            getControl().getTreeTableView().getSelectionModel().clearSelection(getControl().getIndex());
-        }
     }
 
 

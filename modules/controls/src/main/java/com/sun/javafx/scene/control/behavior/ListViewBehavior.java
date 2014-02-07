@@ -25,6 +25,8 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.scene.control.skin.Utils;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
@@ -34,33 +36,20 @@ import javafx.collections.WeakListChangeListener;
 import javafx.event.EventType;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
-import javafx.scene.control.*;
+import javafx.scene.control.Control;
+import javafx.scene.control.FocusModel;
+import javafx.scene.control.ListView;
+import javafx.scene.control.MultipleSelectionModel;
+import javafx.scene.control.SelectionMode;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.util.Callback;
+
 import java.util.ArrayList;
 import java.util.List;
-import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.scene.control.skin.Utils;
-import static javafx.scene.input.KeyCode.A;
-import static javafx.scene.input.KeyCode.BACK_SLASH;
-import static javafx.scene.input.KeyCode.DOWN;
-import static javafx.scene.input.KeyCode.END;
-import static javafx.scene.input.KeyCode.ENTER;
-import static javafx.scene.input.KeyCode.ESCAPE;
-import static javafx.scene.input.KeyCode.F2;
-import static javafx.scene.input.KeyCode.HOME;
-import static javafx.scene.input.KeyCode.KP_DOWN;
-import static javafx.scene.input.KeyCode.KP_LEFT;
-import static javafx.scene.input.KeyCode.KP_RIGHT;
-import static javafx.scene.input.KeyCode.KP_UP;
-import static javafx.scene.input.KeyCode.LEFT;
-import static javafx.scene.input.KeyCode.PAGE_DOWN;
-import static javafx.scene.input.KeyCode.PAGE_UP;
-import static javafx.scene.input.KeyCode.RIGHT;
-import static javafx.scene.input.KeyCode.SPACE;
-import static javafx.scene.input.KeyCode.UP;
+
+import static javafx.scene.input.KeyCode.*;
 
 /**
  *
@@ -366,7 +355,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     @Override public void mousePressed(MouseEvent e) {
         super.mousePressed(e);
         
-        if (! e.isShiftDown()) {
+        if (! e.isShiftDown() && ! e.isSynthesized()) {
             int index = getControl().getSelectionModel().getSelectedIndex();
             setAnchor(index);
         }
