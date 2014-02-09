@@ -702,7 +702,7 @@ public class TreeView<T> extends Control {
 
     /**
      * <p>A property used to represent the TreeItem currently being edited
-     * in the TreeView, if editing is taking place, or -1 if no item is being edited.
+     * in the TreeView, if editing is taking place, or null if no item is being edited.
      * 
      * <p>It is not possible to set the editing item, instead it is required that
      * you call {@link #edit(javafx.scene.control.TreeItem)}.
