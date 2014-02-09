@@ -1439,20 +1439,19 @@ public class TestBuilder {
         });
 
         GridPane grid = new GridPane();
-        grid.setVgap(10);
-        grid.setHgap(10);
-        grid.setPadding(new Insets(13, 13, 13, 13));
+
+        grid.setHgap(30);
         grid.setAlignment(Pos.CENTER);
 
-        Label title1 = new Label("   Raw image");
+        Text title1 = new Text("            Raw image\n    ");
         grid.setConstraints(title1, 0, 0);
         grid.getChildren().add(title1);
 
-        Label title2 = new Label("   Image with effect");
+        Text title2 = new Text("         Image with effect\n     ");
         grid.setConstraints(title2, 1, 0);
         grid.getChildren().add(title2);
 
-        Label title3 = new Label("   Expected Result");
+        Text title3 = new Text("         Expected Result\n     ");
         grid.setConstraints(title3, 2, 0);
         grid.getChildren().add(title3);
 
@@ -1490,10 +1489,20 @@ public class TestBuilder {
         grid.setConstraints(dukeRef, 1, 2);
         grid.getChildren().add(dukeRef);
 
-        Image dukeImage1 = new Image("hello/DukeReflection.png");
+        Image dukeImage1 = new Image("hello/DukeReflectionUp.png",
+                200, 170, false, false);
         Label duke1 = new Label("",new ImageView(dukeImage1));
         grid.setConstraints(duke1, 2, 2);
         grid.getChildren().add(duke1);
+
+        Image dukeImage2 = new Image("hello/DukeReflectionDown.png",
+                200, 170, false, false);
+        Label duke2 = new Label("",new ImageView(dukeImage2));
+        grid.setConstraints(duke2, 2, 3);
+        grid.getChildren().add(duke2);
+
+        duke1.setLayoutX(50);
+        duke1.setLayoutY(50);
         
         VBox vb = new VBox(20);
         vb.setAlignment(Pos.CENTER);
