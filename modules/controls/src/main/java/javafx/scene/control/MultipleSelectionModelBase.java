@@ -595,8 +595,10 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             clearSelection();
         }
 
+        // we pass in (index, index) here to represent that nothing was added
+        // in this change.
         selectedIndicesSeq.callObservers(
-                new NonIterableChange.GenericAddRemoveChange<Integer>(index, index+1, 
+                new NonIterableChange.GenericAddRemoveChange<>(index, index,
                 Collections.singletonList(index), selectedIndicesSeq));
     }
 

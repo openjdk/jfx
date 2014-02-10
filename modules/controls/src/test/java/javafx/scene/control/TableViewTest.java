@@ -32,6 +32,8 @@ import static org.junit.Assert.*;
 
 import java.util.*;
 
+import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
+import com.sun.javafx.scene.control.SelectedCellsMap;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
@@ -42,6 +44,7 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.SortedList;
 import javafx.event.ActionEvent;
@@ -2638,5 +2641,40 @@ public class TableViewTest {
 
         assertEquals(1, table.getSortOrder().size());
         assertEquals(firstNameCol, table.getSortOrder().get(0));
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void test_rt35768_negativeFrom() {
+        readOnlyUnbackedObservableListSubListTest(-1, 0);
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void test_rt35768_bigTo() {
+        readOnlyUnbackedObservableListSubListTest(0, 10);
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void test_rt35768_fromEqualsTo() {
+        readOnlyUnbackedObservableListSubListTest(1, 1);
+    }
+
+    private void readOnlyUnbackedObservableListSubListTest(int from, int to) {
+        final SelectedCellsMap<TablePosition> selectedCellsMap = new SelectedCellsMap<>(new ListChangeListener<TablePosition>() {
+            @Override public void onChanged(javafx.collections.ListChangeListener.Change<? extends TablePosition> c) {
+                // Do nothing
+            }
+        });
+        ReadOnlyUnbackedObservableList<TablePosition<Object, ?>> selectedCellsSeq = new ReadOnlyUnbackedObservableList<TablePosition<Object, ?>>() {
+            @Override public TablePosition<Object, ?> get(int i) {
+                return selectedCellsMap.get(i);
+            }
+
+            @Override public int size() {
+                return selectedCellsMap.size();
+            }
+        };
+
+        // This should result in an IOOBE, but didn't until this bug was fixed
+        selectedCellsSeq.subList(from, to);
     }
 }
