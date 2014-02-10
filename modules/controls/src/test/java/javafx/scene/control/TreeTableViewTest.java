@@ -3252,4 +3252,55 @@ public class TreeTableViewTest {
         root.getChildren().setAll(aabbaa, bbc);
         assertEquals("bbc", treeView.getSelectionModel().getSelectedItem().getValue());
     }
+
+    @Test public void test_rt35763() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        TreeItem aaa = new TreeItem("aaa");
+        TreeItem bbb = new TreeItem("bbb");
+        root.getChildren().setAll(bbb, aaa);
+
+        final TreeTableView<String> treeView = new TreeTableView<>();
+
+        TreeTableColumn<String, String> col = new TreeTableColumn<>("Column");
+        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
+            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
+                return param.getValue().valueProperty();
+            }
+        });
+
+        treeView.getColumns().add(col);
+        treeView.setRoot(root);
+
+        assertEquals(root, treeView.getTreeItem(0));
+        assertEquals(bbb, treeView.getTreeItem(1));
+        assertEquals(aaa,treeView.getTreeItem(2));
+
+        // change sort order - expect items to be sorted
+        treeView.getSortOrder().setAll(col);
+
+        assertEquals(1, treeView.getSortOrder().size());
+        assertEquals(col, treeView.getSortOrder().get(0));
+
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(root, treeView.getTreeItem(0));
+        assertEquals(bbb, treeView.getTreeItem(2));
+        assertEquals(aaa,treeView.getTreeItem(1));
+
+        // set new items into items list - expect sortOrder list to be reset
+        // and the items list to remain unsorted
+        TreeItem<String> root2 = new TreeItem<>("Root");
+        root2.setExpanded(true);
+        TreeItem ccc = new TreeItem("ccc");
+        TreeItem ddd = new TreeItem("ddd");
+        root2.getChildren().setAll(ddd, ccc);
+        treeView.setRoot(root2);
+
+        assertEquals(root2, treeView.getTreeItem(0));
+        assertEquals(ddd, treeView.getTreeItem(1));
+        assertEquals(ccc,treeView.getTreeItem(2));
+
+        assertTrue(treeView.getSortOrder().isEmpty());
+    }
 }

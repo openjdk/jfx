@@ -781,8 +781,11 @@ public class TreeTableView<S> extends Control {
             if (root != null) {
                 weakRootEventListener = new WeakEventHandler<>(rootEvent);
                 getRoot().addEventHandler(TreeItem.<S>treeNotificationEvent(), weakRootEventListener);
-                weakOldItem = new WeakReference<TreeItem<S>>(root);
+                weakOldItem = new WeakReference<>(root);
             }
+
+            // Fix for RT-35763
+            getSortOrder().clear();
 
             expandedItemCountDirty = true;
             updateRootExpanded();
