@@ -43,11 +43,11 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.Metadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
-import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.HashMap;
 import java.util.Map;
 import javafx.geometry.Point2D;
+import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.input.KeyEvent;
 
@@ -56,25 +56,18 @@ import javafx.scene.input.KeyEvent;
  */
 public class ResizeTableColumnGesture extends AbstractMouseGesture {
 
-    private final FXOMInstance fxomInstance;
-    private final int columnIndex;
-    private final TableView<?> tableView;
+    private final FXOMInstance columnInstance;
     private TableColumnResizer resizer;
 
 
     public ResizeTableColumnGesture(ContentPanelController contentPanelController,
-            FXOMInstance fxomInstance, int columnIndex) {
+            FXOMInstance fxomInstance) {
         super(contentPanelController);
         
         assert fxomInstance != null;
-        assert fxomInstance.getSceneGraphObject() instanceof TableView;
-        assert columnIndex >= 0;
+        assert fxomInstance.getSceneGraphObject() instanceof TableColumn;
         
-        this.fxomInstance = fxomInstance;
-        this.columnIndex = columnIndex;
-        this.tableView = (TableView) fxomInstance.getSceneGraphObject(); // Shortcut
-        
-        assert this.columnIndex < this.tableView.getColumns().size();
+        this.columnInstance = fxomInstance;
     }
 
     /*
@@ -89,8 +82,9 @@ public class ResizeTableColumnGesture extends AbstractMouseGesture {
     @Override
     protected void mouseDragStarted() {
         assert resizer == null;
+        assert columnInstance.getSceneGraphObject() instanceof TableColumn;
         
-        resizer = new TableColumnResizer(tableView, columnIndex);
+        resizer = new TableColumnResizer((TableColumn)columnInstance.getSceneGraphObject());
         
         // Now same as mouseDragged
         mouseDragged();
@@ -104,6 +98,7 @@ public class ResizeTableColumnGesture extends AbstractMouseGesture {
         final double startSceneY = getMousePressedEvent().getSceneY();
         final double currentSceneX = getLastMouseEvent().getSceneX();
         final double currentSceneY = getLastMouseEvent().getSceneY();
+        final TableView<?> tableView = resizer.getTableColumn().getTableView();
         final Point2D start = tableView.sceneToLocal(startSceneX, startSceneY);
         final Point2D current = tableView.sceneToLocal(currentSceneX, currentSceneY);
         final double dx = current.getX() - start.getX();
@@ -140,10 +135,10 @@ public class ResizeTableColumnGesture extends AbstractMouseGesture {
                 = new BatchJob(editorController, true,
                 I18N.getString("label.action.edit.resize.column"));
         if (changeMap.isEmpty() == false) {
-            batchJob.addSubJob(makeResizeJob(columnIndex, changeMap));
+            batchJob.addSubJob(makeResizeJob(columnInstance, changeMap));
         }
         if (changeMapNext.isEmpty() == false) {
-            batchJob.addSubJob(makeResizeJob(columnIndex+1, changeMapNext));
+            batchJob.addSubJob(makeResizeJob(columnInstance.getNextSlibing(), changeMapNext));
         }
         if (batchJob.isExecutable()) {
             editorController.getJobManager().push(batchJob);
@@ -165,7 +160,7 @@ public class ResizeTableColumnGesture extends AbstractMouseGesture {
     @Override
     protected void userDidCancel() {
         resizer.revertToOriginalSize();
-        tableView.layout();
+        resizer.getTableColumn().getTableView().layout();
     }
     
     
@@ -173,25 +168,23 @@ public class ResizeTableColumnGesture extends AbstractMouseGesture {
      * Private
      */
     
-    private Job makeResizeJob(int columnIndex, Map<PropertyName, Object> changeMap) {
-        final EditorController editorController 
-                = contentPanelController.getEditorController();
-        final DesignHierarchyMask m = new DesignHierarchyMask(fxomInstance);
-        final FXOMObject tcObject = m.getSubComponentAtIndex(columnIndex);
+    private Job makeResizeJob(FXOMObject columnObject, Map<PropertyName, Object> changeMap) {
+        assert columnObject.getSceneGraphObject() instanceof TableColumn;
+        assert columnObject instanceof FXOMInstance;
         
         final Metadata metadata = Metadata.getMetadata();
         final Map<ValuePropertyMetadata, Object> metaValueMap = new HashMap<>();
         for (Map.Entry<PropertyName,Object> e : changeMap.entrySet()) {
-            final ValuePropertyMetadata vpm = metadata.queryValueProperty(fxomInstance, e.getKey());
+            final ValuePropertyMetadata vpm = metadata.queryValueProperty(columnInstance, e.getKey());
             assert vpm != null;
             metaValueMap.put(vpm, e.getValue());
         }
 
         final BatchModifyObjectJob result = new BatchModifyObjectJob(
-                (FXOMInstance) tcObject, 
+                (FXOMInstance) columnObject, 
                 BatchModifyObjectJob.class.getSimpleName(), 
                 metaValueMap, 
-                editorController);
+                contentPanelController.getEditorController());
         
         return result;
     }

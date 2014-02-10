@@ -55,6 +55,7 @@ import javafx.scene.Node;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollBar;
@@ -146,12 +147,9 @@ public class DesignHierarchyMask {
     public URL getClassNameIconURL() {
         final Object sceneGraphObject;
         
-        // For included files, we use the included file ancestor sceneGraphObject
-        if (fxomObject instanceof FXOMIntrinsic
-                && ((FXOMIntrinsic) fxomObject).getType() == FXOMIntrinsic.Type.FX_INCLUDE) {
-            final FXOMObject included
-                    = ((FXOMIntrinsic) fxomObject).getFirstAncestorWithNonNullScene();
-            sceneGraphObject = included == null ? null : included.getSceneGraphObject();
+        // For FXOMIntrinsic, we use the source sceneGraphObject
+        if (fxomObject instanceof FXOMIntrinsic) {
+            sceneGraphObject = ((FXOMIntrinsic) fxomObject).getSourceSceneGraphObject();
         } else {
             sceneGraphObject = fxomObject.getSceneGraphObject();
         }
@@ -211,14 +209,14 @@ public class DesignHierarchyMask {
         final String classNameInfo;
         String prefix = "", suffix = ""; //NOI18N
 
-        // For included files, we use the included file ancestor sceneGraphObject
-        if (fxomObject instanceof FXOMIntrinsic
-                && ((FXOMIntrinsic) fxomObject).getType() == FXOMIntrinsic.Type.FX_INCLUDE) {
-            final FXOMObject included
-                    = ((FXOMIntrinsic) fxomObject).getFirstAncestorWithNonNullScene();
-            sceneGraphObject = included == null ? null : included.getSceneGraphObject();
-            // Add FXML prefix for included FXML file
-            prefix += "FXML "; //NOI18N
+        // For FXOMIntrinsic, we use the source sceneGraphObject
+        if (fxomObject instanceof FXOMIntrinsic) {
+            final FXOMIntrinsic fxomIntrinsic = (FXOMIntrinsic) fxomObject;
+            sceneGraphObject = fxomIntrinsic.getSourceSceneGraphObject();
+            if (fxomIntrinsic.getType() == FXOMIntrinsic.Type.FX_INCLUDE) {
+                // Add FXML prefix for included FXML file
+                prefix += "FXML "; //NOI18N
+            }
         } else {
             sceneGraphObject = fxomObject.getSceneGraphObject();
         }
@@ -255,36 +253,23 @@ public class DesignHierarchyMask {
     }
 
     /**
-     * Returns the object value for this FXOM object description property.
-     *
-     * @return
-     */
-    public Object getDescriptionValue() {
-        Object result = null;
-        if (fxomObject instanceof FXOMInstance) {
-            final FXOMInstance fxomInstance = (FXOMInstance) fxomObject;
-            final PropertyName propertyName = getPropertyNameForDescription();
-            if (propertyName != null) {
-                final ValuePropertyMetadata vpm
-                        = Metadata.getMetadata().queryValueProperty(fxomInstance, propertyName);
-                result = vpm.getValueObject(fxomInstance);
-            }
-        }
-        return result;
-    }
-
-    /**
      * Returns the string value for this FXOM object description property.
+     * If the value is internationalized, the returned value is the resolved one.
      *
      * @return
      */
     public String getDescription() {
-        final Object value = getDescriptionValue();
-        String result = null;
-        if (value != null) {
-            result = value.toString();
+        if (hasDescription()) { // (1)
+            final PropertyName propertyName = getPropertyNameForDescription();
+            assert propertyName != null; // Because of (1)
+            assert fxomObject instanceof FXOMInstance; // Because of (1)
+            final FXOMInstance fxomInstance = (FXOMInstance) fxomObject;
+            final ValuePropertyMetadata vpm
+                    = Metadata.getMetadata().queryValueProperty(fxomInstance, propertyName);
+            final Object description = vpm.getValueInSceneGraphObject(fxomInstance); // resolved value
+            return description.toString();
         }
-        return result;
+        return null;
     }
 
     /**
@@ -360,9 +345,16 @@ public class DesignHierarchyMask {
     }
     
     public boolean isResourceKey() {
-        if (hasDescription()) {
-            final String description = getDescription();
-            final PrefixedValue pv = new PrefixedValue(description);
+        if (hasDescription()) { // (1)
+            // Retrieve the unresolved description
+            final PropertyName propertyName = getPropertyNameForDescription();
+            assert propertyName != null; // Because of (1)
+            assert fxomObject instanceof FXOMInstance; // Because of (1)
+            final FXOMInstance fxomInstance = (FXOMInstance) fxomObject;
+            final ValuePropertyMetadata vpm
+                    = Metadata.getMetadata().queryValueProperty(fxomInstance, propertyName);
+            final Object description = vpm.getValueObject(fxomInstance); // unresolved value
+            final PrefixedValue pv = new PrefixedValue(description.toString());
             return pv.isResourceKey();
         }
         return false;
@@ -912,7 +904,7 @@ public class DesignHierarchyMask {
             result = 0;
         } else {
             assert value instanceof Integer;
-            result = ((Integer) value).intValue();
+            result = ((Integer) value);
         }
         return result;
     }
@@ -940,7 +932,7 @@ public class DesignHierarchyMask {
             result = 0;
         } else {
             assert value instanceof Integer;
-            result = ((Integer) value).intValue();
+            result = ((Integer) value);
         }
         return result;
     }
@@ -969,6 +961,7 @@ public class DesignHierarchyMask {
                 || this.isAcceptingAccessory(Accessory.RIGHT)
                 || this.isAcceptingAccessory(Accessory.BOTTOM)
                 || this.isAcceptingAccessory(Accessory.LEFT))
-                && ! (fxomObject.getSceneGraphObject() instanceof MenuButton); // Jerome
+                && ! (fxomObject.getSceneGraphObject() instanceof MenuButton
+                        || fxomObject.getSceneGraphObject() instanceof MenuBar); // Jerome
     }
 }

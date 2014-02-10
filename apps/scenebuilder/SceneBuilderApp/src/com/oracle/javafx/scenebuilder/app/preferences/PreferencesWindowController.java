@@ -34,7 +34,7 @@ package com.oracle.javafx.scenebuilder.app.preferences;
 import com.oracle.javafx.scenebuilder.app.i18n.I18N;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.ALIGNMENT_GUIDES_COLOR;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.BACKGROUND_IMAGE;
-import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.CSS_ANALYZER_COLUMN_ORDER;
+import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.CSS_TABLE_COLUMNS_ORDERING_REVERSED;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.ROOT_CONTAINER_HEIGHT;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.ROOT_CONTAINER_WIDTH;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.HIERARCHY_DISPLAY_OPTION;
@@ -51,7 +51,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.DoubleF
 import com.oracle.javafx.scenebuilder.kit.editor.panel.library.LibraryPanelController.DISPLAY_MODE;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractFxmlWindowController;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker;
-import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPickerController.Mode;
+import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker.Mode;
 import java.net.URL;
 import java.util.Arrays;
 import javafx.beans.value.ChangeListener;
@@ -156,9 +156,15 @@ public class PreferencesWindowController extends AbstractFxmlWindowController {
         backgroundImage.setValue(recordGlobal.getBackgroundImage());
         backgroundImage.getSelectionModel().selectedItemProperty().addListener(new BackgroundImageListener());
 
+        final PaintPicker.Delegate delegate = new PaintPicker.Delegate() {
+            @Override
+            public void handleError(String warningKey, Object... arguments) {
+            }
+        };
+
         // Alignment guides color
         final Color alignmentColor = recordGlobal.getAlignmentGuidesColor();
-        final PaintPicker alignmentColorPicker = new PaintPicker(Mode.COLOR);
+        final PaintPicker alignmentColorPicker = new PaintPicker(delegate, Mode.COLOR);
         alignmentGuidesGraphic.setFill(alignmentColor);
         alignmentGuidesMenuItem.setContent(alignmentColorPicker);
         alignmentColorPicker.setPaintProperty(alignmentColor);
@@ -167,10 +173,10 @@ public class PreferencesWindowController extends AbstractFxmlWindowController {
 
         // Parent ring color
         final Color parentRingColor = recordGlobal.getParentRingColor();
-        final PaintPicker parentRingColorPicker = new PaintPicker(Mode.COLOR);
+        final PaintPicker parentRingColorPicker = new PaintPicker(delegate, Mode.COLOR);
         parentRingGraphic.setFill(parentRingColor);
         parentRingMenuItem.setContent(parentRingColorPicker);
-        parentRingColorPicker.setPaintProperty(alignmentColor);
+        parentRingColorPicker.setPaintProperty(parentRingColor);
         parentRingColorPicker.paintProperty().addListener(
                 new ParentRingColorListener(parentRingGraphic));
 
@@ -281,7 +287,7 @@ public class PreferencesWindowController extends AbstractFxmlWindowController {
                     = preferencesController.getRecordGlobal();
             // Update preferences
             recordGlobal.setCSSAnalyzerColumnsOrder(newValue);
-            recordGlobal.writeToJavaPreferences(CSS_ANALYZER_COLUMN_ORDER);
+            recordGlobal.writeToJavaPreferences(CSS_TABLE_COLUMNS_ORDERING_REVERSED);
             // Update UI
             recordGlobal.refreshCSSAnalyzerColumnsOrder();
         }

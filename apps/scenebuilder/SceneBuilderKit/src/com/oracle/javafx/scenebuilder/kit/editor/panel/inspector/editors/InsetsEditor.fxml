@@ -32,24 +32,34 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
 
+<?import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.*?>
 <?import java.lang.*?>
 <?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.*?>
 <?scenebuilder-preview-i18n-resource ../../../i18n/SceneBuilderKit.properties?>
 
-<GridPane xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
-  <children>
-    <Label styleClass="small-label" text="TOP" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-    <Label styleClass="small-label" text="RIGHT" GridPane.columnIndex="2" GridPane.rowIndex="0" />
-    <Label styleClass="small-label" text="BOTTOM" GridPane.columnIndex="3" GridPane.rowIndex="0" />
-    <Label styleClass="small-label" text="LEFT" GridPane.columnIndex="4" GridPane.rowIndex="0" />
+<GridPane vgap="3.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+  <children><Region maxHeight="8.0" maxWidth="8.0" minHeight="8.0" minWidth="8.0" styleClass="insets-icon-top" GridPane.halignment="CENTER">
+<GridPane.margin>
+<Insets top="2.0" />
+</GridPane.margin></Region><Region maxHeight="8.0" maxWidth="8.0" minHeight="8.0" minWidth="8.0" styleClass="insets-icon-right" GridPane.columnIndex="2" GridPane.halignment="CENTER" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+<GridPane.margin>
+<Insets top="2.0" />
+</GridPane.margin></Region><Region maxHeight="8.0" maxWidth="8.0" minHeight="8.0" minWidth="8.0" styleClass="insets-icon-bottom" GridPane.columnIndex="3" GridPane.halignment="CENTER" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+<GridPane.margin>
+<Insets top="2.0" />
+</GridPane.margin></Region><Region maxHeight="8.0" maxWidth="8.0" minHeight="8.0" minWidth="8.0" styleClass="insets-icon-left" GridPane.columnIndex="4" GridPane.halignment="CENTER" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+<GridPane.margin>
+<Insets top="2.0" />
+</GridPane.margin></Region>
     <DoubleField fx:id="topTf" prefColumnCount="12" prefWidth="-1.0" text="" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-    <Button fx:id="linkBt" defaultButton="false" maxWidth="8.0" minWidth="8.0" mnemonicParsing="false" onAction="#linkValuesAction" onKeyReleased="#linkValuesKeypressed" prefWidth="8.0" styleClass="insets-copy-button" text="" GridPane.columnIndex="1" GridPane.rowIndex="1">
+    <Button fx:id="linkBt" defaultButton="false" mnemonicParsing="false" onAction="#linkValuesAction" onKeyReleased="#linkValuesKeypressed" styleClass="insets-copy-button" text="" GridPane.columnIndex="1" GridPane.rowIndex="1">
       <tooltip>
         <Tooltip text="%inspector.insets.setall" />
       </tooltip>
+<graphic><Region maxHeight="8.0" maxWidth="4.0" minHeight="8.0" minWidth="4.0" styleClass="insets-copy-button-shape" />
+</graphic>
     </Button>
     <DoubleField fx:id="rightTf" prefColumnCount="12" prefWidth="-1.0" text="" GridPane.columnIndex="2" GridPane.rowIndex="1">
       <GridPane.margin>

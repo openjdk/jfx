@@ -35,7 +35,9 @@ import java.lang.ref.Reference;
 import java.lang.ref.SoftReference;
 import java.net.URL;
 import java.util.WeakHashMap;
+import javafx.scene.Cursor;
 import javafx.scene.Group;
+import javafx.scene.ImageCursor;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
@@ -50,7 +52,9 @@ public abstract class ImageUtils {
     static final String UI_DIR = "ui"; //NOI18N
     static final String MISSING_ICON = "MissingIcon.png"; //NOI18N
     static final String WARNING_BADGE = "WarningBadge.png"; //NOI18N
+    static final String CSS_CURSOR = "css-cursor.png"; //NOI18N
     private static Image warning_badge_image;
+    private static ImageCursor css_cursor;
     private static final WeakHashMap<String, Reference<Image>> imageCache = new WeakHashMap<>();
 
     public static Image getImage(URL resource) {
@@ -99,6 +103,14 @@ public abstract class ImageUtils {
             warning_badge_image = new Image(url.toExternalForm());
         }
         return warning_badge_image;
+    }
+    
+    public static synchronized Cursor getCSSCursor() {
+        if (css_cursor == null) {
+            final URL url = ImageUtils.class.getResource(UI_DIR + "/" + CSS_CURSOR); //NOI18N
+            css_cursor = new ImageCursor(new Image(url.toExternalForm()));
+        }
+        return css_cursor;
     }
     
     /**

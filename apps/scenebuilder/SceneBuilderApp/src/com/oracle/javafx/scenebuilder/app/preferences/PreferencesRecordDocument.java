@@ -662,7 +662,9 @@ public class PreferencesRecordDocument {
         documentPreferences.putBoolean(DOCUMENT_VISIBLE, getDocumentVisible());
 
         // Inspector expanded TitledPane
-        documentPreferences.put(INSPECTOR_SECTION_ID, getInspectorSectionId().name());
+        if (getInspectorSectionId() != null) { // Section ID is null when View Mode differs from section
+            documentPreferences.put(INSPECTOR_SECTION_ID, getInspectorSectionId().name());
+        }
 
         // Dividers position
         documentPreferences.putDouble(LEFT_DIVIDER_HPOS, getLeftDividerHPos());

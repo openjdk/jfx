@@ -45,6 +45,7 @@ import com.oracle.javafx.scenebuilder.kit.library.user.UserLibrary;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.dialog.ErrorDialog;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMArchive;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import com.oracle.javafx.scenebuilder.kit.library.BuiltinLibrary;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -354,36 +355,40 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
 //    }
 
     void libraryDidChange(Library oldLib) {
-        // Store selection context.
         if (libAccordion != null) {
-            String sectionName = null;
-            int selectedIndex = -1;
-            if (sectionNameToKeepOpened != null) {
-                sectionName = sectionNameToKeepOpened;
-            }
-            if (sectionName == null && libAccordion.getExpandedPane() != null) {
-                sectionName = libAccordion.getExpandedPane().getText();
-                // NOTE I dunno for now how to manage the selectedIndex.
-                if (oldLib != null) {
-                    final ListView<?> list = (ListView<?>)libAccordion.getExpandedPane().getContent();
-                    LibraryItem item = ((LibraryItem)list.getSelectionModel().getSelectedItem());
-                    selectedIndex = oldLib.getItems().indexOf(item);
-//                    System.out.println("libraryDidChange - Set selected item index to " + selectedIndex);
-                }
-            }
-            
-//            System.out.println("libraryDidChange - Opened section name is " + sectionName);
-
             // Clear the content of the panel.
             libAccordion.getPanes().clear();
 
             // Reconstruct the panel content based on the new Library.
             populateLibraryPanel();
-
-            // Restore selection context, if possible.
-            setSelectedItem(selectedIndex, sectionName);
         }
     }
+    
+    private String getExpandedSectionName() {
+        String sectionName = null;
+        
+        if (libAccordion != null && libAccordion.getExpandedPane() != null) {
+            sectionName = libAccordion.getExpandedPane().getText();
+        }
+        
+//        System.out.println("getExpandedSectionName " + sectionName);
+        return sectionName;
+    }
+    
+//    private String getSelectedItemName() {
+//        String selectedItemName = null;
+//        
+//        if (libAccordion != null && libAccordion.getExpandedPane() != null) {
+//            final ListView<?> list = (ListView<?>)libAccordion.getExpandedPane().getContent();
+//            Object selectedItem = list.getSelectionModel().getSelectedItem();
+//            if (selectedItem instanceof LibraryListItem) {
+//                selectedItemName = ((LibraryListItem)selectedItem).getLibItem().getName();
+//            }
+//        }
+//        
+////        System.out.println("getSelectedItemName " + selectedItemName);
+//        return selectedItemName;
+//    }
     
     // We need to discover the sections and the content of each one before being
     // able to populate the panel.
@@ -441,7 +446,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
             }
 
             if (libAccordion.getPanes().size() >= 1) {
-                libAccordion.setExpandedPane(panes.get(0));
+                expandPaneWithName(sectionNameToKeepOpened);
             }
 
             if (libSearchList.getCellFactory() == null) {
@@ -457,37 +462,17 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
         }
     }
     
-    // We first try to open a section whose name matches the given one, then we
-    // try to select within the ListView of the corresponding TitledPane a
-    // LibraryItem with the given index.
-    // If no matching elemnts are found we do nothing.
-    private void setSelectedItem(Integer index, String sectionName) {
-        if (sectionName != null) {
-            // Try to open the section of the libAccordion that has the given name
-            for (TitledPane tp : libAccordion.getPanes()) {
-                if (tp.getText().equals(sectionName)) {
-//                    System.out.println("setSelectedItem - Expand section " + sectionName);
-                    libAccordion.setExpandedPane(tp);
-
-                    if (index != -1) {
-                        // Try to select the item
-                        LibraryItem libItem = null;
-                        try {
-                            libItem = getEditorController().getLibrary().getItems().get(index);
-                        } catch (IndexOutOfBoundsException ioobe) {
-                            // No item with this index exists
-//                            System.out.println("setSelectedItem - No item with index " + index + " exists");
-                        }
-
-                        if (libItem != null) {
-//                            System.out.println("setSelectedItem - Scroll to then select the item " + libItem.getName());
-                            final ListView<?> list = (ListView<?>) tp.getContent();
-                            int indexInList = list.getItems().indexOf(libItem);
-                            list.scrollTo(indexInList);
-                            list.getSelectionModel().select(indexInList);
-                        }
-                    }
-                }
+    private void expandPaneWithName(String paneName) {
+        String sectionName = paneName;
+        
+        if (sectionName == null) {
+            sectionName = BuiltinLibrary.TAG_CONTAINERS;
+        }
+        
+        for (TitledPane tp : libAccordion.getPanes()) {
+            if (tp.getText().equals(sectionName)) {
+//                System.out.println("expandPaneWithName - Expand section " + sectionName);
+                libAccordion.setExpandedPane(tp);
             }
         }
     }
@@ -683,6 +668,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
     // We stop the watching thread to avoid potential parsing of a file that
     // would not yet be properly finalized on disk.
     private void processInternalImport(List<FXOMObject> objects) {
+        sectionNameToKeepOpened = getExpandedSectionName();
         String userLibraryPathString = ((UserLibrary) getEditorController().getLibrary()).getPath();
         Path libPath = Paths.get(userLibraryPathString);
         ((UserLibrary) getEditorController().getLibrary()).stopWatching();
@@ -749,6 +735,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
     
     private void processImportJarFxml(List<File> importedFiles) {
         if (importedFiles != null && !importedFiles.isEmpty()) {
+            sectionNameToKeepOpened = getExpandedSectionName();
             Path libPath = Paths.get(((UserLibrary)getEditorController().getLibrary()).getPath());
             // Create UserLibrary dir if missing
             if (createUserLibraryDir(libPath)) {
@@ -778,8 +765,6 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
 
                     if (userChoice.equals(ButtonID.OK) && currentDisplayMode.equals(DISPLAY_MODE.SECTIONS)) {
                         sectionNameToKeepOpened = UserLibrary.TAG_USER_DEFINED;
-                    } else {
-                        sectionNameToKeepOpened = null;
                     }
                 }
             }

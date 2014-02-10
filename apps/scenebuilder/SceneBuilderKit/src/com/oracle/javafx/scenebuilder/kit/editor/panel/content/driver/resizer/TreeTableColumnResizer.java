@@ -36,8 +36,10 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TreeTableV
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import com.oracle.javafx.scenebuilder.kit.util.MathUtils;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import javafx.geometry.Bounds;
+import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.layout.Region;
@@ -51,24 +53,28 @@ public class TreeTableColumnResizer {
     private static final PropertyName prefWidthName    = new PropertyName("prefWidth"); //NOI18N
     private static final PropertyName maxWidthName     = new PropertyName("maxWidth"); //NOI18N
 
-    private final TreeTableView<?> treeTableView;
-    private final int columnIndex;
     private final TreeTableColumn<?,?> treeTableColumn;
     private final TreeTableColumn<?,?> treeTableColumnNext;
     private final ColumnSizing originalSizing; // Column at columnIndex
     private final ColumnSizing originalSizingNext; // Column at columnIndex+1 (if any)
     private final double x1, x2, x3;
 
-    public TreeTableColumnResizer(TreeTableView<?> treeTableView, int columnIndex) {
-        assert treeTableView != null;
+    public TreeTableColumnResizer(TreeTableColumn<?,?> treeTableColumn) {
+        assert treeTableColumn != null;
+        assert treeTableColumn.getTreeTableView() != null;
         
-        this.treeTableView = treeTableView;
-        this.columnIndex = columnIndex;
-        this.treeTableColumn = this.treeTableView.getColumns().get(columnIndex);
+        this.treeTableColumn = treeTableColumn;
         this.originalSizing = new ColumnSizing(this.treeTableColumn);
         
-        if (columnIndex+1 < this.treeTableView.getColumns().size()) {
-            this.treeTableColumnNext = this.treeTableView.getColumns().get(columnIndex+1);
+        final List<?> columns;
+        if (this.treeTableColumn.getParentColumn() != null) {
+            columns = this.treeTableColumn.getParentColumn().getColumns();
+        } else {
+            columns = this.treeTableColumn.getTreeTableView().getColumns();
+        }
+        final int columnIndex = columns.indexOf(this.treeTableColumn);
+        if (columnIndex+1 < columns.size()) {
+            this.treeTableColumnNext = (TreeTableColumn<?,?>)columns.get(columnIndex+1);
             this.originalSizingNext = new ColumnSizing(this.treeTableColumnNext);
         } else {
             this.treeTableColumnNext = null;
@@ -88,6 +94,17 @@ public class TreeTableColumnResizer {
         //
         //  Case #2 : treeTableColumnNext == null
         //
+        //      Case #2.1: treeTableColumn.getParentColumn() != null
+        //
+        //         x1                x2                       x3
+        //       --+-----------------+                        |
+        //         |      col n      |                        |
+        //         |                 |                        |
+        //                                               parentColumn maxX
+        //
+        //
+        //      Case #2.2: treeTableColumn.getParentColumn() == null
+        //
         //         x1                x2                       x3
         //       --+-----------------+                        |
         //         |      col n      |                        |
@@ -106,17 +123,21 @@ public class TreeTableColumnResizer {
             final Bounds nextBounds = di.getColumnBounds(treeTableColumnNext);
             x3 = nextBounds.getMaxX();
         } else {
-            final Bounds layoutBounds = treeTableView.getLayoutBounds();
-            x3 = layoutBounds.getMaxX();
+            if (treeTableColumn.getParentColumn() != null) {
+                final TableColumnBase<?,?> parentColumn 
+                        = (TableColumnBase<?,?>) this.treeTableColumn.getParentColumn();
+                assert parentColumn instanceof TreeTableColumn<?,?>;
+                final Bounds parentBounds = di.getColumnBounds((TreeTableColumn<?,?>)parentColumn);
+                x3 = parentBounds.getMaxX();
+            } else {
+                final Bounds layoutBounds = treeTableColumn.getTreeTableView().getLayoutBounds();
+                x3 = layoutBounds.getMaxX();
+            }
         }
     }
 
-    public TreeTableView<?> getSceneGraphObject() {
-        return treeTableView;
-    }
-
-    public int getColumnIndex() {
-        return columnIndex;
+    public TreeTableColumn<?,?> getTreeTableColumn() {
+        return treeTableColumn;
     }
     
     public void updateWidth(double dx) {

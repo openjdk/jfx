@@ -31,6 +31,10 @@
  */
 package com.oracle.javafx.scenebuilder.kit.util.control.paintpicker;
 
+import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker.Mode;
+import static com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker.Mode.COLOR;
+import static com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker.Mode.LINEAR;
+import static com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker.Mode.RADIAL;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.colorpicker.ColorPicker;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.gradientpicker.GradientPicker;
 import javafx.beans.property.ObjectProperty;
@@ -54,12 +58,6 @@ import javafx.stage.Window;
  */
 public class PaintPickerController {
 
-    public enum Mode {
-
-        // What about ImagePattern ?
-        COLOR, LINEAR, RADIAL
-    }
-
     @FXML
     private VBox root_vbox;
     @FXML
@@ -71,6 +69,7 @@ public class PaintPickerController {
 
     private ColorPicker colorPicker;
     private GradientPicker gradientPicker;
+    private PaintPicker.Delegate delegate;
 
     private final ObjectProperty<Paint> paint = new SimpleObjectProperty<>();
 
@@ -92,11 +91,41 @@ public class PaintPickerController {
         paint.setValue(value);
     }
 
-    public void reset() {
-        colorPicker.reset();
-        gradientPicker.reset();
+    public VBox getRoot() {
+        return root_vbox;
     }
 
+    public ColorPicker getColorPicker() {
+        return colorPicker;
+    }
+
+    public GradientPicker getGradientPicker() {
+        return gradientPicker;
+    }
+
+    public PaintPicker.Delegate getDelegate() {
+        return delegate;
+    }
+    
+    /**
+     * Simple utility function which clamps the given value to be strictly
+     * between the min and max values.
+     * @param min
+     * @param value
+     * @param max
+     * @return 
+     * @treatAsPrivate
+     */
+    public static double clamp(double min, double value, double max) {
+        if (value < min) return min;
+        if (value > max) return max;
+        return value;
+    }
+
+    void setDelegate(PaintPicker.Delegate delegate) {
+        this.delegate = delegate;
+    }
+    
     public Mode getMode() {
         final Mode mode;
         final Paint value = getPaintProperty();
@@ -178,18 +207,6 @@ public class PaintPickerController {
         setPaintProperty(value);
         // Update UI
         updateUI(value);
-    }
-
-    public VBox getRoot() {
-        return root_vbox;
-    }
-
-    public ColorPicker getColorPicker() {
-        return colorPicker;
-    }
-
-    public GradientPicker getGradientPicker() {
-        return gradientPicker;
     }
 
     private void setMode(Paint value) {

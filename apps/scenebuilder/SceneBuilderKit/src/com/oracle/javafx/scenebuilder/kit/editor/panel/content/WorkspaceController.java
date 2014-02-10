@@ -327,7 +327,7 @@ class WorkspaceController {
             if (rootBounds.isEmpty() 
                     || (rootBounds.getWidth() == 0.0)
                     || (rootBounds.getHeight() == 0.0)) {
-                backgroundBounds = new BoundingBox(0.0, 0.0, 320.0, 200.0);
+                backgroundBounds = new BoundingBox(0.0, 0.0, 0.0, 0.0);
                 extensionBounds = new BoundingBox(0.0, 0.0, 0.0, 0.0);
             } else {
                 if ((rootBounds.getDepth() > 0) && autoResize3DContent) {

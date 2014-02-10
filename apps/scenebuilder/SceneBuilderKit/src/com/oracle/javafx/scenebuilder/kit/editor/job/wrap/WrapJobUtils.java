@@ -53,10 +53,12 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TitledPane;
+import javafx.scene.control.ToolBar;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
@@ -123,10 +125,12 @@ public class WrapJobUtils {
             GridPane.class,
             Group.class,
             HBox.class,
+            Pane.class,
             ScrollPane.class,
             SplitPane.class,
             StackPane.class,
             TitledPane.class,
+            ToolBar.class,
             VBox.class
         };
         boolean isAssignableFrom = false;

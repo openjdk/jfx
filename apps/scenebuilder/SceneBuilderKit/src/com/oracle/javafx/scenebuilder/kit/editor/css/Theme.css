@@ -119,33 +119,6 @@
     -fx-min-height: 8;
     -fx-max-height: 8;
 }
-.cog-button {
-    -fx-background-color: -sb-panel-background;
-    -fx-background-image: url("../cssimages/property-cog.png");
-    -fx-background-repeat: no-repeat;
-    -fx-background-position: center;
-    -fx-padding: 1 4 5 4;
-    -fx-min-width: 10px;
-    -fx-min-height: 10px;
-}
-.cog-button:hover {
-    -fx-background-color: derive(-sb-panel-background, -10%), -sb-panel-background;
-    -fx-background-insets: 0, 1;
-}
-.cog-button:focused {
-    -fx-background-color: -fx-focus-color, -fx-background;
-}
-.cog-button .arrow-button {
-    visibility: hidden;
-    -fx-padding:0;
-}
-.cog-button .arrow {
-    -fx-shape: null;
-    -fx-padding:0;
-}
-.cog-button .label {
-    -fx-padding: -2 0 0 0;
-}
 
 /*******************************************************************************
  * Common UI Styling - Accordion and TitledPane and search area shadows        *
@@ -640,6 +613,17 @@
  * Content Panel - Resize Shadow                                               *
  ******************************************************************************/
 
+.css-pick-chrome {
+    -fx-background-color: rgba(0.0, 255, 0.0, 0.5);
+    -fx-border-width: 1;
+    -fx-border-style: dotted;
+    -fx-border-color: black;
+}
+
+/*******************************************************************************
+ * Content Panel - Outline Mode                                                *
+ ******************************************************************************/
+
 .outline-ring {
     -fx-stroke: rgba(0,0,0,0.2);
     -fx-stroke-type: inside;
@@ -660,12 +644,17 @@
     -fx-font-size: 0.875em;
 }
 
+.property-sheet .small-label {
+    -fx-font-size: 0.750em; /* 9 */
+    -fx-text-fill: -sb-content-text-dimmed;
+    -fx-padding: 0;
+}
+
 .property-sheet .check-box .box {
     -fx-background-radius: 0;
 }
 
 .property-sheet .label {
-    -fx-font-size: 0.875em;
     -fx-text-fill: -sb-content-text;
     -fx-padding: 4 0 3 0;
 }
@@ -746,10 +735,17 @@
     -fx-fill: -sb-content-text-dimmed;
 }
 
+/*******************************************************************************
+ * Property Sheet Panels - CSS Override property decoration                    *
+ ******************************************************************************/
+
 .css-override {
     -fx-background-color: -sb-css-winner-color;
     -fx-border-color: derive(-sb-sharp-edge-lo, 0%);
     -fx-border-style: dotted;
+}
+.css-override > .hyperlink {
+    -fx-padding: 0;
 }
 
 /*******************************************************************************
@@ -761,38 +757,57 @@
 }
 
 .sub-section-background {
--fx-background-color:  
+    -fx-background-color:  
         derive(-sb-sharp-edge-lo, 65%),
         linear-gradient(to left, derive(-sb-panel-background, 40%) 0%, -sb-panel-background 70%);
-    -fx-background-insets: 7 0 8 -10, 8 0 9 -10;
-    -fx-padding: 8 12 8 0;
+    -fx-background-insets: 7 -1 8 -10, 8 -1 9 -10;
+    -fx-padding: 8 10 8 0;
 }
 
 /*******************************************************************************
  * Property Sheet Panels - Insets Editor                                       *
  ******************************************************************************/
 
-.insets-copy-button {
-    -fx-background-color: null;
-    -fx-background-image: url("../cssimages/values-link.png");
-    -fx-background-position: center;
-    -fx-background-repeat: no-repeat;
-    -fx-background-radius: 0;
+.insets-icon-top {
+    -fx-background-color: -sb-dark, -sb-flat, -sb-panel-background;
+    -fx-background-insets: 0, 1 0 0 0, 1;
 }
-.insets-copy-button:hover {
-    -fx-background-image: url("../cssimages/values-link-hover.png");
-    -fx-background-color: lightgrey, -fx-base;
-    -fx-background-insets: 0, 1;
+.insets-icon-right {
+    -fx-background-color: -sb-dark, -sb-flat, -sb-panel-background;
+    -fx-background-insets: 0, 0 1 0 0, 1;
 }
-.insets-copy-button:focused {
-    -fx-background-color: -fx-focus-color, -fx-control-inner-background, -fx-faint-focus-color, -fx-control-inner-background;
-    -fx-background-insets: 0, 1, 1, 2;
+.insets-icon-bottom {
+    -fx-background-color: -sb-dark, -sb-flat, -sb-panel-background;
+    -fx-background-insets: 0, 0 0 1 0, 1;
+}
+.insets-icon-left {
+    -fx-background-color: -sb-dark, -sb-flat, -sb-panel-background;
+    -fx-background-insets: 0, 0 0 0 1, 1;
 }
 
-.property-sheet .small-label {
-    -fx-font-size: 0.750em; /* 9 */
-    -fx-text-fill: -sb-content-text-dimmed;
-    -fx-padding: 0;
+.insets-copy-button-shape {
+    -fx-shape: "M1.25,7.5c-0.13,0-0.259-0.051-0.357-0.15C0.7,7.152,0.703,6.836,0.9,
+        6.643L3.598,4L0.9,1.357 C0.703,1.164,0.7,0.847,0.893,0.65c0.194-0.196,0.51-0.2,
+        0.708-0.007L5.027,4L1.6,7.357C1.502,7.453,1.376,7.5,1.25,7.5z";
+    -fx-background-color: -sb-content-text-dimmed;
+    -fx-min-width: 4;
+    -fx-max-width: 4;
+    -fx-min-height: 8;
+    -fx-max-height: 8;
+}
+.insets-copy-button {
+    -fx-background-color: null;
+    -fx-background-radius: 0;
+    -fx-min-width: 10;
+    -fx-max-width: 10;
+}
+.insets-copy-button:hover {
+    -fx-background-color: derive(-sb-panel-background, -10%), -sb-panel-background;
+    -fx-background-insets: 0 1 0 1, 1 2 1 2;
+}
+.insets-copy-button:focused {
+    -fx-background-color: -fx-focus-color, -fx-background;
+    -fx-background-insets: 0 1 0 1, 1 2 1 2;
 }
 
 /*******************************************************************************
@@ -905,6 +920,65 @@
     -fx-font-size: 0.750em;
 }
 
+.css-panel-background {
+    -fx-background-color: -sb-sharp-edge-lo, -sb-panel-background;
+    -fx-background-insets: 0, 1 0 0 0;
+}
+
+.css-panel-message .text {
+    /* Used for 'Multiple Selection' message */
+    -fx-fill: -sb-content-text-dimmed;
+    -fx-font-size: 0.875em;
+}
+
+/*******************************************************************************
+ * CSS Panel - Picking Mode Toggle Buttons                                     *
+ ******************************************************************************/
+
+.cursor-shape {
+    -fx-shape: "M9.084,7.833c-1.709,0.25-3.242,0.734-3.242,0.734l2.783,4.892l-1.708,1L3.904,9.454C2.713,
+    9.967,1.208,11.5,1.208,11.5L1,1 L9.084,7.833z";
+    -fx-background-color: -sb-content-text;
+    -fx-min-width: 8;
+    -fx-max-width: 8;
+    -fx-min-height: 13;
+    -fx-max-height: 13;
+}
+
+.css-cursor-shape {
+    -fx-shape: "M9.083,7.833C4.833,8.25,1,11,1,11V1L9.083,7.833z M8,14H6v-3h2v-1H5v5h3V14z M12,
+    12h-2v-1h2v-1H9v3h2v1H9v1h3V12z M16,12 h-2v-1h2v-1h-3v3h2v1h-2v1h3V12z";
+    -fx-background-color: -sb-content-text;
+    -fx-min-width: 15;
+    -fx-max-width: 15;
+    -fx-min-height: 15;
+    -fx-max-height: 15;
+}
+
+.SBKIT-css-panel .toggle-button {
+    -fx-background-color: -sb-sharp-edge-lo, -sb-sharp-edge-hi, -sb-flat;
+    -fx-background-insets: 0, 0 0 1 0, 1 0 1 0;
+    -fx-background-radius: 0;
+    -fx-min-width: 25;
+    -fx-min-height: 25;
+}
+.SBKIT-css-panel .toggle-button:selected {
+    -fx-background-color: 
+        derive(-sb-sharp-edge-lo, -25%), 
+        derive(-sb-sharp-edge-lo, -10%), 
+        linear-gradient(to bottom, derive(-sb-flat, -20% ) 0%, derive(-sb-flat, -12% ) 20%);
+    -fx-background-insets: -1 0 0 0, 0, 0 1 0 1;
+}
+.SBKIT-css-panel .toggle-button:focused {
+    -fx-background-color: 
+        -fx-focus-color, 
+        linear-gradient(to bottom, derive(-sb-flat, -20% ) 0%, derive(-sb-flat, -12% ) 20%);
+    -fx-background-insets: -1 0 0 0, 0 1 1 1;
+}
+.SBKIT-css-panel .css-toggle-left {
+    -fx-background-insets: 0, 0 0 1 1, 1 0 1 1;
+}
+
 /*******************************************************************************
  * CSS Panel - Stylelable Path                                                 *
  ******************************************************************************/
@@ -952,4 +1026,33 @@
 }
 .lookup-button:hover {
     -fx-background-color: derive(-fx-background, -25%), -fx-background;
+}
+
+/*******************************************************************************
+ * CSS Panel - Cog Button                                                      *
+ ******************************************************************************/
+
+.css-panel-cog-menubutton {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+    -fx-graphic-text-gap: 0;
+    -fx-min-width: 16;
+    -fx-max-width: 16;
+    -fx-min-height: 12;
+    -fx-max-height: 12;
+}
+.css-panel-cog-menubutton:hover {
+    -fx-background-color: derive(-sb-sharp-edge-lo, 20%), -sb-css-winner-color;
+    -fx-background-insets: 0, 1;
+}
+.css-panel-cog-menubutton:focused {
+    -fx-background-color: -fx-focus-color, -fx-background;
+}
+.css-panel-cog-menubutton > .arrow-button {
+    visibility: hidden;
+    -fx-padding: 0;
+}
+.css-panel-cog-menubutton > .arrow {
+    -fx-shape: null;
+    -fx-padding: 0;
 }

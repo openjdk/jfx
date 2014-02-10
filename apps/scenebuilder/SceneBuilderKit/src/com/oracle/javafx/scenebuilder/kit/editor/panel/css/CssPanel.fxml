@@ -36,7 +36,6 @@
 <?import java.lang.*?>
 <?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
-<?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.web.*?>
 <?scenebuilder-classpath-element ../../../../../../../../../../dist/SceneBuilderKit.jar?>
@@ -48,35 +47,25 @@
           <children>
             <Label text="%csspanel.styleable.path" />
             <SelectionPath fx:id="selectionPath" alignment="BOTTOM_LEFT" styleClass="selection-path" HBox.hgrow="ALWAYS" />
-            <ToggleButton fx:id="edit" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#onSelectionModeSwitchAction" textAlignment="JUSTIFY">
+            <ToggleButton fx:id="edit" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" styleClass="css-toggle-left" textAlignment="JUSTIFY">
               <tooltip>
                 <Tooltip text="%csspanel.selection.tooltip" />
               </tooltip>
-              <graphic>
-                <ImageView fitHeight="16.0" fitWidth="16.0" mouseTransparent="true" pickOnBounds="true" preserveRatio="true">
-                  <image>
-                    <Image preserveRatio="false" smooth="false" url="@../images/ui/css-button-arrow.png" />
-                  </image>
-                </ImageView>
-              </graphic>
               <toggleGroup>
                 <ToggleGroup fx:id="modes" />
               </toggleGroup>
+<graphic><Region prefHeight="10.0" prefWidth="10.0" styleClass="cursor-shape" />
+</graphic>
             </ToggleButton>
-            <ToggleButton fx:id="pick" contentDisplay="GRAPHIC_ONLY" graphicTextGap="2.0" mnemonicParsing="false" onAction="#onSelectionModeSwitchAction" styleClass="toggle-button-right" toggleGroup="$modes">
+            <ToggleButton fx:id="pick" contentDisplay="GRAPHIC_ONLY" graphicTextGap="2.0" mnemonicParsing="false" toggleGroup="$modes">
               <tooltip>
                 <Tooltip text="%csspanel.picking.tooltip" />
               </tooltip>
-              <graphic>
-                <ImageView fitHeight="20.0" fitWidth="20.0" mouseTransparent="true" pickOnBounds="true" preserveRatio="true">
-                  <image>
-                    <Image preserveRatio="false" smooth="false" url="@../images/cursors/css-cursor.png" />
-                  </image>
-                </ImageView>
-              </graphic>
               <HBox.margin>
                 <Insets />
               </HBox.margin>
+<graphic><Region prefHeight="10.0" prefWidth="10.0" styleClass="css-cursor-shape" />
+</graphic>
             </ToggleButton>
           </children>
 <VBox.margin>
@@ -85,7 +74,7 @@
         </HBox>
     <TableView fx:id="table" prefHeight="200.0" prefWidth="200.0" styleClass="css-table-view" VBox.vgrow="ALWAYS">
       <columns>
-        <TableColumn fx:id="propertiesColumn" editable="false" minWidth="150.0" prefWidth="200.0" resizable="false" sortable="false" text="%csspanel.col.properties" />
+        <TableColumn fx:id="propertiesColumn" editable="false" maxWidth="200.0" minWidth="200.0" prefWidth="200.0" resizable="false" sortable="false" text="%csspanel.col.properties" />
         <TableColumn fx:id="defaultColumn" editable="false" minWidth="100.0" prefWidth="100.0" sortable="false" text="%csspanel.col.defaults" visible="true" />
         <TableColumn fx:id="builtinColumn" editable="false" minWidth="100.0" prefWidth="100.0" sortable="false" text="%csspanel.col.api.defaults" visible="false" />
         <TableColumn fx:id="fxThemeColumn" editable="false" minWidth="120.0" prefWidth="120.0" sortable="false" text="%csspanel.col.theme.defaults" visible="false" />
@@ -93,13 +82,18 @@
         <TableColumn fx:id="stylesheetsColumn" editable="false" minWidth="100.0" prefWidth="100.0" sortable="false" text="%csspanel.col.stylesheets" />
         <TableColumn fx:id="inlineColumn" editable="false" minWidth="100.0" prefWidth="100.0" sortable="false" text="%csspanel.col.inline" />
       </columns>
+      <columnResizePolicy>
+        <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+      </columnResizePolicy>
     </TableView>
     <ScrollPane fx:id="rulesPane" fitToWidth="true" hbarPolicy="NEVER" prefHeight="200.0" prefWidth="200.0" vbarPolicy="AS_NEEDED" VBox.vgrow="ALWAYS">
       <content>
         <VBox fx:id="rulesBox" prefHeight="-1.0" prefWidth="-1.0" />
       </content>
     </ScrollPane>
-    <WebView fx:id="textPane" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS" />
+    <WebView fx:id="textPane" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS" /><StackPane fx:id="messagePane" prefHeight="150.0" prefWidth="200.0" styleClass="css-panel-background" VBox.vgrow="ALWAYS">
+<children><Label fx:id="messageLabel" styleClass="css-panel-message" text="Label" />
+</children></StackPane>
   </children>
 <styleClass>
 <String fx:value="theme-presets" />

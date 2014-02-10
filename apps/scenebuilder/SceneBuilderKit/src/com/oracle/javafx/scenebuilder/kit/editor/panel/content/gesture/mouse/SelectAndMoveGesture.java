@@ -108,27 +108,22 @@ public class SelectAndMoveGesture extends AbstractMouseDragGesture {
         final boolean extendKeyDown
                 = EditorPlatform.isContinuousSelectKeyDown(e) 
                 || EditorPlatform.isNonContinousSelectKeyDown(e);
-        final Point2D hitPoint
-                = computeHitPoint(hitObject);
         
         if (selection.isSelected(hitObject)) {
             if (extendKeyDown) { // Case C
-                selection.toggleSelection(hitObject, hitPoint);
-            } else { // else Case A
-                assert selection.getGroup() instanceof ObjectSelectionGroup;
-                selection.updateHitObject(hitObject, hitPoint);
-            }
+                selection.toggleSelection(hitObject);
+            } // else Case A
         } else {
             final FXOMObject ancestor = selection.lookupSelectedAncestor(hitObject);
             if (ancestor == null) {
                 if (extendKeyDown) { // Case D.1
-                    selection.toggleSelection(hitObject, hitPoint);
+                    selection.toggleSelection(hitObject);
                 } else { // Case B.1
-                    selection.select(hitObject, hitPoint);
+                    selection.select(hitObject);
                 }
             } else {
                 if (extendKeyDown) { // Case D.2
-                    selection.toggleSelection(ancestor, hitPoint);
+                    selection.toggleSelection(ancestor);
                 } // else Case B.2
             }
         }
@@ -187,7 +182,7 @@ public class SelectAndMoveGesture extends AbstractMouseDragGesture {
                         hitPoint.getX(), hitPoint.getY(), ownerWindow);
                 
                 final Node glassLayer = contentPanelController.getGlassLayer();
-                final Dragboard db = glassLayer.startDragAndDrop(TransferMode.MOVE);
+                final Dragboard db = glassLayer.startDragAndDrop(TransferMode.COPY_OR_MOVE);
                 db.setContent(dragSource.makeClipboardContent());
                 db.setDragView(dragSource.makeDragView());
                 
@@ -218,7 +213,7 @@ public class SelectAndMoveGesture extends AbstractMouseDragGesture {
                 = EditorPlatform.isContinuousSelectKeyDown(e) 
                 || EditorPlatform.isNonContinousSelectKeyDown(e);
         if (extendKeyDown == false) {
-            selection.select(hitObject, computeHitPoint(hitObject));
+            selection.select(hitObject);
         }
         
         /*

@@ -36,10 +36,10 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TableViewD
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import com.oracle.javafx.scenebuilder.kit.util.MathUtils;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import javafx.geometry.Bounds;
 import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
 import javafx.scene.layout.Region;
 
 /**
@@ -51,24 +51,28 @@ public class TableColumnResizer {
     private static final PropertyName prefWidthName    = new PropertyName("prefWidth"); //NOI18N
     private static final PropertyName maxWidthName     = new PropertyName("maxWidth"); //NOI18N
 
-    private final TableView<?> tableView;
-    private final int columnIndex;
     private final TableColumn<?,?> tableColumn;
     private final TableColumn<?,?> tableColumnNext;
     private final ColumnSizing originalSizing; // Column at columnIndex
     private final ColumnSizing originalSizingNext; // Column at columnIndex+1 (if any)
     private final double x1, x2, x3;
 
-    public TableColumnResizer(TableView<?> tableView, int columnIndex) {
-        assert tableView != null;
+    public TableColumnResizer(TableColumn<?,?> tableColumn) {
+        assert tableColumn != null;
+        assert tableColumn.getTableView() != null;
         
-        this.tableView = tableView;
-        this.columnIndex = columnIndex;
-        this.tableColumn = this.tableView.getColumns().get(columnIndex);
+        this.tableColumn = tableColumn;
         this.originalSizing = new ColumnSizing(this.tableColumn);
         
-        if (columnIndex+1 < this.tableView.getColumns().size()) {
-            this.tableColumnNext = this.tableView.getColumns().get(columnIndex+1);
+        final List<?> columns;
+        if (this.tableColumn.getParentColumn() != null) {
+            columns = this.tableColumn.getParentColumn().getColumns();
+        } else {
+            columns = this.tableColumn.getTableView().getColumns();
+        }
+        final int columnIndex = columns.indexOf(this.tableColumn);
+        if (columnIndex+1 < columns.size()) {
+            this.tableColumnNext = (TableColumn<?,?>)columns.get(columnIndex+1);
             this.originalSizingNext = new ColumnSizing(this.tableColumnNext);
         } else {
             this.tableColumnNext = null;
@@ -87,6 +91,16 @@ public class TableColumnResizer {
         //
         //
         //  Case #2 : tableColumnNext == null
+        //       
+        //       Case #2.1 : tableColumn.getParentColumn() != null
+        //
+        //         x1                x2                       x3
+        //       --+-----------------+                        |
+        //         |      col n      |                        |
+        //         |                 |                        |
+        //                                               parentColumn maxX
+        // 
+        //       Case #2.2 : tableColumn.getParentColumn() == null
         //
         //         x1                x2                       x3
         //       --+-----------------+                        |
@@ -102,21 +116,23 @@ public class TableColumnResizer {
         final Bounds columnBounds = di.getColumnBounds(tableColumn);
         x1 = columnBounds.getMinX();
         x2 = columnBounds.getMaxX();
-        if (tableColumnNext != null) {
+        if (tableColumnNext != null) { // Case #1
             final Bounds nextBounds = di.getColumnBounds(tableColumnNext);
             x3 = nextBounds.getMaxX();
         } else {
-            final Bounds layoutBounds = tableView.getLayoutBounds();
-            x3 = layoutBounds.getMaxX();
+            if (tableColumn.getParentColumn() != null) { // Case #2.1
+                final TableColumn<?,?> parentColumn = (TableColumn<?,?>) this.tableColumn.getParentColumn();
+                final Bounds parentBounds = di.getColumnBounds(parentColumn);
+                x3 = parentBounds.getMaxX();
+            } else { // Case #2.2
+                final Bounds layoutBounds = tableColumn.getTableView().getLayoutBounds();
+                x3 = layoutBounds.getMaxX();
+            }
         }
     }
 
-    public TableView<?> getSceneGraphObject() {
-        return tableView;
-    }
-
-    public int getColumnIndex() {
-        return columnIndex;
+    public TableColumn<?,?> getTableColumn() {
+        return tableColumn;
     }
     
     public void updateWidth(double dx) {

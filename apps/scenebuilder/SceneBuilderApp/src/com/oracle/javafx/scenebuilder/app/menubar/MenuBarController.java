@@ -558,7 +558,7 @@ public class MenuBarController {
         if (EditorPlatform.IS_MAC) {
             revealMenuKey = "menu.title.reveal.mac";
         } else if (EditorPlatform.IS_WINDOWS) {
-            revealMenuKey = "menu.title.reveal.win";
+            revealMenuKey = "menu.title.reveal.win.mnemonic";
         } else {
             assert EditorPlatform.IS_LINUX;
             revealMenuKey = "menu.title.reveal.linux";

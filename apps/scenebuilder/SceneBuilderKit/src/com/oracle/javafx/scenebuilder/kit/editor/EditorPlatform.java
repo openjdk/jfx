@@ -272,7 +272,7 @@ public class EditorPlatform {
      */
     public static void revealInFileBrowser(File filePath) throws IOException {
         List<String> args = new ArrayList<>();
-        String path = filePath.getCanonicalPath();
+        String path = filePath.toURI().toURL().toExternalForm();
         if (EditorPlatform.IS_MAC) {
             args.add("open"); //NOI18N
             args.add("-R"); //NOI18N

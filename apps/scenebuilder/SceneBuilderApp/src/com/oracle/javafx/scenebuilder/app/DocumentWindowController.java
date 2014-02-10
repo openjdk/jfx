@@ -68,6 +68,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import com.oracle.javafx.scenebuilder.kit.library.Library;
 import com.oracle.javafx.scenebuilder.kit.library.user.UserLibrary;
 import com.sun.javafx.scene.control.behavior.KeyBinding;
 import java.io.File;
@@ -97,8 +98,9 @@ import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.Accordion;
-import javafx.scene.control.MenuButton;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.SplitPane;
@@ -212,6 +214,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
     @FXML private RadioMenuItem libraryViewAsList;
     @FXML private RadioMenuItem libraryViewAsSections;
     @FXML private MenuItem libraryReveal;
+    @FXML private Menu customLibraryMenu;
     
     @FXML private MenuItem cssPanelShowStyledOnlyMi;
     @FXML private MenuItem cssPanelSplitDefaultsMi;
@@ -457,7 +460,11 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         }
         hierarchyPanelController.setDisplayOption(option);
     }
-    
+
+    public void refreshCssTableColumnsOrderingReversed(boolean cssTableColumnsOrderingReversed) {
+        cssPanelController.setTableColumnsOrderingReversed(cssTableColumnsOrderingReversed);
+    }
+
     public static final String makeTitle(FXOMDocument fxomDocument) {
         final String title;
         
@@ -675,6 +682,12 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 }
 
                 bottomSplitController.toggleTarget();
+                if (bottomSplitController.isTargetVisible()) {
+                    // CSS panel is built lazely
+                    // Need to update its table column ordering with preference value
+                    final PreferencesRecordGlobal recordGlobal = pc.getRecordGlobal();
+                    refreshCssTableColumnsOrderingReversed(recordGlobal.isCssTableColumnsOrderingReversed());
+                }
                 // Update preferences
                 recordDocument.setBottomVisible(bottomSplitController.isTargetVisible());
                 break;
@@ -929,6 +942,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         assert libraryReveal != null;
         assert libraryMenuButton != null;
         assert libraryImportSelection != null;
+        assert customLibraryMenu != null;
         
         // CSS setup
         final URL themeURL = EditorController.class.getResource("css/Theme.css"); //NOI18N
@@ -1030,6 +1044,18 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                     if (asg != null && asg instanceof ObjectSelectionGroup) {
                         if (((ObjectSelectionGroup)asg).getItems().size() >= 1) {
                             libraryImportSelection.setDisable(false);
+                        }
+                    }
+                    
+                    // DTL-6439. The custom library menu shall be enabled only
+                    // in the case there is a user library directory on disk.
+                    Library lib = getEditorController().getLibrary();
+                    if (lib instanceof UserLibrary) {
+                        File userLibDir = new File(((UserLibrary)lib).getPath());
+                        if (userLibDir.canRead()) {
+                            customLibraryMenu.setDisable(false);
+                        } else {
+                            customLibraryMenu.setDisable(true);
                         }
                     }
                 }

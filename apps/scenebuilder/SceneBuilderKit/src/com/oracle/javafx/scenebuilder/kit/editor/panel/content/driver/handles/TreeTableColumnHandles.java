@@ -35,15 +35,23 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.content.AbstractResilient
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TreeTableViewDesignInfoX;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.AbstractGesture;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.mouse.DebugMouseGesture;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.mouse.DiscardGesture;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.mouse.ResizeTreeTableColumnGesture;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
+import java.util.List;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
+import javafx.scene.Cursor;
+import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Line;
 import javafx.scene.transform.Transform;
 
 /**
@@ -65,14 +73,18 @@ public class TreeTableColumnHandles extends AbstractResilientHandles<Object> {
      * care of this singularity.
      */
     
+    private final Group grips = new Group();
     private final TreeTableViewDesignInfoX tableViewDesignInfo
             = new TreeTableViewDesignInfoX();
     private TreeTableView<?> treeTableView;
+    private Node columnHeaderNode;
     
     public TreeTableColumnHandles(ContentPanelController contentPanelController,
             FXOMInstance fxomInstance) {
         super(contentPanelController, fxomInstance, Object.class);
         assert fxomInstance.getSceneGraphObject() instanceof TreeTableColumn;
+        
+        getRootNode().getChildren().add(grips); // Above handles
         
         getTreeTableColumn().treeTableViewProperty().addListener(
                 new ChangeListener<Object>() {
@@ -90,6 +102,15 @@ public class TreeTableColumnHandles extends AbstractResilientHandles<Object> {
                 });
         
         treeTableViewOrVisibilityDidChange();
+        
+        handleNN.setCursor(Cursor.DEFAULT);
+        handleEE.setCursor(Cursor.DEFAULT);
+        handleSS.setCursor(Cursor.DEFAULT);
+        handleWW.setCursor(Cursor.DEFAULT);
+        handleNW.setCursor(Cursor.DEFAULT);
+        handleNE.setCursor(Cursor.DEFAULT);
+        handleSE.setCursor(Cursor.DEFAULT);
+        handleSW.setCursor(Cursor.DEFAULT);
     }
     
     public FXOMInstance getFxomInstance() {
@@ -134,6 +155,10 @@ public class TreeTableColumnHandles extends AbstractResilientHandles<Object> {
         assert treeTableView != null;
         startListeningToLayoutBounds(treeTableView);
         startListeningToLocalToSceneTransform(treeTableView);
+        
+        assert columnHeaderNode == null;
+        columnHeaderNode = tableViewDesignInfo.getColumnNode(getTreeTableColumn());
+        startListeningToBoundsInParent(columnHeaderNode);
     }
 
     @Override
@@ -142,11 +167,44 @@ public class TreeTableColumnHandles extends AbstractResilientHandles<Object> {
         assert treeTableView != null;
         stopListeningToLayoutBounds(treeTableView);
         stopListeningToLocalToSceneTransform(treeTableView);
+        
+        assert columnHeaderNode != null;
+        stopListeningToBoundsInParent(columnHeaderNode);
+        columnHeaderNode = null;
+    }
+
+    @Override
+    protected void layoutDecoration() {
+        assert treeTableView != null;
+        
+        super.layoutDecoration();
+             
+        // Adjusts the number of grip lines to the number of dividers
+        adjustGripCount();
+        
+        // Updates grip positions
+        for (int i = 0, count = getTreeTableColumns().size(); i < count; i++) {
+            layoutGrip(i);
+        }
     }
 
     @Override
     public AbstractGesture findGesture(Node node) {
-        return new DebugMouseGesture(getContentPanelController(), "Resize gesture for TreeTableColumn");
+        final AbstractGesture result;
+        
+        final int gripIndex = grips.getChildren().indexOf(node);
+        if (gripIndex != -1) {
+            final FXOMObject parentObject = getFxomInstance().getParentObject();
+            final DesignHierarchyMask m = new DesignHierarchyMask(parentObject);
+            final FXOMObject columnObject = m.getSubComponentAtIndex(gripIndex);
+            assert columnObject instanceof FXOMInstance;
+            result = new ResizeTreeTableColumnGesture(getContentPanelController(), 
+                    (FXOMInstance)columnObject);
+        } else {
+            result = new DiscardGesture(getContentPanelController());
+        }
+        
+        return result;
     }
 
 
@@ -159,9 +217,89 @@ public class TreeTableColumnHandles extends AbstractResilientHandles<Object> {
         return (TreeTableColumn<?,?>) getSceneGraphObject();
     }
     
-    
     private void treeTableViewOrVisibilityDidChange() {
         treeTableView = getTreeTableColumn().getTreeTableView();
         setReady((treeTableView != null) && getTreeTableColumn().isVisible());
+    }
+    
+    private List<?> getTreeTableColumns() {
+        final List<?> result;
+
+        final TreeTableColumn<?,?> treeTableColumn = getTreeTableColumn();
+        if (treeTableColumn.getParentColumn() == null) {
+            result = treeTableView.getColumns();
+        } else {
+            result = treeTableColumn.getParentColumn().getColumns();
+        }
+        
+        return result;
+    }
+    
+    
+    
+    /*
+     * Private (grips)
+     */
+    
+    private void adjustGripCount() {
+        assert treeTableView != null;
+        
+        final int columnCount = getTreeTableColumns().size();
+        final List<Node> gripChildren = grips.getChildren();
+        
+        while (gripChildren.size() < columnCount) {
+            gripChildren.add(makeGripLine());
+        }
+        while (gripChildren.size() > columnCount) {
+            gripChildren.remove(gripChildren.size()-1);
+        }
+    }
+    
+    private Line makeGripLine() {
+        final Line result = new Line();
+        result.setStrokeWidth(SELECTION_HANDLES_SIZE);
+        result.setStroke(Color.TRANSPARENT);
+        result.setCursor(Cursor.H_RESIZE);
+        attachHandles(result);
+        return result;
+    }
+    
+    private void layoutGrip(int gripIndex) {
+        assert grips.getChildren().get(gripIndex) instanceof Line;
+        assert getTreeTableColumns().get(gripIndex) instanceof TreeTableColumn<?,?>;
+        
+        final List<?> columns = getTreeTableColumns();
+        final TreeTableColumn<?,?> ttc = (TreeTableColumn<?,?>)columns.get(gripIndex);
+        if (ttc.isVisible()) {
+            final TreeTableViewDesignInfoX di = new TreeTableViewDesignInfoX();
+            final Bounds b = di.getColumnHeaderBounds(ttc);
+            final double startX = b.getMaxX();
+            final double startY = b.getMinY();
+            final double endY = b.getMaxY();
+
+            final boolean snapToPixel = true;
+            final Point2D startPoint = sceneGraphObjectToDecoration(startX, startY, snapToPixel);
+            final Point2D endPoint = sceneGraphObjectToDecoration(startX, endY, snapToPixel);
+
+            final Line gripLine = (Line) grips.getChildren().get(gripIndex);
+            gripLine.setVisible(true);
+            gripLine.setManaged(true);
+            gripLine.setStartX(startPoint.getX());
+            gripLine.setStartY(startPoint.getY());
+            gripLine.setEndX(endPoint.getX());
+            gripLine.setEndY(endPoint.getY());
+        } else {
+            final Line gripLine = (Line) grips.getChildren().get(gripIndex);
+            gripLine.setVisible(false);
+            gripLine.setManaged(false);
+        }
+    }
+    
+    
+    /* 
+     * Wrapper to avoid the 'leaking this in constructor' warning emitted by NB.
+     */
+    private void attachHandles(Node node) {
+        attachHandles(node, this);
     }
 }

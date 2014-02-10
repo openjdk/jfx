@@ -64,15 +64,16 @@
                             <MenuItem mnemonicParsing="false" onAction="#onLibraryImportJarFxml" text="%library.panel.menu.import.jar.fxml" />
                             <MenuItem fx:id="libraryImportSelection" mnemonicParsing="false" onAction="#onLibraryImportSelection" text="%library.panel.menu.import.selection" />
                             <SeparatorMenuItem mnemonicParsing="false" />
-                            <Menu mnemonicParsing="false" text="%library.panel.menu.custom">
+                            <Menu fx:id="customLibraryMenu" mnemonicParsing="false" text="%library.panel.menu.custom">
                               <items>
                                 <MenuItem fx:id="libraryReveal" mnemonicParsing="false" onAction="#onLibraryRevealCustomFolder" text="Action 1" />
                                 <MenuItem fx:id="libraryReport" mnemonicParsing="false" onAction="#onLibraryShowJarAnalysisReport" text="%library.panel.menu.custom.report" />
                               </items>
                             </Menu>
                           </items>
-<graphic><Region prefHeight="10.0" prefWidth="10.0" styleClass="cog-shape" />
-</graphic>
+                          <graphic>
+                            <Region prefHeight="10.0" prefWidth="10.0" styleClass="cog-shape" />
+                          </graphic>
                         </MenuButton>
                       </children>
                     </HBox>
@@ -99,8 +100,9 @@
                               </items>
                             </Menu>
                           </items>
-<graphic><Region prefHeight="10.0" prefWidth="10.0" styleClass="cog-shape" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" />
-</graphic>
+                          <graphic>
+                            <Region prefHeight="10.0" prefWidth="10.0" styleClass="cog-shape" />
+                          </graphic>
                         </MenuButton>
                       </children>
                     </HBox>
@@ -155,8 +157,9 @@
                         <RadioMenuItem mnemonicParsing="false" onAction="#onInspectorViewByPropertyNameAction" text="%inspector.by.property.name" toggleGroup="$viewTg" />
                         <RadioMenuItem mnemonicParsing="false" onAction="#onInspectorViewByPropertyTypeAction" text="%inspector.by.property.type" toggleGroup="$viewTg" />
                       </items>
-<graphic><Region prefHeight="10.0" prefWidth="10.0" styleClass="cog-shape" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" />
-</graphic>
+                      <graphic>
+                        <Region prefHeight="10.0" prefWidth="10.0" styleClass="cog-shape" />
+                      </graphic>
                     </MenuButton>
                   </children>
                 </HBox>
@@ -167,7 +170,7 @@
         </SplitPane>
         <VBox maxWidth="-1.0" minHeight="200.0" prefHeight="-1.0" prefWidth="-1.0">
           <children>
-            <HBox id="HBox" alignment="CENTER" spacing="5.0" styleClass="panel-header">
+            <HBox id="HBox" alignment="CENTER" styleClass="panel-header">
               <children>
                 <Label maxHeight="-Infinity" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" text="%csspanel" HBox.hgrow="ALWAYS" />
                 <StackPane fx:id="cssPanelSearchPanelHost" prefHeight="-1.0" prefWidth="-1.0" HBox.hgrow="NEVER" />
@@ -189,8 +192,9 @@
                     <MenuItem fx:id="cssPanelShowStyledOnlyMi" mnemonicParsing="false" onAction="#onCssPanelShowStyledOnlyAction" text="%csspanel.hide.default.values" />
                     <MenuItem fx:id="cssPanelSplitDefaultsMi" mnemonicParsing="false" onAction="#onCssPanelSplitDefaultsAction" text="%csspanel.defaults.split" />
                   </items>
-<graphic><Region prefHeight="10.0" prefWidth="10.0" styleClass="cog-shape" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" />
-</graphic>
+                  <graphic>
+                    <Region prefHeight="10.0" prefWidth="10.0" styleClass="cog-shape" />
+                  </graphic>
                 </MenuButton>
               </children>
             </HBox>

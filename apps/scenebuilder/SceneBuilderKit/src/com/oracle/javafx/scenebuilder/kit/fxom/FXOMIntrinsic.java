@@ -54,10 +54,12 @@ public class FXOMIntrinsic extends FXOMObject {
     }
     
     private final Map<PropertyName, FXOMProperty> properties = new TreeMap<>();
+    private Object sourceSceneGraphObject;
 
     
-    FXOMIntrinsic(FXOMDocument document, GlueElement glueElement) {
+    FXOMIntrinsic(FXOMDocument document, GlueElement glueElement, Object targetSceneGraphObject) {
         super(document, glueElement, null);
+        this.sourceSceneGraphObject = targetSceneGraphObject;
     }
     
     FXOMIntrinsic(FXOMDocument document, Type type, String source) {
@@ -96,6 +98,14 @@ public class FXOMIntrinsic extends FXOMObject {
         } else {
             getGlueElement().getAttributes().put("source", source);
         }
+    }
+
+    public Object getSourceSceneGraphObject() {
+        return sourceSceneGraphObject;
+    }
+
+    public void setSourceSceneGraphObject(Object sourceSceneGraphObject) {
+        this.sourceSceneGraphObject = sourceSceneGraphObject;
     }
     
     public Map<PropertyName, FXOMProperty> getProperties() {

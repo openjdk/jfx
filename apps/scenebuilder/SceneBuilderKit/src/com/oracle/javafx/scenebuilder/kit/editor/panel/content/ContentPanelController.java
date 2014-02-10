@@ -34,6 +34,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.content;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform.Theme;
+import com.oracle.javafx.scenebuilder.kit.editor.drag.source.AbstractDragSource;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.AbstractDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.mode.AbstractModeController;
@@ -166,6 +167,15 @@ public class ContentPanelController extends AbstractFxmlPanelController
         this.editModeController = new EditModeController(this);
         this.pickModeController = new PickModeController(this);
         
+        editorController.getDragController().dragSourceProperty().addListener(new 
+                ChangeListener<AbstractDragSource>() {
+                    @Override
+                    public void changed(ObservableValue<? extends AbstractDragSource> ov, AbstractDragSource t, AbstractDragSource t1) {
+                        dragSourceDidChange();
+                    }
+                }
+        );
+        
         editorController.getDragController().dropTargetProperty().addListener(new 
                 ChangeListener<AbstractDropTarget>() {
                     @Override
@@ -189,6 +199,14 @@ public class ContentPanelController extends AbstractFxmlPanelController
                     @Override
                     public void onChanged(ListChangeListener.Change<? extends File> change) {
                         sceneStyleSheetsDidChange();
+                    }
+                }
+        );
+        editorController.pickModeEnabledProperty().addListener(new 
+                ChangeListener<Boolean>() {
+                    @Override
+                    public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
+                        pickModeDidChange();
                     }
                 }
         );
@@ -594,25 +612,6 @@ public class ContentPanelController extends AbstractFxmlPanelController
     
     
     /**
-     * @treatAsPrivate Returns the current mode controller.
-     * @return the current mode controller.
-     */
-    public AbstractModeController getCurrentModeController() {
-        return currentModeController;
-    }
-    
-    
-    /**
-     * @treatAsPrivate Enable/disable pick mode.
-     * @param pickModeEnabled true if pick mode should be enabled.
-     */
-    public void setPickModeEnabled(boolean pickModeEnabled) {
-        if (currentModeController != pickModeController) {
-            changeModeController(pickModeController);
-        }
-    }
-    
-    /**
      * @treatAsPrivate Returns the hud window controller.
      * @return the hud window controller.
      */
@@ -722,6 +721,7 @@ public class ContentPanelController extends AbstractFxmlPanelController
      */
     @Override
     protected void jobManagerRevisionDidChange() {
+        getEditorController().setPickModeEnabled(false);
         fxomDocumentDidRefreshSceneGraph(getEditorController().getFxomDocument());
     }
 
@@ -808,7 +808,7 @@ public class ContentPanelController extends AbstractFxmlPanelController
         
 
         // Setup the mode controller
-        changeModeController(this.editModeController);
+        pickModeDidChange();
 
         resetViewport();
         setupEventTracingFilter();
@@ -956,6 +956,11 @@ public class ContentPanelController extends AbstractFxmlPanelController
     };
     
     
+    private void dragSourceDidChange() {
+        getEditorController().setPickModeEnabled(false);
+    }
+    
+    
     private void dropTargetDidChange() {
         if (currentModeController != null) {
             currentModeController.dropTargetDidChange();
@@ -981,6 +986,16 @@ public class ContentPanelController extends AbstractFxmlPanelController
             }
             workspaceController.setPreviewStyleSheets(sceneStyleSheetURLs);
         }
+    }
+    
+    private void pickModeDidChange() {
+        final AbstractModeController newModeController;
+        if (getEditorController().isPickModeEnabled()) {
+            newModeController = pickModeController;
+        } else {
+            newModeController = editModeController;
+        }
+        changeModeController(newModeController);
     }
     
     private void installStylingIsolationGroup() {

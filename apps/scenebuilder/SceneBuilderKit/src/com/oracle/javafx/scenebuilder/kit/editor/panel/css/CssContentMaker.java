@@ -154,6 +154,10 @@ public class CssContentMaker {
             // No corresponding metadata
             return null;
         }
+        if (!propMeta.isReadWrite()) {
+            // R/O : no overridden
+            return null;
+        }
         boolean overriden = false;
         Object defaultValue = propMeta.getDefaultValueObject();
         Object propertyValue = propMeta.getValueObject(fxomInstance);

@@ -45,6 +45,8 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.geometry.Bounds;
@@ -64,6 +66,8 @@ import javafx.stage.Window;
  */
 public class DragGesture extends AbstractGesture {
     
+    private static final Logger LOG = Logger.getLogger(DragGesture.class.getName());
+
     private final double MARGIN = 14.0;
     
     private final DragController dragController;
@@ -196,6 +200,20 @@ public class DragGesture extends AbstractGesture {
     }
     
     private void dragOverGlassLayer() {
+        /*
+         * On Linux, Node.onDragOver() is sometimes called *after*
+         * Node.onDragDropped() : see RT-34537.
+         * We detect those illegal invocations here and ignore them.
+         */
+        
+        if (lastDragEvent.isDropCompleted()) {
+            LOG.log(Level.WARNING, "Ignored dragOver() after dragDropped()"); //NOI18N
+        } else {
+            dragOverGlassLayerBis();
+        }
+    }
+    
+    private void dragOverGlassLayerBis() {
         
         final double hitX = lastDragEvent.getSceneX();
         final double hitY = lastDragEvent.getSceneY();

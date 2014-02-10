@@ -34,6 +34,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.drag.target;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.source.AbstractDragSource;
+import com.oracle.javafx.scenebuilder.kit.editor.drag.source.LibraryDragSource;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.SetDocumentRootJob;
@@ -69,11 +70,18 @@ public class RootDropTarget extends AbstractDropTarget {
         
         final FXOMObject newRoot = dragSource.getDraggedObjects().get(0);
         
+        /*
+         * Containers coming from the library are automatically resized.
+         */
         final UsePredefinedSizeJob resizeJob;
-        final DesignHierarchyMask mask = new DesignHierarchyMask(newRoot);
-        if (mask.needResizeWhenTopElement()) {
-            resizeJob = new UsePredefinedSizeJob(editorController, 
-                    EditorController.Size.SIZE_DEFAULT, newRoot);
+        if (dragSource instanceof LibraryDragSource) {
+            final DesignHierarchyMask mask = new DesignHierarchyMask(newRoot);
+            if (mask.needResizeWhenTopElement()) {
+                resizeJob = new UsePredefinedSizeJob(editorController, 
+                        EditorController.Size.SIZE_DEFAULT, newRoot);
+            } else {
+                resizeJob = null;
+            }
         } else {
             resizeJob = null;
         }

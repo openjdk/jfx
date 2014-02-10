@@ -668,37 +668,40 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
                 // 2) If valid, commit the new value and return true
                 // 3) Otherwise, return false
                 final HierarchyItem item = getItem();
-                final FXOMObject fxomObject = item.getFxomObject();
-                final DisplayOption option = panelController.getDisplayOption();
-                final EditorController editorController = panelController.getEditorController();
-                switch (option) {
-                    case INFO:
-                    case NODEID:
-                        if (fxomObject instanceof FXOMInstance) {
-                            final FXOMInstance fxomInstance = (FXOMInstance) fxomObject;
-                            final PropertyName propertyName = item.getPropertyNameForDisplayInfo(option);
-                            assert propertyName != null;
-                            final ValuePropertyMetadata vpm
-                                    = Metadata.getMetadata().queryValueProperty(fxomInstance, propertyName);
-                            final ModifyObjectJob job
-                                    = new ModifyObjectJob(fxomInstance, vpm, newValue, editorController);
+                // Item may be null when invoking UNDO while inline editing session is on going
+                if (item != null) {
+                    final FXOMObject fxomObject = item.getFxomObject();
+                    final DisplayOption option = panelController.getDisplayOption();
+                    final EditorController editorController = panelController.getEditorController();
+                    switch (option) {
+                        case INFO:
+                        case NODEID:
+                            if (fxomObject instanceof FXOMInstance) {
+                                final FXOMInstance fxomInstance = (FXOMInstance) fxomObject;
+                                final PropertyName propertyName = item.getPropertyNameForDisplayInfo(option);
+                                assert propertyName != null;
+                                final ValuePropertyMetadata vpm
+                                        = Metadata.getMetadata().queryValueProperty(fxomInstance, propertyName);
+                                final ModifyObjectJob job
+                                        = new ModifyObjectJob(fxomInstance, vpm, newValue, editorController);
+                                if (job.isExecutable()) {
+                                    editorController.getJobManager().push(job);
+                                }
+                            }
+                            break;
+                        case FXID:
+                            assert newValue != null;
+                            final String fxId = newValue.isEmpty() ? null : newValue;
+                            final ModifyFxIdJob job
+                                    = new ModifyFxIdJob(fxomObject, fxId, editorController);
                             if (job.isExecutable()) {
                                 editorController.getJobManager().push(job);
                             }
-                        }
-                        break;
-                    case FXID:
-                        assert newValue != null;
-                        final String fxId = newValue.isEmpty() ? null : newValue;
-                        final ModifyFxIdJob job
-                                = new ModifyFxIdJob(fxomObject, fxId, editorController);
-                        if (job.isExecutable()) {
-                            editorController.getJobManager().push(job);
-                        }
-                        break;
-                    default:
-                        assert false;
-                        return false;
+                            break;
+                        default:
+                            assert false;
+                            return false;
+                    }
                 }
                 return true;
             }

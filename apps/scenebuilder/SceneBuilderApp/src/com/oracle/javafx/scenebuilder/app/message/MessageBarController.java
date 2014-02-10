@@ -231,7 +231,7 @@ public class MessageBarController extends AbstractFxmlPanelController {
             FadeTransition showHost = new FadeTransition(Duration.seconds(1), messagePart);
             showHost.setFromValue(1.0);
             showHost.setToValue(0.0);
-            showHost.setDelay(Duration.seconds(2));
+            showHost.setDelay(Duration.seconds(3)); // DTL-5073
             showHost.setOnFinished(new EventHandler<ActionEvent>() {
 
                 @Override

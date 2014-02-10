@@ -60,7 +60,7 @@ class TransientIntrinsic extends TransientNode {
     }
     
     public FXOMIntrinsic makeFxomIntrinsic(FXOMDocument fxomDocument) {
-        return new FXOMIntrinsic(fxomDocument, glueElement);
+        return new FXOMIntrinsic(fxomDocument, glueElement, getSceneGraphObject());
     }
 
 }

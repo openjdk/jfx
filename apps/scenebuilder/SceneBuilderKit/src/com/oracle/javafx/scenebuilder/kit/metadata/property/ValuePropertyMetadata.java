@@ -96,6 +96,23 @@ public abstract class ValuePropertyMetadata extends PropertyMetadata {
         getName().setValue(fxomInstance.getSceneGraphObject(), value);
     }
     
+    /**
+     * Gets the property value in the scene graph object.
+     * Result might be different from getValueObject().
+     * For example, if Button.text contains a resource key 'button-key'
+     * and a resource bundle assign 'OK' to this key:
+     *    - getValueObject() -> '%button-key'
+     *    - getValueInSceneGraphObject() -> 'OK'
+     * 
+     * @param fxomInstance an fxom instance (never null)
+     * @return value of this property in the scene graph object associated
+     *         fxomInstance
+     */
+    public Object getValueInSceneGraphObject(FXOMInstance fxomInstance) {
+        assert fxomInstance != null;
+        return getName().getValue(fxomInstance.getSceneGraphObject());
+    }
+    
     /*
      * Object
      */

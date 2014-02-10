@@ -31,8 +31,10 @@
  */
 package com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.gradientpicker;
 
+import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker.Mode;
+import static com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker.Mode.LINEAR;
+import static com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker.Mode.RADIAL;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPickerController;
-import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPickerController.Mode;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.rotator.RotatorControl;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.slider.SliderControl;
 import javafx.fxml.FXML;
@@ -99,7 +101,6 @@ public class GradientPicker extends VBox {
     private final SliderControl radiusSlider
             = new SliderControl("radius", 0.0, 1.0, 0.5); //NOI18N
     private final List<GradientPickerStop> gradientPickerStops = new ArrayList<>();
-    private GradientPickerStop selectedStop;
     private final int maxStops = 12; // the numbers of stops supported in platform
 
     public GradientPicker(PaintPickerController pe) {
@@ -109,10 +110,6 @@ public class GradientPicker extends VBox {
 
     public final PaintPickerController getPaintPickerController() {
         return paintPicker;
-    }
-
-    public void reset() {
-//        setSelectedStop(null);
     }
 
     public Paint getValue(Mode mode) {
@@ -251,9 +248,10 @@ public class GradientPicker extends VBox {
         assert radial_container != null;
 
         // Add two default stops
-        addStop(0.0, 1.0, 0.0, Color.BLACK);
+        final GradientPickerStop black = addStop(0.0, 1.0, 0.0, Color.BLACK);
         addStop(0.0, 1.0, 1.0, Color.WHITE);
-        setSelectedStop(null); // start with no selected stops
+        // Select first default stop
+        setSelectedStop(black);
         proportional_checkbox.setSelected(true);
         proportional_checkbox.selectedProperty().addListener(new ChangeListener<Boolean>() {
             @Override
@@ -313,8 +311,6 @@ public class GradientPicker extends VBox {
         double percentH = ((100.0 / track_pane.getWidth()) * event.getX()) / 100;
         final Color color = paintPicker.getColorPicker().getValue();
         addStop(0.0, 1.0, percentH, color);
-//        selectedStop.thumbMousePressed(event);
-
         final Mode mode = paintPicker.getMode();
         final Paint value = getValue(mode);
         // Update UI
@@ -325,8 +321,6 @@ public class GradientPicker extends VBox {
 
     @FXML
     void sliderDragged(MouseEvent event) {
-//        selectedStop.thumbMouseDragged(event);
-
         final Mode mode = paintPicker.getMode();
         final Paint value = getValue(mode);
         // Update UI
@@ -335,13 +329,15 @@ public class GradientPicker extends VBox {
         paintPicker.setPaintProperty(value);
     }
 
-    void addStop(double min, double max, double value, Color color) {
+    GradientPickerStop addStop(double min, double max, double value, Color color) {
         if (gradientPickerStops.size() < maxStops) {
             final GradientPickerStop gradientStop
                     = new GradientPickerStop(this, min, max, value, color);
             track_pane.getChildren().add(gradientStop);
             gradientPickerStops.add(gradientStop);
+            return gradientStop;
         }
+        return null;
     }
 
     void removeStop(GradientPickerStop gradientStop) {
@@ -354,14 +350,11 @@ public class GradientPicker extends VBox {
         gradientPickerStops.clear();
     }
 
-    void setSelectedStop(GradientPickerStop gradientStop) {
+    public void setSelectedStop(GradientPickerStop gradientStop) {
         for (GradientPickerStop stop : gradientPickerStops) {
             stop.setSelected(false); // turn them all false
         }
-        if (gradientStop == null) {
-            selectedStop = null;
-        } else {
-            selectedStop = gradientStop;
+        if (gradientStop != null) {
             gradientStop.setSelected(true);
         }
     }

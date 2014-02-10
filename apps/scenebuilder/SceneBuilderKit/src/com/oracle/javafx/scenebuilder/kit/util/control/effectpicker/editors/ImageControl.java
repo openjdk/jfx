@@ -38,8 +38,12 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.event.ActionEvent;
@@ -52,6 +56,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.layout.GridPane;
 import javafx.stage.FileChooser;
+import javafx.stage.PopupWindow;
 import javafx.stage.Window;
 
 public class ImageControl extends GridPane {
@@ -95,37 +100,56 @@ public class ImageControl extends GridPane {
 
     @FXML
     void textfieldOnAction(ActionEvent e) {
-        editor_textfield.selectAll();
-        final Image image = new Image(editor_textfield.getText());
-        // First update the model
-        setValue(image);
-        // Then notify the controller a change occured
-        effectPickerController.incrementRevision();
+        final String location = editor_textfield.getText();
+        try {
+            final URI uri = new URI(location);
+            final File file = new File(uri);
+            if (file.exists()) {
+                final Image image = new Image(uri.toURL().toExternalForm());
+                // First update the model
+                setValue(image);
+                // Then notify the controller a change occured
+                effectPickerController.incrementRevision();
+            } else {
+                effectPickerController.getEffectPickerDelegate().handleError(
+                        "log.warning.image.location.does.not.exist", location);
+            }
+            editor_textfield.selectAll();
+        } catch (URISyntaxException | MalformedURLException ex) {
+            effectPickerController.getEffectPickerDelegate().handleError(
+                    "log.warning.image.location.does.not.exist", location);
+        }
     }
 
     @FXML
     void buttonOnAction(ActionEvent e) {
-        final String[] extensions = {"*.jpg", "*.jpeg", "*.png", "*.gif"}; //NOI18N
-        final FileChooser fileChooser = new FileChooser();
-        //fileChooser.setTitle(I18N.getString("inspector.select.image"));
-        fileChooser.setTitle("Select Image"); //NOI18N
-        fileChooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter(
-                        I18N.getString("inspector.select.image"),
-                        Arrays.asList(extensions)));
-//        final File file = fileChooser.showOpenDialog(getScene().getWindow());
-//        if ((file == null)) {
-//            return;
-//        }
-//        String url;
+        final Window window = editor_textfield.getScene().getWindow();
+        assert window instanceof PopupWindow;
+//        final PopupWindow popupWindow = (PopupWindow) window;
 //        try {
+//            // Disable auto-hide so we can open the file chooser
+//            popupWindow.setAutoHide(false);
+//            final String[] extensions = {"*.jpg", "*.jpeg", "*.png", "*.gif"}; //NOI18N
+//            final FileChooser fileChooser = new FileChooser();
+//            fileChooser.getExtensionFilters().add(
+//                    new FileChooser.ExtensionFilter(
+//                            I18N.getString("inspector.select.image"),
+//                            Arrays.asList(extensions)));
+//            final File file = fileChooser.showOpenDialog(getScene().getWindow());
+//            if ((file == null)) {
+//                return;
+//            }
+//            String url;
 //            url = file.toURI().toURL().toExternalForm();
+//            editor_textfield.setText(url);
+//            final Image image = new Image(url);
+//            setValue(image);
 //        } catch (MalformedURLException ex) {
-//            throw new RuntimeException("Invalid URL", ex); //NOI18N
+//            Logger.getLogger(ImageControl.class.getName()).log(Level.SEVERE, null, ex);
+//        } finally {
+//            // Enable auto-hide
+//            popupWindow.setAutoHide(true);
 //        }
-//        editor_textfield.setText(url);
-//        final Image image = new Image(url);
-//        setValue(image);
     }
 
     private void initialize(String labelString, Image initVal) {
@@ -141,7 +165,7 @@ public class ImageControl extends GridPane {
         } catch (IOException x) {
             throw new RuntimeException(x);
         }
-        
+
         editor_label.setText(labelString);
         editor_textfield.setText(initVal == null ? "" : Deprecation.getUrl(initVal)); //NOI18N
         setValue(initVal);
