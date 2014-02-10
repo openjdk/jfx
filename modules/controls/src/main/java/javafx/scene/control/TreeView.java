@@ -1214,6 +1214,8 @@ public class TreeView<T> extends Control {
 
                     shift = - count + 1;
                     startRow++;
+                } else if (e.wasPermutated()) {
+                    // no-op
                 } else if (e.wasAdded()) {
                     // shuffle selection by the number of added items
                     shift = treeItem.isExpanded() ? e.getAddedSize() : 0;

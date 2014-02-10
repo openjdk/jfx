@@ -2211,6 +2211,13 @@ public class TreeTableView<S> extends Control {
 
                     shift = - count + 1;
                     startRow++;
+                } else if (e.wasPermutated()) {
+                    // This handles the sorting case where nothing was added or
+                    // removed, but the location of the selected index / item
+                    // has likely changed. This was added to fix RT-30156 and
+                    // unit tests exist to prevent it from regressing.
+                    quietClearSelection();
+                    select(oldSelectedItem);
                 } else if (e.wasAdded()) {
                     // shuffle selection by the number of added items
                     shift = treeItem.isExpanded() ? e.getAddedSize() : 0;
@@ -2257,13 +2264,6 @@ public class TreeTableView<S> extends Control {
                             }
                         }
                     }
-                } else if (e.wasPermutated()) {
-                    // This handles the sorting case where nothing was added or
-                    // removed, but the location of the selected index / item
-                    // has likely changed. This was added to fix RT-30156 and
-                    // unit tests exist to prevent it from regressing.
-                    quietClearSelection();
-                    select(oldSelectedItem);
                 }
                 
                 shiftSelection(startRow, shift, new Callback<ShiftParams, Void>() {

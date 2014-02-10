@@ -36,10 +36,7 @@ import com.sun.javafx.scene.control.test.Person;
 import com.sun.javafx.scene.control.test.RT_22463_Person;
 import com.sun.javafx.tk.Toolkit;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -1510,5 +1507,56 @@ public class TreeViewTest {
 
         group2.setExpanded(false);
         Toolkit.getToolkit().firePulse();
+    }
+
+    @Test public void test_rt35039_setRoot() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(
+                new TreeItem("aabbaa"),
+                new TreeItem("bbc"));
+
+        final TreeView<String> treeView = new TreeView<>();
+        treeView.setRoot(root);
+
+        new StageLoader(treeView);
+
+        // everything should be null to start with
+        assertNull(treeView.getSelectionModel().getSelectedItem());
+
+        // select "bbc" and ensure everything is set to that
+        treeView.getSelectionModel().select(2);
+        assertEquals("bbc", treeView.getSelectionModel().getSelectedItem().getValue());
+
+        // change the items list - but retain the same content. We expect
+        // that "bbc" remains selected as it is still in the list
+        treeView.setRoot(root);
+        assertEquals("bbc", treeView.getSelectionModel().getSelectedItem().getValue());
+    }
+
+    @Test public void test_rt35039_resetRootChildren() {
+        TreeItem aabbaa = new TreeItem("aabbaa");
+        TreeItem bbc = new TreeItem("bbc");
+
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().setAll(aabbaa, bbc);
+
+        final TreeView<String> treeView = new TreeView<>();
+        treeView.setRoot(root);
+
+        new StageLoader(treeView);
+
+        // everything should be null to start with
+        assertNull(treeView.getSelectionModel().getSelectedItem());
+
+        // select "bbc" and ensure everything is set to that
+        treeView.getSelectionModel().select(2);
+        assertEquals("bbc", treeView.getSelectionModel().getSelectedItem().getValue());
+
+        // change the items list - but retain the same content. We expect
+        // that "bbc" remains selected as it is still in the list
+        root.getChildren().setAll(aabbaa, bbc);
+        assertEquals("bbc", treeView.getSelectionModel().getSelectedItem().getValue());
     }
 }

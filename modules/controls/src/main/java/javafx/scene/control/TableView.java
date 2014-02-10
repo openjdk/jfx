@@ -1977,7 +1977,16 @@ public class TableView<S> extends Control {
 
             // when the items list totally changes, we should clear out
             // the selection
-            setSelectedIndex(-1);
+            int newValueIndex = -1;
+            if (newList != null) {
+                S selectedItem = getSelectedItem();
+                if (selectedItem != null) {
+                    newValueIndex = newList.indexOf(selectedItem);
+                }
+            }
+
+            setSelectedIndex(newValueIndex);
+            focus(newValueIndex);
         }
         
 

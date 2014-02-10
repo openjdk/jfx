@@ -2514,4 +2514,27 @@ public class TableViewTest {
         assertFalse(sm.isSelected(2, lastNameCol));
         assertTrue(sm.isSelected(2, emailCol));
     }
+
+    @Test public void test_rt35039() {
+        final List<String> data = new ArrayList<>();
+        data.add("aabbaa");
+        data.add("bbc");
+
+        final TableView<String> tableView = new TableView<>();
+        tableView.setItems(FXCollections.observableArrayList(data));
+
+        new StageLoader(tableView);
+
+        // everything should be null to start with
+        assertNull(tableView.getSelectionModel().getSelectedItem());
+
+        // select "bbc" and ensure everything is set to that
+        tableView.getSelectionModel().select(1);
+        assertEquals("bbc", tableView.getSelectionModel().getSelectedItem());
+
+        // change the items list - but retain the same content. We expect
+        // that "bbc" remains selected as it is still in the list
+        tableView.setItems(FXCollections.observableArrayList(data));
+        assertEquals("bbc", tableView.getSelectionModel().getSelectedItem());
+    }
 }

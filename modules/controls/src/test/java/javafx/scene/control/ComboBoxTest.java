@@ -37,8 +37,7 @@ import com.sun.javafx.scene.control.skin.VirtualFlow;
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import static org.junit.Assert.*;
 
-import java.util.Arrays;
-import java.util.Set;
+import java.util.*;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -1213,5 +1212,35 @@ public class ComboBoxTest {
         keyboard.doKeyPress(KeyCode.ENTER);
 
         assertEquals(1, test_rt35586_count);
+    }
+
+    @Test public void test_rt35039() {
+        final List<String> data = new ArrayList<>();
+        data.add("aabbaa");
+        data.add("bbc");
+
+        final ComboBox<String> combo = new ComboBox<>();
+        combo.setEditable(true);
+        combo.setItems(FXCollections.observableArrayList(data));
+
+        new StageLoader(combo);
+
+        // everything should be null to start with
+        assertNull(combo.getValue());
+        assertTrue(combo.getEditor().getText().isEmpty());
+        assertNull(combo.getSelectionModel().getSelectedItem());
+
+        // select "bbc" and ensure everything is set to that
+        combo.getSelectionModel().select(1);
+        assertEquals("bbc", combo.getValue());
+        assertEquals("bbc", combo.getEditor().getText());
+        assertEquals("bbc", combo.getSelectionModel().getSelectedItem());
+
+        // change the items list - but retain the same content. We expect
+        // that "bbc" remains selected as it is still in the list
+        combo.setItems(FXCollections.observableArrayList(data));
+        assertEquals("bbc", combo.getValue());
+        assertEquals("bbc", combo.getEditor().getText());
+        assertEquals("bbc", combo.getSelectionModel().getSelectedItem());
     }
 }

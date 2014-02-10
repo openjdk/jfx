@@ -282,7 +282,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         }
 
         this.listViewItems = comboBoxItems;
-        listView.setItems(null);
         listView.setItems(listViewItems);
 
         if (listViewItems != null) {
