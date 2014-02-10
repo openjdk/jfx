@@ -215,7 +215,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>, TreeCellBehavior<
         
         Node disclosureNode = getSkinnable().getDisclosureNode();
         
-        int level = TreeView.getNodeLevel(treeItem);
+        int level = tree.getTreeItemLevel(treeItem);
         if (! tree.isShowRoot()) level--;
         double leftMargin = getIndent() * level;
 
@@ -303,7 +303,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>, TreeCellBehavior<
         pw = labelWidth;
 
         // determine the amount of indentation
-        int level = TreeView.getNodeLevel(treeItem);
+        int level = tree.getTreeItemLevel(treeItem);
         if (! tree.isShowRoot()) level--;
         pw += getIndent() * level;
 

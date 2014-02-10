@@ -463,18 +463,29 @@ public class TreeTableView<S> extends Control {
     }
     private static final EventType<?> EDIT_COMMIT_EVENT =
             new EventType(editAnyEvent(), "EDIT_COMMIT");
-    
+
     /**
      * Returns the number of levels of 'indentation' of the given TreeItem, 
-     * based on how many times getParent() can be recursively called. If the 
-     * given TreeItem is the root node, or if the TreeItem does not have any 
-     * parent set, the returned value will be zero. For each time getParent() is 
-     * recursively called, the returned value is incremented by one.
-     * 
+     * based on how many times {@link javafx.scene.control.TreeItem#getParent()}
+     * can be recursively called. If the TreeItem does not have any parent set,
+     * the returned value will be zero. For each time getParent() is recursively
+     * called, the returned value is incremented by one.
+     *
+     * <p><strong>Important note: </strong>This method is deprecated as it does
+     * not consider the root node. This means that this method will iterate
+     * past the root node of the TreeTableView control, if the root node has a parent.
+     * If this is important, call {@link TreeTableView#getTreeItemLevel(TreeItem)}
+     * instead.
+     *
      * @param node The TreeItem for which the level is needed.
      * @return An integer representing the number of parents above the given node,
      *         or -1 if the given TreeItem is null.
+     * @deprecated This method does not correctly calculate the distance from the
+     *          given TreeItem to the root of the TreeTableView. As of JavaFX 8.0_20,
+     *          the proper way to do this is via
+     *          {@link TreeTableView#getTreeItemLevel(TreeItem)}
      */
+    @Deprecated
     public static int getNodeLevel(TreeItem<?> node) {
         return TreeView.getNodeLevel(node);
     }
@@ -1495,6 +1506,39 @@ public class TreeTableView<S> extends Control {
         TreeItem<S> treeItem = TreeUtil.getItem(getRoot(), _row, expandedItemCountDirty);
         treeItemCacheMap.put(_row, new SoftReference<>(treeItem));
         return treeItem;
+    }
+
+    /**
+     * Returns the number of levels of 'indentation' of the given TreeItem,
+     * based on how many times getParent() can be recursively called. If the
+     * given TreeItem is the root node of this TreeTableView, or if the TreeItem
+     * does not have any parent set, the returned value will be zero. For each
+     * time getParent() is recursively called, the returned value is incremented
+     * by one.
+     *
+     * @param node The TreeItem for which the level is needed.
+     * @return An integer representing the number of parents above the given node,
+     *         or -1 if the given TreeItem is null.
+     */
+    public int getTreeItemLevel(TreeItem<?> node) {
+        final TreeItem<?> root = getRoot();
+
+        if (node == null) return -1;
+        if (node == root) return 0;
+
+        int level = 0;
+        TreeItem<?> parent = node.getParent();
+        while (parent != null) {
+            level++;
+
+            if (parent == root) {
+                break;
+            }
+
+            parent = parent.getParent();
+        }
+
+        return level;
     }
     
     /**

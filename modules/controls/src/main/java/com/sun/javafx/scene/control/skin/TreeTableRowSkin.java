@@ -231,7 +231,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     }
 
     @Override protected int getIndentationLevel(TreeTableRow<T> control) {
-        return TreeTableView.getNodeLevel(control.getTreeItem());
+        return control.getTreeTableView().getTreeItemLevel(control.getTreeItem());
     }
 
     @Override protected double getIndentationPerLevel() {

@@ -3113,6 +3113,95 @@ public class TreeTableViewTest {
         Toolkit.getToolkit().firePulse();
     }
 
+    @Test public void test_rt23245_itemIsInTree() {
+        final TreeTableView<String> view = new TreeTableView<String>();
+        final List<TreeItem<String>> items = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            final TreeItem<String> item = new TreeItem<String>("Item" + i);
+            item.setExpanded(true);
+            items.add(item);
+        }
+
+        // link the items up so that the next item is the child of the current item
+        for (int i = 0; i < 9; i++) {
+            items.get(i).getChildren().add(items.get(i + 1));
+        }
+
+        view.setRoot(items.get(0));
+
+        for (int i = 0; i < 10; i++) {
+            // we expect the level of the tree item at the ith position to be
+            // 0, as every iteration we are setting the ith item as the root.
+            assertEquals(0, view.getTreeItemLevel(items.get(i)));
+
+            // whilst we are testing, we should also ensure that the ith item
+            // is indeed the root item, and that the ith item is indeed the item
+            // at the 0th position
+            assertEquals(items.get(i), view.getRoot());
+            assertEquals(items.get(i), view.getTreeItem(0));
+
+            // shuffle the next item into the root position (keeping its parent
+            // chain intact - which is what exposes this issue in the first place).
+            if (i < 9) {
+                view.setRoot(items.get(i + 1));
+            }
+        }
+    }
+
+    @Test public void test_rt23245_itemIsNotInTree_noRootNode() {
+        final TreeView<String> view = new TreeView<String>();
+        final List<TreeItem<String>> items = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            final TreeItem<String> item = new TreeItem<String>("Item" + i);
+            item.setExpanded(true);
+            items.add(item);
+        }
+
+        // link the items up so that the next item is the child of the current item
+        for (int i = 0; i < 9; i++) {
+            items.get(i).getChildren().add(items.get(i + 1));
+        }
+
+        for (int i = 0; i < 10; i++) {
+            // because we have no root (and we are not changing the root like
+            // the previous test), we expect the tree item level of the item
+            // in the ith position to be i.
+            assertEquals(i, view.getTreeItemLevel(items.get(i)));
+
+            // all items requested from the TreeView should be null, as the
+            // TreeView does not have a root item
+            assertNull(view.getTreeItem(i));
+        }
+    }
+
+    @Test public void test_rt23245_itemIsNotInTree_withUnrelatedRootNode() {
+        final TreeView<String> view = new TreeView<String>();
+        final List<TreeItem<String>> items = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            final TreeItem<String> item = new TreeItem<String>("Item" + i);
+            item.setExpanded(true);
+            items.add(item);
+        }
+
+        // link the items up so that the next item is the child of the current item
+        for (int i = 0; i < 9; i++) {
+            items.get(i).getChildren().add(items.get(i + 1));
+        }
+
+        view.setRoot(new TreeItem("Unrelated root node"));
+
+        for (int i = 0; i < 10; i++) {
+            // because we have no root (and we are not changing the root like
+            // the previous test), we expect the tree item level of the item
+            // in the ith position to be i.
+            assertEquals(i, view.getTreeItemLevel(items.get(i)));
+
+            // all items requested from the TreeView should be null except for
+            // the root node
+            assertNull(view.getTreeItem(i + 1));
+        }
+    }
+
     @Test public void test_rt35039_setRoot() {
         TreeItem<String> root = new TreeItem<>("Root");
         root.setExpanded(true);
