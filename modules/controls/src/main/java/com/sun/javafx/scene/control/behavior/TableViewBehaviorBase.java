@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import com.sun.javafx.scene.control.SizeLimitedList;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
@@ -220,6 +221,8 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
     private boolean selectionPathDeviated = false;
     protected boolean selectionChanging = false;
 
+    private final SizeLimitedList<TablePositionBase> selectionHistory = new SizeLimitedList<>(10);
+
     protected final ListChangeListener<TablePositionBase> selectedCellsListener = new ListChangeListener<TablePositionBase>() {
         @Override public void onChanged(ListChangeListener.Change c) {
             while (c.next()) {
@@ -231,6 +234,12 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
                 
                 int addedSize = c.getAddedSize();
                 List<TablePositionBase> addedSubList = (List<TablePositionBase>) c.getAddedSubList();
+
+                for (TablePositionBase tpb : addedSubList) {
+                    if (! selectionHistory.contains(tpb)) {
+                        selectionHistory.add(tpb);
+                    }
+                }
                 
                 // newest selection
                 if (addedSize > 0 && ! hasAnchor()) {
@@ -710,9 +719,8 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
 
             // work out if we're backtracking
             boolean backtracking = false;
-            ObservableList<? extends TablePositionBase> selectedCells = getSelectedCells();
-            if (selectedCells.size() >= 2) {
-                TablePositionBase<TC> secondToLastSelectedCell = selectedCells.get(selectedCells.size() - 2);
+            if (selectionHistory.size() >= 2) {
+                TablePositionBase<TC> secondToLastSelectedCell = selectionHistory.get(1);
                 backtracking = secondToLastSelectedCell.getRow() == newFocusOwner &&
                         secondToLastSelectedCell.getColumn() == focusedCell.getColumn();
             }
