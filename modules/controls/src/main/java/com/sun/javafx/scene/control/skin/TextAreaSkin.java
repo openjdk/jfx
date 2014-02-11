@@ -25,6 +25,8 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.scene.control.behavior.TextAreaBehavior;
+import com.sun.javafx.scene.text.HitInfo;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
@@ -61,9 +63,8 @@ import javafx.scene.shape.PathElement;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextBoundsType;
 import javafx.util.Duration;
+
 import java.util.List;
-import com.sun.javafx.scene.control.behavior.TextAreaBehavior;
-import com.sun.javafx.scene.text.HitInfo;
 
 /**
  * Text area skin.
@@ -402,6 +403,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
     public static final int SCROLL_RATE = 30;
 
     private double pressX, pressY; // For dragging handles on embedded
+    private boolean handlePressed;
 
     public TextAreaSkin(final TextArea textArea) {
         super(textArea, new TextAreaBehavior(textArea));
@@ -441,17 +443,14 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         scrollPane.setContent(contentView);
         getChildren().add(scrollPane);
 
-        // RT-21658: We can currently only handle scroll events from touch if
-        // on the embedded platform.
-        if (!SHOW_HANDLES) {
-            scrollPane.addEventFilter(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
-                @Override public void handle(ScrollEvent event) {
-                    if (event.isDirect()) {
-                        event.consume();
-                    }
+        getSkinnable().addEventFilter(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
+            @Override
+            public void handle(ScrollEvent event) {
+                if (event.isDirect() && handlePressed) {
+                    event.consume();
                 }
-            });
-        }
+            }
+        });
 
         // Add selection
         selectionHighlightGroup.setManaged(false);
@@ -664,13 +663,25 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                 @Override public void handle(MouseEvent e) {
                     pressX = e.getX();
                     pressY = e.getY();
+                    handlePressed = true;
                     e.consume();
+                }
+            };
+
+            EventHandler<MouseEvent> handleReleaseHandler = new EventHandler<MouseEvent>() {
+                @Override
+                public void handle(MouseEvent event) {
+                    handlePressed = false;
                 }
             };
 
             caretHandle.setOnMousePressed(handlePressHandler);
             selectionHandle1.setOnMousePressed(handlePressHandler);
             selectionHandle2.setOnMousePressed(handlePressHandler);
+
+            caretHandle.setOnMouseReleased(handleReleaseHandler);
+            selectionHandle1.setOnMouseReleased(handleReleaseHandler);
+            selectionHandle2.setOnMouseReleased(handleReleaseHandler);
 
             caretHandle.setOnMouseDragged(new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent e) {

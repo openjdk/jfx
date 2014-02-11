@@ -25,6 +25,10 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.geom.transform.Affine3D;
+import com.sun.javafx.scene.control.skin.TextAreaSkin;
+import com.sun.javafx.scene.text.HitInfo;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Bounds;
@@ -39,28 +43,13 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.stage.Screen;
 import javafx.stage.Window;
+
 import java.util.ArrayList;
 import java.util.List;
-import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.geom.transform.Affine3D;
-import com.sun.javafx.scene.control.skin.TextAreaSkin;
-import com.sun.javafx.scene.text.HitInfo;
+
 import static com.sun.javafx.PlatformUtil.isMac;
 import static com.sun.javafx.PlatformUtil.isWindows;
-import static javafx.scene.input.KeyCode.DOWN;
-import static javafx.scene.input.KeyCode.END;
-import static javafx.scene.input.KeyCode.ENTER;
-import static javafx.scene.input.KeyCode.HOME;
-import static javafx.scene.input.KeyCode.KP_DOWN;
-import static javafx.scene.input.KeyCode.KP_LEFT;
-import static javafx.scene.input.KeyCode.KP_RIGHT;
-import static javafx.scene.input.KeyCode.KP_UP;
-import static javafx.scene.input.KeyCode.LEFT;
-import static javafx.scene.input.KeyCode.PAGE_DOWN;
-import static javafx.scene.input.KeyCode.PAGE_UP;
-import static javafx.scene.input.KeyCode.RIGHT;
-import static javafx.scene.input.KeyCode.TAB;
-import static javafx.scene.input.KeyCode.UP;
+import static javafx.scene.input.KeyCode.*;
 import static javafx.scene.input.KeyEvent.KEY_PRESSED;
 
 
@@ -344,7 +333,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
                 final int anchor = textArea.getAnchor();
                 final int caretPosition = textArea.getCaretPosition();
                 if (e.getClickCount() < 2 &&
-                    (IS_TOUCH_SUPPORTED ||
+                    (e.isSynthesized() ||
                      (anchor != caretPosition &&
                       ((i > anchor && i < caretPosition) || (i < anchor && i > caretPosition))))) {
                     // if there is a selection, then we will NOT handle the
@@ -393,13 +382,14 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         final TextArea textArea = getControl();
         // we never respond to events if disabled, but we do notify any onXXX
         // event listeners on the control
-        if (!textArea.isDisabled() && !deferClick) {
-            if (e.getButton() == MouseButton.PRIMARY && !(e.isMiddleButtonDown() || e.isSecondaryButtonDown())) {
-                if (!(e.isControlDown() || e.isAltDown() || e.isShiftDown() || e.isMetaDown() || e.isShortcutDown())) {
-                    skin.positionCaret(skin.getIndex(e.getX(), e.getY()), true, false);
-                }
+        if (!textArea.isDisabled() && !e.isSynthesized()) {
+            if (e.getButton() == MouseButton.PRIMARY &&
+                    !(e.isMiddleButtonDown() || e.isSecondaryButtonDown() ||
+                            e.isControlDown() || e.isAltDown() || e.isShiftDown() || e.isMetaDown())) {
+                skin.positionCaret(skin.getIndex(e.getX(), e.getY()), true, false);
             }
         }
+        deferClick = false;
     }
 
     @Override public void mouseReleased(final MouseEvent e) {
