@@ -48,12 +48,18 @@ import java.util.*;
 // T == TablePosition<S,?>
 public class SelectedCellsMap<T extends TablePositionBase> {
     private final ObservableList<T> selectedCells;
+    private final ObservableList<T> sortedSelectedCells;
 
     private final Map<Integer, BitSet> selectedCellBitSetMap;
 
     public SelectedCellsMap(final ListChangeListener<T> listener) {
         selectedCells = FXCollections.<T>observableArrayList();
-        selectedCells.addListener(listener);
+        sortedSelectedCells = selectedCells.sorted(new Comparator<T>() {
+            @Override public int compare(T o1, T o2) {
+                return o1.getRow() - o2.getRow();
+            }
+        });
+        sortedSelectedCells.addListener(listener);
 
         selectedCellBitSetMap = new TreeMap<>(new Comparator<Integer>() {
             @Override public int compare(Integer o1, Integer o2) {
@@ -70,7 +76,7 @@ public class SelectedCellsMap<T extends TablePositionBase> {
         if (i < 0) {
             return null;
         }
-        return selectedCells.get(i);
+        return sortedSelectedCells.get(i);
     }
 
     public void add(T tp) {
@@ -193,7 +199,7 @@ public class SelectedCellsMap<T extends TablePositionBase> {
     }
 
     public int indexOf(T tp) {
-        return selectedCells.indexOf(tp);
+        return sortedSelectedCells.indexOf(tp);
     }
 
     public boolean isEmpty() {

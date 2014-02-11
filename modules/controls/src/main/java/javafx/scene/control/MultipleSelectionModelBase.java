@@ -458,6 +458,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             // we may have requested to select row 5, and the selectedIndices
             // list may therefore have the following: [1,4,5], meaning row 5
             // is in position 2 of the selectedIndices list
+            Collections.sort(actualSelectedRows);
             Change<Integer> change = createRangeChange(selectedIndicesSeq, actualSelectedRows);
             selectedIndicesSeq.callObservers(change);
         }
@@ -503,18 +504,19 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
                 
                 // starting from pos, we keep going until the value is
                 // not the next value
-                from = pos;
                 int startValue = addedItems.get(pos++);
+                from = list.indexOf(startValue);
+                to = from + 1;
                 int endValue = startValue;
                 while (pos < addedSize) {
                     int previousEndValue = endValue;
                     endValue = addedItems.get(pos++);
+                    ++to;
                     if (previousEndValue != (endValue - 1)) {
                         break;
                     }
                 }
-                to = pos;
-                
+
                 if (invalid) {
                     invalid = false;
                     return true; 
