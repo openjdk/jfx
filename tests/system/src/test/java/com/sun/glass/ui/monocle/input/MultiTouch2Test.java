@@ -47,11 +47,6 @@ public class MultiTouch2Test extends ParameterizedTestBase {
         return TestTouchDevices.getTouchDeviceParameters(2);
     }
 
-    @Before
-    public void checkMultitouch() {
-        Assume.assumeTrue(TestApplication.hasMultitouch());
-    }
-
     @Test
     public void twoFingerTap() throws Exception {
         Rectangle2D r = TestTouchDevices.getScreenBounds();

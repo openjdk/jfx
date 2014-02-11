@@ -55,7 +55,6 @@ public class TestApplication extends Application {
             System.getProperty("timeScale", "1"));
     private static Stage stage;
     static final Semaphore ready = new Semaphore(1);
-    private static boolean useMultitouch;
     private static int tapRadius;
     private static Group root;
     private static String glassPlatform;
@@ -102,17 +101,12 @@ public class TestApplication extends Application {
             Platform.runLater(() -> {
                 if (isMonocle()) {
                     tapRadius = TouchInput.getInstance().getTouchRadius();
-                    useMultitouch = true;
                 } else {
                     tapRadius = Integer.getInteger("lens.input.touch.TapRadius", 20);
-                    useMultitouch = Boolean.getBoolean("com.sun.javafx.experimental.embedded.multiTouch");
                 }
                 ready.release();
             });
-            ready.acquire();
-            if (!hasMultitouch() && verbose)  {
-                System.out.println("Multi-touch tests will be skipped");
-            }
+            ready.acquire();          
         }
         return stage;
     }
@@ -351,8 +345,4 @@ public class TestApplication extends Application {
         return timeScale;
     }
 
-
-    public static boolean hasMultitouch() {
-        return useMultitouch;
-    }
 }

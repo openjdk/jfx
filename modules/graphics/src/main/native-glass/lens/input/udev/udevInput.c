@@ -448,9 +448,9 @@ jboolean lens_input_initialize(JNIEnv *env) {
                              gUseMultiTouch? "true" : "false");
         } else {
             GLASS_LOG_SEVERE("Could not find static useMultiTouch filed in %s, "
-                             "disabling multi touch support",
+                             "enabling multi touch support",
                              className);
-            gUseMultiTouch = JNI_FALSE;
+            gUseMultiTouch = JNI_TRUE;
         }
 
         //try to set device trace property

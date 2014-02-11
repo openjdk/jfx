@@ -116,7 +116,7 @@ final class LensTouchInputSupport {
         new PrivilegedAction<Boolean>() {
             @Override
             public Boolean run() {
-                return Boolean.getBoolean("com.sun.javafx.experimental.embedded.multiTouch");
+                return !(Boolean.getBoolean("lens.input.forceSingleTouch"));
             }
         });
 
