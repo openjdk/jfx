@@ -2123,7 +2123,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         final boolean isVertical = isVertical();
         if (((isVertical && (tempVisibility ? !needLengthBar : !vbar.isVisible())) ||
-                (! isVertical && (tempVisibility ? !needBreadthBar : !hbar.isVisible())))) return 0;
+                (! isVertical && (tempVisibility ? !needLengthBar : !hbar.isVisible())))) return 0;
         
         double pos = getPosition();
         if (pos == 0.0f && delta < 0) return 0;
