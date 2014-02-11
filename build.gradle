@@ -1783,6 +1783,27 @@ project(":fxpackager") {
             }
         }
     }
+
+    task packagerFakeJar(type: Jar) {
+        dependsOn compileTestJava
+        from compileTestJava.destinationDir
+        include "hello/**"
+
+        destinationDir project.file("build/tmp/tests/appResources")
+        archiveName "mainApp.jar"
+        
+        manifest {
+            attributes(
+                    "Main-Class": "hello.HelloRectangle",
+                    "Custom-Attribute": " Is it stripped?"
+            )
+        }
+    }
+    
+    test {
+        dependsOn packagerFakeJar
+        systemProperty "tmpBase", project.file("build/tmp/tests").canonicalPath
+    }
 }
 
 project(":media") {

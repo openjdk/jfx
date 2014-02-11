@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,54 +25,77 @@
 
 package com.sun.javafx.tools.packager.bundlers;
 
+import com.oracle.bundlers.AbstractBundler;
+import com.oracle.bundlers.BundlerParamInfo;
+import com.oracle.bundlers.StandardBundlerParam;
 import com.sun.javafx.tools.packager.Log;
-import com.sun.javafx.tools.packager.bundlers.Bundler.ConfigException;
-import com.sun.javafx.tools.packager.bundlers.Bundler.UnsupportedPlatformException;
 import com.sun.javafx.tools.resource.linux.LinuxResources;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.text.MessageFormat;
+import java.util.*;
 
-public class LinuxAppBundler extends Bundler {
-    private BundleParams params = null;
+import static com.oracle.bundlers.StandardBundlerParam.*;
 
+public class LinuxAppBundler extends AbstractBundler {
+
+    private static final ResourceBundle I18N =
+            ResourceBundle.getBundle("com.oracle.bundlers.linux.LinuxAppBundler");
+    
     protected static final String LINUX_BUNDLER_PREFIX =
-             BUNDLER_PREFIX + "linux" + File.separator;
+            BUNDLER_PREFIX + "linux" + File.separator;
     private static final String EXECUTABLE_NAME = "JavaAppLauncher";
-    private static final String LAUNCHER_CLASS = "com.javafx.main.Main";
+
+    public static final BundlerParamInfo<URL> RAW_EXECUTABLE_URL = new StandardBundlerParam<>(
+            I18N.getString("param.raw-executable-url.name"),
+            I18N.getString("param.raw-executable-url.description"),
+            "linux.launcher.url",  //KEY
+            URL.class, null, params -> LinuxResources.class.getResource(EXECUTABLE_NAME),
+            false, s -> {
+        try {
+            return new URL(s);
+        } catch (MalformedURLException e) {
+            Log.info(e.toString());
+            return null;
+        }
+    });
 
     @Override
-    boolean validate(BundleParams p) throws UnsupportedPlatformException, ConfigException {
-        if (p.type != Bundler.BundleType.ALL && p.type != Bundler.BundleType.IMAGE) {
-            return false;
-        }
+    public boolean validate(Map<String, ? super Object> p) throws UnsupportedPlatformException, ConfigException {
+        if (p == null) throw new ConfigException(
+                I18N.getString("error.parameters-null"),
+                I18N.getString("error.parameters-null.advice"));
+
         return doValidate(p);
     }
 
     //used by chained bundlers to reuse validation logic
-    boolean doValidate(BundleParams p) throws UnsupportedPlatformException, ConfigException {
+    boolean doValidate(Map<String, ? super Object> p) throws UnsupportedPlatformException, ConfigException {
         if (!System.getProperty("os.name").toLowerCase().startsWith("linux")) {
-            throw new Bundler.UnsupportedPlatformException();
+            throw new UnsupportedPlatformException();
         }
 
-        if (LinuxResources.class.getResource(EXECUTABLE_NAME) == null) {
-            throw new Bundler.ConfigException(
-                    "This copy of ant-javafx.jar does not support Linux.",
-                    "Please use ant-javafx.jar coming with Oracle JDK for Linux.");
+        if (RAW_EXECUTABLE_URL.fetchFrom(p) == null) {
+            throw new ConfigException(
+                    I18N.getString("error.no-linux-resources"),
+                    I18N.getString("error.no-linux-resources.advice"));
         }
 
-        if (p.getMainApplicationJar() == null) {
-            throw new Bundler.ConfigException(
-                    "Main application jar is missing.",
-                    "Make sure to use fx:jar task to create main application jar.");
+        if (MAIN_JAR.fetchFrom(p) == null) {
+            throw new ConfigException(
+                    I18N.getString("error.no-application-jar"),
+                    I18N.getString("error.no-application-jar.advice"));
         }
 
         //validate required inputs
-        testRuntime(p, new String[] {"lib/ext/jfxrt.jar", "lib/jfxrt.jar"});
+        if (USE_FX_PACKAGING.fetchFrom(p)) {
+            testRuntime(p, new String[] {"lib/ext/jfxrt.jar", "lib/jfxrt.jar"});
+        }
         testRuntime(p, new String[] { "lib/rt.jar" });
 
         return true;
@@ -80,42 +103,26 @@ public class LinuxAppBundler extends Bundler {
 
     //it is static for the sake of sharing with "installer" bundlers
     // that may skip calls to validate/bundle in this class!
-    private static File getRootDir(File outDir, BundleParams p) {
-        return new File(outDir, getLauncherName(p));
+    private static File getRootDir(File outDir, Map<String, ? super Object> p) {
+        return new File(outDir, APP_NAME.fetchFrom(p));
     }
 
-    private static String getLauncherName(BundleParams p) {
-        String nm;
-        if (p.name != null) {
-            nm = p.name;
-        } else {
-            nm = p.getMainClassName();
-        }
-        nm = nm.replaceAll(" ", "");
-
-        return nm;
+    public static File getLauncher(File outDir, Map<String, ? super Object> p) {
+        return new File(getRootDir(outDir, p), APP_NAME.fetchFrom(p));
     }
 
-    public static File getLauncher(File outDir, BundleParams p) {
-        return new File(getRootDir(outDir, p), getLauncherName(p));
-    }
-
-    @Override
-    public boolean bundle(BundleParams p, File outputDirectory) {
-        return doBundle(p, outputDirectory, false);
-    }
-
-    boolean doBundle(BundleParams p, File outputDirectory, boolean dependentTask) {
+    File doBundle(Map<String, ? super Object> p, File outputDirectory, boolean dependentTask) {
         try {
-            params = p;
+
+            outputDirectory.mkdirs();
 
             // Create directory structure
-            File rootDirectory = new File(outputDirectory, getLauncherName(p));
+            File rootDirectory = new File(outputDirectory, APP_NAME.fetchFrom(p));
             IOUtils.deleteRecursive(rootDirectory);
             rootDirectory.mkdirs();
 
             if (!dependentTask) {
-                Log.info("Creating app bundle: " + rootDirectory.getAbsolutePath());
+                Log.info(MessageFormat.format(I18N.getString("message.creating-bundle-location"), rootDirectory.getAbsolutePath()));
             }
 
             File runtimeDirectory = new File(rootDirectory, "runtime");
@@ -126,7 +133,7 @@ public class LinuxAppBundler extends Bundler {
             // Copy executable to MacOS folder
             File executableFile = getLauncher(outputDirectory, p);
             IOUtils.copyFromURL(
-                    LinuxResources.class.getResource(EXECUTABLE_NAME),
+                    RAW_EXECUTABLE_URL.fetchFrom(p),
                     executableFile);
 
             executableFile.setExecutable(true, false);
@@ -135,59 +142,60 @@ public class LinuxAppBundler extends Bundler {
             // Generate PkgInfo
             File pkgInfoFile = new File(appDirectory, "package.cfg");
             pkgInfoFile.createNewFile();
-            writePkgInfo(pkgInfoFile);
+            writePkgInfo(p, pkgInfoFile);
 
             // Copy runtime to PlugIns folder
-            copyRuntime(runtimeDirectory);
+            copyRuntime(p, runtimeDirectory);
 
             // Copy class path entries to Java folder
-            copyApplication(appDirectory);
+            copyApplication(p, appDirectory);
 
             // Copy icon to Resources folder
-//            copyIcon(resourcesDirectory);
+//FIXME            copyIcon(resourcesDirectory);
 
+            return rootDirectory;
         } catch (IOException ex) {
             System.out.println("Exception: "+ex);
             ex.printStackTrace();
-            return false;
-        } 
-        return true;
+            return null;
+        }
     }
 
     @Override
     public String toString() {
-        return "Linux Application Bundler";
+        return getName();
     }
 
-    private void copyApplication(File appDirectory) throws IOException {
-        if (params.appResources == null) {
+    private void copyApplication(Map<String, ? super Object> params, File appDirectory) throws IOException {
+        RelativeFileSet appResources = APP_RESOURCES.fetchFrom(params);
+        if (appResources == null) {
             throw new RuntimeException("Null app resources?");
         }
-        File srcdir = params.appResources.getBaseDirectory();
-        for (String fname : params.appResources.getIncludedFiles()) {
+        File srcdir = appResources.getBaseDirectory();
+        for (String fname : appResources.getIncludedFiles()) {
             IOUtils.copyFile(
                     new File(srcdir, fname), new File(appDirectory, fname));
         }
     }
 
-    private void writePkgInfo(File pkgInfoFile) throws FileNotFoundException {
+    private void writePkgInfo(Map<String, ? super Object> params, File pkgInfoFile) throws FileNotFoundException {
         pkgInfoFile.delete();
         PrintStream out = new PrintStream(pkgInfoFile);
-        out.println("app.mainjar=" + params.getMainApplicationJar());
-        out.println("app.version=" + params.appVersion);
+        out.println("app.mainjar=" + MAIN_JAR.fetchFrom(params).getIncludedFiles().iterator().next());
+        out.println("app.version=" + VERSION.fetchFrom(params));
 
         //use '/' in the clas name (instead of '.' to simplify native code
-        if (params.useJavaFXPackaging()) {
+        if (USE_FX_PACKAGING.fetchFrom(params)) {
             out.println("app.mainclass=" +
                     JAVAFX_LAUNCHER_CLASS.replaceAll("\\.", "/"));
         } else {
             out.println("app.mainclass=" +
-                    params.applicationClass.replaceAll("\\.", "/"));
+                    MAIN_CLASS.fetchFrom(params).replaceAll("\\.", "/"));
         }
         //This will be emtry string for correctly packaged JavaFX apps
-        out.println("app.classpath=" + params.getAppClassPath());
+        out.println("app.classpath=" + MAIN_JAR_CLASSPATH.fetchFrom(params));
 
-        List<String> jvmargs = params.getAllJvmOptions();
+        List<String> jvmargs = JVM_OPTIONS.fetchFrom(params);
         int idx = 1;
         for (String a : jvmargs) {
             out.println("jvmarg."+idx+"="+a);
@@ -195,13 +203,13 @@ public class LinuxAppBundler extends Bundler {
         }
 
         //app.id required for setting user preferences (Java Preferences API)
-        out.println("app.preferences.id="+ params.getPreferencesID());
+        out.println("app.preferences.id=" + PREFERENCES_ID.fetchFrom(params));
 
-        Map<String, String> jvmUserOptions = params.getAllJvmUserOptions();
+        Map<String, String> overridableJVMOptions = USER_JVM_OPTIONS.fetchFrom(params);
         idx = 1;
-        for (Map.Entry<String, String> arg: jvmUserOptions.entrySet()) {
+        for (Map.Entry<String, String> arg: overridableJVMOptions.entrySet()) {
             if (arg.getKey() == null || arg.getValue() == null) {
-                Log.info("WARNING: a jvmuserarg has a null name or value");
+                Log.info(I18N.getString("message.jvm-user-arg-is-null"));
             }
             else {
                 out.println("jvmuserarg."+idx+".name="+arg.getKey());
@@ -209,23 +217,71 @@ public class LinuxAppBundler extends Bundler {
             }
             idx++;
         }
-       out.close();
+        out.close();
     }
 
-    private void copyRuntime(File runtimeDirectory) throws IOException {
-        if (params.runtime == null) {
+    private void copyRuntime(Map<String, ? super Object> params, File runtimeDirectory) throws IOException {
+        RelativeFileSet runtime = RUNTIME.fetchFrom(params);
+        if (runtime == null) {
             //request to use system runtime
             return;
         }
         runtimeDirectory.mkdirs();
 
-        File srcdir = params.runtime.getBaseDirectory();
+        File srcdir = runtime.getBaseDirectory();
         File destDir = new File(runtimeDirectory, srcdir.getName());
-        Set<String> filesToCopy = params.runtime.getIncludedFiles();
+        Set<String> filesToCopy = runtime.getIncludedFiles();
         for (String fname : filesToCopy) {
             IOUtils.copyFile(
                     new File(srcdir, fname), new File(destDir, fname));
         }
     }
 
+    @Override
+    public String getName() {
+        return I18N.getString("bundler.name");
+    }
+
+    @Override
+    public String getDescription() {
+        return I18N.getString("bundler.description");
+    }
+
+    @Override
+    public String getID() {
+        return "linux.app";  //KEY
+    }
+
+    @Override
+    public BundleType getBundleType() {
+        return BundleType.IMAGE;
+    }
+
+    @Override
+    public Collection<BundlerParamInfo<?>> getBundleParameters() {
+        return getAppBundleParameters();
+    }
+
+    public static Collection<BundlerParamInfo<?>> getAppBundleParameters() {
+        return Arrays.asList(
+                APP_NAME,
+                APP_RESOURCES,
+                BUILD_ROOT,
+                JVM_OPTIONS,
+                MAIN_CLASS,
+                MAIN_JAR,
+                MAIN_JAR_CLASSPATH,
+                PREFERENCES_ID,
+                RAW_EXECUTABLE_URL,
+                RUNTIME,
+                USE_FX_PACKAGING,
+                USER_JVM_OPTIONS,
+                VERSION
+        );
+    }
+
+    @Override
+    public File execute(Map<String, ? super Object> params, File outputParentDir) {
+        return doBundle(params, outputParentDir, false);
+    }
 }

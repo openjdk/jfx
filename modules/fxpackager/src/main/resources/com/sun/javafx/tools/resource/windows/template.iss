@@ -32,6 +32,7 @@ UninstallDisplayIcon={app}\APPLICATION_NAME.ico
 UninstallDisplayName=APPLICATION_NAME
 WizardImageStretch=No
 WizardSmallImageFile=APPLICATION_NAME-setup-icon.bmp   
+ArchitecturesInstallIn64BitMode=ARCHITECTURE_BIT_MODE
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
