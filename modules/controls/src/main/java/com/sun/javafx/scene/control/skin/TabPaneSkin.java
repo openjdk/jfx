@@ -32,6 +32,7 @@ import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -383,6 +384,23 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         tabRegion.removeListeners(tab);
         tabHeaderArea.removeTab(tab);
         removeTabContent(tab);
+
+        // remove the menu item from the popup menu
+        ContextMenu popupMenu = tabHeaderArea.controlButtons.popup;
+        TabMenuItem tabItem = null;
+        for (MenuItem item : popupMenu.getItems()) {
+            tabItem = (TabMenuItem) item;
+            if (tab == tabItem.getTab()) {
+                break;
+            }
+            tabItem = null;
+        }
+        if (tabItem != null) {
+            tabItem.dispose();
+            popupMenu.getItems().remove(tabItem);
+        }
+        // end of removing menu item
+
         tabRegion.animating = false;
         tabHeaderArea.requestLayout();
     }
@@ -1776,20 +1794,29 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 
     class TabMenuItem extends RadioMenuItem {
         Tab tab;
+
+        private InvalidationListener disableListener = new InvalidationListener() {
+            @Override public void invalidated(Observable o) {
+                setDisable(tab.isDisable());
+            }
+        };
+
+        private WeakInvalidationListener weakDisableListener =
+                new WeakInvalidationListener(disableListener);
+
         public TabMenuItem(final Tab tab) {
             super(tab.getText(), TabPaneSkin.clone(tab.getGraphic()));                        
             this.tab = tab;
             setDisable(tab.isDisable());
-            tab.disableProperty().addListener(new InvalidationListener() {
-                @Override
-                public void invalidated(Observable arg0) {
-                    setDisable(tab.isDisable());
-                }
-            });                   
+            tab.disableProperty().addListener(weakDisableListener);
         }
 
         public Tab getTab() {
             return tab;
+        }
+
+        public void dispose() {
+            tab.disableProperty().removeListener(weakDisableListener);
         }
     }
 }
