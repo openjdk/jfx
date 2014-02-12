@@ -252,7 +252,8 @@ public class ContextMenu extends PopupControl {
         // This leads to incorrect translation of anchor to screen coordinates.
         // A call to show initializes the content. Skin is null only the very first time.
         if(getSkin() == null) {
-            // A change made here also needs to be made in ContextMenu#show(Node,double,double)
+            // This check is also done in PopupControl#show,
+            // but happens too late for the purposes of calculating perfWidth/perfHeight
             bridge.applyCss();
         }
         // FIXME because Side is not yet in javafx.geometry, we have to convert
@@ -281,14 +282,6 @@ public class ContextMenu extends PopupControl {
         if (getItems().size() == 0) return;
 
         getScene().setNodeOrientation(anchor.getEffectiveNodeOrientation());
-        //RT-27546 : The problem here is before the first show the content of the popup
-        // is not initialized yet and hence the prefWidth & prefHeight remains 0
-        // This leads to incorrect translation of anchor to screen coordinates.
-        // A call to show initializes the content. Skin is null only the very first time.
-        if(getSkin() == null) {
-            // A change made here also needs to be made in ContextMenu#show(Node,Side,double,double)
-            bridge.applyCss();
-        }
         doShow(anchor, screenX, screenY);
     }
 

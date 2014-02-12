@@ -630,13 +630,6 @@ public class TableColumnHeader extends Region {
     private void updateSortOrderDots(int sortPos) {
         double arrowWidth = arrow.prefWidth(-1);
         
-        // This is a bit of a hack - we're forcing the arrow to have its CSS 
-        // processed so that it has its bounds calculated
-        if (arrowWidth == 0.0) {
-            arrow.impl_processCSS(true);
-            arrowWidth = arrow.prefWidth(-1);
-        }
-        
         sortOrderDots.getChildren().clear();
 
         for (int i = 0; i <= sortPos; i++) {

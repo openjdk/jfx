@@ -955,7 +955,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
     }
 
     private void recomputeSkinSize() {
-        if (!skinSizeComputed && getOwnerWindow() != null) { //getScene() != null && getScene().getRoot() != null) {
+        if (!skinSizeComputed)  {
             // RT-14094, RT-16754: We need the skins of the popup
             // and it children before the stage is visible so we
             // can calculate the popup position based on content
@@ -966,6 +966,17 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
     }
 //    public double getBaselineOffset() { return getSkinNode() == null? 0 : getSkinNode().getBaselineOffset(); }
 
+    @Override protected void show() {
+        //RT-27546 : The problem here is before the first show the content of the popup
+        // is not initialized yet and hence the prefWidth & prefHeight remains 0
+        // This leads to incorrect translation of anchor to screen coordinates.
+        // A call to show initializes the content. Skin is null only the very first time.
+        if(getSkin() == null) {
+            bridge.applyCss();
+        }
+        super.show();
+
+    }
     /**
      * Create a new instance of the default skin for this control. This is called to create a skin for the control if
      * no skin is provided via CSS {@code -fx-skin} or set explicitly in a sub-class with {@code  setSkin(...)}.
