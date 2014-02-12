@@ -6,9 +6,9 @@
                  classpath="../../../../../../../libs/ant-javafx.jar"/>
         <!-- designed to be run in build/resoruce/test/... dir -->
 
-        <fx:application id="rectangle"
-                        name="Hello Rectangle"
-                        mainClass="hello.HelloRectangle"/>
+        <fx:application id="packagerTest"
+                        name="Packager Test"
+                        mainClass="hello.TestPackager"/>
 
         <fx:resources id="appRes">
             <fx:fileset dir="../../../../../../../tmp/tests/appResources" includes="mainApp.jar"/>
@@ -20,7 +20,7 @@
 
             <fx:resources refid="appRes"/>
 
-            <fx:info title="Hello Rectange Test"/>
+            <fx:info title="Packager Test"/>
 
             <fx:bundleArgument arg="preferencesID" value="not.the.default.value"/>
 

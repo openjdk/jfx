@@ -29,18 +29,15 @@ import com.oracle.bundlers.*;
 import com.oracle.bundlers.Bundler;
 import com.sun.javafx.tools.packager.Log;
 import com.sun.javafx.tools.packager.bundlers.*;
-import hello.TestPackager;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
 import java.nio.file.Files;
 import java.util.*;
 
-import static junit.framework.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -64,11 +61,7 @@ public class MacPKGBundlerTest {
         tmpBase.mkdirs();
         workDir = new File(tmpBase, "macapp");
         appResourcesDir = new File(tmpBase, "appResources");
-
-        //TODO just for initial testing, need better way to test - this works for my test project
-        URL resource = TestPackager.class.getResource("/TestPackager.jar");
-        IOUtils.copyFile(new File(resource.getFile()), new File(appResourcesDir, "TestPackager.jar"));
-        fakeMainJar = new File(appResourcesDir, "TestPackager.jar");
+        fakeMainJar = new File(appResourcesDir, "mainApp.jar");
 
         appResources = new HashSet<>(Arrays.asList(fakeMainJar));
 

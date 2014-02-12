@@ -133,7 +133,7 @@ public class BundlersTest {
 
     @Test
     public void getBundlersPlatformTest() {
-        Collection<String> bundlerIDs = new ArrayList<String>();
+        Collection<String> bundlerIDs = new ArrayList<>();
         for (Bundler bundler : Bundlers.createBundlersInstance().getBundlers()) {
             try {
                 bundler.validate(new HashMap<>());
@@ -148,8 +148,8 @@ public class BundlersTest {
 
         boolean mac = System.getProperty("os.name").toLowerCase().contains("os x");
         assertEquals(mac, bundlerIDs.contains("mac.app"));
-        assertEquals(mac, bundlerIDs.contains("mac.dmg"));
-        assertEquals(mac, bundlerIDs.contains("mac.pkg"));
+        assertEquals(mac, bundlerIDs.contains("dmg"));
+        assertEquals(mac, bundlerIDs.contains("pkg"));
 
         boolean linux = System.getProperty("os.name").toLowerCase().startsWith("linux");
         assertEquals(linux, bundlerIDs.contains("linux.app"));

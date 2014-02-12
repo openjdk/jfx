@@ -90,7 +90,7 @@ public class LinuxDebBundlerTest {
         bundleParams.put(StandardBundlerParam.BUILD_ROOT.getID(), Files.createTempDirectory(tmpBase.toPath(), "fxpackager").toFile());
 
         bundleParams.put(StandardBundlerParam.NAME.getID(), "Smoke");
-        bundleParams.put(StandardBundlerParam.MAIN_CLASS.getID(), "hello.HelloRectangle");
+        bundleParams.put(StandardBundlerParam.MAIN_CLASS.getID(), "hello.TestPackager");
         bundleParams.put(StandardBundlerParam.APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         
         bundler.execute(bundleParams, new File(workDir, "smoke"));

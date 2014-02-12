@@ -1794,7 +1794,7 @@ project(":fxpackager") {
         
         manifest {
             attributes(
-                    "Main-Class": "hello.HelloRectangle",
+                    "Main-Class": "hello.TestPackager",
                     "Custom-Attribute": " Is it stripped?"
             )
         }

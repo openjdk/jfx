@@ -157,7 +157,9 @@ public class MacAppBundler extends AbstractBundler {
         }
 
         //validate required inputs
-        testRuntime(p, new String[] {"Contents/Home/jre/lib/ext/jfxrt.jar", "Contents/Home/jre/lib/jfxrt.jar"});
+        if (USE_FX_PACKAGING.fetchFrom(p)) {
+            testRuntime(p, new String[] {"Contents/Home/jre/lib/ext/jfxrt.jar", "Contents/Home/jre/lib/jfxrt.jar"});
+        }
 
         return true;
     }
