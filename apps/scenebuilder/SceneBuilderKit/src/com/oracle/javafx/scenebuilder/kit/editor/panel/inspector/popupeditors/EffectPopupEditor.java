@@ -31,9 +31,11 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.popupeditors;
 
+import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.EffectPicker;
 import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.Utils;
+import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker;
 import java.util.List;
 import java.util.Set;
 import javafx.beans.value.ChangeListener;
@@ -49,6 +51,7 @@ public class EffectPopupEditor extends PopupEditor {
 
     private EffectPicker effectPicker;
     private List<MenuItem> effectMenuItems;
+    private final EditorController editorController;
 
     private final ChangeListener<Number> effectRevisionChangeListener = new ChangeListener<Number>() {
         @Override
@@ -64,8 +67,9 @@ public class EffectPopupEditor extends PopupEditor {
     };
 
     @SuppressWarnings("LeakingThisInConstructor")
-    public EffectPopupEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
+    public EffectPopupEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, EditorController editorController) {
         super(propMeta, selectedClasses);
+        this.editorController = editorController;
     }
 
     @Override
@@ -83,7 +87,19 @@ public class EffectPopupEditor extends PopupEditor {
 
     @Override
     public void initializePopupContent() {
-        effectPicker = new EffectPicker();
+        final EffectPicker.Delegate epd = new EffectPicker.Delegate() {
+            @Override
+            public void handleError(String warningKey, Object... arguments) {
+                editorController.getMessageLog().logWarningMessage(warningKey, arguments);
+            }
+        };
+        final PaintPicker.Delegate ppd = new PaintPicker.Delegate() {
+            @Override
+            public void handleError(String warningKey, Object... arguments) {
+                editorController.getMessageLog().logWarningMessage(warningKey, arguments);
+            }
+        };
+        effectPicker = new EffectPicker(epd, ppd);
         effectMenuItems = effectPicker.getMenuItems();
     }
 

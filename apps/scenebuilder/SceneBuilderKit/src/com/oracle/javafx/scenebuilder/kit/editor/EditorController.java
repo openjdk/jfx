@@ -253,7 +253,7 @@ public class EditorController {
     private final ListProperty<File> sceneStyleSheetProperty
             = new SimpleListProperty<>();
     private final BooleanProperty pickModeEnabledProperty
-            = new SimpleBooleanProperty(true);
+            = new SimpleBooleanProperty(false);
     private final BooleanProperty sampleDataEnabledProperty
             = new SimpleBooleanProperty(false);
     
@@ -366,6 +366,14 @@ public class EditorController {
      */
     public boolean isTextEditingSessionOnGoing() {
         return requestTextEditingSessionEnd != null;
+    }
+    
+    /**
+     * The property holding the fxml location associated to this editor.
+     * @return the property holding the fxml location associated to this editor.
+     */
+    public ObservableValue<URL> fxmlLocationProperty() {
+        return fxmlLocationProperty;
     }
     
     /**
@@ -1471,6 +1479,9 @@ public class EditorController {
                 ((BatchJob) job).addSubJob(new UsePredefinedSizeJob(this,
                         EditorController.Size.SIZE_DEFAULT, newObject));
             }
+                        
+            // As for non root element the inserted object is selected.
+            ((BatchJob) job).addSubJob(new UpdateSelectionJob(newObject, this));
         } else {
             if (selection.isEmpty() || selection.isSelected(rootObject)) {
                 // No selection or root is selected -> we insert below root

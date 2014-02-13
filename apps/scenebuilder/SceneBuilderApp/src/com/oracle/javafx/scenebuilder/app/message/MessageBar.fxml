@@ -47,7 +47,7 @@
         <HBox fx:id="messagePart" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
           <children>
             <Label fx:id="messageLabel" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" mouseTransparent="true" style="&#10;" text="Message" HBox.hgrow="ALWAYS" />
-            <HBox id="messageBox" alignment="CENTER_RIGHT" fillHeight="true" prefHeight="-1.0" prefWidth="-1.0" spacing="0.0" HBox.hgrow="NEVER">
+            <HBox id="messageBox" alignment="CENTER_RIGHT" fillHeight="true" minWidth="-Infinity" prefHeight="-1.0" prefWidth="-1.0" spacing="0.0" HBox.hgrow="NEVER">
              <children>
                 <Button fx:id="messageButton" alignment="CENTER" maxHeight="1.7976931348623157E308" minHeight="-1.0" minWidth="20.0" mnemonicParsing="false" onAction="#onOpenCloseAction" text="">
                   <graphic>

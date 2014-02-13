@@ -33,6 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.css;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
+import com.oracle.javafx.scenebuilder.kit.editor.drag.source.AbstractDragSource;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.css.CssContentMaker.BeanPropertyState;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.css.CssContentMaker.CssPropertyState;
@@ -42,7 +43,6 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.css.CssContentMaker.NodeC
 import com.oracle.javafx.scenebuilder.kit.editor.panel.css.CssContentMaker.PropertyState;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.css.CssValuePresenterFactory.CssValuePresenter;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.css.SelectionPath.Item;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.InspectorPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractFxmlPanelController;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
@@ -65,8 +65,8 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.text.MessageFormat;
 import java.util.*;
-import java.util.concurrent.Callable;
 import javafx.animation.FadeTransition;
+import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
@@ -146,27 +146,25 @@ public class CssPanelController extends AbstractFxmlPanelController {
     private TableColumn<CssProperty, CssProperty> stylesheetsColumn;
     @FXML
     private TableView<CssProperty> table;
+    @FXML
+    private StackPane messagePane;
+    @FXML
+    private Label messageLabel;
 
     private TreeView<Node> rulesTree;
 
     private boolean advanced = false;
     private boolean styledOnly = false;
+    private boolean tableColumnsOrderingReversed = false;
+    private boolean dragOnGoing = false;
 
     private ObservableList<CssProperty> model;
-    private ObservableList<TableColumn<CssProperty, ?>> initialOrder;
-    private ObservableList<TableColumn<CssProperty, ?>> reversedOrder;
 
     private View currentView = View.TABLE;
-
-    private StackPane message;
 
     private String searchPattern;
     private static final Image lookups = new Image(
             CssPanelController.class.getResource("images/css-lookup-icon.png").toExternalForm()); //NOI18N
-    private static final Image pickImg = new Image(
-            CssPanelController.class.getResource("images/css-cursor.png").toExternalForm()); //NOI18N
-    private static final Image editImg = new Image(
-            CssPanelController.class.getResource("images/css-button-arrow.png").toExternalForm()); //NOI18N
 
     private static final String NO_MATCHING_RULES = I18N.getString("csspanel.no.matching.rule");
 
@@ -178,7 +176,6 @@ public class CssPanelController extends AbstractFxmlPanelController {
     private Object selectedObject; // Can be either an FXOMObject (selection mode), or a Node (pick mode)
     private Selection selection;
     @SuppressWarnings("rawtypes")
-    private Callable onSelectionModeSwitch;
     private final EditorController editorController;
     private final Delegate applicationDelegate;
     private final ObjectProperty<NodeCssState> cssStateProperty = new SimpleObjectProperty<>();
@@ -197,7 +194,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
     @Override
     protected void fxomDocumentDidChange(FXOMDocument oldDocument) {
         if (isCssPanelLoaded() && hasFxomDocument()) {
-            selection = editorController.getSelection();
+            updateSelectedObject();
             refresh();
         }
     }
@@ -228,15 +225,8 @@ public class CssPanelController extends AbstractFxmlPanelController {
 
     @Override
     protected void editorSelectionDidChange() {
-        if (isCssPanelLoaded() && hasFxomDocument()) {
-            selection = editorController.getSelection();
-            if (!isMultipleSelection()) {
-                if (isPickMode()) {
-                    selectedObject = selection.findHitNode();
-                } else {
-                    selectedObject = getFXOMInstance(selection);
-                }
-            }
+        if (isCssPanelLoaded() && hasFxomDocument() && !dragOnGoing) {
+            updateSelectedObject();
             refresh();
         }
     }
@@ -251,7 +241,6 @@ public class CssPanelController extends AbstractFxmlPanelController {
         root.getChildren().remove(textPane);
         root.getChildren().remove(table);
 
-        pick.setGraphic(new ImageView(pickImg));
         pick.setOnAction(new EventHandler<ActionEvent>() {
 
             @Override
@@ -259,8 +248,13 @@ public class CssPanelController extends AbstractFxmlPanelController {
                 editorController.setPickModeEnabled(true);
             }
         });
-        edit.setGraphic(new ImageView(editImg));
-        edit.setSelected(true);
+        edit.setOnAction(new EventHandler<ActionEvent>() {
+
+            @Override
+            public void handle(ActionEvent t) {
+                editorController.setPickModeEnabled(false);
+            }
+        });
         editorController.pickModeEnabledProperty().addListener(new ChangeListener<Boolean>() {
 
             @Override
@@ -268,11 +262,10 @@ public class CssPanelController extends AbstractFxmlPanelController {
                 setPickMode(newVal);
             }
         });
+        // Initialize the pick mode from the editorController value
+        setPickMode(editorController.isPickModeEnabled());
 
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-        initialOrder = FXCollections.observableArrayList(table.getColumns());
-        reversedOrder = FXCollections.observableArrayList(table.getColumns());
-        FXCollections.reverse(reversedOrder);
 
         disableColumnReordering();
         final Callback<TableColumn.CellDataFeatures<CssProperty, CssProperty>, ObservableValue<CssProperty>> valueFactory
@@ -321,16 +314,30 @@ public class CssPanelController extends AbstractFxmlPanelController {
                     Node selectedSubNode = CssUtils.getNode(newValue.getItem());
                     selectedObject = selectedSubNode;
                     refresh();
-                    // TODO: use the hit point method from Eric
-//                    selection.select(getFXOMInstance(selection), Point2D.ZERO);
                     // Switch to pick mode
-                    setPickMode(true);
+                    editorController.setPickModeEnabled(true);
                 }
             }
         };
         selectionPath.selected().addListener(selectionListener);
 
-        selectedObject = getFXOMInstance(selection);
+        // Listen the drag property changes
+        getEditorController().getDragController().dragSourceProperty().addListener(new ChangeListener<AbstractDragSource>() {
+
+            @Override
+            public void changed(ObservableValue<? extends AbstractDragSource> ov, AbstractDragSource oldVal, AbstractDragSource newVal) {
+                if (newVal != null) {
+//                    System.out.println("Drag started !");
+                    dragOnGoing = true;
+                } else {
+//                    System.out.println("Drag finished.");
+                    dragOnGoing = false;
+                    updateSelectedObject();
+                    refresh();
+                }
+            }
+        });
+
         // View table by default
         changeView(CssPanelController.View.TABLE);
 
@@ -375,6 +382,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
 
         @Override
         public TableCell<CssProperty, CssProperty> call(TableColumn<CssProperty, CssProperty> param) {
+//            System.out.println("Creating new ModelValueTableCell...");
             return new ModelValueTableCell();
         }
     }
@@ -436,12 +444,11 @@ public class CssPanelController extends AbstractFxmlPanelController {
     }
 
     public void viewMessage(String mess) {
-        root.getChildren().removeAll(message, header, table, rulesPane, textPane);
+        root.getChildren().removeAll(messagePane, header, table, rulesPane, textPane);
 //        mainMenu.setDisable(true);
 //        searchBox.setDisable(true);
-        message = new StackPane();
-        message.getChildren().add(new Label(mess));
-        root.getChildren().add(message);
+        messageLabel.setText(mess);
+        root.getChildren().add(messagePane);
     }
 
     public final Node getRulesPane() {
@@ -456,7 +463,6 @@ public class CssPanelController extends AbstractFxmlPanelController {
         changeView(currentView);
         initializeRulesTextPanes(state);
         this.model = FXCollections.observableArrayList(model);
-        updateTable(model);
     }
 
     public void clearContent() {
@@ -482,46 +488,31 @@ public class CssPanelController extends AbstractFxmlPanelController {
         updateTable(filtered);
     }
 
-    public static void attachStyleProperty(Object component, TreeItem<Node> parent, CssPropertyState cssProp, CssStyle style,
+    public static void attachStyleProperty(TreeItem<Node> parent, CssPropertyState cssProp, CssStyle style,
             boolean applied, boolean isLookup) {
         if (isLookup) {
             String cssValue = CssValueConverter.toCssString(style.getCssProperty(), style.getCssRule(), style.getParsedValue());
-            TreeItem<Node> item = new TreeItem<>(getContent(component, style.getCssProperty(), cssValue, style.getParsedValue(), applied));
+            TreeItem<Node> item = new TreeItem<>(getContent(style.getCssProperty(), cssValue, style.getParsedValue(), applied));
             parent.getChildren().add(item);
         } else {
-            attachStylePropertyNoLookup(component, parent, cssProp, style, applied);
+            attachStylePropertyNoLookup(parent, cssProp, style, applied);
         }
-    }
-
-    @SuppressWarnings("rawtypes")
-    public void setOnSelectionModeSwitch(Callable callable) {
-        onSelectionModeSwitch = callable;
-    }
-
-    public void selectionModeSwitch() {
-        // Switch Content View selection mode (css/standard)
-        try {
-            onSelectionModeSwitch.call();
-        } catch (Exception ex) {
-            System.out.println("Cannot switch selection mode. " + ex);
-        }
-
     }
 
     public void changeView(View view) {
         switch (view) {
             case TABLE: {
-                root.getChildren().removeAll(message, header, table, rulesPane, textPane);
+                root.getChildren().removeAll(messagePane, header, table, rulesPane, textPane);
                 root.getChildren().addAll(header, table);
                 break;
             }
             case RULES: {
-                root.getChildren().removeAll(message, header, rulesPane, table, textPane);
+                root.getChildren().removeAll(messagePane, header, rulesPane, table, textPane);
                 root.getChildren().addAll(header, rulesPane);
                 break;
             }
             case TEXT: {
-                root.getChildren().removeAll(message, header, textPane, table, rulesPane);
+                root.getChildren().removeAll(messagePane, header, textPane, table, rulesPane);
                 root.getChildren().addAll(header, textPane);
                 break;
             }
@@ -548,6 +539,29 @@ public class CssPanelController extends AbstractFxmlPanelController {
         showStyled(model);
     }
 
+    public void toggleTableColumnsOrdering() {
+        // switch the table columns:
+        // Default to Inline ==> Inline to Defaults
+        // (and vice-versa)
+        ObservableList<TableColumn<CssProperty, ?>> columns = table.getColumns();
+        FXCollections.reverse(columns);
+        // Property column is always first
+        TableColumn<CssProperty, ?> propertyColumn = columns.get(columns.size() - 1);
+        columns.remove(propertyColumn);
+        columns.add(0, propertyColumn);
+        tableColumnsOrderingReversed = !tableColumnsOrderingReversed;
+    }
+
+    public boolean isTableColumnsOrderingReversed() {
+        return tableColumnsOrderingReversed;
+    }
+
+    public void setTableColumnsOrderingReversed(boolean value) {
+        if (table != null && tableColumnsOrderingReversed != value) {
+            toggleTableColumnsOrdering();
+        }
+    }
+
     /*
      *
      * FXML methods
@@ -557,11 +571,6 @@ public class CssPanelController extends AbstractFxmlPanelController {
 
     }
 
-    @FXML
-    void onSelectionModeSwitchAction(ActionEvent event) {
-        selectionModeSwitch();
-    }
-
     /*
      *
      * Private
@@ -569,6 +578,28 @@ public class CssPanelController extends AbstractFxmlPanelController {
      */
     private void refresh() {
         setCSSContent();
+    }
+
+    private void updateSelectedObject() {
+        selection = editorController.getSelection();
+        if (!isMultipleSelection()) {
+            if (isPickMode()) {
+                // In pick mode:
+                // If the selected node is the "root" node ==> we get its FXOMInstance
+                // Else, we don't have an FXOMInstance
+                Object pickObject = selection.findHitNode();
+                FXOMInstance fxomInstance = getFXOMInstance(selection);
+                if (fxomInstance != null && fxomInstance.getSceneGraphObject() == pickObject) {
+                    selectedObject = fxomInstance;
+                } else {
+                    selectedObject = pickObject;
+                }
+//                System.out.println("(pick mode) selectedObject = " + selectedObject);
+            } else {
+                selectedObject = getFXOMInstance(selection);
+//                System.out.println("selectedObject = " + selectedObject);
+            }
+        }
     }
 
     private static String getFirstStandardClassName(final Class<?> type) {
@@ -602,11 +633,26 @@ public class CssPanelController extends AbstractFxmlPanelController {
         clearContent();
         if (isMultipleSelection()) {
             viewMessage(I18N.getString("csspanel.multiselection"));
+            return;
         }
 
+        //
+        // Workaround for:
+        //     RT-35742: GridPane content is not updated as it should
+        //
+        // The TableView setItems is put in a runLater() so that 
+        // the TableView is rendered empty first, then with the new content.
+        // This is an ugly (and temporary) workaround, since one can see the TableView flashing on model update.
+        //
         if (selectedObject != null) { // Update content.
-            fillSelectionContent();
-            collectCss();
+            Platform.runLater(new Runnable() {
+
+                @Override
+                public void run() {
+                    fillSelectionContent();
+                    collectCss();
+                }
+            });
         }
     }
 
@@ -628,11 +674,12 @@ public class CssPanelController extends AbstractFxmlPanelController {
     }
 
     private boolean isPickMode() {
-        return pick.isSelected();
+        return editorController.isPickModeEnabled();
     }
 
     private void setPickMode(boolean pickMode) {
         pick.setSelected(pickMode);
+        edit.setSelected(!pickMode);
     }
 
     private void fillSelectionContent() {
@@ -741,7 +788,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
                 CssPropertyState cssProp = (CssPropertyState) ss;
                 if (cssProp.getStyle() != null) {
                     // Need to add the container, not the sub properties
-                    Node content = getContent(selectedObject, ss.getCssProperty(), ss.getCssValue(), ss.getFxValue(), true);
+                    Node content = getContent(ss.getCssProperty(), ss.getCssValue(), ss.getFxValue(), true);
                     TreeItem<Node> ti = newTreeItem(content, ss);
                     parent.getChildren().add(ti);
                     attachStyles(cssProp, ti);
@@ -753,7 +800,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
                 attachSubProperties(parent, ss);
             }
         } else {
-            Node content = getContent(selectedObject, ss.getCssProperty(), ss.getCssValue(), ss.getFxValue(), true);
+            Node content = getContent(ss.getCssProperty(), ss.getCssValue(), ss.getFxValue(), true);
             TreeItem<Node> ti = newTreeItem(content, ss);
             parent.getChildren().add(ti);
             if (ss instanceof CssPropertyState) {
@@ -810,7 +857,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
 
             for (CssContentMaker.NodeCssState.MatchingDeclaration p : lst) {
                 CssPropertyState prop = p.getProp();
-                attachStyleProperty(state.getNode(), ruleRoot, prop, p.getStyle(), p.isApplied(), p.isLookup());
+                attachStyleProperty(ruleRoot, prop, p.getStyle(), p.isApplied(), p.isLookup());
                 CssStyle style = p.getStyle();
                 String cssValue = CssValueConverter.toCssString(style.getCssProperty(), style.getCssRule(), style.getParsedValue());
                 htmlStyler.addProperty(p.getStyle().getCssProperty(), cssValue, p.isApplied());
@@ -912,8 +959,8 @@ public class CssPanelController extends AbstractFxmlPanelController {
             try {
                 // XXX jfdenise, for now can't do better than opening the file, no Anchor per property...
                 // Retrieve defining class
-                EditorPlatform.open(EditorPlatform.JAVADOC_HOME + 
-                        "javafx/scene/doc-files/cssref.html#" + //NOI18N
+                EditorPlatform.open(EditorPlatform.JAVADOC_HOME
+                        + "javafx/scene/doc-files/cssref.html#" + //NOI18N
                         item.getTarget().getClass().getSimpleName().toLowerCase(Locale.ROOT));
             } catch (IOException ex) {
                 System.out.println(ex.getMessage());
@@ -1013,6 +1060,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
         @Override
         public void updateItem(CssProperty item, boolean empty) {
             super.updateItem(item, empty);
+//            System.out.println("CssValueTableCell.updateItem() called !");
             values.clear();
             setGraphic(null);
             if (!empty) {
@@ -1158,10 +1206,13 @@ public class CssPanelController extends AbstractFxmlPanelController {
 
         private void createNavigationMenuButton() {
             navigationMenuButton = new MenuButton();
-            navigationMenuButton.setPrefWidth(5);
-            navigationMenuButton.setMinWidth(5);
+
+            Region region = new Region();
+            navigationMenuButton.setGraphic(region);
+            region.getStyleClass().add("cog-shape"); //NOI18N
+
             navigationMenuButton.setOpacity(0);
-            navigationMenuButton.getStyleClass().addAll("cog-button"); //NOI18N
+            navigationMenuButton.getStyleClass().addAll("css-panel-cog-menubutton"); //NOI18N
             fadeTransition = new FadeTransition(Duration.millis(500), navigationMenuButton);
         }
     }
@@ -1525,7 +1576,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
         return "(" + getFirstStandardClassName(n.getClass()) + ")";//NOI18N
     }
 
-    private static Node getContent(Object component, String property, String cssValue, Object value, boolean applied) {
+    private static Node getContent(String property, String cssValue, Object value, boolean applied) {
         HBox hbox = new HBox();
         Node l = createPropertyLabel(property + ": ", applied);//NOI18N
         hbox.getChildren().add(l);
@@ -2106,12 +2157,12 @@ public class CssPanelController extends AbstractFxmlPanelController {
         return customPresenter;
     }
 
-    private static void attachStylePropertyNoLookup(Object component, TreeItem<Node> parent,
+    private static void attachStylePropertyNoLookup(TreeItem<Node> parent,
             CssPropertyState ps, CssStyle style, boolean applied) {
         CssStyle cssStyle = applied ? ps.getStyle() : style;
         Object value = applied ? ps.getFxValue() : style.getParsedValue();
         String cssValue = CssValueConverter.toCssString(cssStyle.getCssProperty(), cssStyle.getCssRule(), cssStyle.getParsedValue());
-        TreeItem<Node> item = new TreeItem<>(getContent(component, ps.getCssProperty(), cssValue, value, applied));
+        TreeItem<Node> item = new TreeItem<>(getContent(ps.getCssProperty(), cssValue, value, applied));
         parent.getChildren().add(item);
     }
 

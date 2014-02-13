@@ -31,8 +31,8 @@
  */
 package com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.gradientpicker;
 
+import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker.Mode;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPickerController;
-import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPickerController.Mode;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.colorpicker.ColorPicker;
 import com.sun.javafx.Utils;
 import javafx.fxml.FXML;

@@ -105,9 +105,10 @@ class FXOMRefresher {
             refreshFxomInstance((FXOMInstance) currentObject, (FXOMInstance) newObject);
         } else if (currentObject instanceof FXOMCollection) {
             refreshFxomCollection((FXOMCollection) currentObject, (FXOMCollection) newObject);
+        } else if (currentObject instanceof FXOMIntrinsic) {
+            refreshFxomIntrinsic((FXOMIntrinsic) currentObject, (FXOMIntrinsic) newObject);
         } else {
-            // For other fxom nodes, there is nothing else to refresh
-            assert currentObject instanceof FXOMIntrinsic;
+            assert false : "Unexpected fxom object " + currentObject;
         }
         
 //        assert currentObject.equals(newObject) : "currentValue=" + currentObject +
@@ -135,6 +136,13 @@ class FXOMRefresher {
         assert newCollection != null;
         
         refreshFxomObjects(currentCollection.getItems(), newCollection.getItems());
+    }
+    
+    private void refreshFxomIntrinsic(FXOMIntrinsic currentIntrinsic, FXOMIntrinsic newIntrinsic) {
+        assert currentIntrinsic != null;
+        assert newIntrinsic != null;
+        
+        currentIntrinsic.setSourceSceneGraphObject(newIntrinsic.getSourceSceneGraphObject());
     }
     
     private void refreshFxomProperty(FXOMProperty currentProperty, FXOMProperty newProperty) {

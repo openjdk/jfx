@@ -41,8 +41,8 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 
 /**
- * Insets editor (for top/right/bottom/left fields).
- *
+ * Point3D editor (for x/y/z fields).
+ * (used for instance by Transforms.rotationAxis property)
  *
  */
 public class Point3DEditor extends PropertyEditor {

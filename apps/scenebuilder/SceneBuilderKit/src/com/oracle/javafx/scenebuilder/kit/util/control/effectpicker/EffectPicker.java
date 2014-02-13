@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.util.control.effectpicker;
 
+import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -81,7 +82,7 @@ public class EffectPicker extends Pane {
         return effectClasses;
     }
 
-    public EffectPicker() {
+    public EffectPicker(EffectPicker.Delegate epd, PaintPicker.Delegate ppd) {
         final FXMLLoader loader = new FXMLLoader();
         loader.setLocation(EffectPicker.class.getResource("EffectPicker.fxml")); //NOI18N
 
@@ -96,6 +97,8 @@ public class EffectPicker extends Pane {
             final Object ctl = loader.getController();
             assert ctl instanceof EffectPickerController;
             this.controller = (EffectPickerController) ctl;
+            this.controller.setEffectPickerDelegate(epd);
+            this.controller.setPaintPickerDelegate(ppd);
         } catch (IOException ex) {
             throw new IllegalStateException(ex);
         }
@@ -119,11 +122,7 @@ public class EffectPicker extends Pane {
     public ReadOnlyIntegerProperty revisionProperty() {
         return controller.revisionProperty();
     }
-
-    public void reset() {
-        controller.reset();
-    }
-
+    
     public String getEffectPath() {
         return controller.getEffectPath();
     }
@@ -143,5 +142,9 @@ public class EffectPicker extends Pane {
             menuItems.add(mi);
         }
         return menuItems;
+    }
+    
+    public static interface Delegate {
+        public void handleError(String warningKey, Object... arguments);
     }
 }

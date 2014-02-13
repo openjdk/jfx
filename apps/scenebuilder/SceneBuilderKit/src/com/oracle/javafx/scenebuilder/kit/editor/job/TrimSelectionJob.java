@@ -39,6 +39,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMIndex;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 
 /**
@@ -67,12 +68,17 @@ public class TrimSelectionJob extends Job {
             final ObjectSelectionGroup osg = (ObjectSelectionGroup) selection.getGroup();
             if (osg.getItems().size() == 1) {
                 // We can trim if:
+                //  - object is an FXOMInstance
                 //  - object is not already the root
                 //  - object is self contained
                 final FXOMObject fxomObject = osg.getItems().iterator().next();
-                final FXOMDocument fxomDocument = fxomObject.getFxomDocument();
-                result = (fxomObject != fxomDocument.getFxomRoot())
-                        && FXOMIndex.isSelfContainedObject(fxomObject);
+                if (fxomObject instanceof FXOMInstance) {
+                    final FXOMDocument fxomDocument = fxomObject.getFxomDocument();
+                    result = (fxomObject != fxomDocument.getFxomRoot())
+                            && FXOMIndex.isSelfContainedObject(fxomObject);
+                } else {
+                    result = false;
+                }
             } else {
                 // Cannot trim when multiple objects are selected
                 result = false;
@@ -95,19 +101,36 @@ public class TrimSelectionJob extends Job {
         assert selection.getGroup() instanceof ObjectSelectionGroup; // Because (1)
         final ObjectSelectionGroup osg = (ObjectSelectionGroup) selection.getGroup();
         assert osg.getItems().size() == 1;
+        final FXOMObject oldRoot = getEditorController().getFxomDocument().getFxomRoot();
         final FXOMObject candidateRoot = osg.getItems().iterator().next();
         
         /*
-         *  This job is composed of three subjobs:
-         *      0) Unselect the candidate
+         *  This job is composed of subjobs:
+         *      0) Remove fx:controller/fx:root (if defined) from the old root object if any
+         *      1) Unselect the candidate
          *          => ClearSelectionJob
-         *      1) Disconnect the candidate from its existing parent
+         *      2) Disconnect the candidate from its existing parent
          *          => DeleteObjectJob
-         *      2) Set the candidate as the root of the document
+         *      3) Set the candidate as the root of the document
          *          => SetDocumentRootJob
+         *      4) Add fx:controller/fx:root (if defined) to the new root object
          */
         
         batchJob = new BatchJob(getEditorController());
+        
+        assert oldRoot instanceof FXOMInstance;
+        boolean isFxRoot = ((FXOMInstance) oldRoot).isFxRoot();
+        final String fxController = oldRoot.getFxController();
+        // First remove the fx:controller/fx:root from the old root object
+        if (isFxRoot) {
+            final ToggleFxRootJob fxRootJob = new ToggleFxRootJob(getEditorController());
+            batchJob.addSubJob(fxRootJob);
+        }
+        if (fxController != null) {
+            final ModifyFxControllerJob fxControllerJob
+                    = new ModifyFxControllerJob(oldRoot, null, getEditorController());
+            batchJob.addSubJob(fxControllerJob);
+        }
         
         final Job clearSelectionJob = new ClearSelectionJob(getEditorController());
         batchJob.addSubJob(clearSelectionJob);
@@ -117,8 +140,18 @@ public class TrimSelectionJob extends Job {
         
         final Job setDocumentRoot = new SetDocumentRootJob(candidateRoot, getEditorController());
         batchJob.addSubJob(setDocumentRoot);
-        
-        
+
+        // Finally add the fx:controller/fx:root to the new root object
+        if (isFxRoot) {
+            final ToggleFxRootJob fxRootJob = new ToggleFxRootJob(getEditorController());
+            batchJob.addSubJob(fxRootJob);
+        }
+        if (fxController != null) {
+            final ModifyFxControllerJob fxControllerJob
+                    = new ModifyFxControllerJob(candidateRoot, fxController, getEditorController());
+            batchJob.addSubJob(fxControllerJob);
+        }
+
         // Now execute the batch
         batchJob.execute();
     }

@@ -31,7 +31,6 @@
  */
 package com.oracle.javafx.scenebuilder.kit.util.control.paintpicker;
 
-import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPickerController.Mode;
 import java.io.IOException;
 import javafx.beans.property.ObjectProperty;
 import javafx.fxml.FXMLLoader;
@@ -44,9 +43,14 @@ import javafx.scene.paint.Paint;
  */
 public class PaintPicker extends Pane {
 
+    public enum Mode {
+
+        COLOR, LINEAR, RADIAL
+    }
+
     private final PaintPickerController controller;
 
-    public PaintPicker() {
+    public PaintPicker(Delegate delegate) {        
         final FXMLLoader loader = new FXMLLoader();
         loader.setLocation(PaintPicker.class.getResource("PaintPicker.fxml")); //NOI18N
 
@@ -61,13 +65,14 @@ public class PaintPicker extends Pane {
             final Object ctl = loader.getController();
             assert ctl instanceof PaintPickerController;
             this.controller = (PaintPickerController) ctl;
+            this.controller.setDelegate(delegate);
         } catch (IOException ex) {
             throw new IllegalStateException(ex);
         }
     }
 
-    public PaintPicker(Mode mode) {
-        this();
+    public PaintPicker(Delegate delegate, Mode mode) {
+        this(delegate);
         controller.setSingleMode(mode);
     }
     
@@ -85,8 +90,8 @@ public class PaintPicker extends Pane {
     public final Paint getPaintProperty() {
         return controller.getPaintProperty();
     }
-
-    public void reset() {
-        controller.reset();
+    
+    public static interface Delegate {
+        public void handleError(String warningKey, Object... arguments);
     }
 }

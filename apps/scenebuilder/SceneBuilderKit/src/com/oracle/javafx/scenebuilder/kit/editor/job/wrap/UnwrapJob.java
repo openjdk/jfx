@@ -34,8 +34,10 @@ package com.oracle.javafx.scenebuilder.kit.editor.job.wrap;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
+import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyFxControllerJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.SetDocumentRootJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.ToggleFxRootJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.AddPropertyValueJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.RemovePropertyJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.RemovePropertyValueJob;
@@ -218,11 +220,33 @@ public class UnwrapJob extends Job {
         //------------------------------------------------------------------
         else {
             assert oldContainerChildren.size() == 1; // Because of (1)
-
+            boolean isFxRoot = oldContainer.isFxRoot();
+            final String fxController = oldContainer.getFxController();
+            // First remove the fx:controller/fx:root from the old root object
+            if (isFxRoot) {
+                final ToggleFxRootJob fxRootJob = new ToggleFxRootJob(getEditorController());
+                batchJob.addSubJob(fxRootJob);
+            }
+            if (fxController != null) {
+                final ModifyFxControllerJob fxControllerJob
+                        = new ModifyFxControllerJob(oldContainer, null, getEditorController());
+                batchJob.addSubJob(fxControllerJob);
+            }
+            // Then set the new container as root object            
             final FXOMObject child = oldContainerChildren.iterator().next();
             final Job setDocumentRoot = new SetDocumentRootJob(
                     child, getEditorController());
             batchJob.addSubJob(setDocumentRoot);
+            // Finally add the fx:controller/fx:root to the new root object
+            if (isFxRoot) {
+                final ToggleFxRootJob fxRootJob = new ToggleFxRootJob(getEditorController());
+                batchJob.addSubJob(fxRootJob);
+            }
+            if (fxController != null) {
+                final ModifyFxControllerJob fxControllerJob
+                        = new ModifyFxControllerJob(child, fxController, getEditorController());
+                batchJob.addSubJob(fxControllerJob);
+            }
         }
     }
 

@@ -57,6 +57,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -276,6 +277,7 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
     public void start(Stage stage) throws Exception {
         assert singleton == null;
         singleton = this;
+        setApplicationUncaughtExceptionHandler();
 
         try {
             if (AppPlatform.requestStart(this, getParameters()) == false) {
@@ -306,6 +308,7 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
      */
     @Override
     public void handleLaunch(List<String> files) {
+        setApplicationUncaughtExceptionHandler();
 
         // On Mac, AppPlatform disables implicit exit.
         // So we need to set a default system menu bar.
@@ -619,6 +622,22 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
                 break;
             default:
                 assert false;
+        }
+    }
+    
+    private void setApplicationUncaughtExceptionHandler() {
+        if (Thread.getDefaultUncaughtExceptionHandler() == null) {
+            // Register a Default Uncaught Exception Handler for the application
+            Thread.setDefaultUncaughtExceptionHandler(new SceneBuilderUncaughtExceptionHandler());
+        }
+    }
+    
+    private static class SceneBuilderUncaughtExceptionHandler implements Thread.UncaughtExceptionHandler{
+
+        @Override
+        public void uncaughtException(Thread t, Throwable e) {
+            // Print the details of the exception in SceneBuilder log file
+            Logger.getLogger(this.getClass().getName()).log(Level.SEVERE, "An exception was thrown:", e); //NOI18N
         }
     }
 }

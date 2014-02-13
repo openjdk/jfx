@@ -34,6 +34,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.handles;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.util.CardinalPoint;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import com.oracle.javafx.scenebuilder.kit.util.MathUtils;
 import java.util.List;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
@@ -200,15 +201,31 @@ public abstract class AbstractGenericHandles<T> extends AbstractHandles<T> {
         final double midX = (minX + maxX) / 2.0;
         final double midY = (minY + maxY) / 2.0;
         
+        final boolean zeroWidth = MathUtils.equals(minX, maxX);
+        final boolean zeroHeight = MathUtils.equals(minY, maxY);
+        
         final boolean snapToPixel = true;
         final Point2D pNW, pNE, pSE, pSW;
         final Point2D pNN, pEE, pSS, pWW;
         
-        if (b.isEmpty()) {
-            // Object is zero sized : let's optmize and avoid rounding errors
+        if (zeroWidth && zeroHeight) {
             pNW = pNE = pSE = pSW = 
             pNN = pEE = pSS = pWW = 
                     sceneGraphObjectToDecoration(minX, minY, snapToPixel);
+        } else if (zeroWidth) {
+            pNW = pNN = pNE =
+                    sceneGraphObjectToDecoration(minX, minY, snapToPixel);
+            pSW = pSS = pSE =
+                    sceneGraphObjectToDecoration(minX, maxY, snapToPixel);
+            pEE = pWW =
+                    sceneGraphObjectToDecoration(minX, midY, snapToPixel);
+        } else if (b.getHeight() == 0) {
+            pNW = pWW = pSW =
+                    sceneGraphObjectToDecoration(minX, minY, snapToPixel);
+            pNE = pEE = pSE =
+                    sceneGraphObjectToDecoration(maxX, minY, snapToPixel);
+            pNN = pSS =
+                    sceneGraphObjectToDecoration(midX, minY, snapToPixel);
         } else {
             pNW = sceneGraphObjectToDecoration(minX, minY, snapToPixel);
             pNE = sceneGraphObjectToDecoration(maxX, minY, snapToPixel);
@@ -249,7 +266,7 @@ public abstract class AbstractGenericHandles<T> extends AbstractHandles<T> {
         handleWW.setLayoutY(pWW.getY());
         
         final Bounds handlesBounds = computeBounds(pNW, pNE, pSE, pSW);
-        final int rotation = computeHandleRotation(pNW, handlesBounds);
+        final int rotation = computeNWHandleRotation(pNW, handlesBounds);
         
         setupCornerHandle(handleNW, rotation +   0);
         setupCornerHandle(handleNE, rotation +  90);
@@ -344,7 +361,7 @@ public abstract class AbstractGenericHandles<T> extends AbstractHandles<T> {
         handle.setTranslateY(dy);
     }
     
-    private int computeHandleRotation(Point2D handlePos, Bounds handlesBounds) {
+    private int computeNWHandleRotation(Point2D handlePos, Bounds handlesBounds) {
         final int result;
         
         assert handlePos != null;
@@ -353,8 +370,8 @@ public abstract class AbstractGenericHandles<T> extends AbstractHandles<T> {
        
         
         if ((handlesBounds.getWidth() == 0) || (handlesBounds.getHeight() == 0)) {
-            // scene graph object is zero sized ; rotation angle does not matter
-            result = 0;
+            // scene graph object is zero sized
+            result = +180;
         } else {
             /*
              *          x0        xm        x1

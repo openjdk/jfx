@@ -155,7 +155,15 @@ implements AbstractGesture.Observer {
     
     @Override
     public void willResignActive(AbstractModeController nextModeController) {
-        stopListeningToInputEvents();
+        stopListeningToInputEvents();        
+        
+        removeAllHandles();
+        removePring();
+        removeTring();
+        
+        assert contentPanelController.getHandleLayer().getChildren().isEmpty();
+        assert contentPanelController.getPringLayer().getChildren().isEmpty();
+        assert contentPanelController.getRudderLayer().getChildren().isEmpty();
     }
 
     @Override
@@ -163,6 +171,7 @@ implements AbstractGesture.Observer {
         assert contentPanelController.getGlassLayer() != null;
         assert contentPanelController.getHandleLayer() != null;
         assert contentPanelController.getPringLayer() != null;
+        assert contentPanelController.getRudderLayer() != null;
         
         editorSelectionDidChange();
         startListeningToInputEvents();
@@ -278,6 +287,14 @@ implements AbstractGesture.Observer {
         return result;
     }
     
+    
+    private void removePring() {
+        if (pring != null) {
+            final Group pringLayer = contentPanelController.getPringLayer();
+            pringLayer.getChildren().remove(pring.getRootNode());
+            pring = null;
+        }
+    }
 
     /*
      * Private (tring)
@@ -342,6 +359,14 @@ implements AbstractGesture.Observer {
         }
         
         return result;
+    }
+    
+    private void removeTring() {
+        if (tring != null) {
+            final Group rudderLayer = contentPanelController.getRudderLayer();
+            rudderLayer.getChildren().remove(tring.getRootNode());
+            tring = null;
+        }
     }
     
     /*

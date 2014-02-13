@@ -34,7 +34,7 @@ package com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.editors;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.DoubleField;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.EditorUtils;
 import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.EffectPickerController;
-import com.sun.javafx.Utils;
+import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.Utils;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;

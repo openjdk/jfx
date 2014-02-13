@@ -36,7 +36,7 @@ import com.oracle.javafx.scenebuilder.app.SceneBuilderApp;
 import com.oracle.javafx.scenebuilder.app.i18n.I18N;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.ALIGNMENT_GUIDES_COLOR;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.BACKGROUND_IMAGE;
-import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.CSS_ANALYZER_COLUMN_ORDER;
+import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.CSS_TABLE_COLUMNS_ORDERING_REVERSED;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.ROOT_CONTAINER_HEIGHT;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.ROOT_CONTAINER_WIDTH;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.HIERARCHY_DISPLAY_OPTION;
@@ -80,8 +80,7 @@ public class PreferencesRecordGlobal {
             = DISPLAY_MODE.SECTIONS;
     private static final DisplayOption DEFAULT_HIERARCHY_DISPLAY_OPTION
             = DisplayOption.INFO;
-    private static final CSSAnalyzerColumnsOrder DEFAULT_CSS_ANALYZER_COLUMN_ORDER
-            = CSSAnalyzerColumnsOrder.DEFAULTS_FIRST;
+    private static final boolean DEFAULT_CSS_TABLE_COLUMNS_ORDERING_REVERSED = false;
 
     private static final int DEFAULT_RECENT_ITEMS_SIZE = 15;
 
@@ -93,7 +92,7 @@ public class PreferencesRecordGlobal {
     private Color parentRingColor = DEFAULT_PARENT_RING_COLOR;
     private DISPLAY_MODE libraryDisplayOption = DEFAULT_LIBRARY_DISPLAY_OPTION;
     private DisplayOption hierarchyDisplayOption = DEFAULT_HIERARCHY_DISPLAY_OPTION;
-    private CSSAnalyzerColumnsOrder cssAnalyzerColumnOrder = DEFAULT_CSS_ANALYZER_COLUMN_ORDER;
+    private boolean cssTableColumnsOrderingReversed = DEFAULT_CSS_TABLE_COLUMNS_ORDERING_REVERSED;
     private int recentItemsSize = DEFAULT_RECENT_ITEMS_SIZE;
     private final List<String> recentItems = new ArrayList<>();
 
@@ -205,11 +204,32 @@ public class PreferencesRecordGlobal {
     }
 
     public CSSAnalyzerColumnsOrder getCSSAnalyzerColumnsOrder() {
-        return cssAnalyzerColumnOrder;
+        if (isCssTableColumnsOrderingReversed()) {
+            return CSSAnalyzerColumnsOrder.DEFAULTS_LAST;
+        } else {
+            return CSSAnalyzerColumnsOrder.DEFAULTS_FIRST;
+        }
     }
 
     public void setCSSAnalyzerColumnsOrder(CSSAnalyzerColumnsOrder value) {
-        cssAnalyzerColumnOrder = value;
+        switch (value) {
+            case DEFAULTS_FIRST:
+                setCssTableColumnsOrderingReversed(false);
+                break;
+            case DEFAULTS_LAST:
+                setCssTableColumnsOrderingReversed(true);
+                break;
+            default:
+                assert false;
+        }
+    }
+
+    public boolean isCssTableColumnsOrderingReversed() {
+        return cssTableColumnsOrderingReversed;
+    }
+
+    public void setCssTableColumnsOrderingReversed(boolean value) {
+        cssTableColumnsOrderingReversed = value;
     }
 
     public int getRecentItemsSize() {
@@ -288,7 +308,7 @@ public class PreferencesRecordGlobal {
     }
 
     public void refreshCSSAnalyzerColumnsOrder(DocumentWindowController dwc) {
-
+        dwc.refreshCssTableColumnsOrderingReversed(cssTableColumnsOrderingReversed);
     }
 
     public void refreshLibraryDisplayOption(DocumentWindowController dwc) {
@@ -424,9 +444,9 @@ public class PreferencesRecordGlobal {
         setHierarchyDisplayOption(DisplayOption.valueOf(hierarchy_DisplayOption));
 
         // CSS analyzer column order
-        final String order = applicationRootPreferences.get(CSS_ANALYZER_COLUMN_ORDER,
-                DEFAULT_CSS_ANALYZER_COLUMN_ORDER.name());
-        setCSSAnalyzerColumnsOrder(CSSAnalyzerColumnsOrder.valueOf(order));
+        final boolean reversed = applicationRootPreferences.getBoolean(
+                CSS_TABLE_COLUMNS_ORDERING_REVERSED, DEFAULT_CSS_TABLE_COLUMNS_ORDERING_REVERSED);
+        setCssTableColumnsOrderingReversed(reversed);
 
         // Recent items size
         final int size = applicationRootPreferences.getInt(
@@ -469,8 +489,8 @@ public class PreferencesRecordGlobal {
             case HIERARCHY_DISPLAY_OPTION:
                 applicationRootPreferences.put(HIERARCHY_DISPLAY_OPTION, getHierarchyDisplayOption().name());
                 break;
-            case CSS_ANALYZER_COLUMN_ORDER:
-                applicationRootPreferences.put(CSS_ANALYZER_COLUMN_ORDER, getCSSAnalyzerColumnsOrder().name());
+            case CSS_TABLE_COLUMNS_ORDERING_REVERSED:
+                applicationRootPreferences.putBoolean(CSS_TABLE_COLUMNS_ORDERING_REVERSED, isCssTableColumnsOrderingReversed());
                 break;
             case RECENT_ITEMS_SIZE:
                 applicationRootPreferences.putInt(RECENT_ITEMS_SIZE, getRecentItemsSize());

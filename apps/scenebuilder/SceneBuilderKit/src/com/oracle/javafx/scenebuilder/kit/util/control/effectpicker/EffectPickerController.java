@@ -37,7 +37,7 @@ import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.editors.Imag
 import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.editors.DoubleTextFieldControl;
 import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.editors.SliderControl;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker;
-import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPickerController.Mode;
+import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker.Mode;
 import java.net.URL;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyIntegerProperty;
@@ -91,6 +91,8 @@ public class EffectPickerController {
 
     private final ToggleGroup effectToggleGroup = new ToggleGroup();
     private final Image selectionChevronImage;
+    private EffectPicker.Delegate effectPickerDelegate;
+    private PaintPicker.Delegate paintPickerDelegate;
 
     private final ObjectProperty<Effect> rootEffect = new SimpleObjectProperty<>();
     // The revision property is used when a change occurs on the root effect inputs
@@ -119,9 +121,20 @@ public class EffectPickerController {
         return revision;
     }
 
-    public void reset() {
-        setRootEffectProperty(null);
-        incrementRevision();
+    public EffectPicker.Delegate getEffectPickerDelegate() {
+        return effectPickerDelegate;
+    }
+    
+    void setEffectPickerDelegate(EffectPicker.Delegate delegate) {
+        this.effectPickerDelegate = delegate;
+    }
+
+    public PaintPicker.Delegate getPaintPickerDelegate() {
+        return paintPickerDelegate;
+    }
+    
+    void setPaintPickerDelegate(PaintPicker.Delegate delegate) {
+        this.paintPickerDelegate = delegate;
     }
 
     /**
@@ -443,7 +456,7 @@ public class EffectPickerController {
         colorInput.yProperty().bind(yEditor.valueProperty());
         vBox.getChildren().add(yEditor);
 
-        final PaintPicker colorPicker = new PaintPicker();
+        final PaintPicker colorPicker = new PaintPicker(paintPickerDelegate);
         colorPicker.setPaintProperty(colorInput.getPaint());
         colorPicker.paintProperty().addListener(new PaintChangeListener(this, colorInput));
         vBox.getChildren().add(colorPicker);
@@ -525,7 +538,7 @@ public class EffectPickerController {
         dropShadow.spreadProperty().bind(spreadEditor.valueProperty());
         vBox.getChildren().add(spreadEditor);
 
-        final PaintPicker colorPicker = new PaintPicker(Mode.COLOR);
+        final PaintPicker colorPicker = new PaintPicker(paintPickerDelegate, Mode.COLOR);
         colorPicker.setPaintProperty(dropShadow.getColor());
         colorPicker.paintProperty().addListener(new ColorChangeListener(this, dropShadow));
         vBox.getChildren().add(colorPicker);
@@ -623,7 +636,7 @@ public class EffectPickerController {
         innerShadow.offsetYProperty().bind(offsetYEditor.valueProperty());
         vBox.getChildren().add(offsetYEditor);
 
-        final PaintPicker colorPicker = new PaintPicker(Mode.COLOR);
+        final PaintPicker colorPicker = new PaintPicker(paintPickerDelegate, Mode.COLOR);
         colorPicker.setPaintProperty(innerShadow.getColor());
         colorPicker.paintProperty().addListener(new ColorChangeListener(this, innerShadow));
         vBox.getChildren().add(colorPicker);
@@ -795,7 +808,7 @@ public class EffectPickerController {
         shadow.radiusProperty().bind(radiusEditor.valueProperty());
         vBox.getChildren().add(radiusEditor);
 
-        final PaintPicker colorPicker = new PaintPicker(Mode.COLOR);
+        final PaintPicker colorPicker = new PaintPicker(paintPickerDelegate, Mode.COLOR);
         colorPicker.setPaintProperty(shadow.getColor());
         colorPicker.paintProperty().addListener(new ColorChangeListener(this, shadow));
         vBox.getChildren().add(colorPicker);

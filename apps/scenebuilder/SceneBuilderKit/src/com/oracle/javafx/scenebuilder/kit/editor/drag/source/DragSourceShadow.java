@@ -83,7 +83,10 @@ class DragSourceShadow extends Group {
             throw new RuntimeException(x);
         }
         final Bounds vp = node.getLayoutBounds();
-        sp.setViewport(new Rectangle2D(vp.getMinX(), vp.getMinY(), vp.getWidth(), vp.getHeight()));
+        if ((vp.getWidth() >= 0) && (vp.getHeight() >= 0)) {
+            sp.setViewport(new Rectangle2D(vp.getMinX(), vp.getMinY(), 
+                    vp.getWidth(), vp.getHeight()));
+        }
         imageView.setImage(node.snapshot(sp, null));
         
         // Setup layoutX/layoutY on the image view and the region (1)

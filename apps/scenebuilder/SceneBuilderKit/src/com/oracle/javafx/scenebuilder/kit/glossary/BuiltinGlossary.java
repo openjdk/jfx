@@ -32,6 +32,7 @@
 package com.oracle.javafx.scenebuilder.kit.glossary;
 
 import java.io.File;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -55,7 +56,7 @@ public class BuiltinGlossary extends Glossary {
         if (fxmlLocation == null ) {
             return Collections.emptyList();
         } else {
-            File fxmlFile = new File(fxmlLocation.getPath());
+            File fxmlFile = getFileFromURL(fxmlLocation);
             if (! fxmlFile.exists()) {
                 // Suspicious ! May I print some warning ? or assert the file exists ?
                 return Collections.emptyList();
@@ -79,7 +80,7 @@ public class BuiltinGlossary extends Glossary {
         if (fxmlLocation == null ) {
             return Collections.emptyList();
         } else {
-            File fxmlFile = new File(fxmlLocation.getPath());
+            File fxmlFile = getFileFromURL(fxmlLocation);
             if (! fxmlFile.exists()) {
                 // Suspicious ! May I print some warning ? or assert the file exists ?
                 return Collections.emptyList();
@@ -104,7 +105,7 @@ public class BuiltinGlossary extends Glossary {
         if (fxmlLocation == null ) {
             return Collections.emptyList();
         } else {
-            File fxmlFile = new File(fxmlLocation.getPath());
+            File fxmlFile = getFileFromURL(fxmlLocation);
             if (! fxmlFile.exists()) {
                 // Suspicious ! May I print some warning ? or assert the file exists ?
                 return Collections.emptyList();
@@ -123,4 +124,16 @@ public class BuiltinGlossary extends Glossary {
         }
     }
     
+    // It's better to use URL.toURI than URL.getPath to feed File constructor.
+    private File getFileFromURL(URL location) {
+        File res;
+        
+        try {
+            res= new File(location.toURI());
+        } catch (URISyntaxException ex) {
+            throw new RuntimeException("Bug", ex); //NOI18N
+        }
+        
+        return res;
+    }
 }

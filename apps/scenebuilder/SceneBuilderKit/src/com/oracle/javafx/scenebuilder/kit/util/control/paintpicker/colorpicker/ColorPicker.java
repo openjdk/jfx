@@ -31,11 +31,13 @@
  */
 package com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.colorpicker;
 
+import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker.Mode;
+import static com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker.Mode.COLOR;
+import static com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker.Mode.LINEAR;
+import static com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker.Mode.RADIAL;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPickerController;
-import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPickerController.Mode;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.gradientpicker.GradientPicker;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.gradientpicker.GradientPickerStop;
-import com.sun.javafx.Utils;
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -102,9 +104,6 @@ public class ColorPicker extends VBox {
     public ColorPicker(PaintPickerController pe) {
         paintPickerController = pe;
         initialize();
-    }
-
-    public void reset() {
     }
 
     public Color getValue() {
@@ -201,10 +200,14 @@ public class ColorPicker extends VBox {
             @Override
             public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
                 if (newValue == false) {
-                    // Update UI
-                    final Color color = updateUI_OnHexaChange();
-                    // Update model
-                    setPaintProperty(color);
+                    try {
+                        // Update UI
+                        final Color color = updateUI_OnHexaChange();
+                        // Update model
+                        setPaintProperty(color);
+                    } catch (IllegalArgumentException iae) {
+                        handleHexaException();
+                    }
                 }
             }
         };
@@ -250,7 +253,7 @@ public class ColorPicker extends VBox {
                 double brightness = Double.valueOf(brightness_textfield.getText()) / 100.0;
                 // Update UI
                 final Color color = updateUI(hue, saturation, brightness, alpha);
-            // Update model
+                // Update model
                 setPaintProperty(color);
             }
         });
@@ -350,13 +353,17 @@ public class ColorPicker extends VBox {
     }
 
     private void onHexaChange(ActionEvent event) {
-        // Update UI
-        final Color color = updateUI_OnHexaChange();
-        final Object source = event.getSource();
-        assert source instanceof TextField;
-        ((TextField) source).selectAll();
-        // Update model
-        setPaintProperty(color);
+        try {
+            // Update UI
+            final Color color = updateUI_OnHexaChange();
+            final Object source = event.getSource();
+            assert source instanceof TextField;
+            ((TextField) source).selectAll();
+            // Update model
+            setPaintProperty(color);
+        } catch (IllegalArgumentException iae) {
+            handleHexaException();
+        }
     }
 
     @FXML
@@ -400,13 +407,14 @@ public class ColorPicker extends VBox {
 
     private Color updateUI_OnRGBChange() {
         // retrieve RGB TextFields values
-        double red = Double.valueOf(red_textfield.getText());
-        double green = Double.valueOf(green_textfield.getText());
-        double blue = Double.valueOf(blue_textfield.getText());
+        int red = Double.valueOf(red_textfield.getText()).intValue();
+        int green = Double.valueOf(green_textfield.getText()).intValue();
+        int blue = Double.valueOf(blue_textfield.getText()).intValue();
         // retrieve HSB values from RGB values
-        double hue = getHueFromRGB(red, green, blue);
-        double saturation = getSaturationFromRGB(red, green, blue);
-        double brightness = getBrightnessFromRGB(red, green, blue);
+        final Color color = Color.rgb(red, green, blue);
+        double hue = color.getHue();
+        double saturation = color.getSaturation();
+        double brightness = color.getBrightness();
         double alpha = Double.valueOf(alpha_textfield.getText());
         return updateUI(hue, saturation, brightness, alpha);
     }
@@ -414,10 +422,10 @@ public class ColorPicker extends VBox {
     private Color updateUI_OnHexaChange() {
         // retrieve Hexa TextField value
         final String hexa = hexa_textfield.getText().trim();
-        // retrieve HSB values from RGB values
-        double hue = getHueFromHexa(hexa);
-        double saturation = getSaturationFromHexa(hexa);
-        double brightness = getBrightnessFromHexa(hexa);
+        final Color color = Color.web(hexa);
+        double hue = color.getHue();
+        double saturation = color.getSaturation();
+        double brightness = color.getBrightness();
         double alpha = Double.valueOf(alpha_textfield.getText());
         return updateUI(hue, saturation, brightness, alpha);
     }
@@ -427,17 +435,16 @@ public class ColorPicker extends VBox {
         updating = true;
 
         // update the HSB values so they are within range
-        hue = Utils.clamp(0, hue, 360);
-        saturation = Utils.clamp(0, saturation, 1);
-        brightness = Utils.clamp(0, brightness, 1);
-        alpha = Utils.clamp(0, alpha, 1);
+        hue = PaintPickerController.clamp(0, hue, 360);
+        saturation = PaintPickerController.clamp(0, saturation, 1);
+        brightness = PaintPickerController.clamp(0, brightness, 1);
+        alpha = PaintPickerController.clamp(0, alpha, 1);
         // make an rgb color from the hsb
         final Color color = Color.hsb(hue, saturation, brightness, alpha);
-        double[] rgb = Utils.HSBtoRGB(color.getHue(), color.getSaturation(), color.getBrightness());
-        int red = (int) (rgb[0] * 255);
-        int green = (int) (rgb[1] * 255);
-        int blue = (int) (rgb[2] * 255);
-        final String hexa = String.format("%02x%02x%02x", red, green, blue); //NOI18N
+        int red = (int) (color.getRed() * 255);
+        int green = (int) (color.getGreen() * 255);
+        int blue = (int) (color.getBlue() * 255);
+        final String hexa = String.format("#%02x%02x%02x", red, green, blue); //NOI18N
 
         // Set TextFields value
         hue_textfield.setText(String.valueOf((int) hue));
@@ -448,7 +455,7 @@ public class ColorPicker extends VBox {
         red_textfield.setText(Integer.toString(red));
         green_textfield.setText(Integer.toString(green));
         blue_textfield.setText(Integer.toString(blue));
-        hexa_textfield.setText("#" + hexa); //NOI18N
+        hexa_textfield.setText(hexa);
 
         // Set the background color of the chips
         final StringBuilder sb = new StringBuilder();
@@ -503,38 +510,39 @@ public class ColorPicker extends VBox {
         return sb.toString();
     }
 
-    private double getHueFromRGB(double red, double green, double blue) {
-        double[] hsb = Utils.RGBtoHSB(red, green, blue);
-        return hsb[0];
-    }
-
-    private double getSaturationFromRGB(double red, double green, double blue) {
-        double[] hsb = Utils.RGBtoHSB(red, green, blue);
-        return hsb[1];
-    }
-
-    private double getBrightnessFromRGB(double red, double green, double blue) {
-        double[] hsb = Utils.RGBtoHSB(red, green, blue);
-        return hsb[2];
-    }
-
-    private double getHueFromHexa(String hexa) {
-        final Color c = Color.web(hexa);
-        return c.getHue();
-    }
-
-    private double getSaturationFromHexa(String hexa) {
-        final Color c = Color.web(hexa);
-        return c.getSaturation();
-    }
-
-    private double getBrightnessFromHexa(String hexa) {
-        final Color c = Color.web(hexa);
-        return c.getBrightness();
-    }
-
     private double round(double value, int roundingFactor) {
         double doubleRounded = Math.round(value * roundingFactor);
         return doubleRounded / roundingFactor;
+    }
+
+    private void handleHexaException() {
+        paintPickerController.getDelegate().handleError(
+                "log.warning.color.creation.error.hexadecimal",
+                hexa_textfield.getText().trim());
+        // Update UI to previous value
+        final Color color;
+        switch (paintPickerController.getMode()) {
+            case COLOR:
+                assert paintPickerController.getPaintProperty() instanceof Color;
+                color = (Color) paintPickerController.getPaintProperty();
+                break;
+            case LINEAR:
+            case RADIAL:
+                final GradientPicker gradientPicker = paintPickerController.getGradientPicker();
+                if (gradientPicker.getGradientStops().isEmpty() == false) {
+                    final GradientPickerStop stop = paintPickerController.getGradientPicker().getSelectedStop();
+                    assert stop != null;
+                    color = stop.getColor();
+                } else {
+                    color = Color.BLACK;
+                }
+                break;
+            default:
+                color = null;
+                assert false;
+        }
+        assert color != null;
+        updateUI(color);
+        hexa_textfield.selectAll();
     }
 }

@@ -36,6 +36,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.DeleteObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.JobUtils;
+import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyFxControllerJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.SetDocumentRootJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.ToggleFxRootJob;
@@ -240,19 +241,30 @@ public abstract class AbstractWrapInJob extends Job {
             final FXOMObject rootObject = children.iterator().next();
             assert rootObject instanceof FXOMInstance;
             boolean isFxRoot = ((FXOMInstance) rootObject).isFxRoot();
-            // First remove the fx:root from the old root object
+            final String fxController = rootObject.getFxController();
+            // First remove the fx:controller/fx:root from the old root object
             if (isFxRoot) {
                 final ToggleFxRootJob fxRootJob = new ToggleFxRootJob(getEditorController());
                 batchJob.addSubJob(fxRootJob);
+            }
+            if (fxController != null) {
+                final ModifyFxControllerJob fxControllerJob
+                        = new ModifyFxControllerJob(rootObject, null, getEditorController());
+                batchJob.addSubJob(fxControllerJob);
             }
             // Then set the new container as root object
             final Job setDocumentRoot = new SetDocumentRootJob(
                     newContainer, getEditorController());
             batchJob.addSubJob(setDocumentRoot);
-            // Finally add the fx:root to the new root object
+            // Finally add the fx:controller/fx:root to the new root object
             if (isFxRoot) {
                 final ToggleFxRootJob fxRootJob = new ToggleFxRootJob(getEditorController());
                 batchJob.addSubJob(fxRootJob);
+            }
+            if (fxController != null) {
+                final ModifyFxControllerJob fxControllerJob
+                        = new ModifyFxControllerJob(newContainer, fxController, getEditorController());
+                batchJob.addSubJob(fxControllerJob);
             }
         }
 

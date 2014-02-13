@@ -50,6 +50,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
@@ -171,9 +172,9 @@ public class InfoPanelController extends AbstractFxmlPanelController {
         assert controllerAndCogHBox != null;
         
         if (controllerClassEditor != null) {
-            controllerClassEditor.reset(getSuggestedControllerClasses());
+            controllerClassEditor.reset(getSuggestedControllerClasses(null));
         } else {
-            controllerClassEditor = new ControllerClassEditor(getSuggestedControllerClasses());
+            controllerClassEditor = new ControllerClassEditor(getSuggestedControllerClasses(null));
         }
         
         HBox propNameNode = controllerClassEditor.getPropNameNode();
@@ -197,7 +198,19 @@ public class InfoPanelController extends AbstractFxmlPanelController {
                 }
             }
         });
-                
+        
+        // We e.g. an Untitled document is saved we need to trigger a scan for
+        // potential controller classes.
+        getEditorController().fxmlLocationProperty().addListener(new ChangeListener<URL>() {
+
+            @Override
+            public void changed(ObservableValue<? extends URL> ov, URL t, URL t1) {
+                if (t1 != null) {
+                    resetSuggestedControllerClasses(t1);
+                }
+            }
+        });
+        
         leftTableColumn.setCellValueFactory(new PropertyValueFactory<>("key")); //NOI18N
         rightTableColumn.setCellValueFactory(new PropertyValueFactory<>("fxomObject")); //NOI18N
         leftTableColumn.setCellFactory(new LeftCell.Factory());
@@ -360,12 +373,13 @@ public class InfoPanelController extends AbstractFxmlPanelController {
     }
     
     
-    private List<String> getSuggestedControllerClasses() {
+    private List<String> getSuggestedControllerClasses(URL location) {
         Glossary glossary = getEditorController().getGlossary();
-        URL location = null;
-        if (getEditorController().getFxomDocument() != null) {
+        
+        if (location == null && getEditorController().getFxomDocument() != null) {
             location = getEditorController().getFxomDocument().getLocation();
         }
+        
         return glossary.queryControllerClasses(location);
     }
 
@@ -421,4 +435,17 @@ public class InfoPanelController extends AbstractFxmlPanelController {
         }
     };
 
+    private void resetSuggestedControllerClasses(URL location) {
+        if (controllerClassEditor != null) {
+            // The listener on fxmlLocationProperty is called before the file
+            // denoted by the location is created on disk, hence the runLater.
+            Platform.runLater(new Runnable() {
+
+                @Override
+                public void run() {
+                    controllerClassEditor.reset(getSuggestedControllerClasses(location));
+                }
+            });
+        }
+    }
 }

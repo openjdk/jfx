@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.popupeditors;
 
+import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.ColorEncoder;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker;
@@ -52,6 +53,7 @@ public class PaintPopupEditor extends PopupEditor {
 
     private PaintPicker paintEditor;
     private final Rectangle graphic = new Rectangle(20, 10);
+    private final EditorController editorController;
 
     private final ChangeListener<Paint> paintChangeListener = new ChangeListener<Paint>() {
         @Override
@@ -62,8 +64,9 @@ public class PaintPopupEditor extends PopupEditor {
     };
 
     @SuppressWarnings("LeakingThisInConstructor")
-    public PaintPopupEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
+    public PaintPopupEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, EditorController editorController) {
         super(propMeta, selectedClasses);
+        this.editorController = editorController;
     }
 
     //
@@ -72,7 +75,13 @@ public class PaintPopupEditor extends PopupEditor {
     //
     @Override
     public void initializePopupContent() {
-        paintEditor = new PaintPicker();
+        final PaintPicker.Delegate delegate = new PaintPicker.Delegate() {
+            @Override
+            public void handleError(String warningKey, Object... arguments) {
+                editorController.getMessageLog().logWarningMessage(warningKey, arguments);
+            }
+        };
+        paintEditor = new PaintPicker(delegate);
     }
 
     @Override

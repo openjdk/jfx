@@ -1733,7 +1733,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
             if (propertyEditor != null) {
                 ((EffectPopupEditor) propertyEditor).reset(propMeta, selectedClasses);
             } else {
-                propertyEditor = new EffectPopupEditor(propMeta, selectedClasses);
+                propertyEditor = new EffectPopupEditor(propMeta, selectedClasses, getEditorController());
             }
         } else if (editorClass == FontPopupEditor.class) {
             if (propertyEditor != null) {
@@ -1745,7 +1745,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
             if (propertyEditor != null) {
                 ((PaintPopupEditor) propertyEditor).reset(propMeta, selectedClasses);
             } else {
-                propertyEditor = new PaintPopupEditor(propMeta, selectedClasses);
+                propertyEditor = new PaintPopupEditor(propMeta, selectedClasses, getEditorController());
             }
         } else if (editorClass == ImageEditor.class) {
             if (propertyEditor != null) {
@@ -1904,7 +1904,8 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     }
 
     private List<String> getSuggestedFxIds(String controllerClass) {
-        if (controllerClass == null) {
+        // Is not needed if multiple selection.
+        if (controllerClass == null || hasMultipleSelection()) {
             return Collections.emptyList();
         }
         Glossary glossary = getEditorController().getGlossary();

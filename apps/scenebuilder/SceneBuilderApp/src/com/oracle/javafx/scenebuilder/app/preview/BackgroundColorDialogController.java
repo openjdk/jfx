@@ -46,8 +46,6 @@ import javafx.stage.Window;
  */
 public class BackgroundColorDialogController extends AbstractModalDialog {
 
-    private final PaintPicker paintPicker = new PaintPicker();
-
     public BackgroundColorDialogController(Window owner) {
         super(BackgroundColorDialogController.class.getResource("BackgroundColor.fxml"), //NOI18N
                 I18N.getBundle(), owner);
@@ -72,6 +70,13 @@ public class BackgroundColorDialogController extends AbstractModalDialog {
 
         assert getContentRoot() instanceof Pane;
         final Pane contentRoot = (Pane) getContentRoot();
+
+        final PaintPicker.Delegate delegate = new PaintPicker.Delegate() {
+            @Override
+            public void handleError(String warningKey, Object... arguments) {
+            }
+        };
+        final PaintPicker paintPicker = new PaintPicker(delegate);
         contentRoot.getChildren().add(paintPicker);
 
         final ChangeListener<Number> sizeListener = new ChangeListener<Number>() {
