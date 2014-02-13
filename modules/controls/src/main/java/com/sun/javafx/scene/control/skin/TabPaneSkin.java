@@ -1428,9 +1428,23 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 
         private TraversalEngine engine;
         private Direction direction = Direction.NEXT;
-        //private Direction direction;
         private Tab tab;
-        private InvalidationListener tabContentListener;
+
+        private InvalidationListener tabContentListener = new InvalidationListener() {
+            @Override public void invalidated(Observable valueModel) {
+                updateContent();
+            }
+        };
+        private InvalidationListener tabSelectedListener = new InvalidationListener() {
+            @Override public void invalidated(Observable valueModel) {
+                setVisible(tab.isSelected());
+            }
+        };
+
+        private WeakInvalidationListener weakTabContentListener =
+                new WeakInvalidationListener(tabContentListener);
+        private WeakInvalidationListener weakTabSelectedListener =
+                new WeakInvalidationListener(tabSelectedListener);
 
         public Tab getTab() {
             return tab;
@@ -1441,15 +1455,10 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             setManaged(false);
             this.tab = tab;
             updateContent();
+            setVisible(tab.isSelected());
 
-            visibleProperty().bind(tab.selectedProperty());
-
-            tab.contentProperty().addListener(tabContentListener = new InvalidationListener() {
-                @Override public void invalidated(Observable valueModel) {
-                    getChildren().clear();
-                    updateContent();
-                }
-            });
+            tab.selectedProperty().addListener(weakTabSelectedListener);
+            tab.contentProperty().addListener(weakTabContentListener);
 
             engine = new TraversalEngine(this, false) {
                 @Override public boolean trav(Node owner, Direction dir) {
@@ -1462,16 +1471,17 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         }
 
         private void updateContent() {
-            if (getTab().getContent() == null) {
+            Node newContent = getTab().getContent();
+            if (newContent == null) {
                 getChildren().clear();
             } else {
-                getChildren().setAll(getTab().getContent());
+                getChildren().setAll(newContent);
             }
         }
 
         private void removeListeners(Tab tab) {
-            visibleProperty().unbind();
-            tab.contentProperty().removeListener(tabContentListener);
+            tab.selectedProperty().removeListener(weakTabSelectedListener);
+            tab.contentProperty().removeListener(weakTabContentListener);
             engine.removeTraverseListener(this);
         }
 
