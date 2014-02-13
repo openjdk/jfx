@@ -1079,7 +1079,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
     private double updatePosY() {
         final ScrollPane sp = getSkinnable();
         double minY = Math.min((- posY / (vsb.getMax() - vsb.getMin()) * (nodeHeight - contentHeight)), 0);
-        viewContent.setLayoutY(minY);
+        viewContent.setLayoutY(snapPosition(minY));
         if (!sp.vvalueProperty().isBound()) sp.setVvalue(Utils.clamp(sp.getVmin(), posY, sp.getVmax()));
         return posY;
     }

@@ -356,6 +356,9 @@ public abstract class NGNode {
      * @param tx must not be null
      */
     public void setTransformMatrix(BaseTransform tx) {
+        if (transform.equals(tx)) {
+            return;
+        }
         // If the transform matrix has changed, then we need to update it,
         // and mark this node as dirty. If this node is cached, we DO NOT
         // invalidate the cache. The cacheFilter will compare its cached
