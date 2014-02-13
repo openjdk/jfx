@@ -248,8 +248,6 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
             // Let CSS know that this property has been manually changed
             // Dispose of the old skin
             if (oldValue != null) {
-                Node n = oldValue.getNode();
-                if (n != null) getContent().remove(n);
                 oldValue.dispose();
             }
 
@@ -265,7 +263,11 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
             skinSizeComputed = false;
 
             final Node n = getSkinNode();
-            if (n != null) getContent().add(n);
+            if (n != null) {
+                bridge.getChildren().setAll(n);
+            } else {
+                bridge.getChildren().clear();
+            }
 
             // calling impl_reapplyCSS() as the styleable properties may now
             // be different, as we will now be able to return styleable properties
@@ -967,6 +969,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
 //    public double getBaselineOffset() { return getSkinNode() == null? 0 : getSkinNode().getBaselineOffset(); }
 
     @Override protected void show() {
+
         //RT-27546 : The problem here is before the first show the content of the popup
         // is not initialized yet and hence the prefWidth & prefHeight remains 0
         // This leads to incorrect translation of anchor to screen coordinates.
@@ -977,6 +980,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
         super.show();
 
     }
+
     /**
      * Create a new instance of the default skin for this control. This is called to create a skin for the control if
      * no skin is provided via CSS {@code -fx-skin} or set explicitly in a sub-class with {@code  setSkin(...)}.
@@ -1073,26 +1077,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      */
     @Override
     public Styleable getStyleableParent() {
-
-        final Node ownerNode = getOwnerNode();
-        if (ownerNode != null) {
-
-            return ownerNode;
-
-        } else {
-
-            final Window ownerWindow = getOwnerWindow();
-            if (ownerWindow != null) {
-
-                final Scene ownerScene = ownerWindow.getScene();
-                if (ownerScene != null) {
-
-                    return ownerScene.getRoot();
-                }
-            }
-        }
-
-        return null;
+        return bridge.getStyleableParent();
     }
 
     /**
@@ -1144,7 +1129,24 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
 
         @Override
         public final Styleable getStyleableParent() {
-            return PopupControl.this.getStyleableParent();
+
+            final Node ownerNode = getOwnerNode();
+            if (ownerNode != null) {
+                return ownerNode;
+
+            } else {
+
+                final Window ownerWindow = getOwnerWindow();
+                if (ownerWindow != null) {
+
+                    final Scene ownerScene = ownerWindow.getScene();
+                    if (ownerScene != null) {
+                        return ownerScene.getRoot();
+                    }
+                }
+            }
+
+            return bridge.getParent();
         }
 
         @Override
